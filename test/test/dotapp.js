@@ -6,7 +6,7 @@ const { expect } = require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
 
-const { treasuryAddressSS58, polkadotSenderSS58,
+const { treasuryAddressSS58, polkadotSenderSS58Alice,
   polkadotRecipientSS58, polkadotRecipient, bootstrap } = require('../src/fixtures');
 
 const { ChannelId } = require("../src/helpers");
@@ -28,14 +28,14 @@ describe('Bridge', function () {
       const ethAccount = ethClient.accounts[1];
 
       const beforeEthBalance = await ethClient.getDotBalance(ethAccount);
-      const beforeSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
+      const beforeSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58Alice);
 
       // lock DOT using basic channel
       await subClient.lockDOT(subClient.alice, ethAccount, amount.toFixed(), ChannelId.INCENTIVIZED)
       await ethClient.waitForNextEventData({ appName: 'snowDOT', eventName: 'Minted' });
 
       const afterEthBalance = await ethClient.getDotBalance(ethAccount);
-      const afterSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
+      const afterSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58Alice);
 
       expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amountWrapped);
       expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.greaterThan(amount);

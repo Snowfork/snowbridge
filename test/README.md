@@ -19,10 +19,13 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
   (cd ../ethereum && yarn install)
   ```
 
-* Development environment for the relay services. See setup [instructions](../relayer/README.md#development).
+* Development environment for the relay services. See setup [instructions](../relayer/README.md#Development).
+
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
 * lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `v1.0.0`.
+* g++ (required for lodestar) is available in the `build-essential` package: `apt install build-essential`
+* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `v0.40.0-dev.ccdf688e6e`. Newer versions should work but haven't been tested.
 
   ```bash
   yarn global add @chainsafe/lodestar@1.0.0
@@ -95,45 +98,52 @@ You can see the relay chain by connecting to https://polkadot.js.org/apps/?rpc=w
 
 Confirm the block number is > 2
 
-### Troubleshooting
-
-The `start-services.sh` script writes the following logs:
-
-- Parachain nodes: /tmp/snowbridge/{alice,bob,11144,11155}.log
-- Relay services: /tmp/snowbridge/{beefy,parachain,ethereum}-relay.log
-- Geth: /tmp/snowbridge/geth.log
-
 ## E2E tests
 
-Run the tests using the following command:
+These tests are meant to closely replicate real-world behaviour. This means that they also replicate real-world delays and confirmation times. This can take up to 4 minutes per test and around 40 minutes for all tests.
+
+### Run a specific test
+
+To just run a specific test, the bridge needs to be bootstrapped first:
+
+```bash
+yarn test test/bootstrap.js
+```
+
+Now individual tests can be run, like the following:
+```bash
+yarn test --grep 'should transfer ETH from Substrate to Ethereum \(incentivized channel\)'
+```
+
+### Run all tests
+
+Run the full suite of tests using the following command:
 
 ```bash
 yarn test
 ```
 
-These tests are meant to closely replicate real-world behaviour. This means that they also replicate real-world delays and confirmation times. This can take up to 4 minutes per test and ~20minutes for all tests.
+The bootstrap tests will be called automatically as part of the full suite.
 
-### Testing against a malicious contract
-We also have a test environment that tests against a malicious contract that attempts to consume infinite gas. To setup this environment, run the start-services script with the malicious flag:
+## Troubleshooting
 
-```bash
-TEST_MALICIOUS_APP=1 scripts/start-services.sh
+The `start-services.sh` script writes the following logs:
+
+- Parachain nodes: {alice,bob,11144,11155}.log
+- Relay services: {beefy,parachain,beacon}-relay.log
+- Geth (execution client): /tmp/snowbridge/geth.log
+- Lodestar (beacon client): /tmp/snowbridge/lodestar.log
+
+### Common issues
+
+Sometimes during development tests will fail for transfers in the substrate->ethereum direction. If you see this, look in `parachain-relay.log` for the following error:
+```
+{"@timestamp":"2022-08-26T15:10:50.263740077+02:00","args":"[--api ws://localhost:11144 --block 0xe2e21a61b017699961b6d87c6aecbae18f2ce0c89bd87e0e8b0d808c26e2aad3]","level":"error","message":"Failed to query events.","name":"snowbridge-query-events","stdErr":"Error: Metadata(IncompatibleMetadata)\n","stdOut":""}
 ```
 
-This will deploy and run everything as usual, but replace the dot app with a malicious one. Once everything is ready to go, run the tests for the malicious app:
+That means a dependency of the relayer has obsolete parachain metadata and needs to be refreshed. Please refer [here](../parachain/README.md#Chain_metadata) for steps to fix.
 
-```bash
-yarn test ./test/malicious-dotapp.js
-```
-
-You should see the test pass, checking that message delivery works correctly and channel functionality is still secure without being affected by the malicious app.
-
-
-## Generating/Updating new test fixtures
-
-Test fixtures are taken by running the service in full e2e test. The relayer should log the fixture data you need (code is in [the relayer here](../relayer/workers/beefyrelayer/fixture-data-logger.go), though may require a bit of manual copy/pasting to get perfectly it in the right format.
-
-## Running E2E tests on Ropsten
+## Running E2E tests against Ropsten
 
 To run the E2E tests on Ropsten you need to have separate accounts for the relayers, an account for deployment and one for running the E2E test stack. You will also require an [Infura](https://infura.io/) account and project.
 

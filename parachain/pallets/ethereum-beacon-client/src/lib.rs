@@ -44,7 +44,11 @@ pub mod pallet {
 	}
 
 	#[pallet::event]
-	pub enum Event<T> {}
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		BeaconHeaderImported{block_hash: H256, slot: u64},
+		ExecutionHeaderImported{block_hash: H256, block_number: u64},
+	}
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -583,10 +587,16 @@ pub mod pallet {
 				<LatestFinalizedHeaderSlot<T>>::set(slot);
 				<LatestFinalizedHeaderHash<T>>::set(block_root);
 			}
+
+			Self::deposit_event(Event::BeaconHeaderImported{block_hash: block_root, slot: slot});
 		}
 
 		fn store_execution_header(block_root: H256, header: ExecutionHeader) {
+			let block_number = header.block_number;
+
 			<ExecutionHeaders<T>>::insert(block_root, header);
+
+			Self::deposit_event(Event::ExecutionHeaderImported{block_hash: block_root, block_number: block_number});
 		}
 
 		fn store_validators_root(validators_root: H256) {

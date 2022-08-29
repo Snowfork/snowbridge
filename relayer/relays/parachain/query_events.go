@@ -27,8 +27,8 @@ type Events struct {
 }
 
 type BasicChannelEvent struct {
-	Hash   types.H256
-	Bundle BasicOutboundChannelMessageBundle
+	Hash    types.H256
+	Bundles []BasicOutboundChannelMessageBundle
 }
 
 type IncentivizedChannelEvent struct {
@@ -84,14 +84,14 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 		}
 
 		if item.ID == 0 {
-			var bundle BasicOutboundChannelMessageBundle
-			err = types.DecodeFromHexString(item.Data, &bundle)
+			var bundles []BasicOutboundChannelMessageBundle
+			err = types.DecodeFromHexString(item.Data, &bundles)
 			if err != nil {
 				return nil, err
 			}
 			events.Basic = &BasicChannelEvent{
-				Hash:   hash,
-				Bundle: bundle,
+				Hash:    hash,
+				Bundles: bundles,
 			}
 		} else if item.ID == 1 {
 			var bundle IncentivizedOutboundChannelMessageBundle

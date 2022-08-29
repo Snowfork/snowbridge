@@ -36,6 +36,7 @@ Several runtimes can be built:
 * snowbridge: Polkadot parachain
 
 To build with snowbase and snowblink runtimes (the default):
+
 ```bash
 cargo build --release --features rococo-native
 ```
@@ -47,6 +48,7 @@ Note: This section is not necessary for local development, as there are scripts 
 For a fully operational chain, further configuration of the initial chain spec is required. The specific configuration will depend heavily on your environment, so this guide will remain high-level.
 
 Build an initial spec for the snowbase runtime:
+
 ```bash
 target/release/snowbridge build-spec --chain snowbase --disable-default-bootnode > spec.json
 ```
@@ -62,3 +64,27 @@ For an example configuration, consult the [setup script](https://github.com/Snow
 ## Tests
 
 To run the parachain tests locally, use `cargo test --release`. For the full suite of tests, use `cargo test --release --features runtime-benchmarks`.
+
+## Chain metadata
+
+There is an internal tool `snowbridge-query-events` which is used to read specific events from the parachain. It is a used by our offchain message relayers.
+
+This tool must be kept up to date with the latest chain metadata. This is the process for keeping that up to date:
+
+Install subxt client:
+
+```bash
+cargo install subxt-cli
+```
+
+Update metadata by fetching it from parachain node (in this case a node in the E2E stack):
+```
+subxt metadata --url http://localhost:8081 -f bytes > tools/query-events/metadata.scale
+```
+
+If you want to update the tool for an already running E2E stack:
+
+```
+cargo build --release --manifest-path tools/query-events/Cargo.toml
+cp target/release/snowbridge-query-events /tmp/snowbridge/bin/
+```

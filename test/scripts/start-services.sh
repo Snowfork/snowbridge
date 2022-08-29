@@ -13,6 +13,10 @@ infura_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
+# Accounts for which the relayer will relay messages over the basic channel.
+# Currently only works for messages from Polkadot to Ethereum until SNO-305 is complete.
+account_ids="${ACCOUNT_IDS:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d,0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48}"
+
 beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://localhost:9596}"
 
 output_dir=/tmp/snowbridge
@@ -33,7 +37,7 @@ start_geth() {
     fi
 
     local data_dir="$output_dir/geth"
-    
+
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local net"
 
@@ -125,7 +129,7 @@ start_polkadot_launch()
         --bin snowbridge
 
     echo "Building query tool"
-    cargo build --release --manifest-path "$parachain_dir/tools/query-events/Cargo.toml" --bin snowbridge-query-events
+    cargo build --manifest-path "$parachain_dir/tools/query-events/Cargo.toml" --release --bin snowbridge-query-events
 
     cp "$parachain_dir/target/release/snowbridge-query-events" "$output_dir/bin"
 
@@ -134,13 +138,6 @@ start_polkadot_launch()
 
     echo "Generating chain specification"
     "$parachain_bin" build-spec --chain "$runtime" --disable-default-bootnode > "$output_dir/spec.json"
-
-    echo "Updating chain specification"
-    curl $infura_endpoint_http \
-        -X POST \
-        -H "Content-Type: application/json" \
-        -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
-        | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
 
     initial_beacon_block=$(curl "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
             | jq -r '.data.finalized.root')
@@ -158,7 +155,7 @@ start_polkadot_launch()
         "$output_dir/initialBeaconSync_tmp.json" \
         > "$output_dir/initialBeaconSync.json"
 
-    cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
+    cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
 
     # TODO: add back
     # if [[ -n "${TEST_MALICIOUS_APP+x}" ]]; then
@@ -231,6 +228,7 @@ start_relayer()
         --arg k2 "$(address_for IncentivizedInboundChannel)" \
         --arg k3 "$(address_for BeefyClient)" \
         --arg infura_endpoint_ws $infura_endpoint_ws \
+        --arg account_ids $account_ids \
     '
       .source.contracts.BasicInboundChannel = $k1
     | .source.contracts.IncentivizedInboundChannel = $k2
@@ -239,6 +237,7 @@ start_relayer()
     | .sink.contracts.IncentivizedInboundChannel = $k2
     | .source.ethereum.endpoint = $infura_endpoint_ws
     | .sink.ethereum.endpoint = $infura_endpoint_ws
+    | .source.accounts = ($account_ids | split(","))
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 

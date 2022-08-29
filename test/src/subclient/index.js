@@ -17,6 +17,7 @@ class SubClient {
 
     this.keyring = new Keyring({ type: 'sr25519' });
     this.alice = this.keyring.addFromUri('//Alice', { name: 'Alice' });
+    this.bob = this.keyring.addFromUri('//Bob', { name: 'Bob' });
   }
 
   async queryAssetsAccountBalance(assetId, accountId) {
@@ -33,7 +34,7 @@ class SubClient {
     const unsubscribe = await this.api.query.assets.account(assetId, accountId, (account) => {
       if(account.isNone) {
         resolvers[count](BigNumber(0));
-      } 
+      }
       else {
         resolvers[count](BigNumber(account.value.balance.toBigInt()));
       }

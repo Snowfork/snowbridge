@@ -94,7 +94,6 @@ fn testnet_genesis(
 			source_channel: Default::default(),
 		},
 		basic_outbound_channel: snowblink_runtime::BasicOutboundChannelConfig {
-			principal: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
 			interval: 1,
 		},
 		incentivized_inbound_channel: snowblink_runtime::IncentivizedInboundChannelConfig {
@@ -120,10 +119,6 @@ fn testnet_genesis(
 		},
 		asset_registry: snowblink_runtime::AssetRegistryConfig { next_asset_id: 1 },
 		xcm_support: snowblink_runtime::XcmSupportConfig {},
-		ethereum_light_client: snowblink_runtime::EthereumLightClientConfig {
-			initial_header: Default::default(),
-			initial_difficulty: Default::default(),
-		},
 		ethereum_beacon_client: snowblink_runtime::EthereumBeaconClientConfig {
 			initial_sync: Default::default(),
 		},

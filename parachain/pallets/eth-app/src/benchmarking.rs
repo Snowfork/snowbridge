@@ -13,7 +13,7 @@ use snowbridge_core::ChannelId;
 
 use frame_support::traits::fungible::Inspect;
 use pallet_assets::Config as AssetsConfig;
-use snowbridge_basic_channel::outbound::{Config as BasicOutboundChannelConfig, Principal};
+use snowbridge_basic_channel::outbound::Config as BasicOutboundChannelConfig;
 use snowbridge_incentivized_channel::outbound::{Config as IncentivizedOutboundChannelConfig, Fee};
 
 pub struct Pallet<T: Config>(EtherApp<T>);
@@ -28,9 +28,6 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 		let recipient = H160::repeat_byte(2);
 		let amount = 500;
-
-		// set principal for basic channel
-		Principal::<T>::set(Some(caller.clone()));
 
 		T::Asset::mint_into(&caller, amount)?;
 	}: burn(RawOrigin::Signed(caller.clone()), ChannelId::Basic, recipient, amount)

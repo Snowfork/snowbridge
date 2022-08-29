@@ -19,6 +19,7 @@ func (b BasicOutboundChannelMessageBundle) IntoInboundMessageBundle() basic.Basi
 	}
 	return basic.BasicInboundChannelMessageBundle{
 		SourceChannelID: b.SourceChannelID,
+		Account:         b.Account,
 		Nonce:           (*big.Int)(&b.Nonce).Uint64(),
 		Messages:        messages,
 	}
@@ -26,6 +27,7 @@ func (b BasicOutboundChannelMessageBundle) IntoInboundMessageBundle() basic.Basi
 
 type BasicOutboundChannelMessageBundle struct {
 	SourceChannelID uint8
+	Account         [32]byte
 	Nonce           types.UCompact
 	Messages        []BasicOutboundChannelMessage
 }

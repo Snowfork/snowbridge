@@ -25,7 +25,7 @@ func init() {
 	rootCmd.AddCommand(fetchMessagesCmd())
 	rootCmd.AddCommand(subBeefyCmd())
 	rootCmd.AddCommand(leafCmd())
-
+	rootCmd.AddCommand(basicChannelLeafProofCmd())
 }
 
 func Execute() {

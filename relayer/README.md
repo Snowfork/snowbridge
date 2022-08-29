@@ -15,7 +15,7 @@ This project requires the following tools for day to day development:
 
 - [Golang](https://go.dev/)
 - [Mage](https://magefile.org/): Used for build tasks
-- [Revive](https://github.com/mgechev/revive): Used for linting instead of golint
+- [Revive](https://github.com/mgechev/revive): (optional) Used for linting instead of golint
 
 Please install them first.
 
@@ -34,7 +34,7 @@ To enable revive for linting in VS-code, add the following to your config:
 
 ## Contract Bindings
 
-The bindings in the [contracts](contracts/) directory for our Ethereum contracts are dynamically generated.
+The relayer relies on dynamically generated bindings for our Ethereum contracts. They need to updated whenever the contracts change.
 
 Make sure you have the following dependencies installed:
 
@@ -56,7 +56,7 @@ Compile the contracts in the [ethereum](../ethereum) directory:
 npx hardhat compile
 ```
 
-Generate the bindings:
+Generate the bindings in the [contracts](contracts/) directory:
 
 ```bash
 go generate ./...

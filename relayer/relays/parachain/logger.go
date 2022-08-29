@@ -13,6 +13,8 @@ func Hex(b []byte) string {
 
 func (wr *EthereumWriter) logFieldsForBasicSubmission(
 	bundle basic.BasicInboundChannelMessageBundle,
+	leafProof [][32]byte,
+	hashSides []bool,
 	proof []byte,
 ) log.Fields {
 	var messagesLog []log.Fields
@@ -24,13 +26,21 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 		})
 	}
 
+	leafProofHexes := make([]string, len(leafProof))
+	for i, leaf := range leafProof {
+		leafProofHexes[i] = Hex(leaf[:])
+	}
+
 	params := log.Fields{
 		"bundle": log.Fields{
 			"sourceChannelID": bundle.SourceChannelID,
 			"nonce":           bundle.Nonce,
+			"account":         Hex(bundle.Account[:]),
 			"messages":        messagesLog,
 		},
-		"proof": Hex(proof),
+		"proof":     Hex(proof),
+		"leafProof": leafProofHexes,
+		"hashSides": hashSides,
 	}
 
 	return params

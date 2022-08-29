@@ -84,10 +84,10 @@ pub trait RuntimeApiCollection:
 	+ sp_api::Metadata<Block>
 	+ sp_offchain::OffchainWorkerApi<Block>
 	+ sp_session::SessionKeys<Block>
-	+ cumulus_primitives_core::CollectCollationInfo<Block>
-	+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-	+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
 	+ sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId>
+	+ cumulus_primitives_core::CollectCollationInfo<Block>
+	+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
+	+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
 where
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
@@ -103,10 +103,10 @@ where
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>
+		+ sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId>
 		+ cumulus_primitives_core::CollectCollationInfo<Block>
-		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
 		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId>,
+		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
@@ -344,11 +344,13 @@ where
 		})?;
 
 	let rpc_builder = {
+		let backend = backend.clone();
 		let client = client.clone();
 		let transaction_pool = transaction_pool.clone();
 
 		Box::new(move |deny_unsafe, _| {
 			let deps = crate::rpc::FullDeps {
+				backend: backend.clone(),
 				client: client.clone(),
 				pool: transaction_pool.clone(),
 				deny_unsafe,

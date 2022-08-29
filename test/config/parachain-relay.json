@@ -14,7 +14,8 @@
             "BasicInboundChannel": null,
             "IncentivizedInboundChannel": null
         },
-        "beefy-activation-block": 0
+        "beefy-activation-block": 0,
+        "accounts": []
     },
     "sink": {
         "ethereum": {

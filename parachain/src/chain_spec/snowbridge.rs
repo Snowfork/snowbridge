@@ -95,7 +95,6 @@ fn testnet_genesis(
 			source_channel: Default::default(),
 		},
 		basic_outbound_channel: snowbridge_runtime::BasicOutboundChannelConfig {
-			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
 			interval: 1,
 		},
 		incentivized_inbound_channel: snowbridge_runtime::IncentivizedInboundChannelConfig {
@@ -121,10 +120,6 @@ fn testnet_genesis(
 		},
 		asset_registry: snowbridge_runtime::AssetRegistryConfig { next_asset_id: 1 },
 		xcm_support: snowbridge_runtime::XcmSupportConfig {},
-		ethereum_light_client: snowbridge_runtime::EthereumLightClientConfig {
-			initial_header: Default::default(),
-			initial_difficulty: Default::default(),
-		},
 		ethereum_beacon_client: snowbridge_runtime::EthereumBeaconClientConfig {
 			initial_sync: Default::default(),
 		},
