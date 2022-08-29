@@ -1,12 +1,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use snowbridge_ethereum::mpt;
 use sp_core::{H160, H256, U256};
 use sp_io::hashing::keccak_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
+use frame_support::BoundedVec;
 
 #[cfg(feature = "std")]
 use core::fmt::Formatter;
@@ -20,6 +21,8 @@ pub type Domain = H256;
 pub type ValidatorIndex = u64;
 pub type ProofBranch = Vec<H256>;
 pub type ForkVersion = [u8; 4];
+
+const MAX_SIZE: u64 = 512;
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct PublicKey(pub [u8; 48]);
@@ -83,7 +86,7 @@ impl<'de> Deserialize<'de> for PublicKey {
 	}
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct InitialSync {
 	pub header: BeaconHeader,
@@ -143,7 +146,7 @@ pub struct SigningData {
 	pub domain: Domain,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct ExecutionHeader {
 	pub parent_hash: H256,
 	pub fee_recipient: H160,
@@ -162,10 +165,10 @@ pub struct ExecutionHeader {
 }
 
 /// Sync committee as it is stored in the runtime storage.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SyncCommittee {
-	pub pubkeys: Vec<PublicKey>,
+	pub pubkeys: BoundedVec<PublicKey, MAX_SIZE>,
 	pub aggregate_pubkey: PublicKey,
 }
 
