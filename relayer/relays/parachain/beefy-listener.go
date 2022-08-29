@@ -479,6 +479,13 @@ func (li *BeefyListener) gatherProofInputs(
 				polkadotBlockNumber,
 				paraHeadsAsSlice,
 			}
+			log.WithFields(log.Fields{
+				"parachainId":             li.paraID,
+				"polkadotBlockHash":       polkadotBlockHash.Hex(),
+				"relayerchainBlockNumber": polkadotBlockNumber,
+				"parachainBlockNumber":    snowbridgeBlockNumber,
+				"paraHeads":               paraHeadsAsSlice,
+			}).Info("Generated proof input for parachain block.")
 			delete(items, snowbridgeBlockNumber)
 		}
 
@@ -490,7 +497,7 @@ func (li *BeefyListener) gatherProofInputs(
 	}
 
 	if len(items) > 0 {
-		return fmt.Errorf("Could not gather all proof inputs")
+		return fmt.Errorf("could not gather all proof inputs")
 	}
 
 	return nil
