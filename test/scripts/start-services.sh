@@ -336,7 +336,7 @@ export PATH="$output_dir/bin:$PATH"
 start_geth
 start_lodestar
 
-#deploy_contracts
+deploy_contracts
 start_polkadot_launch
 
 echo "Waiting for consensus between polkadot and parachain"
