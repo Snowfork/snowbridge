@@ -34,12 +34,8 @@ describe('Bridge', function () {
       const amountWrapped = BigNumber(Web3.utils.toWei('10', "ether")); // 10 SnowDOT (18 decimal places)
       const ethAccount = ethClient.accounts[1];
 
-      // // Get the current sudo key in the system
-      // const sudoKey = await subClient.api.query.sudo.key();
-      // // Lookup from keyring (assuming we have added all, on --dev this would be `//Alice`)
-      // const sudoPair = subClient.keyring.getPair(sudoKey);
-
-      const sudoPair = subClient.alice
+      const sudoKey = await subClient.api.query.sudo.key().toString();
+      const sudoPair = subClient.keyring.getPair(sudoKey);
 
       const beforeEthBalance = await ethClient.getDotBalance(ethAccount);
       const beforeSubBalanceAlice = await subClient.queryAccountBalance(polkadotSenderSS58Alice);
