@@ -30,11 +30,14 @@ const PARA_TO_ETH_WAIT_TIME = 100000;
 
 async function bootstrap() {
   const ethClient = new EthClient(ethEndpoint + '/' + infuraProjectId, testNetworkID);
+  await ethClient.initialize();
+
   const subClient = new SubClient(parachainEndpoint);
   await subClient.connect();
+
   const testSubClient = new SubClient(testParachainEndpoint);
   await testSubClient.connect();
-  await ethClient.initialize();
+
   return { ethClient, subClient, testSubClient };
 }
 
