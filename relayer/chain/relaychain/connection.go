@@ -155,68 +155,10 @@ type ParaHead struct {
 	Data   types.Bytes
 }
 
-// Offset of encoded para id in storage key.
-// The key is of this format:
-//
-//	ParaId: u32
-//	Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
-const ParaIDOffset = 16 + 16 + 8
-
-func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
-	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
-	keys, err := co.fetchKeys(keyPrefix, blockHash)
-	if err != nil {
-		log.WithError(err).Error("Failed to get all parachain keys")
-		return nil, err
-	}
-
-	log.WithFields(log.Fields{
-		"numKeys":          len(keys),
-		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
-		"block":            blockHash.Hex(),
-	}).Trace("Found keys for Paras.Heads storage map")
-
-	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
-	if err != nil {
-		log.WithError(err).Error("Failed to get all parachain headers")
-		return nil, err
-	}
-
-	heads := make(map[uint32]ParaHead)
-	for _, changeSet := range changeSets {
-		for _, change := range changeSet.Changes {
-			if change.StorageData.IsNone() {
-				continue
-			}
-
-			var paraID uint32
-			if err := types.DecodeFromBytes(change.StorageKey[ParaIDOffset:], &paraID); err != nil {
-				log.WithError(err).Error("Failed to decode parachain ID")
-				return nil, err
-			}
-
-			_, headDataWrapped := change.StorageData.Unwrap()
-
-			var headData types.Bytes
-			if err := types.DecodeFromBytes(headDataWrapped, &headData); err != nil {
-				log.WithError(err).Error("Failed to decode HeadData wrapper")
-				return nil, err
-			}
-
-			heads[paraID] = ParaHead{
-				ParaID: paraID,
-				Data:   headData,
-			}
-		}
-	}
-
-	return heads, nil
-}
-
 // Fetches heads for each parachain Id filtering out para threads.
 func (conn *Connection) FetchParachainHeads(paraId uint32, relayChainBlockHash types.Hash) ([]ParaHead, *types.Header, error) {
 	// Fetch para heads
-	paraHeads, err := conn.FetchParaHeads(relayChainBlockHash)
+	paraHeads, err := conn.fetchParaHeads(relayChainBlockHash)
 	if err != nil {
 		log.WithError(err).Error("Cannot fetch para heads.")
 		return nil, nil, err
@@ -350,4 +292,62 @@ func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types
 	}).Trace("Fetching of paged keys complete.")
 
 	return results, nil
+}
+
+// Offset of encoded para id in storage key.
+// The key is of this format:
+//
+//	ParaId: u32
+//	Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
+const ParaIDOffset = 16 + 16 + 8
+
+func (co *Connection) fetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
+	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
+	keys, err := co.fetchKeys(keyPrefix, blockHash)
+	if err != nil {
+		log.WithError(err).Error("Failed to get all parachain keys")
+		return nil, err
+	}
+
+	log.WithFields(log.Fields{
+		"numKeys":          len(keys),
+		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
+		"block":            blockHash.Hex(),
+	}).Trace("Found keys for Paras.Heads storage map")
+
+	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
+	if err != nil {
+		log.WithError(err).Error("Failed to get all parachain headers")
+		return nil, err
+	}
+
+	heads := make(map[uint32]ParaHead)
+	for _, changeSet := range changeSets {
+		for _, change := range changeSet.Changes {
+			if change.StorageData.IsNone() {
+				continue
+			}
+
+			var paraID uint32
+			if err := types.DecodeFromBytes(change.StorageKey[ParaIDOffset:], &paraID); err != nil {
+				log.WithError(err).Error("Failed to decode parachain ID")
+				return nil, err
+			}
+
+			_, headDataWrapped := change.StorageData.Unwrap()
+
+			var headData types.Bytes
+			if err := types.DecodeFromBytes(headDataWrapped, &headData); err != nil {
+				log.WithError(err).Error("Failed to decode HeadData wrapper")
+				return nil, err
+			}
+
+			heads[paraID] = ParaHead{
+				ParaID: paraID,
+				Data:   headData,
+			}
+		}
+	}
+
+	return heads, nil
 }
