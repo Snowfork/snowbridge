@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -87,38 +86,9 @@ func BeefyProofFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// Fetch para heads
-	paraHeads, err := conn.FetchParaHeads(relayChainBlockHash)
-	if err != nil {
-		log.WithError(err).Error("Cannot fetch para heads.")
-		return err
-	}
-
-	// Make sure our snowbridge para head is included
-	log.WithField("relayChainBlockHash", relayChainBlockHash).WithField("paraId", paraId).Info("ParaHeads")
-	if _, ok := paraHeads[paraId]; !ok {
-		return fmt.Errorf("snowbridge is not a registered parachain")
-	}
-
-	// fetch ids of parachains (not including parathreads)
-	var parachainIDs []uint32
-
-	parachainsKey, err := types.CreateStorageKey(conn.Metadata(), "Paras", "Parachains", nil, nil)
+	paraHeadsAsSlice, parachainHeader, err := conn.FetchParachainHeads(paraId, relayChainBlockHash)
 	if err != nil {
 		return err
-	}
-
-	_, err = conn.API().RPC.State.GetStorage(parachainsKey, &parachainIDs, relayChainBlockHash)
-	if err != nil {
-		return err
-	}
-
-	// filter out parathreads
-	var paraHeadsAsSlice []relaychain.ParaHead
-	for _, v := range parachainIDs {
-		if head, ok := paraHeads[v]; ok {
-			paraHeadsAsSlice = append(paraHeadsAsSlice, head)
-		}
 	}
 
 	merkleProofData, err := parachain.CreateParachainMerkleProof(paraHeadsAsSlice, paraId)
@@ -133,6 +103,7 @@ func BeefyProofFn(cmd *cobra.Command, _ []string) error {
 		"relaychainBlockNumber": relayChainBlock,
 		"parachainBlockNumber":  parachainBlock,
 		"paraHeads":             paraHeadsAsSlice,
+		"parachainHeader":       parachainHeader,
 	}).Info("Generated proof input for parachain block.")
 
 	log.WithFields(log.Fields{

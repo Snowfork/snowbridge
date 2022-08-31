@@ -163,9 +163,7 @@ type ParaHead struct {
 const ParaIDOffset = 16 + 16 + 8
 
 func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
-
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
-
 	keys, err := co.fetchKeys(keyPrefix, blockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain keys")
@@ -185,7 +183,6 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 	}
 
 	heads := make(map[uint32]ParaHead)
-
 	for _, changeSet := range changeSets {
 		for _, change := range changeSet.Changes {
 			if change.StorageData.IsNone() {
@@ -214,6 +211,48 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 	}
 
 	return heads, nil
+}
+
+// Fetches heads for each parachain Id filtering out para threads.
+func (conn *Connection) FetchParachainHeads(paraId uint32, relayChainBlockHash types.Hash) ([]ParaHead, *types.Header, error) {
+	// Fetch para heads
+	paraHeads, err := conn.FetchParaHeads(relayChainBlockHash)
+	if err != nil {
+		log.WithError(err).Error("Cannot fetch para heads.")
+		return nil, nil, err
+	}
+
+	// Make sure our snowbridge para head is included
+	log.WithField("relayChainBlockHash", relayChainBlockHash).WithField("paraId", paraId).Info("Fetching parachain heads.")
+	if _, ok := paraHeads[paraId]; !ok {
+		return nil, nil, fmt.Errorf("snowbridge is not a registered parachain")
+	}
+
+	var snowbridgeHeader types.Header
+	if err := types.DecodeFromBytes(paraHeads[paraId].Data, &snowbridgeHeader); err != nil {
+		return nil, nil, fmt.Errorf("decode parachain header: %w", err)
+	}
+
+	// fetch ids of parachains (not including parathreads)
+	var parachainIDs []uint32
+	parachainsKey, err := types.CreateStorageKey(conn.Metadata(), "Paras", "Parachains", nil, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	_, err = conn.API().RPC.State.GetStorage(parachainsKey, &parachainIDs, relayChainBlockHash)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// filter out parathreads
+	var paraHeadsAsSlice []ParaHead
+	for _, v := range parachainIDs {
+		if head, ok := paraHeads[v]; ok {
+			paraHeadsAsSlice = append(paraHeadsAsSlice, head)
+		}
+	}
+	return paraHeadsAsSlice, &snowbridgeHeader, nil
 }
 
 func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID uint32) (*types.Header, error) {
