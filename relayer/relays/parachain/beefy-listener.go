@@ -453,23 +453,9 @@ func (li *BeefyListener) gatherProofInputs(
 	}
 
 	for len(items) > 0 && polkadotBlockNumber > 0 {
-		paraHeads, err := li.relaychainConn.FetchParaHeads(polkadotBlockHash)
+		paraHeadsAsSlice, snowbridgeHeader, err := li.relaychainConn.FetchParachainHeads(li.paraID, polkadotBlockHash)
 		if err != nil {
 			return err
-		}
-
-		if _, ok := paraHeads[li.paraID]; !ok {
-			return fmt.Errorf("snowbridge is not a registered parachain")
-		}
-
-		paraHeadsAsSlice := make([]relaychain.ParaHead, 0, len(paraHeads))
-		for _, v := range paraHeads {
-			paraHeadsAsSlice = append(paraHeadsAsSlice, v)
-		}
-
-		var snowbridgeHeader types.Header
-		if err := types.DecodeFromBytes(paraHeads[li.paraID].Data, &snowbridgeHeader); err != nil {
-			return fmt.Errorf("decode parachain header: %w", err)
 		}
 
 		snowbridgeBlockNumber := uint64(snowbridgeHeader.Number)
