@@ -309,7 +309,7 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 }
 
 func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types.StorageKey, error) {
-	const pageSize = 100
+	const pageSize = 200
 	var startKey *types.StorageKey
 
 	if pageSize < 1 {
