@@ -581,11 +581,11 @@ func (li *BeefyListener) scanForCommitments(
 
 	currentBlockNumber := lastParaBlockNumber
 
-	basicAccountsToCheck := make(map[types.AccountID]bool, len(basicAccountsAndNoncesToFind))
+	scanBasicChannelAccounts := make(map[types.AccountID]bool, len(basicAccountsAndNoncesToFind))
 	for _, basicAccountAndNonce := range basicAccountsAndNoncesToFind {
-		basicAccountsToCheck[basicAccountAndNonce.account] = true
+		scanBasicChannelAccounts[basicAccountAndNonce.account] = true
 	}
-	scanBasicChannelDone := len(basicAccountsToCheck) == 0
+	scanBasicChannelDone := len(scanBasicChannelAccounts) == 0
 
 	scanIncentivizedChannelDone := !scanIncentivizedChannel
 
@@ -641,7 +641,7 @@ func (li *BeefyListener) scanForCommitments(
 				}
 
 				for _, accountAndNonce := range basicAccountsAndNoncesToFind {
-					_, shouldCheckAccount := basicAccountsToCheck[accountAndNonce.account]
+					_, shouldCheckAccount := scanBasicChannelAccounts[accountAndNonce.account]
 					if !shouldCheckAccount {
 						continue
 					}
@@ -669,16 +669,16 @@ func (li *BeefyListener) scanForCommitments(
 							"Halting scan for account '%v'. Messages not committed yet on basic channel",
 							types.HexEncodeToString(accountAndNonce.account[:]),
 						)
-						delete(basicAccountsToCheck, accountAndNonce.account)
-						scanBasicChannelDone = len(basicAccountsToCheck) == 0
+						delete(scanBasicChannelAccounts, accountAndNonce.account)
+						scanBasicChannelDone = len(scanBasicChannelAccounts) == 0
 						// Collect these commitments
 					} else if bundleNonce > accountAndNonce.nonceToFind {
 						commitments[channelID] = append(commitments[channelID], NewCommitment(digestItem.AsCommitment.Hash, bundle))
 						// Collect this commitment and terminate scan
 					} else if bundleNonce == accountAndNonce.nonceToFind {
 						commitments[channelID] = append(commitments[channelID], NewCommitment(digestItem.AsCommitment.Hash, bundle))
-						delete(basicAccountsToCheck, accountAndNonce.account)
-						scanBasicChannelDone = len(basicAccountsToCheck) == 0
+						delete(scanBasicChannelAccounts, accountAndNonce.account)
+						scanBasicChannelDone = len(scanBasicChannelAccounts) == 0
 					}
 				}
 			}
