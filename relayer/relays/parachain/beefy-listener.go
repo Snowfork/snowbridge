@@ -480,11 +480,11 @@ func (li *BeefyListener) gatherProofInputs(
 				paraHeadsAsSlice,
 			}
 			log.WithFields(log.Fields{
-				"parachainId":             li.paraID,
-				"polkadotBlockHash":       polkadotBlockHash.Hex(),
-				"relayerchainBlockNumber": polkadotBlockNumber,
-				"parachainBlockNumber":    snowbridgeBlockNumber,
-				"paraHeads":               paraHeadsAsSlice,
+				"parachainId":           li.paraID,
+				"relaychainBlockHash":   polkadotBlockHash.Hex(),
+				"relaychainBlockNumber": polkadotBlockNumber,
+				"parachainBlockNumber":  snowbridgeBlockNumber,
+				"paraHeads":             paraHeadsAsSlice,
 			}).Info("Generated proof input for parachain block.")
 			delete(items, snowbridgeBlockNumber)
 		}
