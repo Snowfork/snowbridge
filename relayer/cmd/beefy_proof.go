@@ -121,13 +121,6 @@ func BeefyProofFn(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	// mmrRootHash, err := conn.GetMMRRootHash(beefyBlockHash)
-	// if err != nil {
-	// 	log.WithError(err).Error("Cannot get MMR root hash.")
-	// 	return err
-	// }
-	// _ = mmrRootHash
-
 	merkleProofData, err := parachain.CreateParachainMerkleProof(paraHeadsAsSlice, paraId)
 	if err != nil {
 		log.WithError(err).Error("Cannot create merkle proof.")

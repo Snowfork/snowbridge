@@ -93,7 +93,7 @@ func (co *Connection) GenerateProofForBlock(
 	log.WithFields(log.Fields{
 		"blockNumber": blockNumber,
 		"blockHash":   latestBeefyBlockHash.Hex(),
-	}).Info("Getting MMR Leaf for block...")
+	}).Trace("Getting MMR Leaf for block...")
 
 	// We expect 1 mmr leaf for each block. However, some chains only started using beefy late
 	// in their existence, so there are no leafs for blocks produced before beefy was activated.
@@ -145,7 +145,7 @@ func (co *Connection) GenerateProofForBlock(
 			"LeafCount": proofResponse.Proof.LeafCount,
 			"Items":     proofItemsHex,
 		},
-	}).Info("Generated MMR proof")
+	}).Trace("Generated MMR proof")
 
 	return proofResponse, nil
 }

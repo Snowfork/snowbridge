@@ -23,7 +23,6 @@ import (
 )
 
 func configureLogger() {
-	log.SetLevel(log.TraceLevel)
 	log.SetFormatter(&log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
 		FieldMap: log.FieldMap{

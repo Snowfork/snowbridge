@@ -485,7 +485,7 @@ func (li *BeefyListener) gatherProofInputs(
 				"relaychainBlockNumber": polkadotBlockNumber,
 				"parachainBlockNumber":  snowbridgeBlockNumber,
 				"paraHeads":             paraHeadsAsSlice,
-			}).Info("Generated proof input for parachain block.")
+			}).Trace("Generated proof input for parachain block.")
 			delete(items, snowbridgeBlockNumber)
 		}
 
