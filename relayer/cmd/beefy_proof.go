@@ -81,19 +81,19 @@ func BeefyProofFn(cmd *cobra.Command, _ []string) error {
 	paraId, _ := cmd.Flags().GetUint32("parachain-id")
 	parachainBlock, _ := cmd.Flags().GetUint64("parachain-block")
 
-	parachainBlockHash, err := conn.API().RPC.Chain.GetBlockHash(parachainBlock)
+	relayChainBlockHash, err := conn.API().RPC.Chain.GetBlockHash(relayChainBlock)
 	if err != nil {
 		log.WithError(err).Error("Cannot fetch parachain block hash.")
 		return err
 	}
 
-	paraHeads, err := conn.FetchParaHeads(beefyBlockHash)
+	paraHeads, err := conn.FetchParaHeads(relayChainBlockHash)
 	if err != nil {
 		log.WithError(err).Error("Cannot fetch para heads.")
 		return err
 	}
 
-	log.WithField("paraBlockHash", parachainBlockHash).WithField("paraId", paraId).Info("ParaHeads")
+	log.WithField("relayChainBlockHash", relayChainBlockHash).WithField("paraId", paraId).Info("ParaHeads")
 	if _, ok := paraHeads[paraId]; !ok {
 		return fmt.Errorf("snowbridge is not a registered parachain")
 	}
@@ -115,10 +115,20 @@ func BeefyProofFn(cmd *cobra.Command, _ []string) error {
 		log.WithError(err).Error("Cannot create merkle proof.")
 		return err
 	}
-	//mmrProof.Leaf.ParachainHeads.Hex(), merkleProofData.Root.String(),
+
 	log.WithFields(log.Fields{
-		"proof":           mmrProof.Leaf.ParachainHeads.Hex(),
-		"merkleProofData": merkleProofData.Root.Hex(),
+		"parachainId":           paraId,
+		"relaychainBlockHash":   relayChainBlockHash.Hex(),
+		"relaychainBlockNumber": relayChainBlock,
+		"parachainBlockNumber":  parachainBlock,
+		"paraHeads":             paraHeadsAsSlice,
+	}).Info("Generated proof input for parachain block.")
+
+	log.WithFields(log.Fields{
+		"mmrProofParachainHeads":           mmrProof.Leaf.ParachainHeads.Hex(),
+		"mmrProofParentNumberAndHash":      mmrProof.Leaf.ParentNumberAndHash,
+		"computedProofParachainHeads":      merkleProofData.Root.Hex(),
+		"computedProofParentNumberAndHash": types.ParentNumberAndHash{ParentNumber: types.U32(relayChainBlock), Hash: relayChainBlockHash},
 	}).Info("Complete.")
 
 	return nil
