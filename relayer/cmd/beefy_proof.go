@@ -87,20 +87,38 @@ func BeefyProofFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	// Fetch para heads
 	paraHeads, err := conn.FetchParaHeads(relayChainBlockHash)
 	if err != nil {
 		log.WithError(err).Error("Cannot fetch para heads.")
 		return err
 	}
 
+	// Make sure our snowbridge para head is included
 	log.WithField("relayChainBlockHash", relayChainBlockHash).WithField("paraId", paraId).Info("ParaHeads")
 	if _, ok := paraHeads[paraId]; !ok {
 		return fmt.Errorf("snowbridge is not a registered parachain")
 	}
 
-	paraHeadsAsSlice := make([]relaychain.ParaHead, 0, len(paraHeads))
-	for _, v := range paraHeads {
-		paraHeadsAsSlice = append(paraHeadsAsSlice, v)
+	// fetch ids of parachains (not including parathreads)
+	var parachainIDs []uint32
+
+	parachainsKey, err := types.CreateStorageKey(conn.Metadata(), "Paras", "Parachains", nil, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.API().RPC.State.GetStorage(parachainsKey, &parachainIDs, relayChainBlockHash)
+	if err != nil {
+		return err
+	}
+
+	// filter out parathreads
+	var paraHeadsAsSlice []relaychain.ParaHead
+	for _, v := range parachainIDs {
+		if head, ok := paraHeads[v]; ok {
+			paraHeadsAsSlice = append(paraHeadsAsSlice, head)
+		}
 	}
 
 	// mmrRootHash, err := conn.GetMMRRootHash(beefyBlockHash)
