@@ -22,10 +22,10 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 * Development environment for the relay services. See setup [instructions](../relayer/README.md#Development).
 
 * `jq` - https://stedolan.github.io/jq/download/
-* geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
+* geth - https://geth.ethereum.org/docs/install-and-build/installing-geth `go install github.com/ethereum/go-ethereum/cmd/geth@v1.10.23`
 * lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `v1.0.0`.
 * g++ (required for lodestar) is available in the `build-essential` package: `apt install build-essential`
-* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `v0.40.0-dev.ccdf688e6e`. Newer versions should work but haven't been tested.
+* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `v1.1.0`.
 
   ```bash
   yarn global add @chainsafe/lodestar@1.0.0

@@ -143,13 +143,13 @@ start_polkadot_launch()
     initial_beacon_block=""
     while [ -z "$initial_beacon_block" ] || [ "$initial_beacon_block" == "0x0000000000000000000000000000000000000000000000000000000000000000" ]
     do 
-        echo "Waiting for beacon chain to finalized to get finalized checkpoint..."
+        echo "Waiting for beacon chain to finalize to get initial block..."
         initial_beacon_block=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
             | jq -r '.data.finalized.root')
         sleep 3
     done 
 
-    echo "Found finalized checkpoint: $initial_beacon_block"
+    echo "Found initial finalized block: $initial_beacon_block"
     curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" \
         | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
 
