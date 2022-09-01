@@ -677,7 +677,7 @@ func (li *BeefyListener) scanForCommitments(
 					}
 					if basicChannelBundleProof.Root != digestItem.AsCommitment.Hash {
 						log.Warnf(
-							"Halting scan for account '%v'. Basic channel bundle proof doesn't match hash in digest item",
+							"Halting scan for account '%v'. Basic channel proof root doesn't match digest item's commitment hash",
 							types.HexEncodeToString(accountAndNonce.account[:]),
 						)
 						delete(scanBasicChannelAccounts, accountAndNonce.account)
