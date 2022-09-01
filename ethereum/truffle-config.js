@@ -22,6 +22,15 @@ module.exports = {
       network_id: 3,
       gas: 8000000,
       gasPrice: 50000000000
+    },
+    goerli: {
+      provider: () => new HDWalletProvider(
+        [process.env.ROPSTEN_PRIVATE_KEY],
+        "https://goerli.infura.io/v3/".concat(process.env.INFURA_PROJECT_ID)
+      ),
+      network_id: 5,
+      gas: 8000000,
+      gasPrice: 50000000000
     }
   },
   mocha: {
