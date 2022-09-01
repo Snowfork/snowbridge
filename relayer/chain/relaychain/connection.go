@@ -76,11 +76,10 @@ func (conn *Connection) GetMMRRootHash(blockHash types.Hash) (types.Hash, error)
 	var mmrRootHash types.Hash
 	ok, err := conn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, blockHash)
 	if err != nil {
-		log.Error(err)
-		return types.Hash{}, err
+		return types.Hash{}, fmt.Errorf("query storage for mmr root hash at block %v: %w", blockHash.Hex(), err)
 	}
 	if !ok {
-		return types.Hash{}, fmt.Errorf("could not get mmr root hash")
+		return types.Hash{}, fmt.Errorf("Mmr.RootHash storage item does not exist")
 	}
 	return mmrRootHash, nil
 }
@@ -93,7 +92,7 @@ func (co *Connection) GenerateProofForBlock(
 	log.WithFields(log.Fields{
 		"blockNumber": blockNumber,
 		"blockHash":   latestBeefyBlockHash.Hex(),
-	}).Trace("Getting MMR Leaf for block...")
+	}).Debug("Getting MMR Leaf for block...")
 
 	// We expect 1 mmr leaf for each block. However, some chains only started using beefy late
 	// in their existence, so there are no leafs for blocks produced before beefy was activated.
@@ -145,7 +144,7 @@ func (co *Connection) GenerateProofForBlock(
 			"LeafCount": proofResponse.Proof.LeafCount,
 			"Items":     proofItemsHex,
 		},
-	}).Trace("Generated MMR proof")
+	}).Debug("Generated MMR proof")
 
 	return proofResponse, nil
 }

@@ -522,8 +522,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 
 	mmrRootHash, err := li.relaychainConn.GetMMRRootHash(latestBeefyBlockHash)
 	if err != nil {
-		log.WithError(err).Error("Could not retrieve MMR roor hash")
-		return nil, err
+		return nil, fmt.Errorf("retrieve MMR root hash at block %v: %w", latestBeefyBlockHash.Hex(), err)
 	}
 
 	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, li.paraID)
