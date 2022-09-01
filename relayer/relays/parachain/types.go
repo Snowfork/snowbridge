@@ -36,22 +36,20 @@ func NewIncentivizedChannelCommitment(hash types.H256, data IncentivizedOutbound
 }
 
 type RawMerkleProof struct {
-	Root  types.H256
-	Proof []types.H256
+	Root           types.H256
+	Proof          []types.H256
+	NumberOfLeaves uint64
+	LeafIndex      uint64
 	// TODO: test that this decodes properly
 	Leaf []byte
 	// Leaf BasicOutboundChannelMessageBundle
-
-	NumberOfLeaves uint64
-	LeafIndex      uint64
 }
 
 type MerkleProof struct {
-	Root  types.H256
-	Proof [][32]byte
-	Leaf  BasicOutboundChannelMessageBundle
-
+	Root      types.H256
+	Proof     [][32]byte
 	HashSides []bool
+	Leaf      BasicOutboundChannelMessageBundle
 }
 
 func NewMerkleProof(rawProof RawMerkleProof, bundle BasicOutboundChannelMessageBundle) (MerkleProof, error) {
