@@ -453,7 +453,7 @@ func (li *BeefyListener) gatherProofInputs(
 	}
 
 	for len(items) > 0 && polkadotBlockNumber > 0 {
-		paraHeadsAsSlice, snowbridgeHeader, err := li.relaychainConn.FetchParachainHeads(li.paraID, polkadotBlockHash)
+		parachainHeads, snowbridgeHeader, err := li.relaychainConn.FetchParachainHeads(li.paraID, polkadotBlockHash)
 		if err != nil {
 			return err
 		}
@@ -463,14 +463,14 @@ func (li *BeefyListener) gatherProofInputs(
 		if task, ok := items[snowbridgeBlockNumber]; ok {
 			task.ProofInput = &ProofInput{
 				polkadotBlockNumber,
-				paraHeadsAsSlice,
+				parachainHeads,
 			}
 			log.WithFields(log.Fields{
 				"parachainId":           li.paraID,
 				"relaychainBlockHash":   polkadotBlockHash.Hex(),
 				"relaychainBlockNumber": polkadotBlockNumber,
 				"parachainBlockNumber":  snowbridgeBlockNumber,
-				"paraHeads":             paraHeadsAsSlice,
+				"paraHeads":             parachainHeads,
 			}).Trace("Generated proof input for parachain block.")
 			delete(items, snowbridgeBlockNumber)
 		}
