@@ -76,6 +76,12 @@ func BeefyProofFn(cmd *cobra.Command, _ []string) error {
 		log.WithError(err).Error("Cannot connect.")
 		return err
 	}
+	log.WithFields(log.Fields{
+		"relayChainBlock":      relayChainBlock,
+		"beefyBlockHash":       beefyBlockHash,
+		"beefyActivationBlock": 0,
+		"mmrProof":             mmrProof,
+	}).Info("conn.GenerateProofForBlock")
 
 	paraId, _ := cmd.Flags().GetUint32("parachain-id")
 	parachainBlock, _ := cmd.Flags().GetUint64("parachain-block")
@@ -88,14 +94,26 @@ func BeefyProofFn(cmd *cobra.Command, _ []string) error {
 
 	paraHeadsAsSlice, parachainHeader, err := conn.FetchParachainHeads(paraId, relayChainBlockHash)
 	if err != nil {
+		log.WithError(err).Error("Cannot fetch parachain head.")
 		return err
 	}
+	log.WithFields(log.Fields{
+		"paraHeadsAsSlice":    paraHeadsAsSlice,
+		"parachainHeader":     parachainHeader,
+		"paraId":              paraId,
+		"relayChainBlockHash": relayChainBlockHash.Hex(),
+	}).Info("parachain.CreateParachainMerkleProof")
 
 	merkleProofData, err := parachain.CreateParachainMerkleProof(paraHeadsAsSlice, paraId)
 	if err != nil {
 		log.WithError(err).Error("Cannot create merkle proof.")
 		return err
 	}
+	log.WithFields(log.Fields{
+		"paraHeadsAsSlice": paraHeadsAsSlice,
+		"paraId":           paraId,
+		"merkleProofData":  merkleProofData,
+	}).Info("parachain.CreateParachainMerkleProof")
 
 	log.WithFields(log.Fields{
 		"parachainId":           paraId,
