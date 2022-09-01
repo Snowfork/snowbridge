@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
@@ -82,13 +83,15 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 	basicChannel := make(chan uint64)
 	incentivizedChannel := make(chan uint64)
 
+	lastSyncedExecutionBlockNumber := uint64(0)
+
 	eg.Go(func() error {
 		defer func() {
 			close(basicChannel)
 			close(incentivizedChannel)
 		}()
 		for {
-			lastBlockNumber, err := h.SyncHeaders(ctx)
+			err := h.SyncHeaders(ctx)
 			switch {
 			case errors.Is(err, ErrFinalizedHeaderUnchanged):
 				log.WithField("finalized_header", h.cache.LastFinalizedHeader()).Info("finalized header unchanged")
@@ -96,9 +99,29 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 				log.WithError(err).Error("error while syncing headers")
 
 				return err
-			default:
-				basicChannel <- lastBlockNumber
-				incentivizedChannel <- lastBlockNumber
+			}
+
+			lastImportedFinalizedHeader, err := h.writer.GetLastStoredFinalizedHeader()
+			if err != nil {
+				return fmt.Errorf("fetch last finalized header: %w", err)
+			}
+
+			log.WithField("last_finalized_header", lastImportedFinalizedHeader).Info("read last finalized header from parachain")
+
+			executionBlockNumber, err := h.syncer.GetExecutionBlockHash(lastImportedFinalizedHeader)
+			if err != nil {
+				return fmt.Errorf("fetch execution block hash: %w", err)
+			}
+
+			log.WithField("block_number", executionBlockNumber).Info("last finalized execution block")
+
+			if executionBlockNumber > lastSyncedExecutionBlockNumber {
+				lastSyncedExecutionBlockNumber = executionBlockNumber
+
+				log.WithField("block_number", lastSyncedExecutionBlockNumber).Info("sending block number")
+
+				basicChannel <- lastSyncedExecutionBlockNumber
+				incentivizedChannel <- lastSyncedExecutionBlockNumber
 			}
 
 			select {
@@ -206,18 +229,18 @@ func (h *Header) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggr
 	return headerUpdate, nil
 }
 
-func (h *Header) SyncHeaders(ctx context.Context) (uint64, error) {
+func (h *Header) SyncHeaders(ctx context.Context) error {
 	secondLastFinalizedHeader := h.cache.LastFinalizedHeader()
 
 	finalizedHeader, finalizedHeaderBlockRoot, err := h.SyncFinalizedHeader(ctx)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	lastFinalizedHeader := h.cache.LastFinalizedHeader()
 
 	if lastFinalizedHeader == secondLastFinalizedHeader {
-		return 0, ErrFinalizedHeaderUnchanged
+		return ErrFinalizedHeaderUnchanged
 	}
 
 	log.WithFields(log.Fields{
@@ -227,40 +250,39 @@ func (h *Header) SyncHeaders(ctx context.Context) (uint64, error) {
 
 	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
 
-	prevSyncAggregate, err := h.syncer.GetSyncAggregate(finalizedHeaderBlockRoot)
+	prevSyncAggregate, err := h.syncer.GetSyncAggregateForSlot(uint64(finalizedHeader.FinalizedHeader.Slot + 1))
 	if err != nil {
-		return 0, fmt.Errorf("fetch sync aggregate: %w", err)
+		return fmt.Errorf("get sync aggregate by slot: %w", err)
+	}
+
+	headerUpdate, err := h.SyncHeader(ctx, finalizedHeaderBlockRoot, prevSyncAggregate)
+	if err != nil {
+		return err
 	}
 
 	foundFinalizedHeaderAncestor := false
-	ancestorFinalizedHeader := common.Hash{}
+	prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 
 	for secondLastFinalizedHeader != blockRoot {
 		headerUpdate, err := h.SyncHeader(ctx, blockRoot, prevSyncAggregate)
 		if err != nil {
-			return 0, err
+			return err
 		}
 
 		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
 		if !foundFinalizedHeaderAncestor {
-			ancestorFinalizedHeader = blockRoot
 			foundFinalizedHeaderAncestor = true
 		}
 
 		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 	}
 
-	// Import the execution header for the second last finalized header too.
-	_, err = h.SyncHeader(ctx, blockRoot, prevSyncAggregate)
+	executionBlockNumber, err := h.syncer.GetExecutionBlockHash(finalizedHeaderBlockRoot)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	// Use the block just before the last finalized header, because the finalized header is not imported in this chunk
-	executionBlockNumber, err := h.syncer.GetExecutionBlockHash(ancestorFinalizedHeader)
-	if err != nil {
-		return 0, err
-	}
+	log.WithField("block_number", executionBlockNumber).Info("according to last finalized header, last execution header is")
 
-	return executionBlockNumber, nil
+	return nil
 }
