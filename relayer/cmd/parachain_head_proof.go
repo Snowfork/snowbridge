@@ -10,12 +10,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func beefyProofCmd() *cobra.Command {
+func parachainHeadProofCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "beefy-proof",
+		Use:   "parachain-head-proof",
 		Short: "Prove a block using beefy.",
 		Args:  cobra.ExactArgs(0),
-		RunE:  BeefyProofFn,
+		RunE:  ParachainHeadProofFn,
 	}
 
 	cmd.Flags().StringP("url", "u", "", "Polkadot URL")
@@ -31,7 +31,7 @@ func beefyProofCmd() *cobra.Command {
 	cmd.Flags().Uint64(
 		"relaychain-block",
 		0,
-		"The relaychain block you are trying to prove. i.e. Leaf Index.",
+		"The relaychain block in which the parachain header was was accepted.",
 	)
 	cmd.MarkFlagRequired("relaychain-block")
 
@@ -51,7 +51,7 @@ func beefyProofCmd() *cobra.Command {
 	return cmd
 }
 
-func BeefyProofFn(cmd *cobra.Command, _ []string) error {
+func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
 	url, _ := cmd.Flags().GetString("url")
