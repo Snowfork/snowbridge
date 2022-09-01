@@ -574,7 +574,7 @@ func (li *BeefyListener) scanForCommitments(
 	incentivizedNonceToFind uint64,
 ) ([]*Task, error) {
 	log.WithFields(log.Fields{
-		"basicAccountsAndNonces": basicAccountsAndNoncesToFind,
+		"basicAccountsAndNonces": fmt.Sprintf("%+v", basicAccountsAndNoncesToFind),
 		"incentivizedNonce":      incentivizedNonceToFind,
 		"latestblockNumber":      lastParaBlockNumber,
 	}).Debug("Searching backwards from latest block on parachain to find block with nonces")
