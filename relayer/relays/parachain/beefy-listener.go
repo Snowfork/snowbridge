@@ -616,7 +616,7 @@ func (li *BeefyListener) scanForCommitments(
 			continue
 		}
 
-		basicChannelProofs := make([]MerkleProof, len(basicAccountsAndNoncesToFind))
+		basicChannelProofs := make([]MerkleProof, 0, len(basicAccountsAndNoncesToFind))
 		var incentivizedChannelCommitment *IncentivizedChannelCommitment
 
 		events, err := li.eventQueryClient.QueryEvents(ctx, li.config.Parachain.Endpoint, blockHash)
