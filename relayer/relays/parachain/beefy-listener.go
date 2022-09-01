@@ -727,6 +727,10 @@ func (li *BeefyListener) scanForCommitments(
 			}
 		}
 
+		for _, proof := range basicChannelProofs {
+			log.Debugf("proof root: %v", proof.Root)
+		}
+
 		if len(basicChannelProofs) > 0 || incentivizedChannelCommitment != nil {
 			task := Task{
 				ParaID:                        li.paraID,
@@ -767,11 +771,13 @@ func fetchBundleProof(
 	}
 
 	err = types.DecodeFromHexString(proofHex, &rawProof)
+	log.Debugf("raw proof: %+v", rawProof)
 	if err != nil {
 		return proof, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
 	proof, err = NewMerkleProof(rawProof, bundle)
+	log.Debugf("proof: %+v", proof)
 	if err != nil {
 		return proof, fmt.Errorf("decode merkle proof: %w", err)
 	}
