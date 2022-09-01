@@ -616,7 +616,8 @@ func (li *BeefyListener) scanForCommitments(
 			continue
 		}
 
-		commitments := make(map[ChannelID][]Commitment)
+		basicChannelProofs := make([]MerkleProof, len(basicAccountsAndNoncesToFind))
+		var incentivizedChannelCommitment *IncentivizedChannelCommitment
 
 		events, err := li.eventQueryClient.QueryEvents(ctx, li.config.Parachain.Endpoint, blockHash)
 		if err != nil {
@@ -640,6 +641,7 @@ func (li *BeefyListener) scanForCommitments(
 					return nil, fmt.Errorf("basic channel commitment hash in digest item does not match the one in the Committed event")
 				}
 
+				// TODO: iterate over basic channel event bundles instead of accounts configured on the relayer
 				for _, accountAndNonce := range basicAccountsAndNoncesToFind {
 					_, shouldCheckAccount := scanBasicChannelAccounts[accountAndNonce.account]
 					if !shouldCheckAccount {
@@ -652,11 +654,6 @@ func (li *BeefyListener) scanForCommitments(
 						continue
 					}
 					bundle := events.Basic.Bundles[bundleIndex]
-
-					basicChannelBundleProof, err = fetchBundleProof(li.parachainConnection.API(), digestItem, bundleIndex)
-					if err != nil {
-						return nil, err
-					}
 
 					bundleNonceBigInt := big.Int(bundle.Nonce)
 					bundleNonce := bundleNonceBigInt.Uint64()
@@ -671,12 +668,29 @@ func (li *BeefyListener) scanForCommitments(
 						)
 						delete(scanBasicChannelAccounts, accountAndNonce.account)
 						scanBasicChannelDone = len(scanBasicChannelAccounts) == 0
+						continue
+					}
+
+					basicChannelBundleProof, err = fetchBundleProof(li.parachainConnection.API(), digestItem, bundleIndex)
+					if err != nil {
+						return nil, err
+					}
+					if basicChannelBundleProof.Root != digestItem.AsCommitment.Hash {
+						log.Warnf(
+							"Halting scan for account '%v'. Basic channel bundle proof doesn't match hash in digest item",
+							types.HexEncodeToString(accountAndNonce.account[:]),
+						)
+						delete(scanBasicChannelAccounts, accountAndNonce.account)
+						scanBasicChannelDone = len(scanBasicChannelAccounts) == 0
+						continue
+					}
+
+					if bundleNonce > accountAndNonce.nonceToFind {
 						// Collect these commitments
-					} else if bundleNonce > accountAndNonce.nonceToFind {
-						commitments[channelID] = append(commitments[channelID], NewCommitment(digestItem.AsCommitment.Hash, bundle))
-						// Collect this commitment and terminate scan
+						basicChannelProofs = append(basicChannelProofs, basicChannelBundleProof)
 					} else if bundleNonce == accountAndNonce.nonceToFind {
-						commitments[channelID] = append(commitments[channelID], NewCommitment(digestItem.AsCommitment.Hash, bundle))
+						// Collect this commitment and terminate scan
+						basicChannelProofs = append(basicChannelProofs, basicChannelBundleProof)
 						delete(scanBasicChannelAccounts, accountAndNonce.account)
 						scanBasicChannelDone = len(scanBasicChannelAccounts) == 0
 					}
@@ -702,26 +716,26 @@ func (li *BeefyListener) scanForCommitments(
 				if bundleNonce < incentivizedNonceToFind {
 					scanIncentivizedChannelDone = true
 					continue
-					// Collect these commitments
 				} else if bundleNonce > incentivizedNonceToFind {
-					commitments[channelID] = append(commitments[channelID], NewCommitment(digestItem.AsCommitment.Hash, bundle))
-					// collect this commitment and terminate scan
+					// Collect these commitments
+					*incentivizedChannelCommitment = NewIncentivizedChannelCommitment(digestItem.AsCommitment.Hash, bundle)
 				} else if bundleNonce == incentivizedNonceToFind {
-					commitments[channelID] = append(commitments[channelID], NewCommitment(digestItem.AsCommitment.Hash, bundle))
+					// Collect this commitment and terminate scan
+					*incentivizedChannelCommitment = NewIncentivizedChannelCommitment(digestItem.AsCommitment.Hash, bundle)
 					scanIncentivizedChannelDone = true
 				}
 			}
 		}
 
-		if len(commitments) > 0 {
+		if len(basicChannelProofs) > 0 || incentivizedChannelCommitment != nil {
 			task := Task{
-				ParaID:                  li.paraID,
-				BlockNumber:             currentBlockNumber,
-				Header:                  header,
-				Commitments:             commitments,
-				BasicChannelBundleProof: &basicChannelBundleProof,
-				ProofInput:              nil,
-				ProofOutput:             nil,
+				ParaID:                        li.paraID,
+				BlockNumber:                   currentBlockNumber,
+				Header:                        header,
+				BasicChannelProofs:            &basicChannelProofs,
+				IncentivizedChannelCommitment: incentivizedChannelCommitment,
+				ProofInput:                    nil,
+				ProofOutput:                   nil,
 			}
 			tasks = append(tasks, &task)
 		}
@@ -742,19 +756,26 @@ func fetchBundleProof(
 	digestItem AuxiliaryDigestItem,
 	bundleIndex int,
 ) (MerkleProof, error) {
-	var basicChannelBundleProof MerkleProof
 	var proofHex string
+	var rawProof RawMerkleProof
+	var proof MerkleProof
+
 	err := api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItem.AsCommitment.Hash.Hex(), bundleIndex)
 	if err != nil {
-		return basicChannelBundleProof, fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof(%v, %v): %w", digestItem.AsCommitment.Hash.Hex(), bundleIndex, err)
+		return proof, fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof(%v, %v): %w", digestItem.AsCommitment.Hash.Hex(), bundleIndex, err)
 	}
 
-	err = types.DecodeFromHexString(proofHex, &basicChannelBundleProof)
+	err = types.DecodeFromHexString(proofHex, &rawProof)
 	if err != nil {
-		return basicChannelBundleProof, fmt.Errorf("decode merkle proof: %w", err)
+		return proof, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
-	return basicChannelBundleProof, nil
+	proof, err = NewMerkleProof(rawProof)
+	if err != nil {
+		return proof, fmt.Errorf("decode merkle proof: %w", err)
+	}
+
+	return proof, nil
 }
 
 func bundleIndexForAccount(bundles []BasicOutboundChannelMessageBundle, account *[32]byte) int {
