@@ -39,8 +39,8 @@ type RawMerkleProof struct {
 	Root  types.H256
 	Proof []types.H256
 	// TODO: test that this decodes properly
-	// Leaf  []byte
-	Leaf BasicOutboundChannelMessageBundle
+	Leaf []byte
+	// Leaf BasicOutboundChannelMessageBundle
 
 	NumberOfLeaves uint64
 	LeafIndex      uint64
@@ -54,7 +54,7 @@ type MerkleProof struct {
 	HashSides []bool
 }
 
-func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
+func NewMerkleProof(rawProof RawMerkleProof, bundle BasicOutboundChannelMessageBundle) (MerkleProof, error) {
 	var proof MerkleProof
 
 	byteArrayProof := make([][32]byte, len(rawProof.Proof))
@@ -71,7 +71,7 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 		Root:      rawProof.Root,
 		Proof:     byteArrayProof,
 		HashSides: hashSides,
-		Leaf:      rawProof.Leaf,
+		Leaf:      bundle,
 	}
 
 	return proof, nil

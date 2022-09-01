@@ -671,7 +671,7 @@ func (li *BeefyListener) scanForCommitments(
 						continue
 					}
 
-					basicChannelBundleProof, err = fetchBundleProof(li.parachainConnection.API(), digestItem, bundleIndex)
+					basicChannelBundleProof, err = fetchBundleProof(li.parachainConnection.API(), digestItem, bundleIndex, bundle)
 					if err != nil {
 						return nil, err
 					}
@@ -755,6 +755,7 @@ func fetchBundleProof(
 	api *gsrpc.SubstrateAPI,
 	digestItem AuxiliaryDigestItem,
 	bundleIndex int,
+	bundle BasicOutboundChannelMessageBundle,
 ) (MerkleProof, error) {
 	var proofHex string
 	var rawProof RawMerkleProof
@@ -770,7 +771,7 @@ func fetchBundleProof(
 		return proof, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
-	proof, err = NewMerkleProof(rawProof)
+	proof, err = NewMerkleProof(rawProof, bundle)
 	if err != nil {
 		return proof, fmt.Errorf("decode merkle proof: %w", err)
 	}
