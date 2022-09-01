@@ -187,13 +187,13 @@ func (conn *Connection) FetchParachainHeads(paraId uint32, relayChainBlockHash t
 	}
 
 	// filter out parathreads
-	var paraHeadsAsSlice []ParaHead
+	var parachainHeads []ParaHead
 	for _, v := range parachainIDs {
 		if head, ok := paraHeads[v]; ok {
-			paraHeadsAsSlice = append(paraHeadsAsSlice, head)
+			parachainHeads = append(parachainHeads, head)
 		}
 	}
-	return paraHeadsAsSlice, &snowbridgeHeader, nil
+	return parachainHeads, &snowbridgeHeader, nil
 }
 
 func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID uint32) (*types.Header, error) {
