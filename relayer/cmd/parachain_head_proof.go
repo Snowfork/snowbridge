@@ -24,7 +24,7 @@ func parachainHeadProofCmd() *cobra.Command {
 	cmd.Flags().BytesHex(
 		"beefy-block-hash",
 		[]byte{},
-		"Latest beefy block",
+		"Latest block finalized by BEEFY",
 	)
 	cmd.MarkFlagRequired("beefy-block-hash")
 

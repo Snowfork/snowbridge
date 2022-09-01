@@ -26,7 +26,7 @@ func init() {
 	rootCmd.AddCommand(subBeefyCmd())
 	rootCmd.AddCommand(leafCmd())
 	rootCmd.AddCommand(basicChannelLeafProofCmd())
-	rootCmd.AddCommand(beefyProofCmd())
+	rootCmd.AddCommand(parachainHeadProofCmd())
 }
 
 func Execute() {
