@@ -160,15 +160,17 @@ func (wr *EthereumWriter) WriteChannels(
 		}
 	}
 
-	err := wr.WriteIncentivizedChannel(
-		options,
-		task.IncentivizedChannelCommitment.Hash,
-		task.IncentivizedChannelCommitment.Data,
-		task.ParaID,
-		task.ProofOutput,
-	)
-	if err != nil {
-		return fmt.Errorf("write incentivized channel: %w", err)
+	if task.IncentivizedChannelCommitment != nil {
+		err := wr.WriteIncentivizedChannel(
+			options,
+			task.IncentivizedChannelCommitment.Hash,
+			task.IncentivizedChannelCommitment.Data,
+			task.ParaID,
+			task.ProofOutput,
+		)
+		if err != nil {
+			return fmt.Errorf("write incentivized channel: %w", err)
+		}
 	}
 
 	return nil
