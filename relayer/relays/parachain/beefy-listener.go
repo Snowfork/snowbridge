@@ -537,7 +537,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 	}
 
 	// Generate a merkle proof for the parachain heads.
-	// Polkadot uses the following code to generate their merkle proof:
+	// Polkadot uses the following code to generate the merkle proof:
 	// https://github.com/paritytech/polkadot/blob/2eb7672905d99971fc11ad7ff4d57e68967401d2/runtime/rococo/src/lib.rs#L700
 	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, li.paraID)
 	if err != nil {
