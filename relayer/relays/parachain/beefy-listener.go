@@ -439,6 +439,8 @@ func (li *BeefyListener) discoverCatchupTasks(
 	return tasks, nil
 }
 
+// For each snowbridge header (Task) gatherProofInputs will search to find the polkadot block
+// in which that header was finalized as well as the parachain heads for that block.
 func (li *BeefyListener) gatherProofInputs(
 	polkadotBlockNumber uint64,
 	polkadotBlockHash types.Hash,
@@ -452,6 +454,8 @@ func (li *BeefyListener) gatherProofInputs(
 		items[task.BlockNumber] = task
 	}
 
+	// Scan blocks linearly in a backwards direction until there are no more blocks
+	// or all items have been found.
 	for len(items) > 0 && polkadotBlockNumber > 0 {
 		parachainHeads, snowbridgeHeader, err := li.relaychainConn.FetchParachainHeads(li.paraID, polkadotBlockHash)
 		if err != nil {
@@ -471,7 +475,7 @@ func (li *BeefyListener) gatherProofInputs(
 				"relaychainBlockNumber": polkadotBlockNumber,
 				"parachainBlockNumber":  snowbridgeBlockNumber,
 				"paraHeads":             parachainHeads,
-			}).Trace("Generated proof input for parachain block.")
+			}).Debug("Generated proof input for parachain block.")
 			delete(items, snowbridgeBlockNumber)
 		}
 
@@ -489,6 +493,12 @@ func (li *BeefyListener) gatherProofInputs(
 	return nil
 }
 
+// Generates two proofs from the proof input.
+//
+// The polkadot block (leaf index) will be used to generate an MMR proof required by the BeefyClient contract. This will prove that the polkadot
+// block containing the snowbridge header is finalized on the relaychain.
+// The parachain heads will be used to generate a merkle proof required by the ParachainClient contract. This will prove that the snowbridge
+// header containing the commitment is included in the parachain heads for the previously proven polkadot block.
 func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (*ProofOutput, error) {
 	latestBeefyBlockNumber, latestBeefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
 	if err != nil {
@@ -500,6 +510,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 		"leafIndex":  input.PolkadotBlockNumber,
 	}).Info("Generating MMR proof")
 
+	// Generate the MMR proof for the polkadot block.
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
 		input.PolkadotBlockNumber,
 		latestBeefyBlockHash,
@@ -525,6 +536,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 		return nil, fmt.Errorf("retrieve MMR root hash at block %v: %w", latestBeefyBlockHash.Hex(), err)
 	}
 
+	// Generate a merkle proof for the parachain heads.
 	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, li.paraID)
 	if err != nil {
 		return nil, fmt.Errorf("create parachain header proof: %w", err)
