@@ -91,7 +91,7 @@ func generateHashSides(commitmentProof RawMerkleProof) ([]bool, error) {
 	// This is equivalent to the number of bits that aren't leading zeroes in breadth - 1, which we use here.
 	treeHeight := 64 - bits.LeadingZeros64(breadth-1)
 	// The number of leaves in the next-largest perfect tree after the current complete tree.
-	perfectTreeBreadth := uint64(2 ^ treeHeight)
+	perfectTreeBreadth := uint64(1 << treeHeight)
 
 	// map node position in complete tree to left child in the next-largest perfect tree.
 	// Then skip the first side to get back to the sides for the node in the complete tree.
