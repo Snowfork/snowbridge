@@ -35,7 +35,7 @@ library MerkleProof {
      * @param leaf the leaf we want to prove
      * @param proof an array of nodes to be hashed in order that they should be hashed
      * @param side an array of booleans signalling whether the corresponding proof hash should be hashed on the left side (true) or
-     * the right side (false) of the current hash
+     * the right side (false) of the current node hash
      */
     function computeRootFromProofAndSide(
         bytes32 leaf,

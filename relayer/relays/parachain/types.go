@@ -76,25 +76,53 @@ func NewMerkleProof(rawProof RawMerkleProof, bundle BasicOutboundChannelMessageB
 }
 
 func generateHashSides(commitmentProof RawMerkleProof) ([]bool, error) {
-	pos := commitmentProof.LeafIndex
-	width := commitmentProof.NumberOfLeaves
+	nodePosition := commitmentProof.LeafIndex
+	breadth := commitmentProof.NumberOfLeaves
 
-	if pos >= width {
-		return nil, fmt.Errorf("leaf position %v is too high in proof with %v leaves", pos, width)
+	if nodePosition >= breadth {
+		return nil, fmt.Errorf("leaf position %v is too high in proof with %v leaves", nodePosition, breadth)
 	}
 
-	if width == 0 {
+	if breadth == 0 {
 		return nil, fmt.Errorf("no hash sides for an empty proof")
 	}
 
-	// The number of intermediate hashes is the height of the complete tree, which is the base 2 log of the number of leaves, rounded up.
-	// This is equivalent to the number of bits after the most significant bit, which is what we use here.
-	numSides := 64 - bits.LeadingZeros64(width-1)
-	sides := make([]bool, numSides)
-	for i := 0; i < numSides; i++ {
-		sides[i] = pos%2 == 1
-		pos /= 2
-		width = ((width - 1) / 2) + 1
+	// The height of a complete tree (eg. the Merkle tree we have here) is the base 2 log of the number of leaves, rounded up.
+	// This is equivalent to the number of bits that aren't leading zeroes in breadth - 1, which we use here.
+	treeHeight := 64 - bits.LeadingZeros64(breadth-1)
+	// The number of leaves in the next-largest perfect tree after the current complete tree.
+	perfectTreeBreadth := uint64(2 ^ treeHeight)
+
+	// map node position in complete tree to left child in the next-largest perfect tree.
+	// Then skip the first side to get back to the sides for the node in the complete tree.
+
+	// The bottom level has 2 nodes for every 1 node the tree has over the next-smaller perfect tree.
+	bottomLevelWidth := 2 * (breadth - (perfectTreeBreadth / 2))
+	// Nodes on the bottom level have depth equal to tree height.
+	// In a complete tree, the nodes on the bottom level are as far left as possible, so their position must be less than the number of
+	// nodes on the bottom level.
+	nodeDepthIsTreeHeight := nodePosition < bottomLevelWidth
+
+	// The number of intermediate hashes for a leaf is the depth of that leaf.
+	// Since the tree is complete, this depth is either the height of the tree, or height - 1.
+	var nodeDepth int
+	if nodeDepthIsTreeHeight {
+		// same as a perfect tree
+		nodeDepth = treeHeight
+	} else {
+		// like a perfect tree, but skip the first iteration
+		nodeDepth = treeHeight - 1
+		nodePosition -= bottomLevelWidth / 2
+		breadth = ((breadth - 1) / 2) + 1
+	}
+
+	sides := make([]bool, nodeDepth)
+	for i := 0; i < nodeDepth; i++ {
+		// sides[i] is true when the proof hash is on the left and false when on the right.
+		// this is the same as being true when the node hash is on the right and false when on the left, which we use here.
+		sides[i] = nodePosition%2 == 1
+		nodePosition /= 2
+		breadth = ((breadth - 1) / 2) + 1
 	}
 
 	return sides, nil
