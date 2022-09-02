@@ -493,12 +493,8 @@ func (li *BeefyListener) gatherProofInputs(
 	return nil
 }
 
-// Generates two proofs from the proof input.
-//
-// The polkadot block (leaf index) will be used to generate an MMR proof required by the BeefyClient contract. This will prove that the polkadot
-// block containing the snowbridge header is finalized on the relaychain.
-// The parachain heads will be used to generate a merkle proof required by the ParachainClient contract. This will prove that the snowbridge
-// header containing the commitment is included in the parachain heads for the previously proven polkadot block.
+// Generates a proof for an MMR leaf, and then generates a merkle proof for our parachain header, which should be verifiable against the
+// parachains root in the mmr leaf.
 func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (*ProofOutput, error) {
 	latestBeefyBlockNumber, latestBeefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
 	if err != nil {
