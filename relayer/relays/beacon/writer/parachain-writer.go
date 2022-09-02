@@ -3,6 +3,7 @@ package writer
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -120,6 +121,83 @@ func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName s
 	wr.nonce = wr.nonce + 1
 
 	return nil
+}
+
+func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrinsicName string, payload ...interface{}) error {
+	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
+	if err != nil {
+		return err
+	}
+
+	c, err := types.NewCall(meta, extrinsicName, payload...)
+	if err != nil {
+		return err
+	}
+
+	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
+	if err != nil {
+		return err
+	}
+
+	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
+	if err != nil {
+		return err
+	}
+
+	ext := types.NewExtrinsic(c)
+	era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
+
+	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return err
+	}
+
+	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
+	if err != nil {
+		return err
+	}
+
+	o := types.SignatureOptions{
+		BlockHash:          latestHash,
+		Era:                era,
+		GenesisHash:        genesisHash,
+		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
+		SpecVersion:        rv.SpecVersion,
+		Tip:                types.NewUCompactFromUInt(0),
+		TransactionVersion: rv.TransactionVersion,
+	}
+
+	extI := ext
+
+	err = extI.Sign(*wr.conn.Keypair(), o)
+	if err != nil {
+		return err
+	}
+
+	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(extI)
+	if err != nil {
+		return err
+	}
+
+	wr.nonce = wr.nonce + 1
+
+	defer sub.Unsubscribe()
+
+	timeout := time.After(60 * time.Second)
+	for {
+		select {
+		case status := <-sub.Chan():
+			if status.IsInBlock {
+				return nil
+			}
+		case err = <-sub.Err():
+			return err
+		case <-timeout:
+			return fmt.Errorf("timeout")
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 func (wr *ParachainWriter) GetLastSyncedSyncCommitteePeriod() (uint64, error) {

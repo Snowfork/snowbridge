@@ -18,6 +18,7 @@ import (
 )
 
 var ErrFinalizedHeaderUnchanged = errors.New("finalized header unchanged")
+var ErrFinalizedHeaderNotImported = errors.New("finalized header not imported")
 
 type Header struct {
 	cache  *cache.BeaconCache
@@ -95,33 +96,27 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 			switch {
 			case errors.Is(err, ErrFinalizedHeaderUnchanged):
 				log.WithField("finalized_header", h.cache.LastFinalizedHeader()).Info("finalized header unchanged")
+			case errors.Is(err, ErrFinalizedHeaderNotImported):
+				log.Info("last finalized header wasn't imported")
 			case err != nil:
 				log.WithError(err).Error("error while syncing headers")
-
 				return err
-			}
+			default:
+				executionBlockNumber, err := h.syncer.GetExecutionBlockHash(h.cache.LastFinalizedHeader())
+				if err != nil {
+					return fmt.Errorf("fetch execution block hash: %w", err)
+				}
 
-			lastImportedFinalizedHeader, err := h.writer.GetLastStoredFinalizedHeader()
-			if err != nil {
-				return fmt.Errorf("fetch last finalized header: %w", err)
-			}
+				log.WithField("block_number", executionBlockNumber).Info("last finalized execution block")
 
-			log.WithField("last_finalized_header", lastImportedFinalizedHeader).Info("read last finalized header from parachain")
+				if executionBlockNumber > lastSyncedExecutionBlockNumber {
+					lastSyncedExecutionBlockNumber = executionBlockNumber
 
-			executionBlockNumber, err := h.syncer.GetExecutionBlockHash(lastImportedFinalizedHeader)
-			if err != nil {
-				return fmt.Errorf("fetch execution block hash: %w", err)
-			}
+					log.WithField("block_number", lastSyncedExecutionBlockNumber).Info("sending block number")
 
-			log.WithField("block_number", executionBlockNumber).Info("last finalized execution block")
-
-			if executionBlockNumber > lastSyncedExecutionBlockNumber {
-				lastSyncedExecutionBlockNumber = executionBlockNumber
-
-				log.WithField("block_number", lastSyncedExecutionBlockNumber).Info("sending block number")
-
-				basicChannel <- lastSyncedExecutionBlockNumber
-				incentivizedChannel <- lastSyncedExecutionBlockNumber
+					basicChannel <- lastSyncedExecutionBlockNumber
+					incentivizedChannel <- lastSyncedExecutionBlockNumber
+				}
 			}
 
 			select {
@@ -195,12 +190,18 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 		}
 	}
 
-	err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_finalized_header", finalizedHeaderUpdate)
+	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_finalized_header", finalizedHeaderUpdate)
 	if err != nil {
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("write to parachain: %w", err)
 	}
 
 	h.cache.FinalizedHeaders = append(h.cache.FinalizedHeaders, blockRoot)
+
+	lastStoredHeader, err := h.writer.GetLastStoredFinalizedHeader()
+
+	if lastStoredHeader != blockRoot {
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("finalized header in storage doesn't match synced header: %w", err)
+	}
 
 	return finalizedHeaderUpdate, blockRoot, err
 }
