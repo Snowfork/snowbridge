@@ -40,9 +40,7 @@ type RawMerkleProof struct {
 	Proof          []types.H256
 	NumberOfLeaves uint64
 	LeafIndex      uint64
-	// TODO: test that this decodes properly
-	Leaf []byte
-	// Leaf BasicOutboundChannelMessageBundle
+	Leaf           []byte
 }
 
 type MerkleProof struct {
@@ -64,6 +62,10 @@ func NewMerkleProof(rawProof RawMerkleProof, bundle BasicOutboundChannelMessageB
 	if err != nil {
 		return proof, err
 	}
+
+	// TODO: decode bundle in raw proof instead of using bundle parameter
+	// var bundle BasicOutboundChannelMessageBundle
+	// ethabiDecode(&bundle, rawProof.Leaf)
 
 	proof = MerkleProof{
 		Root:      rawProof.Root,
