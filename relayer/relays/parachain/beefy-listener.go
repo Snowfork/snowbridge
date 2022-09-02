@@ -306,11 +306,6 @@ type AccountNonces struct {
 	paraBasicNonce, ethBasicNonce uint64
 }
 
-type AccountNonceToFind struct {
-	account     [32]byte
-	nonceToFind uint64
-}
-
 // discoverCatchupTasks finds all the commitments which need to be relayed
 func (li *BeefyListener) discoverCatchupTasks(
 	ctx context.Context,
@@ -403,12 +398,10 @@ func (li *BeefyListener) discoverCatchupTasks(
 	var scanIncentivizedChannel bool
 	var incentivizedNonceToFind uint64
 
-	basicAccountsAndNoncesToFind := make([]AccountNonceToFind, 0, len(li.accounts))
+	basicAccountsAndNoncesToFind := make(map[types.AccountID]uint64, len(li.accounts))
 	for _, nonceForAccount := range basicNoncesForAccounts {
 		if nonceForAccount.paraBasicNonce > nonceForAccount.ethBasicNonce {
-			basicAccountsAndNoncesToFind = append(basicAccountsAndNoncesToFind, AccountNonceToFind{
-				nonceForAccount.account, nonceForAccount.ethBasicNonce + 1,
-			})
+			basicAccountsAndNoncesToFind[nonceForAccount.account] = nonceForAccount.ethBasicNonce + 1
 		}
 	}
 
@@ -569,7 +562,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 func (li *BeefyListener) scanForCommitments(
 	ctx context.Context,
 	lastParaBlockNumber uint64,
-	basicAccountsAndNoncesToFind []AccountNonceToFind,
+	basicAccountsAndNoncesToFind map[types.AccountID]uint64,
 	scanIncentivizedChannel bool,
 	incentivizedNonceToFind uint64,
 ) ([]*Task, error) {
@@ -582,8 +575,8 @@ func (li *BeefyListener) scanForCommitments(
 	currentBlockNumber := lastParaBlockNumber
 
 	scanBasicChannelAccounts := make(map[types.AccountID]bool, len(basicAccountsAndNoncesToFind))
-	for _, basicAccountAndNonce := range basicAccountsAndNoncesToFind {
-		scanBasicChannelAccounts[basicAccountAndNonce.account] = true
+	for account := range basicAccountsAndNoncesToFind {
+		scanBasicChannelAccounts[account] = true
 	}
 	scanBasicChannelDone := len(scanBasicChannelAccounts) == 0
 
@@ -641,19 +634,12 @@ func (li *BeefyListener) scanForCommitments(
 					return nil, fmt.Errorf("basic channel commitment hash in digest item does not match the one in the Committed event")
 				}
 
-				// TODO: iterate over basic channel event bundles instead of accounts configured on the relayer
-				for _, accountAndNonce := range basicAccountsAndNoncesToFind {
-					_, shouldCheckAccount := scanBasicChannelAccounts[accountAndNonce.account]
+				for bundleIndex, bundle := range events.Basic.Bundles {
+					_, shouldCheckAccount := scanBasicChannelAccounts[bundle.Account]
 					if !shouldCheckAccount {
 						continue
 					}
-
-					// Only consider message bundles for the accounts we're interested in
-					bundleIndex := bundleIndexForAccount(events.Basic.Bundles, &accountAndNonce.account)
-					if bundleIndex == -1 {
-						continue
-					}
-					bundle := events.Basic.Bundles[bundleIndex]
+					nonceToFind := basicAccountsAndNoncesToFind[bundle.Account]
 
 					bundleNonceBigInt := big.Int(bundle.Nonce)
 					bundleNonce := bundleNonceBigInt.Uint64()
@@ -661,12 +647,12 @@ func (li *BeefyListener) scanForCommitments(
 					// This case will be hit if basicNonceToFind has not
 					// been committed yet. Channels emit commitments every N
 					// blocks.
-					if bundleNonce < accountAndNonce.nonceToFind {
+					if bundleNonce < nonceToFind {
 						log.Debugf(
 							"Halting scan for account '%v'. Messages not committed yet on basic channel",
-							types.HexEncodeToString(accountAndNonce.account[:]),
+							types.HexEncodeToString(bundle.Account[:]),
 						)
-						delete(scanBasicChannelAccounts, accountAndNonce.account)
+						delete(scanBasicChannelAccounts, bundle.Account)
 						scanBasicChannelDone = len(scanBasicChannelAccounts) == 0
 						continue
 					}
@@ -678,20 +664,20 @@ func (li *BeefyListener) scanForCommitments(
 					if basicChannelBundleProof.Root != digestItem.AsCommitment.Hash {
 						log.Warnf(
 							"Halting scan for account '%v'. Basic channel proof root doesn't match digest item's commitment hash",
-							types.HexEncodeToString(accountAndNonce.account[:]),
+							types.HexEncodeToString(bundle.Account[:]),
 						)
-						delete(scanBasicChannelAccounts, accountAndNonce.account)
+						delete(scanBasicChannelAccounts, bundle.Account)
 						scanBasicChannelDone = len(scanBasicChannelAccounts) == 0
 						continue
 					}
 
-					if bundleNonce > accountAndNonce.nonceToFind {
+					if bundleNonce > nonceToFind {
 						// Collect these commitments
 						basicChannelProofs = append(basicChannelProofs, basicChannelBundleProof)
-					} else if bundleNonce == accountAndNonce.nonceToFind {
+					} else if bundleNonce == nonceToFind {
 						// Collect this commitment and terminate scan
 						basicChannelProofs = append(basicChannelProofs, basicChannelBundleProof)
-						delete(scanBasicChannelAccounts, accountAndNonce.account)
+						delete(scanBasicChannelAccounts, bundle.Account)
 						scanBasicChannelDone = len(scanBasicChannelAccounts) == 0
 					}
 				}
