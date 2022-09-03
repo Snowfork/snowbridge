@@ -9,10 +9,10 @@ use std::{
 use subxt::{ext::sp_core::H256, OnlineClient, PolkadotConfig};
 
 #[cfg_attr(feature = "parachain-snowbase",
-  subxt::subxt(runtime_metadata_path = "snowbase-metadata.scale")
+  subxt::subxt(runtime_metadata_path = "metadata-snowbase.scale")
 )]
 #[cfg_attr(feature = "parachain-snowblink",
-  subxt::subxt(runtime_metadata_path = "snowblink-metadata.scale")
+  subxt::subxt(runtime_metadata_path = "metadata-snowblink.scale")
 )]
 pub mod runtime {}
 
