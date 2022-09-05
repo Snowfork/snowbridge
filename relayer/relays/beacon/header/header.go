@@ -97,7 +97,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 			case errors.Is(err, ErrFinalizedHeaderUnchanged):
 				log.WithField("finalized_header", h.cache.LastFinalizedHeader()).Info("finalized header unchanged")
 			case errors.Is(err, ErrFinalizedHeaderNotImported):
-				log.Info("last finalized header wasn't imported")
+				log.Warn("last finalized header wasn't imported")
 			case err != nil:
 				log.WithError(err).Error("error while syncing headers")
 				return err
@@ -106,8 +106,6 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 				if err != nil {
 					return fmt.Errorf("fetch execution block hash: %w", err)
 				}
-
-				log.WithField("block_number", executionBlockNumber).Info("last finalized execution block")
 
 				if executionBlockNumber > lastSyncedExecutionBlockNumber {
 					lastSyncedExecutionBlockNumber = executionBlockNumber
@@ -200,7 +198,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	lastStoredHeader, err := h.writer.GetLastStoredFinalizedHeader()
 
 	if lastStoredHeader != blockRoot {
-		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("finalized header in storage doesn't match synced header: %w", err)
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, ErrFinalizedHeaderNotImported
 	}
 
 	return finalizedHeaderUpdate, blockRoot, err
@@ -277,13 +275,6 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 
 		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 	}
-
-	executionBlockNumber, err := h.syncer.GetExecutionBlockHash(finalizedHeaderBlockRoot)
-	if err != nil {
-		return err
-	}
-
-	log.WithField("block_number", executionBlockNumber).Info("according to last finalized header, last execution header is")
 
 	return nil
 }
