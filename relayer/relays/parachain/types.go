@@ -63,10 +63,6 @@ func NewMerkleProof(rawProof RawMerkleProof, bundle BasicOutboundChannelMessageB
 		return proof, err
 	}
 
-	// TODO: decode bundle in raw proof instead of using bundle parameter
-	// var bundle BasicOutboundChannelMessageBundle
-	// ethabiDecode(&bundle, rawProof.Leaf)
-
 	proof = MerkleProof{
 		Root:      rawProof.Root,
 		Proof:     byteArrayProof,

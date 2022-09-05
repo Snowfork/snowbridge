@@ -762,8 +762,6 @@ func fetchBundleProof(
 		return proof, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
-	// TODO: check that bundle matches proof.leaf
-
 	return proof, nil
 }
 
