@@ -4,13 +4,13 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 ## Requirements
 
-* Ubuntu 20.04 or later. MacOs may work, but its not currently a supported configuration.
+* Ubuntu 20.04 or later. MacOS may work, but it's not currently a supported configuration.
 * Development environment for Rust and Substrate. See parachain [requirements](../parachain/README.md#requirements).
 * Node 16. Can install using [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
 
   ```bash
-  nvm install 16.13.2
-  nvm use 16.13.2
+  nvm install 16.17.0
+  nvm use 16.17.0
   ```
 
 * Development environment for Ethereum smart contracts.
@@ -23,7 +23,6 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth `go install github.com/ethereum/go-ethereum/cmd/geth@v1.10.23`
-* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `v1.0.0`.
 * g++ (required for lodestar) is available in the `build-essential` package: `apt install build-essential`
 * lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `v1.1.0`.
 
@@ -69,7 +68,7 @@ cargo build --release
 
 ### Configure testnet
 
-Create an `.envrc` file in which to hold environment config, using [.envrc-example](.envrc-example) as a template. make sure to override the `POLKADOT_BIN` variable to the location of the polkadot binary built in the previous step.
+Create an `.envrc` file in which to hold environment config, using [.envrc-example](.envrc-example) as a template. Make sure to override the `POLKADOT_BIN` variable to the location of the polkadot binary built in the previous step.
 
 Example:
 ```
