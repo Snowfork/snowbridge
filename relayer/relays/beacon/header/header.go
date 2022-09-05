@@ -195,7 +195,6 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	h.cache.FinalizedHeaders = append(h.cache.FinalizedHeaders, blockRoot)
 
 	lastStoredHeader, err := h.writer.GetLastStoredFinalizedHeader()
-
 	if lastStoredHeader != blockRoot {
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, ErrFinalizedHeaderNotImported
 	}
@@ -247,7 +246,6 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 	}).Info("starting to back-fill headers")
 
 	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
-
 	prevSyncAggregate := finalizedHeader.SyncAggregate
 
 	headerUpdate, err := h.SyncHeader(ctx, finalizedHeaderBlockRoot, prevSyncAggregate)
