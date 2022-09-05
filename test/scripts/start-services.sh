@@ -56,6 +56,7 @@ start_geth() {
             --trace "$data_dir/trace" \
             --gcmode archive \
             --miner.gasprice=0 \
+            --syncmode=full \
             > "$output_dir/geth.log" 2>&1 &
     fi
 }
@@ -79,14 +80,14 @@ start_lodestar() {
             --genesisTime $timestamp \
             --startValidators "0..7" \
             --enr.ip "127.0.0.1" \
-            --rootDir "$output_dir/beacon-$timestamp" \
+            --dataDir "$output_dir/beacon-$timestamp" \
             --reset \
             --terminal-total-difficulty-override 0 \
             --genesisEth1Hash $genesisHash \
             --params.ALTAIR_FORK_EPOCH 0 \
             --params.BELLATRIX_FORK_EPOCH 0 \
-            --eth1.enabled=true \
-            --api.rest.api="beacon,config,events,node,validator,lightclient" \
+            --eth1=true \
+            --rest.namespace="beacon,config,events,node,validator,lightclient" \
             --jwt-secret config/jwtsecret \
             > "$output_dir/lodestar.log" 2>&1 &
     fi
@@ -139,13 +140,20 @@ start_polkadot_launch()
     echo "Generating chain specification"
     "$parachain_bin" build-spec --chain "$runtime" --disable-default-bootnode > "$output_dir/spec.json"
 
-    initial_beacon_block=$(curl "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
+    initial_beacon_block=""
+    while [ -z "$initial_beacon_block" ] || [ "$initial_beacon_block" == "0x0000000000000000000000000000000000000000000000000000000000000000" ]
+    do 
+        echo "Waiting for beacon chain to finalize to get initial block..."
+        initial_beacon_block=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
             | jq -r '.data.finalized.root')
+        sleep 3
+    done 
 
-    curl "$beacon_endpoint_http/eth/v1/light_client/bootstrap/$initial_beacon_block" \
+    echo "Found initial finalized block: $initial_beacon_block"
+    curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" \
         | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
 
-    validatorsRoot=$(curl "$beacon_endpoint_http/eth/v1/beacon/genesis" \
+    validatorsRoot=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/genesis" \
             | jq -r '.data.genesis_validators_root')
 
     jq \

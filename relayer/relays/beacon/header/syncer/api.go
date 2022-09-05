@@ -368,7 +368,7 @@ type SyncCommitteePeriodUpdateResponse struct {
 }
 
 func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/light_client/updates?start_period=%d&count=1", b.endpoint, from), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/updates?start_period=%d&count=1", b.endpoint, from), nil)
 	if err != nil {
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
@@ -573,7 +573,7 @@ type LatestFinalisedUpdateResponse struct {
 }
 
 func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/light_client/finality_update/", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/finality_update/", b.endpoint), nil)
 	if err != nil {
 		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}

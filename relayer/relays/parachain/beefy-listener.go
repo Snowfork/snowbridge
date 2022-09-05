@@ -432,6 +432,8 @@ func (li *BeefyListener) discoverCatchupTasks(
 	return tasks, nil
 }
 
+// For each snowbridge header (Task) gatherProofInputs will search to find the polkadot block
+// in which that header was finalized as well as the parachain heads for that block.
 func (li *BeefyListener) gatherProofInputs(
 	polkadotBlockNumber uint64,
 	polkadotBlockHash types.Hash,
@@ -445,24 +447,12 @@ func (li *BeefyListener) gatherProofInputs(
 		items[task.BlockNumber] = task
 	}
 
+	// Scan blocks linearly in a backwards direction until there are no more blocks
+	// or all items have been found.
 	for len(items) > 0 && polkadotBlockNumber > 0 {
-		paraHeads, err := li.relaychainConn.FetchParaHeads(polkadotBlockHash)
+		parachainHeads, snowbridgeHeader, err := li.relaychainConn.FetchParachainHeads(li.paraID, polkadotBlockHash)
 		if err != nil {
 			return err
-		}
-
-		if _, ok := paraHeads[li.paraID]; !ok {
-			return fmt.Errorf("snowbridge is not a registered parachain")
-		}
-
-		paraHeadsAsSlice := make([]relaychain.ParaHead, 0, len(paraHeads))
-		for _, v := range paraHeads {
-			paraHeadsAsSlice = append(paraHeadsAsSlice, v)
-		}
-
-		var snowbridgeHeader types.Header
-		if err := types.DecodeFromBytes(paraHeads[li.paraID].Data, &snowbridgeHeader); err != nil {
-			return fmt.Errorf("decode parachain header: %w", err)
 		}
 
 		snowbridgeBlockNumber := uint64(snowbridgeHeader.Number)
@@ -470,8 +460,15 @@ func (li *BeefyListener) gatherProofInputs(
 		if task, ok := items[snowbridgeBlockNumber]; ok {
 			task.ProofInput = &ProofInput{
 				polkadotBlockNumber,
-				paraHeadsAsSlice,
+				parachainHeads,
 			}
+			log.WithFields(log.Fields{
+				"parachainId":           li.paraID,
+				"relaychainBlockHash":   polkadotBlockHash.Hex(),
+				"relaychainBlockNumber": polkadotBlockNumber,
+				"parachainBlockNumber":  snowbridgeBlockNumber,
+				"paraHeads":             parachainHeads,
+			}).Debug("Generated proof input for parachain block.")
 			delete(items, snowbridgeBlockNumber)
 		}
 
@@ -483,12 +480,14 @@ func (li *BeefyListener) gatherProofInputs(
 	}
 
 	if len(items) > 0 {
-		return fmt.Errorf("Could not gather all proof inputs")
+		return fmt.Errorf("could not gather all proof inputs")
 	}
 
 	return nil
 }
 
+// Generates a proof for an MMR leaf, and then generates a merkle proof for our parachain header, which should be verifiable against the
+// parachains root in the mmr leaf.
 func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (*ProofOutput, error) {
 	latestBeefyBlockNumber, latestBeefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
 	if err != nil {
@@ -500,6 +499,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 		"leafIndex":  input.PolkadotBlockNumber,
 	}).Info("Generating MMR proof")
 
+	// Generate the MMR proof for the polkadot block.
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
 		input.PolkadotBlockNumber,
 		latestBeefyBlockHash,
@@ -520,20 +520,14 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 		return nil, fmt.Errorf("simplify MMR leaf proof: %w", err)
 	}
 
-	mmrRootHashKey, err := types.CreateStorageKey(li.relaychainConn.Metadata(), "Mmr", "RootHash", nil, nil)
+	mmrRootHash, err := li.relaychainConn.GetMMRRootHash(latestBeefyBlockHash)
 	if err != nil {
-		return nil, fmt.Errorf("create storage key: %w", err)
-	}
-	var mmrRootHash types.Hash
-	ok, err := li.relaychainConn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, latestBeefyBlockHash)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	if !ok {
-		return nil, fmt.Errorf("could not get mmr root hash")
+		return nil, fmt.Errorf("retrieve MMR root hash at block %v: %w", latestBeefyBlockHash.Hex(), err)
 	}
 
+	// Generate a merkle proof for the parachain heads.
+	// Polkadot uses the following code to generate the merkle proof:
+	// https://github.com/paritytech/polkadot/blob/2eb7672905d99971fc11ad7ff4d57e68967401d2/runtime/rococo/src/lib.rs#L700
 	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, li.paraID)
 	if err != nil {
 		return nil, fmt.Errorf("create parachain header proof: %w", err)

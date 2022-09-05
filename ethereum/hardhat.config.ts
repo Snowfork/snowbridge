@@ -38,6 +38,12 @@ const config: HardhatUserConfig = {
       url: `https://ropsten.infura.io/v3/${INFURA_KEY}`,
       accounts: [ROPSTEN_KEY],
       gas: 6000000,
+    },
+    goerli: {
+      chainId: 5,
+      url: `https://goerli.infura.io/v3/${INFURA_KEY}`,
+      accounts: [ROPSTEN_KEY],
+      gas: 6000000,
     }
   },
   solidity: {

@@ -68,15 +68,31 @@ func (co *Connection) Close() {
 	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
 }
 
+func (conn *Connection) GetMMRRootHash(blockHash types.Hash) (types.Hash, error) {
+	mmrRootHashKey, err := types.CreateStorageKey(conn.Metadata(), "Mmr", "RootHash", nil, nil)
+	if err != nil {
+		return types.Hash{}, fmt.Errorf("create storage key: %w", err)
+	}
+	var mmrRootHash types.Hash
+	ok, err := conn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, blockHash)
+	if err != nil {
+		return types.Hash{}, fmt.Errorf("query storage for mmr root hash at block %v: %w", blockHash.Hex(), err)
+	}
+	if !ok {
+		return types.Hash{}, fmt.Errorf("Mmr.RootHash storage item does not exist")
+	}
+	return mmrRootHash, nil
+}
+
 func (co *Connection) GenerateProofForBlock(
 	blockNumber uint64,
 	latestBeefyBlockHash types.Hash,
 	beefyActivationBlock uint64,
 ) (types.GenerateMMRProofResponse, error) {
-	// log.WithFields(log.Fields{
-	// 	"blockNumber": blockNumber,
-	// 	"blockHash":   latestBeefyBlockHash.Hex(),
-	// }).Info("Getting MMR Leaf for block...")
+	log.WithFields(log.Fields{
+		"blockNumber": blockNumber,
+		"blockHash":   latestBeefyBlockHash.Hex(),
+	}).Debug("Getting MMR Leaf for block...")
 
 	// We expect 1 mmr leaf for each block. However, some chains only started using beefy late
 	// in their existence, so there are no leafs for blocks produced before beefy was activated.
@@ -111,24 +127,24 @@ func (co *Connection) GenerateProofForBlock(
 		proofItemsHex = append(proofItemsHex, item.Hex())
 	}
 
-	// log.WithFields(log.Fields{
-	// 	"BlockHash": proofResponse.BlockHash.Hex(),
-	// 	"Leaf": log.Fields{
-	// 		"ParentNumber":   proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
-	// 		"ParentHash":     proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
-	// 		"ParachainHeads": proofResponse.Leaf.ParachainHeads.Hex(),
-	// 		"NextAuthoritySet": log.Fields{
-	// 			"Id":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
-	// 			"Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
-	// 			"Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
-	// 		},
-	// 	},
-	// 	"Proof": log.Fields{
-	// 		"LeafIndex": proofResponse.Proof.LeafIndex,
-	// 		"LeafCount": proofResponse.Proof.LeafCount,
-	// 		"Items":     proofItemsHex,
-	// 	},
-	// }).Info("Generated MMR proof")
+	log.WithFields(log.Fields{
+		"BlockHash": proofResponse.BlockHash.Hex(),
+		"Leaf": log.Fields{
+			"ParentNumber":   proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
+			"ParentHash":     proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
+			"ParachainHeads": proofResponse.Leaf.ParachainHeads.Hex(),
+			"NextAuthoritySet": log.Fields{
+				"Id":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
+				"Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
+				"Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
+			},
+		},
+		"Proof": log.Fields{
+			"LeafIndex": proofResponse.Proof.LeafIndex,
+			"LeafCount": proofResponse.Proof.LeafCount,
+			"Items":     proofItemsHex,
+		},
+	}).Debug("Generated MMR proof")
 
 	return proofResponse, nil
 }
@@ -138,64 +154,46 @@ type ParaHead struct {
 	Data   types.Bytes
 }
 
-// Offset of encoded para id in storage key.
-// The key is of this format:
-//   ParaId: u32
-//   Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
-const ParaIDOffset = 16 + 16 + 8
-
-func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
-
-	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
-
-	keys, err := co.fetchKeys(keyPrefix, blockHash)
+// Fetches heads for each parachain Id filtering out para threads.
+func (conn *Connection) FetchParachainHeads(paraId uint32, relayChainBlockHash types.Hash) ([]ParaHead, *types.Header, error) {
+	// Fetch para heads
+	paraHeads, err := conn.fetchParaHeads(relayChainBlockHash)
 	if err != nil {
-		log.WithError(err).Error("Failed to get all parachain keys")
-		return nil, err
+		log.WithError(err).Error("Cannot fetch para heads.")
+		return nil, nil, err
 	}
 
-	log.WithFields(log.Fields{
-		"numKeys":          len(keys),
-		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
-		"block":            blockHash.Hex(),
-	}).Trace("Found keys for Paras.Heads storage map")
-
-	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
-	if err != nil {
-		log.WithError(err).Error("Failed to get all parachain headers")
-		return nil, err
+	// Make sure our snowbridge para head is included
+	log.WithField("relayChainBlockHash", relayChainBlockHash).WithField("paraId", paraId).Info("Fetching parachain heads.")
+	if _, ok := paraHeads[paraId]; !ok {
+		return nil, nil, fmt.Errorf("snowbridge is not a registered parachain")
 	}
 
-	heads := make(map[uint32]ParaHead)
+	var snowbridgeHeader types.Header
+	if err := types.DecodeFromBytes(paraHeads[paraId].Data, &snowbridgeHeader); err != nil {
+		return nil, nil, fmt.Errorf("decode parachain header: %w", err)
+	}
 
-	for _, changeSet := range changeSets {
-		for _, change := range changeSet.Changes {
-			if change.StorageData.IsNone() {
-				continue
-			}
+	// fetch ids of parachains (not including parathreads)
+	var parachainIDs []uint32
+	parachainsKey, err := types.CreateStorageKey(conn.Metadata(), "Paras", "Parachains", nil, nil)
+	if err != nil {
+		return nil, nil, err
+	}
 
-			var paraID uint32
-			if err := types.DecodeFromBytes(change.StorageKey[ParaIDOffset:], &paraID); err != nil {
-				log.WithError(err).Error("Failed to decode parachain ID")
-				return nil, err
-			}
+	_, err = conn.API().RPC.State.GetStorage(parachainsKey, &parachainIDs, relayChainBlockHash)
+	if err != nil {
+		return nil, nil, err
+	}
 
-			_, headDataWrapped := change.StorageData.Unwrap()
-
-			var headData types.Bytes
-			if err := types.DecodeFromBytes(headDataWrapped, &headData); err != nil {
-				log.WithError(err).Error("Failed to decode HeadData wrapper")
-				return nil, err
-			}
-
-			heads[paraID] = ParaHead{
-				ParaID: paraID,
-				Data:   headData,
-			}
+	// filter out parathreads
+	var parachainHeads []ParaHead
+	for _, v := range parachainIDs {
+		if head, ok := paraHeads[v]; ok {
+			parachainHeads = append(parachainHeads, head)
 		}
 	}
-
-	return heads, nil
+	return parachainHeads, &snowbridgeHeader, nil
 }
 
 func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID uint32) (*types.Header, error) {
@@ -252,7 +250,7 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 }
 
 func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types.StorageKey, error) {
-	const pageSize = 50
+	const pageSize = 200
 	var startKey *types.StorageKey
 
 	if pageSize < 1 {
@@ -293,4 +291,62 @@ func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types
 	}).Trace("Fetching of paged keys complete.")
 
 	return results, nil
+}
+
+// Offset of encoded para id in storage key.
+// The key is of this format:
+//
+//	ParaId: u32
+//	Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
+const ParaIDOffset = 16 + 16 + 8
+
+func (co *Connection) fetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
+	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
+	keys, err := co.fetchKeys(keyPrefix, blockHash)
+	if err != nil {
+		log.WithError(err).Error("Failed to get all parachain keys")
+		return nil, err
+	}
+
+	log.WithFields(log.Fields{
+		"numKeys":          len(keys),
+		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
+		"block":            blockHash.Hex(),
+	}).Trace("Found keys for Paras.Heads storage map")
+
+	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
+	if err != nil {
+		log.WithError(err).Error("Failed to get all parachain headers")
+		return nil, err
+	}
+
+	heads := make(map[uint32]ParaHead)
+	for _, changeSet := range changeSets {
+		for _, change := range changeSet.Changes {
+			if change.StorageData.IsNone() {
+				continue
+			}
+
+			var paraID uint32
+			if err := types.DecodeFromBytes(change.StorageKey[ParaIDOffset:], &paraID); err != nil {
+				log.WithError(err).Error("Failed to decode parachain ID")
+				return nil, err
+			}
+
+			_, headDataWrapped := change.StorageData.Unwrap()
+
+			var headData types.Bytes
+			if err := types.DecodeFromBytes(headDataWrapped, &headData); err != nil {
+				log.WithError(err).Error("Failed to decode HeadData wrapper")
+				return nil, err
+			}
+
+			heads[paraID] = ParaHead{
+				ParaID: paraID,
+				Data:   headData,
+			}
+		}
+	}
+
+	return heads, nil
 }
