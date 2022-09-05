@@ -1,6 +1,3 @@
-#[subxt::subxt(runtime_metadata_path = "metadata.scale")]
-pub mod runtime {}
-
 use codec::Encode;
 use serde::Serialize;
 use serde_hex::{SerHexSeq, StrictPfx};
@@ -10,6 +7,15 @@ use std::{
 	str::FromStr,
 };
 use subxt::{ext::sp_core::H256, OnlineClient, PolkadotConfig};
+
+#[cfg_attr(feature = "parachain-snowbase",
+  subxt::subxt(runtime_metadata_path = "metadata-snowbase.scale")
+)]
+#[cfg_attr(feature = "parachain-snowblink",
+  subxt::subxt(runtime_metadata_path = "metadata-snowblink.scale")
+)]
+pub mod runtime {}
+
 
 #[derive(Debug, Serialize)]
 struct Items {
@@ -43,38 +49,28 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let args = Args::parse();
-
 	let block_hash = H256::from_str(args.block.trim_start_matches("0x"))?;
-
 	let api = OnlineClient::<PolkadotConfig>::from_url(args.api).await?;
-
-	let query = runtime::storage().system().events();
-	let events = api.storage().fetch(&query, Some(block_hash.into())).await?;
-
+	let events = api.events().at(Some(block_hash.into())).await?;
 	let mut items: Vec<Item> = Vec::new();
 
-	for event in events.expect("Failed to get events for block.").into_iter() {
-		if let runtime::runtime_types::snowbase_runtime::Event::BasicOutboundChannel(ev) =
-			&event.event
-		{
-			if let runtime::runtime_types::snowbridge_basic_channel::outbound::pallet::Event::Committed { hash, data } = ev {
-					items.push(Item {
-						id: 0,
-						hash: hash.encode(),
-						data: data.encode(),
-					});
-				}
+	for ev in events.find::<runtime::basic_outbound_channel::events::Committed>() {
+		if let Ok(runtime::basic_outbound_channel::events::Committed { hash , data }) = ev {
+			items.push(Item {
+				id: 0,
+				hash: hash.encode(),
+				data: data.encode(),
+			});
 		}
-		if let runtime::runtime_types::snowbase_runtime::Event::IncentivizedOutboundChannel(ev) =
-			&event.event
-		{
-			if let runtime::runtime_types::snowbridge_incentivized_channel::outbound::pallet::Event::Committed { hash, data } = ev {
-					items.push(Item {
-						id: 1,
-						hash: hash.encode(),
-						data: data.encode(),
-					});
-				}
+	}
+
+	for ev in events.find::<runtime::incentivized_outbound_channel::events::Committed>() {
+		if let Ok(runtime::incentivized_outbound_channel::events::Committed { hash , data }) = ev {
+			items.push(Item {
+				id: 1,
+				hash: hash.encode(),
+				data: data.encode(),
+			});
 		}
 	}
 

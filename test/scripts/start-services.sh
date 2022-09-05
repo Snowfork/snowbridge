@@ -130,7 +130,7 @@ start_polkadot_launch()
         --bin snowbridge
 
     echo "Building query tool"
-    cargo build --manifest-path "$parachain_dir/tools/query-events/Cargo.toml" --release --bin snowbridge-query-events
+    cargo build --manifest-path "$parachain_dir/tools/query-events/Cargo.toml" --release --features parachain-snowbase --bin snowbridge-query-events
 
     cp "$parachain_dir/target/release/snowbridge-query-events" "$output_dir/bin"
 
@@ -142,12 +142,12 @@ start_polkadot_launch()
 
     initial_beacon_block=""
     while [ -z "$initial_beacon_block" ] || [ "$initial_beacon_block" == "0x0000000000000000000000000000000000000000000000000000000000000000" ]
-    do 
+    do
         echo "Waiting for beacon chain to finalize to get initial block..."
         initial_beacon_block=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
             | jq -r '.data.finalized.root')
         sleep 3
-    done 
+    done
 
     echo "Found initial finalized block: $initial_beacon_block"
     curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" \
