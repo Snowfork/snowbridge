@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"golang.org/x/sync/errgroup"
-
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -249,10 +248,7 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 
 	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
 
-	prevSyncAggregate, err := h.syncer.GetSyncAggregateForSlot(uint64(finalizedHeader.FinalizedHeader.Slot + 1))
-	if err != nil {
-		return fmt.Errorf("get sync aggregate by slot: %w", err)
-	}
+	prevSyncAggregate := finalizedHeader.SyncAggregate
 
 	headerUpdate, err := h.SyncHeader(ctx, finalizedHeaderBlockRoot, prevSyncAggregate)
 	if err != nil {

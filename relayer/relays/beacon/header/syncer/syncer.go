@@ -10,7 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 )
@@ -280,36 +279,6 @@ func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, e
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
 		return scale.SyncAggregate{}, fmt.Errorf("fetch block: %w", err)
-	}
-
-	blockScale, err := block.ToScale()
-	if err != nil {
-		return scale.SyncAggregate{}, fmt.Errorf("convert block to scale: %w", err)
-	}
-
-	return blockScale.Body.SyncAggregate, nil
-}
-
-func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, error) {
-	err := ErrNotFound
-	var block BeaconBlockResponse
-	tries := 0
-	maxSlotsMissed := 20
-	for errors.Is(err, ErrNotFound) && tries < maxSlotsMissed {
-		log.WithFields(log.Fields{
-			"try_number": tries,
-			"slot":       slot,
-		}).Info("fetching sync aggregate for slot")
-		block, err = s.Client.GetBeaconBlockBySlot(slot)
-		if err != nil {
-			log.Info("next slot didn't have a block, finding next slot")
-		}
-
-		tries = tries + 1
-		slot = slot + 1
-	}
-	if tries == maxSlotsMissed {
-		return scale.SyncAggregate{}, fmt.Errorf("next block to get sync aggregate by slot: %w", err)
 	}
 
 	blockScale, err := block.ToScale()
