@@ -335,7 +335,7 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return common.Hash{}, fmt.Errorf("%s: %w", HTTPStatusNotOKErrorMessage, res.StatusCode)
+		return common.Hash{}, fmt.Errorf("fetch beacon block %d: %s", res.StatusCode, HTTPStatusNotOKErrorMessage)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)

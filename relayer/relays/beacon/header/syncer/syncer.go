@@ -302,11 +302,14 @@ func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, erro
 		}).Info("fetching sync aggregate for slot")
 		block, err = s.Client.GetBeaconBlockBySlot(slot)
 		if err != nil {
-			return scale.SyncAggregate{}, fmt.Errorf("fetch block: %w", err)
+			log.Info("next slot didn't have a block, finding next slot")
 		}
 
 		tries = tries + 1
 		slot = slot + 1
+	}
+	if tries == maxSlotsMissed {
+		return scale.SyncAggregate{}, fmt.Errorf("next block to get sync aggregate by slot: %w", err)
 	}
 
 	blockScale, err := block.ToScale()
