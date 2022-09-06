@@ -1,3 +1,4 @@
+use frame_support::traits::Get;
 use ssz_rs::{Deserialize, SimpleSerialize as SimpleSerializeTrait, Bitlist, Bitvector};
 use ssz_rs::prelude::{Vector, List};
 use sp_std::convert::TryInto;
@@ -219,7 +220,7 @@ pub fn hash_tree_root_beacon_body(body: Body) -> Result<[u8; 32], MerkleizationE
     hash_tree_root(get_ssz_beacon_block_body(body)?)
 }
 
-pub fn hash_tree_root_sync_committee(sync_committee: SyncCommittee) -> Result<[u8; 32], MerkleizationError> {
+pub fn hash_tree_root_sync_committee<S: Get<u32>>(sync_committee: SyncCommittee<S>) -> Result<[u8; 32], MerkleizationError> {
     let mut pubkeys_vec = Vec::new();
 
     for pubkey in sync_committee.pubkeys.iter() {
