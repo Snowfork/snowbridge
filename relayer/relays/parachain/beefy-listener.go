@@ -767,17 +767,6 @@ func fetchBundleProof(
 	return proof, nil
 }
 
-func bundleIndexForAccount(bundles []BasicOutboundChannelMessageBundle, account *[32]byte) int {
-	bundleIndex := -1
-	for i, b := range bundles {
-		if b.Account == *account {
-			bundleIndex = i
-			break
-		}
-	}
-	return bundleIndex
-}
-
 type OffchainStorageValue struct {
 	Nonce      uint64
 	Commitment []byte
