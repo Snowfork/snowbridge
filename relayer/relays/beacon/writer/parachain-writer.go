@@ -3,9 +3,10 @@ package writer
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"golang.org/x/sync/errgroup"
@@ -62,25 +63,25 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 	return uint32(accountInfo.Nonce), nil
 }
 
-func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) error {
+func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
 	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c, err := types.NewCall(meta, extrinsicName, payload...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ext := types.NewExtrinsic(c)
@@ -88,12 +89,12 @@ func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName s
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	o := types.SignatureOptions{
@@ -110,90 +111,39 @@ func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName s
 
 	err = extI.Sign(*wr.conn.Keypair(), o)
 	if err != nil {
-		return err
-	}
-
-	_, err = wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(extI)
-	if err != nil {
-		return err
-	}
-
-	wr.nonce = wr.nonce + 1
-
-	return nil
-}
-
-func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrinsicName string, payload ...interface{}) error {
-	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
-	if err != nil {
-		return err
-	}
-
-	c, err := types.NewCall(meta, extrinsicName, payload...)
-	if err != nil {
-		return err
-	}
-
-	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
-	if err != nil {
-		return err
-	}
-
-	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
-	if err != nil {
-		return err
-	}
-
-	ext := types.NewExtrinsic(c)
-	era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
-
-	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
-	if err != nil {
-		return err
-	}
-
-	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
-	if err != nil {
-		return err
-	}
-
-	o := types.SignatureOptions{
-		BlockHash:          latestHash,
-		Era:                era,
-		GenesisHash:        genesisHash,
-		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
-		SpecVersion:        rv.SpecVersion,
-		Tip:                types.NewUCompactFromUInt(0),
-		TransactionVersion: rv.TransactionVersion,
-	}
-
-	extI := ext
-
-	err = extI.Sign(*wr.conn.Keypair(), o)
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(extI)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	wr.nonce = wr.nonce + 1
 
+	return sub, nil
+}
+
+func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrinsicName string, payload ...interface{}) error {
+	sub, err := wr.WriteToParachain(ctx, extrinsicName, payload...)
+	if err != nil {
+		return err
+	}
+
+
 	defer sub.Unsubscribe()
 
-	timeout := time.After(60 * time.Second)
 	for {
 		select {
 		case status := <-sub.Chan():
+			if status.IsDropped || status.IsInvalid || status.IsUsurped {
+				return fmt.Errorf("parachain write status was dropped, invalid or usurped")
+			}
 			if status.IsInBlock {
 				return nil
 			}
 		case err = <-sub.Err():
 			return err
-		case <-timeout:
-			return fmt.Errorf("timeout")
 		case <-ctx.Done():
 			return nil
 		}

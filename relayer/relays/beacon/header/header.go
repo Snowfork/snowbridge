@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/sync/errgroup"
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -14,6 +13,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/writer"
+	"golang.org/x/sync/errgroup"
 )
 
 var ErrFinalizedHeaderUnchanged = errors.New("finalized header unchanged")
@@ -94,11 +94,10 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 			err := h.SyncHeaders(ctx)
 			switch {
 			case errors.Is(err, ErrFinalizedHeaderUnchanged):
-				log.WithField("finalized_header", h.cache.LastFinalizedHeader()).Info("finalized header unchanged")
+				log.WithField("finalized_header", h.cache.LastFinalizedHeader()).Info(err.Error())
 			case errors.Is(err, ErrFinalizedHeaderNotImported):
-				log.Warn("last finalized header wasn't imported")
+				log.Warn(err.Error())
 			case err != nil:
-				log.WithError(err).Error("error while syncing headers")
 				return err
 			default:
 				executionBlockNumber, err := h.syncer.GetExecutionBlockHash(h.cache.LastFinalizedHeader())
@@ -150,7 +149,7 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		"period": period,
 	}).Info("syncing sync committee for period")
 
-	err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
+	_, err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
 	if err != nil {
 		return err
 	}
@@ -195,6 +194,10 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	h.cache.FinalizedHeaders = append(h.cache.FinalizedHeaders, blockRoot)
 
 	lastStoredHeader, err := h.writer.GetLastStoredFinalizedHeader()
+	if err != nil {
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch last finalized header from parachain: %w", err)
+	}
+
 	if lastStoredHeader != blockRoot {
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, ErrFinalizedHeaderNotImported
 	}
@@ -216,7 +219,7 @@ func (h *Header) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggr
 
 	headerUpdate.SyncAggregate = syncAggregate
 
-	err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
+	_, err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
 	if err != nil {
 		return syncer.HeaderUpdate{}, fmt.Errorf("write to parachain: %w", err)
 	}
@@ -234,15 +237,13 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 		return err
 	}
 
-	lastFinalizedHeader := h.cache.LastFinalizedHeader()
-
-	if lastFinalizedHeader == secondLastFinalizedHeader {
+	if finalizedHeaderBlockRoot == secondLastFinalizedHeader {
 		return ErrFinalizedHeaderUnchanged
 	}
 
 	log.WithFields(log.Fields{
 		"secondLastHash": secondLastFinalizedHeader,
-		"lastHash":       lastFinalizedHeader,
+		"lastHash":       finalizedHeaderBlockRoot,
 	}).Info("starting to back-fill headers")
 
 	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
@@ -253,7 +254,6 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 		return err
 	}
 
-	foundFinalizedHeaderAncestor := false
 	prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 
 	for secondLastFinalizedHeader != blockRoot {
@@ -263,10 +263,6 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 		}
 
 		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
-		if !foundFinalizedHeaderAncestor {
-			foundFinalizedHeaderAncestor = true
-		}
-
 		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 	}
 
