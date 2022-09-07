@@ -698,12 +698,10 @@ func (li *BeefyListener) scanForCommitments(
 					continue
 				} else if bundleNonce > incentivizedNonceToFind {
 					// Collect these commitments
-					commitment := NewIncentivizedChannelCommitment(digestItem.AsCommitment.Hash, bundle)
-					incentivizedChannelCommitment = &commitment
+					incentivizedChannelCommitment = NewIncentivizedChannelCommitment(digestItem.AsCommitment.Hash, bundle)
 				} else if bundleNonce == incentivizedNonceToFind {
 					// Collect this commitment and terminate scan
-					commitment := NewIncentivizedChannelCommitment(digestItem.AsCommitment.Hash, bundle)
-					incentivizedChannelCommitment = &commitment
+					incentivizedChannelCommitment = NewIncentivizedChannelCommitment(digestItem.AsCommitment.Hash, bundle)
 					scanIncentivizedChannelDone = true
 				}
 			}

@@ -28,8 +28,8 @@ type IncentivizedChannelCommitment struct {
 	Data IncentivizedOutboundChannelMessageBundle
 }
 
-func NewIncentivizedChannelCommitment(hash types.H256, data IncentivizedOutboundChannelMessageBundle) IncentivizedChannelCommitment {
-	return IncentivizedChannelCommitment{
+func NewIncentivizedChannelCommitment(hash types.H256, data IncentivizedOutboundChannelMessageBundle) *IncentivizedChannelCommitment {
+	return &IncentivizedChannelCommitment{
 		Hash: hash,
 		Data: data,
 	}
