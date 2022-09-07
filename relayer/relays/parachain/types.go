@@ -78,10 +78,6 @@ func generateHashSides(nodePosition uint64, breadth uint64) ([]bool, error) {
 		return nil, fmt.Errorf("leaf position %v is too high in proof with %v leaves", nodePosition, breadth)
 	}
 
-	if breadth == 0 {
-		return nil, fmt.Errorf("no hash sides for an empty proof")
-	}
-
 	// The height of a complete tree (eg. the Merkle tree we have here) is the base 2 log of the number of leaves, rounded up.
 	// This is equivalent to the number of bits that aren't leading zeroes in breadth - 1, which we use here.
 	treeHeight := 64 - bits.LeadingZeros64(breadth-1)
