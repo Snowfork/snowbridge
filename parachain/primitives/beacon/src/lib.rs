@@ -24,7 +24,7 @@ pub type ForkVersion = [u8; 4];
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct PublicKey(pub [u8; 48]);
 
-impl <S: Get<u32>, P: Get<u32>>Default for InitialSync<S, P> {
+impl <SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>Default for InitialSync<SyncCommitteeSize, ProofSize> {
 	fn default() -> Self {
 		InitialSync { 
 			header: Default::default(), 
@@ -35,7 +35,7 @@ impl <S: Get<u32>, P: Get<u32>>Default for InitialSync<S, P> {
 	}
 }
 
-impl <S: Get<u32>>Default for SyncCommittee<S> {
+impl <SyncCommitteeSize: Get<u32>>Default for SyncCommittee<SyncCommitteeSize> {
 	fn default() -> Self {
 		SyncCommittee { 
 			pubkeys: Default::default(), 
@@ -111,21 +111,21 @@ impl<'de> Deserialize<'de> for PublicKey {
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct InitialSync<S: Get<u32>, P: Get<u32>> {
+pub struct InitialSync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> {
 	pub header: BeaconHeader,
-	pub current_sync_committee: SyncCommittee<S>,
-	pub current_sync_committee_branch: BoundedVec<H256, P>,
+	pub current_sync_committee: SyncCommittee<SyncCommitteeSize>,
+	pub current_sync_committee_branch: BoundedVec<H256, ProofSize>,
 	pub validators_root: Root,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct SyncCommitteePeriodUpdate<S: Get<u32>, P: Get<u32>> {
+pub struct SyncCommitteePeriodUpdate<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> {
 	pub attested_header: BeaconHeader,
-	pub next_sync_committee: SyncCommittee<S>,
-	pub next_sync_committee_branch: BoundedVec<H256, P>,
+	pub next_sync_committee: SyncCommittee<SyncCommitteeSize>,
+	pub next_sync_committee_branch: BoundedVec<H256, ProofSize>,
 	pub finalized_header: BeaconHeader,
-	pub finality_branch: BoundedVec<H256, P>,
+	pub finality_branch: BoundedVec<H256, ProofSize>,
 	pub sync_aggregate: SyncAggregate,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_fork_version"))]
 	pub fork_version: ForkVersion,
@@ -134,10 +134,10 @@ pub struct SyncCommitteePeriodUpdate<S: Get<u32>, P: Get<u32>> {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct FinalizedHeaderUpdate<F: Get<u32>>  {
+pub struct FinalizedHeaderUpdate<ProofSize: Get<u32>>  {
 	pub attested_header: BeaconHeader,
 	pub finalized_header: BeaconHeader,
-	pub finality_branch: BoundedVec<H256, F>,
+	pub finality_branch: BoundedVec<H256, ProofSize>,
 	pub sync_aggregate: SyncAggregate,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_fork_version"))]
 	pub fork_version: ForkVersion,
@@ -338,16 +338,21 @@ pub struct ExecutionPayload<F: Get<u32>, L: Get<u32>, E: Get<u32>>  {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct Body<FeeR: Get<u32>, LogsB: Get<u32>, ExtraD: Get<u32>, DepositD: Get<u32>, X: Get<u32>, P: Get<u32>, De: Get<u32>, Randao: Get<u32>, ProposerS: Get<u32>, AttesterS: Get<u32>, VoluntaryE: Get<u32>> {
+pub struct Body<
+	FeeRecipientSize: Get<u32>, 
+	LogsBloomSize: Get<u32>, 
+	ExtraDataSize: Get<u32>, 
+	DepositDataSize: Get<u32>, 
+	X: Get<u32>, P: Get<u32>, De: Get<u32>, RandaoSize: Get<u32>, ProposerSlashingSize: Get<u32>, AttesterSlashingSize: Get<u32>, VoluntaryExitSize: Get<u32>> {
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub randao_reveal: BoundedVec<u8, Randao>,
+	pub randao_reveal: BoundedVec<u8, RandaoSize>,
 	pub eth1_data: Eth1Data,
 	pub graffiti: H256,
-	pub proposer_slashings: BoundedVec<ProposerSlashing, ProposerS>,
-	pub attester_slashings: BoundedVec<AttesterSlashing, AttesterS>,
+	pub proposer_slashings: BoundedVec<ProposerSlashing, ProposerSlashingSize>,
+	pub attester_slashings: BoundedVec<AttesterSlashing, AttesterSlashingSize>,
 	pub attestations: Vec<Attestation>,
 	pub deposits: BoundedVec<Deposit<DepositD, X, P>, De>,
-	pub voluntary_exits: BoundedVec<VoluntaryExit, VoluntaryE>,
+	pub voluntary_exits: BoundedVec<VoluntaryExit, VoluntaryExitSize>,
 	pub sync_aggregate: SyncAggregate,
 	pub execution_payload: ExecutionPayload<FeeR, LogsB, ExtraD>,
 }
