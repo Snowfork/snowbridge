@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
