@@ -58,7 +58,7 @@ func NewMerkleProof(rawProof RawMerkleProof, bundle BasicOutboundChannelMessageB
 		byteArrayProof[i] = ([32]byte)(rawProof.Proof[i])
 	}
 
-	hashSides, err := generateHashSides(rawProof)
+	hashSides, err := generateHashSides(rawProof.LeafIndex, rawProof.NumberOfLeaves)
 	if err != nil {
 		return proof, err
 	}
@@ -73,10 +73,7 @@ func NewMerkleProof(rawProof RawMerkleProof, bundle BasicOutboundChannelMessageB
 	return proof, nil
 }
 
-func generateHashSides(commitmentProof RawMerkleProof) ([]bool, error) {
-	nodePosition := commitmentProof.LeafIndex
-	breadth := commitmentProof.NumberOfLeaves
-
+func generateHashSides(nodePosition uint64, breadth uint64) ([]bool, error) {
 	if nodePosition >= breadth {
 		return nil, fmt.Errorf("leaf position %v is too high in proof with %v leaves", nodePosition, breadth)
 	}
