@@ -632,7 +632,8 @@ func (li *BeefyListener) scanForCommitments(
 					digestItemHash,
 					basicChannelAccountNonces,
 					basicChannelScanAccounts,
-					events.Basic.Bundles)
+					events.Basic.Bundles,
+				)
 				if err != nil {
 					return nil, err
 				}
