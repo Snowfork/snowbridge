@@ -95,9 +95,9 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 			err := h.SyncHeaders(ctx)
 			switch {
 			case errors.Is(err, ErrFinalizedHeaderUnchanged):
-				log.WithField("finalized_header", h.cache.LastAttemptedFinalizedHeader).Info(err.Error())
+				log.WithError(err).WithField("finalized_header", h.cache.LastAttemptedFinalizedHeader).Info("not importing unchanged header")
 			case errors.Is(err, ErrFinalizedHeaderNotImported):
-				log.Warn(err.Error())
+				log.WithError(err).Warn("Not importing header this cycle")
 			case err != nil:
 				return err
 			default:
