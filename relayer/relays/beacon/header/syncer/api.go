@@ -27,7 +27,6 @@ type BeaconClientTracker interface {
 	GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error)
 	GetHeadCheckpoint() (FinalizedCheckpointResponse, error)
 	GetBeaconBlock(slot uint64) (BeaconBlockResponse, error)
-	GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error)
 	GetCurrentForkVersion(slot uint64) (string, error)
 	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
 }
@@ -287,41 +286,6 @@ func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse,
 	return response, nil
 }
 
-func (b *BeaconClient) GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%d", b.endpoint, slot), nil)
-	if err != nil {
-		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
-	}
-
-	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
-	if err != nil {
-		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		if res.StatusCode == 404 {
-			return BeaconBlockResponse{}, ErrNotFound
-		}
-
-		return BeaconBlockResponse{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
-	}
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
-	}
-
-	var response BeaconBlockResponse
-
-	err = json.Unmarshal(bodyBytes, &response)
-	if err != nil {
-		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
-	}
-
-	return response, nil
-}
-
 func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/blocks/%d/root", b.endpoint, slot), nil)
 	if err != nil {
@@ -335,7 +299,7 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return common.Hash{}, fmt.Errorf("%s: %w", HTTPStatusNotOKErrorMessage, res.StatusCode)
+		return common.Hash{}, fmt.Errorf("fetch beacon block %d: %s", res.StatusCode, HTTPStatusNotOKErrorMessage)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)

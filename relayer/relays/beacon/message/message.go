@@ -191,7 +191,7 @@ func (m *Message) SyncIncentivized(ctx context.Context, eg *errgroup.Group, bloc
 
 func (m *Message) writeMessages(ctx context.Context, payload ParachainPayload) error {
 	for _, msg := range payload.Messages {
-		err := m.writer.WriteToParachain(ctx, msg.Call, msg.Args...)
+		_, err := m.writer.WriteToParachain(ctx, msg.Call, msg.Args...)
 		if err != nil {
 			return err
 		}

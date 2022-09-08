@@ -7,10 +7,14 @@ import (
 )
 
 type BeaconCache struct {
-	LastSyncedSyncCommitteePeriod          uint64
-	FinalizedHeaders                       []common.Hash
-	HeadersMap                             map[common.Hash]uint64
-	mu                                     sync.Mutex
+	LastSyncedSyncCommitteePeriod uint64
+	// Stores all successfully imported (in the parachain) finalized headers. 
+	// Used to determine the execution headers that needs to be backfilled.
+	FinalizedHeaders              []common.Hash
+	// Stores the last attempted finalized header, whether the import succeeded or not.
+	LastAttemptedFinalizedHeader  common.Hash
+	HeadersMap                    map[common.Hash]uint64
+	mu                            sync.Mutex
 }
 
 func New() *BeaconCache {

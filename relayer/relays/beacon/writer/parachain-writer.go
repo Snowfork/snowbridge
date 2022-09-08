@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"golang.org/x/sync/errgroup"
@@ -61,25 +62,25 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 	return uint32(accountInfo.Nonce), nil
 }
 
-func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) error {
+func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
 	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c, err := types.NewCall(meta, extrinsicName, payload...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ext := types.NewExtrinsic(c)
@@ -87,12 +88,12 @@ func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName s
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	o := types.SignatureOptions{
@@ -109,17 +110,43 @@ func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName s
 
 	err = extI.Sign(*wr.conn.Keypair(), o)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(extI)
+	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(extI)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	wr.nonce = wr.nonce + 1
 
-	return nil
+	return sub, nil
+}
+
+func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrinsicName string, payload ...interface{}) error {
+	sub, err := wr.WriteToParachain(ctx, extrinsicName, payload...)
+	if err != nil {
+		return err
+	}
+
+
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case status := <-sub.Chan():
+			if status.IsDropped || status.IsInvalid || status.IsUsurped {
+				return fmt.Errorf("parachain write status was dropped, invalid or usurped")
+			}
+			if status.IsInBlock {
+				return nil
+			}
+		case err = <-sub.Err():
+			return err
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 func (wr *ParachainWriter) GetLastSyncedSyncCommitteePeriod() (uint64, error) {

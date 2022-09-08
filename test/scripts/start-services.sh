@@ -150,6 +150,15 @@ start_polkadot_launch()
     done
 
     echo "Found initial finalized block: $initial_beacon_block"
+    bootstrap_header=""
+    while [ -z "$bootstrap_header" ] || [ "$bootstrap_header" == "" ] || [ "$bootstrap_header" == "null" ]
+    do 
+        echo "Waiting for beacon chain to finalize to get initial block..."
+        bootstrap_header=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" \
+            | jq -r '.data.header')
+        sleep 3
+    done 
+    
     curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" \
         | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
 

@@ -289,20 +289,6 @@ func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, e
 	return blockScale.Body.SyncAggregate, nil
 }
 
-func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, error) {
-	block, err := s.Client.GetBeaconBlockBySlot(slot)
-	if err != nil {
-		return scale.SyncAggregate{}, fmt.Errorf("fetch block: %w", err)
-	}
-
-	blockScale, err := block.ToScale()
-	if err != nil {
-		return scale.SyncAggregate{}, fmt.Errorf("convert block to scale: %w", err)
-	}
-
-	return blockScale.Body.SyncAggregate, nil
-}
-
 func (s *Syncer) ComputeSyncPeriodAtSlot(slot uint64) uint64 {
 	return slot / (s.SlotsInEpoch * s.EpochsPerSyncCommitteePeriod)
 }
