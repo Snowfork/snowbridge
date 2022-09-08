@@ -603,7 +603,7 @@ func (li *BeefyListener) scanForCommitments(
 			continue
 		}
 
-		basicChannelProofs := make([]MerkleProof, 0, len(basicChannelAccountNonces))
+		basicChannelProofs := make([]BundleProof, 0, len(basicChannelAccountNonces))
 		var incentivizedChannelCommitment *IncentivizedChannelCommitment
 
 		events, err := li.eventQueryClient.QueryEvents(ctx, li.config.Parachain.Endpoint, blockHash)
@@ -702,11 +702,11 @@ func scanForBasicChannelProofs(
 	basicChannelScanAccounts map[types.AccountID]bool,
 	bundles []BasicOutboundChannelMessageBundle,
 ) (*struct {
-	proofs   []MerkleProof
+	proofs   []BundleProof
 	scanDone bool
 }, error) {
 	var scanBasicChannelDone bool
-	basicChannelProofs := make([]MerkleProof, 0, len(basicChannelAccountNonces))
+	basicChannelProofs := make([]BundleProof, 0, len(basicChannelAccountNonces))
 
 	for bundleIndex, bundle := range bundles {
 		_, shouldCheckAccount := basicChannelScanAccounts[bundle.Account]
@@ -733,7 +733,7 @@ func scanForBasicChannelProofs(
 		if err != nil {
 			return nil, err
 		}
-		if basicChannelBundleProof.Root != digestItemHash {
+		if basicChannelBundleProof.Proof.Root != digestItemHash {
 			log.Warnf(
 				"Halting scan for account '%v'. Basic channel proof root doesn't match digest item's commitment hash",
 				types.HexEncodeToString(bundle.Account[:]),
@@ -753,7 +753,7 @@ func scanForBasicChannelProofs(
 	}
 
 	return &struct {
-		proofs   []MerkleProof
+		proofs   []BundleProof
 		scanDone bool
 	}{
 		proofs:   basicChannelProofs,
@@ -771,27 +771,27 @@ func fetchBundleProof(
 	digestItemHash types.H256,
 	bundleIndex int,
 	bundle BasicOutboundChannelMessageBundle,
-) (MerkleProof, error) {
+) (BundleProof, error) {
 	var proofHex string
 	var rawProof RawMerkleProof
-	var proof MerkleProof
+	var bundleProof BundleProof
 
 	err := api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItemHash, bundleIndex)
 	if err != nil {
-		return proof, fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof(%v, %v): %w", digestItemHash, bundleIndex, err)
+		return bundleProof, fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof(%v, %v): %w", digestItemHash, bundleIndex, err)
 	}
 
 	err = types.DecodeFromHexString(proofHex, &rawProof)
 	if err != nil {
-		return proof, fmt.Errorf("decode merkle proof: %w", err)
+		return bundleProof, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
-	proof, err = NewMerkleProof(rawProof, bundle)
+	proof, err := NewMerkleProof(rawProof)
 	if err != nil {
-		return proof, fmt.Errorf("decode merkle proof: %w", err)
+		return bundleProof, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
-	return proof, nil
+	return BundleProof{Bundle: bundle, Proof: proof}, nil
 }
 
 type OffchainStorageValue struct {

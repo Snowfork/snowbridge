@@ -14,7 +14,7 @@ type Task struct {
 	ParaID                        uint32
 	BlockNumber                   uint64
 	Header                        *types.Header
-	BasicChannelProofs            *[]MerkleProof
+	BasicChannelProofs            *[]BundleProof
 	IncentivizedChannelCommitment *IncentivizedChannelCommitment
 	ProofInput                    *ProofInput
 	ProofOutput                   *ProofOutput
@@ -37,13 +37,12 @@ type RawMerkleProof struct {
 }
 
 type MerkleProof struct {
-	Root      types.H256
-	Proof     [][32]byte
-	HashSides []bool
-	Leaf      BasicOutboundChannelMessageBundle
+	Root        types.H256
+	InnerHashes [][32]byte
+	HashSides   []bool
 }
 
-func NewMerkleProof(rawProof RawMerkleProof, bundle BasicOutboundChannelMessageBundle) (MerkleProof, error) {
+func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 	var proof MerkleProof
 
 	byteArrayProof := make([][32]byte, len(rawProof.Proof))
@@ -57,13 +56,17 @@ func NewMerkleProof(rawProof RawMerkleProof, bundle BasicOutboundChannelMessageB
 	}
 
 	proof = MerkleProof{
-		Root:      rawProof.Root,
-		Proof:     byteArrayProof,
-		HashSides: hashSides,
-		Leaf:      bundle,
+		Root:        rawProof.Root,
+		InnerHashes: byteArrayProof,
+		HashSides:   hashSides,
 	}
 
 	return proof, nil
+}
+
+type BundleProof struct {
+	Bundle BasicOutboundChannelMessageBundle
+	Proof  MerkleProof
 }
 
 func generateHashSides(nodePosition uint64, breadth uint64) ([]bool, error) {

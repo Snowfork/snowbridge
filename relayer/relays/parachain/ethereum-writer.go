@@ -179,11 +179,11 @@ func (wr *EthereumWriter) WriteChannels(
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (wr *EthereumWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
-	commitmentProof *MerkleProof,
+	commitmentProof *BundleProof,
 	paraID uint32,
 	proof *ProofOutput,
 ) error {
-	bundle := commitmentProof.Leaf.IntoInboundMessageBundle()
+	bundle := commitmentProof.Bundle.IntoInboundMessageBundle()
 
 	paraHeadProof := opaqueproof.ParachainClientHeadProof{
 		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
@@ -193,7 +193,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 
 	ownParachainHeadBytes := proof.MerkleProofData.ProvenPreLeaf
 	ownParachainHeadBytesString := hex.EncodeToString(ownParachainHeadBytes)
-	commitmentHashString := hex.EncodeToString(commitmentProof.Root[:])
+	commitmentHashString := hex.EncodeToString(commitmentProof.Proof.Root[:])
 	prefixSuffix := strings.Split(ownParachainHeadBytesString, commitmentHashString)
 	if len(prefixSuffix) != 2 {
 		return errors.New("error splitting parachain header into prefix and suffix")
@@ -241,7 +241,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 	}
 
 	tx, err := wr.basicInboundChannel.Submit(
-		options, bundle, commitmentProof.Proof, commitmentProof.HashSides, opaqueProof,
+		options, bundle, commitmentProof.Proof.InnerHashes, commitmentProof.Proof.HashSides, opaqueProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction BasicInboundChannel.submit: %w", err)
@@ -254,7 +254,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("params", wr.logFieldsForBasicSubmission(bundle, commitmentProof.Proof, commitmentProof.HashSides, opaqueProof)).
+		WithField("params", wr.logFieldsForBasicSubmission(bundle, commitmentProof.Proof.InnerHashes, commitmentProof.Proof.HashSides, opaqueProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),
