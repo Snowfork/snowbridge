@@ -310,7 +310,7 @@ pub mod pallet {
 		fn process_sync_committee_period_update(
 			update: SyncCommitteePeriodUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeBitsSize, T::MaxSyncCommitteeSize>,
 		) -> DispatchResult {
-			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits)
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 			Self::verify_sync_committee(
@@ -473,8 +473,8 @@ pub mod pallet {
 		}
 
 		pub(super) fn verify_signed_header(
-			sync_committee_bits: Vec<u8>,
-			sync_committee_signature: Vec<u8>,
+			sync_committee_bits: BoundedVec<u8, T::MaxSyncCommitteeBitsSize>,
+			sync_committee_signature: BoundedVec<u8, T::SignatureSize>,
 			sync_committee_pubkeys: BoundedVec<PublicKey, T::MaxSyncCommitteeSize>,
 			fork_version: ForkVersion,
 			header: BeaconHeader,
