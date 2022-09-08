@@ -70,6 +70,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 	}
 
 	h.cache.FinalizedHeaders = append(h.cache.FinalizedHeaders, lastFinalizedHeader)
+	h.cache.LastAttemptedFinalizedHeader = lastFinalizedHeader
 
 	log.WithFields(log.Fields{
 		"hash": lastFinalizedHeader,
@@ -94,7 +95,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 			err := h.SyncHeaders(ctx)
 			switch {
 			case errors.Is(err, ErrFinalizedHeaderUnchanged):
-				log.WithField("finalized_header", h.cache.LastFinalizedHeader()).Info(err.Error())
+				log.WithField("finalized_header", h.cache.LastAttemptedFinalizedHeader).Info(err.Error())
 			case errors.Is(err, ErrFinalizedHeaderNotImported):
 				log.Warn(err.Error())
 			case err != nil:
@@ -110,8 +111,17 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 
 					log.WithField("block_number", lastSyncedExecutionBlockNumber).Info("sending block number")
 
-					basicChannel <- lastSyncedExecutionBlockNumber
-					incentivizedChannel <- lastSyncedExecutionBlockNumber
+					select {
+					case basicChannel <- lastSyncedExecutionBlockNumber:
+					case <-ctx.Done():
+						return ctx.Err()
+					}
+
+					select {
+					case incentivizedChannel <- lastSyncedExecutionBlockNumber:
+					case <-ctx.Done():
+						return ctx.Err()
+					}
 				}
 			}
 
@@ -191,12 +201,19 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("write to parachain: %w", err)
 	}
 
-	h.cache.FinalizedHeaders = append(h.cache.FinalizedHeaders, blockRoot)
+	// We need a distinction between finalized headers that we've tried to sync, so that we don't try syncing
+	// it over and over again with the same failure.
+	h.cache.LastAttemptedFinalizedHeader = blockRoot
 
 	lastStoredHeader, err := h.writer.GetLastStoredFinalizedHeader()
 	if err != nil {
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch last finalized header from parachain: %w", err)
 	}
+
+	// If the finalized header import succeeded, we add it to this cache. This cache is used to determine
+	// from which last finalized header needs to imported (i.e. start and end finalized blocks, to backfill execution
+	// headers in between).
+	h.cache.FinalizedHeaders = append(h.cache.FinalizedHeaders, blockRoot)
 
 	if lastStoredHeader != blockRoot {
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, ErrFinalizedHeaderNotImported
@@ -230,6 +247,7 @@ func (h *Header) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggr
 }
 
 func (h *Header) SyncHeaders(ctx context.Context) error {
+	lastAttemptedFinalizedHeader := h.cache.LastAttemptedFinalizedHeader
 	secondLastFinalizedHeader := h.cache.LastFinalizedHeader()
 
 	finalizedHeader, finalizedHeaderBlockRoot, err := h.SyncFinalizedHeader(ctx)
@@ -237,7 +255,7 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 		return err
 	}
 
-	if finalizedHeaderBlockRoot == secondLastFinalizedHeader {
+	if finalizedHeaderBlockRoot == lastAttemptedFinalizedHeader {
 		return ErrFinalizedHeaderUnchanged
 	}
 
