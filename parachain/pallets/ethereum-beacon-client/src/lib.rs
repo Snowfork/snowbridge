@@ -47,6 +47,36 @@ pub mod pallet {
 		type MaxExtraData: Get<u32>;
 		#[pallet::constant]
 		type MaxLogsBloom: Get<u32>;
+		#[pallet::constant]
+		type MaxFeeRecipientSize: Get<u32>;
+		#[pallet::constant]
+		type MaxLogsBloomSize: Get<u32>;
+		#[pallet::constant]
+		type MaxExtraDataSize: Get<u32>;
+		#[pallet::constant]
+		type MaxDepositDataSize: Get<u32>;
+		#[pallet::constant]
+		type MaxPublicKeySize: Get<u32>;
+		#[pallet::constant]
+		type MaxSignatureSize: Get<u32>;
+		#[pallet::constant]
+		type MaxProofSize: Get<u32>;
+		#[pallet::constant]
+		type MaxRandaoSize: Get<u32>;
+		#[pallet::constant]
+		type MaxProposerSlashingSize: Get<u32>;
+		#[pallet::constant]
+		type MaxAttesterSlashingSize: Get<u32>;
+		#[pallet::constant]
+		type MaxVoluntaryExitSize: Get<u32>;
+		#[pallet::constant]
+		type MaxAttestionSize: Get<u32>;
+		#[pallet::constant]
+		type MaxAggregationBitsSize: Get<u32>;
+		#[pallet::constant]
+		type MaxSyncCommitteeBitsSize: Get<u32>;
+		#[pallet::constant]
+		type MaxAttestingIndicesSize: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -141,7 +171,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn sync_committee_period_update(
 			origin: OriginFor<T>,
-			sync_committee_period_update: SyncCommitteePeriodUpdate<T::MaxSyncCommitteeSize, T::MaxProofBranchSize>,
+			sync_committee_period_update: SyncCommitteePeriodUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeBitsSize, T::MaxSyncCommitteeSize>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -174,7 +204,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_finalized_header(
 			origin: OriginFor<T>,
-			finalized_header_update: FinalizedHeaderUpdate<T::MaxProofBranchSize>,
+			finalized_header_update: FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeBitsSize>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -208,7 +238,21 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
-			update: BlockUpdate,
+			update: BlockUpdate<T::MaxFeeRecipientSize, 
+				T::MaxLogsBloomSize, 
+				T::MaxExtraDataSize, 
+				T::MaxDepositDataSize, 
+				T::MaxPublicKeySize, 
+				T::MaxSignatureSize, 
+				T::MaxProofSize, 
+				T::MaxRandaoSize, 
+				T::MaxProposerSlashingSize, 
+				T::MaxAttesterSlashingSize, 
+				T::MaxVoluntaryExitSize,
+				T::MaxAttestionSize,
+				T::MaxAggregationBitsSize,
+				T::MaxSyncCommitteeBitsSize,
+				T::MaxAttestingIndicesSize>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -264,7 +308,7 @@ pub mod pallet {
 		}
 
 		fn process_sync_committee_period_update(
-			update: SyncCommitteePeriodUpdate<T::MaxSyncCommitteeSize, T::MaxProofBranchSize>,
+			update: SyncCommitteePeriodUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeBitsSize, T::MaxSyncCommitteeSize>,
 		) -> DispatchResult {
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
@@ -306,7 +350,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_finalized_header(update: FinalizedHeaderUpdate<T::MaxProofBranchSize>) -> DispatchResult {
+		fn process_finalized_header(update: FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeBitsSize>) -> DispatchResult {
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
@@ -339,7 +383,21 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_header(update: BlockUpdate) -> DispatchResult {
+		fn process_header(update: BlockUpdate<T::MaxFeeRecipientSize, 
+				T::MaxLogsBloomSize, 
+				T::MaxExtraDataSize, 
+				T::MaxDepositDataSize, 
+				T::MaxPublicKeySize, 
+				T::MaxSignatureSize, 
+				T::MaxProofSize, 
+				T::MaxRandaoSize, 
+				T::MaxProposerSlashingSize, 
+				T::MaxAttesterSlashingSize, 
+				T::MaxVoluntaryExitSize,
+				T::MaxAttestionSize,
+				T::MaxAggregationBitsSize,
+				T::MaxSyncCommitteeBitsSize,
+				T::MaxAttestingIndicesSize>) -> DispatchResult {
 			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
 			let block_slot = update.block.slot;
 			if block_slot > latest_finalized_header_slot {

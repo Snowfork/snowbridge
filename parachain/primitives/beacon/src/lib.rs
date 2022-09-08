@@ -120,13 +120,17 @@ pub struct InitialSync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct SyncCommitteePeriodUpdate<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> {
+pub struct SyncCommitteePeriodUpdate<
+	SignatureSize: Get<u32>, 
+	ProofSize: Get<u32>, 
+	SyncCommitteeBitsSize: Get<u32>,
+	SyncCommitteeSize: Get<u32>> {
 	pub attested_header: BeaconHeader,
 	pub next_sync_committee: SyncCommittee<SyncCommitteeSize>,
 	pub next_sync_committee_branch: BoundedVec<H256, ProofSize>,
 	pub finalized_header: BeaconHeader,
 	pub finality_branch: BoundedVec<H256, ProofSize>,
-	pub sync_aggregate: SyncAggregate,
+	pub sync_aggregate: SyncAggregate<SyncCommitteeBitsSize, SignatureSize>,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_fork_version"))]
 	pub fork_version: ForkVersion,
 	pub sync_committee_period: u64,
@@ -134,24 +138,56 @@ pub struct SyncCommitteePeriodUpdate<SyncCommitteeSize: Get<u32>, ProofSize: Get
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct FinalizedHeaderUpdate<ProofSize: Get<u32>>  {
+pub struct FinalizedHeaderUpdate<
+	SignatureSize: Get<u32>, 
+	ProofSize: Get<u32>, 
+	SyncCommitteeBitsSize: Get<u32>>  {
 	pub attested_header: BeaconHeader,
 	pub finalized_header: BeaconHeader,
 	pub finality_branch: BoundedVec<H256, ProofSize>,
-	pub sync_aggregate: SyncAggregate,
+	pub sync_aggregate: SyncAggregate<SyncCommitteeBitsSize, SignatureSize>,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_fork_version"))]
 	pub fork_version: ForkVersion,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct BlockUpdate<F: Get<u32>, L: Get<u32>, E: Get<u32>> {
-	pub block: BeaconBlock<F, L, E>,
+pub struct BlockUpdate<
+	FeeRecipientSize: Get<u32>, 
+	LogsBloomSize: Get<u32>, 
+	ExtraDataSize: Get<u32>, 
+	DepositDataSize: Get<u32>, 
+	PublicKeySize: Get<u32>, 
+	SignatureSize: Get<u32>, 
+	ProofSize: Get<u32>, 
+	RandaoSize: Get<u32>, 
+	ProposerSlashingSize: Get<u32>, 
+	AttesterSlashingSize: Get<u32>, 
+	VoluntaryExitSize: Get<u32>,
+	AttestionSize: Get<u32>,
+	AggregationBitsSize: Get<u32>,
+	SyncCommitteeBitsSize: Get<u32>,
+	AttestingIndicesSize: Get<u32>> {
+	pub block: BeaconBlock<FeeRecipientSize, 
+	LogsBloomSize, 
+	ExtraDataSize, 
+	DepositDataSize, 
+	PublicKeySize, 
+	SignatureSize, 
+	ProofSize, 
+	RandaoSize, 
+	ProposerSlashingSize, 
+	AttesterSlashingSize, 
+	VoluntaryExitSize,
+	AttestionSize,
+	AggregationBitsSize,
+	SyncCommitteeBitsSize,
+	AttestingIndicesSize>,
 	//  // Only used for debugging purposes, to compare the hash tree
 	// root of the block body to the body hash retrieved from the API.
 	// Can be removed later.
 	pub block_body_root: H256,
-	pub sync_aggregate: SyncAggregate,
+	pub sync_aggregate: SyncAggregate<SyncCommitteeBitsSize, SignatureSize>,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_fork_version"))]
 	pub fork_version: ForkVersion,
 }
@@ -170,18 +206,18 @@ pub struct SigningData {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub struct ExecutionHeader<L: Get<u32>, E: Get<u32>> {
+pub struct ExecutionHeader<LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>> {
 	pub parent_hash: H256,
 	pub fee_recipient: H160,
 	pub state_root: H256,
 	pub receipts_root: H256,
-	pub logs_bloom: BoundedVec<u8, L>,
+	pub logs_bloom: BoundedVec<u8, LogsBloomSize>,
 	pub prev_randao: H256,
 	pub block_number: u64,
 	pub gas_limit: u64,
 	pub gas_used: u64,
 	pub timestamp: u64,
-	pub extra_data: BoundedVec<u8, E>,
+	pub extra_data: BoundedVec<u8, ExtraDataSize>,
 	pub base_fee_per_gas: U256,
 	pub block_hash: H256,
 	pub transactions_root: H256,
@@ -190,8 +226,8 @@ pub struct ExecutionHeader<L: Get<u32>, E: Get<u32>> {
 /// Sync committee as it is stored in the runtime storage.
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct SyncCommittee<S: Get<u32>> {
-	pub pubkeys: BoundedVec<PublicKey, S>,
+pub struct SyncCommittee<SyncCommitteeSize: Get<u32>> {
+	pub pubkeys: BoundedVec<PublicKey, SyncCommitteeSize>,
 	pub aggregate_pubkey: PublicKey,
 }
 
@@ -215,20 +251,20 @@ pub struct BeaconHeader {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct DepositData<D: Get<u32>, X: Get<u32>> {
+pub struct DepositData<PublicKeySize: Get<u32>, SignatureSize: Get<u32>> {
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub pubkey: BoundedVec<u8, D>,
+	pub pubkey: BoundedVec<u8, PublicKeySize>,
 	pub withdrawal_credentials: H256,
 	pub amount: u64,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub signature: BoundedVec<u8, X>,
+	pub signature: BoundedVec<u8, SignatureSize>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct Deposit<D: Get<u32>, X: Get<u32>, P: Get<u32>> {
-	pub proof: BoundedVec<H256, P>,
-	pub data: DepositData<D, X>,
+pub struct Deposit<PublicKeySize: Get<u32>, SignatureSize: Get<u32>, ProofSize: Get<u32>> {
+	pub proof: BoundedVec<H256, ProofSize>,
+	pub data: DepositData<PublicKeySize, SignatureSize>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -250,43 +286,43 @@ pub struct AttestationData {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct IndexedAttestation {
-	pub attesting_indices: Vec<u64>,
+pub struct IndexedAttestation<AttestingIndicesSize: Get<u32>, SignatureSize: Get<u32>> {
+	pub attesting_indices: BoundedVec<u64, AttestingIndicesSize>,
 	pub data: AttestationData,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub signature: Vec<u8>,
+	pub signature: BoundedVec<u8, SignatureSize>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct SignedHeader {
+pub struct SignedHeader<SignatureSize: Get<u32>> {
 	pub message: crate::BeaconHeader,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub signature: Vec<u8>,
+	pub signature: BoundedVec<u8, SignatureSize>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct ProposerSlashing {
-	pub signed_header_1: SignedHeader,
-	pub signed_header_2: SignedHeader,
+pub struct ProposerSlashing<SignatureSize: Get<u32>> {
+	pub signed_header_1: SignedHeader<SignatureSize>,
+	pub signed_header_2: SignedHeader<SignatureSize>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct AttesterSlashing {
-	pub attestation_1: IndexedAttestation,
-	pub attestation_2: IndexedAttestation,
+pub struct AttesterSlashing<AttestingIndicesSize: Get<u32>, SignatureSize: Get<u32>> {
+	pub attestation_1: IndexedAttestation<AttestingIndicesSize, SignatureSize>,
+	pub attestation_2: IndexedAttestation<AttestingIndicesSize, SignatureSize>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct Attestation {
+pub struct Attestation<AggregationBitsSize: Get<u32>, SignatureSize: Get<u32>> {
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub aggregation_bits: Vec<u8>,
+	pub aggregation_bits: BoundedVec<u8, AggregationBitsSize>,
 	pub data: AttestationData,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub signature: Vec<u8>,
+	pub signature: BoundedVec<u8, SignatureSize>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -306,11 +342,11 @@ pub struct Eth1Data {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct SyncAggregate {
+pub struct SyncAggregate<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>> {
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub sync_committee_bits: Vec<u8>,
+	pub sync_committee_bits: BoundedVec<u8, SyncCommitteeBitsSize>,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub sync_committee_signature: Vec<u8>,
+	pub sync_committee_signature: BoundedVec<u8, SignatureSize>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -343,28 +379,67 @@ pub struct Body<
 	LogsBloomSize: Get<u32>, 
 	ExtraDataSize: Get<u32>, 
 	DepositDataSize: Get<u32>, 
-	X: Get<u32>, P: Get<u32>, De: Get<u32>, RandaoSize: Get<u32>, ProposerSlashingSize: Get<u32>, AttesterSlashingSize: Get<u32>, VoluntaryExitSize: Get<u32>> {
+	PublicKeySize: Get<u32>, 
+	SignatureSize: Get<u32>, 
+	ProofSize: Get<u32>, 
+	RandaoSize: Get<u32>, 
+	ProposerSlashingSize: Get<u32>, 
+	AttesterSlashingSize: Get<u32>, 
+	VoluntaryExitSize: Get<u32>,
+	AttestionSize: Get<u32>,
+	AggregationBitsSize: Get<u32>,
+	SyncCommitteeBitsSize: Get<u32>,
+	AttestingIndicesSize: Get<u32>> {
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
 	pub randao_reveal: BoundedVec<u8, RandaoSize>,
 	pub eth1_data: Eth1Data,
 	pub graffiti: H256,
-	pub proposer_slashings: BoundedVec<ProposerSlashing, ProposerSlashingSize>,
-	pub attester_slashings: BoundedVec<AttesterSlashing, AttesterSlashingSize>,
-	pub attestations: Vec<Attestation>,
-	pub deposits: BoundedVec<Deposit<DepositD, X, P>, De>,
+	pub proposer_slashings: BoundedVec<ProposerSlashing<SignatureSize>, ProposerSlashingSize>,
+	pub attester_slashings: BoundedVec<AttesterSlashing<AttestingIndicesSize, SignatureSize>, AttesterSlashingSize>,
+	pub attestations: BoundedVec<Attestation<AggregationBitsSize, SignatureSize>, AttestionSize>,
+	pub deposits: BoundedVec<Deposit<PublicKeySize, SignatureSize, ProofSize>, DepositDataSize>,
 	pub voluntary_exits: BoundedVec<VoluntaryExit, VoluntaryExitSize>,
-	pub sync_aggregate: SyncAggregate,
-	pub execution_payload: ExecutionPayload<FeeR, LogsB, ExtraD>,
+	pub sync_aggregate: SyncAggregate<SyncCommitteeBitsSize, SignatureSize>,
+	pub execution_payload: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct BeaconBlock<F: Get<u32>, L: Get<u32>, E: Get<u32>> {
+pub struct BeaconBlock<
+	FeeRecipientSize: Get<u32>, 
+	LogsBloomSize: Get<u32>, 
+	ExtraDataSize: Get<u32>, 
+	DepositDataSize: Get<u32>, 
+	PublicKeySize: Get<u32>, 
+	SignatureSize: Get<u32>, 
+	ProofSize: Get<u32>, 
+	RandaoSize: Get<u32>, 
+	ProposerSlashingSize: Get<u32>, 
+	AttesterSlashingSize: Get<u32>, 
+	VoluntaryExitSize: Get<u32>,
+	AttestionSize: Get<u32>,
+	AggregationBitsSize: Get<u32>,
+	SyncCommitteeBitsSize: Get<u32>,
+	AttestingIndicesSize: Get<u32>> {
 	pub slot: u64,
 	pub proposer_index: u64,
 	pub parent_root: H256,
 	pub state_root: H256,
-	pub body: Body<F, L, E>,
+	pub body: Body<FeeRecipientSize, 
+	LogsBloomSize, 
+	ExtraDataSize, 
+	DepositDataSize, 
+	PublicKeySize, 
+	SignatureSize, 
+	ProofSize, 
+	RandaoSize, 
+	ProposerSlashingSize, 
+	AttesterSlashingSize, 
+	VoluntaryExitSize,
+	AttestionSize,
+	AggregationBitsSize,
+	SyncCommitteeBitsSize,
+	AttestingIndicesSize>
 }
 
 impl <S: Get<u32>, M: Get<u32>>ExecutionHeader<S, M> {
