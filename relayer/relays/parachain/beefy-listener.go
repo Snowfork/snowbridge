@@ -13,7 +13,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
-	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -797,27 +796,4 @@ func fetchBundleProof(
 type OffchainStorageValue struct {
 	Nonce      uint64
 	Commitment []byte
-}
-
-func (li *BeefyListener) fetchOffchainData(digestItem AuxiliaryDigestItem) (*OffchainStorageValue, error) {
-	storageKey, err := makeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := li.parachainConnection.API().RPC.Offchain.LocalStorageGet(offchain.Persistent, storageKey)
-	if err != nil {
-		return nil, fmt.Errorf("read commitment from offchain storage: %w", err)
-	}
-	if data == nil {
-		return nil, fmt.Errorf("offchain storage item not found")
-	}
-
-	var offchainStorageValue OffchainStorageValue
-	err = types.DecodeFromBytes(*data, &offchainStorageValue)
-	if err != nil {
-		return nil, fmt.Errorf("decode offchain storage value: %w", err)
-	}
-
-	return &offchainStorageValue, nil
 }
