@@ -6,19 +6,18 @@ const { expect } = require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber));
 
-const { treasuryAddressSS58, polkadotSenderSS58Alice, polkadotSenderSS58Bob,
+const { treasuryAddressSS58, polkadotSenderSS58Alice,
   polkadotRecipientSS58, polkadotRecipient, bootstrap } = require('../src/fixtures');
 
 const { ChannelId } = require("../src/helpers");
 
 describe('Bridge', function () {
-  let ethClient, subClient, testSubClient;
+  let ethClient, subClient;
 
   before(async function () {
     const clients = await bootstrap();
     ethClient = clients.ethClient;
     subClient = clients.subClient;
-    // testSubClient = clients.testSubClient;
     this.testParaEthAssetId = 0;
   });
 
@@ -30,21 +29,16 @@ describe('Bridge', function () {
 
       const beforeEthBalance = await ethClient.getDotBalance(ethAccount);
       const beforeSubBalanceAlice = await subClient.queryAccountBalance(polkadotSenderSS58Alice);
-      const beforeSubBalanceBob = await subClient.queryAccountBalance(polkadotSenderSS58Bob);
 
       // lock DOT using basic channel
       await subClient.lockDOT(subClient.alice, ethAccount, amount.toFixed(), ChannelId.BASIC)
-      await subClient.lockDOT(subClient.bob, ethAccount, amount.toFixed(), ChannelId.BASIC)
-      await ethClient.waitForNextEventData({ appName: 'snowDOT', eventName: 'Minted' });
       await ethClient.waitForNextEventData({ appName: 'snowDOT', eventName: 'Minted' });
 
       const afterEthBalance = await ethClient.getDotBalance(ethAccount);
       const afterSubBalanceAlice = await subClient.queryAccountBalance(polkadotSenderSS58Alice);
-      const afterSubBalanceBob = await subClient.queryAccountBalance(polkadotSenderSS58Bob);
 
-      expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(2 * amountWrapped);
+      expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amountWrapped);
       expect(beforeSubBalanceAlice.minus(afterSubBalanceAlice)).to.be.bignumber.greaterThan(amount);
-      expect(beforeSubBalanceBob.minus(afterSubBalanceBob)).to.be.bignumber.greaterThan(amount);
     });
 
     it('should transfer ETH from Ethereum to Substrate (basic channel)', async function () {

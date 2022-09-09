@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"math/bits"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -142,7 +141,7 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			err := wr.WriteChannel(options, task)
+			err := wr.WriteChannels(options, task)
 			if err != nil {
 				return fmt.Errorf("write message: %w", err)
 			}
@@ -150,53 +149,22 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 	}
 }
 
-func (wr *EthereumWriter) WriteChannel(
+func (wr *EthereumWriter) WriteChannels(
 	options *bind.TransactOpts,
 	task *Task,
 ) error {
-	for channelID, commitments := range task.Commitments {
-		for _, commitment := range commitments {
-			err := wr.WriteCommitment(channelID, commitment, options, task)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (wr *EthereumWriter) WriteCommitment(
-	channelID ChannelID,
-	commitment Commitment,
-	options *bind.TransactOpts,
-	task *Task,
-) error {
-	if channelID.IsBasic {
-		bundle, ok := commitment.Data.(BasicOutboundChannelMessageBundle)
-		if !ok {
-			return fmt.Errorf("invalid commitment data for basic channel")
-		}
-		err := wr.WriteBasicChannel(
-			options,
-			commitment.Hash,
-			bundle,
-			task.BasicChannelBundleProof,
-			task.ParaID,
-			task.ProofOutput,
-		)
+	for _, proof := range *task.BasicChannelProofs {
+		err := wr.WriteBasicChannel(options, &proof, task.ParaID, task.ProofOutput)
 		if err != nil {
 			return fmt.Errorf("write basic channel: %w", err)
 		}
 	}
-	if channelID.IsIncentivized {
-		bundle, ok := commitment.Data.(IncentivizedOutboundChannelMessageBundle)
-		if !ok {
-			return fmt.Errorf("invalid commitment data for incentivized channel")
-		}
+
+	if task.IncentivizedChannelCommitment != nil {
 		err := wr.WriteIncentivizedChannel(
 			options,
-			commitment.Hash,
-			bundle,
+			task.IncentivizedChannelCommitment.Hash,
+			task.IncentivizedChannelCommitment.Data,
 			task.ParaID,
 			task.ProofOutput,
 		)
@@ -204,19 +172,18 @@ func (wr *EthereumWriter) WriteCommitment(
 			return fmt.Errorf("write incentivized channel: %w", err)
 		}
 	}
+
 	return nil
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (wr *EthereumWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
-	commitmentHash gsrpcTypes.H256,
-	commitmentData BasicOutboundChannelMessageBundle,
-	commitmentProof *MerkleProof,
+	commitmentProof *BundleProof,
 	paraID uint32,
 	proof *ProofOutput,
 ) error {
-	bundle := commitmentData.IntoInboundMessageBundle()
+	bundle := commitmentProof.Bundle.IntoInboundMessageBundle()
 
 	paraHeadProof := opaqueproof.ParachainClientHeadProof{
 		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
@@ -226,7 +193,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 
 	ownParachainHeadBytes := proof.MerkleProofData.ProvenPreLeaf
 	ownParachainHeadBytesString := hex.EncodeToString(ownParachainHeadBytes)
-	commitmentHashString := hex.EncodeToString(commitmentHash[:])
+	commitmentHashString := hex.EncodeToString(commitmentProof.Proof.Root[:])
 	prefixSuffix := strings.Split(ownParachainHeadBytesString, commitmentHashString)
 	if len(prefixSuffix) != 2 {
 		return errors.New("error splitting parachain header into prefix and suffix")
@@ -273,18 +240,8 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("pack proof: %w", err)
 	}
 
-	leafProof := make([][32]byte, len(commitmentProof.Proof))
-	for i := 0; i < len(commitmentProof.Proof); i++ {
-		leafProof[i] = ([32]byte)(commitmentProof.Proof[i])
-	}
-
-	hashSides, err := generateHashSides(commitmentProof)
-	if err != nil {
-		return err
-	}
-
 	tx, err := wr.basicInboundChannel.Submit(
-		options, bundle, leafProof, hashSides, opaqueProof,
+		options, bundle, commitmentProof.Proof.InnerHashes, commitmentProof.Proof.HashSides, opaqueProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction BasicInboundChannel.submit: %w", err)
@@ -297,7 +254,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("params", wr.logFieldsForBasicSubmission(bundle, leafProof, hashSides, opaqueProof)).
+		WithField("params", wr.logFieldsForBasicSubmission(bundle, commitmentProof.Proof.InnerHashes, commitmentProof.Proof.HashSides, opaqueProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),
@@ -309,31 +266,6 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		Info("Sent transaction BasicInboundChannel.submit")
 
 	return nil
-}
-
-func generateHashSides(commitmentProof *MerkleProof) ([]bool, error) {
-	pos := commitmentProof.LeafIndex
-	width := commitmentProof.NumberOfLeaves
-
-	if pos >= width {
-		return nil, fmt.Errorf("leaf position %v is too high in proof with %v leaves", pos, width)
-	}
-
-	if width == 0 {
-		return nil, fmt.Errorf("no hash sides for an empty proof")
-	}
-
-	// The number of intermediate hashes is the height of the complete tree, which is the base 2 log of the number of leaves, rounded up.
-	// This is equivalent to the number of bits after the most significant bit, which is what we use here.
-	numSides := 64 - bits.LeadingZeros64(width-1)
-	sides := make([]bool, numSides)
-	for i := 0; i < numSides; i++ {
-		sides[i] = pos%2 == 1
-		pos /= 2
-		width = ((width - 1) / 2) + 1
-	}
-
-	return sides, nil
 }
 
 func (wr *EthereumWriter) WriteIncentivizedChannel(
