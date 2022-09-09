@@ -26,14 +26,12 @@ pub fn get_ssz_beacon_block_body<
 	PublicKeySize: Get<u32>, 
 	SignatureSize: Get<u32>, 
 	ProofSize: Get<u32>, 
-	RandaoSize: Get<u32>, 
 	ProposerSlashingSize: Get<u32>, 
 	AttesterSlashingSize: Get<u32>, 
 	VoluntaryExitSize: Get<u32>,
-	AttestionSize: Get<u32>,
+	AttestationSize: Get<u32>,
 	AggregationBitsSize: Get<u32>,
-	SyncCommitteeBitsSize: Get<u32>,
-	AttestingIndicesSize: Get<u32>>
+	ValidatorCommitteeSize: Get<u32>>
     (body: Body<FeeRecipientSize, 
 	LogsBloomSize, 
 	ExtraDataSize, 
@@ -41,14 +39,12 @@ pub fn get_ssz_beacon_block_body<
 	PublicKeySize, 
 	SignatureSize, 
 	ProofSize, 
-	RandaoSize, 
 	ProposerSlashingSize, 
 	AttesterSlashingSize, 
 	VoluntaryExitSize,
-	AttestionSize,
+	AttestationSize,
 	AggregationBitsSize,
-	SyncCommitteeBitsSize,
-	AttestingIndicesSize>) -> Result<SSZBeaconBlockBody, MerkleizationError> {
+	ValidatorCommitteeSize>) -> Result<SSZBeaconBlockBody, MerkleizationError> {
     Ok(SSZBeaconBlockBody{
         randao_reveal: Vector::<u8, 96>::from_iter(body.randao_reveal),
         eth1_data: get_ssz_eth1_data(body.eth1_data)?,
@@ -127,7 +123,7 @@ pub fn get_ssz_attestations<AttestionBitsSize: Get<u32>, SignatureSize: Get<u32>
     let mut attestations_vec = Vec::new();
 
     for attestation in attestations.iter() {
-        attestations_vec.push(get_ssz_attestation(*attestation)?);
+        attestations_vec.push(get_ssz_attestation((*attestation).clone())?);
     }
 
     Ok(List::<SSZAttestation, { config::MAX_ATTESTATIONS }>::from_iter(attestations_vec))
@@ -157,7 +153,7 @@ pub fn get_ssz_proposer_slashings<ProposerSlashingSize: Get<u32>, SignatureSize:
     let mut proposer_slashings_vec = Vec::new();
 
     for proposer_slashing in proposer_slashings.iter() {
-       proposer_slashings_vec.push(get_ssz_proposer_slashing((*proposer_slashing))?);
+       proposer_slashings_vec.push(get_ssz_proposer_slashing((*proposer_slashing).clone())?);
     }
 
     Ok(List::<SSZProposerSlashing, { config::MAX_PROPOSER_SLASHINGS }>::from_iter(proposer_slashings_vec))
@@ -183,7 +179,7 @@ pub fn get_ssz_attester_slashings<AttestingIndicesSize: Get<u32>, SignatureSize:
     let mut attester_slashings_vec = Vec::new();
 
     for attester_slashing in attester_slashings.iter() {
-        attester_slashings_vec.push(get_ssz_attester_slashing(*attester_slashing)?);
+        attester_slashings_vec.push(get_ssz_attester_slashing((*attester_slashing).clone())?);
     }
 
     Ok(List::<SSZAttesterSlashing, { config::MAX_ATTESTER_SLASHINGS } >::from_iter(attester_slashings_vec))
@@ -255,28 +251,24 @@ pub fn hash_tree_root_beacon_body<
 	PublicKeySize: Get<u32>, 
 	SignatureSize: Get<u32>, 
 	ProofSize: Get<u32>, 
-	RandaoSize: Get<u32>, 
 	ProposerSlashingSize: Get<u32>, 
 	AttesterSlashingSize: Get<u32>, 
 	VoluntaryExitSize: Get<u32>,
-	AttestionSize: Get<u32>,
-	AggregationBitsSize: Get<u32>,
-	SyncCommitteeBitsSize: Get<u32>,
-	AttestingIndicesSize: Get<u32>>(body: Body<FeeRecipientSize, 
+	AttestationSize: Get<u32>,
+	ValidatorCommitteeSize: Get<u32>,
+    SyncCommitteeSize: Get<u32>>(body: Body<FeeRecipientSize, 
 	LogsBloomSize, 
 	ExtraDataSize, 
 	DepositDataSize, 
 	PublicKeySize, 
 	SignatureSize, 
 	ProofSize, 
-	RandaoSize, 
 	ProposerSlashingSize, 
 	AttesterSlashingSize, 
 	VoluntaryExitSize,
-	AttestionSize,
-	AggregationBitsSize,
-	SyncCommitteeBitsSize,
-	AttestingIndicesSize>) -> Result<[u8; 32], MerkleizationError> {
+	AttestationSize,
+	ValidatorCommitteeSize,
+    SyncCommitteeSize>) -> Result<[u8; 32], MerkleizationError> {
     hash_tree_root(get_ssz_beacon_block_body(body)?)
 }
 
