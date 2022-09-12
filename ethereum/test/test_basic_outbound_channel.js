@@ -26,8 +26,7 @@ describe("BasicOutboundChannel", function () {
   describe("send", function () {
     beforeEach(async function () {
       this.channel = await BasicOutboundChannel.new();
-      const principal = "0x0000000000000000000000000000000000000042"
-      await this.channel.initialize(owner, principal, [appAddress]).should.be.fulfilled;
+      await this.channel.initialize(owner, [appAddress]).should.be.fulfilled;
     });
 
     it("should send messages out with the correct event and fields", async function () {
