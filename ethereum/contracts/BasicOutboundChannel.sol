@@ -11,7 +11,7 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
     // Governance contracts will administer using this role.
     bytes32 public constant CONFIG_UPDATE_ROLE = keccak256("CONFIG_UPDATE_ROLE");
 
-    uint64 public nonce;
+    mapping(address => uint64) public nonces;
 
     // Only messages originating from this account will
     // be allowed through the channel.
@@ -77,7 +77,7 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
         if (principal != address(0x0000000000000000000000000000000000000042)) {
             require(_origin == principal, "Origin is not an authorized principal");
         }
-        nonce = nonce + 1;
-        emit Message(msg.sender, nonce, _payload);
+        nonces[msg.sender] = nonces[msg.sender] + 1;
+        emit Message(msg.sender, nonces[msg.sender], _payload);
     }
 }
