@@ -433,11 +433,11 @@ pub struct AttesterSlashing<AttestingIndicesSize: Get<u32>, SignatureSize: Get<u
         bound(deserialize = "")
     )
 )]
-#[scale_info(skip_type_params(AggregationBitsSize, SignatureSize))]
+#[scale_info(skip_type_params(ValidatorCommitteeSize, SignatureSize))]
 #[codec(mel_bound())]
-pub struct Attestation<AggregationBitsSize: Get<u32>, SignatureSize: Get<u32>> {
+pub struct Attestation<ValidatorCommitteeSize: Get<u32>, SignatureSize: Get<u32>> {
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub aggregation_bits: BoundedVec<u8, AggregationBitsSize>,
+	pub aggregation_bits: BoundedVec<u8, ValidatorCommitteeSize>,
 	pub data: AttestationData,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
 	pub signature: BoundedVec<u8, SignatureSize>,
@@ -468,11 +468,11 @@ pub struct Eth1Data {
         bound(deserialize = "")
     )
 )]
-#[scale_info(skip_type_params(SyncCommitteeBitsSize, SignatureSize))]
+#[scale_info(skip_type_params(SyncCommitteeSize, SignatureSize))]
 #[codec(mel_bound())]
-pub struct SyncAggregate<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>> {
+pub struct SyncAggregate<SyncCommitteeSize: Get<u32>, SignatureSize: Get<u32>> {
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub sync_committee_bits: BoundedVec<u8, SyncCommitteeBitsSize>,
+	pub sync_committee_bits: BoundedVec<u8, SyncCommitteeSize>,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
 	pub sync_committee_signature: BoundedVec<u8, SignatureSize>,
 }

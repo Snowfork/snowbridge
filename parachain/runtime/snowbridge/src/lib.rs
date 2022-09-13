@@ -611,24 +611,24 @@ impl incentivized_channel_outbound::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaxSyncCommitteeSize: u32 = 512;
-	pub const MaxProofBranchSize: u32 = 10;
-	pub const MaxExtraDataSize: u32 = 32;
-	pub const MaxLogsBloomSize: u32 = 256;
-	pub const MaxFeeRecipientSize: u32 = 20;
-	pub const MaxDepositDataSize: u32 = 16;
-	pub const MaxPublicKeySize: u32 = 48;
-	pub const MaxSignatureSize: u32 = 96;
-	pub const MaxProposerSlashingSize: u32 = 16;
-	pub const MaxAttesterSlashingSize: u32 = 2;
-	pub const MaxVoluntaryExitSize: u32 = 16;
-	pub const MaxAttestationSize: u32 = 128;
-	pub const MaxValidatorsPerCommittee: u32 = 2048;
+    pub const MaxSyncCommitteeSize: u32 = 512;
+    pub const MaxProofBranchSize: u32 = 10;
+    pub const MaxExtraDataSize: u32 = 32;
+    pub const MaxLogsBloomSize: u32 = 256;
+    pub const MaxFeeRecipientSize: u32 = 20;
+    pub const MaxDepositDataSize: u32 = 16;
+    pub const MaxPublicKeySize: u32 = 48;
+    pub const MaxSignatureSize: u32 = 96;
+    pub const MaxProposerSlashingSize: u32 = 16;
+    pub const MaxAttesterSlashingSize: u32 = 2;
+    pub const MaxVoluntaryExitSize: u32 = 16;
+    pub const MaxAttestationSize: u32 = 128;
+    pub const MaxValidatorsPerCommittee: u32 = 2048;
 }
 
 impl ethereum_beacon_client::Config for Runtime {
 	type Event = Event;
-	type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
+    type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
     type MaxProofBranchSize = MaxProofBranchSize;
     type MaxExtraDataSize = MaxExtraDataSize;
     type MaxLogsBloomSize = MaxLogsBloomSize;
