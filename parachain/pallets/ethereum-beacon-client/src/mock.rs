@@ -4,7 +4,7 @@ use frame_support::{BoundedVec, parameter_types};
 use frame_system as system;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-	AttesterSlashing, BeaconHeader, Body, SyncCommittee, SyncAggregate, SyncCommitteePeriodUpdateSerialize, FinalizedHeaderUpdateSerialize, BlockUpdateSerialize, AttesterSlashingSerialize, Eth1Data, IndexedAttestation, AttestationData,
+	AttesterSlashing, BeaconHeader, Body, SyncCommittee, SyncAggregate, SyncCommitteePeriodUpdateSerialize, FinalizedHeaderUpdateSerialize, BlockUpdateSerialize, AttesterSlashingSerialize, Eth1Data, IndexedAttestation, AttestationData, Checkpoint,
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -259,8 +259,14 @@ pub fn get_header_update() -> BlockUpdate<
 					slot: attester_slashing.attestation_1.data.slot,
 					index: attester_slashing.attestation_1.data.index,
 					beacon_block_root: attester_slashing.attestation_1.data.beacon_block_root,
-					source: todo!(),
-					target: todo!(),
+					source: Checkpoint{ 
+						epoch: attester_slashing.attestation_1.data.source.epoch, 
+						root: attester_slashing.attestation_1.data.source.root, 
+					},
+					target: Checkpoint{ 
+						epoch: attester_slashing.attestation_1.data.target.epoch, 
+						root: attester_slashing.attestation_1.data.target.root, 
+					},
 				},
 				signature: attester_slashing.attestation_1.signature.clone().try_into().expect("signature is too long"),
 			}, 
