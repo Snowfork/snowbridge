@@ -14,7 +14,7 @@ use frame_system::ensure_signed;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_std::prelude::*;
-use snowbridge_beacon_primitives::{SyncCommittee, InitialSyncSerialize, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
 
@@ -126,19 +126,19 @@ pub mod pallet {
 	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {
-		pub initial_sync: InitialSyncSerialize,
+	pub struct GenesisConfig<T: Config> {
+		pub initial_sync: InitialSync<T::MaxSyncCommitteeSize, T::MaxProofBranchSize>,
 	}
 
 	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
+	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self { GenesisConfig {
 			initial_sync: Default::default(),
 		}}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -146,25 +146,9 @@ pub mod pallet {
 				config::SYNC_COMMITTEE_SIZE
 			);
 
-			let bounded_branch: BoundedVec<H256, T::MaxProofBranchSize> =
-				self.initial_sync.current_sync_committee_branch.clone().try_into().expect("proof branch is too long");
-
-			let bounded_sync_committee_pubkeys: BoundedVec<PublicKey, T::MaxSyncCommitteeSize> = 
-				self.initial_sync.current_sync_committee.pubkeys.clone().try_into().expect("pubkeys are too many");
-
-			let bounded_sync_committee = SyncCommittee{
-				pubkeys: bounded_sync_committee_pubkeys,
-				aggregate_pubkey: self.initial_sync.current_sync_committee.aggregate_pubkey.clone()
-			};
-
-			let initial_sync_converted = InitialSync{ 
-				header: self.initial_sync.header.clone(), 
-				current_sync_committee: bounded_sync_committee, 
-				current_sync_committee_branch: bounded_branch, 
-				validators_root: self.initial_sync.validators_root,
-			};
-
-			Pallet::<T>::initial_sync(initial_sync_converted).unwrap();
+			Pallet::<T>::initial_sync(
+				self.initial_sync.clone(),
+			).unwrap();
 		}
 	}
 

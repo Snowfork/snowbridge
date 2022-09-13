@@ -1,10 +1,10 @@
 use super::*;
 use crate as ethereum_beacon_client;
-use frame_support::{BoundedVec, parameter_types};
+use frame_support::parameter_types;
 use frame_system as system;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-	AttesterSlashing, BeaconHeader, Body, SyncCommittee, SyncAggregate, SyncCommitteePeriodUpdateSerialize, FinalizedHeaderUpdateSerialize, BlockUpdateSerialize, AttesterSlashingSerialize, Eth1Data, IndexedAttestation, AttestationData, Checkpoint,
+	AttesterSlashing, BeaconHeader, Body, SyncCommittee,
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -24,7 +24,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config, Storage, Event<T>},
+		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config<T>, Storage, Event<T>},
 	}
 );
 
@@ -61,19 +61,19 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxSyncCommitteeSize: u32 = 512;
-	pub const MaxProofBranchSize: u32 = 10;
-	pub const MaxExtraDataSize: u32 = 32;
-	pub const MaxLogsBloomSize: u32 = 256;
-	pub const MaxFeeRecipientSize: u32 = 20;
-	pub const MaxDepositDataSize: u32 = 16;
-	pub const MaxPublicKeySize: u32 = 48;
-	pub const MaxSignatureSize: u32 = 96;
-	pub const MaxProposerSlashingSize: u32 = 16;
-	pub const MaxAttesterSlashingSize: u32 = 2;
-	pub const MaxVoluntaryExitSize: u32 = 16;
-	pub const MaxAttestationSize: u32 = 128;
-	pub const MaxValidatorsPerCommittee: u32 = 2048;
+	pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
+	pub const MaxProofBranchSize: u32 = 6;
+	pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
+	pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
+	pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
+	pub const MaxDepositDataSize: u32 = config::MAX_DEPOSITS as u32;
+	pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
+	pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
+	pub const MaxProposerSlashingSize: u32 = config::MAX_PROPOSER_SLASHINGS as u32;
+	pub const MaxAttesterSlashingSize: u32 = config::MAX_ATTESTER_SLASHINGS as u32;
+	pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
+	pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
+	pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
 }
 
 impl ethereum_beacon_client::Config for Test {
@@ -135,27 +135,40 @@ fn fixture_path(name: &str) -> PathBuf {
 	[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", name].iter().collect()
 }
 
-fn initial_sync_from_file(name: &str) -> InitialSyncSerialize {
+fn initial_sync_from_file(name: &str) -> InitialSync<MaxSyncCommitteeSize, MaxProofBranchSize> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn sync_committee_update_from_file(name: &str) -> SyncCommitteePeriodUpdateSerialize{
+fn sync_committee_update_from_file(name: &str) -> SyncCommitteePeriodUpdate<MaxSignatureSize, MaxProofBranchSize, MaxSyncCommitteeSize> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn finalized_header_update_from_file(name: &str) -> FinalizedHeaderUpdateSerialize {
+fn finalized_header_update_from_file(name: &str) -> FinalizedHeaderUpdate<MaxSignatureSize, MaxProofBranchSize, MaxSyncCommitteeSize> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn block_update_from_file(name: &str) -> BlockUpdateSerialize {
+fn block_update_from_file(name: &str) -> BlockUpdate<
+	MaxFeeRecipientSize, 
+	MaxLogsBloomSize, 
+	MaxExtraDataSize, 
+	MaxDepositDataSize, 
+	MaxPublicKeySize, 
+	MaxSignatureSize, 
+	MaxProofBranchSize, 
+	MaxProposerSlashingSize, 
+	MaxAttesterSlashingSize, 
+	MaxVoluntaryExitSize,
+	MaxAttestationSize,
+	MaxValidatorsPerCommittee,
+	MaxSyncCommitteeSize> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn attester_slashing_from_file(name: &str) -> AttesterSlashingSerialize {
+fn attester_slashing_from_file(name: &str) -> AttesterSlashing<MaxValidatorsPerCommittee, MaxSignatureSize> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -172,65 +185,11 @@ fn add_file_prefix(name: &str) -> String {
 }
 
 pub fn get_initial_sync() -> InitialSync<MaxSyncCommitteeSize, MaxProofBranchSize> {
-	let initial_sync = initial_sync_from_file(&add_file_prefix("initial_sync.json"));
-
-	let bounded_branch: BoundedVec<H256, MaxProofBranchSize> =
-		initial_sync.current_sync_committee_branch.clone().try_into().expect("proof branch is too long");
-
-	let bounded_sync_committee_pubkeys: BoundedVec<PublicKey, MaxSyncCommitteeSize> = 
-		initial_sync.current_sync_committee.pubkeys.clone().try_into().expect("pubkeys are too many");
-
-	let bounded_sync_committee = SyncCommittee{
-		pubkeys: bounded_sync_committee_pubkeys,
-		aggregate_pubkey: initial_sync.current_sync_committee.aggregate_pubkey.clone()
-	};
-
-	InitialSync{ 
-		header: initial_sync.header.clone(), 
-		current_sync_committee: bounded_sync_committee, 
-		current_sync_committee_branch: bounded_branch, 
-		validators_root: initial_sync.validators_root,
-	}
+	initial_sync_from_file(&add_file_prefix("initial_sync.json"))
 }
 
 pub fn get_committee_sync_period_update() -> SyncCommitteePeriodUpdate<MaxSignatureSize, MaxProofBranchSize, MaxSyncCommitteeSize> {
-	let update = sync_committee_update_from_file(&add_file_prefix("sync_committee_update.json"));
-
-	let bounded_sync_committee_branch: BoundedVec<H256, MaxProofBranchSize> =
-		update.next_sync_committee_branch.clone().try_into().expect("sync committee proof branch is too long");
-
-	let bounded_finality_branch: BoundedVec<H256, MaxProofBranchSize> =
-		update.finality_branch.clone().try_into().expect("finalized header proof branch is too long");
-
-	let bounded_sync_committee_pubkeys: BoundedVec<PublicKey, MaxSyncCommitteeSize> = 
-		update.next_sync_committee.pubkeys.clone().try_into().expect("pubkeys are too many");
-
-	let bounded_sync_committee = SyncCommittee{
-		pubkeys: bounded_sync_committee_pubkeys,
-		aggregate_pubkey: update.next_sync_committee.aggregate_pubkey.clone()
-	};
-
-	let sync_committee_bits: BoundedVec<u8, MaxSyncCommitteeSize> =
-		update.sync_aggregate.sync_committee_bits.clone().try_into().expect("sync committee bits are too long");
-
-	let sync_committee_signature: BoundedVec<u8, MaxSignatureSize> =
-		update.sync_aggregate.sync_committee_signature.clone().try_into().expect("sync committee sinature is too long");
-
-	let sync_aggregate = SyncAggregate{
-		sync_committee_bits: sync_committee_bits,
-		sync_committee_signature: sync_committee_signature,
-	};
-
-	SyncCommitteePeriodUpdate{ 
-		attested_header: update.attested_header.clone(), 
-		next_sync_committee: bounded_sync_committee, 
-		next_sync_committee_branch: bounded_sync_committee_branch, 
-		finalized_header: update.finalized_header.clone(), 
-		finality_branch: bounded_finality_branch, 
-		sync_aggregate: sync_aggregate, 
-		fork_version: update.fork_version.clone(), 
-		sync_committee_period: update.sync_committee_period
-	}
+	sync_committee_update_from_file(&add_file_prefix("sync_committee_update.json"))
 }
 
 pub fn get_header_update() -> BlockUpdate<
@@ -247,66 +206,7 @@ pub fn get_header_update() -> BlockUpdate<
 	MaxAttestationSize,
 	MaxValidatorsPerCommittee,
 	MaxSyncCommitteeSize> {
-	let update = block_update_from_file(&add_file_prefix("block_update.json"));
-
-	let attester_slashings = Vec::new();
-
-	for attester_slashing in update.block.body.attester_slashings.iter() {
-        attester_slashings.push(AttesterSlashing{ 
-			attestation_1: IndexedAttestation{
-				attesting_indices: attester_slashing.attestation_1.attesting_indices.clone().try_into().expect("attesting indices is too long"),
-				data: AttestationData{
-					slot: attester_slashing.attestation_1.data.slot,
-					index: attester_slashing.attestation_1.data.index,
-					beacon_block_root: attester_slashing.attestation_1.data.beacon_block_root,
-					source: Checkpoint{ 
-						epoch: attester_slashing.attestation_1.data.source.epoch, 
-						root: attester_slashing.attestation_1.data.source.root, 
-					},
-					target: Checkpoint{ 
-						epoch: attester_slashing.attestation_1.data.target.epoch, 
-						root: attester_slashing.attestation_1.data.target.root, 
-					},
-				},
-				signature: attester_slashing.attestation_1.signature.clone().try_into().expect("signature is too long"),
-			}, 
-			attestation_2: todo!() 
-		});
-    }
-
-	BlockUpdate { 
-		block: snowbridge_beacon_primitives::BeaconBlock { 
-			slot: update.block.slot, 
-			proposer_index: update.block.proposer_index, 
-			parent_root: update.block.parent_root, 
-			state_root: update.block.state_root, 
-			body: Body{ 
-				randao_reveal: update.block.body.randao_reveal.clone().try_into().expect("randao reveal is too long"), 
-				eth1_data: Eth1Data { 
-					deposit_root: update.block.body.eth1_data.deposit_root, 
-					deposit_count: update.block.body.eth1_data.deposit_count, 
-					block_hash: update.block.body.eth1_data.block_hash, 
-				}, 
-				graffiti: update.block.body.graffiti, 
-				proposer_slashings: update.block.body.proposer_slashings.clone().try_into().expect("too many proposer slashings"), 
-				attester_slashings: update.block.body.attester_slashings.clone().try_into().expect("too many attester slashings"), 
-				attestations: update.block.body.attester_slashings.clone().try_into().expect("too many attestations"), 
-				deposits: todo!(), 
-				voluntary_exits: todo!(), 
-				sync_aggregate: SyncAggregate{
-					sync_committee_bits: update.block.body.sync_aggregate.sync_committee_bits.clone().try_into().expect("sync committee bits are too long"),
-					sync_committee_signature: update.block.body.sync_aggregate.sync_committee_signature.clone().try_into().expect("sync committee sinature is too long"),
-				}, 
-				execution_payload: todo!() 
-			}
-		}, 
-		block_body_root: update.block_body_root, 
-		sync_aggregate: SyncAggregate{
-			sync_committee_bits: update.sync_aggregate.sync_committee_bits.clone().try_into().expect("sync committee bits are too long"),
-			sync_committee_signature: update.sync_aggregate.sync_committee_signature.clone().try_into().expect("sync committee sinature is too long"),
-		}, 
-		fork_version: update.fork_version
-	}
+	block_update_from_file(&add_file_prefix("block_update.json"))
 }
 
 pub fn get_finalized_header_update() -> FinalizedHeaderUpdate<MaxSignatureSize, MaxProofBranchSize, MaxSyncCommitteeSize> {
@@ -318,27 +218,11 @@ pub fn get_validators_root() -> H256 {
 }
 
 pub fn get_current_sync_committee_for_current_committee_update() -> SyncCommittee<MaxSyncCommitteeSize> {
-	let initial_sync = initial_sync_from_file(&add_file_prefix("initial_sync.json"));
-
-	let bounded_sync_committee_pubkeys: BoundedVec<PublicKey, MaxSyncCommitteeSize> = 
-		initial_sync.current_sync_committee.pubkeys.clone().try_into().expect("pubkeys are too many");
-
-	SyncCommittee{
-		pubkeys: bounded_sync_committee_pubkeys,
-		aggregate_pubkey: initial_sync.current_sync_committee.aggregate_pubkey.clone()
-	}
+	get_initial_sync().current_sync_committee
 }
 
 pub fn get_current_sync_committee_for_finalized_header_update() -> SyncCommittee<MaxSyncCommitteeSize> {
-	let initial_sync = initial_sync_from_file(&add_file_prefix("initial_sync.json"));
-
-	let bounded_sync_committee_pubkeys: BoundedVec<PublicKey, MaxSyncCommitteeSize> = 
-		initial_sync.current_sync_committee.pubkeys.clone().try_into().expect("pubkeys are too many");
-
-	SyncCommittee{
-		pubkeys: bounded_sync_committee_pubkeys,
-		aggregate_pubkey: initial_sync.current_sync_committee.aggregate_pubkey.clone()
-	}
+	get_initial_sync().current_sync_committee
 }
 
 pub fn get_sync_committee_test_data() -> SyncCommitteeTest {
@@ -361,7 +245,7 @@ pub fn get_block_body_test_data() -> BlockBodyTest {
 	BlockBodyTest { body, result }
 }
 
-pub fn get_current_sync_committee_for_header_update() -> SyncCommittee<MaxSignatureSize> {
+pub fn get_current_sync_committee_for_header_update() -> SyncCommittee<MaxSyncCommitteeSize> {
 	get_initial_sync().current_sync_committee
 }
 
@@ -370,15 +254,15 @@ pub fn get_bls_signature_verify_test_data() -> BLSSignatureVerifyTest {
 	let initial_sync = get_initial_sync();
 
 	BLSSignatureVerifyTest {
-		sync_committee_bits: finalized_update.sync_aggregate.sync_committee_bits,
-		sync_committee_signature: finalized_update.sync_aggregate.sync_committee_signature,
-		pubkeys: initial_sync.current_sync_committee.pubkeys,
+		sync_committee_bits: finalized_update.sync_aggregate.sync_committee_bits.try_into().expect("sync committee bits are too long"),
+		sync_committee_signature: finalized_update.sync_aggregate.sync_committee_signature.to_vec().try_into().expect("signature is too long"),
+		pubkeys: initial_sync.current_sync_committee.pubkeys.to_vec().try_into().expect("pubkeys are too long"),
 		fork_version: finalized_update.fork_version,
 		header: finalized_update.attested_header,
 		validators_root: initial_sync.validators_root,
 	}
 }
 
-pub fn get_attester_slashing() ->  AttesterSlashing<MaxValidatorsPerCommittee, MaxSignatureSize> {
+pub fn get_attester_slashing() -> AttesterSlashing<MaxValidatorsPerCommittee, MaxSignatureSize> {
 	attester_slashing_from_file("attester_slashing.json")
 }
