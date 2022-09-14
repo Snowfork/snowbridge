@@ -20,14 +20,14 @@ use crate::merkleization::get_sync_committee_bits;
 
 pub use pallet::*;
 
-type BlockUpdateOf<T> = BlockUpdate<<T as Config>::MaxFeeRecipientSize, <T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize, <T as Config>::MaxDepositDataSize, 
+pub type BlockUpdateOf<T> = BlockUpdate<<T as Config>::MaxFeeRecipientSize, <T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize, <T as Config>::MaxDepositDataSize, 
 <T as Config>::MaxPublicKeySize, <T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxProposerSlashingSize, <T as Config>::MaxAttesterSlashingSize, 
 <T as Config>::MaxVoluntaryExitSize, <T as Config>::MaxAttestationSize,<T as Config>::MaxValidatorsPerCommittee, <T as Config>::MaxSyncCommitteeSize>;
-type InitialSyncOf<T> = InitialSync<<T as Config>::MaxSyncCommitteeSize, <T as Config>::MaxProofBranchSize>;
-type SyncCommitteePeriodUpdateOf<T> = SyncCommitteePeriodUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
-type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
-type ExecutionHeaderOf<T> = ExecutionHeader<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
-type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
+pub type InitialSyncOf<T> = InitialSync<<T as Config>::MaxSyncCommitteeSize, <T as Config>::MaxProofBranchSize>;
+pub type SyncCommitteePeriodUpdateOf<T> = SyncCommitteePeriodUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
+pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
+pub type ExecutionHeaderOf<T> = ExecutionHeader<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
+pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
 
 #[frame_support::pallet]
 pub mod pallet {
