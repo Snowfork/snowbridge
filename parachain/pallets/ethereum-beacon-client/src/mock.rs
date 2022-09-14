@@ -61,24 +61,24 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
-	pub const MaxProofBranchSize: u32 = 6;
-	pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
-	pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
-	pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
-	pub const MaxDepositDataSize: u32 = config::MAX_DEPOSITS as u32;
-	pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
-	pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
-	pub const MaxProposerSlashingSize: u32 = config::MAX_PROPOSER_SLASHINGS as u32;
-	pub const MaxAttesterSlashingSize: u32 = config::MAX_ATTESTER_SLASHINGS as u32;
-	pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
-	pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
-	pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
+    pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
+    pub const MaxProofBranchSize: u32 = 6;
+    pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
+    pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
+    pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
+    pub const MaxDepositDataSize: u32 = config::MAX_DEPOSITS as u32;
+    pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
+    pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
+    pub const MaxProposerSlashingSize: u32 = config::MAX_PROPOSER_SLASHINGS as u32;
+    pub const MaxAttesterSlashingSize: u32 = config::MAX_ATTESTER_SLASHINGS as u32;
+    pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
+    pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
+    pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
 }
 
 impl ethereum_beacon_client::Config for Test {
-	type Event = Event;
-	type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
+    type Event = Event;
+    type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
     type MaxProofBranchSize = MaxProofBranchSize;
     type MaxExtraDataSize = MaxExtraDataSize;
     type MaxLogsBloomSize = MaxLogsBloomSize;
