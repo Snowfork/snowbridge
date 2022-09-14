@@ -627,7 +627,7 @@ parameter_types! {
 }
 
 impl ethereum_beacon_client::Config for Runtime {
-	type Event = Event;
+    type Event = Event;
     type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
     type MaxProofBranchSize = MaxProofBranchSize;
     type MaxExtraDataSize = MaxExtraDataSize;
