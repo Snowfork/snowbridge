@@ -20,6 +20,15 @@ use crate::merkleization::get_sync_committee_bits;
 
 pub use pallet::*;
 
+type BlockUpdateOf<T> = BlockUpdate<<T as Config>::MaxFeeRecipientSize, <T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize, <T as Config>::MaxDepositDataSize, 
+<T as Config>::MaxPublicKeySize, <T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxProposerSlashingSize, <T as Config>::MaxAttesterSlashingSize, 
+<T as Config>::MaxVoluntaryExitSize, <T as Config>::MaxAttestationSize,<T as Config>::MaxValidatorsPerCommittee, <T as Config>::MaxSyncCommitteeSize>;
+type InitialSyncOf<T> = InitialSync<<T as Config>::MaxSyncCommitteeSize, <T as Config>::MaxProofBranchSize>;
+type SyncCommitteePeriodUpdateOf<T> = SyncCommitteePeriodUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
+type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
+type ExecutionHeaderOf<T> = ExecutionHeader<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
+type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -105,13 +114,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
-		StorageMap<_, Identity, H256, ExecutionHeader<T::MaxLogsBloomSize, T::MaxExtraDataSize>, OptionQuery>;
+		StorageMap<_, Identity, H256, ExecutionHeaderOf<T>, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
 	#[pallet::storage]
 	pub(super) type SyncCommittees<T: Config> =
-		StorageMap<_, Identity, u64, SyncCommittee<T::MaxSyncCommitteeSize>, ValueQuery>;
+		StorageMap<_, Identity, u64, SyncCommitteeOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
@@ -127,7 +136,7 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub initial_sync: InitialSync<T::MaxSyncCommitteeSize, T::MaxProofBranchSize>,
+		pub initial_sync: InitialSyncOf<T>,
 	}
 
 	#[cfg(feature = "std")]
@@ -159,7 +168,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn sync_committee_period_update(
 			origin: OriginFor<T>,
-			sync_committee_period_update: SyncCommitteePeriodUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize>,
+			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -192,7 +201,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_finalized_header(
 			origin: OriginFor<T>,
-			finalized_header_update: FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize>,
+			finalized_header_update: FinalizedHeaderUpdateOf<T>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -226,19 +235,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
-			update: BlockUpdate<T::MaxFeeRecipientSize, 
-				T::MaxLogsBloomSize, 
-				T::MaxExtraDataSize, 
-				T::MaxDepositDataSize, 
-				T::MaxPublicKeySize, 
-				T::MaxSignatureSize, 
-				T::MaxProofBranchSize, 
-				T::MaxProposerSlashingSize, 
-				T::MaxAttesterSlashingSize, 
-				T::MaxVoluntaryExitSize,
-				T::MaxAttestationSize,
-				T::MaxValidatorsPerCommittee,
-				T::MaxSyncCommitteeSize>,
+			update: BlockUpdateOf<T>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -272,7 +269,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn process_initial_sync(initial_sync: InitialSync<T::MaxSyncCommitteeSize, T::MaxProofBranchSize>) -> DispatchResult {
+		fn process_initial_sync(initial_sync: InitialSyncOf<T>) -> DispatchResult {
 			Self::verify_sync_committee(
 				initial_sync.current_sync_committee.clone(),
 				initial_sync.current_sync_committee_branch,
@@ -294,7 +291,7 @@ pub mod pallet {
 		}
 
 		fn process_sync_committee_period_update(
-			update: SyncCommitteePeriodUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize>,
+			update: SyncCommitteePeriodUpdateOf<T>,
 		) -> DispatchResult {
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
@@ -336,7 +333,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_finalized_header(update: FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize>) -> DispatchResult {
+		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
@@ -369,19 +366,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_header(update: BlockUpdate<T::MaxFeeRecipientSize, 
-				T::MaxLogsBloomSize, 
-				T::MaxExtraDataSize, 
-				T::MaxDepositDataSize, 
-				T::MaxPublicKeySize, 
-				T::MaxSignatureSize, 
-				T::MaxProofBranchSize, 
-				T::MaxProposerSlashingSize, 
-				T::MaxAttesterSlashingSize, 
-				T::MaxVoluntaryExitSize,
-				T::MaxAttestationSize,
-				T::MaxValidatorsPerCommittee,
-				T::MaxSyncCommitteeSize>) -> DispatchResult {
+		fn process_header(update: BlockUpdateOf<T>) -> DispatchResult {
 			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
 			let block_slot = update.block.slot;
 			if block_slot > latest_finalized_header_slot {
@@ -546,7 +531,7 @@ pub mod pallet {
 		}
 
 		fn verify_sync_committee(
-			sync_committee: SyncCommittee<T::MaxSyncCommitteeSize>,
+			sync_committee: SyncCommitteeOf<T>,
 			sync_committee_branch: BoundedVec<H256, T::MaxProofBranchSize>,
 			header_state_root: H256,
 			depth: u64,
@@ -591,7 +576,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_sync_committee(period: u64, sync_committee: SyncCommittee<T::MaxSyncCommitteeSize>) {
+		fn store_sync_committee(period: u64, sync_committee: SyncCommitteeOf<T>) {
 			<SyncCommittees<T>>::insert(period, sync_committee);
 
 			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
@@ -639,7 +624,7 @@ pub mod pallet {
 			Self::deposit_event(Event::BeaconHeaderImported{block_hash: block_root, slot: slot});
 		}
 
-		fn store_execution_header(block_root: H256, header: ExecutionHeader<T::MaxLogsBloomSize, T::MaxExtraDataSize>) {
+		fn store_execution_header(block_root: H256, header: ExecutionHeaderOf<T>) {
 			let block_number = header.block_number;
 
 			<ExecutionHeaders<T>>::insert(block_root, header);
@@ -752,7 +737,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub(super) fn get_sync_committee_for_period(period: u64) -> Result<SyncCommittee<T::MaxSyncCommitteeSize>, DispatchError> {
+		pub(super) fn get_sync_committee_for_period(period: u64) -> Result<SyncCommitteeOf<T>, DispatchError> {
 			let sync_committee = <SyncCommittees<T>>::get(period);
 
 			if sync_committee.pubkeys.len() == 0 {
@@ -764,7 +749,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn initial_sync(
-			initial_sync: InitialSync<T::MaxSyncCommitteeSize, T::MaxProofBranchSize>,
+			initial_sync: InitialSyncOf<T>,
 		) -> Result<(), &'static str> {
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -791,7 +776,7 @@ pub mod pallet {
 		// Verifies that the receipt encoded in proof.data is included
 		// in the block given by proof.block_hash. Inclusion is only
 		// recognized if the block has been finalized.
-		fn verify_receipt_inclusion(stored_header: ExecutionHeader<T::MaxLogsBloomSize, T::MaxExtraDataSize>, proof: &Proof) -> Result<Receipt, DispatchError> {
+		fn verify_receipt_inclusion(stored_header: ExecutionHeaderOf<T>, proof: &Proof) -> Result<Receipt, DispatchError> {
 			let result = stored_header
 				.check_receipt_proof(&proof.data.1)
 				.ok_or(Error::<T>::InvalidProof)?;
