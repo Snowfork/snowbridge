@@ -14,12 +14,20 @@ use frame_system::ensure_signed;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_std::prelude::*;
-use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader,
-	ProofBranch, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
 
 pub use pallet::*;
+
+pub type BlockUpdateOf<T> = BlockUpdate<<T as Config>::MaxFeeRecipientSize, <T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize, <T as Config>::MaxDepositDataSize, 
+<T as Config>::MaxPublicKeySize, <T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxProposerSlashingSize, <T as Config>::MaxAttesterSlashingSize, 
+<T as Config>::MaxVoluntaryExitSize, <T as Config>::MaxAttestationSize,<T as Config>::MaxValidatorsPerCommittee, <T as Config>::MaxSyncCommitteeSize>;
+pub type InitialSyncOf<T> = InitialSync<<T as Config>::MaxSyncCommitteeSize, <T as Config>::MaxProofBranchSize>;
+pub type SyncCommitteePeriodUpdateOf<T> = SyncCommitteePeriodUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
+pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
+pub type ExecutionHeaderOf<T> = ExecutionHeader<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
+pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -35,12 +43,37 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		#[pallet::constant]
+		type MaxSyncCommitteeSize: Get<u32>;
+		#[pallet::constant]
+		type MaxProofBranchSize: Get<u32>;
+		#[pallet::constant]
+		type MaxExtraDataSize: Get<u32>;
+		#[pallet::constant]
+		type MaxLogsBloomSize: Get<u32>;
+		#[pallet::constant]
+		type MaxFeeRecipientSize: Get<u32>;
+		#[pallet::constant]
+		type MaxDepositDataSize: Get<u32>;
+		#[pallet::constant]
+		type MaxPublicKeySize: Get<u32>;
+		#[pallet::constant]
+		type MaxSignatureSize: Get<u32>;
+		#[pallet::constant]
+		type MaxProposerSlashingSize: Get<u32>;
+		#[pallet::constant]
+		type MaxAttesterSlashingSize: Get<u32>;
+		#[pallet::constant]
+		type MaxVoluntaryExitSize: Get<u32>;
+		#[pallet::constant]
+		type MaxAttestationSize: Get<u32>;
+		#[pallet::constant]
+		type MaxValidatorsPerCommittee: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -81,13 +114,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
-		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
+		StorageMap<_, Identity, H256, ExecutionHeaderOf<T>, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
 	#[pallet::storage]
 	pub(super) type SyncCommittees<T: Config> =
-		StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
+		StorageMap<_, Identity, u64, SyncCommitteeOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
@@ -102,19 +135,19 @@ pub mod pallet {
 	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {
-		pub initial_sync: InitialSync,
+	pub struct GenesisConfig<T: Config> {
+		pub initial_sync: InitialSyncOf<T>,
 	}
 
 	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
+	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self { GenesisConfig {
 			initial_sync: Default::default(),
 		}}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -135,7 +168,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn sync_committee_period_update(
 			origin: OriginFor<T>,
-			sync_committee_period_update: SyncCommitteePeriodUpdate,
+			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -168,7 +201,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_finalized_header(
 			origin: OriginFor<T>,
-			finalized_header_update: FinalizedHeaderUpdate,
+			finalized_header_update: FinalizedHeaderUpdateOf<T>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -202,7 +235,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
-			update: BlockUpdate,
+			update: BlockUpdateOf<T>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -236,7 +269,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn process_initial_sync(initial_sync: InitialSync) -> DispatchResult {
+		fn process_initial_sync(initial_sync: InitialSyncOf<T>) -> DispatchResult {
 			Self::verify_sync_committee(
 				initial_sync.current_sync_committee.clone(),
 				initial_sync.current_sync_committee_branch,
@@ -258,7 +291,7 @@ pub mod pallet {
 		}
 
 		fn process_sync_committee_period_update(
-			update: SyncCommitteePeriodUpdate,
+			update: SyncCommitteePeriodUpdateOf<T>,
 		) -> DispatchResult {
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
@@ -300,7 +333,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
+		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
@@ -333,7 +366,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_header(update: BlockUpdate) -> DispatchResult {
+		fn process_header(update: BlockUpdateOf<T>) -> DispatchResult {
 			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
 			let block_slot = update.block.slot;
 			if block_slot > latest_finalized_header_slot {
@@ -410,8 +443,8 @@ pub mod pallet {
 
 		pub(super) fn verify_signed_header(
 			sync_committee_bits: Vec<u8>,
-			sync_committee_signature: Vec<u8>,
-			sync_committee_pubkeys: Vec<PublicKey>,
+			sync_committee_signature: BoundedVec<u8, T::MaxSignatureSize>,
+			sync_committee_pubkeys: BoundedVec<PublicKey, T::MaxSyncCommitteeSize>,
 			fork_version: ForkVersion,
 			header: BeaconHeader,
 			validators_root: H256,
@@ -444,7 +477,7 @@ pub mod pallet {
 		pub(super) fn bls_fast_aggregate_verify(
 			pubkeys: Vec<PublicKey>,
 			message: H256,
-			signature: Vec<u8>,
+			signature: BoundedVec<u8, T::MaxSignatureSize>,
 		) -> DispatchResult {
 			let sig = Signature::from_bytes(&signature[..]);
 			if let Err(_e) = sig {
@@ -498,8 +531,8 @@ pub mod pallet {
 		}
 
 		fn verify_sync_committee(
-			sync_committee: SyncCommittee,
-			sync_committee_branch: ProofBranch,
+			sync_committee: SyncCommitteeOf<T>,
+			sync_committee_branch: BoundedVec<H256, T::MaxProofBranchSize>,
 			header_state_root: H256,
 			depth: u64,
 			index: u64,
@@ -524,7 +557,7 @@ pub mod pallet {
 
 		fn verify_header(
 			block_root: H256,
-			proof_branch: ProofBranch,
+			proof_branch: BoundedVec<H256, T::MaxProofBranchSize>,
 			attested_header_state_root: H256,
 			depth: u64,
 			index: u64,
@@ -543,7 +576,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_sync_committee(period: u64, sync_committee: SyncCommittee) {
+		fn store_sync_committee(period: u64, sync_committee: SyncCommitteeOf<T>) {
 			<SyncCommittees<T>>::insert(period, sync_committee);
 
 			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
@@ -591,7 +624,7 @@ pub mod pallet {
 			Self::deposit_event(Event::BeaconHeaderImported{block_hash: block_root, slot: slot});
 		}
 
-		fn store_execution_header(block_root: H256, header: ExecutionHeader) {
+		fn store_execution_header(block_root: H256, header: ExecutionHeaderOf<T>) {
 			let block_number = header.block_number;
 
 			<ExecutionHeaders<T>>::insert(block_root, header);
@@ -655,7 +688,7 @@ pub mod pallet {
 
 		pub(super) fn is_valid_merkle_branch(
 			leaf: H256,
-			branch: Vec<H256>,
+			branch: BoundedVec<H256, T::MaxProofBranchSize>,
 			depth: u64,
 			index: u64,
 			root: Root,
@@ -704,7 +737,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub(super) fn get_sync_committee_for_period(period: u64) -> Result<SyncCommittee, DispatchError> {
+		pub(super) fn get_sync_committee_for_period(period: u64) -> Result<SyncCommitteeOf<T>, DispatchError> {
 			let sync_committee = <SyncCommittees<T>>::get(period);
 
 			if sync_committee.pubkeys.len() == 0 {
@@ -716,7 +749,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn initial_sync(
-			initial_sync: InitialSync,
+			initial_sync: InitialSyncOf<T>,
 		) -> Result<(), &'static str> {
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -743,7 +776,7 @@ pub mod pallet {
 		// Verifies that the receipt encoded in proof.data is included
 		// in the block given by proof.block_hash. Inclusion is only
 		// recognized if the block has been finalized.
-		fn verify_receipt_inclusion(stored_header: ExecutionHeader, proof: &Proof) -> Result<Receipt, DispatchError> {
+		fn verify_receipt_inclusion(stored_header: ExecutionHeaderOf<T>, proof: &Proof) -> Result<Receipt, DispatchError> {
 			let result = stored_header
 				.check_receipt_proof(&proof.data.1)
 				.ok_or(Error::<T>::InvalidProof)?;

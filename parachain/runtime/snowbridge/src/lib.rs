@@ -610,8 +610,37 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type WeightInfo = incentivized_channel_outbound::weights::SnowbridgeWeight<Self>;
 }
 
+parameter_types! {
+    pub const MaxSyncCommitteeSize: u32 = 512;
+    pub const MaxProofBranchSize: u32 = 10;
+    pub const MaxExtraDataSize: u32 = 32;
+    pub const MaxLogsBloomSize: u32 = 256;
+    pub const MaxFeeRecipientSize: u32 = 20;
+    pub const MaxDepositDataSize: u32 = 16;
+    pub const MaxPublicKeySize: u32 = 48;
+    pub const MaxSignatureSize: u32 = 96;
+    pub const MaxProposerSlashingSize: u32 = 16;
+    pub const MaxAttesterSlashingSize: u32 = 2;
+    pub const MaxVoluntaryExitSize: u32 = 16;
+    pub const MaxAttestationSize: u32 = 128;
+    pub const MaxValidatorsPerCommittee: u32 = 2048;
+}
+
 impl ethereum_beacon_client::Config for Runtime {
-	type Event = Event;
+    type Event = Event;
+    type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
+    type MaxProofBranchSize = MaxProofBranchSize;
+    type MaxExtraDataSize = MaxExtraDataSize;
+    type MaxLogsBloomSize = MaxLogsBloomSize;
+    type MaxFeeRecipientSize = MaxFeeRecipientSize;
+    type MaxDepositDataSize = MaxDepositDataSize;
+    type MaxPublicKeySize = MaxPublicKeySize;
+    type MaxSignatureSize = MaxSignatureSize;
+    type MaxProposerSlashingSize = MaxProposerSlashingSize;
+    type MaxAttesterSlashingSize = MaxAttesterSlashingSize;
+    type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
+    type MaxAttestationSize = MaxAttestationSize;
+    type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 }
 
 parameter_types! {
@@ -742,7 +771,7 @@ construct_runtime!(
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 14,
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 16,
-		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config, Storage, Event<T>} = 18,
+		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config<T>, Storage, Event<T>} = 18,
 		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 20,
 		XcmSupport: snowbridge_xcm_support::{Pallet, Storage, Config, Event<T>} = 21,
