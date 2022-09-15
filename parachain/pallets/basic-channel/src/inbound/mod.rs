@@ -66,7 +66,8 @@ pub mod pallet {
 	pub type SourceChannel<T: Config> = StorageValue<_, H160, ValueQuery>;
 
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
+	// TODO: if eth addresses are user-generated, we need to use the blake2_128_concat hasher
+	pub type Nonces<T: Config> = StorageMap<_, Identity, H160, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub type LatestVerifiedBlockNumber<T: Config> = StorageValue<_, u64, ValueQuery>;
@@ -108,7 +109,7 @@ pub mod pallet {
 			}
 
 			// Verify message nonce
-			<Nonce<T>>::try_mutate(|nonce| -> DispatchResult {
+			<Nonces<T>>::try_mutate(envelope.origin, |nonce| -> DispatchResult {
 				if envelope.nonce != *nonce + 1 {
 					Err(Error::<T>::InvalidNonce.into())
 				} else {
