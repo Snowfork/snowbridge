@@ -6,8 +6,9 @@ use sp_std::{convert::TryFrom, prelude::*};
 
 // Used to decode a raw Ethereum log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
-	signature: "Message(address,uint64,bytes)",
+	signature: "Message(address,address,uint64,bytes)",
 	inputs: &[
+		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Uint(64), indexed: false },
 		Param { kind: ParamKind::Bytes, indexed: false },
@@ -20,6 +21,8 @@ static EVENT_ABI: &Event = &Event {
 pub struct Envelope {
 	/// The address of the outbound channel on Ethereum that forwarded this message.
 	pub channel: H160,
+	/// The user on Ethereum that authorized the source to send the message.
+	pub origin: H160,
 	/// The application on Ethereum where the message originated from.
 	pub source: H160,
 	/// A nonce for enforcing replay protection and ordering.
@@ -39,6 +42,11 @@ impl TryFrom<Log> for Envelope {
 
 		let mut iter = tokens.into_iter();
 
+		let origin = match iter.next().ok_or(EnvelopeDecodeError)? {
+			Token::Address(origin) => origin,
+			_ => return Err(EnvelopeDecodeError),
+		};
+
 		let source = match iter.next().ok_or(EnvelopeDecodeError)? {
 			Token::Address(source) => source,
 			_ => return Err(EnvelopeDecodeError),
@@ -54,7 +62,7 @@ impl TryFrom<Log> for Envelope {
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		Ok(Self { channel: log.address, source, nonce, payload })
+		Ok(Self { channel: log.address, origin, source, nonce, payload })
 	}
 }
 
