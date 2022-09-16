@@ -2,8 +2,85 @@ use hex_literal::hex;
 use frame_support::traits::Get;
 use snowbridge_beacon_primitives::{SyncCommitteePeriodUpdate, BeaconHeader, SyncCommittee, SyncAggregate, PublicKey};
 use sp_std::vec;
+use crate::config;
 
 pub fn sync_committee_update<SignatureSize: Get<u32>, ProofSize: Get<u32>, SyncCommitteeSize: Get<u32>>() -> SyncCommitteePeriodUpdate<SignatureSize, ProofSize, SyncCommitteeSize> {
+    if config::IS_MINIMAL {
+        return SyncCommitteePeriodUpdate {
+            attested_header: BeaconHeader {
+                slot: 144,
+                proposer_index: 7,
+                parent_root: hex!("d77b86068d2d659ec16d1575da2846e1b9e464665179232e2cfe93b1a5aae08d").into(),
+                state_root: hex!("db507dc7503e94dd418371b9d85b838d6df379d7528348e76e6cc06d6b838b17").into(),
+                body_root: hex!("9064957264ecea6c03410df91da189e4dc1c2b7adeb93c1fef24bfa07d5f9e8d").into(),
+            },
+            next_sync_committee: SyncCommittee {
+                pubkeys: vec![
+                    PublicKey(hex!("ab0bdda0f85f842f431beaccf1250bf1fd7ba51b4100fd64364b6401fda85bb0069b3e715b58819684e7fc0b10a72a34").into()),
+                    PublicKey(hex!("88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e").into()),
+                    PublicKey(hex!("9977f1c8b731a8d5558146bfb86caea26434f3c5878b589bf280a42c9159e700e9df0e4086296c20b011d2e78c27d373").into()),
+                    PublicKey(hex!("a8d4c7c27795a725961317ef5953a7032ed6d83739db8b0e8a72353d1b8b4439427f7efa2c89caa03cc9f28f8cbab8ac").into()),
+                    PublicKey(hex!("a3a32b0f8b4ddb83f1a0a853d81dd725dfe577d4f4c3db8ece52ce2b026eca84815c1a7e8e92a4de3d755733bf7e4a9b").into()),
+                    PublicKey(hex!("a99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c").into()),
+                    PublicKey(hex!("81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e").into()),
+                    PublicKey(hex!("b89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b").into()),
+                    PublicKey(hex!("ab0bdda0f85f842f431beaccf1250bf1fd7ba51b4100fd64364b6401fda85bb0069b3e715b58819684e7fc0b10a72a34").into()),
+                    PublicKey(hex!("88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e").into()),
+                    PublicKey(hex!("9977f1c8b731a8d5558146bfb86caea26434f3c5878b589bf280a42c9159e700e9df0e4086296c20b011d2e78c27d373").into()),
+                    PublicKey(hex!("a8d4c7c27795a725961317ef5953a7032ed6d83739db8b0e8a72353d1b8b4439427f7efa2c89caa03cc9f28f8cbab8ac").into()),
+                    PublicKey(hex!("a3a32b0f8b4ddb83f1a0a853d81dd725dfe577d4f4c3db8ece52ce2b026eca84815c1a7e8e92a4de3d755733bf7e4a9b").into()),
+                    PublicKey(hex!("a99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c").into()),
+                    PublicKey(hex!("81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e").into()),
+                    PublicKey(hex!("b89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b").into()),
+                    PublicKey(hex!("ab0bdda0f85f842f431beaccf1250bf1fd7ba51b4100fd64364b6401fda85bb0069b3e715b58819684e7fc0b10a72a34").into()),
+                    PublicKey(hex!("88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e").into()),
+                    PublicKey(hex!("9977f1c8b731a8d5558146bfb86caea26434f3c5878b589bf280a42c9159e700e9df0e4086296c20b011d2e78c27d373").into()),
+                    PublicKey(hex!("a8d4c7c27795a725961317ef5953a7032ed6d83739db8b0e8a72353d1b8b4439427f7efa2c89caa03cc9f28f8cbab8ac").into()),
+                    PublicKey(hex!("a3a32b0f8b4ddb83f1a0a853d81dd725dfe577d4f4c3db8ece52ce2b026eca84815c1a7e8e92a4de3d755733bf7e4a9b").into()),
+                    PublicKey(hex!("a99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c").into()),
+                    PublicKey(hex!("81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e").into()),
+                    PublicKey(hex!("b89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b").into()),
+                    PublicKey(hex!("ab0bdda0f85f842f431beaccf1250bf1fd7ba51b4100fd64364b6401fda85bb0069b3e715b58819684e7fc0b10a72a34").into()),
+                    PublicKey(hex!("88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e").into()),
+                    PublicKey(hex!("9977f1c8b731a8d5558146bfb86caea26434f3c5878b589bf280a42c9159e700e9df0e4086296c20b011d2e78c27d373").into()),
+                    PublicKey(hex!("a8d4c7c27795a725961317ef5953a7032ed6d83739db8b0e8a72353d1b8b4439427f7efa2c89caa03cc9f28f8cbab8ac").into()),
+                    PublicKey(hex!("a3a32b0f8b4ddb83f1a0a853d81dd725dfe577d4f4c3db8ece52ce2b026eca84815c1a7e8e92a4de3d755733bf7e4a9b").into()),
+                    PublicKey(hex!("a99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c").into()),
+                    PublicKey(hex!("81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e").into()),
+                    PublicKey(hex!("b89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b").into()),
+                ].try_into().expect("too many pubkeys"),
+                aggregate_pubkey: PublicKey(hex!("8fe11476a05750c52618deb79918e2e674f56dfbf12dbce55ae4386d108e8a1e83c6326f5957e2ef19137582ce270dc6").into())
+            },   
+            next_sync_committee_branch: vec![
+                hex!("a029d3222d058eda01bb4f685838e236bf376606a456abbfb62bc8d950bb3e6e").into(),
+                hex!("87d4e2118b29f53bc12a79ad5c12c8545c5c3272552e1c41595d170210402b7d").into(),
+                hex!("7bd6940ba7512add6f66c545a2537927b5ae0bb48ae3a16514d016a2ad3edadf").into(),
+                hex!("90ad38d6c943356f2b83c9fdb75233a67cc5655c4e74e3c4f1ba308e1ed3e02e").into(),
+                hex!("679db685789e272ec4acd9715324b5675babee626ba3f1cf5978aa2ad820937d").into()
+            ].try_into().expect("too many branch proof items"),
+            finalized_header: BeaconHeader{
+                slot: 128,
+                proposer_index: 5,
+                parent_root:  hex!("32262564365f66697720bf6efaa8282ebd2eacf3b9dee5c5df021a6ad7bc4a25").into(),
+                state_root:  hex!("22fdc072fdc81a003e3cc06f926590e0702523025e074a7e5761997a972e6e5e").into(),
+                body_root:  hex!("0ea8f943d034c0a2e89c01fa1d23b950377ec56b276f92d1c3d393dcec7a4bc7").into()
+            },
+            finality_branch: vec![
+                hex!("1000000000000000000000000000000000000000000000000000000000000000").into(),
+                hex!("10c726fac935bf9657cc7476d3cfa7bedec5983dcfb59e8a7df6d0a619e108d7").into(),
+                hex!("cfa7946ecd0c1c0ceed6e9e6df96d2e621cf8b6ae5e5d3a04b86d4dbb92d7ea7").into(),
+                hex!("6ff33839779edc0c42422fff412ef70538f5bc2214538e17a246bf9a5d465848").into(),
+                hex!("8cf99cb70fb69f7e617387fd8b33101871fe1ec4518fbdef5a8e509e58516369").into(),
+                hex!("6420b9ff10dc877038a4a4a0284808cffd505db241d5d1a43450f11d52d7326c").into()
+            ].try_into().expect("too many branch proof items"),
+            sync_aggregate: SyncAggregate{
+                sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("too many sync committee bits"),
+                sync_committee_signature: hex!("813a37a2bdc13c58b92a4d188a32d3af130f98efa730b116c9a4623b77333a8fa09c49256d0d5eb378a8374da51f2d84013fa5a87c405743915c3887619bf7d645e1151fa2dad9a692f9767fd4e9c021cd3b694d9aaba74fe509f41d8a9ad6e8").to_vec().try_into().expect("signature too long"),
+            },
+            fork_version: hex!("02000001").into(),
+            sync_committee_period: 2,
+        };
+    }
 	SyncCommitteePeriodUpdate {
 		attested_header: BeaconHeader {
 			slot: 524358,
@@ -555,8 +632,7 @@ pub fn sync_committee_update<SignatureSize: Get<u32>, ProofSize: Get<u32>, SyncC
             sync_committee_bits: hex!("ffffffffffffdfffffefffffdffffffffffffffffffffdffffbf7ffffffbffffffecfffffff7ffffffffffffeffffffffffdff7ffffffffffeffffffffffffbf").to_vec().try_into().expect("too many sync committee bits"),
             sync_committee_signature: hex!("98105d1c33ddd403f9e756aa69606e4dd7aa3183d654e74ce449e0b3941c5ef3420ad2dd90e1afb968384db343b5dc34124a117a91d9d313ca9022fc2a5442c58385c28ea9ac04f90a645ecdd1f92f8810336aa1ed44049912c1b50d79a52cbf").to_vec().try_into().expect("signature too long"),
         },
-        fork_version: [128, 0, 0, 113],
-	    //fork_version: vec!("80000071").into(),
+        fork_version: hex!("80000071").into(),
 	    sync_committee_period: 65,
 
 	}
