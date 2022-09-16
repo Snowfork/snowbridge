@@ -159,7 +159,7 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		"period": period,
 	}).Info("syncing sync committee for period")
 
-	_, err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
+	err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
 	if err != nil {
 		return err
 	}
@@ -196,7 +196,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 		}
 	}
 
-	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_finalized_header", finalizedHeaderUpdate)
+	err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_finalized_header", finalizedHeaderUpdate)
 	if err != nil {
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("write to parachain: %w", err)
 	}
@@ -236,7 +236,7 @@ func (h *Header) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggr
 
 	headerUpdate.SyncAggregate = syncAggregate
 
-	_, err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
+	err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
 	if err != nil {
 		return syncer.HeaderUpdate{}, fmt.Errorf("write to parachain: %w", err)
 	}
