@@ -9,6 +9,9 @@ mod mock;
 mod tests;
 mod ssz;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
+
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
 use sp_core::H256;
