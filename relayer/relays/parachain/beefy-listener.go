@@ -767,7 +767,7 @@ func markAccountScanDone(scanBasicChannelAccounts map[types.AccountID]bool, acco
 
 func fetchBundleProof(
 	api *gsrpc.SubstrateAPI,
-	digestItemHash types.H256,
+	commitmentHash types.H256,
 	bundleIndex int,
 	bundle BasicOutboundChannelMessageBundle,
 ) (BundleProof, error) {
@@ -775,14 +775,14 @@ func fetchBundleProof(
 	var rawProof RawMerkleProof
 	var bundleProof BundleProof
 
-	digestItemHex, err := types.EncodeToHexString(digestItemHash)
+	commitmentHashHex, err := types.EncodeToHexString(commitmentHash)
 	if err != nil {
-		return bundleProof, fmt.Errorf("encode digestItem(%v): %w", digestItemHash, err)
+		return bundleProof, fmt.Errorf("encode digestItem(%v): %w", commitmentHash, err)
 	}
 
-	err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItemHex, bundleIndex)
+	err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", commitmentHashHex, bundleIndex)
 	if err != nil {
-		return bundleProof, fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof(%v, %v): %w", digestItemHash, bundleIndex, err)
+		return bundleProof, fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof(%v, %v): %w", commitmentHash, bundleIndex, err)
 	}
 
 	err = types.DecodeFromHexString(proofHex, &rawProof)
