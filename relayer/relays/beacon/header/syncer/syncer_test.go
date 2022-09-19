@@ -6,37 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestComputeEpochAtSlot(t *testing.T) {
-	values := []struct {
-		name     string
-		slot     uint64
-		expected uint64
-	}{
-		{
-			name:     "valid",
-			slot:     3433200,
-			expected: 107287,
-		},
-		{
-			name:     "valid",
-			slot:     400,
-			expected: 12,
-		},
-		{
-			name:     "0",
-			slot:     0,
-			expected: 0,
-		},
-	}
-
-	for _, tt := range values {
-		total := computeEpochAtSlot(tt.slot)
-		if total != tt.expected {
-			t.Errorf("ComputeEpochAtSlot of slot (%d) was incorrect, got: %d, want: %d.", tt.slot, total, tt.expected)
-		}
-	}
-}
-
 func TestHexToBinaryString(t *testing.T) {
 	values := []struct {
 		name     string

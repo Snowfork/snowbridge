@@ -236,7 +236,7 @@ func (h *Header) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggr
 
 	headerUpdate.SyncAggregate = syncAggregate
 
-	_, err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
+	err = h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
 	if err != nil {
 		return syncer.HeaderUpdate{}, fmt.Errorf("write to parachain: %w", err)
 	}
