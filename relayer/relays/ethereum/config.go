@@ -22,6 +22,5 @@ type ContractsConfig struct {
 }
 
 type SinkConfig struct {
-	Parachain            config.ParachainConfig `mapstructure:"parachain"`
-	MaxWatchedExtrinsics int64                  `mapstructure:"maxWatchedExtrinsics"`
+	Parachain config.ParachainConfig `mapstructure:"parachain"`
 }

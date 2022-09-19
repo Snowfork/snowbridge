@@ -24,7 +24,7 @@ func TestWrite(t *testing.T) {
 	eg, ctx := errgroup.WithContext(ctx)
 	defer cancel()
 
-	writer := ethereumRelay.NewParachainWriter(conn, payloads)
+	writer := ethereumRelay.NewParachainWriter(conn, payloads, 10)
 
 	err := conn.Connect(ctx)
 	if err != nil {
