@@ -18,9 +18,10 @@ type Spec struct {
 }
 
 type SourceConfig struct {
-	Beacon    BeaconConfig          `mapstructure:"beacon"`
-	Ethereum  config.EthereumConfig `mapstructure:"ethereum"`
-	Contracts ContractsConfig       `mapstructure:"contracts"`
+	Beacon               BeaconConfig          `mapstructure:"beacon"`
+	Ethereum             config.EthereumConfig `mapstructure:"ethereum"`
+	Contracts            ContractsConfig       `mapstructure:"contracts"`
+	MaxWatchedExtrinsics int64                 `mapstructure:"maxWatchedExtrinsics"`
 }
 
 type ContractsConfig struct {

@@ -14,6 +14,7 @@ type SourceConfig struct {
 	DataDir               string                `mapstructure:"data-dir"`
 	DescendantsUntilFinal uint64                `mapstructure:"descendants-until-final"`
 	Contracts             ContractsConfig       `mapstructure:"contracts"`
+	MaxWatchedExtrinsics  int64 				`mapstructure:"maxWatchedExtrinsics"`
 }
 
 type ContractsConfig struct {

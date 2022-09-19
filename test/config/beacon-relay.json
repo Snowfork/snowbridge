@@ -20,7 +20,8 @@
     "contracts": {
       "BasicOutboundChannel": null,
       "IncentivizedOutboundChannel": null
-    }
+    },
+    "maxWatchedExtrinsics": 32
   },
   "sink": {
     "parachain": {
