@@ -777,7 +777,7 @@ func fetchBundleProof(
 
 	commitmentHashHex, err := types.EncodeToHexString(commitmentHash)
 	if err != nil {
-		return bundleProof, fmt.Errorf("encode digestItem(%v): %w", commitmentHash, err)
+		return bundleProof, fmt.Errorf("encode commitmentHash(%v): %w", commitmentHash, err)
 	}
 
 	err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", commitmentHashHex, bundleIndex)
