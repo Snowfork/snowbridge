@@ -11,6 +11,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const MaxWatchedExtrinsics = 32
+
 type ParachainWriter struct {
 	conn        *parachain.Connection
 	nonce       uint32
@@ -39,7 +41,7 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 	}
 	wr.genesisHash = genesisHash
 
-	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn)
+	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn, MaxWatchedExtrinsics)
 
 	return nil
 }

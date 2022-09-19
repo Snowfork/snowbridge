@@ -17,6 +17,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const MaxWatchedExtrinsics = 10
+
 type ParachainPayload struct {
 	Header   *chain.Header
 	Messages []*chain.EthereumOutboundMessage
@@ -53,7 +55,7 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 	}
 	wr.genesisHash = genesisHash
 
-	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn)
+	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn, 10)
 
 	eg.Go(func() error {
 		err := wr.writeLoop(ctx)
