@@ -57,6 +57,7 @@
             "--rpc-methods=Unsafe",
             "--enable-offchain-indexing=true",
             "--execution=wasm",
+            "--pruning=archive",
             "--",
             "--execution=wasm"
           ]
@@ -73,6 +74,7 @@
             "--rpc-methods=Unsafe",
             "--enable-offchain-indexing=true",
             "--execution=wasm",
+            "--pruning=archive",
             "--",
             "--execution=wasm"
           ]
@@ -97,6 +99,7 @@
             "--rpc-methods=Unsafe",
             "--enable-offchain-indexing=true",
             "--execution=wasm",
+            "--pruning=archive",
             "--",
             "--execution=wasm"
           ]
@@ -114,6 +117,7 @@
             "--rpc-methods=Unsafe",
             "--enable-offchain-indexing=true",
             "--execution=wasm",
+            "--pruning=archive",
             "--",
             "--execution=wasm"
           ]
