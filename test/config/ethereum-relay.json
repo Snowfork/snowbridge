@@ -8,12 +8,12 @@
     "contracts": {
       "BasicOutboundChannel": null,
       "IncentivizedOutboundChannel": null
-    },
-    "maxWatchedExtrinsics": 10
+    }
   },
   "sink": {
     "parachain": {
-      "endpoint": "ws://localhost:11144"
+      "endpoint": "ws://localhost:11144",
+      "maxWatchedExtrinsics": 10
     }
   }
 }

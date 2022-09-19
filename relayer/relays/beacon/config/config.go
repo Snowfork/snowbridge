@@ -18,10 +18,9 @@ type Spec struct {
 }
 
 type SourceConfig struct {
-	Beacon               BeaconConfig          `mapstructure:"beacon"`
-	Ethereum             config.EthereumConfig `mapstructure:"ethereum"`
-	Contracts            ContractsConfig       `mapstructure:"contracts"`
-	MaxWatchedExtrinsics int64                 `mapstructure:"maxWatchedExtrinsics"`
+	Beacon    BeaconConfig          `mapstructure:"beacon"`
+	Ethereum  config.EthereumConfig `mapstructure:"ethereum"`
+	Contracts ContractsConfig       `mapstructure:"contracts"`
 }
 
 type ContractsConfig struct {
@@ -37,7 +36,8 @@ type BeaconConfig struct {
 }
 
 type SinkConfig struct {
-	Parachain config.ParachainConfig `mapstructure:"parachain"`
+	Parachain            config.ParachainConfig `mapstructure:"parachain"`
+	MaxWatchedExtrinsics int64                  `mapstructure:"maxWatchedExtrinsics"`
 }
 
 func (c Config) GetSpecSettings() SpecSettings {

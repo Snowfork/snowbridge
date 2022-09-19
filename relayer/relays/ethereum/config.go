@@ -14,7 +14,6 @@ type SourceConfig struct {
 	DataDir               string                `mapstructure:"data-dir"`
 	DescendantsUntilFinal uint64                `mapstructure:"descendants-until-final"`
 	Contracts             ContractsConfig       `mapstructure:"contracts"`
-	MaxWatchedExtrinsics  int64 				`mapstructure:"maxWatchedExtrinsics"`
 }
 
 type ContractsConfig struct {
@@ -23,5 +22,6 @@ type ContractsConfig struct {
 }
 
 type SinkConfig struct {
-	Parachain config.ParachainConfig `mapstructure:"parachain"`
+	Parachain            config.ParachainConfig `mapstructure:"parachain"`
+	MaxWatchedExtrinsics int64                  `mapstructure:"maxWatchedExtrinsics"`
 }

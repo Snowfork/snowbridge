@@ -46,7 +46,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	writer := writer.NewParachainWriter(
 		paraconn,
-		r.config.Source.MaxWatchedExtrinsics,
+		r.config.Sink.MaxWatchedExtrinsics,
 	)
 
 	err = writer.Start(ctx, eg)
