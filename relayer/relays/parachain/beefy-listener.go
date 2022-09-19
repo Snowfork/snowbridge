@@ -775,7 +775,12 @@ func fetchBundleProof(
 	var rawProof RawMerkleProof
 	var bundleProof BundleProof
 
-	err := api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItemHash, bundleIndex)
+	digestItemHex, err := types.EncodeToHexString(digestItemHash)
+	if err != nil {
+		return bundleProof, fmt.Errorf("encode digestItem(%v): %w", digestItemHash, err)
+	}
+
+	err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItemHex, bundleIndex)
 	if err != nil {
 		return bundleProof, fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof(%v, %v): %w", digestItemHash, bundleIndex, err)
 	}
