@@ -91,6 +91,7 @@ impl ethereum_beacon_client::Config for Test {
     type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
     type MaxAttestationSize = MaxAttestationSize;
     type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+	type WeightInfo = ();
 }
 
 // Build genesis storage according to the mock runtime.
