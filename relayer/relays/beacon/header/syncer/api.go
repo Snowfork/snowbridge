@@ -26,7 +26,8 @@ type BeaconClientTracker interface {
 	GetHeader(id string) (BeaconHeader, error)
 	GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error)
 	GetHeadCheckpoint() (FinalizedCheckpointResponse, error)
-	GetBeaconBlock(slot uint64) (BeaconBlockResponse, error)
+	GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error)
+	GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error)
 	GetCurrentForkVersion(slot uint64) (string, error)
 	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
 }
