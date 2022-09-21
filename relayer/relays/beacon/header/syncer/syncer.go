@@ -294,7 +294,7 @@ func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, erro
 	err := ErrNotFound
 	var block BeaconBlockResponse
 	tries := 0
-	maxSlotsMissed := 20
+	maxSlotsMissed := int(s.SlotsInEpoch)
 	for errors.Is(err, ErrNotFound) && tries < maxSlotsMissed {
 		log.WithFields(log.Fields{
 			"try_number": tries,
