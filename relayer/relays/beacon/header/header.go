@@ -265,7 +265,7 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 	}).Info("starting to back-fill headers")
 
 	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
-	prevSyncAggregate, err := h.syncer.GetSyncAggregateForSlot(uint64(finalizedHeader.FinalizedHeader.Slot))
+	prevSyncAggregate, err := h.syncer.GetSyncAggregateForSlot(uint64(finalizedHeader.FinalizedHeader.Slot + 1))
 	if err != nil {
 		return err
 	}
