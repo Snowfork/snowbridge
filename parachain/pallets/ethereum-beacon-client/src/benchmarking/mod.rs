@@ -42,6 +42,11 @@ benchmarks! {
 
 		let block_update = data::block_update();
 	}: _(RawOrigin::Signed(caller.clone()), block_update.clone())
+	verify {
+		let block_hash: H256 = block_update.block.body.execution_payload.block_hash;
+
+        <ExecutionHeaders<T>>::get(block_hash).unwrap();
+    }
 }
 
 impl_benchmark_test_suite!(

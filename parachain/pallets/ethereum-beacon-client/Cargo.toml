@@ -37,6 +37,7 @@ snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-featu
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25" }
 snowbridge-testutils = { path = "../../primitives/testutils" }
 serde_json = "1.0.68"
+hex-literal = { version = "0.3.4" }
 
 [features]
 default = ["std"]
