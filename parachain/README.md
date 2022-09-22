@@ -65,6 +65,32 @@ For an example configuration, consult the [setup script](https://github.com/Snow
 
 To run the parachain tests locally, use `cargo test --release`. For the full suite of tests, use `cargo test --release --features runtime-benchmarks`.
 
+### Updating test data for inbound channel unit tests
+
+To regenerate the encoded message data, use the test in `ethereum/test/test_{basic,incentivized}_outbound_channel.js`.
+On one of the transaction objects `tx` returned from a `submit` call, run this:
+
+```javascript
+const rlp = require("rlp");
+const rawLog = tx.receipt.rawLogs[0];
+const encodedLog = rlp.encode([rawLog.address, rawLog.topics, rawLog.data]).toString("hex");
+console.log(`encodedLog: ${encodedLog}`);
+```
+
+To decode the event from a `rawLog` to inspect the event data:
+
+```javascript
+const iface = new ethers.utils.Interface(BasicOutboundChannel.abi);
+const decodedEventLog = iface.decodeEventLog(
+  'Message(address,address,uint64,bytes)',
+  rawLog.data,
+  rawLog.topics,
+);
+console.log(`decoded rawLog.data: ${JSON.stringify(decodedEventLog)}`);
+```
+
+Set the contract object and event signature based on the log you want to decode.
+
 ## Chain metadata
 
 There is an internal tool `snowbridge-query-events` which is used to read specific events from the parachain. It is a used by our offchain message relayers.
