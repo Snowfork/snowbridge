@@ -24,7 +24,7 @@ pub enum ChannelId {
 /// A message relayed from Ethereum.
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Message {
-	/// The raw message data.
+	/// The raw RLP-encoded message data.
 	pub data: Vec<u8>,
 	/// Input to the message verifier
 	pub proof: Proof,
