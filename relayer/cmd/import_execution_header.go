@@ -12,6 +12,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/writer"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 func importExecutionHeaderCmd() *cobra.Command {
@@ -43,24 +44,29 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		ctx := cmd.Context()
 
+		eg, ctx := errgroup.WithContext(ctx)
+
 		parachainEndpoint, _ := cmd.Flags().GetString("parachain-endpoint")
 		privateKeyFile, _ := cmd.Flags().GetString("private-key-file")
 		lodestarEndpoint, _ := cmd.Flags().GetString("lodestar-endpoint")
 		beaconHeader, _ := cmd.Flags().GetString("beacon-header")
 
-		var cleanedKeyURI string
-		content, err := ioutil.ReadFile(privateKeyFile)
+		keypair, err := getKeyPair(privateKeyFile)
 		if err != nil {
-			return fmt.Errorf("cannot read key file: %w", err)
-		}
-		cleanedKeyURI = strings.TrimSpace(string(content))
-		keypair, err := sr25519.NewKeypairFromSeed(cleanedKeyURI, 42)
-		if err != nil {
-			return fmt.Errorf("unable to parse private key URI: %w", err)
+			return fmt.Errorf("get keypair from file: %w", err)
 		}
 
 		paraconn := parachain.NewConnection(parachainEndpoint, keypair.AsKeyringPair())
+		err = paraconn.Connect(ctx)
+		if err != nil {
+			return fmt.Errorf("connect to parachain: %w", err)
+		}
+
 		writer := writer.NewParachainWriter(paraconn, 32)
+		err = writer.Start(ctx, eg)
+		if err != nil {
+			return fmt.Errorf("start parachain conn: %w", err)
+		}
 
 		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
 
@@ -86,6 +92,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("write to parachain: %w", err)
 		}
+		log.Info("imported execution header")
 
 		return nil
 	}()
@@ -94,4 +101,19 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+func getKeyPair(privateKeyFile string) (*sr25519.Keypair, error) {
+	var cleanedKeyURI string
+	content, err := ioutil.ReadFile(privateKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read key file: %w", err)
+	}
+	cleanedKeyURI = strings.TrimSpace(string(content))
+	keypair, err := sr25519.NewKeypairFromSeed(cleanedKeyURI, 42)
+	if err != nil {
+		return nil, fmt.Errorf("parse private key URI: %w", err)
+	}
+
+	return keypair, nil
 }
