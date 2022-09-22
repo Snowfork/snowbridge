@@ -22,7 +22,7 @@ pub struct Envelope {
 	/// The address of the outbound channel on Ethereum that forwarded this message.
 	pub channel: H160,
 	/// The user on Ethereum that authorized the source to send the message.
-	pub origin: H160,
+	pub user: H160,
 	/// The application on Ethereum where the message originated from.
 	pub source: H160,
 	/// A nonce for enforcing replay protection and ordering.
@@ -42,8 +42,8 @@ impl TryFrom<Log> for Envelope {
 
 		let mut iter = tokens.into_iter();
 
-		let origin = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Address(origin) => origin,
+		let user = match iter.next().ok_or(EnvelopeDecodeError)? {
+			Token::Address(user) => user,
 			_ => return Err(EnvelopeDecodeError),
 		};
 
@@ -62,7 +62,7 @@ impl TryFrom<Log> for Envelope {
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		Ok(Self { channel: log.address, origin, source, nonce, payload })
+		Ok(Self { channel: log.address, user, source, nonce, payload })
 	}
 }
 
@@ -94,7 +94,7 @@ mod tests {
 			envelope,
 			Envelope {
 				channel: hex!["86d9ac0bab011917f57b9e9607833b4340f9d4f8"].into(),
-				origin: hex!["04e00e6d2e9ea1e2af553de02a5172120bfa5c3e"].into(),
+				user: hex!["04e00e6d2e9ea1e2af553de02a5172120bfa5c3e"].into(),
 				source: hex!["89b4ab1ef20763630df9743acf155865600daff2"].into(),
 				nonce: 1,
 				payload: hex!(
