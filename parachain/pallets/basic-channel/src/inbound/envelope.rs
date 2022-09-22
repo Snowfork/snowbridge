@@ -53,7 +53,7 @@ impl TryFrom<Log> for Envelope {
 		};
 
 		let nonce = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Uint(value) => value.low_u64(),
+			Token::Uint(nonce) => nonce.low_u64(),
 			_ => return Err(EnvelopeDecodeError),
 		};
 
