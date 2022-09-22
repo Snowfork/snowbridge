@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -25,7 +26,6 @@ type BeaconClientTracker interface {
 	GetHeadHeader() (BeaconHeader, error)
 	GetHeader(id string) (BeaconHeader, error)
 	GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error)
-	GetHeadCheckpoint() (FinalizedCheckpointResponse, error)
 	GetBeaconBlock(slot uint64) (BeaconBlockResponse, error)
 	GetCurrentForkVersion(slot uint64) (string, error)
 	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
@@ -115,6 +115,8 @@ func (b *BeaconClient) GetHeader(id string) (BeaconHeader, error) {
 	if err != nil {
 		return BeaconHeader{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
+
+	log.WithField("body", string(bodyBytes)).Info("get_header")
 
 	var response BeaconHeaderResponse
 
@@ -276,6 +278,8 @@ func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse,
 		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
+	log.WithField("body", string(bodyBytes)).Info("get_beacon_block")
+
 	var response BeaconBlockResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
@@ -306,6 +310,8 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
+
+	log.WithField("body", string(bodyBytes)).Info("get_beacon_block_root")
 
 	var response struct {
 		Data string `json:"data"`
@@ -368,6 +374,8 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteeP
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
+	log.WithField("body", string(bodyBytes)).Info("get_sync_committee_update")
+
 	var response SyncCommitteePeriodUpdateResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
@@ -376,59 +384,6 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteeP
 	}
 
 	return response, nil
-}
-
-type SyncCommitteeIndexesResponse struct {
-	Data struct {
-		Validators []string `json:"validators"`
-	} `json:"data"`
-}
-
-type SyncCommitteeIndexes struct {
-	Indexes []uint64
-}
-
-func (b *BeaconClient) GetSyncCommittee(epoch uint64) (SyncCommitteeIndexes, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/finalized/sync_committees?epoch=%v", b.endpoint, epoch), nil)
-	if err != nil {
-		return SyncCommitteeIndexes{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
-	}
-
-	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
-	if err != nil {
-		return SyncCommitteeIndexes{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return SyncCommitteeIndexes{}, fmt.Errorf("%s: %w", HTTPStatusNotOKErrorMessage, res.StatusCode)
-	}
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return SyncCommitteeIndexes{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
-	}
-
-	var response SyncCommitteeIndexesResponse
-
-	err = json.Unmarshal(bodyBytes, &response)
-	if err != nil {
-		return SyncCommitteeIndexes{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
-	}
-
-	syncCommittee := SyncCommitteeIndexes{
-		Indexes: []uint64{},
-	}
-
-	for _, validatorIndex := range response.Data.Validators {
-		index, err := strconv.ParseUint(validatorIndex, 10, 64)
-		if err != nil {
-			return SyncCommitteeIndexes{}, fmt.Errorf("parse index as int: %w", err)
-		}
-		syncCommittee.Indexes = append(syncCommittee.Indexes, index)
-	}
-
-	return syncCommittee, nil
 }
 
 type ForkResponse struct {
@@ -460,6 +415,8 @@ func (b *BeaconClient) GetCurrentForkVersion(slot uint64) (string, error) {
 		return "", fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
+	log.WithField("body", string(bodyBytes)).Info("get_current_fork_version")
+
 	var response ForkResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
@@ -468,62 +425,6 @@ func (b *BeaconClient) GetCurrentForkVersion(slot uint64) (string, error) {
 	}
 
 	return response.Data.CurrentVersion, nil
-}
-
-type FinalizedCheckpointResponse struct {
-	Data struct {
-		PreviousJustified struct {
-			Epoch string `json:"epoch"`
-			Root  string `json:"root"`
-		} `json:"previous_justified"`
-		CurrentJustified struct {
-			Epoch string `json:"epoch"`
-			Root  string `json:"root"`
-		} `json:"current_justified"`
-		Finalized struct {
-			Epoch string `json:"epoch"`
-			Root  string `json:"root"`
-		} `json:"finalized"`
-	} `json:"data"`
-}
-
-func (b *BeaconClient) GetFinalizedCheckpoint() (FinalizedCheckpointResponse, error) {
-	return b.GetCheckpoint("finalized")
-}
-
-func (b *BeaconClient) GetHeadCheckpoint() (FinalizedCheckpointResponse, error) {
-	return b.GetCheckpoint("head")
-}
-
-func (b *BeaconClient) GetCheckpoint(state string) (FinalizedCheckpointResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/%s/finality_checkpoints", b.endpoint, state), nil)
-	if err != nil {
-		return FinalizedCheckpointResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
-	}
-
-	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
-	if err != nil {
-		return FinalizedCheckpointResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return FinalizedCheckpointResponse{}, fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
-	}
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return FinalizedCheckpointResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
-	}
-
-	var response FinalizedCheckpointResponse
-
-	err = json.Unmarshal(bodyBytes, &response)
-	if err != nil {
-		return FinalizedCheckpointResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
-	}
-
-	return response, nil
 }
 
 type LatestFinalisedUpdateResponse struct {
@@ -556,6 +457,8 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 	if err != nil {
 		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
+
+	log.WithField("body", string(bodyBytes)).Info("get_finalised_update")
 
 	var response LatestFinalisedUpdateResponse
 

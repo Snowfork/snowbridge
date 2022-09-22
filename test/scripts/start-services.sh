@@ -122,12 +122,14 @@ start_polkadot_launch()
         runtime="snowblink"
     fi
 
+    echo "Runtime is $runtime"
+
     echo "Building snowbridge parachain"
     cargo build \
         --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
-        --features "${runtime}-native,rococo-native,runtime-benchmarks" \
+        --features "${runtime}-native,rococo-native" \
         --bin snowbridge
 
     echo "Building query tool"
