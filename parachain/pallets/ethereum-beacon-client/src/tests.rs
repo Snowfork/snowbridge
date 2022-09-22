@@ -34,7 +34,7 @@ mod beacon {
 	fn it_updates_a_committee_period_sync_update() {
 		let update = get_committee_sync_period_update();
 
-		let current_sync_committee = get_current_sync_committee_for_current_committee_update();
+		let current_sync_committee = get_initial_sync().current_sync_committee;
 
 		let current_period =
 			EthereumBeaconClient::compute_current_sync_period(update.attested_header.slot);
@@ -61,7 +61,7 @@ mod beacon {
 	fn it_processes_a_finalized_header_update() {
 		let update = get_finalized_header_update();
 
-		let current_sync_committee = get_current_sync_committee_for_finalized_header_update();
+		let current_sync_committee = get_initial_sync().current_sync_committee;
 
 		let current_period =
 			EthereumBeaconClient::compute_current_sync_period(update.attested_header.slot);
@@ -88,7 +88,7 @@ mod beacon {
 	fn it_processes_a_header_update() {
 		let update = get_header_update();
 
-		let current_sync_committee = get_current_sync_committee_for_header_update();
+		let current_sync_committee = get_initial_sync().current_sync_committee;
 
 		let current_period = EthereumBeaconClient::compute_current_sync_period(update.block.slot);
 

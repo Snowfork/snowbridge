@@ -218,18 +218,10 @@ pub fn get_validators_root() -> H256 {
 	get_initial_sync().validators_root
 }
 
-pub fn get_current_sync_committee_for_current_committee_update() -> SyncCommittee<MaxSyncCommitteeSize> {
-	get_initial_sync().current_sync_committee
-}
-
-pub fn get_current_sync_committee_for_finalized_header_update() -> SyncCommittee<MaxSyncCommitteeSize> {
-	get_initial_sync().current_sync_committee
-}
-
 pub fn get_sync_committee_test_data() -> SyncCommitteeTest {
 	let sync_committee = get_committee_sync_period_update().next_sync_committee;
 	let result: H256 = match config::IS_MINIMAL {
-		true => hex!("fc5afdee715774e88c160f1ef6b81dd0cd47f769fca7062a8881ab932a510e18").into(),
+		true => hex!("92df9cdb8a742500dbf7afd3a7cce35805f818a3acbee8a26b7d6beff7d2c554").into(),
 		false => hex!("b51b706921f2c94eff39fd6c3377b6acf6a050c077db87e3ee0a013023d75f82").into(),
 	};
 
@@ -237,17 +229,13 @@ pub fn get_sync_committee_test_data() -> SyncCommitteeTest {
 }
 
 pub fn get_block_body_test_data() -> BlockBodyTest {
-	let body = get_header_update().block.body;
+	let update = get_header_update();
 	let result: H256 = match config::IS_MINIMAL {
-		true => hex!("90049ca395d637c1643af699f1aba29aa10d14e8b267fc92f71a87b421641d00").into(),
+		true => update.block_body_root,
 		false => hex!("c8b6dade675a2453c0d2702d66626b18bbb4ed9d00e542a7763ce9b6a406f47c").into(),
 	};
 
-	BlockBodyTest { body, result }
-}
-
-pub fn get_current_sync_committee_for_header_update() -> SyncCommittee<MaxSyncCommitteeSize> {
-	get_initial_sync().current_sync_committee
+	BlockBodyTest { body: update.block.body, result }
 }
 
 pub fn get_bls_signature_verify_test_data() -> BLSSignatureVerifyTest {

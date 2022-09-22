@@ -205,7 +205,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::import_finalized_header())]
 		#[transactional]
 		pub fn import_finalized_header(
 			origin: OriginFor<T>,
@@ -239,7 +239,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::import_execution_header())]
 		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
