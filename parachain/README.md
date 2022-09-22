@@ -67,8 +67,8 @@ To run the parachain tests locally, use `cargo test --release`. For the full sui
 
 ### Updating test data for inbound channel unit tests
 
-To regenerate the encoded message data, use the test in `ethereum/test/test_{basic,incentivized}_outbound_channel.js`.
-On one of the transaction objects `tx` returned from a `submit` call, run this:
+To regenerate the test data, use a test with multiple `submit` calls in `ethereum/test/test_{basic,incentivized}_outbound_channel.js`.
+For each encoded log you want to create, find a transaction object `tx` returned from a `submit` call, then run this:
 
 ```javascript
 const rlp = require("rlp");
