@@ -2,10 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/writer"
 	"github.com/spf13/cobra"
 )
 
@@ -36,24 +41,51 @@ func importExecutionHeaderCmd() *cobra.Command {
 func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 	err := func() error {
-		_ = cmd.Context()
+		ctx := cmd.Context()
 
+		parachainEndpoint, _ := cmd.Flags().GetString("parachain-endpoint")
+		privateKeyFile, _ := cmd.Flags().GetString("private-key-file")
+		lodestarEndpoint, _ := cmd.Flags().GetString("lodestar-endpoint")
 		beaconHeader, _ := cmd.Flags().GetString("beacon-header")
 
-		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
+		var cleanedKeyURI string
+		content, err := ioutil.ReadFile(privateKeyFile)
+		if err != nil {
+			return fmt.Errorf("cannot read key file: %w", err)
+		}
+		cleanedKeyURI = strings.TrimSpace(string(content))
+		keypair, err := sr25519.NewKeypairFromSeed(cleanedKeyURI, 42)
+		if err != nil {
+			return fmt.Errorf("unable to parse private key URI: %w", err)
+		}
 
-		lodestarEndpoint, _ := cmd.Flags().GetString("lodestar-endpoint")
+		paraconn := parachain.NewConnection(parachainEndpoint, keypair.AsKeyringPair())
+		writer := writer.NewParachainWriter(paraconn, 32)
+
+		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
 
 		syncer := syncer.New(lodestarEndpoint, 32, 256)
 
 		beaconHeaderHash := common.HexToHash(beaconHeader)
 
-		block, err := syncer.Client.GetBeaconBlock(beaconHeaderHash)
+		update, err := syncer.GetHeaderUpdate(beaconHeaderHash)
 		if err != nil {
-			return fmt.Errorf("get block: %w", err)
+			return fmt.Errorf("get header update: %w", err)
 		}
+		log.WithField("slot", update.Block.Slot).Info("found block at slot")
 
-		log.WithField("slot", block.Data.Message.Slot).Info("found block at slot")
+		syncAggregate, err := syncer.GetSyncAggregateForSlot(uint64(update.Block.Slot) + 1)
+		if err != nil {
+			return fmt.Errorf("get sync aggregate: %w", err)
+		}
+		log.Info("found sync aggregate")
+
+		update.SyncAggregate = syncAggregate
+
+		err = writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_execution_header", update)
+		if err != nil {
+			return fmt.Errorf("write to parachain: %w", err)
+		}
 
 		return nil
 	}()
