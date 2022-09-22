@@ -94,6 +94,7 @@ mod tests {
 			envelope,
 			Envelope {
 				channel: hex!["30d2da52e36f80b17fe2694a5e4900b81cf26344"].into(),
+				origin: hex!["abe98e5ef4dc7a5c4f317823986fe48649f0edbb"].into(),
 				source: hex!["abe98e5ef4dc7a5c4f317823986fe48649f0edbb"].into(),
 				nonce: 0,
 				payload: hex!(
