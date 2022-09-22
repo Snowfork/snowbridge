@@ -9,8 +9,8 @@ use sp_std::vec::Vec;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum MessageId {
-	Basic(ChannelId, H160, u64),
-	Incentivized(ChannelId, u64),
+	Basic(H160, u64),
+	Incentivized(u64),
 }
 
 pub type MessageNonce = u64;

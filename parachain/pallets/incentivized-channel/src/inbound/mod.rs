@@ -152,7 +152,7 @@ pub mod pallet {
 
 			Self::handle_fee(envelope.fee, &relayer);
 
-			let message_id = MessageId::Incentivized(ChannelId::Incentivized, envelope.nonce);
+			let message_id = MessageId::Incentivized(envelope.nonce);
 			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 			<LatestVerifiedBlockNumber<T>>::set(block_number);
