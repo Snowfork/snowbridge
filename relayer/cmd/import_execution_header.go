@@ -24,7 +24,7 @@ func importExecutionHeaderCmd() *cobra.Command {
 	}
 
 	//snowbridge-relay beacon import --beacon-header $$$$$$$$$$ --parachain-api wss://rococo-rpc.snowbridge.network --lodestar-api safdjdafjkdskfhj --private-key keyfile
-	cmd.Flags().String("beacon-header", "", "Beacon header whose execution header that will be imported")
+	cmd.Flags().String("beacon-header", "", "Beacon header whose execution header will be imported")
 	cmd.MarkFlagRequired("beacon-header")
 
 	cmd.Flags().String("parachain-endpoint", "", "Parachain API URL")
