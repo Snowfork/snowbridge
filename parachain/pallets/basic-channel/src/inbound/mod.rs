@@ -118,7 +118,7 @@ pub mod pallet {
 				}
 			})?;
 
-			let message_id = MessageId::Basic(envelope.user, envelope.nonce);
+			let message_id = MessageId::Basic { user: envelope.user, nonce: envelope.nonce };
 			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 			<LatestVerifiedBlockNumber<T>>::set(block_number);
