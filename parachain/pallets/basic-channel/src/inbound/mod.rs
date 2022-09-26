@@ -66,8 +66,7 @@ pub mod pallet {
 	pub type SourceChannel<T: Config> = StorageValue<_, H160, ValueQuery>;
 
 	#[pallet::storage]
-	// TODO: if eth addresses are user-generated, we need to use the blake2_128_concat hasher
-	pub type Nonces<T: Config> = StorageMap<_, Identity, H160, u64, ValueQuery>;
+	pub type Nonces<T: Config> = StorageMap<_, Twox64Concat, H160, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub type LatestVerifiedBlockNumber<T: Config> = StorageValue<_, u64, ValueQuery>;
