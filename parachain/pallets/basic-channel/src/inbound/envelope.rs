@@ -88,7 +88,6 @@ mod tests {
 	fn test_try_from_log() {
 		let log: Log = rlp::decode(&LOG).unwrap();
 		let envelope = Envelope::try_from(log).unwrap();
-		println!("payload: {:?}",  envelope.payload);
 
 		assert_eq!(
 			envelope,
