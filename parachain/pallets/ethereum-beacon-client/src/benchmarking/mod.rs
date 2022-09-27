@@ -15,9 +15,9 @@ benchmarks! {
 
 		let update = data::sync_committee_update();
         
-    }: sync_committee_period_update(RawOrigin::Signed(caller.clone()), update)
+    }: sync_committee_period_update(RawOrigin::Signed(caller.clone()), update.clone())
     verify {
-        assert!(<SyncCommittees<T>>::get(0).pubkeys.len() > 0);
+        assert!(<SyncCommittees<T>>::get(update.sync_committee_period+1).pubkeys.len() > 0);
     }
 
 	import_finalized_header {

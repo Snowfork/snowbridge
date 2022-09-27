@@ -1396,10 +1396,10 @@ pub fn block_update<
     }
     return BlockUpdate{
         block: BeaconBlock{
-            slot: 531103,
-            proposer_index: 104201,
-            parent_root: hex!("558a719a43e5ab53548cf32e4687c2e01cd96ea0bd120e031b6d1c8b4db9b5bd").into(),
-            state_root: hex!("3a731ecc4e32926c340952ae5c62ac6b48010e83d4f1b3ba933da8972fa34ed3").into(),
+            slot: 3980063,
+            proposer_index: 259057,
+            parent_root: hex!("c835fa6fcfa00d1b0cfa3ec24b3c4671be93538f19aef7cf54065982ab6ae7e0").into(),
+            state_root: hex!("a17da5a19ca5c9a6e93ad81c78028b18e8adfd12a0d92b53c9139f10e67fc4e7").into(),
             body: Body{
                 randao_reveal: hex!("afd062030d581b05ddd13993159d7d61beef7d82baad38e26f20ff2ad7be924aa6a78ea0a44b65a2277a52e64f263adc11bec23a61bbb00504e17848f7ecc84962d4107332742be87ff1be4bd6ac31864b1a75ad6b041d9b93cf7ec50973b0ff").to_vec().try_into().expect("randao reveal too long"),
                 eth1_data: Eth1Data{
@@ -3616,11 +3616,11 @@ pub fn block_update<
                 }
             },
         },
-        block_body_root: hex!("13ebd9d683aa427b2c8cb3f93d96b3ce921dcc0a065c74d1cd7636891454670d").into(),
+        block_body_root: hex!("ad1b3be000eab0cd26d809a7f50372213c9d0b8a8ea0dd762cb0f9c817b0908d").into(),
         sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("fffffffffbffdfffffeffffedffffbfffffffbfffffffdf7ffbf7ffffffbffffffecfffffff7fffffff7fdf7efffffffeffdef7bfffff7fffeffffff6f7fffaf").to_vec().try_into().expect("too many pubkeys"),
-            sync_committee_signature: hex!("b8e1389392b3cc6578dc80505ffbc684bf9fda13cea4b5d513f29f6a79b5cadfa1bbf09ed91946cd97a3ec1fb6e7f0fa17a705f937a1f31cd9ebc4b94813b738d329c23c20eb6c3459c3bc3833199fd17095964f7bc8be2de0acead4dbc1c9b3").to_vec().try_into().expect("signature too long"),
+            sync_committee_bits: hex!("05efefd2f7f4f777ed46476cbeff7bc37db995cffbb5effbfffab66fed73bfcf354efffdfdbff7bfebdff575fffbfbfe37dfd6deffffdff52dd5e7ff7fd9d7b9").to_vec().try_into().expect("too many pubkeys"),
+            sync_committee_signature: hex!("859326de544fa047c553ab7d1f65e19474daf1f147b5c59c2bfd8a0bc489b6dbae1d70260a9a6a1ffc98175cf7636bb50898f505392374d84bad4f22834a80bb0dd69687733978820eec008dd387d8c8fb557650708f308ae88f9b470cf766e1").to_vec().try_into().expect("signature too long"),
         },
-        fork_version: hex!("80000071").into(),
+        fork_version: hex!("02001020").into(),
     }
 }

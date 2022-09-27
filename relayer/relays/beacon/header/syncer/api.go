@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -115,8 +114,6 @@ func (b *BeaconClient) GetHeader(id string) (BeaconHeader, error) {
 	if err != nil {
 		return BeaconHeader{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
-
-	log.WithField("body", string(bodyBytes)).Info("get_header")
 
 	var response BeaconHeaderResponse
 
@@ -278,8 +275,6 @@ func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse,
 		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
-	log.WithField("body", string(bodyBytes)).Info("get_beacon_block")
-
 	var response BeaconBlockResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
@@ -310,8 +305,6 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
-
-	log.WithField("body", string(bodyBytes)).Info("get_beacon_block_root")
 
 	var response struct {
 		Data struct {
@@ -376,8 +369,6 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteeP
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
-	log.WithField("body", string(bodyBytes)).Info("get_sync_committee_update")
-
 	var response SyncCommitteePeriodUpdateResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
@@ -416,8 +407,6 @@ func (b *BeaconClient) GetCurrentForkVersion(slot uint64) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
-
-	log.WithField("body", string(bodyBytes)).Info("get_current_fork_version")
 
 	var response ForkResponse
 
@@ -459,8 +448,6 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 	if err != nil {
 		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
-
-	log.WithField("body", string(bodyBytes)).Info("get_finalised_update")
 
 	var response LatestFinalisedUpdateResponse
 
