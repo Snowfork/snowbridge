@@ -641,7 +641,7 @@ impl ethereum_beacon_client::Config for Runtime {
     type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
     type MaxAttestationSize = MaxAttestationSize;
     type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
-	type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
+    type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
