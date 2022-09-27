@@ -129,7 +129,7 @@ start_polkadot_launch()
         --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
-        --features "${runtime}-native,rococo-native" \
+        --features "${runtime}-native,rococo-native,${runtime}-runtime-benchmarks,runtime-benchmarks" \
         --bin snowbridge
 
     echo "Building query tool"
