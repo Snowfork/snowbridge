@@ -215,17 +215,17 @@ func (s *HeaderCache) GetReceiptTrie(ctx context.Context, hash gethCommon.Hash) 
 
 	block, err := s.blockLoader.GetBlock(ctx, hash)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get block: %w", err)
 	}
 
 	receipts, err := s.blockLoader.GetAllReceipts(ctx, block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get all receipts: %w", err)
 	}
 
 	receiptTrie, err = MakeTrie(receipts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("make trie: %w", err)
 	}
 
 	if receiptTrie.Hash() != block.ReceiptHash() {
