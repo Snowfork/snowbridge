@@ -314,7 +314,9 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	log.WithField("body", string(bodyBytes)).Info("get_beacon_block_root")
 
 	var response struct {
-		Data string `json:"data"`
+		Data struct {
+			Root string `json:"root"`
+		} `json:"data"`
 	}
 
 	err = json.Unmarshal(bodyBytes, &response)
@@ -322,7 +324,7 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 		return common.Hash{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
-	return common.HexToHash(response.Data), nil
+	return common.HexToHash(response.Data.Root), nil
 }
 
 type SyncCommitteePeriodUpdateResponse struct {
