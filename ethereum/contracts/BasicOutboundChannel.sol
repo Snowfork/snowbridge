@@ -18,8 +18,8 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
     address public principal;
 
     event Message(
-        address origin,
         address source,
+        address origin,
         uint64 nonce,
         bytes payload
     );
@@ -63,6 +63,6 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
     function submit(address _origin, bytes calldata _payload) external override {
         require(isOperatorFor(msg.sender, _origin), "Caller is unauthorized");
         nonces[_origin] = nonces[_origin] + 1;
-        emit Message(_origin, msg.sender, nonces[_origin], _payload);
+        emit Message(msg.sender, _origin, nonces[_origin], _payload);
     }
 }

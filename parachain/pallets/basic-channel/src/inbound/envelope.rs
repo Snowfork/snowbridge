@@ -6,8 +6,9 @@ use sp_std::{convert::TryFrom, prelude::*};
 
 // Used to decode a raw Ethereum log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
-	signature: "Message(address,uint64,bytes)",
+	signature: "Message(address,address,uint64,bytes)",
 	inputs: &[
+		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Uint(64), indexed: false },
 		Param { kind: ParamKind::Bytes, indexed: false },
@@ -22,6 +23,8 @@ pub struct Envelope {
 	pub channel: H160,
 	/// The application on Ethereum where the message originated from.
 	pub source: H160,
+	/// The user on Ethereum that authorized the source to send the message.
+	pub user: H160,
 	/// A nonce for enforcing replay protection and ordering.
 	pub nonce: u64,
 	/// The inner payload generated from the source application.
@@ -44,8 +47,13 @@ impl TryFrom<Log> for Envelope {
 			_ => return Err(EnvelopeDecodeError),
 		};
 
+		let user = match iter.next().ok_or(EnvelopeDecodeError)? {
+			Token::Address(user) => user,
+			_ => return Err(EnvelopeDecodeError),
+		};
+
 		let nonce = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Uint(value) => value.low_u64(),
+			Token::Uint(nonce) => nonce.low_u64(),
 			_ => return Err(EnvelopeDecodeError),
 		};
 
@@ -54,7 +62,7 @@ impl TryFrom<Log> for Envelope {
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		Ok(Self { channel: log.address, source, nonce, payload })
+		Ok(Self { channel: log.address, user, source, nonce, payload })
 	}
 }
 
@@ -63,17 +71,16 @@ mod tests {
 	use super::*;
 	use hex_literal::hex;
 
-	const LOG: [u8; 284] = hex!(
+	const LOG: [u8; 251] = hex!(
 		"
-		f901199430d2da52e36f80b17fe2694a5e4900b81cf26344e1a0779b38144a38
-		cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
-		0000000000000000abe98e5ef4dc7a5c4f317823986fe48649f0edbb00000000
-		0000000000000000000000000000000000000000000000000000000000000000
-		0000000000000000000000000000000000000000000000000000006000000000
-		000000000000000000000000000000000000000000000000000000541ed28b61
-		269a6d3d28d07b1fd834ebe4e703368ed43593c715fdd31c61141abd04a99fd6
-		822c8558854ccde39a5684e7a56da27d00010000000000000000000000000000
-		00000000000000000000000000000000000000000000000000000000
+		f8f99486d9ac0bab011917f57b9e9607833b4340f9d4f8e1a0daab80e8986999
+		7d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562fb8c00000000000
+		0000000000000089b4ab1ef20763630df9743acf155865600daff20000000000
+		0000000000000004e00e6d2e9ea1e2af553de02a5172120bfa5c3e0000000000
+		0000000000000000000000000000000000000000000000000000010000000000
+		0000000000000000000000000000000000000000000000000000800000000000
+		0000000000000000000000000000000000000000000000000000206172626974
+		726172792d7061796c6f6164000000000000000000000000000000
 	"
 	);
 
@@ -85,14 +92,12 @@ mod tests {
 		assert_eq!(
 			envelope,
 			Envelope {
-				channel: hex!["30d2da52e36f80b17fe2694a5e4900b81cf26344"].into(),
-				source: hex!["abe98e5ef4dc7a5c4f317823986fe48649f0edbb"].into(),
-				nonce: 0,
+				channel: hex!["86d9ac0bab011917f57b9e9607833b4340f9d4f8"].into(),
+				source: hex!["89b4ab1ef20763630df9743acf155865600daff2"].into(),
+				user: hex!["04e00e6d2e9ea1e2af553de02a5172120bfa5c3e"].into(),
+				nonce: 1,
 				payload: hex!(
-					"
-					1ed28b61269a6d3d28d07b1fd834ebe4e703368ed43593c715fdd31c61141abd
-					04a99fd6822c8558854ccde39a5684e7a56da27d000100000000000000000000
-					0000000000000000000000000000000000000000"
+					"6172626974726172792d7061796c6f6164000000000000000000000000000000"
 				)
 				.into(),
 			}
