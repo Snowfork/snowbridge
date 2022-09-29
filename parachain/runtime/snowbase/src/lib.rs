@@ -641,6 +641,7 @@ impl ethereum_beacon_client::Config for Runtime {
     type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
     type MaxAttestationSize = MaxAttestationSize;
     type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+    type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -959,6 +960,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, basic_channel_outbound, BasicOutboundChannel);
 			list_benchmark!(list, extra, incentivized_channel_inbound, IncentivizedInboundChannel);
 			list_benchmark!(list, extra, incentivized_channel_outbound, IncentivizedOutboundChannel);
+			list_benchmark!(list, extra, ethereum_beacon_client, EthereumBeaconClient);
 			list_benchmark!(list, extra, dot_app, DotAppBench::<Runtime>);
 			list_benchmark!(list, extra, erc20_app, Erc20AppBench::<Runtime>);
 			list_benchmark!(list, extra, eth_app, EthAppBench::<Runtime>);
@@ -1011,6 +1013,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, basic_channel_outbound, BasicOutboundChannel);
 			add_benchmark!(params, batches, incentivized_channel_inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, incentivized_channel_outbound, IncentivizedOutboundChannel);
+			add_benchmark!(params, batches, ethereum_beacon_client, EthereumBeaconClient);
 			add_benchmark!(params, batches, dot_app, DotAppBench::<Runtime>);
 			add_benchmark!(params, batches, erc20_app, Erc20AppBench::<Runtime>);
 			add_benchmark!(params, batches, eth_app, EthAppBench::<Runtime>);

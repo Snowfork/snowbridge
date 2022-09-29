@@ -2,12 +2,19 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod merkleization;
+pub mod weights;
 pub mod config;
 #[cfg(test)]
 mod mock;
+
 #[cfg(test)]
 mod tests;
 mod ssz;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
+
+pub use weights::WeightInfo;
 
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
@@ -74,6 +81,7 @@ pub mod pallet {
 		type MaxAttestationSize: Get<u32>;
 		#[pallet::constant]
 		type MaxValidatorsPerCommittee: Get<u32>;
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -164,7 +172,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	{
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::sync_committee_period_update())]
 		#[transactional]
 		pub fn sync_committee_period_update(
 			origin: OriginFor<T>,
@@ -197,7 +205,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::import_finalized_header())]
 		#[transactional]
 		pub fn import_finalized_header(
 			origin: OriginFor<T>,
@@ -231,7 +239,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::import_execution_header())]
 		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,

@@ -19,6 +19,7 @@ ssz-rs = { git = "https://github.com/Snowfork/ssz_rs", default-features = false,
 ssz-rs-derive = { git = "https://github.com/Snowfork/ssz_rs", default-features = false, rev="8d497a949c320577aa1f741eb9f2958191df905b" }
 byte-slice-cast = { version = "1.2.1", default-features = false }
 rlp = { version = "0.5", default-features = false }
+hex-literal = { version = "0.3.1", optional = true }
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25", default-features = false }
@@ -34,9 +35,9 @@ snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-featu
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25" }
-hex-literal = { version = "0.3.1" }
 snowbridge-testutils = { path = "../../primitives/testutils" }
 serde_json = "1.0.68"
+hex-literal = { version = "0.3.4" }
 
 [features]
 default = ["std"]
@@ -61,5 +62,6 @@ runtime-benchmarks = [
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "hex-literal"
 ]
 minimal = []

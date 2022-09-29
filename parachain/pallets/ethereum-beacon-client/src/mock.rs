@@ -91,6 +91,7 @@ impl ethereum_beacon_client::Config for Test {
     type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
     type MaxAttestationSize = MaxAttestationSize;
     type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+	type WeightInfo = ();
 }
 
 // Build genesis storage according to the mock runtime.
@@ -176,7 +177,7 @@ fn attester_slashing_from_file(name: &str) -> AttesterSlashing<MaxValidatorsPerC
 fn add_file_prefix(name: &str) -> String {
 	let prefix = match config::IS_MINIMAL {
 		true => "minimal_",
-		false => "ropsten_",
+		false => "goerli_",
 	};
 
 	let mut result = prefix.to_owned();
@@ -217,36 +218,20 @@ pub fn get_validators_root() -> H256 {
 	get_initial_sync().validators_root
 }
 
-pub fn get_current_sync_committee_for_current_committee_update() -> SyncCommittee<MaxSyncCommitteeSize> {
-	get_initial_sync().current_sync_committee
-}
-
-pub fn get_current_sync_committee_for_finalized_header_update() -> SyncCommittee<MaxSyncCommitteeSize> {
-	get_initial_sync().current_sync_committee
-}
-
 pub fn get_sync_committee_test_data() -> SyncCommitteeTest {
 	let sync_committee = get_committee_sync_period_update().next_sync_committee;
 	let result: H256 = match config::IS_MINIMAL {
-		true => hex!("fc5afdee715774e88c160f1ef6b81dd0cd47f769fca7062a8881ab932a510e18").into(),
-		false => hex!("b51b706921f2c94eff39fd6c3377b6acf6a050c077db87e3ee0a013023d75f82").into(),
+		true => hex!("92df9cdb8a742500dbf7afd3a7cce35805f818a3acbee8a26b7d6beff7d2c554").into(),
+		false => hex!("c1bcfd9c44c8b9fec443530f7cf06f281c6b5d2d1ede77a486eea591fe79b0b5").into(),
 	};
 
 	SyncCommitteeTest { sync_committee, result }
 }
 
 pub fn get_block_body_test_data() -> BlockBodyTest {
-	let body = get_header_update().block.body;
-	let result: H256 = match config::IS_MINIMAL {
-		true => hex!("90049ca395d637c1643af699f1aba29aa10d14e8b267fc92f71a87b421641d00").into(),
-		false => hex!("c8b6dade675a2453c0d2702d66626b18bbb4ed9d00e542a7763ce9b6a406f47c").into(),
-	};
+	let update = get_header_update();
 
-	BlockBodyTest { body, result }
-}
-
-pub fn get_current_sync_committee_for_header_update() -> SyncCommittee<MaxSyncCommitteeSize> {
-	get_initial_sync().current_sync_committee
+	BlockBodyTest { body: update.block.body, result: update.block_body_root }
 }
 
 pub fn get_bls_signature_verify_test_data() -> BLSSignatureVerifyTest {
