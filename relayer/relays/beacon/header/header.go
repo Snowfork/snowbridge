@@ -159,9 +159,18 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		"period": period,
 	}).Info("syncing sync committee for period")
 
-	_, err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
+	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
 	if err != nil {
 		return err
+	}
+
+	lastSyncedSyncCommitteePeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
+	if err != nil {
+		return fmt.Errorf("fetch last synced committee periid from parachain: %w", err)
+	}
+
+	if lastSyncedSyncCommitteePeriod != period {
+		return fmt.Errorf("synced committee period %d not imported successfully", lastSyncedSyncCommitteePeriod)
 	}
 
 	h.cache.SetLastSyncedSyncCommitteePeriod(period)
@@ -222,26 +231,27 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	return finalizedHeaderUpdate, blockRoot, err
 }
 
-func (h *Header) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggregate scale.SyncAggregate) (syncer.HeaderUpdate, error) {
+func (h *Header) SyncHeader(ctx context.Context, headerUpdate syncer.HeaderUpdate) error {
+	log.WithFields(log.Fields{
+		"beaconBlockRoot":      headerUpdate.BlockRoot,
+		"slot":                 headerUpdate.Block.Slot,
+		"executionBlockRoot":   headerUpdate.Block.Body.ExecutionPayload.BlockHash.Hex(),
+		"executionBlockNumber": headerUpdate.Block.Body.ExecutionPayload.BlockNumber,
+	}).Info("Syncing header between last two finalized headers")
+
+	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
+	if err != nil {
+		return fmt.Errorf("write to parachain: %w", err)
+	}
+	return nil
+}
+
+func (h *Header) fetchHeaderUpdate(ctx context.Context, blockRoot common.Hash, syncAggregate scale.SyncAggregate) (syncer.HeaderUpdate, error) {
 	headerUpdate, err := h.syncer.GetHeaderUpdate(blockRoot)
 	if err != nil {
 		return syncer.HeaderUpdate{}, fmt.Errorf("fetch header update: %w", err)
 	}
-
-	log.WithFields(log.Fields{
-		"beaconBlockRoot":    blockRoot,
-		"executionBlockRoot": headerUpdate.Block.Body.ExecutionPayload.BlockHash.Hex(),
-		"slot":               headerUpdate.Block.Slot,
-	}).Info("Syncing header between last two finalized headers")
-
 	headerUpdate.SyncAggregate = syncAggregate
-
-	err = h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
-	if err != nil {
-		return syncer.HeaderUpdate{}, fmt.Errorf("write to parachain: %w", err)
-	}
-
-	h.cache.HeadersMap[blockRoot] = uint64(headerUpdate.Block.Slot)
 
 	return headerUpdate, nil
 }
@@ -270,21 +280,37 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 		return err
 	}
 
-	headerUpdate, err := h.SyncHeader(ctx, finalizedHeaderBlockRoot, prevSyncAggregate)
+	headersToSync := []syncer.HeaderUpdate{}
+
+	headerUpdate, err := h.fetchHeaderUpdate(ctx, finalizedHeaderBlockRoot, prevSyncAggregate)
 	if err != nil {
 		return err
 	}
 
-	prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
+	headersToSync = append(headersToSync, headerUpdate)
 
 	for secondLastFinalizedHeader != blockRoot {
-		headerUpdate, err := h.SyncHeader(ctx, blockRoot, prevSyncAggregate)
+		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
+		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
+
+		headerUpdate, err := h.fetchHeaderUpdate(ctx, blockRoot, prevSyncAggregate)
 		if err != nil {
 			return err
 		}
 
-		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
-		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
+		headersToSync = append(headersToSync, headerUpdate)
+	}
+
+	// Reverse headers array to sync them sequentially, instead of backwards, so that we can track the last imported execution header
+	for i, j := 0, len(headersToSync)-1; i < j; i, j = i+1, j-1 {
+		headersToSync[i], headersToSync[j] = headersToSync[j], headersToSync[i]
+	}
+
+	for _, headerUpdate := range headersToSync {
+		err := h.SyncHeader(ctx, headerUpdate)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -88,6 +88,7 @@ type FinalizedHeaderUpdate struct {
 }
 
 type HeaderUpdate struct {
+	BlockRoot     types.H256
 	Block         scale.BeaconBlock
 	BlockBodyRoot types.H256
 	SyncAggregate scale.SyncAggregate
@@ -252,6 +253,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	}
 
 	headerUpdate := HeaderUpdate{
+		BlockRoot:     types.NewH256(blockRoot.Bytes()),
 		Block:         blockScale,
 		BlockBodyRoot: types.NewH256(header.BodyRoot.Bytes()),
 		ForkVersion:   forkVersion,
