@@ -134,10 +134,16 @@ pub mod pallet {
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
+	pub(super) type LatestFinalizedHeaderHash<T: Config> = StorageValue<_, H256, ValueQuery>;
+
+	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestFinalizedHeaderHash<T: Config> = StorageValue<_, H256, ValueQuery>;
+	pub(super) type LatestExecutionHash<T: Config> = StorageValue<_, H256, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type LatestExecutionBlockNumber<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
@@ -636,6 +642,18 @@ pub mod pallet {
 			let block_number = header.block_number;
 
 			<ExecutionHeaders<T>>::insert(block_root, header);
+
+			let latest_execution_block_number = <LatestExecutionBlockNumber<T>>::get();
+		
+			if block_number > latest_execution_block_number {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"💫 Updated latest execution block number to {}.",
+					block_number
+				);
+				<LatestExecutionBlockNumber<T>>::set(block_number);
+				<LatestExecutionHash<T>>::set(block_root);
+			}
 
 			Self::deposit_event(Event::ExecutionHeaderImported{block_hash: block_root, block_number: block_number});
 		}

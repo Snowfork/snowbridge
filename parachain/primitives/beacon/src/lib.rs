@@ -206,6 +206,7 @@ pub struct BlockUpdate<
 	AttestationSize: Get<u32>,
 	ValidatorCommitteeSize: Get<u32>,
 	SyncCommitteeSize: Get<u32>> {
+	pub block_root: H256,
 	pub block: BeaconBlock<FeeRecipientSize, 
 	LogsBloomSize, 
 	ExtraDataSize, 

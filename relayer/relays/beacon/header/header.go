@@ -169,7 +169,8 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		return fmt.Errorf("fetch last synced committee periid from parachain: %w", err)
 	}
 
-	if lastSyncedSyncCommitteePeriod != period {
+	// Period + 1 because the sync committee update contains the next period's sync committee
+	if lastSyncedSyncCommitteePeriod != period+1 {
 		return fmt.Errorf("synced committee period %d not imported successfully", lastSyncedSyncCommitteePeriod)
 	}
 
@@ -233,7 +234,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 
 func (h *Header) SyncHeader(ctx context.Context, headerUpdate syncer.HeaderUpdate) error {
 	log.WithFields(log.Fields{
-		"beaconBlockRoot":      headerUpdate.BlockRoot,
+		"beaconBlockRoot":      headerUpdate.BlockRoot.Hex(),
 		"slot":                 headerUpdate.Block.Slot,
 		"executionBlockRoot":   headerUpdate.Block.Body.ExecutionPayload.BlockHash.Hex(),
 		"executionBlockNumber": headerUpdate.Block.Body.ExecutionPayload.BlockNumber,
@@ -288,17 +289,22 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 	}
 
 	headersToSync = append(headersToSync, headerUpdate)
+	prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 
 	for secondLastFinalizedHeader != blockRoot {
-		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
-		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
-
 		headerUpdate, err := h.fetchHeaderUpdate(ctx, blockRoot, prevSyncAggregate)
 		if err != nil {
 			return err
 		}
 
+		log.WithFields(log.Fields{
+			"slot": headerUpdate.Block.Slot,
+		}).Info("fetching header update from api")
+
 		headersToSync = append(headersToSync, headerUpdate)
+
+		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
+		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 	}
 
 	// Reverse headers array to sync them sequentially, instead of backwards, so that we can track the last imported execution header
