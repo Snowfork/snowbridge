@@ -75,9 +75,6 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 		}
 
 		basicPayload.Messages = filterMessagesByLastNonces(basicPayload.Messages, addressNonzeroNonceMap)
-		// Reset the nonce so that the next block processing range will exclude the block that was synced,
-		// and start syncing from the next block instead
-		nonce = 0
 
 		err = m.writeMessages(ctx, basicPayload)
 		if err != nil {
