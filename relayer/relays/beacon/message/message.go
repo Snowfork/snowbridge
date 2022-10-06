@@ -63,7 +63,7 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 		// and start syncing from the next block instead
 		nonce = 0
 
-		err = m.writeMessages(ctx, basicPayload)
+		err = m.writeBasicMessages(ctx, basicPayload)
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 					return err
 				}
 
-				err = m.writeMessages(ctx, basicPayload)
+				err = m.writeBasicMessages(ctx, basicPayload)
 				if err != nil {
 					return err
 				}
@@ -145,7 +145,7 @@ func (m *Message) SyncIncentivized(ctx context.Context, eg *errgroup.Group, bloc
 			"incentivizedPayload": incentivizedPayload,
 		}).Info("writing incentivized messages")
 
-		err = m.writeMessages(ctx, incentivizedPayload)
+		err = m.writeIncentivizedMessages(ctx, incentivizedPayload)
 		if err != nil {
 			return err
 		}
@@ -176,7 +176,7 @@ func (m *Message) SyncIncentivized(ctx context.Context, eg *errgroup.Group, bloc
 					return err
 				}
 
-				err = m.writeMessages(ctx, incentivizedPayload)
+				err = m.writeIncentivizedMessages(ctx, incentivizedPayload)
 				if err != nil {
 					return err
 				}
@@ -189,11 +189,42 @@ func (m *Message) SyncIncentivized(ctx context.Context, eg *errgroup.Group, bloc
 	return nil
 }
 
-func (m *Message) writeMessages(ctx context.Context, payload ParachainPayload) error {
+func (m *Message) writeBasicMessages(ctx context.Context, payload ParachainPayload) error {
 	for _, msg := range payload.Messages {
 		err := m.writer.WriteToParachainAndWatch(ctx, msg.Call, msg.Args...)
 		if err != nil {
 			return err
+		}
+
+		log.Info("wrote basic message")
+
+		lastNonce, err := m.writer.GetLastBasicChannelNonce()
+		if err != nil {
+			return err
+		}
+
+		if lastNonce != msg.Nonce {
+			return fmt.Errorf("last basic message (nonce: %d) : %w", lastNonce, err)
+		}
+	}
+
+	return nil
+}
+
+func (m *Message) writeIncentivizedMessages(ctx context.Context, payload ParachainPayload) error {
+	for _, msg := range payload.Messages {
+		err := m.writer.WriteToParachainAndWatch(ctx, msg.Call, msg.Args...)
+		if err != nil {
+			return err
+		}
+
+		lastNonce, err := m.writer.GetLastIncentivizedChannelNonce()
+		if err != nil {
+			return err
+		}
+
+		if lastNonce != msg.Nonce {
+			return fmt.Errorf("last incentivized message (nonce: %d) : %w", lastNonce, err)
 		}
 	}
 

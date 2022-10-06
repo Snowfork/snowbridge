@@ -299,10 +299,6 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 
 	headersToSync := []syncer.HeaderUpdate{}
 
-	log.WithFields(log.Fields{
-		"blockRoot": blockRoot,
-	}).Info("block root is")
-
 	headerUpdate, err := h.fetchHeaderUpdate(ctx, blockRoot, prevSyncAggregate)
 	if err != nil {
 		return err
