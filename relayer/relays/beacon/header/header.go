@@ -12,6 +12,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/writer"
 	"golang.org/x/sync/errgroup"
 )
@@ -77,6 +78,16 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 		"slot": lastFinalizedSlot,
 	}).Info("set cache: last finalized header")
 
+	executionHeaderState, err := h.writer.GetExecutionHeaderState()
+	if err != nil {
+		return nil, nil, fmt.Errorf("fetch last execution hash: %w", err)
+	}
+
+	err = h.syncLaggingExecutionHeaders(ctx, lastFinalizedHeader, lastFinalizedSlot, executionHeaderState)
+	if err != nil {
+		return nil, nil, fmt.Errorf("sync lagging execution headers: %w", err)
+	}
+
 	log.Info("starting to sync finalized headers")
 
 	ticker := time.NewTicker(time.Second * 20)
@@ -92,10 +103,10 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 			close(incentivizedChannel)
 		}()
 		for {
-			err := h.SyncHeaders(ctx)
+			err := h.SyncHeadersFromFinalized(ctx)
 			switch {
 			case errors.Is(err, ErrFinalizedHeaderUnchanged):
-				log.WithError(err).WithField("finalized_header", h.cache.LastAttemptedFinalizedHeader).Info("not importing unchanged header")
+				log.WithField("finalized_header", h.cache.LastAttemptedFinalizedHeader).Info("not importing unchanged header")
 			case errors.Is(err, ErrFinalizedHeaderNotImported):
 				log.WithError(err).Warn("Not importing header this cycle")
 			case err != nil:
@@ -257,7 +268,7 @@ func (h *Header) fetchHeaderUpdate(ctx context.Context, blockRoot common.Hash, s
 	return headerUpdate, nil
 }
 
-func (h *Header) SyncHeaders(ctx context.Context) error {
+func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 	lastAttemptedFinalizedHeader := h.cache.LastAttemptedFinalizedHeader
 	secondLastFinalizedHeader := h.cache.LastFinalizedHeader()
 
@@ -270,28 +281,38 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 		return ErrFinalizedHeaderUnchanged
 	}
 
+	return h.SyncHeaders(ctx, secondLastFinalizedHeader, finalizedHeaderBlockRoot, uint64(finalizedHeader.FinalizedHeader.Slot))
+}
+
+func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Hash, toHeaderSlot uint64) error {
 	log.WithFields(log.Fields{
-		"secondLastHash": secondLastFinalizedHeader,
-		"lastHash":       finalizedHeaderBlockRoot,
+		"fromHeader": fromHeader,
+		"toHeader":   toHeader,
 	}).Info("starting to back-fill headers")
 
-	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
-	prevSyncAggregate, err := h.syncer.GetSyncAggregateForSlot(uint64(finalizedHeader.FinalizedHeader.Slot + 1))
+	blockRoot := toHeader
+
+	prevSyncAggregate, err := h.syncer.GetSyncAggregateForSlot(toHeaderSlot + 1)
 	if err != nil {
 		return err
 	}
 
 	headersToSync := []syncer.HeaderUpdate{}
 
-	headerUpdate, err := h.fetchHeaderUpdate(ctx, finalizedHeaderBlockRoot, prevSyncAggregate)
+	log.WithFields(log.Fields{
+		"blockRoot": blockRoot,
+	}).Info("block root is")
+
+	headerUpdate, err := h.fetchHeaderUpdate(ctx, blockRoot, prevSyncAggregate)
 	if err != nil {
 		return err
 	}
-
 	headersToSync = append(headersToSync, headerUpdate)
-	prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 
-	for secondLastFinalizedHeader != blockRoot {
+	prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
+	blockRoot = common.Hash(headerUpdate.Block.ParentRoot)
+
+	for fromHeader != blockRoot {
 		headerUpdate, err := h.fetchHeaderUpdate(ctx, blockRoot, prevSyncAggregate)
 		if err != nil {
 			return err
@@ -299,7 +320,7 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 
 		log.WithFields(log.Fields{
 			"slot": headerUpdate.Block.Slot,
-		}).Info("fetching header update from api")
+		}).Debug("fetching header update from api")
 
 		headersToSync = append(headersToSync, headerUpdate)
 
@@ -320,4 +341,37 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedHeader common.Hash, lastFinalizedSlot uint64, executionHeaderState state.ExecutionHeader) error {
+	log.WithFields(log.Fields{
+		"lastFinalizedSlot": lastFinalizedSlot,
+		"lastExecutionSlot": executionHeaderState.BeaconHeaderSlot,
+	}).Info("comparing finalized slot with execution slot")
+
+	if executionHeaderState.BlockNumber == 0 {
+		log.Info("start of syncing, no execution header lag found")
+
+		return nil
+	}
+
+	if executionHeaderState.BeaconHeaderSlot >= lastFinalizedSlot {
+		log.WithFields(log.Fields{
+			"slot":          executionHeaderState.BeaconHeaderSlot,
+			"blockNumber":   executionHeaderState.BlockNumber,
+			"executionHash": executionHeaderState.BlockHash,
+		}).Info("execution headers sync up to date with last finalized header")
+
+		return nil
+	}
+
+	log.WithFields(log.Fields{
+		"executionSlot": executionHeaderState.BeaconHeaderSlot,
+		"finalizedSlot": lastFinalizedSlot,
+		"blockNumber":   executionHeaderState.BlockNumber,
+		"executionHash": executionHeaderState.BlockHash,
+		"finalizedHash": lastFinalizedHeader,
+	}).Info("execution headers sync is not up to date with last finalized header, syncing lagging execution headers")
+
+	return h.SyncHeaders(ctx, executionHeaderState.BeaconHeaderBlockRoot, lastFinalizedHeader, lastFinalizedSlot)
 }

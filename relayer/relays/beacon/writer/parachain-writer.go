@@ -3,11 +3,13 @@ package writer
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -17,6 +19,7 @@ type ParachainWriter struct {
 	pool                 *parachain.ExtrinsicPool
 	genesisHash          types.Hash
 	maxWatchedExtrinsics int64
+	mu                   sync.Mutex
 }
 
 func NewParachainWriter(
@@ -34,7 +37,7 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 	if err != nil {
 		return err
 	}
-	wr.nonce = nonce
+	wr.nonce = nonce - 1
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
 	if err != nil {
@@ -66,6 +69,8 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 }
 
 func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
+	wr.incrementNonce()
+
 	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
 	if err != nil {
 		return nil, err
@@ -76,12 +81,14 @@ func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName s
 		return nil, err
 	}
 
-	wr.nonce = wr.nonce + 1
+	
 
 	return sub, nil
 }
 
 func (wr *ParachainWriter) WriteToParachainAndRateLimit(ctx context.Context, extrinsicName string, payload ...interface{}) error {
+	wr.incrementNonce()
+
 	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
 	if err != nil {
 		return err
@@ -93,8 +100,6 @@ func (wr *ParachainWriter) WriteToParachainAndRateLimit(ctx context.Context, ext
 	if err != nil {
 		return err
 	}
-
-	wr.nonce = wr.nonce + 1
 
 	return nil
 }
@@ -124,7 +129,7 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 	}
 }
 
-func (wr ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
+func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
 	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
 		return nil, err
@@ -179,39 +184,77 @@ func (wr ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName stri
 }
 
 func (wr *ParachainWriter) GetLastSyncedSyncCommitteePeriod() (uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestSyncCommitteePeriod", nil, nil)
-	if err != nil {
-		return 0, fmt.Errorf("create storage key for last sync committee: %w", err)
-	}
-
-	var period types.U64
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &period)
-	if err != nil {
-		return 0, fmt.Errorf("get storage for latest synced sync committee period (err): %w", err)
-	}
-
-	return uint64(period), nil
+	return wr.getNumberFromParachain("EthereumBeaconClient", "LatestSyncCommitteePeriod")
 }
 
 func (wr *ParachainWriter) GetLastStoredFinalizedHeader() (common.Hash, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestFinalizedHeaderHash", nil, nil)
+	return wr.getHashFromParachain("EthereumBeaconClient", "LatestFinalizedHeaderHash")
+}
+
+func (wr *ParachainWriter) GetLastStoredFinalizedHeaderSlot() (uint64, error) {
+	return wr.getNumberFromParachain("EthereumBeaconClient", "LatestFinalizedHeaderSlot")
+}
+
+func (wr *ParachainWriter) GetLastBasicChannelMessage() (uint64, error) {
+	return wr.getNumberFromParachain("BasicInboundChannel", "LatestVerifiedBlockNumber")
+}
+
+func (wr *ParachainWriter) GetLastBasicChannelNonce() (uint64, error) {
+	return wr.getNumberFromParachain("BasicInboundChannel", "Nonce")
+}
+
+func (wr *ParachainWriter) GetLastIncentivizedChannelMessage() (uint64, error) {
+	return wr.getNumberFromParachain("IncentivizedInboundChannel", "LatestVerifiedBlockNumber")
+}
+
+func (wr *ParachainWriter) GetLastIncentivizedChannelNonce() (uint64, error) {
+	return wr.getNumberFromParachain("IncentivizedInboundChannel", "Nonce")
+}
+
+func (wr *ParachainWriter) GetExecutionHeaderState() (state.ExecutionHeader, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestExecutionHeaderState", nil, nil)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("create storage key for last finalized header hash: %w", err)
+		return state.ExecutionHeader{}, fmt.Errorf("create storage key for LatestExecutionHeaderState: %w", err)
+	}
+
+	var storageState struct {
+		BeaconHeaderBlockRoot types.H256
+		BeaconHeaderSlot      types.U64
+		BlockHash             types.H256
+		BlockNumber           types.U64
+	}
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &storageState)
+	if err != nil {
+		return state.ExecutionHeader{}, fmt.Errorf("get storage for LatestExecutionHeaderState (err): %w", err)
+	}
+
+	return state.ExecutionHeader{
+		BeaconHeaderBlockRoot: common.Hash(storageState.BeaconHeaderBlockRoot),
+		BeaconHeaderSlot:      uint64(storageState.BeaconHeaderSlot),
+		BlockHash:             common.Hash(storageState.BlockHash),
+		BlockNumber:           uint64(storageState.BlockNumber),
+	}, nil
+}
+
+func (wr *ParachainWriter) getHashFromParachain(pallet, storage string) (common.Hash, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), pallet, storage, nil, nil)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("create storage key for %s: %w", storage, err)
 	}
 
 	var hash types.H256
 	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &hash)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("get storage for latest finalized header hash (err): %w", err)
+		return common.Hash{}, fmt.Errorf("get storage for %s (err): %w", storage, err)
 	}
 
 	return common.HexToHash(hash.Hex()), nil
 }
 
-func (wr *ParachainWriter) GetLastStoredFinalizedHeaderSlot() (uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestFinalizedHeaderSlot", nil, nil)
+func (wr *ParachainWriter) getNumberFromParachain(pallet, storage string) (uint64, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), pallet, storage, nil, nil)
 	if err != nil {
-		return 0, fmt.Errorf("create storage key for last finalized header slot: %w", err)
+		return 0, fmt.Errorf("create storage key for %s: %w", storage, err)
 	}
 
 	var slot types.U64
@@ -223,62 +266,9 @@ func (wr *ParachainWriter) GetLastStoredFinalizedHeaderSlot() (uint64, error) {
 	return uint64(slot), nil
 }
 
-func (wr *ParachainWriter) GetLastBasicChannelMessage() (uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicInboundChannel", "LatestVerifiedBlockNumber", nil, nil)
-	if err != nil {
-		return 0, fmt.Errorf("create storage key for last sync committee: %w", err)
-	}
-
-	var blockNumber types.U64
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &blockNumber)
-	if err != nil {
-		return 0, fmt.Errorf("get storage for latest synced sync committee period (err): %w", err)
-	}
-
-	return uint64(blockNumber), nil
-}
-
-func (wr *ParachainWriter) GetLastBasicChannelNonce() (uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicInboundChannel", "Nonce", nil, nil)
-	if err != nil {
-		return 0, fmt.Errorf("create storage key for last sync committee: %w", err)
-	}
-
-	var nonce types.U64
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &nonce)
-	if err != nil {
-		return 0, fmt.Errorf("get storage for latest synced sync committee period (err): %w", err)
-	}
-
-	return uint64(nonce), nil
-}
-
-func (wr *ParachainWriter) GetLastIncentivizedChannelMessage() (uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "IncentivizedInboundChannel", "LatestVerifiedBlockNumber", nil, nil)
-	if err != nil {
-		return 0, fmt.Errorf("create storage key for last sync committee: %w", err)
-	}
-
-	var blockNumber types.U64
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &blockNumber)
-	if err != nil {
-		return 0, fmt.Errorf("get storage for latest synced sync committee period (err): %w", err)
-	}
-
-	return uint64(blockNumber), nil
-}
-
-func (wr *ParachainWriter) GetLastIncentivizedChannelNonce() (uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "IncentivizedInboundChannel", "Nonce", nil, nil)
-	if err != nil {
-		return 0, fmt.Errorf("create storage key for last sync committee: %w", err)
-	}
-
-	var nonce types.U64
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &nonce)
-	if err != nil {
-		return 0, fmt.Errorf("get storage for latest synced sync committee period (err): %w", err)
-	}
-
-	return uint64(nonce), nil
+func (wr *ParachainWriter) incrementNonce() {
+	wr.mu.Lock()
+	defer wr.mu.Unlock()
+	
+	wr.nonce = wr.nonce + 1
 }

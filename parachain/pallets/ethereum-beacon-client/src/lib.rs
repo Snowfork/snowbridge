@@ -24,6 +24,8 @@ use sp_std::prelude::*;
 use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
+use codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
 
 pub use pallet::*;
 
@@ -35,6 +37,14 @@ pub type SyncCommitteePeriodUpdateOf<T> = SyncCommitteePeriodUpdate<<T as Config
 pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
 pub type ExecutionHeaderOf<T> = ExecutionHeader<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
 pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
+
+#[derive(Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub struct ExecutionHeaderState {
+	beacon_header_block_root: H256,
+	beacon_header_slot: u64,
+	block_hash: H256,
+	block_number: u64,
+}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -140,10 +150,7 @@ pub mod pallet {
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestExecutionHash<T: Config> = StorageValue<_, H256, ValueQuery>;
-
-	#[pallet::storage]
-	pub(super) type LatestExecutionBlockNumber<T: Config> = StorageValue<_, u64, ValueQuery>;
+	pub(super) type LatestExecutionHeaderState<T: Config> = StorageValue<_, ExecutionHeaderState, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
@@ -409,6 +416,9 @@ pub mod pallet {
 				body_root: body_root_hash,
 			};
 
+			let beacon_block_root: H256 = merkleization::hash_tree_root_beacon_header(header.clone())
+				.map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?.into();
+
 			let validators_root = <ValidatorsRoot<T>>::get();
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
@@ -450,7 +460,7 @@ pub mod pallet {
 				base_fee_per_gas: execution_payload.base_fee_per_gas,
 				block_hash: execution_payload.block_hash,
 				transactions_root: execution_payload.transactions_root,
-			});
+			}, block_slot, beacon_block_root);
 
 			Ok(())
 		}
@@ -638,12 +648,14 @@ pub mod pallet {
 			Self::deposit_event(Event::BeaconHeaderImported{block_hash: block_root, slot: slot});
 		}
 
-		fn store_execution_header(block_root: H256, header: ExecutionHeaderOf<T>) {
+		fn store_execution_header(block_root: H256, header: ExecutionHeaderOf<T>, slot: u64, beacon_header_hash: H256) {
 			let block_number = header.block_number;
 
 			<ExecutionHeaders<T>>::insert(block_root, header);
 
-			let latest_execution_block_number = <LatestExecutionBlockNumber<T>>::get();
+			let mut execution_header_state = <LatestExecutionHeaderState<T>>::get();
+
+			let latest_execution_block_number = execution_header_state.block_number;
 		
 			if block_number > latest_execution_block_number {
 				log::trace!(
@@ -651,8 +663,13 @@ pub mod pallet {
 					"💫 Updated latest execution block number to {}.",
 					block_number
 				);
-				<LatestExecutionBlockNumber<T>>::set(block_number);
-				<LatestExecutionHash<T>>::set(block_root);
+
+				execution_header_state.beacon_header_block_root = beacon_header_hash;
+				execution_header_state.beacon_header_slot = slot;
+				execution_header_state.block_hash = block_root;
+				execution_header_state.block_number = block_number;
+
+				<LatestExecutionHeaderState<T>>::set(execution_header_state);
 			}
 
 			Self::deposit_event(Event::ExecutionHeaderImported{block_hash: block_root, block_number: block_number});
