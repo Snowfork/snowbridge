@@ -12,7 +12,8 @@
   },
   "sink": {
     "parachain": {
-      "endpoint": "ws://localhost:11144"
+      "endpoint": "ws://localhost:11144",
+      "maxWatchedExtrinsics": 10
     }
   }
 }

@@ -95,12 +95,14 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.
 
 [features]
 default = [ "snowblink-native", "snowbase-native" ]
-runtime-benchmarks = [
-    "snowbridge-runtime/runtime-benchmarks",
-    "snowblink-runtime/runtime-benchmarks",
-    "snowbase-runtime/runtime-benchmarks",
-    "polkadot-service/runtime-benchmarks"
-]
+
+snowbridge-runtime-benchmarks = [ "snowbridge-runtime/runtime-benchmarks" ]
+snowblink-runtime-benchmarks = [ "snowblink-runtime/runtime-benchmarks" ]
+snowbase-runtime-benchmarks = [ "snowbase-runtime/runtime-benchmarks" ]
+polkadot-runtime-benchmarks = [ "polkadot-service/runtime-benchmarks" ]
+
+runtime-benchmarks = []
+
 snowbridge-native = [ "snowbridge-runtime" ]
 snowblink-native = [ "snowblink-runtime" ]
 snowbase-native = [ "snowbase-runtime" ]

@@ -14,8 +14,6 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-const MaxWatchedExtrinsics = 10
-
 type ExtrinsicPool struct {
 	conn *Connection
 	eg   *errgroup.Group
@@ -24,11 +22,11 @@ type ExtrinsicPool struct {
 
 type OnFinalized func(types.Hash) error
 
-func NewExtrinsicPool(eg *errgroup.Group, conn *Connection) *ExtrinsicPool {
+func NewExtrinsicPool(eg *errgroup.Group, conn *Connection, maxWatchedExtrinsics int64) *ExtrinsicPool {
 	ep := ExtrinsicPool{
 		conn: conn,
 		eg:   eg,
-		sem:  semaphore.NewWeighted(MaxWatchedExtrinsics),
+		sem:  semaphore.NewWeighted(maxWatchedExtrinsics),
 	}
 	return &ep
 }

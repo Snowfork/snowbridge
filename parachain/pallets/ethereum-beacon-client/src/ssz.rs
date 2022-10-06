@@ -12,10 +12,10 @@ pub struct SSZVoluntaryExit {
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZDepositData {
-    pub pubkey: Vector<u8, 48>,
+    pub pubkey: Vector<u8, { config::PUBKEY_SIZE }>,
     pub withdrawal_credentials: [u8; 32],
     pub amount: u64,
-    pub signature: Vector<u8, 96>,
+    pub signature: Vector<u8, { config::SIGNATURE_SIZE }>,
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
@@ -42,14 +42,14 @@ pub struct SSZAttestationData {
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SignedBeaconBlockHeader {
     pub message: SSZBeaconBlockHeader,
-    pub signature: Vector<u8, 96>,
+    pub signature: Vector<u8, { config::SIGNATURE_SIZE }>,
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZIndexedAttestation {
     pub attesting_indices: List<u64, { config::MAX_VALIDATORS_PER_COMMITTEE }>,
     pub data: SSZAttestationData,
-    pub signature: Vector<u8, 96>,
+    pub signature: Vector<u8, { config::SIGNATURE_SIZE }>,
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
@@ -75,7 +75,7 @@ pub struct SSZEth1Data {
 pub struct SSZAttestation {
     pub aggregation_bits: Bitlist<{ config::MAX_VALIDATORS_PER_COMMITTEE} >,
     pub data: SSZAttestationData,
-    pub signature: Vector<u8, 96>,
+    pub signature: Vector<u8, { config::SIGNATURE_SIZE }>,
 }
 
 #[derive(Default, SimpleSerialize)]
@@ -98,14 +98,14 @@ pub struct SSZBeaconBlockHeader {
 
 #[derive(Default, SimpleSerialize)]
 pub struct SSZSyncCommittee {
-    pub pubkeys: Vector<Vector<u8, 48>, { config::SYNC_COMMITTEE_SIZE }>,
-    pub aggregate_pubkey: Vector<u8, 48>,
+    pub pubkeys: Vector<Vector<u8, { config::PUBKEY_SIZE }>, { config::SYNC_COMMITTEE_SIZE }>,
+    pub aggregate_pubkey: Vector<u8, { config::PUBKEY_SIZE }>,
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZSyncAggregate {
     pub sync_committee_bits: Bitvector<{ config::SYNC_COMMITTEE_SIZE }>,
-    pub sync_committee_signature: Vector<u8, 96>,
+    pub sync_committee_signature: Vector<u8, { config::SIGNATURE_SIZE }>,
 }
 
 #[derive(Default, SimpleSerialize)]
@@ -123,10 +123,10 @@ pub struct SSZSigningData {
 #[derive(Default, SimpleSerialize, Clone, Debug)]
 pub struct SSZExecutionPayload {
     pub parent_hash: [u8; 32],
-    pub fee_recipient: Vector<u8, 20>,
+    pub fee_recipient: Vector<u8, { config::MAX_FEE_RECIPIENT_SIZE }>,
     pub state_root: [u8; 32],
     pub receipts_root: [u8; 32],
-    pub logs_bloom: Vector<u8, 256>,
+    pub logs_bloom: Vector<u8, { config::MAX_LOGS_BLOOM_SIZE }>,
     pub prev_randao: [u8; 32],
     pub block_number: u64,
     pub gas_limit: u64,
@@ -140,7 +140,7 @@ pub struct SSZExecutionPayload {
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZBeaconBlockBody {
-    pub randao_reveal: Vector<u8, 96>,
+    pub randao_reveal: Vector<u8, { config::SIGNATURE_SIZE }>,
     pub eth1_data: SSZEth1Data,
     pub graffiti: [u8; 32],
     pub proposer_slashings: List<SSZProposerSlashing, { config::MAX_PROPOSER_SLASHINGS }>,

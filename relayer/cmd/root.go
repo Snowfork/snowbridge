@@ -27,6 +27,7 @@ func init() {
 	rootCmd.AddCommand(leafCmd())
 	rootCmd.AddCommand(basicChannelLeafProofCmd())
 	rootCmd.AddCommand(parachainHeadProofCmd())
+	rootCmd.AddCommand(importExecutionHeaderCmd())
 }
 
 func Execute() {

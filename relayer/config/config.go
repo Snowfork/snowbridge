@@ -5,7 +5,8 @@ type PolkadotConfig struct {
 }
 
 type ParachainConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+	Endpoint             string `mapstructure:"endpoint"`
+	MaxWatchedExtrinsics int64  `mapstructure:"maxWatchedExtrinsics"`
 }
 
 type EthereumConfig struct {
