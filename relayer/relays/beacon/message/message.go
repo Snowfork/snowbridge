@@ -44,7 +44,6 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 		return fmt.Errorf("fetch last basic channel message block number")
 	}
 
-	// TODO: fetch nonce by addresses
 	addressNonceMap, err := m.writer.GetLastBasicChannelNoncesByAddresses(m.addresses)
 	if err != nil {
 		return fmt.Errorf("fetch last basic channel message nonce")
@@ -65,7 +64,7 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 
 	// If the last nonce is set, there could be messages that have not been processed in the same block.
 	// Messages that have already been verified will not be reprocessed because they will be filtered out
-	// in filterMessagesByLastNonce.
+	// in filterMessagesByLastNonces.
 	// Messages after the lastVerifiedBlockNumber will be processed normally in the go routine below.
 	if len(addressNonzeroNonceMap) != 0 {
 		log.Info("processing basic block events for last verified block")
