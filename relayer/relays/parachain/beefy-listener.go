@@ -2,10 +2,12 @@ package parachain
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
 	"sort"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -552,8 +554,15 @@ func (li *BeefyListener) scanForCommitments(
 	scanIncentivizedChannel bool,
 	incentivizedNonceToFind uint64,
 ) ([]*Task, error) {
+	basicChannelAccountNonceString := "map["
+	for account, nonce := range basicChannelAccountNonces {
+		basicChannelAccountNonceString += fmt.Sprintf("%v: %v ", hex.EncodeToString(account[:]), nonce)
+	}
+	basicChannelAccountNonceString = strings.Trim(basicChannelAccountNonceString, " ")
+	basicChannelAccountNonceString += "]"
+
 	log.WithFields(log.Fields{
-		"basicAccountNonces": fmt.Sprintf("%+v", basicChannelAccountNonces),
+		"basicAccountNonces": basicChannelAccountNonceString,
 		"incentivizedNonce":  incentivizedNonceToFind,
 		"latestblockNumber":  lastParaBlockNumber,
 	}).Debug("Searching backwards from latest block on parachain to find block with nonces")
