@@ -21,7 +21,7 @@
       "BasicOutboundChannel": null,
       "IncentivizedOutboundChannel": null
     },
-  "accounts": []
+  "basicChannelAddresses": []
   },
   "sink": {
     "parachain": {

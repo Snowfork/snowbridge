@@ -20,7 +20,7 @@ type Message struct {
 }
 
 func New(ctx context.Context, eg *errgroup.Group, writer *writer.ParachainWriter, configSource *config.SourceConfig, ethconn *ethereum.Connection) (*Message, error) {
-	addresses, err := configSource.GetAddresses()
+	addresses, err := configSource.GetBasicChannelAddresses()
 	if err != nil {
 		return nil, err
 	}
