@@ -208,21 +208,6 @@ func (wr *ParachainWriter) GetLastBasicChannelMessage() (uint64, error) {
 	return uint64(blockNumber), nil
 }
 
-func (wr *ParachainWriter) GetLastBasicChannelNonce() (uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicInboundChannel", "Nonce", nil, nil)
-	if err != nil {
-		return 0, fmt.Errorf("create storage key for last sync committee: %w", err)
-	}
-
-	var nonce types.U64
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &nonce)
-	if err != nil {
-		return 0, fmt.Errorf("get storage for latest synced sync committee period (err): %w", err)
-	}
-
-	return uint64(nonce), nil
-}
-
 func (wr *ParachainWriter) GetLastBasicChannelNoncesByAddresses(addresses []common.Address) (map[common.Address]uint64, error) {
 	addressNonceMap := make(map[common.Address]uint64, len(addresses))
 
