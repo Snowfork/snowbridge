@@ -124,6 +124,8 @@ start_polkadot_launch()
         runtime="snowblink"
     fi
 
+    echo "Runtime is $runtime"
+
     echo "Building snowbridge parachain"
     cargo build \
         --manifest-path "$parachain_dir/Cargo.toml" \
@@ -155,8 +157,8 @@ start_polkadot_launch()
     echo "Found initial finalized block: $initial_beacon_block"
     bootstrap_header=""
     while [ -z "$bootstrap_header" ] || [ "$bootstrap_header" == "" ] || [ "$bootstrap_header" == "null" ]
-    do
-        echo "Waiting for beacon chain to finalize to get initial block..."
+    do 
+        echo "Waiting for beacon to get initial bootstrap..."
         bootstrap_header=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" \
             | jq -r '.data.header')
         sleep 3

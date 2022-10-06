@@ -34,7 +34,7 @@ mod beacon {
 	fn it_updates_a_committee_period_sync_update() {
 		let update = get_committee_sync_period_update();
 
-		let current_sync_committee = get_current_sync_committee_for_current_committee_update();
+		let current_sync_committee = get_initial_sync().current_sync_committee;
 
 		let current_period =
 			EthereumBeaconClient::compute_current_sync_period(update.attested_header.slot);
@@ -61,7 +61,7 @@ mod beacon {
 	fn it_processes_a_finalized_header_update() {
 		let update = get_finalized_header_update();
 
-		let current_sync_committee = get_current_sync_committee_for_finalized_header_update();
+		let current_sync_committee = get_initial_sync().current_sync_committee;
 
 		let current_period =
 			EthereumBeaconClient::compute_current_sync_period(update.attested_header.slot);
@@ -88,7 +88,7 @@ mod beacon {
 	fn it_processes_a_header_update() {
 		let update = get_header_update();
 
-		let current_sync_committee = get_current_sync_committee_for_header_update();
+		let current_sync_committee = get_initial_sync().current_sync_committee;
 
 		let current_period = EthereumBeaconClient::compute_current_sync_period(update.block.slot);
 
@@ -298,7 +298,7 @@ mod beacon {
 							.into(),
 						hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584")
 							.into(),
-					],
+					].to_vec().try_into().expect("proof branch is too long"),
 					6,
 					41,
 					hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
@@ -321,7 +321,7 @@ mod beacon {
 							.into(),
 						hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d")
 							.into(),
-					],
+					].to_vec().try_into().expect("proof branch is too long"),
 					6,
 					41,
 					hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
@@ -342,7 +342,7 @@ mod beacon {
 				PublicKey(hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into()),
 			],
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
+			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
 		));
 	});
 	}
@@ -358,7 +358,7 @@ mod beacon {
 				PublicKey(hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into()),
 			],
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
+			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
 		), Error::<Test>::InvalidSignaturePoint);
 	});
 	}
@@ -374,7 +374,7 @@ mod beacon {
 				PublicKey(hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into()),
 			],
 			hex!("99241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
+			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
 		), Error::<Test>::SignatureVerificationFailed);
 	});
 	}
@@ -390,7 +390,7 @@ mod beacon {
 				PublicKey(hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into()),
 			],
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			hex!("c204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
+			hex!("c204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
 		), Error::<Test>::InvalidSignature);
 	});
 	}
@@ -399,14 +399,14 @@ mod beacon {
 	pub fn test_bls_fast_aggregate_verify() {
 		let test_data = get_bls_signature_verify_test_data();
 
-		let sync_committee_bits =  merkleization::get_sync_committee_bits(test_data.sync_committee_bits);
+		let sync_committee_bits =  merkleization::get_sync_committee_bits::<MaxSyncCommitteeSize>(test_data.sync_committee_bits.try_into().expect("too many sync committee bits"));
 
 		assert_ok!(&sync_committee_bits);
 
 		assert_ok!(EthereumBeaconClient::verify_signed_header(
 			sync_committee_bits.unwrap(),
-			test_data.sync_committee_signature,
-			test_data.pubkeys,
+			test_data.sync_committee_signature.try_into().expect("signature is too long"),
+			test_data.pubkeys.to_vec().try_into().expect("to many pubkeys"),
 			test_data.fork_version,
 			test_data.header,
 			test_data.validators_root
@@ -420,7 +420,7 @@ mod beacon {
 			false => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b").to_vec(),
 		};
 		
-		let sync_committee_bits =  merkleization::get_sync_committee_bits(bits);
+		let sync_committee_bits =  merkleization::get_sync_committee_bits::<MaxSyncCommitteeSize>(bits.try_into().expect("too many sync committee bits"));
 
 		assert_ok!(&sync_committee_bits);
 
@@ -596,14 +596,14 @@ mod beacon {
 
 	#[test]
 	pub fn test_hash_sync_aggregrate() {
-		let sync_aggregate = match config::IS_MINIMAL {
+		let sync_aggregate: SyncAggregate<MaxSyncCommitteeSize, MaxSignatureSize> = match config::IS_MINIMAL {
 			true => SyncAggregate{
-				sync_committee_bits: hex!("ffffffff").to_vec(),
-				sync_committee_signature: hex!("99b0a4c6b69f17a876c65364e164c74b9cdd75dfd3b7f9b60b850cfb9394091ed501e2c190b8349f1b903bca44dd556a0c20fd9cd34dec3906921f1424359a4870356557b70261eee14bf49d8f3c62dfcdb37206cb34991c379eee46510602bd").to_vec(),
+				sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("sync committee bits are too long"),
+				sync_committee_signature: hex!("99b0a4c6b69f17a876c65364e164c74b9cdd75dfd3b7f9b60b850cfb9394091ed501e2c190b8349f1b903bca44dd556a0c20fd9cd34dec3906921f1424359a4870356557b70261eee14bf49d8f3c62dfcdb37206cb34991c379eee46510602bd").to_vec().try_into().expect("signature is too long"),
 			},
 			false => SyncAggregate{
-				sync_committee_bits: hex!("cefffffefffffff767fffbedffffeffffeeffdffffdebffffff7f7dbdf7fffdffffbffcfffdff79dfffbbfefff2ffffff7ddeff7ffffc98ff7fbfffffffffff7").to_vec(),
-				sync_committee_signature: hex!("8af1a8577bba419fe054ee49b16ed28e081dda6d3ba41651634685e890992a0b675e20f8d9f2ec137fe9eb50e838aa6117f9f5410e2e1024c4b4f0e098e55144843ce90b7acde52fe7b94f2a1037342c951dc59f501c92acf7ed944cb6d2b5f7").to_vec(),
+				sync_committee_bits: hex!("cefffffefffffff767fffbedffffeffffeeffdffffdebffffff7f7dbdf7fffdffffbffcfffdff79dfffbbfefff2ffffff7ddeff7ffffc98ff7fbfffffffffff7").to_vec().try_into().expect("sync committee bits are too long"),
+				sync_committee_signature: hex!("8af1a8577bba419fe054ee49b16ed28e081dda6d3ba41651634685e890992a0b675e20f8d9f2ec137fe9eb50e838aa6117f9f5410e2e1024c4b4f0e098e55144843ce90b7acde52fe7b94f2a1037342c951dc59f501c92acf7ed944cb6d2b5f7").to_vec().try_into().expect("signature is too long"),
 			},
 		};
 		let expected_hash_root: H256 = match config::IS_MINIMAL {
@@ -639,18 +639,18 @@ mod beacon {
 	#[test]
 	pub fn test_hash_tree_root_execution_payload() {
 		let payload = merkleization::get_ssz_execution_payload(
-            ExecutionPayload{
+            ExecutionPayload::<MaxFeeRecipientSize, MaxLogsBloomSize, MaxExtraDataSize>{
                 parent_hash: hex!("eadee5ab098dde64e9fd02ae5858064bad67064070679625b09f8d82dec183f7").into(),
-                fee_recipient: hex!("f97e180c050e5ab072211ad2c213eb5aee4df134").to_vec(),
+                fee_recipient: hex!("f97e180c050e5ab072211ad2c213eb5aee4df134").to_vec().try_into().expect("fee recipient bits are too long"),
                 state_root: hex!("564fa064c2a324c2b5978d7fdfc5d4224d4f421a45388af1ed405a399c845dff").into(),
                 receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
-                logs_bloom: hex!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").to_vec(),
+                logs_bloom: hex!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").to_vec().try_into().expect("logs bloom is too long"),
                 prev_randao: hex!("6bf538bdfbdf1c96ff528726a40658a91d0bda0f1351448c4c4f3604db2a0ccf").into(),
                 block_number: 477434,
                 gas_limit: 8154925,
                 gas_used: 0,
                 timestamp: 1652816940,
-                extra_data: vec![],
+                extra_data: vec![].try_into().expect("extra data field is too long"),
                 base_fee_per_gas: U256::from(7 as i16),
                 block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
                 transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
@@ -668,8 +668,8 @@ mod beacon {
 	#[test]
 	pub fn test_hash_tree_root_attestation() {
 		let payload = merkleization::get_ssz_attestation(
-            Attestation{
-                aggregation_bits: hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec(),
+            Attestation::<MaxValidatorsPerCommittee, MaxSignatureSize>{
+                aggregation_bits: hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec().try_into().expect("aggregation bits are too long"),
                 data: AttestationData{
                     slot: 484119,
                     index: 0,
@@ -683,7 +683,7 @@ mod beacon {
                         root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
                     }
                 },
-                signature: hex!("af8e57aadf092443bd6675927ca84875419233fb7a5eb3ae626621d3339fe738b00af4a0edcc55efbe1198a815600784074388d366c4add789aa6126bb1ec5ed63ad8d8f22b5f158ae4c25d46b08d46d1188f7ed7e8f99d96ff6c3c69a240c18").to_vec(),
+                signature: hex!("af8e57aadf092443bd6675927ca84875419233fb7a5eb3ae626621d3339fe738b00af4a0edcc55efbe1198a815600784074388d366c4add789aa6126bb1ec5ed63ad8d8f22b5f158ae4c25d46b08d46d1188f7ed7e8f99d96ff6c3c69a240c18").to_vec().try_into().expect("signature is too long"),
             },
         );
 

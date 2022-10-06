@@ -169,6 +169,7 @@ runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",
     "snowbridge-basic-channel/runtime-benchmarks",
     "snowbridge-incentivized-channel/runtime-benchmarks",
+    "ethereum-beacon-client/runtime-benchmarks",
     "dot-app/runtime-benchmarks",
     "dispatch/runtime-benchmarks",
     "erc20-app/runtime-benchmarks",

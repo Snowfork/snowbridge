@@ -236,7 +236,7 @@ func (h *Header) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggr
 
 	headerUpdate.SyncAggregate = syncAggregate
 
-	_, err = h.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
+	err = h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
 	if err != nil {
 		return syncer.HeaderUpdate{}, fmt.Errorf("write to parachain: %w", err)
 	}
@@ -265,7 +265,10 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 	}).Info("starting to back-fill headers")
 
 	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
-	prevSyncAggregate := finalizedHeader.SyncAggregate
+	prevSyncAggregate, err := h.syncer.GetSyncAggregateForSlot(uint64(finalizedHeader.FinalizedHeader.Slot + 1))
+	if err != nil {
+		return err
+	}
 
 	headerUpdate, err := h.SyncHeader(ctx, finalizedHeaderBlockRoot, prevSyncAggregate)
 	if err != nil {
