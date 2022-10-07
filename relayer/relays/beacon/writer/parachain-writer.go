@@ -244,13 +244,13 @@ func (wr *ParachainWriter) GetLastBasicChannelNoncesByAddresses(addresses []comm
 	for _, address := range addresses {
 		key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicOutboundChannel", "Nonces", address[:], nil)
 		if err != nil {
-			return addressNonceMap, fmt.Errorf("create storage key for last sync committee: %w", err)
+			return addressNonceMap, fmt.Errorf("create storage key for basic channel nonces: %w", err)
 		}
 
 		var nonce types.U64
 		_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &nonce)
 		if err != nil {
-			return addressNonceMap, fmt.Errorf("get storage for latest synced sync committee period (err): %w", err)
+			return addressNonceMap, fmt.Errorf("get storage for latest basic channel nonces (err): %w", err)
 		}
 
 	}
