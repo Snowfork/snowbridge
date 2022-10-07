@@ -27,7 +27,7 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 * lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `v1.1.0`.
 
   ```bash
-  yarn global add @chainsafe/lodestar@1.0.0
+  yarn global add @chainsafe/lodestar@1.1.0
   ```
 
 * sponge - Is available in the `moreutils` package.
