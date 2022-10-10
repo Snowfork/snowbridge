@@ -20,13 +20,13 @@ type SourceConfig struct {
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
 	// Block number when Beefy was activated
 	BeefyActivationBlock uint64   `mapstructure:"beefy-activation-block"`
-	Accounts             []string `mapstructure:"accounts"`
+	BasicChannelAccounts []string `mapstructure:"basicChannelAccounts"`
 }
 
 func (c *SourceConfig) getAccounts() ([][32]byte, error) {
 	var accounts [][32]byte
 
-	for _, account := range c.Accounts {
+	for _, account := range c.BasicChannelAccounts {
 		trimmedAccount := strings.TrimPrefix(account, "0x")
 		accountBytes, err := hex.DecodeString(trimmedAccount)
 

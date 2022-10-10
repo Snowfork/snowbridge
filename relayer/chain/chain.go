@@ -3,13 +3,16 @@
 
 package chain
 
+import "github.com/ethereum/go-ethereum/common"
+
 type Message interface{}
 
 // Message from ethereum
 type EthereumOutboundMessage struct {
-	Call  string
-	Args  []interface{}
-	Nonce uint64
+	Call   string
+	Args   []interface{}
+	Origin common.Address
+	Nonce  uint64
 }
 
 type Header struct {
