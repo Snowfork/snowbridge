@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -50,44 +51,11 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 	return nil
 }
 
-func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "System", "Account", wr.conn.Keypair().PublicKey, nil)
-	if err != nil {
-		return 0, err
-	}
-
-	var accountInfo types.AccountInfo
-	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &accountInfo)
-	if err != nil {
-		return 0, err
-	}
-	if !ok {
-		return 0, fmt.Errorf("no account info found for %s", wr.conn.Keypair().URI)
-	}
-
-	return uint32(accountInfo.Nonce), nil
-}
-
-func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
-	wr.incrementNonce()
-
-	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
-	if err != nil {
-		return nil, err
-	}
-
-	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(*extI)
-	if err != nil {
-		return nil, err
-	}
-
-	
-
-	return sub, nil
-}
-
 func (wr *ParachainWriter) WriteToParachainAndRateLimit(ctx context.Context, extrinsicName string, payload ...interface{}) error {
-	wr.incrementNonce()
+	wr.mu.Lock()
+	defer wr.mu.Unlock()
+
+	wr.nonce = wr.nonce + 1
 
 	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
 	if err != nil {
@@ -105,7 +73,12 @@ func (wr *ParachainWriter) WriteToParachainAndRateLimit(ctx context.Context, ext
 }
 
 func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrinsicName string, payload ...interface{}) error {
-	sub, err := wr.WriteToParachain(ctx, extrinsicName, payload...)
+	wr.mu.Lock()
+	defer wr.mu.Unlock()
+
+	wr.nonce = wr.nonce + 1
+
+	sub, err := wr.writeToParachain(ctx, extrinsicName, payload...)
 	if err != nil {
 		return err
 	}
@@ -115,10 +88,11 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 	for {
 		select {
 		case status := <-sub.Chan():
-			if status.IsDropped || status.IsInvalid || status.IsUsurped {
-				return fmt.Errorf("parachain write status was dropped, invalid or usurped")
+			log.WithFields(log.Fields{"extrinsicName": extrinsicName, "status": status}).Info("found status")
+			if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
+				return fmt.Errorf("parachain write status was dropped, invalid, usurped or finality timed out")
 			}
-			if status.IsInBlock {
+			if status.IsInBlock || status.IsFinalized {
 				return nil
 			}
 		case err = <-sub.Err():
@@ -127,6 +101,38 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 			return nil
 		}
 	}
+}
+
+func (wr *ParachainWriter) writeToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
+	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
+	if err != nil {
+		return nil, err
+	}
+
+	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(*extI)
+	if err != nil {
+		return nil, err
+	}
+
+	return sub, nil
+}
+
+func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "System", "Account", wr.conn.Keypair().PublicKey, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	var accountInfo types.AccountInfo
+	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &accountInfo)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		return 0, fmt.Errorf("no account info found for %s", wr.conn.Keypair().URI)
+	}
+
+	return uint32(accountInfo.Nonce), nil
 }
 
 func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
@@ -264,11 +270,4 @@ func (wr *ParachainWriter) getNumberFromParachain(pallet, storage string) (uint6
 	}
 
 	return uint64(slot), nil
-}
-
-func (wr *ParachainWriter) incrementNonce() {
-	wr.mu.Lock()
-	defer wr.mu.Unlock()
-	
-	wr.nonce = wr.nonce + 1
 }
