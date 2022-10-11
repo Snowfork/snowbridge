@@ -11,7 +11,6 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/writer"
 	"golang.org/x/sync/errgroup"
@@ -258,16 +257,6 @@ func (h *Header) SyncHeader(ctx context.Context, headerUpdate syncer.HeaderUpdat
 	return nil
 }
 
-func (h *Header) fetchHeaderUpdate(ctx context.Context, blockRoot common.Hash, syncAggregate scale.SyncAggregate) (syncer.HeaderUpdate, error) {
-	headerUpdate, err := h.syncer.GetHeaderUpdate(blockRoot)
-	if err != nil {
-		return syncer.HeaderUpdate{}, fmt.Errorf("fetch header update: %w", err)
-	}
-	headerUpdate.SyncAggregate = syncAggregate
-
-	return headerUpdate, nil
-}
-
 func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 	lastAttemptedFinalizedHeader := h.cache.LastAttemptedFinalizedHeader
 	secondLastFinalizedHeader := h.cache.LastFinalizedHeader()
@@ -285,61 +274,63 @@ func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 }
 
 func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Hash, toHeaderSlot uint64) error {
+	fromHeaderUpdate, err := h.syncer.GetHeaderUpdate(fromHeader)
+	if err != nil {
+		return err
+	}
+
+	fromSlot := uint64(fromHeaderUpdate.Block.Slot)
+	toSlot := uint64(fromHeaderUpdate.Block.Slot)
+	totalSlots := toSlot - fromSlot
+
 	log.WithFields(log.Fields{
 		"fromHeader": fromHeader,
+		"fromSlot":   fromSlot,
+		"toSlot":     toSlot,
+		"totalSlots": totalSlots,
 		"toHeader":   toHeader,
 	}).Info("starting to back-fill headers")
 
-	blockRoot := toHeader
+	fromEpoch := h.syncer.ComputeEpochAtSlot(fromSlot)
 
-	prevSyncAggregate, err := h.syncer.GetSyncAggregateForSlot(toHeaderSlot + 1)
-	if err != nil {
-		return err
-	}
-
+	currentEpoch := fromEpoch
+	headerUpdate := fromHeaderUpdate
 	headersToSync := []syncer.HeaderUpdate{}
 
-	headerUpdate, err := h.fetchHeaderUpdate(ctx, blockRoot, prevSyncAggregate)
-	if err != nil {
-		return err
-	}
-	headersToSync = append(headersToSync, headerUpdate)
-
-	prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
-	blockRoot = common.Hash(headerUpdate.Block.ParentRoot)
-
-	for fromHeader != blockRoot {
-		headerUpdate, err := h.fetchHeaderUpdate(ctx, blockRoot, prevSyncAggregate)
+	for i := fromSlot + 1; i <= toSlot; i++ {
+		log.WithFields(log.Fields{
+			"slot": i,
+		}).Debug("fetching header update from api")
+		nextHeaderUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(1)
 		if err != nil {
 			return err
 		}
-
-		log.WithFields(log.Fields{
-			"slot": headerUpdate.Block.Slot,
-		}).Debug("fetching header update from api")
+		headerUpdate.SyncAggregate = nextHeaderUpdate.SyncAggregate
 
 		headersToSync = append(headersToSync, headerUpdate)
 
-		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
-		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
-	}
+		headerUpdate = nextHeaderUpdate
 
-	// Reverse headers array to sync them sequentially, instead of backwards, so that we can track the last imported execution header
-	for i, j := 0, len(headersToSync)-1; i < j; i, j = i+1, j-1 {
-		headersToSync[i], headersToSync[j] = headersToSync[j], headersToSync[i]
-	}
+		// end of epoch, sync headers OR last slot to be synced, sync headers
+		if (float64(currentEpoch) == (float64(i) / float64(h.syncer.SlotsInEpoch))) || i == toSlot {
+			for _, headerUpdate := range headersToSync {
+				err := h.SyncHeader(ctx, headerUpdate)
+				if err != nil {
+					return err
+				}
+			}
 
-	for _, headerUpdate := range headersToSync {
-		err := h.SyncHeader(ctx, headerUpdate)
-		if err != nil {
-			return err
+			// new epoch, start with clean array
+			headersToSync = []syncer.HeaderUpdate{}
+
+			currentEpoch = currentEpoch + 1
 		}
 	}
 
 	return nil
 }
 
-// Syncs execution headers from the last synced execution header on the parachain to the current finalized header. Lagging execution headers can occur if the relayer 
+// Syncs execution headers from the last synced execution header on the parachain to the current finalized header. Lagging execution headers can occur if the relayer
 // stopped while still processing a set of execution headers.
 func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedHeader common.Hash, lastFinalizedSlot uint64, executionHeaderState state.ExecutionHeader) error {
 	if executionHeaderState.BlockNumber == 0 {

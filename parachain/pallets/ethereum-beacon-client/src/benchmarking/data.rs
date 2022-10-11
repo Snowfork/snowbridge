@@ -1396,7 +1396,7 @@ pub fn block_update<
         };
     }
     return BlockUpdate{
-        block_root: hex!("7b52e1d22c849ee9486fcdc27d11febcc5f0fbbb96c6df7203c490552067b478").into(),
+        block_root: hex!("15bef2169783b8bbe2db96c211aa319f468a3f2927e59c818e43777eb8e98a54").into(),
         block: BeaconBlock{
             slot: 3980063,
             proposer_index: 259057,

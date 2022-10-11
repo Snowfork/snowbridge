@@ -226,13 +226,108 @@ func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, common.Hash, error
 	return finalizedHeaderUpdate, blockRoot, nil
 }
 
+func (s *Syncer) GetHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
+	block, err := s.Client.GetBeaconBlockBySlot(slot)
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
+	}
+
+	header, err := s.Client.GetHeaderBySlot(slot)
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
+	}
+
+	blockRoot, err := s.Client.GetBeaconBlockRoot(slot)
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
+	}
+
+	blockScale, err := block.ToScale()
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
+	}
+
+	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(blockScale.Slot))
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch current fork version: %w", err)
+	}
+
+	forkVersion, err := hexStringToForkVersion(currentForkVersion)
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("convert fork version: %w", err)
+	}
+
+	headerUpdate := HeaderUpdate{
+		BlockRoot:     types.NewH256(blockRoot.Bytes()),
+		Block:         blockScale,
+		BlockBodyRoot: types.NewH256(header.BodyRoot.Bytes()),
+		ForkVersion:   forkVersion,
+	}
+
+	return headerUpdate, nil
+}
+
+func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
+	err := ErrNotFound
+	var block BeaconBlockResponse
+	tries := 0
+	maxSlotsMissed := int(s.SlotsInEpoch)
+	for errors.Is(err, ErrNotFound) && tries < maxSlotsMissed {
+		log.WithFields(log.Fields{
+			"try_number": tries,
+			"slot":       slot,
+		}).Info("fetching sync aggregate for slot")
+		block, err = s.Client.GetBeaconBlockBySlot(slot)
+		if err != nil && !errors.Is(err, ErrNotFound) {
+			return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
+		}
+
+		tries = tries + 1
+		slot = slot + 1
+	}
+
+	header, err := s.Client.GetHeaderBySlot(slot)
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
+	}
+
+	blockRoot, err := s.Client.GetBeaconBlockRoot(slot)
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
+	}
+
+	blockScale, err := block.ToScale()
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
+	}
+
+	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(blockScale.Slot))
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch current fork version: %w", err)
+	}
+
+	forkVersion, err := hexStringToForkVersion(currentForkVersion)
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("convert fork version: %w", err)
+	}
+
+	headerUpdate := HeaderUpdate{
+		BlockRoot:     types.NewH256(blockRoot.Bytes()),
+		Block:         blockScale,
+		BlockBodyRoot: types.NewH256(header.BodyRoot.Bytes()),
+		ForkVersion:   forkVersion,
+	}
+
+	return headerUpdate, nil
+}
+
 func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
 		return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
 	}
 
-	header, err := s.Client.GetHeader(blockRoot.Hex())
+	header, err := s.Client.GetHeader(blockRoot)
 	if err != nil {
 		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
 	}
@@ -320,6 +415,10 @@ func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, erro
 
 func (s *Syncer) ComputeSyncPeriodAtSlot(slot uint64) uint64 {
 	return slot / (s.SlotsInEpoch * s.EpochsPerSyncCommitteePeriod)
+}
+
+func (s *Syncer) ComputeEpochAtSlot(slot uint64) uint64 {
+	return slot / s.SlotsInEpoch
 }
 
 func IsInArray(values []uint64, toCheck uint64) bool {

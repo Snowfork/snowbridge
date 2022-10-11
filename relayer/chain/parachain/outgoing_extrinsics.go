@@ -70,7 +70,7 @@ func (ep *ExtrinsicPool) WaitForSubmitAndWatch(
 					sub.Unsubscribe()
 					log.WithFields(log.Fields{
 						"nonce": nonce(ext),
-					}).Debug("Extrinsic included in finalized block")
+					}).Trace("Extrinsic included in finalized block")
 					return onFinalized(status.AsFinalized)
 				} else if status.IsFinalityTimeout {
 					sub.Unsubscribe()
