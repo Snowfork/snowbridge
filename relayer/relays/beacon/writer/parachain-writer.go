@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -38,6 +37,8 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 	if err != nil {
 		return err
 	}
+
+	// decrement the nonce because we increment it before extrinsic calls.
 	wr.nonce = nonce - 1
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
@@ -88,7 +89,6 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 	for {
 		select {
 		case status := <-sub.Chan():
-			log.WithFields(log.Fields{"extrinsicName": extrinsicName, "status": status}).Info("found status")
 			if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
 				return fmt.Errorf("parachain write status was dropped, invalid, usurped or finality timed out")
 			}
@@ -245,13 +245,13 @@ func (wr *ParachainWriter) GetExecutionHeaderState() (state.ExecutionHeader, err
 func (wr *ParachainWriter) getHashFromParachain(pallet, storage string) (common.Hash, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), pallet, storage, nil, nil)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("create storage key for %s: %w", storage, err)
+		return common.Hash{}, fmt.Errorf("create storage key for %s:%s: %w", pallet, storage, err)
 	}
 
 	var hash types.H256
 	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &hash)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("get storage for %s (err): %w", storage, err)
+		return common.Hash{}, fmt.Errorf("get storage for %s:%s (err): %w", pallet, storage, err)
 	}
 
 	return common.HexToHash(hash.Hex()), nil
@@ -260,14 +260,14 @@ func (wr *ParachainWriter) getHashFromParachain(pallet, storage string) (common.
 func (wr *ParachainWriter) getNumberFromParachain(pallet, storage string) (uint64, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), pallet, storage, nil, nil)
 	if err != nil {
-		return 0, fmt.Errorf("create storage key for %s: %w", storage, err)
+		return 0, fmt.Errorf("create storage key for %s:%s: %w", pallet, storage, err)
 	}
 
-	var slot types.U64
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &slot)
+	var number types.U64
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &number)
 	if err != nil {
-		return 0, fmt.Errorf("get storage for latest finalized header slot (err): %w", err)
+		return 0, fmt.Errorf("get storage for %s:%s (err): %w", pallet, storage, err)
 	}
 
-	return uint64(slot), nil
+	return uint64(number), nil
 }

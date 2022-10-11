@@ -204,7 +204,7 @@ func (m *Message) writeBasicMessages(ctx context.Context, payload ParachainPaylo
 		}
 
 		if lastNonce != msg.Nonce {
-			return fmt.Errorf("last basic message (nonce: %d) : %w", lastNonce, err)
+			return fmt.Errorf("last basic message verification failed (nonce: %d)", lastNonce)
 		}
 	}
 
@@ -224,7 +224,7 @@ func (m *Message) writeIncentivizedMessages(ctx context.Context, payload Paracha
 		}
 
 		if lastNonce != msg.Nonce {
-			return fmt.Errorf("last incentivized message (nonce: %d) : %w", lastNonce, err)
+			return fmt.Errorf("last incentivized message verification failed (nonce: %d)", lastNonce)
 		}
 	}
 
