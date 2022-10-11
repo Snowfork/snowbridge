@@ -21,11 +21,9 @@ use frame_system::ensure_signed;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_std::prelude::*;
-use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate, ExecutionHeaderState};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
-use codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
 
 pub use pallet::*;
 
@@ -37,14 +35,6 @@ pub type SyncCommitteePeriodUpdateOf<T> = SyncCommitteePeriodUpdate<<T as Config
 pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
 pub type ExecutionHeaderOf<T> = ExecutionHeader<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
 pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
-
-#[derive(Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
-pub struct ExecutionHeaderState {
-	beacon_header_block_root: H256,
-	beacon_header_slot: u64,
-	block_hash: H256,
-	block_number: u64,
-}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -418,6 +408,13 @@ pub mod pallet {
 
 			let beacon_block_root: H256 = merkleization::hash_tree_root_beacon_header(header.clone())
 				.map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?.into();
+			if beacon_block_root != update.block_root {
+				log::warn!(target: "ethereum-beacon-client",
+					"beacon block hash incorrect, expected: {:?}, got {:?}.",
+					update.block_root,
+					beacon_block_root
+				);
+			}
 
 			let validators_root = <ValidatorsRoot<T>>::get();
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())

@@ -339,12 +339,9 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 	return nil
 }
 
+// Syncs execution headers from the last synced execution header on the parachain to the current finalized header. Lagging execution headers can occur if the relayer 
+// stopped while still processing a set of execution headers.
 func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedHeader common.Hash, lastFinalizedSlot uint64, executionHeaderState state.ExecutionHeader) error {
-	log.WithFields(log.Fields{
-		"lastFinalizedSlot": lastFinalizedSlot,
-		"lastExecutionSlot": executionHeaderState.BeaconHeaderSlot,
-	}).Info("comparing finalized slot with execution slot")
-
 	if executionHeaderState.BlockNumber == 0 {
 		log.Info("start of syncing, no execution header lag found")
 

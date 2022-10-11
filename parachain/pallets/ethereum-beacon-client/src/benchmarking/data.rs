@@ -1324,6 +1324,7 @@ pub fn block_update<
 	SyncCommitteeSize> {
     if config::IS_MINIMAL {
         return BlockUpdate{
+            block_root: hex!("03fe2f7ea47b2f99de47640391423be25a32c0e1a9747fd28b0278bfd855f0cc").into(),
             block: BeaconBlock{
                 slot: 87,
                 proposer_index: 0,
@@ -1395,6 +1396,7 @@ pub fn block_update<
         };
     }
     return BlockUpdate{
+        block_root: hex!("7b52e1d22c849ee9486fcdc27d11febcc5f0fbbb96c6df7203c490552067b478").into(),
         block: BeaconBlock{
             slot: 3980063,
             proposer_index: 259057,

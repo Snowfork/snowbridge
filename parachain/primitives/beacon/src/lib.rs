@@ -109,6 +109,14 @@ impl<'de> Deserialize<'de> for PublicKey {
 	}
 }
 
+#[derive(Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub struct ExecutionHeaderState {
+	pub beacon_header_block_root: H256,
+	pub beacon_header_slot: u64,
+	pub block_hash: H256,
+	pub block_number: u64,
+}
+
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(
@@ -206,6 +214,7 @@ pub struct BlockUpdate<
 	AttestationSize: Get<u32>,
 	ValidatorCommitteeSize: Get<u32>,
 	SyncCommitteeSize: Get<u32>> {
+	// Not used in the beacon client logic, used for debugging.
 	pub block_root: H256,
 	pub block: BeaconBlock<FeeRecipientSize, 
 	LogsBloomSize, 
