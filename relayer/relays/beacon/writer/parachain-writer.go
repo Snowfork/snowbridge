@@ -3,6 +3,7 @@ package writer
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
@@ -17,6 +18,7 @@ type ParachainWriter struct {
 	pool                 *parachain.ExtrinsicPool
 	genesisHash          types.Hash
 	maxWatchedExtrinsics int64
+	mu                   sync.Mutex
 }
 
 func NewParachainWriter(
@@ -66,6 +68,9 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 }
 
 func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
+	wr.mu.Lock()
+	defer wr.mu.Unlock()
+
 	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
 	if err != nil {
 		return nil, err
@@ -82,6 +87,9 @@ func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName s
 }
 
 func (wr *ParachainWriter) WriteToParachainAndRateLimit(ctx context.Context, extrinsicName string, payload ...interface{}) error {
+	wr.mu.Lock()
+	defer wr.mu.Unlock()
+
 	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
 	if err != nil {
 		return err
@@ -124,7 +132,7 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 	}
 }
 
-func (wr ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
+func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
 	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
 		return nil, err
