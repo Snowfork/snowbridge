@@ -242,10 +242,11 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	return finalizedHeaderUpdate, blockRoot, err
 }
 
-func (h *Header) SyncHeader(ctx context.Context, headerUpdate syncer.HeaderUpdate) error {
+func (h *Header) SyncHeader(ctx context.Context, headerUpdate syncer.HeaderUpdate, slotsLeft uint64) error {
 	log.WithFields(log.Fields{
 		"beaconBlockRoot":      headerUpdate.BlockRoot.Hex(),
 		"slot":                 headerUpdate.Block.Slot,
+		"slotsLeftToSync":      slotsLeft,
 		"executionBlockRoot":   headerUpdate.Block.Body.ExecutionPayload.BlockHash.Hex(),
 		"executionBlockNumber": headerUpdate.Block.Body.ExecutionPayload.BlockNumber,
 	}).Info("Syncing header between last two finalized headers")
@@ -279,42 +280,52 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 		return err
 	}
 
+	toHeaderUpdate, err := h.syncer.GetHeaderUpdate(toHeader)
+	if err != nil {
+		return err
+	}
+
 	fromSlot := uint64(fromHeaderUpdate.Block.Slot)
-	toSlot := uint64(fromHeaderUpdate.Block.Slot)
+	toSlot := uint64(toHeaderUpdate.Block.Slot)
 	totalSlots := toSlot - fromSlot
 
 	log.WithFields(log.Fields{
 		"fromHeader": fromHeader,
 		"fromSlot":   fromSlot,
-		"toSlot":     toSlot,
-		"totalSlots": totalSlots,
+		"fromEpoch":  h.syncer.ComputeEpochAtSlot(fromSlot),
 		"toHeader":   toHeader,
+		"toSlot":     toSlot,
+		"toEpoch":    h.syncer.ComputeEpochAtSlot(toSlot),
+		"totalSlots": totalSlots,
 	}).Info("starting to back-fill headers")
 
-	fromEpoch := h.syncer.ComputeEpochAtSlot(fromSlot)
-
-	currentEpoch := fromEpoch
-	headerUpdate := fromHeaderUpdate
 	headersToSync := []syncer.HeaderUpdate{}
 
-	for i := fromSlot + 1; i <= toSlot; i++ {
-		log.WithFields(log.Fields{
-			"slot": i,
-		}).Debug("fetching header update from api")
-		nextHeaderUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(1)
+	currentSlot := fromSlot + 1
+	for currentSlot <= toSlot {
+		epoch := h.syncer.ComputeEpochAtSlot(currentSlot)
+
+		headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot)
 		if err != nil {
 			return err
 		}
-		headerUpdate.SyncAggregate = nextHeaderUpdate.SyncAggregate
+		nextHeaderUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot + 1)
+		if err != nil {
+			return err
+		}
+
+		headerUpdate.SyncAggregate = nextHeaderUpdate.Block.Body.SyncAggregate
 
 		headersToSync = append(headersToSync, headerUpdate)
-
 		headerUpdate = nextHeaderUpdate
 
 		// end of epoch, sync headers OR last slot to be synced, sync headers
-		if (float64(currentEpoch) == (float64(i) / float64(h.syncer.SlotsInEpoch))) || i == toSlot {
-			for _, headerUpdate := range headersToSync {
-				err := h.SyncHeader(ctx, headerUpdate)
+		if (float64(epoch) >= (float64(currentSlot) / float64(h.syncer.SlotsInEpoch))) || currentSlot == toSlot || currentSlot > toSlot {
+			log.WithFields(log.Fields{
+				"epoch": h.syncer.ComputeEpochAtSlot(currentSlot),
+			}).Debug("synced epoch")
+			for _, header := range headersToSync {
+				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Block.Slot))
 				if err != nil {
 					return err
 				}
@@ -322,8 +333,6 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 
 			// new epoch, start with clean array
 			headersToSync = []syncer.HeaderUpdate{}
-
-			currentEpoch = currentEpoch + 1
 		}
 	}
 

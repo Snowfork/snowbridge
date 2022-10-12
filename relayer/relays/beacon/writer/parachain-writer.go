@@ -38,8 +38,7 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 		return err
 	}
 
-	// decrement the nonce because we increment it before extrinsic calls.
-	wr.nonce = nonce - 1
+	wr.nonce = nonce
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
 	if err != nil {
@@ -56,8 +55,6 @@ func (wr *ParachainWriter) WriteToParachainAndRateLimit(ctx context.Context, ext
 	wr.mu.Lock()
 	defer wr.mu.Unlock()
 
-	wr.nonce = wr.nonce + 1
-
 	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
 	if err != nil {
 		return err
@@ -70,6 +67,8 @@ func (wr *ParachainWriter) WriteToParachainAndRateLimit(ctx context.Context, ext
 		return err
 	}
 
+	wr.nonce = wr.nonce + 1
+
 	return nil
 }
 
@@ -77,12 +76,12 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 	wr.mu.Lock()
 	defer wr.mu.Unlock()
 
-	wr.nonce = wr.nonce + 1
-
 	sub, err := wr.writeToParachain(ctx, extrinsicName, payload...)
 	if err != nil {
 		return err
 	}
+
+	wr.nonce = wr.nonce + 1
 
 	defer sub.Unsubscribe()
 

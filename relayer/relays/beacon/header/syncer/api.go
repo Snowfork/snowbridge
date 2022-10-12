@@ -86,7 +86,7 @@ type BeaconHeader struct {
 }
 
 func (b *BeaconClient) GetHeaderBySlot(slot uint64) (BeaconHeader, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf(b.endpoint+"/eth/v1/beacon/headers/%s", slot), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/headers/%d", b.endpoint, slot), nil)
 	if err != nil {
 		return BeaconHeader{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
