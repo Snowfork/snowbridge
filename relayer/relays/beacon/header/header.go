@@ -304,6 +304,9 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 	currentSlot := fromSlot + 1
 	for currentSlot <= toSlot {
 		epoch := h.syncer.ComputeEpochAtSlot(currentSlot)
+		log.WithFields(log.Fields{
+			"slot": currentSlot,
+		}).Info("fetching header at slot")
 
 		headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot)
 		if err != nil {
@@ -334,6 +337,8 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 			// new epoch, start with clean array
 			headersToSync = []syncer.HeaderUpdate{}
 		}
+
+		currentSlot = uint64(nextHeaderUpdate.Block.Slot)
 	}
 
 	return nil

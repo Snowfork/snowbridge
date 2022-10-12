@@ -272,15 +272,17 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
 	var block BeaconBlockResponse
 	tries := 0
 	maxSlotsMissed := int(s.SlotsInEpoch)
-	slotToTry := slot
 	for errors.Is(err, ErrNotFound) && tries < maxSlotsMissed {
-		block, err = s.Client.GetBeaconBlockBySlot(slotToTry)
+		block, err = s.Client.GetBeaconBlockBySlot(slot)
 		if err != nil && !errors.Is(err, ErrNotFound) {
 			return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
 		}
 
-		tries = tries + 1
-		slotToTry = slotToTry + 1
+		if errors.Is(err, ErrNotFound) {
+			log.WithField("slot", slot).Info("no block at slot")
+			tries = tries + 1
+			slot = slot + 1
+		}
 	}
 
 	header, err := s.Client.GetHeaderBySlot(slot)

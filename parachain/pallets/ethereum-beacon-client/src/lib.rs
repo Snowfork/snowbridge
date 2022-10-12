@@ -853,7 +853,7 @@ pub mod pallet {
 			let receipt = match Self::verify_receipt_inclusion(stored_header, &message.proof) {
 				Ok(receipt) => receipt,
 				Err(err) => {
-					log::trace!(
+					log::error!(
 						target: "ethereum-beacon-client",
 						"Verify receipt inclusion failed for block {}: {:?}",
 						message.proof.block_hash,
@@ -872,7 +872,7 @@ pub mod pallet {
 			let log = match rlp::decode(&message.data) {
 				Ok(log) => log,
 				Err(err) => {
-					log::trace!(
+					log::error!(
 						target: "ethereum-beacon-client",
 						"RLP log decoded failed {}: {:?}",
 						message.proof.block_hash,
@@ -883,7 +883,7 @@ pub mod pallet {
 			};
 
 			if !receipt.contains_log(&log) {
-				log::trace!(
+				log::error!(
 					target: "ethereum-beacon-client",
 					"Event log not found in receipt for transaction at index {} in block {}",
 					message.proof.tx_index, message.proof.block_hash,
