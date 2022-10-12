@@ -13,6 +13,7 @@ require("chai")
 const { ethers } = require("ethers");
 const { expect } = require("chai");
 
+const ETHVault = artifacts.require("ETHVault");
 const ETHApp = artifacts.require("ETHApp");
 const ScaleCodec = artifacts.require("ScaleCodec");
 
@@ -50,13 +51,15 @@ describe("ETHApp", function () {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      let outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel);
+      let outboundChannel = await MockOutboundChannel.new();
+      this.vault = await ETHVault.new();
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
+      await this.vault.transferOwnership(this.app.address);
     });
 
     it("should lock funds", async function () {
 
-      const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
+      const beforeBalance = BigNumber(await web3.eth.getBalance(this.vault.address));
       const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
 
       const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
@@ -74,13 +77,13 @@ describe("ETHApp", function () {
       BigNumber(event.args.amount).should.be.bignumber.equal(amount);
 
       // Confirm contract's balance has increased
-      const afterBalance = await web3.eth.getBalance(this.app.address);
+      const afterBalance = await web3.eth.getBalance(this.vault.address);
       afterBalance.should.be.bignumber.equal(beforeBalance.plus(amount));
 
     });
 
     it("should lock funds to destination parachain", async function () {
-      const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
+      const beforeBalance = BigNumber(await web3.eth.getBalance(this.vault.address));
       const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
 
       const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 1001, 4_000_000)
@@ -98,11 +101,11 @@ describe("ETHApp", function () {
       BigNumber(event.args.amount).should.be.bignumber.equal(amount);
 
       // Confirm contract's balance has increased
-      const afterBalance = await web3.eth.getBalance(this.app.address);
+      const afterBalance = await web3.eth.getBalance(this.vault.address);
       afterBalance.should.be.bignumber.equal(amount);
 
       // Confirm contract's locked balance state has increased by amount locked
-      const afterBalanceState = BigNumber(await web3.eth.getBalance(this.app.address));
+      const afterBalanceState = BigNumber(await web3.eth.getBalance(this.vault.address));
       afterBalanceState.should.be.bignumber.equal(beforeBalance.plus(amount));
     });
 
@@ -115,8 +118,10 @@ describe("ETHApp", function () {
   describe("withdrawals", function () {
 
     beforeEach(async function () {
-      let outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel);
+      let outboundChannel = await MockOutboundChannel.new();
+      this.vault = await ETHVault.new();
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
+      await this.vault.transferOwnership(this.app.address);
     });
 
     it("should unlock", async function () {
@@ -131,7 +136,7 @@ describe("ETHApp", function () {
       // expected amount to unlock
       const amount = web3.utils.toWei("1", "ether");
 
-      const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
+      const beforeBalance = BigNumber(await web3.eth.getBalance(this.vault.address));
       const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
       const unlockAmount = web3.utils.toBN( web3.utils.toWei("2", "ether")).add(web3.utils.toBN(1))
@@ -165,19 +170,51 @@ describe("ETHApp", function () {
       event.recipient.should.be.equal(recipient);
       event.amount.eq(ethers.BigNumber.from(amount)).should.be.true;
 
-      const afterBalance = BigNumber(await web3.eth.getBalance(this.app.address));
+      const afterBalance = BigNumber(await web3.eth.getBalance(this.vault.address));
       const afterRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
       afterBalance.should.be.bignumber.equal(beforeBalance.minus(amount));
       afterRecipientBalance.minus(beforeRecipientBalance).should.be.bignumber.equal(amount);
     });
   });
+  
+  describe("vault ownership", function () {
+
+    beforeEach(async function () {
+      let outboundChannel = await MockOutboundChannel.new();
+      this.vault = await ETHVault.new();
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
+    });
+
+    it("should not lock", async function () {
+      const amount = BigNumber(web3.utils.toWei("2", "ether"));
+
+      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
+        .should.be.rejectedWith(/Ownable: caller is not the owner/);
+    });
+
+    it("should not unlock", async function () {
+      const amount = BigNumber(web3.utils.toWei("2", "ether"));
+      // recipient on the ethereum side
+      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
+
+      await this.app.unlock(
+        POLKADOT_ADDRESS,
+        recipient,
+        amount,
+        {
+          from: inboundChannel,
+        }
+      ).should.be.rejectedWith(/Ownable: caller is not the owner/);
+    });
+  });
 
   describe("upgradeability", function () {
     beforeEach(async function () {
+      let vault = await ETHVault.new();
       this.outboundChannel = await MockOutboundChannel.new()
       this.newInboundChannel = accounts[2];
-      this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ETHApp, inboundChannel);
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ETHApp, inboundChannel, vault.address);
       const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
       this.iface = new ethers.utils.Interface(abi);
     });

@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./RewardController.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
+import "./ETHVault.sol";
 
 enum ChannelId {
     Basic,
@@ -50,11 +51,16 @@ contract ETHApp is RewardController, AccessControl {
     bytes32 public constant CHANNEL_UPGRADE_ROLE =
         keccak256("CHANNEL_UPGRADE_ROLE");
 
+        
+    ETHVault public vault;
+
     constructor(
         address rewarder,
+        ETHVault _vault,
         Channel memory _basic,
         Channel memory _incentivized
     ) {
+        vault = _vault;
 
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
@@ -72,6 +78,10 @@ contract ETHApp is RewardController, AccessControl {
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
 
+    receive() external payable {
+        require(msg.sender == address(vault), "Only receive funds from vault");
+    }
+
     function lock(
         bytes32 _recipient,
         ChannelId _channelId,
@@ -87,6 +97,7 @@ contract ETHApp is RewardController, AccessControl {
 
         // revert in case of overflow.
         uint128 value = (msg.value).toUint128();
+        vault.lock{value: msg.value}();
 
         emit Locked(msg.sender, _recipient, value, _paraId, _fee);
 
@@ -110,6 +121,7 @@ contract ETHApp is RewardController, AccessControl {
     ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         require(_amount > 0, "Must unlock a positive amount");
 
+        vault.unlock(_amount);
         (bool success, ) = _recipient.call{value: _amount}("");
         require(success, "Unable to send Ether");
         emit Unlocked(_sender, _recipient, _amount);
