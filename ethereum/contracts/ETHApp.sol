@@ -193,4 +193,10 @@ contract ETHApp is RewardController, AccessControl {
         grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
         emit Upgraded(msg.sender, c1, c2);
     }
+
+     function transferVaultOwnership(
+        address newOwner
+    ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
+        vault.transferOwnership(newOwner);
+    }
 }
