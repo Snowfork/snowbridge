@@ -82,7 +82,10 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 		return nil, nil, fmt.Errorf("fetch last execution hash: %w", err)
 	}
 
-	err = h.syncLaggingExecutionHeaders(ctx, lastFinalizedHeader, lastFinalizedSlot, executionHeaderState)
+	basicChannel := make(chan uint64)
+	incentivizedChannel := make(chan uint64)
+
+	err = h.syncLaggingExecutionHeaders(ctx, lastFinalizedHeader, lastFinalizedSlot, executionHeaderState, basicChannel, incentivizedChannel)
 	if err != nil {
 		return nil, nil, fmt.Errorf("sync lagging execution headers: %w", err)
 	}
@@ -91,48 +94,26 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 
 	ticker := time.NewTicker(time.Second * 20)
 
-	basicChannel := make(chan uint64)
-	incentivizedChannel := make(chan uint64)
-
-	lastSyncedExecutionBlockNumber := uint64(0)
-
 	eg.Go(func() error {
 		defer func() {
 			close(basicChannel)
 			close(incentivizedChannel)
 		}()
 		for {
-			err := h.SyncHeadersFromFinalized(ctx)
+			slot, err := h.SyncHeadersFromFinalized(ctx, basicChannel, incentivizedChannel)
 			switch {
 			case errors.Is(err, ErrFinalizedHeaderUnchanged):
-				log.WithField("finalized_header", h.cache.LastAttemptedFinalizedHeader).Info("not importing unchanged header")
+				log.WithFields(log.Fields{
+					"finalized_header": h.cache.LastAttemptedFinalizedHeader,
+					"slot":             slot,
+				}).Info("not importing unchanged header")
 			case errors.Is(err, ErrFinalizedHeaderNotImported):
-				log.WithError(err).Warn("Not importing header this cycle")
+				log.WithFields(log.Fields{
+					"finalized_header": h.cache.LastAttemptedFinalizedHeader,
+					"slot":             slot,
+				}).WithError(err).Warn("Not importing header this cycle")
 			case err != nil:
 				return err
-			default:
-				executionBlockNumber, err := h.syncer.GetExecutionBlockHash(h.cache.LastFinalizedHeader())
-				if err != nil {
-					return fmt.Errorf("fetch execution block hash: %w", err)
-				}
-
-				if executionBlockNumber > lastSyncedExecutionBlockNumber {
-					lastSyncedExecutionBlockNumber = executionBlockNumber
-
-					log.WithField("block_number", lastSyncedExecutionBlockNumber).Info("sending block number")
-
-					select {
-					case basicChannel <- lastSyncedExecutionBlockNumber:
-					case <-ctx.Done():
-						return ctx.Err()
-					}
-
-					select {
-					case incentivizedChannel <- lastSyncedExecutionBlockNumber:
-					case <-ctx.Done():
-						return ctx.Err()
-					}
-				}
 			}
 
 			select {
@@ -189,7 +170,7 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 	return nil
 }
 
-func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeaderUpdate, common.Hash, error) {
+func (h *Header) SyncFinalizedHeader(ctx context.Context, basicChannel, incentivizedChannel chan uint64) (syncer.FinalizedHeaderUpdate, common.Hash, error) {
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
 	finalizedHeaderUpdate, blockRoot, err := h.syncer.GetFinalizedUpdate()
 	if err != nil {
@@ -258,23 +239,28 @@ func (h *Header) SyncHeader(ctx context.Context, headerUpdate syncer.HeaderUpdat
 	return nil
 }
 
-func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
+func (h *Header) SyncHeadersFromFinalized(ctx context.Context, basicChannel, incentivizedChannel chan uint64) (uint64, error) {
 	lastAttemptedFinalizedHeader := h.cache.LastAttemptedFinalizedHeader
 	secondLastFinalizedHeader := h.cache.LastFinalizedHeader()
 
-	finalizedHeader, finalizedHeaderBlockRoot, err := h.SyncFinalizedHeader(ctx)
+	finalizedHeader, finalizedHeaderBlockRoot, err := h.SyncFinalizedHeader(ctx, basicChannel, incentivizedChannel)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if finalizedHeaderBlockRoot == lastAttemptedFinalizedHeader {
-		return ErrFinalizedHeaderUnchanged
+		return 0, ErrFinalizedHeaderUnchanged
 	}
 
-	return h.SyncHeaders(ctx, secondLastFinalizedHeader, finalizedHeaderBlockRoot, uint64(finalizedHeader.FinalizedHeader.Slot))
+	err = h.SyncHeaders(ctx, secondLastFinalizedHeader, finalizedHeaderBlockRoot, uint64(finalizedHeader.FinalizedHeader.Slot), basicChannel, incentivizedChannel)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint64(finalizedHeader.FinalizedHeader.Slot), nil
 }
 
-func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Hash, toHeaderSlot uint64) error {
+func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Hash, toHeaderSlot uint64, basicChannel, incentivizedChannel chan uint64) error {
 	fromHeaderUpdate, err := h.syncer.GetHeaderUpdate(fromHeader)
 	if err != nil {
 		return err
@@ -304,6 +290,30 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 	currentSlot := fromSlot + 1
 	for currentSlot <= toSlot {
 		epoch := h.syncer.ComputeEpochAtSlot(currentSlot)
+
+		// start of new epoch, sync headers of last epoch
+		if float64(epoch) >= (float64(currentSlot) / float64(h.syncer.SlotsInEpoch)) {
+			log.WithFields(log.Fields{
+				"epoch": h.syncer.ComputeEpochAtSlot(currentSlot) - 1,
+			}).Debug("syncing header in epoch")
+			for _, header := range headersToSync {
+				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Block.Slot))
+				if err != nil {
+					return err
+				}
+			}
+
+			if len(headersToSync) > 0 {
+				err = h.sendLastBlockNumberMessage(ctx, uint64(headersToSync[len(headersToSync)-1].Block.Body.ExecutionPayload.BlockNumber), basicChannel, incentivizedChannel)
+				if err != nil {
+					return err
+				}
+			}
+
+			// new epoch, start with clean array
+			headersToSync = []syncer.HeaderUpdate{}
+		}
+
 		log.WithFields(log.Fields{
 			"slot": currentSlot,
 		}).Info("fetching header at slot")
@@ -322,11 +332,11 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 		headersToSync = append(headersToSync, headerUpdate)
 		headerUpdate = nextHeaderUpdate
 
-		// end of epoch, sync headers OR last slot to be synced, sync headers
-		if (float64(epoch) >= (float64(currentSlot) / float64(h.syncer.SlotsInEpoch))) || currentSlot == toSlot || currentSlot > toSlot {
+		// last slot to be synced, sync headers
+		if currentSlot >= toSlot {
 			log.WithFields(log.Fields{
 				"epoch": h.syncer.ComputeEpochAtSlot(currentSlot),
-			}).Debug("synced epoch")
+			}).Debug("syncing last set of headers in epoch")
 			for _, header := range headersToSync {
 				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Block.Slot))
 				if err != nil {
@@ -334,8 +344,12 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 				}
 			}
 
-			// new epoch, start with clean array
-			headersToSync = []syncer.HeaderUpdate{}
+			if len(headersToSync) > 0 {
+				err = h.sendLastBlockNumberMessage(ctx, uint64(headersToSync[len(headersToSync)-1].Block.Body.ExecutionPayload.BlockNumber), basicChannel, incentivizedChannel)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		currentSlot = uint64(nextHeaderUpdate.Block.Slot)
@@ -344,9 +358,27 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 	return nil
 }
 
+func (h *Header) sendLastBlockNumberMessage(ctx context.Context, lastBlockNumber uint64, basicChannel, incentivizedChannel chan uint64) error {
+	log.WithField("block_number", lastBlockNumber).Info("sending block number")
+
+	select {
+	case basicChannel <- lastBlockNumber:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	select {
+	case incentivizedChannel <- lastBlockNumber:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	return nil
+}
+
 // Syncs execution headers from the last synced execution header on the parachain to the current finalized header. Lagging execution headers can occur if the relayer
 // stopped while still processing a set of execution headers.
-func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedHeader common.Hash, lastFinalizedSlot uint64, executionHeaderState state.ExecutionHeader) error {
+func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedHeader common.Hash, lastFinalizedSlot uint64, executionHeaderState state.ExecutionHeader, basicChannel, incentivizedChannel chan uint64) error {
 	if executionHeaderState.BlockNumber == 0 {
 		log.Info("start of syncing, no execution header lag found")
 
@@ -371,5 +403,5 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedH
 		"finalizedHash": lastFinalizedHeader,
 	}).Info("execution headers sync is not up to date with last finalized header, syncing lagging execution headers")
 
-	return h.SyncHeaders(ctx, executionHeaderState.BeaconHeaderBlockRoot, lastFinalizedHeader, lastFinalizedSlot)
+	return h.SyncHeaders(ctx, executionHeaderState.BeaconHeaderBlockRoot, lastFinalizedHeader, lastFinalizedSlot, basicChannel, incentivizedChannel)
 }
