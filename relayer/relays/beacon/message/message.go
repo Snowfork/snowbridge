@@ -190,13 +190,13 @@ func (m *Message) SyncIncentivized(ctx context.Context, eg *errgroup.Group, bloc
 }
 
 func (m *Message) writeBasicMessages(ctx context.Context, payload ParachainPayload) error {
+	log.WithField("count", len(payload.Messages)).Info("writing basic messages")
+
 	for _, msg := range payload.Messages {
 		err := m.writer.WriteToParachainAndWatch(ctx, msg.Call, msg.Args...)
 		if err != nil {
 			return err
 		}
-
-		log.Info("wrote basic message")
 
 		lastNonce, err := m.writer.GetLastBasicChannelNonce()
 		if err != nil {
@@ -212,6 +212,8 @@ func (m *Message) writeBasicMessages(ctx context.Context, payload ParachainPaylo
 }
 
 func (m *Message) writeIncentivizedMessages(ctx context.Context, payload ParachainPayload) error {
+	log.WithField("count", len(payload.Messages)).Info("writing incentivized messages")
+
 	for _, msg := range payload.Messages {
 		err := m.writer.WriteToParachainAndWatch(ctx, msg.Call, msg.Args...)
 		if err != nil {

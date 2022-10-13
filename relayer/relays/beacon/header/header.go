@@ -86,14 +86,11 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 	basicChannel := make(chan uint64)
 	incentivizedChannel := make(chan uint64)
 
-	err = h.syncLaggingExecutionHeaders(ctx, eg, lastFinalizedHeader, lastFinalizedSlot, executionHeaderState, basicChannel, incentivizedChannel)
-	if err != nil {
-		return nil, nil, fmt.Errorf("sync lagging execution headers: %w", err)
-	}
-
 	log.Info("starting to sync finalized headers")
 
 	ticker := time.NewTicker(time.Second * 20)
+
+	firstRun := true
 
 	eg.Go(func() error {
 		defer func() {
@@ -101,6 +98,16 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 			close(incentivizedChannel)
 		}()
 		for {
+			// This is in the same goroutine as the normal finalized header sync, otherwise the headers are syced out of order: for the lagging execution headers and
+			// new headers. This needs to be in goroutine because otherwise sending a message to the basic and incentizived Go channels don't work.
+			if firstRun {
+				err = h.syncLaggingExecutionHeaders(ctx, lastFinalizedHeader, lastFinalizedSlot, executionHeaderState, basicChannel, incentivizedChannel)
+				if err != nil {
+					return fmt.Errorf("sync lagging execution headers: %w", err)
+				}
+				firstRun = false
+			}
+
 			err := h.SyncHeadersFromFinalized(ctx, basicChannel, incentivizedChannel)
 			logFields := log.Fields{
 				"finalized_header": h.cache.Finalized.LastAttemptedSyncHash,
@@ -380,7 +387,7 @@ func (h *Header) sendLastBlockNumberMessage(ctx context.Context, lastBlockNumber
 
 // Syncs execution headers from the last synced execution header on the parachain to the current finalized header. Lagging execution headers can occur if the relayer
 // stopped while still processing a set of execution headers.
-func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, eg *errgroup.Group, lastFinalizedHeader common.Hash, lastFinalizedSlot uint64, executionHeaderState state.ExecutionHeader, basicChannel, incentivizedChannel chan uint64) error {
+func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedHeader common.Hash, lastFinalizedSlot uint64, executionHeaderState state.ExecutionHeader, basicChannel, incentivizedChannel chan uint64) error {
 	if executionHeaderState.BlockNumber == 0 {
 		log.Info("start of syncing, no execution header lag found")
 
@@ -405,14 +412,10 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, eg *errgroup.G
 		"finalizedHash": lastFinalizedHeader,
 	}).Info("execution headers sync is not up to date with last finalized header, syncing lagging execution headers")
 
-	eg.Go(func() error {
-		err := h.SyncHeaders(ctx, executionHeaderState.BeaconHeaderBlockRoot, lastFinalizedHeader, lastFinalizedSlot, basicChannel, incentivizedChannel)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
+	err := h.SyncHeaders(ctx, executionHeaderState.BeaconHeaderBlockRoot, lastFinalizedHeader, lastFinalizedSlot, basicChannel, incentivizedChannel)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
