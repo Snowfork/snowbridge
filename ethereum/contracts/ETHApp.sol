@@ -51,7 +51,6 @@ contract ETHApp is RewardController, AccessControl {
     bytes32 public constant CHANNEL_UPGRADE_ROLE =
         keccak256("CHANNEL_UPGRADE_ROLE");
 
-        
     ETHVault public vault;
 
     constructor(
