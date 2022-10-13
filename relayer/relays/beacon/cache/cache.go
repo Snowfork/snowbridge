@@ -4,22 +4,18 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 )
 
 type BeaconCache struct {
 	LastSyncedSyncCommitteePeriod uint64
-	// Stores all successfully imported (in the parachain) finalized headers. 
-	// Used to determine the execution headers that needs to be backfilled.
-	FinalizedHeaders              []common.Hash
-	// Stores the last attempted finalized header, whether the import succeeded or not.
-	LastAttemptedFinalizedHeader  common.Hash
+	Finalized                     state.FinalizedHeader
 	mu                            sync.Mutex
 }
 
 func New() *BeaconCache {
 	return &BeaconCache{
 		LastSyncedSyncCommitteePeriod: 0,
-		FinalizedHeaders:              []common.Hash{},
 	}
 }
 
@@ -32,5 +28,5 @@ func (b *BeaconCache) SetLastSyncedSyncCommitteePeriod(period uint64) {
 }
 
 func (b *BeaconCache) LastFinalizedHeader() common.Hash {
-	return b.FinalizedHeaders[len(b.FinalizedHeaders)-1]
+	return b.Finalized.Headers[len(b.Finalized.Headers)-1]
 }

@@ -69,8 +69,9 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 		return nil, nil, fmt.Errorf("fetch last finalized header slot: %w", err)
 	}
 
-	h.cache.FinalizedHeaders = append(h.cache.FinalizedHeaders, lastFinalizedHeader)
-	h.cache.LastAttemptedFinalizedHeader = lastFinalizedHeader
+	h.cache.Finalized.Headers = append(h.cache.Finalized.Headers, lastFinalizedHeader)
+	h.cache.Finalized.LastAttemptedSyncHash = lastFinalizedHeader
+	h.cache.Finalized.LastAttemptedSyncSlot = lastFinalizedSlot
 
 	log.WithFields(log.Fields{
 		"hash": lastFinalizedHeader,
@@ -100,18 +101,16 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 			close(incentivizedChannel)
 		}()
 		for {
-			slot, err := h.SyncHeadersFromFinalized(ctx, basicChannel, incentivizedChannel)
+			err := h.SyncHeadersFromFinalized(ctx, basicChannel, incentivizedChannel)
+			logFields := log.Fields{
+				"finalized_header": h.cache.Finalized.LastAttemptedSyncHash,
+				"slot":             h.cache.Finalized.LastAttemptedSyncSlot,
+			}
 			switch {
 			case errors.Is(err, ErrFinalizedHeaderUnchanged):
-				log.WithFields(log.Fields{
-					"finalized_header": h.cache.LastAttemptedFinalizedHeader,
-					"slot":             slot,
-				}).Info("not importing unchanged header")
+				log.WithFields(logFields).Info("not importing unchanged header")
 			case errors.Is(err, ErrFinalizedHeaderNotImported):
-				log.WithFields(log.Fields{
-					"finalized_header": h.cache.LastAttemptedFinalizedHeader,
-					"slot":             slot,
-				}).WithError(err).Warn("Not importing header this cycle")
+				log.WithFields(logFields).WithError(err).Warn("Not importing header this cycle")
 			case err != nil:
 				return err
 			}
@@ -177,7 +176,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context, basicChannel, incentiv
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch finalized header update: %w", err)
 	}
 
-	if syncer.IsInHashArray(h.cache.FinalizedHeaders, blockRoot) {
+	if syncer.IsInHashArray(h.cache.Finalized.Headers, blockRoot) {
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, ErrFinalizedHeaderUnchanged
 	}
 
@@ -204,7 +203,8 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context, basicChannel, incentiv
 
 	// We need a distinction between finalized headers that we've tried to sync, so that we don't try syncing
 	// it over and over again with the same failure.
-	h.cache.LastAttemptedFinalizedHeader = blockRoot
+	h.cache.Finalized.LastAttemptedSyncHash = blockRoot
+	h.cache.Finalized.LastAttemptedSyncSlot = uint64(finalizedHeaderUpdate.FinalizedHeader.Slot)
 
 	lastStoredHeader, err := h.writer.GetLastStoredFinalizedHeader()
 	if err != nil {
@@ -214,7 +214,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context, basicChannel, incentiv
 	// If the finalized header import succeeded, we add it to this cache. This cache is used to determine
 	// from which last finalized header needs to imported (i.e. start and end finalized blocks, to backfill execution
 	// headers in between).
-	h.cache.FinalizedHeaders = append(h.cache.FinalizedHeaders, blockRoot)
+	h.cache.Finalized.Headers = append(h.cache.Finalized.Headers, blockRoot)
 
 	if lastStoredHeader != blockRoot {
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, ErrFinalizedHeaderNotImported
@@ -239,25 +239,25 @@ func (h *Header) SyncHeader(ctx context.Context, headerUpdate syncer.HeaderUpdat
 	return nil
 }
 
-func (h *Header) SyncHeadersFromFinalized(ctx context.Context, basicChannel, incentivizedChannel chan uint64) (uint64, error) {
-	lastAttemptedFinalizedHeader := h.cache.LastAttemptedFinalizedHeader
+func (h *Header) SyncHeadersFromFinalized(ctx context.Context, basicChannel, incentivizedChannel chan uint64) error {
+	lastAttemptedFinalizedHeader := h.cache.Finalized.LastAttemptedSyncHash
 	secondLastFinalizedHeader := h.cache.LastFinalizedHeader()
 
 	finalizedHeader, finalizedHeaderBlockRoot, err := h.SyncFinalizedHeader(ctx, basicChannel, incentivizedChannel)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	if finalizedHeaderBlockRoot == lastAttemptedFinalizedHeader {
-		return 0, ErrFinalizedHeaderUnchanged
+		return ErrFinalizedHeaderUnchanged
 	}
 
 	err = h.SyncHeaders(ctx, secondLastFinalizedHeader, finalizedHeaderBlockRoot, uint64(finalizedHeader.FinalizedHeader.Slot), basicChannel, incentivizedChannel)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	return uint64(finalizedHeader.FinalizedHeader.Slot), nil
+	return nil
 }
 
 func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Hash, toHeaderSlot uint64, basicChannel, incentivizedChannel chan uint64) error {
@@ -322,6 +322,8 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 		if err != nil {
 			return err
 		}
+		// To get the sync witness for the current synced header. This header
+		// will be used as the next update.
 		nextHeaderUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot + 1)
 		if err != nil {
 			return err
