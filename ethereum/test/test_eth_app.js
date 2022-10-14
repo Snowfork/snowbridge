@@ -13,7 +13,7 @@ require("chai")
 const { ethers } = require("ethers");
 const { expect } = require("chai");
 
-const ETHVault = artifacts.require("EtherVault");
+const EtherVault = artifacts.require("EtherVault");
 const ETHApp = artifacts.require("ETHApp");
 const ScaleCodec = artifacts.require("ScaleCodec");
 
@@ -52,7 +52,7 @@ describe("ETHApp", function () {
   describe("deposits", function () {
     beforeEach(async function () {
       let outboundChannel = await MockOutboundChannel.new();
-      this.vault = await ETHVault.new();
+      this.vault = await EtherVault.new();
       this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
       await this.vault.transferOwnership(this.app.address);
     });
@@ -64,6 +64,16 @@ describe("ETHApp", function () {
 
       const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
         .should.be.fulfilled;
+
+      var ifaceVault = new ethers.utils.Interface(EtherVault.abi);
+      let depositEvent = ifaceVault.decodeEventLog(
+        'Deposit(address,uint256)',
+        tx.receipt.rawLogs[0].data,
+        tx.receipt.rawLogs[0].topics
+      );
+
+      depositEvent.account.should.be.equal(this.app.address);
+      depositEvent.amount.eq(ethers.BigNumber.from(amount.toString())).should.be.true;
 
       // Confirm app event emitted with expected values
       const event = tx.logs.find(
@@ -119,7 +129,7 @@ describe("ETHApp", function () {
 
     beforeEach(async function () {
       let outboundChannel = await MockOutboundChannel.new();
-      this.vault = await ETHVault.new();
+      this.vault = await EtherVault.new();
       this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
       await this.vault.transferOwnership(this.app.address);
     });
@@ -161,14 +171,25 @@ describe("ETHApp", function () {
 
       // decode event
       var iface = new ethers.utils.Interface(ETHApp.abi);
-      let event = iface.decodeEventLog(
+      let unlockEvent = iface.decodeEventLog(
         'Unlocked(bytes32,address,uint128)',
+        receipt.rawLogs[1].data,
+        receipt.rawLogs[1].topics
+      );
+
+      unlockEvent.recipient.should.be.equal(recipient);
+      unlockEvent.amount.eq(ethers.BigNumber.from(amount)).should.be.true;
+
+      var ifaceVault = new ethers.utils.Interface(EtherVault.abi);
+      let withdrawEvent = ifaceVault.decodeEventLog(
+        'Withdraw(address,address,uint256)',
         receipt.rawLogs[0].data,
         receipt.rawLogs[0].topics
       );
 
-      event.recipient.should.be.equal(recipient);
-      event.amount.eq(ethers.BigNumber.from(amount)).should.be.true;
+      withdrawEvent.account.should.be.equal(this.app.address);
+      withdrawEvent.recipient.should.be.equal(recipient);
+      withdrawEvent.amount.eq(ethers.BigNumber.from(amount)).should.be.true;
 
       const afterBalance = BigNumber(await web3.eth.getBalance(this.vault.address));
       const afterRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
@@ -182,7 +203,7 @@ describe("ETHApp", function () {
 
     beforeEach(async function () {
       let outboundChannel = await MockOutboundChannel.new();
-      this.vault = await ETHVault.new();
+      this.vault = await EtherVault.new();
       this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
     });
 
@@ -204,7 +225,7 @@ describe("ETHApp", function () {
 
   describe("upgradeability", function () {
     beforeEach(async function () {
-      this.vault = await ETHVault.new();
+      this.vault = await EtherVault.new();
       this.outboundChannel = await MockOutboundChannel.new()
       this.newInboundChannel = accounts[2];
       this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
