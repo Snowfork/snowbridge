@@ -77,10 +77,6 @@ contract ETHApp is RewardController, AccessControl {
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
 
-    receive() external payable {
-        require(msg.sender == address(vault), "Only receive funds from vault");
-    }
-
     function lock(
         bytes32 _recipient,
         ChannelId _channelId,
@@ -96,7 +92,7 @@ contract ETHApp is RewardController, AccessControl {
 
         // revert in case of overflow.
         uint128 value = (msg.value).toUint128();
-        
+
         (bool success, ) = address(vault).call{value: msg.value}("");
         require(success, "Vault must accept funds");
 
@@ -120,11 +116,7 @@ contract ETHApp is RewardController, AccessControl {
         address payable _recipient,
         uint128 _amount
     ) public onlyRole(INBOUND_CHANNEL_ROLE) {
-        require(_amount > 0, "Must unlock a positive amount");
-
-        vault.unlock(_amount);
-        (bool success, ) = _recipient.call{value: _amount}("");
-        require(success, "Unable to send Ether");
+        vault.withdraw(_recipient, _amount);
         emit Unlocked(_sender, _recipient, _amount);
     }
 

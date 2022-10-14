@@ -9,12 +9,12 @@ contract EtherVault is Ownable {
     receive() external payable {}
 
     // Returns ETH to the caller.
-    function unlock(uint128 _amount)
-        public
+    function withdraw(address payable _recipient, uint128 _amount)
+        external
         onlyOwner
     {
         require(_amount > 0, "Must unlock a positive amount");
-        (bool success, ) = msg.sender.call{ value: _amount }("");
+        (bool success, ) = _recipient.call{ value: _amount }("");
         require(success, "Unable to send Ether");
     }
 }
