@@ -216,7 +216,10 @@ describe("ETHApp", function () {
       this.newInboundChannel = accounts[2];
       this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
       await this.vault.transferOwnership(this.app.address);
-      const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
+      const abi = [
+        "event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)", 
+        "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)"
+      ];
       this.iface = new ethers.utils.Interface(abi);
     });
 
@@ -260,6 +263,9 @@ describe("ETHApp", function () {
     it("CHANNEL_UPGRADE_ROLE can transfer vault ownership", async function () {
       const newVaultOwner = ethers.Wallet.createRandom().address;
       const tx = await this.app.transferVaultOwnership(newVaultOwner, { from: inboundChannel }).should.be.fulfilled;
+      const event = this.iface.decodeEventLog('OwnershipTransferred', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
+      expect(event.previousOwner).to.equal(this.app.address);
+      expect(event.newOwner).to.equal(newVaultOwner);
     });
 
     it("reverts when non-upgrader attempts to change CHANNEL_UPGRADE_ROLE", async function () {

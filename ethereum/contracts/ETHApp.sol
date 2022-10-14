@@ -36,8 +36,6 @@ contract ETHApp is RewardController, AccessControl {
         Channel incentivized
     );
 
-    event VaultTransferred(address newOwner);
-
     bytes2 constant MINT_CALL = 0x4101;
 
     bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
@@ -199,6 +197,5 @@ contract ETHApp is RewardController, AccessControl {
         address newOwner
     ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
         vault.transferOwnership(newOwner);
-        emit VaultTransferred(newOwner);
     }
 }
