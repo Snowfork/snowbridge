@@ -186,13 +186,6 @@ describe("ETHApp", function () {
       this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
     });
 
-    it("should not lock", async function () {
-      const amount = BigNumber(web3.utils.toWei("2", "ether"));
-
-      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
-        .should.be.rejectedWith(/Ownable: caller is not the owner/);
-    });
-
     it("should not unlock", async function () {
       const amount = BigNumber(web3.utils.toWei("2", "ether"));
       // recipient on the ethereum side

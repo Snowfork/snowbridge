@@ -6,13 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // Holds ETH on behalf of ETHApp
 contract EtherVault is Ownable {
     // Accepts ETH from the caller.
-    function lock() 
-        public
-        payable
-        onlyOwner
-    {
-        require(msg.value > 0, "Value of transaction must be positive");
-    }
+    receive() external payable {}
 
     // Returns ETH to the caller.
     function unlock(uint128 _amount)
