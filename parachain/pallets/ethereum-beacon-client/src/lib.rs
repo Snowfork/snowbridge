@@ -110,7 +110,8 @@ pub mod pallet {
 		HeaderNotFinalized,
 		MissingHeader,
 		InvalidProof,
-		DecodeFailed
+		DecodeFailed,
+		HashTreeRootFailed
 	}
 
 	#[pallet::hooks]
@@ -292,7 +293,7 @@ pub mod pallet {
 			let period = Self::compute_current_sync_period(initial_sync.header.slot);
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
-				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+				.map_err(|_| Error::<T>::HashTreeRootFailed)?.into();
 
 			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 			Self::store_finalized_header(block_root, initial_sync.header);
@@ -316,7 +317,7 @@ pub mod pallet {
 			)?;
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+				.map_err(|_| Error::<T>::HashTreeRootFailed)?.into();
 			Self::verify_header(
 				block_root,
 				update.finality_branch,
@@ -350,7 +351,7 @@ pub mod pallet {
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+				.map_err(|_| Error::<T>::HashTreeRootFailed)?.into();
 			Self::verify_header(
 				block_root,
 				update.finality_branch,
@@ -388,7 +389,7 @@ pub mod pallet {
 			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
 
 			let body_root = merkleization::hash_tree_root_beacon_body(update.block.body.clone())
-				.map_err(|_| DispatchError::Other("Beacon body hash tree root failed"))?;
+				.map_err(|_| Error::<T>::HashTreeRootFailed)?;
 			let body_root_hash: H256 = body_root.into();
 			if body_root_hash != update.block_body_root {
 				log::warn!(target: "ethereum-beacon-client",
@@ -407,7 +408,7 @@ pub mod pallet {
 			};
 
 			let beacon_block_root: H256 = merkleization::hash_tree_root_beacon_header(header.clone())
-				.map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?.into();
+				.map_err(|_| Error::<T>::HashTreeRootFailed)?.into();
 			if beacon_block_root != update.block_root {
 				log::warn!(target: "ethereum-beacon-client",
 					"beacon block hash incorrect, expected: {:?}, got {:?}.",
@@ -418,7 +419,7 @@ pub mod pallet {
 
 			let validators_root = <ValidatorsRoot<T>>::get();
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
+				.map_err(|_| Error::<T>::HashTreeRootFailed)?;
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
@@ -538,7 +539,7 @@ pub mod pallet {
 			domain: Domain,
 		) -> Result<Root, DispatchError> {
 			let beacon_header_root = merkleization::hash_tree_root_beacon_header(beacon_header)
-				.map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?;
+				.map_err(|_| Error::<T>::HashTreeRootFailed)?;
 
 			let header_hash_tree_root: H256 = beacon_header_root.into();
 
@@ -546,7 +547,7 @@ pub mod pallet {
 				object_root: header_hash_tree_root,
 				domain,
 			})
-			.map_err(|_| DispatchError::Other("Signing root hash tree root failed"))?;
+			.map_err(|_| Error::<T>::HashTreeRootFailed)?;
 
 			Ok(hash_root.into())
 		}
@@ -560,7 +561,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sync_committee_root =
 				merkleization::hash_tree_root_sync_committee(sync_committee)
-					.map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
+					.map_err(|_| Error::<T>::HashTreeRootFailed)?;
 
 			ensure!(
 				Self::is_valid_merkle_branch(
@@ -721,7 +722,7 @@ pub mod pallet {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
 			})
-			.map_err(|_| DispatchError::Other("Fork data hash tree root failed"))?;
+			.map_err(|_| Error::<T>::HashTreeRootFailed)?;
 
 			Ok(hash_root.into())
 		}
