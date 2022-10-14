@@ -111,7 +111,8 @@ pub mod pallet {
 		MissingHeader,
 		InvalidProof,
 		DecodeFailed,
-		HashTreeRootFailed
+		HashTreeRootFailed,
+		ExecutionHeaderNotLatest
 	}
 
 	#[pallet::hooks]
@@ -651,24 +652,30 @@ pub mod pallet {
 
 			<ExecutionHeaders<T>>::insert(block_root, header);
 
-			let mut execution_header_state = <LatestExecutionHeaderState<T>>::get();
+			<LatestExecutionHeaderState<T>>::try_mutate(|value| {
+				if block_number > value.block_number {
+					log::info!(
+						target: "ethereum-beacon-client",
+						"💫 Updated latest execution block number to {}.",
+						block_number
+					);
 
-			let latest_execution_block_number = execution_header_state.block_number;
-		
-			if block_number > latest_execution_block_number {
-				log::trace!(
-					target: "ethereum-beacon-client",
-					"💫 Updated latest execution block number to {}.",
-					block_number
-				);
+					value.beacon_header_block_root = beacon_header_hash;
+					value.beacon_header_slot = slot;
+					value.block_hash = block_root;
+					value.block_number = block_number;
 
-				execution_header_state.beacon_header_block_root = beacon_header_hash;
-				execution_header_state.beacon_header_slot = slot;
-				execution_header_state.block_hash = block_root;
-				execution_header_state.block_number = block_number;
+					return Ok(());
+				}
 
-				<LatestExecutionHeaderState<T>>::set(execution_header_state);
-			}
+				return Err(())
+			}).unwrap_or_else(|_err| { 
+				log::info!(
+						target: "ethereum-beacon-client",
+						"💫 Execution block is not the latest {}.",
+						block_number
+					);
+			 } );
 
 			Self::deposit_event(Event::ExecutionHeaderImported{block_hash: block_root, block_number: block_number});
 		}
