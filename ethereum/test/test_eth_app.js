@@ -13,7 +13,7 @@ require("chai")
 const { ethers } = require("ethers");
 const { expect } = require("chai");
 
-const ETHVault = artifacts.require("ETHVault");
+const ETHVault = artifacts.require("EtherVault");
 const ETHApp = artifacts.require("ETHApp");
 const ScaleCodec = artifacts.require("ScaleCodec");
 

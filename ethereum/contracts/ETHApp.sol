@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./RewardController.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
-import "./ETHVault.sol";
+import "./EtherVault.sol";
 
 enum ChannelId {
     Basic,
@@ -53,11 +53,11 @@ contract ETHApp is RewardController, AccessControl {
     bytes32 public constant CHANNEL_UPGRADE_ROLE =
         keccak256("CHANNEL_UPGRADE_ROLE");
 
-    ETHVault public immutable vault;
+    EtherVault public immutable vault;
 
     constructor(
         address rewarder,
-        ETHVault _vault,
+        EtherVault _vault,
         Channel memory _basic,
         Channel memory _incentivized
     ) {

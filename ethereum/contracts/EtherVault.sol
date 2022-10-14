@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // Holds ETH on behalf of ETHApp
-contract ETHVault is Ownable {
+contract EtherVault is Ownable {
     // Accepts ETH from the caller.
     function lock() 
         public
