@@ -4,8 +4,8 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./RewardController.sol";
-import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
+import "./PalletCalls.sol";
 
 enum ChannelId {
     Basic,
@@ -90,12 +90,7 @@ contract ETHApp is RewardController, AccessControl {
 
         emit Locked(msg.sender, _recipient, value, _paraId, _fee);
 
-        bytes memory call;
-        if (_paraId == 0) {
-            call = encodeCall(msg.sender, _recipient, value);
-        } else {
-            call = encodeCallWithParaId(msg.sender, _recipient, value, _paraId, _fee);
-        }
+        bytes memory call = PalletCalls.EtherApp_mint(msg.sender, _recipient, value, _paraId, _fee);
 
         OutboundChannel channel = OutboundChannel(
             channels[_channelId].outbound
@@ -115,43 +110,6 @@ contract ETHApp is RewardController, AccessControl {
         emit Unlocked(_sender, _recipient, _amount);
     }
 
-    // SCALE-encode payload
-    function encodeCall(
-        address _sender,
-        bytes32 _recipient,
-        uint128 _amount
-    ) private pure returns (bytes memory) {
-        return bytes.concat(
-                MINT_CALL,
-                abi.encodePacked(_sender),
-                bytes1(0x00), // Encoding recipient as MultiAddress::Id
-                _recipient,
-                _amount.encode128(),
-                bytes1(0x00)
-            );
-    }
-
-    // SCALE-encode payload with parachain Id
-    function encodeCallWithParaId(
-        address _sender,
-        bytes32 _recipient,
-        uint128 _amount,
-        uint32 _paraId,
-        uint128 _fee
-    ) private pure returns (bytes memory) {
-        return bytes.concat(
-                MINT_CALL,
-                abi.encodePacked(_sender),
-                bytes1(0x00), // Encoding recipient as MultiAddress::Id
-                _recipient,
-                _amount.encode128(),
-                bytes1(0x01),
-                _paraId.encode32(),
-                _fee.encode128()
-            );
-    }
-
-    // NOTE: should never revert or the bridge will be broken
     function handleReward(address payable _relayer, uint128 _amount)
         external
         override
