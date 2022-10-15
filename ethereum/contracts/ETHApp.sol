@@ -35,8 +35,6 @@ contract ETHApp is RewardController, AccessControl {
         Channel incentivized
     );
 
-    bytes2 constant MINT_CALL = 0x4101;
-
     bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
 
     struct Channel {
