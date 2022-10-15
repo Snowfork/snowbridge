@@ -212,7 +212,7 @@ contract BeefyClient is Ownable {
         // the signature of senderPublicKey on the commitmentHash
         require(ECDSA.recover(commitmentHash, proof.signature) == proof.addr, "Invalid signature");
 
-        // Check that the bitfield actually contains enough claims to be successful, ie, >= 2/3
+        // Check that the bitfield actually contains enough claims to be successful
         require(
             bitfield.countSetBits() >= minimumSignatureThreshold(vset),
             "Not enough claims"
@@ -327,9 +327,49 @@ contract BeefyClient is Ownable {
         return uint256(blockhash(request.blockNumber + BLOCK_WAIT_PERIOD));
     }
 
+    /**
+     * @dev Calculate minimum number of required signatures for the current validator set.
+     *
+     * This function approximates f(x) defined below for x in [1, 21_846):
+     *
+     *  x <= 10: f(x) = x * (2/3)
+     *  x  > 10: f(x) = max(10, ceil(log2(3 * x))
+     *
+     * Research by W3F suggests that `ceil(log2(3 * x))` is a minimum number of signatures required to make an
+     * attack unfeasible. We put a further minimum bound of 10 on this value for extra security.
+     *
+     * If the session has less than 10 active validators it's definitely some sort of local testnet
+     * and we use different logic (minimum 2/3 + 1 validators must sign).
+     *
+     * One assumption is that Polkadot/Kusama will never have more than 21_845 active validators in a session.
+     * As of writing this comment, Polkadot has 300 validators and Kusama has around 1000 validators,
+     * so we are well within those limits.
+     *
+     * In any case, an order of magnitude increase in validator set sizes will likely require a re-architecture
+     * of Polkadot that would make this contract obsolete well before the assumption becomes a problem.
+     *
+     * Constants generated with the help of scripts/minsigs.py
+     */
     function minimumSignatureThreshold(ValidatorSet memory vset) internal pure returns (uint256) {
-        return
-            (vset.length * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) / THRESHOLD_DENOMINATOR;
+        if (vset.length <= 10) {
+            return (vset.length * 2) / 3 + 1;
+        } else if (vset.length < 342) {
+            return 10;
+        } else if (vset.length < 683) {
+            return 11;
+        } else if (vset.length < 1366) {
+            return 12;
+        } else if (vset.length < 2731) {
+            return 13;
+        } else if (vset.length < 5462) {
+            return 14;
+        } else if (vset.length < 10923) {
+            return 15;
+        } else if (vset.length < 21846) {
+            return 16;
+        } else {
+            return 17;
+        }
     }
 
     /**
