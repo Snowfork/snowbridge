@@ -147,9 +147,6 @@ contract BeefyClient is Ownable {
 
     /* Constants */
 
-    // Used for calculating minimum number of required signatures
-    uint256 public constant THRESHOLD_NUMERATOR = 3;
-    uint256 public constant THRESHOLD_DENOMINATOR = 250;
     uint64 public constant BLOCK_WAIT_PERIOD = 3;
 
     /**
