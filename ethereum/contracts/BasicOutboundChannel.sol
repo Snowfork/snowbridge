@@ -19,7 +19,7 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
 
     event Message(
         address source,
-        address origin,
+        address account,
         uint64 nonce,
         bytes payload
     );
@@ -57,12 +57,12 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
     /**
      * @dev Sends a message across the channel
      *
-     * Submission is a privileged action involving two parties: The operator and the origin.
-     * Apps (aka operators) need to be authorized by the `origin` to submit messages via this channel.
+     * Submission is a privileged action involving two parties: The operator and the origin (called account here).
+     * Apps (aka operators) need to be authorized by the `account` to submit messages via this channel.
      */
-    function submit(address _origin, bytes calldata _payload) external override {
-        require(isOperatorFor(msg.sender, _origin), "Caller is unauthorized");
-        nonce[_origin] = nonce[_origin] + 1;
-        emit Message(msg.sender, _origin, nonce[_origin], _payload);
+    function submit(address _account, bytes calldata _payload) external override {
+        require(isOperatorFor(msg.sender, _account), "Caller is unauthorized");
+        nonce[_account] = nonce[_account] + 1;
+        emit Message(msg.sender, _account, nonce[_account], _payload);
     }
 }

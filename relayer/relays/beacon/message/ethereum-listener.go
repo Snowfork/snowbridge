@@ -140,10 +140,10 @@ func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChanne
 			break
 		}
 
-		if addressNonceMap[iter.Event.Origin] != 0 {
+		if addressNonceMap[iter.Event.Account] != 0 {
 			events = append(events, EventContainer{
 				Event:  &iter.Event.Raw,
-				Origin: iter.Event.Origin,
+				Origin: iter.Event.Account,
 				Nonce:  iter.Event.Nonce,
 			})
 		}
