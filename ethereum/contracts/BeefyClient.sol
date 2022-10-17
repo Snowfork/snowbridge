@@ -349,7 +349,7 @@ contract BeefyClient is Ownable {
      */
     function minimumSignatureThreshold(ValidatorSet memory vset) internal pure returns (uint256) {
         if (vset.length <= 10) {
-            return (vset.length * 2) / 3 + 1;
+            return vset.length - (vset.length - 1) / 3;
         } else if (vset.length < 342) {
             return 10;
         } else if (vset.length < 683) {
