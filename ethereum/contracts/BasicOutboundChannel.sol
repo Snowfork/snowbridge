@@ -13,10 +13,6 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
 
     mapping(address => uint64) public nonce;
 
-    // Only messages originating from this account will
-    // be allowed through the channel.
-    address public principal;
-
     event Message(
         address source,
         address account,
