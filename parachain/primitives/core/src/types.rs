@@ -9,7 +9,7 @@ use sp_std::vec::Vec;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum MessageId {
-	Basic { user: H160, nonce: u64 },
+	Basic { account: H160, nonce: u64 },
 	Incentivized { nonce: u64 },
 }
 

@@ -121,7 +121,7 @@ pub fn new_tester_with_config(
 fn parse_origin(message: Message) -> H160 {
 	let (log, _) = MockVerifier::verify(&message).map_err(|err| { println!("mock verify: {:?}", err); err }).unwrap();
 	let envelope = Envelope::try_from(log).map_err(|err| { println!("envelope: {:?}", err); err }).unwrap();
-	envelope.user
+	envelope.account
 }
 
 // The originating channel address for the messages below

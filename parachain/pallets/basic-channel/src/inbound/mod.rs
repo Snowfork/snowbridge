@@ -108,7 +108,7 @@ pub mod pallet {
 			}
 
 			// Verify message nonce
-			<Nonce<T>>::try_mutate(envelope.user, |nonce| -> DispatchResult {
+			<Nonce<T>>::try_mutate(envelope.account, |nonce| -> DispatchResult {
 				if envelope.nonce != *nonce + 1 {
 					Err(Error::<T>::InvalidNonce.into())
 				} else {
@@ -117,7 +117,7 @@ pub mod pallet {
 				}
 			})?;
 
-			let message_id = MessageId::Basic { user: envelope.user, nonce: envelope.nonce };
+			let message_id = MessageId::Basic { account: envelope.account, nonce: envelope.nonce };
 			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 			<LatestVerifiedBlockNumber<T>>::set(block_number);
