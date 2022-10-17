@@ -39,7 +39,7 @@ describe("BasicOutboundChannel", function () {
       const event = iface.decodeEventLog('Message(address,address,uint64,bytes)', log.data, log.topics);
 
       log.address.should.be.equal(this.channel.address);
-      event.origin.should.be.equal(origin)
+      event.account.should.be.equal(origin)
       event.source.should.be.equal(appAddress);
       event.nonce.eq(ethers.BigNumber.from(1)).should.be.true;
       event.payload.should.be.equal(testPayload)
