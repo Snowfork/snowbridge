@@ -11,7 +11,7 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
     // Governance contracts will administer using this role.
     bytes32 public constant CONFIG_UPDATE_ROLE = keccak256("CONFIG_UPDATE_ROLE");
 
-    mapping(address => uint64) public nonces;
+    mapping(address => uint64) public nonce;
 
     // Only messages originating from this account will
     // be allowed through the channel.
@@ -62,7 +62,7 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
      */
     function submit(address _origin, bytes calldata _payload) external override {
         require(isOperatorFor(msg.sender, _origin), "Caller is unauthorized");
-        nonces[_origin] = nonces[_origin] + 1;
-        emit Message(msg.sender, _origin, nonces[_origin], _payload);
+        nonce[_origin] = nonce[_origin] + 1;
+        emit Message(msg.sender, _origin, nonce[_origin], _payload);
     }
 }

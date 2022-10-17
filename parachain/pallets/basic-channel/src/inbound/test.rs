@@ -207,7 +207,7 @@ fn test_submit() {
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_1.clone()));
 
 		let event_origin = parse_origin(message_1);
-		let nonce: u64 = <Nonces<Test>>::get(event_origin.clone());
+		let nonce: u64 = <Nonce<Test>>::get(event_origin.clone());
 		assert_eq!(nonce, 1);
 
 		// Submit message 2
@@ -222,7 +222,7 @@ fn test_submit() {
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_2.clone()));
 
 		let event_origin_2 = parse_origin(message_2);
-		let nonce: u64 = <Nonces<Test>>::get(event_origin_2.clone());
+		let nonce: u64 = <Nonce<Test>>::get(event_origin_2.clone());
 		assert_eq!(nonce, 2);
 	});
 }
@@ -245,7 +245,7 @@ fn test_submit_with_invalid_nonce() {
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message.clone()));
 
 		let event_origin = parse_origin(message.clone());
-		let nonce: u64 = <Nonces<Test>>::get(event_origin);
+		let nonce: u64 = <Nonce<Test>>::get(event_origin);
 		assert_eq!(nonce, 1);
 
 		// Submit the same again
