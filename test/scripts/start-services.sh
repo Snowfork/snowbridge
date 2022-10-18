@@ -13,10 +13,12 @@ infura_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
-# Accounts for which the relayer will relay messages over the basic channel.
-# Currently only works for messages from Polkadot to Ethereum until SNO-305 is complete.
+# Parachain accounts for which the relayer will relay messages over the basic channel.
 # These IDs are for the test accounts Alice, Bob, Charlie, Dave, Eve and Ferdie, in order
-account_ids="${ACCOUNT_IDS:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d,0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48,0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22,0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20,0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e,0x1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c}"
+basic_parachain_account_ids="${BASIC_PARACHAIN_ACCOUNT_IDS:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d,0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48,0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22,0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20,0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e,0x1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c}"
+# Ethereum addresses for which the relayer will relay messages over the basic channel.
+# This address is for the default eth account used in the E2E tests, taken from test/src/ethclient/index.js.
+basic_eth_addresses="${BASIC_ETH_ADDRESSES:-0x89b4ab1ef20763630df9743acf155865600daff2}"
 
 beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://localhost:9596}"
 
@@ -155,13 +157,13 @@ start_polkadot_launch()
     echo "Found initial finalized block: $initial_beacon_block"
     bootstrap_header=""
     while [ -z "$bootstrap_header" ] || [ "$bootstrap_header" == "" ] || [ "$bootstrap_header" == "null" ]
-    do 
+    do
         echo "Waiting for beacon to get initial bootstrap..."
         bootstrap_header=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" \
             | jq -r '.data.header')
         sleep 3
-    done 
-    
+    done
+
     curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" \
         | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
 
@@ -248,7 +250,7 @@ start_relayer()
         --arg k2 "$(address_for IncentivizedInboundChannel)" \
         --arg k3 "$(address_for BeefyClient)" \
         --arg infura_endpoint_ws $infura_endpoint_ws \
-        --arg account_ids $account_ids \
+        --arg basic_parachain_account_ids $basic_parachain_account_ids \
     '
       .source.contracts.BasicInboundChannel = $k1
     | .source.contracts.IncentivizedInboundChannel = $k2
@@ -257,7 +259,7 @@ start_relayer()
     | .sink.contracts.IncentivizedInboundChannel = $k2
     | .source.ethereum.endpoint = $infura_endpoint_ws
     | .sink.ethereum.endpoint = $infura_endpoint_ws
-    | .source.accounts = ($account_ids | split(","))
+    | .source.basicChannelAccounts = ($basic_parachain_account_ids | split(","))
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
@@ -285,12 +287,14 @@ start_relayer()
         --arg infura_endpoint_ws $infura_endpoint_ws \
         --arg beacon_endpoint_http $beacon_endpoint_http \
         --arg active_spec $active_spec \
+        --arg basic_eth_addresses $basic_eth_addresses \
     '
       .source.contracts.BasicOutboundChannel = $k1
     | .source.contracts.IncentivizedOutboundChannel = $k2
     | .source.ethereum.endpoint = $infura_endpoint_ws
     | .source.beacon.endpoint = $beacon_endpoint_http
     | .source.beacon.activeSpec = $active_spec
+    | .source.basicChannelAddresses = ($basic_eth_addresses | split(","))
     ' \
     config/beacon-relay.json > $output_dir/beacon-relay.json
 

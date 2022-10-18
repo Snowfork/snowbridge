@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
@@ -13,22 +14,28 @@ import (
 )
 
 type Message struct {
-	writer   *writer.ParachainWriter
-	listener *EthereumListener
+	writer    *writer.ParachainWriter
+	listener  *EthereumListener
+	addresses []common.Address
 }
 
 func New(ctx context.Context, eg *errgroup.Group, writer *writer.ParachainWriter, configSource *config.SourceConfig, ethconn *ethereum.Connection) (*Message, error) {
+	addresses, err := configSource.GetBasicChannelAddresses()
+	if err != nil {
+		return nil, err
+	}
+
 	listener := NewEthereumListener(
 		configSource,
 		ethconn,
 	)
 
-	err := listener.Start(ctx, eg)
+	err = listener.Start(ctx, eg)
 	if err != nil {
 		return &Message{}, err
 	}
 
-	return &Message{writer, listener}, nil
+	return &Message{writer, listener, addresses}, nil
 }
 
 func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber <-chan uint64) error {
@@ -37,36 +44,46 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 		return fmt.Errorf("fetch last basic channel message block number")
 	}
 
-	nonce, err := m.writer.GetLastBasicChannelNonce()
+	addressNonceMap, err := m.writer.GetLastBasicChannelNoncesByAddresses(m.addresses)
 	if err != nil {
 		return fmt.Errorf("fetch last basic channel message nonce")
 	}
 
-	log.WithFields(log.Fields{
-		"block_number": lastVerifiedBlockNumber,
-		"nonce":        nonce,
-	}).Info("last basic channel")
+	addressNonzeroNonceMap := make(map[common.Address]uint64, len(addressNonceMap))
+	for address, nonce := range addressNonceMap {
+		log.WithFields(log.Fields{
+			"block_number": lastVerifiedBlockNumber,
+			"address":      address,
+			"nonce":        nonce,
+		}).Info("last basic channel")
+
+		if nonce != 0 {
+			addressNonzeroNonceMap[address] = nonce
+		}
+	}
 
 	// If the last nonce is set, there could be messages that have not been processed in the same block.
 	// Messages that have already been verified will not be reprocessed because they will be filtered out
-	// in filterMessagesByLastNonce.
+	// in filterMessagesByLastNonces.
 	// Messages after the lastVerifiedBlockNumber will be processed normally in the go routine below.
-	if nonce != 0 {
+	if len(addressNonzeroNonceMap) != 0 {
 		log.Info("processing basic block events for last verified block")
-		basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber)
+		basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber, addressNonzeroNonceMap)
 		if err != nil {
 			return err
 		}
 
-		basicPayload.Messages = filterMessagesByLastNonce(basicPayload.Messages, nonce)
-		// Reset the nonce so that the next block processing range will exclude the block that was synced,
-		// and start syncing from the next block instead
-		nonce = 0
+		basicPayload.Messages = filterMessagesByLastNonces(basicPayload.Messages, addressNonzeroNonceMap)
 
 		err = m.writeMessages(ctx, basicPayload)
 		if err != nil {
 			return err
 		}
+	}
+
+	addressNonceMap = make(map[common.Address]uint64, len(m.addresses))
+	for _, address := range m.addresses {
+		addressNonceMap[address] = 1
 	}
 
 	eg.Go(func() error {
@@ -91,7 +108,7 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 					"start": lastVerifiedBlockNumber,
 					"end":   blockNumber,
 				}).Info("fetching basic channel messages")
-				basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, blockNumber)
+				basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, blockNumber, addressNonceMap)
 				if err != nil {
 					return err
 				}
@@ -209,6 +226,20 @@ func filterMessagesByLastNonce(messages []*chain.EthereumOutboundMessage, nonce 
 		}
 
 		resultMessages = append(resultMessages, incentivizedMessage)
+	}
+
+	return resultMessages
+}
+
+func filterMessagesByLastNonces(messages []*chain.EthereumOutboundMessage, addressNonceMap map[common.Address]uint64) []*chain.EthereumOutboundMessage {
+	resultMessages := []*chain.EthereumOutboundMessage{}
+
+	for _, basicMessage := range messages {
+		if basicMessage.Nonce <= addressNonceMap[basicMessage.Origin] {
+			continue
+		}
+
+		resultMessages = append(resultMessages, basicMessage)
 	}
 
 	return resultMessages
