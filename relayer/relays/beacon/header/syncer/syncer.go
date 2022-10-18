@@ -88,9 +88,7 @@ type FinalizedHeaderUpdate struct {
 }
 
 type HeaderUpdate struct {
-	BlockRoot     types.H256
 	Block         scale.BeaconBlock
-	BlockBodyRoot types.H256
 	SyncAggregate scale.SyncAggregate
 	ForkVersion   [4]byte
 }
@@ -232,16 +230,6 @@ func (s *Syncer) GetHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
 		return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
 	}
 
-	header, err := s.Client.GetHeaderBySlot(slot)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
-	}
-
-	blockRoot, err := s.Client.GetBeaconBlockRoot(slot)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
-	}
-
 	blockScale, err := block.ToScale()
 	if err != nil {
 		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
@@ -258,10 +246,8 @@ func (s *Syncer) GetHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
 	}
 
 	headerUpdate := HeaderUpdate{
-		BlockRoot:     types.NewH256(blockRoot.Bytes()),
-		Block:         blockScale,
-		BlockBodyRoot: types.NewH256(header.BodyRoot.Bytes()),
-		ForkVersion:   forkVersion,
+		Block:       blockScale,
+		ForkVersion: forkVersion,
 	}
 
 	return headerUpdate, nil
@@ -285,16 +271,6 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
 		}
 	}
 
-	header, err := s.Client.GetHeaderBySlot(slot)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
-	}
-
-	blockRoot, err := s.Client.GetBeaconBlockRoot(slot)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
-	}
-
 	blockScale, err := block.ToScale()
 	if err != nil {
 		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
@@ -311,10 +287,8 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
 	}
 
 	headerUpdate := HeaderUpdate{
-		BlockRoot:     types.NewH256(blockRoot.Bytes()),
-		Block:         blockScale,
-		BlockBodyRoot: types.NewH256(header.BodyRoot.Bytes()),
-		ForkVersion:   forkVersion,
+		Block:       blockScale,
+		ForkVersion: forkVersion,
 	}
 
 	return headerUpdate, nil
@@ -326,11 +300,6 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 		return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
 	}
 
-	header, err := s.Client.GetHeader(blockRoot)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
-	}
-
 	blockScale, err := block.ToScale()
 	if err != nil {
 		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
@@ -347,10 +316,8 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	}
 
 	headerUpdate := HeaderUpdate{
-		BlockRoot:     types.NewH256(blockRoot.Bytes()),
-		Block:         blockScale,
-		BlockBodyRoot: types.NewH256(header.BodyRoot.Bytes()),
-		ForkVersion:   forkVersion,
+		Block:       blockScale,
+		ForkVersion: forkVersion,
 	}
 
 	return headerUpdate, nil

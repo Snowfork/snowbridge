@@ -232,7 +232,6 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context, basicChannel, incentiv
 
 func (h *Header) SyncHeader(ctx context.Context, headerUpdate syncer.HeaderUpdate, slotsLeft uint64) error {
 	log.WithFields(log.Fields{
-		"beaconBlockRoot":      headerUpdate.BlockRoot.Hex(),
 		"slot":                 headerUpdate.Block.Slot,
 		"slotsLeftToSync":      slotsLeft,
 		"executionBlockRoot":   headerUpdate.Block.Body.ExecutionPayload.BlockHash.Hex(),

@@ -214,8 +214,6 @@ pub struct BlockUpdate<
 	AttestationSize: Get<u32>,
 	ValidatorCommitteeSize: Get<u32>,
 	SyncCommitteeSize: Get<u32>> {
-	// Not used in the beacon client logic, used for debugging.
-	pub block_root: H256,
 	pub block: BeaconBlock<FeeRecipientSize, 
 	LogsBloomSize, 
 	ExtraDataSize, 
@@ -229,10 +227,6 @@ pub struct BlockUpdate<
 	AttestationSize,
 	ValidatorCommitteeSize,
 	SyncCommitteeSize>,
-	//  // Only used for debugging purposes, to compare the hash tree
-	// root of the block body to the body hash retrieved from the API.
-	// Can be removed later.
-	pub block_body_root: H256,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_fork_version"))]
 	pub fork_version: ForkVersion,
