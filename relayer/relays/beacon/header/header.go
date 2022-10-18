@@ -163,7 +163,7 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 
 	lastSyncedSyncCommitteePeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
 	if err != nil {
-		return fmt.Errorf("fetch last synced committee periid from parachain: %w", err)
+		return fmt.Errorf("fetch last synced committee period from parachain: %w", err)
 	}
 
 	// Period + 1 because the sync committee update contains the next period's sync committee
