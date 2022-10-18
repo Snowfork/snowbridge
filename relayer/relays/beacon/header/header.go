@@ -310,7 +310,9 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 			}
 
 			if len(headersToSync) > 0 {
-				err = h.sendLastBlockNumberMessage(ctx, uint64(headersToSync[len(headersToSync)-1].Block.Body.ExecutionPayload.BlockNumber), basicChannel, incentivizedChannel)
+				lastBlockNumber := uint64(headersToSync[len(headersToSync)-1].Block.Body.ExecutionPayload.BlockNumber)
+
+				err = h.sendLastBlockNumberMessage(ctx, lastBlockNumber, basicChannel, incentivizedChannel)
 				if err != nil {
 					return err
 				}
@@ -353,7 +355,9 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 			}
 
 			if len(headersToSync) > 0 {
-				err = h.sendLastBlockNumberMessage(ctx, uint64(headersToSync[len(headersToSync)-1].Block.Body.ExecutionPayload.BlockNumber), basicChannel, incentivizedChannel)
+				lastBlockNumber := uint64(headersToSync[len(headersToSync)-1].Block.Body.ExecutionPayload.BlockNumber)
+
+				err = h.sendLastBlockNumberMessage(ctx, lastBlockNumber, basicChannel, incentivizedChannel)
 				if err != nil {
 					return err
 				}

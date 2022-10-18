@@ -323,22 +323,6 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	return headerUpdate, nil
 }
 
-func (s *Syncer) GetExecutionBlockHash(consensusBlockHash common.Hash) (uint64, error) {
-	executionBlockHash, err := s.Client.GetBeaconBlock(consensusBlockHash)
-	if err != nil {
-		return 0, fmt.Errorf("fetch block for last hash: %w", err)
-	}
-
-	blockNumberString := executionBlockHash.Data.Message.Body.ExecutionPayload.BlockNumber
-
-	blockNumber, err := strconv.ParseUint(blockNumberString, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("parse last block slot as int: %w", err)
-	}
-
-	return blockNumber, nil
-}
-
 func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
@@ -385,6 +369,10 @@ func (s *Syncer) ComputeSyncPeriodAtSlot(slot uint64) uint64 {
 
 func (s *Syncer) ComputeEpochAtSlot(slot uint64) uint64 {
 	return slot / s.SlotsInEpoch
+}
+
+func (s *Syncer) IsStartOfEpoch(slot uint64) bool {
+	return slot % s.SlotsInEpoch == 0
 }
 
 func IsInArray(values []uint64, toCheck uint64) bool {
