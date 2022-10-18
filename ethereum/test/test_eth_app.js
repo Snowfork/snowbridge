@@ -67,12 +67,13 @@ describe("ETHApp", function () {
 
       var ifaceVault = new ethers.utils.Interface(EtherVault.abi);
       let depositEvent = ifaceVault.decodeEventLog(
-        'Deposit(address,uint256)',
+        'Deposit(address,address,uint256)',
         tx.receipt.rawLogs[0].data,
         tx.receipt.rawLogs[0].topics
       );
 
       depositEvent.account.should.be.equal(this.app.address);
+      depositEvent.owner.should.be.equal(userOne);
       depositEvent.amount.eq(ethers.BigNumber.from(amount.toString())).should.be.true;
 
       // Confirm app event emitted with expected values
@@ -151,7 +152,7 @@ describe("ETHApp", function () {
 
       const unlockAmount = web3.utils.toBN( web3.utils.toWei("2", "ether")).add(web3.utils.toBN(1))
 
-       await this.app.unlock(
+      await this.app.unlock(
         POLKADOT_ADDRESS,
         recipient,
         unlockAmount.toString(),
@@ -205,6 +206,15 @@ describe("ETHApp", function () {
       let outboundChannel = await MockOutboundChannel.new();
       this.vault = await EtherVault.new();
       this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
+    });
+
+    it("should not lock", async function () {
+      const amount = BigNumber(web3.utils.toWei("2", "ether"));
+      // recipient on the ethereum side
+      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
+
+      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Incentivized, 0, 0)
+        .should.be.rejectedWith(/Ownable: caller is not the owner/);
     });
 
     it("should not unlock", async function () {

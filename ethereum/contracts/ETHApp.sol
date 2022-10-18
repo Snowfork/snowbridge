@@ -92,9 +92,7 @@ contract ETHApp is RewardController, AccessControl {
 
         // revert in case of overflow.
         uint128 value = (msg.value).toUint128();
-
-        (bool success, ) = address(vault).call{value: msg.value}("");
-        require(success, "Vault must accept funds");
+        vault.deposit{value: msg.value}(tx.origin);
 
         emit Locked(msg.sender, _recipient, value, _paraId, _fee);
 
