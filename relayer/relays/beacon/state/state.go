@@ -12,7 +12,7 @@ type ExecutionHeader struct {
 }
 
 type FinalizedHeader struct {
-	// Used to determine the execution headers that needs to be backfilled.
+	// Used to determine the execution headers that need to be backfilled.
 	Headers []common.Hash
 	// Stores the last attempted finalized header, whether the import succeeded or not.
 	LastAttemptedSyncHash common.Hash
