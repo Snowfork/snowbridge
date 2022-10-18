@@ -300,7 +300,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 		// start of new epoch, sync headers of last epoch
 		if float64(epoch) >= (float64(currentSlot) / float64(h.syncer.SlotsInEpoch)) {
 			log.WithFields(log.Fields{
-				"epoch": h.syncer.ComputeEpochAtSlot(currentSlot) - 1,
+				"epoch": epoch - 1,
 			}).Debug("syncing header in epoch")
 			for _, header := range headersToSync {
 				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Block.Slot))
