@@ -338,9 +338,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 		}
 
 		headerUpdate.SyncAggregate = nextHeaderUpdate.Block.Body.SyncAggregate
-
 		headersToSync = append(headersToSync, headerUpdate)
-		headerUpdate = nextHeaderUpdate
 
 		// last slot to be synced, sync headers
 		if currentSlot >= toSlot {
