@@ -75,17 +75,17 @@ func TestIsStartOfEpoch(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "middle of epouch",
+			name:     "middle of epoch",
 			slot:     16,
 			expected: false,
 		},
 		{
-			name:     "end of epouch",
+			name:     "end of epoch",
 			slot:     31,
 			expected: false,
 		},
 		{
-			name:     "start of new of epouch",
+			name:     "start of new of epoch",
 			slot:     32,
 			expected: true,
 		},
