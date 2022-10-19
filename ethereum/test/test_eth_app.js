@@ -231,6 +231,16 @@ describe("ETHApp", function () {
         }
       ).should.be.rejectedWith(/Ownable: caller is not the owner/);
     });
+
+    it("should not receive", async function () {
+      const amount = BigNumber(web3.utils.toWei("2", "ether"));
+      await this.vault.sendTransaction(
+        {
+          value: amount,
+          from: inboundChannel,
+        }
+      ).should.be.rejectedWith(/Must use deposit function/);
+    });
   });
 
   describe("upgradeability", function () {
