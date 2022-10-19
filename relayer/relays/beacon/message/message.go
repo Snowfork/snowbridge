@@ -215,17 +215,30 @@ func (m *Message) writeBasicMessages(ctx context.Context, payload ParachainPaylo
 			return err
 		}
 
-		lastNonce, err := m.writer.GetLastBasicChannelNonce()
+		err = m.checkMessageVerificationResult(msg.Origin, msg.Nonce)
 		if err != nil {
 			return err
-		}
-
-		if lastNonce != msg.Nonce {
-			return fmt.Errorf("last basic message verification failed (nonce: %d)", lastNonce)
 		}
 	}
 
 	return nil
+}
+
+func (m *Message) checkMessageVerificationResult(msgAddress common.Address, msgNonce uint64) error {
+	addressNonceMap, err := m.writer.GetLastBasicChannelNoncesByAddresses(m.addresses)
+	if err != nil {
+		return fmt.Errorf("fetch last basic channel message nonces by addresses")
+	}
+
+	for address, nonce := range addressNonceMap {
+		if address == msgAddress && nonce != msgNonce {
+			return fmt.Errorf("last basic message verification failed for address %s (nonce: %d)", msgAddress, msgNonce)
+		} else if address == msgAddress {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("address not found in nonce map %s (nonce: %d)", msgAddress, msgNonce)
 }
 
 func (m *Message) writeIncentivizedMessages(ctx context.Context, payload ParachainPayload) error {
