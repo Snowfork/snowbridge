@@ -20,7 +20,7 @@ use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
 
-use crate::{inbound as basic_inbound_channel, inbound::Error};
+use crate::{inbound as basic_inbound_channel, inbound::Error, inbound::envelope::Envelope};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -118,8 +118,14 @@ pub fn new_tester_with_config(
 	ext
 }
 
+fn parse_origin(message: Message) -> H160 {
+	let (log, _) = MockVerifier::verify(&message).map_err(|err| { println!("mock verify: {:?}", err); err }).unwrap();
+	let envelope = Envelope::try_from(log).map_err(|err| { println!("envelope: {:?}", err); err }).unwrap();
+	envelope.account
+}
+
 // The originating channel address for the messages below
-const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["2d02f2234d0B6e35D8d8fD77705f535ACe681327"];
+const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["86d9ac0bab011917f57b9e9607833b4340f9d4f8"];
 
 // Ethereum Log:
 //   address: 0xe4ab635d0bdc5668b3fcb4eaee1dec587998f4af (outbound channel contract)
@@ -128,17 +134,16 @@ const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["2d02f2234d0B6e35D8d8fD77705f535ACe68
 //     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
 //     nonce: 1
 //     payload ...
-const MESSAGE_DATA_0: [u8; 284] = hex!(
+const MESSAGE_DATA_0: [u8; 251] = hex!(
 	"
-	f90119942d02f2234d0b6e35d8d8fd77705f535ace681327e1a0779b38144a38
-	cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
-	00000000000000000a42cba2b7960a0ce216ade5d6a82574257023d800000000
-	0000000000000000000000000000000000000000000000000000000100000000
-	0000000000000000000000000000000000000000000000000000006000000000
-	000000000000000000000000000000000000000000000000000000570c018213
-	dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd04
-	a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d78030000000000
-	00000000000000000000000000000000000000000000000000000000
+	f8f99486d9ac0bab011917f57b9e9607833b4340f9d4f8e1a0daab80e8986999
+	7d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562fb8c00000000000
+	0000000000000089b4ab1ef20763630df9743acf155865600daff20000000000
+	0000000000000004e00e6d2e9ea1e2af553de02a5172120bfa5c3e0000000000
+	0000000000000000000000000000000000000000000000000000010000000000
+	0000000000000000000000000000000000000000000000000000800000000000
+	0000000000000000000000000000000000000000000000000000206172626974
+	726172792d7061796c6f6164000000000000000000000000000000
 "
 );
 
@@ -149,17 +154,16 @@ const MESSAGE_DATA_0: [u8; 284] = hex!(
 //     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
 //     nonce: 1
 //     payload ...
-const MESSAGE_DATA_1: [u8; 284] = hex!(
+const MESSAGE_DATA_1: [u8; 251] = hex!(
 	"
-	f90119942d02f2234d0b6e35d8d8fd77705f535ace681327e1a0779b38144a38
-	cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
-	00000000000000000a42cba2b7960a0ce216ade5d6a82574257023d800000000
-	0000000000000000000000000000000000000000000000000000000200000000
-	0000000000000000000000000000000000000000000000000000006000000000
-	000000000000000000000000000000000000000000000000000000570c018213
-	dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd04
-	a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d78030000000000
-	00000000000000000000000000000000000000000000000000000000
+	f8f99486d9ac0bab011917f57b9e9607833b4340f9d4f8e1a0daab80e8986999
+	7d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562fb8c00000000000
+	0000000000000089b4ab1ef20763630df9743acf155865600daff20000000000
+	0000000000000004e00e6d2e9ea1e2af553de02a5172120bfa5c3e0000000000
+	0000000000000000000000000000000000000000000000000000020000000000
+	0000000000000000000000000000000000000000000000000000800000000000
+	0000000000000000000000000000000000000000000000000000206172626974
+	726172792d7061796c6f6164000000000000000000000000000000
 "
 );
 
@@ -200,8 +204,10 @@ fn test_submit() {
 				data: Default::default(),
 			},
 		};
-		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_1));
-		let nonce: u64 = <Nonce<Test>>::get();
+		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_1.clone()));
+
+		let event_origin = parse_origin(message_1);
+		let nonce: u64 = <Nonce<Test>>::get(event_origin.clone());
 		assert_eq!(nonce, 1);
 
 		// Submit message 2
@@ -213,8 +219,10 @@ fn test_submit() {
 				data: Default::default(),
 			},
 		};
-		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_2));
-		let nonce: u64 = <Nonce<Test>>::get();
+		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_2.clone()));
+
+		let event_origin_2 = parse_origin(message_2);
+		let nonce: u64 = <Nonce<Test>>::get(event_origin_2.clone());
 		assert_eq!(nonce, 2);
 	});
 }
@@ -235,7 +243,9 @@ fn test_submit_with_invalid_nonce() {
 			},
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message.clone()));
-		let nonce: u64 = <Nonce<Test>>::get();
+
+		let event_origin = parse_origin(message.clone());
+		let nonce: u64 = <Nonce<Test>>::get(event_origin);
 		assert_eq!(nonce, 1);
 
 		// Submit the same again

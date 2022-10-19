@@ -30,7 +30,7 @@ var (
 
 // BasicOutboundChannelMetaData contains all meta data concerning the BasicOutboundChannel contract.
 var BasicOutboundChannelMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"source\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"Message\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"OperatorAuthorized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"OperatorRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"CONFIG_UPDATE_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"authorizeDefaultOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"authorizeOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_configUpdater\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_principal\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"defaultOperators\",\"type\":\"address[]\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_origin\",\"type\":\"address\"}],\"name\":\"isOperatorFor\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"principal\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"revokeDefaultOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"revokeOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_principal\",\"type\":\"address\"}],\"name\":\"setPrincipal\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_origin\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_payload\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"source\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"Message\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"OperatorAuthorized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"OperatorRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"CONFIG_UPDATE_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"authorizeDefaultOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"authorizeOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_configUpdater\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"defaultOperators\",\"type\":\"address[]\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_origin\",\"type\":\"address\"}],\"name\":\"isOperatorFor\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"revokeDefaultOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"revokeOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_account\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_payload\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // BasicOutboundChannelABI is the input ABI used to generate the binding from.
@@ -334,12 +334,12 @@ func (_BasicOutboundChannel *BasicOutboundChannelCallerSession) IsOperatorFor(_o
 	return _BasicOutboundChannel.Contract.IsOperatorFor(&_BasicOutboundChannel.CallOpts, _operator, _origin)
 }
 
-// Nonce is a free data retrieval call binding the contract method 0xaffed0e0.
+// Nonce is a free data retrieval call binding the contract method 0x70ae92d2.
 //
-// Solidity: function nonce() view returns(uint64)
-func (_BasicOutboundChannel *BasicOutboundChannelCaller) Nonce(opts *bind.CallOpts) (uint64, error) {
+// Solidity: function nonce(address ) view returns(uint64)
+func (_BasicOutboundChannel *BasicOutboundChannelCaller) Nonce(opts *bind.CallOpts, arg0 common.Address) (uint64, error) {
 	var out []interface{}
-	err := _BasicOutboundChannel.contract.Call(opts, &out, "nonce")
+	err := _BasicOutboundChannel.contract.Call(opts, &out, "nonce", arg0)
 
 	if err != nil {
 		return *new(uint64), err
@@ -351,49 +351,18 @@ func (_BasicOutboundChannel *BasicOutboundChannelCaller) Nonce(opts *bind.CallOp
 
 }
 
-// Nonce is a free data retrieval call binding the contract method 0xaffed0e0.
+// Nonce is a free data retrieval call binding the contract method 0x70ae92d2.
 //
-// Solidity: function nonce() view returns(uint64)
-func (_BasicOutboundChannel *BasicOutboundChannelSession) Nonce() (uint64, error) {
-	return _BasicOutboundChannel.Contract.Nonce(&_BasicOutboundChannel.CallOpts)
+// Solidity: function nonce(address ) view returns(uint64)
+func (_BasicOutboundChannel *BasicOutboundChannelSession) Nonce(arg0 common.Address) (uint64, error) {
+	return _BasicOutboundChannel.Contract.Nonce(&_BasicOutboundChannel.CallOpts, arg0)
 }
 
-// Nonce is a free data retrieval call binding the contract method 0xaffed0e0.
+// Nonce is a free data retrieval call binding the contract method 0x70ae92d2.
 //
-// Solidity: function nonce() view returns(uint64)
-func (_BasicOutboundChannel *BasicOutboundChannelCallerSession) Nonce() (uint64, error) {
-	return _BasicOutboundChannel.Contract.Nonce(&_BasicOutboundChannel.CallOpts)
-}
-
-// Principal is a free data retrieval call binding the contract method 0xba5d3078.
-//
-// Solidity: function principal() view returns(address)
-func (_BasicOutboundChannel *BasicOutboundChannelCaller) Principal(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _BasicOutboundChannel.contract.Call(opts, &out, "principal")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// Principal is a free data retrieval call binding the contract method 0xba5d3078.
-//
-// Solidity: function principal() view returns(address)
-func (_BasicOutboundChannel *BasicOutboundChannelSession) Principal() (common.Address, error) {
-	return _BasicOutboundChannel.Contract.Principal(&_BasicOutboundChannel.CallOpts)
-}
-
-// Principal is a free data retrieval call binding the contract method 0xba5d3078.
-//
-// Solidity: function principal() view returns(address)
-func (_BasicOutboundChannel *BasicOutboundChannelCallerSession) Principal() (common.Address, error) {
-	return _BasicOutboundChannel.Contract.Principal(&_BasicOutboundChannel.CallOpts)
+// Solidity: function nonce(address ) view returns(uint64)
+func (_BasicOutboundChannel *BasicOutboundChannelCallerSession) Nonce(arg0 common.Address) (uint64, error) {
+	return _BasicOutboundChannel.Contract.Nonce(&_BasicOutboundChannel.CallOpts, arg0)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -490,25 +459,25 @@ func (_BasicOutboundChannel *BasicOutboundChannelTransactorSession) GrantRole(ro
 	return _BasicOutboundChannel.Contract.GrantRole(&_BasicOutboundChannel.TransactOpts, role, account)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x77a24f36.
+// Initialize is a paid mutator transaction binding the contract method 0x946d9204.
 //
-// Solidity: function initialize(address _configUpdater, address _principal, address[] defaultOperators) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelTransactor) Initialize(opts *bind.TransactOpts, _configUpdater common.Address, _principal common.Address, defaultOperators []common.Address) (*types.Transaction, error) {
-	return _BasicOutboundChannel.contract.Transact(opts, "initialize", _configUpdater, _principal, defaultOperators)
+// Solidity: function initialize(address _configUpdater, address[] defaultOperators) returns()
+func (_BasicOutboundChannel *BasicOutboundChannelTransactor) Initialize(opts *bind.TransactOpts, _configUpdater common.Address, defaultOperators []common.Address) (*types.Transaction, error) {
+	return _BasicOutboundChannel.contract.Transact(opts, "initialize", _configUpdater, defaultOperators)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x77a24f36.
+// Initialize is a paid mutator transaction binding the contract method 0x946d9204.
 //
-// Solidity: function initialize(address _configUpdater, address _principal, address[] defaultOperators) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelSession) Initialize(_configUpdater common.Address, _principal common.Address, defaultOperators []common.Address) (*types.Transaction, error) {
-	return _BasicOutboundChannel.Contract.Initialize(&_BasicOutboundChannel.TransactOpts, _configUpdater, _principal, defaultOperators)
+// Solidity: function initialize(address _configUpdater, address[] defaultOperators) returns()
+func (_BasicOutboundChannel *BasicOutboundChannelSession) Initialize(_configUpdater common.Address, defaultOperators []common.Address) (*types.Transaction, error) {
+	return _BasicOutboundChannel.Contract.Initialize(&_BasicOutboundChannel.TransactOpts, _configUpdater, defaultOperators)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x77a24f36.
+// Initialize is a paid mutator transaction binding the contract method 0x946d9204.
 //
-// Solidity: function initialize(address _configUpdater, address _principal, address[] defaultOperators) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelTransactorSession) Initialize(_configUpdater common.Address, _principal common.Address, defaultOperators []common.Address) (*types.Transaction, error) {
-	return _BasicOutboundChannel.Contract.Initialize(&_BasicOutboundChannel.TransactOpts, _configUpdater, _principal, defaultOperators)
+// Solidity: function initialize(address _configUpdater, address[] defaultOperators) returns()
+func (_BasicOutboundChannel *BasicOutboundChannelTransactorSession) Initialize(_configUpdater common.Address, defaultOperators []common.Address) (*types.Transaction, error) {
+	return _BasicOutboundChannel.Contract.Initialize(&_BasicOutboundChannel.TransactOpts, _configUpdater, defaultOperators)
 }
 
 // RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
@@ -595,46 +564,25 @@ func (_BasicOutboundChannel *BasicOutboundChannelTransactorSession) RevokeRole(r
 	return _BasicOutboundChannel.Contract.RevokeRole(&_BasicOutboundChannel.TransactOpts, role, account)
 }
 
-// SetPrincipal is a paid mutator transaction binding the contract method 0x847fd5bf.
+// Submit is a paid mutator transaction binding the contract method 0x76846edd.
 //
-// Solidity: function setPrincipal(address _principal) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelTransactor) SetPrincipal(opts *bind.TransactOpts, _principal common.Address) (*types.Transaction, error) {
-	return _BasicOutboundChannel.contract.Transact(opts, "setPrincipal", _principal)
-}
-
-// SetPrincipal is a paid mutator transaction binding the contract method 0x847fd5bf.
-//
-// Solidity: function setPrincipal(address _principal) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelSession) SetPrincipal(_principal common.Address) (*types.Transaction, error) {
-	return _BasicOutboundChannel.Contract.SetPrincipal(&_BasicOutboundChannel.TransactOpts, _principal)
-}
-
-// SetPrincipal is a paid mutator transaction binding the contract method 0x847fd5bf.
-//
-// Solidity: function setPrincipal(address _principal) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelTransactorSession) SetPrincipal(_principal common.Address) (*types.Transaction, error) {
-	return _BasicOutboundChannel.Contract.SetPrincipal(&_BasicOutboundChannel.TransactOpts, _principal)
+// Solidity: function submit(address _account, bytes _payload) returns()
+func (_BasicOutboundChannel *BasicOutboundChannelTransactor) Submit(opts *bind.TransactOpts, _account common.Address, _payload []byte) (*types.Transaction, error) {
+	return _BasicOutboundChannel.contract.Transact(opts, "submit", _account, _payload)
 }
 
 // Submit is a paid mutator transaction binding the contract method 0x76846edd.
 //
-// Solidity: function submit(address _origin, bytes _payload) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelTransactor) Submit(opts *bind.TransactOpts, _origin common.Address, _payload []byte) (*types.Transaction, error) {
-	return _BasicOutboundChannel.contract.Transact(opts, "submit", _origin, _payload)
+// Solidity: function submit(address _account, bytes _payload) returns()
+func (_BasicOutboundChannel *BasicOutboundChannelSession) Submit(_account common.Address, _payload []byte) (*types.Transaction, error) {
+	return _BasicOutboundChannel.Contract.Submit(&_BasicOutboundChannel.TransactOpts, _account, _payload)
 }
 
 // Submit is a paid mutator transaction binding the contract method 0x76846edd.
 //
-// Solidity: function submit(address _origin, bytes _payload) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelSession) Submit(_origin common.Address, _payload []byte) (*types.Transaction, error) {
-	return _BasicOutboundChannel.Contract.Submit(&_BasicOutboundChannel.TransactOpts, _origin, _payload)
-}
-
-// Submit is a paid mutator transaction binding the contract method 0x76846edd.
-//
-// Solidity: function submit(address _origin, bytes _payload) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelTransactorSession) Submit(_origin common.Address, _payload []byte) (*types.Transaction, error) {
-	return _BasicOutboundChannel.Contract.Submit(&_BasicOutboundChannel.TransactOpts, _origin, _payload)
+// Solidity: function submit(address _account, bytes _payload) returns()
+func (_BasicOutboundChannel *BasicOutboundChannelTransactorSession) Submit(_account common.Address, _payload []byte) (*types.Transaction, error) {
+	return _BasicOutboundChannel.Contract.Submit(&_BasicOutboundChannel.TransactOpts, _account, _payload)
 }
 
 // BasicOutboundChannelMessageIterator is returned from FilterMessage and is used to iterate over the raw logs and unpacked data for Message events raised by the BasicOutboundChannel contract.
@@ -707,14 +655,15 @@ func (it *BasicOutboundChannelMessageIterator) Close() error {
 // BasicOutboundChannelMessage represents a Message event raised by the BasicOutboundChannel contract.
 type BasicOutboundChannelMessage struct {
 	Source  common.Address
+	Account common.Address
 	Nonce   uint64
 	Payload []byte
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterMessage is a free log retrieval operation binding the contract event 0x779b38144a38cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15b.
+// FilterMessage is a free log retrieval operation binding the contract event 0xdaab80e89869997d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562f.
 //
-// Solidity: event Message(address source, uint64 nonce, bytes payload)
+// Solidity: event Message(address source, address account, uint64 nonce, bytes payload)
 func (_BasicOutboundChannel *BasicOutboundChannelFilterer) FilterMessage(opts *bind.FilterOpts) (*BasicOutboundChannelMessageIterator, error) {
 
 	logs, sub, err := _BasicOutboundChannel.contract.FilterLogs(opts, "Message")
@@ -724,9 +673,9 @@ func (_BasicOutboundChannel *BasicOutboundChannelFilterer) FilterMessage(opts *b
 	return &BasicOutboundChannelMessageIterator{contract: _BasicOutboundChannel.contract, event: "Message", logs: logs, sub: sub}, nil
 }
 
-// WatchMessage is a free log subscription operation binding the contract event 0x779b38144a38cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15b.
+// WatchMessage is a free log subscription operation binding the contract event 0xdaab80e89869997d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562f.
 //
-// Solidity: event Message(address source, uint64 nonce, bytes payload)
+// Solidity: event Message(address source, address account, uint64 nonce, bytes payload)
 func (_BasicOutboundChannel *BasicOutboundChannelFilterer) WatchMessage(opts *bind.WatchOpts, sink chan<- *BasicOutboundChannelMessage) (event.Subscription, error) {
 
 	logs, sub, err := _BasicOutboundChannel.contract.WatchLogs(opts, "Message")
@@ -761,9 +710,9 @@ func (_BasicOutboundChannel *BasicOutboundChannelFilterer) WatchMessage(opts *bi
 	}), nil
 }
 
-// ParseMessage is a log parse operation binding the contract event 0x779b38144a38cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15b.
+// ParseMessage is a log parse operation binding the contract event 0xdaab80e89869997d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562f.
 //
-// Solidity: event Message(address source, uint64 nonce, bytes payload)
+// Solidity: event Message(address source, address account, uint64 nonce, bytes payload)
 func (_BasicOutboundChannel *BasicOutboundChannelFilterer) ParseMessage(log types.Log) (*BasicOutboundChannelMessage, error) {
 	event := new(BasicOutboundChannelMessage)
 	if err := _BasicOutboundChannel.contract.UnpackLog(event, "Message", log); err != nil {

@@ -169,7 +169,8 @@ contract BeefyClient is Ownable {
         currentValidatorSet = _initialValidatorSet;
         nextValidatorSet = _nextValidatorSet;
 
-        // Removed to support lean BEEFY. Will add this back once fully BEEFY is supported.
+        // Removed renouncing of ownership to support lean BEEFY.
+        // This will be added back once full BEEFY is supported.
         // See https://linear.app/snowfork/issue/SNO-294
         // See https://linear.app/snowfork/issue/SNO-297
         // renounceOwnership();

@@ -3,20 +3,14 @@
 use codec::{Decode, Encode};
 use enum_iterator::IntoEnumIterator;
 use frame_support::{scale_info::TypeInfo, RuntimeDebug};
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_runtime::DigestItem;
 use sp_std::vec::Vec;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct MessageId {
-	pub channel_id: ChannelId,
-	pub nonce: u64,
-}
-
-impl MessageId {
-	pub fn new(channel_id: ChannelId, nonce: u64) -> Self {
-		Self { channel_id, nonce }
-	}
+pub enum MessageId {
+	Basic { account: H160, nonce: u64 },
+	Incentivized { nonce: u64 },
 }
 
 pub type MessageNonce = u64;
@@ -30,7 +24,7 @@ pub enum ChannelId {
 /// A message relayed from Ethereum.
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Message {
-	/// The raw message data.
+	/// The raw RLP-encoded message data.
 	pub data: Vec<u8>,
 	/// Input to the message verifier
 	pub proof: Proof,

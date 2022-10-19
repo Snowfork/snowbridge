@@ -66,7 +66,7 @@ pub mod pallet {
 	pub type SourceChannel<T: Config> = StorageValue<_, H160, ValueQuery>;
 
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
+	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, H160, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub type LatestVerifiedBlockNumber<T: Config> = StorageValue<_, u64, ValueQuery>;
@@ -108,7 +108,7 @@ pub mod pallet {
 			}
 
 			// Verify message nonce
-			<Nonce<T>>::try_mutate(|nonce| -> DispatchResult {
+			<Nonce<T>>::try_mutate(envelope.account, |nonce| -> DispatchResult {
 				if envelope.nonce != *nonce + 1 {
 					Err(Error::<T>::InvalidNonce.into())
 				} else {
@@ -117,7 +117,7 @@ pub mod pallet {
 				}
 			})?;
 
-			let message_id = MessageId::new(ChannelId::Basic, envelope.nonce);
+			let message_id = MessageId::Basic { account: envelope.account, nonce: envelope.nonce };
 			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 			<LatestVerifiedBlockNumber<T>>::set(block_number);

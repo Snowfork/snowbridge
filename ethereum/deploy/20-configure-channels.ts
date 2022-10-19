@@ -7,11 +7,6 @@ module.exports = async ({
 }: HardhatRuntimeEnvironment) => {
   let [deployer] = await getUnnamedAccounts();
 
-  if (!("BASIC_CHANNEL_PRINCIPAL" in process.env)) {
-    throw "Missing BASIC_CHANNEL_PRINCIPAL in environment config"
-  }
-  const principal = process.env.BASIC_CHANNEL_PRINCIPAL
-
   if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
     throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
   }
@@ -41,7 +36,6 @@ module.exports = async ({
     },
     "initialize",
     deployer,
-    principal,
     [dotApp.address, ethApp.address, erc20App.address],
   );
 
