@@ -81,7 +81,6 @@ impl WeightInfo for () {
 				.saturating_add(RocksDbWeight::get().reads(4 as Weight))		
 				.saturating_add(RocksDbWeight::get().writes(2 as Weight))	
 		}
-		
 	}	
 		
 	fn import_finalized_header() -> Weight {
@@ -93,7 +92,6 @@ impl WeightInfo for () {
 				.saturating_add(RocksDbWeight::get().reads(3 as Weight))			
 				.saturating_add(RocksDbWeight::get().writes(1 as Weight))	
 		}
-		
 	}	
 		
 	fn import_execution_header() -> Weight {
@@ -105,6 +103,5 @@ impl WeightInfo for () {
 				.saturating_add(RocksDbWeight::get().reads(3 as Weight))			
 				.saturating_add(RocksDbWeight::get().writes(1 as Weight))	
 		}
-		
 	}
 }
