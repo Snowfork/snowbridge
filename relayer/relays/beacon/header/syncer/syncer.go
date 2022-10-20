@@ -93,28 +93,18 @@ type HeaderUpdate struct {
 	ForkVersion   [4]byte
 }
 
-func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, error) {
-	finalizedHeader, err := s.Client.GetLatestFinalizedUpdate()
-	if err != nil {
-		return []uint64{}, fmt.Errorf("fetch latest finalized update: %w", err)
-	}
-
-	slot, err := strconv.ParseUint(finalizedHeader.Data.AttestedHeader.Slot, 10, 64)
-	if err != nil {
-		return []uint64{}, fmt.Errorf("parse slot as int: %w", err)
-	}
-
-	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(slot)
+func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSlot uint64) ([]uint64, error) {
+	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(currentSlot)
 
 	//The current sync period's next sync committee should be synced too. So even
 	// if the syncing is up to date with the current period, we still need to sync the current
 	// period's next sync committee.
-	if checkpointSyncPeriod == currentSyncPeriod {
+	if lastSyncedPeriod == currentSyncPeriod {
 		return []uint64{currentSyncPeriod}, nil
 	}
 
 	syncPeriodsToFetch := []uint64{}
-	for i := checkpointSyncPeriod; i <= currentSyncPeriod; i++ {
+	for i := lastSyncedPeriod + 1; i <= currentSyncPeriod; i++ {
 		syncPeriodsToFetch = append(syncPeriodsToFetch, i)
 	}
 
@@ -372,7 +362,7 @@ func (s *Syncer) ComputeEpochAtSlot(slot uint64) uint64 {
 }
 
 func (s *Syncer) IsStartOfEpoch(slot uint64) bool {
-	return slot % s.SlotsInEpoch == 0
+	return slot%s.SlotsInEpoch == 0
 }
 
 func IsInArray(values []uint64, toCheck uint64) bool {

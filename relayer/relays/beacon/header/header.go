@@ -43,20 +43,14 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 
 	log.WithField("period", latestSyncedPeriod).Info("set cache: last beacon synced sync committee period")
 
-	periodsToSync, err := h.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod)
+	finalizedHeader, _, err := h.syncer.GetFinalizedUpdate()
 	if err != nil {
-		return nil, nil, fmt.Errorf("check sync committee periods to be fetched: %w", err)
+		return nil, nil, fmt.Errorf("fetch latest finalized update: %w", err)
 	}
 
-	log.WithFields(log.Fields{
-		"periods": periodsToSync,
-	}).Info("sync committee periods to be synced")
-
-	for _, period := range periodsToSync {
-		err := h.SyncCommitteePeriodUpdate(ctx, period)
-		if err != nil {
-			return nil, nil, err
-		}
+	err = h.syncLaggingSyncCommitteePeriods(ctx, latestSyncedPeriod, uint64(finalizedHeader.FinalizedHeader.Slot), true)
+	if err != nil {
+		return nil, nil, fmt.Errorf("sync lagging sync committee periods: %w", err)
 	}
 
 	lastFinalizedHeader, err := h.writer.GetLastStoredFinalizedHeader()
@@ -195,11 +189,9 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context, basicChannel, incentiv
 	currentSyncPeriod := h.syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
 
 	if h.cache.LastSyncedSyncCommitteePeriod < currentSyncPeriod {
-		log.WithField("period", currentSyncPeriod).Info("sync period rolled over, getting sync committee update")
-
-		err := h.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
+		err = h.syncLaggingSyncCommitteePeriods(ctx, h.cache.LastSyncedSyncCommitteePeriod, uint64(finalizedHeaderUpdate.AttestedHeader.Slot), false)
 		if err != nil {
-			return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
+			return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("sync lagging sync committee periods: %w", err)
 		}
 	}
 
@@ -302,6 +294,15 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 
 	for currentSlot <= toSlot {
 		epoch := h.syncer.ComputeEpochAtSlot(currentSlot)
+
+		currentSyncPeriod := h.syncer.ComputeSyncPeriodAtSlot(uint64(currentSlot))
+
+		if currentSyncPeriod > h.cache.LastSyncedSyncCommitteePeriod {
+			err = h.syncLaggingSyncCommitteePeriods(ctx, h.cache.LastSyncedSyncCommitteePeriod, currentSlot, false)
+			if err != nil {
+				return fmt.Errorf("sync lagging sync committee periods: %w", err)
+			}
+		}
 
 		// start of new epoch, sync headers of last epoch
 		if h.syncer.IsStartOfEpoch(currentSlot) {
@@ -420,6 +421,29 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedH
 	err := h.SyncHeaders(ctx, executionHeaderState.BeaconHeaderBlockRoot, lastFinalizedHeader, lastFinalizedSlot, basicChannel, incentivizedChannel)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, latestSlot uint64, includeLatestSyncPeriod bool) error {
+	periodsToSync, err := h.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod, latestSlot)
+	if err != nil {
+		return fmt.Errorf("check sync committee periods to be fetched: %w", err)
+	}
+
+	log.WithFields(log.Fields{
+		"periods": periodsToSync,
+	}).Info("sync committee periods to be synced")
+
+	for _, period := range periodsToSync {
+		if !includeLatestSyncPeriod && period == latestSyncedPeriod {
+			continue
+		}
+		err := h.SyncCommitteePeriodUpdate(ctx, period)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
