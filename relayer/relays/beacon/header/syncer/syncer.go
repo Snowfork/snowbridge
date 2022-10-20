@@ -104,7 +104,7 @@ func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSlot uint64) ([]
 	}
 
 	syncPeriodsToFetch := []uint64{}
-	for i := lastSyncedPeriod + 1; i <= currentSyncPeriod; i++ {
+	for i := lastSyncedPeriod; i <= currentSyncPeriod; i++ {
 		syncPeriodsToFetch = append(syncPeriodsToFetch, i)
 	}
 
