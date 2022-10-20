@@ -2,6 +2,8 @@
 
 A trustless bridge between Polkadot and Ethereum.
 
+For architectural documentation, visit https://docs.snowbridge.network/.
+
 ## Development
 
 To locally bootstrap our system for testing and development, or just to play around, please refer to our [tests](test/README.md) component.
