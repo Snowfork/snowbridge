@@ -324,7 +324,8 @@ contract BeefyClient is Ownable {
     /* Private Functions */
 
     /**
-     * TODO: Ensure request is not too old (SNO-354).
+     * TODO: Ensure request is not too old as the blockhash function
+     * only works for the 256 most recent blocks (SNO-354).
      *
      * @dev Deterministically generate a seed based on the initial request
      * @param request a storage reference to the requests struct
