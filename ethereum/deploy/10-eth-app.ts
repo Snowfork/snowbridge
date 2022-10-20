@@ -47,11 +47,11 @@ module.exports = async ({
     autoMine: true,
   });
 
-  console.log("Transferring EtherVault ownership to ETHApp")
   await deployments.execute(
     "EtherVault", 
     {
       from: deployer,
+      log: true,
       autoMine: true
     },
     "transferOwnership",
