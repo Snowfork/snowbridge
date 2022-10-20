@@ -293,7 +293,13 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 
 	headersToSync := []syncer.HeaderUpdate{}
 
-	currentSlot := fromSlot + 1
+	currentSlot := fromSlot + 1 // start syncing at next block after last synced block
+
+	headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot)
+	if err != nil {
+		return err
+	}
+
 	for currentSlot <= toSlot {
 		epoch := h.syncer.ComputeEpochAtSlot(currentSlot)
 
@@ -326,10 +332,6 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 			"slot": currentSlot,
 		}).Info("fetching header at slot")
 
-		headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot)
-		if err != nil {
-			return err
-		}
 		// To get the sync witness for the current synced header. This header
 		// will be used as the next update.
 		nextHeaderUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot + 1)
@@ -339,6 +341,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 
 		headerUpdate.SyncAggregate = nextHeaderUpdate.Block.Body.SyncAggregate
 		headersToSync = append(headersToSync, headerUpdate)
+		headerUpdate = nextHeaderUpdate
 
 		// last slot to be synced, sync headers
 		if currentSlot >= toSlot {
@@ -411,6 +414,7 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedH
 		"blockNumber":   executionHeaderState.BlockNumber,
 		"executionHash": executionHeaderState.BlockHash,
 		"finalizedHash": lastFinalizedHeader,
+		"slotsBacklog":  lastFinalizedSlot - executionHeaderState.BeaconHeaderSlot,
 	}).Info("execution headers sync is not up to date with last finalized header, syncing lagging execution headers")
 
 	err := h.SyncHeaders(ctx, executionHeaderState.BeaconHeaderBlockRoot, lastFinalizedHeader, lastFinalizedSlot, basicChannel, incentivizedChannel)

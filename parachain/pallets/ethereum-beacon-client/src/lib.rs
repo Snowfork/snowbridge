@@ -200,7 +200,7 @@ pub mod pallet {
 			if let Err(err) = Self::process_sync_committee_period_update(sync_committee_period_update) {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"Sync committee period update failed with error {:?}",
+					"💫 Sync committee period update failed with error {:?}",
 					err
 				);
 				return Err(err);
@@ -234,7 +234,7 @@ pub mod pallet {
 			if let Err(err) = Self::process_finalized_header(finalized_header_update) {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"Finalized header update failed with error {:?}",
+					"💫 Finalized header update failed with error {:?}",
 					err
 				);
 				return Err(err);
@@ -269,7 +269,7 @@ pub mod pallet {
 			if let Err(err) = Self::process_header(update) {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"Header update failed with error {:?}",
+					"💫 Header update failed with error {:?}",
 					err
 				);
 				return Err(err);
@@ -511,7 +511,7 @@ pub mod pallet {
 
 			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
 			if let Err(e) = agg_pub_key_res {
-				log::error!(target: "ethereum-beacon-client", "invalid public keys: {:?}.", e);
+				log::error!(target: "ethereum-beacon-client", "💫 invalid public keys: {:?}.", e);
 				return Err(Error::<T>::InvalidAggregatePublicKeys.into());
 			}
 
@@ -774,7 +774,7 @@ pub mod pallet {
 			let sync_committee = <SyncCommittees<T>>::get(period);
 
 			if sync_committee.pubkeys.len() == 0 {
-				log::error!(target: "ethereum-beacon-client", "Sync committee for period {} missing", period);
+				log::error!(target: "ethereum-beacon-client", "💫 Sync committee for period {} missing", period);
 				return Err(Error::<T>::SyncCommitteeMissing.into());
 			}
 
@@ -819,7 +819,7 @@ pub mod pallet {
 				Err(err) => {
 					log::trace!(
 						target: "ethereum-beacon-client",
-						"Failed to decode transaction receipt: {}",
+						"💫 Failed to decode transaction receipt: {}",
 						err
 					);
 					Err(Error::<T>::InvalidProof.into())
@@ -848,7 +848,7 @@ pub mod pallet {
 				Err(err) => {
 					log::error!(
 						target: "ethereum-beacon-client",
-						"Verify receipt inclusion failed for block {}: {:?}",
+						"💫 Verify receipt inclusion failed for block {}: {:?}",
 						message.proof.block_hash,
 						err
 					);
@@ -858,7 +858,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"Verified receipt inclusion for transaction at index {} in block {}",
+				"💫 Verified receipt inclusion for transaction at index {} in block {}",
 				message.proof.tx_index, message.proof.block_hash,
 			);
 
@@ -867,7 +867,7 @@ pub mod pallet {
 				Err(err) => {
 					log::error!(
 						target: "ethereum-beacon-client",
-						"RLP log decoded failed {}: {:?}",
+						"💫 RLP log decoded failed {}: {:?}",
 						message.proof.block_hash,
 						err
 					);
@@ -878,7 +878,7 @@ pub mod pallet {
 			if !receipt.contains_log(&log) {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"Event log not found in receipt for transaction at index {} in block {}",
+					"💫 Event log not found in receipt for transaction at index {} in block {}",
 					message.proof.tx_index, message.proof.block_hash,
 				);
 				return Err(Error::<T>::InvalidProof.into())

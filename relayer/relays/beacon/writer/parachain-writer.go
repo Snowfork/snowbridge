@@ -208,20 +208,30 @@ func (wr *ParachainWriter) GetLastBasicChannelNoncesByAddresses(addresses []comm
 	addressNonceMap := make(map[common.Address]uint64, len(addresses))
 
 	for _, address := range addresses {
-		key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicOutboundChannel", "Nonces", address[:], nil)
+		nonce, err := wr.GetLastBasicChannelNoncesByAddress(address)
 		if err != nil {
-			return addressNonceMap, fmt.Errorf("create storage key for basic channel nonces: %w", err)
+			return addressNonceMap, fmt.Errorf("fetch basic channel nonce for address %s: %w", address, err)
 		}
 
-		var nonce types.U64
-		_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &nonce)
-		if err != nil {
-			return addressNonceMap, fmt.Errorf("get storage for latest basic channel nonces (err): %w", err)
-		}
-
+		addressNonceMap[address] = uint64(nonce)
 	}
 
 	return addressNonceMap, nil
+}
+
+func (wr *ParachainWriter) GetLastBasicChannelNoncesByAddress(address common.Address) (uint64, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicInboundChannel", "Nonce", address[:], nil)
+	if err != nil {
+		return 0, fmt.Errorf("create storage key for basic channel nonces: %w", err)
+	}
+
+	var nonce types.U64
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &nonce)
+	if err != nil {
+		return 0, fmt.Errorf("get storage for latest basic channel nonces (err): %w", err)
+	}
+
+	return uint64(nonce), nil
 }
 
 func (wr *ParachainWriter) GetLastIncentivizedChannelMessage() (uint64, error) {
