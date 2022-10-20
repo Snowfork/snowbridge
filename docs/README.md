@@ -4,6 +4,10 @@ Snowbridge is a general purpose, trustless and decentralized bridge between Polk
 
 Our goal is to launch as common-good bridge on the proposed BridgeHub parachain.
 
+<figure><img src=".gitbook/assets/badge_black.svg" alt=""><figcaption></figcaption></figure>
+
+<figure><img src=".gitbook/assets/SBP_M2.svg" alt=""><figcaption></figcaption></figure>
+
 ## Contact us <a href="#block-cc97a7bab4b348b5849698a0716ff0ae" id="block-cc97a7bab4b348b5849698a0716ff0ae"></a>
 
 To get in contact, please create a discussion thread [here](https://github.com/Snowfork/snowbridge/discussions).
