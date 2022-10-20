@@ -26,7 +26,6 @@
 
 use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use sp_std::marker::PhantomData;
-
 use crate::config;
 
 /// Weight functions needed for ethereum_beacon_client.
