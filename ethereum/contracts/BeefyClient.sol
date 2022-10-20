@@ -10,7 +10,7 @@ import "./ScaleCodec.sol";
 import "./utils/MerkleProof.sol";
 
 /**
- * @title A entry contract for the BEEFY light client
+ * @title BeefyClient
  */
 contract BeefyClient is Ownable {
     using Bits for uint256;
@@ -150,6 +150,14 @@ contract BeefyClient is Ownable {
     // Used for calculating minimum number of required signatures
     uint256 public constant THRESHOLD_NUMERATOR = 3;
     uint256 public constant THRESHOLD_DENOMINATOR = 250;
+
+    /**
+     * TODO: Review this constant (SNO-355)
+     *
+     * @dev The minimum number of blocks a relayer must wait between submissions
+     * in the interactive update protcol. The longer the period, the greater the
+     * crypto-economic security.
+     */
     uint64 public constant BLOCK_WAIT_PERIOD = 3;
 
     /**
@@ -169,21 +177,22 @@ contract BeefyClient is Ownable {
         currentValidatorSet = _initialValidatorSet;
         nextValidatorSet = _nextValidatorSet;
 
-        // Removed renouncing of ownership to support lean BEEFY.
+        // NOTE: Disabling renouncing of ownership to support lean BEEFY.
         // This will be added back once full BEEFY is supported.
-        // See https://linear.app/snowfork/issue/SNO-294
-        // See https://linear.app/snowfork/issue/SNO-297
+        // See SNO-294, SNO-297
+        //
         // renounceOwnership();
     }
 
     /* Public Functions */
 
     /**
-     * @notice Executed by the prover in order to begin the process of block
+     * @dev Executed by the prover in order to begin the process of block
      * acceptance by the light client
      * @param commitmentHash contains the commitmentHash signed by the validator(s)
      * @param bitfield a bitfield containing a membership status of each
      * validator who has claimed to have signed the commitmentHash
+     * @param validatorSetID the id of the validator set which signed the commitment
      * @param proof the validator proof
      */
     function submitInitial(
@@ -315,18 +324,24 @@ contract BeefyClient is Ownable {
     /* Private Functions */
 
     /**
-     * @notice Deterministically generates a seed from the block hash at the block number of creation of the validation
-     * request plus BLOCK_WAIT_PERIOD.
-     * @dev Note that `blockhash(blockNum)` will only work for the 256 most recent blocks. If
-     * `submit` is called too late, a new call to `presubmit` is necessary to reset
-     * validation request's block number
+     * TODO: Ensure request is not too old (SNO-354).
+     *
+     * @dev Deterministically generate a seed based on the initial request
      * @param request a storage reference to the requests struct
-     * @return uint256 the derived seed
+     * @return uint256 the seed
      */
     function deriveSeed(Request storage request) internal view returns (uint256) {
         return uint256(blockhash(request.blockNumber + BLOCK_WAIT_PERIOD));
     }
 
+    /**
+     * TODO: Settle on final algorithm (SNO-150). The current one here should be considered
+     *  a temporary placeholder.
+     *
+     * @dev Compute the minimum required signatures for a given validator set
+     * @param vset the validator set
+     * @return uint256 minimum required signatures
+     */
     function minimumSignatureThreshold(ValidatorSet memory vset) internal pure returns (uint256) {
         return
             (vset.length * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) / THRESHOLD_DENOMINATOR;
