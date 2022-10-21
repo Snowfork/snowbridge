@@ -106,7 +106,7 @@ fn test_submit() {
 		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
 
 		assert_eq!(<NextId<Test>>::get(), 1);
-		assert_eq!(<Nonces<Test>>::get(who), 0);
+		assert_eq!(<Nonce<Test>>::get(who), 0);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 1);
 	});
 }
@@ -154,7 +154,7 @@ fn test_commit_single_user() {
 		run_to_block(2);
 
 		assert_eq!(<NextId<Test>>::get(), 1);
-		assert_eq!(<Nonces<Test>>::get(who), 1);
+		assert_eq!(<Nonce<Test>>::get(who), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
 	})
 }
@@ -171,8 +171,8 @@ fn test_commit_multi_user() {
 		run_to_block(2);
 
 		assert_eq!(<NextId<Test>>::get(), 2);
-		assert_eq!(<Nonces<Test>>::get(alice), 1);
-		assert_eq!(<Nonces<Test>>::get(bob), 1);
+		assert_eq!(<Nonce<Test>>::get(alice), 1);
+		assert_eq!(<Nonce<Test>>::get(bob), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
 	})
 }
