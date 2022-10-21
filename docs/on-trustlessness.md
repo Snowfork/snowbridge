@@ -6,4 +6,4 @@ We define a trustless system as a system in which the end user does not need to 
 
 This can be achieved in various ways. The important thing here is for safety of user funds and expectations to be preserved, irrespective of the participants in the system.
 
-100% trustlessness cannot always be guaranteed - there always needs to be some set of basic assumptions that must be taken on, (eg: like assuming that an EMP wont hit the earth and wipe out all digital data). Snowbridge caters to a set of assumptions that will be mostly uncontroversial and acceptable by the community.
+100% trustlessness cannot always be guaranteed—there always needs to be some set of basic assumptions that must be taken on. Snowbridge caters to a set of assumptions that will be mostly uncontroversial and acceptable by the community.
