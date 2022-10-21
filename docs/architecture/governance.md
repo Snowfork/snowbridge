@@ -30,7 +30,7 @@ There are various options for fallback governance. We believe the most decentral
 
 The initial membership of the BeefyDAO will be seeded by Polkadot governance through cross-chain messaging.
 
-its expected that most of the initial members will be Polkadot fellows. Over time, the ranks will grow to include various other stakeholders in the ecosystem.
+It's expected that most of the initial members will be Polkadot fellows. Over time, the ranks will grow to include various other stakeholders in the ecosystem.
 
 The BeefyDAO is allowed to perform a single operation:
 
