@@ -347,7 +347,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 			"account": types.HexEncodeToString(account[:]),
 		}).Info("Checked latest nonce delivered to ethereum basic channel")
 
-		paraBasicNonceKey, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "BasicOutboundChannel", "Nonces", account[:], nil)
+		paraBasicNonceKey, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "BasicOutboundChannel", "Nonce", account[:], nil)
 		if err != nil {
 			return nil, fmt.Errorf("create storage key for account '%v': %w", types.HexEncodeToString(account[:]), err)
 		}

@@ -250,7 +250,7 @@ func (wr *ParachainWriter) GetLastBasicChannelNoncesByAddresses(addresses []comm
 	addressNonceMap := make(map[common.Address]uint64, len(addresses))
 
 	for _, address := range addresses {
-		key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicOutboundChannel", "Nonces", address[:], nil)
+		key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicInboundChannel", "Nonce", address[:], nil)
 		if err != nil {
 			return addressNonceMap, fmt.Errorf("create storage key for basic channel nonces: %w", err)
 		}
