@@ -163,7 +163,7 @@ pub mod pallet {
 		StorageValue<_, BoundedVec<EnqueuedMessageOf<T>, T::MaxMessagesPerCommit>, ValueQuery>;
 
 	#[pallet::storage]
-	pub type Nonces<T: Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
+	pub type Nonce<T: Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub type NextId<T: Config> = StorageValue<_, u64, ValueQuery>;
@@ -318,7 +318,7 @@ pub mod pallet {
 
 			let mut message_bundles: Vec<MessageBundleOf<T>> = Vec::new();
 			for (account, messages) in account_message_map {
-				let next_nonce = <Nonces<T>>::mutate(&account, |nonce| {
+				let next_nonce = <Nonce<T>>::mutate(&account, |nonce| {
 					*nonce = nonce.saturating_add(1);
 					*nonce
 				});

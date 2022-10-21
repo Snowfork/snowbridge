@@ -338,7 +338,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 
 	basicChannelAccountNoncesToFind := make(map[types.AccountID]uint64, len(li.accounts))
 	for _, account := range li.accounts {
-		ethBasicNonce, err := basicContract.Nonces(&options, account)
+		ethBasicNonce, err := basicContract.Nonce(&options, account)
 		if err != nil {
 			return nil, err
 		}
