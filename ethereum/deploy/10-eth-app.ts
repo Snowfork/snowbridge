@@ -20,10 +20,17 @@ module.exports = async ({
 
   let scaleCodecLibrary = await deployments.get("ScaleCodec")
 
-  await deployments.deploy("ETHApp", {
+  let vault = await deployments.deploy('EtherVault', {
+    from: deployer,
+    log: true,
+    autoMine: true
+  });
+
+  let app = await deployments.deploy("ETHApp", {
     from: deployer,
     args:[
       channels.incentivized.inbound.address,
+      vault.address,
       {
         inbound: channels.basic.inbound.address,
         outbound: channels.basic.outbound.address,
@@ -40,4 +47,14 @@ module.exports = async ({
     autoMine: true,
   });
 
+  await deployments.execute(
+    "EtherVault", 
+    {
+      from: deployer,
+      log: true,
+      autoMine: true
+    },
+    "transferOwnership",
+    app.address
+  );
 };

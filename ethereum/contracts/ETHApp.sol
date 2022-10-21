@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./RewardController.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
+import "./EtherVault.sol";
 
 enum ChannelId {
     Basic,
@@ -50,11 +51,15 @@ contract ETHApp is RewardController, AccessControl {
     bytes32 public constant CHANNEL_UPGRADE_ROLE =
         keccak256("CHANNEL_UPGRADE_ROLE");
 
+    EtherVault public immutable vault;
+
     constructor(
         address rewarder,
+        EtherVault _vault,
         Channel memory _basic,
         Channel memory _incentivized
     ) {
+        vault = _vault;
 
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
@@ -87,6 +92,7 @@ contract ETHApp is RewardController, AccessControl {
 
         // revert in case of overflow.
         uint128 value = (msg.value).toUint128();
+        vault.deposit{value: msg.value}(msg.sender);
 
         emit Locked(msg.sender, _recipient, value, _paraId, _fee);
 
@@ -108,10 +114,7 @@ contract ETHApp is RewardController, AccessControl {
         address payable _recipient,
         uint128 _amount
     ) public onlyRole(INBOUND_CHANNEL_ROLE) {
-        require(_amount > 0, "Must unlock a positive amount");
-
-        (bool success, ) = _recipient.call{value: _amount}("");
-        require(success, "Unable to send Ether");
+        vault.withdraw(_recipient, _amount);
         emit Unlocked(_sender, _recipient, _amount);
     }
 
@@ -180,5 +183,11 @@ contract ETHApp is RewardController, AccessControl {
         grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
         grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
         emit Upgraded(msg.sender, c1, c2);
+    }
+
+     function transferVaultOwnership(
+        address newOwner
+    ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
+        vault.transferOwnership(newOwner);
     }
 }
