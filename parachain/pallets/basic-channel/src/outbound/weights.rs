@@ -25,7 +25,7 @@
 // --output
 // pallets/basic-channel/src/outbound/weights.rs
 // --template
-// module-weight-template.hbs
+// templates/module-weight-template.hbs
 
 
 #![cfg_attr(rustfmt, rustfmt_skip)]

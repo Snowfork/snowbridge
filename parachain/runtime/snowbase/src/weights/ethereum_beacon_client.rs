@@ -20,19 +20,20 @@
 // --repeat
 // 10
 // --output
-// pallets/ethereum-beacon-client/src/ethereum_beacon_client.rs
+// runtime/snowbase/src/weights/ethereum_beacon_client.rs
 // --template
-// module-weight-template.hbs
+// templates/runtime-weight-template.hbs
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
+use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 
+/// Weight functions for ethereum_beacon_client.
 pub struct SnowbridgeWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> ethereum_beacon_client::WeightInfo for SnowbridgeWeight<T> {	fn sync_committee_period_update() -> Weight {
-		(48_395_674_000 as Weight)			.saturating_add(T::DbWeight::get().reads(4 as Weight))			.saturating_add(T::DbWeight::get().writes(3 as Weight))	}	fn import_finalized_header() -> Weight {
-		(48_137_514_000 as Weight)			.saturating_add(T::DbWeight::get().reads(3 as Weight))			.saturating_add(T::DbWeight::get().writes(3 as Weight))	}	fn import_execution_header() -> Weight {
-		(48_366_379_000 as Weight)			.saturating_add(T::DbWeight::get().reads(3 as Weight))			.saturating_add(T::DbWeight::get().writes(1 as Weight))	}}
+		(48_498_137_000 as Weight)			.saturating_add(T::DbWeight::get().reads(4 as Weight))			.saturating_add(T::DbWeight::get().writes(3 as Weight))	}	fn import_finalized_header() -> Weight {
+		(48_245_247_000 as Weight)			.saturating_add(T::DbWeight::get().reads(3 as Weight))			.saturating_add(T::DbWeight::get().writes(3 as Weight))	}	fn import_execution_header() -> Weight {
+		(48_464_072_000 as Weight)			.saturating_add(T::DbWeight::get().reads(3 as Weight))			.saturating_add(T::DbWeight::get().writes(1 as Weight))	}}
