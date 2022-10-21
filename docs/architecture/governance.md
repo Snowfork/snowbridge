@@ -16,32 +16,29 @@ As a prime example, Polkadot and BEEFY consensus algorithms will change, and so 
 
 Smart contract upgrades and configuration changes will be triggered by governance on Polkadot, through the use of cross-chain messaging secured by the bridge itself. In effect this means that there will be no governance authority on the Ethereum side. So no centralised multisigs or anything like that.
 
-### Fallbacks
+## Fallbacks
 
-Obviously there are implications if governance messages cannot be delivered to Ethereum for any reason. It would mean the Ethereum side would remain static and non-upgradable, potentially leading to a loss of funds.
+Obviously there are implications if governance messages cannot be delivered to Ethereum. It would mean the Ethereum side would remain static and non-upgradable, eventually lead to a loss of funds.
 
-As a mitigation, we envision heartbeat messages periodically being sent to the Ethereum side. If these messages are not received or fail verification for a certain period of time, then a fallback governance mechanism will activate.
+As a mitigation, we envision heartbeat signals periodically being sent to the Ethereum side. If these signals are not received for a certain length of time, then a fallback governance mechanism will activate.
 
-The fallback governance method will be likely be constrained in its scope of authority, being limited to upgrading a limited number of critical contracts. The BEEFY light client being one of them.&#x20;
+The fallback governance method will be limited to upgrading the BEEFY light client. This should be enough to re-establish cross-chain governance signalling.
 
-Fundamentally there are really only three options for fallback governance, each with its own compromises and tradeoffs. Ultimately the choice of fallback will need to be made by the community during the evaluation of our treasury proposal.
+There are various options for fallback governance. We believe the most decentralized fallback is a DAO that uses a voting system similar to what [Compound](https://docs.compound.finance/v2/governance/) uses.
 
-#### Compound-style voting
+### BeefyDAO
 
-Voting-based governance similar to what [Compound](https://docs.compound.finance/v2/governance/) uses. This would require voting power to be distributed among various stakeholders and various checks and balances to prevent subversion.
+The initial membership of the BeefyDAO will be seeded by Polkadot governance through cross-chain messaging.
 
-Through an on-chain mechanism, voting shares could initially be seeded by the Polkadot fellowship on the Polkadot side. Each fellowship member could supply an ethereum address to be given a share of voting power. Obviously this is still subject to sybil attacks, as there is no way to prove that fellowship members actually control the ethereum accounts that participate in voting.
+its expected that most of the initial members will be Polkadot fellows. Over time, the ranks will grow to include various other stakeholders in the ecosystem.
 
-Another option is to distribute voting power based on assets locked up as collateral on the Ethereum side. This would incentivize voters to keep the bridge operational so their collateral can continue to be redeemable. However since the bridge is designed to be general-purpose, there will be no blessed apps/assets. So this approach will likely not be viable in the long-term.
+The BeefyDAO is allowed to perform a single operation:
 
-#### Non-upgradable contracts
+* Update the BEEFY light client contract
 
-One option is to just not have any fallbacks, and design the contracts to be non-upgradable.
+Once secure cross-chain signalling is re-established, the DAO will deactivate. &#x20;
 
-This would likely require changes to the BEEFY protocol to enable some kind of protocol versioning and signaling of new light client implementations.
 
-The risk is that the bridge gets bricked due to bugs not discovered during audits.
 
-#### Multisig
 
-This is probably the most contentious option. If the bridge is bricked/dormant for a minimum length of time, a multisig could be allowed to upgrade a limited number of critical contracts. The governance actions initiated by the multisig would also be subject to a 2 week time lock delay.
+
