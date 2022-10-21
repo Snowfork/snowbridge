@@ -14,7 +14,7 @@ Our bridge has a significant number of contracts on the Ethereum, and these cont
 
 As a prime example, Polkadot and BEEFY consensus algorithms will change, and so we need to make sure the Ethereum side of the bridge remains compatible. Otherwise locked up collateral will not be redeemable.
 
-Smart contract upgrades and configuration changes will be triggered by governance on Polkadot, through the use of cross-chain messaging secured by the bridge itself. In effect this means that there will be no governance authority on the Ethereum side. So no centralised multisigs or anything like that.
+Smart contract upgrades and configuration changes will be triggered by Polkadot governance through the use of cross-chain messaging secured by the bridge itself.
 
 ## Fallbacks
 
