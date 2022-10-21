@@ -6,6 +6,7 @@ const { env } = require('process');
 const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge/contracts.json', 'utf8'));
 
 const ETHApp = contracts.contracts.ETHApp;
+const ERC20Vault = contracts.contracts.ERC20Vault;
 const ERC20App = contracts.contracts.ERC20App;
 const TestToken = contracts.contracts.TestToken;
 const DOTApp = contracts.contracts.DOTApp;
@@ -32,6 +33,9 @@ class EthClient {
   loadApplicationContracts(networkID) {
     const appETH = new this.web3.eth.Contract(ETHApp.abi, ETHApp.address);
     this.appETH = appETH;
+
+    const vaultERC20 = new this.web3.eth.Contract(ERC20Vault.abi, ERC20Vault.address);
+    this.vaultERC20 = vaultERC20;
 
     const appERC20 = new this.web3.eth.Contract(ERC20App.abi, ERC20App.address);
     this.appERC20 = appERC20;
@@ -129,7 +133,7 @@ class EthClient {
 
   async approveERC20(from, amount) {
     const erc20Instance = this.loadERC20Contract();
-    return erc20Instance.methods.approve(this.appERC20._address, this.web3.utils.toBN(amount))
+    return erc20Instance.methods.approve(this.vaultERC20._address, this.web3.utils.toBN(amount))
       .send({
         from,
         gasLimit: 300000

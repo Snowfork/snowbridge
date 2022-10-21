@@ -48,7 +48,7 @@ module.exports = async ({
 
 
   await deployments.execute(
-    "EtherVault", 
+    "ERC20Vault", 
     {
       from: deployer,
       log: true,
