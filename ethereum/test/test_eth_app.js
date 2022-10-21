@@ -178,6 +178,7 @@ describe("ETHApp", function () {
         receipt.rawLogs[1].topics
       );
 
+      unlockEvent.sender.should.be.equal(POLKADOT_ADDRESS);
       unlockEvent.recipient.should.be.equal(recipient);
       unlockEvent.amount.eq(ethers.BigNumber.from(amount)).should.be.true;
 
