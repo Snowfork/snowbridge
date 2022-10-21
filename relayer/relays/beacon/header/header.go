@@ -72,7 +72,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 		"slot": lastFinalizedSlot,
 	}).Info("set cache: last finalized header")
 
-	executionHeaderState, err := h.writer.GetExecutionHeaderState()
+	executionHeaderState, err := h.writer.GetLastExecutionHeaderState()
 	if err != nil {
 		return nil, nil, fmt.Errorf("fetch last execution hash: %w", err)
 	}
@@ -399,9 +399,9 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedH
 		return nil
 	}
 
-	if executionHeaderState.BeaconHeaderSlot >= lastFinalizedSlot {
+	if executionHeaderState.BeaconSlot >= lastFinalizedSlot {
 		log.WithFields(log.Fields{
-			"slot":          executionHeaderState.BeaconHeaderSlot,
+			"slot":          executionHeaderState.BeaconSlot,
 			"blockNumber":   executionHeaderState.BlockNumber,
 			"executionHash": executionHeaderState.BlockHash,
 		}).Info("execution headers sync up to date with last finalized header")
@@ -410,15 +410,15 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedH
 	}
 
 	log.WithFields(log.Fields{
-		"executionSlot": executionHeaderState.BeaconHeaderSlot,
+		"executionSlot": executionHeaderState.BeaconSlot,
 		"finalizedSlot": lastFinalizedSlot,
 		"blockNumber":   executionHeaderState.BlockNumber,
 		"executionHash": executionHeaderState.BlockHash,
 		"finalizedHash": lastFinalizedHeader,
-		"slotsBacklog":  lastFinalizedSlot - executionHeaderState.BeaconHeaderSlot,
+		"slotsBacklog":  lastFinalizedSlot - executionHeaderState.BeaconSlot,
 	}).Info("execution headers sync is not up to date with last finalized header, syncing lagging execution headers")
 
-	err := h.SyncHeaders(ctx, executionHeaderState.BeaconHeaderBlockRoot, lastFinalizedHeader, lastFinalizedSlot, basicChannel, incentivizedChannel)
+	err := h.SyncHeaders(ctx, executionHeaderState.BeaconBlockRoot, lastFinalizedHeader, lastFinalizedSlot, basicChannel, incentivizedChannel)
 	if err != nil {
 		return err
 	}

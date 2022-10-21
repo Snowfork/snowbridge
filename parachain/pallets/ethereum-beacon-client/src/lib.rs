@@ -638,10 +638,10 @@ pub mod pallet {
 			Self::deposit_event(Event::BeaconHeaderImported{block_hash: block_root, slot: slot});
 		}
 
-		fn store_execution_header(block_root: H256, header: ExecutionHeaderOf<T>, slot: u64, beacon_header_hash: H256) {
+		fn store_execution_header(block_hash: H256, header: ExecutionHeaderOf<T>, beacon_slot: u64, beacon_block_root: H256) {
 			let block_number = header.block_number;
 
-			<ExecutionHeaders<T>>::insert(block_root, header);
+			<ExecutionHeaders<T>>::insert(block_hash, header);
 
 			let mut execution_header_state = <LatestExecutionHeaderState<T>>::get();
 
@@ -654,15 +654,15 @@ pub mod pallet {
 					block_number
 				);
 
-				execution_header_state.beacon_header_block_root = beacon_header_hash;
-				execution_header_state.beacon_header_slot = slot;
-				execution_header_state.block_hash = block_root;
+				execution_header_state.beacon_block_root = beacon_block_root;
+				execution_header_state.beacon_slot = beacon_slot;
+				execution_header_state.block_hash = block_hash;
 				execution_header_state.block_number = block_number;
 
 				<LatestExecutionHeaderState<T>>::set(execution_header_state);
 			}
 
-			Self::deposit_event(Event::ExecutionHeaderImported{block_hash: block_root, block_number: block_number});
+			Self::deposit_event(Event::ExecutionHeaderImported{block_hash: block_hash, block_number: block_number});
 		}
 
 		fn store_validators_root(validators_root: H256) {

@@ -200,15 +200,15 @@ func (wr *ParachainWriter) GetLastStoredFinalizedHeaderSlot() (uint64, error) {
 	return wr.getNumberFromParachain("EthereumBeaconClient", "LatestFinalizedHeaderSlot")
 }
 
-func (wr *ParachainWriter) GetLastBasicChannelMessage() (uint64, error) {
+func (wr *ParachainWriter) GetLastBasicChannelBlockNumber() (uint64, error) {
 	return wr.getNumberFromParachain("BasicInboundChannel", "LatestVerifiedBlockNumber")
 }
 
-func (wr *ParachainWriter) GetLastBasicChannelNoncesByAddresses(addresses []common.Address) (map[common.Address]uint64, error) {
+func (wr *ParachainWriter) GetLastBasicChannelNonceByAddresses(addresses []common.Address) (map[common.Address]uint64, error) {
 	addressNonceMap := make(map[common.Address]uint64, len(addresses))
 
 	for _, address := range addresses {
-		nonce, err := wr.GetLastBasicChannelNoncesByAddress(address)
+		nonce, err := wr.GetLastBasicChannelNonceByAddress(address)
 		if err != nil {
 			return addressNonceMap, fmt.Errorf("fetch basic channel nonce for address %s: %w", address, err)
 		}
@@ -219,7 +219,7 @@ func (wr *ParachainWriter) GetLastBasicChannelNoncesByAddresses(addresses []comm
 	return addressNonceMap, nil
 }
 
-func (wr *ParachainWriter) GetLastBasicChannelNoncesByAddress(address common.Address) (uint64, error) {
+func (wr *ParachainWriter) GetLastBasicChannelNonceByAddress(address common.Address) (uint64, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicInboundChannel", "Nonce", address[:], nil)
 	if err != nil {
 		return 0, fmt.Errorf("create storage key for basic channel nonces: %w", err)
@@ -234,7 +234,7 @@ func (wr *ParachainWriter) GetLastBasicChannelNoncesByAddress(address common.Add
 	return uint64(nonce), nil
 }
 
-func (wr *ParachainWriter) GetLastIncentivizedChannelMessage() (uint64, error) {
+func (wr *ParachainWriter) GetLastIncentivizedChannelBlockNumber() (uint64, error) {
 	return wr.getNumberFromParachain("IncentivizedInboundChannel", "LatestVerifiedBlockNumber")
 }
 
@@ -242,17 +242,17 @@ func (wr *ParachainWriter) GetLastIncentivizedChannelNonce() (uint64, error) {
 	return wr.getNumberFromParachain("IncentivizedInboundChannel", "Nonce")
 }
 
-func (wr *ParachainWriter) GetExecutionHeaderState() (state.ExecutionHeader, error) {
+func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestExecutionHeaderState", nil, nil)
 	if err != nil {
 		return state.ExecutionHeader{}, fmt.Errorf("create storage key for LatestExecutionHeaderState: %w", err)
 	}
 
 	var storageState struct {
-		BeaconHeaderBlockRoot types.H256
-		BeaconHeaderSlot      types.U64
-		BlockHash             types.H256
-		BlockNumber           types.U64
+		BeaconBlockRoot types.H256
+		BeaconSlot      types.U64
+		BlockHash       types.H256
+		BlockNumber     types.U64
 	}
 	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &storageState)
 	if err != nil {
@@ -260,10 +260,10 @@ func (wr *ParachainWriter) GetExecutionHeaderState() (state.ExecutionHeader, err
 	}
 
 	return state.ExecutionHeader{
-		BeaconHeaderBlockRoot: common.Hash(storageState.BeaconHeaderBlockRoot),
-		BeaconHeaderSlot:      uint64(storageState.BeaconHeaderSlot),
-		BlockHash:             common.Hash(storageState.BlockHash),
-		BlockNumber:           uint64(storageState.BlockNumber),
+		BeaconBlockRoot: common.Hash(storageState.BeaconBlockRoot),
+		BeaconSlot:      uint64(storageState.BeaconSlot),
+		BlockHash:       common.Hash(storageState.BlockHash),
+		BlockNumber:     uint64(storageState.BlockNumber),
 	}, nil
 }
 

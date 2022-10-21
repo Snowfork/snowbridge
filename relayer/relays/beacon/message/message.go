@@ -39,12 +39,12 @@ func New(ctx context.Context, eg *errgroup.Group, writer *writer.ParachainWriter
 }
 
 func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber <-chan uint64) error {
-	lastVerifiedBlockNumber, err := m.writer.GetLastBasicChannelMessage()
+	lastVerifiedBlockNumber, err := m.writer.GetLastBasicChannelBlockNumber()
 	if err != nil {
 		return fmt.Errorf("fetch last basic channel message block number: %w", err)
 	}
 
-	addressNonceMap, err := m.writer.GetLastBasicChannelNoncesByAddresses(m.addresses)
+	addressNonceMap, err := m.writer.GetLastBasicChannelNonceByAddresses(m.addresses)
 	if err != nil {
 		return fmt.Errorf("fetch last basic channel message nonce: %w", err)
 	}
@@ -127,7 +127,7 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 }
 
 func (m *Message) SyncIncentivized(ctx context.Context, eg *errgroup.Group, blockNumber <-chan uint64) error {
-	lastVerifiedBlockNumber, err := m.writer.GetLastIncentivizedChannelMessage()
+	lastVerifiedBlockNumber, err := m.writer.GetLastIncentivizedChannelBlockNumber()
 	if err != nil {
 		return fmt.Errorf("fetch last incentivized channel message block number: %w", err)
 	}
@@ -225,7 +225,7 @@ func (m *Message) writeBasicMessages(ctx context.Context, payload ParachainPaylo
 }
 
 func (m *Message) checkMessageVerificationResult(msgAddress common.Address, msgNonce uint64) error {
-	nonce, err := m.writer.GetLastBasicChannelNoncesByAddress(msgAddress)
+	nonce, err := m.writer.GetLastBasicChannelNonceByAddress(msgAddress)
 	if err != nil {
 		return fmt.Errorf("fetch last basic channel message nonces by addresses: %w", err)
 	}

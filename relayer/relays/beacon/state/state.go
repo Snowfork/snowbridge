@@ -5,10 +5,10 @@ import (
 )
 
 type ExecutionHeader struct {
-	BeaconHeaderBlockRoot common.Hash
-	BeaconHeaderSlot      uint64
-	BlockHash             common.Hash
-	BlockNumber           uint64
+	BeaconBlockRoot common.Hash
+	BeaconSlot      uint64
+	BlockHash       common.Hash
+	BlockNumber     uint64
 }
 
 type FinalizedHeader struct {
