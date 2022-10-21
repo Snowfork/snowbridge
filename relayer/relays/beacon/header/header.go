@@ -295,7 +295,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 	for currentSlot <= toSlot {
 		epoch := h.syncer.ComputeEpochAtSlot(currentSlot)
 
-		currentSyncPeriod := h.syncer.ComputeSyncPeriodAtSlot(uint64(currentSlot))
+		currentSyncPeriod := h.syncer.ComputeSyncPeriodAtSlot(currentSlot)
 
 		if currentSyncPeriod > h.cache.LastSyncedSyncCommitteePeriod {
 			err = h.syncLaggingSyncCommitteePeriods(ctx, h.cache.LastSyncedSyncCommitteePeriod, currentSlot, false)
