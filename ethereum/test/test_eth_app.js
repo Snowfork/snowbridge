@@ -73,7 +73,7 @@ describe("ETHApp", function () {
       );
 
       depositEvent.account.should.be.equal(this.app.address);
-      depositEvent.origin.should.be.equal(userOne);
+      depositEvent.sender.should.be.equal(userOne);
       depositEvent.amount.eq(ethers.BigNumber.from(amount.toString())).should.be.true;
 
       // Confirm app event emitted with expected values

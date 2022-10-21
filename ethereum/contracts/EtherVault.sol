@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 // Holds ETH on behalf of ETHApp
 contract EtherVault is Ownable {
-    event Deposit(address account, address origin, uint256 amount);
+    event Deposit(address account, address sender, uint256 amount);
     event Withdraw(address account, address recipient, uint256 amount);
 
     receive() external payable {
@@ -13,12 +13,12 @@ contract EtherVault is Ownable {
     }
 
     // Accepts ETH from the caller.
-    function deposit(address origin) 
+    function deposit(address sender) 
         external
         payable
         onlyOwner
     {
-        emit Deposit(msg.sender, origin, msg.value);
+        emit Deposit(msg.sender, sender, msg.value);
     }
 
     // Returns ETH to the caller.
