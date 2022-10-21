@@ -2,11 +2,9 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
+import "./ERC20Vault.sol";
 
 enum ChannelId {
     Basic,
@@ -17,9 +15,6 @@ contract ERC20App is AccessControl {
     using ScaleCodec for uint128;
     using ScaleCodec for uint32;
     using ScaleCodec for uint8;
-    using SafeERC20 for IERC20;
-
-    mapping(address => uint128) public balances;
 
     mapping(ChannelId => Channel) public channels;
 
@@ -61,8 +56,11 @@ contract ERC20App is AccessControl {
     bytes32 public constant CHANNEL_UPGRADE_ROLE =
         keccak256("CHANNEL_UPGRADE_ROLE");
 
+    ERC20Vault public immutable vault;
 
-    constructor(Channel memory _basic, Channel memory _incentivized) {
+    constructor(ERC20Vault _vault, Channel memory _basic, Channel memory _incentivized) {
+        vault = _vault;
+
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
         c1.outbound = _basic.outbound;
@@ -92,8 +90,7 @@ contract ERC20App is AccessControl {
             "Invalid channel ID"
         );
 
-        balances[_token] = balances[_token] + _amount;
-
+        vault.deposit(msg.sender, _token, _amount);
         emit Locked(_token, msg.sender, _recipient, _amount, _paraId, _fee);
 
         OutboundChannel channel = OutboundChannel(
@@ -114,11 +111,6 @@ contract ERC20App is AccessControl {
         }
 
         channel.submit(msg.sender, call);
-
-        require(
-            IERC20(_token).transferFrom(msg.sender, address(this), _amount),
-            "Contract token allowances insufficient to complete this lock request"
-        );
     }
 
     function unlock(
@@ -127,14 +119,7 @@ contract ERC20App is AccessControl {
         address _recipient,
         uint128 _amount
     ) public onlyRole(INBOUND_CHANNEL_ROLE) {
-        require(_amount > 0, "Must unlock a positive amount");
-        require(
-            _amount <= balances[_token],
-            "ERC20 token balances insufficient to fulfill the unlock request"
-        );
-
-        balances[_token] = balances[_token] - _amount;
-        IERC20(_token).safeTransfer(_recipient, _amount);
+        vault.withdraw(_recipient, _token, _amount);
         emit Unlocked(_token, _sender, _recipient, _amount);
     }
 
@@ -205,5 +190,11 @@ contract ERC20App is AccessControl {
         grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
         grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
         emit Upgraded(msg.sender, c1, c2);
+    }
+
+    function transferVaultOwnership(
+        address newOwner
+    ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
+        vault.transferOwnership(newOwner);
     }
 }

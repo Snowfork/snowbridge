@@ -11,6 +11,7 @@ require("chai")
 const MockOutboundChannel = artifacts.require("MockOutboundChannel");
 
 const ScaleCodec = artifacts.require("ScaleCodec");
+const ERC20Vault = artifacts.require("ERC20Vault");
 const ERC20App = artifacts.require("ERC20App");
 const TestToken = artifacts.require("TestToken");
 const TestNoNameToken = artifacts.require("TestToken20");
@@ -61,7 +62,9 @@ describe("ERC20App", function () {
   describe("deposits", function () {
     beforeEach(async function () {
       this.outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ERC20App);
+      this.vault = await ERC20Vault.new();
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ERC20App, this.vault.address);
+      await this.vault.transferOwnership(this.app.address);
       this.symbol = "TEST";
       this.name = "Test Token";
       this.decimals = 18;
@@ -73,10 +76,10 @@ describe("ERC20App", function () {
 
     it("should lock funds", async function () {
       amount = 100;
-      const beforeVaultBalance = BigNumber(await this.app.balances(this.token.address));
+      const beforeVaultBalance = BigNumber(await this.vault.balances(this.token.address));
       const beforeUserBalance = BigNumber(await this.token.balanceOf(userOne));
 
-      await approveFunds(this.token, this.app, userOne, amount * 2)
+      await approveFunds(this.token, this.vault, userOne, amount * 2)
         .should.be.fulfilled;
 
       let createMintTokenTransaction = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
@@ -93,7 +96,7 @@ describe("ERC20App", function () {
       BigNumber(event.args.fee).should.be.bignumber.equal(0);
       BigNumber(event.args.amount).should.be.bignumber.equal(amount);
 
-      const afterVaultBalance = BigNumber(await this.app.balances(this.token.address));
+      const afterVaultBalance = BigNumber(await this.vault.balances(this.token.address));
       const afterUserBalance = BigNumber(await this.token.balanceOf(userOne));
 
       afterVaultBalance.should.be.bignumber.equal(beforeVaultBalance.plus(100));
@@ -104,7 +107,7 @@ describe("ERC20App", function () {
       (await this.app.tokens(this.token.address))
       .should.be.equal(true);
 
-      await approveFunds(this.token, this.app, userOne, amount * 2)
+      await approveFunds(this.token, this.vault, userOne, amount * 2)
       .should.be.fulfilled;
 
       let mintOnlyTokenTransaction = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
@@ -131,10 +134,10 @@ describe("ERC20App", function () {
 
     it("should lock funds to destination parachain", async function () {
       amount = 100;
-      const beforeVaultBalance = BigNumber(await this.app.balances(this.token.address));
+      const beforeVaultBalance = BigNumber(await this.vault.balances(this.token.address));
       const beforeUserBalance = BigNumber(await this.token.balanceOf(userOne));
 
-      await approveFunds(this.token, this.app, userOne, amount * 2)
+      await approveFunds(this.token, this.vault, userOne, amount * 2)
         .should.be.fulfilled;
 
       let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 1001, 4_000_000)
@@ -151,7 +154,7 @@ describe("ERC20App", function () {
       BigNumber(event.args.fee).should.be.bignumber.equal(4_000_000);
       BigNumber(event.args.amount).should.be.bignumber.equal(amount);
 
-      const afterVaultBalance = BigNumber(await this.app.balances(this.token.address));
+      const afterVaultBalance = BigNumber(await this.vault.balances(this.token.address));
       const afterUserBalance = BigNumber(await this.token.balanceOf(userOne));
 
       afterVaultBalance.should.be.bignumber.equal(beforeVaultBalance.plus(100));
@@ -162,8 +165,10 @@ describe("ERC20App", function () {
   describe("withdrawals", function () {
 
     beforeEach(async function () {
-      let outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(owner, [owner, outboundChannel.address], ERC20App);
+      let outboundChannel = await MockOutboundChannel.new();
+      this.vault = await ERC20Vault.new();
+      this.app = await deployAppWithMockChannels(owner, [owner, outboundChannel.address], ERC20App, this.vault.address);
+      await this.vault.transferOwnership(this.app.address);
       this.symbol = "TEST";
       this.name = "Test Token";
       this.decimals = 18;
@@ -174,7 +179,7 @@ describe("ERC20App", function () {
 
     it("should unlock funds", async function () {
       const lockupAmount = 200;
-      await approveFunds(this.token, this.app, userOne, lockupAmount * 2)
+      await approveFunds(this.token, this.vault, userOne, lockupAmount * 2)
         .should.be.fulfilled;
       let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Basic, 0, 0)
         .should.be.fulfilled;
@@ -201,8 +206,8 @@ describe("ERC20App", function () {
       var iface = new ethers.utils.Interface(ERC20App.abi);
       let event = iface.decodeEventLog(
         'Unlocked(address,bytes32,address,uint128)',
-        receipt.rawLogs[1].data,
-        receipt.rawLogs[1].topics
+        receipt.rawLogs[2].data,
+        receipt.rawLogs[2].topics
       );
 
       event.recipient.should.be.equal(recipient);
@@ -214,7 +219,9 @@ describe("ERC20App", function () {
     beforeEach(async function () {
       this.outboundChannel = await MockOutboundChannel.new()
       this.newInboundChannel = accounts[2];
-      this.app = await deployAppWithMockChannels(owner, [owner, this.outboundChannel.address], ERC20App);
+      this.vault = await ERC20Vault.new();
+      this.app = await deployAppWithMockChannels(owner, [owner, this.outboundChannel.address], ERC20App, this.vault.address);
+      await this.vault.transferOwnership(this.app.address);
       const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
       this.iface = new ethers.utils.Interface(abi);
     });
