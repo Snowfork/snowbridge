@@ -13,12 +13,12 @@ contract EtherVault is Ownable {
     }
 
     // Accepts ETH from the caller.
-    function deposit(address sender) 
+    function deposit(address _sender) 
         external
         payable
         onlyOwner
     {
-        emit Deposit(msg.sender, sender, msg.value);
+        emit Deposit(msg.sender, _sender, msg.value);
     }
 
     // Returns ETH to the caller.
