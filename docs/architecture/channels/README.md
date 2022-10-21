@@ -8,8 +8,6 @@ Channels are the central organizing components of the bridge. Their main functio
 
 A full bidirectional channel consists of 4 related on-chain objects, a pair of _inbound_ and _outbound_ channels on both chains.
 
-Any user or system wanting to send a message across the bridge must submit their message to the channel.
-
 ![](../../.gitbook/assets/1)
 
 ## Messaging Protocol
@@ -38,15 +36,16 @@ Note:
 
 Ethereum has much reduced blockspace than a typical Parachain, and gas costs are considerably higher.
 
-As a mitigation for this, in the Parachain→Ethereum direction, messages are batched into bundles, and then delivered together as a bundle to the Ethereum side. This reduces gas costs considerably.
+As a mitigation for this, in the Parachain→Ethereum direction, messages are batched together into bundles and delivered to the Ethereum side. This reduces gas costs considerably.
 
-The tradeoff is that these message bundles are limited in size, as all the messages in the bundle would need to be executed in a single Ethereum block. This means that the parachain can only accept a limited number of messages every batching period. This period is configurable, but for our launch we anticipate it being anywhere from 6s to 1hour.
+The tradeoff is that these message bundles are limited in size, as all the messages in the bundle would need to be executed in a single Ethereum block. This means that the parachain can only accept a limited number of messages every batching period. This period is configurable, but for our launch we anticipate it being anywhere from 1 to 10 minutes.
 
-After users submit their messages they will need to wait for a bundle to be created. Only then can these bundles be delivered to Ethereum.
+## Implementations <a href="#_qd56myj60aib" id="_qd56myj60aib"></a>
 
-## Channel Variants <a href="#_qd56myj60aib" id="_qd56myj60aib"></a>
+Our bridge provides two concrete implementations, which differ primarily in their [delivery guarantees](../overview.md#deliverability-and-delivery).
 
-Our bridge provides two kinds of channels, which differ in how they incentivize off-chain relayers to relay messages between chains.
+* [Basic Channel](basic-channel.md)
+* [Incentivized Channel](incentivized-channel.md)
 
-Since the bridge has a modular design, new channels can be added to the bridge to support different use cases.
+Since the bridge has a modular architecture, new implementations can be added at any time.
 

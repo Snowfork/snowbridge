@@ -6,48 +6,40 @@ A common problem with bridges is in handling fluctuating gas prices and exchange
 
 However, with the [Basic Channel](basic-channel.md) activated, we now have access to cross-chain pegged assets, and so we can use those as part of our relaying incentive model. This means using [wETH](../apps/ether.md) and [wDOT](../apps/dot.md) to cover costs for relayers so that they are not impacted by changing exchange rates.&#x20;
 
-In the Parachain→Ethereum direction, users pay a fixed fee in wrapped Ether ([wETH](../apps/ether.md)) to send a message to Ethereum. Relayers are rewarded Ether on the Ethereum side.
+In the Parachain→Ethereum direction, users pay a fixed upfront fee in wrapped Ether ([wETH](../apps/ether.md)) to send a message to Ethereum. Relayers are rewarded Ether on the Ethereum side.
 
-In the same way, for the Ethereum→Parachain direction, users pay a fixed fee in wrapped DOT ([wDOT](../apps/dot.md)) to send a message to Ethereum. Relayers are rewarded DOT on the Parachain side.
+In the same way, for the Ethereum→Parachain direction, users pay a fixed upfront fee in wrapped DOT ([wDOT](../apps/dot.md)) to send a message to Ethereum. Relayers are rewarded DOT on the Parachain side.
 
-The fees are fixed, calculated offline, and can be only be updated by governance.
+For our launch, the fees will be fixed, calculated offline, and can be only be updated by governance. Soon after launch, [dynamic fees](incentivized-channel.md#increasing-cost-efficiency) will be introduced.
 
-## Fee Calculation
+## Pricing Strategy
 
 ### Polkadot->Ethereum
 
 In this direction, messages are batched together in a bundle for delivery. Therefore the aggregate fees for the bundle would need to cover:
 
-1. Transaction fee paid by relayer for delivering the bundle
+1. Transaction fee in Ether paid by relayer for delivering the bundle
 2. Incentivization reward paid to message relayer
 
-Since bundle sizes are dynamic, a fixed per-message fee could potentially result in two extremes:
+Since bundle sizes are dynamic, a fixed upfront fee could potentially result in two extremes:
 
 1. If a bundle contains only a single message, then the aggregate fees may not be enough to incentivize relayers to deliver the bundle.
 2. If a bundle contains a large number of messages, then the relayer makes a large profit at the expense of users.
 
-Our solution for the initial launch is err on the side of overcompensating relayers to ensure message delivery. Some major [improvements](incentivized-channel.md#post-launch-improvements) are on our roadmap though.
+Our solution for the initial launch is to charge an upfront unit fee that would cover the worst-case scenario: A message bundle containing a single message.
+
+However, if finalized bundles end up containing more than one message, then participating users will be refunded by the amount that they overpaid.
 
 ### Ethereum->Polkadot
 
-In this direction, messages are not batched, which simplifies fee calculation greatly. Given the larger blockspace expected on BridgeHub compared to Ethereum, fees should remain low and fairly constant over time. The fee would need to cover:
+In this direction, messages are not batched, which simplifies pricing. Given the larger blockspace expected on BridgeHub compared to Ethereum, fees should remain low and fairly constant over time. The fee would need to cover:
 
-1. Transaction fee paid by relayer for delivering the message
+1. Transaction fee in DOT paid by relayer for delivering the message
 2. Incentivization reward paid to relayer
 
 ## Increasing cost efficiency
 
-To increase the cost-efficiency for Polkadot->Ethereum fees, we are planning several improvements post-launch.
-
-Since the recent Ethereum [EIP-1559](https://www.blocknative.com/blog/eip-1559-fees) upgrade, the `baseFeePerGas` field is available in the block header and can be tracked by our Ethereum light client. This means an on-chain fee estimator can more accurately and dynamically derive an appropriate fee without overcharging as much.
-
-Another improvement is to let users choose how long they would be willing to wait for their message to be included in a bundle. A user willing to wait 1 hour would pay less than a user who needs their message to be instantly transferred. Architecturally, this means the outbound channel would be divided into multiple _lanes_, where accumulated messages will be held for certain amount of time before being bundled_:_
-
-* 1 minute&#x20;
-* 10 minutes
-* 1 hour
-
-Beyond these improvements, the most cost-efficient incentivation approach is a fee market system where relayers can quote their delivery fees and influence the messages included in a bundle. Given the effort and complexities in building a decentralized and secure fee market, we'll only consider implementing this until well after launch.
+Since the recent Ethereum [EIP-1559](https://www.blocknative.com/blog/eip-1559-fees) upgrade, the `baseFeePerGas` field is available in the block header and can be tracked trustlessly by our Ethereum light client. This means an on-chain fee estimator can more accurately and dynamically derive an appropriate fee without overcharging as much.
 
 ## Protocol Objects
 
