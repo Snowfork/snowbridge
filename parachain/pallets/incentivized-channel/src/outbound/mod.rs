@@ -11,14 +11,15 @@ use ethabi::{self, Token};
 use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
-	traits::{fungible::Mutate, EnsureOrigin, Get},
+	traits::{
+		fungible::{Mutate, Transfer},
+		EnsureOrigin, Get,
+	},
 	BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
-
 use scale_info::TypeInfo;
 use sp_core::{H160, H256};
 use sp_runtime::traits::{Hash, Zero};
-
 use sp_std::prelude::*;
 
 use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
@@ -56,9 +57,25 @@ pub struct Message<M: Get<u32>> {
 	payload: BoundedVec<u8, M>,
 }
 
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
+)]
+#[scale_info(skip_type_params(M))]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
+pub struct EnqueuedMessage<AccountId, M: Get<u32>>
+where
+	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
+{
+	account: AccountId,
+	message: Message<M>,
+}
+
 pub type MessageBundleOf<T> =
 	MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit>;
 pub type MessageOf<T> = Message<<T as Config>::MaxMessagePayloadSize>;
+
+pub type EnqueuedMessageOf<T> =
+	EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
 
 pub use pallet::*;
 
@@ -88,7 +105,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxMessagesPerCommit: Get<u32>;
 
-		type FeeCurrency: Mutate<<Self as frame_system::Config>::AccountId, Balance = u128>;
+		type FeeCurrency: Mutate<<Self as frame_system::Config>::AccountId, Balance = u128>
+			+ Transfer<<Self as frame_system::Config>::AccountId, Balance = u128>;
+
+		type PalletId: Get<PalletId>;
 
 		/// The origin which may update reward related params
 		type SetFeeOrigin: EnsureOrigin<Self::Origin>;
@@ -124,7 +144,7 @@ pub mod pallet {
 	/// Messages waiting to be committed.
 	#[pallet::storage]
 	pub(super) type MessageQueue<T: Config> =
-		StorageValue<_, BoundedVec<MessageOf<T>, T::MaxMessagesPerCommit>, ValueQuery>;
+		StorageValue<_, BoundedVec<EnqueuedMessageOf<T>, T::MaxMessagesPerCommit>, ValueQuery>;
 
 	/// Fee for accepting a message
 	#[pallet::storage]
@@ -135,6 +155,7 @@ pub mod pallet {
 	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn epoch_index)]
 	pub type NextId<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
@@ -202,12 +223,18 @@ pub mod pallet {
 			}
 
 			// Attempt to charge a fee for message submission
-			T::FeeCurrency::burn_from(who, Self::fee()).map_err(|_| Error::<T>::NoFunds)?;
+			T::FeeCurrency::transfer(who, Self::account_id(), Self::fee(), true)?;
 
-			<MessageQueue<T>>::try_append(Message {
-				id: next_id,
-				target,
-				payload: payload.to_vec().try_into().map_err(|_| Error::<T>::PayloadTooLarge)?,
+			<MessageQueue<T>>::try_append(EnqueuedMessage {
+				account: who.clone(),
+				message: Message {
+					id: next_id,
+					target,
+					payload: payload
+						.to_vec()
+						.try_into()
+						.map_err(|_| Error::<T>::PayloadTooLarge)?,
+				},
 			})
 			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
 
@@ -219,7 +246,7 @@ pub mod pallet {
 		}
 
 		fn commit() -> Weight {
-			let messages = <MessageQueue<T>>::take();
+			let messages = <MessageQueue<T>>::get();
 			if messages.is_empty() {
 				return T::WeightInfo::on_initialize_no_messages();
 			}
@@ -231,7 +258,7 @@ pub mod pallet {
 			let bundle: MessageBundleOf<T> = MessageBundle {
 				source_channel_id: ChannelId::Incentivized as u8,
 				nonce: next_nonce,
-				fee: (messages.len() as u128).saturating_mul(Self::fee()),
+				fee: Self::fee(),
 				messages: messages.clone(),
 			};
 
@@ -241,6 +268,12 @@ pub mod pallet {
 					.into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 			Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
+
+			// should not fail since this account is only controlled by on-chain code.
+			let _ = T::FeeCurrency::burn_from(Self::account_id(), Self::fee());
+
+			// refund users who overpaid
+			Self::do_refunds(messages);
 
 			T::WeightInfo::on_initialize(
 				messages.len() as u32,
@@ -267,6 +300,31 @@ pub mod pallet {
 				Token::Array(messages),
 			])]);
 			<T as Config>::Hashing::hash(&commitment)
+		}
+
+		fn do_refunds(
+			messages: BoundedVec<EnqueuedMessageOf<T>, T::MaxMessagesPerCommit>,
+		) -> DispatchResult {
+			if messages.len() < 2 {
+				return Ok(());
+			}
+
+			let accounts = messages.iter().map(|m| m.account).collect();
+			let aggregate_fee = Self::fee();
+			let unit_fee = aggregate_fee / accounts.len();
+			let refund = aggregate_fee - unit_fee;
+
+			for account in accounts.iter() {
+				T::FeeCurrency::transfer(Self::account_id(), account, refund, true)?;
+			}
+
+			Ok(())
+		}
+
+		pub fn account_id() -> Result<T::AccountId, DispatchError> {
+			T::PalletId::get()
+				.try_into_account()
+				.ok_or(DispatchError::Other("PalletId account conversion failed."))
 		}
 
 		fn average_payload_size(messages: &[MessageOf<T>]) -> u32 {
