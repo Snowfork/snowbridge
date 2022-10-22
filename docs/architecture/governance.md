@@ -18,7 +18,7 @@ Smart contract upgrades and configuration changes will be triggered by Polkadot 
 
 ## Fallbacks
 
-Obviously there are implications if governance messages cannot be delivered to Ethereum. It would mean the Ethereum side would remain static and non-upgradable, eventually lead to a loss of funds.
+Obviously there are implications if governance messages cannot be delivered to Ethereum. It would mean the Ethereum side would remain static and non-upgradable, eventually leading to a loss of funds.
 
 As a mitigation, we envision heartbeat signals periodically being sent to the Ethereum side. If these signals are not received for a certain length of time, then a fallback governance mechanism will activate.
 
@@ -30,13 +30,13 @@ There are various options for fallback governance. We believe the most decentral
 
 The initial membership of the BeefyDAO will be seeded by Polkadot governance through cross-chain messaging.
 
-It's expected that most of the initial members will be Polkadot fellows. Over time, the ranks will grow to include various other stakeholders in the ecosystem.
+It's expected that most of the initial members will be Polkadot fellows. Over time, the DAO will grow to include various other stakeholders in the ecosystem.
 
 The BeefyDAO is allowed to perform a single operation:
 
-* Update the BEEFY light client contract
+* Register a new BEEFY light client
 
-Once secure cross-chain signalling is re-established, the DAO will deactivate. &#x20;
+Once secure cross-chain signalling is re-established, the DAO will become dormant. &#x20;
 
 
 
