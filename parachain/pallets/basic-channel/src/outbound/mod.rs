@@ -163,7 +163,7 @@ pub mod pallet {
 		StorageValue<_, BoundedVec<EnqueuedMessageOf<T>, T::MaxMessagesPerCommit>, ValueQuery>;
 
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
+	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub type NextId<T: Config> = StorageValue<_, u64, ValueQuery>;
