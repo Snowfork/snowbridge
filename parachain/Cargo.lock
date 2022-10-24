@@ -10022,7 +10022,7 @@ dependencies = [
  "frame-benchmarking-cli",
  "futures 0.3.24",
  "hex-literal",
- "jsonrpsee 0.14.0",
+ "jsonrpsee 0.15.1",
  "log",
  "pallet-transaction-payment-rpc",
  "parity-scale-codec",
