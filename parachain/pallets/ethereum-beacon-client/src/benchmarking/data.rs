@@ -1386,7 +1386,6 @@ pub fn block_update<
                     }
                 }
             },
-            block_body_root: hex!("332cbf177a081616822905703c4bf026dad64b6d726a59f5b46ecf1661f81808").into(),
             sync_aggregate: SyncAggregate{
                 sync_committee_bits: hex!("ffffffff").to_vec().to_vec().try_into().expect("too many bits"),
                 sync_committee_signature: hex!("adc869227de9fb08b67333c8bd012dc73fe4ad4ed5f3ff3db981f2b9595191ecde20ea47c7495d3ce1ac6510bc97de9a0095b0086fb17698210497935e6a8fa2e17cd70e6bb3daf6c8e06674e124c5447d6d841a17d46316b8ca7ffb0d731f27").to_vec().try_into().expect("signature too long"),
@@ -3616,7 +3615,6 @@ pub fn block_update<
                 }
             },
         },
-        block_body_root: hex!("ad1b3be000eab0cd26d809a7f50372213c9d0b8a8ea0dd762cb0f9c817b0908d").into(),
         sync_aggregate: SyncAggregate{
             sync_committee_bits: hex!("05efefd2f7f4f777ed46476cbeff7bc37db995cffbb5effbfffab66fed73bfcf354efffdfdbff7bfebdff575fffbfbfe37dfd6deffffdff52dd5e7ff7fd9d7b9").to_vec().try_into().expect("too many pubkeys"),
             sync_committee_signature: hex!("859326de544fa047c553ab7d1f65e19474daf1f147b5c59c2bfd8a0bc489b6dbae1d70260a9a6a1ffc98175cf7636bb50898f505392374d84bad4f22834a80bb0dd69687733978820eec008dd387d8c8fb557650708f308ae88f9b470cf766e1").to_vec().try_into().expect("signature too long"),

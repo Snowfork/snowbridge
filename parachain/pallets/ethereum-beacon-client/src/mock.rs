@@ -230,8 +230,12 @@ pub fn get_sync_committee_test_data() -> SyncCommitteeTest {
 
 pub fn get_block_body_test_data() -> BlockBodyTest {
 	let update = get_header_update();
+	let result: H256 = match config::IS_MINIMAL {
+		true => hex!("332cbf177a081616822905703c4bf026dad64b6d726a59f5b46ecf1661f81808").into(),
+		false => hex!("ad1b3be000eab0cd26d809a7f50372213c9d0b8a8ea0dd762cb0f9c817b0908d").into(),
+	};
 
-	BlockBodyTest { body: update.block.body, result: update.block_body_root }
+	BlockBodyTest { body: update.block.body, result: result }
 }
 
 pub fn get_bls_signature_verify_test_data() -> BLSSignatureVerifyTest {

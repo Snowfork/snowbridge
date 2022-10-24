@@ -39,14 +39,14 @@ func New(ctx context.Context, eg *errgroup.Group, writer *writer.ParachainWriter
 }
 
 func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber <-chan uint64) error {
-	lastVerifiedBlockNumber, err := m.writer.GetLastBasicChannelMessage()
+	lastVerifiedBlockNumber, err := m.writer.GetLastBasicChannelBlockNumber()
 	if err != nil {
-		return fmt.Errorf("fetch last basic channel message block number")
+		return fmt.Errorf("fetch last basic channel message block number: %w", err)
 	}
 
-	addressNonceMap, err := m.writer.GetLastBasicChannelNoncesByAddresses(m.addresses)
+	addressNonceMap, err := m.writer.GetLastBasicChannelNonceByAddresses(m.addresses)
 	if err != nil {
-		return fmt.Errorf("fetch last basic channel message nonce")
+		return fmt.Errorf("fetch last basic channel message nonce: %w", err)
 	}
 
 	addressNonzeroNonceMap := make(map[common.Address]uint64, len(addressNonceMap))
@@ -75,7 +75,7 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 
 		basicPayload.Messages = filterMessagesByLastNonces(basicPayload.Messages, addressNonzeroNonceMap)
 
-		err = m.writeMessages(ctx, basicPayload)
+		err = m.writeBasicMessages(ctx, basicPayload)
 		if err != nil {
 			return err
 		}
@@ -113,7 +113,7 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 					return err
 				}
 
-				err = m.writeMessages(ctx, basicPayload)
+				err = m.writeBasicMessages(ctx, basicPayload)
 				if err != nil {
 					return err
 				}
@@ -127,14 +127,14 @@ func (m *Message) SyncBasic(ctx context.Context, eg *errgroup.Group, blockNumber
 }
 
 func (m *Message) SyncIncentivized(ctx context.Context, eg *errgroup.Group, blockNumber <-chan uint64) error {
-	lastVerifiedBlockNumber, err := m.writer.GetLastIncentivizedChannelMessage()
+	lastVerifiedBlockNumber, err := m.writer.GetLastIncentivizedChannelBlockNumber()
 	if err != nil {
-		return fmt.Errorf("fetch last incentivized channel message block number")
+		return fmt.Errorf("fetch last incentivized channel message block number: %w", err)
 	}
 
 	nonce, err := m.writer.GetLastIncentivizedChannelNonce()
 	if err != nil {
-		return fmt.Errorf("fetch last incentivized channel message nonce")
+		return fmt.Errorf("fetch last incentivized channel message nonce: %w", err)
 	}
 
 	log.WithFields(log.Fields{
@@ -162,7 +162,7 @@ func (m *Message) SyncIncentivized(ctx context.Context, eg *errgroup.Group, bloc
 			"incentivizedPayload": incentivizedPayload,
 		}).Info("writing incentivized messages")
 
-		err = m.writeMessages(ctx, incentivizedPayload)
+		err = m.writeIncentivizedMessages(ctx, incentivizedPayload)
 		if err != nil {
 			return err
 		}
@@ -193,7 +193,7 @@ func (m *Message) SyncIncentivized(ctx context.Context, eg *errgroup.Group, bloc
 					return err
 				}
 
-				err = m.writeMessages(ctx, incentivizedPayload)
+				err = m.writeIncentivizedMessages(ctx, incentivizedPayload)
 				if err != nil {
 					return err
 				}
@@ -206,11 +206,54 @@ func (m *Message) SyncIncentivized(ctx context.Context, eg *errgroup.Group, bloc
 	return nil
 }
 
-func (m *Message) writeMessages(ctx context.Context, payload ParachainPayload) error {
+func (m *Message) writeBasicMessages(ctx context.Context, payload ParachainPayload) error {
+	log.WithField("count", len(payload.Messages)).Info("writing basic messages")
+
 	for _, msg := range payload.Messages {
-		_, err := m.writer.WriteToParachain(ctx, msg.Call, msg.Args...)
+		err := m.writer.WriteToParachainAndWatch(ctx, msg.Call, msg.Args...)
 		if err != nil {
 			return err
+		}
+
+		err = m.checkMessageVerificationResult(msg.Origin, msg.Nonce)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Message) checkMessageVerificationResult(msgAddress common.Address, msgNonce uint64) error {
+	nonce, err := m.writer.GetLastBasicChannelNonceByAddress(msgAddress)
+	if err != nil {
+		return fmt.Errorf("fetch last basic channel message nonces by addresses: %w", err)
+	}
+
+	if nonce != msgNonce {
+		return fmt.Errorf("last basic message verification failed for address %s (expected nonce: %d, actual nonce: %d)", msgAddress, msgNonce, nonce)
+	}
+
+	log.WithFields(log.Fields{"nonce": msgNonce, "address": msgAddress}).Info("basic message verified successfully")
+	return nil
+}
+
+func (m *Message) writeIncentivizedMessages(ctx context.Context, payload ParachainPayload) error {
+	log.WithField("count", len(payload.Messages)).Info("writing incentivized messages")
+
+	for _, msg := range payload.Messages {
+		err := m.writer.WriteToParachainAndWatch(ctx, msg.Call, msg.Args...)
+		if err != nil {
+			return err
+		}
+
+		lastNonce, err := m.writer.GetLastIncentivizedChannelNonce()
+		if err != nil {
+			return err
+		}
+
+		if lastNonce != msg.Nonce {
+			return fmt.Errorf("last incentivized message verification failed (nonce: %d)", lastNonce)
 		}
 	}
 
