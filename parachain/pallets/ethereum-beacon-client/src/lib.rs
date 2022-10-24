@@ -21,7 +21,7 @@ use frame_system::ensure_signed;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_std::prelude::*;
-use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate, ExecutionHeaderState};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
 
@@ -105,12 +105,19 @@ pub mod pallet {
 		InvalidSignaturePoint,
 		InvalidAggregatePublicKeys,
 		InvalidHash,
+		InvalidSyncCommitteeBits,
 		SignatureVerificationFailed,
 		NoBranchExpected,
 		HeaderNotFinalized,
 		MissingHeader,
 		InvalidProof,
-		DecodeFailed
+		DecodeFailed,
+		BlockBodyHashTreeRootFailed,
+		HeaderHashTreeRootFailed,
+		SyncCommitteeHashTreeRootFailed,
+		SigningRootHashTreeRootFailed,
+		ForkDataHashTreeRootFailed,
+		ExecutionHeaderNotLatest
 	}
 
 	#[pallet::hooks]
@@ -134,10 +141,13 @@ pub mod pallet {
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
+	pub(super) type LatestFinalizedHeaderHash<T: Config> = StorageValue<_, H256, ValueQuery>;
+
+	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestFinalizedHeaderHash<T: Config> = StorageValue<_, H256, ValueQuery>;
+	pub(super) type LatestExecutionHeaderState<T: Config> = StorageValue<_, ExecutionHeaderState, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
@@ -190,7 +200,7 @@ pub mod pallet {
 			if let Err(err) = Self::process_sync_committee_period_update(sync_committee_period_update) {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"Sync committee period update failed with error {:?}",
+					"💫 Sync committee period update failed with error {:?}",
 					err
 				);
 				return Err(err);
@@ -224,7 +234,7 @@ pub mod pallet {
 			if let Err(err) = Self::process_finalized_header(finalized_header_update) {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"Finalized header update failed with error {:?}",
+					"💫 Finalized header update failed with error {:?}",
 					err
 				);
 				return Err(err);
@@ -259,7 +269,7 @@ pub mod pallet {
 			if let Err(err) = Self::process_header(update) {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"Header update failed with error {:?}",
+					"💫 Header update failed with error {:?}",
 					err
 				);
 				return Err(err);
@@ -289,7 +299,7 @@ pub mod pallet {
 			let period = Self::compute_current_sync_period(initial_sync.header.slot);
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
-				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?.into();
 
 			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 			Self::store_finalized_header(block_root, initial_sync.header);
@@ -302,7 +312,7 @@ pub mod pallet {
 			update: SyncCommitteePeriodUpdateOf<T>,
 		) -> DispatchResult {
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
+				.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 			Self::verify_sync_committee(
 				update.next_sync_committee.clone(),
@@ -313,7 +323,7 @@ pub mod pallet {
 			)?;
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?.into();
 			Self::verify_header(
 				block_root,
 				update.finality_branch,
@@ -343,11 +353,11 @@ pub mod pallet {
 
 		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
+				.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?.into();
 			Self::verify_header(
 				block_root,
 				update.finality_branch,
@@ -385,15 +395,8 @@ pub mod pallet {
 			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
 
 			let body_root = merkleization::hash_tree_root_beacon_body(update.block.body.clone())
-				.map_err(|_| DispatchError::Other("Beacon body hash tree root failed"))?;
+				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 			let body_root_hash: H256 = body_root.into();
-			if body_root_hash != update.block_body_root {
-				log::warn!(target: "ethereum-beacon-client",
-					"body root hash incorrect, expected: {:?}, got {:?}.",
-					update.block_body_root,
-					body_root_hash
-				);
-			}
 
 			let header = BeaconHeader {
 				slot: update.block.slot,
@@ -403,9 +406,12 @@ pub mod pallet {
 				body_root: body_root_hash,
 			};
 
+			let beacon_block_root: H256 = merkleization::hash_tree_root_beacon_header(header.clone())
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?.into();
+
 			let validators_root = <ValidatorsRoot<T>>::get();
 			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
+				.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
@@ -444,7 +450,7 @@ pub mod pallet {
 				base_fee_per_gas: execution_payload.base_fee_per_gas,
 				block_hash: execution_payload.block_hash,
 				transactions_root: execution_payload.transactions_root,
-			});
+			}, block_slot, beacon_block_root);
 
 			Ok(())
 		}
@@ -505,7 +511,7 @@ pub mod pallet {
 
 			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
 			if let Err(e) = agg_pub_key_res {
-				log::error!(target: "ethereum-beacon-client", "invalid public keys: {:?}.", e);
+				log::error!(target: "ethereum-beacon-client", "💫 invalid public keys: {:?}.", e);
 				return Err(Error::<T>::InvalidAggregatePublicKeys.into());
 			}
 
@@ -525,7 +531,7 @@ pub mod pallet {
 			domain: Domain,
 		) -> Result<Root, DispatchError> {
 			let beacon_header_root = merkleization::hash_tree_root_beacon_header(beacon_header)
-				.map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?;
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			let header_hash_tree_root: H256 = beacon_header_root.into();
 
@@ -533,7 +539,7 @@ pub mod pallet {
 				object_root: header_hash_tree_root,
 				domain,
 			})
-			.map_err(|_| DispatchError::Other("Signing root hash tree root failed"))?;
+			.map_err(|_| Error::<T>::SigningRootHashTreeRootFailed)?;
 
 			Ok(hash_root.into())
 		}
@@ -547,7 +553,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sync_committee_root =
 				merkleization::hash_tree_root_sync_committee(sync_committee)
-					.map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
+					.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
 			ensure!(
 				Self::is_valid_merkle_branch(
@@ -632,12 +638,31 @@ pub mod pallet {
 			Self::deposit_event(Event::BeaconHeaderImported{block_hash: block_root, slot: slot});
 		}
 
-		fn store_execution_header(block_root: H256, header: ExecutionHeaderOf<T>) {
+		fn store_execution_header(block_hash: H256, header: ExecutionHeaderOf<T>, beacon_slot: u64, beacon_block_root: H256) {
 			let block_number = header.block_number;
 
-			<ExecutionHeaders<T>>::insert(block_root, header);
+			<ExecutionHeaders<T>>::insert(block_hash, header);
 
-			Self::deposit_event(Event::ExecutionHeaderImported{block_hash: block_root, block_number: block_number});
+			let mut execution_header_state = <LatestExecutionHeaderState<T>>::get();
+
+			let latest_execution_block_number = execution_header_state.block_number;
+
+			if block_number > latest_execution_block_number {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"💫 Updated latest execution block number to {}.",
+					block_number
+				);
+
+				execution_header_state.beacon_block_root = beacon_block_root;
+				execution_header_state.beacon_slot = beacon_slot;
+				execution_header_state.block_hash = block_hash;
+				execution_header_state.block_number = block_number;
+
+				<LatestExecutionHeaderState<T>>::set(execution_header_state);
+			}
+
+			Self::deposit_event(Event::ExecutionHeaderImported{block_hash: block_hash, block_number: block_number});
 		}
 
 		fn store_validators_root(validators_root: H256) {
@@ -689,7 +714,7 @@ pub mod pallet {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
 			})
-			.map_err(|_| DispatchError::Other("Fork data hash tree root failed"))?;
+			.map_err(|_| Error::<T>::ForkDataHashTreeRootFailed)?;
 
 			Ok(hash_root.into())
 		}
@@ -749,7 +774,7 @@ pub mod pallet {
 			let sync_committee = <SyncCommittees<T>>::get(period);
 
 			if sync_committee.pubkeys.len() == 0 {
-				log::error!(target: "ethereum-beacon-client", "Sync committee for period {} missing", period);
+				log::error!(target: "ethereum-beacon-client", "💫 Sync committee for period {} missing", period);
 				return Err(Error::<T>::SyncCommitteeMissing.into());
 			}
 
@@ -794,7 +819,7 @@ pub mod pallet {
 				Err(err) => {
 					log::trace!(
 						target: "ethereum-beacon-client",
-						"Failed to decode transaction receipt: {}",
+						"💫 Failed to decode transaction receipt: {}",
 						err
 					);
 					Err(Error::<T>::InvalidProof.into())
@@ -821,9 +846,9 @@ pub mod pallet {
 			let receipt = match Self::verify_receipt_inclusion(stored_header, &message.proof) {
 				Ok(receipt) => receipt,
 				Err(err) => {
-					log::trace!(
+					log::error!(
 						target: "ethereum-beacon-client",
-						"Verify receipt inclusion failed for block {}: {:?}",
+						"💫 Verify receipt inclusion failed for block {}: {:?}",
 						message.proof.block_hash,
 						err
 					);
@@ -833,16 +858,16 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"Verified receipt inclusion for transaction at index {} in block {}",
+				"💫 Verified receipt inclusion for transaction at index {} in block {}",
 				message.proof.tx_index, message.proof.block_hash,
 			);
 
 			let log = match rlp::decode(&message.data) {
 				Ok(log) => log,
 				Err(err) => {
-					log::trace!(
+					log::error!(
 						target: "ethereum-beacon-client",
-						"RLP log decoded failed {}: {:?}",
+						"💫 RLP log decoded failed {}: {:?}",
 						message.proof.block_hash,
 						err
 					);
@@ -851,9 +876,9 @@ pub mod pallet {
 			};
 
 			if !receipt.contains_log(&log) {
-				log::trace!(
+				log::error!(
 					target: "ethereum-beacon-client",
-					"Event log not found in receipt for transaction at index {} in block {}",
+					"💫 Event log not found in receipt for transaction at index {} in block {}",
 					message.proof.tx_index, message.proof.block_hash,
 				);
 				return Err(Error::<T>::InvalidProof.into())
