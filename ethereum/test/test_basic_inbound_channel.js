@@ -46,7 +46,7 @@ describe("BasicInboundChannel", function () {
     });
 
     it("should accept a valid commitment and dispatch messages", async function () {
-      const nonceBeforeSubmit = BigNumber(await this.channel.nonces(submitInput.params.bundle.account));
+      const nonceBeforeSubmit = BigNumber(await this.channel.nonce(submitInput.params.bundle.account));
 
       const { receipt } = await this.channel.submit(
         submitInput.params.bundle,
@@ -55,7 +55,7 @@ describe("BasicInboundChannel", function () {
         submitInput.params.proof,
       ).should.be.fulfilled
 
-      const nonceAfterSubmit = BigNumber(await this.channel.nonces(submitInput.params.bundle.account));
+      const nonceAfterSubmit = BigNumber(await this.channel.nonce(submitInput.params.bundle.account));
       nonceAfterSubmit.minus(nonceBeforeSubmit).should.be.bignumber.equal(1);
 
       const event = interface.decodeEventLog(

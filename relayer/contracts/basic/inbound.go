@@ -45,7 +45,7 @@ type BasicInboundChannelMessageBundle struct {
 
 // BasicInboundChannelMetaData contains all meta data concerning the BasicInboundChannel contract.
 var BasicInboundChannelMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_sourceChannelID\",\"type\":\"uint8\"},{\"internalType\":\"contractParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"id\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"nonces\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sourceChannelID\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint8\",\"name\":\"sourceChannelID\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"account\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"id\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message[]\",\"name\":\"messages\",\"type\":\"tuple[]\"}],\"internalType\":\"structBasicInboundChannel.MessageBundle\",\"name\":\"bundle\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bool[]\",\"name\":\"hashSides\",\"type\":\"bool[]\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_sourceChannelID\",\"type\":\"uint8\"},{\"internalType\":\"contractParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"id\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sourceChannelID\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint8\",\"name\":\"sourceChannelID\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"account\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"id\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message[]\",\"name\":\"messages\",\"type\":\"tuple[]\"}],\"internalType\":\"structBasicInboundChannel.MessageBundle\",\"name\":\"bundle\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bool[]\",\"name\":\"hashSides\",\"type\":\"bool[]\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // BasicInboundChannelABI is the input ABI used to generate the binding from.
@@ -256,12 +256,12 @@ func (_BasicInboundChannel *BasicInboundChannelCallerSession) MAXGASPERMESSAGE()
 	return _BasicInboundChannel.Contract.MAXGASPERMESSAGE(&_BasicInboundChannel.CallOpts)
 }
 
-// Nonces is a free data retrieval call binding the contract method 0x9e317f12.
+// Nonce is a free data retrieval call binding the contract method 0x905da30f.
 //
-// Solidity: function nonces(bytes32 ) view returns(uint64)
-func (_BasicInboundChannel *BasicInboundChannelCaller) Nonces(opts *bind.CallOpts, arg0 [32]byte) (uint64, error) {
+// Solidity: function nonce(bytes32 ) view returns(uint64)
+func (_BasicInboundChannel *BasicInboundChannelCaller) Nonce(opts *bind.CallOpts, arg0 [32]byte) (uint64, error) {
 	var out []interface{}
-	err := _BasicInboundChannel.contract.Call(opts, &out, "nonces", arg0)
+	err := _BasicInboundChannel.contract.Call(opts, &out, "nonce", arg0)
 
 	if err != nil {
 		return *new(uint64), err
@@ -273,18 +273,18 @@ func (_BasicInboundChannel *BasicInboundChannelCaller) Nonces(opts *bind.CallOpt
 
 }
 
-// Nonces is a free data retrieval call binding the contract method 0x9e317f12.
+// Nonce is a free data retrieval call binding the contract method 0x905da30f.
 //
-// Solidity: function nonces(bytes32 ) view returns(uint64)
-func (_BasicInboundChannel *BasicInboundChannelSession) Nonces(arg0 [32]byte) (uint64, error) {
-	return _BasicInboundChannel.Contract.Nonces(&_BasicInboundChannel.CallOpts, arg0)
+// Solidity: function nonce(bytes32 ) view returns(uint64)
+func (_BasicInboundChannel *BasicInboundChannelSession) Nonce(arg0 [32]byte) (uint64, error) {
+	return _BasicInboundChannel.Contract.Nonce(&_BasicInboundChannel.CallOpts, arg0)
 }
 
-// Nonces is a free data retrieval call binding the contract method 0x9e317f12.
+// Nonce is a free data retrieval call binding the contract method 0x905da30f.
 //
-// Solidity: function nonces(bytes32 ) view returns(uint64)
-func (_BasicInboundChannel *BasicInboundChannelCallerSession) Nonces(arg0 [32]byte) (uint64, error) {
-	return _BasicInboundChannel.Contract.Nonces(&_BasicInboundChannel.CallOpts, arg0)
+// Solidity: function nonce(bytes32 ) view returns(uint64)
+func (_BasicInboundChannel *BasicInboundChannelCallerSession) Nonce(arg0 [32]byte) (uint64, error) {
+	return _BasicInboundChannel.Contract.Nonce(&_BasicInboundChannel.CallOpts, arg0)
 }
 
 // ParachainClient is a free data retrieval call binding the contract method 0x1674f9b7.
