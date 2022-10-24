@@ -419,9 +419,12 @@ pub fn run() -> Result<()> {
 
 					Err("Chain runtime doesn't support benchmarking".into())
 				}),
-				BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
 				BenchmarkCmd::Machine(cmd) =>
 					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
+				// NOTE: this allows the Client to leniently implement
+				// new benchmark commands without requiring a companion MR.
+				#[allow(unreachable_patterns)]
+				_ => Err("Benchmarking sub-command unsupported".into()),
 			}
 		},
 		None => {
