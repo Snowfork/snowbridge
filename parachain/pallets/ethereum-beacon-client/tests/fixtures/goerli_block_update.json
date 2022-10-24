@@ -2216,7 +2216,6 @@
             }
         }
     },
-    "block_body_root": "0xad1b3be000eab0cd26d809a7f50372213c9d0b8a8ea0dd762cb0f9c817b0908d",
     "sync_aggregate": {
         "sync_committee_bits": "0x05efefd2f7f4f777ed46476cbeff7bc37db995cffbb5effbfffab66fed73bfcf354efffdfdbff7bfebdff575fffbfbfe37dfd6deffffdff52dd5e7ff7fd9d7b9",
         "sync_committee_signature": "0x859326de544fa047c553ab7d1f65e19474daf1f147b5c59c2bfd8a0bc489b6dbae1d70260a9a6a1ffc98175cf7636bb50898f505392374d84bad4f22834a80bb0dd69687733978820eec008dd387d8c8fb557650708f308ae88f9b470cf766e1"

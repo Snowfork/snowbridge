@@ -89,33 +89,22 @@ type FinalizedHeaderUpdate struct {
 
 type HeaderUpdate struct {
 	Block         scale.BeaconBlock
-	BlockBodyRoot types.H256
 	SyncAggregate scale.SyncAggregate
 	ForkVersion   [4]byte
 }
 
-func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, error) {
-	finalizedHeader, err := s.Client.GetLatestFinalizedUpdate()
-	if err != nil {
-		return []uint64{}, fmt.Errorf("fetch latest finalized update: %w", err)
-	}
-
-	slot, err := strconv.ParseUint(finalizedHeader.Data.AttestedHeader.Slot, 10, 64)
-	if err != nil {
-		return []uint64{}, fmt.Errorf("parse slot as int: %w", err)
-	}
-
-	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(slot)
+func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSlot uint64) ([]uint64, error) {
+	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(currentSlot)
 
 	//The current sync period's next sync committee should be synced too. So even
 	// if the syncing is up to date with the current period, we still need to sync the current
 	// period's next sync committee.
-	if checkpointSyncPeriod == currentSyncPeriod {
+	if lastSyncedPeriod == currentSyncPeriod {
 		return []uint64{currentSyncPeriod}, nil
 	}
 
 	syncPeriodsToFetch := []uint64{}
-	for i := checkpointSyncPeriod; i <= currentSyncPeriod; i++ {
+	for i := lastSyncedPeriod; i <= currentSyncPeriod; i++ {
 		syncPeriodsToFetch = append(syncPeriodsToFetch, i)
 	}
 
@@ -225,15 +214,10 @@ func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, common.Hash, error
 	return finalizedHeaderUpdate, blockRoot, nil
 }
 
-func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
-	block, err := s.Client.GetBeaconBlock(blockRoot)
+func (s *Syncer) GetHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
+	block, err := s.Client.GetBeaconBlockBySlot(slot)
 	if err != nil {
 		return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
-	}
-
-	header, err := s.Client.GetHeader(blockRoot.Hex())
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
 	}
 
 	blockScale, err := block.ToScale()
@@ -252,28 +236,81 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	}
 
 	headerUpdate := HeaderUpdate{
-		Block:         blockScale,
-		BlockBodyRoot: types.NewH256(header.BodyRoot.Bytes()),
-		ForkVersion:   forkVersion,
+		Block:       blockScale,
+		ForkVersion: forkVersion,
 	}
 
 	return headerUpdate, nil
 }
 
-func (s *Syncer) GetExecutionBlockHash(consensusBlockHash common.Hash) (uint64, error) {
-	executionBlockHash, err := s.Client.GetBeaconBlock(consensusBlockHash)
-	if err != nil {
-		return 0, fmt.Errorf("fetch block for last hash: %w", err)
+func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
+	err := ErrNotFound
+	var block BeaconBlockResponse
+	tries := 0
+	maxSlotsMissed := int(s.SlotsInEpoch)
+	for errors.Is(err, ErrNotFound) && tries < maxSlotsMissed {
+		block, err = s.Client.GetBeaconBlockBySlot(slot)
+		if err != nil && !errors.Is(err, ErrNotFound) {
+			return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
+		}
+
+		if errors.Is(err, ErrNotFound) {
+			log.WithField("slot", slot).Info("no block at slot")
+			tries = tries + 1
+			slot = slot + 1
+		}
 	}
 
-	blockNumberString := executionBlockHash.Data.Message.Body.ExecutionPayload.BlockNumber
-
-	blockNumber, err := strconv.ParseUint(blockNumberString, 10, 64)
+	blockScale, err := block.ToScale()
 	if err != nil {
-		return 0, fmt.Errorf("parse last block slot as int: %w", err)
+		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
 	}
 
-	return blockNumber, nil
+	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(blockScale.Slot))
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch current fork version: %w", err)
+	}
+
+	forkVersion, err := hexStringToForkVersion(currentForkVersion)
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("convert fork version: %w", err)
+	}
+
+	headerUpdate := HeaderUpdate{
+		Block:       blockScale,
+		ForkVersion: forkVersion,
+	}
+
+	return headerUpdate, nil
+}
+
+func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
+	block, err := s.Client.GetBeaconBlock(blockRoot)
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
+	}
+
+	blockScale, err := block.ToScale()
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
+	}
+
+	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(blockScale.Slot))
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch current fork version: %w", err)
+	}
+
+	forkVersion, err := hexStringToForkVersion(currentForkVersion)
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("convert fork version: %w", err)
+	}
+
+	headerUpdate := HeaderUpdate{
+		Block:       blockScale,
+		ForkVersion: forkVersion,
+	}
+
+	return headerUpdate, nil
 }
 
 func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, error) {
@@ -318,6 +355,14 @@ func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, erro
 
 func (s *Syncer) ComputeSyncPeriodAtSlot(slot uint64) uint64 {
 	return slot / (s.SlotsInEpoch * s.EpochsPerSyncCommitteePeriod)
+}
+
+func (s *Syncer) ComputeEpochAtSlot(slot uint64) uint64 {
+	return slot / s.SlotsInEpoch
+}
+
+func (s *Syncer) IsStartOfEpoch(slot uint64) bool {
+	return slot%s.SlotsInEpoch == 0
 }
 
 func IsInArray(values []uint64, toCheck uint64) bool {

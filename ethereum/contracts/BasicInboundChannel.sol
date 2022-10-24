@@ -10,7 +10,7 @@ contract BasicInboundChannel {
 
     uint8 public immutable sourceChannelID;
 
-    mapping(bytes32 => uint64) public nonces;
+    mapping(bytes32 => uint64) public nonce;
 
     ParachainClient public parachainClient;
 
@@ -45,12 +45,12 @@ contract BasicInboundChannel {
 
         require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
         require(bundle.sourceChannelID == sourceChannelID, "Invalid source channel");
-        require(bundle.nonce == nonces[bundle.account] + 1, "Invalid nonce");
+        require(bundle.nonce == nonce[bundle.account] + 1, "Invalid nonce");
         require(
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
-        nonces[bundle.account]++;
+        nonce[bundle.account]++;
         dispatch(bundle);
     }
 

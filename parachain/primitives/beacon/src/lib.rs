@@ -109,6 +109,14 @@ impl<'de> Deserialize<'de> for PublicKey {
 	}
 }
 
+#[derive(Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub struct ExecutionHeaderState {
+	pub beacon_block_root: H256,
+	pub beacon_slot: u64,
+	pub block_hash: H256,
+	pub block_number: u64,
+}
+
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(
@@ -219,10 +227,6 @@ pub struct BlockUpdate<
 	AttestationSize,
 	ValidatorCommitteeSize,
 	SyncCommitteeSize>,
-	//  // Only used for debugging purposes, to compare the hash tree
-	// root of the block body to the body hash retrieved from the API.
-	// Can be removed later.
-	pub block_body_root: H256,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_fork_version"))]
 	pub fork_version: ForkVersion,

@@ -1,14 +1,23 @@
 # Upgrades
 
-In general, the design for our upgradable smart contracts is quite simple, relying on versioning of immutable contracts.
+The Polkadot side of our bridge is easily upgradable using forkless runtime upgrades. On the Ethereum side, it is more complicated, since smart contracts are immutable.
 
-This stands in contrast with the [proxy pattern](https://docs.openzeppelin.com/contracts/4.x/api/proxy), which while being very popular does have [drawbacks](https://blog.trailofbits.com/2018/09/05/contract-upgrade-anti-patterns/) which could impact the viability and security of the bridge.
+In general, the design for our upgradable smart contracts is quite simple, relying on versioning of immutable contracts. This stands in contrast with the [proxy pattern](https://docs.openzeppelin.com/contracts/4.x/api/proxy), which while being very popular does have [drawbacks](https://blog.trailofbits.com/2018/09/05/contract-upgrade-anti-patterns/) which could impact the viability and security of the bridge.
 
-## Migrations
+## BEEFY Light Client
 
-The actual upgrade steps will be executed by a _Migration_ smart contract which will be deployed and used only once.
+There are various constraints and circular dependencies which make upgrading the client more complicated.
 
-Since the upgrade steps are defined as code, it is simpler to test and audit.
+1. The client is upgraded using cross-chain governance&#x20;
+2. Cross-chain governance relies on the client to be operational and bug-free
+3. For non-compatible changes in BEEFY consensus, the client needs to be upgraded before the relay chain.
+4. A client is only operational once it has been configured with the details of the current and next validator set.&#x20;
+
+To untangle these problems, we have the following strategy:
+
+* The ethereum side of the bridge can have more than one registered client, and each client supports a different version of BEEFY.
+* If a registered client has critical bug that breaks the bridge, then the [BeefyDAO](governance.md#beefydao) is allowed to replace that client with one that works.
+* Newly registered clients will be configured with the current and next validator set from the previously registered client that is being replaced.
 
 ## Apps
 
