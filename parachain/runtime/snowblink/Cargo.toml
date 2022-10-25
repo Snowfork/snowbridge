@@ -10,7 +10,7 @@ repository = "https://github.com/Snowfork/snowbridge"
 targets = [ "x86_64-unknown-linux-gnu" ]
 
 [dependencies]
-serde = { version = "1.0.137", optional = true }
+serde = { version = "1.0.144", optional = true }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = [ "derive" ], default-features = false }
 scale-info = { version = "2.0.1", default-features = false, features = [ "derive" ] }
 #getrandom = { version = "0.2.1", features = [ "js" ] }
