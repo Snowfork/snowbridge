@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode};
 use enum_iterator::IntoEnumIterator;
-use frame_support::{scale_info::TypeInfo, RuntimeDebug};
+use frame_support::{scale_info::TypeInfo, RuntimeDebug, weights::Weight};
 use sp_core::{H160, H256};
 use sp_runtime::DigestItem;
 use sp_std::vec::Vec;
@@ -26,8 +26,10 @@ pub enum ChannelId {
 pub struct Message {
 	/// The raw RLP-encoded message data.
 	pub data: Vec<u8>,
-	/// Input to the message verifier
+	/// Input to the message verifier.
 	pub proof: Proof,
+	/// Untrusted weight declared by relayer.
+	pub weight: Weight,
 }
 
 /// Verification input for the message verifier.

@@ -6,7 +6,7 @@
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::dispatch::{DispatchError, DispatchResult};
+use frame_support::{dispatch::{DispatchError, DispatchResult}, weights::Weight};
 use frame_system::Config;
 use snowbridge_ethereum::{Header, Log, U256};
 use sp_core::H160;
@@ -46,7 +46,7 @@ pub trait MessageCommitment {
 
 /// Dispatch a message
 pub trait MessageDispatch<T: Config, MessageId> {
-	fn dispatch(source: H160, id: MessageId, payload: &[u8]);
+	fn dispatch(source: H160, id: MessageId, payload: &[u8], untrusted_weight: Option<Weight>);
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_dispatch_event(id: MessageId) -> Option<<T as Config>::Event>;
 }

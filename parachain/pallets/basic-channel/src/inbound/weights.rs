@@ -1,3 +1,12 @@
-pub trait WeightInfo {}
+use frame_support::weights::Weight;
 
-impl WeightInfo for () {}
+pub trait WeightInfo {
+    fn submit() -> Weight;
+}
+
+// TODO: placeholder implementation, generate weights properly
+impl WeightInfo for () {
+    fn submit() -> Weight {
+        42
+    }
+}

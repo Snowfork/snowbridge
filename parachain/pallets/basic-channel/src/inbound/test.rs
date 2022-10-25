@@ -5,6 +5,7 @@ use frame_support::{
 	dispatch::DispatchError,
 	parameter_types,
 	traits::{Everything, GenesisBuild},
+	weights::Weight,
 };
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
@@ -87,7 +88,7 @@ impl Verifier for MockVerifier {
 pub struct MockMessageDispatch;
 
 impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
-	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
+	fn dispatch(_: H160, _: MessageId, _: &[u8], _: Option<Weight>) {}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_dispatch_event(_: MessageId) -> Option<<Test as frame_system::Config>::Event> {
@@ -181,6 +182,7 @@ fn test_submit_with_invalid_source_channel() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			weight: 0
 		};
 		assert_noop!(
 			BasicInboundChannel::submit(origin.clone(), message.clone()),
@@ -203,6 +205,7 @@ fn test_submit() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			weight: 0,
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_1.clone()));
 
@@ -218,6 +221,7 @@ fn test_submit() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			weight: 0,
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_2.clone()));
 
@@ -241,6 +245,7 @@ fn test_submit_with_invalid_nonce() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			weight: 0,
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message.clone()));
 

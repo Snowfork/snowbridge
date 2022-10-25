@@ -49,7 +49,7 @@ pub use pallet::*;
 pub mod pallet {
 
 	use super::*;
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, weights::Weight};
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
@@ -104,7 +104,7 @@ pub mod pallet {
 	pub type MessageIdOf<T> = <T as Config>::MessageId;
 
 	impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Pallet<T> {
-		fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8]) {
+		fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8], untrusted_weight: Option<Weight>) {
 			let call = match <T as Config>::Call::decode(&mut &payload[..]) {
 				Ok(call) => call,
 				Err(_) => {
@@ -112,6 +112,13 @@ pub mod pallet {
 					return
 				},
 			};
+
+			if let Some(declared_weight) = untrusted_weight {
+				if declared_weight < call.get_dispatch_info().weight {
+					Self::deposit_event(Event::MessageRejected(id));
+					return
+				}
+			}
 
 			if !T::CallFilter::contains(&call) {
 				Self::deposit_event(Event::MessageRejected(id));
@@ -229,7 +236,7 @@ mod tests {
 			let message = Call::System(frame_system::Call::remark { remark: vec![] }).encode();
 
 			System::set_block_number(1);
-			Dispatch::dispatch(source, id, &message);
+			Dispatch::dispatch(source, id, &message, None);
 
 			assert_eq!(
 				System::events(),
@@ -254,7 +261,7 @@ mod tests {
 			let message: Vec<u8> = vec![1, 2, 3];
 
 			System::set_block_number(1);
-			Dispatch::dispatch(source, id, &message);
+			Dispatch::dispatch(source, id, &message, None);
 
 			assert_eq!(
 				System::events(),
@@ -276,7 +283,7 @@ mod tests {
 			let message = Call::System(frame_system::Call::set_code { code: vec![] }).encode();
 
 			System::set_block_number(1);
-			Dispatch::dispatch(source, id, &message);
+			Dispatch::dispatch(source, id, &message, None);
 
 			assert_eq!(
 				System::events(),
