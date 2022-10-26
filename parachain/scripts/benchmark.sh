@@ -10,4 +10,4 @@ target/release/snowbridge benchmark \
   --repeat 20 \
   --steps 50 \
   --output pallets/incentivized-channel/src/inbound/weights.rs \
-  --template module-weight-template.hbs
+  --template templates/module-weight-template.hbs

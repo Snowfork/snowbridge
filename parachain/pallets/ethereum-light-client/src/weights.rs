@@ -24,7 +24,7 @@
 // --output
 // pallets/ethereum-light-client/src/weights.rs
 // --template
-// module-weight-template.hbs
+// templates/module-weight-template.hbs
 
 
 #![cfg_attr(rustfmt, rustfmt_skip)]

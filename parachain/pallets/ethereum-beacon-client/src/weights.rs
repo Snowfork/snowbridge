@@ -22,7 +22,7 @@
 // --output
 // pallets/ethereum-beacon-client/src/weights.rs
 // --template
-// module-weight-template.hbs
+// templates/module-weight-template.hbs
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![allow(unused_parens)]
@@ -32,17 +32,47 @@ use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use sp_std::marker::PhantomData;
 
 /// Weight functions needed for ethereum_beacon_client.
-pub trait WeightInfo {	fn sync_committee_period_update() -> Weight;	fn import_finalized_header() -> Weight;	fn import_execution_header() -> Weight;}
+pub trait WeightInfo {
+	fn sync_committee_period_update() -> Weight;
+	fn import_finalized_header() -> Weight;
+	fn import_execution_header() -> Weight;
+}
 
 /// Weights for ethereum_beacon_client using the Snowbridge node and recommended hardware.
 pub struct SnowbridgeWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {	fn sync_committee_period_update() -> Weight {
-		Weight::from_ref_time(170_683_416_000 as u64)			.saturating_add(T::DbWeight::get().reads(4))			.saturating_add(T::DbWeight::get().writes(2))	}	fn import_finalized_header() -> Weight {
-		Weight::from_ref_time(166_954_505_000 as u64)			.saturating_add(T::DbWeight::get().reads(3))			.saturating_add(T::DbWeight::get().writes(1))	}	fn import_execution_header() -> Weight {
-		Weight::from_ref_time(162_194_827_000 as u64)			.saturating_add(T::DbWeight::get().reads(3))			.saturating_add(T::DbWeight::get().writes(1))	}}
+impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
+	fn sync_committee_period_update() -> Weight {
+		(175_039_777_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	fn import_finalized_header() -> Weight {
+		(171_871_518_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	fn import_execution_header() -> Weight {
+		(166_011_885_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+}
 
 // For backwards compatibility and tests
-impl WeightInfo for () {	fn sync_committee_period_update() -> Weight {
-		Weight::from_ref_time(170_683_416_000 as u64)			.saturating_add(RocksDbWeight::get().reads(4))			.saturating_add(RocksDbWeight::get().writes(2))	}	fn import_finalized_header() -> Weight {
-		Weight::from_ref_time(166_954_505_000 as u64)			.saturating_add(RocksDbWeight::get().reads(3))			.saturating_add(RocksDbWeight::get().writes(1))	}	fn import_execution_header() -> Weight {
-		Weight::from_ref_time(162_194_827_000 as u64)			.saturating_add(RocksDbWeight::get().reads(3))			.saturating_add(RocksDbWeight::get().writes(1))	}}
+impl WeightInfo for () {
+	fn sync_committee_period_update() -> Weight {
+		(175_039_777_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	fn import_finalized_header() -> Weight {
+		(171_871_518_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn import_execution_header() -> Weight {
+		(166_011_885_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+}

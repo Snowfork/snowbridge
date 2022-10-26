@@ -7,6 +7,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod weights;
+
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, U256};
@@ -642,7 +644,7 @@ impl ethereum_beacon_client::Config for Runtime {
     type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
     type MaxAttestationSize = MaxAttestationSize;
     type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
-    type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
+    type WeightInfo = weights::ethereum_beacon_client::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {

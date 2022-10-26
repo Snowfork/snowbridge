@@ -25,7 +25,7 @@
 // --output
 // pallets/incentivized-channel/src/inbound/weights.rs
 // --template
-// module-weight-template.hbs
+// templates/module-weight-template.hbs
 
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
