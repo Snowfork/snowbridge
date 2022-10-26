@@ -133,6 +133,7 @@ const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["86d9ac0bab011917f57b9e9607833b4340f9
 //   topics: ...
 //   data:
 //     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
+//     TODO: fill in account
 //     nonce: 1
 //     payload ...
 const MESSAGE_DATA_0: [u8; 251] = hex!(
@@ -153,6 +154,7 @@ const MESSAGE_DATA_0: [u8; 251] = hex!(
 //   topics: ...
 //   data:
 //     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
+//     TODO: fill in account
 //     nonce: 1
 //     payload ...
 const MESSAGE_DATA_1: [u8; 251] = hex!(
@@ -197,9 +199,25 @@ fn test_submit() {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = Origin::signed(relayer);
 
+		// Submit message 0
+		let message_0 = Message {
+			data: MESSAGE_DATA_0.into(),
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+			weight: 0,
+		};
+		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_0.clone()));
+
+		let event_origin_0 = parse_origin(message_0);
+		let nonce: u64 = <Nonce<Test>>::get(event_origin_0.clone());
+		assert_eq!(nonce, 1);
+
 		// Submit message 1
 		let message_1 = Message {
-			data: MESSAGE_DATA_0.into(),
+			data: MESSAGE_DATA_1.into(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -209,24 +227,8 @@ fn test_submit() {
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_1.clone()));
 
-		let event_origin = parse_origin(message_1);
-		let nonce: u64 = <Nonce<Test>>::get(event_origin.clone());
-		assert_eq!(nonce, 1);
-
-		// Submit message 2
-		let message_2 = Message {
-			data: MESSAGE_DATA_1.into(),
-			proof: Proof {
-				block_hash: Default::default(),
-				tx_index: Default::default(),
-				data: Default::default(),
-			},
-			weight: 0,
-		};
-		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_2.clone()));
-
-		let event_origin_2 = parse_origin(message_2);
-		let nonce: u64 = <Nonce<Test>>::get(event_origin_2.clone());
+		let event_origin_1 = parse_origin(message_1);
+		let nonce: u64 = <Nonce<Test>>::get(event_origin_1.clone());
 		assert_eq!(nonce, 2);
 	});
 }
