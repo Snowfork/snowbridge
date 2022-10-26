@@ -35,6 +35,7 @@ describe("IncentivizedOutboundChannel", function () {
       const txPromise = this.channel.submit(
         origin,
         testPayload,
+        0,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
       printTxPromiseGas(txPromise)
@@ -53,18 +54,21 @@ describe("IncentivizedOutboundChannel", function () {
       await this.channel.submit(
         origin,
         testPayload,
+        0,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
       await this.channel.submit(
         origin,
         testPayload,
+        0,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
       const { receipt } = await this.channel.submit(
         origin,
         testPayload,
+        0,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
@@ -81,6 +85,7 @@ describe("IncentivizedOutboundChannel", function () {
       await this.channel.submit(
         origin,
         testPayload,
+        0,
         { from: appAddress, value: 0 }
       ).should.not.be.fulfilled;
 
