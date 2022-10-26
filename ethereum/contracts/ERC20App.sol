@@ -103,7 +103,7 @@ contract ERC20App is AccessControl {
         if (!tokens[_token]) {
             bytes memory createCall = encodeCreateTokenCall(_token);
             tokens[_token] = true;
-            channel.submit(msg.sender, createCall);
+            channel.submit(msg.sender, createCall, 0);
         }
 
         bytes memory call;
@@ -113,7 +113,7 @@ contract ERC20App is AccessControl {
             call = encodeCallWithParaId(_token, msg.sender, _recipient, _amount, _paraId, _fee);
         }
 
-        channel.submit(msg.sender, call);
+        channel.submit(msg.sender, call, 0);
 
         require(
             IERC20(_token).transferFrom(msg.sender, address(this), _amount),

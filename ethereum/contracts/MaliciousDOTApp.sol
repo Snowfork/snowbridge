@@ -73,7 +73,7 @@ contract MaliciousDOTApp is FeeController, AccessControl {
         );
 
         bytes memory call = encodeCall(msg.sender, _recipient, _amount);
-        channel.submit(msg.sender, call);
+        channel.submit(msg.sender, call, 0);
     }
 
     function mint(
