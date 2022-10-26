@@ -6,12 +6,13 @@ use sp_std::{convert::TryFrom, prelude::*};
 
 // Used to decode a raw Ethereum log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
-	signature: "Message(address,address,uint64,bytes)",
+	signature: "Message(address,address,uint64,bytes,uint64)",
 	inputs: &[
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Uint(64), indexed: false },
 		Param { kind: ParamKind::Bytes, indexed: false },
+		Param { kind: ParamKind::Uint(64), indexed: false },
 	],
 	anonymous: false,
 };
@@ -29,6 +30,8 @@ pub struct Envelope {
 	pub nonce: u64,
 	/// The inner payload generated from the source application.
 	pub payload: Vec<u8>,
+	/// The weight declared by the app
+	pub weight: u64
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
@@ -62,7 +65,12 @@ impl TryFrom<Log> for Envelope {
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		Ok(Self { channel: log.address, account, source, nonce, payload })
+		let weight = match iter.next().ok_or(EnvelopeDecodeError)? {
+			Token::Uint(weight) => weight.low_u64(),
+			_ => return Err(EnvelopeDecodeError),
+		};
+
+		Ok(Self { channel: log.address, source, account, nonce, payload, weight })
 	}
 }
 
