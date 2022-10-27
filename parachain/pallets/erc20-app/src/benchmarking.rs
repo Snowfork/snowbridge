@@ -7,7 +7,7 @@ use sp_core::H160;
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
-use crate::{Address, AssetId, Call, Config as Erc20AppConfig, Pallet as Erc20App};
+use crate::{Address, AssetId, RuntimeCall, Config as Erc20AppConfig, Pallet as Erc20App};
 use snowbridge_core::ChannelId;
 
 use pallet_assets::Config as AssetsConfig;
@@ -40,7 +40,7 @@ benchmarks! {
 		} else {
 				return Err("Failed to extract caller address from origin".into());
 		}
-		let call = Call::<T>::create { token: token };
+		let call = RuntimeCall::<T>::create { token: token };
 		call.dispatch_bypass_filter(origin)?;
 
 		let asset_id = <AssetId<T>>::get(token).unwrap();
@@ -69,7 +69,7 @@ benchmarks! {
 		} else {
 				return Err("Failed to extract caller address from origin".into());
 		}
-		let call = Call::<T>::create { token: token };
+		let call = RuntimeCall::<T>::create { token: token };
 		call.dispatch_bypass_filter(origin)?;
 
 		let asset_id = <AssetId<T>>::get(token).unwrap();
@@ -104,12 +104,12 @@ benchmarks! {
 		} else {
 				return Err("Failed to extract caller address from origin".into());
 		}
-		let call = Call::<T>::create { token: token };
+		let call = RuntimeCall::<T>::create { token: token };
 		call.dispatch_bypass_filter(origin.clone())?;
 
 		let asset_id = <AssetId<T>>::get(token).unwrap();
 
-		let call = Call::<T>::mint { token: token, sender: sender, recipient: recipient_lookup, amount : amount, destination: None };
+		let call = RuntimeCall::<T>::mint { token: token, sender: sender, recipient: recipient_lookup, amount : amount, destination: None };
 
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {

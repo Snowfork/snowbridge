@@ -44,7 +44,7 @@ mod beacon {
 			ValidatorsRoot::<Test>::set(get_validators_root());
 
 			assert_ok!(EthereumBeaconClient::sync_committee_period_update(
-				Origin::signed(1),
+				RuntimeOrigin::signed(1),
 				update.clone(),
 			));
 
@@ -71,7 +71,7 @@ mod beacon {
 			ValidatorsRoot::<Test>::set(get_validators_root());
 
 			assert_ok!(EthereumBeaconClient::import_finalized_header(
-				Origin::signed(1),
+				RuntimeOrigin::signed(1),
 				update.clone()
 			));
 
@@ -98,7 +98,7 @@ mod beacon {
 			LatestFinalizedHeaderSlot::<Test>::set(update.block.slot);
 
 			assert_ok!(EthereumBeaconClient::import_execution_header(
-				Origin::signed(1),
+				RuntimeOrigin::signed(1),
 				update.clone()
 			));
 
@@ -119,7 +119,7 @@ mod beacon {
 			);
 
 			assert_err!(
-				EthereumBeaconClient::import_finalized_header(Origin::signed(1), update),
+				EthereumBeaconClient::import_finalized_header(RuntimeOrigin::signed(1), update),
 				Error::<Test>::SyncCommitteeMissing
 			);
 		});

@@ -59,26 +59,26 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The overarching event type.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The overarching origin type.
-		type Origin: From<RawOrigin>;
+		type RuntimeOrigin: FromRawOrigin>;
 
 		/// Id of the message. Whenever message is passed to the dispatch module, it emits
 		/// event with this id + dispatch result.
 		type MessageId: Parameter;
 
 		/// The overarching dispatch call type.
-		type Call: Parameter
+		type RuntimeCall: Parameter
 			+ GetDispatchInfo
 			+ Dispatchable<
-				Origin = <Self as Config>::Origin,
+				RuntimeOrigin = <Self as Config>::RuntimeOrigin,
 				PostInfo = frame_support::dispatch::PostDispatchInfo,
 			>;
 
 		/// The pallet will filter all incoming calls right before they're dispatched. If this
 		/// filter rejects the call, special event (`Event::MessageRejected`) is emitted.
-		type CallFilter: Contains<<Self as Config>::Call>;
+		type CallFilter: Contains<<Self as Config>::RuntimeCall>;
 	}
 
 	#[pallet::hooks]
@@ -94,7 +94,7 @@ pub mod pallet {
 		MessageDispatched(T::MessageId, DispatchResult),
 		/// Message has been rejected
 		MessageRejected(T::MessageId),
-		/// We have failed to decode a Call from the message.
+		/// We have failed to decode a RuntimeCall from the message.
 		MessageDecodeFailed(T::MessageId),
 	}
 
@@ -105,7 +105,7 @@ pub mod pallet {
 
 	impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Pallet<T> {
 		fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8]) {
-			let call = match <T as Config>::Call::decode(&mut &payload[..]) {
+			let call = match <T as Config>::RuntimeCall::decode(&mut &payload[..]) {
 				Ok(call) => call,
 				Err(_) => {
 					Self::deposit_event(Event::MessageDecodeFailed(id));
@@ -130,7 +130,7 @@ pub mod pallet {
 		#[cfg(feature = "runtime-benchmarks")]
 		fn successful_dispatch_event(
 			id: MessageIdOf<T>,
-		) -> Option<<T as frame_system::Config>::Event> {
+		) -> Option<<T as frame_system::Config>::RuntimeEvent> {
 			let event: <T as Config>::Event = Event::MessageDispatched(id, Ok(())).into();
 			Some(event.into())
 		}
@@ -159,8 +159,8 @@ mod tests {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Pallet, Call, Storage, Event<T>},
-			Dispatch: dispatch::{Pallet, Storage, Origin, Event<T>},
+			System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
+			Dispatch: dispatch::{Pallet, Storage, RuntimeOrigin, RuntimeEvent<T>},
 		}
 	);
 
@@ -171,16 +171,16 @@ mod tests {
 	}
 
 	impl frame_system::Config for Test {
-		type Origin = Origin;
+		type RuntimeOrigin = RuntimeOrigin;
 		type Index = u64;
-		type Call = Call;
+		type RuntimeCall = RuntimeCall;
 		type BlockNumber = u64;
 		type Hash = H256;
 		type Hashing = BlakeTwo256;
 		type AccountId = AccountId;
 		type Lookup = IdentityLookup<Self::AccountId>;
 		type Header = Header;
-		type Event = Event;
+		type RuntimeEvent = RuntimeEvent;
 		type BlockHashCount = BlockHashCount;
 		type Version = ();
 		type PalletInfo = PalletInfo;
@@ -198,20 +198,20 @@ mod tests {
 	}
 
 	pub struct CallFilter;
-	impl frame_support::traits::Contains<Call> for CallFilter {
-		fn contains(call: &Call) -> bool {
+	impl frame_support::traits::Contains<RuntimeCall> for CallFilter {
+		fn contains(call: &RuntimeCall) -> bool {
 			match call {
-				Call::System(frame_system::pallet::Call::<Test>::remark { remark: _ }) => true,
+				RuntimeCall::System(frame_system::pallet::RuntimeCall::<Test>::remark { remark: _ }) => true,
 				_ => false,
 			}
 		}
 	}
 
 	impl dispatch::Config for Test {
-		type Origin = Origin;
-		type Event = Event;
+		type RuntimeOrigin = RuntimeOrigin;
+		type RuntimeEvent = RuntimeEvent;
 		type MessageId = u64;
-		type Call = Call;
+		type RuntimeCall = RuntimeCall;
 		type CallFilter = CallFilter;
 	}
 
@@ -226,7 +226,7 @@ mod tests {
 			let id = 37;
 			let source = H160::repeat_byte(7);
 
-			let message = Call::System(frame_system::Call::remark { remark: vec![] }).encode();
+			let message = RuntimeCall::System(frame_system::Call::remark { remark: vec![] }).encode();
 
 			System::set_block_number(1);
 			Dispatch::dispatch(source, id, &message);
@@ -273,7 +273,7 @@ mod tests {
 			let id = 37;
 			let source = H160::repeat_byte(7);
 
-			let message = Call::System(frame_system::Call::set_code { code: vec![] }).encode();
+			let message = RuntimeCall::System(frame_system::Call::set_code { code: vec![] }).encode();
 
 			System::set_block_number(1);
 			Dispatch::dispatch(source, id, &message);

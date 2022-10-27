@@ -10,7 +10,7 @@ use sp_core::H160;
 use sp_runtime::traits::{StaticLookup, Zero};
 use sp_std::prelude::*;
 
-use crate::{primitives::wrap, Address, Call, Config as DotAppConfig, Pallet as DotApp};
+use crate::{primitives::wrap, Address, RuntimeCall, Config as DotAppConfig, Pallet as DotApp};
 use snowbridge_core::ChannelId;
 
 use pallet_assets::Config as AssetsConfig;
@@ -105,7 +105,7 @@ benchmarks! {
 		// Create account to store locked DOT
 		<T as DotAppConfig>::Currency::make_free_balance_be(&lock_account, balance);
 
-		let call = Call::<T>::unlock { sender: sender, recipient: recipient_lookup, amount: amount_wrapped };
+		let call = RuntimeCall::<T>::unlock { sender: sender, recipient: recipient_lookup, amount: amount_wrapped };
 
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {

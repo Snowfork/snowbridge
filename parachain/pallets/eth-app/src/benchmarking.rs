@@ -8,7 +8,7 @@ use sp_std::prelude::*;
 
 use frame_support::traits::fungible::Mutate;
 
-use crate::{Address, Call, Config as EtherAppConfig, Pallet as EtherApp};
+use crate::{Address, RuntimeCall, Config as EtherAppConfig, Pallet as EtherApp};
 use snowbridge_core::ChannelId;
 
 use frame_support::traits::fungible::Inspect;
@@ -67,7 +67,7 @@ benchmarks! {
 		let sender = H160::zero();
 		let amount = 500;
 
-		let call = Call::<T>::mint { sender: sender, recipient: recipient_lookup, amount: amount, destination: None  };
+		let call = RuntimeCall::<T>::mint { sender: sender, recipient: recipient_lookup, amount: amount, destination: None  };
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {
 		assert_eq!(T::Asset::balance(&recipient), amount);

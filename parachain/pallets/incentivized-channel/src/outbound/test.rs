@@ -32,10 +32,10 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
-		IncentivizedOutboundChannel: incentivized_outbound_channel::{Pallet, Call, Config<T>, Storage, Event<T>},
+		System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
+		Balances: pallet_balances::{Pallet, RuntimeCall, Storage, Config<T>, RuntimeEvent<T>},
+		Assets: pallet_assets::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
+		IncentivizedOutboundChannel: incentivized_outbound_channel::{Pallet, RuntimeCall, Config<T>, Storage, RuntimeEvent<T>},
 	}
 );
 
@@ -50,8 +50,8 @@ impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
-	type Origin = Origin;
-	type Call = Call;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -59,7 +59,7 @@ impl frame_system::Config for Test {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
@@ -80,7 +80,7 @@ parameter_types! {
 impl pallet_balances::Config for Test {
 	type Balance = u64;
 	type DustRemoval = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
@@ -99,7 +99,7 @@ parameter_types! {
 }
 
 impl pallet_assets::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Balance = u128;
 	type AssetId = u128;
 	type Currency = Balances;
@@ -128,7 +128,7 @@ parameter_types! {
 pub type Ether = ItemOf<Assets, EtherAssetId, AccountId>;
 
 impl incentivized_outbound_channel::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
@@ -238,7 +238,7 @@ fn test_set_fee_not_authorized() {
 	new_tester().execute_with(|| {
 		let bob: AccountId = Keyring::Bob.into();
 		assert_noop!(
-			IncentivizedOutboundChannel::set_fee(Origin::signed(bob), 1000),
+			IncentivizedOutboundChannel::set_fee(RuntimeOrigin::signed(bob), 1000),
 			DispatchError::BadOrigin
 		);
 	});

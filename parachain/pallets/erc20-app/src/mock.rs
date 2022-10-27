@@ -29,14 +29,14 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
+		System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
+		Balances: pallet_balances::{Pallet, RuntimeCall, Storage, Config<T>, RuntimeEvent<T>},
+		Assets: pallet_assets::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage},
-		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Config<T>, Storage, Event<T>},
-		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
-		Erc20App: crate::{Pallet, Call, Config, Storage, Event<T>},
+		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Config<T>, Storage, RuntimeEvent<T>},
+		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, RuntimeCall, Config<T>, Storage, RuntimeEvent<T>},
+		Dispatch: snowbridge_dispatch::{Pallet, RuntimeCall, Storage, RuntimeOrigin, RuntimeEvent<T>},
+		Erc20App: crate::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>},
 	}
 );
 
@@ -52,8 +52,8 @@ impl system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
-	type Origin = Origin;
-	type Call = Call;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -61,7 +61,7 @@ impl system::Config for Test {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
@@ -84,7 +84,7 @@ parameter_types! {
 impl pallet_balances::Config for Test {
 	type Balance = u64;
 	type DustRemoval = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
@@ -103,7 +103,7 @@ parameter_types! {
 }
 
 impl pallet_assets::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Balance = u128;
 	type AssetId = u128;
 	type Currency = Balances;
@@ -122,10 +122,10 @@ impl pallet_assets::Config for Test {
 impl snowbridge_asset_registry::Config for Test {}
 
 impl snowbridge_dispatch::Config for Test {
-	type Origin = Origin;
-	type Event = Event;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeEvent = RuntimeEvent;
 	type MessageId = u64;
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type CallFilter = Everything;
 }
 
@@ -163,7 +163,7 @@ parameter_types! {
 pub type Ether = ItemOf<Assets, EtherAssetId, AccountId>;
 
 impl snowbridge_basic_channel::outbound::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
@@ -171,7 +171,7 @@ impl snowbridge_basic_channel::outbound::Config for Test {
 }
 
 impl snowbridge_incentivized_channel::outbound::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
@@ -180,7 +180,7 @@ impl snowbridge_incentivized_channel::outbound::Config for Test {
 	type WeightInfo = ();
 }
 pub struct XcmAssetTransfererMock<T>(PhantomData<T>);
-impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
+impl XcmReserveTransfer<AccountId, RuntimeOrigin> for XcmAssetTransfererMock<Test> {
 	fn reserve_transfer(
 		_asset_id: u128,
 		_sender: H160,
@@ -192,7 +192,7 @@ impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 }
 
 impl crate::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type PalletId = Erc20AppPalletId;
 	type Assets = Assets;
 	type NextAssetId = AssetRegistry;

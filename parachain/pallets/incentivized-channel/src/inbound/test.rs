@@ -33,9 +33,9 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		IncentivizedInboundChannel: incentivized_inbound_channel::{Pallet, Call, Storage, Event<T>},
+		System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
+		Balances: pallet_balances::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
+		IncentivizedInboundChannel: incentivized_inbound_channel::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
 	}
 );
 
@@ -51,8 +51,8 @@ impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
-	type Origin = Origin;
-	type Call = Call;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -60,7 +60,7 @@ impl frame_system::Config for Test {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
@@ -82,7 +82,7 @@ parameter_types! {
 
 impl pallet_balances::Config for Test {
 	/// The ubiquitous event type.
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type MaxLocks = MaxLocks;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
@@ -115,7 +115,7 @@ impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
 	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_dispatch_event(_: MessageId) -> Option<<Test as frame_system::Config>::Event> {
+	fn successful_dispatch_event(_: MessageId) -> Option<<Test as frame_system::Config>::RuntimeEvent> {
 		None
 	}
 }
@@ -134,7 +134,7 @@ impl<T: Config> Convert<U256, Option<BalanceOf<T>>> for FeeConverter<T> {
 }
 
 impl incentivized_inbound_channel::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
 	type MessageDispatch = MockMessageDispatch;
 	type Currency = Balances;
@@ -203,7 +203,7 @@ const MESSAGE_DATA_1: [u8; 317] = hex!(
 fn test_submit_with_invalid_source_channel() {
 	new_tester(H160::zero()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
-		let origin = Origin::signed(relayer);
+		let origin = RuntimeOrigin::signed(relayer);
 
 		// Submit message
 		let message = Message {
@@ -225,7 +225,7 @@ fn test_submit_with_invalid_source_channel() {
 fn test_submit() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
-		let origin = Origin::signed(relayer);
+		let origin = RuntimeOrigin::signed(relayer);
 
 		// Submit message 1
 		let message_1 = Message {
@@ -259,7 +259,7 @@ fn test_submit() {
 fn test_submit_with_invalid_nonce() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
-		let origin = Origin::signed(relayer);
+		let origin = RuntimeOrigin::signed(relayer);
 
 		// Submit message
 		let message = Message {
@@ -305,7 +305,7 @@ fn test_set_reward_fraction_not_authorized() {
 		let bob: AccountId = Keyring::Bob.into();
 		assert_noop!(
 			IncentivizedInboundChannel::set_reward_fraction(
-				Origin::signed(bob),
+				RuntimeOrigin::signed(bob),
 				Perbill::from_percent(60)
 			),
 			DispatchError::BadOrigin

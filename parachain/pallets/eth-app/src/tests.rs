@@ -1,4 +1,4 @@
-use crate::mock::{new_tester, AccountId, Ether, EtherApp, Event, Origin, System, Test};
+use crate::mock::{new_tester, AccountId, Ether, EtherApp, Event, RuntimeOrigin, System, Test};
 use frame_support::{
 	assert_noop, assert_ok,
 	traits::fungible::{Inspect, Mutate},
@@ -70,7 +70,7 @@ fn burn_should_emit_bridge_event() {
 		Ether::mint_into(&bob, 500).unwrap();
 
 		assert_ok!(EtherApp::burn(
-			Origin::signed(bob.clone()),
+			RuntimeOrigin::signed(bob.clone()),
 			ChannelId::Incentivized,
 			recipient.clone(),
 			20
@@ -91,7 +91,7 @@ fn should_not_burn_on_commitment_failure() {
 		// fill up message queue
 		for _ in 0..3 {
 			let _ = EtherApp::burn(
-				Origin::signed(sender.clone()),
+				RuntimeOrigin::signed(sender.clone()),
 				ChannelId::Incentivized,
 				recipient.clone(),
 				20,
@@ -100,7 +100,7 @@ fn should_not_burn_on_commitment_failure() {
 
 		assert_noop!(
 			EtherApp::burn(
-				Origin::signed(sender.clone()),
+				RuntimeOrigin::signed(sender.clone()),
 				ChannelId::Incentivized,
 				recipient.clone(),
 				20

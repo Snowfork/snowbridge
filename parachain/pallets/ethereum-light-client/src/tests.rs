@@ -8,7 +8,7 @@ use snowbridge_core::Verifier as VerifierConfig;
 
 use crate::mock::mock_verifier_with_pow;
 
-use crate::mock::mock_verifier::{MaxHeadersForNumber, Origin, Test, Verifier};
+use crate::mock::mock_verifier::{MaxHeadersForNumber, RuntimeOrigin, Test, Verifier};
 
 use crate::{
 	BestBlock, Error, EthereumHeader, FinalizedBlock, GenesisConfig, Headers, HeadersByNumber,
@@ -29,12 +29,12 @@ fn it_tracks_highest_difficulty_ethereum_chain() {
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		assert_ok!(Verifier::import_header(
-			Origin::signed(ferdie.clone()),
+			RuntimeOrigin::signed(ferdie.clone()),
 			child1,
 			Default::default(),
 		));
 		assert_ok!(Verifier::import_header(
-			Origin::signed(ferdie.clone()),
+			RuntimeOrigin::signed(ferdie.clone()),
 			child2,
 			Default::default(),
 		));
@@ -57,12 +57,12 @@ fn it_tracks_multiple_unfinalized_ethereum_forks() {
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		assert_ok!(Verifier::import_header(
-			Origin::signed(ferdie.clone()),
+			RuntimeOrigin::signed(ferdie.clone()),
 			child1,
 			Default::default(),
 		));
 		assert_ok!(Verifier::import_header(
-			Origin::signed(ferdie.clone()),
+			RuntimeOrigin::signed(ferdie.clone()),
 			child2,
 			Default::default(),
 		));
@@ -100,7 +100,7 @@ fn it_tracks_only_one_finalized_ethereum_fork() {
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		for header in vec![block1, block4, block2, block3].into_iter() {
 			assert_ok!(Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				header,
 				Default::default(),
 			));
@@ -120,11 +120,11 @@ fn it_tracks_only_one_finalized_ethereum_fork() {
 		//       |
 		//       B3
 		assert_err!(
-			Verifier::import_header(Origin::signed(ferdie.clone()), block5, Default::default(),),
+			Verifier::import_header(RuntimeOrigin::signed(ferdie.clone()), block5, Default::default(),),
 			Error::<Test>::HeaderOnStaleFork,
 		);
 		assert_err!(
-			Verifier::import_header(Origin::signed(ferdie.clone()), block6, Default::default(),),
+			Verifier::import_header(RuntimeOrigin::signed(ferdie.clone()), block6, Default::default(),),
 			Error::<Test>::AncientHeader,
 		);
 	});
@@ -154,7 +154,7 @@ fn it_prunes_ethereum_headers_correctly() {
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		for header in vec![block1, block4, block2, block3].into_iter() {
 			assert_ok!(Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				header,
 				Default::default(),
 			));
@@ -219,13 +219,13 @@ fn it_imports_ethereum_header_only_once() {
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		assert_ok!(Verifier::import_header(
-			Origin::signed(ferdie.clone()),
+			RuntimeOrigin::signed(ferdie.clone()),
 			child,
 			Default::default(),
 		));
 		assert_err!(
 			Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				child_for_reimport,
 				Default::default(),
 			),
@@ -239,7 +239,7 @@ fn it_rejects_unsigned_ethereum_header() {
 	new_tester::<Test>().execute_with(|| {
 		let child = child_of_genesis_ethereum_header();
 		assert_err!(
-			Verifier::import_header(Origin::none(), child, Default::default()),
+			Verifier::import_header(RuntimeOrigin::none(), child, Default::default()),
 			DispatchError::BadOrigin,
 		);
 	});
@@ -254,7 +254,7 @@ fn it_rejects_ethereum_header_before_parent() {
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		assert_err!(
-			Verifier::import_header(Origin::signed(ferdie), child_of_child, Default::default(),),
+			Verifier::import_header(RuntimeOrigin::signed(ferdie), child_of_child, Default::default(),),
 			Error::<Test>::MissingParentHeader,
 		);
 	});
@@ -273,13 +273,13 @@ fn it_validates_proof_of_work() {
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		assert_ok!(mock_verifier_with_pow::Verifier::import_header(
-			mock_verifier_with_pow::Origin::signed(ferdie.clone()),
+			mock_verifier_with_pow::RuntimeOrigin::signed(ferdie.clone()),
 			header1,
 			header1_proof,
 		));
 		assert_err!(
 			mock_verifier_with_pow::Verifier::import_header(
-				mock_verifier_with_pow::Origin::signed(ferdie),
+				mock_verifier_with_pow::RuntimeOrigin::signed(ferdie),
 				header2,
 				Default::default(),
 			),
@@ -300,7 +300,7 @@ fn it_rejects_ethereum_header_with_low_difficulty() {
 
 		assert_err!(
 			mock_verifier_with_pow::Verifier::import_header(
-				mock_verifier_with_pow::Origin::signed(Keyring::Ferdie.into()),
+				mock_verifier_with_pow::RuntimeOrigin::signed(Keyring::Ferdie.into()),
 				header,
 				header_proof,
 			),
@@ -421,7 +421,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		assert_ok!(Verifier::import_header(
-			Origin::signed(ferdie.clone()),
+			RuntimeOrigin::signed(ferdie.clone()),
 			block1,
 			Default::default(),
 		));
@@ -446,7 +446,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 		//           B3_ALT
 		for header in vec![block1_alt, block2_alt, block3_alt].into_iter() {
 			assert_ok!(Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				header,
 				Default::default(),
 			));
@@ -464,7 +464,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 		);
 
 		assert_ok!(Verifier::import_header(
-			Origin::signed(ferdie.clone()),
+			RuntimeOrigin::signed(ferdie.clone()),
 			block4_alt,
 			Default::default(),
 		));
@@ -507,21 +507,21 @@ fn it_can_only_import_max_headers_worth_of_headers() {
 		last_block.difficulty = (MAX_BLOCKS + 1).into();
 
 		assert_ok!(Verifier::import_header(
-			Origin::signed(ferdie.clone()),
+			RuntimeOrigin::signed(ferdie.clone()),
 			first_block,
 			Default::default(),
 		));
 
 		for block in blocks {
 			assert_ok!(Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				block,
 				Default::default(),
 			));
 		}
 
 		assert_err!(
-			Verifier::import_header(Origin::signed(ferdie.clone()), last_block, Default::default(),),
+			Verifier::import_header(RuntimeOrigin::signed(ferdie.clone()), last_block, Default::default(),),
 			Error::<Test>::AtMaxHeadersForNumber
 		);
 	});
@@ -536,7 +536,7 @@ fn it_should_reject_non_root_origin_calling_force_reset_to_fork() {
 		let ferdie: AccountId = Keyring::Ferdie.into();
 
 		assert_err!(
-			Verifier::force_reset_to_fork(Origin::signed(ferdie.clone()), block1_hash),
+			Verifier::force_reset_to_fork(RuntimeOrigin::signed(ferdie.clone()), block1_hash),
 			DispatchError::BadOrigin
 		);
 	});
@@ -577,7 +577,7 @@ fn it_should_be_able_to_force_reset_to_fork() {
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		for header in vec![block1, block2, block3.clone(), block4, block5, block6].into_iter() {
 			assert_ok!(Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				header,
 				Default::default(),
 			));
@@ -627,7 +627,7 @@ fn it_should_be_able_to_force_reset_to_fork() {
 		// The relayer will try to import B7 and will fail.
 		assert_err!(
 			Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				fork_block7.clone(),
 				Default::default(),
 			),
@@ -637,19 +637,19 @@ fn it_should_be_able_to_force_reset_to_fork() {
 		// Trying to import the forked chain from 4 will fail.
 		assert_err!(
 			Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				fork_block4.clone(),
 				Default::default(),
 			),
 			Error::<Test>::AncientHeader
 		);
 
-		assert_ok!(Verifier::force_reset_to_fork(Origin::root(), block3_hash));
+		assert_ok!(Verifier::force_reset_to_fork(RuntimeOrigin::root(), block3_hash));
 
 		// Once best block is set the relayer will import the fork
 		for header in vec![fork_block4, fork_block5, fork_block6, fork_block7].into_iter() {
 			assert_ok!(Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				header,
 				Default::default(),
 			));
@@ -690,7 +690,7 @@ fn it_should_not_allow_force_reset_to_fork_for_blocks_that_cannot_be_finalized()
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		for header in vec![block1.clone(), block2, block3, block4].into_iter() {
 			assert_ok!(Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				header,
 				Default::default(),
 			));
@@ -704,7 +704,7 @@ fn it_should_not_allow_force_reset_to_fork_for_blocks_that_cannot_be_finalized()
 		assert_eq!(BestBlock::<Test>::get().0.hash, block4_hash);
 
 		assert_err!(
-			Verifier::force_reset_to_fork(Origin::root(), block1_hash),
+			Verifier::force_reset_to_fork(RuntimeOrigin::root(), block1_hash),
 			DispatchError::Other(
 				"Cannot reset to fork if it does not have the required number of decendants."
 			)
@@ -747,7 +747,7 @@ fn it_should_fail_reset_for_blocks_at_or_after_current_finalized() {
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		for header in vec![block1.clone(), block2, block3, block4].into_iter() {
 			assert_ok!(Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				header,
 				Default::default(),
 			));
@@ -761,7 +761,7 @@ fn it_should_fail_reset_for_blocks_at_or_after_current_finalized() {
 		assert_eq!(BestBlock::<Test>::get().0.hash, block4_hash);
 
 		assert_err!(
-			Verifier::force_reset_to_fork(Origin::root(), block2_hash),
+			Verifier::force_reset_to_fork(RuntimeOrigin::root(), block2_hash),
 			DispatchError::Other("Cannot reset to fork after the current finalized block.")
 		);
 
@@ -800,7 +800,7 @@ fn it_should_fail_reset_for_blocks_that_are_not_finalized() {
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		for header in vec![block1.clone(), block2, block3, block4].into_iter() {
 			assert_ok!(Verifier::import_header(
-				Origin::signed(ferdie.clone()),
+				RuntimeOrigin::signed(ferdie.clone()),
 				header,
 				Default::default(),
 			));
@@ -814,7 +814,7 @@ fn it_should_fail_reset_for_blocks_that_are_not_finalized() {
 		assert_eq!(BestBlock::<Test>::get().0.hash, block4_hash);
 
 		assert_err!(
-			Verifier::force_reset_to_fork(Origin::root(), block3_hash),
+			Verifier::force_reset_to_fork(RuntimeOrigin::root(), block3_hash),
 			DispatchError::Other("Cannot reset to a header that is not finalized.")
 		);
 

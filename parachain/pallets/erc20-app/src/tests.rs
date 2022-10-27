@@ -1,4 +1,4 @@
-use crate::mock::{new_tester, AccountId, Assets, Erc20App, Event, Origin, System, Test};
+use crate::mock::{new_tester, AccountId, Assets, Erc20App, Event, RuntimeOrigin, System, Test};
 use frame_support::{assert_noop, assert_ok};
 use snowbridge_core::ChannelId;
 use snowbridge_xcm_support_primitives::RemoteParachain;
@@ -88,7 +88,7 @@ fn burn_should_emit_bridge_event() {
 		Assets::mint_into(<AssetId<Test>>::get(token_id).unwrap(), &bob, 500).unwrap();
 
 		assert_ok!(Erc20App::burn(
-			Origin::signed(bob.clone()),
+			RuntimeOrigin::signed(bob.clone()),
 			ChannelId::Incentivized,
 			token_id,
 			recipient.clone(),
@@ -120,7 +120,7 @@ fn should_not_burn_on_commitment_failure() {
 
 		for _ in 0..3 {
 			let _ = Erc20App::burn(
-				Origin::signed(sender.clone()),
+				RuntimeOrigin::signed(sender.clone()),
 				ChannelId::Incentivized,
 				token_id,
 				recipient.clone(),
@@ -130,7 +130,7 @@ fn should_not_burn_on_commitment_failure() {
 
 		assert_noop!(
 			Erc20App::burn(
-				Origin::signed(sender.clone()),
+				RuntimeOrigin::signed(sender.clone()),
 				ChannelId::Incentivized,
 				token_id,
 				recipient.clone(),

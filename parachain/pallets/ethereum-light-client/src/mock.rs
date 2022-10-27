@@ -39,8 +39,8 @@ pub mod mock_verifier {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Pallet, Call, Storage, Event<T>},
-			Verifier: verifier::{Pallet, Call, Config, Storage, Event<T>},
+			System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
+			Verifier: verifier::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>},
 		}
 	);
 
@@ -48,8 +48,8 @@ pub mod mock_verifier {
 		type BaseCallFilter = Everything;
 		type BlockWeights = ();
 		type BlockLength = ();
-		type Origin = Origin;
-		type Call = Call;
+		type RuntimeOrigin = RuntimeOrigin;
+		type RuntimeCall = RuntimeCall;
 		type Index = u64;
 		type BlockNumber = u64;
 		type Hash = H256;
@@ -57,7 +57,7 @@ pub mod mock_verifier {
 		type AccountId = AccountId;
 		type Lookup = IdentityLookup<Self::AccountId>;
 		type Header = Header;
-		type Event = Event;
+		type RuntimeEvent = RuntimeEvent;
 		type BlockHashCount = BlockHashCount;
 		type DbWeight = ();
 		type Version = ();
@@ -79,7 +79,7 @@ pub mod mock_verifier {
 	}
 
 	impl verifier::Config for Test {
-		type Event = Event;
+		type RuntimeEvent = RuntimeEvent;
 		type DescendantsUntilFinalized = DescendantsUntilFinalized;
 		type DifficultyConfig = DifficultyConfig;
 		type VerifyPoW = VerifyPoW;
@@ -101,8 +101,8 @@ pub mod mock_verifier_with_pow {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Pallet, Call, Storage, Event<T>},
-			Verifier: verifier::{Pallet, Call, Config, Storage, Event<T>},
+			System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
+			Verifier: verifier::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>},
 		}
 	);
 
@@ -110,8 +110,8 @@ pub mod mock_verifier_with_pow {
 		type BaseCallFilter = Everything;
 		type BlockWeights = ();
 		type BlockLength = ();
-		type Origin = Origin;
-		type Call = Call;
+		type RuntimeOrigin = RuntimeOrigin;
+		type RuntimeCall = RuntimeCall;
 		type Index = u64;
 		type BlockNumber = u64;
 		type Hash = H256;
@@ -119,7 +119,7 @@ pub mod mock_verifier_with_pow {
 		type AccountId = AccountId;
 		type Lookup = IdentityLookup<Self::AccountId>;
 		type Header = Header;
-		type Event = Event;
+		type RuntimeEvent = RuntimeEvent;
 		type BlockHashCount = BlockHashCount;
 		type DbWeight = ();
 		type Version = ();
@@ -141,7 +141,7 @@ pub mod mock_verifier_with_pow {
 	}
 
 	impl verifier::Config for Test {
-		type Event = Event;
+		type RuntimeEvent = RuntimeEvent;
 		type DescendantsUntilFinalized = DescendantsUntilFinalized;
 		type DifficultyConfig = DifficultyConfig;
 		type VerifyPoW = VerifyPoW;
