@@ -35,18 +35,18 @@ use sp_std::marker::PhantomData;
 pub struct SnowbridgeWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> ethereum_beacon_client::WeightInfo for SnowbridgeWeight<T> {
 	fn sync_committee_period_update() -> Weight {
-		(48_609_506_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(48_609_506_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(2))
 	}
 	fn import_finalized_header() -> Weight {
-		(48_328_434_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(48_328_434_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	fn import_execution_header() -> Weight {
-		(48_505_068_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(48_505_068_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(1))
 	}
 }
