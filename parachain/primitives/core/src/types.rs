@@ -29,7 +29,7 @@ pub struct Message {
 	/// Input to the message verifier.
 	pub proof: Proof,
 	/// Untrusted weight declared by relayer.
-	pub weight: Weight,
+	pub dispatch_weight: Weight,
 }
 
 /// Verification input for the message verifier.

@@ -214,7 +214,7 @@ fn test_submit_with_invalid_source_channel() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
-			weight: 0,
+			dispatch_weight: 0,
 		};
 		assert_noop!(
 			IncentivizedInboundChannel::submit(origin.clone(), message.clone()),
@@ -237,7 +237,7 @@ fn test_submit() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
-			weight: 0,
+			dispatch_weight: 0,
 		};
 		assert_ok!(IncentivizedInboundChannel::submit(origin.clone(), message_1));
 		let nonce: u64 = <Nonce<Test>>::get();
@@ -251,7 +251,7 @@ fn test_submit() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
-			weight: 0,
+			dispatch_weight: 0,
 		};
 		assert_ok!(IncentivizedInboundChannel::submit(origin.clone(), message_2));
 		let nonce: u64 = <Nonce<Test>>::get();
@@ -273,7 +273,7 @@ fn test_submit_with_invalid_nonce() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
-			weight: 0,
+			dispatch_weight: 0,
 		};
 		assert_ok!(IncentivizedInboundChannel::submit(origin.clone(), message.clone()));
 		let nonce: u64 = <Nonce<Test>>::get();

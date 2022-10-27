@@ -92,7 +92,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::submit() + message.weight)]
+		#[pallet::weight(T::WeightInfo::submit() + message.dispatch_weight)]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			ensure_signed(origin)?;
 			// submit message to verifier for verification
@@ -118,7 +118,7 @@ pub mod pallet {
 			})?;
 
 			let message_id = MessageId::Basic { account: envelope.account, nonce: envelope.nonce };
-			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload, Some(message.weight));
+			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload, Some(message.dispatch_weight));
 
 			<LatestVerifiedBlockNumber<T>>::set(block_number);
 

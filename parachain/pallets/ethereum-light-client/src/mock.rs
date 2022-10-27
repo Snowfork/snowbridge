@@ -216,7 +216,7 @@ pub fn message_with_receipt_proof(
 	block_hash: H256,
 	proof_data: (Vec<Vec<u8>>, Vec<Vec<u8>>),
 ) -> Message {
-	Message { data: payload, proof: Proof { block_hash, tx_index: 0, data: proof_data }, weight: 0 }
+	Message { data: payload, proof: Proof { block_hash, tx_index: 0, data: proof_data }, dispatch_weight: 0 }
 }
 
 // from https://ropsten.etherscan.io/tx/0x3541903322b74942aa9dd436ac6277d36d874865c35032fe915518d2659fc64c
@@ -239,7 +239,7 @@ pub fn ropsten_london_message() -> Message {
 				],
 			),
 		},
-		weight: 0,
+		dispatch_weight: 0,
 	}
 }
 
