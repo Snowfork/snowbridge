@@ -6,13 +6,13 @@ use sp_std::{convert::TryFrom, prelude::*};
 
 // Used to decode a raw Ethereum log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
-	signature: "Message(address,address,uint64,bytes,uint64)",
+	signature: "Message(address,address,uint64,uint64,bytes)",
 	inputs: &[
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Uint(64), indexed: false },
-		Param { kind: ParamKind::Bytes, indexed: false },
 		Param { kind: ParamKind::Uint(64), indexed: false },
+		Param { kind: ParamKind::Bytes, indexed: false },
 	],
 	anonymous: false,
 };
@@ -28,10 +28,10 @@ pub struct Envelope {
 	pub account: H160,
 	/// A nonce for enforcing replay protection and ordering.
 	pub nonce: u64,
+	/// The weight declared by the app
+	pub weight: u64,
 	/// The inner payload generated from the source application.
 	pub payload: Vec<u8>,
-	/// The weight declared by the app
-	pub weight: u64
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
@@ -60,17 +60,17 @@ impl TryFrom<Log> for Envelope {
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		let payload = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Bytes(payload) => payload,
-			_ => return Err(EnvelopeDecodeError),
-		};
-
 		let weight = match iter.next().ok_or(EnvelopeDecodeError)? {
 			Token::Uint(weight) => weight.low_u64(),
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		Ok(Self { channel: log.address, source, account, nonce, payload, weight })
+		let payload = match iter.next().ok_or(EnvelopeDecodeError)? {
+			Token::Bytes(payload) => payload,
+			_ => return Err(EnvelopeDecodeError),
+		};
+
+		Ok(Self { channel: log.address, source, account, nonce, weight, payload })
 	}
 }
 
@@ -81,13 +81,13 @@ mod tests {
 
 	const LOG: [u8; 284] = hex!(
 		"
-		f901199486d9ac0bab011917f57b9e9607833b4340f9d4f8e1a0be48f60e5cc4
-		2a244b79a80d1415a57f17848d7062caa22340c0b8546499dc92b8e000000000
+		f901199486d9ac0bab011917f57b9e9607833b4340f9d4f8e1a0a5f39ee370f7
+		0ab738604498959665b56d7cfdcfc84c052d752404fbc09ae3dfb8e000000000
 		000000000000000089b4ab1ef20763630df9743acf155865600daff200000000
 		000000000000000004e00e6d2e9ea1e2af553de02a5172120bfa5c3e00000000
 		0000000000000000000000000000000000000000000000000000000100000000
-		000000000000000000000000000000000000000000000000000000a000000000
 		0000000000000000000000000000000000000000000000000000002a00000000
+		000000000000000000000000000000000000000000000000000000a000000000
 		0000000000000000000000000000000000000000000000000000002061726269
 		74726172792d7061796c6f6164000000000000000000000000000000
 	"
@@ -105,10 +105,10 @@ mod tests {
 				source: hex!["89b4ab1ef20763630df9743acf155865600daff2"].into(),
 				account: hex!["04e00e6d2e9ea1e2af553de02a5172120bfa5c3e"].into(),
 				nonce: 1,
+				weight: 42,
 				payload: hex!(
 					"6172626974726172792d7061796c6f6164000000000000000000000000000000"
 				).into(),
-				weight: 42,
 			}
 		)
 	}

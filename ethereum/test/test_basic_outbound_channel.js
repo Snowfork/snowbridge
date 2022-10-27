@@ -37,7 +37,7 @@ describe("BasicOutboundChannel", function () {
       ).should.be.fulfilled;
 
       const log = tx.receipt.rawLogs[0];
-      const event = iface.decodeEventLog('Message(address,address,uint64,bytes,uint64)', log.data, log.topics);
+      const event = iface.decodeEventLog('Message(address,address,uint64,uint64,bytes)', log.data, log.topics);
 
       log.address.should.be.equal(this.channel.address);
       event.account.should.be.equal(origin)
@@ -69,7 +69,7 @@ describe("BasicOutboundChannel", function () {
       ).should.be.fulfilled;
 
       const log = tx3.receipt.rawLogs[0];
-      const event = iface.decodeEventLog('Message(address,address,uint64,bytes,uint64)', log.data, log.topics);
+      const event = iface.decodeEventLog('Message(address,address,uint64,uint64,bytes)', log.data, log.topics);
       event.nonce.eq(ethers.BigNumber.from(3)).should.be.true;
     });
 

@@ -17,8 +17,8 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
         address source,
         address account,
         uint64 nonce,
-        bytes payload,
-        uint64 weight
+        uint64 weight,
+        bytes payload
     );
 
     constructor() {
@@ -60,6 +60,6 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
     function submit(address _account, bytes calldata _payload, uint64 weight) external override {
         require(isOperatorFor(msg.sender, _account), "Caller is unauthorized");
         nonce[_account] = nonce[_account] + 1;
-        emit Message(msg.sender, _account, nonce[_account], _payload, weight);
+        emit Message(msg.sender, _account, nonce[_account], weight, _payload);
     }
 }

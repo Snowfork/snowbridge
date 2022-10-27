@@ -87,7 +87,7 @@ Add the following preamble:
 ```javascript
 const rlp = require("rlp");
 const contract = BasicOutboundChannel;
-const signature = 'Message(address,address,uint64,bytes,uint64)';
+const signature = 'Message(address,address,uint64,uint64,bytes)';
 ```
 
 For each encoded log you want to create, find a transaction object `tx` returned from a `submit` call and run this:
