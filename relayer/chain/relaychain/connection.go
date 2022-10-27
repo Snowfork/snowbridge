@@ -155,35 +155,24 @@ type ParaHead struct {
 }
 
 // Fetches heads for each parachain Id filtering out para threads.
-func (conn *Connection) FetchParachainHeads(paraId uint32, relayChainBlockHash types.Hash) ([]ParaHead, *types.Header, error) {
+func (conn *Connection) FetchParachainHeads(relayChainBlockHash types.Hash) ([]ParaHead, error) {
 	// Fetch para heads
 	paraHeads, err := conn.fetchParaHeads(relayChainBlockHash)
 	if err != nil {
 		log.WithError(err).Error("Cannot fetch para heads.")
-		return nil, nil, err
-	}
-
-	// Make sure our snowbridge para head is included
-	log.WithField("relayChainBlockHash", relayChainBlockHash).WithField("paraId", paraId).Info("Fetching parachain heads.")
-	if _, ok := paraHeads[paraId]; !ok {
-		return nil, nil, fmt.Errorf("snowbridge is not a registered parachain")
-	}
-
-	var snowbridgeHeader types.Header
-	if err := types.DecodeFromBytes(paraHeads[paraId].Data, &snowbridgeHeader); err != nil {
-		return nil, nil, fmt.Errorf("decode parachain header: %w", err)
+		return nil, err
 	}
 
 	// fetch ids of parachains (not including parathreads)
 	var parachainIDs []uint32
 	parachainsKey, err := types.CreateStorageKey(conn.Metadata(), "Paras", "Parachains", nil, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	_, err = conn.API().RPC.State.GetStorage(parachainsKey, &parachainIDs, relayChainBlockHash)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// filter out parathreads
@@ -193,37 +182,44 @@ func (conn *Connection) FetchParachainHeads(paraId uint32, relayChainBlockHash t
 			parachainHeads = append(parachainHeads, head)
 		}
 	}
-	return parachainHeads, &snowbridgeHeader, nil
+	return parachainHeads, nil
 }
 
-func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID uint32) (*types.Header, error) {
+func (co *Connection) FetchParachainHead(relayBlockhash types.Hash, paraID uint32, header *types.Header) (bool, error) {
 	encodedParaID, err := types.EncodeToBytes(paraID)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	storageKey, err := types.CreateStorageKey(co.Metadata(), "Paras", "Heads", encodedParaID, nil)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	var headerBytes types.Bytes
 	ok, err := co.API().RPC.State.GetStorage(storageKey, &headerBytes, relayBlockhash)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	if !ok {
-		return nil, fmt.Errorf("parachain head not found")
+		return false, nil
 	}
 
+	if err := types.DecodeFromBytes(headerBytes, header); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (co *Connection) IsParachainRegistered(relayBlockHash types.Hash, paraID uint32) (bool, error) {
 	var header types.Header
-	if err := types.DecodeFromBytes(headerBytes, &header); err != nil {
-		log.WithError(err).Error("Failed to decode Header")
-		return nil, err
+	ok, err := co.FetchParachainHead(relayBlockHash, paraID, &header)
+	if err != nil {
+		return false, fmt.Errorf("fetch parachain header")
 	}
-
-	return &header, nil
+	return ok, nil
 }
 
 func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, error) {
