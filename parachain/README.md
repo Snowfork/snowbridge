@@ -63,33 +63,50 @@ For an example configuration, consult the [setup script](https://github.com/Snow
 
 ## Tests
 
-To run the parachain tests locally, use `cargo test --release`. For the full suite of tests, use `cargo test --release --features runtime-benchmarks`.
+To run the parachain tests locally, use `cargo test --workspace`. For the full suite of tests, use `cargo test --workspace --release --features runtime-benchmarks`.
+
+Optionally exclude the top-level and runtime crates:
+
+```
+cargo test --workspace \
+        --release \
+        --features runtime-benchmarks \
+        --exclude snowbridge \
+        --exclude snowbridge-runtime \
+        --exclude snowblink-runtime \
+        --exclude snowbase-runtime \
+```
 
 ### Updating test data for inbound channel unit tests
 
-To regenerate the test data, use a test with multiple `submit` calls in `ethereum/test/test_{basic,incentivized}_outbound_channel.js`.
-For each encoded log you want to create, find a transaction object `tx` returned from a `submit` call, then run this:
+To regenerate the test data, use a test with multiple `submit` calls in `ethereum/test/test_{basic,incentivized}_outbound_channel.js`, eg.
+"should increment nonces correctly".
+
+Add the following preamble:
 
 ```javascript
 const rlp = require("rlp");
+const contract = BasicOutboundChannel;
+const signature = 'Message(address,address,uint64,bytes,uint64)';
+```
+
+For each encoded log you want to create, find a transaction object `tx` returned from a `submit` call and run this:
+
+```javascript
 const rawLog = tx.receipt.rawLogs[0];
 const encodedLog = rlp.encode([rawLog.address, rawLog.topics, rawLog.data]).toString("hex");
 console.log(`encodedLog: ${encodedLog}`);
-```
-
-To decode the event from a `rawLog` to inspect the event data:
-
-```javascript
-const iface = new ethers.utils.Interface(BasicOutboundChannel.abi);
+const iface = new ethers.utils.Interface(contract.abi);
 const decodedEventLog = iface.decodeEventLog(
-  'Message(address,address,uint64,bytes)',
+  signature,
   rawLog.data,
   rawLog.topics,
 );
 console.log(`decoded rawLog.data: ${JSON.stringify(decodedEventLog)}`);
 ```
 
-Set the contract object and event signature based on the log you want to decode.
+Place the `encodedLog` string in the `message.data` field in the test data. Use the `decoded rawLog.data` field to update the comments
+with the decoded log data.
 
 ## Chain metadata
 
