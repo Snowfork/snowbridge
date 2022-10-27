@@ -28,7 +28,9 @@ pub struct Message {
 	pub data: Vec<u8>,
 	/// Input to the message verifier.
 	pub proof: Proof,
-	/// Untrusted weight declared by relayer.
+	/// The declared weight of the dispatchable call, extracted from the message payload by
+	/// relayers. This is untrusted, so the message payload will be rejected if the actual
+	/// dispatchable weight is higher than the declared weight.
 	pub dispatch_weight: Weight,
 }
 
