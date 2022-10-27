@@ -188,7 +188,7 @@ fn test_submit_with_invalid_source_channel() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
-			dispatch_weight: 42
+			dispatch_weight: 123
 		};
 		assert_noop!(
 			BasicInboundChannel::submit(origin.clone(), message.clone()),
@@ -211,7 +211,7 @@ fn test_submit() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
-			dispatch_weight: 42,
+			dispatch_weight: 123,
 		};
 
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_0.clone()));
@@ -228,7 +228,7 @@ fn test_submit() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
-			dispatch_weight: 42,
+			dispatch_weight: 123,
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_1.clone()));
 
@@ -252,7 +252,7 @@ fn test_submit_with_invalid_nonce() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
-			dispatch_weight: 0,
+			dispatch_weight: 123,
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message.clone()));
 
