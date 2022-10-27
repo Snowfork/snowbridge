@@ -63,18 +63,17 @@ For an example configuration, consult the [setup script](https://github.com/Snow
 
 ## Tests
 
-To run the parachain tests locally, use `cargo test --workspace`. For the full suite of tests, use `cargo test --workspace --release --features runtime-benchmarks`.
+To run the parachain tests locally, use `cargo test --workspace`. For the full suite of tests, use `cargo test --workspace --features runtime-benchmarks`.
 
 Optionally exclude the top-level and runtime crates:
 
 ```
 cargo test --workspace \
-        --release \
         --features runtime-benchmarks \
         --exclude snowbridge \
         --exclude snowbridge-runtime \
         --exclude snowblink-runtime \
-        --exclude snowbase-runtime \
+        --exclude snowbase-runtime
 ```
 
 ### Updating test data for inbound channel unit tests
