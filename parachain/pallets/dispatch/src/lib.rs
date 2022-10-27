@@ -14,9 +14,9 @@ use sp_std::prelude::*;
 
 use snowbridge_core::MessageDispatch;
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct RawOrigin(pub H160);
 
 impl From<H160> for RawOrigin {

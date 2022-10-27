@@ -47,49 +47,49 @@ pub trait WeightInfo {
 pub struct SnowbridgeWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 	fn on_initialize(m: u32, p: u32, ) -> Weight {
-		(0 as Weight)
+		Weight::from_ref_time(0 as u64)
 			// Standard Error: 32_000
-			.saturating_add((11_895_000 as Weight).saturating_mul(m as Weight))
+			.saturating_add(Weight::from_ref_time(11_895_000 as u64).saturating_mul(m as u64))
 			// Standard Error: 1_000
-			.saturating_add((393_000 as Weight).saturating_mul(p as Weight))
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+			.saturating_add(Weight::from_ref_time(393_000 as u64).saturating_mul(p as u64))
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(2))
 	}
 	fn on_initialize_non_interval() -> Weight {
-		(3_469_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+		Weight::from_ref_time(3_469_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1))
 	}
 	fn on_initialize_no_messages() -> Weight {
-		(5_157_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+		Weight::from_ref_time(5_157_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(2))
 	}
 	fn set_fee() -> Weight {
-		(2_311_000 as Weight)
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(2_311_000 as u64)
+			.saturating_add(T::DbWeight::get().writes(1))
 	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn on_initialize(m: u32, p: u32, ) -> Weight {
-		(0 as Weight)
+		Weight::from_ref_time(0 as u64)
 			// Standard Error: 32_000
-			.saturating_add((11_895_000 as Weight).saturating_mul(m as Weight))
+			.saturating_add(Weight::from_ref_time(11_895_000 as u64).saturating_mul(m as u64))
 			// Standard Error: 1_000
-			.saturating_add((393_000 as Weight).saturating_mul(p as Weight))
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+			.saturating_add(Weight::from_ref_time(393_000 as u64).saturating_mul(p as u64))
+			.saturating_add(RocksDbWeight::get().reads(3))
+			.saturating_add(RocksDbWeight::get().writes(2))
 	}
 	fn on_initialize_non_interval() -> Weight {
-		(3_469_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+		Weight::from_ref_time(3_469_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1))
 	}
 	fn on_initialize_no_messages() -> Weight {
-		(5_157_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
+		Weight::from_ref_time(5_157_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(2))
 	}
 	fn set_fee() -> Weight {
-		(2_311_000 as Weight)
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(2_311_000 as u64)
+			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 }
