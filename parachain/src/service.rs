@@ -16,9 +16,7 @@ use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayC
 use cumulus_relay_chain_rpc_interface::{create_client_and_start_worker, RelayChainRpcInterface};
 
 use sc_executor::NativeElseWasmExecutor;
-use sc_network::NetworkService;
-use sc_network::NetworkBlock; // TODO check why it's not the below path
-//use sc_network_common::service::NetworkBlock;
+use sc_network::{NetworkService, NetworkBlock};
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
