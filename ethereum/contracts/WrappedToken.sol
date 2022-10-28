@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 
 /// @custom:security-contact contact@snowfork.com
-contract WDOT is ERC20, Ownable, ERC20Permit {
-    constructor() ERC20("Wrapped DOT", "WDOT") ERC20Permit("Wrapped DOT") {}
+contract WrappedToken is ERC20, Ownable, ERC20Permit {
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) ERC20Permit(name) {}
 
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./WDOT.sol";
+import "./WrappedToken.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 import "./FeeController.sol";
@@ -16,7 +16,7 @@ contract DOTApp is FeeController, AccessControl {
 
     bytes2 constant UNLOCK_CALL = 0x4001;
 
-    WDOT public token;
+    WrappedToken public immutable token;
 
     bytes32 public constant FEE_BURNER_ROLE = keccak256("FEE_BURNER_ROLE");
     bytes32 public constant INBOUND_CHANNEL_ROLE =
@@ -40,11 +40,12 @@ contract DOTApp is FeeController, AccessControl {
     }
 
     constructor(
+        WrappedToken _token,
         address feeBurner,
         Channel memory _basic,
         Channel memory _incentivized
     ) {
-        token = new WDOT();
+        token = _token;
 
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
@@ -110,5 +111,24 @@ contract DOTApp is FeeController, AccessControl {
                 _recipient,
                 _amount.encode256()
             );
+    }
+
+    function upgrade(
+        Channel memory _basic,
+        Channel memory _incentivized
+    ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
+        Channel storage c1 = channels[ChannelId.Basic];
+        Channel storage c2 = channels[ChannelId.Incentivized];
+        // revoke old channel
+        revokeRole(INBOUND_CHANNEL_ROLE, c1.inbound);
+        revokeRole(INBOUND_CHANNEL_ROLE, c2.inbound);
+       // set new channel
+        c1.inbound = _basic.inbound;
+        c1.outbound = _basic.outbound;
+        c2.inbound = _incentivized.inbound;
+        c2.outbound = _incentivized.outbound;
+        grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
+        grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
+        emit Upgraded(msg.sender, c1, c2);
     }
 }
