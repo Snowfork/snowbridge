@@ -111,23 +111,4 @@ contract DOTApp is FeeController, AccessControl {
                 _amount.encode256()
             );
     }
-
-    function upgrade(
-        Channel memory _basic,
-        Channel memory _incentivized
-    ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
-        Channel storage c1 = channels[ChannelId.Basic];
-        Channel storage c2 = channels[ChannelId.Incentivized];
-        // revoke old channel
-        revokeRole(INBOUND_CHANNEL_ROLE, c1.inbound);
-        revokeRole(INBOUND_CHANNEL_ROLE, c2.inbound);
-        // set new channel
-        c1.inbound = _basic.inbound;
-        c1.outbound = _basic.outbound;
-        c2.inbound = _incentivized.inbound;
-        c2.outbound = _incentivized.outbound;
-        grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
-        grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
-        emit Upgraded(msg.sender, c1, c2);
-    }
 }
