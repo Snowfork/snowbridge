@@ -7,6 +7,6 @@ pub trait WeightInfo {
 // TODO: placeholder implementation, generate weights properly
 impl WeightInfo for () {
     fn submit() -> Weight {
-        42
+        42u64
     }
 }
