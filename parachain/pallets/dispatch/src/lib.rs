@@ -131,7 +131,7 @@ pub mod pallet {
 		fn successful_dispatch_event(
 			id: MessageIdOf<T>,
 		) -> Option<<T as frame_system::Config>::RuntimeEvent> {
-			let event: <T as Config>::Event = Event::MessageDispatched(id, Ok(())).into();
+			let event: <T as Config>::RuntimeEvent = Event::MessageDispatched(id, Ok(())).into();
 			Some(event.into())
 		}
 	}

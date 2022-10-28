@@ -8,7 +8,7 @@ use sp_std::prelude::*;
 
 use frame_support::traits::fungible::Mutate;
 
-use crate::{Address, RuntimeCall, Config as EtherAppConfig, Pallet as EtherApp};
+use crate::{Address, Call, Config as EtherAppConfig, Pallet as EtherApp};
 use snowbridge_core::ChannelId;
 
 use frame_support::traits::fungible::Inspect;
