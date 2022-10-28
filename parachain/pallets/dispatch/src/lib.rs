@@ -62,7 +62,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The overarching origin type.
-		type RuntimeOrigin: FromRawOrigin>;
+		type RuntimeOrigin: From<RawOrigin>;
 
 		/// Id of the message. Whenever message is passed to the dispatch module, it emits
 		/// event with this id + dispatch result.
