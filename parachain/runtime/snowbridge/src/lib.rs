@@ -262,7 +262,7 @@ impl cumulus_pallet_aura_ext::Config for Runtime {}
 parameter_types! {
 	pub const RococoLocation: MultiLocation = MultiLocation::parent();
 	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
-	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::RuntimeOrigin::Relay.into();
+	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
 	pub const Local: MultiLocation = Here.into();
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
@@ -325,12 +325,12 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, RuntimeOrigin>,
 	// Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
 	// transaction from the Root origin.
-	ParentAsSuperuser<Origin>,
+	ParentAsSuperuser<RuntimeOrigin>,
 	// Native signed account converter; this just converts an `AccountId32` origin into a normal
-	// `RuntimeOrigin::Signed` origin of the same 32-byte value.
+	// `Origin::Signed` origin of the same 32-byte value.
 	SignedAccountId32AsNative<RococoNetwork, RuntimeOrigin>,
 	// Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
-	XcmPassthrough<Origin>,
+	XcmPassthrough<RuntimeOrigin>,
 );
 
 parameter_types! {
@@ -375,7 +375,7 @@ parameter_types! {
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
-pub type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, RococoNetwork>,);
+pub type LocalOriginToLocation = (SignedToAccountId32<RuntimeOrigin, AccountId, RococoNetwork>,);
 
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
@@ -390,9 +390,9 @@ impl pallet_xcm::Config for Runtime {
 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
 
 	type RuntimeEvent = RuntimeEvent;
-	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type XcmRouter = XcmRouter;
-	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = Everything;
@@ -752,53 +752,53 @@ construct_runtime!(
 		NodeBlock = runtime_primitives::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>} = 0,
-		Timestamp: pallet_timestamp::{Pallet, RuntimeCall, Storage, Inherent} = 1,
-		Balances: pallet_balances::{Pallet, RuntimeCall, Storage, Config<T>, RuntimeEvent<T>} = 2,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, RuntimeEvent<T>} = 3,
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
-		Utility: pallet_utility::{Pallet, RuntimeCall, Storage, RuntimeEvent} = 5,
-		Scheduler: pallet_scheduler::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>} = 6,
-		Preimage: pallet_preimage::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>} = 7,
+		Utility: pallet_utility::{Pallet, Call, Storage, Event} = 5,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 6,
+		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 7,
 
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 8,
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, RuntimeCall, Storage, Inherent, Config, RuntimeEvent<T>} = 9,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>} = 9,
 
-		LocalCouncil: pallet_collective::<Instance1>::{Pallet, RuntimeCall, Storage, RuntimeOrigin<T>, RuntimeEvent<T>, Config<T>} = 10,
-		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>, Config<T>} = 11,
+		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 10,
+		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
 
 		// Bridge Infrastructure
-		BasicInboundChannel: basic_channel_inbound::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>} = 12,
-		BasicOutboundChannel: basic_channel_outbound::{Pallet, Config<T>, Storage, RuntimeEvent<T>} = 13,
-		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>} = 14,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, RuntimeCall, Config<T>, Storage, RuntimeEvent<T>} = 15,
-		Dispatch: dispatch::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>, RuntimeOrigin} = 16,
-		EthereumBeaconClient: ethereum_beacon_client::{Pallet, RuntimeCall, Config<T>, Storage, RuntimeEvent<T>} = 18,
-		Assets: pallet_assets::{Pallet, RuntimeCall, Config<T>, Storage, RuntimeEvent<T>} = 19,
+		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Config<T>, Storage, Event<T>} = 13,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 14,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
+		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 16,
+		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config<T>, Storage, Event<T>} = 18,
+		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 20,
-		XcmSupport: snowbridge_xcm_support::{Pallet, Storage, Config, RuntimeEvent<T>} = 21,
+		XcmSupport: snowbridge_xcm_support::{Pallet, Storage, Config, Event<T>} = 21,
 
 		// XCM
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>} = 22,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>} = 23,
-		PolkadotXcm: pallet_xcm::{Pallet, RuntimeCall, RuntimeEvent<T>, RuntimeOrigin, Config} = 24,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, RuntimeEvent<T>, RuntimeOrigin} = 25,
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 22,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 23,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 24,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 25,
 
-		Authorship: pallet_authorship::{Pallet, RuntimeCall, Storage} = 26,
-		CollatorSelection: pallet_collator_selection::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>, Config<T>} = 27,
-		Session: pallet_session::{Pallet, RuntimeCall, Storage, RuntimeEvent, Config<T>} = 28,
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 26,
+		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 27,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 28,
 		Aura: pallet_aura::{Pallet, Config<T>} = 29,
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 30,
 
 		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, RuntimeCall, Config<T>, Storage, RuntimeEvent<T>} = 31,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 31,
 
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating
 		//   the peer apps (smart contracts) on the Ethereum side.
-		DotApp: dot_app::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>} = 64,
-		EthApp: eth_app::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>} = 65,
-		Erc20App: erc20_app::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>} = 66,
+		DotApp: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 64,
+		EthApp: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
+		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
 		// NOTE: 67 is reserved for use with NFTs.
 	}
 );
