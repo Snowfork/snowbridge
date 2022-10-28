@@ -31,7 +31,17 @@ type Scanner struct {
 	accounts         [][32]byte
 }
 
-// Runs the sync flow for the provided BEEFY block
+// Scans for all parachain message commitments that need to be relayed and can be proven
+// using the MMR root at the specified beefyBlockNumber of the relay chain.
+//
+// The algorithm works roughly like this:
+// 1. Fetch channel nonces on both sides of the bridge and compare them
+// 2. If the nonces on the parachain side are larger that means messages
+//    need to be relayed. If not then exit early.
+// 3. Scan parachain blocks to figure out exactly which commitments need to be relayed,
+// 4. For all the parachain blocks with unsettled commitments, determine the relay chain
+//    block number in which the parachain block was included,
+//
 func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, error) {
 	beefyBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
 	if err != nil {
@@ -58,7 +68,7 @@ func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, e
 		return  nil, fmt.Errorf("fetch parachain block hash for block %v: %w", paraBlockNumber, err)
 	}
 
-	tasks, err := s.discoverCatchupTasks(ctx, paraBlockNumber, paraBlockHash)
+	tasks, err := s.findTasks(ctx, paraBlockNumber, paraBlockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +81,8 @@ type AccountNonces struct {
 	paraBasicNonce, ethBasicNonce uint64
 }
 
-// discoverCatchupTasks finds all the commitments which need to be relayed
-func (s *Scanner) discoverCatchupTasks(
+// findTasks finds all the message commitments which need to be relayed
+func (s *Scanner) findTasks(
 	ctx context.Context,
 	paraBlock uint64,
 	paraHash types.Hash,
@@ -172,7 +182,7 @@ func (s *Scanner) discoverCatchupTasks(
 
 	log.Info("Nonces are mismatched, scanning for commitments that need to be relayed")
 
-	tasks, err := s.scanForCommitments(
+	tasks, err := s.findTasksImpl(
 		ctx,
 		paraBlock,
 		basicChannelAccountNoncesToFind,
@@ -188,97 +198,10 @@ func (s *Scanner) discoverCatchupTasks(
 	return tasks, nil
 }
 
-type PersistedValidationData struct {
-	ParentHead             []byte
-	RelayParentNumber      uint32
-	RelayParentStorageRoot types.Hash
-	MaxPOVSize             uint32
-}
-
-// For each snowbridge header (Task), gatherProofInputs will search to find the polkadot block
-// in which that header was included as well as the parachain heads for that block.
-func (s *Scanner) gatherProofInputs(
-	tasks []*Task,
-) error {
-	for _, task := range tasks {
-
-		log.WithFields(log.Fields{
-			"ParaBlockNumber": task.BlockNumber,
-		}).Debug("Gathering proof inputs for parachain header")
-
-		relayBlockNumber, err := s.findInclusionBlockNumber(task.BlockNumber)
-		if err != nil {
-			return fmt.Errorf("find inclusion block number for parachain block %v: %w", task.BlockNumber, err)
-		}
-
-		relayBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(relayBlockNumber)
-		if err != nil {
-			return fmt.Errorf("fetch relaychain block hash: %w", err)
-		}
-
-		parachainHeads, err := s.relayConn.FetchParachainHeads(relayBlockHash)
-		if err != nil {
-			return fmt.Errorf("fetch parachain heads: %w", err)
-		}
-
-		task.ProofInput.PolkadotBlockNumber = relayBlockNumber
-		task.ProofInput.ParaHeads = parachainHeads
-	}
-
-	return nil
-}
-
-// Find the relaychain block in which a parachain header was included (finalized). This usually happens
-// 2-3 blocks after the relaychain block in which the parachain header was backed.
-func (s *Scanner) findInclusionBlockNumber(
-	paraBlockNumber uint64,
-) (uint64, error) {
-	validationDataKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "ParachainSystem", "ValidationData", nil, nil)
-	if err != nil {
-		return 0, fmt.Errorf("create storage key: %w", err)
-	}
-
-	paraBlockHash, err := s.paraConn.API().RPC.Chain.GetBlockHash(paraBlockNumber)
-	if err != nil {
-		return 0, fmt.Errorf("fetch parachain block hash: %w", err)
-	}
-
-	var validationData PersistedValidationData
-	ok, err := s.paraConn.API().RPC.State.GetStorage(validationDataKey, &validationData, paraBlockHash)
-	if err != nil {
-		return 0, fmt.Errorf("fetch PersistedValidationData for block %v: %w", paraBlockHash.Hex(), err)
-	}
-	if !ok {
-		return 0, fmt.Errorf("PersistedValidationData not found for block %v", paraBlockHash.Hex())
-	}
-
-	for i := validationData.RelayParentNumber + 1; i < validationData.RelayParentNumber+32; i++ {
-		relayBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(i))
-		if err != nil {
-			return 0, fmt.Errorf("fetch relaychain block hash: %w", err)
-		}
-
-		var paraHead types.Header
-		ok, err := s.relayConn.FetchParachainHead(relayBlockHash, s.paraID, &paraHead)
-		if err != nil {
-			return 0, fmt.Errorf("fetch head for parachain %v at block %v: %w", s.paraID, relayBlockHash.Hex(), err)
-		}
-		if !ok {
-			return 0, fmt.Errorf("parachain %v is not registered", s.paraID)
-		}
-
-		if paraBlockNumber == uint64(paraHead.Number) {
-			return uint64(i), nil
-		}
-	}
-
-	return 0, fmt.Errorf("scan terminated")
-}
-
 
 // Searches for all lost commitments on each channel from the given parachain block number backwards
 // until it finds the given basic and incentivized nonce
-func (s *Scanner) scanForCommitments(
+func (s *Scanner) findTasksImpl(
 	ctx context.Context,
 	lastParaBlockNumber uint64,
 	basicChannelAccountNonces map[types.AccountID]uint64,
@@ -405,8 +328,6 @@ func (s *Scanner) scanForCommitments(
 
 		if len(basicChannelProofs) > 0 || incentivizedChannelCommitment != nil {
 			task := Task{
-				ParaID:                        s.paraID,
-				BlockNumber:                   currentBlockNumber,
 				Header:                        header,
 				BasicChannelProofs:            &basicChannelProofs,
 				IncentivizedChannelCommitment: incentivizedChannelCommitment,
@@ -421,10 +342,101 @@ func (s *Scanner) scanForCommitments(
 
 	// sort tasks by ascending block number
 	sort.SliceStable(tasks, func(i, j int) bool {
-		return tasks[i].BlockNumber < tasks[j].BlockNumber
+		return tasks[i].Header.Number < tasks[j].Header.Number
 	})
 
 	return tasks, nil
+}
+
+
+type PersistedValidationData struct {
+	ParentHead             []byte
+	RelayParentNumber      uint32
+	RelayParentStorageRoot types.Hash
+	MaxPOVSize             uint32
+}
+
+// For each task, gatherProofInputs will search to find the relay chain block
+// in which that header was included as well as the parachain heads for that block.
+func (s *Scanner) gatherProofInputs(
+	tasks []*Task,
+) error {
+	for _, task := range tasks {
+
+		log.WithFields(log.Fields{
+			"ParaBlockNumber": task.Header.Number,
+		}).Debug("Gathering proof inputs for parachain header")
+
+		relayBlockNumber, err := s.findInclusionBlockNumber(uint64(task.Header.Number))
+		if err != nil {
+			return fmt.Errorf("find inclusion block number for parachain block %v: %w", task.Header.Number, err)
+		}
+
+		relayBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(relayBlockNumber)
+		if err != nil {
+			return fmt.Errorf("fetch relaychain block hash: %w", err)
+		}
+
+		parachainHeads, err := s.relayConn.FetchParachainHeads(relayBlockHash)
+		if err != nil {
+			return fmt.Errorf("fetch parachain heads: %w", err)
+		}
+
+		task.ProofInput = &ProofInput{
+			ParaID: s.paraID,
+			RelayBlockNumber: relayBlockNumber,
+			ParaHeads: parachainHeads,
+		}
+	}
+
+	return nil
+}
+
+// Find the relaychain block in which a parachain header was included (finalized). This usually happens
+// 2-3 blocks after the relaychain block in which the parachain header was backed.
+func (s *Scanner) findInclusionBlockNumber(
+	paraBlockNumber uint64,
+) (uint64, error) {
+	validationDataKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "ParachainSystem", "ValidationData", nil, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create storage key: %w", err)
+	}
+
+	paraBlockHash, err := s.paraConn.API().RPC.Chain.GetBlockHash(paraBlockNumber)
+	if err != nil {
+		return 0, fmt.Errorf("fetch parachain block hash: %w", err)
+	}
+
+	var validationData PersistedValidationData
+	ok, err := s.paraConn.API().RPC.State.GetStorage(validationDataKey, &validationData, paraBlockHash)
+	if err != nil {
+		return 0, fmt.Errorf("fetch PersistedValidationData for block %v: %w", paraBlockHash.Hex(), err)
+	}
+	if !ok {
+		return 0, fmt.Errorf("PersistedValidationData not found for block %v", paraBlockHash.Hex())
+	}
+
+	for i := validationData.RelayParentNumber + 1; i < validationData.RelayParentNumber+32; i++ {
+		relayBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(i))
+		if err != nil {
+			return 0, fmt.Errorf("fetch relaychain block hash: %w", err)
+		}
+
+		var paraHead types.Header
+		ok, err := s.relayConn.FetchParachainHead(relayBlockHash, s.paraID, &paraHead)
+		if err != nil {
+			return 0, fmt.Errorf("fetch head for parachain %v at block %v: %w", s.paraID, relayBlockHash.Hex(), err)
+		}
+		if !ok {
+			return 0, fmt.Errorf("parachain %v is not registered", s.paraID)
+		}
+
+		if paraBlockNumber == uint64(paraHead.Number) {
+			return uint64(i), nil
+		}
+	}
+
+	return 0, fmt.Errorf("scan terminated")
 }
 
 func scanForBasicChannelProofs(
@@ -529,9 +541,4 @@ func fetchBundleProof(
 	}
 
 	return BundleProof{Bundle: bundle, Proof: proof}, nil
-}
-
-type OffchainStorageValue struct {
-	Nonce      uint64
-	Commitment []byte
 }

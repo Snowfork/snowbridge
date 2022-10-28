@@ -48,7 +48,6 @@ func NewBeefyListener(
 }
 
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
-
 	accounts, err := li.config.getAccounts()
 	if err != nil {
 		return err
@@ -62,12 +61,11 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	li.beefyClientContract = beefyClientContract
 
-	// Fetch ParaId
+	// fetch ParaId
 	paraIDKey, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "ParachainInfo", "ParachainId", nil, nil)
 	if err != nil {
 		return err
 	}
-
 	var paraID uint32
 	ok, err := li.parachainConnection.API().RPC.State.GetStorageLatest(paraIDKey, &paraID)
 	if err != nil {
@@ -80,6 +78,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	li.paraID = paraID
 
 	li.scanner = &Scanner{
+		config: li.config,
 		ethConn: li.ethereumConn,
 		relayConn: li.relaychainConn,
 		paraConn: li.parachainConnection,
@@ -237,12 +236,12 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 
 	log.WithFields(log.Fields{
 		"beefyBlock": latestBeefyBlockNumber,
-		"leafIndex":  input.PolkadotBlockNumber,
+		"leafIndex":  input.RelayBlockNumber,
 	}).Info("Generating MMR proof")
 
 	// Generate the MMR proof for the polkadot block.
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
-		input.PolkadotBlockNumber,
+		input.RelayBlockNumber,
 		latestBeefyBlockHash,
 		li.config.BeefyActivationBlock,
 	)
@@ -269,7 +268,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 	// Generate a merkle proof for the parachain heads.
 	// Polkadot uses the following code to generate the merkle proof:
 	// https://github.com/paritytech/polkadot/blob/2eb7672905d99971fc11ad7ff4d57e68967401d2/runtime/rococo/src/lib.rs#L700
-	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, li.paraID)
+	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, input.ParaID)
 	if err != nil {
 		return nil, fmt.Errorf("create parachain header proof: %w", err)
 	}
