@@ -5,6 +5,7 @@ import "@nomiclabs/hardhat-truffle5";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
+import "hardhat-gas-reporter"
 import "hardhat-deploy";
 import "./tasks/upgrade";
 import "./tasks/renounce";
@@ -50,7 +51,7 @@ const config: HardhatUserConfig = {
     version: "0.8.9",
     settings: {
       optimizer: {
-        enabled: false,
+        enabled: true,
         runs: 200,
       }
     }

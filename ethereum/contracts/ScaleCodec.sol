@@ -105,4 +105,25 @@ library ScaleCodec {
     function encode8(uint8 input) public pure returns (bytes1) {
         return bytes1(input);
     }
+
+    // The biggest value supported by this method is 2^16
+    function encodeUintCompact(uint16 input) internal pure returns (bytes memory) {
+        uint256 v = uint256(input);
+
+        if (v < 64) {
+            return abi.encodePacked(uint8(v << 2));
+        } else if (v < 2 ** 14) {
+            return abi.encodePacked(reverse16(uint16(((v << 2) + 1))));
+        } else {
+            return abi.encodePacked(reverse32(uint32(((v << 2) + 2))));
+        }
+    }
+
+    function encodeBytes(bytes memory input) internal pure returns (bytes memory) {
+        require(input.length <= 2**16, "too big");
+        return abi.encodePacked(
+            encodeUintCompact(uint16(input.length)),
+            input
+        );
+    }
 }

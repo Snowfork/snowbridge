@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./RewardController.sol";
 import "./OutboundChannel.sol";
-import "./PalletCalls.sol";
+import "./ETHAppPallet.sol";
 
 enum ChannelId {
     Basic,
@@ -75,7 +75,7 @@ contract ETHApp is RewardController, AccessControl {
     function lock(
         bytes32 _recipient,
         ChannelId _channelId,
-        uint32 _paraId,
+        uint32 _paraID,
         uint128 _fee
     ) public payable {
         require(msg.value > 0, "Value of transaction must be positive");
@@ -88,9 +88,14 @@ contract ETHApp is RewardController, AccessControl {
         // revert in case of overflow.
         uint128 value = (msg.value).toUint128();
 
-        emit Locked(msg.sender, _recipient, value, _paraId, _fee);
+        emit Locked(msg.sender, _recipient, value, _paraID, _fee);
 
-        bytes memory call = PalletCalls.EtherApp_mint(msg.sender, _recipient, value, _paraId, _fee);
+        bytes memory call;
+        if (_paraID == 0) {
+            (call,) = ETHAppPallet.mint(msg.sender, _recipient, value);
+        } else {
+            (call,) = ETHAppPallet.mintAndForward(msg.sender, _recipient, value, _paraID, _fee);
+        }
 
         OutboundChannel channel = OutboundChannel(
             channels[_channelId].outbound

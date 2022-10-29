@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WrappedToken.sol";
 import "./OutboundChannel.sol";
 import "./FeeController.sol";
-import "./PalletCalls.sol";
+import "./DOTAppPallet.sol";
 
 enum ChannelId {Basic, Incentivized}
 
@@ -75,7 +75,7 @@ contract DOTApp is FeeController, AccessControl {
         OutboundChannel channel =
             OutboundChannel(channels[_channelId].outbound);
 
-        bytes memory call = PalletCalls.DotApp_unlock(msg.sender, _recipient, _amount);
+        (bytes memory call,) = DOTAppPallet.unlock(msg.sender, _recipient, _amount);
         channel.submit(msg.sender, call);
 
         emit Burned(msg.sender, _recipient, _amount);
@@ -114,3 +114,4 @@ contract DOTApp is FeeController, AccessControl {
         emit Upgraded(msg.sender, c1, c2);
     }
 }
+
