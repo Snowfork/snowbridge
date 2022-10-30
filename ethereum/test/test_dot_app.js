@@ -1,21 +1,12 @@
-const { ethers } = require("ethers");
-const { singletons } = require('@openzeppelin/test-helpers');
+const { ethers } = require("hardhat");
 const BigNumber = require('bignumber.js');
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
-const {
-  deployAppWithMockChannels,
-  ChannelId,
-} = require("./helpers");
 const { expect } = require("chai");
 
-const DOTApp = artifacts.require("DOTApp");
-const ScaleCodec = artifacts.require("ScaleCodec");
-const WrappedToken = artifacts.require("WrappedToken");
-const MockOutboundChannel = artifacts.require("MockOutboundChannel");
 
 const DOT_DECIMALS = 10;
 const ETHER_DECIMALS = 18;
@@ -44,17 +35,23 @@ describe("DOTApp", function () {
   // Accounts
   let accounts;
   let owner;
-  let inboundChannel;
   let userOne;
 
   const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
-  before(async function() {
+  before(async function () {
+    this.DOTApp = await ethers.getContractFactory("DOTApp");
+    this.ScaleCodec = await ethers.getContractFactory("ScaleCodec");
+    this.WrappedToken = await ethers.getContractFactory("WrappedToken");
+    this.MockOutboundChannel = await ethers.getContractFactory("MockOutboundChannel");
+    this.Registry = await ethers.getContractFactory("ChannelRegistry");
+
     const codec = await ScaleCodec.new();
     DOTApp.link(codec);
+
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
-    inboundChannel =  accounts[0];
+    inboundChannel = accounts[0];
     userOne = accounts[1];
   });
 
@@ -62,14 +59,19 @@ describe("DOTApp", function () {
     beforeEach(async function () {
       this.token = await WrappedToken.new("Wrapped DOT", "WDOT")
 
+      this.registry = await Registry.new();
+
       let outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(
-        owner,
-        [inboundChannel, outboundChannel.address],
-        DOTApp,
+      await this.registry.updateChannel(0, owner, outboundChannel.address)
+
+      this.app = await DOTApp.new(
         this.token.address,
-        outboundChannel.address
-      );
+        outboundChannel.address,
+        this.registry.address,
+        {
+          from: owner,
+        }
+      )
 
       await this.token.transferOwnership(this.app.address)
     });
@@ -85,7 +87,7 @@ describe("DOTApp", function () {
         userOne,
         amountWrapped.toString(),
         {
-          from: inboundChannel,
+          from: owner,
         }
       ).should.be.fulfilled;
 
@@ -109,14 +111,19 @@ describe("DOTApp", function () {
     beforeEach(async function () {
       this.token = await WrappedToken.new("Wrapped DOT", "WDOT")
 
+      this.registry = await Registry.new();
+
       let outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(
-        owner,
-        [inboundChannel, outboundChannel.address],
-        DOTApp,
+      await this.registry.updateChannel(0, owner, outboundChannel.address)
+
+      this.app = await DOTApp.new(
         this.token.address,
-        outboundChannel.address
-      );
+        outboundChannel.address,
+        this.registry.address,
+        {
+          from: owner,
+        }
+      )
 
       await this.token.transferOwnership(this.app.address)
 
@@ -139,7 +146,7 @@ describe("DOTApp", function () {
       const beforeUserBalance = BigNumber(await this.token.balanceOf(userOne));
       const amountWrapped = wrapped(BigNumber("10000000000"));
 
-      let tx = await burnTokens(this.app, userOne, POLKADOT_ADDRESS, amountWrapped, ChannelId.Basic).should.be.fulfilled;
+      let tx = await burnTokens(this.app, userOne, POLKADOT_ADDRESS, amountWrapped, 0).should.be.fulfilled;
 
       // decode expected IERC20.Transfer event
       var abi = ["event Transfer(address indexed from, address indexed to, uint256 value)"];
@@ -155,71 +162,5 @@ describe("DOTApp", function () {
       beforeTotalSupply.minus(afterTotalSupply).should.be.bignumber.equal(amountWrapped);
       beforeUserBalance.minus(afterUserBalance).should.be.bignumber.equal(amountWrapped);
     });
-  });
-
-  describe("upgradeability", function () {
-    beforeEach(async function () {
-      this.token = await WrappedToken.new("Wrapped DOT", "WDOT")
-      this.outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(
-        owner,
-        [owner, this.outboundChannel.address],
-        DOTApp,
-        this.token.address,
-        this.outboundChannel.address
-      );
-      await this.token.transferOwnership(this.app.address)
-
-      this.newInboundChannel = accounts[2];
-
-      const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
-      this.iface = new ethers.utils.Interface(abi);
-    });
-
-    it("should revert when called by non-admin", async function () {
-      await this.app.upgrade(
-        [this.newInboundChannel, this.outboundChannel.address],
-        [this.newInboundChannel, this.outboundChannel.address],
-        {from: userOne}).should.be.rejectedWith(/AccessControl/);
-    });
-
-    it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
-      await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
-      await this.app.upgrade(
-        [this.newInboundChannel, this.outboundChannel.address],
-        [this.newInboundChannel, this.outboundChannel.address],
-        {from: owner}
-      ).should.be.rejectedWith(/AccessControl/)
-    })
-
-    it("should succeed when called by CHANNEL_UPGRADE_ROLE", async function () {
-      const oldBasic = await this.app.channels(0);
-      const oldIncentivized = await this.app.channels(1);
-      await this.app.upgrade(
-        [this.newInboundChannel, this.outboundChannel.address],
-        [this.newInboundChannel, this.outboundChannel.address],
-        {from: owner}
-      );
-      const newBasic = await this.app.channels(0);
-      const newIncentivized = await this.app.channels(1);
-      expect(newBasic.inbound !== oldBasic.inbound).to.be.true;
-      expect(newIncentivized.inbound !== oldIncentivized.inbound).to.be.true;
-    });
-
-    it("CHANNEL_UPGRADE_ROLE can change CHANNEL_UPGRADE_ROLE", async function () {
-      const newUpgrader = ethers.Wallet.createRandom().address;
-      const tx = await this.app.grantRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), newUpgrader);
-      const event = this.iface.decodeEventLog('RoleGranted', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
-      expect(event.account).to.equal(newUpgrader);
-    });
-
-    it("reverts when non-upgrader attempts to change CHANNEL_UPGRADE_ROLE", async function () {
-      const newUpgrader = ethers.Wallet.createRandom().address;
-      await this.app.grantRole(
-        web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"),
-        newUpgrader,
-        {from: userOne}
-      ).should.be.rejectedWith(/AccessControl/);
-    })
   });
 });

@@ -9,15 +9,15 @@ import "./DOTAppPallet.sol";
 import "./ChannelRegistry.sol";
 
 contract DOTApp is FeeController, AccessControl {
-
     WrappedToken public immutable token;
-    ChannelRegistry public registry;
+    ChannelRegistry public immutable registry;
 
     bytes32 public constant FEE_BURNER_ROLE = keccak256("FEE_BURNER_ROLE");
 
     event Minted(bytes32 sender, address recipient, uint256 amount);
     event Burned(address sender, bytes32 recipient, uint256 amount);
 
+    error UnknownChannel(uint32 id);
     error Unauthorized();
 
     constructor(
@@ -37,10 +37,13 @@ contract DOTApp is FeeController, AccessControl {
     ) external {
         token.burn(msg.sender, _amount);
 
-        OutboundChannel channel = registry.outboundChannelForID(_channelID);
+        address channel = registry.outboundChannelForID(_channelID);
+        if (channel == address(0)) {
+            revert UnknownChannel(_channelID);
+        }
 
-        (bytes memory call,) = DOTAppPallet.unlock(msg.sender, _recipient, _amount);
-        channel.submit(msg.sender, call);
+        (bytes memory call, uint64 weight) = DOTAppPallet.unlock(msg.sender, _recipient, _amount);
+        OutboundChannel(channel).submit(msg.sender, call, weight);
 
         emit Burned(msg.sender, _recipient, _amount);
     }
@@ -58,7 +61,11 @@ contract DOTApp is FeeController, AccessControl {
     }
 
     // Incentivized channel calls this to charge (burn) fees
-    function handleFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
+    function handleFee(address feePayer, uint256 _amount)
+        external
+        override
+        onlyRole(FEE_BURNER_ROLE)
+    {
         token.burn(feePayer, _amount);
     }
 }

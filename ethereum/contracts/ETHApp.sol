@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./RewardController.sol";
 import "./OutboundChannel.sol";
 import "./ETHAppPallet.sol";
+import "./ChannelRegistry.sol";
 
 enum ChannelId {
     Basic,
@@ -13,11 +14,12 @@ enum ChannelId {
 }
 
 contract ETHApp is RewardController, AccessControl {
-    using ScaleCodec for uint128;
-    using ScaleCodec for uint32;
     using SafeCast for uint256;
 
-    mapping(ChannelId => Channel) public channels;
+    ChannelRegistry public immutable registry;
+
+    bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
+
 
     event Locked(
         address sender,
@@ -29,59 +31,40 @@ contract ETHApp is RewardController, AccessControl {
 
     event Unlocked(bytes32 sender, address recipient, uint128 amount);
 
-    event Upgraded(
-        address upgrader,
-        Channel basic,
-        Channel incentivized
-    );
+    // Unknown outbound channel
+    error UnknownChannel(uint32 id);
 
-    bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
+    // Not allowed to send messages to this app
+    error Unauthorized();
 
-    struct Channel {
-        address inbound;
-        address outbound;
-    }
+    // Value of transaction must be positive
+    error MinimumAmount();
 
-    bytes32 public constant INBOUND_CHANNEL_ROLE =
-        keccak256("INBOUND_CHANNEL_ROLE");
-
-    bytes32 public constant CHANNEL_UPGRADE_ROLE =
-        keccak256("CHANNEL_UPGRADE_ROLE");
+    // Cannot send ether to recipient
+    error CannotUnlock();
 
     constructor(
         address rewarder,
-        Channel memory _basic,
-        Channel memory _incentivized
+        address channelRegistry
     ) {
-
-        Channel storage c1 = channels[ChannelId.Basic];
-        c1.inbound = _basic.inbound;
-        c1.outbound = _basic.outbound;
-
-        Channel storage c2 = channels[ChannelId.Incentivized];
-        c2.inbound = _incentivized.inbound;
-        c2.outbound = _incentivized.outbound;
-
-        _setupRole(CHANNEL_UPGRADE_ROLE, msg.sender);
-        _setRoleAdmin(INBOUND_CHANNEL_ROLE, CHANNEL_UPGRADE_ROLE);
-        _setRoleAdmin(CHANNEL_UPGRADE_ROLE, CHANNEL_UPGRADE_ROLE);
+        registry = ChannelRegistry(channelRegistry);
         _setupRole(REWARD_ROLE, rewarder);
-        _setupRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
-        _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
 
     function lock(
         bytes32 _recipient,
-        ChannelId _channelId,
         uint32 _paraID,
-        uint128 _fee
+        uint128 _fee,
+        uint32 _channelID
     ) public payable {
-        require(msg.value > 0, "Value of transaction must be positive");
-        require(
-            _channelId == ChannelId.Basic ||
-                _channelId == ChannelId.Incentivized,
-            "Invalid channel ID"
-        );
+        if (msg.value == 0) {
+            revert MinimumAmount();
+        }
+
+        address channel = registry.outboundChannelForID(_channelID);
+        if (channel == address(0)) {
+            revert UnknownChannel(_channelID);
+        }
 
         // revert in case of overflow.
         uint128 value = (msg.value).toUint128();
@@ -89,27 +72,30 @@ contract ETHApp is RewardController, AccessControl {
         emit Locked(msg.sender, _recipient, value, _paraID, _fee);
 
         bytes memory call;
+        uint64 weight;
         if (_paraID == 0) {
-            (call,) = ETHAppPallet.mint(msg.sender, _recipient, value);
+            (call, weight) = ETHAppPallet.mint(msg.sender, _recipient, value);
         } else {
-            (call,) = ETHAppPallet.mintAndForward(msg.sender, _recipient, value, _paraID, _fee);
+            (call, weight) = ETHAppPallet.mintAndForward(msg.sender, _recipient, value, _paraID, _fee);
         }
 
-        OutboundChannel channel = OutboundChannel(
-            channels[_channelId].outbound
-        );
-        channel.submit(msg.sender, call);
+        OutboundChannel(channel).submit(msg.sender, call, weight);
     }
 
     function unlock(
         bytes32 _sender,
         address payable _recipient,
         uint128 _amount
-    ) public onlyRole(INBOUND_CHANNEL_ROLE) {
-        require(_amount > 0, "Must unlock a positive amount");
+    ) external {
+        if (!registry.isInboundChannel(msg.sender)) {
+            revert Unauthorized();
+        }
 
         (bool success, ) = _recipient.call{value: _amount}("");
-        require(success, "Unable to send Ether");
+        if (!success) {
+            revert CannotUnlock();
+        }
+
         emit Unlocked(_sender, _recipient, _amount);
     }
 
@@ -122,24 +108,5 @@ contract ETHApp is RewardController, AccessControl {
         if (success) {
             emit Rewarded(_relayer, _amount);
         }
-    }
-
-    function upgrade(
-        Channel memory _basic,
-        Channel memory _incentivized
-    ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
-        Channel storage c1 = channels[ChannelId.Basic];
-        Channel storage c2 = channels[ChannelId.Incentivized];
-        // revoke old channel
-        revokeRole(INBOUND_CHANNEL_ROLE, c1.inbound);
-        revokeRole(INBOUND_CHANNEL_ROLE, c2.inbound);
-        // set new channel
-        c1.inbound = _basic.inbound;
-        c1.outbound = _basic.outbound;
-        c2.inbound = _incentivized.inbound;
-        c2.outbound = _incentivized.outbound;
-        grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
-        grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
-        emit Upgraded(msg.sender, c1, c2);
     }
 }
