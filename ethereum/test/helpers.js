@@ -5,32 +5,32 @@ const { ethers } = require("ethers");
 const _ = require("lodash");
 const secp256k1 = require('secp256k1');
 
-const MerkleProof = artifacts.require("MerkleProof");
-const Bitfield = artifacts.require("Bitfield");
-const ScaleCodec = artifacts.require("ScaleCodec");
-const MMRProofVerification = artifacts.require("MMRProofVerification");
-const BeefyClient = artifacts.require("BeefyClient");
+// const MerkleProof = artifacts.require("MerkleProof");
+// const Bitfield = artifacts.require("Bitfield");
+// const ScaleCodec = artifacts.require("ScaleCodec");
+// const MMRProofVerification = artifacts.require("MMRProofVerification");
+// const BeefyClient = artifacts.require("BeefyClient");
 
 const fixture = require('./fixtures/beefy-relay-basic.json');
 
-let lazyLinked = false;
-const lazyLinkLibraries = async _ => {
-  if (lazyLinked) {
-    return;
-  }
+// let lazyLinked = false;
+// const lazyLinkLibraries = async _ => {
+//   if (lazyLinked) {
+//     return;
+//   }
 
-  const mmrProofVerification = await MMRProofVerification.new();
-  const merkleProof = await MerkleProof.new();
-  const bitfield = await Bitfield.new();
-  const scaleCodec = await ScaleCodec.new();
+//   const mmrProofVerification = await MMRProofVerification.new();
+//   const merkleProof = await MerkleProof.new();
+//   const bitfield = await Bitfield.new();
+//   const scaleCodec = await ScaleCodec.new();
 
-  await BeefyClient.link(merkleProof);
-  await BeefyClient.link(bitfield);
-  await BeefyClient.link(scaleCodec);
-  await BeefyClient.link(mmrProofVerification);
+//   await BeefyClient.link(merkleProof);
+//   await BeefyClient.link(bitfield);
+//   await BeefyClient.link(scaleCodec);
+//   await BeefyClient.link(mmrProofVerification);
 
-  lazyLinked = true;
-}
+//   lazyLinked = true;
+// }
 
 const makeBasicCommitment = (messages) => {
   let encoded = ethers.utils.defaultAbiCoder.encode(
@@ -46,25 +46,6 @@ const makeIncentivizedCommitment = (messages) => {
     [messages]
   )
   return ethers.utils.solidityKeccak256(["bytes"], [encoded])
-}
-
-const deployAppWithMockChannels = async (deployer, channels, appContract, ...appContractArgs) => {
-  const app = await appContract.new(
-    ...appContractArgs,
-    {
-      inbound: channels[0],
-      outbound: channels[1],
-    },
-    {
-      inbound: channels[0],
-      outbound: channels[1],
-    },
-    {
-      from: deployer,
-    }
-  );
-
-  return app;
 }
 
 const deployBeefyClient = async (validatorSetID, validatorSetRoot, validatorSetLength) => {
@@ -121,11 +102,6 @@ async function mine(n) {
 
 const encodeLog = (log) => {
   return rlp.encode([log.address, log.topics, log.data]).toString("hex")
-}
-
-const ChannelId = {
-  Basic: 0,
-  Incentivized: 1,
 }
 
 const hexPrefix = /^(0x)/i
@@ -317,12 +293,10 @@ async function createFinalValidatorProofs(id, beefyClient, initialProofs) {
 }
 
 module.exports = {
-  deployAppWithMockChannels,
   deployBeefyClient,
   createMerkleTree,
   signatureSubstrateToEthereum,
   mine,
-  ChannelId,
   encodeLog,
   mergeKeccak256,
   printTxPromiseGas,

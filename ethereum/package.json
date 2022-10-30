@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomiclabs/hardhat-etherscan": "^2.1.4",
     "@openzeppelin/contracts": "^4.1.0",
     "@openzeppelin/test-helpers": "https://github.com/Snowfork/openzeppelin-test-helpers.git#3f9c4b8",
@@ -38,6 +39,8 @@
   },
   "devDependencies": {
     "@babel/core": "^7.11.6",
+    "@ethereum-waffle/mock-contract": "^3.4.4",
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-truffle5": "^2.0.0",
     "@nomiclabs/hardhat-web3": "^2.0.0",

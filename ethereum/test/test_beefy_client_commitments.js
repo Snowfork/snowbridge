@@ -1,67 +1,46 @@
-const BigNumber = web3.BigNumber;
-const {
-  deployBeefyClient, mine
-} = require("./helpers");
-
-const fixture = require('./fixtures/beefy-relay-basic.json')
-
-
-require("chai")
-  .use(require("chai-as-promised"))
-  .use(require("chai-bignumber")(BigNumber))
-  .should();
-
+const { ethers, contract } = require("hardhat");
 const { expect } = require("chai");
+const { loadFixture, mine } = require("@nomicfoundation/hardhat-network-helpers");
+const { beefyClientFixture1 } = require("./fixtures");
 
-
-let METHOD = "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))";
+let SUBMIT_FINAL_2 = "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))";
 
 describe("BeefyClient", function () {
 
-  before(async function () {
-    this.beefyClient = await deployBeefyClient(
-      fixture.params.commitment.validatorSetID-1,
-      fixture.params.leaf.nextAuthoritySetRoot,
-      fixture.params.leaf.nextAuthoritySetLen
-    );
-  });
+  it("runs commitment submission flow", async function () {
+    let { beefyClient, fixtureData, user } = await loadFixture(beefyClientFixture1);
 
-  it("runs new signature commitment and complete signature commitment correctly", async function () {
-
-    const bitfield = await this.beefyClient.createInitialBitfield(
-      fixture.params.proof.indices,
+    const bitfield = await beefyClient.createInitialBitfield(
+      fixtureData.params.proof.indices,
       3
     );
 
-    const tx = this.beefyClient.submitInitial(
-      fixture.commitmentHash,
-      fixture.params.commitment.validatorSetID,
+    await expect(beefyClient.connect(user).submitInitial(
+      fixtureData.commitmentHash,
+      fixtureData.params.commitment.validatorSetID,
       bitfield,
       {
-        signature: fixture.params.proof.signatures[0],
-        index: fixture.params.proof.indices[0],
-        addr: fixture.params.proof.addrs[0],
-        merkleProof: fixture.params.proof.merkleProofs[0]
+        signature: fixtureData.params.proof.signatures[0],
+        index: fixtureData.params.proof.indices[0],
+        addr: fixtureData.params.proof.addrs[0],
+        merkleProof: fixtureData.params.proof.merkleProofs[0]
       }
-    )
-
-    await tx.should.be.fulfilled
-
-    const lastId = (await this.beefyClient.nextRequestID()).sub(new web3.utils.BN(1));
+    )).to.emit(beefyClient, "NewRequest").withArgs(0, user.address);
 
     await mine(3);
 
-    await this.beefyClient.methods[METHOD](
-      lastId,
-      fixture.params.commitment,
-      fixture.params.proof,
-      fixture.params.leaf,
-      fixture.params.leafProof
-    ).should.be.fulfilled;
+    await expect(beefyClient.connect(user)[SUBMIT_FINAL_2](
+      0,
+      fixtureData.params.commitment,
+      fixtureData.params.proof,
+      fixtureData.params.leaf,
+      fixtureData.params.leafProof
+    )).to.emit(beefyClient, "NewMMRRoot").withArgs(
+      fixtureData.params.commitment.payload.mmrRootHash,
+      fixtureData.params.commitment.blockNumber,
+    );
 
-    root = await this.beefyClient.latestMMRRoot()
-    expect(root).to.eq(fixture.params.commitment.payload.mmrRootHash)
+    let root = await beefyClient.latestMMRRoot()
+    expect(root).to.eq(fixtureData.params.commitment.payload.mmrRootHash)
   });
-
-
 });

@@ -1,87 +1,79 @@
-const BigNumber = require('bignumber.js');
-const { ethers } = require("ethers");
-require("chai")
-  .use(require("chai-as-promised"))
-  .use(require("chai-bignumber")(BigNumber))
-  .should();
+const { ethers } = require("hardhat");
+const { expect } = require("chai");
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
-const BasicInboundChannel = artifacts.require("BasicInboundChannel");
-const MerkleProof = artifacts.require("MerkleProof");
-const ScaleCodec = artifacts.require("ScaleCodec");
-const ParachainClient = artifacts.require("ParachainClient");
+const {deployMockContract} = require('@ethereum-waffle/mock-contract');
 
-const {
-  deployBeefyClient, createValidatorFixture, runBeefyClientFlow
-} = require("./helpers");
-
-const fixture = require('./fixtures/beefy-relay-basic.json')
 const submitInput = require('./fixtures/parachain-relay-basic.json')
 
 describe("BasicInboundChannel", function () {
-  const interface = new ethers.utils.Interface(BasicInboundChannel.abi)
 
-  before(async function () {
-    const numberOfSignatures = 8;
-    const numberOfValidators = 24;
-    const validatorFixture = await createValidatorFixture(fixture.params.commitment.validatorSetID-1, numberOfValidators)
-    this.beefyClient = await deployBeefyClient(
-      validatorFixture.validatorSetID,
-      validatorFixture.validatorSetRoot,
-      validatorFixture.validatorSetLength,
-    );
+  async function fixture() {
+    let [owner, user] = await ethers.getSigners();
 
-    const merkleProof = await MerkleProof.new();
-    const scaleCodec = await ScaleCodec.new();
-    await ParachainClient.link(merkleProof);
-    await ParachainClient.link(scaleCodec);
-    await BasicInboundChannel.link(merkleProof);
-    this.parachainClient = await ParachainClient.new(this.beefyClient.address, 1000);
 
-    await runBeefyClientFlow(fixture, this.beefyClient, validatorFixture, numberOfSignatures, numberOfValidators)
-  });
+    let MerkleProof = await ethers.getContractFactory("MerkleProof");
+    let merkleProof = await MerkleProof.deploy();
+    await merkleProof.deployed();
+
+    // mock parachain client
+    let iface = new ethers.utils.Interface([
+      "function verifyCommitment(bytes32 commitment, bytes calldata opaqueProof) returns (bool)",
+    ]);
+    let abi = JSON.parse(iface.format(ethers.utils.FormatTypes.json));
+    const mockParachainClient = await deployMockContract(owner, abi);
+
+    // Make verifyCommitment() return true
+    await mockParachainClient.mock.verifyCommitment.returns(true);
+
+    let BasicInboundChannel = await ethers.getContractFactory("BasicInboundChannel", {
+      libraries: {
+        MerkleProof: merkleProof.address,
+      }
+    });
+    let channel = await BasicInboundChannel.deploy(0, mockParachainClient.address);
+    await channel.deployed();
+
+    return { channel, user };
+  }
 
   describe("submit", function () {
-    beforeEach(async function () {
-      this.channel = await BasicInboundChannel.new(0, this.parachainClient.address);
-    });
 
     it("should accept a valid commitment and dispatch messages", async function () {
-      const nonceBeforeSubmit = BigNumber(await this.channel.nonce(submitInput.params.bundle.account));
+      let { channel } = await loadFixture(fixture);
 
-      const { receipt } = await this.channel.submit(
+      const nonceBeforeSubmit = await channel.nonce(submitInput.params.bundle.account);
+
+      await expect(channel.submit(
         submitInput.params.bundle,
         submitInput.params.leafProof,
         submitInput.params.hashSides,
         submitInput.params.proof,
-      ).should.be.fulfilled
+      )).to.emit(channel, "MessageDispatched").withArgs(ethers.BigNumber.from(0), true);
 
-      const nonceAfterSubmit = BigNumber(await this.channel.nonce(submitInput.params.bundle.account));
-      nonceAfterSubmit.minus(nonceBeforeSubmit).should.be.bignumber.equal(1);
-
-      const event = interface.decodeEventLog(
-        'MessageDispatched(uint64,bool)',
-        receipt.rawLogs[0].data,
-        receipt.rawLogs[0].topics
-      );
-      event.id.eq(ethers.BigNumber.from(0)).should.be.true;
+      const nonceAfterSubmit = await channel.nonce(submitInput.params.bundle.account);
+      expect(nonceAfterSubmit.sub(nonceBeforeSubmit)).to.be.equal(1);
     });
 
     it("should refuse to replay commitments", async function () {
+      let { channel } = await loadFixture(fixture);
+
       // Submit messages
-      await this.channel.submit(
+      await channel.submit(
         submitInput.params.bundle,
         submitInput.params.leafProof,
         submitInput.params.hashSides,
         submitInput.params.proof,
-      ).should.be.fulfilled;
+      );
 
       // Submit messages again - should revert
-      await this.channel.submit(
+      await expect(channel.submit(
         submitInput.params.bundle,
         submitInput.params.leafProof,
         submitInput.params.hashSides,
         submitInput.params.proof,
-      ).should.not.be.fulfilled;
+      )).to.be.reverted;
+
     });
   });
 });

@@ -1,166 +1,148 @@
 const { ethers } = require("hardhat");
-const BigNumber = require('bignumber.js');
-require("chai")
-  .use(require("chai-as-promised"))
-  .use(require("chai-bignumber")(BigNumber))
-  .should();
-
 const { expect } = require("chai");
-
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
 const DOT_DECIMALS = 10;
 const ETHER_DECIMALS = 18;
+const GRANULARITY = Math.pow(10, ETHER_DECIMALS - DOT_DECIMALS);
 
-const granularity = Math.pow(10, ETHER_DECIMALS - DOT_DECIMALS);
-
-const wrapped = (amount) =>
-  amount.multipliedBy(granularity);
-
-const unwrapped = (amount) =>
-  amount.dividedToIntegerBy(granularity);
-
-const burnTokens = (contract, sender, recipient, amount, channel) => {
-  return contract.burn(
-    recipient,
-    amount.toString(),
-    channel,
-    {
-      from: sender,
-      value: 0
-    }
-  )
+// Convert native DOT to wrapped DOT
+const wrapped = (amount) => {
+  return {
+    native: amount,
+    wrapped: amount.mul(GRANULARITY)
+  };
 }
 
+const POLKADOT_ACCOUNT = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+
 describe("DOTApp", function () {
-  // Accounts
-  let accounts;
-  let owner;
-  let userOne;
 
-  const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+  async function baseFixture() {
+    let [owner, user] = await ethers.getSigners();
 
-  before(async function () {
-    this.DOTApp = await ethers.getContractFactory("DOTApp");
-    this.ScaleCodec = await ethers.getContractFactory("ScaleCodec");
-    this.WrappedToken = await ethers.getContractFactory("WrappedToken");
-    this.MockOutboundChannel = await ethers.getContractFactory("MockOutboundChannel");
-    this.Registry = await ethers.getContractFactory("ChannelRegistry");
+    let ScaleCodec = await ethers.getContractFactory("ScaleCodec");
+    let codec = await ScaleCodec.deploy();
 
-    const codec = await ScaleCodec.new();
-    DOTApp.link(codec);
+    let WrappedToken = await ethers.getContractFactory("WrappedToken");
+    let token = await WrappedToken.deploy("Wrapped DOT", "WDOT");
 
-    accounts = await web3.eth.getAccounts();
-    owner = accounts[0];
-    inboundChannel = accounts[0];
-    userOne = accounts[1];
-  });
+    let MockOutboundChannel = await ethers.getContractFactory("MockOutboundChannel");
+    let outboundChannel = await MockOutboundChannel.deploy()
 
-  describe("minting", function () {
-    beforeEach(async function () {
-      this.token = await WrappedToken.new("Wrapped DOT", "WDOT")
+    let Registry = await ethers.getContractFactory("ChannelRegistry");
+    let registry = await Registry.deploy()
 
-      this.registry = await Registry.new();
+    await Promise.all([codec.deployed(), token.deployed(), outboundChannel.deployed(), registry.deployed()])
 
-      let outboundChannel = await MockOutboundChannel.new()
-      await this.registry.updateChannel(0, owner, outboundChannel.address)
+    // Add mock inbound and outbound channels to registry
+    await registry.updateChannel(0, owner.address, outboundChannel.address);
 
-      this.app = await DOTApp.new(
-        this.token.address,
-        outboundChannel.address,
-        this.registry.address,
-        {
-          from: owner,
-        }
-      )
-
-      await this.token.transferOwnership(this.app.address)
+    let DOTApp = await ethers.getContractFactory("DOTApp", {
+      signer: owner,
+      libraries: {
+        ScaleCodec: codec.address,
+      },
     });
 
+    let app = await DOTApp.deploy(
+      token.address,
+      outboundChannel.address,
+      registry.address
+    )
+    await app.deployed();
+
+    await token.transferOwnership(app.address)
+
+    return {
+      app, token, owner, user, channelID: 0
+    }
+  }
+
+  describe("minting", function () {
+
+    async function mintingFixture() {
+        return baseFixture();
+    }
+
     it("should mint funds", async function () {
-      const beforeTotalSupply = BigNumber(await this.token.totalSupply());
-      const beforeUserBalance = BigNumber(await this.token.balanceOf(userOne));
-      const amountNative = BigNumber("10000000000"); // 1 DOT, uint128
-      const amountWrapped = wrapped(amountNative);
+      const { app, token, user } = await loadFixture(mintingFixture);
 
-      let tx = await this.app.mint(
-        POLKADOT_ADDRESS,
-        userOne,
-        amountWrapped.toString(),
-        {
-          from: owner,
-        }
-      ).should.be.fulfilled;
+      const beforeTotalSupply = await token.totalSupply();
+      const beforeUserBalance = await token.balanceOf(user.address);
+      let amount = wrapped(ethers.BigNumber.from("10000000000")); // 1 DOT
 
-      // decode expected IERC20.Transfer event
-      var abi = ["event Transfer(address indexed from, address indexed to, uint256 value)"];
-      var iface = new ethers.utils.Interface(abi);
-      let event = iface.decodeEventLog('Transfer(address,address,uint256)', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
+      await expect(app.mint(
+        POLKADOT_ACCOUNT,
+        user.address,
+        amount.wrapped,
+      )).to.emit(token, "Transfer").withArgs(
+        ethers.constants.AddressZero,
+        user.address,
+        amount.wrapped
+      );
 
-      const afterTotalSupply = BigNumber(await this.token.totalSupply());
-      const afterUserBalance = BigNumber(await this.token.balanceOf(userOne));
+      const afterTotalSupply = await token.totalSupply();
+      const afterUserBalance = await token.balanceOf(user.address);
 
-      event.to.should.be.equal(userOne);
-      BigNumber(event.value.toString()).should.be.bignumber.equal(amountWrapped);
+      expect(afterTotalSupply.sub(beforeTotalSupply)).to.be.equal(amount.wrapped);
+      expect(afterUserBalance.sub(beforeUserBalance)).to.be.equal(amount.wrapped);
+    });
 
-      afterTotalSupply.minus(beforeTotalSupply).should.be.bignumber.equal(amountWrapped);
-      afterUserBalance.minus(beforeUserBalance).should.be.bignumber.equal(amountWrapped);
+    it("should reject mint messages from unauthorised accounts", async function () {
+      const { app, user } = await loadFixture(mintingFixture);
+      await expect(app.connect(user).mint(
+        POLKADOT_ACCOUNT,
+        user.address,
+        ethers.BigNumber.from(10),
+      )).to.be.revertedWithCustomError(app, "Unauthorized");
     });
   });
 
   describe("burning", function () {
-    beforeEach(async function () {
-      this.token = await WrappedToken.new("Wrapped DOT", "WDOT")
 
-      this.registry = await Registry.new();
-
-      let outboundChannel = await MockOutboundChannel.new()
-      await this.registry.updateChannel(0, owner, outboundChannel.address)
-
-      this.app = await DOTApp.new(
-        this.token.address,
-        outboundChannel.address,
-        this.registry.address,
-        {
-          from: owner,
-        }
-      )
-
-      await this.token.transferOwnership(this.app.address)
-
-      // Mint 2 wrapped DOT
-      let amountNative = BigNumber("20000000000"); // 2 DOT, uint128
-      let amountWrapped = wrapped(amountNative);
-      await this.app.mint(
-        POLKADOT_ADDRESS,
-        userOne,
-        amountWrapped.toString(),
-        {
-          from: owner,
-          value: 0
-        }
+    async function burningFixture() {
+      const { app, token, owner, user, channelID } = await baseFixture();
+      let amount = wrapped(ethers.BigNumber.from("20000000000")); // 2 DOT
+      await app.mint(
+        POLKADOT_ACCOUNT,
+        user.address,
+        amount.wrapped,
       );
-    });
+      return { app, token, owner, user, channelID }
+    }
 
     it("should burn funds", async function () {
-      const beforeTotalSupply = BigNumber(await this.token.totalSupply());
-      const beforeUserBalance = BigNumber(await this.token.balanceOf(userOne));
-      const amountWrapped = wrapped(BigNumber("10000000000"));
+      const { app, token, user, channelID } = await loadFixture(burningFixture);
 
-      let tx = await burnTokens(this.app, userOne, POLKADOT_ADDRESS, amountWrapped, 0).should.be.fulfilled;
+      const beforeTotalSupply = await token.totalSupply();
+      const beforeUserBalance = await token.balanceOf(user.address);
+      let amount = wrapped(ethers.BigNumber.from("10000000000")); // 1 DOT
 
-      // decode expected IERC20.Transfer event
-      var abi = ["event Transfer(address indexed from, address indexed to, uint256 value)"];
-      var iface = new ethers.utils.Interface(abi);
-      let event = iface.decodeEventLog('Transfer(address,address,uint256)', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
+      await expect(app.connect(user).burn(
+        POLKADOT_ACCOUNT,
+        amount.wrapped,
+        channelID,
+      )).to.emit(token, "Transfer").withArgs(
+        user.address,
+        ethers.constants.AddressZero,
+        amount.wrapped,
+      );
 
-      const afterTotalSupply = BigNumber(await this.token.totalSupply());
-      const afterUserBalance = BigNumber(await this.token.balanceOf(userOne));
+      const afterTotalSupply = await token.totalSupply();
+      const afterUserBalance = await token.balanceOf(user.address);
 
-      event.from.should.be.equal(userOne);
-      BigNumber(event.value.toString()).should.be.bignumber.equal(amountWrapped);
+      expect(beforeTotalSupply.sub(afterTotalSupply)).to.be.equal(amount.wrapped);
+      expect(beforeUserBalance.sub(afterUserBalance)).to.be.equal(amount.wrapped);
+    });
 
-      beforeTotalSupply.minus(afterTotalSupply).should.be.bignumber.equal(amountWrapped);
-      beforeUserBalance.minus(afterUserBalance).should.be.bignumber.equal(amountWrapped);
+    it("should revert on unknown outbound channel", async function () {
+      const { app, user } = await loadFixture(burningFixture);
+      await expect(app.connect(user).burn(
+        POLKADOT_ACCOUNT,
+        ethers.BigNumber.from(10),
+        77,
+      )).to.be.revertedWithCustomError(app, "UnknownChannel");
     });
   });
 });

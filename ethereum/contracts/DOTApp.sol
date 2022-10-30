@@ -9,8 +9,8 @@ import "./DOTAppPallet.sol";
 import "./ChannelRegistry.sol";
 
 contract DOTApp is FeeController, AccessControl {
-    WrappedToken public immutable token;
     ChannelRegistry public immutable registry;
+    WrappedToken public immutable token;
 
     bytes32 public constant FEE_BURNER_ROLE = keccak256("FEE_BURNER_ROLE");
 

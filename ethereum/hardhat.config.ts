@@ -2,9 +2,10 @@ import { resolve } from "path";
 import "solidity-coverage"
 
 //import "@nomiclabs/hardhat-truffle5";
+import "@nomicfoundation/hardhat-chai-matchers";
 import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
+import "hardhat-gas-reporter"
 import "hardhat-deploy";
 import "./tasks/upgrade";
 import "./tasks/renounce";
@@ -67,6 +68,11 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: ETHERSCAN_KEY
+  },
+  gasReporter: {
+    enabled: (process.env.REPORT_GAS) ? true : false,
+    currency: 'USD',
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
   }
 };
 

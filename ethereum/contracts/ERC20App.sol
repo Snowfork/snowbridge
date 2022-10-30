@@ -72,15 +72,10 @@ contract ERC20App is AccessControl {
             revert UnknownChannel(_channelID);
         }
 
-        balances[_token] = balances[_token] + _amount;
-        require(
-            IERC20(_token).transferFrom(msg.sender, address(this), _amount),
-            "Contract token allowances insufficient to complete this lock request"
-        );
-
         if (!IERC20(_token).transferFrom(msg.sender, address(this), _amount)) {
             revert InsufficientAllowance();
         }
+        balances[_token] = balances[_token] + _amount;
 
         if (!tokens[_token]) {
             (bytes memory createCall, uint64 createWeight) = ERC20AppPallet.create(_token);

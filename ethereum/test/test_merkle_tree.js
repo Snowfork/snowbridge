@@ -1,24 +1,22 @@
-require("chai")
-  .use(require("chai-as-promised"))
-  .should();
+const { ethers } = require("hardhat");
+const { expect } = require("chai");
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
 const { keccakFromHexString } = require("ethereumjs-util");
-
-const {
-  createMerkleTree,
-} = require("./helpers");
-
-const MerkleProof = artifacts.require("MerkleProof");
-
-const { expect } = require("chai");
+const { createMerkleTree } = require("./helpers");
 
 describe("Merkle Proof", function () {
 
-  beforeEach(async function () {
-    this.merkleProof = await MerkleProof.new();
-  });
+  async function fixture() {
+    let MerkleProof = await ethers.getContractFactory("MerkleProof");
+    let merkleProof = await MerkleProof.deploy();
+    await merkleProof.deployed();
+    return { merkleProof };
+  }
 
   it("should_generate_and_verify_proof_on_test_data", async function () {
+    let { merkleProof } = await loadFixture(fixture);
+
     const leaves = testAddresses;
     const tree = createMerkleTree(leaves);
     const root = tree.getHexRoot();
@@ -30,7 +28,7 @@ describe("Merkle Proof", function () {
       const hashedLeafHex = '0x' + hashedLeaf.toString('hex')
       const proof = tree.getHexProof(hashedLeafHex)
 
-      const solidityRoot = await this.merkleProof.computeRootFromProofAtPosition(
+      const solidityRoot = await merkleProof.computeRootFromProofAtPosition(
         hashedLeafHex,
         i,
         leaves.length,

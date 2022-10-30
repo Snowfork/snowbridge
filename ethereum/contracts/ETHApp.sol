@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./RewardController.sol";
 import "./OutboundChannel.sol";
 import "./ETHAppPallet.sol";
@@ -14,8 +13,6 @@ enum ChannelId {
 }
 
 contract ETHApp is RewardController, AccessControl {
-    using SafeCast for uint256;
-
     ChannelRegistry public immutable registry;
 
     bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
@@ -40,7 +37,13 @@ contract ETHApp is RewardController, AccessControl {
     // Value of transaction must be positive
     error MinimumAmount();
 
-    // Cannot send ether to recipient
+    // Value of transaction must fit into 128 bits.
+    error MaximumAmount();
+
+    // Not enough funds to unlock
+    error ExceedsBalance();
+
+    // Recipient rejects funds
     error CannotUnlock();
 
     constructor(
@@ -61,15 +64,16 @@ contract ETHApp is RewardController, AccessControl {
             revert MinimumAmount();
         }
 
+        if (msg.value > type(uint128).max) {
+            revert MaximumAmount();
+        }
+
         address channel = registry.outboundChannelForID(_channelID);
         if (channel == address(0)) {
             revert UnknownChannel(_channelID);
         }
 
-        // revert in case of overflow.
-        uint128 value = (msg.value).toUint128();
-
-        emit Locked(msg.sender, _recipient, value, _paraID, _fee);
+        uint128 value = uint128(msg.value);
 
         bytes memory call;
         uint64 weight;
@@ -80,6 +84,8 @@ contract ETHApp is RewardController, AccessControl {
         }
 
         OutboundChannel(channel).submit(msg.sender, call, weight);
+
+        emit Locked(msg.sender, _recipient, value, _paraID, _fee);
     }
 
     function unlock(
@@ -89,6 +95,10 @@ contract ETHApp is RewardController, AccessControl {
     ) external {
         if (!registry.isInboundChannel(msg.sender)) {
             revert Unauthorized();
+        }
+
+        if (_amount > address(this).balance) {
+            revert ExceedsBalance();
         }
 
         (bool success, ) = _recipient.call{value: _amount}("");

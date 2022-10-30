@@ -21,6 +21,10 @@ describe.skip("Beefy Client Gas Usage", function () {
       totalNumberOfSignatures: 10,
     },
     {
+      totalNumberOfValidators: 20,
+      totalNumberOfSignatures: 20,
+    },
+    {
       totalNumberOfValidators: 200,
       totalNumberOfSignatures: 200,
     },
