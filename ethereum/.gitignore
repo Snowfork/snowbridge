@@ -8,3 +8,4 @@ artifacts/
 coverage.json
 coverage/
 src/
+.vscode/
