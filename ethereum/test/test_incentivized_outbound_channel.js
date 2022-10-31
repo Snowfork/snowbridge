@@ -1,88 +1,79 @@
-const ethers = require("ethers");
-require("chai")
-  .use(require("chai-as-promised"))
-  .should();
-const IncentivizedOutboundChannel = artifacts.require("IncentivizedOutboundChannel");
-const MockFeeSource = artifacts.require("MockFeeController");
+const { ethers } = require("hardhat");
+const { expect } = require("chai");
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
-const {
-  printTxPromiseGas
-} = require("./helpers");
+const {deployMockContract} = require('@ethereum-waffle/mock-contract');
+
+const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
 
 describe("IncentivizedOutboundChannel", function () {
-  let accounts;
-  let owner;
-  let appAddress;
-  let origin;
-  const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
-  const iface = new ethers.utils.Interface(IncentivizedOutboundChannel.abi);
+  async function fixture() {
+    let [owner, app, user] = await ethers.getSigners();
 
-  before(async function () {
-    accounts = await web3.eth.getAccounts();
-    owner = accounts[0];
-    appAddress = accounts[1];
-    origin = accounts[2];
-  });
+    let iface, abi;
+
+    // mock reward source
+    iface = new ethers.utils.Interface([
+      "function handleFee(address feePayer, uint256 _amount)",
+    ]);
+    abi = JSON.parse(iface.format(ethers.utils.FormatTypes.json));
+    let mockFeeController = await deployMockContract(owner, abi);
+    await mockFeeController.mock.handleFee.returns();
+
+    let IncentivizedOutboundChannel = await ethers.getContractFactory("IncentivizedOutboundChannel");
+    let channel = await IncentivizedOutboundChannel.deploy();
+    await channel.deployed();
+
+    await channel.initialize(owner.address, mockFeeController.address, [app.address]);
+
+    await channel.setFee(10);
+
+    return { channel, app, user, mockFeeController };
+  }
 
   describe("send", function () {
-    beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new();
-      const feeSource = await MockFeeSource.new();
-      await this.channel.initialize(owner, feeSource.address, [appAddress]).should.be.fulfilled;
-    });
-
     it("should send messages out with the correct event and fields", async function () {
-      const txPromise = this.channel.submit(
-        origin,
+      let {channel, app, user} = await loadFixture(fixture);
+
+      await expect(channel.connect(app).submit(
+        user.address,
         testPayload,
-        { from: appAddress, value: 0 }
-      ).should.be.fulfilled;
-      printTxPromiseGas(txPromise)
-      const tx = await txPromise;
-
-      const log = tx.receipt.rawLogs[0];
-      const event = iface.decodeEventLog('Message(address,uint64,uint256,bytes)', log.data, log.topics);
-
-      log.address.should.be.equal(this.channel.address);
-      event.source.should.be.equal(appAddress);
-      event.nonce.eq(ethers.BigNumber.from(1)).should.be.true;
-      event.payload.should.be.equal(testPayload)
+        0,
+      )).to.emit(channel, 'Message').withArgs(app.address, 1, 10, testPayload);
     });
 
     it("should increment nonces correctly", async function () {
-      await this.channel.submit(
-        origin,
-        testPayload,
-        { from: appAddress, value: 0 }
-      ).should.be.fulfilled;
+      let {channel, app, user} = await loadFixture(fixture);
 
-      await this.channel.submit(
-        origin,
+      await expect(channel.connect(app).submit(
+        user.address,
         testPayload,
-        { from: appAddress, value: 0 }
-      ).should.be.fulfilled;
+        0
+      )).to.emit(channel, "Message").withArgs(app.address, 1, 10, testPayload);
 
-      const { receipt } = await this.channel.submit(
-        origin,
+      await expect(channel.connect(app).submit(
+        user.address,
         testPayload,
-        { from: appAddress, value: 0 }
-      ).should.be.fulfilled;
+        0
+      )).to.emit(channel, "Message").withArgs(app.address, 2, 10, testPayload);
 
-      const log = receipt.rawLogs[0];
-      const event = iface.decodeEventLog('Message(address,uint64,uint256,bytes)', log.data, log.topics);
-      event.nonce.eq(ethers.BigNumber.from(3)).should.be.true;
+      await expect(channel.connect(app).submit(
+        user.address,
+        testPayload,
+        0
+      )).to.emit(channel, "Message").withArgs(app.address, 3, 10, testPayload);
     });
 
     it("should not send message if user cannot pay fee", async function () {
+      let {channel, app, user, mockFeeController} = await loadFixture(fixture);
 
-      // Trigger our mock fee source to revert in burnFee.
-      await this.channel.setFee(1024).should.be.fulfilled;
+      await mockFeeController.mock.handleFee.reverts();
 
-      await this.channel.submit(
-        origin,
+      await expect(channel.connect(app).submit(
+        user.address,
         testPayload,
-        { from: appAddress, value: 0 }
-      ).should.not.be.fulfilled;
+        0,
+      )).to.be.reverted;
 
     });
 

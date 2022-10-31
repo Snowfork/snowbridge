@@ -47,10 +47,10 @@ library Bitfield {
         uint256 found = 0;
 
         for (uint256 i = 0; found < n; i++) {
-            bytes32 randomness = keccak256(abi.encode(seed + i));
+            bytes32 randomness = keccak256(abi.encodePacked(seed, i));
             uint256 index = uint256(randomness) % length;
 
-            // require randomly seclected bit to be set in prior
+            // require randomly selected bit to be set in prior
             if (!isSet(prior, index)) {
                 continue;
             }

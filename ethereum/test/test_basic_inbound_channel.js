@@ -1,6 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
 const {deployMockContract} = require('@ethereum-waffle/mock-contract');
 
@@ -49,7 +50,7 @@ describe("BasicInboundChannel", function () {
         submitInput.params.leafProof,
         submitInput.params.hashSides,
         submitInput.params.proof,
-      )).to.emit(channel, "MessageDispatched").withArgs(ethers.BigNumber.from(0), true);
+      )).to.emit(channel, "MessageDispatched").withArgs(ethers.BigNumber.from(0), anyValue);
 
       const nonceAfterSubmit = await channel.nonce(submitInput.params.bundle.account);
       expect(nonceAfterSubmit.sub(nonceBeforeSubmit)).to.be.equal(1);

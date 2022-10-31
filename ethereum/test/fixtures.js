@@ -1,9 +1,11 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
+const { createValidatorFixture } = require("./helpers.js");
 
 const fixtureData = require('./fixtures/beefy-relay-basic.json');
 
 module.exports = {
+  baseFixture,
   exposedBeefyClientFixture,
   beefyClientFixture1,
   beefyClientFixture2,
