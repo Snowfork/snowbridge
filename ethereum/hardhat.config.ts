@@ -1,17 +1,17 @@
 import { resolve } from "path";
 import "solidity-coverage"
-
-//import "@nomiclabs/hardhat-truffle5";
 import "@nomicfoundation/hardhat-chai-matchers";
-import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
+import "@nomiclabs/hardhat-ethers";
+import '@typechain/hardhat'
 import "hardhat-gas-reporter"
 import "hardhat-deploy";
+
 import "./tasks/upgrade";
 import "./tasks/renounce";
 import "./tasks/contractAddress";
-import type { HardhatUserConfig } from "hardhat/config";
 
+import type { HardhatUserConfig } from "hardhat/config";
 
 let INFURA_KEY = process.env.INFURA_PROJECT_ID
 let ROPSTEN_KEY = process.env.ROPSTEN_PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -73,7 +73,12 @@ const config: HardhatUserConfig = {
     enabled: (process.env.REPORT_GAS) ? true : false,
     currency: 'USD',
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
-  }
+  },
+  typechain: {
+    outDir: 'src',
+    target: 'ethers-v5',
+    alwaysGenerateOverloads: false, // should overloads with full signatures like deposit(uint256) be generated always, even if there are no overloads?
+  },
 };
 
 export default config;

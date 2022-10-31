@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
-    "target": "es2018",
+    "target": "es2020",
     "module": "commonjs",
     "strict": false,
+    "resolveJsonModule": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
     "forceConsistentCasingInFileNames": true,
-    "outDir": "dist"
+    "outDir": "dist",
   },
   "include": [
-    "deploy", "scripts", "tasks"
+    "./deploy", "./scripts", "./tasks", "./src",
   ],
   "files": ["./hardhat.config.ts"],
 }
