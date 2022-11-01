@@ -217,7 +217,7 @@ func (co *Connection) IsParachainRegistered(relayBlockHash types.Hash, paraID ui
 	var header types.Header
 	ok, err := co.FetchParachainHead(relayBlockHash, paraID, &header)
 	if err != nil {
-		return false, fmt.Errorf("fetch parachain header")
+		return false, fmt.Errorf("fetch parachain header: %w", err)
 	}
 	return ok, nil
 }
