@@ -110,9 +110,9 @@ contract ERC20App is AccessControl {
 
         bytes memory call;
         if (_paraID == 0) {
-            (call,) = ERC20AppPallet.mint(msg.sender, _token, _recipient, _amount);
+            (call,) = ERC20AppPallet.mint(_token, msg.sender, _recipient, _amount);
         } else {
-            (call,) = ERC20AppPallet.mintAndForward(msg.sender, _token, _recipient, _amount, _paraID, _fee);
+            (call,) = ERC20AppPallet.mintAndForward(_token, msg.sender, _recipient, _amount, _paraID, _fee);
         }
 
         channel.submit(msg.sender, call);
