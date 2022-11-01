@@ -11,14 +11,11 @@ describe("IncentivizedInboundChannel", function () {
         let [owner, user] = await ethers.getSigners()
 
         // mock parachain client
-        let mockParachainClient = await deployMockContract(
-            owner as any,
-            ParachainClient__factory.abi
-        )
+        let mockParachainClient = await deployMockContract(owner, ParachainClient__factory.abi)
         await mockParachainClient.mock.verifyCommitment.returns(true)
 
         // mock reward source
-        let mockRewardSource = await deployMockContract(owner as any, RewardController__factory.abi)
+        let mockRewardSource = await deployMockContract(owner, RewardController__factory.abi)
         await mockRewardSource.mock.handleReward.returns()
 
         let channel = await new IncentivizedInboundChannel__factory(owner).deploy(

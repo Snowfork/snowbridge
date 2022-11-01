@@ -6,22 +6,6 @@ import { ethers, Event, Wallet } from "ethers"
 import _ from "lodash"
 import secp256k1 from "secp256k1"
 
-let makeBasicCommitment = (messages) => {
-    let encoded = ethers.utils.defaultAbiCoder.encode(
-        ["tuple(address target, uint64 nonce, bytes payload)[]"],
-        [messages]
-    )
-    return ethers.utils.solidityKeccak256(["bytes"], [encoded])
-}
-
-let makeIncentivizedCommitment = (messages) => {
-    let encoded = ethers.utils.defaultAbiCoder.encode(
-        ["tuple(address target, uint64 nonce, uint256 fee, bytes payload)[]"],
-        [messages]
-    )
-    return ethers.utils.solidityKeccak256(["bytes"], [encoded])
-}
-
 function createMerkleTree(values: string[]) {
     let leaves = values.map((value) => keccakFromHexString(value))
     let merkleTree = new MerkleTree(leaves, keccak, {
@@ -34,15 +18,6 @@ function createMerkleTree(values: string[]) {
 let encodeLog = (log: Event) => {
     return rlp.encode([log.address, log.topics, log.data]).toString("hex")
 }
-
-let hexPrefix = /^(0x)/i
-
-let mergeKeccak256 = (left, right) =>
-    "0x" +
-    keccakFromHexString(
-        "0x" + left.replace(hexPrefix, "") + right.replace(hexPrefix, ""),
-        256
-    ).toString("hex")
 
 function printBitfield(bitfield: ethers.BigNumber[]) {
     return bitfield
@@ -58,7 +33,26 @@ function printBitfield(bitfield: ethers.BigNumber[]) {
         .replace(/^0*/g, "")
 }
 
-async function createValidatorFixture(validatorSetID: number, validatorSetLength: number) {
+type WalletsByLeaf = {
+    [key: string]: Wallet
+}
+
+interface ValidatorFixture {
+    wallets: Wallet[]
+    walletsByLeaf: WalletsByLeaf
+    validatorAddresses: string[]
+    validatorAddressesHashed: string[]
+    validatorSetID: number
+    validatorSetRoot: string
+    validatorSetLength: number
+    validatorAddressProofs: string[][]
+    validatorMerkleTree: MerkleTree
+}
+
+function createValidatorFixture(
+    validatorSetID: number,
+    validatorSetLength: number
+): ValidatorFixture {
     let wallets: Wallet[] = []
     for (let i = 0; i < validatorSetLength; i++) {
         let wallet = ethers.Wallet.createRandom()
@@ -117,7 +111,10 @@ async function createRandomPositions(numberOfPositions: number, numberOfValidato
     return shuffled.slice(0, numberOfPositions)
 }
 
-async function createInitialValidatorProofs(commitmentHash: string, validatorFixture) {
+async function createInitialValidatorProofs(
+    commitmentHash: string,
+    validatorFixture: ValidatorFixture
+) {
     let commitmentHashBytes = ethers.utils.arrayify(commitmentHash)
     let tree = validatorFixture.validatorMerkleTree
     let leaves = tree.getHexLeaves()
@@ -129,12 +126,12 @@ async function createInitialValidatorProofs(commitmentHash: string, validatorFix
         let privateKey = ethers.utils.arrayify(wallet.privateKey)
         let signatureECDSA = secp256k1.ecdsaSign(commitmentHashBytes, privateKey)
         let ethRecID = signatureECDSA.recid + 27
-        let signature = Uint8Array.from(
-            signatureECDSA.signature
-                .join()
-                .split(",")
-                .concat(ethRecID as any) as any
-        )
+
+        // append ethRecID to signature
+        let x = new Uint8Array(signatureECDSA.signature.buffer)
+        let y = Uint8Array.from([ethRecID])
+        let signature = Uint8Array.from([...x, ...y])
+
         return { signature: ethers.utils.hexlify(signature), position, address, proof }
     })
 }
@@ -173,7 +170,6 @@ async function createFinalValidatorProofs(finalBitfield: ethers.BigNumber[], ini
 export {
     createMerkleTree,
     encodeLog,
-    mergeKeccak256,
     printBitfield,
     createValidatorFixture,
     createRandomPositions,

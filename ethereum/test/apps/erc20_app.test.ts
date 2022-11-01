@@ -6,7 +6,7 @@ let POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684
 describe("ERC20App", function () {
     describe("deposits", function () {
         it("should lock funds", async function () {
-            let { app, token, owner, user, channelID } = await loadFixture(erc20AppFixture)
+            let { app, token, user, channelID } = await loadFixture(erc20AppFixture)
 
             let amount = ethers.BigNumber.from(10)
             let beforeVaultBalance = await app.balances(token.address)

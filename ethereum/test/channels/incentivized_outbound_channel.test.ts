@@ -8,7 +8,7 @@ describe("IncentivizedOutboundChannel", function () {
         let [owner, app, user] = await ethers.getSigners()
 
         // mock fee controller
-        let mockFeeController = await deployMockContract(owner as any, FeeController__factory.abi)
+        let mockFeeController = await deployMockContract(owner, FeeController__factory.abi)
         await mockFeeController.mock.handleFee.returns()
 
         let channel = await new IncentivizedOutboundChannel__factory(owner).deploy()

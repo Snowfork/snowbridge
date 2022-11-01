@@ -1,4 +1,4 @@
-import { ethers, expect, loadFixture, deployMockContract } from "../setup"
+import { ethers, expect, loadFixture } from "../setup"
 import { ethAppFixture } from "./fixtures"
 
 let POLKADOT_ACCOUNT = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"

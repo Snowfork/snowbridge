@@ -10,10 +10,7 @@ describe("BasicInboundChannel", function () {
         await merkleProof.deployed()
 
         // mock parachain client
-        let mockParachainClient = await deployMockContract(
-            owner as any,
-            ParachainClient__factory.abi
-        )
+        let mockParachainClient = await deployMockContract(owner, ParachainClient__factory.abi)
         await mockParachainClient.mock.verifyCommitment.returns(true)
 
         let channel = await new BasicInboundChannel__factory(

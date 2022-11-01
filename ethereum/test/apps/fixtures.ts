@@ -20,7 +20,7 @@ async function baseFixture() {
     await codec.deployed()
 
     // mock outbound channel
-    let mockOutboundChannel = await deployMockContract(owner as any, OutboundChannel__factory.abi)
+    let mockOutboundChannel = await deployMockContract(owner, OutboundChannel__factory.abi)
     await mockOutboundChannel.mock.submit.returns()
 
     let registry = await new ChannelRegistry__factory(owner).deploy()
