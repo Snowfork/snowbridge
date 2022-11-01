@@ -82,11 +82,23 @@ describe("ERC20App", function () {
       await approveFunds(this.token, this.vault, userOne, amount * 2)
         .should.be.fulfilled;
 
-      let createMintTokenTransaction = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
+      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
         .should.be.fulfilled;
 
+      var ifaceVault = new ethers.utils.Interface(ERC20Vault.abi);
+      let depositEvent = ifaceVault.decodeEventLog(
+        'Deposit(address,address,address,uint128)',
+        tx.receipt.rawLogs[2].data,
+        tx.receipt.rawLogs[2].topics
+      );
+  
+      depositEvent.account.should.be.equal(this.app.address);
+      depositEvent.sender.should.be.equal(userOne);
+      depositEvent.token.should.be.equal(this.token.address);
+      depositEvent.amount.eq(ethers.BigNumber.from(amount.toString())).should.be.true;
+  
       // Confirm app event emitted with expected values
-      const event = createMintTokenTransaction.logs.find(
+      const event = tx.logs.find(
         e => e.event === "Locked"
       );
 
@@ -118,7 +130,7 @@ describe("ERC20App", function () {
       let messageEventCountforminttx = 0, messageEventCountforMintNcreateTx = 0;
 
       pastEvents.forEach(event => {
-          if(event.transactionHash === createMintTokenTransaction.tx)
+          if(event.transactionHash === tx.tx)
             messageEventCountforMintNcreateTx++;
 
           if(event.transactionHash === mintOnlyTokenTransaction.tx)
@@ -204,14 +216,26 @@ describe("ERC20App", function () {
 
       // decode event
       var iface = new ethers.utils.Interface(ERC20App.abi);
-      let event = iface.decodeEventLog(
+      let unlockEvent = iface.decodeEventLog(
         'Unlocked(address,bytes32,address,uint128)',
         receipt.rawLogs[2].data,
         receipt.rawLogs[2].topics
       );
 
-      event.recipient.should.be.equal(recipient);
-      event.amount.eq(amount).should.be.true;
+      unlockEvent.recipient.should.be.equal(recipient);
+      unlockEvent.amount.eq(amount).should.be.true;
+
+      var ifaceVault = new ethers.utils.Interface(ERC20Vault.abi);
+      let withdrawEvent = ifaceVault.decodeEventLog(
+        'Withdraw(address,address,address,uint128)',
+        receipt.rawLogs[1].data,
+        receipt.rawLogs[1].topics
+      );
+
+      withdrawEvent.account.should.be.equal(this.app.address);
+      withdrawEvent.recipient.should.be.equal(recipient);
+      withdrawEvent.token.should.be.equal(this.token.address);
+      withdrawEvent.amount.eq(ethers.BigNumber.from(amount)).should.be.true;
     });
 
   });
