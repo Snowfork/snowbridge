@@ -1,10 +1,6 @@
-import { ethers, expect, loadFixture, anyValue, deployMockContract } from "./setup"
-import {
-    MerkleProof__factory,
-    BasicInboundChannel__factory,
-    ParachainClient__factory,
-} from "../src"
-import submitInput from "./fixtures/data/parachain-relay-basic.json"
+import { ethers, expect, loadFixture, anyValue, deployMockContract } from "../setup"
+import { MerkleProof__factory, BasicInboundChannel__factory, ParachainClient__factory } from "@src"
+import submitInput from "../data/parachain-relay-basic.json"
 
 describe("BasicInboundChannel", function () {
     async function fixture() {

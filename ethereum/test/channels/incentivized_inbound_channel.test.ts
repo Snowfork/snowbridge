@@ -1,6 +1,6 @@
-import { ethers, expect, loadFixture, deployMockContract, anyValue } from "./setup"
-import { IncentivizedInboundChannel__factory } from "../src"
-import submitInput from "./fixtures/data/parachain-relay-incentivized.json"
+import { ethers, expect, loadFixture, deployMockContract, anyValue } from "../setup"
+import { IncentivizedInboundChannel__factory } from "@src"
+import submitInput from "../data/parachain-relay-incentivized.json"
 
 describe("IncentivizedInboundChannel", function () {
     async function fixture() {

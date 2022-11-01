@@ -11,6 +11,7 @@
     "declaration": true,
     "baseUrl": ".",
     "paths": { "@src": ["src"] },
+    "skipLibCheck": true
   },
   "ts-node": {
     "require": ["tsconfig-paths/register"]
@@ -19,5 +20,5 @@
   "include": [
     "deploy", "scripts", "tasks", "src", "test"
   ],
-  "files": ["./hardhat.config.ts"],
+  "files": ["hardhat.config.ts"],
 }

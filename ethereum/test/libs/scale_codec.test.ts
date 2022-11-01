@@ -1,5 +1,5 @@
-import { ethers, expect, loadFixture } from "./setup"
-import { ScaleCodec__factory } from "../src"
+import { ethers, expect, loadFixture } from "../setup"
+import { ScaleCodec__factory } from "@src"
 
 describe("ScaleCodec", function () {
     async function fixture() {

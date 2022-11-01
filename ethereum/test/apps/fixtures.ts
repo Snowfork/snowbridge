@@ -19,9 +19,6 @@ async function baseFixture() {
     let codec = await new ScaleCodec__factory(owner).deploy()
     await codec.deployed()
 
-    let MockOutboundChannel = await ethers.getContractFactory("MockOutboundChannel")
-    let outboundChannel = await MockOutboundChannel.deploy()
-
     // mock outbound channel
     let mockOutboundChannel = await deployMockContract(owner as any, OutboundChannel__factory.abi)
     await mockOutboundChannel.mock.submit.returns()
@@ -30,7 +27,7 @@ async function baseFixture() {
     await registry.deployed()
 
     // Add mock inbound and outbound channels to registry
-    await registry.updateChannel(0, owner.address, outboundChannel.address)
+    await registry.updateChannel(0, owner.address, mockOutboundChannel.address)
 
     return {
         registry,

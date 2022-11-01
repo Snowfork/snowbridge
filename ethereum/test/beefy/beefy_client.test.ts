@@ -1,5 +1,5 @@
-import { expect, loadFixture, mine } from "./setup"
-import { beefyClientFixture1, exposedBeefyClientFixture } from "./fixtures/beefy"
+import { expect, loadFixture, mine } from "../setup"
+import { beefyClientFixture1, exposedBeefyClientFixture } from "./fixtures"
 
 let SUBMIT_FINAL_2 =
     "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"

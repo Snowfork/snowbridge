@@ -6,9 +6,9 @@ import {
     Bitfield__factory,
     BeefyClient__factory,
     ExposedBeefyClient__factory,
-} from "../../src"
+} from "@src"
 
-import fixtureData from "./data/beefy-relay-basic.json"
+import fixtureData from "../data/beefy-relay-basic.json"
 
 export { baseFixture, exposedBeefyClientFixture, beefyClientFixture1, beefyClientFixture2 }
 

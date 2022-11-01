@@ -1,5 +1,5 @@
-import { ethers, expect, loadFixture, deployMockContract } from "./setup"
-import { IncentivizedOutboundChannel__factory } from "../src"
+import { ethers, expect, loadFixture, deployMockContract } from "../setup"
+import { IncentivizedOutboundChannel__factory } from "@src"
 
 let testPayload = ethers.utils.formatBytes32String("arbitrary-payload")
 

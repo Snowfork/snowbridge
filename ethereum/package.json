@@ -37,6 +37,7 @@
     "keccak": "^3.0.2",
     "lodash": "^4.17.21",
     "merkletreejs": "^0.2.18",
+    "mocha": "^10.1.0",
     "prettier": "^2.6.2",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
     "rlp": "^2.2.6",

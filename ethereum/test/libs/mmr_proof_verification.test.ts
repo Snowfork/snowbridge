@@ -1,7 +1,7 @@
-import { ethers, expect, loadFixture } from "./setup"
-import { MMRProofVerification__factory, MMRProofVerifier__factory } from "../src"
-import fixture7leaves from "./fixtures/data/mmr-fixture-data-7-leaves.json"
-import fixture15leaves from "./fixtures/data/mmr-fixture-data-15-leaves.json"
+import { ethers, expect, loadFixture } from "../setup"
+import { MMRProofVerification__factory, MMRProofVerifier__factory } from "@src"
+import fixture7leaves from "./data/mmr-fixture-data-7-leaves.json"
+import fixture15leaves from "./data/mmr-fixture-data-15-leaves.json"
 
 describe("MMR Proof Verification", function () {
     async function fixture() {

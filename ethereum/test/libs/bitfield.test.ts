@@ -1,6 +1,6 @@
-import { ethers, expect, loadFixture } from "./setup"
-import { printBitfield, createRandomPositions } from "./helpers"
-import { Bitfield__factory } from "../src"
+import { ethers, expect, loadFixture } from "../setup"
+import { printBitfield, createRandomPositions } from "../helpers"
+import { Bitfield__factory } from "@src"
 
 describe("Bitfield", function () {
     async function fixture() {

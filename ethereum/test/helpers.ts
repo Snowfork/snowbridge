@@ -22,7 +22,7 @@ let makeIncentivizedCommitment = (messages) => {
     return ethers.utils.solidityKeccak256(["bytes"], [encoded])
 }
 
-function createMerkleTree(values) {
+function createMerkleTree(values: string[]) {
     let leaves = values.map((value) => keccakFromHexString(value))
     let merkleTree = new MerkleTree(leaves, keccak, {
         sortLeaves: false,
@@ -117,7 +117,7 @@ async function createRandomPositions(numberOfPositions: number, numberOfValidato
     return shuffled.slice(0, numberOfPositions)
 }
 
-async function createInitialValidatorProofs(commitmentHash, validatorFixture) {
+async function createInitialValidatorProofs(commitmentHash: string, validatorFixture) {
     let commitmentHashBytes = ethers.utils.arrayify(commitmentHash)
     let tree = validatorFixture.validatorMerkleTree
     let leaves = tree.getHexLeaves()
