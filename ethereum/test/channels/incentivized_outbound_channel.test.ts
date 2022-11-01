@@ -1,5 +1,5 @@
 import { ethers, expect, loadFixture, deployMockContract } from "../setup"
-import { IncentivizedOutboundChannel__factory } from "@src"
+import { IncentivizedOutboundChannel__factory, FeeController__factory } from "@src"
 
 let testPayload = ethers.utils.formatBytes32String("arbitrary-payload")
 
@@ -7,21 +7,13 @@ describe("IncentivizedOutboundChannel", function () {
     async function fixture() {
         let [owner, app, user] = await ethers.getSigners()
 
-        let iface, abi
-
-        // mock reward source
-        iface = new ethers.utils.Interface([
-            "function handleFee(address feePayer, uint256 _amount)",
-        ])
-        abi = JSON.parse(iface.format(ethers.utils.FormatTypes.json))
-        let mockFeeController = await deployMockContract(owner as any, abi)
+        // mock fee controller
+        let mockFeeController = await deployMockContract(owner as any, FeeController__factory.abi)
         await mockFeeController.mock.handleFee.returns()
 
         let channel = await new IncentivizedOutboundChannel__factory(owner).deploy()
         await channel.deployed()
-
         await channel.initialize(owner.address, mockFeeController.address, [app.address])
-
         await channel.setFee(10)
 
         return { channel, app, user, mockFeeController }

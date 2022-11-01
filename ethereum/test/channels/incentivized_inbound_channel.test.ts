@@ -1,27 +1,24 @@
 import { ethers, expect, loadFixture, deployMockContract, anyValue } from "../setup"
-import { IncentivizedInboundChannel__factory } from "@src"
+import {
+    IncentivizedInboundChannel__factory,
+    ParachainClient__factory,
+    RewardController__factory,
+} from "@src"
 import submitInput from "../data/parachain-relay-incentivized.json"
 
 describe("IncentivizedInboundChannel", function () {
     async function fixture() {
         let [owner, user] = await ethers.getSigners()
 
-        let iface, abi
-
         // mock parachain client
-        iface = new ethers.utils.Interface([
-            "function verifyCommitment(bytes32 commitment, bytes calldata opaqueProof) returns (bool)",
-        ])
-        abi = JSON.parse(iface.format(ethers.utils.FormatTypes.json))
-        let mockParachainClient = await deployMockContract(owner as any, abi)
+        let mockParachainClient = await deployMockContract(
+            owner as any,
+            ParachainClient__factory.abi
+        )
         await mockParachainClient.mock.verifyCommitment.returns(true)
 
         // mock reward source
-        iface = new ethers.utils.Interface([
-            "function handleReward(address payable, uint128 _amount)",
-        ])
-        abi = JSON.parse(iface.format(ethers.utils.FormatTypes.json))
-        let mockRewardSource = await deployMockContract(owner as any, abi)
+        let mockRewardSource = await deployMockContract(owner as any, RewardController__factory.abi)
         await mockRewardSource.mock.handleReward.returns()
 
         let channel = await new IncentivizedInboundChannel__factory(owner).deploy(
