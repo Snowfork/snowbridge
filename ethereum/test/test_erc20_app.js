@@ -239,6 +239,44 @@ describe("ERC20App", function () {
     });
 
   });
+
+  describe("vault ownership", function () {
+
+    beforeEach(async function () {
+      let outboundChannel = await MockOutboundChannel.new();
+      this.vault = await ERC20Vault.new();
+      this.app = await deployAppWithMockChannels(owner, [owner, outboundChannel.address], ERC20App, this.vault.address);
+      this.symbol = "TEST";
+      this.name = "Test Token";
+      this.decimals = 18;
+      this.token = await TestToken.new(this.name, this.symbol);
+    });
+
+    it("should not lock", async function () {
+      const amount = BigNumber(web3.utils.toWei("2", "ether"));
+      // recipient on the ethereum side
+      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
+
+      await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
+        .should.be.rejectedWith(/Ownable: caller is not the owner/);
+    });
+
+    it("should not unlock", async function () {
+      const amount = BigNumber(web3.utils.toWei("2", "ether"));
+      // recipient on the ethereum side
+      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
+
+      await this.app.unlock(
+        this.token.address,
+        POLKADOT_ADDRESS,
+        recipient,
+        amount.toString(),
+        {
+          from: inboundChannel,
+        },
+      ).should.be.rejectedWith(/Ownable: caller is not the owner/);
+    });
+  });
   describe("upgradeability", function () {
     beforeEach(async function () {
       this.outboundChannel = await MockOutboundChannel.new()
