@@ -43,11 +43,6 @@ type Scanner struct {
 //    block number in which the parachain block was included.
 //
 func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, error) {
-	beefyBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
-	if err != nil {
-		return nil, fmt.Errorf("fetch block hash for block %v: %w", beefyBlockNumber, err)
-	}
-
 	// fetch last parachain header that was finalized *before* the BEEFY block
 	beefyBlockMinusOneHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber-1))
 	if err != nil {
@@ -56,7 +51,7 @@ func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, e
 	var paraHead types.Header
 	ok, err := s.relayConn.FetchParachainHead(beefyBlockMinusOneHash, s.paraID, &paraHead)
 	if err != nil {
-		return nil, fmt.Errorf("fetch head for parachain %v at block %v: %w", s.paraID, beefyBlockHash.Hex(), err)
+		return nil, fmt.Errorf("fetch head for parachain %v at block %v: %w", s.paraID, beefyBlockMinusOneHash.Hex(), err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("parachain %v is not registered", s.paraID)
