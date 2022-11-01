@@ -11,6 +11,8 @@ import "./tasks/upgrade"
 import "./tasks/renounce"
 import "./tasks/contractAddress"
 
+import "tsconfig-paths/register"
+
 import type { HardhatUserConfig } from "hardhat/config"
 
 let INFURA_KEY = process.env.INFURA_PROJECT_ID

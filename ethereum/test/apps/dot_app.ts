@@ -1,5 +1,5 @@
-import { ethers, expect, loadFixture } from "./setup"
-import { dotAppFixture } from "./fixtures/apps"
+import { ethers, expect, loadFixture } from "../setup"
+import { dotAppFixture } from "./fixtures"
 import type { BigNumber } from "ethers"
 
 let DOT_DECIMALS = 10

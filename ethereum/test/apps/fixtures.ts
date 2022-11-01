@@ -1,4 +1,4 @@
-import { ethers, expect, loadFixture, deployMockContract } from "../setup"
+import { ethers, loadFixture, deployMockContract } from "../setup"
 import {
     ChannelRegistry__factory,
     ScaleCodec__factory,
@@ -8,7 +8,7 @@ import {
     DOTApp__factory,
     WrappedToken__factory,
     TestToken__factory,
-} from "../../src"
+} from "@src"
 
 export { ethAppFixture, erc20AppFixture, dotAppFixture }
 

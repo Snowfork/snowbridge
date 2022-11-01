@@ -1,5 +1,5 @@
-import { ethers, expect, loadFixture } from "./setup"
-import { erc20AppFixture } from "./fixtures/apps"
+import { ethers, expect, loadFixture } from "../setup"
+import { erc20AppFixture } from "./fixtures"
 
 let POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
