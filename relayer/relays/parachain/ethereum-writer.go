@@ -154,7 +154,7 @@ func (wr *EthereumWriter) WriteChannels(
 	task *Task,
 ) error {
 	for _, proof := range *task.BasicChannelProofs {
-		err := wr.WriteBasicChannel(options, &proof, task.ParaID, task.ProofOutput)
+		err := wr.WriteBasicChannel(options, &proof, task.ProofInput.ParaID, task.ProofOutput)
 		if err != nil {
 			return fmt.Errorf("write basic channel: %w", err)
 		}
@@ -165,7 +165,7 @@ func (wr *EthereumWriter) WriteChannels(
 			options,
 			task.IncentivizedChannelCommitment.Hash,
 			task.IncentivizedChannelCommitment.Data,
-			task.ParaID,
+			task.ProofInput.ParaID,
 			task.ProofOutput,
 		)
 		if err != nil {
