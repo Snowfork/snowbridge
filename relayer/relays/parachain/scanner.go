@@ -38,9 +38,9 @@ type Scanner struct {
 // 1. Fetch channel nonces on both sides of the bridge and compare them
 // 2. If the nonces on the parachain side are larger that means messages
 //    need to be relayed. If not then exit early.
-// 3. Scan parachain blocks to figure out exactly which commitments need to be relayed,
+// 3. Scan parachain blocks to figure out exactly which commitments need to be relayed.
 // 4. For all the parachain blocks with unsettled commitments, determine the relay chain
-//    block number in which the parachain block was included,
+//    block number in which the parachain block was included.
 //
 func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, error) {
 	beefyBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
