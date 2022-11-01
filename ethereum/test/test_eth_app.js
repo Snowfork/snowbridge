@@ -150,7 +150,7 @@ describe("ETHApp", function () {
       const beforeBalance = BigNumber(await web3.eth.getBalance(this.vault.address));
       const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
-      const unlockAmount = web3.utils.toBN( web3.utils.toWei("2", "ether")).add(web3.utils.toBN(1))
+      const unlockAmount = web3.utils.toBN(web3.utils.toWei("2", "ether")).add(web3.utils.toBN(1))
 
       await this.app.unlock(
         POLKADOT_ADDRESS,
@@ -200,7 +200,7 @@ describe("ETHApp", function () {
       afterRecipientBalance.minus(beforeRecipientBalance).should.be.bignumber.equal(amount);
     });
   });
-  
+
   describe("vault ownership", function () {
 
     beforeEach(async function () {
@@ -252,7 +252,7 @@ describe("ETHApp", function () {
       this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ETHApp, inboundChannel, this.vault.address);
       await this.vault.transferOwnership(this.app.address);
       const abi = [
-        "event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)", 
+        "event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)",
         "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)"
       ];
       this.iface = new ethers.utils.Interface(abi);
@@ -262,15 +262,15 @@ describe("ETHApp", function () {
       await this.app.upgrade(
         [this.newInboundChannel, this.outboundChannel.address],
         [this.newInboundChannel, this.outboundChannel.address],
-        {from: userOne}).should.be.rejectedWith(/AccessControl/);
+        { from: userOne }).should.be.rejectedWith(/AccessControl/);
     });
 
     it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
-      await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
+      await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, { from: owner });
       await this.app.upgrade(
         [this.newInboundChannel, this.outboundChannel.address],
         [this.newInboundChannel, this.outboundChannel.address],
-        {from: owner}
+        { from: owner }
       ).should.be.rejectedWith(/AccessControl/)
     })
 
@@ -280,7 +280,7 @@ describe("ETHApp", function () {
       await this.app.upgrade(
         [this.newInboundChannel, this.outboundChannel.address],
         [this.newInboundChannel, this.outboundChannel.address],
-        {from: owner}
+        { from: owner }
       );
       const newBasic = await this.app.channels(0);
       const newIncentivized = await this.app.channels(1);
@@ -308,7 +308,7 @@ describe("ETHApp", function () {
       await this.app.grantRole(
         web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"),
         newUpgrader,
-        {from: userOne}
+        { from: userOne }
       ).should.be.rejectedWith(/AccessControl/);
     });
 

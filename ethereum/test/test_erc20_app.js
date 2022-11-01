@@ -91,12 +91,12 @@ describe("ERC20App", function () {
         tx.receipt.rawLogs[2].data,
         tx.receipt.rawLogs[2].topics
       );
-  
+
       depositEvent.account.should.be.equal(this.app.address);
       depositEvent.sender.should.be.equal(userOne);
       depositEvent.token.should.be.equal(this.token.address);
       depositEvent.amount.eq(ethers.BigNumber.from(amount.toString())).should.be.true;
-  
+
       // Confirm app event emitted with expected values
       const event = tx.logs.find(
         e => e.event === "Locked"
@@ -117,27 +117,27 @@ describe("ERC20App", function () {
       let MyContract = new web3.eth.Contract(this.outboundChannel.abi, this.outboundChannel.address);
 
       (await this.app.tokens(this.token.address))
-      .should.be.equal(true);
+        .should.be.equal(true);
 
       await approveFunds(this.token, this.vault, userOne, amount * 2)
-      .should.be.fulfilled;
+        .should.be.fulfilled;
 
       let mintOnlyTokenTransaction = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
         .should.be.fulfilled;
 
-      const pastEvents = await MyContract.getPastEvents({fromBlock: 0})
+      const pastEvents = await MyContract.getPastEvents({ fromBlock: 0 })
 
       let messageEventCountforminttx = 0, messageEventCountforMintNcreateTx = 0;
 
       pastEvents.forEach(event => {
-          if(event.transactionHash === tx.tx)
-            messageEventCountforMintNcreateTx++;
+        if(event.transactionHash === tx.tx)
+          messageEventCountforMintNcreateTx++;
 
-          if(event.transactionHash === mintOnlyTokenTransaction.tx)
-            messageEventCountforminttx++;
-        });
+        if(event.transactionHash === mintOnlyTokenTransaction.tx)
+          messageEventCountforminttx++;
+      });
 
-        // Confirm message event emitted only twice for 1.create token and 2.mint call.
+      // Confirm message event emitted only twice for 1.create token and 2.mint call.
       messageEventCountforMintNcreateTx.should.be.equal(2)
 
       // Confirm message event emitted only once for 1.mint call.
@@ -295,15 +295,15 @@ describe("ERC20App", function () {
       await this.app.upgrade(
         [this.newInboundChannel, this.outboundChannel.address],
         [this.newInboundChannel, this.outboundChannel.address],
-        {from: userOne}).should.be.rejectedWith(/AccessControl/);
+        { from: userOne }).should.be.rejectedWith(/AccessControl/);
     });
 
     it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
-      await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
+      await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, { from: owner });
       await this.app.upgrade(
         [this.newInboundChannel, this.outboundChannel.address],
         [this.newInboundChannel, this.outboundChannel.address],
-        {from: owner}
+        { from: owner }
       ).should.be.rejectedWith(/AccessControl/)
     })
 
@@ -313,7 +313,7 @@ describe("ERC20App", function () {
       await this.app.upgrade(
         [this.newInboundChannel, this.outboundChannel.address],
         [this.newInboundChannel, this.outboundChannel.address],
-        {from: owner}
+        { from: owner }
       );
       const newBasic = await this.app.channels(0);
       const newIncentivized = await this.app.channels(1);
@@ -341,7 +341,7 @@ describe("ERC20App", function () {
       await this.app.grantRole(
         web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"),
         newUpgrader,
-        {from: userOne}
+        { from: userOne }
       ).should.be.rejectedWith(/AccessControl/);
     })
 
