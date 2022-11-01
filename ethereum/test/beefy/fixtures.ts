@@ -8,7 +8,7 @@ import {
     BeefyClientPublic__factory,
 } from "@src"
 
-import fixtureData from "../data/beefy-relay-basic.json"
+import fixtureData from "./data/beefy-commitment.json"
 
 export { baseFixture, beefyClientPublicFixture, beefyClientFixture1, beefyClientFixture2 }
 

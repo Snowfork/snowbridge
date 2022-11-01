@@ -7,12 +7,12 @@ import {
     createFinalValidatorProofs,
 } from "../helpers"
 
-import fixtureData from "../data/beefy-relay-basic.json"
+import fixtureData from "./data/beefy-commitment.json"
 
 let SUBMIT_FINAL_2 =
     "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"
 
-let runFlow = async function (totalNumberOfValidators, totalNumberOfSignatures) {
+let runFlow = async function (totalNumberOfValidators: number, totalNumberOfSignatures: number) {
     let { beefyClient, user } = await loadFixture(async function foo() {
         return baseFixture()
     })

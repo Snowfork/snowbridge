@@ -4,7 +4,7 @@ import {
     ParachainClient__factory,
     RewardController__factory,
 } from "@src"
-import submitInput from "../data/parachain-relay-incentivized.json"
+import submitInput from "./data/incentivized-commitment.json"
 
 describe("IncentivizedInboundChannel", function () {
     async function fixture() {
@@ -37,7 +37,7 @@ describe("IncentivizedInboundChannel", function () {
 
             let nonceBeforeSubmit = await channel.nonce()
 
-            await expect(channel.submit(submitInput.params.bundle, submitInput.params.proof))
+            await expect(channel.submit(submitInput.bundle, "0xdeadbeef"))
                 .to.emit(channel, "MessageDispatched")
                 .withArgs(ethers.BigNumber.from(0), anyValue)
 
@@ -49,11 +49,10 @@ describe("IncentivizedInboundChannel", function () {
             let { channel } = await loadFixture(fixture)
 
             // Submit messages
-            await channel.submit(submitInput.params.bundle, submitInput.params.proof)
+            await channel.submit(submitInput.bundle, "0xdeadbeef")
 
             // Submit messages again - should revert
-            await expect(channel.submit(submitInput.params.bundle, submitInput.params.proof)).to.be
-                .reverted
+            await expect(channel.submit(submitInput.bundle, "0xdeadbeef")).to.be.reverted
         })
     })
 })
