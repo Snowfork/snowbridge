@@ -284,7 +284,10 @@ describe("ERC20App", function () {
       this.vault = await ERC20Vault.new();
       this.app = await deployAppWithMockChannels(owner, [owner, this.outboundChannel.address], ERC20App, this.vault.address);
       await this.vault.transferOwnership(this.app.address);
-      const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
+      const abi = [
+        "event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)",
+        "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)"
+      ];
       this.iface = new ethers.utils.Interface(abi);
     });
 
@@ -325,6 +328,14 @@ describe("ERC20App", function () {
       expect(event.account).to.equal(newUpgrader);
     });
 
+    it("CHANNEL_UPGRADE_ROLE can transfer vault ownership", async function () {
+      const newVaultOwner = ethers.Wallet.createRandom().address;
+      const tx = await this.app.transferVaultOwnership(newVaultOwner, { from: inboundChannel }).should.be.fulfilled;
+      const event = this.iface.decodeEventLog('OwnershipTransferred', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
+      expect(event.previousOwner).to.equal(this.app.address);
+      expect(event.newOwner).to.equal(newVaultOwner);
+    });
+
     it("reverts when non-upgrader attempts to change CHANNEL_UPGRADE_ROLE", async function () {
       const newUpgrader = ethers.Wallet.createRandom().address;
       await this.app.grantRole(
@@ -333,7 +344,12 @@ describe("ERC20App", function () {
         {from: userOne}
       ).should.be.rejectedWith(/AccessControl/);
     })
+
+    it("reverts when non-upgrader attempts to transfer vault ownsership", async function () {
+      const newVaultOwner = ethers.Wallet.createRandom().address;
+      const tx = await this.app.transferVaultOwnership(newVaultOwner, { from: userOne }).should.be.rejectedWith(/AccessControl/);
+    });
   });
-  });
+});
 
 module.exports = { lockupERC20: lockupFunds };
