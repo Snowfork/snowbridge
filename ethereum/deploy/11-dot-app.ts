@@ -22,15 +22,20 @@ module.exports = async ({
 
   let scaleCodecLibrary = await deployments.get("ScaleCodec")
 
-  if (['hardhat', 'localhost'].includes(network.name)) {
-    await singletons.ERC1820Registry(deployer);
-  }
-
-  await deployments.deploy("DOTApp", {
+  let tokenContract = await deployments.deploy("WrappedToken", {
     from: deployer,
     args: [
-      "Snowfork DOT",
-      "SnowDOT",
+      "Wrapped DOT",
+      "WDOT",
+    ],
+    log: true,
+    autoMine: true,
+  });
+
+  let dotAppContract = await deployments.deploy("DOTApp", {
+    from: deployer,
+    args: [
+      tokenContract.address,
       channels.incentivized.outbound.address,
       {
         inbound: channels.basic.inbound.address,
@@ -48,4 +53,14 @@ module.exports = async ({
     autoMine: true,
   });
 
+  console.log("Configuring WrappedToken")
+  await deployments.execute(
+    "WrappedToken",
+    {
+      from: deployer,
+      autoMine: true,
+    },
+    "transferOwnership",
+    dotAppContract.address
+  );
 };

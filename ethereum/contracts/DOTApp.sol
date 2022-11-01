@@ -16,7 +16,7 @@ contract DOTApp is FeeController, AccessControl {
 
     bytes2 constant UNLOCK_CALL = 0x4001;
 
-    WrappedToken public token;
+    WrappedToken public immutable token;
 
     bytes32 public constant FEE_BURNER_ROLE = keccak256("FEE_BURNER_ROLE");
     bytes32 public constant INBOUND_CHANNEL_ROLE =
@@ -24,6 +24,9 @@ contract DOTApp is FeeController, AccessControl {
 
     bytes32 public constant CHANNEL_UPGRADE_ROLE =
         keccak256("CHANNEL_UPGRADE_ROLE");
+
+    event Minted(bytes32 sender, address recipient, uint256 amount);
+    event Burned(address sender, bytes32 recipient, uint256 amount);
 
     event Upgraded(
         address upgrader,
@@ -37,14 +40,12 @@ contract DOTApp is FeeController, AccessControl {
     }
 
     constructor(
-        string memory _name,
-        string memory _symbol,
+        WrappedToken _token,
         address feeBurner,
         Channel memory _basic,
         Channel memory _incentivized
     ) {
-        address[] memory defaultOperators;
-        token = new WrappedToken(_name, _symbol, defaultOperators);
+        token = _token;
 
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
@@ -72,13 +73,15 @@ contract DOTApp is FeeController, AccessControl {
                 _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
-        token.burn(msg.sender, _amount, abi.encodePacked(_recipient));
+        token.burn(msg.sender, _amount);
 
         OutboundChannel channel =
             OutboundChannel(channels[_channelId].outbound);
 
         bytes memory call = encodeCall(msg.sender, _recipient, _amount);
         channel.submit(msg.sender, call);
+
+        emit Burned(msg.sender, _recipient, _amount);
     }
 
     function mint(
@@ -86,12 +89,13 @@ contract DOTApp is FeeController, AccessControl {
         address _recipient,
         uint256 _amount
     ) external onlyRole(INBOUND_CHANNEL_ROLE) {
-        token.mint(_recipient, _amount, abi.encodePacked(_sender));
+        token.mint(_recipient, _amount);
+        emit Minted(_sender, _recipient, _amount);
     }
 
     // Incentivized channel calls this to charge (burn) fees
     function handleFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
-        token.burn(feePayer, _amount, "");
+        token.burn(feePayer, _amount);
     }
 
     function encodeCall(
@@ -118,7 +122,7 @@ contract DOTApp is FeeController, AccessControl {
         // revoke old channel
         revokeRole(INBOUND_CHANNEL_ROLE, c1.inbound);
         revokeRole(INBOUND_CHANNEL_ROLE, c2.inbound);
-        // set new channel
+       // set new channel
         c1.inbound = _basic.inbound;
         c1.outbound = _basic.outbound;
         c2.inbound = _incentivized.inbound;
