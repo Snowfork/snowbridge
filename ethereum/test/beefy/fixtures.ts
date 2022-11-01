@@ -5,12 +5,12 @@ import {
     MerkleProof__factory,
     Bitfield__factory,
     BeefyClient__factory,
-    ExposedBeefyClient__factory,
+    BeefyClientPublic__factory,
 } from "@src"
 
 import fixtureData from "../data/beefy-relay-basic.json"
 
-export { baseFixture, exposedBeefyClientFixture, beefyClientFixture1, beefyClientFixture2 }
+export { baseFixture, beefyClientPublicFixture, beefyClientFixture1, beefyClientFixture2 }
 
 async function libsFixture() {
     let [owner] = await ethers.getSigners()
@@ -41,12 +41,12 @@ async function baseFixture() {
 }
 
 /**
- * beefy client base fixture with some internal methods exposed
+ * beefy client base fixture with some internal methods made public
  */
-async function exposedBeefyClientFixture() {
+async function beefyClientPublicFixture() {
     let [owner] = await ethers.getSigners()
     let { codec, mmrProof, merkleProof, bitfield } = await libsFixture()
-    let beefyClient = await new ExposedBeefyClient__factory(
+    let beefyClient = await new BeefyClientPublic__factory(
         {
             "contracts/ScaleCodec.sol:ScaleCodec": codec.address,
             "contracts/utils/MMRProofVerification.sol:MMRProofVerification": mmrProof.address,

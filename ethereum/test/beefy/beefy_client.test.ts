@@ -1,5 +1,5 @@
 import { expect, loadFixture, mine } from "../setup"
-import { beefyClientFixture1, exposedBeefyClientFixture } from "./fixtures"
+import { beefyClientFixture1, beefyClientPublicFixture } from "./fixtures"
 
 let SUBMIT_FINAL_2 =
     "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"
@@ -51,7 +51,7 @@ describe("BeefyClient", function () {
         expect(root).to.eq(fixtureData.params.commitment.payload.mmrRootHash)
     })
     it("encodes beefy commitment to SCALE-format", async function () {
-        let { beefyClient } = await loadFixture(exposedBeefyClientFixture)
+        let { beefyClient } = await loadFixture(beefyClientPublicFixture)
         let commitment = {
             blockNumber: 5,
             validatorSetID: 7,
@@ -62,7 +62,7 @@ describe("BeefyClient", function () {
             },
         }
 
-        let encoded = await beefyClient.encodeCommitmentExposed(commitment)
+        let encoded = await beefyClient.encodeCommitment_public(commitment)
         expect(encoded).to.eq(
             "0x0861620c0001026d68803ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c050000000700000000000000"
         )
