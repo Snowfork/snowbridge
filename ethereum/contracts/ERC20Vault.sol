@@ -5,20 +5,32 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-// Holds ERC20 Tokens on behalf of ERC20App
+/// @title ERC20 Vault
+/// @notice Holds ERC20 Tokens on behalf of ERC20App.
 contract ERC20Vault is Ownable {
     using SafeERC20 for IERC20;
 
-    event Deposit(address account, address sender, uint256 amount);
-    event Withdraw(address account, address recipient, uint256 amount);
+    /// @dev Emitted when funds are deposited.
+    /// @param account The address of the ERC20App contract.
+    /// @param sender The address of the sender.
+    /// @param token The address of the ERC20 token.
+    /// @param amount The amount being deposited.
+    event Deposit(address account, address sender, address token, uint256 amount);
 
+    /// @dev Emitted when funds are withdrawn.
+    /// @param account The address of the ERC20App contract.
+    /// @param recipient The address of the sender.
+    /// @param token The address of the ERC20 token.
+    /// @param amount The amount being withdrawn.
+    event Withdraw(address account, address recipient, address token, uint256 amount);
+
+    /* State */
     mapping(address => uint256) public balances;
 
-    receive() external payable {
-        revert("Must use deposit function");
-    }
-
-    // Accepts ETH from the caller.
+    /// @dev Accepts a ERC20 Token from the caller.
+    /// @param _sender The address of the sender.
+    /// @param _token The address of the Token.
+    /// @param _amount The amount being deposited.
     function deposit(address _sender, address _token, uint256 _amount) 
         external
         onlyOwner
@@ -28,10 +40,13 @@ contract ERC20Vault is Ownable {
             IERC20(_token).transferFrom(_sender, address(this), _amount),
             "Contract token allowances insufficient to complete this lock request"
         );
-        emit Deposit(msg.sender, _sender, _amount);
+        emit Deposit(msg.sender, _sender, _token, _amount);
     }
 
-    // Returns ETH to the caller.
+    /// @dev Returns ETH to the caller.
+    /// @param _recipient The address that will receive funds.
+    /// @param _token The address of the Token.
+    /// @param _amount The amount being deposited.
     function withdraw(address _recipient, address _token, uint256 _amount)
         external
         onlyOwner
@@ -44,6 +59,6 @@ contract ERC20Vault is Ownable {
 
         balances[_token] = balances[_token] - _amount;
         IERC20(_token).safeTransfer(_recipient, _amount);
-        emit Withdraw(msg.sender, _recipient, _amount);
+        emit Withdraw(msg.sender, _recipient, _token, _amount);
     }
 }
