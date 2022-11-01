@@ -1,16 +1,11 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
-
+import { ethers, expect, loadFixture } from "./setup"
 import { printBitfield, createRandomPositions } from "./helpers"
+import { Bitfield__factory } from "../src"
 
 describe("Bitfield", function () {
     async function fixture() {
-        let Bitfield = await ethers.getContractFactory("Bitfield")
-        let bitfieldLib = await Bitfield.deploy()
-        await bitfieldLib.deployed()
+        let [owner] = await ethers.getSigners()
+        let bitfieldLib = await new Bitfield__factory(owner).deploy()
         return { bitfieldLib }
     }
 

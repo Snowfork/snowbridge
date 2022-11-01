@@ -1,10 +1,5 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture, mine } from "@nomicfoundation/hardhat-network-helpers"
-import { baseFixture } from "./fixtures"
-
+import { ethers, expect, loadFixture, mine } from "./setup"
+import { baseFixture } from "./fixtures/beefy"
 import {
     createRandomPositions,
     createValidatorFixture,
@@ -12,7 +7,7 @@ import {
     createFinalValidatorProofs,
 } from "./helpers"
 
-import fixtureData from "./fixtures/beefy-relay-basic.json"
+import fixtureData from "./fixtures/data/beefy-relay-basic.json"
 
 let SUBMIT_FINAL_2 =
     "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"

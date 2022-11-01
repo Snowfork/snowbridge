@@ -1,10 +1,5 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
-
-import { deployMockContract } from "@ethereum-waffle/mock-contract"
+import { ethers, expect, loadFixture, deployMockContract } from "./setup"
+import { IncentivizedOutboundChannel__factory } from "../src"
 
 let testPayload = ethers.utils.formatBytes32String("arbitrary-payload")
 
@@ -22,10 +17,7 @@ describe("IncentivizedOutboundChannel", function () {
         let mockFeeController = await deployMockContract(owner as any, abi)
         await mockFeeController.mock.handleFee.returns()
 
-        let IncentivizedOutboundChannel = await ethers.getContractFactory(
-            "IncentivizedOutboundChannel"
-        )
-        let channel = await IncentivizedOutboundChannel.deploy()
+        let channel = await new IncentivizedOutboundChannel__factory(owner).deploy()
         await channel.deployed()
 
         await channel.initialize(owner.address, mockFeeController.address, [app.address])

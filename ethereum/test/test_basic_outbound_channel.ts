@@ -1,8 +1,5 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
+import { ethers, expect, loadFixture } from "./setup"
+import { BasicOutboundChannel__factory } from "../src"
 
 describe("BasicOutboundChannel", function () {
     let testPayload = ethers.utils.formatBytes32String("arbitrary-payload")
@@ -10,10 +7,8 @@ describe("BasicOutboundChannel", function () {
     async function fixture() {
         let [owner, app, user] = await ethers.getSigners()
 
-        let BasicOutboundChannel = await ethers.getContractFactory("BasicOutboundChannel")
-        let channel = await BasicOutboundChannel.deploy()
+        let channel = await new BasicOutboundChannel__factory(owner).deploy()
         await channel.deployed()
-
         await channel.initialize(owner.address, [app.address])
 
         return { channel, owner, app, user }

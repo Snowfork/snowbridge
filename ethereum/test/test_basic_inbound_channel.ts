@@ -1,38 +1,31 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs"
-
-import { deployMockContract } from "@ethereum-waffle/mock-contract"
-
-import submitInput from "./fixtures/parachain-relay-basic.json"
+import { ethers, expect, loadFixture, anyValue, deployMockContract } from "./setup"
+import {
+    MerkleProof__factory,
+    BasicInboundChannel__factory,
+    ParachainClient__factory,
+} from "../src"
+import submitInput from "./fixtures/data/parachain-relay-basic.json"
 
 describe("BasicInboundChannel", function () {
     async function fixture() {
         let [owner, user] = await ethers.getSigners()
 
-        let MerkleProof = await ethers.getContractFactory("MerkleProof")
-        let merkleProof = await MerkleProof.deploy()
+        let merkleProof = await new MerkleProof__factory(owner).deploy()
         await merkleProof.deployed()
 
         // mock parachain client
-        let iface = new ethers.utils.Interface([
-            "function verifyCommitment(bytes32 commitment, bytes calldata opaqueProof) returns (bool)",
-        ])
-        let abi = JSON.parse(iface.format(ethers.utils.FormatTypes.json) as any)
-        let mockParachainClient = await deployMockContract(owner as any, abi)
-
-        // Make verifyCommitment() return true
+        let mockParachainClient = await deployMockContract(
+            owner as any,
+            ParachainClient__factory.abi
+        )
         await mockParachainClient.mock.verifyCommitment.returns(true)
 
-        let BasicInboundChannel = await ethers.getContractFactory("BasicInboundChannel", {
-            libraries: {
-                MerkleProof: merkleProof.address,
+        let channel = await new BasicInboundChannel__factory(
+            {
+                "contracts/utils/MerkleProof.sol:MerkleProof": merkleProof.address,
             },
-        })
-        let channel = await BasicInboundChannel.deploy(0, mockParachainClient.address)
+            owner
+        ).deploy(0, mockParachainClient.address)
         await channel.deployed()
 
         return { channel, user }

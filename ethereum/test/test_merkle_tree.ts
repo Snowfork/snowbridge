@@ -1,16 +1,12 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
-
+import { ethers, expect, loadFixture } from "./setup"
+import { MerkleProof__factory } from "../src"
 import { keccakFromHexString } from "ethereumjs-util"
 import { createMerkleTree } from "./helpers"
 
 describe("Merkle Proof", function () {
     async function fixture() {
-        let MerkleProof = await ethers.getContractFactory("MerkleProof")
-        let merkleProof = await MerkleProof.deploy()
+        let [owner] = await ethers.getSigners()
+        let merkleProof = await new MerkleProof__factory(owner).deploy()
         await merkleProof.deployed()
         return { merkleProof }
     }

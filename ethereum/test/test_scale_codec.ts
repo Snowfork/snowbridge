@@ -1,13 +1,10 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
+import { ethers, expect, loadFixture } from "./setup"
+import { ScaleCodec__factory } from "../src"
 
 describe("ScaleCodec", function () {
     async function fixture() {
-        let factory = await ethers.getContractFactory("ScaleCodec")
-        let codec = await factory.deploy()
+        let [owner] = await ethers.getSigners()
+        let codec = await new ScaleCodec__factory(owner).deploy()
         await codec.deployed()
         return { codec }
     }

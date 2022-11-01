@@ -1,48 +1,40 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
+import { ethers, loadFixture } from "../setup"
+import {
+    ScaleCodec__factory,
+    MMRProofVerification__factory,
+    MerkleProof__factory,
+    Bitfield__factory,
+    BeefyClient__factory,
+    ExposedBeefyClient__factory,
+} from "../../src"
 
-import fixtureData from "./fixtures/beefy-relay-basic.json"
+import fixtureData from "./data/beefy-relay-basic.json"
 
 export { baseFixture, exposedBeefyClientFixture, beefyClientFixture1, beefyClientFixture2 }
 
 async function libsFixture() {
-    let codecFactory = await ethers.getContractFactory("ScaleCodec")
-    let codec = await codecFactory.deploy()
+    let [owner] = await ethers.getSigners()
 
-    let mmrProofFactory = await ethers.getContractFactory("MMRProofVerification")
-    let mmrProof = await mmrProofFactory.deploy()
-
-    let merkleProofFactory = await ethers.getContractFactory("MerkleProof")
-    let merkleProof = await merkleProofFactory.deploy()
-
-    let bitfieldFactory = await ethers.getContractFactory("Bitfield")
-    let bitfield = await bitfieldFactory.deploy()
-
-    await Promise.all([
-        codec.deployed(),
-        mmrProof.deployed(),
-        merkleProof.deployed(),
-        bitfield.deployed(),
-    ])
+    let codec = await new ScaleCodec__factory(owner).deploy()
+    let mmrProof = await new MMRProofVerification__factory(owner).deploy()
+    let merkleProof = await new MerkleProof__factory(owner).deploy()
+    let bitfield = await new Bitfield__factory(owner).deploy()
 
     return { codec, mmrProof, merkleProof, bitfield }
 }
 
 async function baseFixture() {
     let [owner, user] = await ethers.getSigners()
-
     let { codec, mmrProof, merkleProof, bitfield } = await libsFixture()
-
-    let BeefyClient = await ethers.getContractFactory("BeefyClient", {
-        libraries: {
-            ScaleCodec: codec.address,
-            MMRProofVerification: mmrProof.address,
-            MerkleProof: merkleProof.address,
-            Bitfield: bitfield.address,
+    let beefyClient = await new BeefyClient__factory(
+        {
+            "contracts/ScaleCodec.sol:ScaleCodec": codec.address,
+            "contracts/utils/MMRProofVerification.sol:MMRProofVerification": mmrProof.address,
+            "contracts/utils/MerkleProof.sol:MerkleProof": merkleProof.address,
+            "contracts/utils/Bitfield.sol:Bitfield": bitfield.address,
         },
-    })
-    let beefyClient = await BeefyClient.deploy()
+        owner
+    ).deploy()
     await beefyClient.deployed()
 
     return { beefyClient, owner, user }
@@ -52,18 +44,17 @@ async function baseFixture() {
  * beefy client base fixture with some internal methods exposed
  */
 async function exposedBeefyClientFixture() {
+    let [owner] = await ethers.getSigners()
     let { codec, mmrProof, merkleProof, bitfield } = await libsFixture()
-
-    let BeefyClient = await ethers.getContractFactory("ExposedBeefyClient", {
-        libraries: {
-            ScaleCodec: codec.address,
-            MMRProofVerification: mmrProof.address,
-            MerkleProof: merkleProof.address,
-            Bitfield: bitfield.address,
+    let beefyClient = await new ExposedBeefyClient__factory(
+        {
+            "contracts/ScaleCodec.sol:ScaleCodec": codec.address,
+            "contracts/utils/MMRProofVerification.sol:MMRProofVerification": mmrProof.address,
+            "contracts/utils/MerkleProof.sol:MerkleProof": merkleProof.address,
+            "contracts/utils/Bitfield.sol:Bitfield": bitfield.address,
         },
-    })
-    let beefyClient = await BeefyClient.deploy()
-    await beefyClient.deployed()
+        owner
+    ).deploy()
 
     return { beefyClient }
 }
@@ -73,7 +64,7 @@ async function exposedBeefyClientFixture() {
  * that is 1 session older than the validator set that signed the candidate BEEFY commitment
  */
 async function beefyClientFixture1() {
-    let { beefyClient, owner, user } = await baseFixture()
+    let { beefyClient, owner, user } = await loadFixture(baseFixture)
 
     let validatorSetID = fixtureData.params.commitment.validatorSetID - 1
     let validatorSetRoot = fixtureData.params.leaf.nextAuthoritySetRoot
@@ -93,7 +84,7 @@ async function beefyClientFixture1() {
  * that is the same set that signed the candidate BEEFY commitment
  */
 async function beefyClientFixture2() {
-    let { beefyClient, owner, user } = await baseFixture()
+    let { beefyClient, owner, user } = await loadFixture(baseFixture)
 
     let validatorSetID = fixtureData.params.commitment.validatorSetID
     let validatorSetRoot = fixtureData.params.leaf.nextAuthoritySetRoot

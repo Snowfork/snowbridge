@@ -1,7 +1,5 @@
-import {} from "../src/hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
-import { exposedBeefyClientFixture } from "./fixtures"
+import { expect, loadFixture } from "./setup"
+import { exposedBeefyClientFixture } from "./fixtures/beefy"
 
 describe("BeefyClient", function () {
     it("encodes beefy commitment to SCALE-format", async function () {

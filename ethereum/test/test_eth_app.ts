@@ -1,54 +1,12 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
+import { ethers, expect, loadFixture, deployMockContract } from "./setup"
+import { ethAppFixture } from "./fixtures/apps"
 
 let POLKADOT_ACCOUNT = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
 describe("ETHApp", function () {
-    async function baseFixture() {
-        let [owner, user] = await ethers.getSigners()
-
-        let ScaleCodec = await ethers.getContractFactory("ScaleCodec")
-        let codec = await ScaleCodec.deploy()
-
-        let MockOutboundChannel = await ethers.getContractFactory("MockOutboundChannel")
-        let outboundChannel = await MockOutboundChannel.deploy()
-
-        let Registry = await ethers.getContractFactory("ChannelRegistry")
-        let registry = await Registry.deploy()
-
-        await Promise.all([codec.deployed(), outboundChannel.deployed(), registry.deployed()])
-
-        // Add mock inbound and outbound channels to registry
-        await registry.updateChannel(0, owner.address, outboundChannel.address)
-
-        let ETHApp = await ethers.getContractFactory("ETHApp", {
-            signer: owner,
-            libraries: {
-                ScaleCodec: codec.address,
-            },
-        })
-
-        let app = await ETHApp.deploy(owner.address, registry.address)
-        await app.deployed()
-
-        return {
-            app,
-            owner,
-            user,
-            channelID: 0,
-        }
-    }
-
     describe("deposits", function () {
-        async function depositsFixture() {
-            return baseFixture()
-        }
-
         it("should lock funds", async function () {
-            let { app, user, channelID } = await loadFixture(depositsFixture)
+            let { app, user, channelID } = await loadFixture(ethAppFixture)
 
             let beforeBalance = await ethers.provider.getBalance(app.address)
             let amount = ethers.utils.parseEther("0.25")
@@ -67,7 +25,7 @@ describe("ETHApp", function () {
         })
 
         it("should lock funds and forward to destination parachain", async function () {
-            let { app, user, channelID } = await loadFixture(depositsFixture)
+            let { app, user, channelID } = await loadFixture(ethAppFixture)
 
             let beforeBalance = await ethers.provider.getBalance(app.address)
             let amount = ethers.utils.parseEther("0.25")
@@ -86,7 +44,7 @@ describe("ETHApp", function () {
         })
 
         it("should not lock funds if amount is zero", async function () {
-            let { app, user, channelID } = await loadFixture(depositsFixture)
+            let { app, user, channelID } = await loadFixture(ethAppFixture)
             await expect(
                 app.connect(user).lock(POLKADOT_ACCOUNT, 0, 0, channelID, {
                     value: 0,
@@ -95,7 +53,7 @@ describe("ETHApp", function () {
         })
 
         it("should not lock funds if amount is greater than 128-bits", async function () {
-            let { app, user, channelID } = await loadFixture(depositsFixture)
+            let { app, user, channelID } = await loadFixture(ethAppFixture)
             await expect(
                 app.connect(user).lock(POLKADOT_ACCOUNT, 0, 0, channelID, {
                     value: ethers.BigNumber.from("340282366920938463463374607431768211457"),
@@ -106,7 +64,7 @@ describe("ETHApp", function () {
 
     describe("withdrawals", function () {
         async function withdrawalsFixture() {
-            let { app, owner, user, channelID } = await baseFixture()
+            let { app, owner, user, channelID } = await loadFixture(ethAppFixture)
             await app.connect(user).lock(POLKADOT_ACCOUNT, 0, 0, channelID, {
                 value: ethers.utils.parseEther("2"),
             })

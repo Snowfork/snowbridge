@@ -1,62 +1,12 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
+import { ethers, expect, loadFixture } from "./setup"
+import { erc20AppFixture } from "./fixtures/apps"
 
 let POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
 describe("ERC20App", function () {
-    async function baseFixture() {
-        let [owner, user] = await ethers.getSigners()
-
-        let ScaleCodec = await ethers.getContractFactory("ScaleCodec")
-        let codec = await ScaleCodec.deploy()
-
-        let MockOutboundChannel = await ethers.getContractFactory("MockOutboundChannel")
-        let outboundChannel = await MockOutboundChannel.deploy()
-
-        let Registry = await ethers.getContractFactory("ChannelRegistry")
-        let registry = await Registry.deploy()
-
-        await Promise.all([codec.deployed(), outboundChannel.deployed(), registry.deployed()])
-
-        // Add mock inbound and outbound channels to registry
-        await registry.updateChannel(0, owner.address, outboundChannel.address)
-
-        let ERC20App = await ethers.getContractFactory("ERC20App", {
-            signer: owner,
-            libraries: {
-                ScaleCodec: codec.address,
-            },
-        })
-
-        let app = await ERC20App.deploy(registry.address)
-        await app.deployed()
-
-        let Token = await ethers.getContractFactory("TestToken")
-        let token = await Token.deploy("Test Token", "TEST")
-        await token.deployed()
-
-        await token.mint(user.address, 100)
-        await token.connect(user).approve(app.address, 100)
-
-        return {
-            app,
-            token,
-            owner,
-            user,
-            channelID: 0,
-        }
-    }
-
     describe("deposits", function () {
-        async function depositsFixture() {
-            return baseFixture()
-        }
-
         it("should lock funds", async function () {
-            let { app, token, owner, user, channelID } = await loadFixture(depositsFixture)
+            let { app, token, owner, user, channelID } = await loadFixture(erc20AppFixture)
 
             let amount = ethers.BigNumber.from(10)
             let beforeVaultBalance = await app.balances(token.address)
@@ -76,7 +26,7 @@ describe("ERC20App", function () {
         })
 
         it("should lock funds and forward to destination parachain", async function () {
-            let { app, token, user, channelID } = await loadFixture(depositsFixture)
+            let { app, token, user, channelID } = await loadFixture(erc20AppFixture)
 
             let amount = ethers.BigNumber.from(10)
             let beforeVaultBalance = await app.balances(token.address)
@@ -100,7 +50,7 @@ describe("ERC20App", function () {
 
     describe("withdrawals", function () {
         async function withdrawalsFixture() {
-            let { app, token, user, channelID } = await baseFixture()
+            let { app, token, user, channelID } = await loadFixture(erc20AppFixture)
             await expect(
                 app.connect(user).lock(token.address, POLKADOT_ADDRESS, 10, 0, 0, channelID)
             ).to.emit(app, "Locked")

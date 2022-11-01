@@ -1,24 +1,20 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
-
-import fixture7leaves from "./fixtures/mmr-fixture-data-7-leaves.json"
-import fixture15leaves from "./fixtures/mmr-fixture-data-15-leaves.json"
+import { ethers, expect, loadFixture } from "./setup"
+import { MMRProofVerification__factory, MMRProofVerifier__factory } from "../src"
+import fixture7leaves from "./fixtures/data/mmr-fixture-data-7-leaves.json"
+import fixture15leaves from "./fixtures/data/mmr-fixture-data-15-leaves.json"
 
 describe("MMR Proof Verification", function () {
     async function fixture() {
-        let MMRProofVerification = await ethers.getContractFactory("MMRProofVerification")
-        let mmrLib = await MMRProofVerification.deploy()
+        let [owner] = await ethers.getSigners()
+        let mmrLib = await new MMRProofVerification__factory(owner).deploy()
         await mmrLib.deployed()
 
-        let MMRProofVerifier = await ethers.getContractFactory("MMRProofVerifier", {
-            libraries: {
-                MMRProofVerification: mmrLib.address,
+        let verifier = await new MMRProofVerifier__factory(
+            {
+                "contracts/utils/MMRProofVerification.sol:MMRProofVerification": mmrLib.address,
             },
-        })
-        let verifier = await MMRProofVerifier.deploy()
+            owner
+        ).deploy()
         await verifier.deployed()
 
         return { verifier }

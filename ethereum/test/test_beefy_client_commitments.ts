@@ -1,9 +1,5 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture, mine } from "@nomicfoundation/hardhat-network-helpers"
-import { beefyClientFixture1 } from "./fixtures"
+import { expect, loadFixture, mine } from "./setup"
+import { beefyClientFixture1 } from "./fixtures/beefy"
 
 let SUBMIT_FINAL_2 =
     "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"

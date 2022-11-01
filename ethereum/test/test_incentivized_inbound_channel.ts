@@ -1,13 +1,6 @@
-import {} from "../src/hardhat"
-import "@nomiclabs/hardhat-ethers"
-import { ethers } from "hardhat"
-import { expect } from "chai"
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs"
-
-import { deployMockContract } from "@ethereum-waffle/mock-contract"
-
-import submitInput from "./fixtures/parachain-relay-incentivized.json"
+import { ethers, expect, loadFixture, deployMockContract, anyValue } from "./setup"
+import { IncentivizedInboundChannel__factory } from "../src"
+import submitInput from "./fixtures/data/parachain-relay-incentivized.json"
 
 describe("IncentivizedInboundChannel", function () {
     async function fixture() {
@@ -31,12 +24,11 @@ describe("IncentivizedInboundChannel", function () {
         let mockRewardSource = await deployMockContract(owner as any, abi)
         await mockRewardSource.mock.handleReward.returns()
 
-        let IncentivizedInboundChannel = await ethers.getContractFactory(
-            "IncentivizedInboundChannel"
+        let channel = await new IncentivizedInboundChannel__factory(owner).deploy(
+            1,
+            mockParachainClient.address
         )
-        let channel = await IncentivizedInboundChannel.deploy(1, mockParachainClient.address)
         await channel.deployed()
-
         await channel.initialize(owner.address, mockRewardSource.address)
 
         return { channel, user }
