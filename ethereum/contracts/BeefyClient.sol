@@ -254,7 +254,7 @@ contract BeefyClient is Ownable {
     ) public {
         Request storage request = requests[requestID];
 
-        require(commitment.validatorSetID == currentValidatorSet.id);
+        require(commitment.validatorSetID == currentValidatorSet.id, "invalid commitment");
 
         verifyCommitment(currentValidatorSet, request, commitment, proof);
 
@@ -282,8 +282,8 @@ contract BeefyClient is Ownable {
     ) public {
         Request storage request = requests[requestID];
 
-        require(commitment.validatorSetID == nextValidatorSet.id);
-        require(leaf.nextAuthoritySetID == nextValidatorSet.id + 1);
+        require(commitment.validatorSetID == nextValidatorSet.id, "invalid commitment");
+        require(leaf.nextAuthoritySetID == nextValidatorSet.id + 1, "invalid MMR leaf");
 
         verifyCommitment(nextValidatorSet, request, commitment, proof);
 
@@ -367,7 +367,7 @@ contract BeefyClient is Ownable {
         );
 
         // Check that payload.leaf.block_number is > last_known_block_number;
-        require(commitment.blockNumber > latestBeefyBlock, "Commitment blocknumber is too old");
+        require(commitment.blockNumber > latestBeefyBlock, "Commitment is too old");
 
         // verify the validator multiproof
         uint256 signatureCount = minimumSignatureThreshold(vset);

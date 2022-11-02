@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 
 /// @custom:security-contact contact@snowfork.com
 contract WrappedToken is ERC20, Ownable, ERC20Permit {
+    // solhint-disable-next-line no-empty-blocks
     constructor(string memory name, string memory symbol) ERC20(name, symbol) ERC20Permit(name) {}
 
     function mint(address to, uint256 amount) public onlyOwner {

@@ -8,10 +8,10 @@ import "./SubstrateTypes.sol";
  * @title SCALE encoders for DOTApp pallet calls
  */
 library DOTAppPallet {
-    bytes1 constant PALLET_ID = 0x40;
+    bytes1 public constant PALLET_ID = 0x40;
 
-    bytes1 constant UNLOCK_CALL = 0x01;
-    uint64 constant UNLOCK_WEIGHT = 100_000_000;
+    bytes1 public constant UNLOCK_CALL = 0x01;
+    uint64 public constant UNLOCK_WEIGHT = 100_000_000;
 
     /**
      * @dev Encode `Pallet::unlock`

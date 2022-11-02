@@ -4,7 +4,11 @@ import { ApiPromise, WsProvider } from "@polkadot/api"
 import { MerkleTree } from "merkletreejs"
 import createKeccakHash from "keccak"
 import { publicKeyConvert } from "secp256k1"
-import type { ValidatorSetId, BeefyNextAuthoritySet } from "@polkadot/types/interfaces/beefy/types"
+import type {
+    ValidatorSetId,
+    BeefyNextAuthoritySet,
+    BeefyId,
+} from "@polkadot/types/interfaces/beefy/types"
 
 let endpoint = process.env.RELAYCHAIN_ENDPOINT
 
@@ -37,8 +41,7 @@ async function configureBeefy() {
     let api = await api1.at(blockHash)
 
     let validatorSetId = await api.query.beefy.validatorSetId<ValidatorSetId>()
-    let authorities: any = await api.query.beefy.authorities()
-    console.log(authorities)
+    let authorities = await api.query.beefy.authorities<BeefyId[]>()
 
     let addrs = []
     for (let i = 0; i < authorities.length; i++) {

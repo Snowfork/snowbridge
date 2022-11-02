@@ -8,10 +8,10 @@ import "./SubstrateTypes.sol";
  * @title SCALE encoders for ETHApp pallet calls
  */
 library ETHAppPallet {
-    bytes1 constant PALLET_ID = 0x41;
+    bytes1 public constant PALLET_ID = 0x41;
 
-    bytes1 constant MINT_CALL = 0x01;
-    uint64 constant MINT_WEIGHT = 100_000_000;
+    bytes1 public constant MINT_CALL = 0x01;
+    uint64 public constant MINT_WEIGHT = 100_000_000;
 
     /**
      * @dev Encode `Pallet::mint`

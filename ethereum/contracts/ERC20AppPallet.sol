@@ -8,13 +8,13 @@ import "./SubstrateTypes.sol";
  * @title SCALE encoders for ERC20App pallet calls
  */
 library ERC20AppPallet {
-    bytes1 constant PALLET_ID = 0x42;
+    bytes1 public constant PALLET_ID = 0x42;
 
-    bytes1 constant MINT_CALL = 0x01;
-    uint64 constant MINT_WEIGHT = 100_000_000;
+    bytes1 public constant MINT_CALL = 0x01;
+    uint64 public constant MINT_WEIGHT = 100_000_000;
 
-    bytes1 constant CREATE_CALL = 0x02;
-    uint64 constant CREATE_WEIGHT = 100_000_000;
+    bytes1 public constant CREATE_CALL = 0x02;
+    uint64 public constant CREATE_WEIGHT = 100_000_000;
 
     /**
      * @dev Encode `Pallet::mint`

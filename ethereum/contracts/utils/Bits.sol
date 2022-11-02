@@ -106,7 +106,7 @@ library Bits {
         uint8 startIndex,
         uint16 numBits
     ) internal pure returns (uint256) {
-        require(0 < numBits && startIndex < 256 && startIndex + numBits <= 256);
+        require(0 < numBits && startIndex < 256 && startIndex + numBits <= 256, "out of bounds");
         return (self >> startIndex) & (ONES >> (256 - numBits));
     }
 
@@ -114,7 +114,7 @@ library Bits {
     // Returns the highest bit set as an 'uint8'.
     // Requires that 'self != 0'.
     function highestBitSet(uint256 self) internal pure returns (uint8 highest) {
-        require(self != 0);
+        require(self != 0, "should not be zero");
         uint256 val = self;
         for (uint8 i = 128; i >= 1; i >>= 1) {
             if (val & (((ONE << i) - 1) << i) != 0) {
@@ -128,7 +128,7 @@ library Bits {
     // Returns the lowest bit set as an 'uint8'.
     // Requires that 'self != 0'.
     function lowestBitSet(uint256 self) internal pure returns (uint8 lowest) {
-        require(self != 0);
+        require(self != 0, "should not be zero");
         uint256 val = self;
         for (uint8 i = 128; i >= 1; i >>= 1) {
             if (val & ((ONE << i) - 1) == 0) {

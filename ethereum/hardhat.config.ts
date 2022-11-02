@@ -6,8 +6,6 @@ import "@typechain/hardhat"
 import "hardhat-gas-reporter"
 import "hardhat-deploy"
 
-import "./tasks/upgrade"
-import "./tasks/renounce"
 import "./tasks/contractAddress"
 
 import "tsconfig-paths/register"
