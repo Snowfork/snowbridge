@@ -1,4 +1,3 @@
-import { resolve } from "path"
 import "solidity-coverage"
 import "@nomicfoundation/hardhat-chai-matchers"
 import "@nomiclabs/hardhat-etherscan"

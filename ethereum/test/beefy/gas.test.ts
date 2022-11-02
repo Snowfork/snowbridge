@@ -9,9 +9,6 @@ import {
 
 import fixtureData from "./data/beefy-commitment.json"
 
-let SUBMIT_FINAL_2 =
-    "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"
-
 let runFlow = async function (totalNumberOfValidators: number, totalNumberOfSignatures: number) {
     let { beefyClient, user } = await loadFixture(baseFixture)
 
@@ -59,8 +56,8 @@ let runFlow = async function (totalNumberOfValidators: number, totalNumberOfSign
             {
                 signature: initialValidatorProofs[firstPosition].signature,
                 index: firstPosition,
-                addr: initialValidatorProofs[firstPosition].address,
-                merkleProof: initialValidatorProofs[firstPosition].proof,
+                addr: initialValidatorProofs[firstPosition].addr,
+                merkleProof: initialValidatorProofs[firstPosition].merkleProof,
             }
         )
 
@@ -77,7 +74,9 @@ let runFlow = async function (totalNumberOfValidators: number, totalNumberOfSign
     await expect(
         beefyClient
             .connect(user)
-            [SUBMIT_FINAL_2](
+            [
+                "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"
+            ](
                 lastId,
                 fixtureData.params.commitment,
                 completeValidatorProofs,
@@ -87,7 +86,7 @@ let runFlow = async function (totalNumberOfValidators: number, totalNumberOfSign
     ).to.emit(beefyClient, "NewMMRRoot")
 }
 
-describe("Beefy Client Gas Usage", function () {
+describe.skip("Beefy Client Gas Usage", function () {
     let testCases = [
         {
             totalNumberOfValidators: 600,

@@ -58,7 +58,8 @@ function createValidatorFixture(
         let wallet = ethers.Wallet.createRandom()
         wallets.push(wallet)
     }
-    let walletsByLeaf = wallets.reduce((accum, wallet) => {
+
+    let walletsByLeaf = wallets.reduce((accum: WalletsByLeaf, wallet) => {
         let leaf = "0x" + keccakFromHexString(wallet.address).toString("hex")
         accum[leaf] = wallet
         return accum
@@ -111,10 +112,24 @@ async function createRandomPositions(numberOfPositions: number, numberOfValidato
     return shuffled.slice(0, numberOfPositions)
 }
 
-async function createInitialValidatorProofs(
+interface ValidatorProof {
+    signature: string
+    index: number
+    addr: string
+    merkleProof: string[]
+}
+
+interface ValidatorMultiProof {
+    signatures: string[]
+    indices: number[]
+    addrs: string[]
+    merkleProofs: string[][]
+}
+
+function createInitialValidatorProofs(
     commitmentHash: string,
     validatorFixture: ValidatorFixture
-) {
+): ValidatorProof[] {
     let commitmentHashBytes = ethers.utils.arrayify(commitmentHash)
     let tree = validatorFixture.validatorMerkleTree
     let leaves = tree.getHexLeaves()
@@ -132,21 +147,22 @@ async function createInitialValidatorProofs(
         let y = Uint8Array.from([ethRecID])
         let signature = Uint8Array.from([...x, ...y])
 
-        return { signature: ethers.utils.hexlify(signature), position, address, proof }
+        return {
+            signature: ethers.utils.hexlify(signature),
+            index: position,
+            addr: address,
+            merkleProof: proof,
+        }
     })
 }
 
-interface Proofs {
-    signatures: string[]
-    indices: number[]
-    addrs: string[]
-    merkleProofs: string[]
-}
-
-async function createFinalValidatorProofs(finalBitfield: ethers.BigNumber[], initialProofs) {
+async function createFinalValidatorProofs(
+    finalBitfield: ethers.BigNumber[],
+    initialProofs: ValidatorProof[]
+) {
     let bitfieldString = printBitfield(finalBitfield)
 
-    let proofs: Proofs = {
+    let proofs: ValidatorMultiProof = {
         signatures: [],
         indices: [],
         addrs: [],
@@ -158,9 +174,9 @@ async function createFinalValidatorProofs(finalBitfield: ethers.BigNumber[], ini
         let bit = ascendingBitfield[position]
         if (bit === "1") {
             proofs.signatures.push(initialProofs[position].signature)
-            proofs.indices.push(initialProofs[position].position)
-            proofs.addrs.push(initialProofs[position].address)
-            proofs.merkleProofs.push(initialProofs[position].proof)
+            proofs.indices.push(initialProofs[position].index)
+            proofs.addrs.push(initialProofs[position].addr)
+            proofs.merkleProofs.push(initialProofs[position].merkleProof)
         }
     }
 

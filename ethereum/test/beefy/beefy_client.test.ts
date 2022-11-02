@@ -1,9 +1,6 @@
 import { expect, loadFixture, mine } from "../setup"
 import { beefyClientFixture1, beefyClientPublicFixture } from "./fixtures"
 
-let SUBMIT_FINAL_2 =
-    "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"
-
 describe("BeefyClient", function () {
     it("runs commitment submission flow", async function () {
         let { beefyClient, fixtureData, user } = await loadFixture(beefyClientFixture1)
@@ -33,7 +30,9 @@ describe("BeefyClient", function () {
         await expect(
             beefyClient
                 .connect(user)
-                [SUBMIT_FINAL_2](
+                [
+                    "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"
+                ](
                     0,
                     fixtureData.params.commitment,
                     fixtureData.params.proof,
