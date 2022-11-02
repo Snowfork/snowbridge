@@ -114,4 +114,3 @@ contract DOTApp is FeeController, AccessControl {
         emit Upgraded(msg.sender, c1, c2);
     }
 }
-
