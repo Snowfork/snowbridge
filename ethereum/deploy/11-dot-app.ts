@@ -7,18 +7,9 @@ module.exports = async ({
 }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
 
-    let channels = {
-        basic: {
-            inbound: await deployments.get("BasicInboundChannel"),
-            outbound: await deployments.get("BasicOutboundChannel"),
-        },
-        incentivized: {
-            inbound: await deployments.get("IncentivizedInboundChannel"),
-            outbound: await deployments.get("IncentivizedOutboundChannel"),
-        },
-    }
-
     let scaleCodecLibrary = await deployments.get("ScaleCodec")
+    let incentivizedOutboundChannel = await deployments.get("IncentivizedOutboundChannel")
+    let channelRegistry = await deployments.get("IncentivizedOutboundChannel")
 
     let tokenContract = await deployments.deploy("WrappedToken", {
         from: deployer,
@@ -31,15 +22,8 @@ module.exports = async ({
         from: deployer,
         args: [
             tokenContract.address,
-            channels.incentivized.outbound.address,
-            {
-                inbound: channels.basic.inbound.address,
-                outbound: channels.basic.outbound.address,
-            },
-            {
-                inbound: channels.incentivized.inbound.address,
-                outbound: channels.incentivized.outbound.address,
-            },
+            incentivizedOutboundChannel.address,
+            channelRegistry.address
         ],
         libraries: {
             ScaleCodec: scaleCodecLibrary.address,

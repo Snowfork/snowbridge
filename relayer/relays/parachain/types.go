@@ -9,15 +9,36 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
-// A Task is a bundle of items needed to submit commitments to Ethereum
+// A Task contains the working state for message commitments in a single parachain block
 type Task struct {
-	ParaID                        uint32
-	BlockNumber                   uint64
-	Header                        *types.Header
-	BasicChannelProofs            *[]BundleProof
+	// Parachain header
+	Header *types.Header
+	// Inputs for MMR proof generation
+	ProofInput *ProofInput
+	// Outputs of MMR proof generation
+	ProofOutput *ProofOutput
+	// Commitments for basic channel
+	BasicChannelProofs *[]BundleProof
+	// Commitments for incentivized channel
 	IncentivizedChannelCommitment *IncentivizedChannelCommitment
-	ProofInput                    *ProofInput
-	ProofOutput                   *ProofOutput
+}
+
+// A ProofInput is data needed to generate a proof of parachain header inclusion
+type ProofInput struct {
+	// Parachain ID
+	ParaID uint32
+	// Relay chain block number in which our parachain head was included
+	RelayBlockNumber uint64
+	// All included paraheads in RelayBlockNumber
+	ParaHeads []relaychain.ParaHead
+}
+
+// A ProofOutput represents the generated header inclusion proof
+type ProofOutput struct {
+	MMRProof        merkle.SimplifiedMMRProof
+	MMRRootHash     types.Hash
+	Header          types.Header
+	MerkleProofData MerkleProofData
 }
 
 // A Commitment is data provably attested to by polkadot. The commitment hash
@@ -113,18 +134,4 @@ func generateHashSides(nodePosition uint64, breadth uint64) ([]bool, error) {
 	}
 
 	return sides, nil
-}
-
-// A ProofInput is data needed to generate a proof of parachain header inclusion
-type ProofInput struct {
-	PolkadotBlockNumber uint64
-	ParaHeads           []relaychain.ParaHead
-}
-
-// A ProofOutput represents the generated header inclusion proof
-type ProofOutput struct {
-	MMRProof        merkle.SimplifiedMMRProof
-	MMRRootHash     types.Hash
-	Header          types.Header
-	MerkleProofData MerkleProofData
 }

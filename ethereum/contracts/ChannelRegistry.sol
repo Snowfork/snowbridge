@@ -31,4 +31,9 @@ contract ChannelRegistry is Ownable {
         channels[id] = Channel(inbound, outbound);
         validInboundChannels[inbound] = true;
     }
+
+    function removeChannel(uint32 id) external onlyOwner {
+        delete validInboundChannels[channels[id].inbound];
+        delete channels[id];
+    }
 }

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -83,7 +84,7 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 		"mmrProof":             mmrProof,
 	}).Info("conn.GenerateProofForBlock")
 
-	paraId, _ := cmd.Flags().GetUint32("parachain-id")
+	paraID, _ := cmd.Flags().GetUint32("parachain-id")
 	parachainBlock, _ := cmd.Flags().GetUint64("parachain-block")
 
 	relayChainBlockHash, err := conn.API().RPC.Chain.GetBlockHash(relayChainBlock)
@@ -92,31 +93,44 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	paraHeadsAsSlice, parachainHeader, err := conn.FetchParachainHeads(paraId, relayChainBlockHash)
+	paraHeadsAsSlice, err := conn.FetchParachainHeads(relayChainBlockHash)
 	if err != nil {
-		log.WithError(err).Error("Cannot fetch parachain head.")
+		log.WithError(err).Error("Cannot fetch parachain headers")
 		return err
 	}
+
+	var parachainHeader types.Header
+	ok, err := conn.FetchParachainHead(relayChainBlockHash, paraID, &parachainHeader)
+	if err != nil {
+		log.WithError(err).Error("Cannot fetch our parachain header")
+		return err
+	}
+
+	if !ok {
+		log.WithError(err).Error("parachain is not registered")
+		return fmt.Errorf("parachain is not registered")
+	}
+
 	log.WithFields(log.Fields{
 		"paraHeadsAsSlice":    paraHeadsAsSlice,
 		"parachainHeader":     parachainHeader,
-		"paraId":              paraId,
+		"paraId":              paraID,
 		"relayChainBlockHash": relayChainBlockHash.Hex(),
 	}).Info("parachain.CreateParachainMerkleProof")
 
-	merkleProofData, err := parachain.CreateParachainMerkleProof(paraHeadsAsSlice, paraId)
+	merkleProofData, err := parachain.CreateParachainMerkleProof(paraHeadsAsSlice, paraID)
 	if err != nil {
 		log.WithError(err).Error("Cannot create merkle proof.")
 		return err
 	}
 	log.WithFields(log.Fields{
 		"paraHeadsAsSlice": paraHeadsAsSlice,
-		"paraId":           paraId,
+		"paraId":           paraID,
 		"merkleProofData":  merkleProofData,
 	}).Info("parachain.CreateParachainMerkleProof")
 
 	log.WithFields(log.Fields{
-		"parachainId":           paraId,
+		"parachainId":           paraID,
 		"relaychainBlockHash":   relayChainBlockHash.Hex(),
 		"relaychainBlockNumber": relayChainBlock,
 		"parachainBlockNumber":  parachainBlock,

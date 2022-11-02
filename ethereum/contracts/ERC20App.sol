@@ -86,9 +86,9 @@ contract ERC20App is AccessControl {
         bytes memory call;
         uint64 weight;
         if (_paraID == 0) {
-            (call, weight) = ERC20AppPallet.mint(msg.sender, _token, _recipient, _amount);
+            (call, weight) = ERC20AppPallet.mint(_token, msg.sender, _recipient, _amount);
         } else {
-            (call, weight) = ERC20AppPallet.mintAndForward(msg.sender, _token, _recipient, _amount, _paraID, _fee);
+            (call, weight) = ERC20AppPallet.mintAndForward(_token, msg.sender, _recipient, _amount, _paraID, _fee);
         }
         OutboundChannel(channel).submit(msg.sender, call, weight);
 
