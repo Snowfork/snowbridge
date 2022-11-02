@@ -56,6 +56,7 @@ start_geth() {
             --unlock 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD,0x89b4AB1eF20763630df9743ACF155865600daFF2 \
             --password /dev/null \
             --rpc.gascap 100000000 \
+            --ws.origins "*" \
             --trace "$data_dir/trace" \
             --gcmode archive \
             --miner.gasprice=0 \
