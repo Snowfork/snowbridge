@@ -22,7 +22,7 @@ contract MaliciousDOTApp is FeeController, AccessControl {
 
     bytes2 constant UNLOCK_CALL = 0x4001;
 
-    WrappedToken public token;
+    WrappedToken public immutable token;
 
     bytes32 public constant FEE_BURNER_ROLE = keccak256("FEE_BURNER_ROLE");
     bytes32 public constant INBOUND_CHANNEL_ROLE =
@@ -34,14 +34,12 @@ contract MaliciousDOTApp is FeeController, AccessControl {
     }
 
     constructor(
-        string memory _name,
-        string memory _symbol,
+        WrappedToken _token,
         address feeBurner,
         Channel memory _basic,
         Channel memory _incentivized
     ) {
-        address[] memory defaultOperators;
-        token = new WrappedToken(_name, _symbol, defaultOperators);
+        token = _token;
 
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
@@ -66,7 +64,7 @@ contract MaliciousDOTApp is FeeController, AccessControl {
                 _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
-        token.burn(msg.sender, _amount, abi.encodePacked(_recipient));
+        token.burn(msg.sender, _amount);
 
         OutboundChannel channel = OutboundChannel(
             channels[_channelId].outbound
@@ -86,7 +84,7 @@ contract MaliciousDOTApp is FeeController, AccessControl {
 
     // Incentivized channel calls this to charge (burn) fees
     function handleFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
-        token.burn(feePayer, _amount, "");
+        token.burn(feePayer, _amount);
     }
 
     function encodeCall(

@@ -24,7 +24,7 @@
 // --output
 // pallets/ethereum-light-client/src/weights.rs
 // --template
-// module-weight-template.hbs
+// templates/module-weight-template.hbs
 
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
@@ -43,17 +43,17 @@ pub trait WeightInfo {
 pub struct SnowbridgeWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 	fn import_header() -> Weight {
-		(2_253_588_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(17 as Weight))
-			.saturating_add(T::DbWeight::get().writes(22 as Weight))
+		Weight::from_ref_time(2_253_588_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(17))
+			.saturating_add(T::DbWeight::get().writes(22))
 	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn import_header() -> Weight {
-		(2_253_588_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(17 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(22 as Weight))
+		Weight::from_ref_time(2_253_588_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(17))
+			.saturating_add(RocksDbWeight::get().writes(22))
 	}
 }

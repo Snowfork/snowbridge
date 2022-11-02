@@ -79,7 +79,7 @@ fn testnet_genesis(
 			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
 		},
 		sudo: snowbridge_runtime::SudoConfig {
-			key: get_account_id_from_seed::<sr25519::Public>("Alice"),
+			key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
 		},
 		local_council: Default::default(),
 		local_council_membership: snowbridge_runtime::LocalCouncilMembershipConfig {
@@ -147,7 +147,7 @@ fn testnet_genesis(
 		aura: Default::default(),
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
-		polkadot_xcm: parachain_template_runtime::PolkadotXcmConfig {
+		polkadot_xcm: snowbridge_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 		},
 	}

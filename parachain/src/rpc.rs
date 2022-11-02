@@ -57,8 +57,8 @@ where
 	let mut module = RpcExtension::new(());
 	let FullDeps { backend, client, pool, deny_unsafe } = deps;
 
-	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
-	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+	module.merge(TransactionPayment::new(client).into_rpc())?;
 
 	if let Some(basic_channel_rpc) =
 		backend.offchain_storage().map(|storage| BasicChannel::<_>::new(storage).into_rpc())

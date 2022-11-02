@@ -3,10 +3,12 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
+import "./ScaleCodec.sol";
+import "./ERC20AppPallet.sol";
 
 enum ChannelId {
     Basic,
@@ -83,7 +85,7 @@ contract ERC20App is AccessControl {
         bytes32 _recipient,
         uint128 _amount,
         ChannelId _channelId,
-        uint32 _paraId,
+        uint32 _paraID,
         uint128 _fee
     ) public {
         require(
@@ -94,23 +96,23 @@ contract ERC20App is AccessControl {
 
         balances[_token] = balances[_token] + _amount;
 
-        emit Locked(_token, msg.sender, _recipient, _amount, _paraId, _fee);
+        emit Locked(_token, msg.sender, _recipient, _amount, _paraID, _fee);
 
         OutboundChannel channel = OutboundChannel(
             channels[_channelId].outbound
         );
 
         if (!tokens[_token]) {
-            bytes memory createCall = encodeCreateTokenCall(_token);
+            (bytes memory createCall,) = ERC20AppPallet.create(_token);
             tokens[_token] = true;
             channel.submit(msg.sender, createCall, 0);
         }
 
         bytes memory call;
-        if (_paraId == 0) {
-            call = encodeCall(_token, msg.sender, _recipient, _amount);
+        if (_paraID == 0) {
+            (call,) = ERC20AppPallet.mint(_token, msg.sender, _recipient, _amount);
         } else {
-            call = encodeCallWithParaId(_token, msg.sender, _recipient, _amount, _paraId, _fee);
+            (call,) = ERC20AppPallet.mintAndForward(_token, msg.sender, _recipient, _amount, _paraID, _fee);
         }
 
         channel.submit(msg.sender, call, 0);
@@ -136,56 +138,6 @@ contract ERC20App is AccessControl {
         balances[_token] = balances[_token] - _amount;
         IERC20(_token).safeTransfer(_recipient, _amount);
         emit Unlocked(_token, _sender, _recipient, _amount);
-    }
-
-    // SCALE-encode payload
-    function encodeCall(
-        address _token,
-        address _sender,
-        bytes32 _recipient,
-        uint128 _amount
-    ) private pure returns (bytes memory) {
-        return bytes.concat(
-                MINT_CALL,
-                abi.encodePacked(_token),
-                abi.encodePacked(_sender),
-                bytes1(0x00), // Encode recipient as MultiAddress::Id
-                _recipient,
-                _amount.encode128(),
-                bytes1(0x00)
-            );
-    }
-
-    // SCALE-encode payload with parachain Id
-    function encodeCallWithParaId(
-        address _token,
-        address _sender,
-        bytes32 _recipient,
-        uint128 _amount,
-        uint32 _paraId,
-        uint128 _fee
-    ) private pure returns (bytes memory) {
-        return bytes.concat(
-                MINT_CALL,
-                abi.encodePacked(_token),
-                abi.encodePacked(_sender),
-                bytes1(0x00), // Encode recipient as MultiAddress::Id
-                _recipient,
-                _amount.encode128(),
-                bytes1(0x01),
-                _paraId.encode32(),
-                _fee.encode128()
-            );
-    }
-
-    function encodeCreateTokenCall(
-        address _token
-    ) private pure returns (bytes memory) {
-        return
-            abi.encodePacked(
-                CREATE_CALL,
-                _token
-            );
     }
 
     function upgrade(

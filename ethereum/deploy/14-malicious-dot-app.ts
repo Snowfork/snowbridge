@@ -20,11 +20,21 @@ module.exports = async ({
 
   let scaleCodecLibrary = await deployments.get("ScaleCodec")
 
-  await deployments.deploy("MaliciousDOTApp", {
+  let tokenContract = await deployments.deploy("MaliciousWrappedToken", {
+    contract: "WrappedToken",
+    from: deployer,
+    args: [
+      "Wrapped DOT",
+      "WDOT",
+    ],
+    log: true,
+    autoMine: true,
+  }); 
+
+  let dotAppContract = await deployments.deploy("MaliciousDOTApp", {
     from: deployer,
     args:[
-      "Snowfork DOT",
-      "SnowDOT",
+      tokenContract.address,
       channels.incentivized.outbound.address,
       {
         inbound: channels.basic.inbound.address,
@@ -41,4 +51,15 @@ module.exports = async ({
     log: true,
     autoMine: true,
   });
+
+  console.log("Configuring MaliciousWrappedToken")
+  await deployments.execute(
+    "MaliciousWrappedToken",
+    {
+      from: deployer,
+      autoMine: true,
+    },
+    "transferOwnership",
+    dotAppContract.address
+  );
 };

@@ -25,7 +25,7 @@
 // --output
 // pallets/incentivized-channel/src/inbound/weights.rs
 // --template
-// module-weight-template.hbs
+// templates/module-weight-template.hbs
 
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
@@ -44,15 +44,15 @@ pub trait WeightInfo {
 pub struct SnowbridgeWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 	fn set_reward_fraction() -> Weight {
-		(2_321_000 as Weight)
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(2_321_000 as u64)
+			.saturating_add(T::DbWeight::get().writes(1))
 	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn set_reward_fraction() -> Weight {
-		(2_321_000 as Weight)
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(2_321_000 as u64)
+			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 }

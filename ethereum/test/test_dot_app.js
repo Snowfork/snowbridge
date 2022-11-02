@@ -14,7 +14,7 @@ const { expect } = require("chai");
 
 const DOTApp = artifacts.require("DOTApp");
 const ScaleCodec = artifacts.require("ScaleCodec");
-const Token = artifacts.require("WrappedToken");
+const WrappedToken = artifacts.require("WrappedToken");
 const MockOutboundChannel = artifacts.require("MockOutboundChannel");
 
 const DOT_DECIMALS = 10;
@@ -60,16 +60,18 @@ describe("DOTApp", function () {
 
   describe("minting", function () {
     beforeEach(async function () {
-      this.erc1820 = await singletons.ERC1820Registry(owner);
+      this.token = await WrappedToken.new("Wrapped DOT", "WDOT")
+
       let outboundChannel = await MockOutboundChannel.new()
       this.app = await deployAppWithMockChannels(
         owner,
         [inboundChannel, outboundChannel.address],
         DOTApp,
-        "Snowfork DOT", "SnowDOT", outboundChannel.address
+        this.token.address,
+        outboundChannel.address
       );
 
-      this.token = await Token.at(await this.app.token());
+      await this.token.transferOwnership(this.app.address)
     });
 
     it("should mint funds", async function () {
@@ -87,17 +89,16 @@ describe("DOTApp", function () {
         }
       ).should.be.fulfilled;
 
-      // decode expected IERC777.Minted event
-      var abi = ["event Minted(address indexed operator, address indexed to, uint256 amount, bytes data, bytes operatorData)"];
+      // decode expected IERC20.Transfer event
+      var abi = ["event Transfer(address indexed from, address indexed to, uint256 value)"];
       var iface = new ethers.utils.Interface(abi);
-      let event = iface.decodeEventLog('Minted(address,address,uint256,bytes,bytes)', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
+      let event = iface.decodeEventLog('Transfer(address,address,uint256)', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
 
       const afterTotalSupply = BigNumber(await this.token.totalSupply());
       const afterUserBalance = BigNumber(await this.token.balanceOf(userOne));
 
-      event.operator.should.be.equal(this.app.address);
       event.to.should.be.equal(userOne);
-      BigNumber(event.amount.toString()).should.be.bignumber.equal(amountWrapped);
+      BigNumber(event.value.toString()).should.be.bignumber.equal(amountWrapped);
 
       afterTotalSupply.minus(beforeTotalSupply).should.be.bignumber.equal(amountWrapped);
       afterUserBalance.minus(beforeUserBalance).should.be.bignumber.equal(amountWrapped);
@@ -106,15 +107,18 @@ describe("DOTApp", function () {
 
   describe("burning", function () {
     beforeEach(async function () {
-      this.erc1820 = await singletons.ERC1820Registry(owner);
+      this.token = await WrappedToken.new("Wrapped DOT", "WDOT")
+
       let outboundChannel = await MockOutboundChannel.new()
       this.app = await deployAppWithMockChannels(
         owner,
-        [owner, outboundChannel.address],
+        [inboundChannel, outboundChannel.address],
         DOTApp,
-        "Snowfork DOT", "SnowDOT", outboundChannel.address
+        this.token.address,
+        outboundChannel.address
       );
-      this.token = await Token.at(await this.app.token());
+
+      await this.token.transferOwnership(this.app.address)
 
       // Mint 2 wrapped DOT
       let amountNative = BigNumber("20000000000"); // 2 DOT, uint128
@@ -137,17 +141,16 @@ describe("DOTApp", function () {
 
       let tx = await burnTokens(this.app, userOne, POLKADOT_ADDRESS, amountWrapped, ChannelId.Basic).should.be.fulfilled;
 
-      // decode expected IERC777.Burned event
-      var abi = ["event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)"];
+      // decode expected IERC20.Transfer event
+      var abi = ["event Transfer(address indexed from, address indexed to, uint256 value)"];
       var iface = new ethers.utils.Interface(abi);
-      let event = iface.decodeEventLog('Burned(address,address,uint256,bytes,bytes)', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
+      let event = iface.decodeEventLog('Transfer(address,address,uint256)', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
 
       const afterTotalSupply = BigNumber(await this.token.totalSupply());
       const afterUserBalance = BigNumber(await this.token.balanceOf(userOne));
 
-      event.operator.should.be.equal(this.app.address);
       event.from.should.be.equal(userOne);
-      BigNumber(event.amount.toString()).should.be.bignumber.equal(amountWrapped);
+      BigNumber(event.value.toString()).should.be.bignumber.equal(amountWrapped);
 
       beforeTotalSupply.minus(afterTotalSupply).should.be.bignumber.equal(amountWrapped);
       beforeUserBalance.minus(afterUserBalance).should.be.bignumber.equal(amountWrapped);
@@ -156,14 +159,19 @@ describe("DOTApp", function () {
 
   describe("upgradeability", function () {
     beforeEach(async function () {
+      this.token = await WrappedToken.new("Wrapped DOT", "WDOT")
       this.outboundChannel = await MockOutboundChannel.new()
-      this.newInboundChannel = accounts[2];
       this.app = await deployAppWithMockChannels(
         owner,
         [owner, this.outboundChannel.address],
         DOTApp,
-        "Snowfork DOT", "SnowDOT", this.outboundChannel.address
+        this.token.address,
+        this.outboundChannel.address
       );
+      await this.token.transferOwnership(this.app.address)
+
+      this.newInboundChannel = accounts[2];
+
       const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
       this.iface = new ethers.utils.Interface(abi);
     });
