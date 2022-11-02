@@ -29,6 +29,6 @@ jobs:
       - name: Run Tests
         run: yarn test
         working-directory: ethereum
-      - name: Run ESLint
-        run: yarn test
+      - name: Run Linter
+        run: yarn lint
         working-directory: ethereum
