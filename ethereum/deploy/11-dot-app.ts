@@ -1,10 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
 
-module.exports = async ({
-    deployments,
-    getUnnamedAccounts,
-    network,
-}: HardhatRuntimeEnvironment) => {
+module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
 
     let scaleCodecLibrary = await deployments.get("ScaleCodec")

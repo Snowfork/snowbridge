@@ -16,5 +16,5 @@
             "ignoreReadBeforeAssign": false
         }]
     },
-    "ignorePatterns": ["src/**/*.ts"]
+    "ignorePatterns": ["src/**/*.ts", "truffle-config.js"]
   }
