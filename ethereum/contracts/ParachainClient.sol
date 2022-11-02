@@ -37,7 +37,7 @@ contract ParachainClient {
     constructor(BeefyClient _client, uint32 _parachainID) {
         beefyClient = _client;
         parachainID = _parachainID;
-        encodedParachainID = ScaleCodec.encode32(_parachainID);
+        encodedParachainID = ScaleCodec.encodeU32(_parachainID);
     }
 
     function verifyCommitment(bytes32 commitment, bytes calldata opaqueProof)
@@ -86,11 +86,11 @@ contract ParachainClient {
         returns (bytes32)
     {
         bytes memory encodedLeaf = bytes.concat(
-            ScaleCodec.encode8(leaf.version),
-            ScaleCodec.encode32(leaf.parentNumber),
+            ScaleCodec.encodeU8(leaf.version),
+            ScaleCodec.encodeU32(leaf.parentNumber),
             leaf.parentHash,
-            ScaleCodec.encode64(leaf.nextAuthoritySetID),
-            ScaleCodec.encode32(leaf.nextAuthoritySetLen),
+            ScaleCodec.encodeU64(leaf.nextAuthoritySetID),
+            ScaleCodec.encodeU32(leaf.nextAuthoritySetLen),
             leaf.nextAuthoritySetRoot,
             parachainHeadsRoot
         );

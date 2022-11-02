@@ -33,8 +33,8 @@ contract ERC20App is AccessControl {
     // Not enough funds to transfer
     error InsufficientBalance();
 
-    // Contract token allowances insufficient to complete this lock request
-    error InsufficientAllowance();
+    // Token Transfer failed
+    error TokenTransferFailed();
 
 
     event Locked(
@@ -54,9 +54,9 @@ contract ERC20App is AccessControl {
     );
 
     constructor(
-        address channelRegistry
+        ChannelRegistry channelRegistry
     ) {
-        registry = ChannelRegistry(channelRegistry);
+        registry = channelRegistry;
     }
 
     function lock(
@@ -73,7 +73,7 @@ contract ERC20App is AccessControl {
         }
 
         if (!IERC20(_token).transferFrom(msg.sender, address(this), _amount)) {
-            revert InsufficientAllowance();
+            revert TokenTransferFailed();
         }
         balances[_token] = balances[_token] + _amount;
 

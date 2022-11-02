@@ -424,19 +424,19 @@ contract BeefyClient is Ownable {
                 commitment.payload.prefix,
                 commitment.payload.mmrRootHash,
                 commitment.payload.suffix,
-                commitment.blockNumber.encode32(),
-                commitment.validatorSetID.encode64()
+                commitment.blockNumber.encodeU32(),
+                commitment.validatorSetID.encodeU64()
             );
     }
 
     function encodeMMRLeaf(MMRLeaf calldata leaf) internal pure returns (bytes memory) {
         return
             bytes.concat(
-                ScaleCodec.encode8(leaf.version),
-                ScaleCodec.encode32(leaf.parentNumber),
+                ScaleCodec.encodeU8(leaf.version),
+                ScaleCodec.encodeU32(leaf.parentNumber),
                 leaf.parentHash,
-                ScaleCodec.encode64(leaf.nextAuthoritySetID),
-                ScaleCodec.encode32(leaf.nextAuthoritySetLen),
+                ScaleCodec.encodeU64(leaf.nextAuthoritySetID),
+                ScaleCodec.encodeU32(leaf.nextAuthoritySetLen),
                 leaf.nextAuthoritySetRoot,
                 leaf.parachainHeadsRoot
             );

@@ -14,7 +14,7 @@ library ETHAppPallet {
     uint64 public constant MINT_WEIGHT = 100_000_000;
 
     /**
-     * @dev Encode `Pallet::mint`
+     * @dev Encode `Call::mint`
      * @param sender Sender address
      * @param recipient Recipient address (sr25519)
      * @param amount Amount to mint
@@ -32,7 +32,7 @@ library ETHAppPallet {
                 MINT_CALL,
                 SubstrateTypes.H160(sender),
                 SubstrateTypes.MultiAddressWithID(recipient),
-                ScaleCodec.encode128(amount),
+                ScaleCodec.encodeU128(amount),
                 SubstrateTypes.None()
             ),
             MINT_WEIGHT
@@ -40,7 +40,7 @@ library ETHAppPallet {
     }
 
     /**
-     * @dev Encode `Pallet::mint`
+     * @dev Encode `Call::mint`
      * @param sender Sender address
      * @param recipient Recipient address (sr25519)
      * @param amount Amount to mint
@@ -62,7 +62,7 @@ library ETHAppPallet {
                 MINT_CALL,
                 SubstrateTypes.H160(sender),
                 SubstrateTypes.MultiAddressWithID(recipient),
-                ScaleCodec.encode128(amount),
+                ScaleCodec.encodeU128(amount),
                 SubstrateTypes.SomeRemotePara(paraID, fee)
             ),
             MINT_WEIGHT

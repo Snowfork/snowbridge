@@ -48,9 +48,9 @@ contract ETHApp is RewardController, AccessControl {
 
     constructor(
         address rewarder,
-        address channelRegistry
+        ChannelRegistry channelRegistry
     ) {
-        registry = ChannelRegistry(channelRegistry);
+        registry = channelRegistry;
         _setupRole(REWARD_ROLE, rewarder);
     }
 

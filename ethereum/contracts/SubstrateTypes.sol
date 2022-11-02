@@ -43,8 +43,8 @@ library SubstrateTypes {
     function SomeRemotePara(uint32 paraID, uint128 fee) internal pure returns (bytes memory) {
         return bytes.concat(
             hex"01",
-            ScaleCodec.encode32(paraID),
-            ScaleCodec.encode128(fee)
+            ScaleCodec.encodeU32(paraID),
+            ScaleCodec.encodeU128(fee)
         );
     }
 }

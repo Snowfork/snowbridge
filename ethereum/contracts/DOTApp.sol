@@ -23,10 +23,10 @@ contract DOTApp is FeeController, AccessControl {
     constructor(
         WrappedToken _token,
         address feeBurner,
-        address channelRegistry
+        ChannelRegistry channelRegistry
     ) {
         token = _token;
-        registry = ChannelRegistry(channelRegistry);
+        registry = channelRegistry;
         _setupRole(FEE_BURNER_ROLE, feeBurner);
     }
 

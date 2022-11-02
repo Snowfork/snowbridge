@@ -17,7 +17,7 @@ library ERC20AppPallet {
     uint64 public constant CREATE_WEIGHT = 100_000_000;
 
     /**
-     * @dev Encode `Pallet::mint`
+     * @dev Encode `Call::mint`
      * @param token Token address
      * @param sender Sender address
      * @param recipient Recipient address (sr25519)
@@ -38,7 +38,7 @@ library ERC20AppPallet {
                 SubstrateTypes.H160(token),
                 SubstrateTypes.H160(sender),
                 SubstrateTypes.MultiAddressWithID(recipient),
-                ScaleCodec.encode128(amount),
+                ScaleCodec.encodeU128(amount),
                 SubstrateTypes.None()
             ),
             MINT_WEIGHT
@@ -46,7 +46,7 @@ library ERC20AppPallet {
     }
 
     /**
-     * @dev Encode `Pallet::mint`
+     * @dev Encode `Call::mint`
      * @param token Token address
      * @param sender Sender address
      * @param recipient Recipient address (sr25519)
@@ -71,7 +71,7 @@ library ERC20AppPallet {
                 SubstrateTypes.H160(token),
                 SubstrateTypes.H160(sender),
                 SubstrateTypes.MultiAddressWithID(recipient),
-                ScaleCodec.encode128(amount),
+                ScaleCodec.encodeU128(amount),
                 SubstrateTypes.SomeRemotePara(paraID, fee)
             ),
             MINT_WEIGHT
@@ -79,7 +79,7 @@ library ERC20AppPallet {
     }
 
     /**
-     * @dev Encode `Pallet::create`
+     * @dev Encode `Call::create`
      * @param token Token address
      * @return bytes SCALE-encoded call
      * @return uint64 Minimum dispatch weight of pallet call
