@@ -48,7 +48,7 @@ contract BasicInboundChannel {
         require(bundle.nonce == nonce[bundle.account] + 1, "Invalid nonce");
         require(
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
-            "insufficient gas for delivery of all messages"
+            "insufficient gas"
         );
         nonce[bundle.account]++;
         dispatch(bundle);

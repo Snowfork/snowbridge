@@ -2,10 +2,10 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./RewardController.sol";
 import "./OutboundChannel.sol";
 import "./ETHAppPallet.sol";
+import "./ChannelRegistry.sol";
 
 enum ChannelId {
     Basic,
@@ -13,11 +13,10 @@ enum ChannelId {
 }
 
 contract ETHApp is RewardController, AccessControl {
-    using ScaleCodec for uint128;
-    using ScaleCodec for uint32;
-    using SafeCast for uint256;
+    ChannelRegistry public immutable registry;
 
-    mapping(ChannelId => Channel) public channels;
+    bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
+
 
     event Locked(
         address sender,
@@ -29,89 +28,84 @@ contract ETHApp is RewardController, AccessControl {
 
     event Unlocked(bytes32 sender, address recipient, uint128 amount);
 
-    event Upgraded(
-        address upgrader,
-        Channel basic,
-        Channel incentivized
-    );
+    // Unknown outbound channel
+    error UnknownChannel(uint32 id);
 
-    bytes2 constant MINT_CALL = 0x4101;
+    // Not allowed to send messages to this app
+    error Unauthorized();
 
-    bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
+    // Value of transaction must be positive
+    error MinimumAmount();
 
-    struct Channel {
-        address inbound;
-        address outbound;
-    }
+    // Value of transaction must fit into 128 bits.
+    error MaximumAmount();
 
-    bytes32 public constant INBOUND_CHANNEL_ROLE =
-        keccak256("INBOUND_CHANNEL_ROLE");
+    // Not enough funds to unlock
+    error ExceedsBalance();
 
-    bytes32 public constant CHANNEL_UPGRADE_ROLE =
-        keccak256("CHANNEL_UPGRADE_ROLE");
+    // Recipient rejects funds
+    error CannotUnlock();
 
     constructor(
         address rewarder,
-        Channel memory _basic,
-        Channel memory _incentivized
+        ChannelRegistry channelRegistry
     ) {
-
-        Channel storage c1 = channels[ChannelId.Basic];
-        c1.inbound = _basic.inbound;
-        c1.outbound = _basic.outbound;
-
-        Channel storage c2 = channels[ChannelId.Incentivized];
-        c2.inbound = _incentivized.inbound;
-        c2.outbound = _incentivized.outbound;
-
-        _setupRole(CHANNEL_UPGRADE_ROLE, msg.sender);
-        _setRoleAdmin(INBOUND_CHANNEL_ROLE, CHANNEL_UPGRADE_ROLE);
-        _setRoleAdmin(CHANNEL_UPGRADE_ROLE, CHANNEL_UPGRADE_ROLE);
+        registry = channelRegistry;
         _setupRole(REWARD_ROLE, rewarder);
-        _setupRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
-        _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
 
     function lock(
         bytes32 _recipient,
-        ChannelId _channelId,
         uint32 _paraID,
-        uint128 _fee
+        uint128 _fee,
+        uint32 _channelID
     ) public payable {
-        require(msg.value > 0, "Value of transaction must be positive");
-        require(
-            _channelId == ChannelId.Basic ||
-                _channelId == ChannelId.Incentivized,
-            "Invalid channel ID"
-        );
-
-        // revert in case of overflow.
-        uint128 value = (msg.value).toUint128();
-
-        emit Locked(msg.sender, _recipient, value, _paraID, _fee);
-
-        bytes memory call;
-        if (_paraID == 0) {
-            (call,) = ETHAppPallet.mint(msg.sender, _recipient, value);
-        } else {
-            (call,) = ETHAppPallet.mintAndForward(msg.sender, _recipient, value, _paraID, _fee);
+        if (msg.value == 0) {
+            revert MinimumAmount();
         }
 
-        OutboundChannel channel = OutboundChannel(
-            channels[_channelId].outbound
-        );
-        channel.submit(msg.sender, call);
+        if (msg.value > type(uint128).max) {
+            revert MaximumAmount();
+        }
+
+        address channel = registry.outboundChannelForID(_channelID);
+        if (channel == address(0)) {
+            revert UnknownChannel(_channelID);
+        }
+
+        uint128 value = uint128(msg.value);
+
+        bytes memory call;
+        uint64 weight;
+        if (_paraID == 0) {
+            (call, weight) = ETHAppPallet.mint(msg.sender, _recipient, value);
+        } else {
+            (call, weight) = ETHAppPallet.mintAndForward(msg.sender, _recipient, value, _paraID, _fee);
+        }
+
+        OutboundChannel(channel).submit(msg.sender, call, weight);
+
+        emit Locked(msg.sender, _recipient, value, _paraID, _fee);
     }
 
     function unlock(
         bytes32 _sender,
         address payable _recipient,
         uint128 _amount
-    ) public onlyRole(INBOUND_CHANNEL_ROLE) {
-        require(_amount > 0, "Must unlock a positive amount");
+    ) external {
+        if (!registry.isInboundChannel(msg.sender)) {
+            revert Unauthorized();
+        }
+
+        if (_amount > address(this).balance) {
+            revert ExceedsBalance();
+        }
 
         (bool success, ) = _recipient.call{value: _amount}("");
-        require(success, "Unable to send Ether");
+        if (!success) {
+            revert CannotUnlock();
+        }
+
         emit Unlocked(_sender, _recipient, _amount);
     }
 
@@ -124,24 +118,5 @@ contract ETHApp is RewardController, AccessControl {
         if (success) {
             emit Rewarded(_relayer, _amount);
         }
-    }
-
-    function upgrade(
-        Channel memory _basic,
-        Channel memory _incentivized
-    ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
-        Channel storage c1 = channels[ChannelId.Basic];
-        Channel storage c2 = channels[ChannelId.Incentivized];
-        // revoke old channel
-        revokeRole(INBOUND_CHANNEL_ROLE, c1.inbound);
-        revokeRole(INBOUND_CHANNEL_ROLE, c2.inbound);
-        // set new channel
-        c1.inbound = _basic.inbound;
-        c1.outbound = _basic.outbound;
-        c2.inbound = _incentivized.inbound;
-        c2.outbound = _incentivized.outbound;
-        grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
-        grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
-        emit Upgraded(msg.sender, c1, c2);
     }
 }

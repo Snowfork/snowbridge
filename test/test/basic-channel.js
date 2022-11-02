@@ -74,7 +74,7 @@ describe('Bridge', function () {
           ),
         ])
       ).signAndSend(sudoPair)
-      await ethClient.waitForNextEventData({ appName: 'snowDOT', eventName: 'Minted' });
+      await ethClient.waitForNextEventData({ appName: 'appDOT', eventName: 'Minted' });
 
       const afterEthBalance = await ethClient.getDotBalance(ethAccount);
       const afterSubBalanceAlice = await subClient.queryAccountBalance(polkadotSenderSS58Alice);

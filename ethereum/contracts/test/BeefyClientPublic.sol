@@ -4,10 +4,10 @@ pragma solidity ^0.8.9;
 import "../BeefyClient.sol";
 import "../utils/MMRProofVerification.sol";
 
-contract ExposedBeefyClient is BeefyClient {
+contract BeefyClientPublic is BeefyClient {
     constructor() BeefyClient() {}
 
-    function encodeCommitmentExposed(Commitment calldata commitment)
+    function encodeCommitment_public(Commitment calldata commitment)
         external
         pure
         returns (bytes memory)
