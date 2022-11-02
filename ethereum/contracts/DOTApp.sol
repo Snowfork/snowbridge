@@ -3,18 +3,15 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WrappedToken.sol";
-import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 import "./FeeController.sol";
+import "./DOTAppPallet.sol";
 
 enum ChannelId {Basic, Incentivized}
 
 contract DOTApp is FeeController, AccessControl {
-    using ScaleCodec for uint256;
 
     mapping(ChannelId => Channel) public channels;
-
-    bytes2 constant UNLOCK_CALL = 0x4001;
 
     WrappedToken public immutable token;
 
@@ -78,7 +75,7 @@ contract DOTApp is FeeController, AccessControl {
         OutboundChannel channel =
             OutboundChannel(channels[_channelId].outbound);
 
-        bytes memory call = encodeCall(msg.sender, _recipient, _amount);
+        (bytes memory call,) = DOTAppPallet.unlock(msg.sender, _recipient, _amount);
         channel.submit(msg.sender, call);
 
         emit Burned(msg.sender, _recipient, _amount);
@@ -96,21 +93,6 @@ contract DOTApp is FeeController, AccessControl {
     // Incentivized channel calls this to charge (burn) fees
     function handleFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
         token.burn(feePayer, _amount);
-    }
-
-    function encodeCall(
-        address _sender,
-        bytes32 _recipient,
-        uint256 _amount
-    ) private pure returns (bytes memory) {
-        return
-            bytes.concat(
-                UNLOCK_CALL,
-                abi.encodePacked(_sender),
-                bytes1(0x00), // Encoding recipient as MultiAddress::Id
-                _recipient,
-                _amount.encode256()
-            );
     }
 
     function upgrade(
