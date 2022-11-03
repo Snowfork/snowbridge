@@ -9,7 +9,7 @@ pub mod weights;
 mod test;
 
 use frame_system::ensure_signed;
-use snowbridge_core::{ChannelId, Message, MessageDispatch, MessageId, Verifier};
+use snowbridge_core::{Message, MessageDispatch, MessageId, Verifier};
 use sp_core::H160;
 use sp_std::convert::TryFrom;
 
