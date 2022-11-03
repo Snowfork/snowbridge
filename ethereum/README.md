@@ -14,7 +14,7 @@ Install dependencies with yarn:
 yarn install
 ```
 
-Create an `.envrc` file using [.envrc.template](.envrc.template) as a template. Note that deploying to ropsten network requires setting the INFURA_PROJECT_ID and ROPSTEN_PRIVATE_KEY environment variables.
+Create an `.envrc` file using [.envrc.template](.envrc.template) as a template. Note that deploying to goerli network requires setting the INFURA_PROJECT_ID and ROPSTEN_PRIVATE_KEY environment variables.
 
 Example:
 
@@ -39,26 +39,24 @@ To generate logging artifacts, run the following E2E tests:
 
 ```bash
 yarn test --grep 'should transfer DOT from Substrate to Ethereum \(basic channel\)'
-yarn test --grep 'should transfer ETH from Ethereum to Substrate \(incentivized channel\)'
+yarn test --grep 'should transfer ETH from Ethereum to Substrate \(basic channel\)'
 yarn test --grep 'should transfer DOT from Substrate to Ethereum \(incentivized channel\)'
 ```
 
 ### BEEFY commitments
 
 BEEFY commitment & proofs extracted from `../test/beefy-relay.log` and copied into:
-* test/beefy/data/beefy-commitment.json
+* `test/beefy/data/beefy-commitment.json`
 
 For updating `basic-commitment.json`:
 1. Search for `Sent SubmitFinal transaction` in `beefy-relay.log`
 2. Copy into `test/beefy/data/beefy-commitment.json`
 
-Sent SubmitFinal transaction
-
 ### Message bundles
 
 Message bundles are extracted from `../test/parachain-relay.log` and copied into:
-* test/channels/data/basic-commitment.json
-* test/channels/data/incentivized-commitment.json
+* `test/channels/data/basic-commitment.json`
+* `test/channels/data/incentivized-commitment.json`
 
 For updating `basic-commitment.json`:
 1. Search for `Sent transaction BasicInboundChannel.submit` in `parachain-relay.log`
@@ -78,8 +76,8 @@ Example: Run a local hardhat instance with deployments
 yarn hardhat node
 ```
 
-### Ropsten, Mainnet
+### Goerli
 
 ```
-yarn hardhat deploy --network ropsten
+yarn hardhat deploy --network goerli
 ```
