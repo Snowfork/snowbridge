@@ -49,6 +49,7 @@ benchmarks! {
 
 	}: _(origin, message)
 	verify {
+		assert_eq!(<LatestVerifiedBlockNumber<T>>::get(), 0)
 	}
 }
 
