@@ -2,7 +2,7 @@
 use super::*;
 
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::pallet_prelude::Weight;
+use frame_support::weights::Weight;
 use frame_system::RawOrigin;
 use snowbridge_core::Proof;
 
