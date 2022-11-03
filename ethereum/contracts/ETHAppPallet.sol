@@ -8,13 +8,13 @@ import "./SubstrateTypes.sol";
  * @title SCALE encoders for ETHApp pallet calls
  */
 library ETHAppPallet {
-    bytes1 constant PALLET_ID = 0x41;
+    bytes1 public constant PALLET_ID = 0x41;
 
-    bytes1 constant MINT_CALL = 0x01;
-    uint64 constant MINT_WEIGHT = 100_000_000;
+    bytes1 public constant MINT_CALL = 0x01;
+    uint64 public constant MINT_WEIGHT = 100_000_000;
 
     /**
-     * @dev Encode `Pallet::mint`
+     * @dev Encode `Call::mint`
      * @param sender Sender address
      * @param recipient Recipient address (sr25519)
      * @param amount Amount to mint
@@ -32,7 +32,7 @@ library ETHAppPallet {
                 MINT_CALL,
                 SubstrateTypes.H160(sender),
                 SubstrateTypes.MultiAddressWithID(recipient),
-                ScaleCodec.encode128(amount),
+                ScaleCodec.encodeU128(amount),
                 SubstrateTypes.None()
             ),
             MINT_WEIGHT
@@ -40,7 +40,7 @@ library ETHAppPallet {
     }
 
     /**
-     * @dev Encode `Pallet::mint`
+     * @dev Encode `Call::mint`
      * @param sender Sender address
      * @param recipient Recipient address (sr25519)
      * @param amount Amount to mint
@@ -62,7 +62,7 @@ library ETHAppPallet {
                 MINT_CALL,
                 SubstrateTypes.H160(sender),
                 SubstrateTypes.MultiAddressWithID(recipient),
-                ScaleCodec.encode128(amount),
+                ScaleCodec.encodeU128(amount),
                 SubstrateTypes.SomeRemotePara(paraID, fee)
             ),
             MINT_WEIGHT

@@ -3,5 +3,5 @@ pragma solidity ^0.8.9;
 pragma experimental ABIEncoderV2;
 
 interface OutboundChannel {
-    function submit(address origin, bytes calldata payload, uint64 weight) external;
+    function submit(address account, bytes calldata payload, uint64 weight) external;
 }

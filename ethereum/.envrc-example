@@ -13,3 +13,10 @@ export INCENTIVIZED_CHANNEL_SOURCE_ID=1
 
 # ParachainClient
 export PARACHAIN_ID=1000
+
+# For running scripts and tests without hardhat CLI
+TS_NODE_FILES=true
+
+# Uncomment to enable gas reporting:
+#
+# export REPORT_GAS=true

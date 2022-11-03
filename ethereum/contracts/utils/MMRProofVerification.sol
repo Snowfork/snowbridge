@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
 /**
@@ -17,7 +17,7 @@ library MMRProofVerification {
         bytes32 leafHash,
         MMRProof calldata proof
     ) external pure returns (bool) {
-        require(proof.items.length < 64);
+        require(proof.items.length < 64, "proof to large");
         return root == calculateMerkleRoot(leafHash, proof.items, proof.order);
     }
 

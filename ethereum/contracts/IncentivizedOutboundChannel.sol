@@ -72,9 +72,9 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     /**
      * @dev Sends a message across the channel
      */
-    function submit(address feePayer, bytes calldata payload, uint64 _weight) external override {
-        require(isOperatorFor(msg.sender, feePayer), "Caller is not an operator for fee payer");
-        feeController.handleFee(feePayer, fee);
+    function submit(address account, bytes calldata payload, uint64) external override {
+        require(isOperatorFor(msg.sender, account), "Caller is unauthorised");
+        feeController.handleFee(account, fee);
         nonce = nonce + 1;
         emit Message(msg.sender, nonce, fee, payload);
     }
