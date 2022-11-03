@@ -15,8 +15,6 @@ use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
 #[allow(unused_imports)]
 use crate::inbound::Pallet as BasicInboundChannel;
 
-use crate::inbound::test::new_tester;
-
 use hex_literal::hex;
 
 // pub type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
@@ -35,10 +33,6 @@ const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["86d9ac0bab011917f57b9e9607833b4340f9
 // 	74726172792d7061796c6f6164000000000000000000000000000000
 // "
 // );
-
-fn new_tester_benchmarking() -> sp_io::TestExternalities {
-	new_tester(snowbridge_ethereum::H160(SOURCE_CHANNEL_ADDR))
-}
 
 benchmarks! {
 	where_clause {
@@ -87,6 +81,6 @@ benchmarks! {
 
 impl_benchmark_test_suite!(
 	BasicInboundChannel,
-	super::new_tester_benchmarking(),
+	crate::inbound::test::new_tester(crate::inbound::benchmarking::SOURCE_CHANNEL_ADDR.into()),
 	crate::inbound::test::Test,
 );
