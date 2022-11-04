@@ -3,6 +3,7 @@ test-config.json
 .envrc
 
 dist/
+genesis.ssz
 
 *.log
 rococo-local-raw.json
