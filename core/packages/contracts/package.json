@@ -1,5 +1,5 @@
 {
-  "name": "@snowfork/snowbridge-contracts",
+  "name": "@snowbridge/contracts",
   "version": "1.0.0",
   "description": "Snowbridge smart contracts.",
   "license": "Apache-2.0",
@@ -19,7 +19,7 @@
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.4",
     "@openzeppelin/contracts": "^4.1.0",
-    "@polkadot/api": "^7.7.1",
+    "@polkadot/api": "^9.6.2",
     "@typechain/ethers-v5": "^10.1.0",
     "@typechain/hardhat": "^6.1.3",
     "@types/keccak": "^3.0.1",

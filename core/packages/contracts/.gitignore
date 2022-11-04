@@ -1,5 +1,6 @@
 .envrc
 build/
+dist/
 node_modules/
 ganache.log
 artifacts/
