@@ -11,3 +11,5 @@ coverage/
 src/
 .vscode/
 deployments/
+
+tsconfig.tsbuildinfo
