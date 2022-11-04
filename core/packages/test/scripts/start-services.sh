@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -eu
 
-root_dir="$(realpath ..)"
+root_dir="$(realpath ../../..)"
 parachain_dir="$root_dir/parachain"
-ethereum_dir="$root_dir/ethereum"
+ethereum_dir="$root_dir/core/packages/contracts"
 relay_dir="$root_dir/relayer"
 
 eth_network="${ETH_NETWORK:-localhost}"
@@ -180,12 +180,6 @@ start_polkadot_launch()
 
     cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
 
-    # TODO: add back
-    # if [[ -n "${TEST_MALICIOUS_APP+x}" ]]; then
-    #     jq '.genesis.runtime.dotApp.address = "0x433488cec14C4478e5ff18DDC7E7384Fc416f148"' \
-    #     "$output_dir/spec.json" | sponge "$output_dir/spec.json"
-    # fi
-
     echo "Generating test chain specification"
     "$test_collator_bin" build-spec --disable-default-bootnode > "$output_dir/test_spec.json"
 
@@ -220,7 +214,7 @@ start_polkadot_launch()
 configure_contracts()
 {
     echo "Configuring contracts"
-    pushd ../ethereum
+    pushd "$ethereum_dir"
 
     RELAYCHAIN_ENDPOINT="ws://localhost:9944" npx hardhat run ./scripts/configure-beefy.ts --network $eth_network
 
@@ -232,7 +226,7 @@ start_relayer()
     echo "Starting relay services"
 
     # Build relay services
-    mage -d ../relayer build
+    mage -d "$relay_dir" build
 
     # Configure beefy relay
     jq \

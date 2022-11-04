@@ -1,3 +1,5 @@
+import "@polkadot/api-augment/polkadot";
+
 import { ApiPromise, Keyring, WsProvider } from "@polkadot/api";
 import { ISubmittableResult } from "@polkadot/types/types";
 import { assert } from "console";
