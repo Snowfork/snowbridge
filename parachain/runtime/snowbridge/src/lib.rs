@@ -566,7 +566,7 @@ impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = ethereum_beacon_client::Pallet<Runtime>;
 	type MessageDispatch = dispatch::Pallet<Runtime>;
-	type WeightInfo = ();
+	type WeightInfo = basic_channel_inbound::weights::SnowbridgeWeight<Self>;
 }
 
 impl basic_channel_outbound::Config for Runtime {
