@@ -34,7 +34,7 @@ benchmarks! {
 			T::AccountId: AsRef<[u8]>,
 	}
 
-	submit {
+	verify_message {
 		let origin = RawOrigin::Signed(whitelisted_caller::<T::AccountId>());
 
 		let message = Message {
@@ -47,9 +47,14 @@ benchmarks! {
 			dispatch_weight: Weight::from_ref_time(123)
 		};
 
-	}: _(origin, message)
+
+	}: {
+		#[allow(unused_must_use)] {
+			BasicInboundChannel::<T>::verify_message(origin.into(), &message);
+		}
+	}
 	verify {
-		assert_eq!(<LatestVerifiedBlockNumber<T>>::get(), 0)
+		assert_eq!(<LatestVerifiedBlockNumber<T>>::get(), 0);
 	}
 }
 

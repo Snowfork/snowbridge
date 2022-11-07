@@ -94,9 +94,20 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::submit() + message.dispatch_weight)]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
+			let envelope = Self::verify_message(origin, &message)?;
+
+			let message_id = MessageId::Basic { account: envelope.account, nonce: envelope.nonce };
+			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload, Some(message.dispatch_weight));
+
+			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn verify_message(origin: OriginFor<T>, message: &Message) -> Result<Envelope, DispatchError> {
 			ensure_signed(origin)?;
-			// submit message to verifier for verification
-			let (log, block_number) = T::Verifier::verify(&message)?;
+			// Verify message & parse Eth log
+			let (log, block_number) = T::Verifier::verify(message)?;
 
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
@@ -117,12 +128,9 @@ pub mod pallet {
 				}
 			})?;
 
-			let message_id = MessageId::Basic { account: envelope.account, nonce: envelope.nonce };
-			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload, Some(message.dispatch_weight));
-
 			<LatestVerifiedBlockNumber<T>>::set(block_number);
 
-			Ok(())
+			Ok(envelope)
 		}
 	}
 }
