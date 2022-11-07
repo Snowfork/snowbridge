@@ -14,7 +14,7 @@ use frame_support::{
 	},
 };
 use frame_system::ensure_signed;
-use snowbridge_core::{ChannelId, Message, MessageDispatch, MessageId, Verifier};
+use snowbridge_core::{Message, MessageDispatch, MessageId, Verifier};
 use sp_core::{H160, U256};
 use sp_std::convert::TryFrom;
 
