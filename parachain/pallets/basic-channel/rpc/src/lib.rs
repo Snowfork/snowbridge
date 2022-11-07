@@ -82,7 +82,7 @@ mod tests {
 	use codec::Encode;
 	use jsonrpsee::{
 		core::Error,
-		types::error::{CallError, ErrorCode, ErrorObject}
+		types::error::{CallError, ErrorCode}
 	};
 	use sp_core::offchain::OffchainStorage;
 
