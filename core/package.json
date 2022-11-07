@@ -1,8 +1,14 @@
 {
   "name": "@snowbridge/core",
-  "packageManager": "yarn@3.2.4",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ]
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint"
+  },
+
+  "devDependencies": {
+    "turbo": "^1.6.3"
+  }
 }

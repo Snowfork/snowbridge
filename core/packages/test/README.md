@@ -6,40 +6,17 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 * Ubuntu 20.04 or later. MacOS may work, but it's not currently a supported configuration.
 * Development environment for Rust and Substrate. See parachain [requirements](../parachain/README.md#requirements).
-* Node 16. Can install using [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
-
-  ```bash
-  nvm install 16.17.0
-  nvm use 16.17.0
-  ```
-
-* Development environment for Ethereum smart contracts.
-
-  ```bash
-  (cd ../ethereum && yarn install)
-  ```
 
 * Development environment for the relay services. See setup [instructions](../relayer/README.md#Development).
 
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth `go install github.com/ethereum/go-ethereum/cmd/geth@v1.10.23`
 * g++ (required for lodestar) is available in the `build-essential` package: `apt install build-essential`
-* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `v1.1.0`.
-
-  ```bash
-  yarn global add @chainsafe/lodestar@1.1.0
-  ```
 
 * sponge - Is available in the `moreutils` package.
 
   ```bash
   apt install moreutils
-  ```
-
-* polkadot-launch
-
-  ```bash
-  yarn global add polkadot-launch@2.3.0
   ```
 
 * direnv - https://direnv.net/
@@ -48,8 +25,10 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 ### Install NPM dependencies
 
+make sure to install dependencies for all packages (contracts, api, test):
+
 ```bash
-yarn install
+cd ../.. && pnpm install
 ```
 
 ### Polkadot
@@ -106,12 +85,12 @@ These tests are meant to closely replicate real-world behaviour. This means that
 To just run a specific test, the bridge needs to be bootstrapped first:
 
 ```bash
-yarn test test/bootstrap.js
+pnpm test:integration test/bootstrap.js
 ```
 
 Now individual tests can be run, like the following:
 ```bash
-yarn test --grep 'should transfer ETH from Substrate to Ethereum \(incentivized channel\)'
+pnpm test:integration --grep 'should transfer ETH from Substrate to Ethereum \(incentivized channel\)'
 ```
 
 ### Run all tests
@@ -119,7 +98,7 @@ yarn test --grep 'should transfer ETH from Substrate to Ethereum \(incentivized 
 Run the full suite of tests using the following command:
 
 ```bash
-yarn test
+pnpm test:integration
 ```
 
 The bootstrap tests will be called automatically as part of the full suite.

@@ -79,7 +79,7 @@ start_lodestar() {
 
         echo "Starting lodestar local net"
 
-        lodestar dev \
+        npx lodestar dev \
             --genesisValidators 8 \
             --genesisTime $timestamp \
             --startValidators "0..7" \
@@ -205,7 +205,7 @@ start_polkadot_launch()
         config/launch-config.json \
         > "$output_dir/launch-config.json"
 
-    polkadot-launch "$output_dir/launch-config.json" &
+    npx polkadot-launch "$output_dir/launch-config.json" &
 
     scripts/wait-for-it.sh -t 120 localhost:11144
     scripts/wait-for-it.sh -t 120 localhost:13144

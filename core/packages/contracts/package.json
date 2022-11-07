@@ -1,13 +1,20 @@
 {
   "name": "@snowbridge/contracts",
   "version": "1.0.0",
-  "description": "Snowbridge smart contracts.",
+  "description": "Snowbridge smart contracts",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Snowfork/snowbridge.git",
+    "directory": "core/packages/contracts"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "coverage": "hardhat coverage",
-    "lint": "yarn solhint && yarn eslint",
-    "solhint": "solhint 'contracts/**/*.sol'",
-    "eslint": "eslint .",
+    "build": "hardhat compile",
+    "lint": "pnpm lint:solhint && pnpm lint:eslint",
+    "lint:solhint": "solhint 'contracts/**/*.sol'",
+    "lint:eslint": "eslint .",
     "test": "hardhat test"
   },
   "devDependencies": {
@@ -35,10 +42,8 @@
     "eslint-config-prettier": "^8.5.0",
     "ethereumjs-abi": "^0.6.8",
     "ethereumjs-util": "^7.0.10",
-    "ethers": "^5.0.25",
     "find-config": "^1.0.0",
-    "hardhat": "^2.3.0",
-    "hardhat-deploy": "^0.11.19",
+    "hardhat": "^2.12.2",
     "hardhat-gas-reporter": "^1.0.9",
     "keccak": "^3.0.2",
     "lodash": "^4.17.21",
@@ -50,16 +55,20 @@
     "secp256k1": "^4.0.2",
     "solc": "^0.7.6",
     "solidity-bytes-utils": "^0.1.2",
-    "solidity-coverage": "^0.7.16",
+    "solidity-coverage": "^0.8.2",
     "solidity-docgen": "^0.5.10",
     "temp": "^0.9.1",
-    "ts-node": "^10.0.0",
+    "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.1.0",
     "typechain": "^8.1.0",
     "typescript": "^4.3.2",
-    "unique-filename": "^1.1.1"
+    "unique-filename": "^1.1.1",
+    "hardhat-deploy": "^0.11.20",
+    "solhint": "^3.3.7"
   },
   "dependencies": {
-    "solhint": "^3.3.7"
+    "ethers": "^5.7.2",
+    "@ethersproject/bytes": "^5.0.0",
+    "@ethersproject/providers": "^5.4.7"
   }
 }

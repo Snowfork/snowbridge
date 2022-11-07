@@ -1,11 +1,18 @@
 {
   "name": "@snowbridge/test",
   "version": "1.0.0",
-  "license": "MIT",
+  "description": "Snowbridge Integration Tests",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Snowfork/snowbridge.git",
+    "directory": "core/packages/test"
+  },
   "scripts": {
-    "test": "mocha --timeout 600000 --exit"
+    "test:integration": "mocha --timeout 600000 --exit"
   },
   "devDependencies": {
+    "@chainsafe/lodestar": "1.1.0",
     "@polkadot/api": "^9.6.2",
     "@polkadot/util": "^10.1.11",
     "@polkadot/util-crypto": "^10.1.11",
@@ -18,9 +25,12 @@
     "chai-as-promised": "^7.1.1",
     "chai-bignumber": "^3.0.0",
     "esm": "^3.2.25",
-    "ethers": "^5.0.14",
+    "ethers": "^5.7.2",
+    "fastify": "3.15.1",
     "keccak": "^3.0.2",
     "mocha": "^8.1.3",
+    "node-fetch": "*",
+    "polkadot-launch": "^2.3.0",
     "rlp": "^2.2.6",
     "ts-node": "^10.1.0",
     "typescript": "^4.3.5",

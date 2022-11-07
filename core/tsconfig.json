@@ -4,6 +4,9 @@
       "path": "packages/contracts"
     },
     {
+      "path": "packages/api"
+    },
+    {
       "path": "packages/tests"
     }
   ],
