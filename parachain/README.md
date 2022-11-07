@@ -67,7 +67,7 @@ To run the parachain tests locally, use `cargo test --workspace`. For the full s
 
 Optionally exclude the top-level and runtime crates:
 
-```
+```bash
 cargo test --workspace \
         --features runtime-benchmarks \
         --exclude snowbridge \
@@ -120,13 +120,50 @@ cargo install subxt-cli
 ```
 
 Update metadata by fetching it from parachain node (in this case a node in the E2E stack):
-```
+```bash
 subxt metadata --url http://localhost:8081 -f bytes > tools/query-events/metadata.scale
 ```
 
 If you want to update the tool for an already running E2E stack:
 
-```
+```bash
 cargo build --release --manifest-path tools/query-events/Cargo.toml
 cp target/release/snowbridge-query-events /tmp/snowbridge/bin/
+```
+
+## Generating pallet weights from benchmarks
+
+Build the parachain with the runtime benchmark flags and generate the chain spec:
+
+```bash
+runtime=snowbase
+cargo build \
+    --release \
+    --no-default-features \
+    --features "${runtime}-native,rococo-native,runtime-benchmarks,${runtime}-runtime-benchmarks" \
+    --bin snowbridge
+./target/release/snowbridge build-spec --chain $runtime --disable-default-bootnode > /tmp/snowbridge/spec.json
+cat "/tmp/snowbridge/spec.json" | node ../test/scripts/helpers/mutateSpec.js "/tmp/snowbridge/contracts.json" "/tmp/snowbridge/initialBeaconSync.json" | sponge "/tmp/snowbridge/spec.json"
+```
+
+List available pallets and their benchmarks:
+
+```bash
+./target/release/snowbridge benchmark pallet --chain /tmp/snowbridge/spec.json --list
+```
+
+Run a benchmark for a pallet, generating weights:
+
+```bash
+target/release/snowbridge benchmark pallet \
+  --chain=/tmp/snowbridge/spec.json \
+  --execution=wasm \
+  --wasm-execution=compiled \
+  --pallet=basic_channel_inbound \
+  --extra \
+  --extrinsic=* \
+  --repeat=20 \
+  --steps=50 \
+  --output=pallets/basic-channel/src/inbound/weights.rs \
+  --template=templates/module-weight-template.hbs
 ```
