@@ -17,7 +17,7 @@ Install [pnpm](https://pnpm.io/):
 
 ```
 corepack enable
-corepack prepare pnpm@latest --activate
+corepack prepare pnpm@7.14.2 --activate
 ```
 
 Install all dependencies:
