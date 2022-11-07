@@ -483,7 +483,7 @@ impl pallet_assets::Config for Runtime {
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Any;
-	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::RuntimeOrigin::Relay.into();
+	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 }
@@ -562,7 +562,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	// `RuntimeOrigin::Signed` origin of the same 32-byte value.
 	SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
 	// Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
-	XcmPassthrough<Origin>,
+	XcmPassthrough<RuntimeOrigin>,
 );
 
 parameter_types! {
@@ -609,7 +609,7 @@ parameter_types! {
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
-pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
+pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
 
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
@@ -622,9 +622,9 @@ pub type XcmRouter = (
 
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type XcmRouter = XcmRouter;
-	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type XcmExecuteFilter = Nothing;
 	// ^ Disable dispatchable execute on the XCM pallet.
 	// Needs to be `Everything` for local testing.
@@ -734,34 +734,34 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		// System support stuff.
-		System: frame_system::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>} = 0,
-		Timestamp: pallet_timestamp::{Pallet, RuntimeCall, Storage, Inherent} = 1,
-		Sudo: pallet_sudo::{Pallet, RuntimeCall, Config<T>, Storage, RuntimeEvent<T>} = 2,
-		Scheduler: pallet_scheduler::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>} = 3,
-		Preimage: pallet_preimage::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>} = 4,
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 2,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
+		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 4,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 5,
-		ParachainSystem: cumulus_pallet_parachain_system::{ Pallet, RuntimeCall, Config, Storage, Inherent, RuntimeEvent<T>, ValidateUnsigned } = 6,
+		ParachainSystem: cumulus_pallet_parachain_system::{ Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned } = 6,
 
 		// Monetary stuff.
-		Balances: pallet_balances::{Pallet, RuntimeCall, Storage, Config<T>, RuntimeEvent<T>} = 9,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, RuntimeEvent<T>} = 10,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>,Event<T>} = 9,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 10,
 
 		// Collator support. The order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, RuntimeCall, Storage} = 20,
-		CollatorSelection: pallet_collator_selection::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>, Config<T>} = 21,
-		Session: pallet_session::{Pallet, RuntimeCall, Storage, RuntimeEvent, Config<T>} = 22,
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
+		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
 
 		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>} = 31,
-		PolkadotXcm: pallet_xcm::{Pallet, RuntimeCall, RuntimeEvent<T>, RuntimeOrigin, Config} = 32,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, RuntimeEvent<T>, RuntimeOrigin} = 33,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>} = 34,
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 31,
+		PolkadotXcm: pallet_xcm::{Pallet, Call,Event<T>, Origin, Config} = 32,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 33,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 34,
 
 		// Template
-		TemplatePallet: test_pallet::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>}  = 40,
-		Assets: pallet_assets::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>, Config<T>} = 41,
+		TemplatePallet: test_pallet::{Pallet, Call, Storage, Event<T>}  = 40,
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>} = 41,
 	}
 );
 

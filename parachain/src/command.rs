@@ -381,7 +381,7 @@ pub fn run() -> Result<()> {
 					Err("Chain runtime doesn't support benchmarking".into())
 				}),
 				// https://github.com/paritytech/substrate/blob/1802a115e8480fd7a4654d45c85b58c2189c508a/client/db/src/lib.rs#L1096
-				#[cfg(not(feature = "runtime-benchmarks"))]
+				#[cfg(feature = "runtime-benchmarks")]
 					BenchmarkCmd::Storage(_) => Err(
 						"Storage benchmarking can be enabled with `--features runtime-benchmarks`."
 							.into(),
