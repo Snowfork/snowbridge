@@ -30,15 +30,15 @@ pnpm install
 
 Build all artifacts
 ```
-npx turbo build
+npx turbo run build
 ```
 
 Run all unit tests
 ```
-npx turbo test
+npx turbo run test
 ```
 
 Lint all the code
 ```
-npx turbo lint
+npx turbo run lint
 ```
