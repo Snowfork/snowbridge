@@ -92,7 +92,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::submit() + message.dispatch_weight)]
+		#[pallet::weight(T::WeightInfo::verify_message() + message.dispatch_weight)]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			let envelope = Self::verify_message(origin, &message)?;
 
