@@ -46,8 +46,6 @@ benchmarks! {
 			},
 			dispatch_weight: Weight::from_ref_time(123)
 		};
-
-
 	}: {
 		#[allow(unused_must_use)] {
 			BasicInboundChannel::<T>::verify_message(origin.into(), &message);
