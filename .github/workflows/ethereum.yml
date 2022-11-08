@@ -38,3 +38,6 @@ jobs:
       - name: Test
         working-directory: core
         run: pnpm test
+      - name: Lint
+        working-directory: core
+        run: pnpm lint
