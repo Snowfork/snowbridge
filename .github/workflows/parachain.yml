@@ -32,6 +32,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
