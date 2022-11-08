@@ -26,7 +26,7 @@ These are the transaction fees paid by relayers for delivering messages.
 
 The transaction fees for relaying a message bundle are highly variable, and depend on the bundle size and fluctuating gas costs.
 
-For a bundle with a single message, the cost will range between roughly $10 to $60 in the current bear market. The cost can be broken down roughly as follows:
+For a bundle with a single message, the cost will range between roughly $10 to $20 in the current bear market. The cost can be broken down roughly as follows:
 
 1. 50% of gas is used for bundle verification
 2. 50% of gas is used for dispatch and execution of the single message

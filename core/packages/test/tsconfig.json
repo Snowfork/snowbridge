@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "es2021",
+    "module": "commonjs",
+    "strict": false,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "resolveJsonModule": true,
+    "baseUrl": "."
+  },
+  "include": ["src"],
+  "files": ["scripts/detect-fork.ts"],
+  "references": [
+    {
+      "path": "../contracts"
+    }
+  ]
+}

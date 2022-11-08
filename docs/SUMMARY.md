@@ -13,6 +13,7 @@
   * [Ethereum](architecture/verification/ethereum.md)
   * [Polkadot](architecture/verification/polkadot/README.md)
     * [Interactive Update Protocol](architecture/verification/polkadot/interactive-update-protocol.md)
+    * [Operational Costs](architecture/verification/polkadot/operational-costs.md)
 * [Apps](architecture/apps/README.md)
   * [Ether](architecture/apps/ether.md)
   * [ERC20](architecture/apps/erc20.md)
