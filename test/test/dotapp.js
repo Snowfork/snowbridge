@@ -32,7 +32,7 @@ describe('Bridge', function () {
 
       // lock DOT using basic channel
       await subClient.lockDOT(subClient.alice, ethAccount, amount.toFixed(), ChannelId.INCENTIVIZED)
-      await ethClient.waitForNextEventData({ appName: 'snowDOT', eventName: 'Minted' });
+      await ethClient.waitForNextEventData({ appName: 'appDOT', eventName: 'Minted' });
 
       const afterEthBalance = await ethClient.getDotBalance(ethAccount);
       const afterSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58Alice);

@@ -1,35 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 
-contract WrappedToken is ERC777, Ownable {
+/// @custom:security-contact contact@snowfork.com
+contract WrappedToken is ERC20, Ownable, ERC20Permit {
+    // solhint-disable-next-line no-empty-blocks
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) ERC20Permit(name) {}
 
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        address[] memory _defaultOperators
-    )
-        ERC777(_name, _symbol, _defaultOperators)
-    { }
-
-    function burn(address sender, uint256 amount, bytes memory data) external onlyOwner {
-        _burn(sender, amount, data, "");
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
     }
 
-    function mint(address recipient, uint256 amount, bytes memory data) external onlyOwner {
-        _mint(recipient, amount, data, "");
-    }
-
-    // Don't allow users to directly burn their wrapped tokens via the IERC777 burn API, as it won't redeem
-    // the native tokens on substrate.
-
-    function burn(uint256, bytes memory) public pure override  {
-        revert("not-supported");
-    }
-
-    function operatorBurn(address, uint256, bytes memory, bytes memory) public pure override {
-        revert("not-supported");
+    function burn(address from, uint256 amount) public onlyOwner {
+        _burn(from, amount);
     }
 }

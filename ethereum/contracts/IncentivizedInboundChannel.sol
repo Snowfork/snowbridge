@@ -62,7 +62,7 @@ contract IncentivizedInboundChannel is AccessControl {
         require(bundle.nonce == nonce + 1, "Invalid nonce");
         require(
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
-            "insufficient gas for delivery of all messages"
+            "insufficient gas"
         );
         nonce++;
         dispatch(bundle);

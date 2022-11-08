@@ -14,7 +14,7 @@ const IncentivizedOutboundChannel = contracts.contracts.IncentivizedOutboundChan
 const BasicInboundChannel = contracts.contracts.BasicInboundChannel;
 const IncentivizedInboundChannel = contracts.contracts.IncentivizedInboundChannel;
 
-const IERC777 = require("../../../ethereum/artifacts/@openzeppelin/contracts/token/ERC777/IERC777.sol/IERC777.json")
+const IERC20 = require("../../../ethereum/artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json")
 /**
  * The Ethereum client for Bridge interaction
  */
@@ -77,7 +77,7 @@ class EthClient {
     this.web3.eth.defaultAccount = this.accounts[1];
 
     const snowDotAddr = await this.appDOT.methods.token().call();
-    const snowDOT = new this.web3.eth.Contract(IERC777.abi, snowDotAddr);
+    const snowDOT = new this.web3.eth.Contract(IERC20.abi, snowDotAddr);
     this.snowDOT = snowDOT;
   };
 

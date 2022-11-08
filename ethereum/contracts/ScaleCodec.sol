@@ -82,27 +82,27 @@ library ScaleCodec {
         v = (v >> 8) | (v << 8);
     }
 
-    function encode256(uint256 input) public pure returns (bytes32) {
+    function encodeU256(uint256 input) public pure returns (bytes32) {
         return bytes32(reverse256(input));
     }
 
-    function encode128(uint128 input) public pure returns (bytes16) {
+    function encodeU128(uint128 input) public pure returns (bytes16) {
         return bytes16(reverse128(input));
     }
 
-    function encode64(uint64 input) public pure returns (bytes8) {
+    function encodeU64(uint64 input) public pure returns (bytes8) {
         return bytes8(reverse64(input));
     }
 
-    function encode32(uint32 input) public pure returns (bytes4) {
+    function encodeU32(uint32 input) public pure returns (bytes4) {
         return bytes4(reverse32(input));
     }
 
-    function encode16(uint16 input) public pure returns (bytes2) {
+    function encodeU16(uint16 input) public pure returns (bytes2) {
         return bytes2(reverse16(input));
     }
 
-    function encode8(uint8 input) public pure returns (bytes1) {
+    function encodeU8(uint8 input) public pure returns (bytes1) {
         return bytes1(input);
     }
 }

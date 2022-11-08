@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.9;
 
 /*
  * ChannelAccess implements authorization logic for submitting messages to a channel.
