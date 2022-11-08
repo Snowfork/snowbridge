@@ -25,7 +25,7 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 ### Install NPM dependencies
 
-make sure to install dependencies for all packages (contracts, api, test):
+Make sure to install dependencies for all packages (contracts, api, test):
 
 ```bash
 cd ../.. && pnpm install
