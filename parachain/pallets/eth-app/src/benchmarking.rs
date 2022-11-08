@@ -67,7 +67,7 @@ benchmarks! {
 		let sender = H160::zero();
 		let amount = 500;
 
-		let call = RuntimeCall::<T>::mint { sender: sender, recipient: recipient_lookup, amount: amount, destination: None  };
+		let call = Call::<T>::mint { sender: sender, recipient: recipient_lookup, amount: amount, destination: None  };
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {
 		assert_eq!(T::Asset::balance(&recipient), amount);
