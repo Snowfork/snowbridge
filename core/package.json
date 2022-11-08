@@ -1,0 +1,14 @@
+{
+  "name": "@snowbridge/core",
+  "private": true,
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint"
+  },
+
+  "devDependencies": {
+    "turbo": "^1.6.3"
+  }
+}

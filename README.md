@@ -1,42 +1,24 @@
 # Snowbridge
 
-A trustless bridge between Polkadot and Ethereum.
-
-For architectural documentation, visit https://docs.snowbridge.network/.
-
-## Development
-
-To locally bootstrap our system for testing and development, or just to play around, please refer to our [tests](test/README.md) component.
+A trustless bridge between Polkadot and Ethereum. For documentation, visit https://docs.snowbridge.network.
 
 ## Components
 
-### Ethereum
-
-This component includes our Ethereum contracts, tests and truffle config.
-
-See [ethereum/README.md](ethereum/README.md)
-
 ### Parachain
 
-This component includes our substrate parachain, as well as our bridge-specific pallets.
-
-See [parachain/README.md](parachain/README.md)
+Polkadot parachain and our pallets. See [parachain/README.md](parachain/README.md).
 
 ### Relayer
 
-This component includes our Relayer daemon that will be run by relayers to watch and relay 2-way messages.
+Off-chain relayer services for relaying messages between Polkadot and Ethereum. See [relayer/README.md](relayer/README.md)
 
-See [relayer/README.md](relayer/README.md)
+### Contracts
 
-### Tests
+Ethereum contracts and unit tests. See [core/packages/contracts/README.md](core/packages/contracts/README.md)
 
-This component includes our end to end tests, that pull together all the above services and set them up easily through scripts for automated E2E tests.
+### Integration Tests
 
-See [test/README.md](test/README.md)
-
-## Usage
-
-To test out and use the bridge, please refer to the [Tests](#Tests) section above.
+This component includes our end to end tests, that pull together all the above services and set them up easily through scripts for automated E2E tests. See [core/packages/test/README.md](core/packages/test/README.md).
 
 ## Security
 

@@ -3,32 +3,41 @@ name: ethereum
 on:
   push:
     paths:
-      - 'ethereum/**'
-      - '!ethereum/README.md'
-      - '!ethereum/LICENSE'
+      - 'core/**'
+      - '!core/**/README.md'
     branches:
       - main
   pull_request:
     paths:
-      - 'ethereum/**'
-      - '!ethereum/README.md'
-      - '!ethereum/LICENSE'
+      - 'core/**'
+      - '!core/**/README.md'
 
 jobs:
-  test:
-    runs-on: ubuntu-20.04
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v1
-      - uses: actions/cache@v2
         with:
-          path: 'ethereum/node_modules'
-          key: ${{ runner.os }}-modules-${{ hashFiles('ethereum/yarn.lock') }}
-      - name: Install packages
-        run: yarn install
-        working-directory: ethereum
-      - name: Run Tests
-        run: yarn test
-        working-directory: ethereum
-      - name: Run Linter
-        run: yarn lint
-        working-directory: ethereum
+          fetch-depth: 2
+      - uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 7.14.2
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.18.1
+          cache: 'pnpm'
+          cache-dependency-path: core/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: core
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        working-directory: core
+        run: pnpm build
+      - name: Test
+        working-directory: core
+        run: pnpm test
+      - name: Lint
+        working-directory: core
+        run: pnpm lint
