@@ -14,7 +14,7 @@ const IncentivizedOutboundChannel = contracts.contracts.IncentivizedOutboundChan
 const BasicInboundChannel = contracts.contracts.BasicInboundChannel;
 const IncentivizedInboundChannel = contracts.contracts.IncentivizedInboundChannel;
 
-const IERC20 = require("../../../ethereum/artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json")
+const IERC20 = require("../../../contracts/artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json")
 /**
  * The Ethereum client for Bridge interaction
  */
