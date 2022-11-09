@@ -51,7 +51,7 @@ describe('Bridge', function () {
     })
   });
 
-  describe('ETH App XCM', function () {
+  describe.skip('ETH App XCM', function () {
     it('should transfer ETH from Ethereum to Parachain 1001 (incentivized channel)', async function () {
       const amount = BigNumber(Web3.utils.toWei('0.0001', "ether"));
       const xcmFee = 4_000_000;
