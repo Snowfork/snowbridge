@@ -3,7 +3,7 @@
 use frame_support::{
 	dispatch::{DispatchResult, Dispatchable, Parameter},
 	traits::{Contains, EnsureOrigin},
-	weights::GetDispatchInfo,
+	dispatch::GetDispatchInfo,
 };
 
 use scale_info::TypeInfo;

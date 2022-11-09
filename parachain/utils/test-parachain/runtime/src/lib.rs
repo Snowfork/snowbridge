@@ -28,9 +28,10 @@ use frame_support::{
 	traits::{EitherOfDiverse, EqualPrivilegeOnly, Everything, Nothing},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
-		ConstantMultiplier, DispatchClass, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
+		ConstantMultiplier, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
 		WeightToFeePolynomial,
 	},
+	dispatch::DispatchClass,
 	PalletId,
 };
 use frame_system::{

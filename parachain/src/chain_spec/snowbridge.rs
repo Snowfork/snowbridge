@@ -1,5 +1,4 @@
 use cumulus_primitives_core::ParaId;
-use hex_literal::hex;
 use sc_service::ChainType;
 use snowbridge_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
 use sp_core::sr25519;

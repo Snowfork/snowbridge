@@ -387,6 +387,7 @@ pub fn run() -> Result<()> {
 							.into(),
 					),
 				#[cfg(feature = "runtime-benchmarks")]
+				#[allow(unreachable_patterns)]
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
 					#[cfg(feature = "snowbridge-native")]
 					if config.chain_spec.is_snowbridge() {
