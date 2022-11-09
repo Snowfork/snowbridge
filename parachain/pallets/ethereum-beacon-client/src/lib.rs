@@ -154,13 +154,13 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub initial_sync: InitialSyncOf<T>,
+		pub initial_sync: Option<InitialSyncOf<T>>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self { GenesisConfig {
-			initial_sync: Default::default(),
+			initial_sync: None,
 		}}
 	}
 
@@ -173,9 +173,11 @@ pub mod pallet {
 				config::SYNC_COMMITTEE_SIZE
 			);
 
-			Pallet::<T>::initial_sync(
-				self.initial_sync.clone(),
-			).unwrap();
+			if let Some(initial_sync) = self.initial_sync.clone() {
+				Pallet::<T>::initial_sync(
+					initial_sync,
+				).unwrap();
+			}
 		}
 	}
 
