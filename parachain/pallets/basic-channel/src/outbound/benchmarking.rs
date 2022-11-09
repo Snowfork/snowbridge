@@ -1,13 +1,11 @@
 //! BasicOutboundChannel pallet benchmarking
 use super::*;
 
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, BenchmarkError};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::traits::OnInitialize;
 
 #[allow(unused_imports)]
 use crate::outbound::Pallet as BasicOutboundChannel;
-
-const SEED: u32 = 0;
 
 benchmarks! {
 	where_clause {
