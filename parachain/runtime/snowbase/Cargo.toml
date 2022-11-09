@@ -154,7 +154,7 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
-    "frame-system-benchmarking",
+    "frame-system-benchmarking/runtime-benchmarks",
     "hex-literal",
     "xcm-builder/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
