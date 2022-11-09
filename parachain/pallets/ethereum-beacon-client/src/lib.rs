@@ -635,7 +635,7 @@ pub mod pallet {
 				<LatestFinalizedHeaderHash<T>>::set(block_root);
 			}
 
-			Self::deposit_event(Event::BeaconHeaderImported{block_hash: block_root, slot: slot});
+			Self::deposit_event(Event::BeaconHeaderImported{block_hash: block_root, slot});
 		}
 
 		fn store_execution_header(block_hash: H256, header: ExecutionHeaderOf<T>, beacon_slot: u64, beacon_block_root: H256) {
@@ -662,7 +662,7 @@ pub mod pallet {
 				<LatestExecutionHeaderState<T>>::set(execution_header_state);
 			}
 
-			Self::deposit_event(Event::ExecutionHeaderImported{block_hash: block_hash, block_number: block_number});
+			Self::deposit_event(Event::ExecutionHeaderImported{block_hash, block_number});
 		}
 
 		fn store_validators_root(validators_root: H256) {
