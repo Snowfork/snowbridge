@@ -133,30 +133,28 @@ cp target/release/snowbridge-query-events /tmp/snowbridge/bin/
 
 ## Generating pallet weights from benchmarks
 
-Build the parachain with the runtime benchmark flags and generate the chain spec:
+Build the parachain with the runtime benchmark flags for the chosen runtime:
 
 ```bash
 runtime=snowbase
 cargo build \
     --release \
     --no-default-features \
-    --features "${runtime}-native,rococo-native,runtime-benchmarks,${runtime}-runtime-benchmarks" \
+    --features "$runtime-native,rococo-native,runtime-benchmarks,$runtime-runtime-benchmarks" \
     --bin snowbridge
-./target/release/snowbridge build-spec --chain $runtime --disable-default-bootnode > /tmp/snowbridge/spec.json
-cat "/tmp/snowbridge/spec.json" | node ../test/scripts/helpers/mutateSpec.js "/tmp/snowbridge/contracts.json" "/tmp/snowbridge/initialBeaconSync.json" | sponge "/tmp/snowbridge/spec.json"
 ```
 
 List available pallets and their benchmarks:
 
 ```bash
-./target/release/snowbridge benchmark pallet --chain /tmp/snowbridge/spec.json --list
+./target/release/snowbridge benchmark pallet --chain $runtime --list
 ```
 
 Run a benchmark for a pallet, generating weights:
 
 ```bash
 target/release/snowbridge benchmark pallet \
-  --chain=/tmp/snowbridge/spec.json \
+  --chain=$runtime \
   --execution=wasm \
   --wasm-execution=compiled \
   --pallet=basic_channel_inbound \
