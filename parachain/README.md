@@ -21,8 +21,8 @@ Refer to the instructions at the
 
 To add context to the above instructions, the parachain is known to compile with the following versions of Rust:
 
-- stable: 1.61
-- nightly: 1.62.0-nightly
+- stable: 1.62.1
+- nightly: 1.64.0-nightly
 
 ### Build
 

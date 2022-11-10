@@ -34,14 +34,14 @@ cd ../.. && pnpm install
 ### Polkadot
 
 * Clone the polkadot repository somewhere on your machine
-* Checkout tag `v0.9.29`.
+* Checkout tag `v0.9.30`.
 
 Example:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
 git fetch --tags
-git checkout v0.9.29
+git checkout v0.9.30
 cargo build --release
 ```
 

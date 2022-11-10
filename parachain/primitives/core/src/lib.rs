@@ -48,5 +48,5 @@ pub trait MessageCommitment {
 pub trait MessageDispatch<T: Config, MessageId> {
 	fn dispatch(source: H160, id: MessageId, payload: &[u8]);
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_dispatch_event(id: MessageId) -> Option<<T as Config>::Event>;
+	fn successful_dispatch_event(id: MessageId) -> Option<<T as Config>::RuntimeEvent>;
 }

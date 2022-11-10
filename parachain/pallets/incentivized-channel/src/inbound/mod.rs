@@ -42,7 +42,7 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Verifier module for message verification.
 		type Verifier: Verifier;
@@ -63,7 +63,7 @@ pub mod pallet {
 		type FeeConverter: Convert<U256, Option<BalanceOf<Self>>>;
 
 		/// The origin which may update reward related params
-		type UpdateOrigin: EnsureOrigin<Self::Origin>;
+		type UpdateOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;

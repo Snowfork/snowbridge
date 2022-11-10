@@ -9,12 +9,12 @@ repository = "https://github.com/Snowfork/snowbridge"
 targets = [ "x86_64-unknown-linux-gnu" ]
 
 [dependencies]
-codec = { version = "3.0.0", package = "parity-scale-codec", features = [ "derive" ] }
+codec = { version = "3.1.5", package = "parity-scale-codec", features = [ "derive" ] }
 jsonrpsee = { version = "0.15.1", features = ["server", "macros"] }
 
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
-sp-offchain = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.29' }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.30" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.30" }
+sp-offchain = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.30' }
 parking_lot = "0.11.0"
 
 snowbridge-basic-channel-merkle-proof = { path = "../merkle-proof" }

@@ -47,8 +47,8 @@ impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
-	type Origin = Origin;
-	type Call = Call;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -56,7 +56,7 @@ impl frame_system::Config for Test {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
@@ -90,13 +90,13 @@ impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
 	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_dispatch_event(_: MessageId) -> Option<<Test as frame_system::Config>::Event> {
+	fn successful_dispatch_event(_: MessageId) -> Option<<Test as frame_system::Config>::RuntimeEvent> {
 		None
 	}
 }
 
 impl basic_inbound_channel::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
 	type MessageDispatch = MockMessageDispatch;
 	type WeightInfo = ();
@@ -171,7 +171,7 @@ const MESSAGE_DATA_1: [u8; 251] = hex!(
 fn test_submit_with_invalid_source_channel() {
 	new_tester(H160::zero()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
-		let origin = Origin::signed(relayer);
+		let origin = RuntimeOrigin::signed(relayer);
 
 		// Submit message
 		let message = Message {
@@ -193,7 +193,7 @@ fn test_submit_with_invalid_source_channel() {
 fn test_submit() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
-		let origin = Origin::signed(relayer);
+		let origin = RuntimeOrigin::signed(relayer);
 
 		// Submit message 1
 		let message_1 = Message {
@@ -231,7 +231,7 @@ fn test_submit() {
 fn test_submit_with_invalid_nonce() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
-		let origin = Origin::signed(relayer);
+		let origin = RuntimeOrigin::signed(relayer);
 
 		// Submit message
 		let message = Message {

@@ -40,7 +40,7 @@ pub struct TransferInfo {
 }
 
 /// Transfers an asset to the destination parachain. Transfer failures are emitted by events.
-pub trait XcmReserveTransfer<AccountId, Origin> {
+pub trait XcmReserveTransfer<AccountId, RuntimeOrigin> {
 	fn reserve_transfer(
 		asset_id: u128,
 		sender: H160,
