@@ -213,6 +213,7 @@ pub fn run() -> Result<()> {
 					)?;
 					cmd.run(partials.client)
 				}),
+				#[cfg(feature = "runtime-benchmarks")]
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
 					let partials = new_partial::<RuntimeApi, TemplateRuntimeExecutor, _>(
 						&config,

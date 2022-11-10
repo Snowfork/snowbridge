@@ -9,7 +9,7 @@ pub mod weights;
 mod test;
 
 use frame_system::ensure_signed;
-use snowbridge_core::{ChannelId, Message, MessageDispatch, MessageId, Verifier};
+use snowbridge_core::{Message, MessageDispatch, MessageId, Verifier};
 use sp_core::H160;
 use sp_std::convert::TryFrom;
 
@@ -32,7 +32,7 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Verifier module for message verification.
 		type Verifier: Verifier;

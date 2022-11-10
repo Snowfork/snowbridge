@@ -1,5 +1,5 @@
 use crate::{
-	mock::{new_tester, AccountId, Balances, DotApp, Event, Origin, System, Test},
+	mock::{new_tester, AccountId, Balances, DotApp, RuntimeEvent, RuntimeOrigin, System, Test},
 	Config,
 };
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::Currency};
@@ -7,7 +7,7 @@ use snowbridge_core::ChannelId;
 use sp_core::H160;
 use sp_keyring::AccountKeyring as Keyring;
 
-fn last_event() -> Event {
+fn last_event() -> RuntimeEvent {
 	System::events().pop().expect("Event expected").event
 }
 
@@ -21,7 +21,7 @@ fn should_lock() {
 		let _ = Balances::deposit_creating(&sender, amount * 2);
 
 		assert_ok!(DotApp::lock(
-			Origin::signed(sender.clone()),
+			RuntimeOrigin::signed(sender.clone()),
 			ChannelId::Incentivized,
 			recipient.clone(),
 			amount
@@ -30,7 +30,7 @@ fn should_lock() {
 		assert_eq!(Balances::total_balance(&DotApp::account_id().unwrap()), amount);
 
 		assert_eq!(
-			Event::DotApp(crate::Event::<Test>::Locked(sender, recipient, amount)),
+			RuntimeEvent::DotApp(crate::Event::<Test>::Locked(sender, recipient, amount)),
 			last_event()
 		);
 	});
@@ -59,7 +59,7 @@ fn should_unlock() {
 		assert_eq!(Balances::total_balance(&DotApp::account_id().unwrap()), balance - amount);
 
 		assert_eq!(
-			Event::DotApp(crate::Event::<Test>::Unlocked(sender, recipient, amount)),
+			RuntimeEvent::DotApp(crate::Event::<Test>::Unlocked(sender, recipient, amount)),
 			last_event()
 		);
 	});
@@ -90,7 +90,7 @@ fn should_not_unlock_on_bad_origin_failure() {
 
 		assert_noop!(
 			DotApp::unlock(
-				Origin::signed(Keyring::Alice.into()),
+				RuntimeOrigin::signed(Keyring::Alice.into()),
 				sender,
 				recipient.clone(),
 				amount_wrapped,
@@ -111,7 +111,7 @@ fn should_not_lock_on_add_commitment_failure() {
 
 		for _ in 0..3 {
 			let _ = DotApp::lock(
-				Origin::signed(sender.clone()),
+				RuntimeOrigin::signed(sender.clone()),
 				ChannelId::Incentivized,
 				recipient.clone(),
 				1,
@@ -120,7 +120,7 @@ fn should_not_lock_on_add_commitment_failure() {
 
 		assert_noop!(
 			DotApp::lock(
-				Origin::signed(sender.clone()),
+				RuntimeOrigin::signed(sender.clone()),
 				ChannelId::Incentivized,
 				recipient.clone(),
 				amount
