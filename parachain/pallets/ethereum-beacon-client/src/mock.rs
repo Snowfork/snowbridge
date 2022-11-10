@@ -23,8 +23,8 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
-		EthereumBeaconClient: ethereum_beacon_client::{Pallet, RuntimeCall, Config<T>, Storage, RuntimeEvent<T>},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config<T>, Storage, Event<T>},
 	}
 );
 

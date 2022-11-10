@@ -39,8 +39,8 @@ pub mod mock_verifier {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
-			Verifier: verifier::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>},
+			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Verifier: verifier::{Pallet, Call, Config, Storage, Event<T>},
 		}
 	);
 
@@ -101,8 +101,8 @@ pub mod mock_verifier_with_pow {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
-			Verifier: verifier::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>},
+			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Verifier: verifier::{Pallet, Call, Config, Storage, Event<T>},
 		}
 	);
 

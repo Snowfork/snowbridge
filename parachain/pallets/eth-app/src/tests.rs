@@ -1,4 +1,4 @@
-use crate::mock::{new_tester, AccountId, Ether, EtherApp, Event, RuntimeOrigin, System, Test};
+use crate::mock::{new_tester, AccountId, Ether, EtherApp, RuntimeEvent, RuntimeOrigin, System, Test};
 use frame_support::{
 	assert_noop, assert_ok,
 	traits::fungible::{Inspect, Mutate},
@@ -9,7 +9,7 @@ use sp_keyring::AccountKeyring as Keyring;
 use snowbridge_core::ChannelId;
 use snowbridge_xcm_support_primitives::RemoteParachain;
 
-fn last_event() -> Event {
+fn last_event() -> RuntimeEvent {
 	System::events().pop().expect("Event expected").event
 }
 
@@ -31,7 +31,7 @@ fn mints_after_handling_ethereum_event() {
 		assert_eq!(Ether::balance(&recipient), amount);
 
 		assert_eq!(
-			Event::EtherApp(crate::Event::<Test>::Minted(sender, recipient, amount)),
+			RuntimeEvent::EtherApp(crate::Event::<Test>::Minted(sender, recipient, amount)),
 			last_event()
 		);
 	});
@@ -55,7 +55,7 @@ fn mints_after_xcm_error() {
 		assert_eq!(Ether::balance(&recipient), amount);
 
 		assert_eq!(
-			Event::EtherApp(crate::Event::<Test>::Minted(sender, recipient, amount)),
+			RuntimeEvent::EtherApp(crate::Event::<Test>::Minted(sender, recipient, amount)),
 			last_event()
 		);
 	});
@@ -76,7 +76,7 @@ fn burn_should_emit_bridge_event() {
 			20
 		));
 
-		assert_eq!(Event::EtherApp(crate::Event::<Test>::Burned(bob, recipient, 20)), last_event());
+		assert_eq!(RuntimeEvent::EtherApp(crate::Event::<Test>::Burned(bob, recipient, 20)), last_event());
 	});
 }
 

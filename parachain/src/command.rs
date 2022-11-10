@@ -382,12 +382,11 @@ pub fn run() -> Result<()> {
 				}),
 				// https://github.com/paritytech/substrate/blob/1802a115e8480fd7a4654d45c85b58c2189c508a/client/db/src/lib.rs#L1096
 				#[cfg(feature = "runtime-benchmarks")]
-					BenchmarkCmd::Storage(_) => Err(
-						"Storage benchmarking can be enabled with `--features runtime-benchmarks`."
-							.into(),
-					),
+				BenchmarkCmd::Storage(_) => Err(
+					"Storage benchmarking can be enabled with `--features runtime-benchmarks`."
+						.into(),
+				),
 				#[cfg(feature = "runtime-benchmarks")]
-				#[allow(unreachable_patterns)]
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
 					#[cfg(feature = "snowbridge-native")]
 					if config.chain_spec.is_snowbridge() {

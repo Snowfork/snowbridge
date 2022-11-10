@@ -1,9 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-	dispatch::{DispatchResult, Dispatchable, Parameter},
+	dispatch::{DispatchResult, Dispatchable, Parameter, GetDispatchInfo},
 	traits::{Contains, EnsureOrigin},
-	dispatch::GetDispatchInfo,
 };
 
 use scale_info::TypeInfo;
@@ -159,8 +158,8 @@ mod tests {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
-			Dispatch: dispatch::{Pallet, Storage, RuntimeOrigin, RuntimeEvent<T>},
+			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Dispatch: dispatch::{Pallet, Storage, Origin, Event<T>},
 		}
 	);
 
@@ -201,7 +200,7 @@ mod tests {
 	impl frame_support::traits::Contains<RuntimeCall> for CallFilter {
 		fn contains(call: &RuntimeCall) -> bool {
 			match call {
-				RuntimeCall::System(frame_system::pallet::RuntimeCall::<Test>::remark { remark: _ }) => true,
+				RuntimeCall::System(frame_system::pallet::Call::<Test>::remark { remark: _ }) => true,
 				_ => false,
 			}
 		}
@@ -235,7 +234,7 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: Event::Dispatch(crate::Event::<Test>::MessageDispatched(
+					event: RuntimeEvent::Dispatch(crate::Event::<Test>::MessageDispatched(
 						id,
 						Err(DispatchError::BadOrigin)
 					)),
@@ -260,7 +259,7 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: Event::Dispatch(crate::Event::<Test>::MessageDecodeFailed(id)),
+					event: RuntimeEvent::Dispatch(crate::Event::<Test>::MessageDecodeFailed(id)),
 					topics: vec![],
 				}],
 			);
@@ -282,7 +281,7 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: Event::Dispatch(crate::Event::<Test>::MessageRejected(id)),
+					event: RuntimeEvent::Dispatch(crate::Event::<Test>::MessageRejected(id)),
 					topics: vec![],
 				}],
 			);

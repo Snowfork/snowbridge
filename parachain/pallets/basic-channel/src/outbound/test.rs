@@ -24,8 +24,8 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
-		BasicOutboundChannel: basic_outbound_channel::{Pallet, Config<T>, Storage, RuntimeEvent<T>},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		BasicOutboundChannel: basic_outbound_channel::{Pallet, Config<T>, Storage, Event<T>},
 	}
 );
 

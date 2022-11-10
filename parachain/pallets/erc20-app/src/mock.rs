@@ -29,14 +29,14 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
-		Balances: pallet_balances::{Pallet, RuntimeCall, Storage, Config<T>, RuntimeEvent<T>},
-		Assets: pallet_assets::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage},
-		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Config<T>, Storage, RuntimeEvent<T>},
-		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, RuntimeCall, Config<T>, Storage, RuntimeEvent<T>},
-		Dispatch: snowbridge_dispatch::{Pallet, RuntimeCall, Storage, RuntimeOrigin, RuntimeEvent<T>},
-		Erc20App: crate::{Pallet, RuntimeCall, Config, Storage, RuntimeEvent<T>},
+		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Config<T>, Storage, Event<T>},
+		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
+		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
+		Erc20App: crate::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
 

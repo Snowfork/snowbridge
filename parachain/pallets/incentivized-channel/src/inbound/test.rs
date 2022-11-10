@@ -33,9 +33,9 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
-		Balances: pallet_balances::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
-		IncentivizedInboundChannel: incentivized_inbound_channel::{Pallet, RuntimeCall, Storage, RuntimeEvent<T>},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage,Event<T>},
+		IncentivizedInboundChannel: incentivized_inbound_channel::{Pallet, Call, Storage, Event<T>},
 	}
 );
 

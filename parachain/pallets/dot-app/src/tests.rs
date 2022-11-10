@@ -1,5 +1,5 @@
 use crate::{
-	mock::{new_tester, AccountId, Balances, DotApp, Event, RuntimeOrigin, System, Test},
+	mock::{new_tester, AccountId, Balances, DotApp, RuntimeEvent, RuntimeOrigin, System, Test},
 	Config,
 };
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::Currency};
@@ -7,7 +7,7 @@ use snowbridge_core::ChannelId;
 use sp_core::H160;
 use sp_keyring::AccountKeyring as Keyring;
 
-fn last_event() -> Event {
+fn last_event() -> RuntimeEvent {
 	System::events().pop().expect("Event expected").event
 }
 
@@ -30,7 +30,7 @@ fn should_lock() {
 		assert_eq!(Balances::total_balance(&DotApp::account_id().unwrap()), amount);
 
 		assert_eq!(
-			Event::DotApp(crate::Event::<Test>::Locked(sender, recipient, amount)),
+			RuntimeEvent::DotApp(crate::Event::<Test>::Locked(sender, recipient, amount)),
 			last_event()
 		);
 	});
@@ -59,7 +59,7 @@ fn should_unlock() {
 		assert_eq!(Balances::total_balance(&DotApp::account_id().unwrap()), balance - amount);
 
 		assert_eq!(
-			Event::DotApp(crate::Event::<Test>::Unlocked(sender, recipient, amount)),
+			RuntimeEvent::DotApp(crate::Event::<Test>::Unlocked(sender, recipient, amount)),
 			last_event()
 		);
 	});

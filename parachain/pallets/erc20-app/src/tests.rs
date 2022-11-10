@@ -1,4 +1,4 @@
-use crate::mock::{new_tester, AccountId, Assets, Erc20App, Event, RuntimeOrigin, System, Test};
+use crate::mock::{new_tester, AccountId, Assets, Erc20App, RuntimeEvent, RuntimeOrigin, System, Test};
 use frame_support::{assert_noop, assert_ok};
 use snowbridge_core::ChannelId;
 use snowbridge_xcm_support_primitives::RemoteParachain;
@@ -9,7 +9,7 @@ use frame_support::traits::tokens::fungibles::Mutate;
 
 use crate::AssetId;
 
-fn last_event() -> Event {
+fn last_event() -> RuntimeEvent {
 	System::events().pop().expect("Event expected").event
 }
 
@@ -36,7 +36,7 @@ fn mints_after_handling_ethereum_event() {
 		assert_eq!(Assets::balance(<AssetId<Test>>::get(token).unwrap(), &recipient), amount);
 
 		assert_eq!(
-			Event::Erc20App(crate::Event::<Test>::Minted(token, sender, recipient, amount)),
+			RuntimeEvent::Erc20App(crate::Event::<Test>::Minted(token, sender, recipient, amount)),
 			last_event()
 		);
 	});
@@ -65,7 +65,7 @@ fn mints_after_xcm_failure() {
 		assert_eq!(Assets::balance(<AssetId<Test>>::get(token).unwrap(), &recipient), amount);
 
 		assert_eq!(
-			Event::Erc20App(crate::Event::<Test>::Minted(token, sender, recipient, amount)),
+			RuntimeEvent::Erc20App(crate::Event::<Test>::Minted(token, sender, recipient, amount)),
 			last_event()
 		);
 	});
@@ -96,7 +96,7 @@ fn burn_should_emit_bridge_event() {
 		));
 
 		assert_eq!(
-			Event::Erc20App(crate::Event::<Test>::Burned(token_id, bob, recipient, 20)),
+			RuntimeEvent::Erc20App(crate::Event::<Test>::Burned(token_id, bob, recipient, 20)),
 			last_event()
 		);
 	});

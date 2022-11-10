@@ -12,7 +12,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 serde = { version = "1.0.137", optional = true }
-codec = { version = "3.0.0", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
+codec = { version = "3.1.5", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
 scale-info = { version = "2.2.0", default-features = false, features = [ "derive" ] }
 milagro_bls = { git = "https://github.com/Snowfork/milagro_bls", default-features = false }
 ssz-rs = { git = "https://github.com/Snowfork/ssz_rs", default-features = false, rev="8d497a949c320577aa1f741eb9f2958191df905b" }
