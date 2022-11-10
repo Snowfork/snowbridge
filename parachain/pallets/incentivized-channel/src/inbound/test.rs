@@ -34,7 +34,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage,Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		IncentivizedInboundChannel: incentivized_inbound_channel::{Pallet, Call, Storage, Event<T>},
 	}
 );
