@@ -10,6 +10,9 @@
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "scripts": {
+    "lint": "eslint ."
+  },
   "devDependencies": {
     "@types/node": "^18.11.9",
     "@typescript-eslint/eslint-plugin": "^5.42.0",

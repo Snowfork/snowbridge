@@ -1,5 +1,4 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
-import { createType } from "@polkadot/types";
 import { Keyring } from "@polkadot/api";
 import { bundle } from "@snowfork/snowbridge-types";
 import yargs from "yargs"

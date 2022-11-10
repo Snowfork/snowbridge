@@ -27,8 +27,8 @@ use crate::merkleization::get_sync_committee_bits;
 
 pub use pallet::*;
 
-pub type BlockUpdateOf<T> = BlockUpdate<<T as Config>::MaxFeeRecipientSize, <T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize, <T as Config>::MaxDepositDataSize, 
-<T as Config>::MaxPublicKeySize, <T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxProposerSlashingSize, <T as Config>::MaxAttesterSlashingSize, 
+pub type BlockUpdateOf<T> = BlockUpdate<<T as Config>::MaxFeeRecipientSize, <T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize, <T as Config>::MaxDepositDataSize,
+<T as Config>::MaxPublicKeySize, <T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxProposerSlashingSize, <T as Config>::MaxAttesterSlashingSize,
 <T as Config>::MaxVoluntaryExitSize, <T as Config>::MaxAttestationSize,<T as Config>::MaxValidatorsPerCommittee, <T as Config>::MaxSyncCommitteeSize>;
 pub type InitialSyncOf<T> = InitialSync<<T as Config>::MaxSyncCommitteeSize, <T as Config>::MaxProofBranchSize>;
 pub type SyncCommitteePeriodUpdateOf<T> = SyncCommitteePeriodUpdate<<T as Config>::MaxSignatureSize, <T as Config>::MaxProofBranchSize, <T as Config>::MaxSyncCommitteeSize>;
@@ -637,7 +637,7 @@ pub mod pallet {
 				<LatestFinalizedHeaderHash<T>>::set(block_root);
 			}
 
-			Self::deposit_event(Event::BeaconHeaderImported{block_hash: block_root, slot: slot});
+			Self::deposit_event(Event::BeaconHeaderImported{block_hash: block_root, slot});
 		}
 
 		fn store_execution_header(block_hash: H256, header: ExecutionHeaderOf<T>, beacon_slot: u64, beacon_block_root: H256) {
@@ -664,7 +664,7 @@ pub mod pallet {
 				<LatestExecutionHeaderState<T>>::set(execution_header_state);
 			}
 
-			Self::deposit_event(Event::ExecutionHeaderImported{block_hash: block_hash, block_number: block_number});
+			Self::deposit_event(Event::ExecutionHeaderImported{block_hash, block_number});
 		}
 
 		fn store_validators_root(validators_root: H256) {

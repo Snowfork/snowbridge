@@ -54,6 +54,7 @@ class PolkadotContext {
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const contextFactory = async (config: Config): Promise<Context> => {
     let ethApi = new ethers.providers.WebSocketProvider(config.ethereum.url)
     let polApi = await ApiPromise.create({
