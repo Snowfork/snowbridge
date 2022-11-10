@@ -14,6 +14,7 @@
     "baseUrl": "."
   },
   "include": ["src", "scripts/*.ts"],
+  "exclude": ["scripts/make-xcm-transfer.ts"],
   "references": [
     {
       "path": "../contracts"
