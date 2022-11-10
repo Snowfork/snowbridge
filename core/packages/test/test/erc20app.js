@@ -85,7 +85,7 @@ describe('Bridge', function () {
     })
   });
 
-  describe('ERC20 App XCM', function () {
+  describe.skip('ERC20 App XCM', function () {
     it('should transfer ERC20 tokens from Ethereum to Parachain 1001', async function () {
       const amount = BigNumber('1000');
       const xcmFee = 4_000_000;
