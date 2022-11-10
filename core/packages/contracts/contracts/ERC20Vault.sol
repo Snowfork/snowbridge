@@ -24,6 +24,12 @@ contract ERC20Vault is Ownable {
     /// @param amount The amount being withdrawn.
     event Withdraw(address account, address recipient, address token, uint128 amount);
 
+    /// @dev Token Transfer failed.
+    error TokenTransferFailed();
+
+    /// @dev Not enough funds to transfer.
+    error InsufficientBalance();
+
     /* State */
     mapping(address => uint128) public balances;
 
@@ -36,10 +42,9 @@ contract ERC20Vault is Ownable {
         onlyOwner
     {
         balances[_token] = balances[_token] + _amount;
-        require(
-            IERC20(_token).transferFrom(_sender, address(this), _amount),
-            "Contract token allowances insufficient to complete this lock request"
-        );
+        if (!IERC20(_token).transferFrom(_sender, address(this), _amount)) {
+            revert TokenTransferFailed();
+        }
         emit Deposit(msg.sender, _sender, _token, _amount);
     }
 
@@ -51,11 +56,9 @@ contract ERC20Vault is Ownable {
         external
         onlyOwner
     {
-        require(_amount > 0, "Must unlock a positive amount");
-        require(
-            _amount <= balances[_token],
-            "ERC20 token balances insufficient to fulfill the unlock request"
-        );
+        if (_amount > balances[_token]) {
+            revert InsufficientBalance();
+        }
 
         balances[_token] = balances[_token] - _amount;
         IERC20(_token).safeTransfer(_recipient, _amount);

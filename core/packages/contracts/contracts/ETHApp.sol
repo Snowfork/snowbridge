@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./RewardController.sol";
 import "./OutboundChannel.sol";
 import "./ETHAppPallet.sol";
+import "./EtherVault.sol";
 import "./ChannelRegistry.sol";
 
 enum ChannelId {
@@ -13,10 +14,10 @@ enum ChannelId {
 }
 
 contract ETHApp is RewardController, AccessControl {
+    EtherVault public immutable vault;
     ChannelRegistry public immutable registry;
 
     bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
-
 
     event Locked(
         address sender,
@@ -43,13 +44,12 @@ contract ETHApp is RewardController, AccessControl {
     // Not enough funds to unlock
     error ExceedsBalance();
 
-    // Recipient rejects funds
-    error CannotUnlock();
-
     constructor(
         address rewarder,
+        EtherVault etherVault,
         ChannelRegistry channelRegistry
     ) {
+        vault = etherVault;
         registry = channelRegistry;
         _setupRole(REWARD_ROLE, rewarder);
     }
@@ -74,6 +74,7 @@ contract ETHApp is RewardController, AccessControl {
         }
 
         uint128 value = uint128(msg.value);
+        vault.deposit{value: msg.value}(msg.sender);
 
         bytes memory call;
         uint64 weight;
@@ -101,11 +102,7 @@ contract ETHApp is RewardController, AccessControl {
             revert ExceedsBalance();
         }
 
-        (bool success, ) = _recipient.call{value: _amount}("");
-        if (!success) {
-            revert CannotUnlock();
-        }
-
+        vault.withdraw(_recipient, _amount);
         emit Unlocked(_sender, _recipient, _amount);
     }
 
@@ -118,5 +115,14 @@ contract ETHApp is RewardController, AccessControl {
         if (success) {
             emit Rewarded(_relayer, _amount);
         }
+    }
+
+    function transferVaultOwnership(
+        address newOwner
+    ) external {
+        if (!registry.isInboundChannel(msg.sender)) {
+            revert Unauthorized();
+        }
+        vault.transferOwnership(newOwner);
     }
 }
