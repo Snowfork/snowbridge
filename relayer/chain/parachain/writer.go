@@ -1,4 +1,4 @@
-package writer
+package parachain
 
 import (
 	"context"
@@ -8,22 +8,21 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"golang.org/x/sync/errgroup"
 )
 
 type ParachainWriter struct {
-	conn                 *parachain.Connection
+	conn                 *Connection
 	nonce                uint32
-	pool                 *parachain.ExtrinsicPool
+	pool                 *ExtrinsicPool
 	genesisHash          types.Hash
 	maxWatchedExtrinsics int64
 	mu                   sync.Mutex
 }
 
 func NewParachainWriter(
-	conn *parachain.Connection,
+	conn *Connection,
 	maxWatchedExtrinsics int64,
 ) *ParachainWriter {
 	return &ParachainWriter{
@@ -46,7 +45,7 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 	}
 	wr.genesisHash = genesisHash
 
-	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn, wr.maxWatchedExtrinsics)
+	wr.pool = NewExtrinsicPool(eg, wr.conn, wr.maxWatchedExtrinsics)
 
 	return nil
 }
@@ -156,7 +155,7 @@ func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName str
 	}
 
 	ext := types.NewExtrinsic(c)
-	era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
+	era := NewMortalEra(uint64(latestBlock.Block.Header.Number))
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
 	if err != nil {

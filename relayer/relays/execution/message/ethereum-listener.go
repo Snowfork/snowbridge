@@ -12,7 +12,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+	"github.com/snowfork/snowbridge/relayer/relays/execution/config"
 	"golang.org/x/sync/errgroup"
 )
 
