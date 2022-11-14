@@ -6,10 +6,10 @@ let POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684
 describe("ERC20App", function () {
     describe("deposits", function () {
         it("should lock funds", async function () {
-            let { app, token, user, channelID } = await loadFixture(erc20AppFixture)
+            let { app, vault, token, user, channelID } = await loadFixture(erc20AppFixture)
 
             let amount = ethers.BigNumber.from(10)
-            let beforeVaultBalance = await app.balances(token.address)
+            let beforeVaultBalance = await vault.balances(token.address)
             let beforeUserBalance = await token.balanceOf(user.address)
 
             await expect(
@@ -18,7 +18,7 @@ describe("ERC20App", function () {
                 .to.emit(app, "Locked")
                 .withArgs(token.address, user.address, POLKADOT_ADDRESS, amount, 0, 0)
 
-            let afterVaultBalance = await app.balances(token.address)
+            let afterVaultBalance = await vault.balances(token.address)
             let afterUserBalance = await token.balanceOf(user.address)
 
             expect(afterVaultBalance).to.be.equal(beforeVaultBalance.add(10))
@@ -26,10 +26,10 @@ describe("ERC20App", function () {
         })
 
         it("should lock funds and forward to destination parachain", async function () {
-            let { app, token, user, channelID } = await loadFixture(erc20AppFixture)
+            let { app, vault, token, user, channelID } = await loadFixture(erc20AppFixture)
 
             let amount = ethers.BigNumber.from(10)
-            let beforeVaultBalance = await app.balances(token.address)
+            let beforeVaultBalance = await vault.balances(token.address)
             let beforeUserBalance = await token.balanceOf(user.address)
 
             await token.connect(user).approve(app.address, amount.mul(2))
@@ -40,7 +40,7 @@ describe("ERC20App", function () {
                 .to.emit(app, "Locked")
                 .withArgs(token.address, user.address, POLKADOT_ADDRESS, amount, 2048, 0)
 
-            let afterVaultBalance = await app.balances(token.address)
+            let afterVaultBalance = await vault.balances(token.address)
             let afterUserBalance = await token.balanceOf(user.address)
 
             expect(afterVaultBalance).to.be.equal(beforeVaultBalance.add(10))

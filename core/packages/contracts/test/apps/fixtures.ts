@@ -4,7 +4,9 @@ import {
     ScaleCodec__factory,
     OutboundChannel__factory,
     ETHApp__factory,
+    EtherVault__factory,
     ERC20App__factory,
+    ERC20Vault__factory,
     DOTApp__factory,
     WrappedToken__factory,
     TestToken__factory,
@@ -41,16 +43,23 @@ async function baseFixture() {
 async function ethAppFixture() {
     let { registry, codec, owner, user } = await loadFixture(baseFixture)
 
+
+    let vault = await new EtherVault__factory(owner).deploy()
+    await vault.deployed()
+
     let app = await new ETHApp__factory(
         {
             "contracts/ScaleCodec.sol:ScaleCodec": codec.address,
         },
         owner
-    ).deploy(owner.address, registry.address)
+    ).deploy(owner.address, vault.address, registry.address)
     await app.deployed()
+
+    await vault.transferOwnership(app.address)
 
     return {
         app,
+        vault,
         owner,
         user,
         channelID: 0,
@@ -60,22 +69,28 @@ async function ethAppFixture() {
 async function erc20AppFixture() {
     let { registry, codec, owner, user } = await loadFixture(baseFixture)
 
+    let vault = await new ERC20Vault__factory(owner).deploy()
+    await vault.deployed()
+
     let app = await new ERC20App__factory(
         {
             "contracts/ScaleCodec.sol:ScaleCodec": codec.address,
         },
         owner
-    ).deploy(registry.address)
+    ).deploy(vault.address, registry.address)
     await app.deployed()
+
+    await vault.transferOwnership(app.address)
 
     let token = await new TestToken__factory(owner).deploy("Test Token", "TEST")
     await token.deployed()
 
     await token.mint(user.address, 100)
-    await token.connect(user).approve(app.address, 100)
+    await token.connect(user).approve(vault.address, 100)
 
     return {
         app,
+        vault,
         token,
         owner,
         user,

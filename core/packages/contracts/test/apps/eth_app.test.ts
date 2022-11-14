@@ -6,9 +6,9 @@ let POLKADOT_ACCOUNT = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684
 describe("ETHApp", function () {
     describe("deposits", function () {
         it("should lock funds", async function () {
-            let { app, user, channelID } = await loadFixture(ethAppFixture)
+            let { app, vault, user, channelID } = await loadFixture(ethAppFixture)
 
-            let beforeBalance = await ethers.provider.getBalance(app.address)
+            let beforeBalance = await ethers.provider.getBalance(vault.address)
             let amount = ethers.utils.parseEther("0.25")
 
             await expect(
@@ -20,14 +20,14 @@ describe("ETHApp", function () {
                 .withArgs(user.address, POLKADOT_ACCOUNT, amount, 0, 0)
 
             // Confirm contract's balance has increased
-            let afterBalance = await ethers.provider.getBalance(app.address)
+            let afterBalance = await ethers.provider.getBalance(vault.address)
             expect(afterBalance).to.equal(beforeBalance.add(amount))
         })
 
         it("should lock funds and forward to destination parachain", async function () {
-            let { app, user, channelID } = await loadFixture(ethAppFixture)
+            let { app, vault, user, channelID } = await loadFixture(ethAppFixture)
 
-            let beforeBalance = await ethers.provider.getBalance(app.address)
+            let beforeBalance = await ethers.provider.getBalance(vault.address)
             let amount = ethers.utils.parseEther("0.25")
 
             await expect(
@@ -39,7 +39,7 @@ describe("ETHApp", function () {
                 .withArgs(user.address, POLKADOT_ACCOUNT, amount, 2048, 0)
 
             // Confirm contract's balance has increased
-            let afterBalance = await ethers.provider.getBalance(app.address)
+            let afterBalance = await ethers.provider.getBalance(vault.address)
             expect(afterBalance).to.equal(beforeBalance.add(amount))
         })
 
@@ -64,25 +64,25 @@ describe("ETHApp", function () {
 
     describe("withdrawals", function () {
         async function withdrawalsFixture() {
-            let { app, owner, user, channelID } = await loadFixture(ethAppFixture)
+            let { app, vault, owner, user, channelID } = await loadFixture(ethAppFixture)
             await app.connect(user).lock(POLKADOT_ACCOUNT, 0, 0, channelID, {
                 value: ethers.utils.parseEther("2"),
             })
-            return { app, owner, user }
+            return { app, vault, owner, user }
         }
 
         it("should unlock", async function () {
-            let { app, user } = await loadFixture(withdrawalsFixture)
+            let { app, vault, user } = await loadFixture(withdrawalsFixture)
 
             let amount = ethers.utils.parseEther("1")
-            let beforeBalance = await ethers.provider.getBalance(app.address)
+            let beforeBalance = await ethers.provider.getBalance(vault.address)
             let beforeRecipientBalance = await ethers.provider.getBalance(user.address)
 
             await expect(app.unlock(POLKADOT_ACCOUNT, user.address, amount))
                 .to.emit(app, "Unlocked")
                 .withArgs(POLKADOT_ACCOUNT, user.address, amount)
 
-            let afterBalance = await ethers.provider.getBalance(app.address)
+            let afterBalance = await ethers.provider.getBalance(vault.address)
             let afterRecipientBalance = await ethers.provider.getBalance(user.address)
 
             expect(afterBalance).to.be.equal(beforeBalance.sub(amount))

@@ -98,7 +98,7 @@ contract ETHApp is RewardController, AccessControl {
             revert Unauthorized();
         }
 
-        if (_amount > address(this).balance) {
+        if (_amount > address(vault).balance) {
             revert ExceedsBalance();
         }
 
