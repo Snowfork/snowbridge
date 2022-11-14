@@ -46,6 +46,37 @@ describe("ERC20App", function () {
             expect(afterVaultBalance).to.be.equal(beforeVaultBalance.add(10))
             expect(afterUserBalance).to.be.equal(beforeUserBalance.sub(10))
         })
+
+        it("should not lock funds for unknown channel", async function () {
+            let { app, token, user } = await loadFixture(erc20AppFixture)
+
+            let amount = ethers.BigNumber.from(10)
+            let channelID = 42;
+
+            await expect(app.connect(user).lock(token.address, POLKADOT_ADDRESS, amount, 2048, 0, channelID))
+                .to.be.revertedWithCustomError(app, "UnknownChannel")
+        })
+    })
+
+    describe("vault ownership", function () {
+        it("should transfer ownership", async function () {
+            let { app, vault, token, user, owner, channelID } = await loadFixture(erc20AppFixture)
+
+            await expect(app.transferVaultOwnership(owner.address))
+                .to.emit(vault, "OwnershipTransferred")
+                .withArgs(app.address, owner.address)
+
+            let amount = ethers.BigNumber.from(10)
+            await expect(app.connect(user).lock(token.address, POLKADOT_ADDRESS, amount, 0, 0, channelID))
+                .to.be.revertedWith("Ownable: caller is not the owner")
+        })
+
+        it("should not transfer ownership if unauthorized", async function () {
+            let { app, user } = await loadFixture(erc20AppFixture)
+
+            await expect(app.connect(user).transferVaultOwnership(user.address))
+                .to.be.revertedWithCustomError(app, "Unauthorized")
+        })
     })
 
     describe("withdrawals", function () {
@@ -65,6 +96,24 @@ describe("ERC20App", function () {
             await expect(app.unlock(token.address, POLKADOT_ADDRESS, user.address, amount))
                 .to.emit(app, "Unlocked").withArgs(token.address, POLKADOT_ADDRESS, user.address, amount)
                 .to.emit(vault, "Withdraw").withArgs(app.address, user.address, token.address, amount)
+        })
+
+        it("should not unlock funds from unauthorized address", async function () {
+            let { app, vault, token, user } = await loadFixture(withdrawalsFixture)
+
+            let amount = ethers.BigNumber.from(10)
+
+            await expect(app.connect(user).unlock(token.address, POLKADOT_ADDRESS, user.address, amount))
+                .to.be.revertedWithCustomError(app, "Unauthorized")
+        })
+
+        it("should lock not lock mimimum amount", async function () {
+            let { app, token, user } = await loadFixture(withdrawalsFixture)
+
+            let amount = ethers.BigNumber.from(0)
+
+            await expect(app.unlock(token.address, POLKADOT_ADDRESS, user.address, amount))
+                .to.be.revertedWithCustomError(app, "MinimumAmount")
         })
     })
 })

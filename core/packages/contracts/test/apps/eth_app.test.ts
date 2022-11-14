@@ -64,6 +64,28 @@ describe("ETHApp", function () {
         })
     })
 
+    describe("vault ownership", function () {
+        it("should transfer ownership", async function () {
+            let { app, vault, user, owner, channelID } = await loadFixture(ethAppFixture)
+
+            await expect(app.transferVaultOwnership(owner.address))
+                .to.emit(vault, "OwnershipTransferred")
+                .withArgs(app.address, owner.address)
+
+            let amount = ethers.BigNumber.from(10)
+            await expect(app.connect(user).lock(POLKADOT_ACCOUNT, 0, 0, channelID, {
+                value: amount,
+            })).to.be.revertedWith("Ownable: caller is not the owner")
+        })
+
+        it("should not transfer ownership if unauthorized", async function () {
+            let { app, user } = await loadFixture(ethAppFixture)
+
+            await expect(app.connect(user).transferVaultOwnership(user.address))
+                .to.be.revertedWithCustomError(app, "Unauthorized")
+        })
+    })
+
     describe("withdrawals", function () {
         async function withdrawalsFixture() {
             let { app, vault, owner, user, channelID } = await loadFixture(ethAppFixture)
