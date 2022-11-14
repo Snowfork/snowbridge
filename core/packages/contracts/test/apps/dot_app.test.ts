@@ -44,6 +44,27 @@ describe("DOTApp", function () {
         })
     })
 
+    describe("wrapped token ownership", function () {
+        it("should transfer ownership", async function () {
+            let { app, token, user, owner } = await loadFixture(dotAppFixture)
+
+            await expect(app.transferVaultOwnership(owner.address))
+                .to.emit(token, "OwnershipTransferred")
+                .withArgs(app.address, owner.address)
+
+            let amount = wrapped(ethers.BigNumber.from("10000000000")) // 1 DOT
+            await expect(app.mint(POLKADOT_ACCOUNT, user.address, amount.wrapped))
+                .to.be.revertedWith("Ownable: caller is not the owner")
+        })
+
+        it("should not transfer ownership if unauthorized", async function () {
+            let { app, user } = await loadFixture(dotAppFixture)
+
+            await expect(app.connect(user).transferVaultOwnership(user.address))
+                .to.be.revertedWithCustomError(app, "Unauthorized")
+        })
+    })
+
     describe("burning", function () {
         async function burningFixture() {
             let { app, token, owner, user, channelID } = await loadFixture(dotAppFixture)
