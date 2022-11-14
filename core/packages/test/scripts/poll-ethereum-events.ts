@@ -12,6 +12,7 @@ const main = async () => {
         ETHApp: contracts.contracts.ETHApp,
         ERC20Vault: contracts.contracts.ERC20Vault,
         ERC20App: contracts.contracts.ERC20App,
+        WrappedToken: contracts.contracts.WrappedToken,
         DOTApp: contracts.contracts.DOTApp,
         BasicOutboundChannel: contracts.contracts.BasicOutboundChannel,
         IncentivizedOutboundChannel: contracts.contracts.IncentivizedOutboundChannel,
