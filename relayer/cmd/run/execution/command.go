@@ -2,16 +2,13 @@ package execution
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/execution"
 	"github.com/snowfork/snowbridge/relayer/relays/execution/config"
 	"github.com/spf13/cobra"
@@ -59,7 +56,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	keypair, err := resolvePrivateKey(privateKey, privateKeyFile)
+	keypair, err := parachain.ResolvePrivateKey(privateKey, privateKeyFile)
 	if err != nil {
 		return err
 	}
@@ -104,28 +101,4 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
-}
-
-func resolvePrivateKey(privateKey, privateKeyFile string) (*sr25519.Keypair, error) {
-	var cleanedKeyURI string
-
-	if privateKey == "" {
-		if privateKeyFile == "" {
-			return nil, fmt.Errorf("private key URI not supplied")
-		}
-		content, err := ioutil.ReadFile(privateKeyFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		cleanedKeyURI = strings.TrimSpace(string(content))
-	} else {
-		cleanedKeyURI = privateKey
-	}
-
-	keypair, err := sr25519.NewKeypairFromSeed(cleanedKeyURI, 42)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse private key URI: %w", err)
-	}
-
-	return keypair, nil
 }
