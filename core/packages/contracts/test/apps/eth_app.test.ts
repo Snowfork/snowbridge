@@ -18,6 +18,8 @@ describe("ETHApp", function () {
             )
                 .to.emit(app, "Locked")
                 .withArgs(user.address, POLKADOT_ACCOUNT, amount, 0, 0)
+                .to.emit(vault, "Deposit")
+                .withArgs(app.address, user.address, amount)
 
             // Confirm contract's balance has increased
             let afterBalance = await ethers.provider.getBalance(vault.address)
@@ -30,13 +32,13 @@ describe("ETHApp", function () {
             let beforeBalance = await ethers.provider.getBalance(vault.address)
             let amount = ethers.utils.parseEther("0.25")
 
-            await expect(
-                app.connect(user).lock(POLKADOT_ACCOUNT, 2048, 0, channelID, {
+            await expect(app.connect(user).lock(POLKADOT_ACCOUNT, 2048, 0, channelID, {
                     value: amount,
-                })
-            )
+                }))
                 .to.emit(app, "Locked")
                 .withArgs(user.address, POLKADOT_ACCOUNT, amount, 2048, 0)
+                .to.emit(vault, "Deposit")
+                .withArgs(app.address, user.address, amount)
 
             // Confirm contract's balance has increased
             let afterBalance = await ethers.provider.getBalance(vault.address)
@@ -81,6 +83,8 @@ describe("ETHApp", function () {
             await expect(app.unlock(POLKADOT_ACCOUNT, user.address, amount))
                 .to.emit(app, "Unlocked")
                 .withArgs(POLKADOT_ACCOUNT, user.address, amount)
+                .to.emit(vault, "Withdraw")
+                .withArgs(app.address, user.address, amount)
 
             let afterBalance = await ethers.provider.getBalance(vault.address)
             let afterRecipientBalance = await ethers.provider.getBalance(user.address)
