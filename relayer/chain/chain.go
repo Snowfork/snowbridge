@@ -9,11 +9,10 @@ type Message interface{}
 
 // Message from ethereum
 type EthereumOutboundMessage struct {
-	Call        string
-	Args        []interface{}
-	Origin      common.Address
-	Nonce       uint64
-	BlockNumber uint64
+	Call   string
+	Args   []interface{}
+	Origin common.Address
+	Nonce  uint64
 }
 
 type Header struct {
