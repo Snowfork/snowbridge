@@ -40,24 +40,28 @@ func New(ctx context.Context, eg *errgroup.Group, writer *parachain.ParachainWri
 }
 
 func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
-	executionHeaderState, err := m.writer.GetLastExecutionHeaderState()
+	lastSyncedIncentivizedBlock, err := m.syncUnprocessedIncentivizedMessages(ctx)
 	if err != nil {
-		return fmt.Errorf("fetch last synced execution header state: %w", err)
+		return fmt.Errorf("sync unprocessed incentivized messages: %w", err)
 	}
 
-	lastSyncedBlockNumber := executionHeaderState.BlockNumber
-
-	log.WithFields(log.Fields{
-		"blockNumber": lastSyncedBlockNumber,
-	}).Info("last synced execution block number")
-
-	m.syncUnprocessedIncentivizedMessages(ctx)
-
-	m.syncUnprocessedBasicMessages(ctx)
+	lastSyncedBasicBlock, err := m.syncUnprocessedBasicMessages(ctx)
+	if err != nil {
+		return fmt.Errorf("sync unprocessed basic messages: %w", err)
+	}
 
 	ticker := time.NewTicker(time.Second * 20)
 
-	secondLastSyncedBlockNumber := lastSyncedBlockNumber
+	var secondLastSyncedBlockNumber uint64
+	if lastSyncedIncentivizedBlock > lastSyncedBasicBlock {
+		secondLastSyncedBlockNumber = lastSyncedIncentivizedBlock
+	} else {
+		secondLastSyncedBlockNumber = lastSyncedBasicBlock
+	}
+
+	log.WithFields(log.Fields{
+		"blockNumber": secondLastSyncedBlockNumber,
+	}).Info("last synced execution block number")
 
 	eg.Go(func() error {
 		for {
@@ -70,7 +74,7 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 
 			if lastSyncedBlockNumber > 0 && lastSyncedBlockNumber != secondLastSyncedBlockNumber {
 				log.WithFields(log.Fields{
-					"lastBlockNumber": lastSyncedBlockNumber,
+					"blockNumber": lastSyncedBlockNumber,
 				}).Info("last synced execution block changed, fetching messages")
 
 				err = m.syncIncentivized(ctx, eg, secondLastSyncedBlockNumber+1, lastSyncedBlockNumber)
@@ -216,15 +220,15 @@ func filterMessagesByLastNonces(messages []*chain.EthereumOutboundMessage, addre
 	return resultMessages
 }
 
-func (m *Message) syncUnprocessedBasicMessages(ctx context.Context) error {
+func (m *Message) syncUnprocessedBasicMessages(ctx context.Context) (uint64, error) {
 	lastVerifiedBlockNumber, err := m.writer.GetLastBasicChannelBlockNumber()
 	if err != nil {
-		return fmt.Errorf("fetch last basic channel message block number: %w", err)
+		return 0, fmt.Errorf("fetch last basic channel message block number: %w", err)
 	}
 
 	addressNonceMap, err := m.writer.GetLastBasicChannelNonceByAddresses(m.addresses)
 	if err != nil {
-		return fmt.Errorf("fetch last basic channel message nonce: %w", err)
+		return 0, fmt.Errorf("fetch last basic channel message nonce: %w", err)
 	}
 
 	addressNonzeroNonceMap := make(map[common.Address]uint64, len(addressNonceMap))
@@ -241,58 +245,76 @@ func (m *Message) syncUnprocessedBasicMessages(ctx context.Context) error {
 	}
 
 	if len(addressNonzeroNonceMap) == 0 {
-		return nil
+		return 0, nil
 	}
 
-	log.Info("processing basic block events for last verified block")
+	log.WithFields(log.Fields{
+		"block_number": lastVerifiedBlockNumber,
+		"nonces":       addressNonzeroNonceMap,
+	}).Info("checking last synced basic channel messages on startup")
 	basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber, addressNonzeroNonceMap)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	basicPayload.Messages = filterMessagesByLastNonces(basicPayload.Messages, addressNonzeroNonceMap)
 
-	return m.writeBasicMessages(ctx, basicPayload)
+	err = m.writeBasicMessages(ctx, basicPayload)
+	if err != nil {
+		return 0, err
+	}
+
+	return lastVerifiedBlockNumber, err
 }
 
-func (m *Message) syncUnprocessedIncentivizedMessages(ctx context.Context) error {
+func (m *Message) syncUnprocessedIncentivizedMessages(ctx context.Context) (uint64, error) {
 	lastVerifiedBlockNumber, err := m.writer.GetLastIncentivizedChannelBlockNumber()
 	if err != nil {
-		return fmt.Errorf("fetch last incentivized channel message block number: %w", err)
+		return 0, fmt.Errorf("fetch last incentivized channel message block number: %w", err)
 	}
 
 	nonce, err := m.writer.GetLastIncentivizedChannelNonce()
 	if err != nil {
-		return fmt.Errorf("fetch last incentivized channel message nonce: %w", err)
+		return 0, fmt.Errorf("fetch last incentivized channel message nonce: %w", err)
 	}
 
 	log.WithFields(log.Fields{
 		"block_number": lastVerifiedBlockNumber,
 		"nonce":        nonce,
-	}).Info("last incentivized channel")
+	}).Info("checking last synced incentivized channel messages on startup")
 
 	// If the last nonce is set, there could be messages that have not been processed in the same block.
 	// Messages that have already been verified will not be reprocessed because they will be filtered out
 	// in filterMessagesByLastNonce.
 	// Messages after the lastVerifiedBlockNumber will be processed normally in the go routine below.
 	if nonce == 0 {
-		return nil
+		return 0, nil
 	}
 
 	log.Info("processing incentivized block events for last verified block")
 	incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	incentivizedPayload.Messages = filterMessagesByLastNonce(incentivizedPayload.Messages, nonce)
 	// Reset the nonce so that the next block processing range will exclude the block that was synced,
 	// and start syncing from the next block instead
+
+	incentivizedPayload.Messages = filterMessagesByLastNonce(incentivizedPayload.Messages, nonce)
+	// Reset the nonce so that the next block processing range will exclude the block that was synced,
+	// and start syncing from the next block instead
+
 	nonce = 0
 
 	log.WithFields(log.Fields{
 		"incentivizedPayload": incentivizedPayload,
 	}).Info("writing incentivized messages")
 
-	return m.writeIncentivizedMessages(ctx, incentivizedPayload)
+	err = m.writeIncentivizedMessages(ctx, incentivizedPayload)
+	if err != nil {
+		return 0, err
+	}
+
+	return lastVerifiedBlockNumber, nil
 }
