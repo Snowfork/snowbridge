@@ -1,4 +1,4 @@
-package beacon
+package execution
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+	"github.com/snowfork/snowbridge/relayer/relays/execution"
+	"github.com/snowfork/snowbridge/relayer/relays/execution/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -27,8 +27,8 @@ var (
 
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "beacon",
-		Short: "Start the beacon chain relay",
+		Use:   "execution",
+		Short: "Start the execution chain relay",
 		Args:  cobra.ExactArgs(0),
 		RunE:  run,
 	}
@@ -46,7 +46,7 @@ func run(_ *cobra.Command, _ []string) error {
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 	logrus.SetLevel(logrus.DebugLevel)
 
-	logrus.Info("Beacon relayer started up")
+	logrus.Info("Execution relayer started up")
 
 	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
@@ -64,7 +64,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	relay := beacon.NewRelay(&config, keypair)
+	relay := execution.NewRelay(&config, keypair)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func resolvePrivateKey(privateKey, privateKeyFile string) (*sr25519.Keypair, err
 
 	if privateKey == "" {
 		if privateKeyFile == "" {
-			return nil, fmt.Errorf("Private key URI not supplied")
+			return nil, fmt.Errorf("private key URI not supplied")
 		}
 		content, err := ioutil.ReadFile(privateKeyFile)
 		if err != nil {
@@ -124,7 +124,7 @@ func resolvePrivateKey(privateKey, privateKeyFile string) (*sr25519.Keypair, err
 
 	keypair, err := sr25519.NewKeypairFromSeed(cleanedKeyURI, 42)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse private key URI: %w", err)
+		return nil, fmt.Errorf("unable to parse private key URI: %w", err)
 	}
 
 	return keypair, nil

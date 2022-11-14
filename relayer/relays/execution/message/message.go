@@ -62,33 +62,23 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 
 			lastBlockNumber := executionHeaderState.BlockNumber
 
-			if lastVerifiedBlockNumber == 0 {
-				log.WithFields(log.Fields{
-					"lastVerifiedBlockNumber": lastVerifiedBlockNumber,
-				}).Info("fresh start, lastVerifiedBlockNumber is 0")
+			if lastBlockNumber > 0 && lastBlockNumber != lastVerifiedBlockNumber {
+				err = m.syncIncentivized(ctx, eg, lastVerifiedBlockNumber, lastBlockNumber)
+				if err != nil {
+					return fmt.Errorf("sync incentivized messages: %w", err)
+				}
 
-				continue
-			}
+				err = m.syncBasic(ctx, eg, lastVerifiedBlockNumber, lastBlockNumber)
+				if err != nil {
+					return fmt.Errorf("sync basic messages: %w", err)
+				}
 
-			if lastBlockNumber == lastVerifiedBlockNumber {
+				lastVerifiedBlockNumber = lastBlockNumber
+			} else {
 				log.WithFields(log.Fields{
 					"lastBlockNumber": lastBlockNumber,
 				}).Info("last synced execution block unchanged")
-
-				continue
 			}
-
-			err = m.syncIncentivized(ctx, eg, lastVerifiedBlockNumber, lastBlockNumber)
-			if err != nil {
-				return fmt.Errorf("sync incentivized messages: %w", err)
-			}
-
-			err = m.syncBasic(ctx, eg, lastVerifiedBlockNumber, lastBlockNumber)
-			if err != nil {
-				return fmt.Errorf("sync basic messages: %w", err)
-			}
-
-			lastVerifiedBlockNumber = lastBlockNumber
 
 			select {
 			case <-ctx.Done():

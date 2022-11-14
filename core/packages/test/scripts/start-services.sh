@@ -277,21 +277,27 @@ start_relayer()
 
     # Configure beacon relay
     jq \
-        --arg k1 "$(address_for BasicOutboundChannel)" \
-        --arg k2 "$(address_for IncentivizedOutboundChannel)" \
         --arg infura_endpoint_ws $infura_endpoint_ws \
         --arg beacon_endpoint_http $beacon_endpoint_http \
         --arg active_spec $active_spec \
+    '
+     .source.ethereum.endpoint = $infura_endpoint_ws
+    | .source.beacon.endpoint = $beacon_endpoint_http
+    | .source.beacon.activeSpec = $active_spec
+    ' \
+    config/beacon-relay.json > $output_dir/beacon-relay.json
+
+    # Configure execution relay
+    jq \
+        --arg k1 "$(address_for BasicOutboundChannel)" \
+        --arg k2 "$(address_for IncentivizedOutboundChannel)" \
         --arg basic_eth_addresses $basic_eth_addresses \
     '
       .source.contracts.BasicOutboundChannel = $k1
     | .source.contracts.IncentivizedOutboundChannel = $k2
-    | .source.ethereum.endpoint = $infura_endpoint_ws
-    | .source.beacon.endpoint = $beacon_endpoint_http
-    | .source.beacon.activeSpec = $active_spec
     | .source.basicChannelAddresses = ($basic_eth_addresses | split(","))
     ' \
-    config/beacon-relay.json > $output_dir/beacon-relay.json
+    config/execution-relay.json > $output_dir/execution-relay.json
 
     local relay_bin="$relay_dir/build/snowbridge-relay"
 
@@ -333,6 +339,20 @@ start_relayer()
                 --config $output_dir/beacon-relay.json \
                 --substrate.private-key "//BeaconRelay" \
                 >>beacon-relay.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch execution relay
+    (
+        : > execution-relay.log
+        while :
+        do
+        echo "Starting execution relay at $(date)"
+            "${relay_bin}" run execution \
+                --config $output_dir/execution-relay.json \
+                --substrate.private-key "//EthereumRelay" \
+                >>execution-relay.log 2>&1 || true
             sleep 20
         done
     ) &
