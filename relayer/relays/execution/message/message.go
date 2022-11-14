@@ -45,13 +45,19 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("fetch last synced execution header state: %w", err)
 	}
 
-	lastVerifiedBlockNumber := executionHeaderState.BlockNumber
+	lastSyncedBlockNumber := executionHeaderState.BlockNumber
+
+	log.WithFields(log.Fields{
+		"blockNumber": lastSyncedBlockNumber,
+	}).Info("last synced execution block number")
 
 	m.syncUnprocessedIncentivizedMessages(ctx)
 
 	m.syncUnprocessedBasicMessages(ctx)
 
 	ticker := time.NewTicker(time.Second * 20)
+
+	secondLastSyncedBlockNumber := lastSyncedBlockNumber
 
 	eg.Go(func() error {
 		for {
@@ -60,23 +66,27 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 				return fmt.Errorf("fetch last synced execution header state: %w", err)
 			}
 
-			lastBlockNumber := executionHeaderState.BlockNumber
+			lastSyncedBlockNumber := executionHeaderState.BlockNumber
 
-			if lastBlockNumber > 0 && lastBlockNumber != lastVerifiedBlockNumber {
-				err = m.syncIncentivized(ctx, eg, lastVerifiedBlockNumber, lastBlockNumber)
+			if lastSyncedBlockNumber > 0 && lastSyncedBlockNumber != secondLastSyncedBlockNumber {
+				log.WithFields(log.Fields{
+					"lastBlockNumber": lastSyncedBlockNumber,
+				}).Info("last synced execution block changed, fetching messages")
+
+				err = m.syncIncentivized(ctx, eg, secondLastSyncedBlockNumber+1, lastSyncedBlockNumber)
 				if err != nil {
 					return fmt.Errorf("sync incentivized messages: %w", err)
 				}
 
-				err = m.syncBasic(ctx, eg, lastVerifiedBlockNumber, lastBlockNumber)
+				err = m.syncBasic(ctx, eg, secondLastSyncedBlockNumber+1, lastSyncedBlockNumber)
 				if err != nil {
 					return fmt.Errorf("sync basic messages: %w", err)
 				}
 
-				lastVerifiedBlockNumber = lastBlockNumber
+				secondLastSyncedBlockNumber = lastSyncedBlockNumber
 			} else {
 				log.WithFields(log.Fields{
-					"lastBlockNumber": lastBlockNumber,
+					"lastBlockNumber": lastSyncedBlockNumber,
 				}).Info("last synced execution block unchanged")
 			}
 
@@ -92,23 +102,17 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (m *Message) syncBasic(ctx context.Context, eg *errgroup.Group, lastVerifiedBlockNumber, blockNumber uint64) error {
+func (m *Message) syncBasic(ctx context.Context, eg *errgroup.Group, secondLastSyncedBlockNumber, lastSyncedBlockNumber uint64) error {
 	addressNonceMap := make(map[common.Address]uint64, len(m.addresses))
 	for _, address := range m.addresses {
 		addressNonceMap[address] = 1
 	}
 
 	log.WithFields(log.Fields{
-		"block_number": blockNumber,
-	}).Info("last synced execution header received in basic channel")
-
-	lastVerifiedBlockNumber = lastVerifiedBlockNumber + 1
-
-	log.WithFields(log.Fields{
-		"start": lastVerifiedBlockNumber,
-		"end":   blockNumber,
+		"start": secondLastSyncedBlockNumber,
+		"end":   lastSyncedBlockNumber,
 	}).Info("fetching basic channel messages")
-	basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, blockNumber, addressNonceMap)
+	basicPayload, err := m.listener.ProcessBasicEvents(ctx, secondLastSyncedBlockNumber, lastSyncedBlockNumber, addressNonceMap)
 	if err != nil {
 		return err
 	}
@@ -116,19 +120,13 @@ func (m *Message) syncBasic(ctx context.Context, eg *errgroup.Group, lastVerifie
 	return m.writeBasicMessages(ctx, basicPayload)
 }
 
-func (m *Message) syncIncentivized(ctx context.Context, eg *errgroup.Group, lastVerifiedBlockNumber, blockNumber uint64) error {
+func (m *Message) syncIncentivized(ctx context.Context, eg *errgroup.Group, secondLastSyncedBlockNumber, lastSyncedBlockNumber uint64) error {
 	log.WithFields(log.Fields{
-		"block_number": blockNumber,
-	}).Info("last synced execution header received in incentivized channel")
+		"start": secondLastSyncedBlockNumber,
+		"end":   lastSyncedBlockNumber,
+	}).Info("fetching incentivized channel messages")
 
-	lastVerifiedBlockNumber = lastVerifiedBlockNumber + 1
-
-	log.WithFields(log.Fields{
-		"start": lastVerifiedBlockNumber,
-		"end":   blockNumber,
-	}).Info("fetching incentivized events")
-
-	incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, lastVerifiedBlockNumber, blockNumber)
+	incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, secondLastSyncedBlockNumber, lastSyncedBlockNumber)
 	if err != nil {
 		return err
 	}
