@@ -351,7 +351,7 @@ start_relayer()
         echo "Starting execution relay at $(date)"
             "${relay_bin}" run execution \
                 --config $output_dir/execution-relay.json \
-                --substrate.private-key "//EthereumRelay" \
+                --substrate.private-key "//ExecutionRelay" \
                 >>execution-relay.log 2>&1 || true
             sleep 20
         done
