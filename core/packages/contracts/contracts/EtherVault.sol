@@ -20,7 +20,7 @@ contract EtherVault is Ownable {
     event Withdraw(address account, address recipient, uint256 amount);
 
     /// @dev Recipient cannot withdraw funds.
-    error CannotWithraw();
+    error CannotWithdraw();
 
     /// @dev Revert calls which send funds directly.
     receive() external payable {
@@ -47,7 +47,7 @@ contract EtherVault is Ownable {
         require(_amount > 0, "Must unlock a positive amount");
         (bool success, ) = _recipient.call{ value: _amount }("");
         if(!success) {
-            revert CannotWithraw();
+            revert CannotWithdraw();
         }
         emit Withdraw(msg.sender, _recipient, _amount);
     }
