@@ -42,6 +42,7 @@ contract ERC20Vault is Ownable {
         onlyOwner
     {
         balances[_token] = balances[_token] + _amount;
+        // TODO: Transfer ERC20 tokens safely. https://linear.app/snowfork/issue/SNO-366
         if (!IERC20(_token).transferFrom(_sender, address(this), _amount)) {
             revert TokenTransferFailed();
         }
