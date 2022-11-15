@@ -68,13 +68,4 @@ contract DOTApp is FeeController, AccessControl {
     {
         token.burn(feePayer, _amount);
     }
-
-    function transferVaultOwnership(
-        address newOwner
-    ) external {
-        if (!registry.isInboundChannel(msg.sender)) {
-            revert Unauthorized();
-        }
-        token.transferOwnership(newOwner);
-    }
 }

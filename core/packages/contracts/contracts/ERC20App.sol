@@ -99,13 +99,4 @@ contract ERC20App is AccessControl {
         vault.withdraw(_recipient, _token, _amount);
         emit Unlocked(_token, _sender, _recipient, _amount);
     }
-
-    function transferVaultOwnership(
-        address newOwner
-    ) external {
-        if (!registry.isInboundChannel(msg.sender)) {
-            revert Unauthorized();
-        }
-        vault.transferOwnership(newOwner);
-    }
 }
