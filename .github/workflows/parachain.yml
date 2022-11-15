@@ -16,7 +16,7 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-20.04
+    runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
@@ -52,7 +52,7 @@ jobs:
 
   test:
     needs: check
-    runs-on: ubuntu-20.04
+    runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1

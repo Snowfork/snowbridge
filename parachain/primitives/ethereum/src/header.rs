@@ -43,7 +43,6 @@ pub struct Header {
 	/// Block author.
 	pub author: Address,
 
-
 	/// Transactions root.
 	pub transactions_root: H256,
 	/// Block ommers hash.
