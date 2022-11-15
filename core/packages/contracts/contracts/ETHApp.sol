@@ -41,9 +41,6 @@ contract ETHApp is RewardController, AccessControl {
     // Value of transaction must fit into 128 bits.
     error MaximumAmount();
 
-    // Not enough funds to unlock
-    error ExceedsBalance();
-
     constructor(
         address rewarder,
         EtherVault etherVault,
@@ -96,10 +93,6 @@ contract ETHApp is RewardController, AccessControl {
     ) external {
         if (!registry.isInboundChannel(msg.sender)) {
             revert Unauthorized();
-        }
-
-        if (_amount > address(vault).balance) {
-            revert ExceedsBalance();
         }
 
         vault.withdraw(_recipient, _amount);

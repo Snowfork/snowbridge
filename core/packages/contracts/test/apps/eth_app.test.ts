@@ -116,13 +116,13 @@ describe("ETHApp", function () {
         })
 
         it("should not unlock amounts greater than locked balance", async function () {
-            let { app, user } = await loadFixture(withdrawalsFixture)
+            let { app, vault, user } = await loadFixture(withdrawalsFixture)
 
             let unlockAmount = ethers.utils.parseEther("2").add(1)
 
             await expect(
                 app.unlock(POLKADOT_ACCOUNT, user.address, unlockAmount)
-            ).to.be.revertedWithCustomError(app, "ExceedsBalance")
+            ).to.be.revertedWithCustomError(vault, "InsufficientBalance")
         })
     })
 })

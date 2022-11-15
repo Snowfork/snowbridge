@@ -22,6 +22,9 @@ contract EtherVault is Ownable {
     /// @dev Recipient cannot withdraw funds.
     error CannotWithdraw();
 
+    /// @dev Not enough funds to unlock.
+    error InsufficientBalance();
+
     /// @dev Revert calls which send funds directly.
     receive() external payable {
         revert("Must use deposit function");
@@ -44,6 +47,9 @@ contract EtherVault is Ownable {
         external
         onlyOwner
     {
+        if (_amount > address(this).balance) {
+            revert InsufficientBalance();
+        }
         require(_amount > 0, "Must unlock a positive amount");
         (bool success, ) = _recipient.call{ value: _amount }("");
         if(!success) {
