@@ -40,6 +40,7 @@ pub struct Header {
 	pub timestamp: u64,
 	/// Block number.
 	pub number: u64,
+
 	/// Block author.
 	pub author: Address,
 
