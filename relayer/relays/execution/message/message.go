@@ -285,12 +285,6 @@ func (m *Message) syncUnprocessedIncentivizedMessages(ctx context.Context) (uint
 	// Reset the nonce so that the next block processing range will exclude the block that was synced,
 	// and start syncing from the next block instead
 
-	incentivizedPayload.Messages = filterMessagesByLastNonce(incentivizedPayload.Messages, nonce)
-	// Reset the nonce so that the next block processing range will exclude the block that was synced,
-	// and start syncing from the next block instead
-
-	nonce = 0
-
 	log.WithFields(log.Fields{
 		"incentivizedPayload": incentivizedPayload,
 	}).Info("writing incentivized messages")
