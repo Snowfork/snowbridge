@@ -94,8 +94,9 @@ contract BeefyClient is Ownable {
      * @param vs the compacted challenge solution (s) and yParity bit (v)
      */
     struct ValidatorSignature {
+        uint8 v;
         bytes32 r;
-        bytes32 vs;
+        bytes32 s;
     }
 
     /**
@@ -230,7 +231,7 @@ contract BeefyClient is Ownable {
 
         // Check if validatorSignature is correct, ie. check if it matches
         // the signature of senderPublicKey on the commitmentHash
-        require(ECDSA.recover(commitmentHash, proof.signature.r, proof.signature.vs) == proof.addr, "Invalid signature");
+        require(ECDSA.recover(commitmentHash, proof.signature.v, proof.signature.r, proof.signature.s) == proof.addr, "Invalid signature");
 
         // Check that the bitfield actually contains enough claims to be successful, ie, >= 2/3
         require(
@@ -425,7 +426,7 @@ contract BeefyClient is Ownable {
             require(isValidatorInSet(vset, addr, index, merkleProof), "invalid validator proof");
 
             // Check if signature is correct
-            require(ECDSA.recover(commitmentHash, signature.r, signature.vs) == addr, "Invalid signature");
+            require(ECDSA.recover(commitmentHash, signature.v, signature.r, signature.s) == addr, "Invalid signature");
         }
     }
 

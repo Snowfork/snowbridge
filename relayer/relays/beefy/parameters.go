@@ -69,21 +69,16 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 }
 
 func cleanSignature(input types.BeefySignature) beefyclient.BeefyClientValidatorSignature {
-	// Update signature format using EIP-2098 https://eips.ethereum.org/EIPS/eip-2098
-	// Split signature into r, s, v and store v in the first bit of s
+	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
+	// Split signature into r, s, v and add 27 to v
 	r := *(*[32]byte)(input[:32])
 	s := *(*[32]byte)(input[32:64])
-
-	vIsSet := input[64] == 1
-	if vIsSet {
-		s[0] = s[0] | 1<<7
-	} else {
-		s[0] = s[0] & (^byte(1 << 7))
-	}
+	v := byte(uint8(input[64]) + 27)
 
 	return beefyclient.BeefyClientValidatorSignature{
-		R:  r,
-		Vs: s,
+		V: v,
+		R: r,
+		S: s,
 	}
 }
 
