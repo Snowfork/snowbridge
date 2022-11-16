@@ -272,7 +272,7 @@ func (m *Message) syncUnprocessedIncentivizedMessages(ctx context.Context) (uint
 	// in filterMessagesByLastNonce.
 	// Messages after the lastVerifiedBlockNumber will be processed separately in the Sync method.
 	if nonce == 0 {
-		return 0, nil
+		return lastVerifiedBlockNumber, nil
 	}
 
 	log.Info("processing incentivized block events for last verified block")
