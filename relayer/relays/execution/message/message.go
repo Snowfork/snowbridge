@@ -167,7 +167,7 @@ func (m *Message) writeIncentivizedMessages(ctx context.Context, payload Paracha
 		}
 
 		if lastNonce != msg.Nonce {
-			return fmt.Errorf("last incentivized message verification failed (nonce: %d)", lastNonce)
+			return fmt.Errorf("last incentivized message verification failed (expected nonce: %d, actual nonce: %d)", msg.Nonce, lastNonce)
 		}
 	}
 
@@ -227,7 +227,7 @@ func (m *Message) syncUnprocessedBasicMessages(ctx context.Context) (uint64, err
 	}
 
 	if len(addressNonzeroNonceMap) == 0 {
-		return 0, nil
+		return lastVerifiedBlockNumber, nil
 	}
 
 	log.WithFields(log.Fields{
@@ -270,7 +270,7 @@ func (m *Message) syncUnprocessedIncentivizedMessages(ctx context.Context) (uint
 	// in filterMessagesByLastNonce.
 	// Messages after the lastVerifiedBlockNumber will be processed separately in the Sync method.
 	if nonce == 0 {
-		return 0, nil
+		return lastVerifiedBlockNumber, nil
 	}
 
 	log.Info("processing incentivized block events for last verified block")
