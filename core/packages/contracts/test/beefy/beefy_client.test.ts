@@ -31,7 +31,7 @@ describe("BeefyClient", function () {
             beefyClient
                 .connect(user)
                 [
-                    "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"
+                    "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),((bytes32,bytes32)[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"
                 ](
                     0,
                     fixtureData.params.commitment,
@@ -49,6 +49,7 @@ describe("BeefyClient", function () {
         let root = await beefyClient.latestMMRRoot()
         expect(root).to.eq(fixtureData.params.commitment.payload.mmrRootHash)
     })
+
     it("encodes beefy commitment to SCALE-format", async function () {
         let { beefyClient } = await loadFixture(beefyClientPublicFixture)
         let commitment = {

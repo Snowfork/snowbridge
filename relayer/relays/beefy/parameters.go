@@ -108,7 +108,7 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 func (r *Request) MakeSubmitFinalParams(validationID int64, validatorIndices []uint64) (*FinalRequestParams, error) {
 	validationDataID := big.NewInt(validationID)
 
-	signatures := [][]byte{}
+	signatures := []beefyclient.BeefyClientValidatorSignature{}
 	validatorAddresses := []common.Address{}
 	validatorAddressProofs := [][][32]byte{}
 	for _, validatorIndex := range validatorIndices {

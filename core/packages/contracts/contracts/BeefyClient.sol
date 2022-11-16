@@ -67,7 +67,7 @@ contract BeefyClient is Ownable {
      * @param merkleProofs an array of merkle proofs from the chosen validators
      */
     struct ValidatorMultiProof {
-        bytes[] signatures;
+        ValidatorSignature[] signatures;
         uint256[] indices;
         address[] addrs;
         bytes32[][] merkleProofs;
@@ -409,7 +409,7 @@ contract BeefyClient is Ownable {
 
         for (uint256 i = 0; i < signatureCount; i++) {
             (
-                bytes calldata signature,
+                ValidatorSignature calldata signature,
                 uint256 index,
                 address addr,
                 bytes32[] calldata merkleProof
@@ -425,7 +425,7 @@ contract BeefyClient is Ownable {
             require(isValidatorInSet(vset, addr, index, merkleProof), "invalid validator proof");
 
             // Check if signature is correct
-            require(ECDSA.recover(commitmentHash, signature) == addr, "Invalid signature");
+            require(ECDSA.recover(commitmentHash, signature.r, signature.vs) == addr, "Invalid signature");
         }
     }
 
