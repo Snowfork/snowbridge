@@ -229,7 +229,7 @@ func (m *Message) syncUnprocessedBasicMessages(ctx context.Context) (uint64, err
 	}
 
 	if len(addressNonzeroNonceMap) == 0 {
-		return 0, nil
+		return lastVerifiedBlockNumber, nil
 	}
 
 	log.WithFields(log.Fields{
