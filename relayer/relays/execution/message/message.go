@@ -169,7 +169,7 @@ func (m *Message) writeIncentivizedMessages(ctx context.Context, payload Paracha
 		}
 
 		if lastNonce != msg.Nonce {
-			return fmt.Errorf("last incentivized message verification failed (nonce: %d)", lastNonce)
+			return fmt.Errorf("last incentivized message verification failed (expected nonce: %d, actual nonce: %d)", msg.Nonce, lastNonce)
 		}
 	}
 
