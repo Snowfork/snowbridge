@@ -10,7 +10,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/relays/execution/config"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -20,22 +19,7 @@ type Message struct {
 	addresses []common.Address
 }
 
-func New(ctx context.Context, eg *errgroup.Group, writer *parachain.ParachainWriter, configSource *config.SourceConfig, ethconn *ethereum.Connection) (*Message, error) {
-	addresses, err := configSource.GetBasicChannelAddresses()
-	if err != nil {
-		return nil, err
-	}
-
-	listener := NewEthereumListener(
-		configSource,
-		ethconn,
-	)
-
-	err = listener.Start(ctx, eg)
-	if err != nil {
-		return &Message{}, err
-	}
-
+func New(ctx context.Context, eg *errgroup.Group, writer *parachain.ParachainWriter, listener *EthereumListener, ethconn *ethereum.Connection, addresses []common.Address) (*Message, error) {
 	return &Message{writer, listener, addresses}, nil
 }
 

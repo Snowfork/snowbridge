@@ -50,12 +50,28 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
+	listener := message.NewEthereumListener(
+		&r.config.Source,
+		ethconn,
+	)
+
+	err = listener.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
+
+	addresses, err := r.config.Source.GetBasicChannelAddresses()
+	if err != nil {
+		return err
+	}
+
 	messages, err := message.New(
 		ctx,
 		eg,
 		writer,
-		&r.config.Source,
+		listener,
 		ethconn,
+		addresses,
 	)
 	if err != nil {
 		return err
