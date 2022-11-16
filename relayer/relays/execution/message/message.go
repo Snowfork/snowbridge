@@ -270,7 +270,7 @@ func (m *Message) syncUnprocessedIncentivizedMessages(ctx context.Context) (uint
 	// If the last nonce is set, there could be messages that have not been processed in the same block.
 	// Messages that have already been verified will not be reprocessed because they will be filtered out
 	// in filterMessagesByLastNonce.
-	// Messages after the lastVerifiedBlockNumber will be processed normally in the go routine below.
+	// Messages after the lastVerifiedBlockNumber will be processed separately in the Sync method.
 	if nonce == 0 {
 		return 0, nil
 	}
