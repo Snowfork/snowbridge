@@ -37,11 +37,6 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 	ticker := time.NewTicker(time.Second * 20)
 
 	var secondLastSyncedBlockNumber uint64
-	if lastSyncedIncentivizedBlock > lastSyncedBasicBlock {
-		secondLastSyncedBlockNumber = lastSyncedIncentivizedBlock
-	} else {
-		secondLastSyncedBlockNumber = lastSyncedBasicBlock
-	}
 
 	log.WithFields(log.Fields{
 		"blockNumber": secondLastSyncedBlockNumber,
@@ -61,17 +56,20 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 					"blockNumber": lastSyncedBlockNumber,
 				}).Info("last synced execution block changed, fetching messages")
 
-				err = m.syncIncentivized(ctx, eg, secondLastSyncedBlockNumber+1, lastSyncedBlockNumber)
+				err = m.syncIncentivized(ctx, eg, lastSyncedIncentivizedBlock+1, lastSyncedBlockNumber)
 				if err != nil {
 					return fmt.Errorf("sync incentivized messages: %w", err)
 				}
 
-				err = m.syncBasic(ctx, eg, secondLastSyncedBlockNumber+1, lastSyncedBlockNumber)
+				err = m.syncBasic(ctx, eg, lastSyncedBasicBlock+1, lastSyncedBlockNumber)
 				if err != nil {
 					return fmt.Errorf("sync basic messages: %w", err)
 				}
 
 				secondLastSyncedBlockNumber = lastSyncedBlockNumber
+
+				lastSyncedIncentivizedBlock = lastSyncedBlockNumber
+				lastSyncedBasicBlock = lastSyncedBlockNumber
 			} else {
 				log.WithFields(log.Fields{
 					"lastBlockNumber": lastSyncedBlockNumber,
