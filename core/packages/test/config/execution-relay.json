@@ -7,7 +7,7 @@
       "BasicOutboundChannel": null,
       "IncentivizedOutboundChannel": null
     },
-  "basicChannelAddresses": []
+    "basicChannelAddresses": []
   },
   "sink": {
     "parachain": {
