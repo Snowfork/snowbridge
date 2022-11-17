@@ -13,8 +13,8 @@
     "resolveJsonModule": true,
     "baseUrl": "."
   },
-  "include": ["src"],
-  "files": ["scripts/detect-fork.ts"],
+  "include": ["src", "scripts/*.ts"],
+  "exclude": ["scripts/make-xcm-transfer.ts"],
   "references": [
     {
       "path": "../contracts"

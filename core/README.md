@@ -31,17 +31,17 @@ pnpm install
 Build all artifacts:
 
 ```bash
-pnpm run build
+pnpm build
 ```
 
 Run all unit tests:
 
 ```bash
-pnpm run test
+pnpm test
 ```
 
 Lint all the code:
 
 ```bash
-pnpm run lint
+pnpm lint
 ```
