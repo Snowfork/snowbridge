@@ -21,8 +21,10 @@ direnv allow
 Run tests:
 
 ```bash
-npx hardhat test
+pnpm test
 ```
+
+Set `REPORT_GAS=1` when running tests to generate a gas report.
 
 ## Test Fixtures
 
