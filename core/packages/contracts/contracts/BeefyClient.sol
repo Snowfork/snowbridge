@@ -88,10 +88,11 @@ contract BeefyClient is Ownable {
     }
 
     /**
-     * @dev The ValidatorSignature is a compact signature as specified in EIP-2098:
-     * https://eips.ethereum.org/EIPS/eip-2098
+     * @dev The ValidatorSignature is the separated components of a secp256k1 signature as
+     * mentioned in EIP-2098: https://eips.ethereum.org/EIPS/eip-2098
+     * @param v the parity bit to specify the indended solution
      * @param r the x component on the secp256k1 curve
-     * @param vs the compacted challenge solution (s) and yParity bit (v)
+     * @param s the challenge solution
      */
     struct ValidatorSignature {
         uint8 v;
