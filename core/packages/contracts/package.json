@@ -15,7 +15,8 @@
     "lint": "pnpm lint:solhint && pnpm lint:eslint",
     "lint:solhint": "solhint 'contracts/**/*.sol'",
     "lint:eslint": "eslint .",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "test:gasreport": "REPORT_GAS=1 hardhat test"
   },
   "devDependencies": {
     "@babel/core": "^7.11.6",
