@@ -5,14 +5,11 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 ## Requirements
 
 * Ubuntu 20.04 or later. MacOS may work, but it's not currently a supported configuration.
-* Development environment for Rust and Substrate. See parachain [requirements](../parachain/README.md#requirements).
-
-* Development environment for the relay services. See setup [instructions](../relayer/README.md#Development).
-
+* Development environment for Rust and Substrate. See parachain [requirements](../../../parachain/README.md#requirements).
+* Development environment for the relay services. See setup [instructions](../../../relayer/README.md#Development).
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth `go install github.com/ethereum/go-ethereum/cmd/geth@v1.10.23`
 * g++ (required for lodestar) is available in the `build-essential` package: `apt install build-essential`
-
 * sponge - Is available in the `moreutils` package.
 
   ```bash
@@ -119,7 +116,7 @@ Sometimes during development tests will fail for transfers in the substrate->eth
 {"@timestamp":"2022-08-26T15:10:50.263740077+02:00","args":"[--api ws://localhost:11144 --block 0xe2e21a61b017699961b6d87c6aecbae18f2ce0c89bd87e0e8b0d808c26e2aad3]","level":"error","message":"Failed to query events.","name":"snowbridge-query-events","stdErr":"Error: Metadata(IncompatibleMetadata)\n","stdOut":""}
 ```
 
-That means a dependency of the relayer has obsolete parachain metadata and needs to be refreshed. Please refer [here](../parachain/README.md#Chain_metadata) for steps to fix.
+That means a dependency of the relayer has obsolete parachain metadata and needs to be refreshed. Please refer [here](../../../parachain/README.md#Chain_metadata) for steps to fix.
 
 ## Running E2E tests against Ropsten
 
