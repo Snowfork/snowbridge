@@ -5,7 +5,7 @@ import {
     MerkleProof__factory,
     Bitfield__factory,
     BeefyClientPublic__factory
-} from "@src"
+} from "../../src"
 
 import { createValidatorFixture } from "../helpers"
 

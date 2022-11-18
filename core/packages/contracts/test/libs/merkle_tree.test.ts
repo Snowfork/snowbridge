@@ -1,6 +1,6 @@
 import { ethers, expect, loadFixture } from "../setup"
 import { createMerkleTree } from "../helpers"
-import { MerkleProof__factory } from "@src"
+import { MerkleProof__factory } from "../../src"
 import { keccakFromHexString } from "ethereumjs-util"
 
 describe("Merkle Proof", function () {

@@ -3,7 +3,7 @@ import {
     IncentivizedInboundChannel__factory,
     ParachainClient__factory,
     RewardController__factory,
-} from "@src"
+} from "../../src"
 import submitInput from "./data/incentivized-commitment.json"
 
 describe("IncentivizedInboundChannel", function () {
