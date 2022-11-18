@@ -14,11 +14,6 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 	task *Request,
 	params *FinalRequestParams,
 ) (log.Fields, error) {
-	var signatures []string
-	for _, item := range params.Proof.Signatures {
-		signatures = append(signatures, Hex(item))
-	}
-
 	var merkleProofs [][]string
 	for _, merkleProof := range params.Proof.MerkleProofs {
 		var acc []string
@@ -47,7 +42,7 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 				},
 			},
 			"proof": log.Fields{
-				"signatures":   signatures,
+				"signatures":   params.Proof.Signatures,
 				"indices":      params.Proof.Indices,
 				"addrs":        params.Proof.Addrs,
 				"merkleProofs": merkleProofs,
@@ -63,11 +58,6 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 	task *Request,
 	params *FinalRequestParams,
 ) (log.Fields, error) {
-	var signatures []string
-	for _, item := range params.Proof.Signatures {
-		signatures = append(signatures, Hex(item))
-	}
-
 	var merkleProofs [][]string
 	for _, merkleProof := range params.Proof.MerkleProofs {
 		var acc []string
@@ -101,7 +91,7 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 				},
 			},
 			"proof": log.Fields{
-				"signatures":   signatures,
+				"signatures":   params.Proof.Signatures,
 				"indices":      params.Proof.Indices,
 				"addrs":        params.Proof.Addrs,
 				"merkleProofs": merkleProofs,

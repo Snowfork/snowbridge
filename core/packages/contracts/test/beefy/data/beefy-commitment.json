@@ -43,7 +43,11 @@
         ]
       ],
       "signatures": [
-        "0xcfb8535b624c6c1e779aa9e5d28eb0b10ebf4459e890b55c2d3533644bfc8f3e3729f1ea4402838df59696079e1a393ef1136908753ae0932ca3f7661b7e61091b"
+        {
+          "v": "0x1b",
+          "r": "0xcfb8535b624c6c1e779aa9e5d28eb0b10ebf4459e890b55c2d3533644bfc8f3e",
+          "s": "0x3729f1ea4402838df59696079e1a393ef1136908753ae0932ca3f7661b7e6109"
+        }
       ]
     }
   },

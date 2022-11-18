@@ -68,12 +68,18 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	return &msg, nil
 }
 
-func cleanSignature(input types.BeefySignature) []byte {
+func cleanSignature(input types.BeefySignature) beefyclient.BeefyClientValidatorSignature {
 	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
 	// Split signature into r, s, v and add 27 to v
-	rs := input[:64]
-	v := input[64]
-	return append(rs, byte(uint8(v)+27))
+	r := *(*[32]byte)(input[:32])
+	s := *(*[32]byte)(input[32:64])
+	v := byte(uint8(input[64]) + 27)
+
+	return beefyclient.BeefyClientValidatorSignature{
+		V: v,
+		R: r,
+		S: s,
+	}
 }
 
 func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byte, error) {
@@ -97,7 +103,7 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 func (r *Request) MakeSubmitFinalParams(validationID int64, validatorIndices []uint64) (*FinalRequestParams, error) {
 	validationDataID := big.NewInt(validationID)
 
-	signatures := [][]byte{}
+	signatures := []beefyclient.BeefyClientValidatorSignature{}
 	validatorAddresses := []common.Address{}
 	validatorAddressProofs := [][][32]byte{}
 	for _, validatorIndex := range validatorIndices {

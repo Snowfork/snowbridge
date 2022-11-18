@@ -67,7 +67,7 @@ contract BeefyClient is Ownable {
      * @param merkleProofs an array of merkle proofs from the chosen validators
      */
     struct ValidatorMultiProof {
-        bytes[] signatures;
+        ValidatorSignature[] signatures;
         uint256[] indices;
         address[] addrs;
         bytes32[][] merkleProofs;
@@ -81,10 +81,23 @@ contract BeefyClient is Ownable {
      * @param merkleProof merkle proof for the validator
      */
     struct ValidatorProof {
-        bytes signature;
+        ValidatorSignature signature;
         uint256 index;
         address addr;
         bytes32[] merkleProof;
+    }
+
+    /**
+     * @dev The ValidatorSignature is the separated components of a secp256k1 signature as
+     * mentioned in EIP-2098: https://eips.ethereum.org/EIPS/eip-2098
+     * @param v the parity bit to specify the indended solution
+     * @param r the x component on the secp256k1 curve
+     * @param s the challenge solution
+     */
+    struct ValidatorSignature {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
     }
 
     /**
@@ -190,9 +203,9 @@ contract BeefyClient is Ownable {
      * @dev Executed by the prover in order to begin the process of block
      * acceptance by the light client
      * @param commitmentHash contains the commitmentHash signed by the validator(s)
+     * @param validatorSetID the id of the validator set which signed the commitment
      * @param bitfield a bitfield containing a membership status of each
      * validator who has claimed to have signed the commitmentHash
-     * @param validatorSetID the id of the validator set which signed the commitment
      * @param proof the validator proof
      */
     function submitInitial(
@@ -219,7 +232,7 @@ contract BeefyClient is Ownable {
 
         // Check if validatorSignature is correct, ie. check if it matches
         // the signature of senderPublicKey on the commitmentHash
-        require(ECDSA.recover(commitmentHash, proof.signature) == proof.addr, "Invalid signature");
+        require(ECDSA.recover(commitmentHash, proof.signature.v, proof.signature.r, proof.signature.s) == proof.addr, "Invalid signature");
 
         // Check that the bitfield actually contains enough claims to be successful, ie, >= 2/3
         require(
@@ -398,7 +411,7 @@ contract BeefyClient is Ownable {
 
         for (uint256 i = 0; i < signatureCount; i++) {
             (
-                bytes calldata signature,
+                ValidatorSignature calldata signature,
                 uint256 index,
                 address addr,
                 bytes32[] calldata merkleProof
@@ -414,7 +427,7 @@ contract BeefyClient is Ownable {
             require(isValidatorInSet(vset, addr, index, merkleProof), "invalid validator proof");
 
             // Check if signature is correct
-            require(ECDSA.recover(commitmentHash, signature) == addr, "Invalid signature");
+            require(ECDSA.recover(commitmentHash, signature.v, signature.r, signature.s) == addr, "Invalid signature");
         }
     }
 
