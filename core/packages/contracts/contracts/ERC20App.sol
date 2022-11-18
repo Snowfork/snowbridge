@@ -2,21 +2,16 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./OutboundChannel.sol";
 import "./ERC20AppPallet.sol";
+import "./ERC20Vault.sol";
 import "./ChannelRegistry.sol";
 
 contract ERC20App is AccessControl {
     using SafeERC20 for IERC20;
 
+    ERC20Vault public immutable vault;
     ChannelRegistry public immutable registry;
-
-    // balances for each ERC20 token
-    mapping(address => uint128) public balances;
 
     // Registered tokens
     mapping(address => bool) public tokens;
@@ -29,13 +24,6 @@ contract ERC20App is AccessControl {
 
     // ERC20 transfer amount should be greater than zero
     error MinimumAmount();
-
-    // Not enough funds to transfer
-    error InsufficientBalance();
-
-    // Token Transfer failed
-    error TokenTransferFailed();
-
 
     event Locked(
         address token,
@@ -54,8 +42,10 @@ contract ERC20App is AccessControl {
     );
 
     constructor(
+        ERC20Vault erc20vault,
         ChannelRegistry channelRegistry
     ) {
+        vault = erc20vault;
         registry = channelRegistry;
     }
 
@@ -72,10 +62,7 @@ contract ERC20App is AccessControl {
             revert UnknownChannel(_channelID);
         }
 
-        if (!IERC20(_token).transferFrom(msg.sender, address(this), _amount)) {
-            revert TokenTransferFailed();
-        }
-        balances[_token] = balances[_token] + _amount;
+        vault.deposit(msg.sender, _token, _amount);
 
         if (!tokens[_token]) {
             (bytes memory createCall, uint64 createWeight) = ERC20AppPallet.create(_token);
@@ -109,13 +96,7 @@ contract ERC20App is AccessControl {
             revert MinimumAmount();
         }
 
-        if (_amount > balances[_token]) {
-            revert InsufficientBalance();
-        }
-
-        balances[_token] = balances[_token] - _amount;
-        IERC20(_token).safeTransfer(_recipient, _amount);
-
+        vault.withdraw(_recipient, _token, _amount);
         emit Unlocked(_token, _sender, _recipient, _amount);
     }
 }

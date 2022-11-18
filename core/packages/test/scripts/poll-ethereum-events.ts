@@ -8,8 +8,11 @@ const main = async () => {
     const contracts = JSON.parse(await readFile('/tmp/snowbridge/contracts.json', 'utf8'));
 
     const interestingContracts = {
+        EtherVault: contracts.contracts.EtherVault,
         ETHApp: contracts.contracts.ETHApp,
+        ERC20Vault: contracts.contracts.ERC20Vault,
         ERC20App: contracts.contracts.ERC20App,
+        WrappedToken: contracts.contracts.WrappedToken,
         DOTApp: contracts.contracts.DOTApp,
         BasicOutboundChannel: contracts.contracts.BasicOutboundChannel,
         IncentivizedOutboundChannel: contracts.contracts.IncentivizedOutboundChannel,

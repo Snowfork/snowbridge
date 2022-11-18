@@ -7,13 +7,30 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
     let channelRegistry = await deployments.get("ChannelRegistry")
     let scaleCodecLibrary = await deployments.get("ScaleCodec")
 
-    await deployments.deploy("ETHApp", {
+    let vault = await deployments.deploy('EtherVault', {
         from: deployer,
-        args: [incentivizedInboundChannel.address, channelRegistry.address],
+        log: true,
+        autoMine: true
+    })
+
+    let app = await deployments.deploy("ETHApp", {
+        from: deployer,
+        args: [incentivizedInboundChannel.address, vault.address, channelRegistry.address],
         libraries: {
             ScaleCodec: scaleCodecLibrary.address,
         },
         log: true,
         autoMine: true,
     })
+
+    await deployments.execute(
+        "EtherVault", 
+        {
+          from: deployer,
+          log: true,
+          autoMine: true
+        },
+        "transferOwnership",
+        app.address
+    )
 }
