@@ -112,15 +112,21 @@ async function createRandomPositions(numberOfPositions: number, numberOfValidato
     return shuffled.slice(0, numberOfPositions)
 }
 
+interface ValidatorSignature {
+    v: number,
+    r: Uint8Array,
+    s: Uint8Array,
+}
+
 interface ValidatorProof {
-    signature: string
+    signature: ValidatorSignature
     index: number
     addr: string
     merkleProof: string[]
 }
 
 interface ValidatorMultiProof {
-    signatures: string[]
+    signatures: ValidatorSignature[]
     indices: number[]
     addrs: string[]
     merkleProofs: string[][]
@@ -139,16 +145,18 @@ function createInitialValidatorProofs(
         let address = wallet.address
         let proof = tree.getHexProof(leaf, position)
         let privateKey = ethers.utils.arrayify(wallet.privateKey)
-        let signatureECDSA = secp256k1.ecdsaSign(commitmentHashBytes, privateKey)
-        let ethRecID = signatureECDSA.recid + 27
+        let signature = secp256k1.ecdsaSign(commitmentHashBytes, privateKey)
+        let recid = signature.recid + 27
 
-        // append ethRecID to signature
-        let x = new Uint8Array(signatureECDSA.signature.buffer)
-        let y = Uint8Array.from([ethRecID])
-        let signature = Uint8Array.from([...x, ...y])
+        let buf = new Uint8Array(signature.signature.buffer)
+        let r = buf.slice(0, 32)
+        let s = buf.slice(32)
 
         return {
-            signature: ethers.utils.hexlify(signature),
+            signature: {
+                v: recid,
+                r, s
+            },
             index: position,
             addr: address,
             merkleProof: proof,
