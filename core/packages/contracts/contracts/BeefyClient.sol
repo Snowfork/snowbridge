@@ -337,7 +337,7 @@ contract BeefyClient is Ownable {
      * @param request a storage reference to the requests struct
      * @return uint256 the seed
      */
-    function deriveSeed(Request storage request) internal view returns (uint256) {
+    function deriveSeed(Request storage request) internal virtual view returns (uint256) {
         return uint256(blockhash(request.blockNumber + BLOCK_WAIT_PERIOD));
     }
 

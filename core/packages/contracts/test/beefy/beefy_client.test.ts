@@ -1,41 +1,70 @@
 import { expect, loadFixture, mine } from "../setup"
-import { beefyClientFixture1, beefyClientPublicFixture } from "./fixtures"
+import { beefyClientFixture } from "./fixtures"
+
+import {
+    createRandomPositions,
+    createInitialValidatorProofs,
+    createFinalValidatorProofs
+} from "../helpers"
 
 describe("BeefyClient", function () {
     it("runs commitment submission flow", async function () {
-        let { beefyClient, fixtureData, user } = await loadFixture(beefyClientFixture1)
+        let { beefyClient, fixtureData, validators, user } = await loadFixture(beefyClientFixture)
 
-        let bitfield = await beefyClient.createInitialBitfield(fixtureData.params.proof.indices, 3)
+        // expecting 2/3+1 validator signatures
+        let numSignatureClaims =
+            validators.validatorSetLength - Math.floor((validators.validatorSetLength - 1) / 3)
+
+        let initialBitfieldPositions = await createRandomPositions(
+            numSignatureClaims,
+            validators.validatorSetLength
+        )
+        let initialBitfield = await beefyClient.createInitialBitfield(
+            initialBitfieldPositions,
+            validators.validatorSetLength
+        )
+
+        let firstPosition = initialBitfieldPositions[0]
+
+        let commitmentHash = fixtureData.commitmentHash
+
+        let initialValidatorProofs = createInitialValidatorProofs(commitmentHash, validators)
 
         await expect(
             beefyClient
                 .connect(user)
                 .submitInitial(
-                    fixtureData.commitmentHash,
+                    commitmentHash,
                     fixtureData.params.commitment.validatorSetID,
-                    bitfield,
+                    initialBitfield,
                     {
-                        signature: fixtureData.params.proof.signatures[0],
-                        index: fixtureData.params.proof.indices[0],
-                        addr: fixtureData.params.proof.addrs[0],
-                        merkleProof: fixtureData.params.proof.merkleProofs[0],
+                        signature: initialValidatorProofs[firstPosition].signature,
+                        index: firstPosition,
+                        addr: initialValidatorProofs[firstPosition].addr,
+                        merkleProof: initialValidatorProofs[firstPosition].merkleProof
                     }
                 )
         )
             .to.emit(beefyClient, "NewRequest")
             .withArgs(0, user.address)
 
-        await mine(3)
+        expect(await beefyClient.nextRequestID()).to.equal(1)
+
+        await mine(45)
+
+        let finalBitfield = await beefyClient.createFinalBitfield(0)
+        let completeValidatorProofs = await createFinalValidatorProofs(
+            finalBitfield,
+            initialValidatorProofs
+        )
 
         await expect(
             beefyClient
                 .connect(user)
-                [
-                    "submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),((uint8,bytes32,bytes32)[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))"
-                ](
+                .submitFinalWithLeaf(
                     0,
                     fixtureData.params.commitment,
-                    fixtureData.params.proof,
+                    completeValidatorProofs,
                     fixtureData.params.leaf,
                     fixtureData.params.leafProof
                 )
@@ -46,20 +75,24 @@ describe("BeefyClient", function () {
                 fixtureData.params.commitment.blockNumber
             )
 
-        let root = await beefyClient.latestMMRRoot()
-        expect(root).to.eq(fixtureData.params.commitment.payload.mmrRootHash)
+        expect(await beefyClient.latestMMRRoot()).to.eq(
+            fixtureData.params.commitment.payload.mmrRootHash
+        )
+        expect(await beefyClient.latestMMRRoot()).to.eq(
+            fixtureData.params.commitment.payload.mmrRootHash
+        )
     })
 
     it("encodes beefy commitment to SCALE-format", async function () {
-        let { beefyClient } = await loadFixture(beefyClientPublicFixture)
+        let { beefyClient } = await loadFixture(beefyClientFixture)
         let commitment = {
             blockNumber: 5,
             validatorSetID: 7,
             payload: {
                 mmrRootHash: "0x3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c",
                 prefix: "0x0861620c0001026d6880",
-                suffix: "0x",
-            },
+                suffix: "0x"
+            }
         }
 
         let encoded = await beefyClient.encodeCommitment_public(commitment)
