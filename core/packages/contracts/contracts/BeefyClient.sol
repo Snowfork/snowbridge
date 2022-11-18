@@ -160,10 +160,6 @@ contract BeefyClient is Ownable {
 
     /* Constants */
 
-    // Used for calculating minimum number of required signatures
-    uint256 public constant THRESHOLD_NUMERATOR = 3;
-    uint256 public constant THRESHOLD_DENOMINATOR = 250;
-
     /**
      * TODO: Review this constant (SNO-355)
      *
@@ -234,11 +230,12 @@ contract BeefyClient is Ownable {
         // the signature of senderPublicKey on the commitmentHash
         require(ECDSA.recover(commitmentHash, proof.signature.v, proof.signature.r, proof.signature.s) == proof.addr, "Invalid signature");
 
-        // Check that the bitfield actually contains enough claims to be successful, ie, >= 2/3
+        // For the initial commitment, more than two thirds of the validator set should claim to sign the commitment
         require(
-            bitfield.countSetBits() >= minimumSignatureThreshold(vset),
+            bitfield.countSetBits() >= vset.length - (vset.length - 1) / 3,
             "Not enough claims"
         );
+
 
         // Accept and save the commitment
         requests[nextRequestID] = Request(
@@ -349,16 +346,48 @@ contract BeefyClient is Ownable {
     }
 
     /**
-     * TODO: Settle on final algorithm (SNO-150). The current one here should be considered
-     *  a temporary placeholder.
+     * @dev Calculate minimum number of required signatures for the current validator set.
      *
-     * @dev Compute the minimum required signatures for a given validator set
-     * @param vset the validator set
-     * @return uint256 minimum required signatures
+     * This function approximates f(x) defined below for x in [1, 21_846):
+     *
+     *  x <= 10: f(x) = x * (2/3)
+     *  x  > 10: f(x) = max(10, ceil(log2(3 * x))
+     *
+     * Research by W3F suggests that `ceil(log2(3 * x))` is a minimum number of signatures required to make an
+     * attack unfeasible. We put a further minimum bound of 10 on this value for extra security.
+     *
+     * If the session has less than 10 active validators it's definitely some sort of local testnet
+     * and we use different logic (minimum 2/3 + 1 validators must sign).
+     *
+     * One assumption is that Polkadot/Kusama will never have more than 21_845 active validators in a session.
+     * As of writing this comment, Polkadot has 300 validators and Kusama has around 1000 validators,
+     * so we are well within those limits.
+     *
+     * In any case, an order of magnitude increase in validator set sizes will likely require a re-architecture
+     * of Polkadot that would make this contract obsolete well before the assumption becomes a problem.
+     *
+     * Constants generated with the help of scripts/minsigs.py
      */
     function minimumSignatureThreshold(ValidatorSet memory vset) internal pure returns (uint256) {
-        return
-            (vset.length * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) / THRESHOLD_DENOMINATOR;
+        if (vset.length <= 10) {
+            return vset.length - (vset.length - 1) / 3;
+        } else if (vset.length < 342) {
+            return 10;
+        } else if (vset.length < 683) {
+            return 11;
+        } else if (vset.length < 1366) {
+            return 12;
+        } else if (vset.length < 2731) {
+            return 13;
+        } else if (vset.length < 5462) {
+            return 14;
+        } else if (vset.length < 10923) {
+            return 15;
+        } else if (vset.length < 21846) {
+            return 16;
+        } else {
+            return 17;
+        }
     }
 
     /**
