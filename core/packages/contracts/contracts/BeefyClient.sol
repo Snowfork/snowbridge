@@ -103,16 +103,14 @@ contract BeefyClient is Ownable {
     /**
      * @dev A request is used to link initial and final submission of a commitment
      * @param sender the sender of the initial transaction
-     * @param commitmentHash the hash of the commitment they are claiming has been signed
      * @param bitfield a bitfield signalling which validators they claim have signed
      * @param blockNumber the block number for this commitment
      */
     struct Request {
         address sender;
-        bytes32 commitmentHash;
+        uint64 blockNumber;
+        uint32 validatorSetLen;
         uint256[] bitfield;
-        uint256 blockNumber;
-        ValidatorSet vset;
     }
 
     /**
@@ -236,14 +234,12 @@ contract BeefyClient is Ownable {
             "Not enough claims"
         );
 
-
         // Accept and save the commitment
         requests[nextRequestID] = Request(
             msg.sender,
-            commitmentHash,
-            bitfield,
-            block.number,
-            vset
+            uint64(block.number),
+            uint32(vset.length),
+            bitfield
         );
 
         emit NewRequest(nextRequestID, msg.sender);
@@ -283,7 +279,7 @@ contract BeefyClient is Ownable {
      * @param leaf an MMR leaf provable using the MMR root in the commitment payload
      * @param leafProof an MMR leaf proof
      */
-    function submitFinal(
+    function submitFinalWithLeaf(
         uint256 requestID,
         Commitment calldata commitment,
         ValidatorMultiProof calldata proof,
@@ -368,22 +364,22 @@ contract BeefyClient is Ownable {
      *
      * Constants generated with the help of scripts/minsigs.py
      */
-    function minimumSignatureThreshold(ValidatorSet memory vset) internal pure returns (uint256) {
-        if (vset.length <= 10) {
-            return vset.length - (vset.length - 1) / 3;
-        } else if (vset.length < 342) {
+    function minimumSignatureThreshold(uint256 validatorSetLen) internal pure returns (uint256) {
+        if (validatorSetLen <= 10) {
+            return validatorSetLen - (validatorSetLen - 1) / 3;
+        } else if (validatorSetLen < 342) {
             return 10;
-        } else if (vset.length < 683) {
+        } else if (validatorSetLen < 683) {
             return 11;
-        } else if (vset.length < 1366) {
+        } else if (validatorSetLen < 1366) {
             return 12;
-        } else if (vset.length < 2731) {
+        } else if (validatorSetLen < 2731) {
             return 13;
-        } else if (vset.length < 5462) {
+        } else if (validatorSetLen < 5462) {
             return 14;
-        } else if (vset.length < 10923) {
+        } else if (validatorSetLen < 10923) {
             return 15;
-        } else if (vset.length < 21846) {
+        } else if (validatorSetLen < 21846) {
             return 16;
         } else {
             return 17;
@@ -412,7 +408,7 @@ contract BeefyClient is Ownable {
         require(commitment.blockNumber > latestBeefyBlock, "Commitment is too old");
 
         // verify the validator multiproof
-        uint256 signatureCount = minimumSignatureThreshold(vset);
+        uint256 signatureCount = minimumSignatureThreshold(vset.length);
         uint256[] memory finalBitfield = Bitfield.randomNBitsWithPriorCheck(
             deriveSeed(request),
             request.bitfield,
@@ -532,8 +528,8 @@ contract BeefyClient is Ownable {
             Bitfield.randomNBitsWithPriorCheck(
                 deriveSeed(request),
                 request.bitfield,
-                minimumSignatureThreshold(request.vset),
-                request.vset.length
+                minimumSignatureThreshold(request.validatorSetLen),
+                request.validatorSetLen
             );
     }
 }
