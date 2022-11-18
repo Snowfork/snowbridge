@@ -5,6 +5,9 @@ import { MerkleTree } from "merkletreejs"
 import { ethers, Event, Wallet } from "ethers"
 import _ from "lodash"
 import secp256k1 from "secp256k1"
+import seedrandom from "seedrandom"
+import { entropyToMnemonic } from "@ethersproject/hdnode"
+import { arrayify, keccak256 } from "ethers/lib/utils"
 
 function createMerkleTree(values: string[]) {
     let leaves = values.map((value) => keccakFromHexString(value))
@@ -55,7 +58,8 @@ function createValidatorFixture(
 ): ValidatorFixture {
     let wallets: Wallet[] = []
     for (let i = 0; i < validatorSetLength; i++) {
-        let wallet = ethers.Wallet.createRandom()
+        let entropy = entropyToMnemonic(keccak(Buffer.from(`${i}`)))
+        let wallet = ethers.Wallet.fromMnemonic(entropy)
         wallets.push(wallet)
     }
 
@@ -107,7 +111,8 @@ async function createRandomPositions(numberOfPositions: number, numberOfValidato
         positions.push(i)
     }
 
-    let shuffled = _.shuffle(positions)
+    seedrandom('test', { global: true });
+    let shuffled = _.runInContext().shuffle(positions)
 
     return shuffled.slice(0, numberOfPositions)
 }
