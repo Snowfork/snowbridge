@@ -66,11 +66,8 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 
 	messages, err := message.New(
-		ctx,
-		eg,
 		writer,
 		listener,
-		ethconn,
 		addresses,
 	)
 	if err != nil {

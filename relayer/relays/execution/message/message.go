@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain"
-	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"golang.org/x/sync/errgroup"
 )
@@ -19,7 +18,7 @@ type Message struct {
 	addresses []common.Address
 }
 
-func New(ctx context.Context, eg *errgroup.Group, writer *parachain.ParachainWriter, listener *EthereumListener, ethconn *ethereum.Connection, addresses []common.Address) (*Message, error) {
+func New(writer *parachain.ParachainWriter, listener *EthereumListener, addresses []common.Address) (*Message, error) {
 	return &Message{writer, listener, addresses}, nil
 }
 
@@ -57,14 +56,18 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 					"blockNumber":                 lastSyncedBlockNumber,
 				}).Info("last synced execution block changed, fetching messages")
 
-				err = m.syncIncentivized(ctx, eg, lastSyncedIncentivizedBlock+1, lastSyncedBlockNumber)
-				if err != nil {
-					return fmt.Errorf("sync incentivized messages: %w", err)
+				if lastSyncedIncentivizedBlock+1 <= lastSyncedBlockNumber {
+					err = m.syncIncentivized(ctx, eg, lastSyncedIncentivizedBlock+1, lastSyncedBlockNumber)
+					if err != nil {
+						return fmt.Errorf("sync incentivized messages: %w", err)
+					}
 				}
 
-				err = m.syncBasic(ctx, eg, lastSyncedBasicBlock+1, lastSyncedBlockNumber)
-				if err != nil {
-					return fmt.Errorf("sync basic messages: %w", err)
+				if lastSyncedBasicBlock+1 <= lastSyncedBlockNumber {
+					err = m.syncBasic(ctx, eg, lastSyncedBasicBlock+1, lastSyncedBlockNumber)
+					if err != nil {
+						return fmt.Errorf("sync basic messages: %w", err)
+					}
 				}
 
 				lastSyncedIncentivizedBlock = lastSyncedBlockNumber
