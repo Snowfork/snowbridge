@@ -7,7 +7,7 @@ import {
     BeefyClientPublic__factory
 } from "../../src"
 
-import { createValidatorFixture } from "../helpers"
+import { ValidatorSet } from "../helpers"
 
 import fixtureData from "./data/beefy-commitment.json"
 
@@ -52,7 +52,7 @@ const totalNumberOfValidators = 300
 async function beefyClientFixture() {
     let { beefyClient, owner, user } = await loadFixture(baseFixture)
 
-    let validators = createValidatorFixture(
+    let vset = new ValidatorSet(
         fixtureData.params.commitment.validatorSetID - 1,
         totalNumberOfValidators
     )
@@ -60,16 +60,16 @@ async function beefyClientFixture() {
     await beefyClient.initialize(
         0,
         {
-            id: validators.validatorSetID,
-            root: validators.validatorSetRoot,
-            length: validators.validatorSetLength
+            id: vset.id,
+            root: vset.root,
+            length: vset.length
         },
         {
-            id: validators.validatorSetID + 1,
-            root: validators.validatorSetRoot,
-            length: validators.validatorSetLength
+            id: vset.id + 1,
+            root: vset.root,
+            length: vset.length
         }
     )
 
-    return { beefyClient, fixtureData, validators, owner, user }
+    return { beefyClient, fixtureData, vset, owner, user }
 }

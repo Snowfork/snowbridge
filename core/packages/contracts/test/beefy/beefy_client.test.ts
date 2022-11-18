@@ -1,48 +1,30 @@
 import { expect, loadFixture, mine } from "../setup"
 import { beefyClientFixture } from "./fixtures"
 
-import {
-    createRandomPositions,
-    createInitialValidatorProofs,
-    createFinalValidatorProofs
-} from "../helpers"
+import { createRandomSubset, readSetBits } from "../helpers"
 
 describe("BeefyClient", function () {
     it("runs commitment submission flow", async function () {
-        let { beefyClient, fixtureData, validators, user } = await loadFixture(beefyClientFixture)
-
-        // expecting 2/3+1 validator signatures
-        let numSignatureClaims =
-            validators.validatorSetLength - Math.floor((validators.validatorSetLength - 1) / 3)
-
-        let initialBitfieldPositions = await createRandomPositions(
-            numSignatureClaims,
-            validators.validatorSetLength
-        )
-        let initialBitfield = await beefyClient.createInitialBitfield(
-            initialBitfieldPositions,
-            validators.validatorSetLength
-        )
-
-        let firstPosition = initialBitfieldPositions[0]
+        let { beefyClient, fixtureData, vset, user } = await loadFixture(beefyClientFixture)
 
         let commitmentHash = fixtureData.commitmentHash
 
-        let initialValidatorProofs = createInitialValidatorProofs(commitmentHash, validators)
+        // create initial bitfield with signature claims (with 2/3+1 claimed validator signatures)
+        let claims = createRandomSubset(
+            vset.length,
+            vset.length - Math.floor((vset.length - 1) / 3)
+        )
+        let bitfield = await beefyClient.createInitialBitfield(claims, vset.length)
 
+        // Submit initial signature proof
         await expect(
             beefyClient
                 .connect(user)
                 .submitInitial(
                     commitmentHash,
                     fixtureData.params.commitment.validatorSetID,
-                    initialBitfield,
-                    {
-                        signature: initialValidatorProofs[firstPosition].signature,
-                        index: firstPosition,
-                        addr: initialValidatorProofs[firstPosition].addr,
-                        merkleProof: initialValidatorProofs[firstPosition].merkleProof
-                    }
+                    bitfield,
+                    vset.createSignatureProof(claims[0], commitmentHash)
                 )
         )
             .to.emit(beefyClient, "NewRequest")
@@ -50,21 +32,18 @@ describe("BeefyClient", function () {
 
         expect(await beefyClient.nextRequestID()).to.equal(1)
 
-        await mine(45)
-
+        // wait 3+ blocks and then create the final bitfield
+        await mine(3)
         let finalBitfield = await beefyClient.createFinalBitfield(0)
-        let completeValidatorProofs = await createFinalValidatorProofs(
-            finalBitfield,
-            initialValidatorProofs
-        )
 
+        // Submit final signature proof
         await expect(
             beefyClient
                 .connect(user)
                 .submitFinalWithLeaf(
                     0,
                     fixtureData.params.commitment,
-                    completeValidatorProofs,
+                    vset.createSignatureMultiProof(readSetBits(finalBitfield), commitmentHash),
                     fixtureData.params.leaf,
                     fixtureData.params.leafProof
                 )
@@ -78,8 +57,8 @@ describe("BeefyClient", function () {
         expect(await beefyClient.latestMMRRoot()).to.eq(
             fixtureData.params.commitment.payload.mmrRootHash
         )
-        expect(await beefyClient.latestMMRRoot()).to.eq(
-            fixtureData.params.commitment.payload.mmrRootHash
+        expect(await beefyClient.latestBeefyBlock()).to.eq(
+            fixtureData.params.commitment.blockNumber
         )
     })
 

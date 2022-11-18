@@ -1,7 +1,7 @@
 import { ethers, expect, loadFixture } from "../setup"
-import { createMerkleTree } from "../helpers"
 import { MerkleProof__factory } from "../../src"
-import { keccakFromHexString } from "ethereumjs-util"
+import { keccakFromHexString, keccak256 } from "ethereumjs-util"
+import { MerkleTree } from "merkletreejs"
 
 describe("Merkle Proof", function () {
     async function fixture() {
@@ -14,15 +14,18 @@ describe("Merkle Proof", function () {
     it("should_generate_and_verify_proof_on_test_data", async function () {
         let { merkleProof } = await loadFixture(fixture)
 
-        let leaves = testAddresses
-        let tree = createMerkleTree(leaves)
+        let leaves = testAddresses.map((address) => keccakFromHexString(address))
+        let tree = new MerkleTree(leaves, keccak256, {
+            sortLeaves: false,
+            sortPairs: false
+        })
+
         let root = tree.getHexRoot()
         expect(root).to.be.equal(expectedRoot)
 
         for (let i = 0; i < leaves.length; i++) {
             let leaf = leaves[i]
-            let hashedLeaf = keccakFromHexString(leaf)
-            let hashedLeafHex = "0x" + hashedLeaf.toString("hex")
+            let hashedLeafHex = "0x" + leaf.toString("hex")
             let proof = tree.getHexProof(hashedLeafHex)
 
             let solidityRoot = await merkleProof.computeRootFromProofAtPosition(
@@ -35,14 +38,14 @@ describe("Merkle Proof", function () {
             expect(solidityRoot).to.be.equal(expectedRoot)
         }
 
-        let lastLeaf = keccakFromHexString(leaves[leaves.length - 1])
+        let lastLeaf = keccakFromHexString(testAddresses[testAddresses.length - 1])
         let lastProof = tree.getHexProof(lastLeaf)
 
         expect(lastProof).to.deep.equal([
             "0x340bcb1d49b2d82802ddbcf5b85043edb3427b65d09d7f758fbc76932ad2da2f",
             "0xba0580e5bd530bc93d61276df7969fb5b4ae8f1864b4a28c280249575198ff1f",
             "0xd02609d2bbdb28aa25f58b85afec937d5a4c85d37925bce6d0cf802f9d76ba79",
-            "0xae3f8991955ed884613b0a5f40295902eea0e0abe5858fc520b72959bc016d4e",
+            "0xae3f8991955ed884613b0a5f40295902eea0e0abe5858fc520b72959bc016d4e"
         ])
     })
 })
@@ -214,6 +217,6 @@ let testAddresses = [
     "0x70ADEEa65488F439392B869b1Df7241EF317e221",
     "0x64C0bf8AA36Ba590477585Bc0D2BDa7970769463",
     "0xA4cDc98593CE52d01Fe5Ca47CB3dA5320e0D7592",
-    "0xc26B34D375533fFc4c5276282Fa5D660F3d8cbcB",
+    "0xc26B34D375533fFc4c5276282Fa5D660F3d8cbcB"
 ]
 let expectedRoot = "0x72b0acd7c302a84f1f6b6cefe0ba7194b7398afb440e1b44a9dbbe270394ca53"
