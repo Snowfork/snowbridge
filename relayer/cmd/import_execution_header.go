@@ -10,7 +10,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/writer"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )
@@ -61,7 +60,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("connect to parachain: %w", err)
 		}
 
-		writer := writer.NewParachainWriter(paraconn, 32)
+		writer := parachain.NewParachainWriter(paraconn, 32)
 		err = writer.Start(ctx, eg)
 		if err != nil {
 			return fmt.Errorf("start parachain conn: %w", err)

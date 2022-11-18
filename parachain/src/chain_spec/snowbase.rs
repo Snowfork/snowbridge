@@ -43,6 +43,7 @@ pub fn get_chain_spec() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 					get_account_id_from_seed::<sr25519::Public>("Relay"),
 					get_account_id_from_seed::<sr25519::Public>("BeaconRelay"),
+					get_account_id_from_seed::<sr25519::Public>("ExecutionRelay"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),

@@ -1,12 +1,13 @@
-package beacon
+package execution
 
 import (
 	"context"
 
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
+	"github.com/snowfork/snowbridge/relayer/relays/execution/config"
+	"github.com/snowfork/snowbridge/relayer/relays/execution/message"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -26,11 +27,15 @@ func NewRelay(
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	specSettings := r.config.GetSpecSettings()
-
 	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
+	ethconn := ethereum.NewConnection(r.config.Source.Ethereum.Endpoint, nil)
 
 	err := paraconn.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = ethconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -45,12 +50,34 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	headers := header.New(
-		writer,
-		r.config.Source.Beacon.Endpoint,
-		specSettings.SlotsInEpoch,
-		specSettings.EpochsPerSyncCommitteePeriod,
+	listener := message.NewEthereumListener(
+		&r.config.Source,
+		ethconn,
 	)
 
-	return headers.Sync(ctx, eg)
+	err = listener.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
+
+	addresses, err := r.config.Source.GetBasicChannelAddresses()
+	if err != nil {
+		return err
+	}
+
+	messages, err := message.New(
+		writer,
+		listener,
+		addresses,
+	)
+	if err != nil {
+		return err
+	}
+
+	err = messages.Sync(ctx, eg)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

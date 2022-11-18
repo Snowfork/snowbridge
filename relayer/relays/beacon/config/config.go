@@ -1,9 +1,6 @@
 package config
 
 import (
-	"strings"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/config"
 )
 
@@ -24,31 +21,10 @@ type Spec struct {
 
 type SourceConfig struct {
 	Beacon                BeaconConfig          `mapstructure:"beacon"`
-	Ethereum              config.EthereumConfig `mapstructure:"ethereum"`
-	Contracts             ContractsConfig       `mapstructure:"contracts"`
-	BasicChannelAddresses []string              `mapstructure:"basicChannelAddresses"`
-}
-
-func (c *SourceConfig) GetBasicChannelAddresses() ([]common.Address, error) {
-	var addresses []common.Address
-
-	for _, address := range c.BasicChannelAddresses {
-		trimmedAddress := strings.TrimPrefix(address, "0x")
-
-		addresses = append(addresses, common.HexToAddress(trimmedAddress))
-	}
-
-	return addresses, nil
-}
-
-type ContractsConfig struct {
-	BasicOutboundChannel        string `mapstructure:"BasicOutboundChannel"`
-	IncentivizedOutboundChannel string `mapstructure:"IncentivizedOutboundChannel"`
 }
 
 type BeaconConfig struct {
 	Endpoint                string `mapstructure:"endpoint"`
-	FinalizedUpdateEndpoint string `mapstructure:"finalizedUpdateEndpoint"`
 	Spec                    Spec   `mapstructure:"spec"`
 	ActiveSpec              string `mapstructure:"activeSpec"`
 }

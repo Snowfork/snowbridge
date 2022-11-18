@@ -13,15 +13,7 @@
         }
       },
       "activeSpec": "mainnet"
-    },
-    "ethereum": {
-      "endpoint": "ws://localhost:8546"
-    },
-    "contracts": {
-      "BasicOutboundChannel": null,
-      "IncentivizedOutboundChannel": null
-    },
-  "basicChannelAddresses": []
+    }
   },
   "sink": {
     "parachain": {
