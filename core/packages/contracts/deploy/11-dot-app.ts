@@ -3,7 +3,6 @@ import { HardhatRuntimeEnvironment } from "hardhat/types"
 module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
 
-    let scaleCodecLibrary = await deployments.get("ScaleCodec")
     let incentivizedOutboundChannel = await deployments.get("IncentivizedOutboundChannel")
     let channelRegistry = await deployments.get("ChannelRegistry")
 
@@ -11,17 +10,14 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         from: deployer,
         args: ["Wrapped DOT", "WDOT"],
         log: true,
-        autoMine: true,
+        autoMine: true
     })
 
     let dotAppContract = await deployments.deploy("DOTApp", {
         from: deployer,
         args: [tokenContract.address, incentivizedOutboundChannel.address, channelRegistry.address],
-        libraries: {
-            ScaleCodec: scaleCodecLibrary.address,
-        },
         log: true,
-        autoMine: true,
+        autoMine: true
     })
 
     console.log("Configuring WrappedToken")
@@ -29,7 +25,7 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         "WrappedToken",
         {
             from: deployer,
-            autoMine: true,
+            autoMine: true
         },
         "transferOwnership",
         dotAppContract.address

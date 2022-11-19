@@ -9,18 +9,15 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
     const paraID = process.env.PARACHAIN_ID
 
     let merkleProofLibrary = await deployments.get("MerkleProof")
-    let scaleCodecLibrary = await deployments.get("ScaleCodec")
-
     let beefyClient = await deployments.get("BeefyClient")
 
     await deployments.deploy("ParachainClient", {
         from: deployer,
         args: [beefyClient.address, paraID],
         libraries: {
-            MerkleProof: merkleProofLibrary.address,
-            ScaleCodec: scaleCodecLibrary.address,
+            MerkleProof: merkleProofLibrary.address
         },
         log: true,
-        autoMine: true,
+        autoMine: true
     })
 }
