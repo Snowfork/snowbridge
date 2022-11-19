@@ -45,7 +45,8 @@ describe("BeefyClient", function () {
                     fixtureData.params.commitment,
                     vset.createSignatureMultiProof(readSetBits(finalBitfield), commitmentHash),
                     fixtureData.params.leaf,
-                    fixtureData.params.leafProof
+                    fixtureData.params.leafProof,
+                    fixtureData.params.leafProofOrder
                 )
         )
             .to.emit(beefyClient, "NewMMRRoot")

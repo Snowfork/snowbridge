@@ -298,6 +298,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 			params.Proof,
 			params.Leaf,
 			params.LeafProof,
+			params.LeafProofOrder,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("final submission: %w", err)

@@ -28,12 +28,6 @@ var (
 	_ = event.NewSubscription
 )
 
-// MMRProof is an auto generated low-level Go binding around an user-defined struct.
-type MMRProof struct {
-	Items [][32]byte
-	Order uint64
-}
-
 // ParachainClientHeadProof is an auto generated low-level Go binding around an user-defined struct.
 type ParachainClientHeadProof struct {
 	Pos   *big.Int
@@ -53,16 +47,17 @@ type ParachainClientMMRLeafPartial struct {
 
 // ParachainClientProof is an auto generated low-level Go binding around an user-defined struct.
 type ParachainClientProof struct {
-	HeadPrefix  []byte
-	HeadSuffix  []byte
-	HeadProof   ParachainClientHeadProof
-	LeafPartial ParachainClientMMRLeafPartial
-	LeafProof   MMRProof
+	HeadPrefix     []byte
+	HeadSuffix     []byte
+	HeadProof      ParachainClientHeadProof
+	LeafPartial    ParachainClientMMRLeafPartial
+	LeafProof      [][32]byte
+	LeafProofOrder *big.Int
 }
 
 // OpaqueProofMetaData contains all meta data concerning the OpaqueProof contract.
 var OpaqueProofMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"headPrefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"headSuffix\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structParachainClient.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structParachainClient.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"items\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"order\",\"type\":\"uint64\"}],\"internalType\":\"structMMRProof\",\"name\":\"leafProof\",\"type\":\"tuple\"}],\"internalType\":\"structParachainClient.Proof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"dummy\",\"outputs\":[],\"stateMutability\":\"pure\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"headPrefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"headSuffix\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structParachainClient.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structParachainClient.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"leafProofOrder\",\"type\":\"uint256\"}],\"internalType\":\"structParachainClient.Proof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"dummy\",\"outputs\":[],\"stateMutability\":\"pure\",\"type\":\"function\"}]",
 }
 
 // OpaqueProofABI is the input ABI used to generate the binding from.
@@ -211,9 +206,9 @@ func (_OpaqueProof *OpaqueProofTransactorRaw) Transact(opts *bind.TransactOpts, 
 	return _OpaqueProof.Contract.contract.Transact(opts, method, params...)
 }
 
-// Dummy is a free data retrieval call binding the contract method 0xc8a72d23.
+// Dummy is a free data retrieval call binding the contract method 0x821d9b05.
 //
-// Solidity: function dummy((bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) pure returns()
+// Solidity: function dummy((bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) proof) pure returns()
 func (_OpaqueProof *OpaqueProofCaller) Dummy(opts *bind.CallOpts, proof ParachainClientProof) error {
 	var out []interface{}
 	err := _OpaqueProof.contract.Call(opts, &out, "dummy", proof)
@@ -226,16 +221,16 @@ func (_OpaqueProof *OpaqueProofCaller) Dummy(opts *bind.CallOpts, proof Parachai
 
 }
 
-// Dummy is a free data retrieval call binding the contract method 0xc8a72d23.
+// Dummy is a free data retrieval call binding the contract method 0x821d9b05.
 //
-// Solidity: function dummy((bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) pure returns()
+// Solidity: function dummy((bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) proof) pure returns()
 func (_OpaqueProof *OpaqueProofSession) Dummy(proof ParachainClientProof) error {
 	return _OpaqueProof.Contract.Dummy(&_OpaqueProof.CallOpts, proof)
 }
 
-// Dummy is a free data retrieval call binding the contract method 0xc8a72d23.
+// Dummy is a free data retrieval call binding the contract method 0x821d9b05.
 //
-// Solidity: function dummy((bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) pure returns()
+// Solidity: function dummy((bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) proof) pure returns()
 func (_OpaqueProof *OpaqueProofCallerSession) Dummy(proof ParachainClientProof) error {
 	return _OpaqueProof.Contract.Dummy(&_OpaqueProof.CallOpts, proof)
 }

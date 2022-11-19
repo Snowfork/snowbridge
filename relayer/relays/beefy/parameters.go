@@ -20,11 +20,12 @@ type InitialRequestParams struct {
 }
 
 type FinalRequestParams struct {
-	ID         *big.Int
-	Commitment beefyclient.BeefyClientCommitment
-	Proof      beefyclient.BeefyClientValidatorMultiProof
-	Leaf       beefyclient.BeefyClientMMRLeaf
-	LeafProof  beefyclient.MMRProof
+	ID             *big.Int
+	Commitment     beefyclient.BeefyClientCommitment
+	Proof          beefyclient.BeefyClientValidatorMultiProof
+	Leaf           beefyclient.BeefyClientMMRLeaf
+	LeafProof      [][32]byte
+	LeafProofOrder *big.Int
 }
 
 func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []*big.Int) (*InitialRequestParams, error) {
@@ -157,11 +158,6 @@ func (r *Request) MakeSubmitFinalParams(validationID int64, validatorIndices []u
 		merkleProofItems = append(merkleProofItems, mmrProofItem)
 	}
 
-	inputProof := beefyclient.MMRProof{
-		Items: merkleProofItems,
-		Order: r.Proof.MerkleProofOrder,
-	}
-
 	validatorIndicesBigInt := []*big.Int{}
 	for _, index := range validatorIndices {
 		validatorIndicesBigInt = append(validatorIndicesBigInt, new(big.Int).SetUint64(index))
@@ -176,8 +172,9 @@ func (r *Request) MakeSubmitFinalParams(validationID int64, validatorIndices []u
 			Addrs:        validatorAddresses,
 			MerkleProofs: validatorAddressProofs,
 		},
-		Leaf:      inputLeaf,
-		LeafProof: inputProof,
+		Leaf:           inputLeaf,
+		LeafProof:      merkleProofItems,
+		LeafProofOrder: new(big.Int).SetUint64(r.Proof.MerkleProofOrder),
 	}
 
 	return &msg, nil

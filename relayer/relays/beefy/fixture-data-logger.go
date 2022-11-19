@@ -74,7 +74,7 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
 
 	var proofItems []string
-	for _, item := range params.LeafProof.Items {
+	for _, item := range params.LeafProof {
 		proofItems = append(proofItems, Hex(item[:]))
 	}
 
@@ -105,10 +105,8 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 				"nextAuthoritySetRoot": Hex(params.Leaf.NextAuthoritySetRoot[:]),
 				"parachainHeadsRoot":   Hex(params.Leaf.ParachainHeadsRoot[:]),
 			},
-			"leafProof": log.Fields{
-				"items": proofItems,
-				"order": params.LeafProof.Order,
-			},
+			"leafProof": proofItems,
+			"leafProofOrder": params.LeafProofOrder,
 		},
 		"commitmentHash": commitmentHash,
 	}

@@ -1,20 +1,13 @@
 import { ethers, expect, loadFixture } from "../setup"
-import { MMRProofVerification__factory, MMRProofVerifier__factory } from "../../src"
+import { MMRProofWrapper__factory } from "../../src"
 import fixture7leaves from "./data/mmr-fixture-data-7-leaves.json"
 import fixture15leaves from "./data/mmr-fixture-data-15-leaves.json"
 
 describe("MMR Proof Verification", function () {
     async function fixture() {
         let [owner] = await ethers.getSigners()
-        let mmrLib = await new MMRProofVerification__factory(owner).deploy()
-        await mmrLib.deployed()
 
-        let verifier = await new MMRProofVerifier__factory(
-            {
-                "contracts/utils/MMRProofVerification.sol:MMRProofVerification": mmrLib.address
-            },
-            owner
-        ).deploy()
+        let verifier = await new MMRProofWrapper__factory(owner).deploy()
         await verifier.deployed()
 
         return { verifier }
@@ -39,10 +32,8 @@ describe("MMR Proof Verification", function () {
                     await verifier.verifyLeafProof(
                         fixture7leaves.rootHash,
                         fixture7leaves.leaves[i],
-                        {
-                            items: fixture7leaves.proofs[i].items,
-                            order: fixture7leaves.proofs[i].order
-                        }
+                        fixture7leaves.proofs[i].items,
+                        fixture7leaves.proofs[i].order
                     )
                 ).to.be.true
             })
@@ -58,10 +49,8 @@ describe("MMR Proof Verification", function () {
                     await verifier.verifyLeafProof(
                         fixture7leaves.rootHash,
                         fixture7leaves.leaves[i],
-                        {
-                            items: fixture7leaves.proofs[j].items,
-                            order: fixture7leaves.proofs[j].order
-                        }
+                        fixture7leaves.proofs[j].items,
+                        fixture7leaves.proofs[j].order
                     )
                 ).to.be.false
             })
@@ -104,10 +93,8 @@ describe("MMR Proof Verification", function () {
                     await verifier.verifyLeafProof(
                         fixture15leaves.rootHash,
                         fixture15leaves.leaves[i],
-                        {
-                            items: fixture15leaves.proofs[i].items,
-                            order: fixture15leaves.proofs[i].order
-                        }
+                        fixture15leaves.proofs[i].items,
+                        fixture15leaves.proofs[i].order
                     )
                 ).to.be.true
             })
@@ -123,25 +110,21 @@ describe("MMR Proof Verification", function () {
                     await verifier.verifyLeafProof(
                         fixture15leaves.rootHash,
                         fixture15leaves.leaves[i],
-                        {
-                            items: fixture15leaves.proofs[j].items,
-                            order: fixture15leaves.proofs[j].order
-                        }
+                        fixture15leaves.proofs[j].items,
+                        fixture15leaves.proofs[j].order
                     )
                 ).to.be.false
             })
         })
     })
 
-    it("foo", async function () {
+    it("ge report", async function () {
         let { verifier } = await loadFixture(fixture)
         let gasuse = await verifier.estimateGas.verifyLeafProof(
             fixture15leaves.rootHash,
             fixture15leaves.leaves[7],
-            {
-                items: fixture15leaves.proofs[7].items,
-                order: fixture15leaves.proofs[7].order
-            }
+            fixture15leaves.proofs[7].items,
+            fixture15leaves.proofs[7].order
         )
         console.log(gasuse)
     })

@@ -4,6 +4,8 @@ pragma solidity ^0.8.9;
 library MMRProof {
     /**
      * @dev Verify inclusion of a leaf in an MMR
+     * @param root MMR root hash
+     * @param leafHash leaf hash
      * @param proof an array of hashes
      * @param proofOrder a bitfield describing the order of each item (left vs right)
      */
