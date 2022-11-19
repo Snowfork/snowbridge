@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
-import "./utils/MMRProofVerification.sol";
+import "./utils/MMRProof.sol";
 import "./ScaleCodec.sol";
 import "./utils/MerkleProof.sol";
 
@@ -284,7 +284,8 @@ contract BeefyClient is Ownable {
         Commitment calldata commitment,
         ValidatorMultiProof calldata proof,
         MMRLeaf calldata leaf,
-        MMRProof calldata leafProof
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
     ) public {
         Request storage request = requests[requestID];
 
@@ -294,10 +295,10 @@ contract BeefyClient is Ownable {
         verifyCommitment(nextValidatorSet, request, commitment, proof);
 
         require(
-            MMRProofVerification.verifyLeafProof(
+            MMRProof.verifyLeafProof(
                 commitment.payload.mmrRootHash,
                 keccak256(encodeMMRLeaf(leaf)),
-                leafProof.items, leafProof.order
+                leafProof, leafProofOrder
             ),
             "Invalid leaf proof"
         );
@@ -319,12 +320,12 @@ contract BeefyClient is Ownable {
      * @param leafHash contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
      */
-    function verifyMMRLeafProof(bytes32 leafHash, MMRProof calldata proof)
+    function verifyMMRLeafProof(bytes32 leafHash, bytes32[] calldata proof, uint256 proofOrder)
         external
         view
         returns (bool)
     {
-        return MMRProofVerification.verifyLeafProof(latestMMRRoot, leafHash, proof.items, proof.order);
+        return MMRProof.verifyLeafProof(latestMMRRoot, leafHash, proof, proofOrder);
     }
 
     /* Private Functions */

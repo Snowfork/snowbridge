@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "../BeefyClient.sol";
-import "../utils/MMRProofVerification.sol";
 
 contract BeefyClientPublic is BeefyClient {
     constructor() BeefyClient() {}
