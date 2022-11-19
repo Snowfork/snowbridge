@@ -81,37 +81,13 @@ class ValidatorSet {
         let s = buf.slice(32)
 
         return {
-            signature: {
-                v: signature.recid + 27,
-                r,
-                s
-            },
+            v: signature.recid + 27,
+            r,
+            s,
             index: index,
-            addr: wallet.address,
-            merkleProof: this.proofs[index]
+            account: wallet.address,
+            proof: this.proofs[index]
         }
-    }
-
-    createSignatureMultiProof(
-        indices: number[],
-        commitmentHash: string
-    ): BeefyClient.ValidatorMultiProofStruct {
-        let multiProof: BeefyClient.ValidatorMultiProofStruct = {
-            signatures: [],
-            indices: [],
-            addrs: [],
-            merkleProofs: []
-        }
-
-        for (let i of indices) {
-            let proof = this.createSignatureProof(i, commitmentHash)
-            multiProof.signatures.push(proof.signature)
-            multiProof.indices.push(proof.index)
-            multiProof.addrs.push(proof.addr)
-            multiProof.merkleProofs.push(proof.merkleProof)
-        }
-
-        return multiProof
     }
 }
 

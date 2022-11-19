@@ -37,13 +37,11 @@ describe("BeefyClient", function () {
 
         // Submit final signature proof
         await expect(
-            beefyClient
-                .connect(user)
-                .submitFinal(
-                    0,
-                    fixtureData.params.commitment,
-                    vset.createSignatureMultiProof(readSetBits(finalBitfield), commitmentHash)
-                )
+            beefyClient.connect(user).submitFinal(
+                0,
+                fixtureData.params.commitment,
+                readSetBits(finalBitfield).map((i) => vset.createSignatureProof(i, commitmentHash))
+            )
         )
             .to.emit(beefyClient, "NewMMRRoot")
             .withArgs(
@@ -92,16 +90,14 @@ describe("BeefyClient", function () {
 
         // Submit final signature proof
         await expect(
-            beefyClient
-                .connect(user)
-                .submitFinalWithHandover(
-                    0,
-                    fixtureData.params.commitment,
-                    vset.createSignatureMultiProof(readSetBits(finalBitfield), commitmentHash),
-                    fixtureData.params.leaf,
-                    fixtureData.params.leafProof,
-                    fixtureData.params.leafProofOrder
-                )
+            beefyClient.connect(user).submitFinalWithHandover(
+                0,
+                fixtureData.params.commitment,
+                readSetBits(finalBitfield).map((i) => vset.createSignatureProof(i, commitmentHash)),
+                fixtureData.params.leaf,
+                fixtureData.params.leafProof,
+                fixtureData.params.leafProofOrder
+            )
         )
             .to.emit(beefyClient, "NewMMRRoot")
             .withArgs(
