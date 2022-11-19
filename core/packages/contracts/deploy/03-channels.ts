@@ -14,46 +14,41 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
     const incentivizedChannelSourceID = process.env.INCENTIVIZED_CHANNEL_SOURCE_ID
 
     let parachainClient = await deployments.get("ParachainClient")
-    let scaleCodecLibrary = await deployments.get("ScaleCodec")
     let merkleProof = await deployments.get("MerkleProof")
 
     let basicInboundChannel = await deployments.deploy("BasicInboundChannel", {
         from: deployer,
         args: [basicChannelSourceID, parachainClient.address],
         libraries: {
-            ScaleCodec: scaleCodecLibrary.address,
-            MerkleProof: merkleProof.address,
+            MerkleProof: merkleProof.address
         },
         log: true,
-        autoMine: true,
+        autoMine: true
     })
 
     let incentivizedInboundChannel = await deployments.deploy("IncentivizedInboundChannel", {
         from: deployer,
         args: [incentivizedChannelSourceID, parachainClient.address],
-        libraries: {
-            ScaleCodec: scaleCodecLibrary.address,
-        },
         log: true,
-        autoMine: true,
+        autoMine: true
     })
 
     let basicOutboundChannel = await deployments.deploy("BasicOutboundChannel", {
         from: deployer,
         log: true,
-        autoMine: true,
+        autoMine: true
     })
 
     let incentivizedOutboundChannel = await deployments.deploy("IncentivizedOutboundChannel", {
         from: deployer,
         log: true,
-        autoMine: true,
+        autoMine: true
     })
 
     await deployments.deploy("ChannelRegistry", {
         from: deployer,
         log: true,
-        autoMine: true,
+        autoMine: true
     })
 
     console.log("Configuring ChannelRegistry")
@@ -61,7 +56,7 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         "ChannelRegistry",
         {
             from: deployer,
-            autoMine: true,
+            autoMine: true
         },
         "updateChannel",
         0,
@@ -72,7 +67,7 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         "ChannelRegistry",
         {
             from: deployer,
-            autoMine: true,
+            autoMine: true
         },
         "updateChannel",
         1,
