@@ -9,6 +9,6 @@ contract MMRProofVerifier {
         bytes32 leafNodeHash,
         MMRProof calldata proof
     ) external pure returns (bool) {
-        return MMRProofVerification.verifyLeafProof(root, leafNodeHash, proof);
+        return MMRProofVerification.verifyLeafProof(root, leafNodeHash, proof.items, proof.order);
     }
 }

@@ -297,7 +297,7 @@ contract BeefyClient is Ownable {
             MMRProofVerification.verifyLeafProof(
                 commitment.payload.mmrRootHash,
                 keccak256(encodeMMRLeaf(leaf)),
-                leafProof
+                leafProof.items, leafProof.order
             ),
             "Invalid leaf proof"
         );
@@ -324,7 +324,7 @@ contract BeefyClient is Ownable {
         view
         returns (bool)
     {
-        return MMRProofVerification.verifyLeafProof(latestMMRRoot, leafHash, proof);
+        return MMRProofVerification.verifyLeafProof(latestMMRRoot, leafHash, proof.items, proof.order);
     }
 
     /* Private Functions */

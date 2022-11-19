@@ -11,7 +11,7 @@ describe("MMR Proof Verification", function () {
 
         let verifier = await new MMRProofVerifier__factory(
             {
-                "contracts/utils/MMRProofVerification.sol:MMRProofVerification": mmrLib.address,
+                "contracts/utils/MMRProofVerification.sol:MMRProofVerification": mmrLib.address
             },
             owner
         ).deploy()
@@ -41,7 +41,7 @@ describe("MMR Proof Verification", function () {
                         fixture7leaves.leaves[i],
                         {
                             items: fixture7leaves.proofs[i].items,
-                            order: fixture7leaves.proofs[i].order,
+                            order: fixture7leaves.proofs[i].order
                         }
                     )
                 ).to.be.true
@@ -60,7 +60,7 @@ describe("MMR Proof Verification", function () {
                         fixture7leaves.leaves[i],
                         {
                             items: fixture7leaves.proofs[j].items,
-                            order: fixture7leaves.proofs[j].order,
+                            order: fixture7leaves.proofs[j].order
                         }
                     )
                 ).to.be.false
@@ -106,7 +106,7 @@ describe("MMR Proof Verification", function () {
                         fixture15leaves.leaves[i],
                         {
                             items: fixture15leaves.proofs[i].items,
-                            order: fixture15leaves.proofs[i].order,
+                            order: fixture15leaves.proofs[i].order
                         }
                     )
                 ).to.be.true
@@ -125,11 +125,24 @@ describe("MMR Proof Verification", function () {
                         fixture15leaves.leaves[i],
                         {
                             items: fixture15leaves.proofs[j].items,
-                            order: fixture15leaves.proofs[j].order,
+                            order: fixture15leaves.proofs[j].order
                         }
                     )
                 ).to.be.false
             })
         })
+    })
+
+    it("foo", async function () {
+        let { verifier } = await loadFixture(fixture)
+        let gasuse = await verifier.estimateGas.verifyLeafProof(
+            fixture15leaves.rootHash,
+            fixture15leaves.leaves[7],
+            {
+                items: fixture15leaves.proofs[7].items,
+                order: fixture15leaves.proofs[7].order
+            }
+        )
+        console.log(gasuse)
     })
 })
