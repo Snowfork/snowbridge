@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-library MMRProofVerification {
+library MMRProof {
     /**
      * @dev Verify inclusion of a leaf in an MMR
      * @param proof an array of hashes
@@ -12,28 +12,28 @@ library MMRProofVerification {
         bytes32 leafHash,
         bytes32[] calldata proof,
         uint256 proofOrder
-    ) external pure returns (bool) {
-        bytes32 computedHash = leafHash;
+    ) internal pure returns (bool) {
+        bytes32 acc = leafHash;
         unchecked {
             for (uint256 i = 0; i < proof.length; i++) {
-                computedHash = hashPairs(computedHash, proof[i], (proofOrder >> i) & 1);
+                acc = hashPairs(acc, proof[i], (proofOrder >> i) & 1);
             }
         }
-        return root == computedHash;
+        return root == acc;
     }
 
-    function hashPairs(bytes32 left, bytes32 right, uint256 order) internal pure returns (bytes32 _hash) {
+    function hashPairs(bytes32 x, bytes32 y, uint256 order) internal pure returns (bytes32 value) {
         assembly {
             switch order
             case 0 {
-                mstore(0x00, left)
-                mstore(0x20, right)
+                mstore(0x00, x)
+                mstore(0x20, y)
             }
             default {
-                mstore(0x00, right)
-                mstore(0x20, left)
+                mstore(0x00, y)
+                mstore(0x20, x)
             }
-            _hash := keccak256(0x0, 0x40)
+            value := keccak256(0x0, 0x40)
         }
     }
 }
