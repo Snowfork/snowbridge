@@ -19,7 +19,7 @@ type InitialRequestParams struct {
 }
 
 type FinalRequestParams struct {
-	ID             *big.Int
+	ID             [32]byte
 	Commitment     beefyclient.BeefyClientCommitment
 	Proofs         []beefyclient.BeefyClientValidatorProof
 	Leaf           beefyclient.BeefyClientMMRLeaf
@@ -27,7 +27,7 @@ type FinalRequestParams struct {
 	LeafProofOrder *big.Int
 }
 
-func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []*big.Int) (*InitialRequestParams, error) {
+func (r *Request) CommitmentHash() (*[32]byte, error) {
 	commitmentBytes, err := types.EncodeToBytes(r.SignedCommitment.Commitment)
 	if err != nil {
 		return nil, err
@@ -37,6 +37,15 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 
 	var commitmentHash32 [32]byte
 	copy(commitmentHash32[:], commitmentHash[0:32])
+
+	return &commitmentHash32, nil
+}
+
+func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []*big.Int) (*InitialRequestParams, error) {
+	commitmentHash, err := r.CommitmentHash()
+	if err != nil {
+		return nil, fmt.Errorf("generate commitment hash: %w", err)
+	}
 
 	proof, err := r.generateValidatorAddressProof(valAddrIndex)
 	if err != nil {
@@ -56,7 +65,7 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	v, _r, s := cleanSignature(validatorSignature)
 
 	msg := InitialRequestParams{
-		CommitmentHash:          commitmentHash32,
+		CommitmentHash:          *commitmentHash,
 		ValidatorSetID:          r.SignedCommitment.Commitment.ValidatorSetID,
 		ValidatorClaimsBitfield: initialBitfield,
 		Proof: beefyclient.BeefyClientValidatorProof{
@@ -65,7 +74,7 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 			S:           s,
 			Index:       big.NewInt(valAddrIndex),
 			Account:     validatorAddress,
-			MerkleProof: proof,
+			Proof: proof,
 		},
 	}
 
@@ -99,9 +108,7 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 	return proof, nil
 }
 
-func (r *Request) MakeSubmitFinalParams(validationID int64, validatorIndices []uint64) (*FinalRequestParams, error) {
-	validationDataID := big.NewInt(validationID)
-
+func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64) (*FinalRequestParams, error) {
 	validatorProofs := []beefyclient.BeefyClientValidatorProof{}
 
 	for _, validatorIndex := range validatorIndices {
@@ -127,7 +134,7 @@ func (r *Request) MakeSubmitFinalParams(validationID int64, validatorIndices []u
 			S:           s,
 			Index:       new(big.Int).SetUint64(validatorIndex),
 			Account:     account,
-			MerkleProof: merkleProof,
+			Proof: merkleProof,
 		})
 	}
 
@@ -158,7 +165,6 @@ func (r *Request) MakeSubmitFinalParams(validationID int64, validatorIndices []u
 	}
 
 	msg := FinalRequestParams{
-		ID:             validationDataID,
 		Commitment:     commitment,
 		Proofs:         validatorProofs,
 		Leaf:           inputLeaf,

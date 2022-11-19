@@ -20,3 +20,8 @@ TS_NODE_FILES=true
 # Uncomment to enable gas reporting:
 #
 # export REPORT_GAS=true
+#
+
+# Uncomment to enable USD pricing of gas
+#
+# export COINMARKETCAP_API_KEY=foobar

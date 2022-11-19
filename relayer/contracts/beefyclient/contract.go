@@ -55,12 +55,12 @@ type BeefyClientPayload struct {
 
 // BeefyClientValidatorProof is an auto generated low-level Go binding around an user-defined struct.
 type BeefyClientValidatorProof struct {
-	V           uint8
-	R           [32]byte
-	S           [32]byte
-	Index       *big.Int
-	Account     common.Address
-	MerkleProof [][32]byte
+	V       uint8
+	R       [32]byte
+	S       [32]byte
+	Index   *big.Int
+	Account common.Address
+	Proof   [][32]byte
 }
 
 // BeefyClientValidatorSet is an auto generated low-level Go binding around an user-defined struct.
@@ -72,7 +72,7 @@ type BeefyClientValidatorSet struct {
 
 // BeefyClientMetaData contains all meta data concerning the BeefyClient contract.
 var BeefyClientMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidCommitment\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidMMRLeaf\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidMMRLeafProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSender\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignature\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidValidatorProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotEnoughClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"WaitPeriodNotOver\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"mmrRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"}],\"name\":\"NewMMRRoot\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"NewRequest\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"BLOCK_WAIT_PERIOD\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"requestID\",\"type\":\"uint256\"}],\"name\":\"createFinalBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"bitsToSet\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"createInitialBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentValidatorSet\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"_initialBeefyBlock\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"internalType\":\"structBeefyClient.ValidatorSet\",\"name\":\"_initialValidatorSet\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"internalType\":\"structBeefyClient.ValidatorSet\",\"name\":\"_nextValidatorSet\",\"type\":\"tuple\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestBeefyBlock\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestMMRRoot\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextRequestID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextValidatorSet\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"requests\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"validatorSetLen\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"requestID\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint32\",\"name\":\"blockNumber\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"mmrRootHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"prefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"suffix\",\"type\":\"bytes\"}],\"internalType\":\"structBeefyClient.Payload\",\"name\":\"payload\",\"type\":\"tuple\"}],\"internalType\":\"structBeefyClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"merkleProof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structBeefyClient.ValidatorProof[]\",\"name\":\"proof\",\"type\":\"tuple[]\"}],\"name\":\"submitFinal\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"requestID\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint32\",\"name\":\"blockNumber\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"mmrRootHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"prefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"suffix\",\"type\":\"bytes\"}],\"internalType\":\"structBeefyClient.Payload\",\"name\":\"payload\",\"type\":\"tuple\"}],\"internalType\":\"structBeefyClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"merkleProof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structBeefyClient.ValidatorProof[]\",\"name\":\"proof\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyClient.MMRLeaf\",\"name\":\"leaf\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"leafProofOrder\",\"type\":\"uint256\"}],\"name\":\"submitFinalWithHandover\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"bitfield\",\"type\":\"uint256[]\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"merkleProof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structBeefyClient.ValidatorProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submitInitial\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"bitfield\",\"type\":\"uint256[]\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"merkleProof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structBeefyClient.ValidatorProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submitInitialWithHandover\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"leafHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"proofOrder\",\"type\":\"uint256\"}],\"name\":\"verifyMMRLeafProof\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"name\":\"InvalidCommitment\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidMMRLeaf\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidMMRLeafProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignature\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidTask\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidValidatorProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotEnoughClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TaskExpired\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"WaitPeriodNotOver\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"mmrRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"}],\"name\":\"NewMMRRoot\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"RANDAO_COMMIT_DELAY\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"RANDAO_COMMIT_EXPIRATION\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"}],\"name\":\"commitPrevRandao\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"}],\"name\":\"createFinalBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"bitsToSet\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"createInitialBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentValidatorSet\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"_initialBeefyBlock\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"internalType\":\"structBeefyClient.ValidatorSet\",\"name\":\"_initialValidatorSet\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"internalType\":\"structBeefyClient.ValidatorSet\",\"name\":\"_nextValidatorSet\",\"type\":\"tuple\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestBeefyBlock\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestMMRRoot\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextValidatorSet\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"blockNumber\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"mmrRootHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"prefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"suffix\",\"type\":\"bytes\"}],\"internalType\":\"structBeefyClient.Payload\",\"name\":\"payload\",\"type\":\"tuple\"}],\"internalType\":\"structBeefyClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structBeefyClient.ValidatorProof[]\",\"name\":\"proofs\",\"type\":\"tuple[]\"}],\"name\":\"submitFinal\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"blockNumber\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"mmrRootHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"prefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"suffix\",\"type\":\"bytes\"}],\"internalType\":\"structBeefyClient.Payload\",\"name\":\"payload\",\"type\":\"tuple\"}],\"internalType\":\"structBeefyClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structBeefyClient.ValidatorProof[]\",\"name\":\"proofs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyClient.MMRLeaf\",\"name\":\"leaf\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"leafProofOrder\",\"type\":\"uint256\"}],\"name\":\"submitFinalWithHandover\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"bitfield\",\"type\":\"uint256[]\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structBeefyClient.ValidatorProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submitInitial\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"bitfield\",\"type\":\"uint256[]\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structBeefyClient.ValidatorProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submitInitialWithHandover\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"tasks\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"validatorSetLen\",\"type\":\"uint32\"},{\"internalType\":\"uint256\",\"name\":\"prevRandao\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"leafHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"proofOrder\",\"type\":\"uint256\"}],\"name\":\"verifyMMRLeafProof\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // BeefyClientABI is the input ABI used to generate the binding from.
@@ -221,12 +221,12 @@ func (_BeefyClient *BeefyClientTransactorRaw) Transact(opts *bind.TransactOpts, 
 	return _BeefyClient.Contract.contract.Transact(opts, method, params...)
 }
 
-// BLOCKWAITPERIOD is a free data retrieval call binding the contract method 0xfb752c62.
+// RANDAOCOMMITDELAY is a free data retrieval call binding the contract method 0xe127ca34.
 //
-// Solidity: function BLOCK_WAIT_PERIOD() view returns(uint64)
-func (_BeefyClient *BeefyClientCaller) BLOCKWAITPERIOD(opts *bind.CallOpts) (uint64, error) {
+// Solidity: function RANDAO_COMMIT_DELAY() view returns(uint64)
+func (_BeefyClient *BeefyClientCaller) RANDAOCOMMITDELAY(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
-	err := _BeefyClient.contract.Call(opts, &out, "BLOCK_WAIT_PERIOD")
+	err := _BeefyClient.contract.Call(opts, &out, "RANDAO_COMMIT_DELAY")
 
 	if err != nil {
 		return *new(uint64), err
@@ -238,26 +238,57 @@ func (_BeefyClient *BeefyClientCaller) BLOCKWAITPERIOD(opts *bind.CallOpts) (uin
 
 }
 
-// BLOCKWAITPERIOD is a free data retrieval call binding the contract method 0xfb752c62.
+// RANDAOCOMMITDELAY is a free data retrieval call binding the contract method 0xe127ca34.
 //
-// Solidity: function BLOCK_WAIT_PERIOD() view returns(uint64)
-func (_BeefyClient *BeefyClientSession) BLOCKWAITPERIOD() (uint64, error) {
-	return _BeefyClient.Contract.BLOCKWAITPERIOD(&_BeefyClient.CallOpts)
+// Solidity: function RANDAO_COMMIT_DELAY() view returns(uint64)
+func (_BeefyClient *BeefyClientSession) RANDAOCOMMITDELAY() (uint64, error) {
+	return _BeefyClient.Contract.RANDAOCOMMITDELAY(&_BeefyClient.CallOpts)
 }
 
-// BLOCKWAITPERIOD is a free data retrieval call binding the contract method 0xfb752c62.
+// RANDAOCOMMITDELAY is a free data retrieval call binding the contract method 0xe127ca34.
 //
-// Solidity: function BLOCK_WAIT_PERIOD() view returns(uint64)
-func (_BeefyClient *BeefyClientCallerSession) BLOCKWAITPERIOD() (uint64, error) {
-	return _BeefyClient.Contract.BLOCKWAITPERIOD(&_BeefyClient.CallOpts)
+// Solidity: function RANDAO_COMMIT_DELAY() view returns(uint64)
+func (_BeefyClient *BeefyClientCallerSession) RANDAOCOMMITDELAY() (uint64, error) {
+	return _BeefyClient.Contract.RANDAOCOMMITDELAY(&_BeefyClient.CallOpts)
 }
 
-// CreateFinalBitfield is a free data retrieval call binding the contract method 0x38a0eb73.
+// RANDAOCOMMITEXPIRATION is a free data retrieval call binding the contract method 0x1542d2b5.
 //
-// Solidity: function createFinalBitfield(uint256 requestID) view returns(uint256[])
-func (_BeefyClient *BeefyClientCaller) CreateFinalBitfield(opts *bind.CallOpts, requestID *big.Int) ([]*big.Int, error) {
+// Solidity: function RANDAO_COMMIT_EXPIRATION() view returns(uint64)
+func (_BeefyClient *BeefyClientCaller) RANDAOCOMMITEXPIRATION(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
-	err := _BeefyClient.contract.Call(opts, &out, "createFinalBitfield", requestID)
+	err := _BeefyClient.contract.Call(opts, &out, "RANDAO_COMMIT_EXPIRATION")
+
+	if err != nil {
+		return *new(uint64), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
+
+	return out0, err
+
+}
+
+// RANDAOCOMMITEXPIRATION is a free data retrieval call binding the contract method 0x1542d2b5.
+//
+// Solidity: function RANDAO_COMMIT_EXPIRATION() view returns(uint64)
+func (_BeefyClient *BeefyClientSession) RANDAOCOMMITEXPIRATION() (uint64, error) {
+	return _BeefyClient.Contract.RANDAOCOMMITEXPIRATION(&_BeefyClient.CallOpts)
+}
+
+// RANDAOCOMMITEXPIRATION is a free data retrieval call binding the contract method 0x1542d2b5.
+//
+// Solidity: function RANDAO_COMMIT_EXPIRATION() view returns(uint64)
+func (_BeefyClient *BeefyClientCallerSession) RANDAOCOMMITEXPIRATION() (uint64, error) {
+	return _BeefyClient.Contract.RANDAOCOMMITEXPIRATION(&_BeefyClient.CallOpts)
+}
+
+// CreateFinalBitfield is a free data retrieval call binding the contract method 0x5dd5d890.
+//
+// Solidity: function createFinalBitfield(bytes32 commitmentHash) view returns(uint256[])
+func (_BeefyClient *BeefyClientCaller) CreateFinalBitfield(opts *bind.CallOpts, commitmentHash [32]byte) ([]*big.Int, error) {
+	var out []interface{}
+	err := _BeefyClient.contract.Call(opts, &out, "createFinalBitfield", commitmentHash)
 
 	if err != nil {
 		return *new([]*big.Int), err
@@ -269,18 +300,18 @@ func (_BeefyClient *BeefyClientCaller) CreateFinalBitfield(opts *bind.CallOpts, 
 
 }
 
-// CreateFinalBitfield is a free data retrieval call binding the contract method 0x38a0eb73.
+// CreateFinalBitfield is a free data retrieval call binding the contract method 0x5dd5d890.
 //
-// Solidity: function createFinalBitfield(uint256 requestID) view returns(uint256[])
-func (_BeefyClient *BeefyClientSession) CreateFinalBitfield(requestID *big.Int) ([]*big.Int, error) {
-	return _BeefyClient.Contract.CreateFinalBitfield(&_BeefyClient.CallOpts, requestID)
+// Solidity: function createFinalBitfield(bytes32 commitmentHash) view returns(uint256[])
+func (_BeefyClient *BeefyClientSession) CreateFinalBitfield(commitmentHash [32]byte) ([]*big.Int, error) {
+	return _BeefyClient.Contract.CreateFinalBitfield(&_BeefyClient.CallOpts, commitmentHash)
 }
 
-// CreateFinalBitfield is a free data retrieval call binding the contract method 0x38a0eb73.
+// CreateFinalBitfield is a free data retrieval call binding the contract method 0x5dd5d890.
 //
-// Solidity: function createFinalBitfield(uint256 requestID) view returns(uint256[])
-func (_BeefyClient *BeefyClientCallerSession) CreateFinalBitfield(requestID *big.Int) ([]*big.Int, error) {
-	return _BeefyClient.Contract.CreateFinalBitfield(&_BeefyClient.CallOpts, requestID)
+// Solidity: function createFinalBitfield(bytes32 commitmentHash) view returns(uint256[])
+func (_BeefyClient *BeefyClientCallerSession) CreateFinalBitfield(commitmentHash [32]byte) ([]*big.Int, error) {
+	return _BeefyClient.Contract.CreateFinalBitfield(&_BeefyClient.CallOpts, commitmentHash)
 }
 
 // CreateInitialBitfield is a free data retrieval call binding the contract method 0x5da57fe9.
@@ -426,37 +457,6 @@ func (_BeefyClient *BeefyClientCallerSession) LatestMMRRoot() ([32]byte, error) 
 	return _BeefyClient.Contract.LatestMMRRoot(&_BeefyClient.CallOpts)
 }
 
-// NextRequestID is a free data retrieval call binding the contract method 0x12b7d960.
-//
-// Solidity: function nextRequestID() view returns(uint256)
-func (_BeefyClient *BeefyClientCaller) NextRequestID(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _BeefyClient.contract.Call(opts, &out, "nextRequestID")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// NextRequestID is a free data retrieval call binding the contract method 0x12b7d960.
-//
-// Solidity: function nextRequestID() view returns(uint256)
-func (_BeefyClient *BeefyClientSession) NextRequestID() (*big.Int, error) {
-	return _BeefyClient.Contract.NextRequestID(&_BeefyClient.CallOpts)
-}
-
-// NextRequestID is a free data retrieval call binding the contract method 0x12b7d960.
-//
-// Solidity: function nextRequestID() view returns(uint256)
-func (_BeefyClient *BeefyClientCallerSession) NextRequestID() (*big.Int, error) {
-	return _BeefyClient.Contract.NextRequestID(&_BeefyClient.CallOpts)
-}
-
 // NextValidatorSet is a free data retrieval call binding the contract method 0x36667513.
 //
 // Solidity: function nextValidatorSet() view returns(uint256 id, bytes32 root, uint256 length)
@@ -538,54 +538,59 @@ func (_BeefyClient *BeefyClientCallerSession) Owner() (common.Address, error) {
 	return _BeefyClient.Contract.Owner(&_BeefyClient.CallOpts)
 }
 
-// Requests is a free data retrieval call binding the contract method 0x81d12c58.
+// Tasks is a free data retrieval call binding the contract method 0xe579f500.
 //
-// Solidity: function requests(uint256 ) view returns(address sender, uint64 blockNumber, uint32 validatorSetLen)
-func (_BeefyClient *BeefyClientCaller) Requests(opts *bind.CallOpts, arg0 *big.Int) (struct {
-	Sender          common.Address
+// Solidity: function tasks(bytes32 ) view returns(address account, uint64 blockNumber, uint32 validatorSetLen, uint256 prevRandao)
+func (_BeefyClient *BeefyClientCaller) Tasks(opts *bind.CallOpts, arg0 [32]byte) (struct {
+	Account         common.Address
 	BlockNumber     uint64
 	ValidatorSetLen uint32
+	PrevRandao      *big.Int
 }, error) {
 	var out []interface{}
-	err := _BeefyClient.contract.Call(opts, &out, "requests", arg0)
+	err := _BeefyClient.contract.Call(opts, &out, "tasks", arg0)
 
 	outstruct := new(struct {
-		Sender          common.Address
+		Account         common.Address
 		BlockNumber     uint64
 		ValidatorSetLen uint32
+		PrevRandao      *big.Int
 	})
 	if err != nil {
 		return *outstruct, err
 	}
 
-	outstruct.Sender = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Account = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 	outstruct.BlockNumber = *abi.ConvertType(out[1], new(uint64)).(*uint64)
 	outstruct.ValidatorSetLen = *abi.ConvertType(out[2], new(uint32)).(*uint32)
+	outstruct.PrevRandao = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
 
 }
 
-// Requests is a free data retrieval call binding the contract method 0x81d12c58.
+// Tasks is a free data retrieval call binding the contract method 0xe579f500.
 //
-// Solidity: function requests(uint256 ) view returns(address sender, uint64 blockNumber, uint32 validatorSetLen)
-func (_BeefyClient *BeefyClientSession) Requests(arg0 *big.Int) (struct {
-	Sender          common.Address
+// Solidity: function tasks(bytes32 ) view returns(address account, uint64 blockNumber, uint32 validatorSetLen, uint256 prevRandao)
+func (_BeefyClient *BeefyClientSession) Tasks(arg0 [32]byte) (struct {
+	Account         common.Address
 	BlockNumber     uint64
 	ValidatorSetLen uint32
+	PrevRandao      *big.Int
 }, error) {
-	return _BeefyClient.Contract.Requests(&_BeefyClient.CallOpts, arg0)
+	return _BeefyClient.Contract.Tasks(&_BeefyClient.CallOpts, arg0)
 }
 
-// Requests is a free data retrieval call binding the contract method 0x81d12c58.
+// Tasks is a free data retrieval call binding the contract method 0xe579f500.
 //
-// Solidity: function requests(uint256 ) view returns(address sender, uint64 blockNumber, uint32 validatorSetLen)
-func (_BeefyClient *BeefyClientCallerSession) Requests(arg0 *big.Int) (struct {
-	Sender          common.Address
+// Solidity: function tasks(bytes32 ) view returns(address account, uint64 blockNumber, uint32 validatorSetLen, uint256 prevRandao)
+func (_BeefyClient *BeefyClientCallerSession) Tasks(arg0 [32]byte) (struct {
+	Account         common.Address
 	BlockNumber     uint64
 	ValidatorSetLen uint32
+	PrevRandao      *big.Int
 }, error) {
-	return _BeefyClient.Contract.Requests(&_BeefyClient.CallOpts, arg0)
+	return _BeefyClient.Contract.Tasks(&_BeefyClient.CallOpts, arg0)
 }
 
 // VerifyMMRLeafProof is a free data retrieval call binding the contract method 0xa401662b.
@@ -617,6 +622,27 @@ func (_BeefyClient *BeefyClientSession) VerifyMMRLeafProof(leafHash [32]byte, pr
 // Solidity: function verifyMMRLeafProof(bytes32 leafHash, bytes32[] proof, uint256 proofOrder) view returns(bool)
 func (_BeefyClient *BeefyClientCallerSession) VerifyMMRLeafProof(leafHash [32]byte, proof [][32]byte, proofOrder *big.Int) (bool, error) {
 	return _BeefyClient.Contract.VerifyMMRLeafProof(&_BeefyClient.CallOpts, leafHash, proof, proofOrder)
+}
+
+// CommitPrevRandao is a paid mutator transaction binding the contract method 0xa77cf3d2.
+//
+// Solidity: function commitPrevRandao(bytes32 commitmentHash) returns()
+func (_BeefyClient *BeefyClientTransactor) CommitPrevRandao(opts *bind.TransactOpts, commitmentHash [32]byte) (*types.Transaction, error) {
+	return _BeefyClient.contract.Transact(opts, "commitPrevRandao", commitmentHash)
+}
+
+// CommitPrevRandao is a paid mutator transaction binding the contract method 0xa77cf3d2.
+//
+// Solidity: function commitPrevRandao(bytes32 commitmentHash) returns()
+func (_BeefyClient *BeefyClientSession) CommitPrevRandao(commitmentHash [32]byte) (*types.Transaction, error) {
+	return _BeefyClient.Contract.CommitPrevRandao(&_BeefyClient.TransactOpts, commitmentHash)
+}
+
+// CommitPrevRandao is a paid mutator transaction binding the contract method 0xa77cf3d2.
+//
+// Solidity: function commitPrevRandao(bytes32 commitmentHash) returns()
+func (_BeefyClient *BeefyClientTransactorSession) CommitPrevRandao(commitmentHash [32]byte) (*types.Transaction, error) {
+	return _BeefyClient.Contract.CommitPrevRandao(&_BeefyClient.TransactOpts, commitmentHash)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0x3795ea5f.
@@ -661,46 +687,46 @@ func (_BeefyClient *BeefyClientTransactorSession) RenounceOwnership() (*types.Tr
 	return _BeefyClient.Contract.RenounceOwnership(&_BeefyClient.TransactOpts)
 }
 
-// SubmitFinal is a paid mutator transaction binding the contract method 0xb5389ac3.
+// SubmitFinal is a paid mutator transaction binding the contract method 0x0e44e59c.
 //
-// Solidity: function submitFinal(uint256 requestID, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proof) returns()
-func (_BeefyClient *BeefyClientTransactor) SubmitFinal(opts *bind.TransactOpts, requestID *big.Int, commitment BeefyClientCommitment, proof []BeefyClientValidatorProof) (*types.Transaction, error) {
-	return _BeefyClient.contract.Transact(opts, "submitFinal", requestID, commitment, proof)
+// Solidity: function submitFinal((uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs) returns()
+func (_BeefyClient *BeefyClientTransactor) SubmitFinal(opts *bind.TransactOpts, commitment BeefyClientCommitment, proofs []BeefyClientValidatorProof) (*types.Transaction, error) {
+	return _BeefyClient.contract.Transact(opts, "submitFinal", commitment, proofs)
 }
 
-// SubmitFinal is a paid mutator transaction binding the contract method 0xb5389ac3.
+// SubmitFinal is a paid mutator transaction binding the contract method 0x0e44e59c.
 //
-// Solidity: function submitFinal(uint256 requestID, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proof) returns()
-func (_BeefyClient *BeefyClientSession) SubmitFinal(requestID *big.Int, commitment BeefyClientCommitment, proof []BeefyClientValidatorProof) (*types.Transaction, error) {
-	return _BeefyClient.Contract.SubmitFinal(&_BeefyClient.TransactOpts, requestID, commitment, proof)
+// Solidity: function submitFinal((uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs) returns()
+func (_BeefyClient *BeefyClientSession) SubmitFinal(commitment BeefyClientCommitment, proofs []BeefyClientValidatorProof) (*types.Transaction, error) {
+	return _BeefyClient.Contract.SubmitFinal(&_BeefyClient.TransactOpts, commitment, proofs)
 }
 
-// SubmitFinal is a paid mutator transaction binding the contract method 0xb5389ac3.
+// SubmitFinal is a paid mutator transaction binding the contract method 0x0e44e59c.
 //
-// Solidity: function submitFinal(uint256 requestID, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proof) returns()
-func (_BeefyClient *BeefyClientTransactorSession) SubmitFinal(requestID *big.Int, commitment BeefyClientCommitment, proof []BeefyClientValidatorProof) (*types.Transaction, error) {
-	return _BeefyClient.Contract.SubmitFinal(&_BeefyClient.TransactOpts, requestID, commitment, proof)
+// Solidity: function submitFinal((uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs) returns()
+func (_BeefyClient *BeefyClientTransactorSession) SubmitFinal(commitment BeefyClientCommitment, proofs []BeefyClientValidatorProof) (*types.Transaction, error) {
+	return _BeefyClient.Contract.SubmitFinal(&_BeefyClient.TransactOpts, commitment, proofs)
 }
 
-// SubmitFinalWithHandover is a paid mutator transaction binding the contract method 0x1b5112dd.
+// SubmitFinalWithHandover is a paid mutator transaction binding the contract method 0x10c6c24f.
 //
-// Solidity: function submitFinalWithHandover(uint256 requestID, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proof, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder) returns()
-func (_BeefyClient *BeefyClientTransactor) SubmitFinalWithHandover(opts *bind.TransactOpts, requestID *big.Int, commitment BeefyClientCommitment, proof []BeefyClientValidatorProof, leaf BeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int) (*types.Transaction, error) {
-	return _BeefyClient.contract.Transact(opts, "submitFinalWithHandover", requestID, commitment, proof, leaf, leafProof, leafProofOrder)
+// Solidity: function submitFinalWithHandover((uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder) returns()
+func (_BeefyClient *BeefyClientTransactor) SubmitFinalWithHandover(opts *bind.TransactOpts, commitment BeefyClientCommitment, proofs []BeefyClientValidatorProof, leaf BeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int) (*types.Transaction, error) {
+	return _BeefyClient.contract.Transact(opts, "submitFinalWithHandover", commitment, proofs, leaf, leafProof, leafProofOrder)
 }
 
-// SubmitFinalWithHandover is a paid mutator transaction binding the contract method 0x1b5112dd.
+// SubmitFinalWithHandover is a paid mutator transaction binding the contract method 0x10c6c24f.
 //
-// Solidity: function submitFinalWithHandover(uint256 requestID, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proof, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder) returns()
-func (_BeefyClient *BeefyClientSession) SubmitFinalWithHandover(requestID *big.Int, commitment BeefyClientCommitment, proof []BeefyClientValidatorProof, leaf BeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int) (*types.Transaction, error) {
-	return _BeefyClient.Contract.SubmitFinalWithHandover(&_BeefyClient.TransactOpts, requestID, commitment, proof, leaf, leafProof, leafProofOrder)
+// Solidity: function submitFinalWithHandover((uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder) returns()
+func (_BeefyClient *BeefyClientSession) SubmitFinalWithHandover(commitment BeefyClientCommitment, proofs []BeefyClientValidatorProof, leaf BeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int) (*types.Transaction, error) {
+	return _BeefyClient.Contract.SubmitFinalWithHandover(&_BeefyClient.TransactOpts, commitment, proofs, leaf, leafProof, leafProofOrder)
 }
 
-// SubmitFinalWithHandover is a paid mutator transaction binding the contract method 0x1b5112dd.
+// SubmitFinalWithHandover is a paid mutator transaction binding the contract method 0x10c6c24f.
 //
-// Solidity: function submitFinalWithHandover(uint256 requestID, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proof, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder) returns()
-func (_BeefyClient *BeefyClientTransactorSession) SubmitFinalWithHandover(requestID *big.Int, commitment BeefyClientCommitment, proof []BeefyClientValidatorProof, leaf BeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int) (*types.Transaction, error) {
-	return _BeefyClient.Contract.SubmitFinalWithHandover(&_BeefyClient.TransactOpts, requestID, commitment, proof, leaf, leafProof, leafProofOrder)
+// Solidity: function submitFinalWithHandover((uint32,uint64,(bytes32,bytes,bytes)) commitment, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder) returns()
+func (_BeefyClient *BeefyClientTransactorSession) SubmitFinalWithHandover(commitment BeefyClientCommitment, proofs []BeefyClientValidatorProof, leaf BeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int) (*types.Transaction, error) {
+	return _BeefyClient.Contract.SubmitFinalWithHandover(&_BeefyClient.TransactOpts, commitment, proofs, leaf, leafProof, leafProofOrder)
 }
 
 // SubmitInitial is a paid mutator transaction binding the contract method 0x06a9eff7.
@@ -895,141 +921,6 @@ func (_BeefyClient *BeefyClientFilterer) WatchNewMMRRoot(opts *bind.WatchOpts, s
 func (_BeefyClient *BeefyClientFilterer) ParseNewMMRRoot(log types.Log) (*BeefyClientNewMMRRoot, error) {
 	event := new(BeefyClientNewMMRRoot)
 	if err := _BeefyClient.contract.UnpackLog(event, "NewMMRRoot", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// BeefyClientNewRequestIterator is returned from FilterNewRequest and is used to iterate over the raw logs and unpacked data for NewRequest events raised by the BeefyClient contract.
-type BeefyClientNewRequestIterator struct {
-	Event *BeefyClientNewRequest // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *BeefyClientNewRequestIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(BeefyClientNewRequest)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(BeefyClientNewRequest)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *BeefyClientNewRequestIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *BeefyClientNewRequestIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// BeefyClientNewRequest represents a NewRequest event raised by the BeefyClient contract.
-type BeefyClientNewRequest struct {
-	Id     *big.Int
-	Sender common.Address
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterNewRequest is a free log retrieval operation binding the contract event 0xef87e24294defbf647d4ce97e9905a82d73c6e9e03417521acc5ba4aeaf1d618.
-//
-// Solidity: event NewRequest(uint256 id, address sender)
-func (_BeefyClient *BeefyClientFilterer) FilterNewRequest(opts *bind.FilterOpts) (*BeefyClientNewRequestIterator, error) {
-
-	logs, sub, err := _BeefyClient.contract.FilterLogs(opts, "NewRequest")
-	if err != nil {
-		return nil, err
-	}
-	return &BeefyClientNewRequestIterator{contract: _BeefyClient.contract, event: "NewRequest", logs: logs, sub: sub}, nil
-}
-
-// WatchNewRequest is a free log subscription operation binding the contract event 0xef87e24294defbf647d4ce97e9905a82d73c6e9e03417521acc5ba4aeaf1d618.
-//
-// Solidity: event NewRequest(uint256 id, address sender)
-func (_BeefyClient *BeefyClientFilterer) WatchNewRequest(opts *bind.WatchOpts, sink chan<- *BeefyClientNewRequest) (event.Subscription, error) {
-
-	logs, sub, err := _BeefyClient.contract.WatchLogs(opts, "NewRequest")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(BeefyClientNewRequest)
-				if err := _BeefyClient.contract.UnpackLog(event, "NewRequest", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseNewRequest is a log parse operation binding the contract event 0xef87e24294defbf647d4ce97e9905a82d73c6e9e03417521acc5ba4aeaf1d618.
-//
-// Solidity: event NewRequest(uint256 id, address sender)
-func (_BeefyClient *BeefyClientFilterer) ParseNewRequest(log types.Log) (*BeefyClientNewRequest, error) {
-	event := new(BeefyClientNewRequest)
-	if err := _BeefyClient.contract.UnpackLog(event, "NewRequest", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

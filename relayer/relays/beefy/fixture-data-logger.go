@@ -17,7 +17,7 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 	var proofs []log.Fields
 	for _, proof := range params.Proofs {
 		var merkleProof []string
-		for _, item := range proof.MerkleProof {
+		for _, item := range proof.Proof {
 			merkleProof = append(merkleProof, Hex(item[:]))
 		}
 		proofs = append(proofs,
@@ -65,7 +65,7 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 	var proofs []log.Fields
 	for _, proof := range params.Proofs {
 		var merkleProof []string
-		for _, item := range proof.MerkleProof {
+		for _, item := range proof.Proof {
 			merkleProof = append(merkleProof, Hex(item[:]))
 		}
 		proofs = append(proofs,

@@ -6,8 +6,8 @@ import "../BeefyClient.sol";
 contract BeefyClientMock is BeefyClient {
     constructor() BeefyClient() {}
 
-    // Make deriveSeed return the same result over multiple test runs
-    function deriveSeed(Request storage) internal override pure returns (uint256) {
+    // Make seedFromPrevRandao return the same result over multiple test runs
+    function seedFromPrevRandao(uint256) internal override pure returns (uint256) {
         return 377;
     }
 

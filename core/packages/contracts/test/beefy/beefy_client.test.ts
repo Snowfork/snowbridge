@@ -25,20 +25,18 @@ describe("BeefyClient", function () {
                     bitfield,
                     vset.createSignatureProof(claims[0], commitmentHash)
                 )
-        )
-            .to.emit(beefyClient, "NewRequest")
-            .withArgs(0, user.address)
+        ).not.to.be.reverted
 
-        expect(await beefyClient.nextRequestID()).to.equal(1)
-
-        // wait 3+ blocks and then create the final bitfield
-        await mine(3)
-        let finalBitfield = await beefyClient.createFinalBitfield(0)
+        // wait RANDAO_COMMIT_DELAY number of blocks, commit to a PREVRANDAO, and then create
+        // a final bitfield
+        let delay = await beefyClient.connect(user).RANDAO_COMMIT_DELAY()
+        await mine(delay)
+        await expect(beefyClient.connect(user).commitPrevRandao(commitmentHash)).not.to.be.reverted
+        let finalBitfield = await beefyClient.connect(user).createFinalBitfield(commitmentHash)
 
         // Submit final signature proof
         await expect(
             beefyClient.connect(user).submitFinal(
-                0,
                 fixtureData.params.commitment,
                 readSetBits(finalBitfield).map((i) => vset.createSignatureProof(i, commitmentHash))
             )
@@ -78,20 +76,18 @@ describe("BeefyClient", function () {
                     bitfield,
                     vset.createSignatureProof(claims[0], commitmentHash)
                 )
-        )
-            .to.emit(beefyClient, "NewRequest")
-            .withArgs(0, user.address)
+        ).not.to.be.reverted
 
-        expect(await beefyClient.nextRequestID()).to.equal(1)
-
-        // wait 3+ blocks and then create the final bitfield
-        await mine(3)
-        let finalBitfield = await beefyClient.createFinalBitfield(0)
+        // wait RANDAO_COMMIT_DELAY number of blocks, commit to a PREVRANDAO, and then create
+        // a final bitfield
+        let delay = await beefyClient.connect(user).RANDAO_COMMIT_DELAY()
+        await mine(delay)
+        await expect(beefyClient.connect(user).commitPrevRandao(commitmentHash)).not.to.be.reverted
+        let finalBitfield = await beefyClient.connect(user).createFinalBitfield(commitmentHash)
 
         // Submit final signature proof
         await expect(
             beefyClient.connect(user).submitFinalWithHandover(
-                0,
                 fixtureData.params.commitment,
                 readSetBits(finalBitfield).map((i) => vset.createSignatureProof(i, commitmentHash)),
                 fixtureData.params.leaf,
