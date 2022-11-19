@@ -1,10 +1,9 @@
 import { ethers, loadFixture } from "../setup"
 import {
     ScaleCodec__factory,
-    MMRProofVerification__factory,
     MerkleProof__factory,
     Bitfield__factory,
-    BeefyClientPublic__factory
+    BeefyClientMock__factory
 } from "../../src"
 
 import { ValidatorSet } from "../helpers"
@@ -17,7 +16,6 @@ async function libsFixture() {
     let [owner] = await ethers.getSigners()
 
     let codec = await new ScaleCodec__factory(owner).deploy()
-    let mmrProof = await new MMRProofVerification__factory(owner).deploy()
     let merkleProof = await new MerkleProof__factory(owner).deploy()
     let bitfield = await new Bitfield__factory(owner).deploy()
 
@@ -30,10 +28,9 @@ async function libsFixture() {
 async function baseFixture() {
     let [owner, user] = await ethers.getSigners()
     let { codec, mmrProof, merkleProof, bitfield } = await libsFixture()
-    let beefyClient = await new BeefyClientPublic__factory(
+    let beefyClient = await new BeefyClientMock__factory(
         {
             "contracts/ScaleCodec.sol:ScaleCodec": codec.address,
-            "contracts/utils/MMRProofVerification.sol:MMRProofVerification": mmrProof.address,
             "contracts/utils/MerkleProof.sol:MerkleProof": merkleProof.address,
             "contracts/utils/Bitfield.sol:Bitfield": bitfield.address
         },
