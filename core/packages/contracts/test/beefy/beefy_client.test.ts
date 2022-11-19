@@ -22,7 +22,6 @@ describe("BeefyClient", function () {
                 .connect(user)
                 .submitInitial(
                     commitmentHash,
-                    fixtureData.params.commitment.validatorSetID,
                     bitfield,
                     vset.createSignatureProof(claims[0], commitmentHash)
                 )
@@ -76,9 +75,8 @@ describe("BeefyClient", function () {
         await expect(
             beefyClient
                 .connect(user)
-                .submitInitial(
+                .submitInitialWithHandover(
                     commitmentHash,
-                    fixtureData.params.commitment.validatorSetID,
                     bitfield,
                     vset.createSignatureProof(claims[0], commitmentHash)
                 )
@@ -96,7 +94,7 @@ describe("BeefyClient", function () {
         await expect(
             beefyClient
                 .connect(user)
-                .submitFinalWithLeaf(
+                .submitFinalWithHandover(
                     0,
                     fixtureData.params.commitment,
                     vset.createSignatureMultiProof(readSetBits(finalBitfield), commitmentHash),

@@ -242,20 +242,32 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		return nil, err
 	}
 
-	tx, err := wr.contract.SubmitInitial(
-		wr.makeTxOpts(ctx),
-		msg.CommitmentHash,
-		msg.ValidatorSetID,
-		msg.ValidatorClaimsBitfield,
-		msg.Proof,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("initial submit: %w", err)
-	}
-
 	var pkProofHex []string
 	for _, proofItem := range msg.Proof.MerkleProof {
 		pkProofHex = append(pkProofHex, "0x"+hex.EncodeToString(proofItem[:]))
+	}
+
+	var tx *types.Transaction
+	if task.IsHandover {
+		tx, err = wr.contract.SubmitInitialWithHandover(
+			wr.makeTxOpts(ctx),
+			msg.CommitmentHash,
+			msg.ValidatorClaimsBitfield,
+			msg.Proof,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("initial submit: %w", err)
+		}
+	} else {
+		tx, err = wr.contract.SubmitInitial(
+			wr.makeTxOpts(ctx),
+			msg.CommitmentHash,
+			msg.ValidatorClaimsBitfield,
+			msg.Proof,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("initial submit: %w", err)
+		}
 	}
 
 	log.WithFields(logrus.Fields{
@@ -291,7 +303,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 			return nil, fmt.Errorf("logging params: %w", err)
 		}
 
-		tx, err := wr.contract.SubmitFinalWithLeaf(
+		tx, err := wr.contract.SubmitFinalWithHandover(
 			wr.makeTxOpts(ctx),
 			params.ID,
 			params.Commitment,

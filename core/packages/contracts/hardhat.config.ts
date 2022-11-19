@@ -6,6 +6,7 @@ import "@typechain/hardhat"
 import "hardhat-gas-reporter"
 import "hardhat-deploy"
 import "hardhat-contract-sizer"
+import "hardhat-storage-layout"
 
 import "./tasks/contractAddress"
 

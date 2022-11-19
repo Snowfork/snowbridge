@@ -163,6 +163,17 @@ contract BeefyClient is Ownable {
      */
     uint64 public constant BLOCK_WAIT_PERIOD = 3;
 
+    /* Errors */
+
+    error InvalidCommitment();
+    error InvalidValidatorProof();
+    error InvalidSignature();
+    error NotEnoughClaims();
+    error InvalidMMRLeaf();
+    error InvalidMMRLeafProof();
+    error InvalidSender();
+    error WaitPeriodNotOver();
+
     /**
      * @dev Deploys the BeefyClient contract
      */
@@ -190,45 +201,54 @@ contract BeefyClient is Ownable {
     /* Public Functions */
 
     /**
-     * @dev Executed by the prover in order to begin the process of block
-     * acceptance by the light client
-     * @param commitmentHash contains the commitmentHash signed by the validator(s)
-     * @param validatorSetID the id of the validator set which signed the commitment
-     * @param bitfield a bitfield containing a membership status of each
-     * validator who has claimed to have signed the commitmentHash
+     * @dev Begin submission of signature proof for current session
+     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof the validator proof
      */
     function submitInitial(
         bytes32 commitmentHash,
-        uint64 validatorSetID,
         uint256[] calldata bitfield,
         ValidatorProof calldata proof
     ) external payable {
-        // for pre-submission, we accept commitments from either the current or next validator set
-        ValidatorSet memory vset;
-        if (validatorSetID == currentValidatorSet.id) {
-            vset = currentValidatorSet;
-        } else if (validatorSetID == nextValidatorSet.id) {
-            vset = nextValidatorSet;
-        } else {
-            revert("Unknown validator set");
-        }
+        doSubmitInitial(currentValidatorSet, commitmentHash, bitfield, proof);
+    }
 
+    /**
+     * @dev Begin submission of signature proof for next session
+     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param bitfield a bitfield claiming which validators have signed the commitment
+     * @param proof the validator proof
+     */
+    function submitInitialWithHandover(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        ValidatorProof calldata proof
+    ) external payable {
+        doSubmitInitial(nextValidatorSet, commitmentHash, bitfield, proof);
+    }
+
+    function doSubmitInitial(
+        ValidatorSet memory vset,
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        ValidatorProof calldata proof
+    ) internal {
         // Check if merkle proof is valid based on the validatorSetRoot
-        require(
-            isValidatorInSet(vset, proof.addr, proof.index, proof.merkleProof),
-            "invalid validator proof"
-        );
+        if (!isValidatorInSet(vset, proof.addr, proof.index, proof.merkleProof)) {
+            revert InvalidValidatorProof();
+        }
 
         // Check if validatorSignature is correct, ie. check if it matches
         // the signature of senderPublicKey on the commitmentHash
-        require(ECDSA.recover(commitmentHash, proof.signature.v, proof.signature.r, proof.signature.s) == proof.addr, "Invalid signature");
+        if (ECDSA.recover(commitmentHash, proof.signature.v, proof.signature.r, proof.signature.s) != proof.addr) {
+            revert InvalidSignature();
+        }
 
-        // For the initial commitment, more than two thirds of the validator set should claim to sign the commitment
-        require(
-            bitfield.countSetBits() >= vset.length - (vset.length - 1) / 3,
-            "Not enough claims"
-        );
+        // For the initial commitment, more than two thirds of the validator set should have claimed to sign the commitment
+        if (bitfield.countSetBits() < vset.length - (vset.length - 1) / 3) {
+            revert NotEnoughClaims();
+        }
 
         // Accept and save the commitment
         requests[nextRequestID] = Request(
@@ -275,7 +295,7 @@ contract BeefyClient is Ownable {
      * @param leaf an MMR leaf provable using the MMR root in the commitment payload
      * @param leafProof an MMR leaf proof
      */
-    function submitFinalWithLeaf(
+    function submitFinalWithHandover(
         uint256 requestID,
         Commitment calldata commitment,
         ValidatorMultiProof calldata proof,
@@ -285,19 +305,24 @@ contract BeefyClient is Ownable {
     ) public {
         Request storage request = requests[requestID];
 
-        require(commitment.validatorSetID == nextValidatorSet.id, "invalid commitment");
-        require(leaf.nextAuthoritySetID == nextValidatorSet.id + 1, "invalid MMR leaf");
+        if (commitment.validatorSetID != nextValidatorSet.id) {
+            revert InvalidCommitment();
+        }
+
+        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            revert InvalidMMRLeaf();
+        }
 
         verifyCommitment(nextValidatorSet, request, commitment, proof);
 
-        require(
-            MMRProof.verifyLeafProof(
-                commitment.payload.mmrRootHash,
-                keccak256(encodeMMRLeaf(leaf)),
-                leafProof, leafProofOrder
-            ),
-            "Invalid leaf proof"
+        bool leafIsValid = MMRProof.verifyLeafProof(
+            commitment.payload.mmrRootHash,
+            keccak256(encodeMMRLeaf(leaf)),
+            leafProof, leafProofOrder
         );
+        if (!leafIsValid) {
+            revert InvalidMMRLeafProof();
+        }
 
         currentValidatorSet = nextValidatorSet;
         nextValidatorSet.id = leaf.nextAuthoritySetID;
@@ -363,7 +388,9 @@ contract BeefyClient is Ownable {
      */
     function minimumSignatureThreshold(uint256 validatorSetLen) internal pure returns (uint256) {
         if (validatorSetLen <= 10) {
-            return validatorSetLen - (validatorSetLen - 1) / 3;
+            unchecked {
+                return validatorSetLen - (validatorSetLen - 1) / 3;
+            }
         } else if (validatorSetLen < 342) {
             return 10;
         } else if (validatorSetLen < 683) {
@@ -392,17 +419,17 @@ contract BeefyClient is Ownable {
         Commitment calldata commitment,
         ValidatorMultiProof calldata proof
     ) internal view {
-        // Verify that sender is the same as in `submitInitial`
-        require(msg.sender == request.sender, "Sender address invalid");
+        if (msg.sender != request.sender) {
+            revert InvalidSender();
+        }
 
-        // Verify that block wait period has passed
-        require(
-            block.number >= request.blockNumber + BLOCK_WAIT_PERIOD,
-            "Block wait period not over"
-        );
+        if (block.number < request.blockNumber + BLOCK_WAIT_PERIOD) {
+            revert WaitPeriodNotOver();
+        }
 
-        // Check that payload.leaf.block_number is > last_known_block_number;
-        require(commitment.blockNumber > latestBeefyBlock, "Commitment is too old");
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            revert InvalidCommitment();
+        }
 
         // verify the validator multiproof
         uint256 signatureCount = minimumSignatureThreshold(vset.length);
