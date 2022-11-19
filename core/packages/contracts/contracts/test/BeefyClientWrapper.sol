@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import "../BeefyClient.sol";
 
-contract BeefyClientPublic is BeefyClient {
+contract BeefyClientMock is BeefyClient {
     constructor() BeefyClient() {}
 
     // Make deriveSeed return the same result over multiple test runs
