@@ -40,7 +40,7 @@ const totalNumberOfValidators = 300
  * that is 1 session older than the validator set that signed the candidate BEEFY commitment
  */
 async function beefyClientFixture() {
-    let { beefyClient, owner, user } = await loadFixture(baseFixture)
+    let { beefyClient, owner, user } = await baseFixture()
 
     let vset = new ValidatorSet(
         fixtureData.params.commitment.validatorSetID - 1,
@@ -69,7 +69,7 @@ async function beefyClientFixture() {
  * that is the same set that signed the candidate BEEFY commitment
  */
 async function beefyClientFixture2() {
-    let { beefyClient, owner, user } = await loadFixture(baseFixture)
+    let { beefyClient, owner, user } = await baseFixture()
 
     let vset = new ValidatorSet(
         fixtureData.params.commitment.validatorSetID,

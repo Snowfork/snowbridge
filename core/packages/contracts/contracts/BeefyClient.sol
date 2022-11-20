@@ -103,13 +103,13 @@ contract BeefyClient is Ownable {
     /**
      * @dev The ValidatorSet describes a BEEFY validator set
      * @param id identifier for the set
-     * @param root Merkle root of BEEFY validator addresses
      * @param length number of validators in the set
+     * @param root Merkle root of BEEFY validator addresses
      */
     struct ValidatorSet {
-        uint256 id;
+        uint128 id;
+        uint128 length;
         bytes32 root;
-        uint256 length;
     }
 
     /* State */
@@ -143,8 +143,12 @@ contract BeefyClient is Ownable {
     error InvalidMMRLeaf();
     error InvalidMMRLeafProof();
     error InvalidTask();
+    error InvalidBitfield();
     error WaitPeriodNotOver();
     error TaskExpired();
+    error PrevRandaoAlreadyCaptured();
+    error PrevRandaoNotCaptured();
+
 
     // Once-off post-construction call to set initial configuration.
     function initialize(
@@ -229,8 +233,8 @@ contract BeefyClient is Ownable {
         bytes32 taskID = createTaskID(msg.sender, commitmentHash);
         Task storage task = tasks[taskID];
 
-        if (task.account != msg.sender || task.prevRandao != 0) {
-            revert InvalidTask();
+        if (task.prevRandao != 0) {
+            revert PrevRandaoAlreadyCaptured();
         }
 
         if (block.number < task.blockNumber + RANDAO_COMMIT_DELAY) {
@@ -253,14 +257,15 @@ contract BeefyClient is Ownable {
      */
     function submitFinal(
         Commitment calldata commitment,
+        uint256[] calldata bitfield,
         ValidatorProof[] calldata proofs
     ) public {
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         bytes32 taskID = createTaskID(msg.sender, commitmentHash);
         Task storage task = tasks[taskID];
 
-        if (msg.sender != task.account || task.prevRandao == 0) {
-            revert InvalidTask();
+        if (task.prevRandao == 0) {
+            revert PrevRandaoNotCaptured();
         }
 
         if (commitment.validatorSetID != currentValidatorSet.id) {
@@ -271,7 +276,11 @@ contract BeefyClient is Ownable {
             revert InvalidCommitment();
         }
 
-        verifyCommitment(currentValidatorSet, task, commitmentHash, proofs);
+        if (task.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
+            revert InvalidBitfield();
+        }
+
+        verifyCommitment(commitmentHash, bitfield, currentValidatorSet, task, proofs);
 
         latestMMRRoot = commitment.payload.mmrRootHash;
         latestBeefyBlock = commitment.blockNumber;
@@ -288,6 +297,7 @@ contract BeefyClient is Ownable {
      */
     function submitFinalWithHandover(
         Commitment calldata commitment,
+        uint256[] calldata bitfield,
         ValidatorProof[] calldata proofs,
         MMRLeaf calldata leaf,
         bytes32[] calldata leafProof,
@@ -297,8 +307,8 @@ contract BeefyClient is Ownable {
         bytes32 taskID = createTaskID(msg.sender, commitmentHash);
         Task storage task = tasks[taskID];
 
-        if (msg.sender != task.account || task.prevRandao == 0) {
-            revert InvalidTask();
+        if (task.prevRandao == 0) {
+            revert PrevRandaoNotCaptured();
         }
 
         if (commitment.validatorSetID != nextValidatorSet.id) {
@@ -309,7 +319,11 @@ contract BeefyClient is Ownable {
             revert InvalidMMRLeaf();
         }
 
-        verifyCommitment(nextValidatorSet, task, commitmentHash, proofs);
+        if (task.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
+            revert InvalidBitfield();
+        }
+
+        verifyCommitment(commitmentHash, bitfield, nextValidatorSet, task, proofs);
 
         bool leafIsValid = MMRProof.verifyLeafProof(
             commitment.payload.mmrRootHash,
@@ -401,25 +415,21 @@ contract BeefyClient is Ownable {
         }
     }
 
-    /** @dev override in unit tests to ensure deterministic repeatability */
-    function seedFromPrevRandao(uint256 prevrandao) internal view virtual returns (uint256) {
-        return prevrandao;
-    }
-
     /**
      * @dev Verify commitment using the validator multiproof
      */
     function verifyCommitment(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
         ValidatorSet memory vset,
         Task storage task,
-        bytes32 commitmentHash,
         ValidatorProof[] calldata proofs
     ) internal view {
         // verify the validator multiproof
         uint256 signatureCount = minimumSignatureThreshold(vset.length);
-        uint256[] memory bitfield = Bitfield.randomNBitsWithPriorCheck(
-            seedFromPrevRandao(task.prevRandao),
-            task.bitfield,
+        uint256[] memory finalbitfield = Bitfield.randomNBitsWithPriorCheck(
+            task.prevRandao,
+            bitfield,
             signatureCount,
             vset.length
         );
@@ -431,7 +441,7 @@ contract BeefyClient is Ownable {
         for (uint256 i = 0; i < signatureCount;) {
             ValidatorProof calldata proof = proofs[i];
 
-            if (!bitfield.isSet(proof.index)) {
+            if (!finalbitfield.isSet(proof.index)) {
                 revert InvalidValidatorProof();
             }
 
@@ -444,7 +454,7 @@ contract BeefyClient is Ownable {
             }
 
             // Ensure no validator can appear more than once
-            bitfield.clear(proof.index);
+            finalbitfield.clear(proof.index);
 
             unchecked{ i++; }
         }
@@ -512,12 +522,12 @@ contract BeefyClient is Ownable {
     /**
      * @dev Helper to create a final bitfield, with random validator selections.
      */
-    function createFinalBitfield(bytes32 commitmentHash) external view returns (uint256[] memory) {
+    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield) external view returns (uint256[] memory) {
         Task storage task = tasks[createTaskID(msg.sender, commitmentHash)];
         return
             Bitfield.randomNBitsWithPriorCheck(
-                seedFromPrevRandao(task.prevRandao),
-                task.bitfield,
+                task.prevRandao,
+                bitfield,
                 minimumSignatureThreshold(task.validatorSetLen),
                 task.validatorSetLen
             );
