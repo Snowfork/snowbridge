@@ -137,6 +137,7 @@ contract BeefyClient is Ownable {
     /* Errors */
 
     error InvalidCommitment();
+    error StaleCommitment();
     error InvalidValidatorProof();
     error InvalidSignature();
     error NotEnoughClaims();
@@ -273,7 +274,7 @@ contract BeefyClient is Ownable {
         }
 
         if (commitment.blockNumber <= latestBeefyBlock) {
-            revert InvalidCommitment();
+            revert StaleCommitment();
         }
 
         if (task.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
@@ -315,6 +316,10 @@ contract BeefyClient is Ownable {
             revert InvalidCommitment();
         }
 
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            revert StaleCommitment();
+        }
+
         if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
             revert InvalidMMRLeaf();
         }
@@ -336,8 +341,8 @@ contract BeefyClient is Ownable {
 
         currentValidatorSet = nextValidatorSet;
         nextValidatorSet.id = leaf.nextAuthoritySetID;
-        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
         nextValidatorSet.length = leaf.nextAuthoritySetLen;
+        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
 
         latestMMRRoot = commitment.payload.mmrRootHash;
         latestBeefyBlock = commitment.blockNumber;
@@ -393,9 +398,7 @@ contract BeefyClient is Ownable {
      */
     function minimumSignatureThreshold(uint256 validatorSetLen) internal pure returns (uint256) {
         if (validatorSetLen <= 10) {
-            unchecked {
-                return validatorSetLen - (validatorSetLen - 1) / 3;
-            }
+            return validatorSetLen - (validatorSetLen - 1) / 3;
         } else if (validatorSetLen < 342) {
             return 10;
         } else if (validatorSetLen < 683) {

@@ -57,16 +57,16 @@ class ValidatorSet {
         }
 
         let leaves = wallets.map((w) => keccakFromHexString(w.address))
-        let merkleTree = new MerkleTree(leaves, keccak, {
+        let tree = new MerkleTree(leaves, keccak, {
             sortLeaves: false,
             sortPairs: false
         })
 
         this.wallets = wallets
         this.id = id
-        this.root = merkleTree.getHexRoot()
+        this.root = tree.getHexRoot()
         this.length = length
-        this.proofs = leaves.map((leaf, index) => merkleTree.getHexProof(leaf, index))
+        this.proofs = leaves.map((leaf, index) => tree.getHexProof(leaf, index))
     }
 
     createSignatureProof(index: number, commitmentHash: string): BeefyClient.ValidatorProofStruct {

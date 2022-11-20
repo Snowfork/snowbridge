@@ -16,9 +16,10 @@ library MMRProof {
         uint256 proofOrder
     ) internal pure returns (bool) {
         bytes32 acc = leafHash;
-        unchecked {
-            for (uint256 i = 0; i < proof.length; i++) {
-                acc = hashPairs(acc, proof[i], (proofOrder >> i) & 1);
+        for (uint256 i = 0; i < proof.length;) {
+            acc = hashPairs(acc, proof[i], (proofOrder >> i) & 1);
+            unchecked {
+                i++;
             }
         }
         return root == acc;

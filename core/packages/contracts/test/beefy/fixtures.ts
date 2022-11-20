@@ -1,4 +1,4 @@
-import { ethers, loadFixture } from "../setup"
+import { ethers } from "../setup"
 import { MerkleProof__factory, Bitfield__factory, BeefyClientMock__factory } from "../../src"
 
 import { ValidatorSet } from "../helpers"
