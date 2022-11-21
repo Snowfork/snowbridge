@@ -52,17 +52,19 @@ library Bitfield {
             bytes32 randomness = keccak256(abi.encodePacked(seed, i));
             uint256 index = uint256(randomness) % length;
 
+            Location memory loc = toLocation(index);
+
             // require randomly selected bit to be set in prior
-            if (!isSet(prior, index)) {
+            if (!isSet(prior, loc)) {
                 continue;
             }
 
             // require a not yet set (new) bit to be set
-            if (isSet(bitfield, index)) {
+            if (isSet(bitfield, loc)) {
                 continue;
             }
 
-            set(bitfield, index);
+            set(bitfield, loc);
 
             found++;
         }
@@ -81,7 +83,7 @@ library Bitfield {
         bitfield = new uint256[](arrayLength);
 
         for (uint256 i = 0; i < bitsToSet.length; i++) {
-            set(bitfield, bitsToSet[i]);
+            set(bitfield, toLocation(bitsToSet[i]));
         }
 
         return bitfield;
@@ -110,6 +112,16 @@ library Bitfield {
         return count;
     }
 
+    struct Location {
+        uint256 element;
+        uint8 within;
+    }
+
+    function toLocation(uint256 index) internal pure returns (Location memory location) {
+        location.element = index / 256;
+        location.within = uint8(index % 256);
+    }
+
     function isSet(uint256[] memory self, uint256 index)
         internal
         pure
@@ -120,10 +132,16 @@ library Bitfield {
         return self[element].bit(within) == 1;
     }
 
-    function set(uint256[] memory self, uint256 index) internal pure {
-        uint256 element = index / 256;
-        uint8 within = uint8(index % 256);
-        self[element] = self[element].setBit(within);
+    function isSet(uint256[] memory self, Location memory loc)
+        internal
+        pure
+        returns (bool)
+    {
+        return self[loc.element].bit(loc.within) == 1;
+    }
+
+    function set(uint256[] memory self, Location memory loc) internal pure {
+        self[loc.element] = self[loc.element].setBit(loc.within);
     }
 
     function clear(uint256[] memory self, uint256 index) internal pure {
