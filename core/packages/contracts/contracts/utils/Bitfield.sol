@@ -16,14 +16,16 @@ library Bitfield {
         0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f;
     uint256 internal constant M8 =
         0x00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff;
-    uint256 internal constant M16 =
-        0x0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff;
-    uint256 internal constant M32 =
-        0x00000000ffffffff00000000ffffffff00000000ffffffff00000000ffffffff;
-    uint256 internal constant M64 =
-        0x0000000000000000ffffffffffffffff0000000000000000ffffffffffffffff;
-    uint256 internal constant M128 =
-        0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
+    // uint256 internal constant M16 =
+    //     0x0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff;
+    // uint256 internal constant M32 =
+    //     0x00000000ffffffff00000000ffffffff00000000ffffffff00000000ffffffff;
+    // uint256 internal constant M64 =
+    //     0x0000000000000000ffffffffffffffff0000000000000000ffffffffffffffff;
+    // uint256 internal constant M128 =
+    //     0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
+    uint256 internal constant H01 =
+        0x0101010101010101010101010101010101010101010101010101010101010101;
 
     uint256 internal constant ONE = uint256(1);
 
@@ -40,7 +42,7 @@ library Bitfield {
 
         // `n` must be <= number of set bits in `prior`
         require(
-            n <= countSetBits(prior),
+            n <= countSetBits64c(prior),
             "validate param n"
         );
 
@@ -94,28 +96,87 @@ library Bitfield {
         return bitfield;
     }
 
+    // submitFinal gas cost estimation: 523890
+    // function countSetBits64b(uint256[] memory self) internal pure returns (uint256) {
+    //     unchecked {
+    //         uint256 count = 0;
+    //         for (uint256 i = 0; i < self.length; ++i) {
+    //             uint256 x = self[i];
+
+    //             x -= (x >> 1) & M1;             //put count of each 2 bits into those 2 bits
+    //             x = (x & M2) + ((x >> 2) & M2); //put count of each 4 bits into those 4 bits
+    //             x = (x + (x >> 4)) & M4;        //put count of each 8 bits into those 8 bits
+    //             x = (x + (x >> 8)) & M8;        //put count of each 16 bits into those 16 bits
+    //             x += x >> 16;  //put count of each 32 bits into their lowest 16 bits
+    //             x += x >> 32;  //put count of each 64 bits into their lowest 16 bits
+    //             x += x >> 64;  //put count of each 128 bits into their lowest 16 bits
+    //             x += x >> 128;  //put count of each 256 bits into their lowest 16 bits
+    //             count += x & 0x01ff; // last 9 bits can represent up to 2**9-1 = 511, but 8 bits would only hold up to 2**8-1 = 255
+    //         }
+
+    //         return count;
+    //     }
+    // }
+
+    // submitFinal gas cost estimation: 523728
+    function countSetBits64c(uint256[] memory self) internal pure returns (uint256) {
+        unchecked {
+            uint256 count = 0;
+            for (uint256 i = 0; i < self.length; ++i) {
+                uint256 x = self[i];
+
+                x -= (x >> 1) & M1;             //put count of each 2 bits into those 2 bits
+                x = (x & M2) + ((x >> 2) & M2); //put count of each 4 bits into those 4 bits
+                x = (x + (x >> 4)) & M4;        //put count of each 8 bits into those 8 bits
+                x = (x + (x >> 8)) & M8;        //put count of each 16 bits into those 16 bits
+                count += (x * H01) >> 240; // returns left 16 bits of x + (x<<8) + (x<<16) + (x<<24) + ...
+            }
+
+            return count;
+        }
+    }
+
+    // submitFinal gas cost estimation: 537747
+    // function countSetBits64d(uint256[] memory self) internal pure returns (uint256) {
+    //     unchecked {
+    //         uint256 count = 0;
+    //         for (uint256 i = 0; i < self.length; ++i) {
+    //             uint256 x = self[i];
+
+    //             while (x > 0) {
+    //                 x &= x - 1;
+    //                 ++count;
+    //             }
+    //         }
+    //         return count;
+    //     }
+    // }
+
+    // submitFinal gas cost estimation: 524010
     /**
      * @notice Calculates the number of set bits by using the hamming weight of the bitfield.
      * The alogrithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
      * Further improvements are possible, see the article above.
      */
-    function countSetBits(uint256[] memory self) internal pure returns (uint256) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < self.length; ++i) {
-            uint256 x = self[i];
+    // function countSetBits(uint256[] memory self) internal pure returns (uint256) {
+    //     unchecked {
+    //         uint256 count = 0;
+    //         for (uint256 i = 0; i < self.length; ++i) {
+    //             uint256 x = self[i];
 
-            x = (x & M1) + ((x >> 1) & M1); //put count of each  2 bits into those  2 bits
-            x = (x & M2) + ((x >> 2) & M2); //put count of each  4 bits into those  4 bits
-            x = (x & M4) + ((x >> 4) & M4); //put count of each  8 bits into those  8 bits
-            x = (x & M8) + ((x >> 8) & M8); //put count of each 16 bits into those 16 bits
-            x = (x & M16) + ((x >> 16) & M16); //put count of each 32 bits into those 32 bits
-            x = (x & M32) + ((x >> 32) & M32); //put count of each 64 bits into those 64 bits
-            x = (x & M64) + ((x >> 64) & M64); //put count of each 128 bits into those 128 bits
-            x = (x & M128) + ((x >> 128) & M128); //put count of each 256 bits into those 256 bits
-            count += x;
-        }
-        return count;
-    }
+    //             x = (x & M1) + ((x >> 1) & M1); //put count of each  2 bits into those  2 bits
+    //             x = (x & M2) + ((x >> 2) & M2); //put count of each  4 bits into those  4 bits
+    //             x = (x & M4) + ((x >> 4) & M4); //put count of each  8 bits into those  8 bits
+    //             x = (x & M8) + ((x >> 8) & M8); //put count of each 16 bits into those 16 bits
+    //             x = (x & M16) + ((x >> 16) & M16); //put count of each 32 bits into those 32 bits
+    //             x = (x & M32) + ((x >> 32) & M32); //put count of each 64 bits into those 64 bits
+    //             x = (x & M64) + ((x >> 64) & M64); //put count of each 128 bits into those 128 bits
+    //             x = (x & M128) + ((x >> 128) & M128); //put count of each 256 bits into those 256 bits
+    //             count += x;
+    //         }
+    //         return count;
+    //     }
+    // }
 
     struct Location {
         uint256 element;
