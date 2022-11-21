@@ -13,11 +13,7 @@
     "allowSyntheticDefaultImports": true,
     "declaration": true,
     "declarationMap": true,
-    "paths": {
-      "@src": ["src"],
-      "@src/*": ["src/*"]
-    },
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "baseUrl": ".",
     "rootDir": "src",
     "noEmitOnError": true,
@@ -28,6 +24,6 @@
   },
   "exclude": ["node_modules", "dist"],
   "include": [
-    "src/**/*.ts",
+    "src/**/*.ts"
   ]
 }

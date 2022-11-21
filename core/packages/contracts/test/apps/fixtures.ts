@@ -10,7 +10,7 @@ import {
     DOTApp__factory,
     WrappedToken__factory,
     TestToken__factory,
-} from "@src"
+} from "../../src"
 
 export { ethAppFixture, erc20AppFixture, dotAppFixture }
 

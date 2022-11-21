@@ -1,5 +1,5 @@
 import { ethers, expect, loadFixture } from "../setup"
-import { BasicOutboundChannel__factory } from "@src"
+import { BasicOutboundChannel__factory } from "../../src"
 
 describe("BasicOutboundChannel", function () {
     let testPayload = ethers.utils.formatBytes32String("arbitrary-payload")

@@ -291,7 +291,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 			return nil, fmt.Errorf("logging params: %w", err)
 		}
 
-		tx, err := wr.contract.SubmitFinal(
+		tx, err := wr.contract.SubmitFinalWithLeaf(
 			wr.makeTxOpts(ctx),
 			params.ID,
 			params.Commitment,
@@ -314,7 +314,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 			return nil, fmt.Errorf("logging params: %w", err)
 		}
 
-		tx, err := wr.contract.SubmitFinal0(
+		tx, err := wr.contract.SubmitFinal(
 			wr.makeTxOpts(ctx),
 			params.ID,
 			params.Commitment,
