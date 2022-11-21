@@ -85,12 +85,16 @@ library Bitfield {
         returns (uint256[] memory bitfield)
     {
         // Calculate length of uint256 array based on rounding up to number of uint256 needed
-        uint256 arrayLength = (length + 255) / 256;
+        uint256 arrayLength;
+        unchecked {
+            arrayLength = (length + 255) / 256;
+        }
 
         bitfield = new uint256[](arrayLength);
 
-        for (uint256 i = 0; i < bitsToSet.length; ++i) {
+        for (uint256 i = 0; i < bitsToSet.length;) {
             set(bitfield, toLocation(bitsToSet[i]));
+            unchecked { ++i; }
         }
 
         return bitfield;
