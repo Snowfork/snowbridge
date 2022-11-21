@@ -37,7 +37,7 @@ library Bitfield {
         uint256[] memory prior,
         uint256 n,
         uint256 length
-    ) public pure returns (uint256[] memory bitfield) {
+    ) internal pure returns (uint256[] memory bitfield) {
 
         // `n` must be <= number of set bits in `prior`
         require(
@@ -73,7 +73,7 @@ library Bitfield {
     }
 
     function createBitfield(uint256[] calldata bitsToSet, uint256 length)
-        public
+        internal
         pure
         returns (uint256[] memory bitfield)
     {
@@ -94,7 +94,7 @@ library Bitfield {
      * The alogrithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
      * Further improvements are possible, see the article above.
      */
-    function countSetBits(uint256[] memory self) public pure returns (uint256) {
+    function countSetBits(uint256[] memory self) internal pure returns (uint256) {
         uint256 count = 0;
         for (uint256 i = 0; i < self.length; i++) {
             uint256 x = self[i];
