@@ -26,7 +26,6 @@ library Bitfield {
         0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
 
     uint256 internal constant ONE = uint256(1);
-    using Bits for uint256;
 
     /**
      * @notice Draws a random number, derives an index in the bitfield, and sets the bit if it is in the `prior` and not
@@ -132,14 +131,14 @@ library Bitfield {
         pure
         returns (bool)
     {
-        return self[loc.element].bit(loc.within) == 1;
+        return Bits.bit(self[loc.element], loc.within) == 1;
     }
 
     function set(uint256[] memory self, Location memory loc) internal pure {
-        self[loc.element] = self[loc.element].setBit(loc.within);
+        self[loc.element] = Bits.setBit(self[loc.element], loc.within);
     }
 
     function clear(uint256[] memory self, Location memory loc) internal pure {
-        self[loc.element] = self[loc.element].clearBit(loc.within);
+        self[loc.element] = Bits.clearBit(self[loc.element], loc.within);
     }
 }
