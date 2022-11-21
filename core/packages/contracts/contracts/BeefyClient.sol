@@ -442,11 +442,13 @@ contract BeefyClient is Ownable {
                 bytes32[] calldata merkleProof
             ) = (proof.signatures[i], proof.indices[i], proof.addrs[i], proof.merkleProofs[i]);
 
+            Bitfield.Location memory loc = Bitfield.toLocation(index);
+
             // Check if validator in bitfield
-            require(Bitfield.isSet(bitfield, index), "Validator not in bitfield");
+            require(Bitfield.isSet(bitfield, loc), "Validator not in bitfield");
 
             // Remove validator from bitfield such that no validator can appear twice in signatures
-            Bitfield.clear(bitfield, index);
+            Bitfield.clear(bitfield, loc);
 
             // Check if merkle proof is valid
             require(isValidatorInSet(vset, addr, index, merkleProof), "invalid validator proof");

@@ -122,16 +122,6 @@ library Bitfield {
         location.within = uint8(index % 256);
     }
 
-    function isSet(uint256[] memory self, uint256 index)
-        internal
-        pure
-        returns (bool)
-    {
-        uint256 element = index / 256;
-        uint8 within = uint8(index % 256);
-        return self[element].bit(within) == 1;
-    }
-
     function isSet(uint256[] memory self, Location memory loc)
         internal
         pure
@@ -144,9 +134,7 @@ library Bitfield {
         self[loc.element] = self[loc.element].setBit(loc.within);
     }
 
-    function clear(uint256[] memory self, uint256 index) internal pure {
-        uint256 element = index / 256;
-        uint8 within = uint8(index % 256);
-        self[element] = self[element].clearBit(within);
+    function clear(uint256[] memory self, Location memory loc) internal pure {
+        self[loc.element] = self[loc.element].clearBit(loc.within);
     }
 }
