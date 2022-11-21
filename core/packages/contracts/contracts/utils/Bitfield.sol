@@ -50,7 +50,10 @@ library Bitfield {
 
         for (uint256 i = 0; found < n; i++) {
             bytes32 randomness = keccak256(abi.encodePacked(seed, i));
-            uint256 index = uint256(randomness) % length;
+            uint256 index;
+            unchecked {
+                index = uint256(randomness) % length;
+            }
 
             Location memory loc = toLocation(index);
 
@@ -66,7 +69,7 @@ library Bitfield {
 
             set(bitfield, loc);
 
-            found++;
+            unchecked { ++found; }
         }
 
         return bitfield;
@@ -118,8 +121,10 @@ library Bitfield {
     }
 
     function toLocation(uint256 index) internal pure returns (Location memory location) {
-        location.element = index / 256;
-        location.within = uint8(index % 256);
+        unchecked {
+            location.element = index / 256;
+            location.within = uint8(index % 256);
+        }
     }
 
     function isSet(uint256[] memory self, Location memory loc)
