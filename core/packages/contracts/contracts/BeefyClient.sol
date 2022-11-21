@@ -430,7 +430,7 @@ contract BeefyClient is Ownable {
             "Validator proof is malformed"
         );
 
-        for (uint256 i = 0; i < signatureCount; i++) {
+        for (uint256 i = 0; i < signatureCount; ++i) {
             (
                 ValidatorSignature calldata signature,
                 uint256 index,

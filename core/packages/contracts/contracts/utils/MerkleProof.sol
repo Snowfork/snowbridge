@@ -43,7 +43,7 @@ library MerkleProof {
         bool[] calldata side
     ) public pure returns (bytes32) {
         bytes32 node = leaf;
-        for (uint256 i = 0; i < proof.length; i++) {
+        for (uint256 i = 0; i < proof.length; ++i) {
             if (side[i]) {
                 node = keccak256(abi.encodePacked(proof[i], node));
             } else {
@@ -64,7 +64,7 @@ library MerkleProof {
         require(pos < width, "Merkle position is too high");
 
         uint256 i = 0;
-        for (uint256 height = 0; width > 1; height++) {
+        for (uint256 height = 0; width > 1; ++height) {
             bool computedHashLeft = pos % 2 == 0;
 
             // check if at rightmost branch and whether the computedHash is left
@@ -91,7 +91,7 @@ library MerkleProof {
 
             pos /= 2;
             width = ((width - 1) / 2) + 1;
-            i++;
+            ++i;
         }
 
         return computedHash;

@@ -47,7 +47,7 @@ library Bitfield {
         bitfield = new uint256[](prior.length);
         uint256 found = 0;
 
-        for (uint256 i = 0; found < n; i++) {
+        for (uint256 i = 0; found < n; ++i) {
             bytes32 randomness = keccak256(abi.encodePacked(seed, i));
             uint256 index;
             unchecked {
@@ -84,7 +84,7 @@ library Bitfield {
 
         bitfield = new uint256[](arrayLength);
 
-        for (uint256 i = 0; i < bitsToSet.length; i++) {
+        for (uint256 i = 0; i < bitsToSet.length; ++i) {
             set(bitfield, toLocation(bitsToSet[i]));
         }
 
@@ -98,7 +98,7 @@ library Bitfield {
      */
     function countSetBits(uint256[] memory self) internal pure returns (uint256) {
         uint256 count = 0;
-        for (uint256 i = 0; i < self.length; i++) {
+        for (uint256 i = 0; i < self.length; ++i) {
             uint256 x = self[i];
 
             x = (x & M1) + ((x >> 1) & M1); //put count of each  2 bits into those  2 bits

@@ -38,7 +38,7 @@ library MMRProofVerification {
     ) internal pure returns (bytes32) {
         bytes32 currentHash = leafHash;
 
-        for (uint256 currentPosition = 0; currentPosition < items.length; currentPosition++) {
+        for (uint256 currentPosition = 0; currentPosition < items.length; ++currentPosition) {
             bool isSiblingLeft = bit(order, currentPosition);
             bytes32 sibling = items[currentPosition];
 
