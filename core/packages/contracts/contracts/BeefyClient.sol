@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
 import "./utils/MMRProofVerification.sol";
 import "./ScaleCodec.sol";
@@ -13,8 +12,6 @@ import "./utils/MerkleProof.sol";
  * @title BeefyClient
  */
 contract BeefyClient is Ownable {
-    using Bits for uint256;
-
     /* Events */
 
     /**
