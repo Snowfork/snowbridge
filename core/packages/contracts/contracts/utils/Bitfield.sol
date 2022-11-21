@@ -47,7 +47,7 @@ library Bitfield {
         bitfield = new uint256[](prior.length);
         uint256 found = 0;
 
-        for (uint256 i = 0; found < n; ++i) {
+        for (uint256 i = 0; found < n;) {
             bytes32 randomness = keccak256(abi.encodePacked(seed, i));
             uint256 index;
             unchecked {
@@ -58,17 +58,20 @@ library Bitfield {
 
             // require randomly selected bit to be set in prior
             if (!isSet(prior, loc)) {
+                unchecked { ++i; }
                 continue;
             }
 
             // require a not yet set (new) bit to be set
             if (isSet(bitfield, loc)) {
+                unchecked { ++i; }
                 continue;
             }
 
             set(bitfield, loc);
 
             unchecked { ++found; }
+            unchecked { ++i; }
         }
 
         return bitfield;
