@@ -103,8 +103,9 @@ contract BeefyClient is Ownable {
     /**
      * @dev A request is used to link initial and final submission of a commitment
      * @param sender the sender of the initial transaction
-     * @param bitfield a bitfield signalling which validators they claim have signed
      * @param blockNumber the block number for this commitment
+     * @param validatorSetLen the length of the validator set for this commitment
+     * @param bitfield a bitfield signalling which validators they claim have signed
      */
     struct Request {
         address sender;
