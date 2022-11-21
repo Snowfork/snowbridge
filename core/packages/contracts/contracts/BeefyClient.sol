@@ -14,10 +14,6 @@ import "./utils/MerkleProof.sol";
  */
 contract BeefyClient is Ownable {
     using Bits for uint256;
-    using ScaleCodec for uint256;
-    using ScaleCodec for uint64;
-    using ScaleCodec for uint32;
-    using ScaleCodec for uint16;
 
     /* Events */
 
@@ -464,8 +460,8 @@ contract BeefyClient is Ownable {
                 commitment.payload.prefix,
                 commitment.payload.mmrRootHash,
                 commitment.payload.suffix,
-                commitment.blockNumber.encodeU32(),
-                commitment.validatorSetID.encodeU64()
+                ScaleCodec.encodeU32(commitment.blockNumber),
+                ScaleCodec.encodeU64(commitment.validatorSetID)
             );
     }
 
