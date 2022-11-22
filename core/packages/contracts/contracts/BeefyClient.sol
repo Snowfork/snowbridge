@@ -223,7 +223,7 @@ contract BeefyClient is Ownable {
 
         // For the initial commitment, more than two thirds of the validator set should claim to sign the commitment
         require(
-            Bitfield.countSetBits64c(bitfield) >= vset.length - (vset.length - 1) / 3,
+            Bitfield.countSetBits(bitfield) >= vset.length - (vset.length - 1) / 3,
             "Not enough claims"
         );
 
