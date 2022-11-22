@@ -5,6 +5,7 @@ import "@nomiclabs/hardhat-ethers"
 import "@typechain/hardhat"
 import "hardhat-gas-reporter"
 import "hardhat-deploy"
+import 'hardhat-exposed'
 
 import "./tasks/contractAddress"
 
@@ -54,7 +55,7 @@ const config: HardhatUserConfig = {
         version: "0.8.9",
         settings: {
             optimizer: {
-                enabled: true,
+                enabled: false,
                 runs: 200
             }
         }

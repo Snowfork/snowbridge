@@ -11,5 +11,6 @@ coverage/
 src/
 .vscode/
 deployments/
+contracts-exposed/
 
 tsconfig.tsbuildinfo
