@@ -486,7 +486,7 @@ contract BeefyClient is Ownable {
         ValidatorSet memory vset,
         address addr,
         uint256 index,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     ) internal pure returns (bool) {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
         return
