@@ -2,16 +2,13 @@ package parachain
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/relays/parachain"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -56,7 +53,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	keypair, err := resolvePrivateKey(privateKey, privateKeyFile)
+	keypair, err := ethereum.ResolvePrivateKey(privateKey, privateKeyFile)
 	if err != nil {
 		return err
 	}
@@ -99,28 +96,4 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
-}
-
-func resolvePrivateKey(privateKey, privateKeyFile string) (*secp256k1.Keypair, error) {
-	var cleanedKey string
-
-	if privateKey == "" {
-		if privateKeyFile == "" {
-			return nil, fmt.Errorf("private key not supplied")
-		}
-		contentBytes, err := ioutil.ReadFile(privateKeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load private key: %w", err)
-		}
-		cleanedKey = strings.TrimPrefix(strings.TrimSpace(string(contentBytes)), "0x")
-	} else {
-		cleanedKey = strings.TrimPrefix(privateKey, "0x")
-	}
-
-	keypair, err := secp256k1.NewKeypairFromString(cleanedKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse private key: %w", err)
-	}
-
-	return keypair, nil
 }

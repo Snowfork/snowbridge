@@ -71,6 +71,8 @@ contract BeefyClient is Ownable {
      * @param sender the sender of the initial transaction
      * @param bitfield a bitfield signalling which validators they claim have signed
      * @param blockNumber the block number for this commitment
+     * @param validatorSetLen the length of the validator set for this commitment
+     * @param bitfield a bitfield signalling which validators they claim have signed
      */
     struct Task {
         address account;

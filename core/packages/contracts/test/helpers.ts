@@ -46,7 +46,6 @@ class ValidatorSet {
     root: string
     length: number
     proofs: string[][]
-    leaves: Buffer[]
 
     constructor(id: number, length: number) {
         let wallets: Wallet[] = []
