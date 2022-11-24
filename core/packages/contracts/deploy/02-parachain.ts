@@ -1,4 +1,5 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
+const hre = require("hardhat")
 
 module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
@@ -13,6 +14,8 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
 
     let beefyClient = await deployments.get("BeefyClient")
 
+    const feeData = await hre.ethers.provider.getFeeData()
+
     await deployments.deploy("ParachainClient", {
         from: deployer,
         args: [beefyClient.address, paraID],
@@ -22,5 +25,7 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         },
         log: true,
         autoMine: true,
+        maxFeePerGas: feeData.maxFeePerGas,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 }

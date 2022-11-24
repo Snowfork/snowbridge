@@ -1,4 +1,5 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
+const hre = require("hardhat")
 
 module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
@@ -17,6 +18,8 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
     let scaleCodecLibrary = await deployments.get("ScaleCodec")
     let merkleProof = await deployments.get("MerkleProof")
 
+    const feeData = await hre.ethers.provider.getFeeData()
+
     let basicInboundChannel = await deployments.deploy("BasicInboundChannel", {
         from: deployer,
         args: [basicChannelSourceID, parachainClient.address],
@@ -26,6 +29,8 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         },
         log: true,
         autoMine: true,
+        maxFeePerGas: feeData.maxFeePerGas,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 
     let incentivizedInboundChannel = await deployments.deploy("IncentivizedInboundChannel", {
@@ -36,24 +41,32 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         },
         log: true,
         autoMine: true,
+        maxFeePerGas: feeData.maxFeePerGas,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 
     let basicOutboundChannel = await deployments.deploy("BasicOutboundChannel", {
         from: deployer,
         log: true,
         autoMine: true,
+        maxFeePerGas: feeData.maxFeePerGas,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 
     let incentivizedOutboundChannel = await deployments.deploy("IncentivizedOutboundChannel", {
         from: deployer,
         log: true,
         autoMine: true,
+        maxFeePerGas: feeData.maxFeePerGas,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 
     await deployments.deploy("ChannelRegistry", {
         from: deployer,
         log: true,
         autoMine: true,
+        maxFeePerGas: feeData.maxFeePerGas,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 
     console.log("Configuring ChannelRegistry")
@@ -62,6 +75,8 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "updateChannel",
         0,
@@ -73,6 +88,8 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "updateChannel",
         1,

@@ -1,5 +1,6 @@
 import "solidity-coverage"
 import "@nomicfoundation/hardhat-chai-matchers"
+import "@nomiclabs/hardhat-ethers"
 import "@nomiclabs/hardhat-etherscan"
 import "@nomiclabs/hardhat-ethers"
 import "@typechain/hardhat"
@@ -11,6 +12,7 @@ import "./tasks/contractAddress"
 import "tsconfig-paths/register"
 
 import type { HardhatUserConfig } from "hardhat/config"
+import { ethers } from 'ethers';
 
 let INFURA_KEY = process.env.INFURA_PROJECT_ID
 let ROPSTEN_KEY =
@@ -41,13 +43,15 @@ const config: HardhatUserConfig = {
             chainId: 3,
             url: `https://ropsten.infura.io/v3/${INFURA_KEY}`,
             accounts: [ROPSTEN_KEY],
-            gas: 6000000
+            maxFeePerGas: ethers.utils.parseUnits('200', 'gwei'),
+            maxPriorityFeePerGas: ethers.utils.parseUnits('20', 'gwei'),
         },
         goerli: {
             chainId: 5,
             url: `https://goerli.infura.io/v3/${INFURA_KEY}`,
             accounts: [ROPSTEN_KEY],
-            gas: 6000000
+            maxFeePerGas: ethers.utils.parseUnits('200', 'gwei'),
+            maxPriorityFeePerGas: ethers.utils.parseUnits('20', 'gwei'),
         }
     },
     solidity: {
