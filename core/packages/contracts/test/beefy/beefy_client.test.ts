@@ -31,7 +31,7 @@ describe("BeefyClient", function () {
             ).not.to.be.reverted
 
             // wait RANDAO_COMMIT_DELAY number of blocks, commit to a PREVRANDAO, create a final bitfield
-            let delay = await beefyClient.connect(user).RANDAO_COMMIT_DELAY()
+            let delay = await beefyClient.connect(user).randaoCommitDelay()
             await mine(delay)
             setPrevRandao(377)
             await expect(beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)).not
@@ -81,7 +81,7 @@ describe("BeefyClient", function () {
             ).not.to.be.reverted
 
             // wait RANDAO_COMMIT_DELAY number of blocks, commit to a PREVRANDAO, create a final bitfield
-            let delay = await beefyClient.connect(user).RANDAO_COMMIT_DELAY()
+            let delay = await beefyClient.connect(user).randaoCommitDelay()
             await mine(delay)
             setPrevRandao(377)
             await expect(beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)).not
@@ -143,7 +143,7 @@ describe("BeefyClient", function () {
             ).not.to.be.reverted
 
             // wait RANDAO_COMMIT_DELAY number of blocks, commit to a PREVRANDAO, create a final bitfield
-            let delay = await beefyClient.connect(user).RANDAO_COMMIT_DELAY()
+            let delay = await beefyClient.connect(user).randaoCommitDelay()
             await mine(delay)
             setPrevRandao(377)
             await expect(beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)).not
@@ -184,7 +184,7 @@ describe("BeefyClient", function () {
             ).not.to.be.reverted
 
             // wait RANDAO_COMMIT_DELAY number of blocks, commit to a PREVRANDAO, create a final bitfield
-            let delay = await beefyClient.connect(user).RANDAO_COMMIT_DELAY()
+            let delay = await beefyClient.connect(user).randaoCommitDelay()
             await mine(delay)
             setPrevRandao(377)
             await expect(beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)).not
@@ -243,7 +243,7 @@ describe("BeefyClient", function () {
                     )
             ).not.to.be.reverted
 
-            let delay = await beefyClient.connect(user).RANDAO_COMMIT_DELAY()
+            let delay = await beefyClient.connect(user).randaoCommitDelay()
             await mine(delay)
 
             await expect(
@@ -292,8 +292,8 @@ describe("BeefyClient", function () {
                     )
             ).not.to.be.reverted
 
-            let delay = await beefyClient.connect(user).RANDAO_COMMIT_DELAY()
-            let expiration = await beefyClient.connect(user).RANDAO_COMMIT_EXPIRATION()
+            let delay = await beefyClient.connect(user).randaoCommitDelay()
+            let expiration = await beefyClient.connect(user).randaoCommitExpiration()
             await mine(delay.add(expiration).add(1))
             await expect(
                 beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)
@@ -362,7 +362,7 @@ describe("BeefyClient", function () {
 
             // wait RANDAO_COMMIT_DELAY number of blocks, commit to a PREVRANDAO, and then create
             // a final bitfield
-            let delay = await beefyClient.connect(user).RANDAO_COMMIT_DELAY()
+            let delay = await beefyClient.connect(user).randaoCommitDelay()
             await mine(delay)
             await expect(beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)).not
                 .to.be.reverted

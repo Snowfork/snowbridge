@@ -28,7 +28,7 @@ async function baseFixture() {
             "contracts/utils/Bitfield.sol:Bitfield": bitfield.address
         },
         owner
-    ).deploy()
+    ).deploy(3, 8)
 
     return { beefyClient, owner, user }
 }

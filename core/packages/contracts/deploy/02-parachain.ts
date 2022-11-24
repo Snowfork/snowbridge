@@ -1,12 +1,10 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
+import { getConfigForNetwork } from "../config"
 
-module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
+module.exports = async ({ deployments, getUnnamedAccounts, network }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
 
-    if (!("PARACHAIN_ID" in process.env)) {
-        throw "Missing PARACHAIN_ID in environment config"
-    }
-    const paraID = process.env.PARACHAIN_ID
+    const paraID = getConfigForNetwork(network.name).parachainID
 
     let merkleProofLibrary = await deployments.get("MerkleProof")
     let beefyClient = await deployments.get("BeefyClient")

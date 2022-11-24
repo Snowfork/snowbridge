@@ -12,15 +12,14 @@ import (
 )
 
 type InitialRequestParams struct {
-	CommitmentHash          [32]byte
-	ValidatorSetID          uint64
-	ValidatorClaimsBitfield []*big.Int
-	Proof                   beefyclient.BeefyClientValidatorProof
+	CommitmentHash [32]byte
+	Bitfield       []*big.Int
+	Proof          beefyclient.BeefyClientValidatorProof
 }
 
 type FinalRequestParams struct {
-	ID             [32]byte
 	Commitment     beefyclient.BeefyClientCommitment
+	Bitfield       []*big.Int
 	Proofs         []beefyclient.BeefyClientValidatorProof
 	Leaf           beefyclient.BeefyClientMMRLeaf
 	LeafProof      [][32]byte
@@ -65,16 +64,15 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	v, _r, s := cleanSignature(validatorSignature)
 
 	msg := InitialRequestParams{
-		CommitmentHash:          *commitmentHash,
-		ValidatorSetID:          r.SignedCommitment.Commitment.ValidatorSetID,
-		ValidatorClaimsBitfield: initialBitfield,
+		CommitmentHash: *commitmentHash,
+		Bitfield:       initialBitfield,
 		Proof: beefyclient.BeefyClientValidatorProof{
-			V:           v,
-			R:           _r,
-			S:           s,
-			Index:       big.NewInt(valAddrIndex),
-			Account:     validatorAddress,
-			Proof: proof,
+			V:       v,
+			R:       _r,
+			S:       s,
+			Index:   big.NewInt(valAddrIndex),
+			Account: validatorAddress,
+			Proof:   proof,
 		},
 	}
 
@@ -108,7 +106,7 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 	return proof, nil
 }
 
-func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64) (*FinalRequestParams, error) {
+func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfield []*big.Int) (*FinalRequestParams, error) {
 	validatorProofs := []beefyclient.BeefyClientValidatorProof{}
 
 	for _, validatorIndex := range validatorIndices {
@@ -129,12 +127,12 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64) (*FinalReques
 		}
 
 		validatorProofs = append(validatorProofs, beefyclient.BeefyClientValidatorProof{
-			V:           v,
-			R:           _r,
-			S:           s,
-			Index:       new(big.Int).SetUint64(validatorIndex),
-			Account:     account,
-			Proof: merkleProof,
+			V:       v,
+			R:       _r,
+			S:       s,
+			Index:   new(big.Int).SetUint64(validatorIndex),
+			Account: account,
+			Proof:   merkleProof,
 		})
 	}
 
@@ -166,6 +164,7 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64) (*FinalReques
 
 	msg := FinalRequestParams{
 		Commitment:     commitment,
+		Bitfield:       initialBitfield,
 		Proofs:         validatorProofs,
 		Leaf:           inputLeaf,
 		LeafProof:      merkleProofItems,

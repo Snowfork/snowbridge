@@ -126,15 +126,8 @@ contract BeefyClient is Ownable {
 
     /* Constants */
 
-    /**
-     * TODO: Review these constant (SNO-355)
-     *
-     * @dev The minimum number of blocks a relayer must wait between submissions
-     * in the interactive update protcol. The longer the period, the greater the
-     * crypto-economic security.
-     */
-    uint64 public constant RANDAO_COMMIT_DELAY = 3;
-    uint64 public constant RANDAO_COMMIT_EXPIRATION = 8;
+    uint256 public immutable randaoCommitDelay;
+    uint256 public immutable randaoCommitExpiration;
 
     /* Errors */
 
@@ -151,6 +144,12 @@ contract BeefyClient is Ownable {
     error TaskExpired();
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
+
+
+    constructor(uint256 _randaoCommitDelay, uint256 _randaoCommitExpiration) {
+        randaoCommitDelay = _randaoCommitDelay;
+        randaoCommitExpiration = _randaoCommitExpiration;
+    }
 
 
     // Once-off post-construction call to set initial configuration.
@@ -240,11 +239,11 @@ contract BeefyClient is Ownable {
             revert PrevRandaoAlreadyCaptured();
         }
 
-        if (block.number < task.blockNumber + RANDAO_COMMIT_DELAY) {
+        if (block.number < task.blockNumber + randaoCommitDelay) {
             revert WaitPeriodNotOver();
         }
 
-        if (block.number > task.blockNumber + RANDAO_COMMIT_DELAY + RANDAO_COMMIT_EXPIRATION) {
+        if (block.number > task.blockNumber + randaoCommitDelay + randaoCommitExpiration) {
             delete tasks[taskID];
             revert TaskExpired();
         }

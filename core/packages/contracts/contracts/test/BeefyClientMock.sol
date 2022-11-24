@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "../BeefyClient.sol";
 
 contract BeefyClientMock is BeefyClient {
-    constructor() BeefyClient() {}
+    constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration) BeefyClient(randaoCommitDelay, randaoCommitExpiration) {}
 
     function encodeCommitment_public(Commitment calldata commitment)
         external

@@ -1,13 +1,17 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
+import { getConfigForNetwork } from "../config"
 
-module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
+module.exports = async ({ deployments, getUnnamedAccounts, network }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
+
+    let config = getConfigForNetwork(network.name)
 
     let bitFieldLibrary = await deployments.get("Bitfield")
     let merkleProofLibrary = await deployments.get("MerkleProof")
 
     await deployments.deploy("BeefyClient", {
         from: deployer,
+        args: [config.randaoCommitDelay, config.randaoCommitExpiration],
         libraries: {
             MerkleProof: merkleProofLibrary.address,
             Bitfield: bitFieldLibrary.address

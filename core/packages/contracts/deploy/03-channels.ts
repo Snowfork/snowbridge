@@ -1,24 +1,17 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
+import { getConfigForNetwork } from "../config"
 
-module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
+module.exports = async ({ deployments, getUnnamedAccounts, network }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
 
-    if (!("BASIC_CHANNEL_SOURCE_ID" in process.env)) {
-        throw "Missing BASIC_CHANNEL_SOURCE_ID in environment config"
-    }
-    const basicChannelSourceID = process.env.BASIC_CHANNEL_SOURCE_ID
-
-    if (!("INCENTIVIZED_CHANNEL_SOURCE_ID" in process.env)) {
-        throw "Missing INCENTIVIZED_CHANNEL_SOURCE_ID in environment config"
-    }
-    const incentivizedChannelSourceID = process.env.INCENTIVIZED_CHANNEL_SOURCE_ID
+    const config = getConfigForNetwork(network.name)
 
     let parachainClient = await deployments.get("ParachainClient")
     let merkleProof = await deployments.get("MerkleProof")
 
     let basicInboundChannel = await deployments.deploy("BasicInboundChannel", {
         from: deployer,
-        args: [basicChannelSourceID, parachainClient.address],
+        args: [config.basicChannelSourceID, parachainClient.address],
         libraries: {
             MerkleProof: merkleProof.address
         },
@@ -28,7 +21,7 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
 
     let incentivizedInboundChannel = await deployments.deploy("IncentivizedInboundChannel", {
         from: deployer,
-        args: [incentivizedChannelSourceID, parachainClient.address],
+        args: [config.incentivizedChannelSourceID, parachainClient.address],
         log: true,
         autoMine: true
     })

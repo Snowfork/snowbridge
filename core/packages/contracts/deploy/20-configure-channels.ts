@@ -1,12 +1,10 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
+import { getConfigForNetwork } from "../config"
 
-module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
+module.exports = async ({ deployments, getUnnamedAccounts, network }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
 
-    if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
-        throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
-    }
-    const fee = process.env.INCENTIVIZED_CHANNEL_FEE
+    const fee = getConfigForNetwork(network.name).incentivizedChannelFee
 
     let dotApp = await deployments.get("DOTApp")
     let ethApp = await deployments.get("ETHApp")
