@@ -48,21 +48,21 @@ library Bitfield {
                 index = uint256(randomness) % length;
             }
 
-            Location memory loc = toLocation(index);
+            (uint256 element, uint8 within) = toLocation(index);
 
             // require randomly selected bit to be set in prior
-            if (!isSet(prior, loc)) {
+            if (!isSet(prior, element, within)) {
                 unchecked { i++; }
                 continue;
             }
 
             // require a not yet set (new) bit to be set
-            if (isSet(bitfield, loc)) {
+            if (isSet(bitfield, element, within)) {
                 unchecked { i++; }
                 continue;
             }
 
-            set(bitfield, loc);
+            set(bitfield, element, within);
 
             unchecked { found++; }
             unchecked { i++; }
@@ -85,7 +85,8 @@ library Bitfield {
         bitfield = new uint256[](arrayLength);
 
         for (uint256 i = 0; i < bitsToSet.length;) {
-            set(bitfield, toLocation(bitsToSet[i]));
+            (uint256 element, uint8 within) = toLocation(bitsToSet[i]);
+            set(bitfield, element, within);
             unchecked { i++; }
         }
 
@@ -113,31 +114,27 @@ library Bitfield {
         }
     }
 
-    struct Location {
-        uint256 element;
-        uint8 within;
-    }
-
-    function toLocation(uint256 index) internal pure returns (Location memory location) {
+    function toLocation(uint256 index) internal pure returns (uint256, uint8) {
         unchecked {
-            location.element = index / 256;
-            location.within = uint8(index % 256);
+            uint256 element = index / 256;
+            uint8 within = uint8(index % 256);
+            return (element, within);
         }
     }
 
-    function isSet(uint256[] memory self, Location memory loc)
+    function isSet(uint256[] memory self, uint256 element, uint8 within)
         internal
         pure
         returns (bool)
     {
-        return Bits.bit(self[loc.element], loc.within) == 1;
+        return Bits.bit(self[element], within) == 1;
     }
 
-    function set(uint256[] memory self, Location memory loc) internal pure {
-        self[loc.element] = Bits.setBit(self[loc.element], loc.within);
+    function set(uint256[] memory self, uint256 element, uint8 within) internal pure {
+        self[element] = Bits.setBit(self[element], within);
     }
 
-    function clear(uint256[] memory self, Location memory loc) internal pure {
-        self[loc.element] = Bits.clearBit(self[loc.element], loc.within);
+    function clear(uint256[] memory self, uint256 element, uint8 within) internal pure {
+        self[element] = Bits.clearBit(self[element], within);
     }
 }
