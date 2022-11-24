@@ -30,6 +30,10 @@ library Bitfield {
     /**
      * @notice Draws a random number, derives an index in the bitfield, and sets the bit if it is in the `prior` and not
      * yet set. Repeats that `n` times.
+     * @param seed Source of randomness for selecting validator signatures.
+     * @param prior Bitfield indicating which validators claim to have signed the commitment.
+     * @param n Number of unique bits in prior that must be set in the result. Must be <= number of set bits in `prior`.
+     * @param length Length of the bitfield prior to draw bits from. Must be <= prior.length * 256.
      */
     function randomNBitsWithPriorCheck(
         uint256 seed,
