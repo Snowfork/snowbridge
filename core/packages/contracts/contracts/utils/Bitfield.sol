@@ -52,20 +52,20 @@ library Bitfield {
 
             // require randomly selected bit to be set in prior
             if (!isSet(prior, loc)) {
-                unchecked { ++i; }
+                unchecked { i++; }
                 continue;
             }
 
             // require a not yet set (new) bit to be set
             if (isSet(bitfield, loc)) {
-                unchecked { ++i; }
+                unchecked { i++; }
                 continue;
             }
 
             set(bitfield, loc);
 
-            unchecked { ++found; }
-            unchecked { ++i; }
+            unchecked { found++; }
+            unchecked { i++; }
         }
 
         return bitfield;
@@ -86,7 +86,7 @@ library Bitfield {
 
         for (uint256 i = 0; i < bitsToSet.length;) {
             set(bitfield, toLocation(bitsToSet[i]));
-            unchecked { ++i; }
+            unchecked { i++; }
         }
 
         return bitfield;
@@ -99,7 +99,7 @@ library Bitfield {
     function countSetBits(uint256[] memory self) internal pure returns (uint256) {
         unchecked {
             uint256 count = 0;
-            for (uint256 i = 0; i < self.length; ++i) {
+            for (uint256 i = 0; i < self.length; i++) {
                 uint256 x = self[i];
 
                 x -= (x >> 1) & M1;             //put count of each 2 bits into those 2 bits

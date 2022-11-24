@@ -23,7 +23,7 @@ describe("Merkle Proof", function () {
         let root = tree.getHexRoot()
         expect(root).to.be.equal(expectedRoot)
 
-        for (let i = 0; i < leaves.length; ++i) {
+        for (let i = 0; i < leaves.length; i++) {
             let leaf = leaves[i]
             let hashedLeafHex = "0x" + leaf.toString("hex")
             let proof = tree.getHexProof(hashedLeafHex)

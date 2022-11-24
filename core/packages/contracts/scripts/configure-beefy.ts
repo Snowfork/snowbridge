@@ -44,7 +44,7 @@ async function configureBeefy() {
     let authorities = await api.query.beefy.authorities<BeefyId[]>()
 
     let addrs = []
-    for (let i = 0; i < authorities.length; ++i) {
+    for (let i = 0; i < authorities.length; i++) {
         let publicKey = publicKeyConvert(authorities[i], false).slice(1)
         let publicKeyHashed = createKeccakHash("keccak256").update(Buffer.from(publicKey)).digest()
         addrs.push(publicKeyHashed.slice(12))

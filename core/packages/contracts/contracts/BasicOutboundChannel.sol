@@ -32,7 +32,7 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
     external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Set initial configuration
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
-        for (uint i = 0; i < defaultOperators.length; ++i) {
+        for (uint i = 0; i < defaultOperators.length; i++) {
             _authorizeDefaultOperator(defaultOperators[i]);
         }
 

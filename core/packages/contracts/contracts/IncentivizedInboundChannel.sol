@@ -64,13 +64,13 @@ contract IncentivizedInboundChannel is AccessControl {
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas"
         );
-        ++nonce;
+        nonce++;
         dispatch(bundle);
         rewardController.handleReward(payable(msg.sender), bundle.fee);
     }
 
     function dispatch(MessageBundle calldata bundle) internal {
-        for (uint256 i = 0; i < bundle.messages.length; ++i) {
+        for (uint256 i = 0; i < bundle.messages.length; i++) {
             Message calldata message = bundle.messages[i];
             (bool success, ) = message.target.call{ value: 0, gas: MAX_GAS_PER_MESSAGE }(
                 message.payload

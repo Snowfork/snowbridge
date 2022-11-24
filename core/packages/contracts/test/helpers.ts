@@ -47,7 +47,7 @@ class ValidatorSet {
 
     constructor(id: number, length: number) {
         let wallets: Wallet[] = []
-        for (let i = 0; i < length; ++i) {
+        for (let i = 0; i < length; i++) {
             let entropy = entropyToMnemonic(keccak256(Buffer.from(`${i}`)))
             let wallet = ethers.Wallet.fromMnemonic(entropy)
             wallets.push(wallet)
