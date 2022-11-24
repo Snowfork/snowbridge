@@ -64,8 +64,10 @@ library Bitfield {
 
             set(bitfield, element, within);
 
-            unchecked { found++; }
-            unchecked { i++; }
+            unchecked {
+                found++;
+                i++;
+            }
         }
 
         return bitfield;
