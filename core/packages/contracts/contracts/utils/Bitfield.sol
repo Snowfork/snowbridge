@@ -42,7 +42,13 @@ library Bitfield {
         uint256 found = 0;
 
         for (uint256 i = 0; found < n;) {
-            bytes32 randomness = keccak256(abi.encodePacked(seed, i));
+            bytes32 randomness;
+            assembly {
+                mstore(0x00, seed)
+                mstore(0x20, i)
+                randomness := keccak256(0x00, 0x40)
+            }
+
             uint256 index;
             unchecked {
                 index = uint256(randomness) % length;
