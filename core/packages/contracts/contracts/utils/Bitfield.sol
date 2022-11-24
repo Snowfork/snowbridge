@@ -67,6 +67,9 @@ library Bitfield {
         return bitfield;
     }
 
+    /**
+     * @dev Helper to create a bitfield.
+     */
     function createBitfield(uint256[] calldata bitsToSet, uint256 length)
         internal
         pure
@@ -74,16 +77,13 @@ library Bitfield {
     {
         // Calculate length of uint256 array based on rounding up to number of uint256 needed
         uint256 arrayLength;
-        unchecked {
-            arrayLength = (length + 255) / 256;
-        }
+        arrayLength = (length + 255) / 256;
 
         bitfield = new uint256[](arrayLength);
 
-        for (uint256 i = 0; i < bitsToSet.length;) {
+        for (uint256 i = 0; i < bitsToSet.length; i++) {
             (uint256 element, uint8 within) = toLocation(bitsToSet[i]);
             set(bitfield, element, within);
-            unchecked { i++; }
         }
 
         return bitfield;
