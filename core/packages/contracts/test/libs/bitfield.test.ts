@@ -1,10 +1,11 @@
 import { ethers, expect, loadFixture } from "../setup"
 import { readSetBits, createRandomSubset } from "../helpers"
+import { Bitfield__factory } from "../../src";
 
 describe("Bitfield", function () {
     async function fixture() {
-        let bitfieldFactory = await ethers.getContractFactory("$Bitfield");
-        let bitfieldLib = await bitfieldFactory.deploy();
+        let [owner] = await ethers.getSigners();
+        let bitfieldLib = await new Bitfield__factory(owner).deploy();
         return { bitfieldLib }
     }
 
@@ -12,7 +13,7 @@ describe("Bitfield", function () {
         let { bitfieldLib } = await loadFixture(fixture)
 
         let positions = [0, 5, 8]
-        let bitfield = await bitfieldLib.$createBitfield(positions, 9)
+        let bitfield = await bitfieldLib.createBitfield(positions, 9)
 
         expect(readSetBits(bitfield)).to.eql(positions)
     })
@@ -21,7 +22,7 @@ describe("Bitfield", function () {
         let { bitfieldLib } = await loadFixture(fixture)
 
         let positions = createRandomSubset(200, 140)
-        let bitfield = await bitfieldLib.$createBitfield(positions, 200)
+        let bitfield = await bitfieldLib.createBitfield(positions, 200)
 
         expect(readSetBits(bitfield)).to.eql(positions)
     })
