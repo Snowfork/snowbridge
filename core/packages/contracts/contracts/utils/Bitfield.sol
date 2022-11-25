@@ -41,7 +41,6 @@ library Bitfield {
         uint256 n,
         uint256 length
     ) internal pure returns (uint256[] memory bitfield) {
-
         bitfield = new uint256[](prior.length);
         uint256 found = 0;
 
@@ -145,14 +144,11 @@ library Bitfield {
     }
 
     function makeIndex(uint256 seed, uint256 iteration, uint256 length) internal pure returns (uint256 index) {
-            bytes32 randomness;
-            assembly {
-                mstore(0x00, seed)
-                mstore(0x20, iteration)
-                randomness := keccak256(0x00, 0x40)
-            }
-            unchecked {
-                index = uint256(randomness) % length;
-            }
+        assembly {
+            mstore(0x00, seed)
+            mstore(0x20, iteration)
+            let randomness := keccak256(0x00, 0x40)
+            index := mod(randomness, length)
+        }
     }
 }
