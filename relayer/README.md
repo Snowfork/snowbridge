@@ -34,7 +34,7 @@ To enable revive for linting in VS-code, add the following to your config:
 
 ## Contract Bindings
 
-The relayer relies on dynamically generated bindings for our Ethereum contracts. They need to updated whenever the contracts change.
+The relayer relies on dynamically generated bindings for our Ethereum contracts. They need to be updated whenever the contracts change.
 
 Make sure you have the following dependencies installed:
 
@@ -50,10 +50,10 @@ Install [abigen](https://geth.ethereum.org/docs/dapp/native-bindings):
 go install github.com/ethereum/go-ethereum/cmd/abigen@v1.10.17
 ```
 
-Compile the contracts in the [ethereum](../ethereum) directory:
+Compile the contracts in the [contracts](../core/packages/contracts) directory:
 
 ```bash
-npx hardhat compile
+pnpm build
 ```
 
 Generate the bindings in the [contracts](contracts/) directory:
