@@ -1,21 +1,20 @@
 use frame_support::BoundedVec;
 use frame_support::traits::Get;
-use ssz_rs::{Deserialize, SimpleSerialize as SimpleSerializeTrait, Bitlist, Bitvector};
-use ssz_rs::prelude::{Vector, List};
-use sp_std::convert::TryInto;
-use sp_std::iter::FromIterator;
-use sp_std::prelude::*;
-use ssz_rs::U256;
+use ssz_rs::{Deserialize, SimpleSerialize as SimpleSerializeTrait, Bitlist, Bitvector, U256, prelude::Vector, prelude::List, DeserializeError};
+use sp_std::{prelude::*, convert::TryInto, iter::FromIterator};
 use byte_slice_cast::AsByteSlice;
 use snowbridge_beacon_primitives::{SyncAggregate, Attestation, Checkpoint, Eth1Data, BeaconHeader, AttesterSlashing, ExecutionPayload, SigningData, ForkData, SyncCommittee, AttestationData, Body, ProposerSlashing, Deposit, VoluntaryExit};
 use crate::ssz::*;
 use crate::config as config;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum MerkleizationError {
     HashTreeRootError,
     HashTreeRootInvalidBytes,
     InvalidLength,
+    InputTooShort,
+    ExtraInput,
+    InvalidInput
 }
 
 pub fn get_ssz_beacon_block_body<
@@ -313,7 +312,13 @@ pub fn hash_tree_root<T: SimpleSerializeTrait>(mut object: T) -> Result<[u8; 32]
 }
 
 pub fn get_sync_committee_bits<SyncCommitteeBitsSize: Get<u32>>(bits_hex: BoundedVec<u8, SyncCommitteeBitsSize>) -> Result<Vec<u8>, MerkleizationError> {
-    let bitv = Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(&bits_hex).map_err(|_| MerkleizationError::InvalidLength)?;
+    let bitv = Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(&bits_hex).map_err(|e| -> MerkleizationError {
+        match e {
+            DeserializeError::InputTooShort => MerkleizationError::InputTooShort,
+            DeserializeError::ExtraInput => MerkleizationError::ExtraInput,
+            _ => MerkleizationError::InvalidInput,
+        }
+    })?;
 
     let result = bitv.iter().map(|bit| {
         if bit == true {
