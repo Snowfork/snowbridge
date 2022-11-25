@@ -48,7 +48,6 @@
     "find-config": "^1.0.0",
     "hardhat": "^2.12.2",
     "hardhat-deploy": "^0.11.20",
-    "hardhat-exposed": "^0.2.15",
     "hardhat-gas-reporter": "^1.0.9",
     "keccak": "^3.0.2",
     "lodash": "^4.17.21",

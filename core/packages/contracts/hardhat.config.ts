@@ -5,7 +5,6 @@ import "@nomiclabs/hardhat-ethers"
 import "@typechain/hardhat"
 import "hardhat-gas-reporter"
 import "hardhat-deploy"
-import 'hardhat-exposed'
 
 import "./tasks/contractAddress"
 
