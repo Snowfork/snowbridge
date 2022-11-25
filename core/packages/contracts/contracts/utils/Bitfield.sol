@@ -86,8 +86,7 @@ library Bitfield {
         returns (uint256[] memory bitfield)
     {
         // Calculate length of uint256 array based on rounding up to number of uint256 needed
-        uint256 arrayLength;
-        arrayLength = (length + 255) / 256;
+        uint256 arrayLength = (length + 255) / 256;
 
         bitfield = new uint256[](arrayLength);
 

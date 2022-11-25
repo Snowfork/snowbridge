@@ -1,11 +1,11 @@
 import { ethers, expect, loadFixture } from "../setup"
 import { readSetBits, createRandomSubset } from "../helpers"
-import { Bitfield__factory } from "../../src";
+import { Bitfield__factory } from "../../src"
 
 describe("Bitfield", function () {
     async function fixture() {
-        let [owner] = await ethers.getSigners();
-        let bitfieldLib = await new Bitfield__factory(owner).deploy();
+        let [owner] = await ethers.getSigners()
+        let bitfieldLib = await new Bitfield__factory(owner).deploy()
         return { bitfieldLib }
     }
 

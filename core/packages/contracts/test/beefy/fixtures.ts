@@ -35,7 +35,7 @@ async function baseFixture() {
             "contracts/ScaleCodec.sol:ScaleCodec": codec.address,
             "contracts/utils/MMRProofVerification.sol:MMRProofVerification": mmrProof.address,
             "contracts/utils/MerkleProof.sol:MerkleProof": merkleProof.address,
-            "contracts/utils/Bitfield.sol:Bitfield": bitfield.address,
+            "contracts/utils/Bitfield.sol:Bitfield": bitfield.address
         },
         owner
     ).deploy()
