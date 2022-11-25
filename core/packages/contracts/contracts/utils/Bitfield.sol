@@ -46,17 +46,7 @@ library Bitfield {
         uint256 found = 0;
 
         for (uint256 i = 0; found < n;) {
-            bytes32 randomness;
-            assembly {
-                mstore(0x00, seed)
-                mstore(0x20, i)
-                randomness := keccak256(0x00, 0x40)
-            }
-
-            uint256 index;
-            unchecked {
-                index = uint256(randomness) % length;
-            }
+            uint256 index = makeIndex(seed, i, length);
 
             (uint256 element, uint8 within) = toLocation(index);
 
@@ -152,5 +142,17 @@ library Bitfield {
 
     function clear(uint256[] memory self, uint256 element, uint8 within) internal pure {
         self[element] = Bits.clearBit(self[element], within);
+    }
+
+    function makeIndex(uint256 seed, uint256 iteration, uint256 length) internal pure returns (uint256 index) {
+            bytes32 randomness;
+            assembly {
+                mstore(0x00, seed)
+                mstore(0x20, iteration)
+                randomness := keccak256(0x00, 0x40)
+            }
+            unchecked {
+                index = uint256(randomness) % length;
+            }
     }
 }
