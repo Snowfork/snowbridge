@@ -1,4 +1,5 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
+import hre from "hardhat";
 
 module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
@@ -7,11 +8,15 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
     let incentivizedOutboundChannel = await deployments.get("IncentivizedOutboundChannel")
     let channelRegistry = await deployments.get("ChannelRegistry")
 
+    const feeData = await hre.ethers.provider.getFeeData()
+
     let tokenContract = await deployments.deploy("WrappedToken", {
         from: deployer,
         args: ["Wrapped DOT", "WDOT"],
         log: true,
         autoMine: true,
+        maxFeePerGas: feeData.maxFeePerGas,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 
     let dotAppContract = await deployments.deploy("DOTApp", {
@@ -22,6 +27,8 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         },
         log: true,
         autoMine: true,
+        maxFeePerGas: feeData.maxFeePerGas,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 
     console.log("Configuring WrappedToken")
@@ -30,6 +37,8 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "transferOwnership",
         dotAppContract.address

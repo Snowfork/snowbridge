@@ -1,4 +1,5 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
+import hre from "hardhat";
 
 module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
@@ -12,12 +13,16 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
     let ethApp = await deployments.get("ETHApp")
     let erc20App = await deployments.get("ERC20App")
 
+    const feeData = await hre.ethers.provider.getFeeData()
+
     console.log("Configuring BasicOutboundChannel")
     await deployments.execute(
         "BasicOutboundChannel",
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "initialize",
         deployer,
@@ -30,6 +35,8 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "initialize",
         deployer,
@@ -41,6 +48,8 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "setFee",
         fee
@@ -52,6 +61,8 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "initialize",
         deployer,
