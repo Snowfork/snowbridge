@@ -126,7 +126,17 @@ contract BeefyClient is Ownable {
 
     /* Constants */
 
+    /**
+     * @dev Minimum delay in number of blocks that a relayer must wait between calling
+     * submitInitial and commitPrevRandao. In production this should be set to MAX_SEED_LOOKAHEAD:
+     * https://eth2book.info/altair/part3/config/preset#max_seed_lookahead
+     */
     uint256 public immutable randaoCommitDelay;
+
+    /**
+     * @dev after randaoCommitDelay is reached, relayer must
+     * call commitPrevRandao within this number of blocks.
+     */
     uint256 public immutable randaoCommitExpiration;
 
     /* Errors */
@@ -231,6 +241,10 @@ contract BeefyClient is Ownable {
         );
     }
 
+    /**
+     * @dev Capture PREVRANDAO
+     * @param commitmentHash contains the commitmentHash signed by the validators
+     */
     function commitPrevRandao(bytes32 commitmentHash) external {
         bytes32 taskID = createTaskID(msg.sender, commitmentHash);
         Task storage task = tasks[taskID];
