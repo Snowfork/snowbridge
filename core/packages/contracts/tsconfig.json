@@ -15,7 +15,7 @@
     "declarationMap": true,
     "skipLibCheck": false,
     "baseUrl": ".",
-    "rootDir": ".",
+    "rootDir": "src",
     "noEmitOnError": true,
     "sourceMap": true
   },
@@ -24,8 +24,6 @@
   },
   "exclude": ["node_modules", "dist"],
   "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    "test/**/*.json"
+    "src/**/*.ts"
   ]
 }
