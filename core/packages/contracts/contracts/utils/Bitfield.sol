@@ -147,8 +147,7 @@ library Bitfield {
         assembly {
             mstore(0x00, seed)
             mstore(0x20, iteration)
-            let randomness := keccak256(0x00, 0x40)
-            index := mod(randomness, length)
+            index := mod(keccak256(0x00, 0x40), length)
         }
     }
 }
