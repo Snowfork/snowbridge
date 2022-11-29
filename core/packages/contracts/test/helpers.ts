@@ -17,13 +17,11 @@ let readSetBits = (bitfield: ethers.BigNumber[]): number[] => {
             while (bf.length < 256) {
                 bf.unshift("0")
             }
-            return bf.join("")
+            return bf.reverse().join("")
         })
-        .reverse()
         .join("")
-        .replace(/^0*/g, "")
+        .replace(/0*$/g, "")
         .split("")
-        .reverse()
         .map((c) => parseInt(c))
 
     let indices: number[] = []

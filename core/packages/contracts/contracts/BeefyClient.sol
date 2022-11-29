@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
 import "./utils/MMRProofVerification.sol";
 import "./ScaleCodec.sol";
@@ -14,7 +13,6 @@ import "./utils/MerkleProof.sol";
  */
 contract BeefyClient is Ownable {
     using Bits for uint256;
-    using Bitfield for uint256[];
     using ScaleCodec for uint256;
     using ScaleCodec for uint64;
     using ScaleCodec for uint32;
@@ -231,7 +229,7 @@ contract BeefyClient is Ownable {
 
         // For the initial commitment, more than two thirds of the validator set should claim to sign the commitment
         require(
-            bitfield.countSetBits() >= vset.length - (vset.length - 1) / 3,
+            Bitfield.countSetBits(bitfield) >= vset.length - (vset.length - 1) / 3,
             "Not enough claims"
         );
 
@@ -443,11 +441,13 @@ contract BeefyClient is Ownable {
                 bytes32[] calldata merkleProof
             ) = (proof.signatures[i], proof.indices[i], proof.addrs[i], proof.merkleProofs[i]);
 
+            (uint256 element, uint8 within) = Bitfield.toLocation(index);
+
             // Check if validator in bitfield
-            require(bitfield.isSet(index), "Validator not in bitfield");
+            require(Bitfield.isSet(bitfield, element, within), "Validator not in bitfield");
 
             // Remove validator from bitfield such that no validator can appear twice in signatures
-            bitfield.clear(index);
+            Bitfield.clear(bitfield, element, within);
 
             // Check if merkle proof is valid
             require(isValidatorInSet(vset, addr, index, merkleProof), "invalid validator proof");
@@ -492,7 +492,7 @@ contract BeefyClient is Ownable {
         ValidatorSet memory vset,
         address addr,
         uint256 index,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     ) internal pure returns (bool) {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
         return
