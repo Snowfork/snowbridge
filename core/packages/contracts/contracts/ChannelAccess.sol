@@ -13,20 +13,14 @@ pragma solidity ^0.8.9;
  *   - Default Operator: an account that can submit messages for all users
  *
  * Much of this logic was inspired from the ERC777 operators feature.
-*/
+ */
 abstract contract ChannelAccess {
     mapping(address => bool) private defaultOperators;
     mapping(address => mapping(address => bool)) private operators;
 
-    event OperatorAuthorized(
-        address operator,
-        address user
-    );
+    event OperatorAuthorized(address operator, address user);
 
-    event OperatorRevoked(
-        address operator,
-        address user
-    );
+    event OperatorRevoked(address operator, address user);
 
     // Authorize a default operator
     function _authorizeDefaultOperator(address operator) internal {

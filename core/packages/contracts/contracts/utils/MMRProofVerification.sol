@@ -5,7 +5,7 @@ pragma solidity ^0.8.9;
  * @dev The MMRProof is used to verify inclusion of a leaf in an MMR
  * @param items an array of hashes
  * @param order a bitfield describing the order of each item (left vs right)
-*/
+ */
 struct MMRProof {
     bytes32[] items;
     uint64 order;

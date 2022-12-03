@@ -32,9 +32,11 @@ describe("ETHApp", function () {
             let beforeBalance = await ethers.provider.getBalance(vault.address)
             let amount = ethers.utils.parseEther("0.25")
 
-            await expect(app.connect(user).lock(POLKADOT_ACCOUNT, 2048, 0, channelID, {
+            await expect(
+                app.connect(user).lock(POLKADOT_ACCOUNT, 2048, 0, channelID, {
                     value: amount,
-                }))
+                })
+            )
                 .to.emit(app, "Locked")
                 .withArgs(user.address, POLKADOT_ACCOUNT, amount, 2048, 0)
                 .to.emit(vault, "Deposit")

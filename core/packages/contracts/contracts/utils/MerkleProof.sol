@@ -19,12 +19,7 @@ library MerkleProof {
         uint256 width,
         bytes32[] calldata proof
     ) public pure returns (bool) {
-        bytes32 computedHash = computeRootFromProofAtPosition(
-            leaf,
-            pos,
-            width,
-            proof
-        );
+        bytes32 computedHash = computeRootFromProofAtPosition(leaf, pos, width, proof);
 
         return computedHash == root;
     }
@@ -80,13 +75,9 @@ library MerkleProof {
             bytes32 proofElement = proof[i];
 
             if (computedHashLeft) {
-                computedHash = keccak256(
-                    abi.encodePacked(computedHash, proofElement)
-                );
+                computedHash = keccak256(abi.encodePacked(computedHash, proofElement));
             } else {
-                computedHash = keccak256(
-                    abi.encodePacked(proofElement, computedHash)
-                );
+                computedHash = keccak256(abi.encodePacked(proofElement, computedHash));
             }
 
             pos /= 2;

@@ -37,10 +37,7 @@ contract ERC20Vault is Ownable {
     /// @param _sender The address of the sender.
     /// @param _token The address of the Token.
     /// @param _amount The amount being deposited.
-    function deposit(address _sender, address _token, uint128 _amount)
-        external
-        onlyOwner
-    {
+    function deposit(address _sender, address _token, uint128 _amount) external onlyOwner {
         balances[_token] = balances[_token] + _amount;
         // TODO: Transfer ERC20 tokens safely. https://linear.app/snowfork/issue/SNO-366
         if (!IERC20(_token).transferFrom(_sender, address(this), _amount)) {
@@ -53,10 +50,7 @@ contract ERC20Vault is Ownable {
     /// @param _recipient The address that will receive funds.
     /// @param _token The address of the Token.
     /// @param _amount The amount being deposited.
-    function withdraw(address _recipient, address _token, uint128 _amount)
-        external
-        onlyOwner
-    {
+    function withdraw(address _recipient, address _token, uint128 _amount) external onlyOwner {
         if (_amount > balances[_token]) {
             revert InsufficientBalance();
         }

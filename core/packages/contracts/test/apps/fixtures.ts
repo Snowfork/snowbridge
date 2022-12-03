@@ -43,7 +43,6 @@ async function baseFixture() {
 async function ethAppFixture() {
     let { registry, codec, owner, user } = await loadFixture(baseFixture)
 
-
     let vault = await new EtherVault__factory(owner).deploy()
     await vault.deployed()
 

@@ -56,7 +56,7 @@ class ValidatorSet {
         let leaves = wallets.map((w) => keccakFromHexString(w.address))
         let merkleTree = new MerkleTree(leaves, keccak, {
             sortLeaves: false,
-            sortPairs: false
+            sortPairs: false,
         })
 
         this.wallets = wallets
@@ -81,11 +81,11 @@ class ValidatorSet {
             signature: {
                 v: signature.recid + 27,
                 r,
-                s
+                s,
             },
             index: index,
             addr: wallet.address,
-            merkleProof: this.proofs[index]
+            merkleProof: this.proofs[index],
         }
     }
 
@@ -97,7 +97,7 @@ class ValidatorSet {
             signatures: [],
             indices: [],
             addrs: [],
-            merkleProofs: []
+            merkleProofs: [],
         }
 
         for (let i of indices) {

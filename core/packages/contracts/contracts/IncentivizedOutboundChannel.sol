@@ -9,7 +9,6 @@ import "./FeeController.sol";
 // IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have
 // incentivization too.
 contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
-
     // Governance contracts will administer using this role.
     bytes32 public constant CONFIG_UPDATE_ROLE = keccak256("CONFIG_UPDATE_ROLE");
 
@@ -19,17 +18,9 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     uint256 public fee;
     FeeController public feeController;
 
-    event Message(
-        address source,
-        uint64  nonce,
-        uint256 fee,
-        bytes   payload
-    );
+    event Message(address source, uint64 nonce, uint256 fee, bytes payload);
 
-    event FeeChanged(
-        uint256 oldFee,
-        uint256 newFee
-    );
+    event FeeChanged(uint256 oldFee, uint256 newFee);
 
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -40,8 +31,7 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
         address _configUpdater,
         address _feeController,
         address[] memory defaultOperators
-    )
-    external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Set initial configuration
         feeController = FeeController(_feeController);
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);

@@ -225,7 +225,15 @@ contract BeefyClient is Ownable {
 
         // Check if validatorSignature is correct, ie. check if it matches
         // the signature of senderPublicKey on the commitmentHash
-        require(ECDSA.recover(commitmentHash, proof.signature.v, proof.signature.r, proof.signature.s) == proof.addr, "Invalid signature");
+        require(
+            ECDSA.recover(
+                commitmentHash,
+                proof.signature.v,
+                proof.signature.r,
+                proof.signature.s
+            ) == proof.addr,
+            "Invalid signature"
+        );
 
         // For the initial commitment, more than two thirds of the validator set should claim to sign the commitment
         require(
@@ -318,11 +326,10 @@ contract BeefyClient is Ownable {
      * @param leafHash contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
      */
-    function verifyMMRLeafProof(bytes32 leafHash, MMRProof calldata proof)
-        external
-        view
-        returns (bool)
-    {
+    function verifyMMRLeafProof(
+        bytes32 leafHash,
+        MMRProof calldata proof
+    ) external view returns (bool) {
         return MMRProofVerification.verifyLeafProof(latestMMRRoot, leafHash, proof);
     }
 
@@ -336,7 +343,7 @@ contract BeefyClient is Ownable {
      * @param request a storage reference to the requests struct
      * @return uint256 the seed
      */
-    function deriveSeed(Request storage request) internal virtual view returns (uint256) {
+    function deriveSeed(Request storage request) internal view virtual returns (uint256) {
         return uint256(blockhash(request.blockNumber + BLOCK_WAIT_PERIOD));
     }
 
@@ -453,7 +460,10 @@ contract BeefyClient is Ownable {
             require(isValidatorInSet(vset, addr, index, merkleProof), "invalid validator proof");
 
             // Check if signature is correct
-            require(ECDSA.recover(commitmentHash, signature.v, signature.r, signature.s) == addr, "Invalid signature");
+            require(
+                ECDSA.recover(commitmentHash, signature.v, signature.r, signature.s) == addr,
+                "Invalid signature"
+            );
         }
     }
 
@@ -508,11 +518,10 @@ contract BeefyClient is Ownable {
     /**
      * @dev Helper to create an initial validator bitfield.
      */
-    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
-        external
-        pure
-        returns (uint256[] memory)
-    {
+    function createInitialBitfield(
+        uint256[] calldata bitsToSet,
+        uint256 length
+    ) external pure returns (uint256[] memory) {
         return Bitfield.createBitfield(bitsToSet, length);
     }
 

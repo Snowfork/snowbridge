@@ -4,7 +4,7 @@ import {
     MMRProofVerification__factory,
     MerkleProof__factory,
     Bitfield__factory,
-    BeefyClientPublic__factory
+    BeefyClientPublic__factory,
 } from "../../src"
 
 import { ValidatorSet } from "../helpers"
@@ -35,7 +35,7 @@ async function baseFixture() {
             "contracts/ScaleCodec.sol:ScaleCodec": codec.address,
             "contracts/utils/MMRProofVerification.sol:MMRProofVerification": mmrProof.address,
             "contracts/utils/MerkleProof.sol:MerkleProof": merkleProof.address,
-            "contracts/utils/Bitfield.sol:Bitfield": bitfield.address
+            "contracts/utils/Bitfield.sol:Bitfield": bitfield.address,
         },
         owner
     ).deploy()
@@ -62,12 +62,12 @@ async function beefyClientFixture() {
         {
             id: vset.id,
             root: vset.root,
-            length: vset.length
+            length: vset.length,
         },
         {
             id: vset.id + 1,
             root: vset.root,
-            length: vset.length
+            length: vset.length,
         }
     )
 

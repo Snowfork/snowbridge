@@ -40,12 +40,11 @@ contract ParachainClient {
         encodedParachainID = ScaleCodec.encodeU32(_parachainID);
     }
 
-    function verifyCommitment(bytes32 commitment, bytes calldata opaqueProof)
-        external
-        view
-        returns (bool)
-    {
-        (Proof memory proof) = abi.decode(opaqueProof, (Proof));
+    function verifyCommitment(
+        bytes32 commitment,
+        bytes calldata opaqueProof
+    ) external view returns (bool) {
+        Proof memory proof = abi.decode(opaqueProof, (Proof));
 
         // Compute the merkle leaf hash of our parachain
         bytes32 parachainHeadHash = createParachainMerkleLeaf(
@@ -80,11 +79,10 @@ contract ParachainClient {
         return keccak256(encodedHead);
     }
 
-    function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function createMMRLeaf(
+        MMRLeafPartial memory leaf,
+        bytes32 parachainHeadsRoot
+    ) internal pure returns (bytes32) {
         bytes memory encodedLeaf = bytes.concat(
             ScaleCodec.encodeU8(leaf.version),
             ScaleCodec.encodeU32(leaf.parentNumber),
