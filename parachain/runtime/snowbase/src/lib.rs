@@ -68,7 +68,8 @@ use xcm_builder::{
 use xcm_executor::{traits::JustTry, Config, XcmExecutor};
 
 use runtime_common::{
-	DotPalletId, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter, TreasuryPalletId,
+	fee::WeightToFee, DotPalletId, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter,
+	TreasuryPalletId,
 };
 
 pub use runtime_primitives::{AccountId, Address, Balance, BlockNumber, Hash, Index, Signature};
@@ -366,7 +367,7 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type Trader = UsingComponents<IdentityFee<Balance>, RococoLocation, AccountId, Balances, ()>;
+	type Trader = UsingComponents<WeightToFee, RococoLocation, AccountId, Balances, ()>;
 	type ResponseHandler = (); // Don't handle responses for now.
 	type SubscriptionService = PolkadotXcm;
 	type AssetTrap = (); // Don't handle asset trap.
