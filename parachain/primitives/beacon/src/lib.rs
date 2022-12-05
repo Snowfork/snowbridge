@@ -158,9 +158,8 @@ pub struct SyncCommitteePeriodUpdate<
 	pub finalized_header: BeaconHeader,
 	pub finality_branch: BoundedVec<H256, ProofSize>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
-	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_fork_version"))]
-	pub fork_version: ForkVersion,
 	pub sync_committee_period: u64,
+	pub signature_slot: u64,
 }
 
 #[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
@@ -183,8 +182,7 @@ pub struct FinalizedHeaderUpdate<
 	pub finalized_header: BeaconHeader,
 	pub finality_branch: BoundedVec<H256, ProofSize>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
-	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_fork_version"))]
-	pub fork_version: ForkVersion,
+	pub signature_slot: u64,
 }
 
 #[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
@@ -228,8 +226,7 @@ pub struct BlockUpdate<
 	ValidatorCommitteeSize,
 	SyncCommitteeSize>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
-	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_fork_version"))]
-	pub fork_version: ForkVersion,
+	pub signature_slot: u64,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -657,33 +654,6 @@ where
 		Ok(bounded) => return Ok(bounded),
 		Err(_) => return Err(Error::custom("unable to create bounded vec")),
 	};
-}
-
-#[cfg(feature = "std")]
-fn from_hex_to_fork_version<'de, D>(deserializer: D) -> Result<[u8; 4], D::Error>
-where
-	D: Deserializer<'de>,
-{
-	let s = String::deserialize(deserializer)?; 
-
-	let str_without_0x = match s.strip_prefix("0x") {
-		Some(val) => val,
-		None => &s,
-	};
-
-	let hex_bytes = match hex::decode(str_without_0x) {
-		Ok(bytes) => bytes,
-		Err(e) => return Err(Error::custom(e.to_string())),
-	};
-
-	if hex_bytes.len() != 4 {
-		return Err(Error::custom("fork version expected to be 4 characters"))
-	}
-
-	let mut data = [0u8; 4];
-	data[0..4].copy_from_slice(&hex_bytes);
-
-	Ok(data)
 }
 
 #[cfg(feature = "std")]

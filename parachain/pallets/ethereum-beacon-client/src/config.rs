@@ -10,8 +10,6 @@ pub use minimal::*;
 #[cfg(not(feature = "minimal"))]
 pub use mainnet::*;
 
-use snowbridge_beacon_primitives::ForkVersion;
-
 pub const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
 pub const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;
 
@@ -32,9 +30,6 @@ pub const MAX_LOGS_BLOOM_SIZE: usize =  256;
 pub const MAX_FEE_RECIPIENT_SIZE: usize =  20;
 
 pub const DEPOSIT_CONTRACT_TREE_DEPTH: usize = 32;
-
-/// GENESIS_FORK_VERSION('0x00000000')
-pub const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
 
 /// DomainType('0x07000000')
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
