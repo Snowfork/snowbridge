@@ -63,6 +63,7 @@ importers:
       '@types/mocha': ^10.0.0
       '@types/node': ^16.3.3
       '@types/secp256k1': ^4.0.3
+      '@types/seedrandom': ^3.0.2
       '@typescript-eslint/eslint-plugin': ^5.42.0
       '@typescript-eslint/parser': ^5.42.0
       bitfield: ^4.1.0
@@ -121,6 +122,7 @@ importers:
       '@types/mocha': 10.0.0
       '@types/node': 16.18.3
       '@types/secp256k1': 4.0.3
+      '@types/seedrandom': 3.0.2
       '@typescript-eslint/eslint-plugin': 5.42.0_6xw5wg2354iw4zujk2f3vyfrzu
       '@typescript-eslint/parser': 5.42.0_wyqvi574yv7oiwfeinomdzmc3m
       bitfield: 4.1.0
@@ -2021,7 +2023,7 @@ packages:
       '@polkadot/types': 9.6.2
       '@polkadot/types-codec': 9.6.2
       '@polkadot/util': 10.1.11
-      '@polkadot/util-crypto': 10.1.11_@polkadot+util@10.1.11
+      '@polkadot/util-crypto': 10.1.11
       rxjs: 7.5.7
     transitivePeerDependencies:
       - bufferutil
@@ -2071,7 +2073,7 @@ packages:
       '@polkadot/types-create': 9.6.2
       '@polkadot/types-known': 9.6.2
       '@polkadot/util': 10.1.11
-      '@polkadot/util-crypto': 10.1.11_@polkadot+util@10.1.11
+      '@polkadot/util-crypto': 10.1.11
       eventemitter3: 4.0.7
       rxjs: 7.5.7
     transitivePeerDependencies:
@@ -2085,7 +2087,7 @@ packages:
     dependencies:
       '@babel/runtime': 7.20.1
       '@polkadot/util': 10.1.11
-      '@polkadot/util-crypto': 10.1.11_@polkadot+util@10.1.11
+      '@polkadot/util-crypto': 10.1.11
 
   /@polkadot/keyring/9.7.2_ba4sli262fhny7h6sw4utanija:
     resolution: {integrity: sha512-qY5baU1qduwTE04Cyrqtf2pCpsIk7Z5vi45CD9U3cbkKXaJoNUqIpfKoL8Vh/yVJBwhclMdxV9E2rEJs8Iv4bg==}
@@ -2202,7 +2204,7 @@ packages:
       '@polkadot/types': 9.6.2
       '@polkadot/types-support': 9.6.2
       '@polkadot/util': 10.1.11
-      '@polkadot/util-crypto': 10.1.11_@polkadot+util@10.1.11
+      '@polkadot/util-crypto': 10.1.11
       '@polkadot/x-fetch': 10.1.11
       '@polkadot/x-global': 10.1.11
       '@polkadot/x-ws': 10.1.11
@@ -2330,8 +2332,24 @@ packages:
       '@polkadot/types-codec': 9.6.2
       '@polkadot/types-create': 9.6.2
       '@polkadot/util': 10.1.11
-      '@polkadot/util-crypto': 10.1.11_@polkadot+util@10.1.11
+      '@polkadot/util-crypto': 10.1.11
       rxjs: 7.5.7
+
+  /@polkadot/util-crypto/10.1.11:
+    resolution: {integrity: sha512-wG63frIMAR5T/HXGM0SFNzZZdk7qDBsfLXfn6PIZiXCCCsdEYPzS5WltB7fkhicYpbePJ7VgdCAddj1l4IcGyg==}
+    engines: {node: '>=14.0.0'}
+    dependencies:
+      '@babel/runtime': 7.20.1
+      '@noble/hashes': 1.1.3
+      '@noble/secp256k1': 1.7.0
+      '@polkadot/networks': 10.1.11
+      '@polkadot/util': 10.1.11
+      '@polkadot/wasm-crypto': 6.3.1_kq5krb3p4bzvrcxi3xa2lgyh6u
+      '@polkadot/x-bigint': 10.1.11
+      '@polkadot/x-randomvalues': 10.1.11
+      '@scure/base': 1.1.1
+      ed2curve: 0.3.0
+      tweetnacl: 1.0.3
 
   /@polkadot/util-crypto/10.1.11_@polkadot+util@10.1.11:
     resolution: {integrity: sha512-wG63frIMAR5T/HXGM0SFNzZZdk7qDBsfLXfn6PIZiXCCCsdEYPzS5WltB7fkhicYpbePJ7VgdCAddj1l4IcGyg==}
@@ -2350,6 +2368,7 @@ packages:
       '@scure/base': 1.1.1
       ed2curve: 0.3.0
       tweetnacl: 1.0.3
+    dev: true
 
   /@polkadot/util-crypto/9.7.2_@polkadot+util@9.7.2:
     resolution: {integrity: sha512-tfz6mJtPwoNteivKCmR+QklC4mr1/hGZRsDJLWKaFhanDinYZ3V2pJM1EbCI6WONLuuzlTxsDXjAffWzzRqlPA==}
@@ -3230,6 +3249,10 @@ packages:
     resolution: {integrity: sha512-Da66lEIFeIz9ltsdMZcpQvmrmmoqrfju8pm1BH8WbYjZSwUgCwXLb9C+9XYogwBITnbsSaMdVPb2ekf7TV+03w==}
     dependencies:
       '@types/node': 18.11.9
+    dev: true
+
+  /@types/seedrandom/3.0.2:
+    resolution: {integrity: sha512-YPLqEOo0/X8JU3rdiq+RgUKtQhQtrppE766y7vMTu8dGML7TVtZNiiiaC/hhU9Zqw9UYopXxhuWWENclMVBwKQ==}
     dev: true
 
   /@types/semver/7.3.13:

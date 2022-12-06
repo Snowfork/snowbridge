@@ -1,0 +1,18 @@
+[profile.default]
+solc = '0.8.9'
+via_ir = false
+src = 'contracts'
+out = 'out'
+libs = ["lib","node_modules"]
+test = 'contracts/test'
+allow_paths = ["node_modules/@openzeppelin/contracts"]
+remappings = [
+    'ds-test=lib/ds-test/src/',
+    'forge-std=lib/forge-std/src/',
+    'murky=lib/murky/src/',
+    '@openzeppelin=node_modules/@openzeppelin'
+]
+optimizer = true
+optimizer_runs = 19_066
+ffi = true
+fuzz_runs = 5000
