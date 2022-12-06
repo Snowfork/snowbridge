@@ -25,5 +25,5 @@
         "sync_committee_bits": "0xffffffff",
         "sync_committee_signature": "0x8651ddd6e0da54ce90c4fa1d6e43d510a0958b5aaf752cd567b68cf23181dd253a8e7c79e371f16c120a723fabc5f6fc0b82d0da6c88a9a041407f405b8bae023262a0e392a64bcba170f254b07c335b2f380e6c487022b11eb809513e8a8cef"
     },
-    "fork_version": "0x02000001"
+    "signature_slot": 105
 }

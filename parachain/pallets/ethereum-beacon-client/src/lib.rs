@@ -81,6 +81,16 @@ pub mod pallet {
 		type MaxAttestationSize: Get<u32>;
 		#[pallet::constant]
 		type MaxValidatorsPerCommittee: Get<u32>;
+		#[pallet::constant]
+		type GenesisForkVersion: Get<ForkVersion>;
+		#[pallet::constant]
+		type AltairForkEpoch: Get<u64>;
+		#[pallet::constant]
+		type AltairForkVersion: Get<ForkVersion>;
+		#[pallet::constant]
+		type BellatrixForkEpoch: Get<u64>;
+		#[pallet::constant]
+		type BellatrixForkVersion: Get<ForkVersion>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -782,14 +792,14 @@ pub mod pallet {
 		}
 
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
-			if epoch >= config::BELLATRIX_FORK_EPOCH {
-        		return config::BELLATRIX_FORK_VERSION;
-			}
-    		if epoch >= config::ALTAIR_FORK_EPOCH {
-				return config::ALTAIR_FORK_VERSION;
+			if epoch >= T::BellatrixForkEpoch::get() {
+        		return T::BellatrixForkVersion::get();
+			} 
+    		if epoch >= T::AltairForkEpoch::get() {
+				return T::AltairForkVersion::get();
 			}
         
-    		return config::GENESIS_FORK_VERSION;
+    		return T::GenesisForkVersion::get();
 		}
 
 		pub(super) fn initial_sync(

@@ -25,5 +25,5 @@
         "sync_committee_bits": "0x97efefd6fff4f7f7edc64f6cbeff7bf37db9d5effbb5effbffffbeeffdf3bfcf3d4efffdffbff7bfebdff7f5fffbfffe77dfd6deffffdff53dddefff7fdbd7bb",
         "sync_committee_signature": "0x8a9ab21878ae1f3728a41ec46976c3ee88d55c60f1a3f35dc553c6a9d61f20baafa3a1b6b9f08dabe311e5f37ba6af6900946d9e56806af0fe34d50f35abc9d407dba3e68b590c5e1c1ba09c41a2401742adb7ee877f64c2688f1f8d1dd73f54"
     },
-    "fork_version": "0x02001020"
+    "signature_slot": 3979992
 }

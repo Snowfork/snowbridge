@@ -625,6 +625,11 @@ parameter_types! {
     pub const MaxVoluntaryExitSize: u32 = 16;
     pub const MaxAttestationSize: u32 = 128;
     pub const MaxValidatorsPerCommittee: u32 = 2048;
+    pub const GenesisForkVersion: [u8; 4] =[0, 0, 16, 32]; // 0x00001020
+    pub const AltairForkVersion: [u8; 4] =[1, 0, 16, 32]; // 0x01001020
+    pub const AltairForkEpoch: u64 = 36660;
+    pub const BellatrixForkVersion: [u8; 4] =[2, 0, 16, 32]; // 0x02001020
+    pub const BellatrixForkEpoch: u64 = 112260;
 }
 
 impl ethereum_beacon_client::Config for Runtime {
@@ -642,6 +647,11 @@ impl ethereum_beacon_client::Config for Runtime {
     type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
     type MaxAttestationSize = MaxAttestationSize;
     type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+    type GenesisForkVersion = GenesisForkVersion;
+    type AltairForkVersion = AltairForkVersion;
+    type AltairForkEpoch = AltairForkEpoch;
+    type BellatrixForkVersion = BellatrixForkVersion;
+    type BellatrixForkEpoch = BellatrixForkEpoch;
     type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
 }
 

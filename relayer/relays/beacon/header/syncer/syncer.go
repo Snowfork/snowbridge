@@ -382,19 +382,6 @@ func hexStringToByteArray(hexString string) ([]byte, error) {
 	return bytes, nil
 }
 
-func hexStringToForkVersion(hexString string) ([4]byte, error) {
-	key, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
-	if err != nil {
-		return [4]byte{}, err
-	}
-
-	forkVersion4Bytes := [4]byte{}
-
-	copy(forkVersion4Bytes[:], key)
-
-	return forkVersion4Bytes, nil
-}
-
 func (h HeaderResponse) ToScale() (scale.BeaconHeader, error) {
 	slot, err := strconv.ParseUint(h.Slot, 10, 64)
 	if err != nil {
