@@ -172,12 +172,13 @@ pub mod mock_mainnet {
         pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
         pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
         pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
-        pub const MainnetGenesisForkVersion: [u8; 4] =[0, 0, 0, 1]; // 0x00000001
-        pub const MainnetAltairForkVersion: [u8; 4] =[1, 0, 0, 1]; // 0x01000001
-        pub const MainnetAltairForkEpoch: u64 = 0;
-        pub const MainnetBellatrixForkVersion: [u8; 4] =[2, 0, 0, 1]; // 0x02000001
-        pub const MainnetBellatrixForkEpoch: u64 = 0;
-    }
+        pub const GenesisForkVersion: [u8; 4] =[0, 0, 16, 32]; // 0x00001020
+        pub const AltairForkVersion: [u8; 4] =[1, 0, 16, 32]; // 0x01001020
+        pub const AltairForkEpoch: u64 = 36660;
+        pub const BellatrixForkVersion: [u8; 4] =[2, 0, 16, 32]; // 0x02001020
+        pub const BellatrixForkEpoch: u64 = 112260;
+}
+
 
     impl ethereum_beacon_client::Config for Test {
         type RuntimeEvent = RuntimeEvent;
@@ -194,11 +195,11 @@ pub mod mock_mainnet {
         type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
         type MaxAttestationSize = MaxAttestationSize;
         type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
-        type GenesisForkVersion = MainnetGenesisForkVersion;
-        type AltairForkVersion = MainnetAltairForkVersion;
-        type AltairForkEpoch = MainnetAltairForkEpoch;
-        type BellatrixForkVersion = MainnetBellatrixForkVersion;
-        type BellatrixForkEpoch = MainnetBellatrixForkEpoch;
+        type GenesisForkVersion = GenesisForkVersion;
+        type AltairForkVersion = AltairForkVersion;
+        type AltairForkEpoch = AltairForkEpoch;
+        type BellatrixForkVersion = BellatrixForkVersion;
+        type BellatrixForkEpoch = BellatrixForkEpoch;
         type WeightInfo = ();
     }
 }
