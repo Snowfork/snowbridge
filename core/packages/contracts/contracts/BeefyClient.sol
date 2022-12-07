@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
 import "./utils/MMRProof.sol";
 import "./ScaleCodec.sol";
@@ -13,8 +12,6 @@ import "./utils/MerkleProof.sol";
  * @title BeefyClient
  */
 contract BeefyClient is Ownable {
-    using Bits for uint256;
-    using Bitfield for uint256[];
 
     /* Events */
 
@@ -228,7 +225,7 @@ contract BeefyClient is Ownable {
 
         // For the initial commitment, the bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
-        if (bitfield.countSetBits() < vset.length - (vset.length - 1) / 3) {
+        if (Bitfield.countSetBits(bitfield) < vset.length - (vset.length - 1) / 3) {
             revert NotEnoughClaims();
         }
 
@@ -459,7 +456,9 @@ contract BeefyClient is Ownable {
         for (uint256 i = 0; i < signatureCount;) {
             ValidatorProof calldata proof = proofs[i];
 
-            if (!finalbitfield.isSet(proof.index)) {
+            (uint256 x, uint8 y) = Bitfield.toLocation(index);
+
+            if (!Bitfield.isSet(finalbitfield, x, y)) {
                 revert InvalidValidatorProof();
             }
 
@@ -472,9 +471,11 @@ contract BeefyClient is Ownable {
             }
 
             // Ensure no validator can appear more than once
-            finalbitfield.clear(proof.index);
+            Bitfield.clear(finalbitfield, x, y);
 
-            unchecked{ i++; }
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -513,7 +514,7 @@ contract BeefyClient is Ownable {
         ValidatorSet memory vset,
         address addr,
         uint256 index,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     ) internal pure returns (bool) {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
         return

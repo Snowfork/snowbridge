@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
 import { getConfigForNetwork } from "../config"
 
-module.exports = async ({ deployments, getUnnamedAccounts, network }: HardhatRuntimeEnvironment) => {
+module.exports = async ({ ethers, deployments, getUnnamedAccounts, network }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
 
     const fee = getConfigForNetwork(network.name).incentivizedChannelFee
@@ -10,12 +10,16 @@ module.exports = async ({ deployments, getUnnamedAccounts, network }: HardhatRun
     let ethApp = await deployments.get("ETHApp")
     let erc20App = await deployments.get("ERC20App")
 
+    const feeData = await ethers.provider.getFeeData()
+
     console.log("Configuring BasicOutboundChannel")
     await deployments.execute(
         "BasicOutboundChannel",
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "initialize",
         deployer,
@@ -28,6 +32,8 @@ module.exports = async ({ deployments, getUnnamedAccounts, network }: HardhatRun
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "initialize",
         deployer,
@@ -39,6 +45,8 @@ module.exports = async ({ deployments, getUnnamedAccounts, network }: HardhatRun
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "setFee",
         fee
@@ -50,6 +58,8 @@ module.exports = async ({ deployments, getUnnamedAccounts, network }: HardhatRun
         {
             from: deployer,
             autoMine: true,
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         },
         "initialize",
         deployer,

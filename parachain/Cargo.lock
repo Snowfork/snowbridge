@@ -11667,7 +11667,7 @@ dependencies = [
 [[package]]
 name = "ssz-rs"
 version = "0.8.0"
-source = "git+https://github.com/Snowfork/ssz_rs?rev=8d497a949c320577aa1f741eb9f2958191df905b#8d497a949c320577aa1f741eb9f2958191df905b"
+source = "git+https://github.com/Snowfork/ssz_rs?rev=f55915f7f96943109345b164e89342eef1aeb6e3#f55915f7f96943109345b164e89342eef1aeb6e3"
 dependencies = [
  "bitvec",
  "hex",
@@ -11676,12 +11676,13 @@ dependencies = [
  "serde",
  "sha2 0.9.9",
  "ssz-rs-derive",
+ "thiserror",
 ]
 
 [[package]]
 name = "ssz-rs-derive"
 version = "0.8.0"
-source = "git+https://github.com/Snowfork/ssz_rs?rev=8d497a949c320577aa1f741eb9f2958191df905b#8d497a949c320577aa1f741eb9f2958191df905b"
+source = "git+https://github.com/Snowfork/ssz_rs?rev=f55915f7f96943109345b164e89342eef1aeb6e3#f55915f7f96943109345b164e89342eef1aeb6e3"
 dependencies = [
  "proc-macro2",
  "quote",

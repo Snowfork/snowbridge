@@ -1,7 +1,7 @@
 mod beacon {
 	use crate as ethereum_beacon_client;
 	use crate::{
-		config, merkleization,
+		config, merkleization, merkleization::MerkleizationError,
 		mock::*,
 		BeaconHeader, Error, ExecutionHeaders, FinalizedBeaconHeaders, LatestFinalizedHeaderSlot,
 		PublicKey, SyncCommittees, ValidatorsRoot,
@@ -425,6 +425,24 @@ mod beacon {
 		assert_ok!(&sync_committee_bits);
 
 		assert_ok!(EthereumBeaconClient::sync_committee_participation_is_supermajority(sync_committee_bits.unwrap()));
+	}
+
+	#[test]
+	pub fn test_sync_committee_bits_too_short() {
+		let bits = hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bffff5f7fedfffdfb6ddff7bf7").to_vec();
+		
+		let sync_committee_bits =  merkleization::get_sync_committee_bits::<MaxSyncCommitteeSize>(bits.try_into().expect("invalid sync committee bits"));
+
+		assert_err!(sync_committee_bits, MerkleizationError::InputTooShort);
+	}
+
+	#[test]
+	pub fn test_sync_committee_bits_extra_input() {
+		let bits = hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7bf7bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7bf7").to_vec();
+		
+		let sync_committee_bits =  merkleization::get_sync_committee_bits::<MaxSyncCommitteeSize>(bits.try_into().expect("invalid sync committee bits"));
+
+		assert_err!(sync_committee_bits, MerkleizationError::ExtraInput);
 	}
 
 	#[test]

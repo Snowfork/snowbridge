@@ -49,6 +49,7 @@ importers:
       '@ethersproject/bytes': ^5.0.0
       '@ethersproject/hdnode': ^5.7.0
       '@ethersproject/providers': ^5.4.7
+      '@ethersproject/units': ^5.4.7
       '@iarna/toml': ^2.2.5
       '@nomicfoundation/hardhat-chai-matchers': ^1.0.4
       '@nomicfoundation/hardhat-network-helpers': ^1.0.6
@@ -102,6 +103,7 @@ importers:
     dependencies:
       '@ethersproject/bytes': 5.7.0
       '@ethersproject/providers': 5.7.2
+      '@ethersproject/units': 5.7.0
       ethers: 5.7.2
     devDependencies:
       '@babel/core': 7.19.6
