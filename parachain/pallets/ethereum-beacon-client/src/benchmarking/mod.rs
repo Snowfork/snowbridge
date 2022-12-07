@@ -60,6 +60,6 @@ benchmarks! {
 
 impl_benchmark_test_suite!(
 	EthereumBeaconClient,
-	crate::mock::new_tester(),
-	crate::mock::Test,
+	crate::mock::new_tester::<crate::mock::mock_mainnet::Test>(),
+	crate::mock::mock_mainnet::Test,
 );
