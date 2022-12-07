@@ -787,7 +787,7 @@ mod beacon_minimal_tests {
 	}
 }
 
-//#[cfg(not(feature = "minimal"))]
+#[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
 	use crate::{
 		merkleization, mock::*,
