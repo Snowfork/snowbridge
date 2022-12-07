@@ -456,7 +456,7 @@ contract BeefyClient is Ownable {
         for (uint256 i = 0; i < signatureCount;) {
             ValidatorProof calldata proof = proofs[i];
 
-            (uint256 x, uint8 y) = Bitfield.toLocation(index);
+            (uint256 x, uint8 y) = Bitfield.toLocation(proof.index);
 
             if (!Bitfield.isSet(finalbitfield, x, y)) {
                 revert InvalidValidatorProof();
