@@ -793,13 +793,13 @@ pub mod pallet {
 
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
 			if epoch >= T::BellatrixForkEpoch::get() {
-        		return T::BellatrixForkVersion::get();
+				return T::BellatrixForkVersion::get();
 			} 
-    		if epoch >= T::AltairForkEpoch::get() {
+			if epoch >= T::AltairForkEpoch::get() {
 				return T::AltairForkVersion::get();
 			}
         
-    		return T::GenesisForkVersion::get();
+			return T::GenesisForkVersion::get();
 		}
 
 		pub(super) fn initial_sync(
