@@ -1,19 +1,11 @@
 use frame_support::parameter_types;
 use frame_system as system;
-use hex_literal::hex;
 use crate as ethereum_beacon_client;
 use super::*;
-
-use snowbridge_beacon_primitives::{
-	AttesterSlashing, BeaconHeader, Body, SyncCommittee,
-};
+use snowbridge_beacon_primitives::{AttesterSlashing, BeaconHeader, Body};
 use sp_core::H256;
-use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
-};
+use sp_runtime::{testing::Header, traits::{BlakeTwo256, IdentityLookup}};
 use std::{fs::File, path::PathBuf};
-
 
 pub mod mock_minimal {
     use super::*;
@@ -209,11 +201,6 @@ pub fn new_tester<T: crate::Config>() -> sp_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<T>().unwrap().into()
 }
 
-pub struct SyncCommitteeTest<T: crate::Config> {
-	pub sync_committee: SyncCommittee<T::MaxSyncCommitteeSize>,
-	pub result: H256,
-}
-
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct BlockBodyTest<T: crate::Config> {
 	pub body: Body<
@@ -326,26 +313,6 @@ pub fn get_finalized_header_update<T: crate::Config>() -> FinalizedHeaderUpdate<
 
 pub fn get_validators_root<T: crate::Config>() -> H256 {
 	get_initial_sync::<T>().validators_root
-}
-
-pub fn get_sync_committee_test_data<T: crate::Config>() -> SyncCommitteeTest<T> {
-	let sync_committee = get_committee_sync_period_update::<T>().next_sync_committee;
-	let result: H256 = match config::IS_MINIMAL {
-		true => hex!("a029d3222d058eda01bb4f685838e236bf376606a456abbfb62bc8d950bb3e6e").into(),
-		false => hex!("c1bcfd9c44c8b9fec443530f7cf06f281c6b5d2d1ede77a486eea591fe79b0b5").into(),
-	};
-
-	SyncCommitteeTest { sync_committee, result }
-}
-
-pub fn get_block_body_test_data<T: crate::Config>() -> BlockBodyTest<T> {
-	let update = get_header_update::<T>();
-	let result: H256 = match config::IS_MINIMAL {
-		true => hex!("332cbf177a081616822905703c4bf026dad64b6d726a59f5b46ecf1661f81808").into(),
-		false => hex!("ad1b3be000eab0cd26d809a7f50372213c9d0b8a8ea0dd762cb0f9c817b0908d").into(),
-	};
-
-	BlockBodyTest { body: update.block.body, result: result }
 }
 
 pub fn get_bls_signature_verify_test_data<T: crate::Config>() -> BLSSignatureVerifyTest {
