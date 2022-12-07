@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "./BeefyClient.sol";
 import "./utils/MerkleProof.sol";
 import "./ScaleCodec.sol";
-import "./utils/MMRProofVerification.sol";
 
 contract ParachainClient {
     BeefyClient public immutable beefyClient;
@@ -31,7 +30,8 @@ contract ParachainClient {
         bytes headSuffix;
         HeadProof headProof;
         MMRLeafPartial leafPartial;
-        MMRProof leafProof;
+        bytes32[] leafProof;
+        uint256 leafProofOrder;
     }
 
     constructor(BeefyClient _client, uint32 _parachainID) {
@@ -63,7 +63,7 @@ contract ParachainClient {
         );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
-        return beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof);
+        return beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
     }
 
     function createParachainMerkleLeaf(

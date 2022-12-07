@@ -1,14 +1,12 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
-import hre from "hardhat";
 
-module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
+module.exports = async ({ ethers, deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
 
-    let scaleCodecLibrary = await deployments.get("ScaleCodec")
     let incentivizedOutboundChannel = await deployments.get("IncentivizedOutboundChannel")
     let channelRegistry = await deployments.get("ChannelRegistry")
 
-    const feeData = await hre.ethers.provider.getFeeData()
+    const feeData = await ethers.provider.getFeeData()
 
     let tokenContract = await deployments.deploy("WrappedToken", {
         from: deployer,
@@ -22,9 +20,6 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
     let dotAppContract = await deployments.deploy("DOTApp", {
         from: deployer,
         args: [tokenContract.address, incentivizedOutboundChannel.address, channelRegistry.address],
-        libraries: {
-            ScaleCodec: scaleCodecLibrary.address,
-        },
         log: true,
         autoMine: true,
         maxFeePerGas: feeData.maxFeePerGas,
