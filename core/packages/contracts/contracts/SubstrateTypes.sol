@@ -13,7 +13,7 @@ library SubstrateTypes {
      */
     // solhint-disable-next-line func-name-mixedcase
     function MultiAddressWithID(bytes32 account) internal pure returns (bytes memory) {
-        return bytes.concat(bytes1(0x00), account);
+        return bytes.concat(hex"00", account);
     }
 
     /**
