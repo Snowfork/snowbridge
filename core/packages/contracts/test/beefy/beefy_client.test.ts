@@ -246,9 +246,8 @@ describe("BeefyClient", function () {
             let delay = await beefyClient.connect(user).randaoCommitDelay()
             await mine(delay)
 
-            await expect(
-                beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)
-            ).to.not.be.reverted
+            await expect(beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)).to
+                .not.be.reverted
 
             await expect(
                 beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)

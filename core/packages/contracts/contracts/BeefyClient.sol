@@ -12,7 +12,6 @@ import "./utils/MerkleProof.sol";
  * @title BeefyClient
  */
 contract BeefyClient is Ownable {
-
     /* Events */
 
     /**
@@ -152,12 +151,10 @@ contract BeefyClient is Ownable {
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
 
-
     constructor(uint256 _randaoCommitDelay, uint256 _randaoCommitExpiration) {
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
     }
-
 
     // Once-off post-construction call to set initial configuration.
     function initialize(
@@ -345,7 +342,8 @@ contract BeefyClient is Ownable {
         bool leafIsValid = MMRProof.verifyLeafProof(
             commitment.payload.mmrRootHash,
             keccak256(encodeMMRLeaf(leaf)),
-            leafProof, leafProofOrder
+            leafProof,
+            leafProofOrder
         );
         if (!leafIsValid) {
             revert InvalidMMRLeafProof();
@@ -367,17 +365,20 @@ contract BeefyClient is Ownable {
      * @param leafHash contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
      */
-    function verifyMMRLeafProof(bytes32 leafHash, bytes32[] calldata proof, uint256 proofOrder)
-        external
-        view
-        returns (bool)
-    {
+    function verifyMMRLeafProof(
+        bytes32 leafHash,
+        bytes32[] calldata proof,
+        uint256 proofOrder
+    ) external view returns (bool) {
         return MMRProof.verifyLeafProof(latestMMRRoot, leafHash, proof, proofOrder);
     }
 
     /* Private Functions */
 
-    function createTaskID(address account, bytes32 commitmentHash) internal pure returns (bytes32 value) {
+    function createTaskID(
+        address account,
+        bytes32 commitmentHash
+    ) internal pure returns (bytes32 value) {
         assembly {
             mstore(0x00, account)
             mstore(0x20, commitmentHash)
@@ -453,7 +454,7 @@ contract BeefyClient is Ownable {
             revert InvalidValidatorProof();
         }
 
-        for (uint256 i = 0; i < signatureCount;) {
+        for (uint256 i = 0; i < signatureCount; ) {
             ValidatorProof calldata proof = proofs[i];
 
             (uint256 x, uint8 y) = Bitfield.toLocation(proof.index);
@@ -540,7 +541,10 @@ contract BeefyClient is Ownable {
     /**
      * @dev Helper to create a final bitfield, with random validator selections.
      */
-    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield) external view returns (uint256[] memory) {
+    function createFinalBitfield(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield
+    ) external view returns (uint256[] memory) {
         Task storage task = tasks[createTaskID(msg.sender, commitmentHash)];
         return
             Bitfield.randomNBitsWithPriorCheck(
