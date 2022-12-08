@@ -6,6 +6,7 @@ import "@nomiclabs/hardhat-ethers"
 import "@typechain/hardhat"
 import "hardhat-gas-reporter"
 import "hardhat-deploy"
+import "hardhat-contract-sizer"
 
 import "./tasks/contractAddress"
 
@@ -39,19 +40,12 @@ const config: HardhatUserConfig = {
             },
             chainId: 15
         },
-        ropsten: {
-            chainId: 3,
-            url: `https://ropsten.infura.io/v3/${INFURA_KEY}`,
-            accounts: [ROPSTEN_KEY],
-            maxFeePerGas: ethers.utils.parseUnits('200', 'gwei'),
-            maxPriorityFeePerGas: ethers.utils.parseUnits('20', 'gwei'),
-        },
         goerli: {
             chainId: 5,
             url: `https://goerli.infura.io/v3/${INFURA_KEY}`,
             accounts: [ROPSTEN_KEY],
-            maxFeePerGas: ethers.utils.parseUnits('200', 'gwei'),
-            maxPriorityFeePerGas: ethers.utils.parseUnits('20', 'gwei'),
+            maxFeePerGas: ethers.utils.parseUnits("200", "gwei"),
+            maxPriorityFeePerGas: ethers.utils.parseUnits("20", "gwei"),
         }
     },
     solidity: {

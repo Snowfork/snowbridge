@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./utils/Bitfield.sol";
-import "./utils/MMRProofVerification.sol";
+import "./utils/MMRProof.sol";
 import "./ScaleCodec.sol";
 import "./utils/MerkleProof.sol";
 
@@ -12,20 +12,8 @@ import "./utils/MerkleProof.sol";
  * @title BeefyClient
  */
 contract BeefyClient is Ownable {
-    using Bits for uint256;
-    using ScaleCodec for uint256;
-    using ScaleCodec for uint64;
-    using ScaleCodec for uint32;
-    using ScaleCodec for uint16;
 
     /* Events */
-
-    /**
-     * @dev Emitted when a pre-submission request is validated
-     * @param id the identifier for the submission request
-     * @param sender The address of the sender
-     */
-    event NewRequest(uint256 id, address sender);
 
     /**
      * @dev Emitted when the MMR root is updated
@@ -58,58 +46,37 @@ contract BeefyClient is Ownable {
     }
 
     /**
-     * @dev The ValidatorMultiProof is a collection of proofs used to verify a commitment signature
-     * @param signatures an array of validator signatures
-     * @param indices an array of the leaf indices
-     * @param addrs an array of each validator address
-     * @param merkleProofs an array of merkle proofs from the chosen validators
-     */
-    struct ValidatorMultiProof {
-        ValidatorSignature[] signatures;
-        uint256[] indices;
-        address[] addrs;
-        bytes32[][] merkleProofs;
-    }
-
-    /**
      * @dev The ValidatorProof is a proof used to verify a commitment signature
-     * @param signature validator signature
-     * @param index index of the validator address
-     * @param addr validator address
-     * @param merkleProof merkle proof for the validator
-     */
-    struct ValidatorProof {
-        ValidatorSignature signature;
-        uint256 index;
-        address addr;
-        bytes32[] merkleProof;
-    }
-
-    /**
-     * @dev The ValidatorSignature is the separated components of a secp256k1 signature as
-     * mentioned in EIP-2098: https://eips.ethereum.org/EIPS/eip-2098
      * @param v the parity bit to specify the indended solution
      * @param r the x component on the secp256k1 curve
      * @param s the challenge solution
+     * @param index index of the validator address
+     * @param addr validator address
+     * @param proof merkle proof for the validator
      */
-    struct ValidatorSignature {
+    struct ValidatorProof {
         uint8 v;
         bytes32 r;
         bytes32 s;
+        uint256 index;
+        address account;
+        bytes32[] proof;
     }
 
     /**
-     * @dev A request is used to link initial and final submission of a commitment
+     * @dev A task is used to link initial and final submission of a commitment
      * @param sender the sender of the initial transaction
+     * @param bitfield a bitfield signalling which validators they claim have signed
      * @param blockNumber the block number for this commitment
      * @param validatorSetLen the length of the validator set for this commitment
      * @param bitfield a bitfield signalling which validators they claim have signed
      */
-    struct Request {
-        address sender;
+    struct Task {
+        address account;
         uint64 blockNumber;
         uint32 validatorSetLen;
-        uint256[] bitfield;
+        uint256 prevRandao;
+        bytes32 bitfieldHash;
     }
 
     /**
@@ -135,13 +102,13 @@ contract BeefyClient is Ownable {
     /**
      * @dev The ValidatorSet describes a BEEFY validator set
      * @param id identifier for the set
-     * @param root Merkle root of BEEFY validator addresses
      * @param length number of validators in the set
+     * @param root Merkle root of BEEFY validator addresses
      */
     struct ValidatorSet {
-        uint256 id;
+        uint128 id;
+        uint128 length;
         bytes32 root;
-        uint256 length;
     }
 
     /* State */
@@ -152,26 +119,45 @@ contract BeefyClient is Ownable {
     ValidatorSet public currentValidatorSet;
     ValidatorSet public nextValidatorSet;
 
-    uint256 public nextRequestID;
-    mapping(uint256 => Request) public requests;
+    mapping(bytes32 => Task) public tasks;
 
     /* Constants */
 
     /**
-     * TODO: Review this constant (SNO-355)
-     *
-     * @dev The minimum number of blocks a relayer must wait between submissions
-     * in the interactive update protcol. The longer the period, the greater the
-     * crypto-economic security.
+     * @dev Minimum delay in number of blocks that a relayer must wait between calling
+     * submitInitial and commitPrevRandao. In production this should be set to MAX_SEED_LOOKAHEAD:
+     * https://eth2book.info/altair/part3/config/preset#max_seed_lookahead
      */
-    uint64 public constant BLOCK_WAIT_PERIOD = 3;
+    uint256 public immutable randaoCommitDelay;
 
     /**
-     * @dev Deploys the BeefyClient contract
+     * @dev after randaoCommitDelay is reached, relayer must
+     * call commitPrevRandao within this number of blocks.
      */
-    constructor() {
-        nextRequestID = 0;
+    uint256 public immutable randaoCommitExpiration;
+
+    /* Errors */
+
+    error InvalidCommitment();
+    error StaleCommitment();
+    error InvalidValidatorProof();
+    error InvalidSignature();
+    error NotEnoughClaims();
+    error InvalidMMRLeaf();
+    error InvalidMMRLeafProof();
+    error InvalidTask();
+    error InvalidBitfield();
+    error WaitPeriodNotOver();
+    error TaskExpired();
+    error PrevRandaoAlreadyCaptured();
+    error PrevRandaoNotCaptured();
+
+
+    constructor(uint256 _randaoCommitDelay, uint256 _randaoCommitExpiration) {
+        randaoCommitDelay = _randaoCommitDelay;
+        randaoCommitExpiration = _randaoCommitExpiration;
     }
+
 
     // Once-off post-construction call to set initial configuration.
     function initialize(
@@ -193,124 +179,187 @@ contract BeefyClient is Ownable {
     /* Public Functions */
 
     /**
-     * @dev Executed by the prover in order to begin the process of block
-     * acceptance by the light client
-     * @param commitmentHash contains the commitmentHash signed by the validator(s)
-     * @param validatorSetID the id of the validator set which signed the commitment
-     * @param bitfield a bitfield containing a membership status of each
-     * validator who has claimed to have signed the commitmentHash
+     * @dev Begin submission of signature proof for current session
+     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof the validator proof
      */
     function submitInitial(
         bytes32 commitmentHash,
-        uint64 validatorSetID,
         uint256[] calldata bitfield,
         ValidatorProof calldata proof
     ) external payable {
-        // for pre-submission, we accept commitments from either the current or next validator set
-        ValidatorSet memory vset;
-        if (validatorSetID == currentValidatorSet.id) {
-            vset = currentValidatorSet;
-        } else if (validatorSetID == nextValidatorSet.id) {
-            vset = nextValidatorSet;
-        } else {
-            revert("Unknown validator set");
-        }
+        doSubmitInitial(currentValidatorSet, commitmentHash, bitfield, proof);
+    }
 
+    /**
+     * @dev Begin submission of signature proof for next session
+     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param bitfield a bitfield claiming which validators have signed the commitment
+     * @param proof the validator proof
+     */
+    function submitInitialWithHandover(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        ValidatorProof calldata proof
+    ) external payable {
+        doSubmitInitial(nextValidatorSet, commitmentHash, bitfield, proof);
+    }
+
+    function doSubmitInitial(
+        ValidatorSet memory vset,
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        ValidatorProof calldata proof
+    ) internal {
         // Check if merkle proof is valid based on the validatorSetRoot
-        require(
-            isValidatorInSet(vset, proof.addr, proof.index, proof.merkleProof),
-            "invalid validator proof"
-        );
+        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
+            revert InvalidValidatorProof();
+        }
 
         // Check if validatorSignature is correct, ie. check if it matches
         // the signature of senderPublicKey on the commitmentHash
-        require(ECDSA.recover(commitmentHash, proof.signature.v, proof.signature.r, proof.signature.s) == proof.addr, "Invalid signature");
+        if (ECDSA.recover(commitmentHash, proof.v, proof.r, proof.s) != proof.account) {
+            revert InvalidSignature();
+        }
 
-        // For the initial commitment, more than two thirds of the validator set should claim to sign the commitment
-        require(
-            Bitfield.countSetBits(bitfield) >= vset.length - (vset.length - 1) / 3,
-            "Not enough claims"
-        );
+        // For the initial commitment, the bitfield should claim that more than
+        // two thirds of the validator set have sign the commitment
+        if (Bitfield.countSetBits(bitfield) < vset.length - (vset.length - 1) / 3) {
+            revert NotEnoughClaims();
+        }
 
-        // Accept and save the commitment
-        requests[nextRequestID] = Request(
+        tasks[createTaskID(msg.sender, commitmentHash)] = Task(
             msg.sender,
             uint64(block.number),
             uint32(vset.length),
-            bitfield
+            0,
+            keccak256(abi.encodePacked(bitfield))
         );
+    }
 
-        emit NewRequest(nextRequestID, msg.sender);
+    /**
+     * @dev Capture PREVRANDAO
+     * @param commitmentHash contains the commitmentHash signed by the validators
+     */
+    function commitPrevRandao(bytes32 commitmentHash) external {
+        bytes32 taskID = createTaskID(msg.sender, commitmentHash);
+        Task storage task = tasks[taskID];
 
-        nextRequestID = nextRequestID + 1;
+        if (task.prevRandao != 0) {
+            revert PrevRandaoAlreadyCaptured();
+        }
+
+        if (block.number < task.blockNumber + randaoCommitDelay) {
+            revert WaitPeriodNotOver();
+        }
+
+        if (block.number > task.blockNumber + randaoCommitDelay + randaoCommitExpiration) {
+            delete tasks[taskID];
+            revert TaskExpired();
+        }
+
+        // Post-merge, the difficulty opcode now returns PREVRANDAO
+        task.prevRandao = block.difficulty;
     }
 
     /**
      * @dev Submit a commitment for final verification
-     * @param requestID identifier for the request generated by the initial submission
      * @param commitment contains the full commitment that was used for the commitmentHash
-     * @param proof a struct containing the data needed to verify all validator signatures
+     * @param proofs a struct containing the data needed to verify all validator signatures
      */
     function submitFinal(
-        uint256 requestID,
         Commitment calldata commitment,
-        ValidatorMultiProof calldata proof
+        uint256[] calldata bitfield,
+        ValidatorProof[] calldata proofs
     ) public {
-        Request storage request = requests[requestID];
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
+        bytes32 taskID = createTaskID(msg.sender, commitmentHash);
+        Task storage task = tasks[taskID];
 
-        require(commitment.validatorSetID == currentValidatorSet.id, "invalid commitment");
+        if (task.prevRandao == 0) {
+            revert PrevRandaoNotCaptured();
+        }
 
-        verifyCommitment(currentValidatorSet, request, commitment, proof);
+        if (commitment.validatorSetID != currentValidatorSet.id) {
+            revert InvalidCommitment();
+        }
+
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            revert StaleCommitment();
+        }
+
+        if (task.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
+            revert InvalidBitfield();
+        }
+
+        verifyCommitment(commitmentHash, bitfield, currentValidatorSet, task, proofs);
 
         latestMMRRoot = commitment.payload.mmrRootHash;
         latestBeefyBlock = commitment.blockNumber;
         emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
-
-        delete requests[requestID];
+        delete tasks[taskID];
     }
 
     /**
      * @dev Submit a commitment and leaf for final verification
-     * @param requestID identifier for the request generated by the initial submission
      * @param commitment contains the full commitment that was used for the commitmentHash
-     * @param proof a struct containing the data needed to verify all validator signatures
+     * @param proofs a struct containing the data needed to verify all validator signatures
      * @param leaf an MMR leaf provable using the MMR root in the commitment payload
      * @param leafProof an MMR leaf proof
      */
-    function submitFinalWithLeaf(
-        uint256 requestID,
+    function submitFinalWithHandover(
         Commitment calldata commitment,
-        ValidatorMultiProof calldata proof,
+        uint256[] calldata bitfield,
+        ValidatorProof[] calldata proofs,
         MMRLeaf calldata leaf,
-        MMRProof calldata leafProof
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
     ) public {
-        Request storage request = requests[requestID];
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
+        bytes32 taskID = createTaskID(msg.sender, commitmentHash);
+        Task storage task = tasks[taskID];
 
-        require(commitment.validatorSetID == nextValidatorSet.id, "invalid commitment");
-        require(leaf.nextAuthoritySetID == nextValidatorSet.id + 1, "invalid MMR leaf");
+        if (task.prevRandao == 0) {
+            revert PrevRandaoNotCaptured();
+        }
 
-        verifyCommitment(nextValidatorSet, request, commitment, proof);
+        if (commitment.validatorSetID != nextValidatorSet.id) {
+            revert InvalidCommitment();
+        }
 
-        require(
-            MMRProofVerification.verifyLeafProof(
-                commitment.payload.mmrRootHash,
-                keccak256(encodeMMRLeaf(leaf)),
-                leafProof
-            ),
-            "Invalid leaf proof"
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            revert StaleCommitment();
+        }
+
+        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            revert InvalidMMRLeaf();
+        }
+
+        if (task.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
+            revert InvalidBitfield();
+        }
+
+        verifyCommitment(commitmentHash, bitfield, nextValidatorSet, task, proofs);
+
+        bool leafIsValid = MMRProof.verifyLeafProof(
+            commitment.payload.mmrRootHash,
+            keccak256(encodeMMRLeaf(leaf)),
+            leafProof, leafProofOrder
         );
+        if (!leafIsValid) {
+            revert InvalidMMRLeafProof();
+        }
 
         currentValidatorSet = nextValidatorSet;
         nextValidatorSet.id = leaf.nextAuthoritySetID;
-        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
         nextValidatorSet.length = leaf.nextAuthoritySetLen;
+        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
 
         latestMMRRoot = commitment.payload.mmrRootHash;
         latestBeefyBlock = commitment.blockNumber;
         emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
-
-        delete requests[requestID];
+        delete tasks[taskID];
     }
 
     /**
@@ -318,26 +367,22 @@ contract BeefyClient is Ownable {
      * @param leafHash contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
      */
-    function verifyMMRLeafProof(bytes32 leafHash, MMRProof calldata proof)
+    function verifyMMRLeafProof(bytes32 leafHash, bytes32[] calldata proof, uint256 proofOrder)
         external
         view
         returns (bool)
     {
-        return MMRProofVerification.verifyLeafProof(latestMMRRoot, leafHash, proof);
+        return MMRProof.verifyLeafProof(latestMMRRoot, leafHash, proof, proofOrder);
     }
 
     /* Private Functions */
 
-    /**
-     * TODO: Ensure request is not too old as the blockhash function
-     * only works for the 256 most recent blocks (SNO-354).
-     *
-     * @dev Deterministically generate a seed based on the initial request
-     * @param request a storage reference to the requests struct
-     * @return uint256 the seed
-     */
-    function deriveSeed(Request storage request) internal virtual view returns (uint256) {
-        return uint256(blockhash(request.blockNumber + BLOCK_WAIT_PERIOD));
+    function createTaskID(address account, bytes32 commitmentHash) internal pure returns (bytes32 value) {
+        assembly {
+            mstore(0x00, account)
+            mstore(0x20, commitmentHash)
+            value := keccak256(0x0, 0x40)
+        }
     }
 
     /**
@@ -389,71 +434,48 @@ contract BeefyClient is Ownable {
      * @dev Verify commitment using the validator multiproof
      */
     function verifyCommitment(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
         ValidatorSet memory vset,
-        Request storage request,
-        Commitment calldata commitment,
-        ValidatorMultiProof calldata proof
+        Task storage task,
+        ValidatorProof[] calldata proofs
     ) internal view {
-        // Verify that sender is the same as in `submitInitial`
-        require(msg.sender == request.sender, "Sender address invalid");
-
-        // Verify that block wait period has passed
-        require(
-            block.number >= request.blockNumber + BLOCK_WAIT_PERIOD,
-            "Block wait period not over"
-        );
-
-        // Check that payload.leaf.block_number is > last_known_block_number;
-        require(commitment.blockNumber > latestBeefyBlock, "Commitment is too old");
-
         // verify the validator multiproof
         uint256 signatureCount = minimumSignatureThreshold(vset.length);
-        uint256[] memory finalBitfield = Bitfield.randomNBitsWithPriorCheck(
-            deriveSeed(request),
-            request.bitfield,
+        uint256[] memory finalbitfield = Bitfield.randomNBitsWithPriorCheck(
+            task.prevRandao,
+            bitfield,
             signatureCount,
             vset.length
         );
-        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        verifyValidatorMultiProof(proof, signatureCount, vset, finalBitfield, commitmentHash);
-    }
 
-    function verifyValidatorMultiProof(
-        ValidatorMultiProof calldata proof,
-        uint256 signatureCount,
-        ValidatorSet memory vset,
-        uint256[] memory bitfield,
-        bytes32 commitmentHash
-    ) internal pure {
-        require(
-            proof.signatures.length == signatureCount &&
-                proof.indices.length == signatureCount &&
-                proof.addrs.length == signatureCount &&
-                proof.merkleProofs.length == signatureCount,
-            "Validator proof is malformed"
-        );
+        if (proofs.length != signatureCount) {
+            revert InvalidValidatorProof();
+        }
 
-        for (uint256 i = 0; i < signatureCount; i++) {
-            (
-                ValidatorSignature calldata signature,
-                uint256 index,
-                address addr,
-                bytes32[] calldata merkleProof
-            ) = (proof.signatures[i], proof.indices[i], proof.addrs[i], proof.merkleProofs[i]);
+        for (uint256 i = 0; i < signatureCount;) {
+            ValidatorProof calldata proof = proofs[i];
 
-            (uint256 element, uint8 within) = Bitfield.toLocation(index);
+            (uint256 x, uint8 y) = Bitfield.toLocation(proof.index);
 
-            // Check if validator in bitfield
-            require(Bitfield.isSet(bitfield, element, within), "Validator not in bitfield");
+            if (!Bitfield.isSet(finalbitfield, x, y)) {
+                revert InvalidValidatorProof();
+            }
 
-            // Remove validator from bitfield such that no validator can appear twice in signatures
-            Bitfield.clear(bitfield, element, within);
+            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
+                revert InvalidValidatorProof();
+            }
 
-            // Check if merkle proof is valid
-            require(isValidatorInSet(vset, addr, index, merkleProof), "invalid validator proof");
+            if (ECDSA.recover(commitmentHash, proof.v, proof.r, proof.s) != proof.account) {
+                revert InvalidSignature();
+            }
 
-            // Check if signature is correct
-            require(ECDSA.recover(commitmentHash, signature.v, signature.r, signature.s) == addr, "Invalid signature");
+            // Ensure no validator can appear more than once
+            Bitfield.clear(finalbitfield, x, y);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -463,8 +485,8 @@ contract BeefyClient is Ownable {
                 commitment.payload.prefix,
                 commitment.payload.mmrRootHash,
                 commitment.payload.suffix,
-                commitment.blockNumber.encodeU32(),
-                commitment.validatorSetID.encodeU64()
+                ScaleCodec.encodeU32(commitment.blockNumber),
+                ScaleCodec.encodeU64(commitment.validatorSetID)
             );
     }
 
@@ -519,18 +541,14 @@ contract BeefyClient is Ownable {
     /**
      * @dev Helper to create a final bitfield, with random validator selections.
      */
-    function createFinalBitfield(uint256 requestID) external view returns (uint256[] memory) {
-        Request storage request = requests[requestID];
-
-        // verify that block wait period has passed
-        require(block.number >= request.blockNumber + BLOCK_WAIT_PERIOD, "wait period not over");
-
+    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield) external view returns (uint256[] memory) {
+        Task storage task = tasks[createTaskID(msg.sender, commitmentHash)];
         return
             Bitfield.randomNBitsWithPriorCheck(
-                deriveSeed(request),
-                request.bitfield,
-                minimumSignatureThreshold(request.validatorSetLen),
-                request.validatorSetLen
+                task.prevRandao,
+                bitfield,
+                minimumSignatureThreshold(task.validatorSetLen),
+                task.validatorSetLen
             );
     }
 }

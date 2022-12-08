@@ -229,10 +229,8 @@ func (wr *EthereumWriter) WriteBasicChannel(
 			NextAuthoritySetLen:  uint32(proof.MMRProof.Leaf.BeefyNextAuthoritySet.Len),
 			NextAuthoritySetRoot: proof.MMRProof.Leaf.BeefyNextAuthoritySet.Root,
 		},
-		LeafProof: opaqueproof.MMRProof{
-			Items: merkleProofItems,
-			Order: proof.MMRProof.MerkleProofOrder,
-		},
+		LeafProof: merkleProofItems,
+		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
 	opaqueProof, err := wr.abiPacker.Pack(finalProof)
@@ -321,10 +319,8 @@ func (wr *EthereumWriter) WriteIncentivizedChannel(
 			NextAuthoritySetLen:  uint32(proof.MMRProof.Leaf.BeefyNextAuthoritySet.Len),
 			NextAuthoritySetRoot: proof.MMRProof.Leaf.BeefyNextAuthoritySet.Root,
 		},
-		LeafProof: opaqueproof.MMRProof{
-			Items: merkleProofItems,
-			Order: proof.MMRProof.MerkleProofOrder,
-		},
+		LeafProof: merkleProofItems,
+		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
 	opaqueProof, err := wr.abiPacker.Pack(finalProof)
