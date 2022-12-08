@@ -3,12 +3,17 @@
   "private": true,
   "scripts": {
     "preinstall": "npx only-allow pnpm",
+    "postinstall": "cd .. && husky install",
     "build": "turbo run build",
     "test": "turbo run test",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "size": "turbo run size",
+    "coverage": "turbo run coverage"
   },
   "devDependencies": {
-    "turbo": "^1.6.3"
+    "turbo": "^1.6.3",
+    "husky": "^8.0.1"
   },
   "overrides": {
     "@polkadot-api@9.6.2>@polkadot/util": "10.1.11",

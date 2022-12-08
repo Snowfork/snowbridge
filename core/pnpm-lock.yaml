@@ -4,8 +4,10 @@ importers:
 
   .:
     specifiers:
+      husky: ^8.0.1
       turbo: ^1.6.3
     devDependencies:
+      husky: 8.0.2
       turbo: 1.6.3
 
   packages/api:
@@ -7624,6 +7626,12 @@ packages:
     resolution: {integrity: sha512-Fl70vYtsAFb/C06PTS9dZBo7ihau+Tu/DNCk/OyHhea07S+aeMWpFFkUaXRa8fI+ScZbEI8dfSxwY7gxZ9SAVQ==}
     dependencies:
       ms: 2.1.3
+    dev: true
+
+  /husky/8.0.2:
+    resolution: {integrity: sha512-Tkv80jtvbnkK3mYWxPZePGFpQ/tT3HNSs/sasF9P2YfkMezDl3ON37YN6jUUI4eTg5LcyVynlb6r4eyvOmspvg==}
+    engines: {node: '>=14'}
+    hasBin: true
     dev: true
 
   /hyperlinker/1.0.0:
