@@ -16,7 +16,7 @@
     "@polkadot/types": "9.6.2",
     "@polkadot/util": "10.1.11",
     "@polkadot/util-crypto": "10.1.11",
-    "@chainsafe/lodestar": "1.1.0",
+    "@chainsafe/lodestar": "1.2.1",
     "@types/keccak": "^3.0.1",
     "@types/node": "^16.4.2",
     "@types/yargs": "^17.0.2",

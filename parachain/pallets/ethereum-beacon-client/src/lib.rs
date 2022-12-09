@@ -44,6 +44,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
+	use snowbridge_beacon_primitives::ForkVersions;
 	use sp_core::{H160, U256};
 	use snowbridge_core::Proof;
 	use snowbridge_ethereum::{Log, Receipt, Header as EthereumHeader};
@@ -81,6 +82,8 @@ pub mod pallet {
 		type MaxAttestationSize: Get<u32>;
 		#[pallet::constant]
 		type MaxValidatorsPerCommittee: Get<u32>;
+		#[pallet::constant]
+		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -319,7 +322,7 @@ pub mod pallet {
 			Self::verify_sync_committee(
 				update.next_sync_committee.clone(),
 				update.next_sync_committee_branch,
-				update.finalized_header.state_root,
+				update.attested_header.state_root,
 				config::NEXT_SYNC_COMMITTEE_DEPTH,
 				config::NEXT_SYNC_COMMITTEE_INDEX,
 			)?;
@@ -342,9 +345,9 @@ pub mod pallet {
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
 				current_sync_committee.pubkeys,
-				update.fork_version,
 				update.attested_header,
 				validators_root,
+				update.signature_slot,
 			)?;
 
 			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
@@ -376,9 +379,9 @@ pub mod pallet {
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
 				sync_committee.pubkeys,
-				update.fork_version,
 				update.attested_header,
 				validators_root,
+				update.signature_slot,
 			)?;
 
 			Self::store_finalized_header(block_root, update.finalized_header);
@@ -418,9 +421,9 @@ pub mod pallet {
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
 				sync_committee.pubkeys,
-				update.fork_version,
 				header,
 				validators_root,
+				update.signature_slot,
 			)?;
 
 			let execution_payload = update.block.body.execution_payload;
@@ -461,9 +464,9 @@ pub mod pallet {
 			sync_committee_bits: Vec<u8>,
 			sync_committee_signature: BoundedVec<u8, T::MaxSignatureSize>,
 			sync_committee_pubkeys: BoundedVec<PublicKey, T::MaxSyncCommitteeSize>,
-			fork_version: ForkVersion,
 			header: BeaconHeader,
 			validators_root: H256,
+			signature_slot: u64,
 		) -> DispatchResult {
 			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
 			// Gathers all the pubkeys of the sync committee members that participated in siging the header.
@@ -474,9 +477,10 @@ pub mod pallet {
 				}
 			}
 
+			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(signature_slot, config::SLOTS_PER_EPOCH));
 			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
 			// Domains are used for for seeds, for signatures, and for selecting aggregators.
-			let domain = Self::compute_domain(domain_type, Some(fork_version), validators_root)?;
+			let domain = Self::compute_domain(domain_type, fork_version, validators_root)?;
 			// Hash tree root of SigningData - object root + domain
 			let signing_root = Self::compute_signing_root(header, domain)?;
 
@@ -488,6 +492,10 @@ pub mod pallet {
 			)?;
 
 			Ok(())
+		}
+
+		pub(super) fn compute_epoch_at_slot(signature_slot: u64, slots_per_epoch: u64) -> u64 {
+			return signature_slot / slots_per_epoch
 		}
 
 		pub(super) fn bls_fast_aggregate_verify(
@@ -688,18 +696,11 @@ pub mod pallet {
 		/// Return the domain for the domain_type and fork_version.
 		pub(super) fn compute_domain(
 			domain_type: Vec<u8>,
-			fork_version: Option<ForkVersion>,
+			fork_version: ForkVersion,
 			genesis_validators_root: Root,
 		) -> Result<Domain, DispatchError> {
-			let unwrapped_fork_version: ForkVersion;
-			if fork_version.is_none() {
-				unwrapped_fork_version = config::GENESIS_FORK_VERSION;
-			} else {
-				unwrapped_fork_version = fork_version.unwrap();
-			}
-
 			let fork_data_root =
-				Self::compute_fork_data_root(unwrapped_fork_version, genesis_validators_root)?;
+				Self::compute_fork_data_root(fork_version, genesis_validators_root)?;
 
 			let mut domain = [0u8; 32];
 			domain[0..4].copy_from_slice(&(domain_type));
@@ -781,6 +782,19 @@ pub mod pallet {
 			}
 
 			Ok(sync_committee)
+		}
+
+		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
+			let fork_versions = T::ForkVersions::get();
+
+			if epoch >= fork_versions.bellatrix.epoch {
+				return fork_versions.bellatrix.version;
+			} 
+			if epoch >= fork_versions.altair.epoch {
+				return fork_versions.altair.version;
+			}
+        
+			return fork_versions.genesis.version;
 		}
 
 		pub(super) fn initial_sync(

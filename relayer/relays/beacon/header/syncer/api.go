@@ -401,7 +401,7 @@ type SyncCommitteePeriodUpdateResponse struct {
 		FinalizedHeader         HeaderResponse        `json:"finalized_header"`
 		FinalityBranch          []common.Hash         `json:"finality_branch"`
 		SyncAggregate           SyncAggregateResponse `json:"sync_aggregate"`
-		ForkVersion             string                `json:"fork_version"`
+		SignatureSlot           string                `json:"signature_slot"`
 	} `json:"data"`
 }
 
@@ -497,12 +497,12 @@ type LatestFinalisedUpdateResponse struct {
 		FinalizedHeader HeaderResponse        `json:"finalized_header"`
 		FinalityBranch  []common.Hash         `json:"finality_branch"`
 		SyncAggregate   SyncAggregateResponse `json:"sync_aggregate"`
-		ForkVersion     string                `json:"fork_version"`
+		SignatureSlot   string                `json:"signature_slot"`
 	} `json:"data"`
 }
 
 func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/finality_update/", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/finality_update", b.endpoint), nil)
 	if err != nil {
 		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}

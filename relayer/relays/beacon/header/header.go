@@ -251,7 +251,7 @@ func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 	return nil
 }
 
-func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Hash, toHeaderSlot uint64,) error {
+func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Hash, toHeaderSlot uint64) error {
 	fromHeaderUpdate, err := h.syncer.GetHeaderUpdate(fromHeader)
 	if err != nil {
 		return err
@@ -325,6 +325,8 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 		}
 
 		headerUpdate.SyncAggregate = nextHeaderUpdate.Block.Body.SyncAggregate
+		headerUpdate.SignatureSlot = nextHeaderUpdate.Block.Slot
+
 		headersToSync = append(headersToSync, headerUpdate)
 		headerUpdate = nextHeaderUpdate
 
