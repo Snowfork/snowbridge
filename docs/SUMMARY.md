@@ -29,3 +29,7 @@
 ## Performance
 
 * [Benchmarks](performance/benchmarks.md)
+
+## Other
+
+* [Bridge Workshop](other/bridge-workshop.md)
