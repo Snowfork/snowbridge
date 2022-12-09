@@ -45,7 +45,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          toolchain: +nightly
+          toolchain: 1.62.1
           args: >-
             --config-path rustfmt.toml
       - name: cargo check
