@@ -32,4 +32,4 @@
 
 ## Other
 
-* [Bridge Workshop](other/bridge-workshop.md)
+* [Bridges Workshop](other/bridges-workshop.md)

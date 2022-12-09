@@ -1,8 +1,10 @@
 ---
-description: Meeting notes for our bridges workshop at Lisbon Parachains Summit
+description: Meeting notes for our workshop at the Lisbon Parachain Summit
 ---
 
-# Bridge Workshop
+# Bridges Workshop
+
+**Date:**&#x20;
 
 **Attendees:**
 
@@ -46,6 +48,7 @@ Mitigations:
 1. Asynchronous backing may improve this by increasing blockspace.
 2. A huge performance booster will be host functions for BLS-12-381 signature verification.
 3. Should also investigate using a ZK-SNARKS circuit for signature verification in Substrate.
+   1. Apparently W3F already has a working prototype for this, which we can potentially adapt.
 
 ### Next Steps
 
