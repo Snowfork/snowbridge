@@ -16,6 +16,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
+use snowbridge_beacon_primitives::{ForkVersions, Fork};
 
 use sp_std::prelude::*;
 
@@ -625,11 +626,20 @@ parameter_types! {
     pub const MaxVoluntaryExitSize: u32 = 16;
     pub const MaxAttestationSize: u32 = 128;
     pub const MaxValidatorsPerCommittee: u32 = 2048;
-    pub const GenesisForkVersion: [u8; 4] =[0, 0, 16, 32]; // 0x00001020
-    pub const AltairForkVersion: [u8; 4] =[1, 0, 16, 32]; // 0x01001020
-    pub const AltairForkEpoch: u64 = 36660;
-    pub const BellatrixForkVersion: [u8; 4] =[2, 0, 16, 32]; // 0x02001020
-    pub const BellatrixForkEpoch: u64 = 112260;
+	pub const ChainForkVersions: ForkVersions = ForkVersions{
+        genesis: Fork {
+            version: [0, 0, 16, 32], // 0x00001020
+            epoch: 0,
+        },
+        altair: Fork {
+            version: [1, 0, 16, 32], // 0x01001020
+            epoch: 36660,
+        },
+        bellatrix: Fork {
+            version: [2, 0, 16, 32], // 0x02001020
+            epoch: 112260,
+        },
+    };
 }
 
 impl ethereum_beacon_client::Config for Runtime {
@@ -647,11 +657,7 @@ impl ethereum_beacon_client::Config for Runtime {
     type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
     type MaxAttestationSize = MaxAttestationSize;
     type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
-    type GenesisForkVersion = GenesisForkVersion;
-    type AltairForkVersion = AltairForkVersion;
-    type AltairForkEpoch = AltairForkEpoch;
-    type BellatrixForkVersion = BellatrixForkVersion;
-    type BellatrixForkEpoch = BellatrixForkEpoch;
+	type ForkVersions = ChainForkVersions;
     type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
 }
 

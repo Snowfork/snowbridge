@@ -44,7 +44,8 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
-	use sp_core::{H160, U256};
+	use snowbridge_beacon_primitives::ForkVersions;
+use sp_core::{H160, U256};
 	use snowbridge_core::Proof;
 	use snowbridge_ethereum::{Log, Receipt, Header as EthereumHeader};
 
@@ -82,15 +83,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxValidatorsPerCommittee: Get<u32>;
 		#[pallet::constant]
-		type GenesisForkVersion: Get<ForkVersion>;
-		#[pallet::constant]
-		type AltairForkEpoch: Get<u64>;
-		#[pallet::constant]
-		type AltairForkVersion: Get<ForkVersion>;
-		#[pallet::constant]
-		type BellatrixForkEpoch: Get<u64>;
-		#[pallet::constant]
-		type BellatrixForkVersion: Get<ForkVersion>;
+		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -792,14 +785,16 @@ pub mod pallet {
 		}
 
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
-			if epoch >= T::BellatrixForkEpoch::get() {
-				return T::BellatrixForkVersion::get();
+			let fork_versions = T::ForkVersions::get();
+
+			if epoch >= fork_versions.bellatrix.epoch {
+				return fork_versions.bellatrix.version;
 			} 
-			if epoch >= T::AltairForkEpoch::get() {
-				return T::AltairForkVersion::get();
+			if epoch >= fork_versions.altair.epoch {
+				return fork_versions.altair.version;
 			}
         
-			return T::GenesisForkVersion::get();
+			return fork_versions.genesis.version;
 		}
 
 		pub(super) fn initial_sync(

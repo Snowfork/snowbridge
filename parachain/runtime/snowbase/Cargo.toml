@@ -80,6 +80,7 @@ dot-app = { path = "../../pallets/dot-app", package = "snowbridge-dot-app", defa
 eth-app = { path = "../../pallets/eth-app", package = "snowbridge-eth-app", default-features = false }
 erc20-app = { path = "../../pallets/erc20-app", package = "snowbridge-erc20-app", default-features = false }
 runtime-common = { path = "../common", package = "snowbridge-runtime-common", default-features = false }
+snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
 
 # Used for runtime benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.30", default-features = false, optional = true }
@@ -146,6 +147,7 @@ std = [
     "erc20-app/std",
     "snowbridge-core/std",
     "runtime-primitives/std",
+    "snowbridge-beacon-primitives/std",
     "snowbridge-xcm-support/std",
     "snowbridge-asset-registry/std",
     "runtime-common/std"

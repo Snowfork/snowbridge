@@ -2,7 +2,7 @@ use frame_support::parameter_types;
 use frame_system as system;
 use crate as ethereum_beacon_client;
 use super::*;
-use snowbridge_beacon_primitives::{AttesterSlashing, BeaconHeader, Body};
+use snowbridge_beacon_primitives::{AttesterSlashing, BeaconHeader, Body, ForkVersions, Fork};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::{BlakeTwo256, IdentityLookup}};
 use std::{fs::File, path::PathBuf};
@@ -70,11 +70,20 @@ pub mod mock_minimal {
         pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
         pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
         pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
-        pub const MinimalGenesisForkVersion: [u8; 4] =[0, 0, 0, 1]; // 0x00000001
-        pub const MinimalAltairForkVersion: [u8; 4] =[1, 0, 0, 1]; // 0x01000001
-        pub const MinimalAltairForkEpoch: u64 = 0;
-        pub const MinimalBellatrixForkVersion: [u8; 4] =[2, 0, 0, 1]; // 0x02000001
-        pub const MinimalBellatrixForkEpoch: u64 = 0;
+        pub const ChainForkVersions: ForkVersions = ForkVersions{
+            genesis: Fork {
+                version: [0, 0, 0, 1], // 0x00000001
+                epoch: 0,
+            },
+            altair: Fork {
+                version: [1, 0, 0, 1], // 0x01000001
+                epoch: 0,
+            },
+            bellatrix: Fork {
+                version: [2, 0, 0, 1], // 0x02000001
+                epoch: 0,
+            },
+        };
     }
 
     impl ethereum_beacon_client::Config for Test {
@@ -92,11 +101,7 @@ pub mod mock_minimal {
         type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
         type MaxAttestationSize = MaxAttestationSize;
         type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
-        type GenesisForkVersion = MinimalGenesisForkVersion;
-        type AltairForkVersion = MinimalAltairForkVersion;
-        type AltairForkEpoch = MinimalAltairForkEpoch;
-        type BellatrixForkVersion = MinimalBellatrixForkVersion;
-        type BellatrixForkEpoch = MinimalBellatrixForkEpoch;
+        type ForkVersions = ChainForkVersions;
         type WeightInfo = ();
     }
 }
@@ -164,11 +169,20 @@ pub mod mock_mainnet {
         pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
         pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
         pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
-        pub const GenesisForkVersion: [u8; 4] =[0, 0, 16, 32]; // 0x00001020
-        pub const AltairForkVersion: [u8; 4] =[1, 0, 16, 32]; // 0x01001020
-        pub const AltairForkEpoch: u64 = 36660;
-        pub const BellatrixForkVersion: [u8; 4] =[2, 0, 16, 32]; // 0x02001020
-        pub const BellatrixForkEpoch: u64 = 112260;
+        pub const ChainForkVersions: ForkVersions = ForkVersions{
+            genesis: Fork {
+                version: [0, 0, 16, 32], // 0x00001020
+                epoch: 0,
+            },
+            altair: Fork {
+                version: [1, 0, 16, 32], // 0x01001020
+                epoch: 36660,
+            },
+            bellatrix: Fork {
+                version: [2, 0, 16, 32], // 0x02001020
+                epoch: 112260,
+            },
+        };
 }
 
 
@@ -187,11 +201,7 @@ pub mod mock_mainnet {
         type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
         type MaxAttestationSize = MaxAttestationSize;
         type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
-        type GenesisForkVersion = GenesisForkVersion;
-        type AltairForkVersion = AltairForkVersion;
-        type AltairForkEpoch = AltairForkEpoch;
-        type BellatrixForkVersion = BellatrixForkVersion;
-        type BellatrixForkEpoch = BellatrixForkEpoch;
+        type ForkVersions = ChainForkVersions;
         type WeightInfo = ();
     }
 }

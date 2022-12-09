@@ -22,6 +22,19 @@ pub type ValidatorIndex = u64;
 pub type ForkVersion = [u8; 4];
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct ForkVersions {
+	pub genesis: Fork,
+	pub altair: Fork,
+	pub bellatrix: Fork,
+}
+
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct Fork { 
+	pub version: [u8; 4],
+	pub epoch: u64,
+}
+
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct PublicKey(pub [u8; 48]);
 
 impl <SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>Default for InitialSync<SyncCommitteeSize, ProofSize> {
