@@ -100,6 +100,10 @@ check_build_tool() {
         echo 'Error: direnv is not installed.'
         exit
     fi
+    if ! [ -x "$(command -v mage)" ]; then
+        echo 'Error: mage is not installed.'
+        exit
+    fi
     if [[ "$OSTYPE" =~ ^darwin ]]; then
         if ! [ -x "$(command -v gdate)" ]; then
             echo 'Error: gdate is not installed.'
