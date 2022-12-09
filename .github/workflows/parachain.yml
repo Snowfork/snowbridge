@@ -105,3 +105,4 @@ jobs:
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
           toolchain: 1.62.1
+
