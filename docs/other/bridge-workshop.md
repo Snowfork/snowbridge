@@ -4,7 +4,7 @@ description: Meeting notes for our workshop at the Lisbon Parachain Summit
 
 # Bridges Workshop
 
-**Date:**&#x20;
+**Date:** 1 Dec 2022
 
 **Attendees:**
 
