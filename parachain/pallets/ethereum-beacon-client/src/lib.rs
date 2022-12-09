@@ -45,7 +45,7 @@ pub mod pallet {
 
 	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
 	use snowbridge_beacon_primitives::ForkVersions;
-use sp_core::{H160, U256};
+	use sp_core::{H160, U256};
 	use snowbridge_core::Proof;
 	use snowbridge_ethereum::{Log, Receipt, Header as EthereumHeader};
 
