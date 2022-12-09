@@ -11,7 +11,7 @@ description: Meeting notes for our bridges workshop at Lisbon Parachains Summit
 * Syed Hosseini (W3F)
 * Sourabh Niyogi
 
-There were many other attendees, I just didn't manage to get their names :sweat\_smile:
+There were a few other attendees, I just didn't manage to get their names :sweat\_smile:
 
 ## Cross-chain Governance
 
