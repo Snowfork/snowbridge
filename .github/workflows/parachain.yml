@@ -45,6 +45,8 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
+          args: >-
+            --manifest-path parachain/Cargo.toml
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:
