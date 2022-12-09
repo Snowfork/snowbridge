@@ -20,7 +20,7 @@ start_chains()
     start_polkadot_launch
 }
 
-# trap trapkill SIGINT SIGTERM EXIT
-# cleanup
-# start_chains
-# wait
+trap forcekill SIGINT SIGTERM EXIT
+check_build_tool && check_binary && cleanup
+start_chains
+wait

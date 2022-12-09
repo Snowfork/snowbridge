@@ -21,3 +21,7 @@
 # export PARACHAIN_RELAY_ETH_KEY= # Your Parachain relayer account private key
 
 # export E2E_TEST_ETH_KEY= # Your E2E test account private key
+
+# BEEFY_START_BLOCK= # start block to config beefy client,default as: 29
+
+# RELAYCHAIN_ENDPOINT= # relaychain endpoint,default as: ws://localhost:9944

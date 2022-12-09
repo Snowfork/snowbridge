@@ -48,6 +48,8 @@ build_relayer()
     cp $relay_bin "$output_bin_dir"
 }
 
+check_build_tool
+mkdir -p "$output_bin_dir"
 build_relaychain
 build_parachain
 build_relayer

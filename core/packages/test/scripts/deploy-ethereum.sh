@@ -4,17 +4,9 @@ set -eu
 source scripts/set-env.sh
 
 start_geth() {
-    if [[ -n "${DIFFICULTY+x}" ]]; then
-        jq --arg difficulty "${DIFFICULTY}" \
-            '.difficulty = $difficulty' \
-            config/genesis.json \
-            > "$output_dir/genesis.json"
-    else
-        cp config/genesis.json "$output_dir/genesis.json"
-    fi
-
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local node"
+        cp config/genesis.json "$output_dir/genesis.json"
         geth init --datadir "$ethereum_data_dir" "$output_dir/genesis.json"
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key0.prv
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key1.prv
@@ -44,8 +36,13 @@ start_lodestar() {
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
 
-        timestamp=$(date -d'+10second' +%s)
-
+        if [[ "$OSTYPE" =~ ^darwin ]]
+        then
+            timestamp=$(gdate -d'+10second' +%s)
+        else
+            timestamp=$(date -d'+10second' +%s)
+        fi
+        
         npx lodestar dev \
             --genesisValidators 8 \
             --genesisTime $timestamp \

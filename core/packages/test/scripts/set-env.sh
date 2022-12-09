@@ -74,3 +74,36 @@ check_binary() {
         exit
     fi
 }
+
+check_build_tool() {
+    if ! [ -x "$(command -v g++)" ]; then
+        echo 'Error: g++ is not installed.'
+        exit
+    fi
+    if ! [ -x "$(command -v protoc)" ]; then
+        echo 'Error: protoc is not installed.'
+        exit
+    fi
+    if ! [ -x "$(command -v jq)" ]; then
+        echo 'Error: jq is not installed.'
+        exit
+    fi
+    if ! [ -x "$(command -v geth)" ]; then
+        echo 'Error: geth is not installed.'
+        exit
+    fi
+    if ! [ -x "$(command -v sponge)" ]; then
+        echo 'Error: sponge is not installed.'
+        exit
+    fi
+    if ! [ -x "$(command -v direnv)" ]; then
+        echo 'Error: direnv is not installed.'
+        exit
+    fi
+    if [[ "$OSTYPE" =~ ^darwin ]]; then
+        if ! [ -x "$(command -v gdate)" ]; then
+            echo 'Error: gdate is not installed.'
+            exit
+        fi
+    fi
+}
