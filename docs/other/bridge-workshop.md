@@ -9,7 +9,7 @@ description: Meeting notes for our workshop at the Lisbon Parachain Summit
 **Attendees:**
 
 * Vincent, Alistair (Snowfork)
-* Ricardo Ruis, Robert Habermeier, Robert Hambrock, MPJ (Parity)
+* Ricardo Ruis, Robert Habermeier, Robert Hambrock, Mattias Petter Johansson (Parity)
 * Syed Hosseini (W3F)
 * Sourabh Niyogi
 
