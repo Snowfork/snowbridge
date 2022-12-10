@@ -6,8 +6,16 @@ source scripts/set-env.sh
 build_relaychain()
 {
     if [ ! -d "$relaychain_dir" ] ; then
+        echo "clone polkadot project to $relaychain_dir"
         git clone https://github.com/paritytech/polkadot.git $relaychain_dir
     fi
+    if [ ! -f "$relaychain_bin" ]; then
+        echo "Building polkadot binary as $relaychain_bin"
+        rebuild_relaychain
+    fi
+}
+
+rebuild_relaychain(){
     pushd $relaychain_dir
     git fetch --tags
     git checkout $relaychain_version
@@ -48,8 +56,17 @@ build_relayer()
     cp $relay_bin "$output_bin_dir"
 }
 
-check_build_tool
-mkdir -p "$output_bin_dir"
-build_relaychain
-build_parachain
-build_relayer
+install_binary() {
+    echo "Building and installing binaries."
+    if [ ! -f "$relaychain_bin" ]; then
+        build_relaychain
+    fi
+
+    if [ ! -f "$parachain_bin" ]; then
+        build_parachain
+    fi
+
+    if [ ! -f "$relay_bin" ]; then
+        build_relayer
+    fi
+}

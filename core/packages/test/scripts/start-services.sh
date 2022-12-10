@@ -2,20 +2,23 @@
 set -eu
 
 source scripts/set-env.sh
+source scripts/build-binary.sh
 source scripts/start-chains.sh
-source scripts/configure-contracts.sh
 source scripts/start-relayer.sh
 
 trap forcekill SIGINT SIGTERM EXIT
-# 0. check required tools | check binaries | cleanup resource
-check_build_tool && check_binary && cleanup
-# 1. start ethereum and polkadot chains
+
+# 0. check required tools
+check_tool
+
+# 1. forcekill and install binary if not exist
+echo "Installing binaries if not exist"
+forcekill && install_binary
+
+# 2. start ethereum and polkadot chains
 echo "Starting ethereum and polkadot chains"
 start_chains
-echo "Waiting for consensus between polkadot and parachain"
-sleep 30
-# 2. initialize bridge contracts
-configure_contracts
+
 # 3. start relayer
 start_relayer
 

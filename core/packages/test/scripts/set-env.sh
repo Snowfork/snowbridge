@@ -1,6 +1,6 @@
 root_dir="$(realpath ../../..)"
-relaychain_dir="$root_dir/relaychain"
-relaychain_bin="$relaychain_dir/target/release/polkadot"
+relaychain_dir="${POLKADOT_DIR:-$root_dir/relaychain}"
+relaychain_bin="${POLKADOT_BIN:-$relaychain_dir/target/release/polkadot}"
 relaychain_version="v0.9.30"
 parachain_dir="$root_dir/parachain"
 parachain_runtime="${PARACHAIN_RUNTIME:-snowbase}"
@@ -42,40 +42,25 @@ trapkill() {
 }
 
 forcekill() {
-    pkill -9 $relay_bin
-    pkill -9 $test_collator_bin
-    pkill -9 $parachain_bin
-    pkill -9 $relaychain_bin
+    trap - SIGTERM
+    pkill -9 polkadot
+    pkill -9 snowbridge-test-node
+    pkill -9 snowbridge
+    pkill -9 snowbridge-relay
     pkill -9 -f lodestar
     pkill -9 geth
     cleanup
 }
 
 cleanup() {
+    rm -rf *.log
     rm -rf "$output_dir"
     mkdir "$output_dir"
     mkdir "$output_bin_dir"
     mkdir "$ethereum_data_dir"
 }
 
-check_binary() {
-    if [ ! -f "$relaychain_bin" ]; then
-        echo "$relaychain_bin does not exist,run scripts/build-binary.sh first"
-        exit
-    fi
-
-    if [ ! -f "$parachain_bin" ]; then
-        echo "$parachain_bin does not exist,run scripts/build-binary.sh first"
-        exit
-    fi
-
-    if [ ! -f "$relay_bin" ]; then
-        echo "$relay_bin does not exist,run scripts/build-binary.sh first"
-        exit
-    fi
-}
-
-check_build_tool() {
+check_tool() {
     if ! [ -x "$(command -v g++)" ]; then
         echo 'Error: g++ is not installed.'
         exit
