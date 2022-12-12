@@ -44,7 +44,7 @@ jobs:
           command: fmt
           toolchain: nightly
           args: >-
-            --config-path rustfmt.toml
+            -- --config-path rustfmt.toml
       - name: Run rustfmt
         run: cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
 
