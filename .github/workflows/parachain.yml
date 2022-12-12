@@ -40,7 +40,7 @@ jobs:
           components: rustfmt
 
       - name: Run rustfmt
-        run: rustfmt +nightly --edition 2018 --config-path parachain/rustfmt.toml
+        run: cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
 
   check:
     runs-on: ubuntu-20.04
