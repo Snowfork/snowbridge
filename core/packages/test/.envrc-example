@@ -1,31 +1,27 @@
 ## Config for E2E stack
 
+export POLKADOT_BIN=/path/to/polkadot/target/release/polkadot
+
 ## Run E2E on Ropsten
 
-# export INFURA_PROJECT_ID= # Your Infura project id
-
+# export INFURA_PROJECT_ID=           # Your Infura project id
 # export ETH_NETWORK=ropsten
-
 # export ETH_NETWORK_ID=3
 
 # export ETH_RPC_ENDPOINT=https://ropsten.infura.io/v3
-
 # export ETH_WS_ENDPOINT=wss://ropsten.infura.io/ws/v3
 
 # export BEACON_HTTP_ENDPOINT=https://lodestar-ropsten.chainsafe.io
 
-# export ROPSTEN_PRIVATE_KEY= # Your deployment account private key
+# export ROPSTEN_PRIVATE_KEY=         # Your deployment account private key
+# export BEEFY_RELAY_ETH_KEY=         # Your Beefy relayer account private key
+# export PARACHAIN_RELAY_ETH_KEY=     # Your Parachain relayer account private key
+# export E2E_TEST_ETH_KEY=            # Your E2E test account private key
 
-# export BEEFY_RELAY_ETH_KEY= # Your Beefy relayer account private key
+# BEEFY_START_BLOCK=                  # Start block to config beefy client,default value: 29
 
-# export PARACHAIN_RELAY_ETH_KEY= # Your Parachain relayer account private key
+# RELAYCHAIN_ENDPOINT=                # Relaychain endpoint,default value: ws://localhost:9944
 
-# export E2E_TEST_ETH_KEY= # Your E2E test account private key
+# POLKADOT_DIR=                       # Relaychain dir, default value: $root_dir/relaychain
 
-# BEEFY_START_BLOCK= # start block to config beefy client,default as: 29
-
-# RELAYCHAIN_ENDPOINT= # relaychain endpoint,default as: ws://localhost:9944
-
-# POLKADOT_DIR= # relaychain dir, default as: $root_dir/relaychain
-
-# POLKADOT_BIN= # relaychain binary, default as: $POLKADOT_DIR/target/release/polkadot
+# POLKADOT_BIN=                       # Relaychain binary, default value: $POLKADOT_DIR/target/release/polkadot
