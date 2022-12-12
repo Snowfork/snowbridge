@@ -25,7 +25,7 @@ async function baseFixture() {
     let beefyClient = await new BeefyClientMock__factory(
         {
             "contracts/utils/MerkleProof.sol:MerkleProof": merkleProof.address,
-            "contracts/utils/Bitfield.sol:Bitfield": bitfield.address
+            "contracts/utils/Bitfield.sol:Bitfield": bitfield.address,
         },
         owner
     ).deploy(3, 8)
@@ -52,12 +52,12 @@ async function beefyClientFixture() {
         {
             id: vset.id,
             root: vset.root,
-            length: vset.length
+            length: vset.length,
         },
         {
             id: vset.id + 1,
             root: vset.root,
-            length: vset.length
+            length: vset.length,
         }
     )
 
@@ -81,12 +81,12 @@ async function beefyClientFixture2() {
         {
             id: vset.id,
             root: vset.root,
-            length: vset.length
+            length: vset.length,
         },
         {
             id: vset.id + 1,
             root: vset.root,
-            length: vset.length
+            length: vset.length,
         }
     )
 

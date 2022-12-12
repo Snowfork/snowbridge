@@ -5,7 +5,6 @@ import "./OutboundChannel.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ChannelRegistry is Ownable {
-
     struct Channel {
         address inbound;
         address outbound;

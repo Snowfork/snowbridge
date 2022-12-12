@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @title Ether Vault.
 /// @notice Holds Ether on behalf of ETHApp
 contract EtherVault is Ownable {
-
     /// @dev Emitted when funds are deposited.
     /// @param account The address of the ERC20App contract.
     /// @param sender The address of the sender.
@@ -32,27 +31,20 @@ contract EtherVault is Ownable {
 
     /// @dev Accepts ETH from the caller.
     /// @param _sender The address of the sender.
-    function deposit(address _sender) 
-        external
-        payable
-        onlyOwner
-    {
+    function deposit(address _sender) external payable onlyOwner {
         emit Deposit(msg.sender, _sender, msg.value);
     }
 
     /// @dev Returns ETH to the caller.
     /// @param _recipient The address that will receive funds.
     /// @param _amount The amount of ether that will be received.
-    function withdraw(address payable _recipient, uint256 _amount)
-        external
-        onlyOwner
-    {
+    function withdraw(address payable _recipient, uint256 _amount) external onlyOwner {
         if (_amount > address(this).balance) {
             revert InsufficientBalance();
         }
         require(_amount > 0, "Must unlock a positive amount");
         (bool success, ) = _recipient.call{ value: _amount }("");
-        if(!success) {
+        if (!success) {
             revert CannotWithdraw();
         }
         emit Withdraw(msg.sender, _recipient, _amount);

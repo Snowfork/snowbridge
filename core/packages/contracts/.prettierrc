@@ -7,7 +7,8 @@
           "tabWidth": 4,
           "singleQuote": false,
           "bracketSpacing": true,
-          "explicitTypes": "always"
+          "explicitTypes": "always",
+          "plugins": ["prettier-plugin-solidity"]
         }
       },
       {

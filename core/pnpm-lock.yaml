@@ -4,8 +4,10 @@ importers:
 
   .:
     specifiers:
+      husky: ^8.0.1
       turbo: ^1.6.3
     devDependencies:
+      husky: 8.0.2
       turbo: 1.6.3
 
   packages/api:
@@ -85,7 +87,7 @@ importers:
       merkletreejs: ^0.2.18
       mocha: ^10.1.0
       prettier: ^2.6.2
-      prettier-plugin-solidity: ^1.0.0-beta.19
+      prettier-plugin-solidity: ^1.0.0
       rlp: ^2.2.6
       secp256k1: ^4.0.2
       seedrandom: ^3.0.5
@@ -144,7 +146,7 @@ importers:
       merkletreejs: 0.2.32
       mocha: 10.1.0
       prettier: 2.7.1
-      prettier-plugin-solidity: 1.0.0-rc.1_prettier@2.7.1
+      prettier-plugin-solidity: 1.0.0_prettier@2.7.1
       rlp: 2.2.7
       secp256k1: 4.0.3
       seedrandom: 3.0.5
@@ -8168,6 +8170,12 @@ packages:
       ms: 2.1.3
     dev: true
 
+  /husky/8.0.2:
+    resolution: {integrity: sha512-Tkv80jtvbnkK3mYWxPZePGFpQ/tT3HNSs/sasF9P2YfkMezDl3ON37YN6jUUI4eTg5LcyVynlb6r4eyvOmspvg==}
+    engines: {node: '>=14'}
+    hasBin: true
+    dev: true
+
   /hyperlinker/1.0.0:
     resolution: {integrity: sha512-Ty8UblRWFEcfSuIaajM34LdPXIhbs1ajEX/BBPv24J+enSVaEVY63xQ6lTO9VRYS5LAoghIG0IDJ+p+IPzKUQQ==}
     engines: {node: '>=4'}
@@ -10872,8 +10880,8 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /prettier-plugin-solidity/1.0.0-rc.1_prettier@2.7.1:
-    resolution: {integrity: sha512-horUGyCBbfNHWvJ44UVEcsfVySEoG2gxGs7TcBfTZWNvD4VU6rjzwAkrUtKV6VvRZWn9dh01XZ2UhhB3eVnMXQ==}
+  /prettier-plugin-solidity/1.0.0_prettier@2.7.1:
+    resolution: {integrity: sha512-gRJCeZ7imbWtNYN2SudjJoPmka5r6jcd2cSTV6FC3pVCtY6LFZbeQQjpKufUEp88hXBAAnkOTOh7TA5xwj9M3A==}
     engines: {node: '>=12'}
     peerDependencies:
       prettier: ^2.3.0

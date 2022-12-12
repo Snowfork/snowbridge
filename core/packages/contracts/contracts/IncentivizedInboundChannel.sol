@@ -42,10 +42,10 @@ contract IncentivizedInboundChannel is AccessControl {
     }
 
     // Once-off post-construction call to set initial configuration.
-    function initialize(address _configUpdater, address _rewardController)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function initialize(
+        address _configUpdater,
+        address _rewardController
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Set initial configuration
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
         rewardController = RewardController(_rewardController);

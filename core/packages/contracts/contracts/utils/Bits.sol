@@ -14,11 +14,7 @@ library Bits {
 
     // Sets the bit at the given 'index' in 'self' to '0'.
     // Returns the modified value.
-    function clearBit(uint256 self, uint8 index)
-        internal
-        pure
-        returns (uint256)
-    {
+    function clearBit(uint256 self, uint8 index) internal pure returns (uint256) {
         return self & ~(ONE << index);
     }
 
@@ -26,11 +22,7 @@ library Bits {
     //  '1' - if the bit is '0'
     //  '0' - if the bit is '1'
     // Returns the modified value.
-    function toggleBit(uint256 self, uint8 index)
-        internal
-        pure
-        returns (uint256)
-    {
+    function toggleBit(uint256 self, uint8 index) internal pure returns (uint256) {
         return self ^ (ONE << index);
     }
 
@@ -52,11 +44,7 @@ library Bits {
     // Returns:
     //  'true' - if both bits are '0' or both bits are '1'
     //  'false' - otherwise
-    function bitEqual(
-        uint256 self,
-        uint256 other,
-        uint8 index
-    ) internal pure returns (bool) {
+    function bitEqual(uint256 self, uint256 other, uint8 index) internal pure returns (bool) {
         return ((self ^ other) >> index) & 1 == 0;
     }
 
@@ -67,31 +55,19 @@ library Bits {
 
     // Computes the bitwise AND of the bit at the given 'index' in 'self', and the
     // corresponding bit in 'other', and returns the value.
-    function bitAnd(
-        uint256 self,
-        uint256 other,
-        uint8 index
-    ) internal pure returns (uint8) {
+    function bitAnd(uint256 self, uint256 other, uint8 index) internal pure returns (uint8) {
         return uint8(((self & other) >> index) & 1);
     }
 
     // Computes the bitwise OR of the bit at the given 'index' in 'self', and the
     // corresponding bit in 'other', and returns the value.
-    function bitOr(
-        uint256 self,
-        uint256 other,
-        uint8 index
-    ) internal pure returns (uint8) {
+    function bitOr(uint256 self, uint256 other, uint8 index) internal pure returns (uint8) {
         return uint8(((self | other) >> index) & 1);
     }
 
     // Computes the bitwise XOR of the bit at the given 'index' in 'self', and the
     // corresponding bit in 'other', and returns the value.
-    function bitXor(
-        uint256 self,
-        uint256 other,
-        uint8 index
-    ) internal pure returns (uint8) {
+    function bitXor(uint256 self, uint256 other, uint8 index) internal pure returns (uint8) {
         return uint8(((self ^ other) >> index) & 1);
     }
 
@@ -101,11 +77,7 @@ library Bits {
     //  - '0 < numBits <= 256'
     //  - 'startIndex < 256'
     //  - 'numBits + startIndex <= 256'
-    function bits(
-        uint256 self,
-        uint8 startIndex,
-        uint16 numBits
-    ) internal pure returns (uint256) {
+    function bits(uint256 self, uint8 startIndex, uint16 numBits) internal pure returns (uint256) {
         require(0 < numBits && startIndex < 256 && startIndex + numBits <= 256, "out of bounds");
         return (self >> startIndex) & (ONES >> (256 - numBits));
     }

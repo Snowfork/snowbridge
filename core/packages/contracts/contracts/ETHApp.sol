@@ -19,13 +19,7 @@ contract ETHApp is RewardController, AccessControl {
 
     bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
 
-    event Locked(
-        address sender,
-        bytes32 recipient,
-        uint128 amount,
-        uint32 paraId,
-        uint128 fee
-    );
+    event Locked(address sender, bytes32 recipient, uint128 amount, uint32 paraId, uint128 fee);
 
     event Unlocked(bytes32 sender, address recipient, uint128 amount);
 
@@ -41,11 +35,7 @@ contract ETHApp is RewardController, AccessControl {
     // Value of transaction must fit into 128 bits.
     error MaximumAmount();
 
-    constructor(
-        address rewarder,
-        EtherVault etherVault,
-        ChannelRegistry channelRegistry
-    ) {
+    constructor(address rewarder, EtherVault etherVault, ChannelRegistry channelRegistry) {
         vault = etherVault;
         registry = channelRegistry;
         _setupRole(REWARD_ROLE, rewarder);
@@ -71,14 +61,20 @@ contract ETHApp is RewardController, AccessControl {
         }
 
         uint128 value = uint128(msg.value);
-        vault.deposit{value: msg.value}(msg.sender);
+        vault.deposit{ value: msg.value }(msg.sender);
 
         bytes memory call;
         uint64 weight;
         if (_paraID == 0) {
             (call, weight) = ETHAppPallet.mint(msg.sender, _recipient, value);
         } else {
-            (call, weight) = ETHAppPallet.mintAndForward(msg.sender, _recipient, value, _paraID, _fee);
+            (call, weight) = ETHAppPallet.mintAndForward(
+                msg.sender,
+                _recipient,
+                value,
+                _paraID,
+                _fee
+            );
         }
 
         OutboundChannel(channel).submit(msg.sender, call, weight);
@@ -86,11 +82,7 @@ contract ETHApp is RewardController, AccessControl {
         emit Locked(msg.sender, _recipient, value, _paraID, _fee);
     }
 
-    function unlock(
-        bytes32 _sender,
-        address payable _recipient,
-        uint128 _amount
-    ) external {
+    function unlock(bytes32 _sender, address payable _recipient, uint128 _amount) external {
         if (!registry.isInboundChannel(msg.sender)) {
             revert Unauthorized();
         }
@@ -99,12 +91,11 @@ contract ETHApp is RewardController, AccessControl {
         emit Unlocked(_sender, _recipient, _amount);
     }
 
-    function handleReward(address payable _relayer, uint128 _amount)
-        external
-        override
-        onlyRole(REWARD_ROLE)
-    {
-        (bool success,) = _relayer.call{value: _amount}("");
+    function handleReward(
+        address payable _relayer,
+        uint128 _amount
+    ) external override onlyRole(REWARD_ROLE) {
+        (bool success, ) = _relayer.call{ value: _amount }("");
         if (success) {
             emit Rewarded(_relayer, _amount);
         }

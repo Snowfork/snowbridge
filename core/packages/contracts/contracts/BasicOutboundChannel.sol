@@ -7,18 +7,12 @@ import "./OutboundChannel.sol";
 
 // BasicOutboundChannel is a basic channel that just sends messages with a nonce.
 contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
-
     // Governance contracts will administer using this role.
     bytes32 public constant CONFIG_UPDATE_ROLE = keccak256("CONFIG_UPDATE_ROLE");
 
     mapping(address => uint64) public nonce;
 
-    event Message(
-        address source,
-        address account,
-        uint64 nonce,
-        bytes payload
-    );
+    event Message(address source, address account, uint64 nonce, bytes payload);
 
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -28,8 +22,7 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
     function initialize(
         address _configUpdater,
         address[] memory defaultOperators
-    )
-    external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Set initial configuration
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
         for (uint i = 0; i < defaultOperators.length; i++) {

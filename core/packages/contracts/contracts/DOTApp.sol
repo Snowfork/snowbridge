@@ -20,21 +20,13 @@ contract DOTApp is FeeController, AccessControl {
     error UnknownChannel(uint32 id);
     error Unauthorized();
 
-    constructor(
-        WrappedToken _token,
-        address feeBurner,
-        ChannelRegistry channelRegistry
-    ) {
+    constructor(WrappedToken _token, address feeBurner, ChannelRegistry channelRegistry) {
         token = _token;
         registry = channelRegistry;
         _setupRole(FEE_BURNER_ROLE, feeBurner);
     }
 
-    function burn(
-        bytes32 _recipient,
-        uint256 _amount,
-        uint32 _channelID
-    ) external {
+    function burn(bytes32 _recipient, uint256 _amount, uint32 _channelID) external {
         token.burn(msg.sender, _amount);
 
         address channel = registry.outboundChannelForID(_channelID);
@@ -48,11 +40,7 @@ contract DOTApp is FeeController, AccessControl {
         emit Burned(msg.sender, _recipient, _amount);
     }
 
-    function mint(
-        bytes32 _sender,
-        address _recipient,
-        uint256 _amount
-    ) external {
+    function mint(bytes32 _sender, address _recipient, uint256 _amount) external {
         if (!registry.isInboundChannel(msg.sender)) {
             revert Unauthorized();
         }
@@ -61,11 +49,10 @@ contract DOTApp is FeeController, AccessControl {
     }
 
     // Incentivized channel calls this to charge (burn) fees
-    function handleFee(address feePayer, uint256 _amount)
-        external
-        override
-        onlyRole(FEE_BURNER_ROLE)
-    {
+    function handleFee(
+        address feePayer,
+        uint256 _amount
+    ) external override onlyRole(FEE_BURNER_ROLE) {
         token.burn(feePayer, _amount);
     }
 }

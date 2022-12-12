@@ -12,6 +12,16 @@
     },
     "lint": {
       "outputs": []
+    },
+    "format": {
+      "outputs": []
+    },
+    "size": {
+      "outputs": []
+    },
+    "coverage": {
+      "dependsOn": ["test"],
+      "outputs": []
     }
   }
 }

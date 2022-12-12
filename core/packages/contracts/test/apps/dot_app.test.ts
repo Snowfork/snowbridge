@@ -10,7 +10,7 @@ let GRANULARITY = Math.pow(10, ETHER_DECIMALS - DOT_DECIMALS)
 let wrapped = (amount: BigNumber) => {
     return {
         native: amount,
-        wrapped: amount.mul(GRANULARITY)
+        wrapped: amount.mul(GRANULARITY),
     }
 }
 
