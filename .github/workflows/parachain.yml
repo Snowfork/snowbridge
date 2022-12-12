@@ -75,7 +75,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-          toolchain: +nightly
+          toolchain: 1.62.1
           args: >-
             --manifest-path parachain/Cargo.toml
             --workspace
