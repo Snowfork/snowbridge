@@ -38,12 +38,9 @@ jobs:
           toolchain: nightly
           target: wasm32-unknown-unknown
           components: rustfmt
-      - name: rustfmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: >-
-            --manifest-path parachain/Cargo.toml
+
+      - name: Run rustfmt
+        run: rustfmt +nightly --edition 2018 --config-path rustfmt.toml
 
   check:
     runs-on: ubuntu-20.04
