@@ -39,13 +39,6 @@ jobs:
           target: wasm32-unknown-unknown
           components: rustfmt
       - name: cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          toolchain: nightly
-          args: >-
-            -- --config-path rustfmt.toml
-      - name: Run rustfmt
         run: cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
 
   check:
@@ -65,7 +58,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - name: Install Protoc
+      - name: install protoc
         uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
