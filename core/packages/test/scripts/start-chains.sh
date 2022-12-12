@@ -20,8 +20,6 @@ start_chains()
     deploy_contracts
     # 1.3 deploy relaychain&parachain with polkadot-launch
     start_polkadot_launch
-    echo "Waiting for consensus between polkadot and parachain"
-    sleep 30
     # 1.4 initialize bridge contracts
     configure_contracts
 }

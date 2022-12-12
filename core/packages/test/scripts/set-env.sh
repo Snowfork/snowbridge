@@ -37,12 +37,12 @@ address_for()
 
 trapkill() {
     trap - SIGTERM
-    kill -- -"$(ps -o pgid:1= $$)"
-    cleanup
+    pkill -P $$
 }
 
 forcekill() {
-    trap - SIGTERM
+    trapkill
+    sleep 5
     pkill -9 polkadot
     pkill -9 snowbridge-test-node
     pkill -9 snowbridge
