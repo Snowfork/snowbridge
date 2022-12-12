@@ -1,13 +1,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use snowbridge_ethereum::mpt;
 use sp_core::{H160, H256, U256};
 use sp_io::hashing::keccak_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use frame_support::{BoundedVec, traits::Get, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 
 #[cfg(feature = "std")]
 use core::fmt::Formatter;
@@ -29,7 +29,7 @@ pub struct ForkVersions {
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Fork { 
+pub struct Fork {
 	pub version: [u8; 4],
 	pub epoch: u64,
 }
@@ -37,23 +37,22 @@ pub struct Fork {
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct PublicKey(pub [u8; 48]);
 
-impl <SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>Default for InitialSync<SyncCommitteeSize, ProofSize> {
+impl<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> Default
+	for InitialSync<SyncCommitteeSize, ProofSize>
+{
 	fn default() -> Self {
-		InitialSync { 
-			header: Default::default(), 
-			current_sync_committee: Default::default(), 
-			current_sync_committee_branch: Default::default(), 
-			validators_root: Default::default(), 
+		InitialSync {
+			header: Default::default(),
+			current_sync_committee: Default::default(),
+			current_sync_committee_branch: Default::default(),
+			validators_root: Default::default(),
 		}
 	}
 }
 
-impl <SyncCommitteeSize: Get<u32>>Default for SyncCommittee<SyncCommitteeSize> {
+impl<SyncCommitteeSize: Get<u32>> Default for SyncCommittee<SyncCommitteeSize> {
 	fn default() -> Self {
-		SyncCommittee { 
-			pubkeys: Default::default(), 
-			aggregate_pubkey: Default::default(), 
-		}
+		SyncCommittee { pubkeys: Default::default(), aggregate_pubkey: Default::default() }
 	}
 }
 
@@ -64,9 +63,9 @@ impl Default for PublicKey {
 }
 
 impl MaxEncodedLen for PublicKey {
-    fn max_encoded_len() -> usize {
-        48
-    }
+	fn max_encoded_len() -> usize {
+		48
+	}
 }
 
 #[cfg(feature = "std")]
@@ -130,15 +129,13 @@ pub struct ExecutionHeaderState {
 	pub block_number: u64,
 }
 
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize, ProofSize))]
 #[codec(mel_bound())]
@@ -149,22 +146,28 @@ pub struct InitialSync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> {
 	pub validators_root: Root,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(SignatureSize, ProofSize, SyncCommitteeSize, SyncCommitteeSize))]
 #[codec(mel_bound())]
 pub struct SyncCommitteePeriodUpdate<
-	SignatureSize: Get<u32>, 
-	ProofSize: Get<u32>, 
-	SyncCommitteeSize: Get<u32>> {
+	SignatureSize: Get<u32>,
+	ProofSize: Get<u32>,
+	SyncCommitteeSize: Get<u32>,
+> {
 	pub attested_header: BeaconHeader,
 	pub next_sync_committee: SyncCommittee<SyncCommitteeSize>,
 	pub next_sync_committee_branch: BoundedVec<H256, ProofSize>,
@@ -175,22 +178,28 @@ pub struct SyncCommitteePeriodUpdate<
 	pub signature_slot: u64,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(SignatureSize, ProofSize, SyncCommitteeSize))]
 #[codec(mel_bound())]
 pub struct FinalizedHeaderUpdate<
-	SignatureSize: Get<u32>, 
-	ProofSize: Get<u32>, 
-	SyncCommitteeSize: Get<u32>>  {
+	SignatureSize: Get<u32>,
+	ProofSize: Get<u32>,
+	SyncCommitteeSize: Get<u32>,
+> {
 	pub attested_header: BeaconHeader,
 	pub finalized_header: BeaconHeader,
 	pub finality_branch: BoundedVec<H256, ProofSize>,
@@ -198,46 +207,67 @@ pub struct FinalizedHeaderUpdate<
 	pub signature_slot: u64,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize, DepositDataSize, PublicKeySize, SignatureSize, ProofSize, ProposerSlashingSize, AttesterSlashingSize,
-VoluntaryExitSize, AttestationSize, ValidatorCommitteeSize, SyncCommitteeSize))]
-#[codec(mel_bound())]
-pub struct BlockUpdate<
-	FeeRecipientSize: Get<u32>, 
-	LogsBloomSize: Get<u32>, 
-	ExtraDataSize: Get<u32>, 
-	DepositDataSize: Get<u32>, 
-	PublicKeySize: Get<u32>, 
-	SignatureSize: Get<u32>, 
-	ProofSize: Get<u32>, 
-	ProposerSlashingSize: Get<u32>, 
-	AttesterSlashingSize: Get<u32>, 
-	VoluntaryExitSize: Get<u32>,
-	AttestationSize: Get<u32>,
-	ValidatorCommitteeSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>> {
-	pub block: BeaconBlock<FeeRecipientSize, 
-	LogsBloomSize, 
-	ExtraDataSize, 
-	DepositDataSize, 
-	PublicKeySize, 
-	SignatureSize, 
-	ProofSize, 
-	ProposerSlashingSize, 
-	AttesterSlashingSize, 
+#[scale_info(skip_type_params(
+	FeeRecipientSize,
+	LogsBloomSize,
+	ExtraDataSize,
+	DepositDataSize,
+	PublicKeySize,
+	SignatureSize,
+	ProofSize,
+	ProposerSlashingSize,
+	AttesterSlashingSize,
 	VoluntaryExitSize,
 	AttestationSize,
 	ValidatorCommitteeSize,
-	SyncCommitteeSize>,
+	SyncCommitteeSize
+))]
+#[codec(mel_bound())]
+pub struct BlockUpdate<
+	FeeRecipientSize: Get<u32>,
+	LogsBloomSize: Get<u32>,
+	ExtraDataSize: Get<u32>,
+	DepositDataSize: Get<u32>,
+	PublicKeySize: Get<u32>,
+	SignatureSize: Get<u32>,
+	ProofSize: Get<u32>,
+	ProposerSlashingSize: Get<u32>,
+	AttesterSlashingSize: Get<u32>,
+	VoluntaryExitSize: Get<u32>,
+	AttestationSize: Get<u32>,
+	ValidatorCommitteeSize: Get<u32>,
+	SyncCommitteeSize: Get<u32>,
+> {
+	pub block: BeaconBlock<
+		FeeRecipientSize,
+		LogsBloomSize,
+		ExtraDataSize,
+		DepositDataSize,
+		PublicKeySize,
+		SignatureSize,
+		ProofSize,
+		ProposerSlashingSize,
+		AttesterSlashingSize,
+		VoluntaryExitSize,
+		AttestationSize,
+		ValidatorCommitteeSize,
+		SyncCommitteeSize,
+	>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub signature_slot: u64,
 }
@@ -255,7 +285,16 @@ pub struct SigningData {
 	pub domain: Domain,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[scale_info(skip_type_params(LogsBloomSize, ExtraDataSize))]
 #[codec(mel_bound())]
 pub struct ExecutionHeader<LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>> {
@@ -276,15 +315,13 @@ pub struct ExecutionHeader<LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>> {
 }
 
 /// Sync committee as it is stored in the runtime storage.
-#[derive(Encode, Decode, PartialEqNoBound, CloneNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, PartialEqNoBound, CloneNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
@@ -311,15 +348,20 @@ pub struct BeaconHeader {
 	pub body_root: Root,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(PublicKeySize, SignatureSize))]
 #[codec(mel_bound())]
@@ -332,15 +374,20 @@ pub struct DepositData<PublicKeySize: Get<u32>, SignatureSize: Get<u32>> {
 	pub signature: BoundedVec<u8, SignatureSize>,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(PublicKeySize, SignatureSize, ProofSize))]
 #[codec(mel_bound())]
@@ -349,7 +396,16 @@ pub struct Deposit<PublicKeySize: Get<u32>, SignatureSize: Get<u32>, ProofSize: 
 	pub data: DepositData<PublicKeySize, SignatureSize>,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Checkpoint {
 	pub epoch: u64,
@@ -366,15 +422,20 @@ pub struct AttestationData {
 	pub target: Checkpoint,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(ValidatorCommitteeSize, SignatureSize))]
 #[codec(mel_bound())]
@@ -385,15 +446,20 @@ pub struct IndexedAttestation<ValidatorCommitteeSize: Get<u32>, SignatureSize: G
 	pub signature: BoundedVec<u8, SignatureSize>,
 }
 
-#[derive( Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(SignatureSize))]
 #[codec(mel_bound())]
@@ -403,15 +469,20 @@ pub struct SignedHeader<SignatureSize: Get<u32>> {
 	pub signature: BoundedVec<u8, SignatureSize>,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(SignatureSize))]
 #[codec(mel_bound())]
@@ -420,15 +491,20 @@ pub struct ProposerSlashing<SignatureSize: Get<u32>> {
 	pub signed_header_2: SignedHeader<SignatureSize>,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(AttestingIndicesSize, SignatureSize))]
 #[codec(mel_bound())]
@@ -437,15 +513,20 @@ pub struct AttesterSlashing<AttestingIndicesSize: Get<u32>, SignatureSize: Get<u
 	pub attestation_2: IndexedAttestation<AttestingIndicesSize, SignatureSize>,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(ValidatorCommitteeSize, SignatureSize))]
 #[codec(mel_bound())]
@@ -472,15 +553,20 @@ pub struct Eth1Data {
 	pub block_hash: H256,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize, SignatureSize))]
 #[codec(mel_bound())]
@@ -491,19 +577,28 @@ pub struct SyncAggregate<SyncCommitteeSize: Get<u32>, SignatureSize: Get<u32>> {
 	pub sync_committee_signature: BoundedVec<u8, SignatureSize>,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize))]
 #[codec(mel_bound())]
-pub struct ExecutionPayload<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>  {
+pub struct ExecutionPayload<
+	FeeRecipientSize: Get<u32>,
+	LogsBloomSize: Get<u32>,
+	ExtraDataSize: Get<u32>,
+> {
 	pub parent_hash: H256,
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
 	pub fee_recipient: BoundedVec<u8, FeeRecipientSize>,
@@ -524,93 +619,136 @@ pub struct ExecutionPayload<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>,
 	pub transactions_root: H256,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize, DepositDataSize, PublicKeySize, SignatureSize, ProofSize, RandaoSize, ProposerSlashingSize, AttesterSlashingSize,
-VoluntaryExitSize, AttestationSize, ValidatorCommitteeSize, SyncCommitteeSize))]
+#[scale_info(skip_type_params(
+	FeeRecipientSize,
+	LogsBloomSize,
+	ExtraDataSize,
+	DepositDataSize,
+	PublicKeySize,
+	SignatureSize,
+	ProofSize,
+	RandaoSize,
+	ProposerSlashingSize,
+	AttesterSlashingSize,
+	VoluntaryExitSize,
+	AttestationSize,
+	ValidatorCommitteeSize,
+	SyncCommitteeSize
+))]
 #[codec(mel_bound())]
 pub struct Body<
-	FeeRecipientSize: Get<u32>, 
-	LogsBloomSize: Get<u32>, 
-	ExtraDataSize: Get<u32>, 
-	DepositDataSize: Get<u32>, 
-	PublicKeySize: Get<u32>, 
-	SignatureSize: Get<u32>, 
-	ProofSize: Get<u32>, 
-	ProposerSlashingSize: Get<u32>, 
-	AttesterSlashingSize: Get<u32>, 
+	FeeRecipientSize: Get<u32>,
+	LogsBloomSize: Get<u32>,
+	ExtraDataSize: Get<u32>,
+	DepositDataSize: Get<u32>,
+	PublicKeySize: Get<u32>,
+	SignatureSize: Get<u32>,
+	ProofSize: Get<u32>,
+	ProposerSlashingSize: Get<u32>,
+	AttesterSlashingSize: Get<u32>,
 	VoluntaryExitSize: Get<u32>,
 	AttestationSize: Get<u32>,
 	ValidatorCommitteeSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>> {
+	SyncCommitteeSize: Get<u32>,
+> {
 	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
 	pub randao_reveal: BoundedVec<u8, SignatureSize>,
 	pub eth1_data: Eth1Data,
 	pub graffiti: H256,
 	pub proposer_slashings: BoundedVec<ProposerSlashing<SignatureSize>, ProposerSlashingSize>,
-	pub attester_slashings: BoundedVec<AttesterSlashing<ValidatorCommitteeSize, SignatureSize>, AttesterSlashingSize>,
-	pub attestations: BoundedVec<Attestation<ValidatorCommitteeSize, SignatureSize>, AttestationSize>,
+	pub attester_slashings:
+		BoundedVec<AttesterSlashing<ValidatorCommitteeSize, SignatureSize>, AttesterSlashingSize>,
+	pub attestations:
+		BoundedVec<Attestation<ValidatorCommitteeSize, SignatureSize>, AttestationSize>,
 	pub deposits: BoundedVec<Deposit<PublicKeySize, SignatureSize, ProofSize>, DepositDataSize>,
 	pub voluntary_exits: BoundedVec<VoluntaryExit, VoluntaryExitSize>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub execution_payload: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 }
 
-#[derive(Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
-    feature = "std",
-    serde(
-        deny_unknown_fields,
-        bound(serialize = ""),
-        bound(deserialize = "")
-    )
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize, DepositDataSize, PublicKeySize, SignatureSize, ProofSize, ProposerSlashingSize, AttesterSlashingSize,
-VoluntaryExitSize, AttestationSize, ValidatorCommitteeSize, SyncCommitteeSize))]
+#[scale_info(skip_type_params(
+	FeeRecipientSize,
+	LogsBloomSize,
+	ExtraDataSize,
+	DepositDataSize,
+	PublicKeySize,
+	SignatureSize,
+	ProofSize,
+	ProposerSlashingSize,
+	AttesterSlashingSize,
+	VoluntaryExitSize,
+	AttestationSize,
+	ValidatorCommitteeSize,
+	SyncCommitteeSize
+))]
 #[codec(mel_bound())]
 pub struct BeaconBlock<
-	FeeRecipientSize: Get<u32>, 
-	LogsBloomSize: Get<u32>, 
-	ExtraDataSize: Get<u32>, 
-	DepositDataSize: Get<u32>, 
-	PublicKeySize: Get<u32>, 
-	SignatureSize: Get<u32>, 
-	ProofSize: Get<u32>, 
-	ProposerSlashingSize: Get<u32>, 
-	AttesterSlashingSize: Get<u32>, 
+	FeeRecipientSize: Get<u32>,
+	LogsBloomSize: Get<u32>,
+	ExtraDataSize: Get<u32>,
+	DepositDataSize: Get<u32>,
+	PublicKeySize: Get<u32>,
+	SignatureSize: Get<u32>,
+	ProofSize: Get<u32>,
+	ProposerSlashingSize: Get<u32>,
+	AttesterSlashingSize: Get<u32>,
 	VoluntaryExitSize: Get<u32>,
 	AttestationSize: Get<u32>,
 	ValidatorCommitteeSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>> {
+	SyncCommitteeSize: Get<u32>,
+> {
 	pub slot: u64,
 	pub proposer_index: u64,
 	pub parent_root: H256,
 	pub state_root: H256,
-	pub body: Body<FeeRecipientSize, 
-	LogsBloomSize, 
-	ExtraDataSize, 
-	DepositDataSize, 
-	PublicKeySize, 
-	SignatureSize, 
-	ProofSize, 
-	ProposerSlashingSize, 
-	AttesterSlashingSize, 
-	VoluntaryExitSize,
-	AttestationSize,
-	ValidatorCommitteeSize,
-	SyncCommitteeSize>
+	pub body: Body<
+		FeeRecipientSize,
+		LogsBloomSize,
+		ExtraDataSize,
+		DepositDataSize,
+		PublicKeySize,
+		SignatureSize,
+		ProofSize,
+		ProposerSlashingSize,
+		AttesterSlashingSize,
+		VoluntaryExitSize,
+		AttestationSize,
+		ValidatorCommitteeSize,
+		SyncCommitteeSize,
+	>,
 }
 
-impl <S: Get<u32>, M: Get<u32>>ExecutionHeader<S, M> {
+impl<S: Get<u32>, M: Get<u32>> ExecutionHeader<S, M> {
 	// Copied from ethereum_snowbridge::header
 	pub fn check_receipt_proof(
 		&self,
@@ -649,9 +787,10 @@ impl <S: Get<u32>, M: Get<u32>>ExecutionHeader<S, M> {
 #[cfg(feature = "std")]
 fn from_hex_to_bytes<'de, D, S>(deserializer: D) -> Result<BoundedVec<u8, S>, D::Error>
 where
-	D: Deserializer<'de>, S: Get<u32>
+	D: Deserializer<'de>,
+	S: Get<u32>,
 {
-	let s = String::deserialize(deserializer)?; 
+	let s = String::deserialize(deserializer)?;
 
 	let str_without_0x = match s.strip_prefix("0x") {
 		Some(val) => val,
@@ -663,7 +802,7 @@ where
 		Err(e) => return Err(Error::custom(e.to_string())),
 	};
 
-	match BoundedVec::try_from(hex_bytes){
+	match BoundedVec::try_from(hex_bytes) {
 		Ok(bounded) => return Ok(bounded),
 		Err(_) => return Err(Error::custom("unable to create bounded vec")),
 	};
@@ -674,7 +813,7 @@ fn from_int_to_u256<'de, D>(deserializer: D) -> Result<U256, D::Error>
 where
 	D: Deserializer<'de>,
 {
-	let number = u128::deserialize(deserializer)?; 
+	let number = u128::deserialize(deserializer)?;
 
 	Ok(U256::from(number))
 }

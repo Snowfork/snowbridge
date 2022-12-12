@@ -20,7 +20,10 @@ use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
 
-use crate::{inbound as basic_inbound_channel, inbound::Error, inbound::envelope::Envelope};
+use crate::{
+	inbound as basic_inbound_channel,
+	inbound::{envelope::Envelope, Error},
+};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -90,7 +93,9 @@ impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
 	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_dispatch_event(_: MessageId) -> Option<<Test as frame_system::Config>::RuntimeEvent> {
+	fn successful_dispatch_event(
+		_: MessageId,
+	) -> Option<<Test as frame_system::Config>::RuntimeEvent> {
 		None
 	}
 }
@@ -119,8 +124,18 @@ pub fn new_tester_with_config(
 }
 
 fn parse_origin(message: Message) -> H160 {
-	let (log, _) = MockVerifier::verify(&message).map_err(|err| { println!("mock verify: {:?}", err); err }).unwrap();
-	let envelope = Envelope::try_from(log).map_err(|err| { println!("envelope: {:?}", err); err }).unwrap();
+	let (log, _) = MockVerifier::verify(&message)
+		.map_err(|err| {
+			println!("mock verify: {:?}", err);
+			err
+		})
+		.unwrap();
+	let envelope = Envelope::try_from(log)
+		.map_err(|err| {
+			println!("envelope: {:?}", err);
+			err
+		})
+		.unwrap();
 	envelope.account
 }
 

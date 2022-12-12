@@ -51,8 +51,8 @@ where
 	B::State: sc_client_api::backend::StateBackend<sp_runtime::traits::HashFor<Block>>,
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
-	use substrate_frame_rpc_system::{System, SystemApiServer};
 	use snowbridge_basic_channel_rpc::{BasicChannel, BasicChannelApiServer};
+	use substrate_frame_rpc_system::{System, SystemApiServer};
 
 	let mut module = RpcExtension::new(());
 	let FullDeps { backend, client, pool, deny_unsafe } = deps;
@@ -60,8 +60,9 @@ where
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client).into_rpc())?;
 
-	if let Some(basic_channel_rpc) =
-		backend.offchain_storage().map(|storage| BasicChannel::<_>::new(storage).into_rpc())
+	if let Some(basic_channel_rpc) = backend
+		.offchain_storage()
+		.map(|storage| BasicChannel::<_>::new(storage).into_rpc())
 	{
 		module.merge(basic_channel_rpc)?;
 	}

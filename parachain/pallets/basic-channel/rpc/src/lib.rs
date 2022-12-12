@@ -1,7 +1,7 @@
 use jsonrpsee::{
 	core::{Error, RpcResult as Result},
 	proc_macros::rpc,
-	types::error::{CallError, ErrorCode, ErrorObject}
+	types::error::{CallError, ErrorCode, ErrorObject},
 };
 
 use codec::{Decode, Encode};
@@ -43,24 +43,22 @@ where
 			.get(sp_offchain::STORAGE_PREFIX, commitment_hash.as_bytes())
 		{
 			Some(encoded_leaves) => encoded_leaves,
-			None => {
+			None =>
 				return Err(Error::Call(CallError::Custom(ErrorObject::owned(
 					ErrorCode::InvalidParams.code(),
 					"no leaves found for given commitment",
 					None::<()>,
-				))))
-			},
+				)))),
 		};
 
 		let leaves = match Leaves::decode(&mut encoded_leaves.as_ref()) {
 			Ok(leaves) => leaves,
-			Err(_) => {
+			Err(_) =>
 				return Err(Error::Call(CallError::Custom(ErrorObject::owned(
 					ErrorCode::InternalError.code(),
 					"could not decode leaves from storage",
 					None::<()>,
-				))))
-			},
+				)))),
 		};
 
 		if (leaf_index as usize) >= Vec::len(&leaves.0) {
@@ -82,7 +80,7 @@ mod tests {
 	use codec::Encode;
 	use jsonrpsee::{
 		core::Error,
-		types::error::{CallError, ErrorCode}
+		types::error::{CallError, ErrorCode},
 	};
 	use sp_core::offchain::OffchainStorage;
 

@@ -94,9 +94,7 @@ fn testnet_genesis(
 		basic_inbound_channel: snowblink_runtime::BasicInboundChannelConfig {
 			source_channel: Default::default(),
 		},
-		basic_outbound_channel: snowblink_runtime::BasicOutboundChannelConfig {
-			interval: 1,
-		},
+		basic_outbound_channel: snowblink_runtime::BasicOutboundChannelConfig { interval: 1 },
 		incentivized_inbound_channel: snowblink_runtime::IncentivizedInboundChannelConfig {
 			source_channel: Default::default(),
 			reward_fraction: Perbill::from_percent(80),

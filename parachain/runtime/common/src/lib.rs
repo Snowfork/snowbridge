@@ -20,9 +20,8 @@ where
 	) -> DispatchResult {
 		match channel_id {
 			ChannelId::Basic => basic_channel::outbound::Pallet::<T>::submit(who, target, payload),
-			ChannelId::Incentivized => {
-				incentivized_channel::outbound::Pallet::<T>::submit(who, target, payload)
-			},
+			ChannelId::Incentivized =>
+				incentivized_channel::outbound::Pallet::<T>::submit(who, target, payload),
 		}
 	}
 }

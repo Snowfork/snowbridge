@@ -16,7 +16,7 @@ use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayC
 use cumulus_relay_chain_rpc_interface::{create_client_and_start_worker, RelayChainRpcInterface};
 
 use sc_executor::NativeElseWasmExecutor;
-use sc_network::{NetworkService, NetworkBlock};
+use sc_network::{NetworkBlock, NetworkService};
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
@@ -493,20 +493,20 @@ where
 									&validation_data,
 									id,
 								).await;
-								let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+							let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
-								let slot =
+							let slot =
 										sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
 											*timestamp,
 											slot_duration,
 										);
 
-								let parachain_inherent = parachain_inherent.ok_or_else(|| {
-									Box::<dyn std::error::Error + Send + Sync>::from(
-										"Failed to create parachain inherent",
-									)
-								})?;
-								Ok((slot, timestamp, parachain_inherent))
+							let parachain_inherent = parachain_inherent.ok_or_else(|| {
+								Box::<dyn std::error::Error + Send + Sync>::from(
+									"Failed to create parachain inherent",
+								)
+							})?;
+							Ok((slot, timestamp, parachain_inherent))
 						}
 					},
 					block_import: client.clone(),

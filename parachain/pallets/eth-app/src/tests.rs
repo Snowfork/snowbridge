@@ -1,4 +1,6 @@
-use crate::mock::{new_tester, AccountId, Ether, EtherApp, RuntimeEvent, RuntimeOrigin, System, Test};
+use crate::mock::{
+	new_tester, AccountId, Ether, EtherApp, RuntimeEvent, RuntimeOrigin, System, Test,
+};
 use frame_support::{
 	assert_noop, assert_ok,
 	traits::fungible::{Inspect, Mutate},
@@ -76,7 +78,10 @@ fn burn_should_emit_bridge_event() {
 			20
 		));
 
-		assert_eq!(RuntimeEvent::EtherApp(crate::Event::<Test>::Burned(bob, recipient, 20)), last_event());
+		assert_eq!(
+			RuntimeEvent::EtherApp(crate::Event::<Test>::Burned(bob, recipient, 20)),
+			last_event()
+		);
 	});
 }
 

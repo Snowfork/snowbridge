@@ -1,4 +1,6 @@
-use crate::mock::{new_tester, AccountId, Assets, Erc20App, RuntimeEvent, RuntimeOrigin, System, Test};
+use crate::mock::{
+	new_tester, AccountId, Assets, Erc20App, RuntimeEvent, RuntimeOrigin, System, Test,
+};
 use frame_support::{assert_noop, assert_ok};
 use snowbridge_core::ChannelId;
 use snowbridge_xcm_support_primitives::RemoteParachain;

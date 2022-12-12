@@ -381,10 +381,9 @@ pub fn run() -> Result<()> {
 					Err("Chain runtime doesn't support benchmarking".into())
 				}),
 				#[cfg(not(feature = "runtime-benchmarks"))]
-				BenchmarkCmd::Storage(_) => Err(
-					"Storage benchmarking can be enabled with `--features runtime-benchmarks`."
-						.into(),
-				),
+				BenchmarkCmd::Storage(_) =>
+					Err("Storage benchmarking can be enabled with `--features runtime-benchmarks`."
+						.into()),
 				#[cfg(feature = "runtime-benchmarks")]
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
 					#[cfg(feature = "snowbridge-native")]
@@ -417,7 +416,7 @@ pub fn run() -> Result<()> {
 							snowbase_runtime::RuntimeApi,
 							crate::service::SnowbaseRuntimeExecutor,
 						>(&config)?;
-						
+
 						let db = partials.backend.expose_db();
 						let storage = partials.backend.expose_storage();
 
