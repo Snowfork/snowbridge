@@ -38,7 +38,13 @@ jobs:
           toolchain: nightly
           target: wasm32-unknown-unknown
           components: rustfmt
-
+      - name: cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          toolchain: nightly
+          args: >-
+            --config-path rustfmt.toml
       - name: Run rustfmt
         run: cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
 
