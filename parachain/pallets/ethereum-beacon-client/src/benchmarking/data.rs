@@ -1222,7 +1222,7 @@ pub fn sync_committee_update<
             parent_root:  hex!("0e6d03d7852fb022f4a8e5dc63522e8155a2f41a16cc8bae72aa36b31a99f44d").into(),
             state_root:  hex!("208f8fe788fd61579f1ff30104ceca45dc7580c55f4da384ee69574b3369f886").into(),
             body_root:  hex!("b0d4df4b17e8b3e91cde1b99ebd7377d67de3f118c73343dd51d82f66203b81c").into()
-        },
+        },  
 	    finality_branch: vec![
             hex!("7723020000000000000000000000000000000000000000000000000000000000").into(),
             hex!("3e506c3db25d67a9366046f6c5cca30d63b120aaaacf43c50b597c3f3b8a3fcd").into(),
