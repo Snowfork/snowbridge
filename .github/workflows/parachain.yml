@@ -71,12 +71,6 @@ jobs:
           profile: minimal
           toolchain: 1.62.1
           target: wasm32-unknown-unknown
-      - name: rustfmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: >-
-            --manifest-path parachain/Cargo.toml
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:
