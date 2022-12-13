@@ -187,8 +187,8 @@ pub mod pallet {
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 			ensure!(
-				<MessageQueue<T>>::decode_len().unwrap_or(0)
-					< T::MaxMessagesPerCommit::get() as usize,
+				<MessageQueue<T>>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerCommit::get() as usize,
 				Error::<T>::QueueSizeLimitReached,
 			);
 			ensure!(
@@ -198,7 +198,7 @@ pub mod pallet {
 
 			let next_id = <NextId<T>>::get();
 			if next_id.checked_add(1).is_none() {
-				return Err(Error::<T>::Overflow.into());
+				return Err(Error::<T>::Overflow.into())
 			}
 
 			// Attempt to charge a fee for message submission
@@ -221,7 +221,7 @@ pub mod pallet {
 		fn commit() -> Weight {
 			let messages = <MessageQueue<T>>::take();
 			if messages.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages();
+				return T::WeightInfo::on_initialize_no_messages()
 			}
 
 			let nonce = <Nonce<T>>::get();
