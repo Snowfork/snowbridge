@@ -39,7 +39,7 @@ jobs:
           target: wasm32-unknown-unknown
           components: rustfmt
       - name: cargo fmt
-        run: cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
+        run: cd parachain && cargo +nightly fmt -- --check --config-path rustfmt.toml && cd -
 
   check:
     runs-on: ubuntu-20.04

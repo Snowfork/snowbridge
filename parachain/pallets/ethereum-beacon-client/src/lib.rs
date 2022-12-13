@@ -25,8 +25,8 @@ use snowbridge_beacon_primitives::{
 	SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use snowbridge_core::{Message, Verifier};
-use sp_core::H256;
 use sp_io::hashing::sha2_256;
+use sp_core::H256;
 use sp_std::prelude::*;
 
 pub use pallet::*;
