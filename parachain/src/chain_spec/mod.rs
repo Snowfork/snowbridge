@@ -1,4 +1,3 @@
-
 #[cfg(feature = "snowbridge-native")]
 pub mod snowbridge;
 
@@ -10,11 +9,10 @@ pub mod snowbase;
 
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};
-use sp_core::{Pair, Public};
-use snowbridge_runtime_primitives::{Signature, AccountId};
-use sp_runtime::traits::{Verify, IdentifyAccount};
+use snowbridge_runtime_primitives::{AccountId, Signature};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-
+use sp_core::{Pair, Public};
+use sp_runtime::traits::{IdentifyAccount, Verify};
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]

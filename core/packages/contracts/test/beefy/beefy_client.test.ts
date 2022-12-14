@@ -246,9 +246,8 @@ describe("BeefyClient", function () {
             let delay = await beefyClient.connect(user).randaoCommitDelay()
             await mine(delay)
 
-            await expect(
-                beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)
-            ).to.not.be.reverted
+            await expect(beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)).to
+                .not.be.reverted
 
             await expect(
                 beefyClient.connect(user).commitPrevRandao(fixtureData.commitmentHash)
@@ -437,8 +436,8 @@ describe("BeefyClient", function () {
             payload: {
                 mmrRootHash: "0x3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c",
                 prefix: "0x0861620c0001026d6880",
-                suffix: "0x"
-            }
+                suffix: "0x",
+            },
         }
 
         let encoded = await beefyClient.encodeCommitment_public(commitment)

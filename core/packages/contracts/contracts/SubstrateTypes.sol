@@ -7,11 +7,10 @@ import "./ScaleCodec.sol";
  * @title SCALE encoders for common Substrate types
  */
 library SubstrateTypes {
-
     /**
      * @dev Encodes `MultiAddress::Id`: https://crates.parity.io/sp_runtime/enum.MultiAddress.html#variant.Id
      * @return bytes SCALE-encoded bytes
-    */
+     */
     // solhint-disable-next-line func-name-mixedcase
     function MultiAddressWithID(bytes32 account) internal pure returns (bytes memory) {
         return bytes.concat(hex"00", account);
@@ -41,10 +40,6 @@ library SubstrateTypes {
      */
     // solhint-disable-next-line func-name-mixedcase
     function SomeRemotePara(uint32 paraID, uint128 fee) internal pure returns (bytes memory) {
-        return bytes.concat(
-            hex"01",
-            ScaleCodec.encodeU32(paraID),
-            ScaleCodec.encodeU128(fee)
-        );
+        return bytes.concat(hex"01", ScaleCodec.encodeU32(paraID), ScaleCodec.encodeU128(fee));
     }
 }

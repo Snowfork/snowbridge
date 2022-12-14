@@ -120,11 +120,19 @@ fn it_tracks_only_one_finalized_ethereum_fork() {
 		//       |
 		//       B3
 		assert_err!(
-			Verifier::import_header(RuntimeOrigin::signed(ferdie.clone()), block5, Default::default(),),
+			Verifier::import_header(
+				RuntimeOrigin::signed(ferdie.clone()),
+				block5,
+				Default::default(),
+			),
 			Error::<Test>::HeaderOnStaleFork,
 		);
 		assert_err!(
-			Verifier::import_header(RuntimeOrigin::signed(ferdie.clone()), block6, Default::default(),),
+			Verifier::import_header(
+				RuntimeOrigin::signed(ferdie.clone()),
+				block6,
+				Default::default(),
+			),
 			Error::<Test>::AncientHeader,
 		);
 	});
@@ -254,7 +262,11 @@ fn it_rejects_ethereum_header_before_parent() {
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		assert_err!(
-			Verifier::import_header(RuntimeOrigin::signed(ferdie), child_of_child, Default::default(),),
+			Verifier::import_header(
+				RuntimeOrigin::signed(ferdie),
+				child_of_child,
+				Default::default(),
+			),
 			Error::<Test>::MissingParentHeader,
 		);
 	});
@@ -521,7 +533,11 @@ fn it_can_only_import_max_headers_worth_of_headers() {
 		}
 
 		assert_err!(
-			Verifier::import_header(RuntimeOrigin::signed(ferdie.clone()), last_block, Default::default(),),
+			Verifier::import_header(
+				RuntimeOrigin::signed(ferdie.clone()),
+				last_block,
+				Default::default(),
+			),
 			Error::<Test>::AtMaxHeadersForNumber
 		);
 	});

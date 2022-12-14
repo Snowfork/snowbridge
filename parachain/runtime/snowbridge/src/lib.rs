@@ -8,6 +8,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, U256};
 use sp_runtime::{
@@ -555,11 +556,11 @@ impl dispatch::Config for Runtime {
 	type CallFilter = Everything;
 }
 
-use snowbridge_incentivized_channel::{
-	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
-};
 use snowbridge_basic_channel::{
 	inbound as basic_channel_inbound, outbound as basic_channel_outbound,
+};
+use snowbridge_incentivized_channel::{
+	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
 };
 
 impl basic_channel_inbound::Config for Runtime {
@@ -612,37 +613,52 @@ impl incentivized_channel_outbound::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MaxSyncCommitteeSize: u32 = 512;
-    pub const MaxProofBranchSize: u32 = 10;
-    pub const MaxExtraDataSize: u32 = 32;
-    pub const MaxLogsBloomSize: u32 = 256;
-    pub const MaxFeeRecipientSize: u32 = 20;
-    pub const MaxDepositDataSize: u32 = 16;
-    pub const MaxPublicKeySize: u32 = 48;
-    pub const MaxSignatureSize: u32 = 96;
-    pub const MaxProposerSlashingSize: u32 = 16;
-    pub const MaxAttesterSlashingSize: u32 = 2;
-    pub const MaxVoluntaryExitSize: u32 = 16;
-    pub const MaxAttestationSize: u32 = 128;
-    pub const MaxValidatorsPerCommittee: u32 = 2048;
+	pub const MaxSyncCommitteeSize: u32 = 512;
+	pub const MaxProofBranchSize: u32 = 10;
+	pub const MaxExtraDataSize: u32 = 32;
+	pub const MaxLogsBloomSize: u32 = 256;
+	pub const MaxFeeRecipientSize: u32 = 20;
+	pub const MaxDepositDataSize: u32 = 16;
+	pub const MaxPublicKeySize: u32 = 48;
+	pub const MaxSignatureSize: u32 = 96;
+	pub const MaxProposerSlashingSize: u32 = 16;
+	pub const MaxAttesterSlashingSize: u32 = 2;
+	pub const MaxVoluntaryExitSize: u32 = 16;
+	pub const MaxAttestationSize: u32 = 128;
+	pub const MaxValidatorsPerCommittee: u32 = 2048;
+	pub const ChainForkVersions: ForkVersions = ForkVersions{
+		genesis: Fork {
+			version: [0, 0, 0, 0], // 0x00000000
+			epoch: 0,
+		},
+		altair: Fork {
+			version: [1, 0, 0, 0], // 0x01000000
+			epoch: 74240,
+		},
+		bellatrix: Fork {
+			version: [2, 0, 0, 0], // 0x02000000
+			epoch: 144896,
+		},
+	};
 }
 
 impl ethereum_beacon_client::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
-    type MaxProofBranchSize = MaxProofBranchSize;
-    type MaxExtraDataSize = MaxExtraDataSize;
-    type MaxLogsBloomSize = MaxLogsBloomSize;
-    type MaxFeeRecipientSize = MaxFeeRecipientSize;
-    type MaxDepositDataSize = MaxDepositDataSize;
-    type MaxPublicKeySize = MaxPublicKeySize;
-    type MaxSignatureSize = MaxSignatureSize;
-    type MaxProposerSlashingSize = MaxProposerSlashingSize;
-    type MaxAttesterSlashingSize = MaxAttesterSlashingSize;
-    type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
-    type MaxAttestationSize = MaxAttestationSize;
-    type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
-    type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
+	type RuntimeEvent = RuntimeEvent;
+	type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
+	type MaxProofBranchSize = MaxProofBranchSize;
+	type MaxExtraDataSize = MaxExtraDataSize;
+	type MaxLogsBloomSize = MaxLogsBloomSize;
+	type MaxFeeRecipientSize = MaxFeeRecipientSize;
+	type MaxDepositDataSize = MaxDepositDataSize;
+	type MaxPublicKeySize = MaxPublicKeySize;
+	type MaxSignatureSize = MaxSignatureSize;
+	type MaxProposerSlashingSize = MaxProposerSlashingSize;
+	type MaxAttesterSlashingSize = MaxAttesterSlashingSize;
+	type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
+	type MaxAttestationSize = MaxAttestationSize;
+	type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+	type ForkVersions = ChainForkVersions;
+	type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -823,7 +839,8 @@ pub type SignedExtra = (
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+pub type UncheckedExtrinsic =
+	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 /// Executive: handles dispatch to the various modules.

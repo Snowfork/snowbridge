@@ -12,7 +12,9 @@ describe("ERC20App", function () {
             let beforeVaultBalance = await vault.balances(token.address)
             let beforeUserBalance = await token.balanceOf(user.address)
 
-            await expect(app.connect(user).lock(token.address, POLKADOT_ADDRESS, amount, 0, 0, channelID))
+            await expect(
+                app.connect(user).lock(token.address, POLKADOT_ADDRESS, amount, 0, 0, channelID)
+            )
                 .to.emit(app, "Locked")
                 .withArgs(token.address, user.address, POLKADOT_ADDRESS, amount, 0, 0)
                 .to.emit(vault, "Deposit")
@@ -34,7 +36,9 @@ describe("ERC20App", function () {
 
             await token.connect(user).approve(app.address, amount.mul(2))
 
-            await expect(app.connect(user).lock(token.address, POLKADOT_ADDRESS, amount, 2048, 0, channelID))
+            await expect(
+                app.connect(user).lock(token.address, POLKADOT_ADDRESS, amount, 2048, 0, channelID)
+            )
                 .to.emit(app, "Locked")
                 .withArgs(token.address, user.address, POLKADOT_ADDRESS, amount, 2048, 0)
                 .to.emit(vault, "Deposit")
@@ -51,10 +55,11 @@ describe("ERC20App", function () {
             let { app, token, user } = await loadFixture(erc20AppFixture)
 
             let amount = ethers.BigNumber.from(10)
-            let channelID = 42;
+            let channelID = 42
 
-            await expect(app.connect(user).lock(token.address, POLKADOT_ADDRESS, amount, 2048, 0, channelID))
-                .to.be.revertedWithCustomError(app, "UnknownChannel")
+            await expect(
+                app.connect(user).lock(token.address, POLKADOT_ADDRESS, amount, 2048, 0, channelID)
+            ).to.be.revertedWithCustomError(app, "UnknownChannel")
         })
     })
 
@@ -73,17 +78,20 @@ describe("ERC20App", function () {
             let amount = ethers.BigNumber.from(10)
 
             await expect(app.unlock(token.address, POLKADOT_ADDRESS, user.address, amount))
-                .to.emit(app, "Unlocked").withArgs(token.address, POLKADOT_ADDRESS, user.address, amount)
-                .to.emit(vault, "Withdraw").withArgs(app.address, user.address, token.address, amount)
+                .to.emit(app, "Unlocked")
+                .withArgs(token.address, POLKADOT_ADDRESS, user.address, amount)
+                .to.emit(vault, "Withdraw")
+                .withArgs(app.address, user.address, token.address, amount)
         })
 
         it("should not unlock funds from unauthorized address", async function () {
-            let { app, vault, token, user } = await loadFixture(withdrawalsFixture)
+            let { app, token, user } = await loadFixture(withdrawalsFixture)
 
             let amount = ethers.BigNumber.from(10)
 
-            await expect(app.connect(user).unlock(token.address, POLKADOT_ADDRESS, user.address, amount))
-                .to.be.revertedWithCustomError(app, "Unauthorized")
+            await expect(
+                app.connect(user).unlock(token.address, POLKADOT_ADDRESS, user.address, amount)
+            ).to.be.revertedWithCustomError(app, "Unauthorized")
         })
 
         it("should lock not lock mimimum amount", async function () {
@@ -91,8 +99,9 @@ describe("ERC20App", function () {
 
             let amount = ethers.BigNumber.from(0)
 
-            await expect(app.unlock(token.address, POLKADOT_ADDRESS, user.address, amount))
-                .to.be.revertedWithCustomError(app, "MinimumAmount")
+            await expect(
+                app.unlock(token.address, POLKADOT_ADDRESS, user.address, amount)
+            ).to.be.revertedWithCustomError(app, "MinimumAmount")
         })
     })
 })

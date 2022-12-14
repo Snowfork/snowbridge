@@ -8,7 +8,7 @@ import {
     ERC20Vault__factory,
     DOTApp__factory,
     WrappedToken__factory,
-    TestToken__factory
+    TestToken__factory,
 } from "../../src"
 
 export { ethAppFixture, erc20AppFixture, dotAppFixture }
@@ -31,7 +31,7 @@ async function baseFixture() {
         registry,
         mockOutboundChannel,
         owner,
-        user
+        user,
     }
 }
 
@@ -55,7 +55,7 @@ async function ethAppFixture() {
         vault,
         owner,
         user,
-        channelID: 0
+        channelID: 0,
     }
 }
 
@@ -82,7 +82,7 @@ async function erc20AppFixture() {
         token,
         owner,
         user,
-        channelID: 0
+        channelID: 0,
     }
 }
 
@@ -106,6 +106,6 @@ async function dotAppFixture() {
         token,
         owner,
         user,
-        channelID: 0
+        channelID: 0,
     }
 }

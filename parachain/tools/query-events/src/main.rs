@@ -8,14 +8,15 @@ use std::{
 };
 use subxt::{ext::sp_core::H256, OnlineClient, PolkadotConfig};
 
-#[cfg_attr(feature = "parachain-snowbase",
-  subxt::subxt(runtime_metadata_path = "metadata-snowbase.scale")
+#[cfg_attr(
+	feature = "parachain-snowbase",
+	subxt::subxt(runtime_metadata_path = "metadata-snowbase.scale")
 )]
-#[cfg_attr(feature = "parachain-snowblink",
-  subxt::subxt(runtime_metadata_path = "metadata-snowblink.scale")
+#[cfg_attr(
+	feature = "parachain-snowblink",
+	subxt::subxt(runtime_metadata_path = "metadata-snowblink.scale")
 )]
 pub mod runtime {}
-
 
 #[derive(Debug, Serialize)]
 struct Items {
@@ -55,22 +56,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let mut items: Vec<Item> = Vec::new();
 
 	for ev in events.find::<runtime::basic_outbound_channel::events::Committed>() {
-		if let Ok(runtime::basic_outbound_channel::events::Committed { hash , data }) = ev {
-			items.push(Item {
-				id: 0,
-				hash: hash.encode(),
-				data: data.encode(),
-			});
+		if let Ok(runtime::basic_outbound_channel::events::Committed { hash, data }) = ev {
+			items.push(Item { id: 0, hash: hash.encode(), data: data.encode() });
 		}
 	}
 
 	for ev in events.find::<runtime::incentivized_outbound_channel::events::Committed>() {
-		if let Ok(runtime::incentivized_outbound_channel::events::Committed { hash , data }) = ev {
-			items.push(Item {
-				id: 1,
-				hash: hash.encode(),
-				data: data.encode(),
-			});
+		if let Ok(runtime::incentivized_outbound_channel::events::Committed { hash, data }) = ev {
+			items.push(Item { id: 1, hash: hash.encode(), data: data.encode() });
 		}
 	}
 

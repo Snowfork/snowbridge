@@ -1,8 +1,8 @@
 use super::*;
 
+use crate::Pallet as EthereumBeaconClient;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
-use crate::Pallet as EthereumBeaconClient;
 
 mod data;
 
@@ -14,11 +14,11 @@ benchmarks! {
 		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone()).unwrap();
 
 		let update = data::sync_committee_update();
-        
-    }: sync_committee_period_update(RawOrigin::Signed(caller.clone()), update.clone())
-    verify {
-        assert!(<SyncCommittees<T>>::get(update.sync_committee_period+1).pubkeys.len() > 0);
-    }
+
+	}: sync_committee_period_update(RawOrigin::Signed(caller.clone()), update.clone())
+	verify {
+		assert!(<SyncCommittees<T>>::get(update.sync_committee_period+1).pubkeys.len() > 0);
+	}
 
 	import_finalized_header {
 		let caller: T::AccountId = whitelisted_caller();
@@ -36,8 +36,8 @@ benchmarks! {
 
 		let header_hash: H256 = header_hash_bytes.into();
 
-        <FinalizedBeaconHeaders<T>>::get(header_hash).unwrap();
-    }
+		<FinalizedBeaconHeaders<T>>::get(header_hash).unwrap();
+	}
 
 	import_execution_header {
 		let caller: T::AccountId = whitelisted_caller();
@@ -54,12 +54,12 @@ benchmarks! {
 	verify {
 		let block_hash: H256 = block_update.block.body.execution_payload.block_hash;
 
-        <ExecutionHeaders<T>>::get(block_hash).unwrap();
-    }
+		<ExecutionHeaders<T>>::get(block_hash).unwrap();
+	}
 }
 
 impl_benchmark_test_suite!(
 	EthereumBeaconClient,
-	crate::mock::new_tester(),
-	crate::mock::Test,
+	crate::mock::new_tester::<crate::mock::mock_mainnet::Test>(),
+	crate::mock::mock_mainnet::Test,
 );

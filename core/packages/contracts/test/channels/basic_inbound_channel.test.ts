@@ -1,5 +1,9 @@
 import { ethers, expect, loadFixture, anyValue, deployMockContract } from "../setup"
-import { MerkleProof__factory, BasicInboundChannel__factory, ParachainClient__factory } from "../../src"
+import {
+    MerkleProof__factory,
+    BasicInboundChannel__factory,
+    ParachainClient__factory,
+} from "../../src"
 import submitInput from "./data/basic-commitment.json"
 
 describe("BasicInboundChannel", function () {

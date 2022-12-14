@@ -104,7 +104,7 @@ pub mod pallet {
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
 			if envelope.channel != <SourceChannel<T>>::get() {
-				return Err(Error::<T>::InvalidSourceChannel.into());
+				return Err(Error::<T>::InvalidSourceChannel.into())
 			}
 
 			// Verify message nonce

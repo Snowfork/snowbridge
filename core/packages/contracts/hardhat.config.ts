@@ -13,7 +13,7 @@ import "./tasks/contractAddress"
 import "tsconfig-paths/register"
 
 import type { HardhatUserConfig } from "hardhat/config"
-import { ethers } from 'ethers';
+import { ethers } from "ethers"
 
 let INFURA_KEY = process.env.INFURA_PROJECT_ID
 let ROPSTEN_KEY =
@@ -28,17 +28,17 @@ const config: HardhatUserConfig = {
                 mnemonic:
                     "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
                 // Need to give huge account balance to test certain constraints in EthApp.sol::lock()
-                accountsBalance: "350000000000000000000000000000000000000"
+                accountsBalance: "350000000000000000000000000000000000000",
             },
-            chainId: 15
+            chainId: 15,
         },
         localhost: {
             url: "http://127.0.0.1:8545",
             accounts: {
                 mnemonic:
-                    "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
+                    "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
             },
-            chainId: 15
+            chainId: 15,
         },
         goerli: {
             chainId: 5,
@@ -53,33 +53,41 @@ const config: HardhatUserConfig = {
         settings: {
             optimizer: {
                 enabled: true,
-                runs: 200
-            }
-        }
+                runs: 200,
+            },
+        },
     },
     paths: {
         sources: "contracts",
         // deployments: ".deployments",
         tests: "test",
         cache: ".cache",
-        artifacts: "artifacts"
+        artifacts: "artifacts",
     },
     mocha: {
-        timeout: 60000
+        timeout: 60000,
+        // parallel: true,
+        // jobs: 4,
     },
     etherscan: {
-        apiKey: ETHERSCAN_KEY
+        apiKey: ETHERSCAN_KEY,
     },
     gasReporter: {
         enabled: process.env.REPORT_GAS ? true : false,
         currency: "USD",
-        coinmarketcap: process.env.COINMARKETCAP_API_KEY
+        coinmarketcap: process.env.COINMARKETCAP_API_KEY,
     },
     typechain: {
         outDir: "src",
         target: "ethers-v5",
-        alwaysGenerateOverloads: false // should overloads with full signatures like deposit(uint256) be generated always, even if there are no overloads?
-    }
+        alwaysGenerateOverloads: false, // should overloads with full signatures like deposit(uint256) be generated always, even if there are no overloads?
+    },
+    contractSizer: {
+        alphaSort: true,
+        runOnCompile: false,
+        disambiguatePaths: false,
+        except: ["Mock*"],
+    },
 }
 
 export default config
