@@ -25,3 +25,5 @@ export POLKADOT_BIN=/path/to/polkadot/target/release/polkadot
 # POLKADOT_DIR=                       # Relaychain dir, default value: $root_dir/relaychain
 
 # POLKADOT_BIN=                       # Relaychain binary, default value: $POLKADOT_DIR/target/release/polkadot
+
+# POLKADOT_VER=                       # Relaychain version, default value: v0.9.30

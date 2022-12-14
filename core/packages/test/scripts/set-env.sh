@@ -1,7 +1,7 @@
 root_dir="$(realpath ../../..)"
 relaychain_dir="${POLKADOT_DIR:-$root_dir/relaychain}"
+relaychain_version="${POLKADOT_VER:-v0.9.30}"
 relaychain_bin="${POLKADOT_BIN:-$relaychain_dir/target/release/polkadot}"
-relaychain_version="v0.9.30"
 parachain_dir="$root_dir/parachain"
 parachain_runtime="${PARACHAIN_RUNTIME:-snowbase}"
 parachain_bin="$parachain_dir/target/release/snowbridge"
