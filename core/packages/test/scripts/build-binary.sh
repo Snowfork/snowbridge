@@ -21,6 +21,7 @@ rebuild_relaychain(){
     git checkout $relaychain_version
     cargo build --release
     popd
+    cp "$relaychain_bin" "$output_bin_dir"
 }
 
 build_parachain()
@@ -58,15 +59,7 @@ build_relayer()
 
 install_binary() {
     echo "Building and installing binaries."
-    if [ ! -f "$relaychain_bin" ]; then
-        build_relaychain
-    fi
-
-    if [ ! -f "$parachain_bin" ]; then
-        build_parachain
-    fi
-
-    if [ ! -f "$relay_bin" ]; then
-        build_relayer
-    fi
+    build_relaychain
+    build_parachain
+    build_relayer
 }
