@@ -57,7 +57,7 @@ start_lodestar() {
             --params.ALTAIR_FORK_EPOCH 0 \
             --params.BELLATRIX_FORK_EPOCH 0 \
             --eth1=true \
-            --rest.namespace="beacon,config,events,node,validator,lightclient" \
+            --rest.namespace="*" \
             --jwt-secret config/jwtsecret \
             > "$output_dir/lodestar.log" 2>&1 &
     fi

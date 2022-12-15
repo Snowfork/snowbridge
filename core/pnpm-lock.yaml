@@ -164,7 +164,7 @@ importers:
 
   packages/test:
     specifiers:
-      '@chainsafe/lodestar': 1.2.1
+      '@chainsafe/lodestar': ^1.2.2
       '@polkadot/api': 9.6.2
       '@polkadot/types': 9.6.2
       '@polkadot/util': 10.1.11
@@ -192,7 +192,7 @@ importers:
       ws: ^7.4.6
       yargs: ^17.0.1
     devDependencies:
-      '@chainsafe/lodestar': 1.2.1_fastify@3.15.1
+      '@chainsafe/lodestar': 1.2.2_fastify@3.15.1
       '@polkadot/api': 9.6.2
       '@polkadot/types': 9.6.2
       '@polkadot/util': 10.1.11
@@ -661,8 +661,8 @@ packages:
       - supports-color
     dev: true
 
-  /@chainsafe/lodestar/1.2.1_fastify@3.15.1:
-    resolution: {integrity: sha512-oFs8Qq6d7fj5kjHsdo/9NuB9kAPOH3h6G6riATaczJW+5LhfPF86r/zmC0wImA5qA0P9C5iUBqgkads8CTNFdA==}
+  /@chainsafe/lodestar/1.2.2_fastify@3.15.1:
+    resolution: {integrity: sha512-bi1p8x4je9kVfJtxODMcvOEdMbu5W3wNWXDFkl/bgdY+8+YNMZXoRe/g1fVIFi2mGTDP2/dg14+VuAMTbcPSbg==}
     hasBin: true
     dependencies:
       '@chainsafe/as-sha256': 0.3.1
@@ -3681,14 +3681,16 @@ packages:
     engines: {node: '>= 6'}
     dev: true
 
-  /@truffle/hdwallet-provider/2.1.2_@babel+core@7.19.6:
-    resolution: {integrity: sha512-nVkGeQBtgMO8tj3DSGFAKv/T8pgPyu62pWycvgWRSXps8cwlqQ+0YfqYG7Tw3ivbXifCtQ2HkwZH+6jDESi4UQ==}
+  /@truffle/hdwallet-provider/2.1.3_@babel+core@7.19.6:
+    resolution: {integrity: sha512-XOA5AJou4FrHiJEgcewq+86iWJm2t6HrLV5ixGMjULdV+iJzBMtBqOdNM+l8DPSOEIZ3XExOlpZ9PDGs/mD6Uw==}
     dependencies:
       '@ethereumjs/common': 2.6.5
       '@ethereumjs/tx': 3.5.2
       '@metamask/eth-sig-util': 4.0.1
       '@truffle/hdwallet': 0.1.1
+      '@types/ethereum-protocol': 1.0.2
       '@types/web3': 1.0.20
+      '@types/web3-provider-engine': 14.0.1
       ethereum-cryptography: 1.1.2
       ethereum-protocol: 1.0.1
       ethereumjs-util: 7.1.5
@@ -3822,6 +3824,12 @@ packages:
     resolution: {integrity: sha512-OAruArypdNxR/tzbmrtoyEuXeNTLaZCpO19BXaNC10T5ACIbvjmvhmV2RDEy2eLc3w8IjK7SY3cvUCcAW+sfoQ==}
     dependencies:
       '@types/node': 18.11.9
+    dev: true
+
+  /@types/ethereum-protocol/1.0.2:
+    resolution: {integrity: sha512-Ri/hwt4UckZlF7eqhhAQcXsNvcgQmSJOKZteLco1/5NsRcneW/cJuQcrQNILN2Ohs9WUQjeGW3ZRRNqkEVMzuQ==}
+    dependencies:
+      bignumber.js: 7.2.1
     dev: true
 
   /@types/form-data/0.0.33:
@@ -3973,6 +3981,12 @@ packages:
 
   /@types/uuid/8.3.4:
     resolution: {integrity: sha512-c/I8ZRb51j+pYGAu5CrFMRxqZ2ke4y2grEBO5AUjgSkSk+qT2Ea+OdWElz/OiMf5MNpn2b17kuVBwZLQJXzihw==}
+    dev: true
+
+  /@types/web3-provider-engine/14.0.1:
+    resolution: {integrity: sha512-SaAfLJY/40wKFDsNFwaNfwqFSL6kVhTx9JD18qM+Gaw1qdAXLYF/6E7TIqWEdoG4so6fki/zxURP5NsoCePYJw==}
+    dependencies:
+      '@types/ethereum-protocol': 1.0.2
     dev: true
 
   /@types/web3/1.0.20:
@@ -4687,6 +4701,10 @@ packages:
   /bigint-mod-arith/3.1.2:
     resolution: {integrity: sha512-nx8J8bBeiRR+NlsROFH9jHswW5HO8mgfOSqW0AmjicMMvaONDa8AO+5ViKDUUNytBPWiwfvZP4/Bj4Y3lUfvgQ==}
     engines: {node: '>=10.4.0'}
+    dev: true
+
+  /bignumber.js/7.2.1:
+    resolution: {integrity: sha512-S4XzBk5sMB+Rcb/LNcpzXr57VRTxgAvaAEDAl1AwRx27j00hT84O6OkteE7u8UB3NuaaygCRrEpqox4uDOrbdQ==}
     dev: true
 
   /bignumber.js/9.1.0:
@@ -6118,6 +6136,7 @@ packages:
 
   /encoding/0.1.13:
     resolution: {integrity: sha512-ETBauow1T35Y/WZMkio9jiM0Z5xjHHmJ4XmjZOq1l/dXz3lr2sRn87nJy20RupqSh1F2m3HHPSp8ShIPQJrJ3A==}
+    requiresBuild: true
     dependencies:
       iconv-lite: 0.6.3
     dev: true
@@ -11959,7 +11978,7 @@ packages:
   /solidity-bytes-utils/0.1.2_@babel+core@7.19.6:
     resolution: {integrity: sha512-KZLZ4r86EDVQZcxGD5IZfN+06SzXtUaOKbMZgd7g0HR5MAdpdycIZ1wm1+QEOZjPaaiIgzk2vXhTWErOTE03jg==}
     dependencies:
-      '@truffle/hdwallet-provider': 2.1.2_@babel+core@7.19.6
+      '@truffle/hdwallet-provider': 2.1.3_@babel+core@7.19.6
     transitivePeerDependencies:
       - '@babel/core'
       - bufferutil
