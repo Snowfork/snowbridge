@@ -111,6 +111,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
+		type WeakSubjectivityPeriod: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -173,6 +174,9 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type LatestFinalizedHeaderImportBlockNumber<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestExecutionHeaderState<T: Config> =
@@ -387,6 +391,15 @@ pub mod pallet {
 		}
 
 		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
+			let current_block_number: u32 = <frame_system::Pallet<T>>::block_number();
+			let mut last_finalized_block_number = <LatestFinalizedHeaderImportBlockNumber<T>>::get();
+
+			let weakSubjectivityPeriodCheck = last_finalized_block_number + T::WeakSubjectivityPeriod::get();
+
+			if current_block_number > weakSubjectivityPeriodCheck {
+				panic!("weak subjectvity period expired, reinitialize bridge")
+			}
+
 			let sync_committee_bits =
 				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;

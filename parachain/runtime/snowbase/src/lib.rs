@@ -153,7 +153,7 @@ impl frame_system::Config for Runtime {
 	type BlockHashCount = BlockHashCount;
 	/// The weight of database operations that the runtime can invoke.
 	type DbWeight = RocksDbWeight;
-	/// Version of the runtime.
+	/// Version of the runtime. 
 	type Version = Version;
 	/// Converts a module to the index of the module in `construct_runtime!`.
 	///
@@ -628,6 +628,7 @@ parameter_types! {
 	pub const MaxVoluntaryExitSize: u32 = 16;
 	pub const MaxAttestationSize: u32 = 128;
 	pub const MaxValidatorsPerCommittee: u32 = 2048;
+	pub const WeakSubjectivityPeriod: u32 = 27 * HOURS;
 	pub const ChainForkVersions: ForkVersions = ForkVersions{
 		genesis: Fork {
 			version: [0, 0, 0, 1], // 0x00000001
@@ -660,6 +661,7 @@ impl ethereum_beacon_client::Config for Runtime {
 	type MaxAttestationSize = MaxAttestationSize;
 	type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 	type ForkVersions = ChainForkVersions;
+	type WeakSubjectivityPeriod = WeakSubjectivityPeriod;
 	type WeightInfo = weights::ethereum_beacon_client::SnowbridgeWeight<Self>;
 }
 
