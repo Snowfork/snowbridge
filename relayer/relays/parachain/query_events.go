@@ -73,6 +73,10 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 		return nil, err
 	}
 
+	log.WithFields(log.Fields{
+		"inputItems": items,
+	}).Info("parachain.QueryEvents")
+
 	var events Events
 
 	for _, item := range items.Items {
@@ -107,6 +111,9 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 			return nil, fmt.Errorf("unknown channel")
 		}
 	}
+	log.WithFields(log.Fields{
+		"events": events,
+	}).Info("parachain.QueryEvents")
 
 	return &events, nil
 }
