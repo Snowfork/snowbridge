@@ -14,8 +14,8 @@ import (
 )
 
 type PolkadotListener struct {
-	config *Config
-	conn   *relaychain.Connection
+	config              *Config
+	conn                *relaychain.Connection
 	beefyAuthoritiesKey types.StorageKey
 }
 

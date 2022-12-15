@@ -236,7 +236,7 @@ func CalculateMerkleRoot(proof *SimplifiedMMRProof, leafHash types.H256) types.H
 	currentHash := leafHash[:]
 
 	for i := 0; i < int(len(proof.MerkleProofItems)); i++ {
-		isSiblingLeft := (proof.MerkleProofOrder >> i) & 1 == 1
+		isSiblingLeft := (proof.MerkleProofOrder>>i)&1 == 1
 		sibling := proof.MerkleProofItems[i]
 
 		var buf []byte

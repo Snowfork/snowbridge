@@ -229,7 +229,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 			NextAuthoritySetLen:  uint32(proof.MMRProof.Leaf.BeefyNextAuthoritySet.Len),
 			NextAuthoritySetRoot: proof.MMRProof.Leaf.BeefyNextAuthoritySet.Root,
 		},
-		LeafProof: merkleProofItems,
+		LeafProof:      merkleProofItems,
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
@@ -319,7 +319,7 @@ func (wr *EthereumWriter) WriteIncentivizedChannel(
 			NextAuthoritySetLen:  uint32(proof.MMRProof.Leaf.BeefyNextAuthoritySet.Len),
 			NextAuthoritySetRoot: proof.MMRProof.Leaf.BeefyNextAuthoritySet.Root,
 		},
-		LeafProof: merkleProofItems,
+		LeafProof:      merkleProofItems,
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 

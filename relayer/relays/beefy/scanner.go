@@ -219,8 +219,8 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 
 			if !proofIsValid {
 				log.WithFields(log.Fields{
-					"parentNumber": blockNumber,
-					"leafIndex": leafIndex,
+					"parentNumber":   blockNumber,
+					"leafIndex":      leafIndex,
 					"beefyBlockHash": blockHash,
 					"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
 				}).Info("Proof for leaf is invalid")
