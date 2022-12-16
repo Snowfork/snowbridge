@@ -140,6 +140,7 @@ start_relayer()
         echo "Waiting for beacon relay to sync headers..."
         sleep 5
     done
+    echo "Ready for beacon relayer to sync headers"
 }
 
 if [ -z "${from_start_services:-}" ]; then

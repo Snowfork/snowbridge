@@ -51,6 +51,7 @@ kill_chains() {
     pkill -9 polkadot
     pkill -9 snowbridge-test-node
     pkill -9 snowbridge
+    pkill -9 -f polkadot-launch
     pkill -9 -f lodestar
     pkill -9 geth
 }

@@ -65,13 +65,9 @@ start_lodestar() {
 
 deploy_contracts()
 {
-    echo "Deploying contracts"
-    (
-        pushd "$ethereum_dir"
-        npx hardhat deploy --network $eth_network --reset --export "$output_dir/contracts.json"
-        popd
-    )
-
+    pushd "$ethereum_dir"
+    npx hardhat deploy --network $eth_network --reset --export "$output_dir/contracts.json"
+    popd
     echo "Exported contract artifacts: $output_dir/contracts.json"
 }
 
