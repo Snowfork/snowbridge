@@ -29,11 +29,10 @@ source .bashrc
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash
 ```
 
-* Node 16
+* Install Node
 
 ```bash
-nvm install 16.18.1
-nvm use 16.18.1
+cd core && nvm use
 ```
 
 * Install pnpm ([https://pnpm.io/](https://pnpm.io/))
