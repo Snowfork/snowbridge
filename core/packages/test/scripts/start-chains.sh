@@ -8,7 +8,7 @@ source scripts/deploy-polkadot.sh
 source scripts/configure-contracts.sh
 
 start_chains()
-{
+{   
     # 1.1 deploy execution&consensus client
     echo "Starting execution node"
     start_geth
@@ -24,7 +24,10 @@ start_chains()
     configure_contracts
 }
 
-# trap forcekill SIGINT SIGTERM EXIT
-# check_tool && forcekill && install_binary
-# start_chains
-# wait
+if [ -z "${from_start_services:-}" ]; then
+    echo "start chains only!"
+    trap kill_all SIGINT SIGTERM EXIT
+    check_tool && cleanup && kill_all && build_parachain && start_chains
+    wait
+fi
+

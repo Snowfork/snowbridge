@@ -2,6 +2,7 @@
 set -eu
 
 source scripts/set-env.sh
+source scripts/build-binary.sh
 
 start_relayer()
 {
@@ -133,6 +134,18 @@ start_relayer()
             sleep 20
         done
     ) &
+
+    # waiting sync headers 
+    until grep "starting to sync finalized headers" beacon-relay.log > /dev/null; do
+        echo "Waiting for beacon relay to sync headers..."
+        sleep 5
+    done
 }
 
-# start_relayer
+if [ -z "${from_start_services:-}" ]; then
+    echo "start relayers only!"
+    trap kill_relayer SIGINT SIGTERM EXIT
+    check_tool && build_relayer && kill_relayer && rm -rf *relay.log && start_relayer
+    wait
+fi
+

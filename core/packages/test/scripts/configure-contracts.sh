@@ -12,5 +12,3 @@ configure_contracts()
 
     popd
 }
-
-# configure_contracts

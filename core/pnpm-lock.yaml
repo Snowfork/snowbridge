@@ -164,7 +164,7 @@ importers:
 
   packages/test:
     specifiers:
-      '@chainsafe/lodestar': ^1.2.2
+      '@chainsafe/lodestar': 1.2.2
       '@polkadot/api': 9.6.2
       '@polkadot/types': 9.6.2
       '@polkadot/util': 10.1.11

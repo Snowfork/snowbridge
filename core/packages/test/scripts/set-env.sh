@@ -35,24 +35,36 @@ address_for()
     jq -r ".contracts.${1}.address" "$output_dir/contracts.json"
 }
 
-trapkill() {
+kill_trap() {
     trap - SIGTERM
     pkill -P $$
 }
 
-forcekill() {
-    trapkill
-    sleep 5
+kill_all() {
+    kill_trap
+    kill_chains
+    kill_relayer
+}
+
+kill_chains() {
+    echo "Killing chains"
     pkill -9 polkadot
     pkill -9 snowbridge-test-node
     pkill -9 snowbridge
-    pkill -9 snowbridge-relay
     pkill -9 -f lodestar
     pkill -9 geth
-    cleanup
+}
+
+kill_relayer() {
+    echo "Killing relayer"
+    kill_trap
+    sleep 3
+    pkill -9 snowbridge-relay
+    sleep 1
 }
 
 cleanup() {
+    echo "Cleaning resource"
     rm -rf *.log
     rm -rf "$output_dir"
     mkdir "$output_dir"
@@ -96,3 +108,4 @@ check_tool() {
         fi
     fi
 }
+

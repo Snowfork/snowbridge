@@ -72,5 +72,3 @@ start_polkadot_launch()
     scripts/wait-for-it.sh -t 120 localhost:11144
     scripts/wait-for-it.sh -t 120 localhost:13144
 }
-
-# start_polkadot_launch

@@ -3,30 +3,27 @@ set -eu
 
 source scripts/set-env.sh
 source scripts/build-binary.sh
-source scripts/start-chains.sh
-source scripts/start-relayer.sh
+from_start_services=true
 
-trap forcekill SIGINT SIGTERM EXIT
-
-# 0. check required tools
+trap kill_all SIGINT SIGTERM EXIT
+kill_all && cleanup
+# 0. check required tools 
+echo "Check building tools"
 check_tool
 
-# 1. forcekill and install binary if not exist
-echo "Installing binaries if not exist"
-forcekill && install_binary
+# 1. install binary if required
+echo "Installing binaries if required"
+install_binary
 
 # 2. start ethereum and polkadot chains
 echo "Starting ethereum and polkadot chains"
+source scripts/start-chains.sh
 start_chains
 
 # 3. start relayer
+echo "Starting relayers"
+source scripts/start-relayer.sh
 start_relayer
-
-# 4. waiting sync headers 
-until grep "starting to sync finalized headers" beacon-relay.log > /dev/null; do
-    echo "Waiting for beacon relay to sync headers..."
-    sleep 5
-done
 
 echo "Testnet has been initialized"
 

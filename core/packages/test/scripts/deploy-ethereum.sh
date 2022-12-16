@@ -75,8 +75,3 @@ deploy_contracts()
     echo "Exported contract artifacts: $output_dir/contracts.json"
 }
 
-# start_geth
-# echo "Waiting for geth API to be ready"
-# sleep 3
-# start_lodestar
-# deploy_contracts

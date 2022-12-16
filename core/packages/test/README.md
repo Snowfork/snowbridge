@@ -30,9 +30,9 @@ cd ../.. && pnpm install
 
 ### Configure testnet
 
-Environment variables required are all with decent default value so normally no need to config anything but can also be overridden with an `.envrc` file, using [.envrc-example](.envrc-example) as a template. 
+All required environment variables have reasonable defaults so normally there is no need to configure them. If necessary, you can override them with an `.envrc` file, using [.envrc-example](.envrc-example) as a template.
 
-e.g: if polkadot binary already built and exist in your local host, override the `POLKADOT_BIN` variable to the location of the binary
+e.g: if a `polkadot` binary already built and exist in your local host, override the `POLKADOT_BIN` variable in `.envrc` to the location of the binary:
 
 ```
 POLKADOT_BIN=/home/sally/code/polkadot/target/release/polkadot
