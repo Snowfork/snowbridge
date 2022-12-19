@@ -176,7 +176,8 @@ pub mod pallet {
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestFinalizedHeaderImportBlockNumber<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+	pub(super) type LatestFinalizedHeaderImportBlockNumber<T: Config> =
+		StorageValue<_, T::BlockNumber, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestExecutionHeaderState<T: Config> =
@@ -393,7 +394,8 @@ pub mod pallet {
 		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
 			let current_block_number = <frame_system::Pallet<T>>::block_number();
 			let last_finalized_block_number = <LatestFinalizedHeaderImportBlockNumber<T>>::get();
-			let weak_subjectivity_period_check = last_finalized_block_number + T::WeakSubjectivityPeriod::get().into();
+			let weak_subjectivity_period_check =
+				last_finalized_block_number + T::WeakSubjectivityPeriod::get().into();
 
 			log::info!(
 				target: "ethereum-beacon-client",
