@@ -176,7 +176,7 @@ pub mod pallet {
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestFinalizedHeaderImportBlockNumber<T: Config> = StorageValue<_, u32, ValueQuery>;
+	pub(super) type LatestFinalizedHeaderImportBlockNumber<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestExecutionHeaderState<T: Config> =
@@ -391,12 +391,18 @@ pub mod pallet {
 		}
 
 		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
-			let current_block_number: u32 = <frame_system::Pallet<T>>::block_number();
-			let mut last_finalized_block_number = <LatestFinalizedHeaderImportBlockNumber<T>>::get();
+			let current_block_number = <frame_system::Pallet<T>>::block_number();
+			let last_finalized_block_number = <LatestFinalizedHeaderImportBlockNumber<T>>::get();
+			let weak_subjectivity_period_check = last_finalized_block_number + T::WeakSubjectivityPeriod::get().into();
 
-			let weakSubjectivityPeriodCheck = last_finalized_block_number + T::WeakSubjectivityPeriod::get();
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Checking weak subjectivity period. Current block number :{:?} Weak subjectvitity period check: {:?}.",
+				current_block_number,
+				weak_subjectivity_period_check
+			);
 
-			if current_block_number > weakSubjectivityPeriodCheck {
+			if current_block_number > weak_subjectivity_period_check.into() {
 				panic!("weak subjectvity period expired, reinitialize bridge")
 			}
 
@@ -702,6 +708,10 @@ pub mod pallet {
 				);
 				<LatestFinalizedHeaderSlot<T>>::set(slot);
 				<LatestFinalizedHeaderHash<T>>::set(block_root);
+
+				let current_block_number = <frame_system::Pallet<T>>::block_number();
+
+				<LatestFinalizedHeaderImportBlockNumber<T>>::set(current_block_number);
 			}
 
 			Self::deposit_event(Event::BeaconHeaderImported { block_hash: block_root, slot });
