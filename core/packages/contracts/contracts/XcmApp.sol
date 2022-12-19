@@ -14,10 +14,8 @@ contract Proxy is Ownable {
     /// @param _executor The address of the XCM executor.
     /// @param _payload The XCM payload.
     /// @return bool than indicates success of the call.
-    function execute(address _executor, bytes calldata _payload) external onlyOwner returns(bool) { 
-        (bool success, ) = _executor.delegatecall(
-            _payload
-        );
+    function execute(address _executor, bytes calldata _payload) external onlyOwner returns (bool) {
+        (bool success, ) = _executor.delegatecall(_payload);
         return success;
     }
 }
@@ -63,7 +61,9 @@ contract XcmApp {
         if (!registry.isInboundChannel(msg.sender)) {
             revert Unauthorized();
         }
-        if(executors[_version] != address(0)) { revert ExecutorExists(); }
+        if (executors[_version] != address(0)) {
+            revert ExecutorExists();
+        }
         executors[_version] = _executor;
     }
 
@@ -74,7 +74,9 @@ contract XcmApp {
         if (!registry.isInboundChannel(msg.sender)) {
             revert Unauthorized();
         }
-        if(executors[_version] == address(0)) { revert ExecutorNotFound(); }
+        if (executors[_version] == address(0)) {
+            revert ExecutorNotFound();
+        }
         delete executors[_version];
     }
 
@@ -82,7 +84,7 @@ contract XcmApp {
     /// @param _origin The hashed origin.
     /// @param _executor The identifier for the executor version.
     /// @param _payload The XCM payload to be executed.
-    function dispatchToProxy(bytes32 _origin, bytes8 _executor, bytes  calldata _payload) external {
+    function dispatchToProxy(bytes32 _origin, bytes8 _executor, bytes calldata _payload) external {
         // TODO: Should permissionless channels be able to call in here???
         if (!registry.isInboundChannel(msg.sender)) {
             revert Unauthorized();
@@ -90,17 +92,17 @@ contract XcmApp {
 
         Proxy proxy = proxies[_origin];
         // JIT create proxy if it does not exist.
-        if(proxy == Proxy(address(0))) {
+        if (proxy == Proxy(address(0))) {
             proxy = new Proxy();
             proxies[_origin] = proxy;
         }
 
         // Find an approved executor.
         address executor = executors[_executor];
-        if(executor == address(0)) {
+        if (executor == address(0)) {
             revert ExecutorNotFound();
         }
-        
+
         // Dispatch to proxy.
         bool success = proxy.execute(executor, _payload);
         emit XcmExecuted(_origin, proxy, executor, success);
@@ -110,11 +112,11 @@ contract XcmApp {
 /// @dev A mock Xcm Executor.
 contract TestXcmExecutor {
     /// @dev The entry point for an payload.
-    function execute(bytes[] calldata instructions) external { 
+    function execute(bytes[] calldata instructions) external {
         // TODO: registers
         // origin, holding, etc...
 
-        for(uint i = 0; i < instructions.length; i++) {
+        for (uint i = 0; i < instructions.length; i++) {
             if (instructions[i][0] == 0) {
                 // Instruct 0x00 = XcmTransact
                 bytes memory data = instructions[i][1:];
@@ -128,7 +130,7 @@ contract TestXcmExecutor {
 
     /// @dev simulates a single transact instruct.
     function XcmTransact(address target, bytes memory payload) internal {
-        (bool success,) = target.call(payload);
+        (bool success, ) = target.call(payload);
         require(success, "Transact failed");
     }
 }
@@ -137,7 +139,7 @@ contract TestXcmExecutor {
 contract DownstreamTestApp {
     event RecordSender(address sender);
 
-    function doSomethingInteresting() external { 
+    function doSomethingInteresting() external {
         emit RecordSender(msg.sender);
     }
 }
