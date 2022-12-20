@@ -7,8 +7,6 @@ description: Set up a development environment and run the end to end test stack.
 ### System Requirements
 
 * Ubuntu 22.04 LTS (Ubuntu 20.04 LTS should also work)
-* m5.2xlarge (8 vCPU, 32 GB of RAM)
-* 80GB of Storage
 
 ### Development Tools
 
@@ -31,11 +29,10 @@ source .bashrc
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash
 ```
 
-* Node 16
+* Install Node
 
 ```bash
-nvm install 16.18.1
-nvm use 16.18.1
+cd core && nvm use
 ```
 
 * Install pnpm ([https://pnpm.io/](https://pnpm.io/))
@@ -173,42 +170,44 @@ When this is complete `Testnet has been initialized` will be printed to the term
     pnpm test:integration --grep 'should transfer ETH from Substrate to Ethereum \(incentivized channel\)'
     ```
 
-    ### Inspecting the E2E environment
+    ###
 
-    1.  Ethereum
+## Inspecting the E2E environment
 
-        The ethereum data directory is `/tmp/snowbridge/geth`.
+1.  Ethereum
 
-        The ethereum log file is `/tmp/snowbridge/geth.log`.
+    The ethereum data directory is `/tmp/snowbridge/geth`.
 
-        The Lodestar log file is `/tmp/snowbridge/lodestar.log`.
-    2.  Relaychain
+    The ethereum log file is `/tmp/snowbridge/geth.log`.
 
-        The relay chain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `alice.log`, `bob.log`, `charlie.log`
+    The Lodestar log file is `/tmp/snowbridge/lodestar.log`.
+2.  Relaychain
 
-        The relay chain can be accessed via the polkadot.js web using the following url:
+    The relay chain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `alice.log`, `bob.log`, `charlie.log`
 
-        [https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A9944#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A9944#/explorer)
-    3.  Parachain
+    The relay chain can be accessed via the polkadot.js web using the following url:
 
-        The Snowbridge parachain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `11144.log`, `11155.log`
+    [https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A9944#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A9944#/explorer)
+3.  Parachain
 
-        The Snowbridge parachain can be accessed via the polkadot.js web using the following url:
+    The Snowbridge parachain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `11144.log`, `11155.log`
 
-        [https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144#/explorer)
-    4.  Test Parachain
+    The Snowbridge parachain can be accessed via the polkadot.js web using the following url:
 
-        The Snowbridge Test parachain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `13144.log`, `13155.log`
+    [https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144#/explorer)
+4.  Test Parachain
 
-        The Snowbridge Test parachain can be accessed via the polkadot.js web using the following url:
+    The third-party test parachain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `13144.log`, `13155.log`
 
-        [https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A13144#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A13144#/explorer)
-    5. Relayers
+    The Snowbridge Test parachain can be accessed via the polkadot.js web using the following url:
 
-    The relayers’ log files can be found in the `core/packages/test` subdirectory of the `snowbridge` repo.
+    [https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A13144#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A13144#/explorer)
+5. Relayers
 
-    * `beacon-relay.log`
-    * `parachain-relay.log`
-    * `beefy-relay.log`
+The relayers log files can be found in the `core/packages/test` subdirectory of the `snowbridge` repo.
 
-    The`start-services.sh` script will automatically restart the relayer processes if they exit and print to the terminal. Seeing a relayer restart constantly is a sign that something might be wrong with your environment. Grepping the relayer logs will help pin point the issue.
+* `beacon-relay.log`
+* `parachain-relay.log`
+* `beefy-relay.log`
+
+The`start-services.sh` script will automatically restart the relayer processes if they exit and print to the terminal. Seeing a relayer restart constantly is a sign that something might be wrong with your environment. Grepping the relayer logs will help pin point the issue.

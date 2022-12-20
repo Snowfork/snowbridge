@@ -10,7 +10,8 @@ import type {
     BeefyId,
 } from "@polkadot/types/interfaces/beefy/types"
 
-let endpoint = process.env.RELAYCHAIN_ENDPOINT
+let endpoint = process.env.RELAYCHAIN_ENDPOINT || "ws://localhost:9944"
+const beefyStartBlock = process.env.BEEFY_START_BLOCK ? parseInt(process.env.BEEFY_START_BLOCK) : 29
 
 async function configureBeefy() {
     let [signer] = await hre.ethers.getSigners()
@@ -23,20 +24,20 @@ async function configureBeefy() {
         provider: new WsProvider(endpoint),
     })
 
-    console.log("waiting for header 29...")
+    console.log(`waiting for header ${beefyStartBlock}...`)
 
     // eslint-disable-next-line no-async-promise-executor
     await new Promise<void>(async (resolve) => {
         const unsub = await api1.rpc.chain.subscribeFinalizedHeads((header) => {
             console.log(`Header #${header.number}`)
-            if (header.number.toNumber() > 29) {
+            if (header.number.toNumber() > beefyStartBlock) {
                 unsub()
                 resolve()
             }
         })
     })
 
-    let blockHash = await api1.rpc.chain.getBlockHash(29)
+    let blockHash = await api1.rpc.chain.getBlockHash(beefyStartBlock)
 
     let api = await api1.at(blockHash)
 
@@ -70,7 +71,11 @@ async function configureBeefy() {
     console.log("Configuring BeefyClient with initial BEEFY state")
     console.log("Validator sets: ", validatorSets)
 
-    let tx = await beefyClient.initialize(29, validatorSets.current, validatorSets.next)
+    let tx = await beefyClient.initialize(
+        beefyStartBlock,
+        validatorSets.current,
+        validatorSets.next
+    )
 
     await tx.wait()
 
