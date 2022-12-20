@@ -10,16 +10,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @title Proxy
 /// @notice A simple pass through proxy.
 contract Proxy is Ownable {
-    /// @dev The signature of a function which executes xcm.
-    bytes4 private constant EXEC_XCM_FUNC = bytes4(keccak256("execute(bytes[])"));
-
     /// @dev Calls into the XCM executor
     /// @param _executor The address of the XCM executor.
     /// @param _payload The XCM payload.
     /// @return bool than indicates success of the call.
     function execute(address _executor, bytes calldata _payload) external onlyOwner returns (bool) {
-        bytes memory encodedCall = bytes.concat(EXEC_XCM_FUNC, _payload);
-        (bool success, ) = _executor.delegatecall(encodedCall);
+        (bool success, ) = _executor.delegatecall(_payload);
         return success;
     }
 }
@@ -115,18 +111,36 @@ contract XcmApp {
 
 /// @dev Executes Xcm instructions.
 contract XcmExecutor {
+
+    /// @dev Represents the type of instruction.
+    enum InstructionKind {
+        /// @dev Transact allows abritrary call to another contract.
+        Transact
+    }
+
+    /// @dev
+    struct Instruction {
+        /// @dev the type of instruction.
+        InstructionKind kind;
+        /// @dev the data provided for execution.
+        bytes arguments;
+    }
+
+    /// @dev Data needed for xcm Transact.
+    struct TransactData {
+        /// @dev The contract to call.
+        address target;
+        /// @dev The abi encoded payload with function selector.
+        bytes payload;
+    }
+
     /// @dev The entry point for an payload.
-    function execute(bytes[] calldata instructions) external {
+    function execute(Instruction[] calldata instructions) external {
         // TODO: registers like origin, holding, etc...
         for (uint i = 0; i < instructions.length; i++) {
-            bytes1 instruction = instructions[i][0];
-            if (instruction == 0x00) {
+            if (instructions[i].kind == InstructionKind.Transact) {
                 // 0x00 = Transact
-                (address target, bytes memory payload) = abi.decode(
-                    instructions[i][1:],
-                    (address, bytes)
-                );
-                transact(target, payload);
+                transact(abi.decode(instructions[i].arguments, (TransactData)));
             } else {
                 revert("Unknown instruction");
             }
@@ -134,8 +148,8 @@ contract XcmExecutor {
     }
 
     /// @dev single transact instruction.
-    function transact(address target, bytes memory payload) internal {
-        (bool success, ) = target.call(payload);
+    function transact(TransactData memory data) internal {
+        (bool success, ) = data.target.call(data.payload);
         require(success, "Transact failed");
     }
 }
