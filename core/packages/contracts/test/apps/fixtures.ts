@@ -7,11 +7,14 @@ import {
     ERC20App__factory,
     ERC20Vault__factory,
     DOTApp__factory,
+    XcmApp__factory,
+    XcmExecutor__factory,
     WrappedToken__factory,
     TestToken__factory,
+    DownstreamTestApp__factory,
 } from "../../src"
 
-export { ethAppFixture, erc20AppFixture, dotAppFixture }
+export { ethAppFixture, erc20AppFixture, dotAppFixture, xcmAppFixture }
 
 // Sets up a fixture for app dependencies (ChannelRegistry, channels, and so on)
 async function baseFixture() {
@@ -104,6 +107,28 @@ async function dotAppFixture() {
     return {
         app,
         token,
+        owner,
+        user,
+        channelID: 0,
+    }
+}
+
+async function xcmAppFixture() {
+    let { registry, owner, user } = await loadFixture(baseFixture);
+
+    let executor = await new XcmExecutor__factory(owner).deploy()
+    await executor.deployed()
+
+    let app = await new XcmApp__factory(owner).deploy(registry.address)
+    await app.deployed()
+
+    let downstream = await new DownstreamTestApp__factory(owner).deploy()
+    await downstream.deployed()
+
+    return {
+        app,
+        executor,
+        downstream,
         owner,
         user,
         channelID: 0,

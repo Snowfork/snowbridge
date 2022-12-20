@@ -10,12 +10,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @title Proxy
 /// @notice A simple pass through proxy.
 contract Proxy is Ownable {
+
+    /// @dev The signature of a function which executes xcm.
+    bytes4 private constant EXEC_XCM_FUNC = bytes4(keccak256("execute(bytes[])"));
+
     /// @dev Calls into the XCM executor
     /// @param _executor The address of the XCM executor.
     /// @param _payload The XCM payload.
     /// @return bool than indicates success of the call.
     function execute(address _executor, bytes calldata _payload) external onlyOwner returns (bool) {
-        (bool success, ) = _executor.delegatecall(_payload);
+        bytes memory encodedCall = bytes.concat(EXEC_XCM_FUNC, _payload);
+        (bool success, ) = _executor.delegatecall(encodedCall);
         return success;
     }
 }
@@ -109,27 +114,25 @@ contract XcmApp {
     }
 }
 
-/// @dev A mock Xcm Executor.
-contract TestXcmExecutor {
+/// @dev Executes Xcm instructions.
+contract XcmExecutor {
     /// @dev The entry point for an payload.
     function execute(bytes[] calldata instructions) external {
-        // TODO: registers
-        // origin, holding, etc...
-
+        // TODO: registers like origin, holding, etc...
         for (uint i = 0; i < instructions.length; i++) {
-            if (instructions[i][0] == 0) {
-                // Instruct 0x00 = XcmTransact
-                bytes memory data = instructions[i][1:];
-                (address target, bytes memory payload) = abi.decode(data, (address, bytes));
-                XcmTransact(target, payload);
+            bytes1 instruction = instructions[i][0];
+            if (instruction == 0x00) {
+                // 0x00 = Transact
+                (address target, bytes memory payload) = abi.decode(instructions[i][1:], (address, bytes));
+                transact(target, payload);
             } else {
                 revert("Unknown instruction");
             }
         }
     }
 
-    /// @dev simulates a single transact instruct.
-    function XcmTransact(address target, bytes memory payload) internal {
+    /// @dev single transact instruction.
+    function transact(address target, bytes memory payload) internal {
         (bool success, ) = target.call(payload);
         require(success, "Transact failed");
     }
