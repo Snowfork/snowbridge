@@ -23,11 +23,8 @@ describe("XCMApp", function () {
                 [{ kind: 0, arguments: transact }],
             ])
 
-            await expect(app.approveExecutor("0x0000000000000001", executor.address)).not.to.be
-                .reverted
-
             await expect(
-                app.dispatchToProxy(POLKADOT_ORIGIN, "0x0000000000000001", payload, {
+                app.dispatchToProxy(POLKADOT_ORIGIN, executor.address, payload, {
                     gasLimit: 1_000_000,
                 })
             )
