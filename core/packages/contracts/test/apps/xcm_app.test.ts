@@ -9,12 +9,11 @@ describe("XCMApp", function () {
         it("downstream sees proxy as msg.sender", async function () {
             let { app, executor, downstream, user } = await loadFixture(xcmAppFixture)
             let proxy = "0x04f9fa5a18b8A2E6486e76F66B9482DeBF012155"
+            let abi = defaultAbiCoder
 
             let encodedFunc = downstream.interface.encodeFunctionData("doSomethingInteresting")
 
-            let abi = defaultAbiCoder
             // Xcm Transact
-
             let transact = abi.encode(
                 ["tuple(address, bytes)"],
                 [[downstream.address, encodedFunc]]
