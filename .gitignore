@@ -12,3 +12,5 @@ node_modules/
 
 # asdf plugin versions
 .tool-versions
+
+relaychain/
