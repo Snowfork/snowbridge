@@ -1,3 +1,5 @@
+use core::array::TryFromSliceError;
+
 use crate::{config, ssz::*};
 use byte_slice_cast::AsByteSlice;
 use frame_support::{traits::Get, BoundedVec};
@@ -21,6 +23,20 @@ pub enum MerkleizationError {
 	InputTooShort,
 	ExtraInput,
 	InvalidInput,
+	DeserializeError,
+	ListError,
+}
+
+impl From<TryFromSliceError> for MerkleizationError {
+	fn from(_: TryFromSliceError) -> Self {
+		return MerkleizationError::InvalidLength
+	}
+}
+
+impl From<DeserializeError> for MerkleizationError {
+	fn from(_: DeserializeError) -> Self {
+		return MerkleizationError::DeserializeError
+	}
 }
 
 impl<
@@ -78,11 +94,7 @@ impl<
 		Ok(SSZBeaconBlockBody {
 			randao_reveal: Vector::<u8, 96>::from_iter(body.randao_reveal),
 			eth1_data: body.eth1_data.try_into()?,
-			graffiti: body
-				.graffiti
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
+			graffiti: body.graffiti.as_bytes().try_into()?,
 			proposer_slashings: get_ssz_proposer_slashings(body.proposer_slashings)?,
 			attester_slashings: get_ssz_attester_slashings(body.attester_slashings)?,
 			attestations: get_ssz_attestations(body.attestations)?,
@@ -103,28 +115,12 @@ impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32
 		execution_payload: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 	) -> Result<Self, Self::Error> {
 		Ok(SSZExecutionPayload {
-			parent_hash: execution_payload
-				.parent_hash
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
+			parent_hash: execution_payload.parent_hash.as_bytes().try_into()?,
 			fee_recipient: Vector::<u8, 20>::from_iter(execution_payload.fee_recipient),
-			state_root: execution_payload
-				.state_root
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
-			receipts_root: execution_payload
-				.receipts_root
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
+			state_root: execution_payload.state_root.as_bytes().try_into()?,
+			receipts_root: execution_payload.receipts_root.as_bytes().try_into()?,
 			logs_bloom: Vector::<u8, 256>::from_iter(execution_payload.logs_bloom),
-			prev_randao: execution_payload
-				.prev_randao
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
+			prev_randao: execution_payload.prev_randao.as_bytes().try_into()?,
 			block_number: execution_payload.block_number,
 			gas_limit: execution_payload.gas_limit,
 			gas_used: execution_payload.gas_used,
@@ -132,21 +128,12 @@ impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32
 			extra_data: List::<u8, { config::MAX_EXTRA_DATA_BYTES }>::try_from(
 				execution_payload.extra_data.into_inner(),
 			)
-			.map_err(|_| MerkleizationError::InvalidLength)?,
+			.map_err(|_| MerkleizationError::ListError)?,
 			base_fee_per_gas: U256::try_from_bytes_le(
 				&(execution_payload.base_fee_per_gas.as_byte_slice()),
-			)
-			.map_err(|_| MerkleizationError::InvalidLength)?,
-			block_hash: execution_payload
-				.block_hash
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
-			transactions_root: execution_payload
-				.transactions_root
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
+			)?,
+			block_hash: execution_payload.block_hash.as_bytes().try_into()?,
+			transactions_root: execution_payload.transactions_root.as_bytes().try_into()?,
 		})
 	}
 }
@@ -164,8 +151,7 @@ impl<AttestionBitsSize: Get<u32>, SignatureSize: Get<u32>>
 		Ok(SSZAttestation {
 			aggregation_bits: Bitlist::<{ config::MAX_VALIDATORS_PER_COMMITTEE }>::deserialize(
 				&attestation.aggregation_bits,
-			)
-			.map_err(|_| MerkleizationError::InvalidLength)?,
+			)?,
 			data: attestation.data.try_into()?,
 			signature,
 		})
@@ -179,11 +165,7 @@ impl TryFrom<AttestationData> for SSZAttestationData {
 		Ok(SSZAttestationData {
 			slot: attestation_data.slot,
 			index: attestation_data.index,
-			beacon_block_root: attestation_data
-				.beacon_block_root
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
+			beacon_block_root: attestation_data.beacon_block_root.as_bytes().try_into()?,
 			source: attestation_data.source.try_into()?,
 			target: attestation_data.target.try_into()?,
 		})
@@ -229,14 +211,7 @@ impl TryFrom<Checkpoint> for SSZCheckpoint {
 	type Error = MerkleizationError;
 
 	fn try_from(checkpoint: Checkpoint) -> Result<Self, Self::Error> {
-		Ok(SSZCheckpoint {
-			epoch: checkpoint.epoch,
-			root: checkpoint
-				.root
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
-		})
+		Ok(SSZCheckpoint { epoch: checkpoint.epoch, root: checkpoint.root.as_bytes().try_into()? })
 	}
 }
 
@@ -247,21 +222,9 @@ impl TryFrom<BeaconHeader> for SSZBeaconBlockHeader {
 		Ok(SSZBeaconBlockHeader {
 			slot: beacon_header.slot,
 			proposer_index: beacon_header.proposer_index,
-			parent_root: beacon_header
-				.parent_root
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
-			state_root: beacon_header
-				.state_root
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
-			body_root: beacon_header
-				.body_root
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
+			parent_root: beacon_header.parent_root.as_bytes().try_into()?,
+			state_root: beacon_header.state_root.as_bytes().try_into()?,
+			body_root: beacon_header.body_root.as_bytes().try_into()?,
 		})
 	}
 }
@@ -277,8 +240,7 @@ impl<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>>
 		Ok(SSZSyncAggregate {
 			sync_committee_bits: Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(
 				&sync_aggregate.sync_committee_bits,
-			)
-			.map_err(|_| MerkleizationError::InvalidLength)?,
+			)?,
 			sync_committee_signature: Vector::<u8, 96>::from_iter(
 				sync_aggregate.sync_committee_signature,
 			),
@@ -291,17 +253,9 @@ impl TryFrom<Eth1Data> for SSZEth1Data {
 
 	fn try_from(eth1_data: Eth1Data) -> Result<Self, Self::Error> {
 		Ok(SSZEth1Data {
-			deposit_root: eth1_data
-				.deposit_root
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
+			deposit_root: eth1_data.deposit_root.as_bytes().try_into()?,
 			deposit_count: eth1_data.deposit_count,
-			block_hash: eth1_data
-				.block_hash
-				.as_bytes()
-				.try_into()
-				.map_err(|_| MerkleizationError::InvalidLength)?,
+			block_hash: eth1_data.block_hash.as_bytes().try_into()?,
 		})
 	}
 }
@@ -320,7 +274,7 @@ pub fn get_ssz_deposits<
 		let mut proofs = Vec::new();
 
 		for proof in deposit.proof.iter() {
-			proofs.push(proof.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?)
+			proofs.push(proof.as_bytes().try_into()?)
 		}
 
 		let proofs_conv =
@@ -334,8 +288,7 @@ pub fn get_ssz_deposits<
 					.data
 					.withdrawal_credentials
 					.as_bytes()
-					.try_into()
-					.map_err(|_| MerkleizationError::InvalidLength)?,
+					.try_into()?,
 				amount: deposit.data.amount,
 				signature: Vector::<u8, 96>::from_iter(deposit.data.signature.clone()),
 			},
