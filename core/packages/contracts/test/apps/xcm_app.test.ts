@@ -15,8 +15,13 @@ describe("XCMApp", function () {
             let abi = defaultAbiCoder
             // Xcm Transact
 
-            let transact = abi.encode(["tuple(address, bytes)"], [[downstream.address, encodedFunc]]);
-            let payload = executor.interface.encodeFunctionData("execute", [[{ kind: 0, arguments: transact}]])
+            let transact = abi.encode(
+                ["tuple(address, bytes)"],
+                [[downstream.address, encodedFunc]]
+            )
+            let payload = executor.interface.encodeFunctionData("execute", [
+                [{ kind: 0, arguments: transact }],
+            ])
 
             await expect(app.approveExecutor("0x0000000000000001", executor.address)).not.to.be
                 .reverted
