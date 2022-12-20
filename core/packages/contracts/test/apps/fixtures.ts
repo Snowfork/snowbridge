@@ -114,7 +114,7 @@ async function dotAppFixture() {
 }
 
 async function xcmAppFixture() {
-    let { registry, owner, user } = await loadFixture(baseFixture);
+    let { registry, owner, user } = await loadFixture(baseFixture)
 
     let executor = await new XcmExecutor__factory(owner).deploy()
     await executor.deployed()

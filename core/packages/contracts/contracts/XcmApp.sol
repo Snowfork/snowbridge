@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @title Proxy
 /// @notice A simple pass through proxy.
 contract Proxy is Ownable {
-
     /// @dev The signature of a function which executes xcm.
     bytes4 private constant EXEC_XCM_FUNC = bytes4(keccak256("execute(bytes[])"));
 
@@ -123,7 +122,10 @@ contract XcmExecutor {
             bytes1 instruction = instructions[i][0];
             if (instruction == 0x00) {
                 // 0x00 = Transact
-                (address target, bytes memory payload) = abi.decode(instructions[i][1:], (address, bytes));
+                (address target, bytes memory payload) = abi.decode(
+                    instructions[i][1:],
+                    (address, bytes)
+                );
                 transact(target, payload);
             } else {
                 revert("Unknown instruction");

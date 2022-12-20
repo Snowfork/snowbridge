@@ -12,14 +12,21 @@ describe("XCMApp", function () {
 
             let encodedFunc = downstream.interface.encodeFunctionData("doSomethingInteresting")
 
-            let abi = app.interface._abiCoder;
+            let abi = app.interface._abiCoder
             // Xcm Transact
-            let transact = "0x00" + abi.encode(["address","bytes"],[ downstream.address, encodedFunc ]).slice(2)
-            let payload = abi.encode(["bytes[]"], [ [ transact, transact ] ]);
+            let transact =
+                "0x00" +
+                abi.encode(["address", "bytes"], [downstream.address, encodedFunc]).slice(2)
+            let payload = abi.encode(["bytes[]"], [[transact, transact]])
 
-            await expect(app.approveExecutor("0x0000000000000001", executor.address)).not.to.be.reverted
+            await expect(app.approveExecutor("0x0000000000000001", executor.address)).not.to.be
+                .reverted
 
-            await expect(app.dispatchToProxy(POLKADOT_ORIGIN, "0x0000000000000001", payload, { gasLimit: 1_000_000 }))
+            await expect(
+                app.dispatchToProxy(POLKADOT_ORIGIN, "0x0000000000000001", payload, {
+                    gasLimit: 1_000_000,
+                })
+            )
                 .to.emit(app, "XcmExecuted")
                 .withArgs(POLKADOT_ORIGIN, proxy, executor.address, true)
                 .to.emit(downstream, "RecordSender")
