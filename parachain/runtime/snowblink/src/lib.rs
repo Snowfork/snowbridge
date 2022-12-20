@@ -626,7 +626,7 @@ parameter_types! {
 	pub const MaxVoluntaryExitSize: u32 = 16;
 	pub const MaxAttestationSize: u32 = 128;
 	pub const MaxValidatorsPerCommittee: u32 = 2048;
-	pub const WeakSubjectivityPeriod: u32 = 27 * HOURS;
+	pub const WeakSubjectivityPeriodHours: u32 = 27;
 	pub const ChainForkVersions: ForkVersions = ForkVersions{
 		genesis: Fork {
 			version: [0, 0, 16, 32], // 0x00001020
@@ -645,6 +645,7 @@ parameter_types! {
 
 impl ethereum_beacon_client::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type TimeProvider = pallet_timestamp::Pallet<Runtime>;
 	type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
 	type MaxProofBranchSize = MaxProofBranchSize;
 	type MaxExtraDataSize = MaxExtraDataSize;
@@ -659,7 +660,7 @@ impl ethereum_beacon_client::Config for Runtime {
 	type MaxAttestationSize = MaxAttestationSize;
 	type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 	type ForkVersions = ChainForkVersions;
-	type WeakSubjectivityPeriod = WeakSubjectivityPeriod;
+	type WeakSubjectivityPeriodHours = WeakSubjectivityPeriodHours;
 	type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
 }
 

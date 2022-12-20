@@ -17,7 +17,7 @@ mod benchmarking;
 pub use weights::WeightInfo;
 
 use crate::merkleization::get_sync_committee_bits;
-use frame_support::{dispatch::DispatchResult, log, transactional};
+use frame_support::{dispatch::DispatchResult, log, transactional, traits::UnixTime};
 use frame_system::ensure_signed;
 use snowbridge_beacon_primitives::{
 	BeaconHeader, BlockUpdate, Domain, ExecutionHeader, ExecutionHeaderState,
@@ -82,6 +82,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		type TimeProvider: UnixTime;
 		#[pallet::constant]
 		type MaxSyncCommitteeSize: Get<u32>;
 		#[pallet::constant]
@@ -111,7 +112,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
-		type WeakSubjectivityPeriod: Get<u32>;
+		type WeakSubjectivityPeriodHours: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -147,6 +148,7 @@ pub mod pallet {
 		SigningRootHashTreeRootFailed,
 		ForkDataHashTreeRootFailed,
 		ExecutionHeaderNotLatest,
+		BridgeBlocked,
 	}
 
 	#[pallet::hooks]
@@ -176,8 +178,8 @@ pub mod pallet {
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestFinalizedHeaderImportBlockNumber<T: Config> =
-		StorageValue<_, T::BlockNumber, ValueQuery>;
+	pub(super) type LatestFinalizedHeaderImportTime<T: Config> =
+		StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestExecutionHeaderState<T: Config> =
@@ -185,6 +187,9 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type Blocked<T: Config> = StorageValue<_, bool, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -223,6 +228,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
+			Self::check_bridge_blocked_state()?;
+
 			let sync_committee_period = sync_committee_period_update.sync_committee_period;
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -258,6 +265,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
+			Self::check_bridge_blocked_state()?;
+
 			let slot = finalized_header_update.finalized_header.slot;
 
 			log::info!(
@@ -292,6 +301,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
+			Self::check_bridge_blocked_state()?;
+
 			let slot = update.block.slot;
 			let block_hash = update.block.body.execution_payload.block_hash;
 
@@ -316,6 +327,20 @@ pub mod pallet {
 				block_hash,
 				slot
 			);
+
+			Ok(())
+		}
+
+		#[pallet::weight(1000)]
+		#[transactional]
+		pub fn unblock_bridge(
+			origin: OriginFor<T>,
+		) -> DispatchResult {
+			let _sender = ensure_root(origin)?;
+
+			log::info!(target: "ethereum-beacon-client","💫 Unblocking bridge.");
+
+			<Blocked<T>>::set(false); // TODO add denylist headers
 
 			Ok(())
 		}
@@ -392,20 +417,21 @@ pub mod pallet {
 		}
 
 		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
-			let current_block_number = <frame_system::Pallet<T>>::block_number();
-			let last_finalized_block_number = <LatestFinalizedHeaderImportBlockNumber<T>>::get();
-			let weak_subjectivity_period_check =
-				last_finalized_block_number + T::WeakSubjectivityPeriod::get().into();
+			let import_time = <LatestFinalizedHeaderImportTime<T>>::get();
+			let weak_subjectivity_period_check = import_time + 97200;
+			let time: u64 = T::TimeProvider::now().as_secs();
 
 			log::info!(
 				target: "ethereum-beacon-client",
-				"💫 Checking weak subjectivity period. Current block number :{:?} Weak subjectvitity period check: {:?}.",
-				current_block_number,
+				"💫 Checking weak subjectivity period. Current time is :{:?} Weak subjectvitity period check: {:?}.",
+				time,
 				weak_subjectivity_period_check
 			);
 
-			if current_block_number > weak_subjectivity_period_check.into() {
-				panic!("weak subjectvity period expired, reinitialize bridge")
+			if time > weak_subjectivity_period_check {
+				log::info!(target: "ethereum-beacon-client","💫 Weak subjectivity period exceeded, blocking bridge.",);
+				<Blocked<T>>::set(true);
+				return Err(Error::<T>::BridgeBlocked.into());
 			}
 
 			let sync_committee_bits =
@@ -468,7 +494,7 @@ pub mod pallet {
 			let beacon_block_root: H256 =
 				merkleization::hash_tree_root_beacon_header(header.clone())
 					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-					.into();
+					.into(); // TODO check denylist headers
 
 			let validators_root = <ValidatorsRoot<T>>::get();
 			let sync_committee_bits =
@@ -518,6 +544,14 @@ pub mod pallet {
 				block_slot,
 				beacon_block_root,
 			);
+
+			Ok(())
+		}
+
+		fn check_bridge_blocked_state() -> DispatchResult {
+			if <Blocked<T>>::get() {
+				return Err(Error::<T>::BridgeBlocked.into())
+			}
 
 			Ok(())
 		}
@@ -711,9 +745,8 @@ pub mod pallet {
 				<LatestFinalizedHeaderSlot<T>>::set(slot);
 				<LatestFinalizedHeaderHash<T>>::set(block_root);
 
-				let current_block_number = <frame_system::Pallet<T>>::block_number();
-
-				<LatestFinalizedHeaderImportBlockNumber<T>>::set(current_block_number);
+				let time: u64 = T::TimeProvider::now().as_secs();
+				<LatestFinalizedHeaderImportTime<T>>::set(time);
 			}
 
 			Self::deposit_event(Event::BeaconHeaderImported { block_hash: block_root, slot });
