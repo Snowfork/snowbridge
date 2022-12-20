@@ -24,52 +24,58 @@ pub enum MerkleizationError {
 }
 
 impl<
-	FeeRecipientSize: Get<u32>,
-	LogsBloomSize: Get<u32>,
-	ExtraDataSize: Get<u32>,
-	DepositDataSize: Get<u32>,
-	PublicKeySize: Get<u32>,
-	SignatureSize: Get<u32>,
-	ProofSize: Get<u32>,
-	ProposerSlashingSize: Get<u32>,
-	AttesterSlashingSize: Get<u32>,
-	VoluntaryExitSize: Get<u32>,
-	AttestationSize: Get<u32>,
-	AggregationBitsSize: Get<u32>,
-	ValidatorCommitteeSize: Get<u32>,
-> TryFrom<Body<
-		FeeRecipientSize,
-		LogsBloomSize,
-		ExtraDataSize,
-		DepositDataSize,
-		PublicKeySize,
-		SignatureSize,
-		ProofSize,
-		ProposerSlashingSize,
-		AttesterSlashingSize,
-		VoluntaryExitSize,
-		AttestationSize,
-		AggregationBitsSize,
-		ValidatorCommitteeSize,
-	>> for SSZBeaconBlockBody {
-    type Error = MerkleizationError;
-	
-    fn try_from(body: Body<
-		FeeRecipientSize,
-		LogsBloomSize,
-		ExtraDataSize,
-		DepositDataSize,
-		PublicKeySize,
-		SignatureSize,
-		ProofSize,
-		ProposerSlashingSize,
-		AttesterSlashingSize,
-		VoluntaryExitSize,
-		AttestationSize,
-		AggregationBitsSize,
-		ValidatorCommitteeSize,
-	>) -> Result<Self, Self::Error> {
-        Ok(SSZBeaconBlockBody {
+		FeeRecipientSize: Get<u32>,
+		LogsBloomSize: Get<u32>,
+		ExtraDataSize: Get<u32>,
+		DepositDataSize: Get<u32>,
+		PublicKeySize: Get<u32>,
+		SignatureSize: Get<u32>,
+		ProofSize: Get<u32>,
+		ProposerSlashingSize: Get<u32>,
+		AttesterSlashingSize: Get<u32>,
+		VoluntaryExitSize: Get<u32>,
+		AttestationSize: Get<u32>,
+		AggregationBitsSize: Get<u32>,
+		ValidatorCommitteeSize: Get<u32>,
+	>
+	TryFrom<
+		Body<
+			FeeRecipientSize,
+			LogsBloomSize,
+			ExtraDataSize,
+			DepositDataSize,
+			PublicKeySize,
+			SignatureSize,
+			ProofSize,
+			ProposerSlashingSize,
+			AttesterSlashingSize,
+			VoluntaryExitSize,
+			AttestationSize,
+			AggregationBitsSize,
+			ValidatorCommitteeSize,
+		>,
+	> for SSZBeaconBlockBody
+{
+	type Error = MerkleizationError;
+
+	fn try_from(
+		body: Body<
+			FeeRecipientSize,
+			LogsBloomSize,
+			ExtraDataSize,
+			DepositDataSize,
+			PublicKeySize,
+			SignatureSize,
+			ProofSize,
+			ProposerSlashingSize,
+			AttesterSlashingSize,
+			VoluntaryExitSize,
+			AttestationSize,
+			AggregationBitsSize,
+			ValidatorCommitteeSize,
+		>,
+	) -> Result<Self, Self::Error> {
+		Ok(SSZBeaconBlockBody {
 			randao_reveal: Vector::<u8, 96>::from_iter(body.randao_reveal),
 			eth1_data: body.eth1_data.try_into()?,
 			graffiti: body
@@ -85,14 +91,18 @@ impl<
 			sync_aggregate: body.sync_aggregate.try_into()?,
 			execution_payload: body.execution_payload.try_into()?,
 		})
-    }
+	}
 }
 
-impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>> TryFrom<ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>> for SSZExecutionPayload {
+impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
+	TryFrom<ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>> for SSZExecutionPayload
+{
 	type Error = MerkleizationError;
 
-	fn try_from(execution_payload: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>) -> Result<Self, Self::Error> {
-		Ok( SSZExecutionPayload {
+	fn try_from(
+		execution_payload: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	) -> Result<Self, Self::Error> {
+		Ok(SSZExecutionPayload {
 			parent_hash: execution_payload
 				.parent_hash
 				.as_bytes()
@@ -141,10 +151,14 @@ impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32
 	}
 }
 
-impl<AttestionBitsSize: Get<u32>, SignatureSize: Get<u32>> TryFrom<Attestation<AttestionBitsSize, SignatureSize>> for SSZAttestation {
+impl<AttestionBitsSize: Get<u32>, SignatureSize: Get<u32>>
+	TryFrom<Attestation<AttestionBitsSize, SignatureSize>> for SSZAttestation
+{
 	type Error = MerkleizationError;
 
-	fn try_from(attestation: Attestation<AttestionBitsSize, SignatureSize>) -> Result<Self, Self::Error> {
+	fn try_from(
+		attestation: Attestation<AttestionBitsSize, SignatureSize>,
+	) -> Result<Self, Self::Error> {
 		let signature = Vector::<u8, 96>::from_iter(attestation.signature.clone());
 
 		Ok(SSZAttestation {
@@ -162,7 +176,7 @@ impl TryFrom<AttestationData> for SSZAttestationData {
 	type Error = MerkleizationError;
 
 	fn try_from(attestation_data: AttestationData) -> Result<Self, Self::Error> {
-        Ok(SSZAttestationData {
+		Ok(SSZAttestationData {
 			slot: attestation_data.slot,
 			index: attestation_data.index,
 			beacon_block_root: attestation_data
@@ -173,15 +187,21 @@ impl TryFrom<AttestationData> for SSZAttestationData {
 			source: attestation_data.source.try_into()?,
 			target: attestation_data.target.try_into()?,
 		})
-    }
+	}
 }
 
-impl<AttestingIndicesSize: Get<u32>, SignatureSize: Get<u32>> TryFrom<AttesterSlashing<AttestingIndicesSize, SignatureSize>> for SSZAttesterSlashing {
+impl<AttestingIndicesSize: Get<u32>, SignatureSize: Get<u32>>
+	TryFrom<AttesterSlashing<AttestingIndicesSize, SignatureSize>> for SSZAttesterSlashing
+{
 	type Error = MerkleizationError;
 
-	fn try_from(attester_slashing: AttesterSlashing<AttestingIndicesSize, SignatureSize>) -> Result<Self, Self::Error> {
-        let signature1 = Vector::<u8, 96>::from_iter(attester_slashing.attestation_1.signature.clone());
-		let signature2 = Vector::<u8, 96>::from_iter(attester_slashing.attestation_2.signature.clone());
+	fn try_from(
+		attester_slashing: AttesterSlashing<AttestingIndicesSize, SignatureSize>,
+	) -> Result<Self, Self::Error> {
+		let signature1 =
+			Vector::<u8, 96>::from_iter(attester_slashing.attestation_1.signature.clone());
+		let signature2 =
+			Vector::<u8, 96>::from_iter(attester_slashing.attestation_2.signature.clone());
 
 		let attesting_indices1 = List::<u64, { config::MAX_VALIDATORS_PER_COMMITTEE }>::from_iter(
 			attester_slashing.attestation_1.attesting_indices.clone(),
@@ -202,14 +222,14 @@ impl<AttestingIndicesSize: Get<u32>, SignatureSize: Get<u32>> TryFrom<AttesterSl
 				signature: signature2,
 			},
 		})
-    }
+	}
 }
 
 impl TryFrom<Checkpoint> for SSZCheckpoint {
 	type Error = MerkleizationError;
 
 	fn try_from(checkpoint: Checkpoint) -> Result<Self, Self::Error> {
-        Ok(SSZCheckpoint {
+		Ok(SSZCheckpoint {
 			epoch: checkpoint.epoch,
 			root: checkpoint
 				.root
@@ -217,14 +237,14 @@ impl TryFrom<Checkpoint> for SSZCheckpoint {
 				.try_into()
 				.map_err(|_| MerkleizationError::InvalidLength)?,
 		})
-    }
+	}
 }
 
 impl TryFrom<BeaconHeader> for SSZBeaconBlockHeader {
 	type Error = MerkleizationError;
 
 	fn try_from(beacon_header: BeaconHeader) -> Result<Self, Self::Error> {
-       	Ok(SSZBeaconBlockHeader {
+		Ok(SSZBeaconBlockHeader {
 			slot: beacon_header.slot,
 			proposer_index: beacon_header.proposer_index,
 			parent_root: beacon_header
@@ -243,14 +263,18 @@ impl TryFrom<BeaconHeader> for SSZBeaconBlockHeader {
 				.try_into()
 				.map_err(|_| MerkleizationError::InvalidLength)?,
 		})
-    }
+	}
 }
 
-impl<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>> TryFrom<SyncAggregate<SyncCommitteeBitsSize, SignatureSize>> for SSZSyncAggregate {
+impl<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>>
+	TryFrom<SyncAggregate<SyncCommitteeBitsSize, SignatureSize>> for SSZSyncAggregate
+{
 	type Error = MerkleizationError;
 
-	fn try_from(sync_aggregate: SyncAggregate<SyncCommitteeBitsSize, SignatureSize>) -> Result<Self, Self::Error> {
-        Ok(SSZSyncAggregate {
+	fn try_from(
+		sync_aggregate: SyncAggregate<SyncCommitteeBitsSize, SignatureSize>,
+	) -> Result<Self, Self::Error> {
+		Ok(SSZSyncAggregate {
 			sync_committee_bits: Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(
 				&sync_aggregate.sync_committee_bits,
 			)
@@ -259,14 +283,14 @@ impl<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>> TryFrom<SyncAggre
 				sync_aggregate.sync_committee_signature,
 			),
 		})
-    }
+	}
 }
 
 impl TryFrom<Eth1Data> for SSZEth1Data {
 	type Error = MerkleizationError;
 
 	fn try_from(eth1_data: Eth1Data) -> Result<Self, Self::Error> {
-        Ok(SSZEth1Data {
+		Ok(SSZEth1Data {
 			deposit_root: eth1_data
 				.deposit_root
 				.as_bytes()
@@ -279,7 +303,7 @@ impl TryFrom<Eth1Data> for SSZEth1Data {
 				.try_into()
 				.map_err(|_| MerkleizationError::InvalidLength)?,
 		})
-    }
+	}
 }
 
 pub fn get_ssz_deposits<
