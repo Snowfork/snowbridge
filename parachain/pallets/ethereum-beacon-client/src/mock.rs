@@ -2,6 +2,7 @@ use super::*;
 use crate as ethereum_beacon_client;
 use frame_support::parameter_types;
 use frame_system as system;
+use pallet_timestamp;
 use snowbridge_beacon_primitives::{AttesterSlashing, BeaconHeader, Body, Fork, ForkVersions};
 use sp_core::H256;
 use sp_runtime::{
@@ -60,6 +61,13 @@ pub mod mock_minimal {
 		type MaxConsumers = frame_support::traits::ConstU32<16>;
 	}
 
+	impl pallet_timestamp::Config for Test {
+		type Moment = u64;
+		type OnTimestampSet = ();
+		type MinimumPeriod = ();
+		type WeightInfo = ();
+	}
+
 	parameter_types! {
 		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
 		pub const MaxProofBranchSize: u32 = 6;
@@ -92,7 +100,7 @@ pub mod mock_minimal {
 	}
 
 	impl ethereum_beacon_client::Config for Test {
-		type TimeProvider = pallet_timestamp::Pallet<Runtime>;
+		type TimeProvider = pallet_timestamp::Pallet<Test>;
 		type RuntimeEvent = RuntimeEvent;
 		type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
 		type MaxProofBranchSize = MaxProofBranchSize;
@@ -163,6 +171,13 @@ pub mod mock_mainnet {
 		type MaxConsumers = frame_support::traits::ConstU32<16>;
 	}
 
+	impl pallet_timestamp::Config for Test {
+		type Moment = u64;
+		type OnTimestampSet = ();
+		type MinimumPeriod = ();
+		type WeightInfo = ();
+	}
+
 	parameter_types! {
 		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
 		pub const MaxProofBranchSize: u32 = 6;
@@ -196,7 +211,7 @@ pub mod mock_mainnet {
 
 	impl ethereum_beacon_client::Config for Test {
 		type RuntimeEvent = RuntimeEvent;
-		type TimeProvider = pallet_timestamp::Pallet<Runtime>;
+		type TimeProvider = pallet_timestamp::Pallet<Test>;
 		type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
 		type MaxProofBranchSize = MaxProofBranchSize;
 		type MaxExtraDataSize = MaxExtraDataSize;

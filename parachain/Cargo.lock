@@ -10347,6 +10347,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "milagro_bls",
+ "pallet-timestamp",
  "parity-scale-codec",
  "rlp",
  "scale-info",

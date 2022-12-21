@@ -17,7 +17,7 @@ mod benchmarking;
 pub use weights::WeightInfo;
 
 use crate::merkleization::get_sync_committee_bits;
-use frame_support::{dispatch::DispatchResult, log, transactional, traits::UnixTime};
+use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
 use frame_system::ensure_signed;
 use snowbridge_beacon_primitives::{
 	BeaconHeader, BlockUpdate, Domain, ExecutionHeader, ExecutionHeaderState,
@@ -178,8 +178,7 @@ pub mod pallet {
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestFinalizedHeaderImportTime<T: Config> =
-		StorageValue<_, u64, ValueQuery>;
+	pub(super) type LatestFinalizedHeaderImportTime<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestExecutionHeaderState<T: Config> =
@@ -333,9 +332,7 @@ pub mod pallet {
 
 		#[pallet::weight(1000)]
 		#[transactional]
-		pub fn unblock_bridge(
-			origin: OriginFor<T>,
-		) -> DispatchResult {
+		pub fn unblock_bridge(origin: OriginFor<T>) -> DispatchResult {
 			let _sender = ensure_root(origin)?;
 
 			log::info!(target: "ethereum-beacon-client","💫 Unblocking bridge.");
@@ -431,7 +428,7 @@ pub mod pallet {
 			if time > weak_subjectivity_period_check {
 				log::info!(target: "ethereum-beacon-client","💫 Weak subjectivity period exceeded, blocking bridge.",);
 				<Blocked<T>>::set(true);
-				return Err(Error::<T>::BridgeBlocked.into());
+				return Err(Error::<T>::BridgeBlocked.into())
 			}
 
 			let sync_committee_bits =
