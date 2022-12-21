@@ -11,7 +11,7 @@ import {
     XcmExecutor__factory,
     WrappedToken__factory,
     TestToken__factory,
-    DownstreamTestApp__factory,
+    MockDownstreamApp__factory,
 } from "../../src"
 
 export { ethAppFixture, erc20AppFixture, dotAppFixture, xcmAppFixture }
@@ -122,7 +122,7 @@ async function xcmAppFixture() {
     let app = await new XcmApp__factory(owner).deploy(registry.address)
     await app.deployed()
 
-    let downstream = await new DownstreamTestApp__factory(owner).deploy()
+    let downstream = await new MockDownstreamApp__factory(owner).deploy()
     await downstream.deployed()
 
     return {

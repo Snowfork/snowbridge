@@ -11,7 +11,7 @@ describe("XCMApp", function () {
             let proxy = "0x04f9fa5a18b8A2E6486e76F66B9482DeBF012155"
             let abi = defaultAbiCoder
 
-            let encodedFunc = downstream.interface.encodeFunctionData("doSomethingInteresting")
+            let encodedFunc = downstream.interface.encodeFunctionData("recordMsgSender")
 
             // Xcm Transact
             let transact = abi.encode(
