@@ -12,7 +12,7 @@ contract XcmFungibleAsset is ERC20, Ownable {
     /// @dev initializes asset with an owner.
     /// @param _owner The proxy
     constructor(XcmProxy _owner, string memory _name, string memory _symbol) ERC20(_name, _symbol) {
-       transferOwnership(address(_owner));
+        transferOwnership(address(_owner));
     }
 
     /// @dev mints the asset.
@@ -34,7 +34,7 @@ contract XcmFungibleAsset is ERC20, Ownable {
 interface XcmAssetLookup {
     /// @dev looks up or creates a token for a subtrate asset.
     /// @param assetHash the hash of the substrate location.
-    function lookup(bytes32 assetHash) external returns(XcmFungibleAsset);
+    function lookup(bytes32 assetHash) external returns (XcmFungibleAsset);
 }
 
 /// @dev Translates substrate assets to token addresses.
@@ -42,11 +42,9 @@ contract XcmAssetManager is XcmAssetLookup {
     /// @dev A mapping or 32 byte hashed asset locations to token addresses
     mapping(bytes32 => XcmFungibleAsset) public fungibleAssets;
 
-    function lookup(
-        bytes32 assetHash
-    ) external override returns (XcmFungibleAsset) {
+    function lookup(bytes32 assetHash) external override returns (XcmFungibleAsset) {
         XcmFungibleAsset asset = fungibleAssets[assetHash];
-        if(asset == XcmFungibleAsset(address(0))) {
+        if (asset == XcmFungibleAsset(address(0))) {
             string memory name = iToHex(assetHash);
             bytes memory symbol = new bytes(3);
             symbol[0] = bytes(name)[0];
@@ -59,7 +57,6 @@ contract XcmAssetManager is XcmAssetLookup {
     }
 
     function iToHex(bytes32 buffer) public pure returns (string memory) {
-
         // Fixed buffer size for hexadecimal convertion
         bytes memory converted = new bytes(buffer.length * 2);
 
