@@ -13,7 +13,7 @@ const EPOCH_LENGTH: u64 = 30000;
 const MIX_BYTES: usize = 128;
 /// Hash length in bytes
 const HASH_BYTES: usize = 64;
-/// Numver of accesses in hashimoto loop
+/// Number of accesses in hashimoto loop
 const ACCESSES: usize = 64;
 
 #[derive(Default, Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]

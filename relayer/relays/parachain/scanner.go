@@ -388,7 +388,7 @@ func (s *Scanner) gatherProofInputs(
 }
 
 // The process for finalizing a backed parachain header times out after these many blocks:
-const FinalizationTimout = 4
+const FinalizationTimeout = 4
 
 // Find the relaychain block in which a parachain header was included (finalized). This usually happens
 // 2-3 blocks after the relaychain block in which the parachain header was backed.
@@ -415,7 +415,7 @@ func (s *Scanner) findInclusionBlockNumber(
 	}
 
 	startBlock := validationData.RelayParentNumber + 1
-	for i := validationData.RelayParentNumber + 1; i < startBlock+FinalizationTimout; i++ {
+	for i := validationData.RelayParentNumber + 1; i < startBlock+FinalizationTimeout; i++ {
 		relayBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(i))
 		if err != nil {
 			return 0, fmt.Errorf("fetch relaychain block hash: %w", err)

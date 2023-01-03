@@ -296,7 +296,7 @@ pub mod pallet {
 
 			let (new_finalized_hash, finalized_header) =
 				Self::find_finalized_ancestor(forked_at, required_descendants).ok_or(
-					"Cannot reset to fork if it does not have the required number of decendants.",
+					"Cannot reset to fork if it does not have the required number of descendants.",
 				)?;
 
 			let finalized_block_id =

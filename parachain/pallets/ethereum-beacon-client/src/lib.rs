@@ -127,7 +127,7 @@ pub mod pallet {
 		SyncCommitteeMissing,
 		Unknown,
 		SyncCommitteeParticipantsNotSupermajority,
-		InvalidSyncCommiteeSignature,
+		InvalidSyncCommitteeSignature,
 		InvalidHeaderMerkleProof,
 		InvalidSyncCommitteeMerkleProof,
 		InvalidSignature,
@@ -472,7 +472,7 @@ pub mod pallet {
 			} else {
 				log::trace!(
 					target: "ethereum-beacon-client",
-					"fee recipient not 20 characteres, len is: {}.",
+					"fee recipient not 20 characters, len is: {}.",
 					fee_slice.len()
 				);
 			}

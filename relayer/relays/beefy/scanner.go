@@ -132,7 +132,11 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 			var commitment *types.SignedCommitment
 			for j := range block.Justifications {
 				sc := types.OptionalSignedCommitment{}
+				// Filter justification by EngineID
+				// https://github.com/paritytech/substrate/blob/55c64bcc2af5a6e5fc3eb245e638379ebe18a58d/primitives/beefy/src/lib.rs#L114
 				if block.Justifications[j].EngineID() == "BEEF" {
+					// Decode as SignedCommitment
+					// https://github.com/paritytech/substrate/blob/bcee526a9b73d2df9d5dea0f1a17677618d70b8e/primitives/beefy/src/commitment.rs#L89
 					err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
 					if err != nil {
 						sendError(fmt.Errorf("decode BEEFY signed commitment: %w", err))
@@ -209,7 +213,7 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 				sendError(fmt.Errorf("fetch block hash: %w", err))
 				return
 			}
-
+			// Leaves are zero-indexed since beefy activation while block numbers are one-indexed 
 			leafIndex := blockNumber - beefyActivationBlock - 1
 			proofIsValid, proof, err := makeProof(meta, api, leafIndex, blockHash)
 			if err != nil {

@@ -1,0 +1,2 @@
+[files]
+extend-exclude = ["**/*.yaml","**/*.json","**/*.md","**/*.js","**/*.ts","**/*test*.rs","**/*mock*.rs","**/*data*.rs"]

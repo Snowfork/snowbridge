@@ -166,6 +166,10 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 	return fmt.Errorf("corrupted proof"), proofOrder
 }
 
+// SimplifiedMMRProof is pre-processed MMR proof format which make it easy to verify in Solidity
+// Original MMRProof is generated in substrate with https://github.com/nervosnetwork/merkle-mountain-range
+// The optimization works by pre-calculating order of the merkle tree proof so that we don't have to use mathematic operation to determine the same on solidity side 
+// More details in https://github.com/Snowfork/snowbridge/pull/495
 func ConvertToSimplifiedMMRProof(blockhash types.H256, leafIndex uint64, leaf types.MMRLeaf, leafCount uint64, proofItems []types.H256) (SimplifiedMMRProof, error) {
 	leafPos := leafIndexToPosition(leafIndex)
 
@@ -213,11 +217,13 @@ func ConvertToSimplifiedMMRProof(blockhash types.H256, leafIndex uint64, leaf ty
 
 	// Adding peaks into merkle proof itself
 	currentProofOrderIndex := len(merkleProof) - 1
+	// RightBaggedPeak is a hash that bags all right-hand side peaks, skip this part if no right-hand peaks
 	if optionalRightBaggedPeak != [32]byte{} {
 		currentProofOrderIndex += 1
 		proofOrder = proofOrder | 1<<currentProofOrderIndex
 		merkleProof = append(merkleProof, optionalRightBaggedPeak)
 	}
+	// Hashes of all left-hand peaks from right to left
 	for i := 0; i < len(readyMadePeakHashes); i++ {
 		currentProofOrderIndex += 1
 		merkleProof = append(merkleProof, readyMadePeakHashes[len(readyMadePeakHashes)-i-1])
