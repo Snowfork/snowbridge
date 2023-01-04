@@ -3,12 +3,16 @@ pragma solidity ^0.8.9;
 
 import "./ChannelRegistry.sol";
 import "./XcmProxy.sol";
+import "./XcmAssetManager.sol";
 
 /// @title Xcm App
 /// @notice Implements XCM for the EVM.
 contract XcmApp {
     /// @dev Channels which are allowed to call this app.
     ChannelRegistry public immutable registry;
+
+    /// @dev Asset look up.
+    XcmAssetLookup public immutable assetLookup;
 
     /// @dev A mapping or 32 byte hashed origins to proxy accounts.
     mapping(bytes32 => XcmProxy) public proxies;
@@ -24,8 +28,9 @@ contract XcmApp {
     error Unauthorized();
 
     /// @param _registry The channel registry which is the source of messages.
-    constructor(ChannelRegistry _registry) {
+    constructor(ChannelRegistry _registry, XcmAssetLookup _assetLookup) {
         registry = _registry;
+        assetLookup = _assetLookup;
     }
 
     /// @dev Looks up the proxy and executor and executes the payload.
@@ -46,7 +51,7 @@ contract XcmApp {
         }
 
         // Dispatch to proxy.
-        bool success = proxy.execute(_executor, _payload);
+        bool success = proxy.execute(_executor, assetLookup, _payload);
         emit XcmExecuted(_origin, proxy, _executor, success);
     }
 }
