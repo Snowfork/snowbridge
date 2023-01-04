@@ -50,6 +50,8 @@ start_lodestar() {
             --genesisTime $timestamp \
             --startValidators "0..7" \
             --enr.ip "127.0.0.1" \
+            --eth1.providerUrls "http://127.0.0.1:8545" \
+            --execution.urls "http://127.0.0.1:8551" \
             --dataDir "$output_dir/beacon-$timestamp" \
             --reset \
             --terminal-total-difficulty-override 0 \
