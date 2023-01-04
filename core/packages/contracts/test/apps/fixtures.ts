@@ -9,6 +9,7 @@ import {
     DOTApp__factory,
     XcmApp__factory,
     XcmExecutor__factory,
+    XcmAssetManager__factory,
     WrappedToken__factory,
     TestToken__factory,
     MockDownstreamApp__factory,
@@ -119,7 +120,10 @@ async function xcmAppFixture() {
     let executor = await new XcmExecutor__factory(owner).deploy()
     await executor.deployed()
 
-    let app = await new XcmApp__factory(owner).deploy(registry.address)
+    let assetManager = await new XcmAssetManager__factory(owner).deploy()
+    await assetManager.deployed()
+
+    let app = await new XcmApp__factory(owner).deploy(registry.address, assetManager.address)
     await app.deployed()
 
     let downstream = await new MockDownstreamApp__factory(owner).deploy()

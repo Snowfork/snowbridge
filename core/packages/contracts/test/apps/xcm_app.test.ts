@@ -8,7 +8,7 @@ describe("XCMApp", function () {
     describe("Proxies", function () {
         it("downstream sees proxy as msg.sender", async function () {
             let { app, executor, downstream, user } = await loadFixture(xcmAppFixture)
-            let proxy = "0x04f9fa5a18b8A2E6486e76F66B9482DeBF012155"
+            let proxy = "0xe1d2a389cd3e9694D374507E00C49d643605a2fb"
             let abi = defaultAbiCoder
 
             let encodedFunc = downstream.interface.encodeFunctionData("recordMsgSender")
