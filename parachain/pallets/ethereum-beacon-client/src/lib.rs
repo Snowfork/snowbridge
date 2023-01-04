@@ -190,6 +190,9 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type Blocked<T: Config> = StorageValue<_, bool, ValueQuery>;
 
+	#[pallet::storage]
+	pub(super) type GovernanceResync<T: Config> = StorageValue<_, bool, ValueQuery>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub initial_sync: Option<InitialSyncOf<T>>,
@@ -335,9 +338,9 @@ pub mod pallet {
 		pub fn unblock_bridge(origin: OriginFor<T>) -> DispatchResult {
 			let _sender = ensure_root(origin)?;
 
-			log::info!(target: "ethereum-beacon-client","💫 Unblocking bridge.");
+			<GovernanceResync<T>>::set(true);
 
-			<Blocked<T>>::set(false); // TODO add denylist headers
+			log::info!(target: "ethereum-beacon-client","💫 syncing bridge from governance provided checkpoint.");
 
 			Ok(())
 		}
