@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
+import "./XcmAssetLookup.sol";
+
 /// @dev Executes Xcm instructions.
 contract XcmExecutor {
     /// @dev Represents the type of instruction.
@@ -26,7 +28,7 @@ contract XcmExecutor {
     }
 
     /// @dev The entry point for an payload.
-    function execute(Instruction[] calldata instructions) external {
+    function execute(XcmAssetLookup lookup, Instruction[] memory instructions) external {
         // TODO: registers like origin, holding, etc...
         for (uint i = 0; i < instructions.length; i++) {
             if (instructions[i].kind == InstructionKind.Transact) {

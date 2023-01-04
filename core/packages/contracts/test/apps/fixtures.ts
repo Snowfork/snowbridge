@@ -132,6 +132,7 @@ async function xcmAppFixture() {
     return {
         app,
         executor,
+        assetManager,
         downstream,
         owner,
         user,

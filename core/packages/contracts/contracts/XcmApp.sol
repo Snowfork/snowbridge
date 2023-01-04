@@ -22,7 +22,7 @@ contract XcmApp {
     /// @param proxy The proxy account.
     /// @param executor The address of the executor.
     /// @param success The dispatch was successful.
-    event XcmExecuted(bytes32 origin, XcmProxy proxy, address executor, bool success);
+    event XcmExecuted(bytes32 origin, XcmProxy proxy, address executor, bool success, bytes4 debug1, bytes debug2, bytes debug3, bytes debug4);
 
     /// @dev Called from an unauthorized sender.
     error Unauthorized();
@@ -33,12 +33,14 @@ contract XcmApp {
         assetLookup = _assetLookup;
     }
 
+    /// @dev The signature of the xcm execution function.
+    bytes4 private constant EXEC_XCM_FUNC = bytes4(keccak256("execute(address,(uint8,bytes)[])"));
+
     /// @dev Looks up the proxy and executor and executes the payload.
     /// @param _origin The hashed origin.
     /// @param _executor The identifier for the executor version.
-    /// @param _payload The XCM payload to be executed.
-    function dispatchToProxy(bytes32 _origin, address _executor, bytes calldata _payload) external {
-        // TODO: Should permissionless channels be able to call in here???
+    /// @param _instructions The XCM payload to be executed.
+    function dispatchToProxy(bytes32 _origin, address _executor, bytes calldata _instructions) external {
         if (!registry.isInboundChannel(msg.sender)) {
             revert Unauthorized();
         }
@@ -50,8 +52,11 @@ contract XcmApp {
             proxies[_origin] = proxy;
         }
 
+        // encode a call to the xcm executor
+        bytes memory encodedCall = bytes.concat(EXEC_XCM_FUNC, abi.encode(assetLookup), _instructions);
+
         // Dispatch to proxy.
-        bool success = proxy.execute(_executor, assetLookup, _payload);
-        emit XcmExecuted(_origin, proxy, _executor, success);
+        bool success = proxy.execute(_executor, encodedCall);
+        emit XcmExecuted(_origin, proxy, _executor, success, EXEC_XCM_FUNC, abi.encode(assetLookup), _instructions, encodedCall);
     }
 }
