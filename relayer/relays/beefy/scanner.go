@@ -266,6 +266,7 @@ func makeProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, leafIndex uint64, 
 	return proofIsValid, proof2, nil
 }
 
+// Verify the actual MMR Root we calculated is same as value in storage of relaychain
 func verifyProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, proof merkle.SimplifiedMMRProof) (bool, error) {
 	leafEncoded, err := types.EncodeToBytes(proof.Leaf)
 	if err != nil {

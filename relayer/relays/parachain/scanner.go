@@ -277,6 +277,9 @@ func (s *Scanner) findTasksImpl(
 					return nil, fmt.Errorf("basic channel commitment hash in digest item does not match the one in the Committed event")
 				}
 
+				// For basic channel commit hash is the merkle root calculated from bundles 
+				// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/basic-channel/src/outbound/mod.rs#L275-L277
+				// to verify it we fetch bundle proof from parachain
 				result, err := scanForBasicChannelProofs(
 					s.paraConn.API(),
 					digestItemHash,
@@ -296,6 +299,8 @@ func (s *Scanner) findTasksImpl(
 					return nil, fmt.Errorf("event incentivizedOutboundChannel.Committed not found in block")
 				}
 
+				// For Incentivized channel commit hash is encoded with bundle message directly so no bundle proof required
+				// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/incentivized-channel/src/outbound/mod.rs#L263-L269
 				digestItemHash := digestItem.AsCommitment.Hash
 				if events.Incentivized.Hash != digestItemHash {
 					return nil, fmt.Errorf("incentivized channel commitment hash in digest item does not match the one in the Committed event")
@@ -476,6 +481,7 @@ func scanForBasicChannelProofs(
 		if err != nil {
 			return nil, err
 		}
+		// check merkle root calculated from bundle proof is same as the digest hash from header
 		if basicChannelBundleProof.Proof.Root != digestItemHash {
 			log.Warnf(
 				"Halting scan for account '%v'. Basic channel proof root doesn't match digest item's commitment hash",

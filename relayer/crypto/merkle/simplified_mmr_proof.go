@@ -10,10 +10,14 @@ import (
 
 type SimplifiedMMRProof struct {
 	MerkleProofItems []types.H256
+	// Relative position of each proof item comparing with the leaf proof
+	// with bitfield expression of left or right
 	MerkleProofOrder uint64
 	// Below fields are not part of proof directly, but they are included so that
 	// we do not lose any information when converting from RPC response
 	Blockhash types.H256
+	// MMRLeaf in substrate with leaf_extra as merkle root of ParachainHeads
+	// https://github.com/paritytech/substrate/blob/ea387c634715793f806286abf1e64cabf9b7026f/frame/beefy-mmr/src/lib.rs#L149-L156
 	Leaf      types.MMRLeaf
 }
 
