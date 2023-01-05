@@ -20,13 +20,13 @@ type Spec struct {
 }
 
 type SourceConfig struct {
-	Beacon                BeaconConfig          `mapstructure:"beacon"`
+	Beacon BeaconConfig `mapstructure:"beacon"`
 }
 
 type BeaconConfig struct {
-	Endpoint                string `mapstructure:"endpoint"`
-	Spec                    Spec   `mapstructure:"spec"`
-	ActiveSpec              string `mapstructure:"activeSpec"`
+	Endpoint   string `mapstructure:"endpoint"`
+	Spec       Spec   `mapstructure:"spec"`
+	ActiveSpec string `mapstructure:"activeSpec"`
 }
 
 type SinkConfig struct {

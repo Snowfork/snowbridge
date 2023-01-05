@@ -78,13 +78,13 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	li.paraID = paraID
 
 	li.scanner = &Scanner{
-		config: li.config,
-		ethConn: li.ethereumConn,
-		relayConn: li.relaychainConn,
-		paraConn: li.parachainConnection,
+		config:           li.config,
+		ethConn:          li.ethereumConn,
+		relayConn:        li.relaychainConn,
+		paraConn:         li.parachainConnection,
 		eventQueryClient: NewQueryClient(),
-		paraID: paraID,
-		accounts: accounts,
+		paraID:           paraID,
+		accounts:         accounts,
 	}
 
 	eg.Go(func() error {
@@ -177,7 +177,6 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 
 	return nil
 }
-
 
 // queryBeefyClientEvents queries ContractNewMMRRoot events from the BeefyClient contract
 func (li *BeefyListener) queryBeefyClientEvents(
@@ -290,4 +289,3 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 
 	return &output, nil
 }
-

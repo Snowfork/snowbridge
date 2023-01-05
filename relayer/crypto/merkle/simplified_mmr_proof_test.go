@@ -98,4 +98,3 @@ func Test_SimplifiedMMRProof(t *testing.T) {
 		fmt.Println(string(prettyOut))
 	}
 }
-
