@@ -60,12 +60,14 @@ contract XcmExecutor {
                 transact(abi.decode(instructions[i].arguments, (TransactData)));
             } else if (instructions[i].kind == InstructionKind.ReserveAssetsDeposited) {
                 // 0x01 = ReserveAssetDeposited
-                reserveAssetDeposited(lookup, abi.decode(instructions[i].arguments, (ReserveAssetDepositedData)));
+                reserveAssetDeposited(
+                    lookup,
+                    abi.decode(instructions[i].arguments, (ReserveAssetDepositedData))
+                );
             } else if (instructions[i].kind == InstructionKind.DepositAsset) {
                 // 0x02 = DepositAsset
                 depositAsset(lookup, abi.decode(instructions[i].arguments, (DepositAssetData)));
-            } 
-            else {
+            } else {
                 revert("Unknown instruction");
             }
         }
@@ -80,7 +82,10 @@ contract XcmExecutor {
     /// @dev an asset that is held in reserved was deposited. This equates to an ERC20 mint.
     /// @param lookup lookup ERC20 tokens for an asset.
     /// @param data the instruction data.
-    function reserveAssetDeposited(XcmAssetLookup lookup, ReserveAssetDepositedData memory data) internal {
+    function reserveAssetDeposited(
+        XcmAssetLookup lookup,
+        ReserveAssetDepositedData memory data
+    ) internal {
         require(data.amount > 0, "must reserve a positive amount");
         XcmFungibleAsset asset = lookup.lookup(data.assetHash);
         require(address(asset) != address(0), "cannot find asset");
