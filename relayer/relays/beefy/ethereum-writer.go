@@ -130,7 +130,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	}
 
 	// Wait RandaoCommitDelay before submit CommitPrevRandao to prevent attacker to manipulate committee memberships
-	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead 
+	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
 	receipt, err := wr.waitForTransaction(ctx, tx, wr.blockWaitPeriod+1)
 	if err != nil {
 		return err
@@ -229,7 +229,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	initialBitfield, err := wr.contract.CreateInitialBitfield(
 		&bind.CallOpts{
 			Pending: true,
-			From: wr.conn.Keypair().CommonAddress(),
+			From:    wr.conn.Keypair().CommonAddress(),
 		},
 		signedValidators, numberOfValidators,
 	)
@@ -288,7 +288,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 	finalBitfield, err := wr.contract.CreateFinalBitfield(
 		&bind.CallOpts{
 			Pending: true,
-			From: wr.conn.Keypair().CommonAddress(),
+			From:    wr.conn.Keypair().CommonAddress(),
 		},
 		commitmentHash,
 		initialBitfield,

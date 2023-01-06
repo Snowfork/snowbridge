@@ -18,7 +18,7 @@ type SimplifiedMMRProof struct {
 	Blockhash types.H256
 	// MMRLeaf in substrate with leaf_extra as merkle root of ParachainHeads
 	// https://github.com/paritytech/substrate/blob/ea387c634715793f806286abf1e64cabf9b7026f/frame/beefy-mmr/src/lib.rs#L149-L156
-	Leaf      types.MMRLeaf
+	Leaf types.MMRLeaf
 }
 
 func parentOffset(height uint32) uint64 {
@@ -172,7 +172,7 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 
 // SimplifiedMMRProof is pre-processed MMR proof format which make it easy to verify in Solidity
 // Original MMRProof is generated in substrate with https://github.com/nervosnetwork/merkle-mountain-range
-// The optimization works by pre-calculating order of the merkle tree proof so that we don't have to use mathematic operation to determine the same on solidity side 
+// The optimization works by pre-calculating order of the merkle tree proof so that we don't have to use mathematic operation to determine the same on solidity side
 // More details in https://github.com/Snowfork/snowbridge/pull/495
 func ConvertToSimplifiedMMRProof(blockhash types.H256, leafIndex uint64, leaf types.MMRLeaf, leafCount uint64, proofItems []types.H256) (SimplifiedMMRProof, error) {
 	leafPos := leafIndexToPosition(leafIndex)
@@ -246,7 +246,7 @@ func CalculateMerkleRoot(proof *SimplifiedMMRProof, leafHash types.H256) types.H
 	currentHash := leafHash[:]
 
 	for i := 0; i < int(len(proof.MerkleProofItems)); i++ {
-		isSiblingLeft := (proof.MerkleProofOrder >> i) & 1 == 1
+		isSiblingLeft := (proof.MerkleProofOrder>>i)&1 == 1
 		sibling := proof.MerkleProofItems[i]
 
 		var buf []byte

@@ -27,5 +27,5 @@ The app consists of two peer components which communicate via [channels](../chan
 
 On the parachain, the wrapped tokens are stored in a FRAME [assets](https://github.com/paritytech/substrate/tree/master/frame/assets) pallet using numeric identifiers allocated by our [asset-registry](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/asset-registry) pallet.
 
-The ERC20App pallet mantains a mapping of ERC20 token address to pallet-asset asset id. This can be queried by users.
+The ERC20App pallet maintains a mapping of ERC20 token address to pallet-asset asset id. This can be queried by users.
 

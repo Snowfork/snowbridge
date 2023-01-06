@@ -722,7 +722,7 @@ fn it_should_not_allow_force_reset_to_fork_for_blocks_that_cannot_be_finalized()
 		assert_err!(
 			Verifier::force_reset_to_fork(RuntimeOrigin::root(), block1_hash),
 			DispatchError::Other(
-				"Cannot reset to fork if it does not have the required number of decendants."
+				"Cannot reset to fork if it does not have the required number of descendants."
 			)
 		);
 

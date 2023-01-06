@@ -1,8 +1,14 @@
 mod beacon_tests {
 	use crate as ethereum_beacon_client;
 	use crate::{
-		config, merkleization, merkleization::MerkleizationError, mock::*, BeaconHeader, Error,
-		PublicKey,
+		config, merkleization,
+		merkleization::MerkleizationError,
+		mock::*,
+		ssz::{
+			SSZAttestation, SSZAttestationData, SSZAttesterSlashing, SSZCheckpoint, SSZEth1Data,
+			SSZExecutionPayload, SSZSyncAggregate,
+		},
+		BeaconHeader, Error, PublicKey,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -460,13 +466,14 @@ mod beacon_tests {
 
 	#[test]
 	pub fn test_hash_eth1_data() {
-		let payload = merkleization::get_ssz_eth1_data(Eth1Data {
+		let payload: Result<SSZEth1Data, MerkleizationError> = Eth1Data {
 			deposit_root: hex!("d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e")
 				.into(),
 			deposit_count: 0,
 			block_hash: hex!("0000000000000000000000000000000000000000000000000000000000000000")
 				.into(),
-		});
+		}
+		.try_into();
 		assert_ok!(&payload);
 
 		let hash_root = merkleization::hash_tree_root(payload.unwrap());
@@ -477,7 +484,7 @@ mod beacon_tests {
 	}
 
 	#[test]
-	pub fn test_hash_sync_aggregrate() {
+	pub fn test_hash_sync_aggregate() {
 		let sync_aggregate: SyncAggregate<mock_minimal::MaxSyncCommitteeSize, mock_minimal::MaxSignatureSize> = match config::IS_MINIMAL {
 			true => SyncAggregate{
 				sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("sync committee bits are too long"),
@@ -494,7 +501,7 @@ mod beacon_tests {
 				hex!("e6dcad4f60ce9ff8a587b110facbaf94721f06cd810b6d8bf6cffa641272808d").into(),
 		};
 
-		let payload = merkleization::get_ssz_sync_aggregate(sync_aggregate);
+		let payload: Result<SSZSyncAggregate, MerkleizationError> = sync_aggregate.try_into();
 		assert_ok!(&payload);
 
 		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
@@ -518,7 +525,7 @@ mod beacon_tests {
 
 	#[test]
 	pub fn test_hash_tree_root_execution_payload() {
-		let payload = merkleization::get_ssz_execution_payload(
+		let payload: Result<SSZExecutionPayload, MerkleizationError> =
             ExecutionPayload::<mock_minimal::MaxFeeRecipientSize, mock_minimal::MaxLogsBloomSize, mock_minimal::MaxExtraDataSize>{
                 parent_hash: hex!("eadee5ab098dde64e9fd02ae5858064bad67064070679625b09f8d82dec183f7").into(),
                 fee_recipient: hex!("f97e180c050e5ab072211ad2c213eb5aee4df134").to_vec().try_into().expect("fee recipient bits are too long"),
@@ -534,8 +541,7 @@ mod beacon_tests {
                 base_fee_per_gas: U256::from(7 as i16),
                 block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
                 transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
-            }
-        );
+            }.try_into();
 		assert_ok!(&payload);
 
 		let hash_root = merkleization::hash_tree_root(payload.unwrap());
@@ -547,7 +553,7 @@ mod beacon_tests {
 
 	#[test]
 	pub fn test_hash_tree_root_attestation() {
-		let payload = merkleization::get_ssz_attestation(
+		let payload: Result<SSZAttestation, MerkleizationError> =
             Attestation::<mock_minimal::MaxValidatorsPerCommittee, mock_minimal::MaxSignatureSize>{
                 aggregation_bits: hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec().try_into().expect("aggregation bits are too long"),
                 data: AttestationData{
@@ -564,8 +570,7 @@ mod beacon_tests {
                     }
                 },
                 signature: hex!("af8e57aadf092443bd6675927ca84875419233fb7a5eb3ae626621d3339fe738b00af4a0edcc55efbe1198a815600784074388d366c4add789aa6126bb1ec5ed63ad8d8f22b5f158ae4c25d46b08d46d1188f7ed7e8f99d96ff6c3c69a240c18").to_vec().try_into().expect("signature is too long"),
-            },
-        );
+            }.try_into();
 
 		assert_ok!(&payload);
 
@@ -580,7 +585,7 @@ mod beacon_tests {
 
 	#[test]
 	pub fn test_hash_tree_root_attestation_data() {
-		let payload = merkleization::get_ssz_attestation_data(AttestationData {
+		let payload: Result<SSZAttestationData, MerkleizationError> = AttestationData {
 			slot: 484119,
 			index: 25,
 			beacon_block_root: hex!(
@@ -597,7 +602,8 @@ mod beacon_tests {
 				root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7")
 					.into(),
 			},
-		});
+		}
+		.try_into();
 
 		assert_ok!(&payload);
 
@@ -612,10 +618,11 @@ mod beacon_tests {
 
 	#[test]
 	pub fn test_hash_tree_root_checkpoint() {
-		let payload = merkleization::get_ssz_checkpoint(Checkpoint {
+		let payload: Result<SSZCheckpoint, MerkleizationError> = Checkpoint {
 			epoch: 15127,
 			root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-		});
+		}
+		.try_into();
 
 		assert_ok!(&payload);
 
@@ -630,8 +637,8 @@ mod beacon_tests {
 
 	#[test]
 	pub fn test_hash_tree_root_attester_slashing() {
-		let payload =
-			merkleization::get_ssz_attester_slashing(get_attester_slashing::<mock_minimal::Test>());
+		let payload: Result<SSZAttesterSlashing, MerkleizationError> =
+			get_attester_slashing::<mock_minimal::Test>().try_into();
 
 		assert_ok!(&payload);
 
@@ -647,8 +654,9 @@ mod beacon_tests {
 #[cfg(feature = "minimal")]
 mod beacon_minimal_tests {
 	use crate::{
-		merkleization, mock::*, Error, ExecutionHeaders, FinalizedBeaconHeaders,
-		LatestFinalizedHeaderSlot, SyncCommittees, ValidatorsRoot,
+		merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody, Error,
+		ExecutionHeaders, FinalizedBeaconHeaders, LatestFinalizedHeaderSlot, SyncCommittees,
+		ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -756,7 +764,7 @@ mod beacon_minimal_tests {
 	}
 
 	#[test]
-	fn it_errors_when_importing_a_header_with_no_sync_commitee_for_period() {
+	fn it_errors_when_importing_a_header_with_no_sync_committee_for_period() {
 		let update = get_finalized_header_update::<mock_minimal::Test>();
 
 		new_tester::<mock_minimal::Test>().execute_with(|| {
@@ -791,7 +799,8 @@ mod beacon_minimal_tests {
 	#[test]
 	pub fn test_hash_block_body() {
 		let block_update = get_header_update::<mock_minimal::Test>();
-		let payload = merkleization::get_ssz_beacon_block_body(block_update.block.body);
+		let payload: Result<SSZBeaconBlockBody, MerkleizationError> =
+			block_update.block.body.try_into();
 		assert_ok!(&payload);
 
 		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
@@ -829,8 +838,9 @@ mod beacon_minimal_tests {
 #[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
 	use crate::{
-		merkleization, mock::*, ExecutionHeaders, FinalizedBeaconHeaders,
-		LatestFinalizedHeaderSlot, SyncCommittees, ValidatorsRoot,
+		merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
+		ExecutionHeaders, FinalizedBeaconHeaders, LatestFinalizedHeaderSlot, SyncCommittees,
+		ValidatorsRoot,
 	};
 	use frame_support::assert_ok;
 	use hex_literal::hex;
@@ -954,7 +964,8 @@ mod beacon_mainnet_tests {
 	#[test]
 	pub fn test_hash_block_body() {
 		let block_update = get_header_update::<mock_minimal::Test>();
-		let payload = merkleization::get_ssz_beacon_block_body(block_update.block.body);
+		let payload: Result<SSZBeaconBlockBody, MerkleizationError> =
+			block_update.block.body.try_into();
 		assert_ok!(&payload);
 
 		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());

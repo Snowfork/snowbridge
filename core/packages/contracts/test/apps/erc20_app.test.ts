@@ -94,7 +94,7 @@ describe("ERC20App", function () {
             ).to.be.revertedWithCustomError(app, "Unauthorized")
         })
 
-        it("should lock not lock mimimum amount", async function () {
+        it("should lock not lock minimum amount", async function () {
             let { app, token, user } = await loadFixture(withdrawalsFixture)
 
             let amount = ethers.BigNumber.from(0)

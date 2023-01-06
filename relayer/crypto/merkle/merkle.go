@@ -74,13 +74,14 @@ func (n *Node) UnmarshalJSON(data []byte) error {
 
 // Tree is the merkle tree structure. It is implemented
 // as an array of arrays of arrays of bytes:
-//   [
-//     [ root digest ],
-//     [ digest, digest ],
-//     [ digest, digest, digest, digest],
-//     ...
-//     [ leaf, leaf, leaf, leaf, ... ]
-//   ]
+//
+//	[
+//	  [ root digest ],
+//	  [ digest, digest ],
+//	  [ digest, digest, digest, digest],
+//	  ...
+//	  [ leaf, leaf, leaf, leaf, ... ]
+//	]
 type Tree struct {
 	levels [][][]byte
 	h      Hasher

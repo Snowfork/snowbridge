@@ -22,12 +22,12 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 		}
 		proofs = append(proofs,
 			log.Fields{
-				"v": proof.V,
-				"r": Hex(proof.R[:]),
-				"s": Hex(proof.S[:]),
-				"index": proof.Index.Uint64(),
+				"v":       proof.V,
+				"r":       Hex(proof.R[:]),
+				"s":       Hex(proof.S[:]),
+				"index":   proof.Index.Uint64(),
 				"account": proof.Account.Hex(),
-				"proof": merkleProof,
+				"proof":   merkleProof,
 			},
 		)
 	}
@@ -50,7 +50,7 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 				},
 			},
 			"bitfield": params.Bitfield,
-			"proof": proofs,
+			"proof":    proofs,
 		},
 		"commitmentHash": commitmentHash,
 	}
@@ -70,12 +70,12 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 		}
 		proofs = append(proofs,
 			log.Fields{
-				"v": proof.V,
-				"r": Hex(proof.R[:]),
-				"s": Hex(proof.S[:]),
-				"index": proof.Index,
+				"v":       proof.V,
+				"r":       Hex(proof.R[:]),
+				"s":       Hex(proof.S[:]),
+				"index":   proof.Index,
 				"account": proof.Account.Hex(),
-				"proof": merkleProof,
+				"proof":   merkleProof,
 			},
 		)
 	}
@@ -103,7 +103,7 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 				},
 			},
 			"bitfield": params.Bitfield,
-			"proofs": proofs,
+			"proofs":   proofs,
 			"leaf": log.Fields{
 				"version":              params.Leaf.Version,
 				"parentNumber":         params.Leaf.ParentNumber,
@@ -113,7 +113,7 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 				"nextAuthoritySetRoot": Hex(params.Leaf.NextAuthoritySetRoot[:]),
 				"parachainHeadsRoot":   Hex(params.Leaf.ParachainHeadsRoot[:]),
 			},
-			"leafProof": leafProofItems,
+			"leafProof":      leafProofItems,
 			"leafProofOrder": params.LeafProofOrder,
 		},
 		"commitmentHash": commitmentHash,

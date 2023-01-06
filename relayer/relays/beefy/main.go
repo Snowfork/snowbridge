@@ -64,7 +64,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 
 	log.WithFields(log.Fields{
-		"beefyBlock": initialBeefyBlock,
+		"beefyBlock":     initialBeefyBlock,
 		"validatorSetID": initialValidatorSetID,
 	}).Info("Retrieved current BeefyClient state")
 

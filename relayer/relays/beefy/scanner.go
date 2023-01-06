@@ -213,7 +213,7 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 				sendError(fmt.Errorf("fetch block hash: %w", err))
 				return
 			}
-			// Leaves are zero-indexed since beefy activation while block numbers are one-indexed 
+			// Leaves are zero-indexed since beefy activation while block numbers are one-indexed
 			leafIndex := blockNumber - beefyActivationBlock - 1
 			proofIsValid, proof, err := makeProof(meta, api, leafIndex, blockHash)
 			if err != nil {
@@ -223,8 +223,8 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 
 			if !proofIsValid {
 				log.WithFields(log.Fields{
-					"parentNumber": blockNumber,
-					"leafIndex": leafIndex,
+					"parentNumber":   blockNumber,
+					"leafIndex":      leafIndex,
 					"beefyBlockHash": blockHash,
 					"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
 				}).Info("Proof for leaf is invalid")
