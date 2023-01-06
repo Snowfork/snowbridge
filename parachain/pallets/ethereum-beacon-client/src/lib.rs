@@ -127,7 +127,6 @@ pub mod pallet {
 		SyncCommitteeMissing,
 		Unknown,
 		SyncCommitteeParticipantsNotSupermajority,
-		InvalidSyncCommitteeSignature,
 		InvalidHeaderMerkleProof,
 		InvalidSyncCommitteeMerkleProof,
 		InvalidSignature,
