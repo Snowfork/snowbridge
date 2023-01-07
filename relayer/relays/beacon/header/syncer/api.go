@@ -427,7 +427,7 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteeP
 
 		err = json.Unmarshal(bodyBytes, &response)
 		if err != nil {
-			return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w Body Response: %s", HTTPStatusNotOKErrorMessage, err, string(bodyBytes))
+			return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", HTTPStatusNotOKErrorMessage, err)
 		}
 
 		if strings.Contains(response.Message, "No partialUpdate available") {
