@@ -6,7 +6,8 @@ parachain_dir="$root_dir/parachain"
 parachain_runtime="${PARACHAIN_RUNTIME:-snowbase}"
 parachain_bin="$parachain_dir/target/release/snowbridge"
 test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-node"
-ethereum_dir="$root_dir/core/packages/contracts"
+core_dir="$root_dir/core"
+contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
 output_dir=/tmp/snowbridge
@@ -100,6 +101,10 @@ check_tool() {
     fi
     if ! [ -x "$(command -v mage)" ]; then
         echo 'Error: mage is not installed.'
+        exit
+    fi
+    if ! [ -x "$(command -v pnpm)" ]; then
+        echo 'Error: pnpm is not installed.'
         exit
     fi
     if [[ "$OSTYPE" =~ ^darwin ]]; then
