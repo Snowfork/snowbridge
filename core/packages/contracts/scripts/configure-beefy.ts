@@ -11,7 +11,7 @@ import type {
 } from "@polkadot/types/interfaces/beefy/types"
 
 let endpoint = process.env.RELAYCHAIN_ENDPOINT || "ws://localhost:9944"
-const beefyStartBlock = process.env.BEEFY_START_BLOCK ? parseInt(process.env.BEEFY_START_BLOCK) : 29
+const beefyStartBlock = process.env.BEEFY_START_BLOCK ? parseInt(process.env.BEEFY_START_BLOCK) : 15
 
 async function configureBeefy() {
     let [signer] = await hre.ethers.getSigners()

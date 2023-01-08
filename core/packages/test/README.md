@@ -69,7 +69,7 @@ These tests are meant to closely replicate real-world behaviour. This means that
 To just run a specific test, the bridge needs to be bootstrapped first:
 
 ```bash
-pnpm test:integration test/bootstrap.js
+pnpm test:bootstrap
 ```
 
 Now individual tests can be run, like the following:
