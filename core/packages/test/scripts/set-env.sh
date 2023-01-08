@@ -7,6 +7,7 @@ parachain_runtime="${PARACHAIN_RUNTIME:-snowbase}"
 parachain_bin="$parachain_dir/target/release/snowbridge"
 test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-node"
 core_dir="$root_dir/core"
+lodestar_version="${LODESTAR_VER:-1.2.2}"
 contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
@@ -110,6 +111,10 @@ check_tool() {
     if [[ "$OSTYPE" =~ ^darwin ]]; then
         if ! [ -x "$(command -v gdate)" ]; then
             echo 'Error: gdate is not installed.'
+            exit
+        fi
+        if ! [ -x "$(command -v gsed)" ]; then
+            echo 'Error: gsed is not installed.'
             exit
         fi
     fi
