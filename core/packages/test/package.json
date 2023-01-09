@@ -13,10 +13,10 @@
     "test:bootstrap": "mocha --timeout 600000 --parallel --grep Bootstrap --exit"
   },
   "devDependencies": {
-    "@polkadot/api": "9.6.2",
-    "@polkadot/types": "9.6.2",
-    "@polkadot/util": "10.1.11",
-    "@polkadot/util-crypto": "10.1.11",
+    "@polkadot/api": "9.11.1",
+    "@polkadot/types": "9.11.1",
+    "@polkadot/util": "10.2.3",
+    "@polkadot/util-crypto": "10.2.3",
     "@chainsafe/lodestar": "1.2.2",
     "@types/keccak": "^3.0.1",
     "@types/node": "^16.4.2",
