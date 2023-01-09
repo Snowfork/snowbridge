@@ -10,8 +10,7 @@ import "./XcmProxy.sol";
 /// @title Represents a fungible asset from substrate.
 contract XcmFungibleAsset is ERC20, Ownable {
     /// @dev initializes asset with an owner.
-    constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {
-    }
+    constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {}
 
     /// @dev mints the asset.
     /// @param _account the account to mint to.

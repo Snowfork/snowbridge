@@ -72,12 +72,6 @@ contract XcmApp {
 
         // Dispatch to proxy.
         bool success = proxy.execute(_executor, encodedCall);
-        emit XcmExecuted(
-            _origin,
-            proxy,
-            _executor,
-            success,
-            encodedCall
-        );
+        emit XcmExecuted(_origin, proxy, _executor, success, encodedCall);
     }
 }

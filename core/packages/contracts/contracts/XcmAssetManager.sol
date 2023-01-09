@@ -26,7 +26,7 @@ contract XcmAssetManager is XcmAssetLookup {
         return asset;
     }
 
-    function lookup(bytes32 assetHash) external override view returns (XcmFungibleAsset) {
+    function lookup(bytes32 assetHash) external view override returns (XcmFungibleAsset) {
         return fungibleAssets[assetHash];
     }
 
