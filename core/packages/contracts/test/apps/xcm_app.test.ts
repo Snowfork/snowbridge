@@ -1,12 +1,14 @@
 import { defaultAbiCoder } from "@ethersproject/abi"
 import { expect, loadFixture } from "../setup"
 import { xcmAppFixture } from "./fixtures"
+import { XcmFungibleAsset__factory } from "../../src"
 
-let POLKADOT_ORIGIN = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+let PARA_2001_ORIGIN = "0x2001000000000000000000000000000000000000000000000000000000000000"
+let PARA_2002_ORIGIN = "0x2002000000000000000000000000000000000000000000000000000000000000"
 
 describe("XCMApp", function () {
-    describe("Proxies", function () {
-        it("downstream sees proxy as msg.sender", async function () {
+    describe("proxies", function () {
+        it("xcm transact presents msg.sender as the proxy account", async function () {
             let { app, executor, assetManager, downstream, user } = await loadFixture(xcmAppFixture)
             let proxy = "0xe1d2a389cd3e9694D374507E00C49d643605a2fb"
             let abi = defaultAbiCoder
@@ -19,37 +21,88 @@ describe("XCMApp", function () {
                 [[downstream.address, encodedFunc]]
             )
 
+            let instructions = [{ kind: 0, arguments: transact }]
+
             let expectedEncodedCall = executor.interface.encodeFunctionData("execute", [
                 assetManager.address,
-                [{ kind: 0, arguments: transact }],
+                instructions,
             ])
 
-            let hardcoded_payload =
-                "0x0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000774667629726ec1fabebcec0d9139bd1c8f72a230000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000458d524e100000000000000000000000000000000000000000000000000000000"
+            let payload = abi.encode(["tuple(uint8 kind,bytes arguments)[]"],[
+                instructions
+            ]);
 
-            //let payload = abi.encode(["tuple(uint8 kind,bytes arguments)[]"],[
-            //    [ { kind: 0, arguments: transact} ]
-            //]);
-            //await expect(payload, "payload is created successfully").to.eq(hardcoded_payload);
+            // HACK: This fixes the encoding.
+            payload = payload.substring(0, 64) + '4' + payload.substring(65);
 
             await expect(
-                app.dispatchToProxy(POLKADOT_ORIGIN, executor.address, hardcoded_payload, {
+                app.dispatchToProxy(PARA_2001_ORIGIN, executor.address, payload, {
                     gasLimit: 1_000_000,
                 })
             )
                 .to.emit(app, "XcmExecuted")
                 .withArgs(
-                    POLKADOT_ORIGIN,
+                    PARA_2001_ORIGIN,
                     proxy,
                     executor.address,
                     true,
-                    "0x8e1b5c0e",
-                    "0x000000000000000000000000eda338e4dc46038493b885327842fd3e301cab39",
-                    "0x0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000774667629726ec1fabebcec0d9139bd1c8f72a230000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000458d524e100000000000000000000000000000000000000000000000000000000",
                     expectedEncodedCall
                 )
                 .to.emit(downstream, "RecordSender")
                 .withArgs(proxy)
+        })
+    })
+    describe("substrate native assets", function() {
+        it("the owning proxy can mint new tokens", async function () {
+            let { app, executor, assetManager, downstream, user } = await loadFixture(xcmAppFixture)
+            let abi = defaultAbiCoder
+
+            let proxy = "0xe1d2a389cd3e9694D374507E00C49d643605a2fb"
+            let assetHash = "0x0001000000000000000000000000000000000000000000000000000000000000"
+
+            let reserveAssetDeposited = abi.encode(
+                ["tuple(bytes32, uint256)"],
+                [[assetHash, 1000]]
+            )
+
+            let instructions = [
+                { kind: 1, arguments: reserveAssetDeposited }
+            ]
+
+            let expectedEncodedCall = executor.interface.encodeFunctionData("execute", [
+                assetManager.address,
+                instructions,
+            ])
+
+            let payload = abi.encode(["tuple(uint8 kind,bytes arguments)[]"],[
+                instructions
+            ]);
+
+            // HACK: This fixes the encoding.
+            payload = payload.substring(0, 64) + '4' + payload.substring(65);
+
+            await expect(
+                app.dispatchToProxy(PARA_2001_ORIGIN, executor.address, payload, {
+                    gasLimit: 1_000_000,
+                })
+            )
+                .to.emit(app, "XcmExecuted")
+                .withArgs(
+                    PARA_2001_ORIGIN,
+                    proxy,
+                    executor.address,
+                    true,
+                    expectedEncodedCall
+                )
+
+            let assetTokenAddr = await assetManager.lookup(assetHash)
+            console.log(assetTokenAddr)
+            //let asset = new XcmFungibleAsset__factory().attach(assetTokenAddr)
+            //let asset2 = await assetManager.fungibleAssets(assetHash)
+            //console.log(asset2)
+            
+            //let bn = await asset.
+            //console.log(bn)
         })
     })
 })

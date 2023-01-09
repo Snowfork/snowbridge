@@ -87,9 +87,8 @@ contract XcmExecutor {
         ReserveAssetDepositedData memory data
     ) internal {
         require(data.amount > 0, "must reserve a positive amount");
-        XcmFungibleAsset asset = lookup.lookup(data.assetHash);
-        require(address(asset) != address(0), "cannot find asset");
-        asset.mint(address(this), data.amount);
+        XcmFungibleAsset asset = lookup.lookupOrCreate(data.assetHash);
+        //asset.mint(address(this), data.amount);
     }
 
     /// @dev an asset needs to be deposited out of the proxy. This equates to an ERC20 transfer from the proxy to some destination.

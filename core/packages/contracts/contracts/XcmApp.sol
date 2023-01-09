@@ -27,9 +27,7 @@ contract XcmApp {
         XcmProxy proxy,
         address executor,
         bool success,
-        bytes4 debug1,
-        bytes debug2,
-        bytes debug3,
+        // TODO: Remove debug data
         bytes debug4
     );
 
@@ -79,9 +77,6 @@ contract XcmApp {
             proxy,
             _executor,
             success,
-            EXEC_XCM_FUNC,
-            abi.encode(assetLookup),
-            _instructions,
             encodedCall
         );
     }
