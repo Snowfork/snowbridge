@@ -19,11 +19,10 @@ contract XcmAssetManager is XcmAssetLookup {
         symbol[0] = bytes(name)[0];
         symbol[1] = bytes(name)[1];
         symbol[2] = bytes(name)[2];
-        //XcmFungibleAsset created = new XcmFungibleAsset(name, string(symbol));
-        //created.transferOwnership(msg.sender);
-        //fungibleAssets[assetHash] = created;
-        //return created;
-        return asset;
+        XcmFungibleAsset created = new XcmFungibleAsset(name, string(symbol));
+        created.transferOwnership(msg.sender);
+        fungibleAssets[assetHash] = created;
+        return created;
     }
 
     function lookup(bytes32 assetHash) external view override returns (XcmFungibleAsset) {

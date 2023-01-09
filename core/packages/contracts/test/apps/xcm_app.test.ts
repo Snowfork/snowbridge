@@ -52,7 +52,9 @@ describe("XCMApp", function () {
             let proxy = "0xe1d2a389cd3e9694D374507E00C49d643605a2fb"
             let assetHash = "0x0001000000000000000000000000000000000000000000000000000000000000"
 
-            let reserveAssetDeposited = abi.encode(["tuple(bytes32, uint256)"], [[assetHash, 1000]])
+            let mintAmount = 1000
+
+            let reserveAssetDeposited = abi.encode(["tuple(bytes32, uint256)"], [[assetHash, mintAmount]])
 
             let instructions = [{ kind: 1, arguments: reserveAssetDeposited }]
 
@@ -68,20 +70,17 @@ describe("XCMApp", function () {
 
             await expect(
                 app.dispatchToProxy(PARA_2001_ORIGIN, executor.address, payload, {
-                    gasLimit: 1_000_000,
+                    gasLimit: 30_000_000,
                 })
             )
                 .to.emit(app, "XcmExecuted")
                 .withArgs(PARA_2001_ORIGIN, proxy, executor.address, true, expectedEncodedCall)
 
             let assetTokenAddr = await assetManager.lookup(assetHash)
-            console.log(assetTokenAddr)
-            //let asset = new XcmFungibleAsset__factory().attach(assetTokenAddr)
-            //let asset2 = await assetManager.fungibleAssets(assetHash)
-            //console.log(asset2)
-
-            //let bn = await asset.
-            //console.log(bn)
+            //console.log(assetTokenAddr)
+            let asset = new XcmFungibleAsset__factory().attach(assetTokenAddr)
+            //console.log(await asset.totalSupply())
+            //expect(await asset.totalSupply()).to.be.equal(mintAmount)
         })
     })
 })
