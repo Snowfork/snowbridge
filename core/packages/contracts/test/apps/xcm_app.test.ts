@@ -54,7 +54,10 @@ describe("XCMApp", function () {
 
             let mintAmount = 1000
 
-            let reserveAssetDeposited = abi.encode(["tuple(bytes32, uint256)"], [[assetHash, mintAmount]])
+            let reserveAssetDeposited = abi.encode(
+                ["tuple(bytes32, uint256)"],
+                [[assetHash, mintAmount]]
+            )
 
             let instructions = [{ kind: 1, arguments: reserveAssetDeposited }]
 
