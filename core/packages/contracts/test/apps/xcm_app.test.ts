@@ -46,7 +46,7 @@ describe("XCMApp", function () {
     })
     describe("substrate native assets", function () {
         it("the owning proxy can mint new tokens", async function () {
-            let { app, executor, assetManager, downstream, user } = await loadFixture(xcmAppFixture)
+            let { app, executor, assetManager, owner  } = await loadFixture(xcmAppFixture)
             let abi = defaultAbiCoder
 
             let proxy = "0xe1d2a389cd3e9694D374507E00C49d643605a2fb"
@@ -80,10 +80,8 @@ describe("XCMApp", function () {
                 .withArgs(PARA_2001_ORIGIN, proxy, executor.address, true, expectedEncodedCall)
 
             let assetTokenAddr = await assetManager.lookup(assetHash)
-            //console.log(assetTokenAddr)
-            let asset = new XcmFungibleAsset__factory().attach(assetTokenAddr)
-            //console.log(await asset.totalSupply())
-            //expect(await asset.totalSupply()).to.be.equal(mintAmount)
+            let asset = new XcmFungibleAsset__factory(owner).attach(assetTokenAddr)
+            expect(await asset.totalSupply()).to.be.equal(mintAmount)
         })
     })
 })
