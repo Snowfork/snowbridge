@@ -117,7 +117,13 @@ describe("XCMApp", function () {
                 })
             )
                 .to.emit(app, "XcmExecuted")
-                .withArgs(PARA_2001_ORIGIN, owningProxy, executor.address, true, expectedEncodedCall)
+                .withArgs(
+                    PARA_2001_ORIGIN,
+                    owningProxy,
+                    executor.address,
+                    true,
+                    expectedEncodedCall
+                )
 
             let assetTokenAddr = await assetManager.lookup(assetHash)
             let asset = new XcmFungibleAsset__factory(owner).attach(assetTokenAddr)
@@ -129,7 +135,13 @@ describe("XCMApp", function () {
                 })
             )
                 .to.emit(app, "XcmExecuted")
-                .withArgs(PARA_2002_ORIGIN, nonOwningProxy, executor.address, false, expectedEncodedCall)
+                .withArgs(
+                    PARA_2002_ORIGIN,
+                    nonOwningProxy,
+                    executor.address,
+                    false,
+                    expectedEncodedCall
+                )
 
             expect(await asset.totalSupply()).to.be.equal(mintAmount)
             expect(await asset.balanceOf(owningProxy)).to.be.equal(mintAmount)
@@ -148,14 +160,16 @@ describe("XCMApp", function () {
                 ["tuple(bytes32, uint256)"],
                 [[assetHash, mintAmount]]
             )
-            
+
             let depositAsset = abi.encode(
                 ["tuple(bytes32,uint256,address)"],
                 [[assetHash, depositAmount, user.address]]
             )
 
-            let instructions = [{ kind: 1, arguments: reserveAssetDeposited },
-            {kind: 2, arguments: depositAsset}]
+            let instructions = [
+                { kind: 1, arguments: reserveAssetDeposited },
+                { kind: 2, arguments: depositAsset },
+            ]
 
             let expectedEncodedCall = executor.interface.encodeFunctionData("execute", [
                 assetManager.address,
@@ -173,14 +187,20 @@ describe("XCMApp", function () {
                 })
             )
                 .to.emit(app, "XcmExecuted")
-                .withArgs(PARA_2001_ORIGIN, owningProxy, executor.address, true, expectedEncodedCall)
+                .withArgs(
+                    PARA_2001_ORIGIN,
+                    owningProxy,
+                    executor.address,
+                    true,
+                    expectedEncodedCall
+                )
 
             let assetTokenAddr = await assetManager.lookup(assetHash)
             let asset = new XcmFungibleAsset__factory(owner).attach(assetTokenAddr)
             expect(await asset.totalSupply()).to.be.equal(mintAmount)
 
-            expect(await asset.balanceOf(owningProxy)).to.be.equal(mintAmount - depositAmount);
-            expect(await asset.balanceOf(user.address)).to.be.equal(depositAmount);
+            expect(await asset.balanceOf(owningProxy)).to.be.equal(mintAmount - depositAmount)
+            expect(await asset.balanceOf(user.address)).to.be.equal(depositAmount)
         })
     })
 })
