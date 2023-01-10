@@ -20,7 +20,7 @@ use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*};
 
 use sp_io::offchain_index::set;
 
-use snowbridge_core::{types::AuxiliaryDigestItem};
+use snowbridge_core::types::AuxiliaryDigestItem;
 
 use snowbridge_basic_channel_merkle_proof::merkle_root;
 
@@ -274,8 +274,7 @@ pub mod pallet {
 				eth_message_bundles.clone(),
 			);
 
-			let digest_item =
-				AuxiliaryDigestItem::Commitment(commitment_hash.clone()).into();
+			let digest_item = AuxiliaryDigestItem::Commitment(commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
 			Self::deposit_event(Event::Committed {
@@ -320,11 +319,8 @@ pub mod pallet {
 					*nonce = nonce.saturating_add(1);
 					*nonce
 				});
-				let bundle: MessageBundleOf<T> = MessageBundle {
-					account,
-					nonce: next_nonce,
-					messages,
-				};
+				let bundle: MessageBundleOf<T> =
+					MessageBundle { account, nonce: next_nonce, messages };
 				message_bundles.push(bundle);
 			}
 
