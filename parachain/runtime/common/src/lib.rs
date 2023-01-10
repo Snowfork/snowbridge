@@ -88,8 +88,7 @@ mod tests {
 		currency::{CENTS, MILLICENTS},
 		fee::WeightToFee,
 	};
-	use frame_support::weights::constants::ExtrinsicBaseWeight;
-	use frame_support::weights::WeightToFee as WeightToFeeT;
+	use frame_support::weights::{constants::ExtrinsicBaseWeight, WeightToFee as WeightToFeeT};
 
 	#[test]
 	// This function tests that the fee for `ExtrinsicBaseWeight` of weight is correct
