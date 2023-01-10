@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "postinstall": "cd .. && husky install",
+    "postinstall": "cd .. && husky install && cd core/packages/test && ./scripts/hack-ethereum.sh",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",

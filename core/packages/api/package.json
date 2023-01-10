@@ -26,8 +26,8 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
-    "@polkadot/api": "^9.6.2",
-    "@polkadot/types": "^9.6.2",
+    "@polkadot/api": "9.11.1",
+    "@polkadot/types": "9.11.1",
     "@snowbridge/contracts": "workspace:*",
     "ethers": "^5.7.2"
   }
