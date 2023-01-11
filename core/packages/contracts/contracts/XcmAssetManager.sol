@@ -14,12 +14,7 @@ contract XcmAssetManager is XcmAssetLookup {
             return asset;
         }
 
-        string memory name = iToHex(assetHash);
-        bytes memory symbol = new bytes(3);
-        symbol[0] = bytes(name)[0];
-        symbol[1] = bytes(name)[1];
-        symbol[2] = bytes(name)[2];
-        XcmFungibleAsset created = new XcmFungibleAsset(name, string(symbol));
+        XcmFungibleAsset created = new XcmFungibleAsset();
         created.transferOwnership(msg.sender);
         fungibleAssets[assetHash] = created;
         return created;
