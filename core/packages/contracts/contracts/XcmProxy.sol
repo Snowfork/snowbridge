@@ -7,14 +7,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @notice A simple pass through XcmProxy.
 contract XcmProxy is Ownable {
     /// @dev Calls into the XCM executor
-    /// @param _executor The address of the XCM executor.
-    /// @param _encodedCall The encoded call to execute the xcm message.
+    /// @param executor The address of the XCM executor.
+    /// @param encodedCall The encoded call to execute the xcm message.
     /// @return bool than indicates success of the call.
     function execute(
-        address _executor,
-        bytes calldata _encodedCall
+        address executor,
+        bytes calldata encodedCall
     ) external onlyOwner returns (bool) {
-        (bool success, ) = _executor.delegatecall(_encodedCall);
+        (bool success, ) = executor.delegatecall(encodedCall);
         return success;
     }
 }

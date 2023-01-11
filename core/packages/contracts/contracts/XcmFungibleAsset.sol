@@ -17,16 +17,16 @@ contract XcmFungibleAsset is ERC20, Ownable {
     }
 
     /// @dev mints the asset.
-    /// @param _account the account to mint to.
-    /// @param _amount the amount to mint.
-    function mint(address _account, uint256 _amount) public onlyOwner {
-        _mint(_account, _amount);
+    /// @param account the account to mint to.
+    /// @param amount the amount to mint.
+    function mint(address account, uint256 amount) public onlyOwner {
+        _mint(account, amount);
     }
 
     /// @dev mints the asset.
-    /// @param _account the account to mint to.
-    /// @param _amount the amount to mint.
-    function burn(address _account, uint256 _amount) public onlyOwner {
-        _burn(_account, _amount);
+    /// @param account the account to mint to.
+    /// @param amount the amount to mint.
+    function burn(address account, uint256 amount) public onlyOwner {
+        _burn(account, amount);
     }
 }

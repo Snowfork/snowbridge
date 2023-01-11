@@ -39,30 +39,30 @@ contract XcmApp is Ownable {
     bytes4 private constant EXEC_XCM_FUNC = bytes4(keccak256("execute(address,(uint8,bytes)[])"));
 
     /// @dev Looks up the proxy and executor and executes the payload.
-    /// @param _origin The hashed origin.
-    /// @param _executor The identifier for the executor version.
-    /// @param _instructions The XCM payload to be executed.
+    /// @param origin The hashed origin.
+    /// @param executor The identifier for the executor version.
+    /// @param instructions The XCM payload to be executed.
     function dispatchToProxy(
-        bytes32 _origin,
-        address _executor,
-        bytes calldata _instructions
+        bytes32 origin,
+        address executor,
+        bytes calldata instructions
     ) external onlyOwner {
-        XcmProxy proxy = proxies[_origin];
+        XcmProxy proxy = proxies[origin];
         // JIT create proxy if it does not exist.
         if (proxy == XcmProxy(address(0))) {
             proxy = new XcmProxy();
-            proxies[_origin] = proxy;
+            proxies[origin] = proxy;
         }
 
         // encode a call to the xcm executor
         bytes memory encodedCall = bytes.concat(
             EXEC_XCM_FUNC,
             abi.encode(assetLookup),
-            _instructions
+            instructions
         );
 
         // Dispatch to proxy.
-        bool success = proxy.execute(_executor, encodedCall);
-        emit XcmExecuted(_origin, proxy, _executor, success, encodedCall);
+        bool success = proxy.execute(executor, encodedCall);
+        emit XcmExecuted(origin, proxy, executor, success, encodedCall);
     }
 }
