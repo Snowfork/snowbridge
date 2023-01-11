@@ -129,7 +129,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return err
 	}
 
-	// Wait RandaoCommitDelay before submit CommitPrevRandao to prevent attacker to manipulate committee memberships
+	// Wait RandaoCommitDelay before submit CommitPrevRandao to prevent attacker from manipulating committee memberships
 	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
 	receipt, err := wr.waitForTransaction(ctx, tx, wr.blockWaitPeriod+1)
 	if err != nil {
@@ -312,7 +312,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 		}
 
 		// In Handover mode except for the validator proof to verify commitment signature
-		// will also add mmr leaf proof to verify against mmr root later
+		// will also add mmr leaf proof which contains nextAuthoritySet to verify against mmr root
 		// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/BeefyClient.sol#L342-L350
 		tx, err := wr.contract.SubmitFinalWithHandover(
 			wr.makeTxOpts(ctx),

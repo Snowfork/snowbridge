@@ -10,8 +10,8 @@ import (
 
 type SimplifiedMMRProof struct {
 	MerkleProofItems []types.H256
-	// Relative position of each proof item comparing with the leaf proof
-	// with bitfield expression of left or right
+	// Bitfield of the order in which each proof item should be hashed,
+	// either left (1) or right (0).
 	MerkleProofOrder uint64
 	// Below fields are not part of proof directly, but they are included so that
 	// we do not lose any information when converting from RPC response
@@ -170,7 +170,7 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 	return fmt.Errorf("corrupted proof"), proofOrder
 }
 
-// SimplifiedMMRProof is pre-processed MMR proof format which make it easy to verify in Solidity
+// SimplifiedMMRProof is pre-processed MMR proof format which makes it easy to verify in Solidity
 // Original MMRProof is generated in substrate with https://github.com/nervosnetwork/merkle-mountain-range
 // The optimization works by pre-calculating order of the merkle tree proof so that we don't have to use mathematic operation to determine the same on solidity side
 // More details in https://github.com/Snowfork/snowbridge/pull/495
