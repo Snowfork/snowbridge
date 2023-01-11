@@ -18,6 +18,7 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 * direnv - https://direnv.net/
 
+
 ## Setup
 
 ### Install NPM dependencies
@@ -27,6 +28,10 @@ Make sure to install dependencies for all packages (contracts, api, test):
 ```bash
 cd ../.. && pnpm install
 ```
+
+### Install Zombienet
+
+Zombienet is a cli tool to easily spawn ephemeral Polkadot/Substrate networks and perform tests. Just download [latest binary release](https://github.com/paritytech/zombienet/releases/) and copy it to $PATH which can be executed directly from command line
 
 ### Configure testnet
 
