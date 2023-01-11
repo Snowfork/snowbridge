@@ -115,7 +115,7 @@ async function dotAppFixture() {
 }
 
 async function xcmAppFixture() {
-    let { registry, owner, user } = await loadFixture(baseFixture)
+    let { owner, user } = await loadFixture(baseFixture)
 
     let executor = await new XcmExecutor__factory(owner).deploy()
     await executor.deployed()
@@ -123,7 +123,7 @@ async function xcmAppFixture() {
     let assetManager = await new XcmAssetManager__factory(owner).deploy()
     await assetManager.deployed()
 
-    let app = await new XcmApp__factory(owner).deploy(registry.address, assetManager.address)
+    let app = await new XcmApp__factory(owner).deploy(assetManager.address)
     await app.deployed()
 
     let downstream = await new MockDownstreamApp__factory(owner).deploy()
@@ -136,6 +136,5 @@ async function xcmAppFixture() {
         downstream,
         owner,
         user,
-        channelID: 0,
     }
 }

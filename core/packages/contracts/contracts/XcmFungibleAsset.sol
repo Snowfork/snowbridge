@@ -10,8 +10,7 @@ import "./XcmProxy.sol";
 /// @title Represents a fungible asset from substrate.
 contract XcmFungibleAsset is ERC20, Ownable {
     /// @dev initializes asset with an owner.
-    constructor() ERC20("", "") {
-    }
+    constructor() ERC20("", "") {}
 
     function decimals() public view virtual override returns (uint8) {
         return 10;

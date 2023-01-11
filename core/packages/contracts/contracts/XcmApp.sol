@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "./ChannelRegistry.sol";
 import "./XcmProxy.sol";
 import "./XcmAssetManager.sol";
 
 /// @title Xcm App
 /// @notice Implements XCM for the EVM.
-contract XcmApp {
-    /// @dev Channels which are allowed to call this app.
-    ChannelRegistry public immutable registry;
-
+contract XcmApp is Ownable {
     /// @dev Asset look up.
     XcmAssetLookup public immutable assetLookup;
 
@@ -34,10 +30,9 @@ contract XcmApp {
     /// @dev Called from an unauthorized sender.
     error Unauthorized();
 
-    /// @param _registry The channel registry which is the source of messages.
-    constructor(ChannelRegistry _registry, XcmAssetLookup _assetLookup) {
-        registry = _registry;
-        assetLookup = _assetLookup;
+    /// @param lookup Where to look up xcm assets.
+    constructor(XcmAssetLookup lookup) {
+        assetLookup = lookup;
     }
 
     /// @dev The signature of the xcm execution function.
@@ -51,11 +46,7 @@ contract XcmApp {
         bytes32 _origin,
         address _executor,
         bytes calldata _instructions
-    ) external {
-        if (!registry.isInboundChannel(msg.sender)) {
-            revert Unauthorized();
-        }
-
+    ) external onlyOwner {
         XcmProxy proxy = proxies[_origin];
         // JIT create proxy if it does not exist.
         if (proxy == XcmProxy(address(0))) {
