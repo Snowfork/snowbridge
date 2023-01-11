@@ -1,2 +1,2 @@
-/ethereum/contracts @snowfork/snowbridge-onchain-code-owners
-/parachain/pallets @snowfork/snowbridge-onchain-code-owners
+*.sol @snowfork/snowbridge-onchain-code-owners
+*.rs @snowfork/snowbridge-onchain-code-owners

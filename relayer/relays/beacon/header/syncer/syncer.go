@@ -112,16 +112,12 @@ func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSlot uint64) ([]
 }
 
 func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdate, error) {
-	committeeUpdates, err := s.Client.GetSyncCommitteePeriodUpdate(from)
+	committeeUpdateContainer, err := s.Client.GetSyncCommitteePeriodUpdate(from)
 	if err != nil {
 		return SyncCommitteePeriodUpdate{}, fmt.Errorf("fetch sync committee period update: %w", err)
 	}
 
-	if len(committeeUpdates.Data) < 1 {
-		return SyncCommitteePeriodUpdate{}, fmt.Errorf("no sync committee sync update returned: %w", err)
-	}
-
-	committeeUpdate := committeeUpdates.Data[0]
+	committeeUpdate := committeeUpdateContainer.Data
 
 	attestedHeader, err := committeeUpdate.AttestedHeader.ToScale()
 	if err != nil {

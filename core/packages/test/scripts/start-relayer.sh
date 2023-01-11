@@ -134,13 +134,6 @@ start_relayer()
             sleep 20
         done
     ) &
-
-    # waiting sync headers 
-    until grep "starting to sync finalized headers" beacon-relay.log > /dev/null; do
-        echo "Waiting for beacon relay to sync headers..."
-        sleep 5
-    done
-    echo "Ready for beacon relayer to sync headers"
 }
 
 if [ -z "${from_start_services:-}" ]; then

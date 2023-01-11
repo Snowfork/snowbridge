@@ -13,6 +13,23 @@ class SubClient {
     const provider = new WsProvider(this.endpoint);
     this.api = await ApiPromise.create({
       provider,
+      rpc: {
+        basicOutboundChannel: {
+          getMerkleProof: {
+            params: [
+              {
+                name: 'commitment_hash',
+                type: 'H256',
+              },
+              {
+                name: 'leaf_index',
+                type: 'u64',
+              }
+            ],
+            type: 'Bytes'
+          }
+        }
+      }
     })
 
     this.keyring = new Keyring({ type: 'sr25519' });

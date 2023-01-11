@@ -394,7 +394,7 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 }
 
 type SyncCommitteePeriodUpdateResponse struct {
-	Data []struct {
+	Data struct {
 		AttestedHeader          HeaderResponse        `json:"attested_header"`
 		NextSyncCommittee       SyncCommitteeResponse `json:"next_sync_committee"`
 		NextSyncCommitteeBranch []common.Hash         `json:"next_sync_committee_branch"`
@@ -442,14 +442,18 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteeP
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
-	var response SyncCommitteePeriodUpdateResponse
+	var response []SyncCommitteePeriodUpdateResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
 	if err != nil {
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
-	return response, nil
+	if len(response) == 0 {
+		return SyncCommitteePeriodUpdateResponse{}, ErrNotFound
+	}
+
+	return response[0], nil
 }
 
 type ForkResponse struct {
