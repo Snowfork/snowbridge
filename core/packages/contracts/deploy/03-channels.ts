@@ -1,10 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
-import { getConfigForNetwork } from "../config"
 
-module.exports = async ({ ethers, deployments, getUnnamedAccounts, network }: HardhatRuntimeEnvironment) => {
+module.exports = async ({ ethers, deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
-
-    const config = getConfigForNetwork(network.name)
 
     let parachainClient = await deployments.get("ParachainClient")
     let merkleProof = await deployments.get("MerkleProof")
@@ -13,7 +10,7 @@ module.exports = async ({ ethers, deployments, getUnnamedAccounts, network }: Ha
 
     await deployments.deploy("BasicInboundChannel", {
         from: deployer,
-        args: [config.basicChannelSourceID, parachainClient.address],
+        args: [parachainClient.address],
         libraries: {
             MerkleProof: merkleProof.address
         },

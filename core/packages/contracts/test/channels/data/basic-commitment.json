@@ -8,8 +8,7 @@
                 "target": "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d"
             }
         ],
-        "nonce": 1,
-        "sourceChannelID": 0
+        "nonce": 1
     },
     "hashSides": [
         true

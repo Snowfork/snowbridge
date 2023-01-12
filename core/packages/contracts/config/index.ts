@@ -1,5 +1,4 @@
 interface EnvironmentConfig {
-    basicChannelSourceID: number,
     parachainID: number,
     randaoCommitDelay: number,
     randaoCommitExpiration: number,
@@ -11,7 +10,6 @@ interface Config {
 
 const config: Config = {
     default: {
-        basicChannelSourceID: 0,
         parachainID: 1000,
         randaoCommitDelay: 3,
         randaoCommitExpiration: 8

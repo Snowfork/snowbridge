@@ -22,7 +22,7 @@ describe("BasicInboundChannel", function () {
                 "contracts/utils/MerkleProof.sol:MerkleProof": merkleProof.address,
             },
             owner
-        ).deploy(0, mockParachainClient.address)
+        ).deploy(mockParachainClient.address)
         await channel.deployed()
 
         return { channel, user }
