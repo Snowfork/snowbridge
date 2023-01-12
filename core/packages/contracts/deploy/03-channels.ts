@@ -23,24 +23,7 @@ module.exports = async ({ ethers, deployments, getUnnamedAccounts, network }: Ha
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 
-    let incentivizedInboundChannel = await deployments.deploy("IncentivizedInboundChannel", {
-        from: deployer,
-        args: [config.incentivizedChannelSourceID, parachainClient.address],
-        log: true,
-        autoMine: true,
-        maxFeePerGas: feeData.maxFeePerGas,
-        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-    })
-
     let basicOutboundChannel = await deployments.deploy("BasicOutboundChannel", {
-        from: deployer,
-        log: true,
-        autoMine: true,
-        maxFeePerGas: feeData.maxFeePerGas,
-        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-    })
-
-    let incentivizedOutboundChannel = await deployments.deploy("IncentivizedOutboundChannel", {
         from: deployer,
         log: true,
         autoMine: true,
@@ -69,18 +52,5 @@ module.exports = async ({ ethers, deployments, getUnnamedAccounts, network }: Ha
         0,
         basicInboundChannel.address,
         basicOutboundChannel.address
-    )
-    await deployments.execute(
-        "ChannelRegistry",
-        {
-            from: deployer,
-            autoMine: true,
-            maxFeePerGas: feeData.maxFeePerGas,
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-        },
-        "updateChannel",
-        1,
-        incentivizedInboundChannel.address,
-        incentivizedOutboundChannel.address
     )
 }

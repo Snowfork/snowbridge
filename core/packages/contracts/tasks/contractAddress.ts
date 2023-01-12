@@ -7,8 +7,6 @@ task("contractAddressList", "Print the list of deployed contract addresses.")
 
         const BasicInboundChannel = await hre.deployments.get("BasicInboundChannel")
         const BasicOutboundChannel = await hre.deployments.get("BasicOutboundChannel")
-        const IncentivizedInboundChannel = await hre.deployments.get("IncentivizedInboundChannel")
-        const IncentivizedOutboundChannel = await hre.deployments.get("IncentivizedOutboundChannel")
         const ETHApp = await hre.deployments.get("ETHApp")
         const ERC20App = await hre.deployments.get("ERC20App")
         const DOTApp = await hre.deployments.get("DOTApp")
@@ -19,8 +17,6 @@ task("contractAddressList", "Print the list of deployed contract addresses.")
         const addresses = {
             "BasicInboundChannel": BasicInboundChannel.address,
             "BasicOutboundChannel": BasicOutboundChannel.address,
-            "IncentivizedInboundChannel": IncentivizedInboundChannel.address,
-            "IncentivizedOutboundChannel": IncentivizedOutboundChannel.address,
             "ETHApp": ETHApp.address,
             "ERC20App": ERC20App.address,
             "DOTApp": DOTApp.address,
