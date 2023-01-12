@@ -16,24 +16,20 @@ type inputItems struct {
 }
 
 type inputItem struct {
+	// TODO: remove this channelID
 	ID   uint64 `json:"id"`
 	Hash string `json:"hash"`
 	Data string `json:"data"`
 }
 
+// TODO: replace with BasicChannelEvent
 type Events struct {
-	Basic        *BasicChannelEvent
-	Incentivized *IncentivizedChannelEvent
+	Basic *BasicChannelEvent
 }
 
 type BasicChannelEvent struct {
 	Hash    types.H256
 	Bundles []BasicOutboundChannelMessageBundle
-}
-
-type IncentivizedChannelEvent struct {
-	Hash   types.H256
-	Bundle IncentivizedOutboundChannelMessageBundle
 }
 
 type QueryClient struct {
@@ -96,16 +92,6 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 			events.Basic = &BasicChannelEvent{
 				Hash:    hash,
 				Bundles: bundles,
-			}
-		} else if item.ID == 1 {
-			var bundle IncentivizedOutboundChannelMessageBundle
-			err = types.DecodeFromHexString(item.Data, &bundle)
-			if err != nil {
-				return nil, err
-			}
-			events.Incentivized = &IncentivizedChannelEvent{
-				Hash:   hash,
-				Bundle: bundle,
 			}
 		} else {
 			return nil, fmt.Errorf("unknown channel")
