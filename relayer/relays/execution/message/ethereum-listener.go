@@ -29,7 +29,6 @@ type EthereumListener struct {
 	config               *config.SourceConfig
 	conn                 *ethereum.Connection
 	basicOutboundChannel *basic.BasicOutboundChannel
-	mapping              map[common.Address]string
 	headerCache          *ethereum.HeaderCache
 }
 
@@ -41,7 +40,6 @@ func NewEthereumListener(
 		config:               config,
 		conn:                 conn,
 		basicOutboundChannel: nil,
-		mapping:              make(map[common.Address]string),
 	}
 }
 
@@ -64,7 +62,6 @@ func (li *EthereumListener) Start(
 		return err
 	}
 	li.basicOutboundChannel = basicOutboundChannel
-	li.mapping[address] = "BasicInboundChannel.submit"
 
 	return nil
 }
@@ -136,7 +133,7 @@ func (li *EthereumListener) makeOutgoingMessages(
 			return nil, err
 		}
 
-		msg, err := ethereum.MakeMessageFromEvent(li.mapping, event, receiptTrie)
+		msg, err := ethereum.MakeMessageFromEvent(event, receiptTrie)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"address":     event.Address.Hex(),

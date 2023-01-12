@@ -63,22 +63,18 @@ func fetchMessagesFunc(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// TODO: remove mapping, it only maps the basic channel address to the string "BasicInboundChannel.submit"
-	mapping := make(map[common.Address]string)
-
-	contractEvents, trie, err := getEthContractEventsAndTrie(mapping, blockHash, index)
+	contractEvents, trie, err := getEthContractEventsAndTrie(blockHash, index)
 	if err != nil {
 		return err
 	}
 
 	for _, event := range contractEvents {
-		printEthContractEventForSub(mapping, event, trie)
+		printEthContractEventForSub(event, trie)
 	}
 	return nil
 }
 
 func getEthContractEventsAndTrie(
-	mapping map[common.Address]string,
 	blockHash gethCommon.Hash,
 	index uint64,
 ) ([]*gethTypes.Log, *gethTrie.Trie, error) {
@@ -98,7 +94,6 @@ func getEthContractEventsAndTrie(
 	if err != nil {
 		return nil, nil, err
 	}
-	mapping[address] = "BasicInboundChannel.submit"
 
 	loader := ethereum.DefaultBlockLoader{Conn: conn}
 	block, err := loader.GetBlock(ctx, blockHash)
@@ -157,8 +152,8 @@ func getEthBasicMessages(
 	return events, nil
 }
 
-func printEthContractEventForSub(mapping map[common.Address]string, event *gethTypes.Log, trie *gethTrie.Trie) error {
-	message, err := ethereum.MakeMessageFromEvent(mapping, event, trie)
+func printEthContractEventForSub(event *gethTypes.Log, trie *gethTrie.Trie) error {
+	message, err := ethereum.MakeMessageFromEvent(event, trie)
 	if err != nil {
 		return err
 	}

@@ -29,13 +29,11 @@ import (
 
 // EthereumListener streams the Ethereum blockchain for application events
 type EthereumListener struct {
-	ethashDataDir        string
-	ethashCacheDir       string
-	config               *SourceConfig
-	conn                 *ethereum.Connection
-	basicOutboundChannel *basic.BasicOutboundChannel
-	// TODO: remove mapping, it only maps the basic channel address to the string "BasicInboundChannel.submit"
-	mapping               map[common.Address]string
+	ethashDataDir         string
+	ethashCacheDir        string
+	config                *SourceConfig
+	conn                  *ethereum.Connection
+	basicOutboundChannel  *basic.BasicOutboundChannel
 	payloads              chan ParachainPayload
 	headerSyncer          *syncer.Syncer
 	initBlockHeight       uint64
@@ -54,7 +52,6 @@ func NewEthereumListener(
 		config:                config,
 		conn:                  conn,
 		basicOutboundChannel:  nil,
-		mapping:               make(map[common.Address]string),
 		headerSyncer:          nil,
 		initBlockHeight:       initBlockHeight,
 		descendantsUntilFinal: descendantsUntilFinal,
@@ -99,7 +96,6 @@ func (li *EthereumListener) Start(
 		return nil, err
 	}
 	li.basicOutboundChannel = basicOutboundChannel
-	li.mapping[address] = "BasicInboundChannel.submit"
 
 	li.headerSyncer = syncer.NewSyncer(
 		li.descendantsUntilFinal,
@@ -220,7 +216,7 @@ func (li *EthereumListener) makeOutgoingMessages(
 			return nil, err
 		}
 
-		msg, err := ethereum.MakeMessageFromEvent(li.mapping, event, receiptTrie)
+		msg, err := ethereum.MakeMessageFromEvent(event, receiptTrie)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"address":     event.Address.Hex(),
