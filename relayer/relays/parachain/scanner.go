@@ -203,7 +203,7 @@ func (s *Scanner) findTasksImpl(
 
 		basicChannelProofs := make([]BundleProof, 0, len(basicChannelAccountNonces))
 
-		events, err := s.eventQueryClient.QueryEvents(ctx, s.config.Parachain.Endpoint, blockHash)
+		events, err := s.eventQueryClient.QueryEvent(ctx, s.config.Parachain.Endpoint, blockHash)
 		if err != nil {
 			return nil, fmt.Errorf("query events: %w", err)
 		}
@@ -214,12 +214,12 @@ func (s *Scanner) findTasksImpl(
 			}
 
 			if !scanBasicChannelDone {
-				if events.Basic == nil {
+				if events == nil {
 					return nil, fmt.Errorf("event basicOutboundChannel.Committed not found in block")
 				}
 
 				digestItemHash := digestItem.AsCommitment.Hash
-				if events.Basic.Hash != digestItemHash {
+				if events.Hash != digestItemHash {
 					return nil, fmt.Errorf("basic channel commitment hash in digest item does not match the one in the Committed event")
 				}
 
@@ -228,7 +228,7 @@ func (s *Scanner) findTasksImpl(
 					digestItemHash,
 					basicChannelAccountNonces,
 					basicChannelScanAccounts,
-					events.Basic.Bundles,
+					events.Bundles,
 				)
 				if err != nil {
 					return nil, err

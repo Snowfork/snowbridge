@@ -20,11 +20,6 @@ type inputItem struct {
 	Data string `json:"data"`
 }
 
-// TODO: replace with BasicChannelEvent
-type Events struct {
-	Basic *BasicChannelEvent
-}
-
 type BasicChannelEvent struct {
 	Hash    types.H256
 	Bundles []BasicOutboundChannelMessageBundle
@@ -42,7 +37,7 @@ func NewQueryClient() QueryClient {
 	}
 }
 
-func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash types.Hash) (*Events, error) {
+func (q *QueryClient) QueryEvent(ctx context.Context, api string, blockHash types.Hash) (*BasicChannelEvent, error) {
 	name, args := q.NameArgs(api, blockHash.Hex())
 	cmd := exec.CommandContext(ctx, name, args...)
 
@@ -57,7 +52,7 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 			"args":   fmt.Sprintf("%v", args),
 			"stdErr": errBuf.String(),
 			"stdOut": outBuf.String(),
-		}).Error("Failed to query events.")
+		}).Error("Failed to query event.")
 		return nil, err
 	}
 
@@ -71,7 +66,7 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 		"inputItems": items,
 	}).Debug("parachain.QueryEvents")
 
-	var events Events
+	var event *BasicChannelEvent
 
 	for _, item := range items.Items {
 
@@ -86,14 +81,14 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 		if err != nil {
 			return nil, err
 		}
-		events.Basic = &BasicChannelEvent{
+		event = &BasicChannelEvent{
 			Hash:    hash,
 			Bundles: bundles,
 		}
 	}
 	log.WithFields(log.Fields{
-		"events": events,
+		"event": event,
 	}).Debug("parachain.QueryEvents")
 
-	return &events, nil
+	return event, nil
 }
