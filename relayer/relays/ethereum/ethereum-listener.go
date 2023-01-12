@@ -12,9 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 
-	// TODO: replace etypes with gethTypes below
-	etypes "github.com/ethereum/go-ethereum/core/types"
-
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -176,8 +173,8 @@ func (li *EthereumListener) processEventsAndHeaders(
 	}
 }
 
-func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
-	var events []*etypes.Log
+func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChannel, options *bind.FilterOpts) ([]*gethTypes.Log, error) {
+	var events []*gethTypes.Log
 
 	iter, err := contract.FilterMessage(options)
 	if err != nil {
@@ -201,7 +198,7 @@ func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChanne
 func (li *EthereumListener) makeOutgoingMessages(
 	ctx context.Context,
 	hcs *ethereum.HeaderCache,
-	events []*etypes.Log,
+	events []*gethTypes.Log,
 ) ([]*chain.EthereumOutboundMessage, error) {
 	messages := make([]*chain.EthereumOutboundMessage, len(events))
 
