@@ -16,8 +16,6 @@ type inputItems struct {
 }
 
 type inputItem struct {
-	// TODO: remove this channelID
-	ID   uint64 `json:"id"`
 	Hash string `json:"hash"`
 	Data string `json:"data"`
 }
@@ -83,18 +81,14 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 			return nil, err
 		}
 
-		if item.ID == 0 {
-			var bundles []BasicOutboundChannelMessageBundle
-			err = types.DecodeFromHexString(item.Data, &bundles)
-			if err != nil {
-				return nil, err
-			}
-			events.Basic = &BasicChannelEvent{
-				Hash:    hash,
-				Bundles: bundles,
-			}
-		} else {
-			return nil, fmt.Errorf("unknown channel")
+		var bundles []BasicOutboundChannelMessageBundle
+		err = types.DecodeFromHexString(item.Data, &bundles)
+		if err != nil {
+			return nil, err
+		}
+		events.Basic = &BasicChannelEvent{
+			Hash:    hash,
+			Bundles: bundles,
 		}
 	}
 	log.WithFields(log.Fields{

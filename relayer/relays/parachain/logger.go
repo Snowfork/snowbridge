@@ -32,10 +32,9 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 
 	params := log.Fields{
 		"bundle": log.Fields{
-			"sourceChannelID": bundle.SourceChannelID,
-			"nonce":           bundle.Nonce,
-			"account":         Hex(bundle.Account[:]),
-			"messages":        messagesLog,
+			"nonce":    bundle.Nonce,
+			"account":  Hex(bundle.Account[:]),
+			"messages": messagesLog,
 		},
 		"proof":     Hex(proof),
 		"leafProof": leafProofHexes,
