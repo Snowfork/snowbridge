@@ -11,7 +11,7 @@ module.exports = async ({ ethers, deployments, getUnnamedAccounts, network }: Ha
 
     const feeData = await ethers.provider.getFeeData()
 
-    let basicInboundChannel = await deployments.deploy("BasicInboundChannel", {
+    await deployments.deploy("BasicInboundChannel", {
         from: deployer,
         args: [config.basicChannelSourceID, parachainClient.address],
         libraries: {
@@ -23,34 +23,11 @@ module.exports = async ({ ethers, deployments, getUnnamedAccounts, network }: Ha
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 
-    let basicOutboundChannel = await deployments.deploy("BasicOutboundChannel", {
+    await deployments.deploy("BasicOutboundChannel", {
         from: deployer,
         log: true,
         autoMine: true,
         maxFeePerGas: feeData.maxFeePerGas,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
-
-    await deployments.deploy("ChannelRegistry", {
-        from: deployer,
-        log: true,
-        autoMine: true,
-        maxFeePerGas: feeData.maxFeePerGas,
-        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-    })
-
-    console.log("Configuring ChannelRegistry")
-    await deployments.execute(
-        "ChannelRegistry",
-        {
-            from: deployer,
-            autoMine: true,
-            maxFeePerGas: feeData.maxFeePerGas,
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-        },
-        "updateChannel",
-        0,
-        basicInboundChannel.address,
-        basicOutboundChannel.address
-    )
 }
