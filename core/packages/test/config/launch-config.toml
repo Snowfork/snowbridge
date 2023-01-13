@@ -43,7 +43,7 @@ id = 1000
 [[parachains.collators]]
 command = "/tmp/snowbridge/bin/snowbridge"
 name = "snowbrige-alice"                              
-rpc_port = 31200
+rpc_port = 8081
 validator = true
 ws_port = 11144
 args = ["--enable-offchain-indexing=true","--pruning=archive"]
