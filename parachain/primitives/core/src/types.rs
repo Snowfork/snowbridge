@@ -1,7 +1,6 @@
 //! Types for representing messages
 
 use codec::{Decode, Encode};
-use enum_iterator::IntoEnumIterator;
 use frame_support::{scale_info::TypeInfo, RuntimeDebug};
 use sp_core::{H160, H256};
 use sp_runtime::DigestItem;
@@ -10,16 +9,9 @@ use sp_std::vec::Vec;
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum MessageId {
 	Basic { account: H160, nonce: u64 },
-	Incentivized { nonce: u64 },
 }
 
 pub type MessageNonce = u64;
-
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug, TypeInfo)]
-pub enum ChannelId {
-	Basic = 0,
-	Incentivized = 1,
-}
 
 /// A message relayed from Ethereum.
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
@@ -48,7 +40,7 @@ pub struct Proof {
 #[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum AuxiliaryDigestItem {
 	/// A batch of messages has been committed.
-	Commitment(ChannelId, H256),
+	Commitment(H256),
 }
 
 impl Into<DigestItem> for AuxiliaryDigestItem {
