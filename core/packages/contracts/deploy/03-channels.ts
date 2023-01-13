@@ -14,16 +14,12 @@ module.exports = async ({ ethers, deployments, getUnnamedAccounts }: HardhatRunt
         libraries: {
             MerkleProof: merkleProof.address
         },
-        log: true,
-        autoMine: true,
         maxFeePerGas: feeData.maxFeePerGas,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
 
     await deployments.deploy("BasicOutboundChannel", {
         from: deployer,
-        log: true,
-        autoMine: true,
         maxFeePerGas: feeData.maxFeePerGas,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })
