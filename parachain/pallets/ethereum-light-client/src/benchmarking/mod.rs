@@ -37,7 +37,7 @@ fn assert_header_pruned<T: Config>(hash: H256, number: u64) {
 	assert!(hashes_at_number.is_none() || !hashes_at_number.unwrap().contains(&hash),);
 }
 
-// NOTE: These benchmarks only run successully using the `snowbridge' runtime, which is configured
+// NOTE: These benchmarks only run successfully using the `snowbridge' runtime, which is configured
 // for Ethereum mainnet.
 
 benchmarks! {

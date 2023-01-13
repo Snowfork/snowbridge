@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# check typos
+typos .
+
 # lint and format for core contracts and typescript codes
 cd core && pnpm lint && pnpm format && cd ..
 

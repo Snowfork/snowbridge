@@ -103,7 +103,7 @@ func (co *Connection) QueryFailingMessage(hash common.Hash) (string, error) {
 	}).Info("Call info")
 
 	// The logger does a test call to the actual contract to check for any revert message and log it, as well
-	// as logging the call info. This is because the golang client can sometimes supress the log message and so
+	// as logging the call info. This is because the golang client can sometimes suppress the log message and so
 	// it can be helpful to use the call info to do the same call in Truffle/Web3js to get better logs.
 	res, err := co.client.CallContract(context.Background(), params, nil)
 	if err != nil {

@@ -90,7 +90,7 @@ library Bitfield {
 
     /**
      * @notice Calculates the number of set bits by using the hamming weight of the bitfield.
-     * The alogrithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
+     * The algorithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
      * Further improvements are possible, see the article above.
      */
     function countSetBits(uint256[] memory self) public pure returns (uint256) {

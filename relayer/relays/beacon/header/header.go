@@ -36,7 +36,7 @@ func New(writer *parachain.ParachainWriter, beaconEndpoint string, slotsInEpoch 
 func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	latestSyncedPeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
 	if err != nil {
-		return fmt.Errorf("fetch last sync commitee: %w", err)
+		return fmt.Errorf("fetch last sync committee: %w", err)
 	}
 
 	h.cache.SetLastSyncedSyncCommitteePeriod(latestSyncedPeriod)
