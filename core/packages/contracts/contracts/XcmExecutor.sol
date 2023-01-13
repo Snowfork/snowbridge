@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "./XcmAssetLookup.sol";
+import "./utils/SafeCall.sol";
 
 /// @dev Executes Xcm instructions.
 contract XcmExecutor {
@@ -75,7 +76,7 @@ contract XcmExecutor {
 
     /// @dev single transact instruction.
     function transact(TransactData memory data) internal {
-        (bool success, ) = data.target.call(data.payload);
+        bool success = SafeCall.call(data.target, gasleft(), 0, data.payload);
         require(success, "transact failed");
     }
 
