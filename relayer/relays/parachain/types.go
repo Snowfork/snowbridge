@@ -19,8 +19,6 @@ type Task struct {
 	ProofOutput *ProofOutput
 	// Commitments for basic channel
 	BasicChannelProofs *[]BundleProof
-	// Commitments for incentivized channel
-	IncentivizedChannelCommitment *IncentivizedChannelCommitment
 }
 
 // A ProofInput is data needed to generate a proof of parachain header inclusion
@@ -39,14 +37,6 @@ type ProofOutput struct {
 	MMRRootHash     types.Hash
 	Header          types.Header
 	MerkleProofData MerkleProofData
-}
-
-// A Commitment is data provably attested to by polkadot. The commitment hash
-// is contained in a parachain header. Polkadot validator nodes attest that the header
-// is genuine.
-type IncentivizedChannelCommitment struct {
-	Hash types.H256
-	Data IncentivizedOutboundChannelMessageBundle
 }
 
 type RawMerkleProof struct {

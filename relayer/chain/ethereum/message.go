@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/hex"
 
-	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	etrie "github.com/ethereum/go-ethereum/trie"
@@ -19,7 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, receiptsTrie *etrie.Trie) (*chain.EthereumOutboundMessage, error) {
+func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*chain.EthereumOutboundMessage, error) {
 	// RLP encode event log's Address, Topics, and Data
 	var buf bytes.Buffer
 	err := event.EncodeRLP(&buf)
@@ -57,13 +56,8 @@ func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, 
 	var args []interface{}
 	args = append(args, m)
 
-	call, ok := mapping[event.Address]
-	if !ok {
-		return nil, err
-	}
-
 	message := chain.EthereumOutboundMessage{
-		Call: call,
+		Call: "BasicInboundChannel.submit",
 		Args: args,
 	}
 
