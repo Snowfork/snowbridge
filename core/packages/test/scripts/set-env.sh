@@ -11,9 +11,9 @@ lodestar_version="${LODESTAR_VER:-1.2.2}"
 contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
-output_dir=/tmp/snowbridge
-output_bin_dir="$output_dir/bin"
-ethereum_data_dir="$output_dir/geth"
+export output_dir=/tmp/snowbridge
+export output_bin_dir="$output_dir/bin"
+export ethereum_data_dir="$output_dir/geth"
 export PATH="$output_bin_dir:$PATH"
 
 eth_network="${ETH_NETWORK:-localhost}"

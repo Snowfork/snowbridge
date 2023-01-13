@@ -6,7 +6,7 @@ timeout = 600
 ## Rococo
 [relaychain]
 chain = "rococo-local"
-default_command = "/tmp/snowbridge/bin/polkadot"
+default_command = "{{output_bin_dir}}/polkadot"
 default_args = ["-lparachain=debug","--beefy","--enable-offchain-indexing=true","--pruning","archive"]
 
 [relaychain.genesis.runtime.runtime_genesis_config.configuration.config]
@@ -36,12 +36,12 @@ validator = true
 # Snowbridge
 [[parachains]]
 add_to_genesis = true
-chain_spec_path = "/tmp/snowbridge/spec.json"
+chain_spec_path = "{{output_dir}}/spec.json"
 cumulus_based = true
 id = 1000
 
 [[parachains.collators]]
-command = "/tmp/snowbridge/bin/snowbridge"
+command = "{{output_bin_dir}}/snowbridge"
 name = "snowbrige-alice"                              
 rpc_port = 8081
 validator = true
@@ -53,7 +53,7 @@ name = "RUST_LOG"
 value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
 
 [[parachains.collators]]
-command = "/tmp/snowbridge/bin/snowbridge"
+command = "{{output_bin_dir}}/snowbridge"
 name = "snowbrige-bob"
 validator = true
 args = ["--enable-offchain-indexing=true","--pruning=archive"]
@@ -61,14 +61,14 @@ args = ["--enable-offchain-indexing=true","--pruning=archive"]
 # Test Parachain
 [[parachains]]
 add_to_genesis = true
-chain_spec_path = "/tmp/snowbridge/test_spec.json"
+chain_spec_path = "{{output_dir}}/test_spec.json"
 cumulus_based = true
 id = 1001
 
 [[parachains.collators]]
-command = "/tmp/snowbridge/bin/snowbridge-test-node"
+command = "{{output_bin_dir}}/snowbridge-test-node"
 name = "test-parachain-alice"                              
-rpc_port = 31202
+rpc_port = 8083
 validator = true
 ws_port = 13144
 
@@ -77,7 +77,7 @@ name = "RUST_LOG"
 value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
 
 [[parachains.collators]]
-command = "/tmp/snowbridge/bin/snowbridge-test-node"
+command = "{{output_bin_dir}}/snowbridge-test-node"
 name = "test-parachain-bob"
 validator = true
 
