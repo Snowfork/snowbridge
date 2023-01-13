@@ -16,24 +16,13 @@ type inputItems struct {
 }
 
 type inputItem struct {
-	ID   uint64 `json:"id"`
 	Hash string `json:"hash"`
 	Data string `json:"data"`
-}
-
-type Events struct {
-	Basic        *BasicChannelEvent
-	Incentivized *IncentivizedChannelEvent
 }
 
 type BasicChannelEvent struct {
 	Hash    types.H256
 	Bundles []BasicOutboundChannelMessageBundle
-}
-
-type IncentivizedChannelEvent struct {
-	Hash   types.H256
-	Bundle IncentivizedOutboundChannelMessageBundle
 }
 
 type QueryClient struct {
@@ -48,7 +37,7 @@ func NewQueryClient() QueryClient {
 	}
 }
 
-func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash types.Hash) (*Events, error) {
+func (q *QueryClient) QueryEvent(ctx context.Context, api string, blockHash types.Hash) (*BasicChannelEvent, error) {
 	name, args := q.NameArgs(api, blockHash.Hex())
 	cmd := exec.CommandContext(ctx, name, args...)
 
@@ -63,7 +52,7 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 			"args":   fmt.Sprintf("%v", args),
 			"stdErr": errBuf.String(),
 			"stdOut": outBuf.String(),
-		}).Error("Failed to query events.")
+		}).Error("Failed to query event.")
 		return nil, err
 	}
 
@@ -77,7 +66,7 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 		"inputItems": items,
 	}).Debug("parachain.QueryEvents")
 
-	var events Events
+	var event *BasicChannelEvent
 
 	for _, item := range items.Items {
 
@@ -87,33 +76,19 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 			return nil, err
 		}
 
-		if item.ID == 0 {
-			var bundles []BasicOutboundChannelMessageBundle
-			err = types.DecodeFromHexString(item.Data, &bundles)
-			if err != nil {
-				return nil, err
-			}
-			events.Basic = &BasicChannelEvent{
-				Hash:    hash,
-				Bundles: bundles,
-			}
-		} else if item.ID == 1 {
-			var bundle IncentivizedOutboundChannelMessageBundle
-			err = types.DecodeFromHexString(item.Data, &bundle)
-			if err != nil {
-				return nil, err
-			}
-			events.Incentivized = &IncentivizedChannelEvent{
-				Hash:   hash,
-				Bundle: bundle,
-			}
-		} else {
-			return nil, fmt.Errorf("unknown channel")
+		var bundles []BasicOutboundChannelMessageBundle
+		err = types.DecodeFromHexString(item.Data, &bundles)
+		if err != nil {
+			return nil, err
+		}
+		event = &BasicChannelEvent{
+			Hash:    hash,
+			Bundles: bundles,
 		}
 	}
 	log.WithFields(log.Fields{
-		"events": events,
+		"event": event,
 	}).Debug("parachain.QueryEvents")
 
-	return &events, nil
+	return event, nil
 }

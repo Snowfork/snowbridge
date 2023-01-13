@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
@@ -56,10 +55,7 @@ func TestMessage_Proof(t *testing.T) {
 		panic("Receipt trie does not match block receipt hash")
 	}
 
-	mapping := make(map[common.Address]string)
-	mapping[event5_5.Address] = "InboundChannel.submit"
-
-	msg, err := ethereum.MakeMessageFromEvent(mapping, event5_5, receiptTrie)
+	msg, err := ethereum.MakeMessageFromEvent(event5_5, receiptTrie)
 	assert.Nil(t, err)
 	assert.NotNil(t, msg)
 
