@@ -40,6 +40,7 @@ pub trait WeightInfo {
 	fn on_initialize(m: u32, p: u32, ) -> Weight;
 	fn on_initialize_non_interval() -> Weight;
 	fn on_initialize_no_messages() -> Weight;
+	fn on_commit(m: u32, p: u32, ) -> Weight;
 }
 
 /// Weights for basic_channel::outbound using the Snowbridge node and recommended hardware.
@@ -62,6 +63,15 @@ impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 		Weight::from_ref_time(5_228_000 as u64)
 			.saturating_add(T::DbWeight::get().reads(2))
 	}
+	fn on_commit(m: u32, p: u32, ) -> Weight {
+		Weight::from_ref_time(0 as u64)
+			// Standard Error: 31_000
+			.saturating_add(Weight::from_ref_time(100_849_000 as u64).saturating_mul(m as u64))
+			// Standard Error: 1_000
+			.saturating_add(Weight::from_ref_time(3_880_000 as u64).saturating_mul(p as u64))
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
+	}
 }
 
 // For backwards compatibility and tests
@@ -82,5 +92,14 @@ impl WeightInfo for () {
 	fn on_initialize_no_messages() -> Weight {
 		Weight::from_ref_time(5_228_000 as u64)
 			.saturating_add(RocksDbWeight::get().reads(2))
+	}
+	fn on_commit(m: u32, p: u32, ) -> Weight {
+		Weight::from_ref_time(0 as u64)
+			// Standard Error: 31_000
+			.saturating_add(Weight::from_ref_time(100_849_000 as u64).saturating_mul(m as u64))
+			// Standard Error: 1_000
+			.saturating_add(Weight::from_ref_time(3_880_000 as u64).saturating_mul(p as u64))
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 }
