@@ -142,18 +142,6 @@ class SubClient {
     return foundData;
   }
 
-  async burnETH(account, recipient, amount, channelId) {
-    return await this.api.tx.ethApp.burn(channelId, recipient, amount).signAndSend(account);
-  }
-
-  async burnERC20(account, assetId, recipient, amount, channelId) {
-    return await this.api.tx.erc20App.burn(channelId, assetId, recipient, amount).signAndSend(account);
-  }
-
-  async lockDOT(account, recipient, amount, channelId) {
-    return await this.api.tx.dotApp.lock(channelId, recipient, amount).signAndSend(account);
-  }
-
   async waitForNextBlock() {
     const wait = new Promise(async (resolve, reject) => {
       let count = 0;
@@ -166,11 +154,6 @@ class SubClient {
       });
     });
     return wait;
-  }
-
-  async queryIncentivizedOutboundChannelFee() {
-    let fee = await this.api.query.incentivizedOutboundChannel.fee();
-    return BigNumber(fee.toBigInt())
   }
 
 }

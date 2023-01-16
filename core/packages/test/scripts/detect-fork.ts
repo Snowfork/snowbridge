@@ -119,22 +119,10 @@ const NONCES = [
       "0x684b82bef882079feeabe54a5bd7b94a718368a0ace36e2b1b8b6dbd7f8093c0",
   },
   {
-    name: "IncentivizedInboundChannel",
-    event: "MessageDispatched",
-    storageKey:
-      "0xf0f4d0b91e760c07da58bc0498033acb718368a0ace36e2b1b8b6dbd7f8093c0",
-  },
-  {
     name: "BasicOutboundChannel",
     event: "Message",
     storageKey:
       "0x664ff6e369f56e1c7deca5487e631a5c718368a0ace36e2b1b8b6dbd7f8093c0",
-  },
-  {
-    name: "IncentivizedOutboundChannel",
-    event: "Message",
-    storageKey:
-      "0x557df379daaf1cd514a7452dcbf6fccc718368a0ace36e2b1b8b6dbd7f8093c0",
   },
 ];
 
@@ -199,16 +187,6 @@ const generateUpdates = (ethNonces, parachainNonces) => {
       name: NONCES[0].name,
       storageKey: NONCES[0].storageKey,
       nonce: ethNonces.BasicOutboundChannel,
-    });
-  }
-  if (
-    parachainNonces.IncentivizedInboundChannel !==
-    ethNonces.IncentivizedOutboundChannel
-  ) {
-    result.push({
-      name: NONCES[1].name,
-      storageKey: NONCES[1].storageKey,
-      nonce: ethNonces.IncentivizedOutboundChannel,
     });
   }
   return result;
@@ -334,16 +312,10 @@ const main = async () => {
     console.log(
       `Basic Channel:        ${parachainNonces.BasicOutboundChannel} -> ${ethNonces.BasicInboundChannel}`
     );
-    console.log(
-      `Incentivized Channel: ${parachainNonces.IncentivizedOutboundChannel} -> ${ethNonces.IncentivizedInboundChannel}`
-    );
 
     console.log("Nonces                Parachain <- ETH");
     console.log(
       `Basic Channel:        ${parachainNonces.BasicInboundChannel} <- ${ethNonces.BasicOutboundChannel}`
-    );
-    console.log(
-      `Incentivized Channel: ${parachainNonces.IncentivizedInboundChannel} <- ${ethNonces.IncentivizedOutboundChannel}`
     );
 
     let fixWithUser: string = argv["fix"];

@@ -4,8 +4,7 @@
       "endpoint": "ws://localhost:8546"
     },
     "contracts": {
-      "BasicOutboundChannel": null,
-      "IncentivizedOutboundChannel": null
+      "BasicOutboundChannel": null
     },
     "basicChannelAddresses": []
   },

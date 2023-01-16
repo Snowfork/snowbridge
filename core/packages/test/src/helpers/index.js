@@ -11,7 +11,6 @@ const unwrapped = (amount, decimals) =>
 
 const ChannelId = {
   BASIC: 0,
-  INCENTIVIZED: 1,
 }
 Object.freeze(ChannelId);
 
