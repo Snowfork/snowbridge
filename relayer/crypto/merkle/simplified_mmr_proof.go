@@ -10,11 +10,15 @@ import (
 
 type SimplifiedMMRProof struct {
 	MerkleProofItems []types.H256
+	// Bitfield of the order in which each proof item should be hashed,
+	// either left (1) or right (0).
 	MerkleProofOrder uint64
 	// Below fields are not part of proof directly, but they are included so that
 	// we do not lose any information when converting from RPC response
 	Blockhash types.H256
-	Leaf      types.MMRLeaf
+	// MMRLeaf in substrate with leaf_extra as merkle root of ParachainHeads
+	// https://github.com/paritytech/substrate/blob/ea387c634715793f806286abf1e64cabf9b7026f/frame/beefy-mmr/src/lib.rs#L149-L156
+	Leaf types.MMRLeaf
 }
 
 func parentOffset(height uint32) uint64 {
@@ -166,6 +170,10 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 	return fmt.Errorf("corrupted proof"), proofOrder
 }
 
+// SimplifiedMMRProof is pre-processed MMR proof format which makes it easy to verify in Solidity
+// Original MMRProof is generated in substrate with https://github.com/nervosnetwork/merkle-mountain-range
+// The optimization works by pre-calculating order of the merkle tree proof so that we don't have to use mathematic operation to determine the same on solidity side
+// More details in https://github.com/Snowfork/snowbridge/pull/495
 func ConvertToSimplifiedMMRProof(blockhash types.H256, leafIndex uint64, leaf types.MMRLeaf, leafCount uint64, proofItems []types.H256) (SimplifiedMMRProof, error) {
 	leafPos := leafIndexToPosition(leafIndex)
 
@@ -213,11 +221,13 @@ func ConvertToSimplifiedMMRProof(blockhash types.H256, leafIndex uint64, leaf ty
 
 	// Adding peaks into merkle proof itself
 	currentProofOrderIndex := len(merkleProof) - 1
+	// RightBaggedPeak is a hash that bags all right-hand side peaks, skip this part if no right-hand peaks
 	if optionalRightBaggedPeak != [32]byte{} {
 		currentProofOrderIndex += 1
 		proofOrder = proofOrder | 1<<currentProofOrderIndex
 		merkleProof = append(merkleProof, optionalRightBaggedPeak)
 	}
+	// Hashes of all left-hand peaks from right to left
 	for i := 0; i < len(readyMadePeakHashes); i++ {
 		currentProofOrderIndex += 1
 		merkleProof = append(merkleProof, readyMadePeakHashes[len(readyMadePeakHashes)-i-1])

@@ -56,6 +56,12 @@ rustup update nightly
 rustup target add wasm32-unknown-unknown --toolchain nightly
 ```
 
+* Typos ([https://crates.io/crates/typos-cli#install](https://crates.io/crates/typos-cli#install))
+
+```bash
+cargo install typos-cli
+```
+
 * Golang ([https://go.dev/doc/install](https://go.dev/doc/install))
 
 ```bash

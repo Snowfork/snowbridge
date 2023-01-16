@@ -5,7 +5,7 @@ Our bridge has a layered architecture, inspired by networking protocols such as 
 Our bridge is also general-purpose and modular by design. The goals for this include:
 
 * Understandability: Getting to an easier to understand, simple design
-* Flexibility: Having a design that supports seperation of incentives/guarantees with the ability to have multiple relaying designs with differing fees and guarantees
+* Flexibility: Having a design that supports separation of incentives/guarantees with the ability to have multiple relaying designs with differing fees and guarantees
 * Customizability: Having decoupling between pieces that allow different designs to depend on those pieces in whichever way they choose.
 
 ![High-level architecture](../.gitbook/assets/0)

@@ -65,7 +65,7 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 
 	beefyBlockHashHex, _ := cmd.Flags().GetBytesHex("beefy-block-hash")
 	if len(beefyBlockHashHex) != 32 {
-		log.Error("Incorrect lenght of beefy block hash.")
+		log.Error("Incorrect length of beefy block hash.")
 		return errors.New("incorrect block hash length")
 	}
 	var beefyBlockHash types.Hash

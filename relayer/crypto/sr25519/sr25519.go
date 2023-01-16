@@ -53,7 +53,7 @@ func (kp *Keypair) Decode(in []byte) error {
 	return types.DecodeFromBytes(in, kp.keyringPair)
 }
 
-// Address returns the ss58 formated address
+// Address returns the ss58 formatted address
 func (kp *Keypair) Address() string {
 	return kp.keyringPair.Address
 }
