@@ -9,11 +9,6 @@ const wrapped = (amount, decimals) =>
 const unwrapped = (amount, decimals) =>
   amount.dividedToIntegerBy(granularity(decimals));
 
-const ChannelId = {
-  BASIC: 0,
-}
-Object.freeze(ChannelId);
-
 module.exports = {
-    sleep, wrapped, unwrapped, ChannelId
+    sleep, wrapped, unwrapped
 };
