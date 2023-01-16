@@ -31,6 +31,10 @@ const config: HardhatUserConfig = {
                 accountsBalance: "350000000000000000000000000000000000000",
             },
             chainId: 15,
+            loggingEnabled: true,
+            mining: {
+                auto: true,
+            },
         },
         localhost: {
             url: "http://127.0.0.1:8545",
@@ -39,6 +43,10 @@ const config: HardhatUserConfig = {
                     "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
             },
             chainId: 15,
+            loggingEnabled: true,
+            mining: {
+                auto: true,
+            },
         },
         goerli: {
             chainId: 5,
@@ -46,7 +54,11 @@ const config: HardhatUserConfig = {
             accounts: [ROPSTEN_KEY],
             maxFeePerGas: ethers.utils.parseUnits("200", "gwei"),
             maxPriorityFeePerGas: ethers.utils.parseUnits("20", "gwei"),
-        }
+            loggingEnabled: true,
+            mining: {
+                auto: true,
+            },
+        },
     },
     solidity: {
         version: "0.8.9",
