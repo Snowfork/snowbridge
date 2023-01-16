@@ -257,7 +257,7 @@ pub mod pallet {
 		/// - Emit an event with the commitment hash and SCALE-encoded message bundles for a
 		/// relayer to read.
 		/// - Persist the ethabi-encoded message bundles to off-chain storage.
-		fn commit(total_weight: Weight) -> Weight {
+		pub fn commit(total_weight: Weight) -> Weight {
 			// TODO: SNO-310 consider using mutate here. If some part of emitting message bundles
 			// fails, we don't want the MessageQueue to be empty.
 			let message_queue = <MessageQueue<T>>::take();

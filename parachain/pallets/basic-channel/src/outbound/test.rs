@@ -152,6 +152,7 @@ fn test_commit_single_user() {
 
 		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
 		run_to_block(2);
+		BasicOutboundChannel::commit(Weight::MAX);
 
 		assert_eq!(<NextId<Test>>::get(), 1);
 		assert_eq!(<Nonce<Test>>::get(who), 1);
@@ -169,6 +170,7 @@ fn test_commit_multi_user() {
 		assert_ok!(BasicOutboundChannel::submit(alice, target, &vec![0, 1, 2]));
 		assert_ok!(BasicOutboundChannel::submit(bob, target, &vec![0, 1, 2]));
 		run_to_block(2);
+		BasicOutboundChannel::commit(Weight::MAX);
 
 		assert_eq!(<NextId<Test>>::get(), 2);
 		assert_eq!(<Nonce<Test>>::get(alice), 1);

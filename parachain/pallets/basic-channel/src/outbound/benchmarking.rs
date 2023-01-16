@@ -32,7 +32,7 @@ benchmarks! {
 
 		let block_number = Interval::<T>::get();
 
-	}: { BasicOutboundChannel::<T>::on_initialize(block_number) }
+	}: { BasicOutboundChannel::<T>::commit(Weight::MAX) }
 	verify {
 		assert_eq!(<MessageQueue<T>>::get().len(), 0);
 	}
