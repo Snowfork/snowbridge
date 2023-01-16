@@ -20,9 +20,9 @@ use crate::merkleization::get_sync_committee_bits;
 use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
 use frame_system::ensure_signed;
 use snowbridge_beacon_primitives::{
-	BeaconHeader, BlockUpdate, Domain, ExecutionHeader, ExecutionHeaderState,
+	BeaconHeader, BlockUpdate, Domain, ExecutionHeader, ExecutionHeaderState, FinalizedHeaderState,
 	FinalizedHeaderUpdate, ForkData, ForkVersion, InitialSync, PublicKey, Root, SigningData,
-	SyncCommittee, SyncCommitteePeriodUpdate, FinalizedHeaderState
+	SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
@@ -173,7 +173,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderState<T: Config> =
-	StorageValue<_, FinalizedHeaderState, ValueQuery>;
+		StorageValue<_, FinalizedHeaderState, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestExecutionHeaderState<T: Config> =
@@ -411,7 +411,8 @@ pub mod pallet {
 		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let import_time = last_finalized_header.import_time;
-			let weak_subjectivity_period_check = import_time + T::WeakSubjectivityPeriodSeconds::get() as u64;
+			let weak_subjectivity_period_check =
+				import_time + T::WeakSubjectivityPeriodSeconds::get() as u64;
 			let time: u64 = T::TimeProvider::now().as_secs();
 
 			log::info!(

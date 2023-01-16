@@ -655,8 +655,8 @@ mod beacon_tests {
 mod beacon_minimal_tests {
 	use crate::{
 		merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody, Error,
-		ExecutionHeaders, FinalizedBeaconHeaders, LatestFinalizedHeaderSlot, SyncCommittees,
-		ValidatorsRoot,
+		ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState, LatestFinalizedHeaderState,
+		SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -749,7 +749,11 @@ mod beacon_minimal_tests {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
 			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
-			LatestFinalizedHeaderSlot::<mock_minimal::Test>::set(update.block.slot);
+			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
+				beacon_block_root: H256::default(),
+				beacon_slot: update.block.slot,
+				import_time: 0,
+			});
 
 			assert_ok!(mock_minimal::EthereumBeaconClient::import_execution_header(
 				mock_minimal::RuntimeOrigin::signed(1),
@@ -839,8 +843,7 @@ mod beacon_minimal_tests {
 mod beacon_mainnet_tests {
 	use crate::{
 		merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
-		ExecutionHeaders, FinalizedBeaconHeaders, LatestFinalizedHeaderSlot, SyncCommittees,
-		ValidatorsRoot,
+		ExecutionHeaders, FinalizedBeaconHeaders, SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::assert_ok;
 	use hex_literal::hex;
@@ -933,7 +936,11 @@ mod beacon_mainnet_tests {
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
 			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
-			LatestFinalizedHeaderSlot::<mock_mainnet::Test>::set(update.block.slot);
+			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
+				beacon_block_root: H256::default(),
+				beacon_slot: update.block.slot,
+				import_time: 0,
+			});
 
 			assert_ok!(mock_mainnet::EthereumBeaconClient::import_execution_header(
 				mock_mainnet::RuntimeOrigin::signed(1),

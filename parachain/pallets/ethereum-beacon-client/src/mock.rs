@@ -82,7 +82,7 @@ pub mod mock_minimal {
 		pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
 		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
 		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
-		pub const WeakSubjectivityPeriodHours: u32 = 27;
+		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
 				version: [0, 0, 0, 1], // 0x00000001
@@ -116,7 +116,7 @@ pub mod mock_minimal {
 		type MaxAttestationSize = MaxAttestationSize;
 		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 		type ForkVersions = ChainForkVersions;
-		type WeakSubjectivityPeriodHours = WeakSubjectivityPeriodHours;
+		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
 	}
 }
@@ -192,7 +192,7 @@ pub mod mock_mainnet {
 		pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
 		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
 		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
-		pub const WeakSubjectivityPeriodHours: u32 = 27;
+		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
 				version: [0, 0, 16, 32], // 0x00001020
@@ -226,7 +226,7 @@ pub mod mock_mainnet {
 		type MaxAttestationSize = MaxAttestationSize;
 		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 		type ForkVersions = ChainForkVersions;
-		type WeakSubjectivityPeriodHours = WeakSubjectivityPeriodHours;
+		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
 	}
 }
