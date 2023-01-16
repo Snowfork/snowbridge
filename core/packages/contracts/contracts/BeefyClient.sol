@@ -46,7 +46,7 @@ contract BeefyClient is Ownable {
 
     /**
      * @dev The ValidatorProof is a proof used to verify a commitment signature
-     * @param v the parity bit to specify the indended solution
+     * @param v the parity bit to specify the intended solution
      * @param r the x component on the secp256k1 curve
      * @param s the challenge solution
      * @param index index of the validator address

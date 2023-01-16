@@ -484,7 +484,7 @@ mod beacon_tests {
 	}
 
 	#[test]
-	pub fn test_hash_sync_aggregrate() {
+	pub fn test_hash_sync_aggregate() {
 		let sync_aggregate: SyncAggregate<mock_minimal::MaxSyncCommitteeSize, mock_minimal::MaxSignatureSize> = match config::IS_MINIMAL {
 			true => SyncAggregate{
 				sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("sync committee bits are too long"),
@@ -764,7 +764,7 @@ mod beacon_minimal_tests {
 	}
 
 	#[test]
-	fn it_errors_when_importing_a_header_with_no_sync_commitee_for_period() {
+	fn it_errors_when_importing_a_header_with_no_sync_committee_for_period() {
 		let update = get_finalized_header_update::<mock_minimal::Test>();
 
 		new_tester::<mock_minimal::Test>().execute_with(|| {

@@ -223,6 +223,9 @@ func (s *Scanner) findTasksImpl(
 					return nil, fmt.Errorf("basic channel commitment hash in digest item does not match the one in the Committed event")
 				}
 
+				// For basic channel commit hash is the merkle root calculated from bundles
+				// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/basic-channel/src/outbound/mod.rs#L275-L277
+				// to verify it we fetch bundle proof from parachain
 				result, err := scanForBasicChannelProofs(
 					s.paraConn.API(),
 					digestItemHash,
@@ -303,7 +306,7 @@ func (s *Scanner) gatherProofInputs(
 }
 
 // The process for finalizing a backed parachain header times out after these many blocks:
-const FinalizationTimout = 4
+const FinalizationTimeout = 4
 
 // Find the relaychain block in which a parachain header was included (finalized). This usually happens
 // 2-3 blocks after the relaychain block in which the parachain header was backed.
@@ -330,7 +333,7 @@ func (s *Scanner) findInclusionBlockNumber(
 	}
 
 	startBlock := validationData.RelayParentNumber + 1
-	for i := validationData.RelayParentNumber + 1; i < startBlock+FinalizationTimout; i++ {
+	for i := validationData.RelayParentNumber + 1; i < startBlock+FinalizationTimeout; i++ {
 		relayBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(i))
 		if err != nil {
 			return 0, fmt.Errorf("fetch relaychain block hash: %w", err)
@@ -391,6 +394,7 @@ func scanForBasicChannelProofs(
 		if err != nil {
 			return nil, err
 		}
+		// check merkle root calculated from bundle proof is same as the digest hash from header
 		if basicChannelBundleProof.Proof.Root != digestItemHash {
 			log.Warnf(
 				"Halting scan for account '%v'. Basic channel proof root doesn't match digest item's commitment hash",

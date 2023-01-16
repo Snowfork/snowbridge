@@ -172,7 +172,7 @@ async function getParaheads(blockNumber, api, parachainID) {
   // TODO: Address this
 
   // Also, for some reason the polkadot-js query.paras.heads api does not work
-  // with no paramater to retrieve all heads, so we just use the raw state query
+  // with no parameter to retrieve all heads, so we just use the raw state query
   console.log(`Getting parachain heads for ${blockNumber}...`);
   const allParaHeadsStorageKey = '0xcd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c30a31c34bd88c539ec8000000';
   const allParaHeadsRaw = await api.rpc.state.getStorage(allParaHeadsStorageKey);

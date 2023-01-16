@@ -159,9 +159,14 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		Proof: proof.MerkleProofData.Proof,
 	}
 
+	// Split message commit hash from parachain header since added as digest log
+	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/incentivized-channel/src/outbound/mod.rs#L238-L242
 	ownParachainHeadBytes := proof.MerkleProofData.ProvenPreLeaf
 	ownParachainHeadBytesString := hex.EncodeToString(ownParachainHeadBytes)
 	commitmentHashString := hex.EncodeToString(commitmentProof.Proof.Root[:])
+	// Trick here is that in parachain header only commitmentHash is required to verify
+	// so just split to some unknown prefix and suffix in order to reconstruct later
+	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/ParachainClient.sol#L50-L54
 	prefixSuffix := strings.Split(ownParachainHeadBytesString, commitmentHashString)
 	if len(prefixSuffix) != 2 {
 		return errors.New("error splitting parachain header into prefix and suffix")

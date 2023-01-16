@@ -19,7 +19,7 @@ A prover wants to convince a light client that at least $$1/3$$ of validators si
 
 Analysis: If at least $$2/3$$ of validators are honest but no honest validator signed$$S$$, then at least$$1/2$$ of validators the prover claimed to sign$$S$$ did not. Therefore the proof fails with probability at least$$2−kapproval$$.
 
-Furthermore, if signing an incorrect statement $$S$$ is slashable and we slash by at least$$minsupport$$, then if the light client reports the initial claim, then at least $$minsupport$$ stake can be slashed for an incorrect inital statement. Now if at least $$2/3$$ of validators are honest, then the proof fails with probability$$2−kapproval$$ and so there is an expected cost of$$2kapproval*minsupport$$.
+Furthermore, if signing an incorrect statement $$S$$ is slashable and we slash by at least$$minsupport$$, then if the light client reports the initial claim, then at least $$minsupport$$ stake can be slashed for an incorrect initial statement. Now if at least $$2/3$$ of validators are honest, then the proof fails with probability$$2−kapproval$$ and so there is an expected cost of$$2kapproval*minsupport$$.
 
 ## Implementing this on an Ethereum PoW Chain <a href="#implementing-this-on-an-ethereum-pow-chain" id="implementing-this-on-an-ethereum-pow-chain"></a>
 

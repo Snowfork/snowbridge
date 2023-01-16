@@ -31,7 +31,7 @@ pub struct TransferInfo {
 	pub sender: H160,
 	// The recipient Substrate address.
 	pub recipient: H256,
-	// The amount transfered.
+	// The amount transferred.
 	pub amount: u128,
 	/// The destination parachain id.
 	pub para_id: u32,

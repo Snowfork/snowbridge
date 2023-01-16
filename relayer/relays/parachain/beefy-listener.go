@@ -90,6 +90,8 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
 		defer close(li.tasks)
 
+		// Subscribe NewMMRRoot event logs and fetch parachain message commitments
+		// since latest beefy block
 		beefyBlockNumber, _, err := li.fetchLatestBeefyBlock(ctx)
 		if err != nil {
 			return fmt.Errorf("fetch latest beefy block: %w", err)
@@ -264,14 +266,16 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 		return nil, fmt.Errorf("retrieve MMR root hash at block %v: %w", latestBeefyBlockHash.Hex(), err)
 	}
 
-	// Generate a merkle proof for the parachain heads.
-	// Polkadot uses the following code to generate the merkle proof:
-	// https://github.com/paritytech/polkadot/blob/2eb7672905d99971fc11ad7ff4d57e68967401d2/runtime/rococo/src/lib.rs#L700
+	// Generate a merkle proof for the parachain head with input ParaId
+	// and verify with merkle root hash of all parachain heads
+	// Polkadot uses the following code to generate merkle root from parachain headers:
+	// https://github.com/paritytech/polkadot/blob/2eb7672905d99971fc11ad7ff4d57e68967401d2/runtime/rococo/src/lib.rs#L706-L709
 	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, input.ParaID)
 	if err != nil {
 		return nil, fmt.Errorf("create parachain header proof: %w", err)
 	}
 
+	// Verify merkle root generated is same as value generated in relaychain
 	if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
 		return nil, fmt.Errorf("MMR parachain merkle root does not match calculated parachain merkle root (mmr: %s, computed: %s)",
 			mmrProof.Leaf.ParachainHeads.Hex(),
