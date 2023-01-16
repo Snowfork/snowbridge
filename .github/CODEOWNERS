@@ -1,2 +1,2 @@
-*.sol @snowfork/snowbridge-onchain-code-owners
-*.rs @snowfork/snowbridge-onchain-code-owners
+*.sol @snowfork/snowbridge-solidity-code-owners
+*.rs @snowfork/snowbridge-rust-code-owners
