@@ -22,7 +22,7 @@ use frame_system::ensure_signed;
 use snowbridge_beacon_primitives::{
 	BeaconHeader, BlockUpdate, Domain, ExecutionHeader, ExecutionHeaderState,
 	FinalizedHeaderUpdate, ForkData, ForkVersion, InitialSync, PublicKey, Root, SigningData,
-	SyncCommittee, SyncCommitteePeriodUpdate,
+	SyncCommittee, SyncCommitteePeriodUpdate, FinalizedHeaderState
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
@@ -112,7 +112,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
-		type WeakSubjectivityPeriodHours: Get<u32>;
+		type WeakSubjectivityPeriodSeconds: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -172,13 +172,8 @@ pub mod pallet {
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestFinalizedHeaderHash<T: Config> = StorageValue<_, H256, ValueQuery>;
-
-	#[pallet::storage]
-	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
-
-	#[pallet::storage]
-	pub(super) type LatestFinalizedHeaderImportTime<T: Config> = StorageValue<_, u64, ValueQuery>;
+	pub(super) type LatestFinalizedHeaderState<T: Config> =
+	StorageValue<_, FinalizedHeaderState, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestExecutionHeaderState<T: Config> =
@@ -414,8 +409,9 @@ pub mod pallet {
 		}
 
 		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
-			let import_time = <LatestFinalizedHeaderImportTime<T>>::get();
-			let weak_subjectivity_period_check = import_time + 97200;
+			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
+			let import_time = last_finalized_header.import_time;
+			let weak_subjectivity_period_check = import_time + T::WeakSubjectivityPeriodSeconds::get() as u64;
 			let time: u64 = T::TimeProvider::now().as_secs();
 
 			log::info!(
@@ -467,7 +463,8 @@ pub mod pallet {
 		}
 
 		fn process_header(update: BlockUpdateOf<T>) -> DispatchResult {
-			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
+			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
+			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
 			let block_slot = update.block.slot;
 			if block_slot > latest_finalized_header_slot {
 				return Err(Error::<T>::HeaderNotFinalized.into())
@@ -731,7 +728,8 @@ pub mod pallet {
 				slot
 			);
 
-			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
+			let mut last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
+			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
 
 			if slot > latest_finalized_header_slot {
 				log::trace!(
@@ -739,11 +737,11 @@ pub mod pallet {
 					"💫 Updated latest finalized slot to {}.",
 					slot
 				);
-				<LatestFinalizedHeaderSlot<T>>::set(slot);
-				<LatestFinalizedHeaderHash<T>>::set(block_root);
+				last_finalized_header.import_time = T::TimeProvider::now().as_secs();
+				last_finalized_header.beacon_block_root = block_root;
+				last_finalized_header.beacon_slot = slot;
 
-				let time: u64 = T::TimeProvider::now().as_secs();
-				<LatestFinalizedHeaderImportTime<T>>::set(time);
+				<LatestFinalizedHeaderState<T>>::set(last_finalized_header);
 			}
 
 			Self::deposit_event(Event::BeaconHeaderImported { block_hash: block_root, slot });

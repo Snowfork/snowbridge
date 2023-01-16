@@ -53,15 +53,13 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("sync lagging sync committee periods: %w", err)
 	}
 
-	lastFinalizedHeader, err := h.writer.GetLastStoredFinalizedHeader()
+	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return fmt.Errorf("fetch last finalized header: %w", err)
+		return fmt.Errorf("fetch last finalized header state: %w", err)
 	}
 
-	lastFinalizedSlot, err := h.writer.GetLastStoredFinalizedHeaderSlot()
-	if err != nil {
-		return fmt.Errorf("fetch last finalized header slot: %w", err)
-	}
+	lastFinalizedHeader := lastFinalizedHeaderState.BeaconBlockRoot
+	lastFinalizedSlot := lastFinalizedHeaderState.BeaconSlot
 
 	h.cache.Finalized.Headers = append(h.cache.Finalized.Headers, lastFinalizedHeader)
 	h.cache.Finalized.LastAttemptedSyncHash = lastFinalizedHeader
@@ -198,10 +196,12 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	h.cache.Finalized.LastAttemptedSyncHash = blockRoot
 	h.cache.Finalized.LastAttemptedSyncSlot = uint64(finalizedHeaderUpdate.FinalizedHeader.Slot)
 
-	lastStoredHeader, err := h.writer.GetLastStoredFinalizedHeader()
+	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch last finalized header from parachain: %w", err)
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch last finalized header state: %w", err)
 	}
+
+	lastStoredHeader := lastFinalizedHeaderState.BeaconBlockRoot
 
 	// If the finalized header import succeeded, we add it to this cache. This cache is used to determine
 	// from which last finalized header needs to imported (i.e. start and end finalized blocks, to backfill execution
