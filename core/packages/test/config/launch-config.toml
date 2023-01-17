@@ -9,6 +9,9 @@ chain = "rococo-local"
 default_command = "{{output_bin_dir}}/polkadot"
 default_args = ["-lparachain=debug","--beefy","--enable-offchain-indexing=true","--pruning","archive"]
 
+[relaychain.genesis.runtime]
+session_length_in_blocks = 10
+
 [relaychain.genesis.runtime.runtime_genesis_config.configuration.config]
 max_validators_per_core = 2
 needed_approvals = 1
