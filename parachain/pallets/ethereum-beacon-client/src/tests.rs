@@ -843,7 +843,8 @@ mod beacon_minimal_tests {
 mod beacon_mainnet_tests {
 	use crate::{
 		merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
-		ExecutionHeaders, FinalizedBeaconHeaders, SyncCommittees, ValidatorsRoot,
+		ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState, LatestFinalizedHeaderState,
+		SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::assert_ok;
 	use hex_literal::hex;
