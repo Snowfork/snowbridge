@@ -292,7 +292,7 @@ pub mod pallet {
 			set(commitment_hash.as_bytes(), &eth_message_bundles.encode());
 
 			total_weight
-				.saturating_sub(T::WeightInfo::on_initialize(message_count, average_payload_size))
+				.saturating_sub(T::WeightInfo::on_commit(message_count, average_payload_size))
 		}
 
 		fn make_message_bundles(

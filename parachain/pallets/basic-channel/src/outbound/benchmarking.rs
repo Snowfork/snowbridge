@@ -16,7 +16,7 @@ benchmarks! {
 	// in queue are committed.
 	on_initialize {
 		let m in 1 .. T::MaxMessagesPerCommit::get();
-		let p in 0 .. T::MaxMessagePayloadSize::get();
+		let p in 0 .. T::MaxMessagePayloadSize::get()-1;
 
 		for _ in 0 .. m {
 			let payload: Vec<u8> = (0..).take(p as usize).collect();

@@ -64,8 +64,8 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMessagePayloadSize: u32 = 128;
-	pub const MaxMessagesPerCommit: u32 = 5;
+	pub const MaxMessagePayloadSize: u32 = 256;
+	pub const MaxMessagesPerCommit: u32 = 20;
 }
 
 impl basic_outbound_channel::Config for Test {
@@ -135,7 +135,8 @@ fn test_submit_exceeds_payload_limit() {
 		let who: &AccountId = &Keyring::Bob.into();
 
 		let max_payload_bytes = MaxMessagePayloadSize::get();
-		let payload: Vec<u8> = (0..).take(max_payload_bytes as usize + 1).collect();
+
+		let payload: Vec<u8> = vec![1u8; (max_payload_bytes as usize + 1)].try_into().unwrap();
 
 		assert_noop!(
 			BasicOutboundChannel::submit(who, target, payload.as_slice()),
