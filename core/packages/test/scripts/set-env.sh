@@ -50,12 +50,21 @@ kill_all() {
 
 kill_chains() {
     echo "Killing chains"
+    kill_polkadot
+    kill_ethereum
+}
+
+kill_ethereum() {
+    pkill -9 -f lodestar
+    pkill -9 geth
+}
+
+kill_polkadot() {
     pkill -9 polkadot
     pkill -9 snowbridge-test-node
     pkill -9 snowbridge
     pkill -9 -f polkadot-launch
-    pkill -9 -f lodestar
-    pkill -9 geth
+    pkill -9 zombienet
 }
 
 kill_relayer() {
