@@ -20,13 +20,10 @@ benchmarks! {
 
 		for _ in 0 .. m {
 			let payload: Vec<u8> = (0..).take(p as usize).collect();
-			<MessageQueue<T>>::try_append(EnqueuedMessage {
-				account: account("", 0, 0),
-				message: Message {
-					id: 0u64,
-					target: H160::zero(),
-					payload: payload.try_into().unwrap(),
-				}
+			<MessageQueue<T>>::try_append(Message {
+				source_id: account("", 0, 0),
+				nonce: 0u64,
+				payload: payload.try_into().unwrap(),
 			}).unwrap();
 		}
 
@@ -40,13 +37,10 @@ benchmarks! {
 	// Benchmark 'on_initialize` for the best case, i.e. nothing is done
 	// because it's not a commitment interval.
 	on_initialize_non_interval {
-		<MessageQueue<T>>::try_append(EnqueuedMessage {
-			account: account("", 0, 0),
-			message: Message {
-				id: 0u64,
-				target: H160::zero(),
-				payload: vec![1u8; T::MaxMessagePayloadSize::get() as usize].try_into().unwrap(),
-			}
+		<MessageQueue<T>>::try_append(Message {
+			source_id: account("", 0, 0),
+			nonce: 0u64,
+			payload: vec![1u8; T::MaxMessagePayloadSize::get() as usize].try_into().unwrap(),
 		}).unwrap();
 
 		Interval::<T>::put::<T::BlockNumber>(10u32.into());

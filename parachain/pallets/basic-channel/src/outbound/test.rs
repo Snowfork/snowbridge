@@ -69,6 +69,7 @@ parameter_types! {
 }
 
 impl basic_outbound_channel::Config for Test {
+	type SourceId = AccountId;
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
@@ -105,7 +106,6 @@ fn test_submit() {
 
 		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
 
-		assert_eq!(<NextId<Test>>::get(), 1);
 		assert_eq!(<Nonce<Test>>::get(who), 0);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 1);
 	});
@@ -153,7 +153,6 @@ fn test_commit_single_user() {
 		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
 		run_to_block(2);
 
-		assert_eq!(<NextId<Test>>::get(), 1);
 		assert_eq!(<Nonce<Test>>::get(who), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
 	})
@@ -170,7 +169,6 @@ fn test_commit_multi_user() {
 		assert_ok!(BasicOutboundChannel::submit(bob, target, &vec![0, 1, 2]));
 		run_to_block(2);
 
-		assert_eq!(<NextId<Test>>::get(), 2);
 		assert_eq!(<Nonce<Test>>::get(alice), 1);
 		assert_eq!(<Nonce<Test>>::get(bob), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 0);

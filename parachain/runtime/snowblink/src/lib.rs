@@ -565,6 +565,7 @@ impl basic_channel_inbound::Config for Runtime {
 impl basic_channel_outbound::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
+	type SourceId = <Self as frame_system::Config>::AccountId;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 	type WeightInfo = basic_channel_outbound::weights::SnowbridgeWeight<Self>;
