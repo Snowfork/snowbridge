@@ -19,5 +19,5 @@ pkgs.mkShell {
         cowsay "Hello $FOO"
     '';
 
-    FOO = "Hello";
+    FOO = "World!";
 }
