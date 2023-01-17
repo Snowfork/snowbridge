@@ -13,7 +13,7 @@ relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
 export output_dir=/tmp/snowbridge
 export output_bin_dir="$output_dir/bin"
-export ethereum_data_dir="$output_dir/geth"
+ethereum_data_dir="$output_dir/geth"
 export PATH="$output_bin_dir:$PATH"
 
 eth_network="${ETH_NETWORK:-localhost}"
