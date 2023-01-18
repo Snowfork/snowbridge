@@ -600,7 +600,7 @@ pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
             hex!("b132c9711ec41fb5b14de2c9d06da61cd09f57da54ca5556e70824e4787a1e84").into()
         ].try_into().expect("too many branch proof items"),
         validators_root: hex!("043db0d9a83813551ee2f33450d23797757d430911a9320530ad8a0eabc43efb").into()   
-    }
+    };
 }
 
 pub fn sync_committee_update<
@@ -3634,5 +3634,5 @@ pub fn block_update<
             sync_committee_signature: hex!("802cbd03fec8b80a253aa8327cb66fe04684495742a0ef68bae487055f5bd71f00b082b1a1e10a7405e0a518bf06886817bad957aece07f119c66212422b5ce9d09c7c2eebf98a4f04a6bbec1a1fff31568380af32e26fcebc6cb2fbd423ca45").to_vec().try_into().expect("signature too long"),
         },
         signature_slot: 4485186
-    }
+    };
 }
