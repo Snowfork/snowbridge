@@ -29,3 +29,8 @@
 ## Performance
 
 * [Benchmarks](performance/benchmarks.md)
+
+## Other
+
+* [Bridges Workshop](other/bridge-workshop.md)
+* [Quick Start Guide](other/quick-start-guide.md)

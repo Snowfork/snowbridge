@@ -75,8 +75,8 @@ type SyncCommitteePeriodUpdate struct {
 	FinalizedHeader         scale.BeaconHeader
 	FinalityBranch          []types.H256
 	SyncAggregate           scale.SyncAggregate
-	ForkVersion             [4]byte
 	SyncCommitteePeriod     types.U64
+	SignatureSlot           types.U64
 }
 
 type FinalizedHeaderUpdate struct {
@@ -84,13 +84,13 @@ type FinalizedHeaderUpdate struct {
 	FinalizedHeader scale.BeaconHeader
 	FinalityBranch  []types.H256
 	SyncAggregate   scale.SyncAggregate
-	ForkVersion     [4]byte
+	SignatureSlot   types.U64
 }
 
 type HeaderUpdate struct {
 	Block         scale.BeaconBlock
 	SyncAggregate scale.SyncAggregate
-	ForkVersion   [4]byte
+	SignatureSlot types.U64
 }
 
 func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSlot uint64) ([]uint64, error) {
@@ -112,16 +112,12 @@ func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSlot uint64) ([]
 }
 
 func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdate, error) {
-	committeeUpdates, err := s.Client.GetSyncCommitteePeriodUpdate(from)
+	committeeUpdateContainer, err := s.Client.GetSyncCommitteePeriodUpdate(from)
 	if err != nil {
 		return SyncCommitteePeriodUpdate{}, fmt.Errorf("fetch sync committee period update: %w", err)
 	}
 
-	if len(committeeUpdates.Data) < 1 {
-		return SyncCommitteePeriodUpdate{}, fmt.Errorf("no sync committee sync update returned: %w", err)
-	}
-
-	committeeUpdate := committeeUpdates.Data[0]
+	committeeUpdate := committeeUpdateContainer.Data
 
 	attestedHeader, err := committeeUpdate.AttestedHeader.ToScale()
 	if err != nil {
@@ -143,9 +139,9 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 		return SyncCommitteePeriodUpdate{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
 	}
 
-	forkVersion, err := hexStringToForkVersion(committeeUpdate.ForkVersion)
+	signatureSlot, err := strconv.ParseUint(committeeUpdate.SignatureSlot, 10, 64)
 	if err != nil {
-		return SyncCommitteePeriodUpdate{}, fmt.Errorf("convert fork version: %w", err)
+		return SyncCommitteePeriodUpdate{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
 	syncCommitteePeriodUpdate := SyncCommitteePeriodUpdate{
@@ -155,7 +151,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 		FinalizedHeader:         finalizedHeader,
 		FinalityBranch:          proofBranchToScale(committeeUpdate.FinalityBranch),
 		SyncAggregate:           syncAggregate,
-		ForkVersion:             forkVersion,
+		SignatureSlot:           types.U64(signatureSlot),
 	}
 
 	finalizedHeaderSlot := s.ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
@@ -183,19 +179,9 @@ func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, common.Hash, error
 		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert finalized header to scale: %w", err)
 	}
 
-	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(finalizedHeader.Slot))
-	if err != nil {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch fork version: %w", err)
-	}
-
 	blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(finalizedHeader.Slot)) // TODO can compute this ourselves with SSZ
 	if err != nil {
 		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch block root: %w", err)
-	}
-
-	forkVersion, err := hexStringToForkVersion(currentForkVersion)
-	if err != nil {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert fork version: %w", err)
 	}
 
 	syncAggregate, err := finalizedUpdate.Data.SyncAggregate.ToScale()
@@ -203,44 +189,20 @@ func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, common.Hash, error
 		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
 	}
 
+	signatureSlot, err := strconv.ParseUint(finalizedUpdate.Data.SignatureSlot, 10, 64)
+	if err != nil {
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("parse signature slot as int: %w", err)
+	}
+
 	finalizedHeaderUpdate := FinalizedHeaderUpdate{
 		AttestedHeader:  attestedHeader,
 		FinalizedHeader: finalizedHeader,
 		FinalityBranch:  proofBranchToScale(finalizedUpdate.Data.FinalityBranch),
 		SyncAggregate:   syncAggregate,
-		ForkVersion:     forkVersion,
+		SignatureSlot:   types.U64(signatureSlot),
 	}
 
 	return finalizedHeaderUpdate, blockRoot, nil
-}
-
-func (s *Syncer) GetHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
-	block, err := s.Client.GetBeaconBlockBySlot(slot)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
-	}
-
-	blockScale, err := block.ToScale()
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
-	}
-
-	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(blockScale.Slot))
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("fetch current fork version: %w", err)
-	}
-
-	forkVersion, err := hexStringToForkVersion(currentForkVersion)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("convert fork version: %w", err)
-	}
-
-	headerUpdate := HeaderUpdate{
-		Block:       blockScale,
-		ForkVersion: forkVersion,
-	}
-
-	return headerUpdate, nil
 }
 
 func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
@@ -266,19 +228,8 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
 		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
 	}
 
-	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(blockScale.Slot))
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("fetch current fork version: %w", err)
-	}
-
-	forkVersion, err := hexStringToForkVersion(currentForkVersion)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("convert fork version: %w", err)
-	}
-
 	headerUpdate := HeaderUpdate{
-		Block:       blockScale,
-		ForkVersion: forkVersion,
+		Block: blockScale,
 	}
 
 	return headerUpdate, nil
@@ -295,19 +246,8 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
 	}
 
-	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(blockScale.Slot))
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("fetch current fork version: %w", err)
-	}
-
-	forkVersion, err := hexStringToForkVersion(currentForkVersion)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("convert fork version: %w", err)
-	}
-
 	headerUpdate := HeaderUpdate{
-		Block:       blockScale,
-		ForkVersion: forkVersion,
+		Block: blockScale,
 	}
 
 	return headerUpdate, nil
@@ -327,7 +267,7 @@ func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, e
 	return blockScale.Body.SyncAggregate, nil
 }
 
-func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, error) {
+func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, types.U64, error) {
 	err := ErrNotFound
 	var block BeaconBlockResponse
 	tries := 0
@@ -339,7 +279,7 @@ func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, erro
 		}).Info("fetching sync aggregate for slot")
 		block, err = s.Client.GetBeaconBlockBySlot(slot)
 		if err != nil && !errors.Is(err, ErrNotFound) {
-			return scale.SyncAggregate{}, fmt.Errorf("fetch block: %w", err)
+			return scale.SyncAggregate{}, 0, fmt.Errorf("fetch block: %w", err)
 		}
 
 		tries = tries + 1
@@ -348,9 +288,9 @@ func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, erro
 
 	blockScale, err := block.ToScale()
 	if err != nil {
-		return scale.SyncAggregate{}, fmt.Errorf("convert block to scale: %w", err)
+		return scale.SyncAggregate{}, 0, fmt.Errorf("convert block to scale: %w", err)
 	}
-	return blockScale.Body.SyncAggregate, nil
+	return blockScale.Body.SyncAggregate, blockScale.Slot, nil
 }
 
 func (s *Syncer) ComputeSyncPeriodAtSlot(slot uint64) uint64 {
@@ -436,19 +376,6 @@ func hexStringToByteArray(hexString string) ([]byte, error) {
 	}
 
 	return bytes, nil
-}
-
-func hexStringToForkVersion(hexString string) ([4]byte, error) {
-	key, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
-	if err != nil {
-		return [4]byte{}, err
-	}
-
-	forkVersion4Bytes := [4]byte{}
-
-	copy(forkVersion4Bytes[:], key)
-
-	return forkVersion4Bytes, nil
 }
 
 func (h HeaderResponse) ToScale() (scale.BeaconHeader, error) {

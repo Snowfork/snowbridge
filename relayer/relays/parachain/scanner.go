@@ -35,16 +35,15 @@ type Scanner struct {
 // using the MMR root at the specified beefyBlockNumber of the relay chain.
 //
 // The algorithm works roughly like this:
-// 1. Fetch channel nonces on both sides of the bridge and compare them
-// 2. If the nonces on the parachain side are larger that means messages
-//    need to be relayed. If not then exit early.
-// 3. Scan parachain blocks to figure out exactly which commitments need to be relayed.
-// 4. For all the parachain blocks with unsettled commitments, determine the relay chain
-//    block number in which the parachain block was included.
-//
+//  1. Fetch channel nonces on both sides of the bridge and compare them
+//  2. If the nonces on the parachain side are larger that means messages
+//     need to be relayed. If not then exit early.
+//  3. Scan parachain blocks to figure out exactly which commitments need to be relayed.
+//  4. For all the parachain blocks with unsettled commitments, determine the relay chain
+//     block number in which the parachain block was included.
 func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, error) {
 	// fetch last parachain header that was finalized *before* the BEEFY block
-	beefyBlockMinusOneHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber-1))
+	beefyBlockMinusOneHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber - 1))
 	if err != nil {
 		return nil, fmt.Errorf("fetch block hash for block %v: %w", beefyBlockNumber, err)
 	}
@@ -60,7 +59,7 @@ func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, e
 	paraBlockNumber := uint64(paraHead.Number)
 	paraBlockHash, err := s.paraConn.API().RPC.Chain.GetBlockHash(paraBlockNumber)
 	if err != nil {
-		return  nil, fmt.Errorf("fetch parachain block hash for block %v: %w", paraBlockNumber, err)
+		return nil, fmt.Errorf("fetch parachain block hash for block %v: %w", paraBlockNumber, err)
 	}
 
 	tasks, err := s.findTasks(ctx, paraBlockNumber, paraBlockHash)
@@ -193,7 +192,6 @@ func (s *Scanner) findTasks(
 	return tasks, nil
 }
 
-
 // Searches for all lost commitments on each channel from the given parachain block number backwards
 // until it finds the given basic and incentivized nonce
 func (s *Scanner) findTasksImpl(
@@ -277,6 +275,9 @@ func (s *Scanner) findTasksImpl(
 					return nil, fmt.Errorf("basic channel commitment hash in digest item does not match the one in the Committed event")
 				}
 
+				// For basic channel commit hash is the merkle root calculated from bundles
+				// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/basic-channel/src/outbound/mod.rs#L275-L277
+				// to verify it we fetch bundle proof from parachain
 				result, err := scanForBasicChannelProofs(
 					s.paraConn.API(),
 					digestItemHash,
@@ -296,6 +297,8 @@ func (s *Scanner) findTasksImpl(
 					return nil, fmt.Errorf("event incentivizedOutboundChannel.Committed not found in block")
 				}
 
+				// For Incentivized channel commit hash is encoded with bundle message directly so no bundle proof required
+				// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/incentivized-channel/src/outbound/mod.rs#L263-L269
 				digestItemHash := digestItem.AsCommitment.Hash
 				if events.Incentivized.Hash != digestItemHash {
 					return nil, fmt.Errorf("incentivized channel commitment hash in digest item does not match the one in the Committed event")
@@ -343,7 +346,6 @@ func (s *Scanner) findTasksImpl(
 	return tasks, nil
 }
 
-
 type PersistedValidationData struct {
 	ParentHead             []byte
 	RelayParentNumber      uint32
@@ -378,9 +380,9 @@ func (s *Scanner) gatherProofInputs(
 		}
 
 		task.ProofInput = &ProofInput{
-			ParaID: s.paraID,
+			ParaID:           s.paraID,
 			RelayBlockNumber: relayBlockNumber,
-			ParaHeads: parachainHeads,
+			ParaHeads:        parachainHeads,
 		}
 	}
 
@@ -388,7 +390,7 @@ func (s *Scanner) gatherProofInputs(
 }
 
 // The process for finalizing a backed parachain header times out after these many blocks:
-const FinalizationTimout = 4
+const FinalizationTimeout = 4
 
 // Find the relaychain block in which a parachain header was included (finalized). This usually happens
 // 2-3 blocks after the relaychain block in which the parachain header was backed.
@@ -415,7 +417,7 @@ func (s *Scanner) findInclusionBlockNumber(
 	}
 
 	startBlock := validationData.RelayParentNumber + 1
-	for i := validationData.RelayParentNumber + 1; i < startBlock+FinalizationTimout; i++ {
+	for i := validationData.RelayParentNumber + 1; i < startBlock+FinalizationTimeout; i++ {
 		relayBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(i))
 		if err != nil {
 			return 0, fmt.Errorf("fetch relaychain block hash: %w", err)
@@ -476,6 +478,7 @@ func scanForBasicChannelProofs(
 		if err != nil {
 			return nil, err
 		}
+		// check merkle root calculated from bundle proof is same as the digest hash from header
 		if basicChannelBundleProof.Proof.Root != digestItemHash {
 			log.Warnf(
 				"Halting scan for account '%v'. Basic channel proof root doesn't match digest item's commitment hash",

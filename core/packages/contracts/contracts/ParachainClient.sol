@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "./BeefyClient.sol";
 import "./utils/MerkleProof.sol";
 import "./ScaleCodec.sol";
-import "./utils/MMRProofVerification.sol";
 
 contract ParachainClient {
     BeefyClient public immutable beefyClient;
@@ -31,7 +30,8 @@ contract ParachainClient {
         bytes headSuffix;
         HeadProof headProof;
         MMRLeafPartial leafPartial;
-        MMRProof leafProof;
+        bytes32[] leafProof;
+        uint256 leafProofOrder;
     }
 
     constructor(BeefyClient _client, uint32 _parachainID) {
@@ -40,12 +40,11 @@ contract ParachainClient {
         encodedParachainID = ScaleCodec.encodeU32(_parachainID);
     }
 
-    function verifyCommitment(bytes32 commitment, bytes calldata opaqueProof)
-        external
-        view
-        returns (bool)
-    {
-        (Proof memory proof) = abi.decode(opaqueProof, (Proof));
+    function verifyCommitment(
+        bytes32 commitment,
+        bytes calldata opaqueProof
+    ) external view returns (bool) {
+        Proof memory proof = abi.decode(opaqueProof, (Proof));
 
         // Compute the merkle leaf hash of our parachain
         bytes32 parachainHeadHash = createParachainMerkleLeaf(
@@ -63,7 +62,7 @@ contract ParachainClient {
         );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
-        return beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof);
+        return beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
     }
 
     function createParachainMerkleLeaf(
@@ -80,11 +79,10 @@ contract ParachainClient {
         return keccak256(encodedHead);
     }
 
-    function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function createMMRLeaf(
+        MMRLeafPartial memory leaf,
+        bytes32 parachainHeadsRoot
+    ) internal pure returns (bytes32) {
         bytes memory encodedLeaf = bytes.concat(
             ScaleCodec.encodeU8(leaf.version),
             ScaleCodec.encodeU32(leaf.parentNumber),

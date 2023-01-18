@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-	dispatch::{DispatchResult, Dispatchable, Parameter, GetDispatchInfo},
+	dispatch::{DispatchResult, Dispatchable, GetDispatchInfo, Parameter},
 	traits::{Contains, EnsureOrigin},
 };
 
@@ -200,7 +200,8 @@ mod tests {
 	impl frame_support::traits::Contains<RuntimeCall> for CallFilter {
 		fn contains(call: &RuntimeCall) -> bool {
 			match call {
-				RuntimeCall::System(frame_system::pallet::Call::<Test>::remark { remark: _ }) => true,
+				RuntimeCall::System(frame_system::pallet::Call::<Test>::remark { remark: _ }) =>
+					true,
 				_ => false,
 			}
 		}
@@ -225,7 +226,8 @@ mod tests {
 			let id = 37;
 			let source = H160::repeat_byte(7);
 
-			let message = RuntimeCall::System(frame_system::Call::remark { remark: vec![] }).encode();
+			let message =
+				RuntimeCall::System(frame_system::Call::remark { remark: vec![] }).encode();
 
 			System::set_block_number(1);
 			Dispatch::dispatch(source, id, &message);
@@ -272,7 +274,8 @@ mod tests {
 			let id = 37;
 			let source = H160::repeat_byte(7);
 
-			let message = RuntimeCall::System(frame_system::Call::set_code { code: vec![] }).encode();
+			let message =
+				RuntimeCall::System(frame_system::Call::set_code { code: vec![] }).encode();
 
 			System::set_block_number(1);
 			Dispatch::dispatch(source, id, &message);

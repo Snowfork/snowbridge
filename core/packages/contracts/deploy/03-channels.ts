@@ -1,31 +1,21 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
-import hre from "hardhat";
+import { getConfigForNetwork } from "../config"
 
-module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
+module.exports = async ({ ethers, deployments, getUnnamedAccounts, network }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
 
-    if (!("BASIC_CHANNEL_SOURCE_ID" in process.env)) {
-        throw "Missing BASIC_CHANNEL_SOURCE_ID in environment config"
-    }
-    const basicChannelSourceID = process.env.BASIC_CHANNEL_SOURCE_ID
-
-    if (!("INCENTIVIZED_CHANNEL_SOURCE_ID" in process.env)) {
-        throw "Missing INCENTIVIZED_CHANNEL_SOURCE_ID in environment config"
-    }
-    const incentivizedChannelSourceID = process.env.INCENTIVIZED_CHANNEL_SOURCE_ID
+    const config = getConfigForNetwork(network.name)
 
     let parachainClient = await deployments.get("ParachainClient")
-    let scaleCodecLibrary = await deployments.get("ScaleCodec")
     let merkleProof = await deployments.get("MerkleProof")
 
-    const feeData = await hre.ethers.provider.getFeeData()
+    const feeData = await ethers.provider.getFeeData()
 
     let basicInboundChannel = await deployments.deploy("BasicInboundChannel", {
         from: deployer,
-        args: [basicChannelSourceID, parachainClient.address],
+        args: [config.basicChannelSourceID, parachainClient.address],
         libraries: {
-            ScaleCodec: scaleCodecLibrary.address,
-            MerkleProof: merkleProof.address,
+            MerkleProof: merkleProof.address
         },
         log: true,
         autoMine: true,
@@ -35,10 +25,7 @@ module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvir
 
     let incentivizedInboundChannel = await deployments.deploy("IncentivizedInboundChannel", {
         from: deployer,
-        args: [incentivizedChannelSourceID, parachainClient.address],
-        libraries: {
-            ScaleCodec: scaleCodecLibrary.address,
-        },
+        args: [config.incentivizedChannelSourceID, parachainClient.address],
         log: true,
         autoMine: true,
         maxFeePerGas: feeData.maxFeePerGas,

@@ -3,20 +3,14 @@ export ROPSTEN_PRIVATE_KEY=0x000000000000000000000000000000000000000000000000000
 export INFURA_PROJECT_ID=
 export ETHERSCAN_API_KEY=
 
-# Basic Channel
-export BASIC_CHANNEL_SOURCE_ID=0
-
-# Incentivized Channel
-# Default fee is 1 SnowDOT (12 decimal places)
-export INCENTIVIZED_CHANNEL_FEE=1000000000000000000
-export INCENTIVIZED_CHANNEL_SOURCE_ID=1
-
-# ParachainClient
-export PARACHAIN_ID=1000
-
 # For running scripts and tests without hardhat CLI
-TS_NODE_FILES=true
+export TS_NODE_FILES=true
 
 # Uncomment to enable gas reporting:
 #
 # export REPORT_GAS=true
+#
+
+# Uncomment to enable USD pricing of gas
+#
+# export COINMARKETCAP_API_KEY=foobar

@@ -4,13 +4,12 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{pallet_prelude::*};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::ArithmeticError;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
-	}
+	pub trait Config: frame_system::Config {}
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -46,8 +45,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-	}
+	impl<T: Config> Pallet<T> {}
 
 	impl<T: Config> snowbridge_asset_registry_primitives::NextAssetId for Pallet<T> {
 		fn next() -> Result<u128, DispatchError> {

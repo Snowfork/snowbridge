@@ -24,6 +24,6 @@
   },
   "exclude": ["node_modules", "dist"],
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts", "hardhat.config.ts"
   ]
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func makeCommitment() (*types.Commitment, error) {
 	data := types.MustHexDecodeString("3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c")
 

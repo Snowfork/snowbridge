@@ -262,7 +262,7 @@ const main = async () => {
   const contractsConfig = await getContracts(argv["contracts-url"]);
   console.log("Fetch complete.");
 
-  // intialize api clients
+  // initialize api clients
   const parachainApi = await ApiPromise.create({
     provider: new WsProvider(argv["snowbridge-url"]),
   });

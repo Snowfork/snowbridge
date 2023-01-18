@@ -394,14 +394,14 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 }
 
 type SyncCommitteePeriodUpdateResponse struct {
-	Data []struct {
+	Data struct {
 		AttestedHeader          HeaderResponse        `json:"attested_header"`
 		NextSyncCommittee       SyncCommitteeResponse `json:"next_sync_committee"`
 		NextSyncCommitteeBranch []common.Hash         `json:"next_sync_committee_branch"`
 		FinalizedHeader         HeaderResponse        `json:"finalized_header"`
 		FinalityBranch          []common.Hash         `json:"finality_branch"`
 		SyncAggregate           SyncAggregateResponse `json:"sync_aggregate"`
-		ForkVersion             string                `json:"fork_version"`
+		SignatureSlot           string                `json:"signature_slot"`
 	} `json:"data"`
 }
 
@@ -442,14 +442,18 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteeP
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
-	var response SyncCommitteePeriodUpdateResponse
+	var response []SyncCommitteePeriodUpdateResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
 	if err != nil {
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
-	return response, nil
+	if len(response) == 0 {
+		return SyncCommitteePeriodUpdateResponse{}, ErrNotFound
+	}
+
+	return response[0], nil
 }
 
 type ForkResponse struct {
@@ -497,12 +501,12 @@ type LatestFinalisedUpdateResponse struct {
 		FinalizedHeader HeaderResponse        `json:"finalized_header"`
 		FinalityBranch  []common.Hash         `json:"finality_branch"`
 		SyncAggregate   SyncAggregateResponse `json:"sync_aggregate"`
-		ForkVersion     string                `json:"fork_version"`
+		SignatureSlot   string                `json:"signature_slot"`
 	} `json:"data"`
 }
 
 func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/finality_update/", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/finality_update", b.endpoint), nil)
 	if err != nil {
 		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}

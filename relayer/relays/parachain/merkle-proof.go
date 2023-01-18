@@ -89,6 +89,8 @@ func CreateParachainMerkleProof(heads []relaychain.ParaHead, paraID uint32) (Mer
 		}
 	}
 
+	// Reference implementation of MerkleTree in substrate
+	// https://github.com/paritytech/substrate/blob/ea387c634715793f806286abf1e64cabf9b7026f/frame/beefy-mmr/primitives/src/lib.rs#L45-L54
 	leaf, root, proof, err := merkle.GenerateMerkleProof(preLeaves, headerIndex)
 	if err != nil {
 		return MerkleProofData{}, fmt.Errorf("create parachain merkle proof: %w", err)

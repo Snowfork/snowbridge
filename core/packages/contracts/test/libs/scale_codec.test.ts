@@ -1,10 +1,10 @@
 import { ethers, expect, loadFixture } from "../setup"
-import { ScaleCodec__factory } from "../../src"
+import { ScaleCodecWrapper__factory } from "../../src"
 
 describe("ScaleCodec", function () {
     async function fixture() {
         let [owner] = await ethers.getSigners()
-        let codec = await new ScaleCodec__factory(owner).deploy()
+        let codec = await new ScaleCodecWrapper__factory(owner).deploy()
         await codec.deployed()
         return { codec }
     }

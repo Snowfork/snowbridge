@@ -1,10 +1,14 @@
-mod beacon {
+mod beacon_tests {
 	use crate as ethereum_beacon_client;
 	use crate::{
-		config, merkleization, merkleization::MerkleizationError,
+		config, merkleization,
+		merkleization::MerkleizationError,
 		mock::*,
-		BeaconHeader, Error, ExecutionHeaders, FinalizedBeaconHeaders, LatestFinalizedHeaderSlot,
-		PublicKey, SyncCommittees, ValidatorsRoot,
+		ssz::{
+			SSZAttestation, SSZAttestationData, SSZAttesterSlashing, SSZCheckpoint, SSZEth1Data,
+			SSZExecutionPayload, SSZSyncAggregate,
+		},
+		BeaconHeader, Error, PublicKey,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -15,121 +19,12 @@ mod beacon {
 	use ssz_rs::prelude::Vector;
 
 	#[test]
-	fn it_syncs_from_an_initial_checkpoint() {
-		let initial_sync = get_initial_sync();
-
-		new_tester().execute_with(|| {
-			assert_ok!(EthereumBeaconClient::initial_sync(initial_sync.clone()));
-
-			let block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
-					.unwrap()
-					.into();
-
-			assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
-		});
-	}
-
-	#[test]
-	fn it_updates_a_committee_period_sync_update() {
-		let update = get_committee_sync_period_update();
-
-		let current_sync_committee = get_initial_sync().current_sync_committee;
-
-		let current_period =
-			EthereumBeaconClient::compute_current_sync_period(update.attested_header.slot);
-
-		new_tester().execute_with(|| {
-			SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-			ValidatorsRoot::<Test>::set(get_validators_root());
-
-			assert_ok!(EthereumBeaconClient::sync_committee_period_update(
-				RuntimeOrigin::signed(1),
-				update.clone(),
-			));
-
-			let block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-					.unwrap()
-					.into();
-
-			assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
-		});
-	}
-
-	#[test]
-	fn it_processes_a_finalized_header_update() {
-		let update = get_finalized_header_update();
-
-		let current_sync_committee = get_initial_sync().current_sync_committee;
-
-		let current_period =
-			EthereumBeaconClient::compute_current_sync_period(update.attested_header.slot);
-
-		new_tester().execute_with(|| {
-			SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-			ValidatorsRoot::<Test>::set(get_validators_root());
-
-			assert_ok!(EthereumBeaconClient::import_finalized_header(
-				RuntimeOrigin::signed(1),
-				update.clone()
-			));
-
-			let block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-					.unwrap()
-					.into();
-
-			assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
-		});
-	}
-
-	#[test]
-	fn it_processes_a_header_update() {
-		let update = get_header_update();
-
-		let current_sync_committee = get_initial_sync().current_sync_committee;
-
-		let current_period = EthereumBeaconClient::compute_current_sync_period(update.block.slot);
-
-		new_tester().execute_with(|| {
-			SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-			ValidatorsRoot::<Test>::set(get_validators_root());
-			LatestFinalizedHeaderSlot::<Test>::set(update.block.slot);
-
-			assert_ok!(EthereumBeaconClient::import_execution_header(
-				RuntimeOrigin::signed(1),
-				update.clone()
-			));
-
-			let execution_block_root: H256 =
-				update.block.body.execution_payload.block_hash.clone().into();
-
-			assert!(<ExecutionHeaders<Test>>::contains_key(execution_block_root));
-		});
-	}
-
-	#[test]
-	fn it_errors_when_importing_a_header_with_no_sync_commitee_for_period() {
-		let update = get_finalized_header_update();
-
-		new_tester().execute_with(|| {
-			ValidatorsRoot::<Test>::set(
-				hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-			);
-
-			assert_err!(
-				EthereumBeaconClient::import_finalized_header(RuntimeOrigin::signed(1), update),
-				Error::<Test>::SyncCommitteeMissing
-			);
-		});
-	}
-
-	#[test]
 	pub fn test_get_sync_committee_sum() {
-		new_tester().execute_with(|| {
+		new_tester::<mock_minimal::Test>().execute_with(|| {
 			assert_eq!(
-				EthereumBeaconClient::get_sync_committee_sum(vec![0, 1, 0, 1, 1, 0, 1, 0, 1]),
+				mock_minimal::EthereumBeaconClient::get_sync_committee_sum(vec![
+					0, 1, 0, 1, 1, 0, 1, 0, 1
+				]),
 				5
 			);
 		});
@@ -137,8 +32,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_compute_domain() {
-		new_tester().execute_with(|| {
-			let domain = EthereumBeaconClient::compute_domain(
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			let domain = mock_minimal::EthereumBeaconClient::compute_domain(
 				hex!("07000000").into(),
 				hex!("00000001").into(),
 				hex!("5dec7ae03261fde20d5b024dfabce8bac3276c9a4908e23d50ba8c9b50b0adff").into(),
@@ -154,8 +49,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_compute_domain_kiln() {
-		new_tester().execute_with(|| {
-			let domain = EthereumBeaconClient::compute_domain(
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			let domain = mock_minimal::EthereumBeaconClient::compute_domain(
 				hex!("07000000").into(),
 				hex!("70000071").into(),
 				hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
@@ -171,8 +66,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_compute_signing_root_bls() {
-		new_tester().execute_with(|| {
-			let signing_root = EthereumBeaconClient::compute_signing_root(
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			let signing_root = mock_minimal::EthereumBeaconClient::compute_signing_root(
 				BeaconHeader {
 					slot: 3529537,
 					proposer_index: 192549,
@@ -202,8 +97,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_compute_signing_root_kiln() {
-		new_tester().execute_with(|| {
-			let signing_root = EthereumBeaconClient::compute_signing_root(
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			let signing_root = mock_minimal::EthereumBeaconClient::compute_signing_root(
 				BeaconHeader {
 					slot: 221316,
 					proposer_index: 79088,
@@ -233,8 +128,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_compute_signing_root_kiln_head_update() {
-		new_tester().execute_with(|| {
-			let signing_root = EthereumBeaconClient::compute_signing_root(
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			let signing_root = mock_minimal::EthereumBeaconClient::compute_signing_root(
 				BeaconHeader {
 					slot: 222472,
 					proposer_index: 10726,
@@ -264,8 +159,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_compute_domain_bls() {
-		new_tester().execute_with(|| {
-			let domain = EthereumBeaconClient::compute_domain(
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			let domain = mock_minimal::EthereumBeaconClient::compute_domain(
 				hex!("07000000").into(),
 				hex!("01000000").into(),
 				hex!("4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95").into(),
@@ -281,9 +176,9 @@ mod beacon {
 
 	#[test]
 	pub fn test_is_valid_merkle_proof() {
-		new_tester().execute_with(|| {
+		new_tester::<mock_minimal::Test>().execute_with(|| {
 			assert_eq!(
-				EthereumBeaconClient::is_valid_merkle_branch(
+				mock_minimal::EthereumBeaconClient::is_valid_merkle_branch(
 					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 					vec![
 						hex!("0000000000000000000000000000000000000000000000000000000000000000")
@@ -298,7 +193,10 @@ mod beacon {
 							.into(),
 						hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584")
 							.into(),
-					].to_vec().try_into().expect("proof branch is too long"),
+					]
+					.to_vec()
+					.try_into()
+					.expect("proof branch is too long"),
 					6,
 					41,
 					hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
@@ -310,9 +208,9 @@ mod beacon {
 
 	#[test]
 	pub fn test_merkle_proof_fails_if_depth_and_branch_dont_match() {
-		new_tester().execute_with(|| {
+		new_tester::<mock_minimal::Test>().execute_with(|| {
 			assert_eq!(
-				EthereumBeaconClient::is_valid_merkle_branch(
+				mock_minimal::EthereumBeaconClient::is_valid_merkle_branch(
 					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 					vec![
 						hex!("0000000000000000000000000000000000000000000000000000000000000000")
@@ -321,7 +219,10 @@ mod beacon {
 							.into(),
 						hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d")
 							.into(),
-					].to_vec().try_into().expect("proof branch is too long"),
+					]
+					.to_vec()
+					.try_into()
+					.expect("proof branch is too long"),
 					6,
 					41,
 					hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
@@ -333,8 +234,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_bls_fast_aggregate_verify_minimal() {
-		new_tester().execute_with(|| {
-		assert_ok!(EthereumBeaconClient::bls_fast_aggregate_verify(
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+		assert_ok!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
 			vec![
 				PublicKey(hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into()),
 				PublicKey(hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into()),
@@ -349,8 +250,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_bls_fast_aggregate_verify_invalid_point() {
-		new_tester().execute_with(|| {
-		assert_err!(EthereumBeaconClient::bls_fast_aggregate_verify(
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
 			vec![
 				PublicKey(hex!("973eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into()),
 				PublicKey(hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into()),
@@ -359,14 +260,14 @@ mod beacon {
 			],
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
 			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
-		), Error::<Test>::InvalidSignaturePoint);
+		), Error::<mock_minimal::Test>::InvalidSignaturePoint);
 	});
 	}
 
 	#[test]
 	pub fn test_bls_fast_aggregate_verify_invalid_message() {
-		new_tester().execute_with(|| {
-		assert_err!(EthereumBeaconClient::bls_fast_aggregate_verify(
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
 			vec![
 				PublicKey(hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into()),
 				PublicKey(hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into()),
@@ -375,14 +276,14 @@ mod beacon {
 			],
 			hex!("99241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
 			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
-		), Error::<Test>::SignatureVerificationFailed);
+		), Error::<mock_minimal::Test>::SignatureVerificationFailed);
 	});
 	}
 
 	#[test]
 	pub fn test_bls_fast_aggregate_verify_invalid_signature() {
-		new_tester().execute_with(|| {
-		assert_err!(EthereumBeaconClient::bls_fast_aggregate_verify(
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
 			vec![
 				PublicKey(hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into()),
 				PublicKey(hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into()),
@@ -391,26 +292,8 @@ mod beacon {
 			],
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
 			hex!("c204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
-		), Error::<Test>::InvalidSignature);
+		), Error::<mock_minimal::Test>::InvalidSignature);
 	});
-	}
-
-	#[test]
-	pub fn test_bls_fast_aggregate_verify() {
-		let test_data = get_bls_signature_verify_test_data();
-
-		let sync_committee_bits =  merkleization::get_sync_committee_bits::<MaxSyncCommitteeSize>(test_data.sync_committee_bits.try_into().expect("too many sync committee bits"));
-
-		assert_ok!(&sync_committee_bits);
-
-		assert_ok!(EthereumBeaconClient::verify_signed_header(
-			sync_committee_bits.unwrap(),
-			test_data.sync_committee_signature.try_into().expect("signature is too long"),
-			test_data.pubkeys.to_vec().try_into().expect("to many pubkeys"),
-			test_data.fork_version,
-			test_data.header,
-			test_data.validators_root
-		));
 	}
 
 	#[test]
@@ -419,35 +302,51 @@ mod beacon {
 			true => hex!("ffffffff").to_vec(),
 			false => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b").to_vec(),
 		};
-		
-		let sync_committee_bits =  merkleization::get_sync_committee_bits::<MaxSyncCommitteeSize>(bits.try_into().expect("too many sync committee bits"));
+
+		let sync_committee_bits = merkleization::get_sync_committee_bits::<
+			mock_minimal::MaxSyncCommitteeSize,
+		>(bits.try_into().expect("too many sync committee bits"));
 
 		assert_ok!(&sync_committee_bits);
 
-		assert_ok!(EthereumBeaconClient::sync_committee_participation_is_supermajority(sync_committee_bits.unwrap()));
+		assert_ok!(
+			mock_minimal::EthereumBeaconClient::sync_committee_participation_is_supermajority(
+				sync_committee_bits.unwrap()
+			)
+		);
 	}
 
 	#[test]
 	pub fn test_sync_committee_bits_too_short() {
-		let bits = hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bffff5f7fedfffdfb6ddff7bf7").to_vec();
-		
-		let sync_committee_bits =  merkleization::get_sync_committee_bits::<MaxSyncCommitteeSize>(bits.try_into().expect("invalid sync committee bits"));
+		let bits = match config::IS_MINIMAL {
+			true => hex!("ffff").to_vec(),
+			false => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bffff5f7fedfffdfb6ddff7bf7").to_vec(),
+		};
+
+		let sync_committee_bits = merkleization::get_sync_committee_bits::<
+			mock_minimal::MaxSyncCommitteeSize,
+		>(bits.try_into().expect("invalid sync committee bits"));
 
 		assert_err!(sync_committee_bits, MerkleizationError::InputTooShort);
 	}
 
 	#[test]
 	pub fn test_sync_committee_bits_extra_input() {
-		let bits = hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7bf7bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7bf7").to_vec();
-		
-		let sync_committee_bits =  merkleization::get_sync_committee_bits::<MaxSyncCommitteeSize>(bits.try_into().expect("invalid sync committee bits"));
+		let bits = match config::IS_MINIMAL {
+			true => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefff").to_vec(),
+			false => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7bf7bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7bf7").to_vec(),
+		};
+
+		let sync_committee_bits = merkleization::get_sync_committee_bits::<
+			mock_minimal::MaxSyncCommitteeSize,
+		>(bits.try_into().expect("invalid sync committee bits"));
 
 		assert_err!(sync_committee_bits, MerkleizationError::ExtraInput);
 	}
 
 	#[test]
 	pub fn test_sync_committee_participation_is_supermajority_errors_when_not_supermajority() {
-		new_tester().execute_with(|| {
+		new_tester::<mock_minimal::Test>().execute_with(|| {
 			let sync_committee_bits = vec![
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -471,10 +370,10 @@ mod beacon {
 			];
 
 			assert_err!(
-				EthereumBeaconClient::sync_committee_participation_is_supermajority(
+				mock_minimal::EthereumBeaconClient::sync_committee_participation_is_supermajority(
 					sync_committee_bits
 				),
-				Error::<Test>::SyncCommitteeParticipantsNotSupermajority
+				Error::<mock_minimal::Test>::SyncCommitteeParticipantsNotSupermajority
 			);
 		});
 	}
@@ -530,19 +429,6 @@ mod beacon {
 	}
 
 	#[test]
-	pub fn test_hash_tree_root_sync_committee() {
-		let test_data = get_sync_committee_test_data();
-		let hash_root_result = merkleization::hash_tree_root_sync_committee(test_data.sync_committee);
-		assert_ok!(&hash_root_result);
-
-		let hash_root: H256 = hash_root_result.unwrap().into();
-		assert_eq!(
-			hash_root,
-			test_data.result
-		);
-	}
-
-	#[test]
 	pub fn test_hash_tree_root_fork_data() {
 		let hash_root = merkleization::hash_tree_root_fork_data(ethereum_beacon_client::ForkData {
 			current_version: hex!("83f38a34").into(),
@@ -579,30 +465,15 @@ mod beacon {
 	}
 
 	#[test]
-	pub fn test_hash_block_body() {
-		let test_data = get_block_body_test_data();
-		let payload = merkleization::get_ssz_beacon_block_body(test_data.body);
-		assert_ok!(&payload);
-
-		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
-		assert_ok!(&hash_root_result);
-
-		let hash_root: H256 = hash_root_result.unwrap().into();
-		assert_eq!(
-			hash_root,
-			test_data.result
-		);
-	}
-
-	#[test]
 	pub fn test_hash_eth1_data() {
-		let payload = merkleization::get_ssz_eth1_data(Eth1Data {
+		let payload: Result<SSZEth1Data, MerkleizationError> = Eth1Data {
 			deposit_root: hex!("d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e")
 				.into(),
 			deposit_count: 0,
 			block_hash: hex!("0000000000000000000000000000000000000000000000000000000000000000")
 				.into(),
-		});
+		}
+		.try_into();
 		assert_ok!(&payload);
 
 		let hash_root = merkleization::hash_tree_root(payload.unwrap());
@@ -613,8 +484,8 @@ mod beacon {
 	}
 
 	#[test]
-	pub fn test_hash_sync_aggregrate() {
-		let sync_aggregate: SyncAggregate<MaxSyncCommitteeSize, MaxSignatureSize> = match config::IS_MINIMAL {
+	pub fn test_hash_sync_aggregate() {
+		let sync_aggregate: SyncAggregate<mock_minimal::MaxSyncCommitteeSize, mock_minimal::MaxSignatureSize> = match config::IS_MINIMAL {
 			true => SyncAggregate{
 				sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("sync committee bits are too long"),
 				sync_committee_signature: hex!("99b0a4c6b69f17a876c65364e164c74b9cdd75dfd3b7f9b60b850cfb9394091ed501e2c190b8349f1b903bca44dd556a0c20fd9cd34dec3906921f1424359a4870356557b70261eee14bf49d8f3c62dfcdb37206cb34991c379eee46510602bd").to_vec().try_into().expect("signature is too long"),
@@ -626,20 +497,18 @@ mod beacon {
 		};
 		let expected_hash_root: H256 = match config::IS_MINIMAL {
 			true => hex!("6b3a4d0172d3d2075a924b84538621af4a2c9148f26e90e2608a6aae4283e68d").into(),
-			false => hex!("e6dcad4f60ce9ff8a587b110facbaf94721f06cd810b6d8bf6cffa641272808d").into(),
+			false =>
+				hex!("e6dcad4f60ce9ff8a587b110facbaf94721f06cd810b6d8bf6cffa641272808d").into(),
 		};
 
-		let payload = merkleization::get_ssz_sync_aggregate(sync_aggregate);
+		let payload: Result<SSZSyncAggregate, MerkleizationError> = sync_aggregate.try_into();
 		assert_ok!(&payload);
 
 		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
 		assert_ok!(&hash_root_result);
 
 		let hash_root: H256 = hash_root_result.unwrap().into();
-		assert_eq!(
-			hash_root,
-			expected_hash_root
-		);
+		assert_eq!(hash_root, expected_hash_root);
 	}
 
 	#[test]
@@ -656,8 +525,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_hash_tree_root_execution_payload() {
-		let payload = merkleization::get_ssz_execution_payload(
-            ExecutionPayload::<MaxFeeRecipientSize, MaxLogsBloomSize, MaxExtraDataSize>{
+		let payload: Result<SSZExecutionPayload, MerkleizationError> =
+            ExecutionPayload::<mock_minimal::MaxFeeRecipientSize, mock_minimal::MaxLogsBloomSize, mock_minimal::MaxExtraDataSize>{
                 parent_hash: hex!("eadee5ab098dde64e9fd02ae5858064bad67064070679625b09f8d82dec183f7").into(),
                 fee_recipient: hex!("f97e180c050e5ab072211ad2c213eb5aee4df134").to_vec().try_into().expect("fee recipient bits are too long"),
                 state_root: hex!("564fa064c2a324c2b5978d7fdfc5d4224d4f421a45388af1ed405a399c845dff").into(),
@@ -672,8 +541,7 @@ mod beacon {
                 base_fee_per_gas: U256::from(7 as i16),
                 block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
                 transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
-            }
-        );
+            }.try_into();
 		assert_ok!(&payload);
 
 		let hash_root = merkleization::hash_tree_root(payload.unwrap());
@@ -685,8 +553,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_hash_tree_root_attestation() {
-		let payload = merkleization::get_ssz_attestation(
-            Attestation::<MaxValidatorsPerCommittee, MaxSignatureSize>{
+		let payload: Result<SSZAttestation, MerkleizationError> =
+            Attestation::<mock_minimal::MaxValidatorsPerCommittee, mock_minimal::MaxSignatureSize>{
                 aggregation_bits: hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec().try_into().expect("aggregation bits are too long"),
                 data: AttestationData{
                     slot: 484119,
@@ -702,8 +570,7 @@ mod beacon {
                     }
                 },
                 signature: hex!("af8e57aadf092443bd6675927ca84875419233fb7a5eb3ae626621d3339fe738b00af4a0edcc55efbe1198a815600784074388d366c4add789aa6126bb1ec5ed63ad8d8f22b5f158ae4c25d46b08d46d1188f7ed7e8f99d96ff6c3c69a240c18").to_vec().try_into().expect("signature is too long"),
-            },
-        );
+            }.try_into();
 
 		assert_ok!(&payload);
 
@@ -718,7 +585,7 @@ mod beacon {
 
 	#[test]
 	pub fn test_hash_tree_root_attestation_data() {
-		let payload = merkleization::get_ssz_attestation_data(AttestationData {
+		let payload: Result<SSZAttestationData, MerkleizationError> = AttestationData {
 			slot: 484119,
 			index: 25,
 			beacon_block_root: hex!(
@@ -735,7 +602,8 @@ mod beacon {
 				root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7")
 					.into(),
 			},
-		});
+		}
+		.try_into();
 
 		assert_ok!(&payload);
 
@@ -750,10 +618,11 @@ mod beacon {
 
 	#[test]
 	pub fn test_hash_tree_root_checkpoint() {
-		let payload = merkleization::get_ssz_checkpoint(Checkpoint {
+		let payload: Result<SSZCheckpoint, MerkleizationError> = Checkpoint {
 			epoch: 15127,
 			root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-		});
+		}
+		.try_into();
 
 		assert_ok!(&payload);
 
@@ -768,7 +637,8 @@ mod beacon {
 
 	#[test]
 	pub fn test_hash_tree_root_attester_slashing() {
-		let payload = merkleization::get_ssz_attester_slashing(get_attester_slashing());
+		let payload: Result<SSZAttesterSlashing, MerkleizationError> =
+			get_attester_slashing::<mock_minimal::Test>().try_into();
 
 		assert_ok!(&payload);
 
@@ -779,5 +649,353 @@ mod beacon {
 			hash_root.unwrap(),
 			hex!("b1d13ea52fbb24639eee459fdd37e60c56710b51ef07eb32e525f3099dea9251")
 		);
+	}
+}
+#[cfg(feature = "minimal")]
+mod beacon_minimal_tests {
+	use crate::{
+		merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody, Error,
+		ExecutionHeaders, FinalizedBeaconHeaders, LatestFinalizedHeaderSlot, SyncCommittees,
+		ValidatorsRoot,
+	};
+	use frame_support::{assert_err, assert_ok};
+	use hex_literal::hex;
+	use sp_core::H256;
+
+	#[test]
+	fn it_syncs_from_an_initial_checkpoint() {
+		let initial_sync = get_initial_sync::<mock_minimal::Test>();
+
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(initial_sync.clone()));
+
+			let block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
+					.unwrap()
+					.into();
+
+			assert!(<FinalizedBeaconHeaders<mock_minimal::Test>>::contains_key(block_root));
+		});
+	}
+
+	#[test]
+	fn it_updates_a_committee_period_sync_update() {
+		let update = get_committee_sync_period_update::<mock_minimal::Test>();
+
+		let current_sync_committee =
+			get_initial_sync::<mock_minimal::Test>().current_sync_committee;
+
+		let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
+			update.attested_header.slot,
+		);
+
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
+			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
+
+			assert_ok!(mock_minimal::EthereumBeaconClient::sync_committee_period_update(
+				mock_minimal::RuntimeOrigin::signed(1),
+				update.clone(),
+			));
+
+			let block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
+					.unwrap()
+					.into();
+
+			assert!(<FinalizedBeaconHeaders<mock_minimal::Test>>::contains_key(block_root));
+		});
+	}
+
+	#[test]
+	fn it_processes_a_finalized_header_update() {
+		let update = get_finalized_header_update::<mock_minimal::Test>();
+
+		let current_sync_committee =
+			get_initial_sync::<mock_minimal::Test>().current_sync_committee;
+
+		let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
+			update.attested_header.slot,
+		);
+
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
+			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
+
+			assert_ok!(mock_minimal::EthereumBeaconClient::import_finalized_header(
+				mock_minimal::RuntimeOrigin::signed(1),
+				update.clone()
+			));
+
+			let block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
+					.unwrap()
+					.into();
+
+			assert!(<FinalizedBeaconHeaders<mock_minimal::Test>>::contains_key(block_root));
+		});
+	}
+
+	#[test]
+	fn it_processes_a_header_update() {
+		let update = get_header_update::<mock_minimal::Test>();
+
+		let current_sync_committee =
+			get_initial_sync::<mock_minimal::Test>().current_sync_committee;
+
+		let current_period =
+			mock_minimal::EthereumBeaconClient::compute_current_sync_period(update.block.slot);
+
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
+			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
+			LatestFinalizedHeaderSlot::<mock_minimal::Test>::set(update.block.slot);
+
+			assert_ok!(mock_minimal::EthereumBeaconClient::import_execution_header(
+				mock_minimal::RuntimeOrigin::signed(1),
+				update.clone()
+			));
+
+			let execution_block_root: H256 =
+				update.block.body.execution_payload.block_hash.clone().into();
+
+			assert!(<ExecutionHeaders<mock_minimal::Test>>::contains_key(execution_block_root));
+		});
+	}
+
+	#[test]
+	fn it_errors_when_importing_a_header_with_no_sync_committee_for_period() {
+		let update = get_finalized_header_update::<mock_minimal::Test>();
+
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			ValidatorsRoot::<mock_minimal::Test>::set(
+				hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
+			);
+
+			assert_err!(
+				mock_minimal::EthereumBeaconClient::import_finalized_header(
+					mock_minimal::RuntimeOrigin::signed(1),
+					update
+				),
+				Error::<mock_minimal::Test>::SyncCommitteeMissing
+			);
+		});
+	}
+
+	#[test]
+	pub fn test_hash_tree_root_sync_committee() {
+		let sync_committee = get_committee_sync_period_update::<mock_minimal::Test>();
+		let hash_root_result =
+			merkleization::hash_tree_root_sync_committee(sync_committee.next_sync_committee);
+		assert_ok!(&hash_root_result);
+
+		let hash_root: H256 = hash_root_result.unwrap().into();
+		assert_eq!(
+			hash_root,
+			hex!("a029d3222d058eda01bb4f685838e236bf376606a456abbfb62bc8d950bb3e6e").into()
+		);
+	}
+
+	#[test]
+	pub fn test_hash_block_body() {
+		let block_update = get_header_update::<mock_minimal::Test>();
+		let payload: Result<SSZBeaconBlockBody, MerkleizationError> =
+			block_update.block.body.try_into();
+		assert_ok!(&payload);
+
+		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
+		assert_ok!(&hash_root_result);
+
+		let hash_root: H256 = hash_root_result.unwrap().into();
+		assert_eq!(
+			hash_root,
+			hex!("332cbf177a081616822905703c4bf026dad64b6d726a59f5b46ecf1661f81808").into()
+		);
+	}
+
+	#[test]
+	pub fn test_bls_fast_aggregate_verify() {
+		let test_data = get_bls_signature_verify_test_data::<mock_minimal::Test>();
+
+		let sync_committee_bits =
+			merkleization::get_sync_committee_bits::<mock_minimal::MaxSyncCommitteeSize>(
+				test_data.sync_committee_bits.try_into().expect("too many sync committee bits"),
+			);
+
+		assert_ok!(&sync_committee_bits);
+
+		assert_ok!(mock_minimal::EthereumBeaconClient::verify_signed_header(
+			sync_committee_bits.unwrap(),
+			test_data.sync_committee_signature.try_into().expect("signature is too long"),
+			test_data.pubkeys.to_vec().try_into().expect("to many pubkeys"),
+			test_data.header,
+			test_data.validators_root,
+			test_data.signature_slot,
+		));
+	}
+}
+
+#[cfg(not(feature = "minimal"))]
+mod beacon_mainnet_tests {
+	use crate::{
+		merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
+		ExecutionHeaders, FinalizedBeaconHeaders, LatestFinalizedHeaderSlot, SyncCommittees,
+		ValidatorsRoot,
+	};
+	use frame_support::assert_ok;
+	use hex_literal::hex;
+	use sp_core::H256;
+
+	#[test]
+	fn it_syncs_from_an_initial_checkpoint() {
+		let initial_sync = get_initial_sync::<mock_mainnet::Test>();
+
+		new_tester::<mock_mainnet::Test>().execute_with(|| {
+			assert_ok!(mock_mainnet::EthereumBeaconClient::initial_sync(initial_sync.clone()));
+
+			let block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
+					.unwrap()
+					.into();
+
+			assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
+		});
+	}
+
+	#[test]
+	fn it_updates_a_committee_period_sync_update() {
+		let update = get_committee_sync_period_update::<mock_mainnet::Test>();
+
+		let current_sync_committee =
+			get_initial_sync::<mock_mainnet::Test>().current_sync_committee;
+
+		let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
+			update.attested_header.slot,
+		);
+
+		new_tester::<mock_mainnet::Test>().execute_with(|| {
+			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
+			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
+
+			assert_ok!(mock_mainnet::EthereumBeaconClient::sync_committee_period_update(
+				mock_mainnet::RuntimeOrigin::signed(1),
+				update.clone(),
+			));
+
+			let block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
+					.unwrap()
+					.into();
+
+			assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
+		});
+	}
+
+	#[test]
+	fn it_processes_a_finalized_header_update() {
+		let update = get_finalized_header_update::<mock_mainnet::Test>();
+
+		let current_sync_committee =
+			get_initial_sync::<mock_mainnet::Test>().current_sync_committee;
+
+		let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
+			update.attested_header.slot,
+		);
+
+		new_tester::<mock_mainnet::Test>().execute_with(|| {
+			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
+			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
+
+			assert_ok!(mock_mainnet::EthereumBeaconClient::import_finalized_header(
+				mock_mainnet::RuntimeOrigin::signed(1),
+				update.clone()
+			));
+
+			let block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
+					.unwrap()
+					.into();
+
+			assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
+		});
+	}
+
+	#[test]
+	fn it_processes_a_header_update() {
+		let update = get_header_update::<mock_mainnet::Test>();
+
+		let current_sync_committee =
+			get_initial_sync::<mock_mainnet::Test>().current_sync_committee;
+
+		let current_period =
+			mock_mainnet::EthereumBeaconClient::compute_current_sync_period(update.block.slot);
+
+		new_tester::<mock_mainnet::Test>().execute_with(|| {
+			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
+			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
+			LatestFinalizedHeaderSlot::<mock_mainnet::Test>::set(update.block.slot);
+
+			assert_ok!(mock_mainnet::EthereumBeaconClient::import_execution_header(
+				mock_mainnet::RuntimeOrigin::signed(1),
+				update.clone()
+			));
+
+			let execution_block_root: H256 =
+				update.block.body.execution_payload.block_hash.clone().into();
+
+			assert!(<ExecutionHeaders<mock_mainnet::Test>>::contains_key(execution_block_root));
+		});
+	}
+
+	#[test]
+	pub fn test_hash_tree_root_sync_committee() {
+		let sync_committee = get_committee_sync_period_update::<mock_mainnet::Test>();
+		let hash_root_result =
+			merkleization::hash_tree_root_sync_committee(sync_committee.next_sync_committee);
+		assert_ok!(&hash_root_result);
+
+		let hash_root: H256 = hash_root_result.unwrap().into();
+		assert_eq!(
+			hash_root,
+			hex!("a18ae4d83f81638e41ae4bd43b005b2730b0710cb178ffb50766c93ea3d812c9").into()
+		);
+	}
+
+	#[test]
+	pub fn test_hash_block_body() {
+		let block_update = get_header_update::<mock_minimal::Test>();
+		let payload: Result<SSZBeaconBlockBody, MerkleizationError> =
+			block_update.block.body.try_into();
+		assert_ok!(&payload);
+
+		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
+		assert_ok!(&hash_root_result);
+
+		let hash_root: H256 = hash_root_result.unwrap().into();
+		assert_eq!(
+			hash_root,
+			hex!("e9581ec84c95cd3e02f17ee304bca3202fb843111aa36af9698a1ff64373f1dd").into()
+		);
+	}
+
+	#[test]
+	pub fn test_bls_fast_aggregate_verify() {
+		let test_data = get_bls_signature_verify_test_data::<mock_mainnet::Test>();
+
+		let sync_committee_bits =
+			merkleization::get_sync_committee_bits::<mock_mainnet::MaxSyncCommitteeSize>(
+				test_data.sync_committee_bits.try_into().expect("too many sync committee bits"),
+			);
+
+		assert_ok!(&sync_committee_bits);
+
+		assert_ok!(mock_mainnet::EthereumBeaconClient::verify_signed_header(
+			sync_committee_bits.unwrap(),
+			test_data.sync_committee_signature.try_into().expect("signature is too long"),
+			test_data.pubkeys.to_vec().try_into().expect("to many pubkeys"),
+			test_data.header,
+			test_data.validators_root,
+			test_data.signature_slot,
+		));
 	}
 }

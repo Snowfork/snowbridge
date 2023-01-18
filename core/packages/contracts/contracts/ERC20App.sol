@@ -34,17 +34,9 @@ contract ERC20App is AccessControl {
         uint128 fee
     );
 
-    event Unlocked(
-        address token,
-        bytes32 sender,
-        address recipient,
-        uint128 amount
-    );
+    event Unlocked(address token, bytes32 sender, address recipient, uint128 amount);
 
-    constructor(
-        ERC20Vault erc20vault,
-        ChannelRegistry channelRegistry
-    ) {
+    constructor(ERC20Vault erc20vault, ChannelRegistry channelRegistry) {
         vault = erc20vault;
         registry = channelRegistry;
     }
@@ -75,19 +67,21 @@ contract ERC20App is AccessControl {
         if (_paraID == 0) {
             (call, weight) = ERC20AppPallet.mint(_token, msg.sender, _recipient, _amount);
         } else {
-            (call, weight) = ERC20AppPallet.mintAndForward(_token, msg.sender, _recipient, _amount, _paraID, _fee);
+            (call, weight) = ERC20AppPallet.mintAndForward(
+                _token,
+                msg.sender,
+                _recipient,
+                _amount,
+                _paraID,
+                _fee
+            );
         }
         OutboundChannel(channel).submit(msg.sender, call, weight);
 
         emit Locked(_token, msg.sender, _recipient, _amount, _paraID, _fee);
     }
 
-    function unlock(
-        address _token,
-        bytes32 _sender,
-        address _recipient,
-        uint128 _amount
-    ) external {
+    function unlock(address _token, bytes32 _sender, address _recipient, uint128 _amount) external {
         if (!registry.isInboundChannel(msg.sender)) {
             revert Unauthorized();
         }

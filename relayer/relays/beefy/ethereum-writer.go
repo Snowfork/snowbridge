@@ -54,11 +54,11 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 		Context: ctx,
 	}
 
-	blockWaitPeriod, err := wr.contract.BLOCKWAITPERIOD(&callOpts)
+	blockWaitPeriod, err := wr.contract.RandaoCommitDelay(&callOpts)
 	if err != nil {
 		return err
 	}
-	wr.blockWaitPeriod = blockWaitPeriod
+	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
 
 	// launch task processor
 	eg.Go(func() error {
@@ -121,25 +121,17 @@ func (wr *EthereumWriter) pollTransaction(ctx context.Context, tx *types.Transac
 	return nil, nil
 }
 
-func (wr *EthereumWriter) getNewRequestEvent(receipt *types.Receipt) *beefyclient.BeefyClientNewRequest {
-	for _, eventLog := range receipt.Logs {
-		event, err := wr.contract.ParseNewRequest(*eventLog)
-		if err != nil {
-			continue
-		}
-		return event
-	}
-	return nil
-}
-
 func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
-	tx, err := wr.doSubmitInitial(ctx, &task)
+	// Initial submission
+	tx, initialBitfield, err := wr.doSubmitInitial(ctx, &task)
 	if err != nil {
 		log.WithError(err).Error("Failed to send initial signature commitment")
 		return err
 	}
 
-	receipt, err := wr.waitForTransaction(ctx, tx, wr.blockWaitPeriod)
+	// Wait RandaoCommitDelay before submit CommitPrevRandao to prevent attacker from manipulating committee memberships
+	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
+	receipt, err := wr.waitForTransaction(ctx, tx, wr.blockWaitPeriod+1)
 	if err != nil {
 		return err
 	}
@@ -147,21 +139,27 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return fmt.Errorf("initial commitment transaction failed")
 	}
 
-	event := wr.getNewRequestEvent(receipt)
-	if event == nil {
-		return fmt.Errorf("Could not find event CommitmentVerified event")
+	commitmentHash, err := task.CommitmentHash()
+	if err != nil {
+		return fmt.Errorf("generate commitment hash")
 	}
 
-	validationID := int64(event.Id.Uint64())
+	// Commit PrevRandao which will be used as seed to randomly select subset of validators
+	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/BeefyClient.sol#L446-L447
+	tx, err = wr.contract.CommitPrevRandao(
+		wr.makeTxOpts(ctx),
+		*commitmentHash,
+	)
+	receipt, err = wr.waitForTransaction(ctx, tx, 1)
+	if err != nil {
+		return err
+	}
+	if receipt.Status != 1 {
+		return fmt.Errorf("commitmentPrevRandao transaction failed")
+	}
 
-	log.WithFields(log.Fields{
-		"event": log.Fields{
-			"requestID": event.Id.Uint64(),
-			"sender":    event.Sender.Hex(),
-		},
-	}).Info("Initial submission successful")
-
-	tx, err = wr.doSubmitFinal(ctx, validationID, &task)
+	// Final submission
+	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, &task)
 	if err != nil {
 		log.WithError(err).Error("Failed to send final signature commitment")
 		return err
@@ -220,7 +218,7 @@ func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 	return &options
 }
 
-func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*types.Transaction, error) {
+func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*types.Transaction, []*big.Int, error) {
 	signedValidators := []*big.Int{}
 	for i, signature := range task.SignedCommitment.Signatures {
 		if signature.IsSome() {
@@ -229,33 +227,50 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	}
 	numberOfValidators := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
 	initialBitfield, err := wr.contract.CreateInitialBitfield(
-		&bind.CallOpts{Pending: true}, signedValidators, numberOfValidators,
+		&bind.CallOpts{
+			Pending: true,
+			From:    wr.conn.Keypair().CommonAddress(),
+		},
+		signedValidators, numberOfValidators,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("create initial bitfield: %w", err)
+		return nil, nil, fmt.Errorf("create initial bitfield: %w", err)
 	}
 
+	// Pick first validator who signs beefy commitment
 	valIndex := signedValidators[0].Int64()
 
 	msg, err := task.MakeSubmitInitialParams(valIndex, initialBitfield)
 	if err != nil {
-		return nil, err
-	}
-
-	tx, err := wr.contract.SubmitInitial(
-		wr.makeTxOpts(ctx),
-		msg.CommitmentHash,
-		msg.ValidatorSetID,
-		msg.ValidatorClaimsBitfield,
-		msg.Proof,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("initial submit: %w", err)
+		return nil, nil, err
 	}
 
 	var pkProofHex []string
-	for _, proofItem := range msg.Proof.MerkleProof {
+	for _, proofItem := range msg.Proof.Proof {
 		pkProofHex = append(pkProofHex, "0x"+hex.EncodeToString(proofItem[:]))
+	}
+
+	var tx *types.Transaction
+	if task.IsHandover {
+		tx, err = wr.contract.SubmitInitialWithHandover(
+			wr.makeTxOpts(ctx),
+			msg.CommitmentHash,
+			msg.Bitfield,
+			msg.Proof,
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("initial submit: %w", err)
+		}
+	} else {
+		tx, err = wr.contract.SubmitInitial(
+			wr.makeTxOpts(ctx),
+			msg.CommitmentHash,
+			msg.Bitfield,
+			msg.Proof,
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("initial submit: %w", err)
+		}
 	}
 
 	log.WithFields(logrus.Fields{
@@ -265,22 +280,27 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		"ValidatorSetID": task.SignedCommitment.Commitment.ValidatorSetID,
 	}).Info("Transaction submitted for initial verification")
 
-	return tx, nil
+	return tx, initialBitfield, nil
 }
 
 // doFinalSubmit sends a SubmitFinal tx to the BeefyClient contract
-func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64, task *Request) (*types.Transaction, error) {
+func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]byte, initialBitfield []*big.Int, task *Request) (*types.Transaction, error) {
 	finalBitfield, err := wr.contract.CreateFinalBitfield(
-		&bind.CallOpts{Pending: true},
-		big.NewInt(validationID),
+		&bind.CallOpts{
+			Pending: true,
+			From:    wr.conn.Keypair().CommonAddress(),
+		},
+		commitmentHash,
+		initialBitfield,
 	)
+
 	if err != nil {
 		return nil, fmt.Errorf("create validator bitfield: %w", err)
 	}
 
 	validatorIndices := bitfield.New(finalBitfield).Members()
 
-	params, err := task.MakeSubmitFinalParams(validationID, validatorIndices)
+	params, err := task.MakeSubmitFinalParams(validatorIndices, initialBitfield)
 	if err != nil {
 		return nil, err
 	}
@@ -291,13 +311,17 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 			return nil, fmt.Errorf("logging params: %w", err)
 		}
 
-		tx, err := wr.contract.SubmitFinalWithLeaf(
+		// In Handover mode except for the validator proof to verify commitment signature
+		// will also add mmr leaf proof which contains nextAuthoritySet to verify against mmr root
+		// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/BeefyClient.sol#L342-L350
+		tx, err := wr.contract.SubmitFinalWithHandover(
 			wr.makeTxOpts(ctx),
-			params.ID,
 			params.Commitment,
-			params.Proof,
+			params.Bitfield,
+			params.Proofs,
 			params.Leaf,
 			params.LeafProof,
+			params.LeafProofOrder,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("final submission: %w", err)
@@ -316,9 +340,9 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 
 		tx, err := wr.contract.SubmitFinal(
 			wr.makeTxOpts(ctx),
-			params.ID,
 			params.Commitment,
-			params.Proof,
+			params.Bitfield,
+			params.Proofs,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("final submission: %w", err)

@@ -6,17 +6,13 @@ import "@nomiclabs/hardhat-ethers"
 import "@typechain/hardhat"
 import "hardhat-gas-reporter"
 import "hardhat-deploy"
+import "hardhat-contract-sizer"
 
 import "./tasks/contractAddress"
 
 import "tsconfig-paths/register"
 
 import type { HardhatUserConfig } from "hardhat/config"
-import { subtask } from "hardhat/config"
-import {
-    TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS,
-    TASK_TEST_GET_TEST_FILES,
-} from "hardhat/builtin-tasks/task-names"
 import { ethers } from "ethers"
 
 let INFURA_KEY = process.env.INFURA_PROJECT_ID
@@ -55,20 +51,13 @@ const config: HardhatUserConfig = {
             },
             chainId: 15,
         },
-        ropsten: {
-            chainId: 3,
-            url: `https://ropsten.infura.io/v3/${INFURA_KEY}`,
-            accounts: [ROPSTEN_KEY],
-            maxFeePerGas: ethers.utils.parseUnits("200", "gwei"),
-            maxPriorityFeePerGas: ethers.utils.parseUnits("20", "gwei"),
-        },
         goerli: {
             chainId: 5,
             url: `https://goerli.infura.io/v3/${INFURA_KEY}`,
             accounts: [ROPSTEN_KEY],
             maxFeePerGas: ethers.utils.parseUnits("200", "gwei"),
             maxPriorityFeePerGas: ethers.utils.parseUnits("20", "gwei"),
-        },
+        }
     },
     solidity: {
         version: "0.8.9",
@@ -88,6 +77,8 @@ const config: HardhatUserConfig = {
     },
     mocha: {
         timeout: 60000,
+        // parallel: true,
+        // jobs: 4,
     },
     etherscan: {
         apiKey: ETHERSCAN_KEY,
@@ -101,6 +92,12 @@ const config: HardhatUserConfig = {
         outDir: "src",
         target: "ethers-v5",
         alwaysGenerateOverloads: false, // should overloads with full signatures like deposit(uint256) be generated always, even if there are no overloads?
+    },
+    contractSizer: {
+        alphaSort: true,
+        runOnCompile: false,
+        disambiguatePaths: false,
+        except: ["Mock*"],
     },
 }
 

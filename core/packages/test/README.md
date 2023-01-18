@@ -28,25 +28,12 @@ Make sure to install dependencies for all packages (contracts, api, test):
 cd ../.. && pnpm install
 ```
 
-### Polkadot
-
-* Clone the polkadot repository somewhere on your machine
-* Checkout tag `v0.9.30`.
-
-Example:
-```bash
-git clone -n https://github.com/paritytech/polkadot.git
-cd /path/to/polkadot
-git fetch --tags
-git checkout v0.9.30
-cargo build --release
-```
-
 ### Configure testnet
 
-Create an `.envrc` file in which to hold environment config, using [.envrc-example](.envrc-example) as a template. Make sure to override the `POLKADOT_BIN` variable to the location of the polkadot binary built in the previous step.
+All required environment variables have reasonable defaults so normally there is no need to configure them. If necessary, you can override them with an `.envrc` file, using [.envrc-example](.envrc-example) as a template.
 
-Example:
+e.g: if a `polkadot` binary already built and exist in your local host, override the `POLKADOT_BIN` variable in `.envrc` to the location of the binary:
+
 ```
 POLKADOT_BIN=/home/sally/code/polkadot/target/release/polkadot
 ```
@@ -82,7 +69,7 @@ These tests are meant to closely replicate real-world behaviour. This means that
 To just run a specific test, the bridge needs to be bootstrapped first:
 
 ```bash
-pnpm test:integration test/bootstrap.js
+pnpm test:bootstrap
 ```
 
 Now individual tests can be run, like the following:

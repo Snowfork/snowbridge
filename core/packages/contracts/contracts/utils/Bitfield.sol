@@ -44,14 +44,16 @@ library Bitfield {
         bitfield = new uint256[](prior.length);
         uint256 found = 0;
 
-        for (uint256 i = 0; found < n;) {
+        for (uint256 i = 0; found < n; ) {
             uint256 index = makeIndex(seed, i, length);
 
             (uint256 element, uint8 within) = toLocation(index);
 
             // require randomly selected bit to be set in prior and not yet set in bitfield
             if (isNotSetInAOrIsSetInB(prior, bitfield, element, within)) {
-                unchecked { i++; }
+                unchecked {
+                    i++;
+                }
                 continue;
             }
 
@@ -69,11 +71,10 @@ library Bitfield {
     /**
      * @dev Helper to create a bitfield.
      */
-    function createBitfield(uint256[] calldata bitsToSet, uint256 length)
-        public
-        pure
-        returns (uint256[] memory bitfield)
-    {
+    function createBitfield(
+        uint256[] calldata bitsToSet,
+        uint256 length
+    ) public pure returns (uint256[] memory bitfield) {
         // Calculate length of uint256 array based on rounding up to number of uint256 needed
         uint256 arrayLength = (length + 255) / 256;
 
@@ -89,7 +90,7 @@ library Bitfield {
 
     /**
      * @notice Calculates the number of set bits by using the hamming weight of the bitfield.
-     * The alogrithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
+     * The algorithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
      * Further improvements are possible, see the article above.
      */
     function countSetBits(uint256[] memory self) public pure returns (uint256) {
@@ -118,22 +119,22 @@ library Bitfield {
         }
     }
 
-    function isSet(uint256[] memory self, uint256 element, uint8 within)
-        internal
-        pure
-        returns (bool)
-    {
+    function isSet(
+        uint256[] memory self,
+        uint256 element,
+        uint8 within
+    ) internal pure returns (bool) {
         return Bits.bit(self[element], within) == 1;
     }
 
-    function isNotSetInAOrIsSetInB(uint256[] memory a, uint256[] memory b, uint256 element, uint8 within)
-        internal
-        pure
-        returns (bool)
-    {
+    function isNotSetInAOrIsSetInB(
+        uint256[] memory a,
+        uint256[] memory b,
+        uint256 element,
+        uint8 within
+    ) internal pure returns (bool) {
         return Bits.bit(a[element], within) == 0 || Bits.bit(b[element], within) == 1;
     }
-
 
     function set(uint256[] memory self, uint256 element, uint8 within) internal pure {
         self[element] = Bits.setBit(self[element], within);
@@ -143,7 +144,11 @@ library Bitfield {
         self[element] = Bits.clearBit(self[element], within);
     }
 
-    function makeIndex(uint256 seed, uint256 iteration, uint256 length) internal pure returns (uint256 index) {
+    function makeIndex(
+        uint256 seed,
+        uint256 iteration,
+        uint256 length
+    ) internal pure returns (uint256 index) {
         assembly {
             mstore(0x00, seed)
             mstore(0x20, iteration)

@@ -1,18 +1,9 @@
-import {HardhatRuntimeEnvironment} from 'hardhat/types';
-import hre from "hardhat";
+import { HardhatRuntimeEnvironment } from "hardhat/types"
 
-module.exports = async ({deployments, getUnnamedAccounts}: HardhatRuntimeEnvironment) => {
-  let [deployer] = await getUnnamedAccounts();
+module.exports = async ({ ethers, deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
+    let [deployer] = await getUnnamedAccounts()
 
-  const feeData = await hre.ethers.provider.getFeeData()
-
-  await deployments.deploy('ScaleCodec', {
-    from: deployer,
-    log: true,
-    autoMine: true,
-    maxFeePerGas: feeData.maxFeePerGas,
-    maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-  });
+  const feeData = await ethers.provider.getFeeData()
 
   await deployments.deploy('Bitfield', {
     from: deployer,
@@ -30,7 +21,7 @@ module.exports = async ({deployments, getUnnamedAccounts}: HardhatRuntimeEnviron
     maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
   });
 
-  await deployments.deploy('MMRProofVerification', {
+  await deployments.deploy('MMRProof', {
     from: deployer,
     log: true,
     autoMine: true,

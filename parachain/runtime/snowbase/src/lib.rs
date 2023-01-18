@@ -10,6 +10,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod weights;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, U256};
 use sp_runtime::{
@@ -67,7 +68,8 @@ use xcm_builder::{
 use xcm_executor::{traits::JustTry, Config, XcmExecutor};
 
 use runtime_common::{
-	DotPalletId, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter, TreasuryPalletId,
+	fee::WeightToFee, DotPalletId, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter,
+	TreasuryPalletId,
 };
 
 pub use runtime_primitives::{AccountId, Address, Balance, BlockNumber, Hash, Index, Signature};
@@ -365,7 +367,7 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type Trader = UsingComponents<IdentityFee<Balance>, RococoLocation, AccountId, Balances, ()>;
+	type Trader = UsingComponents<WeightToFee, RococoLocation, AccountId, Balances, ()>;
 	type ResponseHandler = (); // Don't handle responses for now.
 	type SubscriptionService = PolkadotXcm;
 	type AssetTrap = (); // Don't handle asset trap.
@@ -557,11 +559,11 @@ impl dispatch::Config for Runtime {
 	type CallFilter = Everything;
 }
 
-use snowbridge_incentivized_channel::{
-	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
-};
 use snowbridge_basic_channel::{
 	inbound as basic_channel_inbound, outbound as basic_channel_outbound,
+};
+use snowbridge_incentivized_channel::{
+	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
 };
 
 impl basic_channel_inbound::Config for Runtime {
@@ -614,37 +616,52 @@ impl incentivized_channel_outbound::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MaxSyncCommitteeSize: u32 = 32;
-    pub const MaxProofBranchSize: u32 = 10;
-    pub const MaxExtraDataSize: u32 = 32;
-    pub const MaxLogsBloomSize: u32 = 256;
-    pub const MaxFeeRecipientSize: u32 = 20;
-    pub const MaxDepositDataSize: u32 = 16;
-    pub const MaxPublicKeySize: u32 = 48;
-    pub const MaxSignatureSize: u32 = 96;
-    pub const MaxProposerSlashingSize: u32 = 16;
-    pub const MaxAttesterSlashingSize: u32 = 2;
-    pub const MaxVoluntaryExitSize: u32 = 16;
-    pub const MaxAttestationSize: u32 = 128;
-    pub const MaxValidatorsPerCommittee: u32 = 2048;
+	pub const MaxSyncCommitteeSize: u32 = 32;
+	pub const MaxProofBranchSize: u32 = 10;
+	pub const MaxExtraDataSize: u32 = 32;
+	pub const MaxLogsBloomSize: u32 = 256;
+	pub const MaxFeeRecipientSize: u32 = 20;
+	pub const MaxDepositDataSize: u32 = 16;
+	pub const MaxPublicKeySize: u32 = 48;
+	pub const MaxSignatureSize: u32 = 96;
+	pub const MaxProposerSlashingSize: u32 = 16;
+	pub const MaxAttesterSlashingSize: u32 = 2;
+	pub const MaxVoluntaryExitSize: u32 = 16;
+	pub const MaxAttestationSize: u32 = 128;
+	pub const MaxValidatorsPerCommittee: u32 = 2048;
+	pub const ChainForkVersions: ForkVersions = ForkVersions{
+		genesis: Fork {
+			version: [0, 0, 0, 1], // 0x00000001
+			epoch: 0,
+		},
+		altair: Fork {
+			version: [1, 0, 0, 1], // 0x01000001
+			epoch: 0,
+		},
+		bellatrix: Fork {
+			version: [2, 0, 0, 1], // 0x02000001
+			epoch: 0,
+		},
+	};
 }
 
 impl ethereum_beacon_client::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
-    type MaxProofBranchSize = MaxProofBranchSize;
-    type MaxExtraDataSize = MaxExtraDataSize;
-    type MaxLogsBloomSize = MaxLogsBloomSize;
-    type MaxFeeRecipientSize = MaxFeeRecipientSize;
-    type MaxDepositDataSize = MaxDepositDataSize;
-    type MaxPublicKeySize = MaxPublicKeySize;
-    type MaxSignatureSize = MaxSignatureSize;
-    type MaxProposerSlashingSize = MaxProposerSlashingSize;
-    type MaxAttesterSlashingSize = MaxAttesterSlashingSize;
-    type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
-    type MaxAttestationSize = MaxAttestationSize;
-    type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
-    type WeightInfo = weights::ethereum_beacon_client::SnowbridgeWeight<Self>;
+	type RuntimeEvent = RuntimeEvent;
+	type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
+	type MaxProofBranchSize = MaxProofBranchSize;
+	type MaxExtraDataSize = MaxExtraDataSize;
+	type MaxLogsBloomSize = MaxLogsBloomSize;
+	type MaxFeeRecipientSize = MaxFeeRecipientSize;
+	type MaxDepositDataSize = MaxDepositDataSize;
+	type MaxPublicKeySize = MaxPublicKeySize;
+	type MaxSignatureSize = MaxSignatureSize;
+	type MaxProposerSlashingSize = MaxProposerSlashingSize;
+	type MaxAttesterSlashingSize = MaxAttesterSlashingSize;
+	type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
+	type MaxAttestationSize = MaxAttestationSize;
+	type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+	type ForkVersions = ChainForkVersions;
+	type WeightInfo = weights::ethereum_beacon_client::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -825,7 +842,8 @@ pub type SignedExtra = (
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+pub type UncheckedExtrinsic =
+	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 /// Executive: handles dispatch to the various modules.

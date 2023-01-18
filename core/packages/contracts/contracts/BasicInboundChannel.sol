@@ -41,7 +41,11 @@ contract BasicInboundChannel {
         bytes calldata proof
     ) external {
         bytes32 leafHash = keccak256(abi.encode(bundle));
-        bytes32 commitment = MerkleProof.computeRootFromProofAndSide(leafHash, leafProof, hashSides);
+        bytes32 commitment = MerkleProof.computeRootFromProofAndSide(
+            leafHash,
+            leafProof,
+            hashSides
+        );
 
         require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
         require(bundle.sourceChannelID == sourceChannelID, "Invalid source channel");

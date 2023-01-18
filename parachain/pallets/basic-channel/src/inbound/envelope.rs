@@ -96,10 +96,8 @@ mod tests {
 				source: hex!["89b4ab1ef20763630df9743acf155865600daff2"].into(),
 				account: hex!["04e00e6d2e9ea1e2af553de02a5172120bfa5c3e"].into(),
 				nonce: 1,
-				payload: hex!(
-					"6172626974726172792d7061796c6f6164000000000000000000000000000000"
-				)
-				.into(),
+				payload: hex!("6172626974726172792d7061796c6f6164000000000000000000000000000000")
+					.into(),
 			}
 		)
 	}

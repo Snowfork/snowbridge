@@ -1,23 +1,22 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
-import hre from "hardhat";
+import { getConfigForNetwork } from "../config"
 
-module.exports = async ({ deployments, getUnnamedAccounts }: HardhatRuntimeEnvironment) => {
+module.exports = async ({ ethers, deployments, getUnnamedAccounts, network }: HardhatRuntimeEnvironment) => {
     let [deployer] = await getUnnamedAccounts()
 
-    let scaleCodecLibrary = await deployments.get("ScaleCodec")
+    let config = getConfigForNetwork(network.name)
+
     let bitFieldLibrary = await deployments.get("Bitfield")
     let merkleProofLibrary = await deployments.get("MerkleProof")
-    let mmrProofVerificationLibrary = await deployments.get("MMRProofVerification")
 
-    const feeData = await hre.ethers.provider.getFeeData()
+    const feeData = await ethers.provider.getFeeData()
 
     await deployments.deploy("BeefyClient", {
         from: deployer,
+        args: [config.randaoCommitDelay, config.randaoCommitExpiration],
         libraries: {
             MerkleProof: merkleProofLibrary.address,
-            MMRProofVerification: mmrProofVerificationLibrary.address,
-            Bitfield: bitFieldLibrary.address,
-            ScaleCodec: scaleCodecLibrary.address,
+            Bitfield: bitFieldLibrary.address
         },
         log: true,
         autoMine: true,
