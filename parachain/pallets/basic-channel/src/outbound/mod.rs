@@ -105,6 +105,11 @@ pub type MessageBundleOf<T> = MessageBundle<
 	<T as Config>::MaxMessagesPerCommit,
 >;
 
+// base_weight=(0.75*0.5)*(10**12)=375_000_000_000
+// we leave the extra 10_000_000_000/375_000_000_000=2.66% as margin
+// so we can use at most 365000000000 for the commit call
+// need to rerun benchmarks later to get weight based on the worst case:
+// MaxMessagesPerCommit=20 and MaxMessagePayloadSize=256
 pub const MINIMUM_WEIGHT_REMAIN_IN_BLOCK: Weight = Weight::from_ref_time(10_000_000_000);
 
 pub use pallet::*;
