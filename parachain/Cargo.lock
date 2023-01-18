@@ -10336,8 +10336,10 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "smallvec 1.9.0",
  "snowbridge-basic-channel",
  "snowbridge-core",
+ "snowbridge-runtime-primitives",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
