@@ -108,7 +108,6 @@ fn testnet_genesis(
 			metadata: vec![],
 			accounts: vec![],
 		},
-		asset_registry: snowbase_runtime::AssetRegistryConfig { next_asset_id: 1 },
 		xcm_support: snowbase_runtime::XcmSupportConfig {},
 		ethereum_beacon_client: snowbase_runtime::EthereumBeaconClientConfig {
 			initial_sync: Default::default(),

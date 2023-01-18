@@ -541,8 +541,6 @@ impl pallet_assets::Config for Runtime {
 
 // Our pallets
 
-impl snowbridge_asset_registry::Config for Runtime {}
-
 impl snowbridge_xcm_support::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
@@ -713,7 +711,7 @@ construct_runtime!(
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 16,
 		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config<T>, Storage, Event<T>} = 18,
 		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
-		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 20,
+		// 20 was used for the asset registry pallet
 		XcmSupport: snowbridge_xcm_support::{Pallet, Storage, Config, Event<T>} = 21,
 
 		// XCM

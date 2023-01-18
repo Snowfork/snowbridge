@@ -86,7 +86,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
 		for {
 			// This is in the same goroutine as the normal finalized header sync, otherwise the headers are syced out of order: for the lagging execution headers and
-			// new headers. This needs to be in goroutine because otherwise sending a message to the basic and incentizived Go channels don't work.
+			// new headers. This needs to be in goroutine because otherwise sending a message to the basic Go channel doesn't work.
 			if firstRun {
 				err = h.syncLaggingExecutionHeaders(ctx, lastFinalizedHeader, lastFinalizedSlot, executionHeaderState)
 				if err != nil {

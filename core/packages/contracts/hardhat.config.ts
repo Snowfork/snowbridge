@@ -27,7 +27,6 @@ const config: HardhatUserConfig = {
             accounts: {
                 mnemonic:
                     "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
-                // Need to give huge account balance to test certain constraints in EthApp.sol::lock()
                 accountsBalance: "350000000000000000000000000000000000000",
             },
             chainId: 15,
