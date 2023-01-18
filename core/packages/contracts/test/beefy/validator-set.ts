@@ -5,12 +5,12 @@ import { ethers } from "ethers"
 
 const setId = parseInt(process.argv[2])
 const setSize = parseInt(process.argv[3])
-const setIndex = parseInt(process.argv[4])
-const commitHash = process.argv[5]
+const setIndex = 0
+const commitHash = process.argv[4]
 const validatorSet = new ValidatorSet(setId, setSize)
-const validator = validatorSet.createSignatureProof(setIndex, commitHash)
 const subsetSize = setSize - Math.floor((setSize - 1) / 3)
 const subset = createRandomSubset(setSize, subsetSize)
+const validator = validatorSet.createSignatureProof(subset[setIndex], commitHash)
 
 const encoder = new ethers.utils.AbiCoder()
 
@@ -21,10 +21,10 @@ process.stdout.write(
             validatorSet.root,
             validatorSet.proofs[setIndex],
             subset,
-            validator.addr,
-            validator.signature.v,
-            validator.signature.r,
-            validator.signature.s,
+            validator.account,
+            validator.v,
+            validator.r,
+            validator.s,
         ]
     )}`
 )
