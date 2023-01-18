@@ -8,7 +8,7 @@ However, with the [Basic Channel](basic-channel.md) activated, we now have acces
 
 In the Parachain→Ethereum direction, users pay a fixed upfront fee in wrapped Ether ([wETH](../apps/ether.md)) to send a message to Ethereum. Relayers are rewarded Ether on the Ethereum side.
 
-In the same way, for the Ethereum→Parachain direction, users pay a fixed upfront fee in wrapped DOT ([wDOT](../apps/dot.md)) to send a message to Ethereum. Relayers are rewarded DOT on the Parachain side.
+In the same way, for the Ethereum→Parachain direction, users pay a fixed upfront fee in wrapped DOT ([wDOT](../apps/dot.md)) to send a message to a Parachain. Relayers are rewarded DOT on the Parachain side.
 
 For our launch, the fees will be fixed, calculated offline, and can be only be updated by governance. Soon after launch, [dynamic fees](incentivized-channel.md#increasing-cost-efficiency) will be introduced.
 
