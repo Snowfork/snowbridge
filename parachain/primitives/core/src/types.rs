@@ -7,8 +7,15 @@ use sp_runtime::DigestItem;
 use sp_std::vec::Vec;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub enum MessageId {
-	Basic { account: H160, nonce: u64 },
+pub struct MessageId {
+	account: H160,
+	nonce: u64,
+}
+
+impl MessageId {
+	pub fn new(account: H160, nonce: u64) -> MessageId {
+		MessageId { account, nonce }
+	}
 }
 
 pub type MessageNonce = u64;
