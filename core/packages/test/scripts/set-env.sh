@@ -108,15 +108,5 @@ check_tool() {
         echo 'Error: pnpm is not installed.'
         exit
     fi
-    if [[ "$OSTYPE" =~ ^darwin ]]; then
-        if ! [ -x "$(command -v gdate)" ]; then
-            echo 'Error: gdate is not installed.'
-            exit
-        fi
-        if ! [ -x "$(command -v gsed)" ]; then
-            echo 'Error: gsed is not installed.'
-            exit
-        fi
-    fi
 }
 

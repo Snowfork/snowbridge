@@ -15,3 +15,9 @@ node_modules/
 
 relaychain/
 .vscode
+
+.rustup
+.cargo
+
+.DS_Store
+

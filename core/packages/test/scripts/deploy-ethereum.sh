@@ -38,12 +38,7 @@ start_lodestar() {
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
 
-        if [[ "$OSTYPE" =~ ^darwin ]]
-        then
-            timestamp=$(gdate -d'+10second' +%s)
-        else
-            timestamp=$(date -d'+10second' +%s)
-        fi
+        timestamp=$(date -d'+10second' +%s)
 
         npx lodestar dev \
             --genesisValidators 8 \
