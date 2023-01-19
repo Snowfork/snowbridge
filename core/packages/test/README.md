@@ -18,6 +18,9 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 * direnv - https://direnv.net/
 
+* zombienet - Just download binary from [latest release](https://github.com/paritytech/zombienet/releases/), rename to `zombienet` and copy to $PATH
+
+
 ## Setup
 
 ### Install NPM dependencies

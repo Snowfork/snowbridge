@@ -1,0 +1,98 @@
+[settings]
+node_spawn_timeout = 120
+provider = "native"
+timeout = 600
+
+## Rococo
+[relaychain]
+chain = "rococo-local"
+default_command = "{{output_bin_dir}}/polkadot"
+default_args = ["-lparachain=debug","--beefy","--enable-offchain-indexing=true","--pruning","archive"]
+
+[relaychain.genesis.runtime]
+session_length_in_blocks = 10
+
+[relaychain.genesis.runtime.runtime_genesis_config.configuration.config]
+max_validators_per_core = 2
+needed_approvals = 1
+validation_upgrade_cooldown = 2
+validation_upgrade_delay = 2
+
+[[relaychain.nodes]]
+name = "rococo-alice"
+rpc_port = 30444
+validator = true
+ws_port = 9944
+
+[[relaychain.nodes]]
+name = "rococo-bob"
+validator = true
+
+[[relaychain.nodes]]
+name = "rococo-charlie"
+validator = true
+
+[[relaychain.nodes]]
+name = "rococo-dave"
+validator = true
+
+# Snowbridge
+[[parachains]]
+add_to_genesis = true
+chain_spec_path = "{{output_dir}}/spec.json"
+cumulus_based = true
+id = 1000
+
+[[parachains.collators]]
+command = "{{output_bin_dir}}/snowbridge"
+name = "snowbrige-alice"                              
+rpc_port = 8081
+validator = true
+ws_port = 11144
+args = ["--enable-offchain-indexing=true","--pruning=archive"]
+
+[[parachains.collators.env]]
+name = "RUST_LOG"
+value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
+
+[[parachains.collators]]
+command = "{{output_bin_dir}}/snowbridge"
+name = "snowbrige-bob"
+validator = true
+args = ["--enable-offchain-indexing=true","--pruning=archive"]
+
+# Test Parachain
+[[parachains]]
+add_to_genesis = true
+chain_spec_path = "{{output_dir}}/test_spec.json"
+cumulus_based = true
+id = 1001
+
+[[parachains.collators]]
+command = "{{output_bin_dir}}/snowbridge-test-node"
+name = "test-parachain-alice"                              
+rpc_port = 8083
+validator = true
+ws_port = 13144
+
+[[parachains.collators.env]]
+name = "RUST_LOG"
+value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
+
+[[parachains.collators]]
+command = "{{output_bin_dir}}/snowbridge-test-node"
+name = "test-parachain-bob"
+validator = true
+
+# XCM Channels
+[[hrmp_channels]]
+max_capacity = 8
+max_message_size = 512
+recipient = 1000
+sender = 1001
+
+[[hrmp_channels]]
+max_capacity = 8
+max_message_size = 512
+recipient = 1001
+sender = 1000

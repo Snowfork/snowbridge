@@ -13,6 +13,7 @@ build_relaychain()
         echo "Building polkadot binary as $relaychain_bin"
         rebuild_relaychain
     fi
+    cp "$relaychain_bin" "$output_bin_dir"
 }
 
 rebuild_relaychain(){
@@ -21,7 +22,6 @@ rebuild_relaychain(){
     git checkout $relaychain_version
     cargo build --release
     popd
-    cp "$relaychain_bin" "$output_bin_dir"
 }
 
 build_parachain()
