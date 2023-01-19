@@ -49,9 +49,9 @@ contract BeefyClient is Ownable {
      * @param v the parity bit to specify the intended solution
      * @param r the x component on the secp256k1 curve
      * @param s the challenge solution
-     * @param index index of the validator address
+     * @param index Merkle leaf index of the validator address
      * @param addr validator address
-     * @param proof merkle proof for the validator
+     * @param proof Merkle proof that the validator's address is in the validator set
      */
     struct ValidatorProof {
         uint8 v;
@@ -442,7 +442,13 @@ contract BeefyClient is Ownable {
         ValidatorProof[] calldata proofs
     ) internal view {
         // verify the validator multiproof
+        // Require minimum number of validator proofs
         uint256 signatureCount = minimumSignatureThreshold(vset.length);
+        if (proofs.length < signatureCount) {
+            revert InvalidValidatorProof();
+        }
+
+        // Select validator proofs at random
         uint256[] memory finalbitfield = Bitfield.randomNBitsWithPriorCheck(
             task.prevRandao,
             bitfield,
@@ -450,23 +456,21 @@ contract BeefyClient is Ownable {
             vset.length
         );
 
-        if (proofs.length != signatureCount) {
-            revert InvalidValidatorProof();
-        }
-
-        for (uint256 i = 0; i < signatureCount; ) {
+        for (uint256 i = 0; i < proofs.length; ) {
             ValidatorProof calldata proof = proofs[i];
-
             (uint256 x, uint8 y) = Bitfield.toLocation(proof.index);
 
+            // Skip proofs that are not selected
             if (!Bitfield.isSet(finalbitfield, x, y)) {
-                revert InvalidValidatorProof();
+                continue;
             }
 
+            // Prove that the validator is in the set
             if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
                 revert InvalidValidatorProof();
             }
 
+            // Verify validator signature
             if (ECDSA.recover(commitmentHash, proof.v, proof.r, proof.s) != proof.account) {
                 revert InvalidSignature();
             }

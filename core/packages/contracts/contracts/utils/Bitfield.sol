@@ -50,17 +50,14 @@ library Bitfield {
             (uint256 element, uint8 within) = toLocation(index);
 
             // require randomly selected bit to be set in prior and not yet set in bitfield
-            if (isNotSetInAOrIsSetInB(prior, bitfield, element, within)) {
+            if (isSetInAAndNotSetInB(prior, bitfield, element, within)) {
+                set(bitfield, element, within);
                 unchecked {
-                    i++;
+                    found++;
                 }
-                continue;
             }
 
-            set(bitfield, element, within);
-
             unchecked {
-                found++;
                 i++;
             }
         }
@@ -127,13 +124,13 @@ library Bitfield {
         return Bits.bit(self[element], within) == 1;
     }
 
-    function isNotSetInAOrIsSetInB(
+    function isSetInAAndNotSetInB(
         uint256[] memory a,
         uint256[] memory b,
         uint256 element,
         uint8 within
     ) internal pure returns (bool) {
-        return Bits.bit(a[element], within) == 0 || Bits.bit(b[element], within) == 1;
+        return Bits.bit(a[element], within) == 1 && Bits.bit(b[element], within) == 0;
     }
 
     function set(uint256[] memory self, uint256 element, uint8 within) internal pure {
