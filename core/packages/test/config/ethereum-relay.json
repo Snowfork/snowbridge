@@ -6,8 +6,7 @@
     },
     "descendants-until-final": 3,
     "contracts": {
-      "BasicOutboundChannel": null,
-      "IncentivizedOutboundChannel": null
+      "BasicOutboundChannel": null
     }
   },
   "sink": {

@@ -11,8 +11,7 @@
         },
         "contracts": {
             "BeefyClient": null,
-            "BasicInboundChannel": null,
-            "IncentivizedInboundChannel": null
+            "BasicInboundChannel": null
         },
         "beefy-activation-block": 0,
         "basicChannelAccounts": []
@@ -23,8 +22,7 @@
             "gas-limit": 5000000
         },
         "contracts": {
-            "BasicInboundChannel": null,
-            "IncentivizedInboundChannel": null
+            "BasicInboundChannel": null
         }
     }
 }

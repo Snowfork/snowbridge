@@ -191,14 +191,6 @@ func (wr *ParachainWriter) GetLastSyncedSyncCommitteePeriod() (uint64, error) {
 	return wr.getNumberFromParachain("EthereumBeaconClient", "LatestSyncCommitteePeriod")
 }
 
-func (wr *ParachainWriter) GetLastStoredFinalizedHeader() (common.Hash, error) {
-	return wr.getHashFromParachain("EthereumBeaconClient", "LatestFinalizedHeaderHash")
-}
-
-func (wr *ParachainWriter) GetLastStoredFinalizedHeaderSlot() (uint64, error) {
-	return wr.getNumberFromParachain("EthereumBeaconClient", "LatestFinalizedHeaderSlot")
-}
-
 func (wr *ParachainWriter) GetLastBasicChannelBlockNumber() (uint64, error) {
 	return wr.getNumberFromParachain("BasicInboundChannel", "LatestVerifiedBlockNumber")
 }
@@ -233,14 +225,6 @@ func (wr *ParachainWriter) GetLastBasicChannelNonceByAddress(address common.Addr
 	return uint64(nonce), nil
 }
 
-func (wr *ParachainWriter) GetLastIncentivizedChannelBlockNumber() (uint64, error) {
-	return wr.getNumberFromParachain("IncentivizedInboundChannel", "LatestVerifiedBlockNumber")
-}
-
-func (wr *ParachainWriter) GetLastIncentivizedChannelNonce() (uint64, error) {
-	return wr.getNumberFromParachain("IncentivizedInboundChannel", "Nonce")
-}
-
 func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestExecutionHeaderState", nil, nil)
 	if err != nil {
@@ -263,6 +247,29 @@ func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader,
 		BeaconSlot:      uint64(storageState.BeaconSlot),
 		BlockHash:       common.Hash(storageState.BlockHash),
 		BlockNumber:     uint64(storageState.BlockNumber),
+	}, nil
+}
+
+func (wr *ParachainWriter) GetLastFinalizedHeaderState() (state.FinalizedHeader, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestFinalizedHeaderState", nil, nil)
+	if err != nil {
+		return state.FinalizedHeader{}, fmt.Errorf("create storage key for GetLastFinalizedHeaderState: %w", err)
+	}
+
+	var storageState struct {
+		BeaconBlockRoot types.H256
+		BeaconSlot      types.U64
+		ImportTime      types.U64
+	}
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &storageState)
+	if err != nil {
+		return state.FinalizedHeader{}, fmt.Errorf("get storage for GetLastFinalizedHeaderState (err): %w", err)
+	}
+
+	return state.FinalizedHeader{
+		BeaconBlockRoot: common.Hash(storageState.BeaconBlockRoot),
+		BeaconSlot:      uint64(storageState.BeaconSlot),
+		ImportTime:      uint64(storageState.ImportTime),
 	}, nil
 }
 

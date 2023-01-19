@@ -16,7 +16,7 @@ var mock = `{
   "items": [
     {
       "id": 0,
-	  "hash": "0xb957c7eacb53bb42cae6309174fdf564db02deee95eb5861a2b4b890780fbfc8", 
+	  "hash": "0xb957c7eacb53bb42cae6309174fdf564db02deee95eb5861a2b4b890780fbfc8",
 	  "data": "0x0400d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d04040054d6643762e46036b3448659791adaf55422554191017ed9db59d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d00000000000000000000000089b4ab1ef20763630df9743acf155865600daff20000000000000000000000000000000000000000000000056bc75e2d63100000"
 	}
   ]
@@ -44,12 +44,12 @@ func TestQueryEvents(t *testing.T) {
 	}
 
 	foo, _ := types.NewHashFromHexString("0x6456d3a2f0c7526d63ad50e79dc8a462931a58ffd57270c3c8aabbcdbd78e76b")
-	events, err := client.QueryEvents(context.Background(), "", foo)
+	events, err := client.QueryEvent(context.Background(), "", foo)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.NotNil(t, events.Basic)
-	assert.Equal(t, events.Basic.Bundles[0].Nonce.Int64(), int64(1))
-	assert.Equal(t, len(events.Basic.Bundles[0].Messages), 1)
+	assert.NotNil(t, events)
+	assert.Equal(t, events.Bundles[0].Nonce.Int64(), int64(1))
+	assert.Equal(t, len(events.Bundles[0].Messages), 1)
 }

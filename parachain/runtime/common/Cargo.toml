@@ -16,9 +16,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 
 snowbridge-core = { path = "../../primitives/core", package = "snowbridge-core", default-features = false }
 basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-basic-channel", default-features = false }
-incentivized-channel = { path = "../../pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }
 runtime-primitives = { path = "../../primitives/runtime", default-features = false, package = "snowbridge-runtime-primitives" }
-
 
 [features]
 default = [ "std" ]
@@ -30,6 +28,5 @@ std = [
     "sp-runtime/std",
     "snowbridge-core/std",
     "basic-channel/std",
-    "incentivized-channel/std",
     "runtime-primitives/std"
 ]

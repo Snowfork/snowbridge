@@ -21,7 +21,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
-	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 )
 
 func fetchMessagesCmd() *cobra.Command {
@@ -38,9 +37,6 @@ func fetchMessagesCmd() *cobra.Command {
 
 	cmd.Flags().String("bo-channel", "", "Address of basic outbound channel")
 	cmd.MarkFlagRequired("bo-channel")
-
-	cmd.Flags().String("io-channel", "", "Address of incentivized outbound channel")
-	cmd.MarkFlagRequired("io-channel")
 
 	cmd.Flags().StringP("block", "b", "", "Block hash")
 	cmd.Flags().Uint64P(
@@ -67,21 +63,18 @@ func fetchMessagesFunc(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	mapping := make(map[common.Address]string)
-
-	contractEvents, trie, err := getEthContractEventsAndTrie(mapping, blockHash, index)
+	contractEvents, trie, err := getEthContractEventsAndTrie(blockHash, index)
 	if err != nil {
 		return err
 	}
 
 	for _, event := range contractEvents {
-		printEthContractEventForSub(mapping, event, trie)
+		printEthContractEventForSub(event, trie)
 	}
 	return nil
 }
 
 func getEthContractEventsAndTrie(
-	mapping map[common.Address]string,
 	blockHash gethCommon.Hash,
 	index uint64,
 ) ([]*gethTypes.Log, *gethTrie.Trie, error) {
@@ -101,14 +94,6 @@ func getEthContractEventsAndTrie(
 	if err != nil {
 		return nil, nil, err
 	}
-	mapping[address] = "BasicInboundChannel.submit"
-
-	address = common.HexToAddress(viper.GetString("io-channel"))
-	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, conn.Client())
-	if err != nil {
-		return nil, nil, err
-	}
-	mapping[address] = "IncentivizedInboundChannel.submit"
 
 	loader := ethereum.DefaultBlockLoader{Conn: conn}
 	block, err := loader.GetBlock(ctx, blockHash)
@@ -126,21 +111,12 @@ func getEthContractEventsAndTrie(
 		return nil, nil, err
 	}
 
-	allEvents := make([]*gethTypes.Log, 0)
-
 	basicEvents, err := getEthBasicMessages(ctx, basicOutboundChannel, block.NumberU64(), index)
 	if err != nil {
 		return nil, nil, err
 	}
-	allEvents = append(allEvents, basicEvents...)
 
-	incentivizedEvents, err := getEthIncentivizedMessages(ctx, incentivizedOutboundChannel, block.NumberU64(), index)
-	if err != nil {
-		return nil, nil, err
-	}
-	allEvents = append(allEvents, incentivizedEvents...)
-
-	return allEvents, trie, nil
+	return basicEvents, trie, nil
 }
 
 func getEthBasicMessages(
@@ -176,41 +152,8 @@ func getEthBasicMessages(
 	return events, nil
 }
 
-func getEthIncentivizedMessages(
-	ctx context.Context,
-	contract *incentivized.IncentivizedOutboundChannel,
-	blockNumber uint64,
-	index uint64,
-) ([]*gethTypes.Log, error) {
-	events := make([]*gethTypes.Log, 0)
-	filterOps := bind.FilterOpts{Start: blockNumber, End: &blockNumber, Context: ctx}
-
-	iter, err := contract.FilterMessage(&filterOps)
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		more := iter.Next()
-		if !more {
-			err = iter.Error()
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
-
-		if uint64(iter.Event.Raw.TxIndex) != index {
-			continue
-		}
-		events = append(events, &iter.Event.Raw)
-	}
-
-	return events, nil
-}
-
-func printEthContractEventForSub(mapping map[common.Address]string, event *gethTypes.Log, trie *gethTrie.Trie) error {
-	message, err := ethereum.MakeMessageFromEvent(mapping, event, trie)
+func printEthContractEventForSub(event *gethTypes.Log, trie *gethTrie.Trie) error {
+	message, err := ethereum.MakeMessageFromEvent(event, trie)
 	if err != nil {
 		return err
 	}
