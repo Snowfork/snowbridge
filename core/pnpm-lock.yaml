@@ -773,6 +773,7 @@ packages:
   /@colors/colors/1.5.0:
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
     engines: {node: '>=0.1.90'}
+    requiresBuild: true
     dev: true
 
   /@cspotcode/source-map-support/0.8.1:
@@ -2923,6 +2924,18 @@ packages:
       '@polkadot/util': 10.2.3
       '@polkadot/util-crypto': 10.2.3_@polkadot+util@10.2.3
 
+  /@polkadot/keyring/10.2.3_t2idn4rbvab4mrmjysleuz7r2y:
+    resolution: {integrity: sha512-OCOfkhqXu9j0g1T6u1bg1Qo/JJS8ng1M1Qv+rfpxDFYGz26T81SOT0caxsOvF6MzBBYm0l0d9sAYB62mQYuWCA==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@polkadot/util': 10.2.3
+      '@polkadot/util-crypto': 10.2.3
+    dependencies:
+      '@babel/runtime': 7.20.7
+      '@polkadot/util': 10.2.3
+      '@polkadot/util-crypto': 10.2.3_@polkadot+util@10.2.3
+    dev: true
+
   /@polkadot/keyring/9.7.2_ba4sli262fhny7h6sw4utanija:
     resolution: {integrity: sha512-qY5baU1qduwTE04Cyrqtf2pCpsIk7Z5vi45CD9U3cbkKXaJoNUqIpfKoL8Vh/yVJBwhclMdxV9E2rEJs8Iv4bg==}
     engines: {node: '>=14.0.0'}
@@ -3106,7 +3119,7 @@ packages:
     engines: {node: '>=14.0.0'}
     dependencies:
       '@babel/runtime': 7.20.7
-      '@polkadot/keyring': 10.2.3
+      '@polkadot/keyring': 10.2.3_t2idn4rbvab4mrmjysleuz7r2y
       '@polkadot/types': 9.6.2
       '@polkadot/types-support': 9.6.2
       '@polkadot/util': 10.2.3
@@ -3295,7 +3308,7 @@ packages:
     engines: {node: '>=14.0.0'}
     dependencies:
       '@babel/runtime': 7.20.7
-      '@polkadot/keyring': 10.2.3
+      '@polkadot/keyring': 10.2.3_t2idn4rbvab4mrmjysleuz7r2y
       '@polkadot/types-augment': 9.6.2
       '@polkadot/types-codec': 9.6.2
       '@polkadot/types-create': 9.6.2
