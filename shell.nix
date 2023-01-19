@@ -15,6 +15,7 @@ pkgs.mkShell {
         # relayer
         go
         mage
+        revive
 
         # parachain
         rustup
