@@ -2,7 +2,7 @@ use cumulus_primitives_core::ParaId;
 use sc_service::ChainType;
 use snowbase_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
 use sp_core::sr25519;
-use sp_runtime::{bounded_vec, traits::AccountIdConversion, Perbill};
+use sp_runtime::{bounded_vec, traits::AccountIdConversion};
 
 use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 
@@ -95,14 +95,6 @@ fn testnet_genesis(
 			source_channel: Default::default(),
 		},
 		basic_outbound_channel: snowbase_runtime::BasicOutboundChannelConfig { interval: 1 },
-		incentivized_inbound_channel: snowbase_runtime::IncentivizedInboundChannelConfig {
-			source_channel: Default::default(),
-			reward_fraction: Perbill::from_percent(80),
-		},
-		incentivized_outbound_channel: snowbase_runtime::IncentivizedOutboundChannelConfig {
-			fee: u128::from_str_radix("10000000000000", 10).unwrap(), // 0.00001 SnowEther
-			interval: 1,
-		},
 		assets: snowbase_runtime::AssetsConfig {
 			// Initialize the wrapped Ether asset
 			assets: vec![(
@@ -116,14 +108,10 @@ fn testnet_genesis(
 			metadata: vec![],
 			accounts: vec![],
 		},
-		asset_registry: snowbase_runtime::AssetRegistryConfig { next_asset_id: 1 },
 		xcm_support: snowbase_runtime::XcmSupportConfig {},
 		ethereum_beacon_client: snowbase_runtime::EthereumBeaconClientConfig {
 			initial_sync: Default::default(),
 		},
-		dot_app: snowbase_runtime::DotAppConfig { address: Default::default() },
-		eth_app: snowbase_runtime::EthAppConfig { address: Default::default() },
-		erc_20_app: snowbase_runtime::Erc20AppConfig { address: Default::default() },
 		parachain_info: snowbase_runtime::ParachainInfoConfig { parachain_id: para_id },
 		collator_selection: snowbase_runtime::CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),

@@ -225,14 +225,6 @@ func (wr *ParachainWriter) GetLastBasicChannelNonceByAddress(address common.Addr
 	return uint64(nonce), nil
 }
 
-func (wr *ParachainWriter) GetLastIncentivizedChannelBlockNumber() (uint64, error) {
-	return wr.getNumberFromParachain("IncentivizedInboundChannel", "LatestVerifiedBlockNumber")
-}
-
-func (wr *ParachainWriter) GetLastIncentivizedChannelNonce() (uint64, error) {
-	return wr.getNumberFromParachain("IncentivizedInboundChannel", "Nonce")
-}
-
 func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestExecutionHeaderState", nil, nil)
 	if err != nil {

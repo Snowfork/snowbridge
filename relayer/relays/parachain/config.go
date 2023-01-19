@@ -46,9 +46,8 @@ func (c *SourceConfig) getAccounts() ([][32]byte, error) {
 }
 
 type SourceContractsConfig struct {
-	BeefyClient                string `mapstructure:"BeefyClient"`
-	BasicInboundChannel        string `mapstructure:"BasicInboundChannel"`
-	IncentivizedInboundChannel string `mapstructure:"IncentivizedInboundChannel"`
+	BeefyClient         string `mapstructure:"BeefyClient"`
+	BasicInboundChannel string `mapstructure:"BasicInboundChannel"`
 }
 
 type SinkConfig struct {
@@ -57,6 +56,5 @@ type SinkConfig struct {
 }
 
 type SinkContractsConfig struct {
-	BasicInboundChannel        string `mapstructure:"BasicInboundChannel"`
-	IncentivizedInboundChannel string `mapstructure:"IncentivizedInboundChannel"`
+	BasicInboundChannel string `mapstructure:"BasicInboundChannel"`
 }

@@ -7,24 +7,18 @@ module.exports = async ({ ethers, deployments, getUnnamedAccounts }: HardhatRunt
 
   await deployments.deploy('Bitfield', {
     from: deployer,
-    log: true,
-    autoMine: true,
     maxFeePerGas: feeData.maxFeePerGas,
     maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
   });
 
   await deployments.deploy('MerkleProof', {
     from: deployer,
-    log: true,
-    autoMine: true,
     maxFeePerGas: feeData.maxFeePerGas,
     maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
   });
 
   await deployments.deploy('MMRProof', {
     from: deployer,
-    log: true,
-    autoMine: true,
     maxFeePerGas: feeData.maxFeePerGas,
     maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
   });

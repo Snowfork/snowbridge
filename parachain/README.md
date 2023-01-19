@@ -57,7 +57,6 @@ Now edit the spec and configure the following:
 1. Recently finalized ethereum header and difficulty for the ethereum light client
 2. Contract addresses for the Ether, Erc20, and Dot apps.
 3. Authorized principal for the basic channel
-4. Fee and reward parameters for the incentivized channel
 
 For an example configuration, consult the [setup script](https://github.com/Snowfork/snowbridge/blob/main/test/scripts/start-services.sh) for our local development stack. Specifically the `start_polkadot_launch` bash function.
 
@@ -78,7 +77,7 @@ cargo test --workspace \
 
 ### Updating test data for inbound channel unit tests
 
-To regenerate the test data, use a test with multiple `submit` calls in `ethereum/test/test_{basic,incentivized}_outbound_channel.js`, eg.
+To regenerate the test data, use a test with multiple `submit` calls in `ethereum/test/test_basic_outbound_channel.js`, eg.
 "should increment nonces correctly".
 
 Add the following preamble:

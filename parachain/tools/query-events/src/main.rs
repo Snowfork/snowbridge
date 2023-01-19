@@ -25,7 +25,6 @@ struct Items {
 
 #[derive(Debug, Serialize)]
 struct Item {
-	id: u8,
 	#[serde(with = "SerHexSeq::<StrictPfx>")]
 	hash: Vec<u8>,
 	#[serde(with = "SerHexSeq::<StrictPfx>")]
@@ -57,13 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	for ev in events.find::<runtime::basic_outbound_channel::events::Committed>() {
 		if let Ok(runtime::basic_outbound_channel::events::Committed { hash, data }) = ev {
-			items.push(Item { id: 0, hash: hash.encode(), data: data.encode() });
-		}
-	}
-
-	for ev in events.find::<runtime::incentivized_outbound_channel::events::Committed>() {
-		if let Ok(runtime::incentivized_outbound_channel::events::Committed { hash, data }) = ev {
-			items.push(Item { id: 1, hash: hash.encode(), data: data.encode() });
+			items.push(Item { hash: hash.encode(), data: data.encode() });
 		}
 	}
 

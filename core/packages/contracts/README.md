@@ -36,7 +36,6 @@ To generate logging artifacts, run the following E2E tests:
 cd ../test
 pnpm test:integration --grep 'should transfer DOT from Substrate to Ethereum \(basic channel\)'
 pnpm test:integration --grep 'should transfer ETH from Ethereum to Substrate \(basic channel\)'
-pnpm test:integration --grep 'should transfer DOT from Substrate to Ethereum \(incentivized channel\)'
 ```
 
 ### BEEFY commitments
@@ -44,20 +43,14 @@ pnpm test:integration --grep 'should transfer DOT from Substrate to Ethereum \(i
 BEEFY commitment & proofs extracted from `../test/beefy-relay.log` and copied into:
 * `test/beefy/data/beefy-commitment.json`
 
-For updating `basic-commitment.json`:
+To update `basic-commitment.json`:
 1. Search for `Sent SubmitFinal transaction` in `beefy-relay.log`
 2. Copy into `test/beefy/data/beefy-commitment.json`
 
 ### Message bundles
 
-Message bundles are extracted from `../test/parachain-relay.log` and copied into:
-* `test/channels/data/basic-commitment.json`
-* `test/channels/data/incentivized-commitment.json`
+Message bundles are extracted from `../test/parachain-relay.log` and copied into `test/channels/data/basic-commitment.json`.
 
-For updating `basic-commitment.json`:
+To update `basic-commitment.json`:
 1. Search for `Sent transaction BasicInboundChannel.submit` in `parachain-relay.log`
 2. Copy the necessary fields into `test/channels/data/basic-commitment.json`
-
-For updating `incentivized-commitment.json`:
-1. Search for `Sent transaction IncentivizedInboundChannel.submit` in `parachain-relay.log`
-2. Copy the necessary fields into `test/channels/data/incentivized-commitment.json`

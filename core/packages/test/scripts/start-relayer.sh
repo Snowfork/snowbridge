@@ -22,16 +22,13 @@ start_relayer()
     # Configure parachain relay
     jq \
         --arg k1 "$(address_for BasicInboundChannel)" \
-        --arg k2 "$(address_for IncentivizedInboundChannel)" \
-        --arg k3 "$(address_for BeefyClient)" \
+        --arg k2 "$(address_for BeefyClient)" \
         --arg infura_endpoint_ws $infura_endpoint_ws \
         --arg basic_parachain_account_ids $basic_parachain_account_ids \
     '
       .source.contracts.BasicInboundChannel = $k1
-    | .source.contracts.IncentivizedInboundChannel = $k2
-    | .source.contracts.BeefyClient = $k3
+    | .source.contracts.BeefyClient = $k2
     | .sink.contracts.BasicInboundChannel = $k1
-    | .sink.contracts.IncentivizedInboundChannel = $k2
     | .source.ethereum.endpoint = $infura_endpoint_ws
     | .sink.ethereum.endpoint = $infura_endpoint_ws
     | .source.basicChannelAccounts = ($basic_parachain_account_ids | split(","))
@@ -41,11 +38,9 @@ start_relayer()
     # Configure ethereum relay
     jq \
         --arg k1 "$(address_for BasicOutboundChannel)" \
-        --arg k2 "$(address_for IncentivizedOutboundChannel)" \
         --arg infura_endpoint_ws $infura_endpoint_ws \
     '
       .source.contracts.BasicOutboundChannel = $k1
-    | .source.contracts.IncentivizedOutboundChannel = $k2
     | .source.ethereum.endpoint = $infura_endpoint_ws
     ' \
     config/ethereum-relay.json > $output_dir/ethereum-relay.json
@@ -69,12 +64,10 @@ start_relayer()
     jq \
         --arg infura_endpoint_ws $infura_endpoint_ws \
         --arg k1 "$(address_for BasicOutboundChannel)" \
-        --arg k2 "$(address_for IncentivizedOutboundChannel)" \
         --arg basic_eth_addresses $basic_eth_addresses \
     '
       .source.ethereum.endpoint = $infura_endpoint_ws
     | .source.contracts.BasicOutboundChannel = $k1
-    | .source.contracts.IncentivizedOutboundChannel = $k2
     | .source.basicChannelAddresses = ($basic_eth_addresses | split(","))
     ' \
     config/execution-relay.json > $output_dir/execution-relay.json

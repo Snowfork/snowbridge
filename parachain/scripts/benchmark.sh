@@ -5,9 +5,9 @@ target/release/snowbridge benchmark \
   --chain spec.json \
   --execution wasm \
   --wasm-execution compiled \
-  --pallet 'incentivized_channel::inbound' \
+  --pallet 'basic_channel::inbound' \
   --extrinsic '*' \
   --repeat 20 \
   --steps 50 \
-  --output pallets/incentivized-channel/src/inbound/weights.rs \
+  --output pallets/basic-channel/src/inbound/weights.rs \
   --template templates/module-weight-template.hbs
