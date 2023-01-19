@@ -2,11 +2,11 @@
 
 pkgs.mkShell {
     buildInputs = with pkgs; [
-        git
         jq
         moreutils
         direnv
         typos
+        go-ethereum
 
         # typescript packages
         nodejs-18_x
@@ -19,7 +19,6 @@ pkgs.mkShell {
 
         # parachain
         rustup
-        go-ethereum
         gcc
         openssl
         libiconv
