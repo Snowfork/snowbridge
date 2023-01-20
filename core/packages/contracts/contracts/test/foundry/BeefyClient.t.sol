@@ -29,6 +29,8 @@ contract BeefyClientTest is Test {
     bytes32 mmrRootHash;
     uint32 setSize;
     uint32 setId;
+    uint128 currentSetId;
+    uint128 nextSetId;
     uint32 setIndex;
     bytes32 commitHash;
     bytes32 root;
@@ -39,6 +41,7 @@ contract BeefyClientTest is Test {
     uint256[] finalBitfield;
     BeefyClient.ValidatorProof validatorProof;
     BeefyClient.ValidatorProof[] finalValidatorProofs;
+    bytes32[] mmrLeafProofs;
 
     function setUp() public {
         randaoCommitDelay = 3;
@@ -52,6 +55,15 @@ contract BeefyClientTest is Test {
         commitHash = 0x243baf0066d021d42716081dad0b30499dad95a300daa269ed8f6f6334d95975;
         prefix = hex"046d6880";
         suffix = hex"";
+
+        mmrLeafProofs = [
+            bytes32(0xe8ae8d4c8027764aa0fdae351c30c6085f7822ad6295ae1bd445ee8bef564901),
+            bytes32(0xe4d591609cb75673ef8992d1ae6c518ad95d8f924f75249ce43153d01380c79f),
+            bytes32(0xb2852e70b508acbda330c6f842d51f4eab82d34b991fe6679d37f2eeedae6ccd),
+            bytes32(0x6a83a49e6424b0de032f730064213f4783f2c9f59dab4480f88673a042102ab2),
+            bytes32(0xee4688d1831443e4c7f2d47265fd529dd50e41a4c49c5f31a04bf45320f59614)
+        ];
+
         beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
 
         // allocate input command array with length as 20
@@ -96,26 +108,20 @@ contract BeefyClientTest is Test {
         for (uint i = 0; i < proofs.length; i++) {
             finalValidatorProofs.push(proofs[i]);
         }
+    }
 
-        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(setId, setSize, root);
+    function testSubmit() public {
+        currentSetId = setId;
+        nextSetId = setId + 1;
+        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(currentSetId, setSize, root);
         BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(
-            setId + 1,
+            nextSetId,
             setSize,
             root
         );
         beefyClient.initialize(0, vset, nextvset);
-    }
 
-    function testSubmit() public {
-        BeefyClient.ValidatorProof memory validateProof = BeefyClient.ValidatorProof(
-            validatorProof.v,
-            validatorProof.r,
-            validatorProof.s,
-            bitSetArray[setIndex],
-            validatorProof.account,
-            validatorProof.proof
-        );
-        beefyClient.submitInitial(commitHash, bitfield, validateProof);
+        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
 
         // mine 3 blocks
         cheats.roll(block.number + randaoCommitDelay);
@@ -135,6 +141,44 @@ contract BeefyClientTest is Test {
         bytes32 encodedCommitmentHash = keccak256(encodeCommitment(commitment));
         assertEq(encodedCommitmentHash, commitHash);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
+        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+    }
+
+    function testSubmitWithHandover() public {
+        currentSetId = setId - 1;
+        nextSetId = setId;
+        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(currentSetId, setSize, root);
+        BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(
+            nextSetId,
+            setSize,
+            root
+        );
+        beefyClient.initialize(0, vset, nextvset);
+        
+        beefyClient.submitInitialWithHandover(commitHash, bitfield, validatorProof);
+
+        // mine 3 blocks
+        cheats.roll(block.number + randaoCommitDelay);
+        // set difficulty as PrevRandao
+        cheats.difficulty(difficulty);
+
+        beefyClient.commitPrevRandao(commitHash);
+
+        beefyClient.createFinalBitfield(commitHash, bitfield);
+
+        BeefyClient.Payload memory payload = BeefyClient.Payload(mmrRootHash, prefix, suffix);
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(
+            blockNumber,
+            setId,
+            payload
+        );
+        BeefyClient.MMRLeaf memory mmrLeaf = BeefyClient.MMRLeaf(0,370,
+        0x2a74fc1410a321daefc1ae17adc69048db56f4d37660e7af042289480de59897,
+        38,3,0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365,
+        0xc992465982e7733f5f91c60f6c7c5d4433298c10b348487081f2356d80a0133f
+        );
+        uint256 leafProofOrder = 0;
+        beefyClient.submitFinalWithHandover(commitment, bitfield, finalValidatorProofs,mmrLeaf,mmrLeafProofs,leafProofOrder);
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
     }
 
