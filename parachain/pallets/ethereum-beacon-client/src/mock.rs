@@ -2,6 +2,7 @@ use super::*;
 use crate as ethereum_beacon_client;
 use frame_support::parameter_types;
 use frame_system as system;
+use pallet_timestamp;
 use snowbridge_beacon_primitives::{AttesterSlashing, BeaconHeader, Body, Fork, ForkVersions};
 use sp_core::H256;
 use sp_runtime::{
@@ -23,6 +24,7 @@ pub mod mock_minimal {
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config<T>, Storage, Event<T>},
 		}
 	);
@@ -59,6 +61,13 @@ pub mod mock_minimal {
 		type MaxConsumers = frame_support::traits::ConstU32<16>;
 	}
 
+	impl pallet_timestamp::Config for Test {
+		type Moment = u64;
+		type OnTimestampSet = ();
+		type MinimumPeriod = ();
+		type WeightInfo = ();
+	}
+
 	parameter_types! {
 		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
 		pub const MaxProofBranchSize: u32 = 6;
@@ -73,6 +82,7 @@ pub mod mock_minimal {
 		pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
 		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
 		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
+		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
 				version: [0, 0, 0, 1], // 0x00000001
@@ -90,6 +100,7 @@ pub mod mock_minimal {
 	}
 
 	impl ethereum_beacon_client::Config for Test {
+		type TimeProvider = pallet_timestamp::Pallet<Test>;
 		type RuntimeEvent = RuntimeEvent;
 		type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
 		type MaxProofBranchSize = MaxProofBranchSize;
@@ -105,6 +116,7 @@ pub mod mock_minimal {
 		type MaxAttestationSize = MaxAttestationSize;
 		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 		type ForkVersions = ChainForkVersions;
+		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
 	}
 }
@@ -122,6 +134,7 @@ pub mod mock_mainnet {
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config<T>, Storage, Event<T>},
 		}
 	);
@@ -158,38 +171,47 @@ pub mod mock_mainnet {
 		type MaxConsumers = frame_support::traits::ConstU32<16>;
 	}
 
+	impl pallet_timestamp::Config for Test {
+		type Moment = u64;
+		type OnTimestampSet = ();
+		type MinimumPeriod = ();
+		type WeightInfo = ();
+	}
+
 	parameter_types! {
-			pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
-			pub const MaxProofBranchSize: u32 = 6;
-			pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
-			pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
-			pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
-			pub const MaxDepositDataSize: u32 = config::MAX_DEPOSITS as u32;
-			pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
-			pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
-			pub const MaxProposerSlashingSize: u32 = config::MAX_PROPOSER_SLASHINGS as u32;
-			pub const MaxAttesterSlashingSize: u32 = config::MAX_ATTESTER_SLASHINGS as u32;
-			pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
-			pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
-			pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
-			pub const ChainForkVersions: ForkVersions = ForkVersions{
-				genesis: Fork {
-					version: [0, 0, 16, 32], // 0x00001020
-					epoch: 0,
-				},
-				altair: Fork {
-					version: [1, 0, 16, 32], // 0x01001020
-					epoch: 36660,
-				},
-				bellatrix: Fork {
-					version: [2, 0, 16, 32], // 0x02001020
-					epoch: 112260,
-				},
-			};
+		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
+		pub const MaxProofBranchSize: u32 = 6;
+		pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
+		pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
+		pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
+		pub const MaxDepositDataSize: u32 = config::MAX_DEPOSITS as u32;
+		pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
+		pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
+		pub const MaxProposerSlashingSize: u32 = config::MAX_PROPOSER_SLASHINGS as u32;
+		pub const MaxAttesterSlashingSize: u32 = config::MAX_ATTESTER_SLASHINGS as u32;
+		pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
+		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
+		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
+		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
+		pub const ChainForkVersions: ForkVersions = ForkVersions{
+			genesis: Fork {
+				version: [0, 0, 16, 32], // 0x00001020
+				epoch: 0,
+			},
+			altair: Fork {
+				version: [1, 0, 16, 32], // 0x01001020
+				epoch: 36660,
+			},
+			bellatrix: Fork {
+				version: [2, 0, 16, 32], // 0x02001020
+				epoch: 112260,
+			},
+		};
 	}
 
 	impl ethereum_beacon_client::Config for Test {
 		type RuntimeEvent = RuntimeEvent;
+		type TimeProvider = pallet_timestamp::Pallet<Test>;
 		type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
 		type MaxProofBranchSize = MaxProofBranchSize;
 		type MaxExtraDataSize = MaxExtraDataSize;
@@ -204,6 +226,7 @@ pub mod mock_mainnet {
 		type MaxAttestationSize = MaxAttestationSize;
 		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 		type ForkVersions = ChainForkVersions;
+		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
 	}
 }

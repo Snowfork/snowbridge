@@ -18,6 +18,9 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 * direnv - https://direnv.net/
 
+* zombienet - Just download binary from [latest release](https://github.com/paritytech/zombienet/releases/), rename to `zombienet` and copy to $PATH
+
+
 ## Setup
 
 ### Install NPM dependencies
@@ -74,7 +77,7 @@ pnpm test:bootstrap
 
 Now individual tests can be run, like the following:
 ```bash
-pnpm test:integration --grep 'should transfer ETH from Substrate to Ethereum \(incentivized channel\)'
+pnpm test:integration --grep 'should transfer ETH from Ethereum to Substrate \(basic channel\)'
 ```
 
 ### Run all tests

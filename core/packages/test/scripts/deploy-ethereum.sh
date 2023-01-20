@@ -66,3 +66,20 @@ deploy_contracts()
     echo "Exported contract artifacts: $output_dir/contracts.json"
 }
 
+deploy_ethereum()
+{
+    # 1. deploy execution client
+    echo "Starting execution node"
+    start_geth
+    echo "Waiting for geth API to be ready"
+    sleep 3
+
+    # 2. deploy consensus client
+    echo "Starting beacon node"
+    start_lodestar
+    
+    # 3. deploy bridge contracts
+    echo "Deploying contracts"
+    deploy_contracts
+}
+

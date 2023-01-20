@@ -10,10 +10,10 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use sp_api::impl_runtime_apis;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata, U256};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, Keccak256},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Keccak256},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -47,8 +47,7 @@ pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
 
-use dispatch::EnsureEthereumAccount;
-pub use snowbridge_core::{ChannelId, MessageId};
+pub use snowbridge_core::MessageId;
 
 use polkadot_parachain::primitives::Sibling;
 
@@ -65,9 +64,7 @@ use xcm_builder::{
 
 use xcm_executor::{traits::JustTry, Config, XcmExecutor};
 
-use runtime_common::{
-	DotPalletId, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter, TreasuryPalletId,
-};
+use runtime_common::{fee::WeightToFee, MaxMessagePayloadSize, MaxMessagesPerCommit};
 
 pub use runtime_primitives::{AccountId, Address, Balance, BlockNumber, Hash, Index, Signature};
 
@@ -364,7 +361,7 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type Trader = UsingComponents<IdentityFee<Balance>, RococoLocation, AccountId, Balances, ()>;
+	type Trader = UsingComponents<WeightToFee, RococoLocation, AccountId, Balances, ()>;
 	type ResponseHandler = (); // Don't handle responses for now.
 	type SubscriptionService = PolkadotXcm;
 	type AssetTrap = (); // Don't handle asset trap.
@@ -439,6 +436,14 @@ type EnsureRootOrHalfLocalCouncil = EitherOfDiverse<
 	pallet_collective::EnsureProportionMoreThan<AccountId, LocalCouncilInstance, 1, 2>,
 >;
 
+parameter_types! {
+	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
+		BlockWeights::get().max_block;
+	pub const MaxScheduledPerBlock: u32 = 10;
+	// Retry a scheduled item every 25 blocks (5 minute) until the preimage exists.
+	pub const NoPreimagePostponement: Option<u32> = Some(5 * MINUTES);
+}
+
 impl pallet_scheduler::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -468,14 +473,6 @@ impl pallet_preimage::Config for Runtime {
 	type MaxSize = PreimageMaxSize;
 	type BaseDeposit = PreimageBaseDeposit;
 	type ByteDeposit = PreimageByteDeposit;
-}
-
-parameter_types! {
-	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
-		BlockWeights::get().max_block;
-	pub const MaxScheduledPerBlock: u32 = 10;
-	// Retry a scheduled item every 25 blocks (5 minute) until the preimage exists.
-	pub const NoPreimagePostponement: Option<u32> = Some(5 * MINUTES);
 }
 
 parameter_types! {
@@ -542,8 +539,6 @@ impl pallet_assets::Config for Runtime {
 
 // Our pallets
 
-impl snowbridge_asset_registry::Config for Runtime {}
-
 impl snowbridge_xcm_support::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
@@ -558,9 +553,6 @@ impl dispatch::Config for Runtime {
 
 use snowbridge_basic_channel::{
 	inbound as basic_channel_inbound, outbound as basic_channel_outbound,
-};
-use snowbridge_incentivized_channel::{
-	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
 };
 
 impl basic_channel_inbound::Config for Runtime {
@@ -579,40 +571,6 @@ impl basic_channel_outbound::Config for Runtime {
 }
 
 parameter_types! {
-	pub SourceAccount: AccountId = DotPalletId::get().try_into_account().expect("Cannot convert PalletId to AccountId.");
-	pub TreasuryAccount: AccountId = TreasuryPalletId::get().try_into_account().expect("Cannot convert PalletId to AccountId.");
-}
-
-pub struct FeeConverter;
-impl Convert<U256, Option<Balance>> for FeeConverter {
-	fn convert(amount: U256) -> Option<Balance> {
-		dot_app::primitives::unwrap::<Runtime>(amount, Decimals::get())
-	}
-}
-
-impl incentivized_channel_inbound::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Verifier = ethereum_beacon_client::Pallet<Runtime>;
-	type MessageDispatch = dispatch::Pallet<Runtime>;
-	type Currency = Balances;
-	type SourceAccount = SourceAccount;
-	type TreasuryAccount = TreasuryAccount;
-	type FeeConverter = FeeConverter;
-	type UpdateOrigin = EnsureRootOrHalfLocalCouncil;
-	type WeightInfo = incentivized_channel_inbound::weights::SnowbridgeWeight<Self>;
-}
-
-impl incentivized_channel_outbound::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Hashing = Keccak256;
-	type MaxMessagePayloadSize = MaxMessagePayloadSize;
-	type MaxMessagesPerCommit = MaxMessagesPerCommit;
-	type FeeCurrency = ItemOf<Assets, EtherAssetId, AccountId>;
-	type SetFeeOrigin = EnsureRootOrHalfLocalCouncil;
-	type WeightInfo = incentivized_channel_outbound::weights::SnowbridgeWeight<Self>;
-}
-
-parameter_types! {
 	pub const MaxSyncCommitteeSize: u32 = 512;
 	pub const MaxProofBranchSize: u32 = 10;
 	pub const MaxExtraDataSize: u32 = 32;
@@ -626,6 +584,7 @@ parameter_types! {
 	pub const MaxVoluntaryExitSize: u32 = 16;
 	pub const MaxAttestationSize: u32 = 128;
 	pub const MaxValidatorsPerCommittee: u32 = 2048;
+	pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 	pub const ChainForkVersions: ForkVersions = ForkVersions{
 		genesis: Fork {
 			version: [0, 0, 0, 0], // 0x00000000
@@ -644,6 +603,7 @@ parameter_types! {
 
 impl ethereum_beacon_client::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type TimeProvider = pallet_timestamp::Pallet<Runtime>;
 	type MaxSyncCommitteeSize = MaxSyncCommitteeSize;
 	type MaxProofBranchSize = MaxProofBranchSize;
 	type MaxExtraDataSize = MaxExtraDataSize;
@@ -658,51 +618,12 @@ impl ethereum_beacon_client::Config for Runtime {
 	type MaxAttestationSize = MaxAttestationSize;
 	type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 	type ForkVersions = ChainForkVersions;
+	type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 	type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
-	pub const EtherAssetId: u128 = 0;
 	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
-}
-
-impl eth_app::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type PalletId = EtherAppPalletId;
-	type Asset = ItemOf<Assets, EtherAssetId, AccountId>;
-	type OutboundRouter = OutboundRouter<Runtime>;
-	type CallOrigin = EnsureEthereumAccount;
-	type WeightInfo = eth_app::weights::SnowbridgeWeight<Self>;
-	type XcmReserveTransfer = snowbridge_xcm_support::Pallet<Runtime>;
-}
-
-parameter_types! {
-	pub const Erc20AppPalletId: PalletId = PalletId(*b"erc20app");
-}
-
-impl erc20_app::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Assets = Assets;
-	type OutboundRouter = OutboundRouter<Runtime>;
-	type CallOrigin = EnsureEthereumAccount;
-	type XcmReserveTransfer = snowbridge_xcm_support::Pallet<Runtime>;
-	type PalletId = Erc20AppPalletId;
-	type NextAssetId = AssetRegistry;
-	type WeightInfo = erc20_app::weights::SnowbridgeWeight<Self>;
-}
-
-parameter_types! {
-	pub const Decimals: u32 = 10;
-}
-
-impl dot_app::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type OutboundRouter = OutboundRouter<Runtime>;
-	type CallOrigin = EnsureEthereumAccount;
-	type PalletId = DotPalletId;
-	type Decimals = Decimals;
-	type WeightInfo = dot_app::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -786,12 +707,11 @@ construct_runtime!(
 		// Bridge Infrastructure
 		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
 		BasicOutboundChannel: basic_channel_outbound::{Pallet, Config<T>, Storage, Event<T>} = 13,
-		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 14,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
+		// 14 and 15 were used for the incentivized inbound and outbound channels respectively
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 16,
 		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config<T>, Storage, Event<T>} = 18,
 		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
-		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 20,
+		// 20 was used for the asset registry pallet
 		XcmSupport: snowbridge_xcm_support::{Pallet, Storage, Config, Event<T>} = 21,
 
 		// XCM
@@ -808,14 +728,6 @@ construct_runtime!(
 
 		// For dev only, will be removed in production
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 31,
-
-		// Bridge applications
-		// NOTE: Do not change the following pallet indices without updating
-		//   the peer apps (smart contracts) on the Ethereum side.
-		DotApp: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 64,
-		EthApp: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
-		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
-		// NOTE: 67 is reserved for use with NFTs.
 	}
 );
 
@@ -962,9 +874,6 @@ impl_runtime_apis! {
 			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
-			use dot_app::benchmarking::Pallet as DotAppBench;
-			use eth_app::benchmarking::Pallet as EthAppBench;
-			use erc20_app::benchmarking::Pallet as Erc20AppBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
 
@@ -976,12 +885,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_scheduler, Scheduler);
 			list_benchmark!(list, extra, assets, Assets);
 			list_benchmark!(list, extra, basic_channel_outbound, BasicOutboundChannel);
-			list_benchmark!(list, extra, incentivized_channel_inbound, IncentivizedInboundChannel);
-			list_benchmark!(list, extra, incentivized_channel_outbound, IncentivizedOutboundChannel);
 			list_benchmark!(list, extra, ethereum_beacon_client, EthereumBeaconClient);
-			list_benchmark!(list, extra, dot_app, DotAppBench::<Runtime>);
-			list_benchmark!(list, extra, erc20_app, Erc20AppBench::<Runtime>);
-			list_benchmark!(list, extra, eth_app, EthAppBench::<Runtime>);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -995,15 +899,6 @@ impl_runtime_apis! {
 
 			use frame_system_benchmarking::Pallet as SystemBench;
 			impl frame_system_benchmarking::Config for Runtime {}
-
-			use dot_app::benchmarking::Pallet as DotAppBench;
-			impl dot_app::benchmarking::Config for Runtime {}
-
-			use eth_app::benchmarking::Pallet as EthAppBench;
-			impl eth_app::benchmarking::Config for Runtime {}
-
-			use erc20_app::benchmarking::Pallet as Erc20AppBench;
-			impl erc20_app::benchmarking::Config for Runtime {}
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
 				// Block Number
@@ -1029,12 +924,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel_outbound, BasicOutboundChannel);
-			add_benchmark!(params, batches, incentivized_channel_inbound, IncentivizedInboundChannel);
-			add_benchmark!(params, batches, incentivized_channel_outbound, IncentivizedOutboundChannel);
 			add_benchmark!(params, batches, ethereum_beacon_client, EthereumBeaconClient);
-			add_benchmark!(params, batches, dot_app, DotAppBench::<Runtime>);
-			add_benchmark!(params, batches, erc20_app, Erc20AppBench::<Runtime>);
-			add_benchmark!(params, batches, eth_app, EthAppBench::<Runtime>);
 
 			if batches.is_empty() {
 				return Err("Benchmark not found for this pallet.".into())

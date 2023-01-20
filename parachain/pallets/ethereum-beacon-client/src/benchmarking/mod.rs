@@ -49,7 +49,11 @@ benchmarks! {
 
 		let block_update = data::block_update();
 
-		LatestFinalizedHeaderSlot::<T>::set(block_update.block.slot);
+		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState{
+			beacon_block_root: H256::default(),
+			beacon_slot: block_update.block.slot,
+			import_time: 0,
+		});
 	}: _(RawOrigin::Signed(caller.clone()), block_update.clone())
 	verify {
 		let block_hash: H256 = block_update.block.body.execution_payload.block_hash;

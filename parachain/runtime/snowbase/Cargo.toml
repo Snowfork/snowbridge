@@ -71,14 +71,9 @@ snowbridge-core = { path = "../../primitives/core", default-features = false }
 runtime-primitives = { path = "../../primitives/runtime", default-features = false, package = "snowbridge-runtime-primitives" }
 
 snowbridge-xcm-support = { path = "../../pallets/xcm-support", default-features = false }
-snowbridge-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 snowbridge-basic-channel = { path = "../../pallets/basic-channel", default-features = false }
-snowbridge-incentivized-channel = { path = "../../pallets/incentivized-channel", default-features = false }
 dispatch = { path = "../../pallets/dispatch", package = "snowbridge-dispatch", default-features = false }
 ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client", package = "snowbridge-ethereum-beacon-client", default-features = false, features=["minimal"]}
-dot-app = { path = "../../pallets/dot-app", package = "snowbridge-dot-app", default-features = false }
-eth-app = { path = "../../pallets/eth-app", package = "snowbridge-eth-app", default-features = false }
-erc20-app = { path = "../../pallets/erc20-app", package = "snowbridge-erc20-app", default-features = false }
 runtime-common = { path = "../common", package = "snowbridge-runtime-common", default-features = false }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
 
@@ -139,17 +134,12 @@ std = [
     "xcm-builder/std",
     "polkadot-parachain/std",
     "snowbridge-basic-channel/std",
-    "snowbridge-incentivized-channel/std",
     "ethereum-beacon-client/std",
     "dispatch/std",
-    "dot-app/std",
-    "eth-app/std",
-    "erc20-app/std",
     "snowbridge-core/std",
     "runtime-primitives/std",
     "snowbridge-beacon-primitives/std",
     "snowbridge-xcm-support/std",
-    "snowbridge-asset-registry/std",
     "runtime-common/std"
 ]
 runtime-benchmarks = [
@@ -170,10 +160,6 @@ runtime-benchmarks = [
     # Snowbridge pallets & support
     "snowbridge-core/runtime-benchmarks",
     "snowbridge-basic-channel/runtime-benchmarks",
-    "snowbridge-incentivized-channel/runtime-benchmarks",
     "ethereum-beacon-client/runtime-benchmarks",
-    "dot-app/runtime-benchmarks",
     "dispatch/runtime-benchmarks",
-    "erc20-app/runtime-benchmarks",
-    "eth-app/runtime-benchmarks",
 ]

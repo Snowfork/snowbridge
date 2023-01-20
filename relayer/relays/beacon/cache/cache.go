@@ -4,12 +4,20 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 )
+
+type FinalizedHeader struct {
+	// Used to determine the execution headers that need to be backfilled.
+	Headers []common.Hash
+	// Stores the last attempted finalized header, whether the import succeeded or not.
+	LastAttemptedSyncHash common.Hash
+	// Stores the slot number of the above header
+	LastAttemptedSyncSlot uint64
+}
 
 type BeaconCache struct {
 	LastSyncedSyncCommitteePeriod uint64
-	Finalized                     state.FinalizedHeader
+	Finalized                     FinalizedHeader
 	mu                            sync.Mutex
 }
 

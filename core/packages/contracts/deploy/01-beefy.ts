@@ -18,8 +18,6 @@ module.exports = async ({ ethers, deployments, getUnnamedAccounts, network }: Ha
             MerkleProof: merkleProofLibrary.address,
             Bitfield: bitFieldLibrary.address
         },
-        log: true,
-        autoMine: true,
         maxFeePerGas: feeData.maxFeePerGas,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     })

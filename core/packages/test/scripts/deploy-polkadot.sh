@@ -3,8 +3,7 @@ set -eu
 
 source scripts/set-env.sh
 
-start_polkadot_launch()
-{
+generate_chain_spec() {
     echo "Generating chain specification"
     "$parachain_bin" build-spec --chain "$parachain_runtime" --disable-default-bootnode > "$output_dir/spec.json"  
     
@@ -51,7 +50,15 @@ start_polkadot_launch()
         | .para_id = 1001
         ' \
         "$output_dir/test_spec.json" | sponge "$output_dir/test_spec.json"
+}
 
+wait_start() {
+    scripts/wait-for-it.sh -t 120 localhost:11144
+    scripts/wait-for-it.sh -t 120 localhost:13144
+}
+
+polkadot_launch() {
+    generate_chain_spec
     jq \
         --arg polkadot "$(realpath $relaychain_bin)" \
         --arg bin "$parachain_bin" \
@@ -66,9 +73,16 @@ start_polkadot_launch()
         ' \
         config/launch-config.json \
         > "$output_dir/launch-config.json"
+    npx polkadot-launch "$output_dir/launch-config.json" 2>&1 &
+    wait_start
+}
 
-    npx polkadot-launch "$output_dir/launch-config.json" &
+zombienet_launch() {
+    generate_chain_spec
+    zombienet spawn config/launch-config.toml --provider=native 2>&1 &
+    wait_start
+}
 
-    scripts/wait-for-it.sh -t 120 localhost:11144
-    scripts/wait-for-it.sh -t 120 localhost:13144
+deploy_polkadot() {
+    zombienet_launch
 }

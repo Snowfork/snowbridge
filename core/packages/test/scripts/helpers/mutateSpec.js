@@ -23,10 +23,6 @@ function run() {
     data['genesis']['runtime']['parachainInfo']['parachainId'] = 1000;
     data['para_id'] = 1000;
 
-    data['genesis']['runtime']['dotApp']['address'] = contracts['contracts']['DOTApp']['address'];
-    data['genesis']['runtime']['ethApp']['address'] = contracts['contracts']['ETHApp']['address'];
-    data['genesis']['runtime']['erc20App']['address'] = contracts['contracts']['ERC20App']['address'];
-    data['genesis']['runtime']['incentivizedInboundChannel']['sourceChannel'] = contracts['contracts']['IncentivizedOutboundChannel']['address'];
     data['genesis']['runtime']['basicInboundChannel']['sourceChannel'] = contracts['contracts']['BasicOutboundChannel']['address'];
 
     console.log(JSON.stringify(
