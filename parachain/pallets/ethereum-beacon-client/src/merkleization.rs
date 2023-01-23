@@ -8,6 +8,7 @@ use snowbridge_beacon_primitives::{
 	Eth1Data, ExecutionPayload, ForkData, ProposerSlashing, SigningData, SyncAggregate,
 	SyncCommittee, VoluntaryExit,
 };
+use sp_core::H256;
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
 	prelude::{List, Vector},
@@ -388,12 +389,32 @@ pub fn get_ssz_attester_slashings<
 	))
 }
 
+pub fn get_beacon_block_roots<SlotsPerHistoricalRoot: Get<u32>>(
+	block_roots: BoundedVec<H256, SlotsPerHistoricalRoot>,
+) -> Result<Vector<[u8; 32], { config::SLOTS_PER_HISTORICAL_ROOT }>, MerkleizationError> {
+	let mut block_roots_vec = Vec::new();
+
+	for block_root in block_roots.iter() {
+		block_roots_vec.push(block_root.as_bytes().try_into()?)
+	}
+
+	Ok(Vector::<[u8; 32], { config::SLOTS_PER_HISTORICAL_ROOT }>::from_iter(block_roots_vec))
+}
+
 pub fn hash_tree_root_beacon_header(
 	beacon_header: BeaconHeader,
 ) -> Result<[u8; 32], MerkleizationError> {
 	let ssz_beacon_header: SSZBeaconBlockHeader = beacon_header.try_into()?;
 
 	hash_tree_root(ssz_beacon_header)
+}
+
+pub fn hash_tree_root_block_roots<SlotsPerHistoricalRoot: Get<u32>>(
+	block_roots: BoundedVec<H256, SlotsPerHistoricalRoot>,
+) -> Result<[u8; 32], MerkleizationError> {
+	let block_root_container = get_beacon_block_roots(block_roots)?;
+
+	hash_tree_root(block_root_container)
 }
 
 pub fn hash_tree_root_beacon_body<

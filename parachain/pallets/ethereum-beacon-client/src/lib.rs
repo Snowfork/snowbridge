@@ -147,6 +147,7 @@ pub mod pallet {
 		InvalidProof,
 		DecodeFailed,
 		BlockBodyHashTreeRootFailed,
+		BlockRootsHashTreeRootFailed,
 		HeaderHashTreeRootFailed,
 		SyncCommitteeHashTreeRootFailed,
 		SigningRootHashTreeRootFailed,
@@ -278,10 +279,6 @@ pub mod pallet {
 				"💫 Received finalized header for slot {}.",
 				slot
 			);
-
-			log::info!(target: "ethereum-beacon-client","💫 Received block roots {:?}.",finalized_header_update.block_roots.clone());
-			log::info!(target: "ethereum-beacon-client","💫 Received block roots hash {:?}.",finalized_header_update.block_roots_hash.clone());
-			log::info!(target: "ethereum-beacon-client","💫 Received block roots proof {:?}.",finalized_header_update.block_roots_proof.clone());
 
 			if let Err(err) = Self::process_finalized_header(finalized_header_update) {
 				log::error!(
@@ -471,11 +468,45 @@ pub mod pallet {
 				weak_subjectivity_period_check
 			);
 
-			if time > weak_subjectivity_period_check {
+			if time > import_time + weak_subjectivity_period_check {
 				log::info!(target: "ethereum-beacon-client","💫 Weak subjectivity period exceeded, blocking bridge.",);
 				<Blocked<T>>::set(true);
 				return Err(Error::<T>::BridgeBlocked.into())
 			}
+
+			let block_root_hash: H256 =
+				merkleization::hash_tree_root_block_roots(update.block_roots)
+					.map_err(|_| Error::<T>::BlockRootsHashTreeRootFailed)?
+					.into();
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 block_root_hash: {:?}", block_root_hash
+			);
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 expected block_root_hash: {:?}", update.block_roots_hash
+			);
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 expected state root: {:?}", update.finalized_header.state_root
+			);
+
+			ensure!(
+				Self::is_valid_merkle_branch(
+					block_root_hash,
+					update.block_roots_proof,
+					config::BLOCK_ROOTS_INDEX,
+					config::BLOCK_ROOTS_INDEX,
+					update.finalized_header.state_root
+				),
+				Error::<T>::InvalidHeaderMerkleProof
+			);
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 block root merkle proof passed!",
+			);
 
 			let sync_committee_bits =
 				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
