@@ -202,7 +202,12 @@ pub struct SyncCommitteePeriodUpdate<
 	feature = "std",
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SignatureSize, ProofSize, SyncCommitteeSize, SlotsPerHistoricalRoot))]
+#[scale_info(skip_type_params(
+	SignatureSize,
+	ProofSize,
+	SyncCommitteeSize,
+	SlotsPerHistoricalRoot
+))]
 #[codec(mel_bound())]
 pub struct FinalizedHeaderUpdate<
 	SignatureSize: Get<u32>,

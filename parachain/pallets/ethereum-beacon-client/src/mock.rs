@@ -290,7 +290,12 @@ fn sync_committee_update_from_file<T: crate::Config>(
 
 fn finalized_header_update_from_file<T: crate::Config>(
 	name: &str,
-) -> FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize, T::MaxSlotsPerHistoricalRoot> {
+) -> FinalizedHeaderUpdate<
+	T::MaxSignatureSize,
+	T::MaxProofBranchSize,
+	T::MaxSyncCommitteeSize,
+	T::MaxSlotsPerHistoricalRoot,
+> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -363,8 +368,12 @@ pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
 	block_update_from_file::<T>(&add_file_prefix("block_update.json"))
 }
 
-pub fn get_finalized_header_update<T: crate::Config>(
-) -> FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize, T::MaxSlotsPerHistoricalRoot> {
+pub fn get_finalized_header_update<T: crate::Config>() -> FinalizedHeaderUpdate<
+	T::MaxSignatureSize,
+	T::MaxProofBranchSize,
+	T::MaxSyncCommitteeSize,
+	T::MaxSlotsPerHistoricalRoot,
+> {
 	finalized_header_update_from_file::<T>(&add_file_prefix("finalized_header_update.json"))
 }
 
