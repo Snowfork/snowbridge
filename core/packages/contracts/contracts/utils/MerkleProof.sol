@@ -1,7 +1,41 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
+import "../BasicInboundChannel.sol";
+
 library MerkleProof {
+    function processProof(
+        BasicInboundChannel.Message calldata leaf,
+        bytes32[] calldata proof,
+        bool[] calldata hashSides
+    ) public pure returns (bytes32) {
+        bytes32 leafHash = keccak256(abi.encode(leaf));
+        return computeRootFromProofAndSide(leafHash, proof, hashSides);
+    }
+
+    function processMultiProof(
+        BasicInboundChannel.Message[] calldata leaves,
+        bytes32[][] calldata proofs,
+        bool[][] calldata hashSides
+    ) public pure returns (bytes32) {
+        require(leaves.length > 0, "No leaves to prove");
+        require(
+            leaves.length == proofs.length && proofs.length == hashSides.length,
+            "Multi-proof input lengths differ"
+        );
+
+        bytes32 previousCommitment = processProof(leaves[0], proofs[0], hashSides[0]);
+        bytes32 currentCommitment;
+
+        for (uint256 i = 1; i < leaves.length; i++) {
+            currentCommitment = processProof(leaves[i], proofs[i], hashSides[i]);
+            require(previousCommitment == currentCommitment, "Root hash mismatch");
+            previousCommitment = currentCommitment;
+        }
+
+        return previousCommitment;
+    }
+
     /**
      * @notice Verify that a specific leaf element is part of the Merkle Tree at a specific position in the tree
      *
