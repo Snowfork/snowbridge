@@ -37,24 +37,6 @@ contract BasicInboundChannel {
         // TODO: should we emit a MessageDispatched event?
     }
 
-    function submitBatch(
-        Message[] calldata messages,
-        bytes32[][] calldata leafProofs,
-        bool[][] calldata hashSides,
-        bytes calldata parachainHeaderProof
-    ) external {
-        bytes32 commitment = MerkleProof.processMultiProof(messages, leafProofs, hashSides);
-        require(
-            parachainClient.verifyCommitment(commitment, parachainHeaderProof),
-            "Invalid proof"
-        );
-        for (uint256 i = 0; i < messages.length; i++) {
-            require(messages[i].nonce == nonce[messages[i].sourceId] + 1, "Invalid nonce");
-            nonce[messages[i].sourceId]++;
-        }
-        dispatchBatch(messages);
-    }
-
     // solhint-disable no-empty-blocks
     function dispatch(Message calldata messages) internal {
         // TODO: dispatch to XCM interpreter
