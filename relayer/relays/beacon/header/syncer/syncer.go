@@ -1,15 +1,19 @@
 package syncer
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
@@ -85,6 +89,9 @@ type FinalizedHeaderUpdate struct {
 	FinalityBranch  []types.H256
 	SyncAggregate   scale.SyncAggregate
 	SignatureSlot   types.U64
+	BlockRoots      []types.H256
+	BlockRootHash   types.H256
+	BlockRootProof  []types.H256
 }
 
 type HeaderUpdate struct {
@@ -163,11 +170,72 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 	return syncCommitteePeriodUpdate, err
 }
 
-func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, common.Hash, error) {
+func (s *Syncer) GetFinalizedUpdate(ctx context.Context) (FinalizedHeaderUpdate, common.Hash, error) {
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
 		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch finalized update: %w", err)
 	}
+
+	err = s.Client.DownloadBeaconState(finalizedUpdate.Data.FinalizedHeader.Beacon.StateRoot)
+	if err != nil {
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("download beacon state: %w", err)
+	}
+
+	data, err := os.ReadFile("beacon_state.ssz")
+	if err != nil {
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("find beacon state file: %w", err)
+	}
+
+	praterConfig := params.PraterConfig()
+
+	params.OverrideBeaconConfig(praterConfig)
+
+	cf, err := detect.FromState(data)
+	if err != nil {
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("could not sniff config+fork for origin state bytes: %w", err)
+	}
+
+	config := params.BeaconConfig()
+
+	fmt.Printf(config.ConfigName)
+
+	_, ok := params.BeaconConfig().ForkVersionSchedule[cf.Version]
+	if !ok {
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("config mismatch, beacon node configured to connect to %s, detected state is for %s", params.BeaconConfig().ConfigName, cf.Config.ConfigName)
+	}
+
+	log.WithField("configName", cf.Config.ConfigName).Info("detected supported config for state & block version, config name")
+
+	state, err := cf.UnmarshalBeaconState(data)
+	if err != nil {
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("failed to initialize origin state w/ bytes + config+forks: %w", err)
+	}
+
+	e := os.Remove("beacon_state.ssz")
+	if e != nil {
+		log.Fatal(e)
+	}
+
+	stateHash, err := state.HashTreeRoot(context.Background())
+
+	blockRoots := state.BlockRoots()
+
+	scaleBlockRoots := []types.H256{}
+	for _, blockRoot := range blockRoots {
+		scaleBlockRoots = append(scaleBlockRoots, types.NewH256(blockRoot))
+	}
+
+	leaf, proof, err := state.BlockRootProof(ctx)
+	if err != nil {
+		return FinalizedHeaderUpdate{}, [32]byte{}, err
+	}
+
+	scaleBlockRootProof := []types.H256{}
+	for _, proofItem := range proof {
+		scaleBlockRootProof = append(scaleBlockRootProof, types.NewH256(proofItem))
+	}
+
+	log.WithField("stateHash", stateHash).Info("found beacon state hash")
 
 	attestedHeader, err := finalizedUpdate.Data.AttestedHeader.Beacon.ToScale()
 	if err != nil {
@@ -200,6 +268,9 @@ func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, common.Hash, error
 		FinalityBranch:  proofBranchToScale(finalizedUpdate.Data.FinalityBranch),
 		SyncAggregate:   syncAggregate,
 		SignatureSlot:   types.U64(signatureSlot),
+		BlockRoots:      scaleBlockRoots,
+		BlockRootHash:   types.NewH256(leaf[:]),
+		BlockRootProof:  scaleBlockRootProof,
 	}
 
 	return finalizedHeaderUpdate, blockRoot, nil

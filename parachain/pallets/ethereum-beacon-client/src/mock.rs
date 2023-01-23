@@ -82,6 +82,7 @@ pub mod mock_minimal {
 		pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
 		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
 		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
+		pub const MaxSlotsPerHistoricalRoot: u32 = 64u32;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
@@ -115,6 +116,7 @@ pub mod mock_minimal {
 		type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
 		type MaxAttestationSize = MaxAttestationSize;
 		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+		type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
@@ -192,6 +194,7 @@ pub mod mock_mainnet {
 		pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
 		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
 		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
+		pub const MaxSlotsPerHistoricalRoot: u32 = 8192u32;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
@@ -225,6 +228,7 @@ pub mod mock_mainnet {
 		type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
 		type MaxAttestationSize = MaxAttestationSize;
 		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+		type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
@@ -286,7 +290,7 @@ fn sync_committee_update_from_file<T: crate::Config>(
 
 fn finalized_header_update_from_file<T: crate::Config>(
 	name: &str,
-) -> FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize> {
+) -> FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize, T::MaxSlotsPerHistoricalRoot> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -360,7 +364,7 @@ pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
 }
 
 pub fn get_finalized_header_update<T: crate::Config>(
-) -> FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize> {
+) -> FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize, T::MaxSlotsPerHistoricalRoot> {
 	finalized_header_update_from_file::<T>(&add_file_prefix("finalized_header_update.json"))
 }
 

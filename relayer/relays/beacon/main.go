@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"errors"
 
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
@@ -26,6 +27,10 @@ func NewRelay(
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
+	if r.config.Source.Beacon.ActiveSpec == "minimal" {
+		return errors.New("ancestry proofs not supported for minimal spec yet")
+	}
+
 	specSettings := r.config.GetSpecSettings()
 
 	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())

@@ -43,7 +43,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 
 	log.WithField("period", latestSyncedPeriod).Info("set cache: last beacon synced sync committee period")
 
-	finalizedHeader, _, err := h.syncer.GetFinalizedUpdate()
+	finalizedHeader, _, err := h.syncer.GetFinalizedUpdate(ctx)
 	if err != nil {
 		return fmt.Errorf("fetch latest finalized update: %w", err)
 	}
@@ -163,7 +163,7 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 
 func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeaderUpdate, common.Hash, error) {
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
-	finalizedHeaderUpdate, blockRoot, err := h.syncer.GetFinalizedUpdate()
+	finalizedHeaderUpdate, blockRoot, err := h.syncer.GetFinalizedUpdate(ctx)
 	if err != nil {
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch finalized header update: %w", err)
 	}

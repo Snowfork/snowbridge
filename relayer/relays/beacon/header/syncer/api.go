@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -542,6 +543,33 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 	}
 
 	return response, nil
+}
+
+func (b *BeaconClient) DownloadBeaconState(stateId string) error {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateId), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Accept", "application/octet-stream")
+	res, err := b.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
+	}
+
+	defer res.Body.Close()
+	out, err := os.Create("beacon_state.ssz")
+	if err != nil {
+		return err
+	}
+
+	defer out.Close()
+	io.Copy(out, res.Body)
+
+	return nil
 }
 
 type LatestHeaderUpdateResponse struct {

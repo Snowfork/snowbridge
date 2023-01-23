@@ -57,6 +57,7 @@ pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<
 	<T as Config>::MaxSignatureSize,
 	<T as Config>::MaxProofBranchSize,
 	<T as Config>::MaxSyncCommitteeSize,
+	<T as Config>::MaxSlotsPerHistoricalRoot,
 >;
 pub type ExecutionHeaderOf<T> =
 	ExecutionHeader<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
@@ -109,6 +110,8 @@ pub mod pallet {
 		type MaxAttestationSize: Get<u32>;
 		#[pallet::constant]
 		type MaxValidatorsPerCommittee: Get<u32>;
+		#[pallet::constant]
+		type MaxSlotsPerHistoricalRoot: Get<u32>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
@@ -275,6 +278,10 @@ pub mod pallet {
 				"💫 Received finalized header for slot {}.",
 				slot
 			);
+
+			log::info!(target: "ethereum-beacon-client","💫 Received block roots {:?}.",finalized_header_update.block_roots.clone());
+			log::info!(target: "ethereum-beacon-client","💫 Received block roots hash {:?}.",finalized_header_update.block_roots_hash.clone());
+			log::info!(target: "ethereum-beacon-client","💫 Received block roots proof {:?}.",finalized_header_update.block_roots_proof.clone());
 
 			if let Err(err) = Self::process_finalized_header(finalized_header_update) {
 				log::error!(
