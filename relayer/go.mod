@@ -107,4 +107,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/prysmaticlabs/prysm/v3 => github.com/snowfork/prysm/v3 v3.0.0-20230123101245-4aec9d4e72a1
+replace github.com/prysmaticlabs/prysm/v3 => github.com/snowfork/prysm/v3 v3.0.0-20230124094310-90fbe9d8a1f1

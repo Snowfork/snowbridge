@@ -557,6 +557,10 @@ func (b *BeaconClient) DownloadBeaconState(stateId string) error {
 	}
 
 	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == 404 {
+			return ErrNotFound
+		}
+
 		return fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
 	}
 

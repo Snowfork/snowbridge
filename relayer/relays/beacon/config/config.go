@@ -24,6 +24,7 @@ type SourceConfig struct {
 }
 
 type BeaconConfig struct {
+	Network    string `mapstructure:"network"`
 	Endpoint   string `mapstructure:"endpoint"`
 	Spec       Spec   `mapstructure:"spec"`
 	ActiveSpec string `mapstructure:"activeSpec"`
@@ -39,4 +40,37 @@ func (c Config) GetSpecSettings() SpecSettings {
 	}
 
 	return c.Source.Beacon.Spec.Mainnet
+}
+
+type Network string
+
+const (
+	Mainnet Network = "mainnet"
+	Goerli  Network = "goerli"
+	Local   Network = "local"
+)
+
+func (c Config) GetNetwork() Network {
+	switch c.Source.Beacon.Network {
+	case string(Mainnet):
+		return Mainnet
+	case string(Goerli):
+		return Goerli
+	case string(Local):
+		return Local
+	default:
+		return Mainnet
+	}
+}
+
+func (n Network) IsGoerli() bool {
+	return n == Goerli
+}
+
+func (n Network) IsMainnet() bool {
+	return n == Mainnet
+}
+
+func (n Network) IsLocal() bool {
+	return n == Local
 }

@@ -55,6 +55,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		r.config.Source.Beacon.Endpoint,
 		specSettings.SlotsInEpoch,
 		specSettings.EpochsPerSyncCommitteePeriod,
+		r.config.GetNetwork(),
 	)
 
 	return headers.Sync(ctx, eg)

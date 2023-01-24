@@ -623,8 +623,8 @@ github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454 h1:aKd0iBLZGB
 github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454/go.mod h1:C5irsRKMm2oEfPRjAJlvPKHtRZrXhcWLS0Z2IMXneSE=
 github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20220330174912-586a653ad92d h1:qHj1wA1ouzfpbM3ZuTlUwnP+fiyZqE82+aHSbqs3ATs=
 github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20220330174912-586a653ad92d/go.mod h1:MVk5+w9icYU7MViYFm7CKYhx1VMj6DpN2tWO6s4OK5g=
-github.com/snowfork/prysm/v3 v3.0.0-20230123101245-4aec9d4e72a1 h1:IoByAg4BfIPcKaZo8KeWiyfpxRf1iHmSD9+SRBeqhm0=
-github.com/snowfork/prysm/v3 v3.0.0-20230123101245-4aec9d4e72a1/go.mod h1:W6h2+OurbfMNqWE2e3r+Uiit4plAW3W7ncDx1LIe8+I=
+github.com/snowfork/prysm/v3 v3.0.0-20230124094310-90fbe9d8a1f1 h1:doqa87/pjXNPbkuOz1UjrbxsumebKIj4PAG8Z7drEi0=
+github.com/snowfork/prysm/v3 v3.0.0-20230124094310-90fbe9d8a1f1/go.mod h1:W6h2+OurbfMNqWE2e3r+Uiit4plAW3W7ncDx1LIe8+I=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spaolacci/murmur3 v1.0.1-0.20190317074736-539464a789e9/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spf13/afero v1.8.2 h1:xehSyVa0YnHWsJ49JFljMpg1HX19V6NDZ1fkm1Xznbo=

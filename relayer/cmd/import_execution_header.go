@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"io/ioutil"
 	"strings"
 
@@ -23,16 +24,34 @@ func importExecutionHeaderCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("beacon-header", "", "Beacon header hash whose execution header will be imported")
-	cmd.MarkFlagRequired("beacon-header")
+	err := cmd.MarkFlagRequired("beacon-header")
+	if err != nil {
+		return nil
+	}
 
 	cmd.Flags().String("parachain-endpoint", "", "Parachain API URL")
-	cmd.MarkFlagRequired("parachain-endpoint")
+	err = cmd.MarkFlagRequired("parachain-endpoint")
+	if err != nil {
+		return nil
+	}
 
 	cmd.Flags().String("lodestar-endpoint", "", "Lodestar API URL")
-	cmd.MarkFlagRequired("lodestar-endpoint")
+	err = cmd.MarkFlagRequired("lodestar-endpoint")
+	if err != nil {
+		return nil
+	}
 
 	cmd.Flags().String("private-key-file", "", "File containing the private key for the relayer")
-	cmd.MarkFlagRequired("private-key-file")
+	err = cmd.MarkFlagRequired("private-key-file")
+	if err != nil {
+		return nil
+	}
+
+	cmd.Flags().String("network", "", "Network name: valid values are mainnet, goerli, local")
+	err = cmd.MarkFlagRequired("network")
+	if err != nil {
+		return nil
+	}
 
 	return cmd
 }
@@ -48,6 +67,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		privateKeyFile, _ := cmd.Flags().GetString("private-key-file")
 		lodestarEndpoint, _ := cmd.Flags().GetString("lodestar-endpoint")
 		beaconHeader, _ := cmd.Flags().GetString("beacon-header")
+		network, _ := cmd.Flags().GetString("network")
 
 		keypair, err := getKeyPair(privateKeyFile)
 		if err != nil {
@@ -68,7 +88,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
 
-		syncer := syncer.New(lodestarEndpoint, 32, 256)
+		syncer := syncer.New(lodestarEndpoint, 32, 256, config.Network(network))
 
 		beaconHeaderHash := common.HexToHash(beaconHeader)
 

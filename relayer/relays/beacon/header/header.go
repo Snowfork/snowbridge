@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -25,11 +26,11 @@ type Header struct {
 	syncer *syncer.Syncer
 }
 
-func New(writer *parachain.ParachainWriter, beaconEndpoint string, slotsInEpoch uint64, epochsPerSyncCommitteePeriod uint64) Header {
+func New(writer *parachain.ParachainWriter, beaconEndpoint string, slotsInEpoch uint64, epochsPerSyncCommitteePeriod uint64, network config.Network) Header {
 	return Header{
 		cache:  cache.New(),
 		writer: writer,
-		syncer: syncer.New(beaconEndpoint, slotsInEpoch, epochsPerSyncCommitteePeriod),
+		syncer: syncer.New(beaconEndpoint, slotsInEpoch, epochsPerSyncCommitteePeriod, network),
 	}
 }
 
@@ -103,6 +104,8 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 				log.WithFields(logFields).Info("not importing unchanged header")
 			case errors.Is(err, ErrFinalizedHeaderNotImported):
 				log.WithFields(logFields).WithError(err).Warn("Not importing header this cycle")
+			case errors.Is(err, syncer.ErrBeaconStateAvailableYet):
+				log.WithFields(logFields).WithError(err).Warn("beacon state not available for finalized state yet")
 			case err != nil:
 				return err
 			}
