@@ -76,8 +76,7 @@ pub mod pallet {
 		type Hashing: Hash<Output = H256>;
 
 		/// ID of message source
-		/// + TypeInfo,
-		type SourceId: Parameter + Member + MaxEncodedLen;
+		type SourceId: Parameter + Member + PartialEq + MaxEncodedLen;
 
 		/// Max bytes in a message payload
 		#[pallet::constant]
