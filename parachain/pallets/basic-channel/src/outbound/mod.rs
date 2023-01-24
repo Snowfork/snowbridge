@@ -161,8 +161,6 @@ pub mod pallet {
 		/// Submit message on the outbound channel
 		// TODO: Remove target once incentivized channel & app removal are done
 		pub fn submit(who: &T::SourceId, _target: H160, payload: &[u8]) -> DispatchResult {
-			// TODO: Do we need to convert the error values passed to ensure! to
-			// sp_runtime::DispatchError? Does the ensure! macro hide a possible type error here?
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerCommit::get() as usize,
