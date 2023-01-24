@@ -106,7 +106,7 @@ fn test_submit() {
 
 		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
 
-		assert_eq!(<Nonce<Test>>::get(who), 0);
+		assert_eq!(<Nonce<Test>>::get(who), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 1);
 	});
 }

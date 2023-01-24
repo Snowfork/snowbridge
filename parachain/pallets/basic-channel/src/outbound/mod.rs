@@ -186,7 +186,7 @@ pub mod pallet {
 			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
 			Self::deposit_event(Event::MessageAccepted(nonce));
 
-			<Nonce<T>>::mutate(who, |_| next_nonce);
+			<Nonce<T>>::set(who, next_nonce);
 
 			Ok(())
 		}
