@@ -44,19 +44,14 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 
 	log.WithField("period", latestSyncedPeriod).Info("set cache: last beacon synced sync committee period")
 
-	finalizedHeader, _, err := h.syncer.GetFinalizedUpdate(ctx)
-	if err != nil {
-		return fmt.Errorf("fetch latest finalized update: %w", err)
-	}
-
-	err = h.syncLaggingSyncCommitteePeriods(ctx, latestSyncedPeriod, uint64(finalizedHeader.FinalizedHeader.Slot), true)
-	if err != nil {
-		return fmt.Errorf("sync lagging sync committee periods: %w", err)
-	}
-
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
 		return fmt.Errorf("fetch last finalized header state: %w", err)
+	}
+
+	err = h.syncLaggingSyncCommitteePeriods(ctx, latestSyncedPeriod, lastFinalizedHeaderState.BeaconSlot, true)
+	if err != nil {
+		return fmt.Errorf("sync lagging sync committee periods: %w", err)
 	}
 
 	lastFinalizedHeader := lastFinalizedHeaderState.BeaconBlockRoot

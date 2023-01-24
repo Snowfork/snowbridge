@@ -227,10 +227,7 @@ func (s *Syncer) GetBlockRoots(ctx context.Context, stateRoot string) ([]types.H
 		return nil, nil, fmt.Errorf("unmarshal beacon state: %w", err)
 	}
 
-	stateHash, err := state.HashTreeRoot(context.Background())
-
 	blockRoots := state.BlockRoots()
-
 	scaleBlockRoots := []types.H256{}
 	for _, blockRoot := range blockRoots {
 		scaleBlockRoots = append(scaleBlockRoots, types.NewH256(blockRoot))
@@ -240,13 +237,10 @@ func (s *Syncer) GetBlockRoots(ctx context.Context, stateRoot string) ([]types.H
 	if err != nil {
 		return nil, nil, err
 	}
-
 	scaleBlockRootProof := []types.H256{}
 	for _, proofItem := range proof {
 		scaleBlockRootProof = append(scaleBlockRootProof, types.NewH256(proofItem))
 	}
-
-	log.WithField("stateHash", stateHash).Info("found beacon state hash")
 
 	return scaleBlockRoots, scaleBlockRootProof, nil
 }

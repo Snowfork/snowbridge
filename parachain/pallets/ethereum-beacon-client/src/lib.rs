@@ -135,6 +135,7 @@ pub mod pallet {
 		SyncCommitteeParticipantsNotSupermajority,
 		InvalidHeaderMerkleProof,
 		InvalidSyncCommitteeMerkleProof,
+		InvalidAncestryMerkleProof,
 		InvalidSignature,
 		InvalidSignaturePoint,
 		InvalidAggregatePublicKeys,
@@ -474,35 +475,6 @@ pub mod pallet {
 				return Err(Error::<T>::BridgeBlocked.into())
 			}
 
-			let block_root_hash: H256 =
-				merkleization::hash_tree_root_block_roots(update.block_roots)
-					.map_err(|_| Error::<T>::BlockRootsHashTreeRootFailed)?
-					.into();
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 block_root_hash: {:?}", block_root_hash
-			);
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 expected block_root_hash: {:?}", update.block_roots_hash
-			);
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 expected state root: {:?}", update.finalized_header.state_root
-			);
-
-			ensure!(
-				Self::is_valid_merkle_branch(
-					block_root_hash,
-					update.block_roots_proof,
-					config::BLOCK_ROOTS_INDEX,
-					config::BLOCK_ROOTS_INDEX,
-					update.finalized_header.state_root
-				),
-				Error::<T>::InvalidHeaderMerkleProof
-			);
-
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 block root merkle proof passed!",
@@ -544,6 +516,47 @@ pub mod pallet {
 				validators_root,
 				update.signature_slot,
 			)?;
+
+			if !config::IS_MINIMAL {
+				log::info!(target: "ethereum-beacon-client","💫 spec is not minimal, checking ancestry proof");
+
+				let block_root_hash: H256 =
+					merkleization::hash_tree_root_block_roots(update.block_roots.clone())
+						.map_err(|_| Error::<T>::BlockRootsHashTreeRootFailed)?
+						.into();
+
+				log::info!(
+					target: "ethereum-beacon-client",
+					"💫 block_roots: {:?}", update.block_roots
+				);
+				log::info!(
+					target: "ethereum-beacon-client",
+					"💫 block_root_hash: {:?}", block_root_hash
+				);
+				log::info!(
+					target: "ethereum-beacon-client",
+					"💫 expected block_root_hash: {:?}", update.block_roots_hash
+				);
+				log::info!(
+					target: "ethereum-beacon-client",
+					"💫 expected state root: {:?}", update.finalized_header.state_root
+				);
+
+				ensure!(
+					Self::is_valid_merkle_branch(
+						block_root_hash,
+						update.block_roots_proof,
+						config::BLOCK_ROOTS_INDEX,
+						config::BLOCK_ROOTS_INDEX,
+						update.finalized_header.state_root
+					),
+					Error::<T>::InvalidAncestryMerkleProof
+				);
+
+				log::info!(target: "ethereum-beacon-client","💫 ancestry proof passed!");
+			} else {
+				log::info!(target: "ethereum-beacon-client","💫 spec is minimal, not checking ancestry proof");
+			}
 
 			Self::store_finalized_header(block_root, update.finalized_header);
 
@@ -805,7 +818,7 @@ pub mod pallet {
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Updated latest finalized block root {} at slot {}.",
 				block_root,
