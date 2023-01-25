@@ -356,8 +356,15 @@ pub mod pallet {
 					.into();
 
 			Self::store_sync_committee(period, initial_sync.current_sync_committee);
-			Self::store_finalized_header(block_root, initial_sync.header);
 			Self::store_validators_root(initial_sync.validators_root);
+
+			let last_finalized_header = FinalizedHeaderState{
+				beacon_block_root: block_root,
+				beacon_slot: initial_sync.header.slot,
+				import_time: initial_sync.import_time,
+			};
+
+			<LatestFinalizedHeaderState<T>>::set(last_finalized_header);
 
 			Ok(())
 		}
