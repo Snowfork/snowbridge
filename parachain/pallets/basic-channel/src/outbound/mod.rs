@@ -160,7 +160,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Submit message on the outbound channel
 		// TODO: Remove target once incentivized channel & app removal are done
-		pub fn submit(who: &T::SourceId, _target: H160, payload: &[u8]) -> DispatchResult {
+		pub fn submit(source_id: &T::SourceId, _target: H160, payload: &[u8]) -> DispatchResult {
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerCommit::get() as usize,
@@ -171,18 +171,18 @@ pub mod pallet {
 				Error::<T>::PayloadTooLarge,
 			);
 
-			let nonce = <Nonce<T>>::get(who);
+			let nonce = <Nonce<T>>::get(source_id);
 			let next_nonce = nonce.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
 			<MessageQueue<T>>::try_append(Message {
-				source_id: who.clone(),
+				source_id: source_id.clone(),
 				nonce,
 				payload: payload.to_vec().try_into().map_err(|_| Error::<T>::PayloadTooLarge)?,
 			})
 			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
 			Self::deposit_event(Event::MessageAccepted(nonce));
 
-			<Nonce<T>>::set(who, next_nonce);
+			<Nonce<T>>::set(source_id, next_nonce);
 
 			Ok(())
 		}
