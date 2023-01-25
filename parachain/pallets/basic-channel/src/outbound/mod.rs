@@ -172,8 +172,7 @@ pub mod pallet {
 			);
 
 			let nonce = <Nonce<T>>::get(who);
-			let next_nonce = nonce.saturating_add(1);
-			ensure!(next_nonce != nonce, Error::<T>::Overflow);
+			let next_nonce = nonce.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
 			<MessageQueue<T>>::try_append(Message {
 				source_id: who.clone(),
