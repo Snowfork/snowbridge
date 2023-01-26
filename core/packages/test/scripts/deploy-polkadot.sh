@@ -5,8 +5,8 @@ source scripts/set-env.sh
 
 generate_chain_spec() {
     echo "Generating chain specification"
-    "$parachain_bin" build-spec --chain "$parachain_runtime" --disable-default-bootnode > "$output_dir/spec.json"  
-    
+    "$parachain_bin" build-spec --chain "$parachain_runtime" --disable-default-bootnode > "$output_dir/spec.json"
+
     initial_beacon_block=""
     while [ -z "$initial_beacon_block" ] || [ "$initial_beacon_block" == "0x0000000000000000000000000000000000000000000000000000000000000000" ]
     do
@@ -18,26 +18,34 @@ generate_chain_spec() {
 
     echo "Found initial finalized block: $initial_beacon_block"
     bootstrap_header=""
+    slot=0
     while [ -z "$bootstrap_header" ] || [ "$bootstrap_header" == "" ] || [ "$bootstrap_header" == "null" ]
     do
         echo "Waiting for beacon to get initial bootstrap..."
-        bootstrap_header=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" \
-            | jq -r '.data.header')
+        bootstrap_data=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block")
+        bootstrap_header=$(jq -r '.data.header' <<< "$bootstrap_data")
+        slot=$(jq -r '.data.header.slot' <<< "$bootstrap_data")
         sleep 3
     done
 
-    curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" \
-        | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
+    curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block" > "$output_dir/initialBeaconSync_tmp.json"
 
-    validatorsRoot=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/genesis" \
-            | jq -r '.data.genesis_validators_root')
+    genesisData=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/genesis")
+    validatorsRoot=$(jq -r '.data.genesis_validators_root' <<< "$genesisData")
+    genesisTime=$(jq -r '.data.genesis_time' <<< "$genesisData")
+
+    importTime="$((genesisTime + (seconds_per_slot * slot)))"
 
     jq \
         --arg validatorsRoot "$validatorsRoot" \
+        --arg importTime "$importTime" \
         ' .validators_root = $validatorsRoot
+        | .import_time = $importTime
         ' \
         "$output_dir/initialBeaconSync_tmp.json" \
-        > "$output_dir/initialBeaconSync.json"
+        > "$output_dir/initialBeaconSync_tmp2.json"
+
+    cat "$output_dir/initialBeaconSync_tmp2.json" | node scripts/helpers/transformInitialBeaconSync.js | sponge "$output_dir/initialBeaconSync.json"
 
     cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
 
