@@ -34,7 +34,7 @@ generate_chain_spec() {
     validatorsRoot=$(jq -r '.data.genesis_validators_root' <<< "$genesisData")
     genesisTime=$(jq -r '.data.genesis_time' <<< "$genesisData")
 
-    importTime="$((genesisTime + (slots_per_epoch * slot)))"
+    importTime="$((genesisTime + (seconds_per_slot * slot)))"
 
     jq \
         --arg validatorsRoot "$validatorsRoot" \
