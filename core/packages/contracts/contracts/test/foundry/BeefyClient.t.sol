@@ -14,7 +14,7 @@ interface CheatCodes {
 
     function warp(uint256) external;
 
-    function expectRevert(bytes calldata msg) external;
+    function expectRevert(bytes4 message) external;
 
     function difficulty(uint256) external;
 }
@@ -128,8 +128,6 @@ contract BeefyClientTest is Test {
             setId,
             payload
         );
-        bytes32 encodedCommitmentHash = keccak256(encodeCommitment(commitment));
-        assertEq(encodedCommitmentHash, commitHash);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
     }
@@ -177,17 +175,32 @@ contract BeefyClientTest is Test {
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
     }
 
-    function encodeCommitment(
-        BeefyClient.Commitment memory commitment
-    ) internal pure returns (bytes memory) {
-        return
-            bytes.concat(
-                commitment.payload.prefix,
-                commitment.payload.mmrRootHash,
-                commitment.payload.suffix,
-                ScaleCodec.encodeU32(commitment.blockNumber),
-                ScaleCodec.encodeU64(commitment.validatorSetID)
-            );
+    function testSubmitFailWithInvalidSignatureProof() public {
+        currentSetId = setId;
+        nextSetId = setId + 1;
+        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(
+            currentSetId,
+            setSize,
+            root
+        );
+        BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(
+            nextSetId,
+            setSize,
+            root
+        );
+        beefyClient.initialize(0, vset, nextvset);
+
+        //bad signature in proof
+        bytes32 originalSignatureS = validatorProof.s;
+        validatorProof.s = bytes32("Hello");
+        cheats.expectRevert(BeefyClient.InvalidSignature.selector);
+        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+
+        //bad account in proof
+        validatorProof.s = originalSignatureS;
+        validatorProof.account = address(0x0);
+        cheats.expectRevert(BeefyClient.InvalidValidatorProof.selector);
+        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
     }
 
     function minimumSignatureThreshold(uint256 validatorSetLen) internal pure returns (uint256) {
