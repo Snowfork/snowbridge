@@ -337,7 +337,7 @@ mod beacon_tests {
 
 		assert_err!(
 			sync_committee_bits,
-			MerkleizationError::ExpectedFurtherInput { provided: provided, expected: expected }
+			MerkleizationError::ExpectedFurtherInput { provided, expected }
 		);
 	}
 
@@ -362,7 +362,7 @@ mod beacon_tests {
 
 		assert_err!(
 			sync_committee_bits,
-			MerkleizationError::AdditionalInput { provided: provided, expected: expected }
+			MerkleizationError::AdditionalInput { provided, expected }
 		);
 	}
 
@@ -675,11 +675,15 @@ mod beacon_tests {
 }
 #[cfg(feature = "minimal")]
 mod beacon_minimal_tests {
-	use std::time::{SystemTime, UNIX_EPOCH};
-	use crate::{merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody, Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState, LatestFinalizedHeaderState, SyncCommittees, ValidatorsRoot, config};
+	use crate::{
+		config, merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
+		Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
+		LatestFinalizedHeaderState, SyncCommittees, ValidatorsRoot,
+	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
 	use sp_core::H256;
+	use std::time::{SystemTime, UNIX_EPOCH};
 
 	#[test]
 	fn it_syncs_from_an_initial_checkpoint() {
@@ -747,10 +751,10 @@ mod beacon_minimal_tests {
 
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 			mock_minimal::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
-			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState{
+			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: Default::default(),
-				import_time: import_time,
-				beacon_slot: slot
+				import_time,
+				beacon_slot: slot,
 			});
 			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
 			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
@@ -874,7 +878,11 @@ mod beacon_minimal_tests {
 
 #[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
-	use crate::{merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState, LatestFinalizedHeaderState, SyncCommittees, ValidatorsRoot, config, Error};
+	use crate::{
+		config, merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
+		Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
+		LatestFinalizedHeaderState, SyncCommittees, ValidatorsRoot,
+	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
 	use sp_core::H256;
@@ -941,10 +949,10 @@ mod beacon_mainnet_tests {
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
 			mock_mainnet::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
 			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
-			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState{
+			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
 				beacon_block_root: Default::default(),
-				import_time: import_time,
-				beacon_slot: slot
+				import_time,
+				beacon_slot: slot,
 			});
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
 
@@ -979,17 +987,20 @@ mod beacon_mainnet_tests {
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
 			mock_mainnet::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
 			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
-			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState{
+			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
 				beacon_block_root: Default::default(),
-				import_time: import_time,
-				beacon_slot: slot
+				import_time,
+				beacon_slot: slot,
 			});
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
 
-			assert_err!(mock_mainnet::EthereumBeaconClient::import_finalized_header(
-				mock_mainnet::RuntimeOrigin::signed(1),
-				update.clone()
-			), Error::<mock_mainnet::Test>::BridgeBlocked);
+			assert_err!(
+				mock_mainnet::EthereumBeaconClient::import_finalized_header(
+					mock_mainnet::RuntimeOrigin::signed(1),
+					update.clone()
+				),
+				Error::<mock_mainnet::Test>::BridgeBlocked
+			);
 		});
 	}
 
