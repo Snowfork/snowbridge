@@ -201,7 +201,7 @@ func (s *Scanner) findTasksImpl(
 			continue
 		}
 
-		basicChannelProofs := make([]BundleProof, 0, len(basicChannelAccountNonces))
+		basicChannelProofs := make([]MessageProof, 0, len(basicChannelAccountNonces))
 
 		events, err := s.eventQueryClient.QueryEvent(ctx, s.config.Parachain.Endpoint, blockHash)
 		if err != nil {
@@ -223,15 +223,15 @@ func (s *Scanner) findTasksImpl(
 					return nil, fmt.Errorf("basic channel commitment hash in digest item does not match the one in the Committed event")
 				}
 
-				// For basic channel commit hash is the merkle root calculated from bundles
+				// For basic channel commit hash is the merkle root calculated from messages
 				// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/basic-channel/src/outbound/mod.rs#L275-L277
-				// to verify it we fetch bundle proof from parachain
+				// to verify it we fetch message proof from parachain
 				result, err := scanForBasicChannelProofs(
 					s.paraConn.API(),
 					digestItemHash,
 					basicChannelAccountNonces,
 					basicChannelScanAccounts,
-					events.Bundles,
+					events.Messages,
 				)
 				if err != nil {
 					return nil, err
@@ -361,61 +361,61 @@ func scanForBasicChannelProofs(
 	digestItemHash types.H256,
 	basicChannelAccountNonces map[types.AccountID]uint64,
 	basicChannelScanAccounts map[types.AccountID]bool,
-	bundles []BasicOutboundChannelMessageBundle,
+	messages []BasicOutboundChannelMessage,
 ) (*struct {
-	proofs   []BundleProof
+	proofs   []MessageProof
 	scanDone bool
 }, error) {
 	var scanBasicChannelDone bool
-	basicChannelProofs := make([]BundleProof, 0, len(basicChannelAccountNonces))
+	basicChannelProofs := make([]MessageProof, 0, len(basicChannelAccountNonces))
 
-	for bundleIndex, bundle := range bundles {
-		_, shouldCheckAccount := basicChannelScanAccounts[bundle.Account]
+	for messageIndex, message := range messages {
+		_, shouldCheckAccount := basicChannelScanAccounts[message.SourceID]
 		if !shouldCheckAccount {
 			continue
 		}
 
-		nonceToFind := basicChannelAccountNonces[bundle.Account]
-		bundleNonceBigInt := big.Int(bundle.Nonce)
-		bundleNonce := bundleNonceBigInt.Uint64()
+		nonceToFind := basicChannelAccountNonces[message.SourceID]
+		messageNonceBigInt := big.Int(message.Nonce)
+		messageNonce := messageNonceBigInt.Uint64()
 
 		// This case will be hit if basicNonceToFind has not been committed yet.
 		// Channels emit commitments every N blocks.
-		if bundleNonce < nonceToFind {
+		if messageNonce < nonceToFind {
 			log.Debugf(
-				"Halting scan for account '%v'. Messages not committed yet on basic channel",
-				types.HexEncodeToString(bundle.Account[:]),
+				"Halting scan for source id '%v'. Messages not committed yet on basic channel",
+				types.HexEncodeToString(message.SourceID[:]),
 			)
-			scanBasicChannelDone = markAccountScanDone(basicChannelScanAccounts, bundle.Account)
+			scanBasicChannelDone = markAccountScanDone(basicChannelScanAccounts, message.SourceID)
 			continue
 		}
 
-		basicChannelBundleProof, err := fetchBundleProof(api, digestItemHash, bundleIndex, bundle)
+		basicChannelMessageProof, err := fetchMessageProof(api, digestItemHash, messageIndex, message)
 		if err != nil {
 			return nil, err
 		}
-		// check merkle root calculated from bundle proof is same as the digest hash from header
-		if basicChannelBundleProof.Proof.Root != digestItemHash {
+		// check merkle root calculated from message proof is same as the digest hash from header
+		if basicChannelMessageProof.Proof.Root != digestItemHash {
 			log.Warnf(
-				"Halting scan for account '%v'. Basic channel proof root doesn't match digest item's commitment hash",
-				types.HexEncodeToString(bundle.Account[:]),
+				"Halting scan for source id '%v'. Basic channel proof root doesn't match digest item's commitment hash",
+				types.HexEncodeToString(message.SourceID[:]),
 			)
-			scanBasicChannelDone = markAccountScanDone(basicChannelScanAccounts, bundle.Account)
+			scanBasicChannelDone = markAccountScanDone(basicChannelScanAccounts, message.SourceID)
 			continue
 		}
 
-		if bundleNonce > nonceToFind {
+		if messageNonce > nonceToFind {
 			// Collect these commitments
-			basicChannelProofs = append(basicChannelProofs, basicChannelBundleProof)
-		} else if bundleNonce == nonceToFind {
+			basicChannelProofs = append(basicChannelProofs, basicChannelMessageProof)
+		} else if messageNonce == nonceToFind {
 			// Collect this commitment and terminate scan
-			basicChannelProofs = append(basicChannelProofs, basicChannelBundleProof)
-			scanBasicChannelDone = markAccountScanDone(basicChannelScanAccounts, bundle.Account)
+			basicChannelProofs = append(basicChannelProofs, basicChannelMessageProof)
+			scanBasicChannelDone = markAccountScanDone(basicChannelScanAccounts, message.SourceID)
 		}
 	}
 
 	return &struct {
-		proofs   []BundleProof
+		proofs   []MessageProof
 		scanDone bool
 	}{
 		proofs:   basicChannelProofs,
@@ -428,35 +428,35 @@ func markAccountScanDone(scanBasicChannelAccounts map[types.AccountID]bool, acco
 	return len(scanBasicChannelAccounts) == 0
 }
 
-func fetchBundleProof(
+func fetchMessageProof(
 	api *gsrpc.SubstrateAPI,
 	commitmentHash types.H256,
-	bundleIndex int,
-	bundle BasicOutboundChannelMessageBundle,
-) (BundleProof, error) {
+	messageIndex int,
+	message BasicOutboundChannelMessage,
+) (MessageProof, error) {
 	var proofHex string
 	var rawProof RawMerkleProof
-	var bundleProof BundleProof
+	var messageProof MessageProof
 
 	commitmentHashHex, err := types.EncodeToHexString(commitmentHash)
 	if err != nil {
-		return bundleProof, fmt.Errorf("encode commitmentHash(%v): %w", commitmentHash, err)
+		return messageProof, fmt.Errorf("encode commitmentHash(%v): %w", commitmentHash, err)
 	}
 
-	err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", commitmentHashHex, bundleIndex)
+	err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", commitmentHashHex, messageIndex)
 	if err != nil {
-		return bundleProof, fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof(%v, %v): %w", commitmentHash, bundleIndex, err)
+		return messageProof, fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof(%v, %v): %w", commitmentHash, messageIndex, err)
 	}
 
 	err = types.DecodeFromHexString(proofHex, &rawProof)
 	if err != nil {
-		return bundleProof, fmt.Errorf("decode merkle proof: %w", err)
+		return messageProof, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
 	proof, err := NewMerkleProof(rawProof)
 	if err != nil {
-		return bundleProof, fmt.Errorf("decode merkle proof: %w", err)
+		return messageProof, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
-	return BundleProof{Bundle: bundle, Proof: proof}, nil
+	return MessageProof{Message: message, Proof: proof}, nil
 }

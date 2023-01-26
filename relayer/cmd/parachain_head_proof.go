@@ -46,7 +46,7 @@ func parachainHeadProofCmd() *cobra.Command {
 	cmd.Flags().Uint64(
 		"parachain-block",
 		0,
-		"The parachain block you are trying to prove. i.e. The block containing the message bundle.",
+		"The parachain block you are trying to prove. i.e. The block containing the message.",
 	)
 	cmd.MarkFlagRequired("parachain-block")
 	return cmd

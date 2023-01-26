@@ -44,12 +44,12 @@ func TestQueryEvents(t *testing.T) {
 	}
 
 	foo, _ := types.NewHashFromHexString("0x6456d3a2f0c7526d63ad50e79dc8a462931a58ffd57270c3c8aabbcdbd78e76b")
-	events, err := client.QueryEvent(context.Background(), "", foo)
+	event, err := client.QueryEvent(context.Background(), "", foo)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.NotNil(t, events)
-	assert.Equal(t, events.Bundles[0].Nonce.Int64(), int64(1))
-	assert.Equal(t, len(events.Bundles[0].Messages), 1)
+	assert.NotNil(t, event)
+	assert.Equal(t, event.Messages[0].Nonce.Int64(), int64(1))
+	assert.Equal(t, len(event.Messages), 1)
 }
