@@ -20,8 +20,8 @@ pub enum MerkleizationError {
 	HashTreeRootError,
 	HashTreeRootInvalidBytes,
 	InvalidLength,
-	InputTooShort,
-	ExtraInput,
+	ExpectedFurtherInput { provided: u64, expected: u64 },
+	AdditionalInput { provided: u64, expected: u64 },
 	InvalidInput,
 	DeserializeError,
 	ListError,
@@ -483,10 +483,19 @@ pub fn get_sync_committee_bits<SyncCommitteeBitsSize: Get<u32>>(
 	bits_hex: BoundedVec<u8, SyncCommitteeBitsSize>,
 ) -> Result<Vec<u8>, MerkleizationError> {
 	let bitv = Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(&bits_hex).map_err(
+		//|_| MerkleizationError::InvalidInput
 		|e| -> MerkleizationError {
 			match e {
-				DeserializeError::InputTooShort => MerkleizationError::InputTooShort,
-				DeserializeError::ExtraInput => MerkleizationError::ExtraInput,
+				DeserializeError::ExpectedFurtherInput { provided, expected } =>
+					MerkleizationError::ExpectedFurtherInput {
+						provided: provided as u64,
+						expected: expected as u64,
+					},
+				DeserializeError::AdditionalInput { provided, expected } =>
+					MerkleizationError::AdditionalInput {
+						provided: provided as u64,
+						expected: expected as u64,
+					},
 				_ => MerkleizationError::InvalidInput,
 			}
 		},

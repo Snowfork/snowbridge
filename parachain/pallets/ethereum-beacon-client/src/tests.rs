@@ -327,7 +327,10 @@ mod beacon_tests {
 			mock_minimal::MaxSyncCommitteeSize,
 		>(bits.try_into().expect("invalid sync committee bits"));
 
-		assert_err!(sync_committee_bits, MerkleizationError::InputTooShort);
+		assert_err!(
+			sync_committee_bits,
+			MerkleizationError::ExpectedFurtherInput { provided: 47, expected: 64 }
+		);
 	}
 
 	#[test]
@@ -341,7 +344,10 @@ mod beacon_tests {
 			mock_minimal::MaxSyncCommitteeSize,
 		>(bits.try_into().expect("invalid sync committee bits"));
 
-		assert_err!(sync_committee_bits, MerkleizationError::ExtraInput);
+		assert_err!(
+			sync_committee_bits,
+			MerkleizationError::AdditionalInput { provided: 130, expected: 64 }
+		);
 	}
 
 	#[test]
