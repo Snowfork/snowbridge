@@ -677,7 +677,7 @@ packages:
       it-pb-stream: 2.0.2
       it-pipe: 2.0.5
       it-stream-types: 1.0.4
-      protons-runtime: 4.0.1
+      protons-runtime: 4.0.1_uint8arraylist@2.4.2
       uint8arraylist: 2.4.2
       uint8arrays: 4.0.2
     transitivePeerDependencies:
@@ -1650,7 +1650,7 @@ packages:
       it-map: 1.0.6
       it-pipe: 2.0.5
       multiformats: 10.0.2
-      protons-runtime: 4.0.1
+      protons-runtime: 4.0.1_uint8arraylist@2.4.2
       uint8-varint: 1.0.4
       uint8arraylist: 2.4.2
       uint8arrays: 4.0.2
@@ -11604,6 +11604,16 @@ packages:
   /protons-runtime/4.0.1:
     resolution: {integrity: sha512-SPeV+8TzJAp5UJYPV7vJkLRi08CP0DksxpKK60rcNaZSPkMBQwc0jQrmkHqwc5P0cYbZzKsdYrUBwRrDLrzTfQ==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
+    dependencies:
+      protobufjs: 7.1.2
+      uint8arraylist: 2.4.2
+    dev: true
+
+  /protons-runtime/4.0.1_uint8arraylist@2.4.2:
+    resolution: {integrity: sha512-SPeV+8TzJAp5UJYPV7vJkLRi08CP0DksxpKK60rcNaZSPkMBQwc0jQrmkHqwc5P0cYbZzKsdYrUBwRrDLrzTfQ==}
+    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
+    peerDependencies:
+      uint8arraylist: ^2.3.2
     dependencies:
       protobufjs: 7.1.2
       uint8arraylist: 2.4.2

@@ -12,12 +12,14 @@ import "./tasks/contractAddress"
 
 import "tsconfig-paths/register"
 
+import { accounts } from "./test/wallets"
+
 import type { HardhatUserConfig } from "hardhat/config"
 import { ethers } from "ethers"
 import {
     TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS,
     TASK_TEST_GET_TEST_FILES,
-  } from "hardhat/builtin-tasks/task-names";
+} from "hardhat/builtin-tasks/task-names"
 
 let INFURA_KEY = process.env.INFURA_PROJECT_ID
 let ROPSTEN_KEY =
@@ -39,11 +41,7 @@ subtask(TASK_TEST_GET_TEST_FILES).setAction(async (_, __, runSuper) => {
 const config: HardhatUserConfig = {
     networks: {
         hardhat: {
-            accounts: {
-                mnemonic:
-                    "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
-                accountsBalance: "350000000000000000000000000000000000000",
-            },
+            accounts,
             chainId: 15,
             loggingEnabled: true,
             mining: {

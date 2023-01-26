@@ -45,11 +45,22 @@ class ValidatorSet {
     length: number
     proofs: string[][]
 
-    constructor(id: number, length: number) {
-        let wallets: Wallet[] = []
+    constructor(id: number, length: number, privateKeys?: string[]) {
+        let wallets: Wallet[] = [],
+            wallet: Wallet,
+            randomSet = true
+        if (privateKeys && privateKeys.length) {
+            length = privateKeys.length
+            randomSet = false
+        }
         for (let i = 0; i < length; i++) {
-            let entropy = entropyToMnemonic(keccak256(Buffer.from(`${i}`)))
-            let wallet = ethers.Wallet.fromMnemonic(entropy)
+            if (randomSet) {
+                wallet = ethers.Wallet.fromMnemonic(
+                    entropyToMnemonic(keccak256(Buffer.from(`${i}`)))
+                )
+            } else {
+                wallet = new ethers.Wallet(privateKeys![i])
+            }
             wallets.push(wallet)
         }
 

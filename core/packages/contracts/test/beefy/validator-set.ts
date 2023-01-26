@@ -2,25 +2,54 @@
 
 import { ValidatorSet, createRandomSubset, readSetBits } from "../helpers"
 import { ethers } from "ethers"
+import fs from "fs"
 import type { BeefyClient } from "../../src/contracts/BeefyClient"
+import { accounts } from "../wallets"
 
 const encoder = new ethers.utils.AbiCoder()
 const command = process.argv[2]
-const setId = parseInt(process.argv[3])
-const setSize = parseInt(process.argv[4])
-const setIndex = parseInt(process.argv[5])
-const commitHash = process.argv[6]
-const subsetSize = setSize - Math.floor((setSize - 1) / 3)
-const subset = createRandomSubset(setSize, subsetSize)
-if (command == "RandomSubset") {
-    process.stdout.write(`${encoder.encode(["uint256[]"], [subset])}`)
-} else if (command == "FinalProof") {
-    const validatorSet = new ValidatorSet(setId, setSize)
-    const validatorProof = validatorSet.createSignatureProof(subset[setIndex], commitHash)
-    const finalBitfieldLength = parseInt(process.argv[7])
+const fixtureData = JSON.parse(fs.readFileSync("./test/beefy/data/beefy-commitment.json", "utf8"))
+const validatorSetID = fixtureData.params.id
+const validatorSetSize = process.env["FixedSet"] == "true" ? accounts.length : 300
+const commitHash = fixtureData.commitmentHash
+const blockNumber = fixtureData.params.commitment.blockNumber
+const mmrLeafProofs = fixtureData.params.leafProof
+const payload: BeefyClient.PayloadStruct = fixtureData.params.commitment.payload
+const mmrLeaf: BeefyClient.MMRLeafStruct = fixtureData.params.leaf
+
+const subsetSize = validatorSetSize - Math.floor((validatorSetSize - 1) / 3)
+const subset = createRandomSubset(validatorSetSize, subsetSize)
+let validatorSet: ValidatorSet
+
+if (command == "GenerateInitialSet") {
+    process.stdout.write(
+        `${encoder.encode(
+            [
+                "uint32",
+                "uint32",
+                "uint32",
+                "uint256[]",
+                "bytes32",
+                "tuple(bytes32 mmrRootHash,bytes prefix,bytes suffix)",
+            ],
+            [blockNumber, validatorSetID, validatorSetSize, subset, commitHash, payload]
+        )}`
+    )
+} else if (command == "GenerateProofs") {
+    if (process.env["FixedSet"] == "true") {
+        validatorSet = new ValidatorSet(
+            validatorSetID,
+            validatorSetSize,
+            accounts.map((account) => account.privateKey)
+        )
+    } else {
+        validatorSet = new ValidatorSet(validatorSetID, validatorSetSize)
+    }
+    const validatorProof = validatorSet.createSignatureProof(subset[0], commitHash)
+    const finalBitfieldLength = parseInt(process.argv[3])
     let finalBitfield: any = []
     for (let i = 0; i < finalBitfieldLength; i++) {
-        finalBitfield.push(ethers.BigNumber.from(process.argv[8 + i]))
+        finalBitfield.push(ethers.BigNumber.from(process.argv[4 + i]))
     }
     const validatorFinalProofs: BeefyClient.ValidatorProofStruct[] = readSetBits(finalBitfield).map(
         (i) => validatorSet.createSignatureProof(i, commitHash)
@@ -31,8 +60,10 @@ if (command == "RandomSubset") {
                 "bytes32",
                 "tuple(uint8 v, bytes32 r, bytes32 s, uint256 index,address account,bytes32[] proof)",
                 "tuple(uint8 v, bytes32 r, bytes32 s, uint256 index,address account,bytes32[] proof)[]",
+                "bytes32[]",
+                "tuple(uint8 version,uint32 parentNumber,bytes32 parentHash,uint64 nextAuthoritySetID,uint32 nextAuthoritySetLen,bytes32 nextAuthoritySetRoot,bytes32 parachainHeadsRoot)",
             ],
-            [validatorSet.root, validatorProof, validatorFinalProofs]
+            [validatorSet.root, validatorProof, validatorFinalProofs, mmrLeafProofs, mmrLeaf]
         )}`
     )
 }
