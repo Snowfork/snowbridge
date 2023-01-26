@@ -37,42 +37,9 @@ address_for()
     jq -r ".contracts.${1}.address" "$output_dir/contracts.json"
 }
 
-kill_trap() {
-    trap - SIGTERM
-    pkill -P $$
-}
-
 kill_all() {
-    kill_trap
-    kill_chains
-    kill_relayer
-}
-
-kill_chains() {
-    echo "Killing chains"
-    kill_polkadot
-    kill_ethereum
-}
-
-kill_ethereum() {
-    pkill -9 -f lodestar
-    pkill -9 geth
-}
-
-kill_polkadot() {
-    pkill -9 polkadot
-    pkill -9 snowbridge-test-node
-    pkill -9 snowbridge
-    pkill -9 -f polkadot-launch
-    pkill -9 zombienet
-}
-
-kill_relayer() {
-    echo "Killing relayer"
-    kill_trap
-    sleep 3
-    pkill -9 snowbridge-relay
-    sleep 1
+    trap - SIGTERM
+    kill $(jobs -p)
 }
 
 cleanup() {
@@ -115,10 +82,6 @@ check_tool() {
     fi
     if ! [ -x "$(command -v pnpm)" ]; then
         echo 'Error: pnpm is not installed.'
-        exit
-    fi
-    if ! [ -x "$(command -v zombienet)" ]; then
-        echo 'Error: zombienet is not installed.'
         exit
     fi
 }

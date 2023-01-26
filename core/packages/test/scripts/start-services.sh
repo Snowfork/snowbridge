@@ -8,7 +8,7 @@ source scripts/build-binary.sh
 from_start_services=true
 
 trap kill_all SIGINT SIGTERM EXIT
-kill_all && cleanup
+cleanup
 # 0. check required tools
 echo "Check building tools"
 check_tool

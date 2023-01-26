@@ -2,6 +2,8 @@
 
 pkgs.mkShell {
     buildInputs = with pkgs; [
+        git
+        curl
         jq
         moreutils
         direnv

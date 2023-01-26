@@ -4,24 +4,19 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 ## Requirements
 
-* Ubuntu 20.04 or later. MacOS may work, but it's not currently a supported configuration.
-* Development environment for Rust and Substrate. See parachain [requirements](../../../parachain/README.md#requirements).
-* Development environment for the relay services. See setup [instructions](../../../relayer/README.md#Development).
-* `jq` - https://stedolan.github.io/jq/download/
-* geth - https://geth.ethereum.org/docs/install-and-build/installing-geth `go install github.com/ethereum/go-ethereum/cmd/geth@v1.10.23`
-* g++ (required for lodestar) is available in the `build-essential` package: `apt install build-essential`
-* sponge - Is available in the `moreutils` package.
+The E2E stack can be run on any system that supports the [Nix](https://nixos.org/explore.html) package manager. This includes Linux, MacOS, and Windows (WSL2).
 
-  ```bash
-  apt install moreutils
-  ```
-
-* direnv - https://direnv.net/
-
-* zombienet - Just download binary from [latest release](https://github.com/paritytech/zombienet/releases/), rename to `zombienet` and copy to $PATH
-
+Make sure to [download](https://nixos.org/download.html) and install the nix package manager.
 
 ## Setup
+
+### Activate nix developer shell
+
+In the root directory of our repository, where `shell.nix` is located, activate a developer shell:
+
+```
+nix-shell
+```
 
 ### Install NPM dependencies
 
