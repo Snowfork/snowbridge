@@ -71,7 +71,7 @@ pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
                 hex!("0d0607530d6ffd3dfffafee157c34db1430cd7a1f29dea854769cf5c45aed99d").into()
             ].try_into().expect("too many branch proof items"),
             validators_root: hex!("270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69").into(),
-            import_time: time_now + 97200,
+            import_time: time_now + 97200, // now + 27 hour sync committee period
         };
 	}
 	return InitialSync{
