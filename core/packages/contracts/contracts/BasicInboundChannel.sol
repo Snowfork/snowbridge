@@ -5,61 +5,45 @@ import "./ParachainClient.sol";
 import "./utils/MerkleProof.sol";
 
 contract BasicInboundChannel {
-    uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
-    uint256 public constant GAS_BUFFER = 60000;
-
     mapping(bytes32 => uint64) public nonce;
 
     ParachainClient public parachainClient;
 
-    struct MessageBundle {
-        bytes32 account;
-        uint64 nonce;
-        Message[] messages;
-    }
-
     struct Message {
-        uint64 id;
-        address target;
+        bytes32 sourceId;
+        uint64 nonce;
         bytes payload;
     }
-
-    event MessageDispatched(uint64 id, bool result);
 
     constructor(ParachainClient _parachainClient) {
         parachainClient = _parachainClient;
     }
 
     function submit(
-        MessageBundle calldata bundle,
+        Message calldata message,
         bytes32[] calldata leafProof,
         bool[] calldata hashSides,
-        bytes calldata proof
+        bytes calldata parachainHeaderProof
     ) external {
-        bytes32 leafHash = keccak256(abi.encode(bundle));
-        bytes32 commitment = MerkleProof.computeRootFromProofAndSide(
-            leafHash,
-            leafProof,
-            hashSides
-        );
-
-        require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
-        require(bundle.nonce == nonce[bundle.account] + 1, "Invalid nonce");
+        bytes32 commitment = MerkleProof.processProof(message, leafProof, hashSides);
         require(
-            gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
-            "insufficient gas"
+            parachainClient.verifyCommitment(commitment, parachainHeaderProof),
+            "Invalid proof"
         );
-        nonce[bundle.account]++;
-        dispatch(bundle);
+        require(message.nonce == nonce[message.sourceId] + 1, "Invalid nonce");
+        // TODO: should we check the remaining gas?
+        nonce[message.sourceId]++;
+        dispatch(message);
+        // TODO: should we emit a MessageDispatched event?
     }
 
-    function dispatch(MessageBundle calldata bundle) internal {
-        for (uint256 i = 0; i < bundle.messages.length; i++) {
-            Message calldata message = bundle.messages[i];
-            (bool success, ) = message.target.call{ value: 0, gas: MAX_GAS_PER_MESSAGE }(
-                message.payload
-            );
-            emit MessageDispatched(message.id, success);
-        }
+    // solhint-disable no-empty-blocks
+    function dispatch(Message calldata messages) internal {
+        // TODO: dispatch to XCM interpreter
+    }
+
+    // solhint-disable no-empty-blocks
+    function dispatchBatch(Message[] calldata messages) internal {
+        // TODO: dispatch to XCM interpreter
     }
 }
