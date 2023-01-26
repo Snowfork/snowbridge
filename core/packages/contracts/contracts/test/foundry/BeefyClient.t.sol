@@ -48,10 +48,10 @@ contract BeefyClientTest is Test {
 
         beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
 
-        // allocate input command array
+        // Allocate for input variables
         string[] memory inputs = new string[](10);
-        inputs[0] = "test/beefy/validator-set.ts";
-        // type of command
+        inputs[0] = "test/ffiWrapper.ts";
+        // Always add type of command as first arguments
         inputs[1] = "GenerateInitialSet";
         // generate initial fixture data with ffi
         (blockNumber, setId, setSize, bitSetArray, commitHash, payload) = abi.decode(
@@ -62,7 +62,7 @@ contract BeefyClientTest is Test {
 
         // To avoid another round of ffi in multiple tests
         // except for the initial merkle root and proof for validators
-        // precalculate finalBitfield and finalValidatorProofs
+        // we also precalculate finalValidatorProofs and cached here
         finalBitfield = Bitfield.randomNBitsWithPriorCheck(
             difficulty,
             bitfield,
@@ -71,7 +71,7 @@ contract BeefyClientTest is Test {
         );
 
         inputs[1] = "GenerateProofs";
-        //length of finalBitField
+        // First add length of finalBitField and then each item as input
         inputs[2] = Strings.toString(finalBitfield.length);
         for (uint i = 0; i < finalBitfield.length; i++) {
             inputs[i + 3] = Strings.toString(finalBitfield[i]);
@@ -87,7 +87,7 @@ contract BeefyClientTest is Test {
                 BeefyClient.MMRLeaf
             )
         );
-        // cache to storage to reuse later in submitFinal
+        // Cache finalValidatorProofs to storage in order to reuse in submitFinal later
         for (uint i = 0; i < _proofs.length; i++) {
             finalValidatorProofs.push(_proofs[i]);
         }
@@ -165,15 +165,6 @@ contract BeefyClientTest is Test {
             setId,
             payload
         );
-        // BeefyClient.MMRLeaf memory mmrLeaf = BeefyClient.MMRLeaf(
-        //     0,
-        //     370,
-        //     0x2a74fc1410a321daefc1ae17adc69048db56f4d37660e7af042289480de59897,
-        //     38,
-        //     3,
-        //     0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365,
-        //     0xc992465982e7733f5f91c60f6c7c5d4433298c10b348487081f2356d80a0133f
-        // );
         uint256 leafProofOrder = 0;
         beefyClient.submitFinalWithHandover(
             commitment,

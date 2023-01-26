@@ -1,10 +1,10 @@
 #!/usr/bin/env ts-node
 
-import { ValidatorSet, createRandomSubset, readSetBits } from "../helpers"
+import { ValidatorSet, createRandomSubset, readSetBits } from "./helpers"
 import { ethers } from "ethers"
 import fs from "fs"
-import type { BeefyClient } from "../../src/contracts/BeefyClient"
-import { accounts } from "../wallets"
+import type { BeefyClient } from "../src/contracts/BeefyClient"
+import { accounts } from "./wallets"
 
 const encoder = new ethers.utils.AbiCoder()
 const command = process.argv[2]
