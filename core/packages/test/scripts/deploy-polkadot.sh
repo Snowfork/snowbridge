@@ -92,5 +92,5 @@ zombienet_launch() {
 }
 
 deploy_polkadot() {
-    polkadot_launch
+    zombienet_launch
 }
