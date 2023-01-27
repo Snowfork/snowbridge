@@ -221,7 +221,6 @@ pub struct FinalizedHeaderUpdate<
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub signature_slot: u64,
 	pub block_roots: BoundedVec<H256, SlotsPerHistoricalRoot>,
-	pub block_roots_hash: H256,
 	pub block_roots_proof: BoundedVec<H256, ProofSize>,
 }
 

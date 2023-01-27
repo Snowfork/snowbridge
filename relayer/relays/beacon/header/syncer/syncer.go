@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"math/big"
 	"os"
 	"strconv"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 )
 

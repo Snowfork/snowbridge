@@ -146,6 +146,7 @@ pub mod pallet {
 		HeaderNotFinalized,
 		MissingHeader,
 		InvalidProof,
+		InvalidBlockRootAtSlot,
 		DecodeFailed,
 		BlockBodyHashTreeRootFailed,
 		BlockRootsHashTreeRootFailed,
@@ -524,23 +525,6 @@ pub mod pallet {
 						.map_err(|_| Error::<T>::BlockRootsHashTreeRootFailed)?
 						.into();
 
-				log::info!(
-					target: "ethereum-beacon-client",
-					"💫 block_roots: {:?}", update.block_roots
-				);
-				log::info!(
-					target: "ethereum-beacon-client",
-					"💫 block_root_hash: {:?}", block_root_hash
-				);
-				log::info!(
-					target: "ethereum-beacon-client",
-					"💫 expected block_root_hash: {:?}", update.block_roots_hash
-				);
-				log::info!(
-					target: "ethereum-beacon-client",
-					"💫 expected state root: {:?}", update.finalized_header.state_root
-				);
-
 				ensure!(
 					Self::is_valid_merkle_branch(
 						block_root_hash,
@@ -554,7 +538,7 @@ pub mod pallet {
 
 				log::info!(target: "ethereum-beacon-client","💫 ancestry proof passed!");
 
-				Self::process_and_store_block_roots(update.block_roots, update.finalized_header.slot);
+				Self::process_and_store_block_roots(update.block_roots, update.finalized_header.slot, block_root);
 			} else {
 				log::info!(target: "ethereum-beacon-client","💫 spec is minimal, not checking ancestry proof");
 			}
@@ -572,11 +556,8 @@ pub mod pallet {
 				let index = n % max_slots;
 				let block_root = block_roots[index as usize];
 
-				log::info!(target: "ethereum-beacon-client","💫 storing slot {} block root {}", n, block_root);
-
 				<BlockRoots<T>>::insert(n, block_root);
 			}
-
 			<BlockRoots<T>>::insert(slot, finalized_header_block_root);
 		}
 
@@ -593,9 +574,6 @@ pub mod pallet {
 				Error::<T>::InvalidExecutionHeaderUpdate
 			);
 
-			let current_period = Self::compute_current_sync_period(update.block.slot);
-			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
-
 			let body_root = merkleization::hash_tree_root_beacon_body(update.block.body.clone())
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 			let body_root_hash: H256 = body_root.into();
@@ -611,7 +589,19 @@ pub mod pallet {
 			let beacon_block_root: H256 =
 				merkleization::hash_tree_root_beacon_header(header.clone())
 					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-					.into(); // TODO check denylist headers
+					.into();
+
+			let stored_block_root = <BlockRoots<T>>::get(update.block.slot);
+			let stored_block_root_null = <BlockRoots<T>>::get(90);
+
+			log::info!(target: "ethereum-beacon-client","💫 stored_block_root_null {}", stored_block_root_null);
+
+			if !config::IS_MINIMAL && stored_block_root != beacon_block_root {
+				return Err(Error::<T>::InvalidBlockRootAtSlot.into())
+			}
+
+			let current_period = Self::compute_current_sync_period(update.block.slot);
+			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
 
 			let validators_root = <ValidatorsRoot<T>>::get();
 			let sync_committee_bits =
