@@ -64,8 +64,8 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMessagePayloadSize: u32 = 128;
-	pub const MaxMessagesPerCommit: u32 = 5;
+	pub const MaxMessagePayloadSize: u32 = 256;
+	pub const MaxMessagesPerCommit: u32 = 20;
 }
 
 impl basic_outbound_channel::Config for Test {
@@ -134,8 +134,12 @@ fn test_submit_exceeds_payload_limit() {
 		let target = H160::zero();
 		let who: &AccountId = &Keyring::Bob.into();
 
-		let max_payload_bytes = MaxMessagePayloadSize::get();
-		let payload: Vec<u8> = (0..).take(max_payload_bytes as usize + 1).collect();
+		let max_payload_bytes = MaxMessagePayloadSize::get() - 1;
+
+		let mut payload: Vec<u8> = (0..).take(max_payload_bytes as usize).collect();
+		// Make payload oversize
+		payload.push(5);
+		payload.push(10);
 
 		assert_noop!(
 			BasicOutboundChannel::submit(who, target, payload.as_slice()),
@@ -152,6 +156,7 @@ fn test_commit_single_user() {
 
 		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
 		run_to_block(2);
+		BasicOutboundChannel::commit(Weight::MAX);
 
 		assert_eq!(<NextId<Test>>::get(), 1);
 		assert_eq!(<Nonce<Test>>::get(who), 1);
@@ -169,6 +174,7 @@ fn test_commit_multi_user() {
 		assert_ok!(BasicOutboundChannel::submit(alice, target, &vec![0, 1, 2]));
 		assert_ok!(BasicOutboundChannel::submit(bob, target, &vec![0, 1, 2]));
 		run_to_block(2);
+		BasicOutboundChannel::commit(Weight::MAX);
 
 		assert_eq!(<NextId<Test>>::get(), 2);
 		assert_eq!(<Nonce<Test>>::get(alice), 1);
