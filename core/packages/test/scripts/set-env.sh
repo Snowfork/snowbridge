@@ -39,7 +39,7 @@ address_for()
 
 kill_all() {
     trap - SIGTERM
-    kill $(jobs -p)
+    kill 0
 }
 
 cleanup() {
