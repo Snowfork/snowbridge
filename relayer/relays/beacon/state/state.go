@@ -12,10 +12,7 @@ type ExecutionHeader struct {
 }
 
 type FinalizedHeader struct {
-	// Used to determine the execution headers that need to be backfilled.
-	Headers []common.Hash
-	// Stores the last attempted finalized header, whether the import succeeded or not.
-	LastAttemptedSyncHash common.Hash
-	// Stores the slot number of the above header
-	LastAttemptedSyncSlot uint64
+	BeaconBlockRoot common.Hash
+	BeaconSlot      uint64
+	ImportTime      uint64
 }

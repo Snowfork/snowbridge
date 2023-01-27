@@ -23,11 +23,6 @@ func New(writer *parachain.ParachainWriter, listener *EthereumListener, addresse
 }
 
 func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
-	lastSyncedIncentivizedBlock, err := m.syncUnprocessedIncentivizedMessages(ctx)
-	if err != nil {
-		return fmt.Errorf("sync unprocessed incentivized messages: %w", err)
-	}
-
 	lastSyncedBasicBlock, err := m.syncUnprocessedBasicMessages(ctx)
 	if err != nil {
 		return fmt.Errorf("sync unprocessed basic messages: %w", err)
@@ -36,8 +31,7 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 	ticker := time.NewTicker(time.Second * 20)
 
 	log.WithFields(log.Fields{
-		"lastSyncedIncentivizedBlock": lastSyncedIncentivizedBlock,
-		"lastSyncedBasicBlock":        lastSyncedBasicBlock,
+		"lastSyncedBasicBlock": lastSyncedBasicBlock,
 	}).Info("last synced execution block numbers")
 
 	eg.Go(func() error {
@@ -49,19 +43,11 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 
 			lastSyncedBlockNumber := executionHeaderState.BlockNumber
 
-			if lastSyncedBlockNumber > 0 && (lastSyncedBlockNumber > lastSyncedIncentivizedBlock || lastSyncedBlockNumber > lastSyncedBasicBlock) {
+			if lastSyncedBlockNumber > 0 && lastSyncedBlockNumber > lastSyncedBasicBlock {
 				log.WithFields(log.Fields{
-					"lastSyncedIncentivizedBlock": lastSyncedIncentivizedBlock,
-					"lastSyncedBasicBlock":        lastSyncedBasicBlock,
-					"blockNumber":                 lastSyncedBlockNumber,
+					"lastSyncedBasicBlock": lastSyncedBasicBlock,
+					"blockNumber":          lastSyncedBlockNumber,
 				}).Info("last synced execution block changed, fetching messages")
-
-				if lastSyncedIncentivizedBlock+1 <= lastSyncedBlockNumber {
-					err = m.syncIncentivized(ctx, eg, lastSyncedIncentivizedBlock+1, lastSyncedBlockNumber)
-					if err != nil {
-						return fmt.Errorf("sync incentivized messages: %w", err)
-					}
-				}
 
 				if lastSyncedBasicBlock+1 <= lastSyncedBlockNumber {
 					err = m.syncBasic(ctx, eg, lastSyncedBasicBlock+1, lastSyncedBlockNumber)
@@ -70,7 +56,6 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 					}
 				}
 
-				lastSyncedIncentivizedBlock = lastSyncedBlockNumber
 				lastSyncedBasicBlock = lastSyncedBlockNumber
 			} else {
 				log.WithFields(log.Fields{
@@ -108,20 +93,6 @@ func (m *Message) syncBasic(ctx context.Context, eg *errgroup.Group, secondLastS
 	return m.writeBasicMessages(ctx, basicPayload)
 }
 
-func (m *Message) syncIncentivized(ctx context.Context, eg *errgroup.Group, secondLastSyncedBlockNumber, lastSyncedBlockNumber uint64) error {
-	log.WithFields(log.Fields{
-		"start": secondLastSyncedBlockNumber,
-		"end":   lastSyncedBlockNumber,
-	}).Info("fetching incentivized channel messages")
-
-	incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, secondLastSyncedBlockNumber, lastSyncedBlockNumber)
-	if err != nil {
-		return err
-	}
-
-	return m.writeIncentivizedMessages(ctx, incentivizedPayload)
-}
-
 func (m *Message) writeBasicMessages(ctx context.Context, payload ParachainPayload) error {
 	log.WithField("count", len(payload.Messages)).Info("writing basic messages")
 
@@ -152,42 +123,6 @@ func (m *Message) checkMessageVerificationResult(msgAddress common.Address, msgN
 
 	log.WithFields(log.Fields{"nonce": msgNonce, "address": msgAddress}).Info("basic message verified successfully")
 	return nil
-}
-
-func (m *Message) writeIncentivizedMessages(ctx context.Context, payload ParachainPayload) error {
-	log.WithField("count", len(payload.Messages)).Info("writing incentivized messages")
-
-	for _, msg := range payload.Messages {
-		err := m.writer.WriteToParachainAndWatch(ctx, msg.Call, msg.Args...)
-		if err != nil {
-			return err
-		}
-
-		lastNonce, err := m.writer.GetLastIncentivizedChannelNonce()
-		if err != nil {
-			return err
-		}
-
-		if lastNonce != msg.Nonce {
-			return fmt.Errorf("last incentivized message verification failed (expected nonce: %d, actual nonce: %d)", msg.Nonce, lastNonce)
-		}
-	}
-
-	return nil
-}
-
-func filterMessagesByLastNonce(messages []*chain.EthereumOutboundMessage, nonce uint64) []*chain.EthereumOutboundMessage {
-	resultMessages := []*chain.EthereumOutboundMessage{}
-
-	for _, incentivizedMessage := range messages {
-		if incentivizedMessage.Nonce <= nonce {
-			continue
-		}
-
-		resultMessages = append(resultMessages, incentivizedMessage)
-	}
-
-	return resultMessages
 }
 
 func filterMessagesByLastNonces(messages []*chain.EthereumOutboundMessage, addressNonceMap map[common.Address]uint64) []*chain.EthereumOutboundMessage {
@@ -249,50 +184,4 @@ func (m *Message) syncUnprocessedBasicMessages(ctx context.Context) (uint64, err
 	}
 
 	return lastVerifiedBlockNumber, err
-}
-
-func (m *Message) syncUnprocessedIncentivizedMessages(ctx context.Context) (uint64, error) {
-	lastVerifiedBlockNumber, err := m.writer.GetLastIncentivizedChannelBlockNumber()
-	if err != nil {
-		return 0, fmt.Errorf("fetch last incentivized channel message block number: %w", err)
-	}
-
-	nonce, err := m.writer.GetLastIncentivizedChannelNonce()
-	if err != nil {
-		return 0, fmt.Errorf("fetch last incentivized channel message nonce: %w", err)
-	}
-
-	log.WithFields(log.Fields{
-		"block_number": lastVerifiedBlockNumber,
-		"nonce":        nonce,
-	}).Info("checking last synced incentivized channel messages on startup")
-
-	// If the last nonce is set, there could be messages that have not been processed in the same block.
-	// Messages that have already been verified will not be reprocessed because they will be filtered out
-	// in filterMessagesByLastNonce.
-	// Messages after the lastVerifiedBlockNumber will be processed separately in the Sync method.
-	if nonce == 0 {
-		return lastVerifiedBlockNumber, nil
-	}
-
-	log.Info("processing incentivized block events for last verified block")
-	incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber)
-	if err != nil {
-		return 0, err
-	}
-
-	incentivizedPayload.Messages = filterMessagesByLastNonce(incentivizedPayload.Messages, nonce)
-	// Reset the nonce so that the next block processing range will exclude the block that was synced,
-	// and start syncing from the next block instead
-
-	log.WithFields(log.Fields{
-		"incentivizedPayload": incentivizedPayload,
-	}).Info("writing incentivized messages")
-
-	err = m.writeIncentivizedMessages(ctx, incentivizedPayload)
-	if err != nil {
-		return 0, err
-	}
-
-	return lastVerifiedBlockNumber, nil
 }

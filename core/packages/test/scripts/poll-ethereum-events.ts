@@ -8,16 +8,9 @@ const main = async () => {
     const contracts = JSON.parse(await readFile('/tmp/snowbridge/contracts.json', 'utf8'));
 
     const interestingContracts = {
-        EtherVault: contracts.contracts.EtherVault,
-        ETHApp: contracts.contracts.ETHApp,
-        ERC20Vault: contracts.contracts.ERC20Vault,
-        ERC20App: contracts.contracts.ERC20App,
         WrappedToken: contracts.contracts.WrappedToken,
-        DOTApp: contracts.contracts.DOTApp,
         BasicOutboundChannel: contracts.contracts.BasicOutboundChannel,
-        IncentivizedOutboundChannel: contracts.contracts.IncentivizedOutboundChannel,
         BasicInboundChannel: contracts.contracts.BasicInboundChannel,
-        IncentivizedInboundChannel: contracts.contracts.IncentivizedInboundChannel,
         BeefyClient: contracts.contracts.BeefyClient,
     };
 
@@ -29,7 +22,7 @@ const main = async () => {
         instantiatedContracts.push(ic);
         ic.events.allEvents({}, (error, event) => {
             console.log(new Date(), event.blockNumber, event.transactionIndex, event.logIndex, key, event.event, JSON.stringify(event.returnValues), JSON.stringify(error));
-        }).on('error', function(error, receipt) { 
+        }).on('error', function(error, receipt) {
             console.error(new Date(), "ERROR", key, receipt, JSON.stringify(error));
         });
     }

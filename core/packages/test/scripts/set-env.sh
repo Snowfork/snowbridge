@@ -11,8 +11,11 @@ lodestar_version="${LODESTAR_VER:-1.3.0}"
 contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
-output_dir=/tmp/snowbridge
-output_bin_dir="$output_dir/bin"
+[ "$parachain_runtime" = "snowbase" ] &&
+   seconds_per_slot=6 ||
+   seconds_per_slot=12
+export output_dir=/tmp/snowbridge
+export output_bin_dir="$output_dir/bin"
 ethereum_data_dir="$output_dir/geth"
 export PATH="$output_bin_dir:$PATH"
 
@@ -50,12 +53,21 @@ kill_all() {
 
 kill_chains() {
     echo "Killing chains"
+    kill_polkadot
+    kill_ethereum
+}
+
+kill_ethereum() {
+    pkill -9 -f lodestar
+    pkill -9 geth
+}
+
+kill_polkadot() {
     pkill -9 polkadot
     pkill -9 snowbridge-test-node
     pkill -9 snowbridge
     pkill -9 -f polkadot-launch
-    pkill -9 -f lodestar
-    pkill -9 geth
+    pkill -9 zombienet
 }
 
 kill_relayer() {
@@ -106,6 +118,10 @@ check_tool() {
     fi
     if ! [ -x "$(command -v pnpm)" ]; then
         echo 'Error: pnpm is not installed.'
+        exit
+    fi
+    if ! [ -x "$(command -v zombienet)" ]; then
+        echo 'Error: zombienet is not installed.'
         exit
     fi
     if [[ "$OSTYPE" =~ ^darwin ]]; then

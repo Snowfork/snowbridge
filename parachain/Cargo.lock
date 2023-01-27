@@ -2106,26 +2106,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "enum-iterator"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c79a6321a1197d7730510c7e3f6cb80432dfefecb32426de8cea0aa19b4bb8d7"
-dependencies = [
- "enum-iterator-derive",
-]
-
-[[package]]
-name = "enum-iterator-derive"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e94aa31f7c0dc764f57896dc615ddd76fc13b0d5dca7eb6cc5e018a5a09ec06"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "enumflags2"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3724,9 +3704,6 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
-dependencies = [
- "spin",
-]
 
 [[package]]
 name = "lazycell"
@@ -9918,16 +9895,11 @@ dependencies = [
  "polkadot-parachain",
  "scale-info",
  "serde",
- "snowbridge-asset-registry",
  "snowbridge-basic-channel",
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-dispatch",
- "snowbridge-dot-app",
- "snowbridge-erc20-app",
- "snowbridge-eth-app",
  "snowbridge-ethereum-beacon-client",
- "snowbridge-incentivized-channel",
  "snowbridge-runtime-common",
  "snowbridge-runtime-primitives",
  "snowbridge-xcm-support",
@@ -9990,16 +9962,11 @@ dependencies = [
  "polkadot-parachain",
  "scale-info",
  "serde",
- "snowbridge-asset-registry",
  "snowbridge-basic-channel",
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-dispatch",
- "snowbridge-dot-app",
- "snowbridge-erc20-app",
- "snowbridge-eth-app",
  "snowbridge-ethereum-beacon-client",
- "snowbridge-incentivized-channel",
  "snowbridge-runtime-common",
  "snowbridge-runtime-primitives",
  "snowbridge-xcm-support",
@@ -10097,31 +10064,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-asset-registry"
-version = "0.1.1"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "snowbridge-asset-registry-primitives",
- "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
-]
-
-[[package]]
-name = "snowbridge-asset-registry-primitives"
-version = "0.1.1"
-dependencies = [
- "frame-support",
- "parity-scale-codec",
- "scale-info",
- "serde",
-]
-
-[[package]]
 name = "snowbridge-basic-channel"
 version = "0.1.1"
 dependencies = [
@@ -10193,7 +10135,6 @@ dependencies = [
 name = "snowbridge-core"
 version = "0.1.1"
 dependencies = [
- "enum-iterator",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -10218,92 +10159,6 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-core",
- "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-keyring",
- "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
-]
-
-[[package]]
-name = "snowbridge-dot-app"
-version = "0.1.1"
-dependencies = [
- "ethabi-decode",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "pallet-assets",
- "pallet-balances",
- "parity-scale-codec",
- "rlp",
- "rustc-hex",
- "scale-info",
- "serde",
- "snowbridge-basic-channel",
- "snowbridge-core",
- "snowbridge-dispatch",
- "snowbridge-incentivized-channel",
- "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-keyring",
- "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
-]
-
-[[package]]
-name = "snowbridge-erc20-app"
-version = "0.1.1"
-dependencies = [
- "ethabi-decode",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "pallet-assets",
- "pallet-balances",
- "pallet-randomness-collective-flip",
- "parity-scale-codec",
- "rlp",
- "rustc-hex",
- "scale-info",
- "serde",
- "snowbridge-asset-registry",
- "snowbridge-asset-registry-primitives",
- "snowbridge-basic-channel",
- "snowbridge-core",
- "snowbridge-dispatch",
- "snowbridge-incentivized-channel",
- "snowbridge-xcm-support-primitives",
- "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-keyring",
- "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
-]
-
-[[package]]
-name = "snowbridge-eth-app"
-version = "0.1.1"
-dependencies = [
- "ethabi-decode",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "pallet-assets",
- "pallet-balances",
- "parity-scale-codec",
- "rlp",
- "rustc-hex",
- "scale-info",
- "serde",
- "snowbridge-basic-channel",
- "snowbridge-core",
- "snowbridge-dispatch",
- "snowbridge-incentivized-channel",
- "snowbridge-xcm-support-primitives",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
  "sp-keyring",
@@ -10347,6 +10202,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "milagro_bls",
+ "pallet-timestamp",
  "parity-scale-codec",
  "rlp",
  "scale-info",
@@ -10383,30 +10239,6 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-ethereum",
  "snowbridge-testutils",
- "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-keyring",
- "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
-]
-
-[[package]]
-name = "snowbridge-incentivized-channel"
-version = "0.1.1"
-dependencies = [
- "ethabi-decode",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "pallet-assets",
- "pallet-balances",
- "parity-scale-codec",
- "rlp",
- "scale-info",
- "serde",
- "snowbridge-core",
- "snowbridge-ethereum",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
  "sp-keyring",
@@ -10471,16 +10303,11 @@ dependencies = [
  "polkadot-parachain",
  "scale-info",
  "serde",
- "snowbridge-asset-registry",
  "snowbridge-basic-channel",
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-dispatch",
- "snowbridge-dot-app",
- "snowbridge-erc20-app",
- "snowbridge-eth-app",
  "snowbridge-ethereum-beacon-client",
- "snowbridge-incentivized-channel",
  "snowbridge-runtime-common",
  "snowbridge-runtime-primitives",
  "snowbridge-xcm-support",
@@ -10507,9 +10334,10 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "smallvec 1.9.0",
  "snowbridge-basic-channel",
  "snowbridge-core",
- "snowbridge-incentivized-channel",
+ "snowbridge-runtime-primitives",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.30)",
@@ -11670,13 +11498,10 @@ dependencies = [
 [[package]]
 name = "ssz-rs"
 version = "0.8.0"
-source = "git+https://github.com/Snowfork/ssz_rs?rev=f55915f7f96943109345b164e89342eef1aeb6e3#f55915f7f96943109345b164e89342eef1aeb6e3"
+source = "git+https://github.com/ralexstokes/ssz-rs?rev=d18af912abacbf84219be37ab3b42a9abcf10d2a#d18af912abacbf84219be37ab3b42a9abcf10d2a"
 dependencies = [
  "bitvec",
- "hex",
- "lazy_static",
  "num-bigint 0.4.3",
- "serde",
  "sha2 0.9.9",
  "ssz-rs-derive",
  "thiserror",
@@ -11685,7 +11510,7 @@ dependencies = [
 [[package]]
 name = "ssz-rs-derive"
 version = "0.8.0"
-source = "git+https://github.com/Snowfork/ssz_rs?rev=f55915f7f96943109345b164e89342eef1aeb6e3#f55915f7f96943109345b164e89342eef1aeb6e3"
+source = "git+https://github.com/ralexstokes/ssz-rs?rev=d18af912abacbf84219be37ab3b42a9abcf10d2a#d18af912abacbf84219be37ab3b42a9abcf10d2a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -12358,7 +12183,7 @@ dependencies = [
  "chrono",
  "lazy_static",
  "matchers",
- "parking_lot 0.11.2",
+ "parking_lot 0.10.2",
  "regex",
  "serde",
  "serde_json",

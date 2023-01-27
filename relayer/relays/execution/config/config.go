@@ -31,8 +31,7 @@ func (c *SourceConfig) GetBasicChannelAddresses() ([]common.Address, error) {
 }
 
 type ContractsConfig struct {
-	BasicOutboundChannel        string `mapstructure:"BasicOutboundChannel"`
-	IncentivizedOutboundChannel string `mapstructure:"IncentivizedOutboundChannel"`
+	BasicOutboundChannel string `mapstructure:"BasicOutboundChannel"`
 }
 
 type SinkConfig struct {

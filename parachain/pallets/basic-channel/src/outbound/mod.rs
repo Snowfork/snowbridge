@@ -20,7 +20,7 @@ use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*};
 
 use sp_io::offchain_index::set;
 
-use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
+use snowbridge_core::types::AuxiliaryDigestItem;
 
 use snowbridge_basic_channel_merkle_proof::merkle_root;
 
@@ -77,7 +77,6 @@ pub struct MessageBundle<AccountId, M: Get<u32>, N: Get<u32>>
 where
 	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
 {
-	source_channel_id: u8,
 	account: AccountId,
 	/// Unique nonce to prevent replaying bundles
 	#[codec(compact)]
@@ -91,7 +90,6 @@ where
 {
 	fn into(self) -> Token {
 		Token::Tuple(vec![
-			Token::Uint(self.source_channel_id.into()),
 			Token::FixedBytes(self.account.as_ref().into()),
 			Token::Uint(self.nonce.into()),
 			Token::Array(self.messages.into_iter().map(|message| message.into()).collect()),
@@ -285,8 +283,7 @@ pub mod pallet {
 				eth_message_bundles.clone(),
 			);
 
-			let digest_item =
-				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
+			let digest_item = AuxiliaryDigestItem::Commitment(commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
 			Self::deposit_event(Event::Committed {
@@ -331,12 +328,8 @@ pub mod pallet {
 					*nonce = nonce.saturating_add(1);
 					*nonce
 				});
-				let bundle: MessageBundleOf<T> = MessageBundle {
-					source_channel_id: ChannelId::Basic as u8,
-					account,
-					nonce: next_nonce,
-					messages,
-				};
+				let bundle: MessageBundleOf<T> =
+					MessageBundle { account, nonce: next_nonce, messages };
 				message_bundles.push(bundle);
 			}
 
