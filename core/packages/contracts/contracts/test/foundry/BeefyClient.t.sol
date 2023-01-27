@@ -55,63 +55,39 @@ contract BeefyClientTest is Test {
         // Always add type of command as first arguments
         inputs[1] = "GenerateInitialSet";
         // generate initial fixture data with ffi
-        (blockNumber, setId, setSize, bitSetArray, commitHash, payload) = abi.decode(
-            vm.ffi(inputs),
-            (uint32, uint32, uint32, uint256[], bytes32, BeefyClient.Payload)
-        );
+        (blockNumber, setId, setSize, bitSetArray, commitHash, payload) =
+            abi.decode(vm.ffi(inputs), (uint32, uint32, uint32, uint256[], bytes32, BeefyClient.Payload));
         bitfield = Bitfield.createBitfield(bitSetArray, setSize);
 
         // To avoid another round of ffi in multiple tests
         // except for the initial merkle root and proof for validators
         // we also precalculate finalValidatorProofs and cached here
-        finalBitfield = Bitfield.randomNBitsWithPriorCheck(
-            difficulty,
-            bitfield,
-            minimumSignatureThreshold(setSize),
-            setSize
-        );
+        finalBitfield =
+            Bitfield.randomNBitsWithPriorCheck(difficulty, bitfield, minimumSignatureThreshold(setSize), setSize);
 
         inputs[1] = "GenerateProofs";
         // First add length of finalBitField and then each item as input
         inputs[2] = Strings.toString(finalBitfield.length);
-        for (uint i = 0; i < finalBitfield.length; i++) {
+        for (uint256 i = 0; i < finalBitfield.length; i++) {
             inputs[i + 3] = Strings.toString(finalBitfield[i]);
         }
         BeefyClient.ValidatorProof[] memory _proofs;
         (root, validatorProof, _proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) = abi.decode(
             vm.ffi(inputs),
-            (
-                bytes32,
-                BeefyClient.ValidatorProof,
-                BeefyClient.ValidatorProof[],
-                bytes32[],
-                BeefyClient.MMRLeaf,
-                uint256
-            )
+            (bytes32, BeefyClient.ValidatorProof, BeefyClient.ValidatorProof[], bytes32[], BeefyClient.MMRLeaf, uint256)
         );
         // Cache finalValidatorProofs to storage in order to reuse in submitFinal later
-        for (uint i = 0; i < _proofs.length; i++) {
+        for (uint256 i = 0; i < _proofs.length; i++) {
             finalValidatorProofs.push(_proofs[i]);
         }
-        console.log(
-            "current validator's merkle root is: %s",
-            Strings.toHexString(uint256(root), 32)
-        );
+        console.log("current validator's merkle root is: %s", Strings.toHexString(uint256(root), 32));
     }
 
     function initialize(uint32 _setId) public {
         currentSetId = _setId;
         nextSetId = _setId + 1;
-        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(
-            currentSetId,
-            setSize,
-            root
-        );
-        BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(
-            nextSetId,
-            setSize,
-            root
-        );
+        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(currentSetId, setSize, root);
+        BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(nextSetId, setSize, root);
         beefyClient.initialize(0, vset, nextvset);
     }
 
@@ -128,11 +104,7 @@ contract BeefyClientTest is Test {
 
         beefyClient.commitPrevRandao(commitHash);
 
-        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(
-            blockNumber,
-            setId,
-            payload
-        );
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
 
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
@@ -146,12 +118,8 @@ contract BeefyClientTest is Test {
         cheats.roll(block.number + randaoCommitDelay);
         cheats.difficulty(difficulty);
         beefyClient.commitPrevRandao(commitHash);
-        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(
-            blockNumber,
-            setId,
-            payload
-        );
-        //submit again will be reverted with StaleCommitment 
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
+        //submit again will be reverted with StaleCommitment
         cheats.expectRevert(BeefyClient.StaleCommitment.selector);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
     }
@@ -167,11 +135,7 @@ contract BeefyClientTest is Test {
 
         beefyClient.commitPrevRandao(commitHash);
 
-        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(
-            blockNumber,
-            setId,
-            payload
-        );
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
         // invalid bitfield here
         bitfield[0] = 0;
         cheats.expectRevert(BeefyClient.InvalidBitfield.selector);
@@ -196,7 +160,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitWithHandover() public {
         //initialize with previous set
-        initialize(setId-1);
+        initialize(setId - 1);
 
         beefyClient.submitInitialWithHandover(commitHash, bitfield, validatorProof);
 
@@ -208,18 +172,9 @@ contract BeefyClientTest is Test {
 
         beefyClient.commitPrevRandao(commitHash);
 
-        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(
-            blockNumber,
-            setId,
-            payload
-        );
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
         beefyClient.submitFinalWithHandover(
-            commitment,
-            bitfield,
-            finalValidatorProofs,
-            mmrLeaf,
-            mmrLeafProofs,
-            leafProofOrder
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
     }

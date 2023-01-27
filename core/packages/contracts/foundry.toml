@@ -11,7 +11,5 @@ remappings = [
     'forge-std=lib/forge-std/src/',
     '@openzeppelin=node_modules/@openzeppelin'
 ]
-optimizer = true
-optimizer_runs = 19_066
 ffi = true
 fuzz_runs = 5000
