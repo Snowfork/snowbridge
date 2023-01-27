@@ -1,6 +1,6 @@
 pragma solidity ^0.8.9;
 
-import "../../BeefyClient.sol";
+import "../BeefyClientMock.sol";
 import "../../ScaleCodec.sol";
 import "../../utils/Bitfield.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -21,7 +21,7 @@ interface CheatCodes {
 
 contract BeefyClientTest is Test {
     CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
-    BeefyClient beefyClient;
+    BeefyClientMock beefyClient;
     uint8 randaoCommitDelay;
     uint8 randaoCommitExpiration;
     uint32 blockNumber;
@@ -47,7 +47,7 @@ contract BeefyClientTest is Test {
         randaoCommitExpiration = 8;
         difficulty = 377;
 
-        beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
+        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration);
 
         // Allocate for input variables
         string[] memory inputs = new string[](10);
@@ -67,7 +67,7 @@ contract BeefyClientTest is Test {
         finalBitfield = Bitfield.randomNBitsWithPriorCheck(
             difficulty,
             bitfield,
-            minimumSignatureThreshold(setSize),
+            beefyClient.minimumSignatureThreshold_public(setSize),
             setSize
         );
 
@@ -178,17 +178,46 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
     }
 
+    function testSubmitFailWithoutPrevRandao() public {
+        initialize(setId);
+        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(
+            blockNumber,
+            setId,
+            payload
+        );
+        // reverted without commit PrevRandao
+        cheats.expectRevert(BeefyClient.PrevRandaoNotCaptured.selector);
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
+    }
+
+    function testSubmitFailForPrevRandaoTooEarlyOrTooLate() public {
+        initialize(setId);
+        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+        // reverted for commit PrevRandao too early
+        cheats.expectRevert(BeefyClient.WaitPeriodNotOver.selector);
+        beefyClient.commitPrevRandao(commitHash);
+
+        // reverted for commit PrevRandao too late
+        cheats.roll(block.number + randaoCommitDelay + randaoCommitExpiration + 1);
+        cheats.expectRevert(BeefyClient.TaskExpired.selector);
+        beefyClient.commitPrevRandao(commitHash);
+    }
+
     function testSubmitFailWithInvalidSignatureProof() public {
         initialize(setId);
 
-        //bad signature in proof
         bytes32 originalSignatureS = validatorProof.s;
+
+        // bad signature in proof
         validatorProof.s = bytes32("Hello");
         cheats.expectRevert(BeefyClient.InvalidSignature.selector);
         beefyClient.submitInitial(commitHash, bitfield, validatorProof);
 
-        //bad account in proof
+        // restore with original signature
         validatorProof.s = originalSignatureS;
+
+        // bad account in proof
         validatorProof.account = address(0x0);
         cheats.expectRevert(BeefyClient.InvalidValidatorProof.selector);
         beefyClient.submitInitial(commitHash, bitfield, validatorProof);
@@ -200,10 +229,8 @@ contract BeefyClientTest is Test {
 
         beefyClient.submitInitialWithHandover(commitHash, bitfield, validatorProof);
 
-        // mine random delay blocks
         cheats.roll(block.number + randaoCommitDelay);
 
-        // set difficulty as PrevRandao
         cheats.difficulty(difficulty);
 
         beefyClient.commitPrevRandao(commitHash);
@@ -222,27 +249,5 @@ contract BeefyClientTest is Test {
             leafProofOrder
         );
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
-    }
-
-    function minimumSignatureThreshold(uint256 validatorSetLen) internal pure returns (uint256) {
-        if (validatorSetLen <= 10) {
-            return validatorSetLen - (validatorSetLen - 1) / 3;
-        } else if (validatorSetLen < 342) {
-            return 10;
-        } else if (validatorSetLen < 683) {
-            return 11;
-        } else if (validatorSetLen < 1366) {
-            return 12;
-        } else if (validatorSetLen < 2731) {
-            return 13;
-        } else if (validatorSetLen < 5462) {
-            return 14;
-        } else if (validatorSetLen < 10923) {
-            return 15;
-        } else if (validatorSetLen < 21846) {
-            return 16;
-        } else {
-            return 17;
-        }
     }
 }
