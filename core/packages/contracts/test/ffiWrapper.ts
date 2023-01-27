@@ -16,6 +16,7 @@ const blockNumber = fixtureData.params.commitment.blockNumber
 const mmrLeafProofs = fixtureData.params.leafProof
 const payload: BeefyClient.PayloadStruct = fixtureData.params.commitment.payload
 const mmrLeaf: BeefyClient.MMRLeafStruct = fixtureData.params.leaf
+const leafProofOrder = fixtureData.params.leafProofOrder
 
 const subsetSize = validatorSetSize - Math.floor((validatorSetSize - 1) / 3)
 const subset = createRandomSubset(validatorSetSize, subsetSize)
@@ -62,8 +63,16 @@ if (command == "GenerateInitialSet") {
                 "tuple(uint8 v, bytes32 r, bytes32 s, uint256 index,address account,bytes32[] proof)[]",
                 "bytes32[]",
                 "tuple(uint8 version,uint32 parentNumber,bytes32 parentHash,uint64 nextAuthoritySetID,uint32 nextAuthoritySetLen,bytes32 nextAuthoritySetRoot,bytes32 parachainHeadsRoot)",
+                "uint256",
             ],
-            [validatorSet.root, validatorProof, validatorFinalProofs, mmrLeafProofs, mmrLeaf]
+            [
+                validatorSet.root,
+                validatorProof,
+                validatorFinalProofs,
+                mmrLeafProofs,
+                mmrLeaf,
+                leafProofOrder,
+            ]
         )}`
     )
 }
