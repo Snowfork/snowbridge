@@ -267,10 +267,10 @@ pub mod pallet {
 			// fails, we don't want the MessageQueue to be empty.
 			let message_queue = <MessageQueue<T>>::take();
 			if message_queue.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages()
+				return T::WeightInfo::on_commit_no_messages()
 			}
 
-			// Store these for the on_initialize call at the end
+			// Store these for the on_commit call at the end
 			let message_count = message_queue.len() as u32;
 			let average_payload_size = Self::average_payload_size(&message_queue);
 

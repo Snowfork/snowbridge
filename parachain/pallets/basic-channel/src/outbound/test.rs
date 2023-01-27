@@ -134,9 +134,12 @@ fn test_submit_exceeds_payload_limit() {
 		let target = H160::zero();
 		let who: &AccountId = &Keyring::Bob.into();
 
-		let max_payload_bytes = MaxMessagePayloadSize::get();
+		let max_payload_bytes = MaxMessagePayloadSize::get() - 1;
 
-		let payload: Vec<u8> = vec![1u8; (max_payload_bytes as usize + 1)].try_into().unwrap();
+		let mut payload: Vec<u8> = (0..).take(max_payload_bytes as usize).collect();
+		// Make payload oversize
+		payload.push(5);
+		payload.push(10);
 
 		assert_noop!(
 			BasicOutboundChannel::submit(who, target, payload.as_slice()),
