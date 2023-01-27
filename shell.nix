@@ -41,6 +41,8 @@ pkgs.mkShell {
         rustup target add wasm32-unknown-unknown --toolchain nightly-2022-11-15
         rustup default 1.66.1
 
+        eval "$(direnv hook bash)"
+
         cowsay "Snowbridge Dev Environment"
     '';
 }
