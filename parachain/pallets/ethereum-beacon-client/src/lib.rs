@@ -185,8 +185,7 @@ pub mod pallet {
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type BlockRoots<T: Config> =
-	StorageMap<_, Identity, u64, H256, ValueQuery>;
+	pub(super) type BlockRoots<T: Config> = StorageMap<_, Identity, u64, H256, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderState<T: Config> =
@@ -538,7 +537,11 @@ pub mod pallet {
 
 				log::info!(target: "ethereum-beacon-client","💫 ancestry proof passed!");
 
-				Self::process_and_store_block_roots(update.block_roots, update.finalized_header.slot, block_root);
+				Self::process_and_store_block_roots(
+					update.block_roots,
+					update.finalized_header.slot,
+					block_root,
+				);
 			} else {
 				log::info!(target: "ethereum-beacon-client","💫 spec is minimal, not checking ancestry proof");
 			}
@@ -548,9 +551,13 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_and_store_block_roots(block_roots: BoundedVec<H256, <T>::MaxSlotsPerHistoricalRoot>, slot: u64, finalized_header_block_root: H256) {
+		fn process_and_store_block_roots(
+			block_roots: BoundedVec<H256, <T>::MaxSlotsPerHistoricalRoot>,
+			slot: u64,
+			finalized_header_block_root: H256,
+		) {
 			let max_slots = T::MaxSlotsPerHistoricalRoot::get() as u64;
-			let start = slot-max_slots;
+			let start = slot - max_slots;
 			let end = slot;
 			for n in start..end {
 				let index = n % max_slots;

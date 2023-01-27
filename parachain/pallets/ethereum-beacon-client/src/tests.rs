@@ -685,7 +685,6 @@ mod beacon_minimal_tests {
 	use hex_literal::hex;
 	use sp_core::H256;
 	use std::time::{SystemTime, UNIX_EPOCH};
-	use crate::pallet::BlockRoots;
 
 	#[test]
 	fn it_syncs_from_an_initial_checkpoint() {

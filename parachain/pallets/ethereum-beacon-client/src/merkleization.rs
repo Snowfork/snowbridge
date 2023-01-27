@@ -3,7 +3,11 @@ use core::array::TryFromSliceError;
 use crate::{config, ssz::*};
 use byte_slice_cast::AsByteSlice;
 use frame_support::{traits::Get, BoundedVec};
-use snowbridge_beacon_primitives::{Attestation, AttestationData, AttesterSlashing, BeaconBlock, BeaconHeader, Body, Checkpoint, Deposit, Eth1Data, ExecutionPayload, ForkData, ProposerSlashing, SigningData, SyncAggregate, SyncCommittee, VoluntaryExit};
+use snowbridge_beacon_primitives::{
+	Attestation, AttestationData, AttesterSlashing, BeaconBlock, BeaconHeader, Body, Checkpoint,
+	Deposit, Eth1Data, ExecutionPayload, ForkData, ProposerSlashing, SigningData, SyncAggregate,
+	SyncCommittee, VoluntaryExit,
+};
 use sp_core::H256;
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
@@ -227,51 +231,57 @@ impl TryFrom<BeaconHeader> for SSZBeaconBlockHeader {
 }
 
 impl<
-	FeeRecipientSize: Get<u32>,
-	LogsBloomSize: Get<u32>,
-	ExtraDataSize: Get<u32>,
-	DepositDataSize: Get<u32>,
-	PublicKeySize: Get<u32>,
-	SignatureSize: Get<u32>,
-	ProofSize: Get<u32>,
-	ProposerSlashingSize: Get<u32>,
-	AttesterSlashingSize: Get<u32>,
-	VoluntaryExitSize: Get<u32>,
-	AttestationSize: Get<u32>,
-	AggregationBitsSize: Get<u32>,
-	ValidatorCommitteeSize: Get<u32>,
-> TryFrom<BeaconBlock<
-	FeeRecipientSize,
-	LogsBloomSize,
-	ExtraDataSize,
-	DepositDataSize,
-	PublicKeySize,
-	SignatureSize,
-	ProofSize,
-	ProposerSlashingSize,
-	AttesterSlashingSize,
-	VoluntaryExitSize,
-	AttestationSize,
-	AggregationBitsSize,
-	ValidatorCommitteeSize,
->> for SSZBeaconBlock {
+		FeeRecipientSize: Get<u32>,
+		LogsBloomSize: Get<u32>,
+		ExtraDataSize: Get<u32>,
+		DepositDataSize: Get<u32>,
+		PublicKeySize: Get<u32>,
+		SignatureSize: Get<u32>,
+		ProofSize: Get<u32>,
+		ProposerSlashingSize: Get<u32>,
+		AttesterSlashingSize: Get<u32>,
+		VoluntaryExitSize: Get<u32>,
+		AttestationSize: Get<u32>,
+		AggregationBitsSize: Get<u32>,
+		ValidatorCommitteeSize: Get<u32>,
+	>
+	TryFrom<
+		BeaconBlock<
+			FeeRecipientSize,
+			LogsBloomSize,
+			ExtraDataSize,
+			DepositDataSize,
+			PublicKeySize,
+			SignatureSize,
+			ProofSize,
+			ProposerSlashingSize,
+			AttesterSlashingSize,
+			VoluntaryExitSize,
+			AttestationSize,
+			AggregationBitsSize,
+			ValidatorCommitteeSize,
+		>,
+	> for SSZBeaconBlock
+{
 	type Error = MerkleizationError;
 
-	fn try_from(beacon_block: BeaconBlock<
-		FeeRecipientSize,
-		LogsBloomSize,
-		ExtraDataSize,
-		DepositDataSize,
-		PublicKeySize,
-		SignatureSize,
-		ProofSize,
-		ProposerSlashingSize,
-		AttesterSlashingSize,
-		VoluntaryExitSize,
-		AttestationSize,
-		AggregationBitsSize,
-		ValidatorCommitteeSize,
-	>) -> Result<Self, Self::Error> {
+	fn try_from(
+		beacon_block: BeaconBlock<
+			FeeRecipientSize,
+			LogsBloomSize,
+			ExtraDataSize,
+			DepositDataSize,
+			PublicKeySize,
+			SignatureSize,
+			ProofSize,
+			ProposerSlashingSize,
+			AttesterSlashingSize,
+			VoluntaryExitSize,
+			AttestationSize,
+			AggregationBitsSize,
+			ValidatorCommitteeSize,
+		>,
+	) -> Result<Self, Self::Error> {
 		Ok(SSZBeaconBlock {
 			slot: beacon_block.slot,
 			proposer_index: beacon_block.proposer_index,
@@ -476,7 +486,21 @@ pub fn hash_tree_root_beacon_block<
 	ValidatorCommitteeSize: Get<u32>,
 	SyncCommitteeSize: Get<u32>,
 >(
-	beacon_block: BeaconBlock<FeeRecipientSize, LogsBloomSize, ExtraDataSize, DepositDataSize, PublicKeySize, SignatureSize, ProofSize, ProposerSlashingSize, AttesterSlashingSize, VoluntaryExitSize, AttestationSize, ValidatorCommitteeSize, SyncCommitteeSize>,
+	beacon_block: BeaconBlock<
+		FeeRecipientSize,
+		LogsBloomSize,
+		ExtraDataSize,
+		DepositDataSize,
+		PublicKeySize,
+		SignatureSize,
+		ProofSize,
+		ProposerSlashingSize,
+		AttesterSlashingSize,
+		VoluntaryExitSize,
+		AttestationSize,
+		ValidatorCommitteeSize,
+		SyncCommitteeSize,
+	>,
 ) -> Result<[u8; 32], MerkleizationError> {
 	let ssz_beacon_block: SSZBeaconBlock = beacon_block.try_into()?;
 
