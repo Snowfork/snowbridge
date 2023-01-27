@@ -250,4 +250,18 @@ contract BeefyClientTest is Test {
         );
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
     }
+
+    function testScaleEncodeCommit() public {
+        BeefyClient.Payload memory _payload = BeefyClient.Payload(
+            0x3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c,
+            hex"0861620c0001026d6880",
+            hex""
+        );
+        BeefyClient.Commitment memory _commitment = BeefyClient.Commitment(5, 7, _payload);
+        bytes memory encoded = beefyClient.encodeCommitment_public(_commitment);
+        assertEq(
+            encoded,
+            hex"0861620c0001026d68803ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c050000000700000000000000"
+        );
+    }
 }

@@ -43,7 +43,7 @@ const config: HardhatUserConfig = {
         hardhat: {
             accounts,
             chainId: 15,
-            loggingEnabled: true,
+            // loggingEnabled: true,
             mining: {
                 auto: true,
             },
