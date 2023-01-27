@@ -469,7 +469,7 @@ pub mod pallet {
 				weak_subjectivity_period_check
 			);
 
-			if time > import_time + weak_subjectivity_period_check {
+			if time > weak_subjectivity_period_check {
 				log::info!(target: "ethereum-beacon-client","💫 Weak subjectivity period exceeded, blocking bridge.",);
 				<Blocked<T>>::set(true);
 				return Err(Error::<T>::BridgeBlocked.into())
