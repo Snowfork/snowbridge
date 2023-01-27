@@ -322,12 +322,23 @@ mod beacon_tests {
 			true => hex!("ffff").to_vec(),
 			false => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bffff5f7fedfffdfb6ddff7bf7").to_vec(),
 		};
+		let provided = match config::IS_MINIMAL {
+			true => 2,
+			false => 47,
+		};
+		let expected = match config::IS_MINIMAL {
+			true => 4,
+			false => 64,
+		};
 
 		let sync_committee_bits = merkleization::get_sync_committee_bits::<
 			mock_minimal::MaxSyncCommitteeSize,
 		>(bits.try_into().expect("invalid sync committee bits"));
 
-		assert_err!(sync_committee_bits, MerkleizationError::InputTooShort);
+		assert_err!(
+			sync_committee_bits,
+			MerkleizationError::ExpectedFurtherInput { provided, expected }
+		);
 	}
 
 	#[test]
@@ -336,12 +347,23 @@ mod beacon_tests {
 			true => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefff").to_vec(),
 			false => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7bf7bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7bf7").to_vec(),
 		};
+		let provided = match config::IS_MINIMAL {
+			true => 24,
+			false => 130,
+		};
+		let expected = match config::IS_MINIMAL {
+			true => 4,
+			false => 64,
+		};
 
 		let sync_committee_bits = merkleization::get_sync_committee_bits::<
 			mock_minimal::MaxSyncCommitteeSize,
 		>(bits.try_into().expect("invalid sync committee bits"));
 
-		assert_err!(sync_committee_bits, MerkleizationError::ExtraInput);
+		assert_err!(
+			sync_committee_bits,
+			MerkleizationError::AdditionalInput { provided, expected }
+		);
 	}
 
 	#[test]
@@ -654,13 +676,14 @@ mod beacon_tests {
 #[cfg(feature = "minimal")]
 mod beacon_minimal_tests {
 	use crate::{
-		merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody, Error,
-		ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState, LatestFinalizedHeaderState,
-		SyncCommittees, ValidatorsRoot,
+		config, merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
+		Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
+		LatestFinalizedHeaderState, SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
 	use sp_core::H256;
+	use std::time::{SystemTime, UNIX_EPOCH};
 
 	#[test]
 	fn it_syncs_from_an_initial_checkpoint() {
@@ -710,15 +733,29 @@ mod beacon_minimal_tests {
 	#[test]
 	fn it_processes_a_finalized_header_update() {
 		let update = get_finalized_header_update::<mock_minimal::Test>();
-
-		let current_sync_committee =
-			get_initial_sync::<mock_minimal::Test>().current_sync_committee;
+		let initial_sync = get_initial_sync::<mock_minimal::Test>();
+		let current_sync_committee = initial_sync.current_sync_committee;
 
 		let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
 			update.attested_header.slot,
 		);
 
+		let time_now = SystemTime::now()
+			.duration_since(UNIX_EPOCH)
+			.expect("Time went backwards")
+			.as_secs();
+
+		let slot = initial_sync.header.slot;
+		let import_time = time_now + (slot * config::SECONDS_PER_SLOT); // Goerli genesis time + finalized header update time
+		let mock_pallet_time = import_time + 3600; // plus one hour
+
 		new_tester::<mock_minimal::Test>().execute_with(|| {
+			mock_minimal::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
+			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
+				beacon_block_root: Default::default(),
+				import_time,
+				beacon_slot: slot,
+			});
 			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
 			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
 
@@ -842,11 +879,11 @@ mod beacon_minimal_tests {
 #[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
 	use crate::{
-		merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
-		ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState, LatestFinalizedHeaderState,
-		SyncCommittees, ValidatorsRoot,
+		config, merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
+		Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
+		LatestFinalizedHeaderState, SyncCommittees, ValidatorsRoot,
 	};
-	use frame_support::assert_ok;
+	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
 	use sp_core::H256;
 
@@ -898,16 +935,25 @@ mod beacon_mainnet_tests {
 	#[test]
 	fn it_processes_a_finalized_header_update() {
 		let update = get_finalized_header_update::<mock_mainnet::Test>();
-
-		let current_sync_committee =
-			get_initial_sync::<mock_mainnet::Test>().current_sync_committee;
+		let initial_sync = get_initial_sync::<mock_mainnet::Test>();
+		let current_sync_committee = initial_sync.current_sync_committee;
 
 		let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
 			update.attested_header.slot,
 		);
 
+		let slot = initial_sync.header.slot;
+		let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT); // Goerli genesis time + finalized header update time
+		let mock_pallet_time = import_time + 3600; // plus one hour
+
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
+			mock_mainnet::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
 			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
+			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
+				beacon_block_root: Default::default(),
+				import_time,
+				beacon_slot: slot,
+			});
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
 
 			assert_ok!(mock_mainnet::EthereumBeaconClient::import_finalized_header(
@@ -921,6 +967,40 @@ mod beacon_mainnet_tests {
 					.into();
 
 			assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
+		});
+	}
+
+	#[test]
+	fn it_errors_when_weak_subjectivity_period_exceeded_for_a_finalized_header_update() {
+		let update = get_finalized_header_update::<mock_mainnet::Test>();
+		let initial_sync = get_initial_sync::<mock_mainnet::Test>();
+		let current_sync_committee = initial_sync.current_sync_committee;
+
+		let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
+			update.attested_header.slot,
+		);
+
+		let slot = initial_sync.header.slot;
+		let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT);
+		let mock_pallet_time = import_time + 100800; // plus 28 hours
+
+		new_tester::<mock_mainnet::Test>().execute_with(|| {
+			mock_mainnet::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
+			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
+			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
+				beacon_block_root: Default::default(),
+				import_time,
+				beacon_slot: slot,
+			});
+			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
+
+			assert_err!(
+				mock_mainnet::EthereumBeaconClient::import_finalized_header(
+					mock_mainnet::RuntimeOrigin::signed(1),
+					update.clone()
+				),
+				Error::<mock_mainnet::Test>::BridgeBlocked
+			);
 		});
 	}
 
