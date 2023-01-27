@@ -184,6 +184,10 @@ pub mod pallet {
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
+	pub(super) type BlockRoots<T: Config> =
+	StorageMap<_, Identity, u64, H256, ValueQuery>;
+
+	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderState<T: Config> =
 		StorageValue<_, FinalizedHeaderState, ValueQuery>;
 
@@ -475,11 +479,6 @@ pub mod pallet {
 				return Err(Error::<T>::BridgeBlocked.into())
 			}
 
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 block root merkle proof passed!",
-			);
-
 			let sync_committee_bits =
 				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
@@ -554,6 +553,8 @@ pub mod pallet {
 				);
 
 				log::info!(target: "ethereum-beacon-client","💫 ancestry proof passed!");
+
+				Self::process_and_store_block_roots(update.block_roots, update.finalized_header.slot);
 			} else {
 				log::info!(target: "ethereum-beacon-client","💫 spec is minimal, not checking ancestry proof");
 			}
@@ -561,6 +562,22 @@ pub mod pallet {
 			Self::store_finalized_header(block_root, update.finalized_header);
 
 			Ok(())
+		}
+
+		fn process_and_store_block_roots(block_roots: BoundedVec<H256, <T>::MaxSlotsPerHistoricalRoot>, slot: u64, finalized_header_block_root: H256) {
+			let max_slots = T::MaxSlotsPerHistoricalRoot::get() as u64;
+			let start = slot-max_slots;
+			let end = slot;
+			for n in start..end {
+				let index = n % max_slots;
+				let block_root = block_roots[index as usize];
+
+				log::info!(target: "ethereum-beacon-client","💫 storing slot {} block root {}", n, block_root);
+
+				<BlockRoots<T>>::insert(n, block_root);
+			}
+
+			<BlockRoots<T>>::insert(slot, finalized_header_block_root);
 		}
 
 		fn process_header(update: BlockUpdateOf<T>) -> DispatchResult {
