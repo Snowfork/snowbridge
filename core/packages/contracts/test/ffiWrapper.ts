@@ -1,5 +1,4 @@
-#!/usr/bin/env ts-node
-
+#!/usr/bin/env node
 import { ValidatorSet, createRandomSubset, readSetBits } from "./helpers"
 import { ethers } from "ethers"
 import fs from "fs"
