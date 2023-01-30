@@ -5,6 +5,9 @@ import "./ParachainClient.sol";
 import "./utils/MerkleProof.sol";
 
 contract BasicInboundChannel {
+    uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
+    uint256 public constant GAS_BUFFER = 60000;
+
     mapping(bytes32 => uint64) public nonce;
 
     ParachainClient public parachainClient;
@@ -33,10 +36,9 @@ contract BasicInboundChannel {
             "Invalid proof"
         );
         require(message.nonce == nonce[message.sourceID] + 1, "Invalid nonce");
-        // TODO: should we check the remaining gas?
+        require(gasleft() >= MAX_GAS_PER_MESSAGE + GAS_BUFFER, "insufficient gas");
         nonce[message.sourceID]++;
         dispatch(message);
-        // TODO: should we emit a MessageDispatched event?
     }
 
     function dispatch(Message calldata message) internal {
