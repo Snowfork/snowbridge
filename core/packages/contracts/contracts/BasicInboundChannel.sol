@@ -15,6 +15,8 @@ contract BasicInboundChannel {
         bytes payload;
     }
 
+    event MessageDispatched(bytes32 sourceId, uint64 nonce);
+
     constructor(ParachainClient _parachainClient) {
         parachainClient = _parachainClient;
     }
@@ -37,9 +39,8 @@ contract BasicInboundChannel {
         // TODO: should we emit a MessageDispatched event?
     }
 
-    // solhint-disable no-empty-blocks
-    function dispatch(Message calldata messages) internal {
-        // TODO: dispatch to XCM interpreter
+    function dispatch(Message calldata message) internal {
+        emit MessageDispatched(message.sourceId, message.nonce);
     }
 
     // solhint-disable no-empty-blocks
