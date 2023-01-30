@@ -42,9 +42,4 @@ contract BasicInboundChannel {
     function dispatch(Message calldata message) internal {
         emit MessageDispatched(message.sourceId, message.nonce);
     }
-
-    // solhint-disable no-empty-blocks
-    function dispatchBatch(Message[] calldata messages) internal {
-        // TODO: dispatch to XCM interpreter
-    }
 }
