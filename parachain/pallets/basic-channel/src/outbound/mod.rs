@@ -9,12 +9,12 @@ mod test;
 use codec::{Decode, Encode, MaxEncodedLen};
 use ethabi::{self, Token};
 use frame_support::{
-	dispatch::DispatchResult, ensure, pallet_prelude::Member, traits::Get, BoundedVec,
-	CloneNoBound, Parameter, PartialEqNoBound, RuntimeDebugNoBound,
+    dispatch::DispatchResult, ensure, pallet_prelude::Member, traits::Get, weights::Weight,
+    BoundedVec, CloneNoBound, Parameter, PartialEqNoBound, RuntimeDebugNoBound,
 };
 use scale_info::TypeInfo;
 use sp_core::{H160, H256};
-use sp_runtime::traits::{Hash, Zero};
+use sp_runtime::traits::Hash;
 
 use sp_std::prelude::*;
 
@@ -56,6 +56,13 @@ where
 		])
 	}
 }
+
+// base_weight=(0.75*0.5)*(10**12)=375_000_000_000
+// we leave the extra 10_000_000_000/375_000_000_000=2.66% as margin
+// so we can use at most 365000000000 for the commit call
+// need to rerun benchmarks later to get weight based on the worst case:
+// MaxMessagesPerCommit=20 and MaxMessagePayloadSize=256
+pub const MINIMUM_WEIGHT_REMAIN_IN_BLOCK: Weight = Weight::from_ref_time(10_000_000_000);
 
 pub use pallet::*;
 
@@ -143,17 +150,22 @@ pub mod pallet {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		// Generate a message commitment every [`Interval`] blocks.
-		//
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
+	where
+		T::AccountId: AsRef<[u8]>,
+	{
+		// Generate a message commitment when the chain is idle with enough remaining weight
 		// The commitment hash is included in an [`AuxiliaryDigestItem`] in the block header,
 		// with the corresponding commitment is persisted offchain.
-		fn on_initialize(now: T::BlockNumber) -> Weight {
-			if (now % Self::interval()).is_zero() {
-				Self::commit()
-			} else {
-				T::WeightInfo::on_initialize_non_interval()
+		fn on_idle(_n: T::BlockNumber, total_weight: Weight) -> Weight {
+			let weight_remaining = total_weight.saturating_sub(T::WeightInfo::on_commit(
+				T::MaxMessagesPerCommit::get(),
+				T::MaxMessagePayloadSize::get(),
+			));
+			if weight_remaining.ref_time() <= MINIMUM_WEIGHT_REMAIN_IN_BLOCK.ref_time() {
+				return total_weight
 			}
+			Self::commit(total_weight)
 		}
 	}
 
@@ -195,15 +207,15 @@ pub mod pallet {
 		/// - Emit an event with the commitment hash and SCALE-encoded message bundles for a
 		/// relayer to read.
 		/// - Persist the ethabi-encoded message bundles to off-chain storage.
-		fn commit() -> Weight {
+		pub fn commit(_total_weight: Weight) -> Weight {
 			// TODO: SNO-310 consider using mutate here. If some part of emitting message bundles
 			// fails, we don't want the MessageQueue to be empty.
 			let message_queue = <MessageQueue<T>>::take();
 			if message_queue.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages()
+				return T::WeightInfo::on_commit_no_messages()
 			}
 
-			// Store these for the on_initialize call at the end
+			// Store these for the on_commit call at the end
 			let message_count = message_queue.len() as u32;
 			let average_payload_size = Self::average_payload_size(&message_queue);
 
@@ -226,7 +238,7 @@ pub mod pallet {
 
 			set(commitment_hash.as_bytes(), &eth_messages.encode());
 
-			T::WeightInfo::on_initialize(message_count, average_payload_size)
+			return T::WeightInfo::on_commit(message_count, average_payload_size)
 		}
 
 		fn average_payload_size(
