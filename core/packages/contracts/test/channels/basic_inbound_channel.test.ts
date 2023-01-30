@@ -32,7 +32,7 @@ describe("BasicInboundChannel", function () {
         it("should accept a valid commitment and dispatch messages", async function () {
             let { channel } = await loadFixture(fixture)
 
-            let nonceBeforeSubmit = await channel.nonce(submitInput.message.sourceId)
+            let nonceBeforeSubmit = await channel.nonce(submitInput.message.sourceID)
 
             await channel.submit(
                 submitInput.message,
@@ -41,7 +41,7 @@ describe("BasicInboundChannel", function () {
                 "0xdeadbeef"
             )
 
-            let nonceAfterSubmit = await channel.nonce(submitInput.message.sourceId)
+            let nonceAfterSubmit = await channel.nonce(submitInput.message.sourceID)
             expect(nonceAfterSubmit.sub(nonceBeforeSubmit)).to.be.equal(1)
         })
 

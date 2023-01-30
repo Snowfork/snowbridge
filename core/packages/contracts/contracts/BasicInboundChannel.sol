@@ -10,12 +10,12 @@ contract BasicInboundChannel {
     ParachainClient public parachainClient;
 
     struct Message {
-        bytes32 sourceId;
+        bytes32 sourceID;
         uint64 nonce;
         bytes payload;
     }
 
-    event MessageDispatched(bytes32 sourceId, uint64 nonce);
+    event MessageDispatched(bytes32 sourceID, uint64 nonce);
 
     constructor(ParachainClient _parachainClient) {
         parachainClient = _parachainClient;
@@ -32,14 +32,14 @@ contract BasicInboundChannel {
             parachainClient.verifyCommitment(commitment, parachainHeaderProof),
             "Invalid proof"
         );
-        require(message.nonce == nonce[message.sourceId] + 1, "Invalid nonce");
+        require(message.nonce == nonce[message.sourceID] + 1, "Invalid nonce");
         // TODO: should we check the remaining gas?
-        nonce[message.sourceId]++;
+        nonce[message.sourceID]++;
         dispatch(message);
         // TODO: should we emit a MessageDispatched event?
     }
 
     function dispatch(Message calldata message) internal {
-        emit MessageDispatched(message.sourceId, message.nonce);
+        emit MessageDispatched(message.sourceID, message.nonce);
     }
 }
