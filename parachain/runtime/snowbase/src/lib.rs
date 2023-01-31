@@ -575,7 +575,7 @@ impl basic_channel_outbound::Config for Runtime {
 
 parameter_types! {
 	pub const MaxSyncCommitteeSize: u32 = 32;
-	pub const MaxProofBranchSize: u32 = 10;
+	pub const MaxProofBranchSize: u32 = 20;
 	pub const MaxExtraDataSize: u32 = 32;
 	pub const MaxLogsBloomSize: u32 = 256;
 	pub const MaxFeeRecipientSize: u32 = 20;

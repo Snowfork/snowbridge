@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/ethereum/go-ethereum v1.10.26
-	github.com/ferranbt/fastssz v0.1.0
+	github.com/ferranbt/fastssz v0.1.2
 	github.com/magefile/mage v1.13.0
 	github.com/prysmaticlabs/prysm/v3 v3.2.0
 	github.com/sirupsen/logrus v1.8.1

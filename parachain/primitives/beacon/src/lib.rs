@@ -206,21 +206,19 @@ pub struct SyncCommitteePeriodUpdate<
 	SignatureSize,
 	ProofSize,
 	SyncCommitteeSize,
-	SlotsPerHistoricalRoot
 ))]
 #[codec(mel_bound())]
 pub struct FinalizedHeaderUpdate<
 	SignatureSize: Get<u32>,
 	ProofSize: Get<u32>,
 	SyncCommitteeSize: Get<u32>,
-	SlotsPerHistoricalRoot: Get<u32>,
 > {
 	pub attested_header: BeaconHeader,
 	pub finalized_header: BeaconHeader,
 	pub finality_branch: BoundedVec<H256, ProofSize>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub signature_slot: u64,
-	pub block_roots: BoundedVec<H256, SlotsPerHistoricalRoot>,
+	pub block_roots_hash: H256,
 	pub block_roots_proof: BoundedVec<H256, ProofSize>,
 }
 
@@ -287,6 +285,7 @@ pub struct BlockUpdate<
 	>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub signature_slot: u64,
+	pub block_root_proof: BoundedVec<u8, ProofSize>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
