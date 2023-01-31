@@ -51,7 +51,7 @@ contract BeefyClientTest is Test {
 
         // Allocate for input variables
         string[] memory inputs = new string[](10);
-        inputs[0] = "test/ffiWrapper.ts";
+        inputs[0] = "test/ffiWrapper.js";
         // Always add type of command as first arguments
         inputs[1] = "GenerateInitialSet";
         // generate initial fixture data with ffi

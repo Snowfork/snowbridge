@@ -16,10 +16,7 @@ import { accounts } from "./test/wallets"
 
 import type { HardhatUserConfig } from "hardhat/config"
 import { ethers } from "ethers"
-import {
-    TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS,
-    TASK_TEST_GET_TEST_FILES,
-} from "hardhat/builtin-tasks/task-names"
+import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names"
 
 let INFURA_KEY = process.env.INFURA_PROJECT_ID
 let ROPSTEN_KEY =
@@ -31,11 +28,6 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper
     const paths = await runSuper()
 
     return paths.filter((p) => !p.endsWith(".t.sol"))
-})
-
-subtask(TASK_TEST_GET_TEST_FILES).setAction(async (_, __, runSuper) => {
-    const files = await runSuper()
-    return files.filter((file) => !file.includes("test/beefy/validator-set.ts"))
 })
 
 const config: HardhatUserConfig = {

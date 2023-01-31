@@ -11,7 +11,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "hardhat compile",
+    "build": "pnpm build:sol && pnpm build:ffi",
+    "build:sol": "hardhat compile",
+    "build:ffi": "esbuild ./test/ffiWrapper.ts --bundle --platform=node --outfile=./test/ffiWrapper.js",
     "lint": "pnpm lint:solhint && pnpm lint:eslint",
     "lint:solhint": "solhint 'contracts/**/*.sol'",
     "lint:eslint": "eslint .",
@@ -74,7 +76,8 @@
     "tsconfig-paths": "^4.1.0",
     "typechain": "^8.1.0",
     "typescript": "^4.3.2",
-    "unique-filename": "^1.1.1"
+    "unique-filename": "^1.1.1",
+    "esbuild": "^0.17.4"
   },
   "dependencies": {
     "@ethersproject/bytes": "^5.0.0",

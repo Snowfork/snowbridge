@@ -23,7 +23,9 @@
     "build",
     "contracts",
     "src/**/*.ts",
+    "src/**/*.js",
     "truffle-config.js",
-    "coverage"
+    "coverage",
+    "test/**/ffi*.js"
   ]
 }
