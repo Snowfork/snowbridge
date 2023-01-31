@@ -24,7 +24,7 @@ generate_chain_spec() {
         echo "Waiting for beacon to get initial bootstrap..."
         bootstrap_data=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block")
         bootstrap_header=$(jq -r '.data.header' <<< "$bootstrap_data")
-        slot=$(jq -r '.data.header.slot' <<< "$bootstrap_data")
+        slot=$(jq -r '.data.header.beacon.slot' <<< "$bootstrap_data")
         sleep 3
     done
 
