@@ -178,18 +178,16 @@ pub mod pallet {
 					T::MaxMessagesPerCommit::get() as usize,
 				Error::<T>::QueueSizeLimitReached,
 			);
-			ensure!(
-				payload.len() <= T::MaxMessagePayloadSize::get() as usize,
-				Error::<T>::PayloadTooLarge,
-			);
 
+			let message_payload =
+				payload.to_vec().try_into().map_err(|_| Error::<T>::PayloadTooLarge)?;
 			let nonce = <Nonce<T>>::get(source_id);
 			let next_nonce = nonce.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
 			<MessageQueue<T>>::try_append(Message {
 				source_id: source_id.clone(),
 				nonce,
-				payload: payload.to_vec().try_into().map_err(|_| Error::<T>::PayloadTooLarge)?,
+				payload: message_payload,
 			})
 			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
 			Self::deposit_event(Event::MessageAccepted(nonce));
