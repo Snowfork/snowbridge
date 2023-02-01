@@ -19,30 +19,30 @@ type SourceConfig struct {
 	Ethereum  config.EthereumConfig  `mapstructure:"ethereum"`
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
 	// Block number when Beefy was activated
-	BeefyActivationBlock uint64   `mapstructure:"beefy-activation-block"`
-	BasicChannelAccounts []string `mapstructure:"basicChannelAccounts"`
+	BeefyActivationBlock  uint64   `mapstructure:"beefy-activation-block"`
+	BasicChannelSourceIDs []string `mapstructure:"basicChannelSourceIDs"`
 }
 
-func (c *SourceConfig) getAccounts() ([][32]byte, error) {
-	var accounts [][32]byte
+func (c *SourceConfig) getSourceIDs() ([][32]byte, error) {
+	var sourceIDs [][32]byte
 
-	for _, account := range c.BasicChannelAccounts {
-		trimmedAccount := strings.TrimPrefix(account, "0x")
-		accountBytes, err := hex.DecodeString(trimmedAccount)
+	for _, sourceID := range c.BasicChannelSourceIDs {
+		trimmedSourceID := strings.TrimPrefix(sourceID, "0x")
+		sourceIDBytes, err := hex.DecodeString(trimmedSourceID)
 
 		if err != nil {
-			return nil, fmt.Errorf("decode account id: %w", err)
-		} else if len(accountBytes) != 32 {
-			// The conversion below will panic if decodedAccount has
+			return nil, fmt.Errorf("decode source id: %w", err)
+		} else if len(sourceIDBytes) != 32 {
+			// The conversion below will panic if sourceIDBytes has
 			// fewer than 32 bytes: we expect exactly 32 bytes.
-			return nil, fmt.Errorf("account id was not 32 bytes long: %v", accountBytes)
+			return nil, fmt.Errorf("source id was not 32 bytes long: %v", sourceIDBytes)
 		}
 
-		decodedAccount := *(*[32]byte)(accountBytes)
-		accounts = append(accounts, decodedAccount)
+		decodedSourceID := *(*[32]byte)(sourceIDBytes)
+		sourceIDs = append(sourceIDs, decodedSourceID)
 	}
 
-	return accounts, nil
+	return sourceIDs, nil
 }
 
 type SourceContractsConfig struct {

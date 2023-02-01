@@ -2,10 +2,12 @@ package parachain
 
 import (
 	"fmt"
+	"math/big"
 	"math/bits"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
@@ -18,7 +20,7 @@ type Task struct {
 	// Outputs of MMR proof generation
 	ProofOutput *ProofOutput
 	// Commitments for basic channel
-	BasicChannelProofs *[]BundleProof
+	BasicChannelProofs *[]MessageProof
 }
 
 // A ProofInput is data needed to generate a proof of parachain header inclusion
@@ -75,9 +77,23 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 	return proof, nil
 }
 
-type BundleProof struct {
-	Bundle BasicOutboundChannelMessageBundle
-	Proof  MerkleProof
+type BasicOutboundChannelMessage struct {
+	SourceID types.AccountID
+	Nonce    types.UCompact
+	Payload  []byte
+}
+
+func (m BasicOutboundChannelMessage) IntoInboundMessage() basic.BasicInboundChannelMessage {
+	return basic.BasicInboundChannelMessage{
+		SourceId: m.SourceID,
+		Nonce:    (*big.Int)(&m.Nonce).Uint64(),
+		Payload:  m.Payload,
+	}
+}
+
+type MessageProof struct {
+	Message BasicOutboundChannelMessage
+	Proof   MerkleProof
 }
 
 func generateHashSides(nodePosition uint64, breadth uint64) ([]bool, error) {
