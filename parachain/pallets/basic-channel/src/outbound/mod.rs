@@ -13,7 +13,7 @@ use frame_support::{
 	BoundedVec, CloneNoBound, Parameter, PartialEqNoBound, RuntimeDebugNoBound,
 };
 use scale_info::TypeInfo;
-use sp_core::{H160, H256};
+use sp_core::H256;
 use sp_runtime::traits::Hash;
 
 use sp_std::prelude::*;
@@ -171,8 +171,7 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		/// Submit message on the outbound channel
-		// TODO: Remove target once incentivized channel & app removal are done
-		pub fn submit(source_id: &T::SourceId, _target: H160, payload: &[u8]) -> DispatchResult {
+		pub fn submit(source_id: &T::SourceId, payload: &[u8]) -> DispatchResult {
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerCommit::get() as usize,
