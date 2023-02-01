@@ -14,5 +14,6 @@ deployments/
 lib/
 out/
 cache/
+broadcast/
 
 tsconfig.tsbuildinfo

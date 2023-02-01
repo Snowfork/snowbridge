@@ -27,7 +27,7 @@ let ETHERSCAN_KEY = process.env.ETHERSCAN_API_KEY
 subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper) => {
     const paths = await runSuper()
 
-    return paths.filter((p) => !p.endsWith(".t.sol"))
+    return paths.filter((p) => !p.endsWith(".t.sol") && !p.endsWith("Deploy.sol"))
 })
 
 const config: HardhatUserConfig = {

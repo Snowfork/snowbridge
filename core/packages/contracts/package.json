@@ -20,7 +20,11 @@
     "format": "prettier --write 'contracts/**/*.sol' 'test/**/*.ts'",
     "size": "hardhat size-contracts",
     "coverage": "hardhat coverage --testfiles 'test/*.ts'",
-    "test": "hardhat test"
+    "test:hardhat": "hardhat test",
+    "test:foundry": "forge test -vvv",
+    "start:hardhat": "hard node",
+    "deploy:hardhat": "hardhat deploy --network localhost",
+    "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ contracts/deploy/foundry/Deploy.sol:DeployScript --broadcast -vvvv"
   },
   "devDependencies": {
     "@babel/core": "^7.11.6",

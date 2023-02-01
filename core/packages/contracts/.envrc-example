@@ -1,16 +1,4 @@
-# Deployment credentials (only necessary for ropsten and mainnet)
-export ROPSTEN_PRIVATE_KEY=0x0000000000000000000000000000000000000000000000000000000000000000
-export INFURA_PROJECT_ID=
-export ETHERSCAN_API_KEY=
-
-# For running scripts and tests without hardhat CLI
-export TS_NODE_FILES=true
-
-# Uncomment to enable gas reporting:
-#
-# export REPORT_GAS=true
-#
-
-# Uncomment to enable USD pricing of gas
-#
-# export COINMARKETCAP_API_KEY=foobar
+export PRIVATE_KEY=0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77
+export RANDAO_COMMIT_DELAY=3
+export RANDAO_COMMIT_EXP=8
+export PARAID=1000

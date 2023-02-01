@@ -5,6 +5,7 @@ src = 'contracts'
 out = 'out'
 libs = ["lib","node_modules"]
 test = 'contracts/test'
+fs_permissions = [{ access = "read", path = "./"}]
 allow_paths = ["node_modules/@openzeppelin/contracts"]
 remappings = [
     'ds-test=lib/ds-test/src/',
