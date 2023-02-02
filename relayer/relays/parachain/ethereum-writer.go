@@ -147,11 +147,11 @@ func (wr *EthereumWriter) WriteChannels(
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (wr *EthereumWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
-	commitmentProof *BundleProof,
+	commitmentProof *MessageProof,
 	paraID uint32,
 	proof *ProofOutput,
 ) error {
-	bundle := commitmentProof.Bundle.IntoInboundMessageBundle()
+	message := commitmentProof.Message.IntoInboundMessage()
 
 	paraHeadProof := opaqueproof.ParachainClientHeadProof{
 		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
@@ -212,7 +212,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 	}
 
 	tx, err := wr.basicInboundChannel.Submit(
-		options, bundle, commitmentProof.Proof.InnerHashes, commitmentProof.Proof.HashSides, opaqueProof,
+		options, message, commitmentProof.Proof.InnerHashes, commitmentProof.Proof.HashSides, opaqueProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction BasicInboundChannel.submit: %w", err)
@@ -225,7 +225,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("params", wr.logFieldsForBasicSubmission(bundle, commitmentProof.Proof.InnerHashes, commitmentProof.Proof.HashSides, opaqueProof)).
+		WithField("params", wr.logFieldsForBasicSubmission(message, commitmentProof.Proof.InnerHashes, commitmentProof.Proof.HashSides, opaqueProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),

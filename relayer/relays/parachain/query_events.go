@@ -21,8 +21,8 @@ type inputItem struct {
 }
 
 type BasicChannelEvent struct {
-	Hash    types.H256
-	Bundles []BasicOutboundChannelMessageBundle
+	Hash     types.H256
+	Messages []BasicOutboundChannelMessage
 }
 
 type QueryClient struct {
@@ -76,14 +76,14 @@ func (q *QueryClient) QueryEvent(ctx context.Context, api string, blockHash type
 			return nil, err
 		}
 
-		var bundles []BasicOutboundChannelMessageBundle
-		err = types.DecodeFromHexString(item.Data, &bundles)
+		var messages []BasicOutboundChannelMessage
+		err = types.DecodeFromHexString(item.Data, &messages)
 		if err != nil {
 			return nil, err
 		}
 		event = &BasicChannelEvent{
-			Hash:    hash,
-			Bundles: bundles,
+			Hash:     hash,
+			Messages: messages,
 		}
 	}
 	log.WithFields(log.Fields{

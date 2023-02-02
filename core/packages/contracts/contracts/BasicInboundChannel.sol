@@ -12,54 +12,36 @@ contract BasicInboundChannel {
 
     ParachainClient public parachainClient;
 
-    struct MessageBundle {
-        bytes32 account;
-        uint64 nonce;
-        Message[] messages;
-    }
-
     struct Message {
-        uint64 id;
-        address target;
+        bytes32 sourceID;
+        uint64 nonce;
         bytes payload;
     }
 
-    event MessageDispatched(uint64 id, bool result);
+    event MessageDispatched(bytes32 sourceID, uint64 nonce);
 
     constructor(ParachainClient _parachainClient) {
         parachainClient = _parachainClient;
     }
 
     function submit(
-        MessageBundle calldata bundle,
+        Message calldata message,
         bytes32[] calldata leafProof,
         bool[] calldata hashSides,
-        bytes calldata proof
+        bytes calldata parachainHeaderProof
     ) external {
-        bytes32 leafHash = keccak256(abi.encode(bundle));
-        bytes32 commitment = MerkleProof.computeRootFromProofAndSide(
-            leafHash,
-            leafProof,
-            hashSides
-        );
-
-        require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
-        require(bundle.nonce == nonce[bundle.account] + 1, "Invalid nonce");
+        bytes32 commitment = MerkleProof.processProof(message, leafProof, hashSides);
         require(
-            gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
-            "insufficient gas"
+            parachainClient.verifyCommitment(commitment, parachainHeaderProof),
+            "Invalid proof"
         );
-        nonce[bundle.account]++;
-        dispatch(bundle);
+        require(message.nonce == nonce[message.sourceID] + 1, "Invalid nonce");
+        require(gasleft() >= MAX_GAS_PER_MESSAGE + GAS_BUFFER, "insufficient gas");
+        nonce[message.sourceID]++;
+        dispatch(message);
     }
 
-    function dispatch(MessageBundle calldata bundle) internal {
-        for (uint256 i = 0; i < bundle.messages.length; i++) {
-            Message calldata message = bundle.messages[i];
-            (bool success, ) = message.target.call{ value: 0, gas: MAX_GAS_PER_MESSAGE }(
-                message.payload
-            );
-            emit MessageDispatched(message.id, success);
-        }
+    function dispatch(Message calldata message) internal {
+        emit MessageDispatched(message.sourceID, message.nonce);
     }
 }

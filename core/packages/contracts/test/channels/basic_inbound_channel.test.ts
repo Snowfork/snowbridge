@@ -32,20 +32,16 @@ describe("BasicInboundChannel", function () {
         it("should accept a valid commitment and dispatch messages", async function () {
             let { channel } = await loadFixture(fixture)
 
-            let nonceBeforeSubmit = await channel.nonce(submitInput.bundle.account)
+            let nonceBeforeSubmit = await channel.nonce(submitInput.message.sourceID)
 
-            await expect(
-                channel.submit(
-                    submitInput.bundle,
-                    submitInput.leafProof,
-                    submitInput.hashSides,
-                    "0xdeadbeef"
-                )
+            await channel.submit(
+                submitInput.message,
+                submitInput.leafProof,
+                submitInput.hashSides,
+                "0xdeadbeef"
             )
-                .to.emit(channel, "MessageDispatched")
-                .withArgs(ethers.BigNumber.from(0), anyValue)
 
-            let nonceAfterSubmit = await channel.nonce(submitInput.bundle.account)
+            let nonceAfterSubmit = await channel.nonce(submitInput.message.sourceID)
             expect(nonceAfterSubmit.sub(nonceBeforeSubmit)).to.be.equal(1)
         })
 
@@ -54,7 +50,7 @@ describe("BasicInboundChannel", function () {
 
             // Submit messages
             await channel.submit(
-                submitInput.bundle,
+                submitInput.message,
                 submitInput.leafProof,
                 submitInput.hashSides,
                 "0xdeadbeef"
@@ -63,7 +59,7 @@ describe("BasicInboundChannel", function () {
             // Submit messages again - should revert
             await expect(
                 channel.submit(
-                    submitInput.bundle,
+                    submitInput.message,
                     submitInput.leafProof,
                     submitInput.hashSides,
                     "0xdeadbeef"

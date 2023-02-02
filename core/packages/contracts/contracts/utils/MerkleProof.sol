@@ -1,7 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
+import "../BasicInboundChannel.sol";
+
 library MerkleProof {
+    function processProof(
+        BasicInboundChannel.Message calldata leaf,
+        bytes32[] calldata proof,
+        bool[] calldata hashSides
+    ) public pure returns (bytes32) {
+        bytes32 leafHash = keccak256(abi.encode(leaf));
+        return computeRootFromProofAndSide(leafHash, proof, hashSides);
+    }
+
     /**
      * @notice Verify that a specific leaf element is part of the Merkle Tree at a specific position in the tree
      *

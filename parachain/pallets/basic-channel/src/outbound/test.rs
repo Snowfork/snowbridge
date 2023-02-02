@@ -69,6 +69,7 @@ parameter_types! {
 }
 
 impl basic_outbound_channel::Config for Test {
+	type SourceId = AccountId;
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
@@ -101,12 +102,11 @@ fn run_to_block(n: u64) {
 fn test_submit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
-		let who: &AccountId = &Keyring::Bob.into();
+		let source_id: &AccountId = &Keyring::Bob.into();
 
-		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
+		assert_ok!(BasicOutboundChannel::submit(source_id, target, &vec![0, 1, 2]));
 
-		assert_eq!(<NextId<Test>>::get(), 1);
-		assert_eq!(<Nonce<Test>>::get(who), 0);
+		assert_eq!(<Nonce<Test>>::get(source_id), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 1);
 	});
 }
@@ -115,14 +115,14 @@ fn test_submit() {
 fn test_submit_exceeds_queue_limit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
-		let who: &AccountId = &Keyring::Bob.into();
+		let source_id: &AccountId = &Keyring::Bob.into();
 
 		let max_messages = MaxMessagesPerCommit::get();
 		(0..max_messages)
-			.for_each(|_| BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]).unwrap());
+			.for_each(|_| BasicOutboundChannel::submit(source_id, target, &vec![0, 1, 2]).unwrap());
 
 		assert_noop!(
-			BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]),
+			BasicOutboundChannel::submit(source_id, target, &vec![0, 1, 2]),
 			Error::<Test>::QueueSizeLimitReached,
 		);
 	})
@@ -132,7 +132,7 @@ fn test_submit_exceeds_queue_limit() {
 fn test_submit_exceeds_payload_limit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
-		let who: &AccountId = &Keyring::Bob.into();
+		let source_id: &AccountId = &Keyring::Bob.into();
 
 		let max_payload_bytes = MaxMessagePayloadSize::get() - 1;
 
@@ -142,7 +142,7 @@ fn test_submit_exceeds_payload_limit() {
 		payload.push(10);
 
 		assert_noop!(
-			BasicOutboundChannel::submit(who, target, payload.as_slice()),
+			BasicOutboundChannel::submit(source_id, target, payload.as_slice()),
 			Error::<Test>::PayloadTooLarge,
 		);
 	})
@@ -152,14 +152,13 @@ fn test_submit_exceeds_payload_limit() {
 fn test_commit_single_user() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
-		let who: &AccountId = &Keyring::Bob.into();
+		let source_id: &AccountId = &Keyring::Bob.into();
 
-		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
+		assert_ok!(BasicOutboundChannel::submit(source_id, target, &vec![0, 1, 2]));
 		run_to_block(2);
 		BasicOutboundChannel::commit(Weight::MAX);
 
-		assert_eq!(<NextId<Test>>::get(), 1);
-		assert_eq!(<Nonce<Test>>::get(who), 1);
+		assert_eq!(<Nonce<Test>>::get(source_id), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
 	})
 }
@@ -176,7 +175,6 @@ fn test_commit_multi_user() {
 		run_to_block(2);
 		BasicOutboundChannel::commit(Weight::MAX);
 
-		assert_eq!(<NextId<Test>>::get(), 2);
 		assert_eq!(<Nonce<Test>>::get(alice), 1);
 		assert_eq!(<Nonce<Test>>::get(bob), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
