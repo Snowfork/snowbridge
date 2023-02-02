@@ -1,0 +1,39 @@
+const fs = require("fs");
+const path = require("path");
+const DeployInfoFile = "./broadcast/Deploy.sol/15/run-latest.json";
+const BuildInfoDir = "./out";
+const DestFile =
+  process.argv.length >= 3 ? process.argv[2] : "/tmp/snowbridge/contracts.json";
+
+const run = async () => {
+  let contracts = {};
+  const deploymentInfo = JSON.parse(fs.readFileSync(DeployInfoFile, "utf8"));
+  for (let transaction of deploymentInfo.transactions) {
+    if (transaction.transactionType === "CREATE") {
+      let contractName = transaction.contractName;
+      let contractInfo = { address: transaction.contractAddress };
+      let contractBuildingInfo = JSON.parse(
+        fs.readFileSync(
+          path.join(
+            BuildInfoDir,
+            contractName + ".sol",
+            contractName + ".json"
+          ),
+          "utf8"
+        )
+      );
+      contractInfo.abi = contractBuildingInfo.abi;
+      contracts[contractName] = contractInfo;
+    }
+  }
+  fs.writeFileSync(DestFile, JSON.stringify({ contracts }, null, 2), "utf8");
+};
+
+run()
+  .then(() => {
+    console.log("Contract File generated successfully");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error(err);
+  });

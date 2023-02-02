@@ -66,7 +66,8 @@ start_lodestar() {
 deploy_contracts()
 {
     pushd "$contract_dir"
-    npx hardhat deploy --network $eth_network --reset --export "$output_dir/contracts.json"
+    forge script --rpc-url $infura_endpoint_http contracts/deploy/foundry/Deploy.sol:DeployScript --broadcast -vvv
+    node scripts/generateContractInfo.js "$output_dir/contracts.json"
     popd
     echo "Exported contract artifacts: $output_dir/contracts.json"
 }

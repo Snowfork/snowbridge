@@ -26,6 +26,7 @@
     "src/**/*.js",
     "truffle-config.js",
     "coverage",
-    "test/**/ffi*.js"
+    "test/**/ffi*.js",
+    "scripts/generateContractInfo.js"
   ]
 }

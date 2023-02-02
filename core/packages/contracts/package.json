@@ -22,8 +22,6 @@
     "coverage": "hardhat coverage --testfiles 'test/*.ts'",
     "test:hardhat": "hardhat test",
     "test:foundry": "forge test -vvv",
-    "start:hardhat": "hard node",
-    "deploy:hardhat": "hardhat deploy --network localhost",
     "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ contracts/deploy/foundry/Deploy.sol:DeployScript --broadcast -vvvv"
   },
   "devDependencies": {
@@ -59,7 +57,6 @@
     "find-config": "^1.0.0",
     "hardhat": "^2.12.2",
     "hardhat-contract-sizer": "^2.6.1",
-    "hardhat-deploy": "^0.11.20",
     "hardhat-gas-reporter": "^1.0.9",
     "keccak": "^3.0.2",
     "lodash": "^4.17.21",
