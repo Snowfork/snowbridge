@@ -15,5 +15,5 @@ lib/
 out/
 cache/
 broadcast/
-
+test/ffiWrapper.js
 tsconfig.tsbuildinfo

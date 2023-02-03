@@ -24,6 +24,7 @@ contract DeployScript is Script {
         console.log("address of inboundChannel is: %s", address(inboundChannel));
         BasicOutboundChannel outboundChannel = new BasicOutboundChannel();
         outboundChannel.initialize(deployer, new address[](0));
+        console.log("address of outboundChannel is: %s", address(outboundChannel));
         vm.stopBroadcast();
     }
 }
