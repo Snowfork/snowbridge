@@ -27,7 +27,7 @@ We use the Nix package manager to provide a repeatable and maintainable develope
 After [installing](https://nixos.org/download.html) Nix, activate a developer shell here in the root of our repo, where `shell.nix` is located:
 
 ```
-nix-shell
+nix-shell --run $SHELL
 ```
 
 To ensure your code editor (such as VS code) can execute tools in the nix env, startup your editor within the interactive shell.
@@ -35,7 +35,7 @@ To ensure your code editor (such as VS code) can execute tools in the nix env, s
 Example for VS Code:
 
 ```
-nix-shell
+nix-shell --run $SHELL
 code .
 ```
 
