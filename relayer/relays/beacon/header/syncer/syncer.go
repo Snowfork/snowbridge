@@ -195,7 +195,7 @@ func (s *Syncer) GetBlockRoots(ctx context.Context, stateRoot string) (types.H25
 		networkConfig = params.PraterConfig()
 	}
 	if s.network.IsLocal() {
-		return types.H256{}, nil, ErrLocalNetBeaconStateNotSupported
+		networkConfig = params.MinimalSpecConfig()
 	}
 
 	err := s.Client.DownloadBeaconState(stateRoot)
@@ -209,7 +209,7 @@ func (s *Syncer) GetBlockRoots(ctx context.Context, stateRoot string) (types.H25
 	const fileName = "beacon_state.ssz"
 
 	defer func() {
-		_ = os.Remove(fileName)
+		//_ = os.Remove(fileName)
 	}()
 
 	data, err := os.ReadFile(fileName)

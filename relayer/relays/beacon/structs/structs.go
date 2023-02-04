@@ -250,6 +250,34 @@ type BeaconStateBellatrix struct {
 	LatestExecutionPayloadHeader *ExecutionPayloadHeader `json:"latest_execution_payload_header"`
 }
 
+type BeaconStateMinimal struct {
+	GenesisTime                  uint64                  `json:"genesis_time"`
+	GenesisValidatorsRoot        []byte                  `json:"genesis_validators_root" ssz-size:"32"`
+	Slot                         uint64                  `json:"slot"`
+	Fork                         *Fork                   `json:"fork"`
+	LatestBlockHeader            *BeaconBlockHeader      `json:"latest_block_header"`
+	BlockRoots                   [][]byte                `json:"block_roots" ssz-size:"64,32"`
+	StateRoots                   [][]byte                `json:"state_roots" ssz-size:"64,32"`
+	HistoricalRoots              [][]byte                `json:"historical_roots" ssz-max:"16777216" ssz-size:"?,32"`
+	Eth1Data                     *Eth1Data               `json:"eth1_data"`
+	Eth1DataVotes                []*Eth1Data             `json:"eth1_data_votes" ssz-max:"32"`
+	Eth1DepositIndex             uint64                  `json:"eth1_deposit_index"`
+	Validators                   []*Validator            `json:"validators" ssz-max:"1099511627776"`
+	Balances                     []uint64                `json:"balances" ssz-max:"1099511627776"`
+	RandaoMixes                  [][]byte                `json:"randao_mixes" ssz-size:"64,32"`
+	Slashings                    []uint64                `json:"slashings" ssz-size:"64"`
+	PreviousEpochParticipation   []byte                  `json:"previous_epoch_participation" ssz-max:"1099511627776"`
+	CurrentEpochParticipation    []byte                  `json:"current_epoch_participation" ssz-max:"1099511627776"`
+	JustificationBits            []byte                  `json:"justification_bits" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector4" ssz-size:"1"`
+	PreviousJustifiedCheckpoint  *Checkpoint             `json:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint   *Checkpoint             `json:"current_justified_checkpoint"`
+	FinalizedCheckpoint          *Checkpoint             `json:"finalized_checkpoint"`
+	InactivityScores             []uint64                `json:"inactivity_scores" ssz-max:"1099511627776"`
+	CurrentSyncCommittee         *SyncCommittee          `json:"current_sync_committee"`
+	NextSyncCommittee            *SyncCommittee          `json:"next_sync_committee"`
+	LatestExecutionPayloadHeader *ExecutionPayloadHeader `json:"latest_execution_payload_header"`
+}
+
 type BlockRootsContainer struct {
 	BlockRoots [][]byte `json:"block_roots" ssz-size:"8192,32"`
 }

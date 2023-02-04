@@ -9,4 +9,4 @@ hack_lodestar() {
    sed -i "s/SLOTS_PER_EPOCH: 8/SLOTS_PER_EPOCH: 4/g" $preset_minimal_phase0_file
 }
 
-hack_lodestar
+#hack_lodestar
