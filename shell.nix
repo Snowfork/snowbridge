@@ -1,5 +1,10 @@
-{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/2f9fd351ec37f5d479556cd48be4ca340da59b8f.tar.gz") {} }:
-
+let
+    nixpkgs = fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/2f9fd351ec37f5d479556cd48be4ca340da59b8f.tar.gz";
+        sha256 = "0w3ysrhbqhgr1qnh0r9miyqd7yf7vsd4wcd21dffwjlb99lynla8";
+    };
+    pkgs = (import nixpkgs {});
+in
 pkgs.mkShell {
     buildInputs = with pkgs; [
         git
