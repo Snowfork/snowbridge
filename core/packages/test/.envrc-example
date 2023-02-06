@@ -1,6 +1,6 @@
 ## Config for E2E stack
 
-export POLKADOT_BIN=/path/to/polkadot/target/release/polkadot
+export POLKADOT_DIR=/path/to/polkadot
 
 ## Run E2E on Ropsten
 
