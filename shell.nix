@@ -36,12 +36,14 @@ pkgs.mkShell {
         export CARGO_HOME=$PWD/.cargo
         export RUSTUP_HOME=$PWD/.rustup
         export PATH=$CARGO_HOME/bin:$PATH
-        export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
         rustup install 1.66.1
         rustup install nightly-2022-11-15
         rustup target add wasm32-unknown-unknown --toolchain nightly-2022-11-15
         rustup default 1.66.1
+
+        # rocksdb requires a clang.so
+        export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
         eval "$(direnv hook bash)"
 
