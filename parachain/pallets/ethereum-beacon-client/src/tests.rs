@@ -745,7 +745,7 @@ mod beacon_minimal_tests {
 			.expect("Time went backwards")
 			.as_secs();
 
-		let slot = initial_sync.header.slot;
+		let slot = update.finalized_header.slot - 1;
 		let import_time = time_now + (slot * config::SECONDS_PER_SLOT); // Goerli genesis time + finalized header update time
 		let mock_pallet_time = import_time + 3600; // plus one hour
 
@@ -812,6 +812,12 @@ mod beacon_minimal_tests {
 			ValidatorsRoot::<mock_minimal::Test>::set(
 				hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
 			);
+
+			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
+				beacon_block_root: H256::default(),
+				beacon_slot: update.finalized_header.slot - 1,
+				import_time: 0,
+			});
 
 			assert_err!(
 				mock_minimal::EthereumBeaconClient::import_finalized_header(
