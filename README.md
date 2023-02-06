@@ -39,6 +39,9 @@ nix-shell --run $SHELL
 code .
 ```
 
+To automatically enter this nix shell whenever you open the project, install [`direnv`](https://direnv.net/docs/installation.html) and run `direnv allow` in the
+project root.
+
 ## Security
 
 The security policy and procedures can be found in SECURITY.md.
