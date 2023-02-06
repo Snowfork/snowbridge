@@ -26,6 +26,7 @@ pkgs.mkShell {
         libiconv
         cmake
         protobuf
+        clang
 
         pkgs.cowsay
     ];
@@ -35,6 +36,7 @@ pkgs.mkShell {
         export CARGO_HOME=$PWD/.cargo
         export RUSTUP_HOME=$PWD/.rustup
         export PATH=$CARGO_HOME/bin:$PATH
+        export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
         rustup install 1.66.1
         rustup install nightly-2022-11-15
