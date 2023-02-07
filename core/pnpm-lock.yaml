@@ -164,7 +164,7 @@ importers:
 
   packages/test:
     specifiers:
-      '@chainsafe/lodestar': 1.4.0
+      '@chainsafe/lodestar': 1.4.2-rc.0
       '@polkadot/api': 9.11.1
       '@polkadot/types': 9.11.1
       '@polkadot/util': 10.2.3
@@ -192,7 +192,7 @@ importers:
       ws: ^7.4.6
       yargs: ^17.0.1
     devDependencies:
-      '@chainsafe/lodestar': 1.4.0_fastify@3.15.1
+      '@chainsafe/lodestar': 1.4.2-rc.0_fastify@3.15.1
       '@polkadot/api': 9.11.1
       '@polkadot/types': 9.11.1
       '@polkadot/util': 10.2.3
@@ -582,14 +582,14 @@ packages:
       - supports-color
     dev: true
 
-  /@chainsafe/discv5/2.1.1:
-    resolution: {integrity: sha512-jKLpMAhx4/jXmUzrKIzMa9jDdXf5DFhnOwhw7ouRln9STzb5MbBDUKI98gqSglF1XdnJQZ4OBspGb9N9+4AnTg==}
+  /@chainsafe/discv5/3.0.0:
+    resolution: {integrity: sha512-NqRjJ9tfD8bbxCo6oI2y+Ih1fBlHmIs8l19f5ca5lY61nfISLKMUO+uCvJ6mguqcSzz0zxSsp5dmzhJ0E+J+HA==}
     dependencies:
-      '@libp2p/crypto': 1.0.9
+      '@libp2p/crypto': 1.0.11
       '@libp2p/interface-peer-discovery': 1.0.2
       '@libp2p/interface-peer-id': 2.0.1
-      '@libp2p/interface-peer-info': 1.0.4
-      '@libp2p/interfaces': 3.0.4
+      '@libp2p/interface-peer-info': 1.0.8
+      '@libp2p/interfaces': 3.3.1
       '@libp2p/peer-id': 2.0.1
       '@multiformats/multiaddr': 11.0.10
       base64url: 3.0.1
@@ -619,7 +619,7 @@ packages:
     resolution: {integrity: sha512-+zIPRGf2T+Qd+Hef/XbJx66FL+hbmth9sk6sr3PvQ2eolHGFwPwxSeM7fVdGWoZ7sMndUoGKUNPmO2GzbPsVQg==}
     engines: {npm: '>=8.7.0'}
     dependencies:
-      '@libp2p/crypto': 1.0.9
+      '@libp2p/crypto': 1.0.11
       '@libp2p/interface-connection': 3.0.3
       '@libp2p/interface-connection-manager': 1.3.1
       '@libp2p/interface-keys': 1.0.4
@@ -628,7 +628,7 @@ packages:
       '@libp2p/interface-pubsub': 3.0.6
       '@libp2p/interface-registrar': 2.0.8
       '@libp2p/interfaces': 3.3.1
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       '@libp2p/peer-id': 2.0.1
       '@libp2p/peer-record': 5.0.0
       '@libp2p/pubsub': 6.0.0
@@ -651,12 +651,12 @@ packages:
     resolution: {integrity: sha512-NEl5aIv6muz9OL+dsa3INEU89JX0NViBxOy7NwwG8eNRPUDHo5E3ZTMSHXQpVx1K/ofoNS4ANO9xwezY6ss5GA==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      '@libp2p/crypto': 1.0.9
+      '@libp2p/crypto': 1.0.11
       '@libp2p/interface-connection-encrypter': 3.0.5
       '@libp2p/interface-keys': 1.0.4
       '@libp2p/interface-metrics': 4.0.4
       '@libp2p/interface-peer-id': 2.0.1
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       '@libp2p/peer-id': 2.0.1
       '@stablelib/chacha20poly1305': 1.0.1
       '@stablelib/hkdf': 1.0.1
@@ -674,8 +674,8 @@ packages:
       - supports-color
     dev: true
 
-  /@chainsafe/lodestar/1.4.0_fastify@3.15.1:
-    resolution: {integrity: sha512-jo+/gt3sFHF8qAmRolsQqyVqd0zE9PDo252Wr9++fLs2ff0uJK+f8mcmyP9IA/DMl/9li4CHXVW6jCN/Vdxwlw==}
+  /@chainsafe/lodestar/1.4.2-rc.0_fastify@3.15.1:
+    resolution: {integrity: sha512-7Rgv5AeOjO/N7ikKTRjQee6mzw8MnpscSSC5YOpzNYCZsqeWHvttZLhOIjMxYnblXTl2MXRvKAWKvdu4aQxR9w==}
     hasBin: true
     dependencies:
       '@chainsafe/as-sha256': 0.3.1
@@ -683,19 +683,19 @@ packages:
       '@chainsafe/bls-keygen': 0.3.0
       '@chainsafe/bls-keystore': 2.0.0
       '@chainsafe/blst': 0.2.8
-      '@chainsafe/discv5': 2.1.1
+      '@chainsafe/discv5': 3.0.0
       '@chainsafe/ssz': 0.9.2
       '@libp2p/peer-id-factory': 2.0.1
-      '@lodestar/api': 1.4.0_fastify@3.15.1
-      '@lodestar/beacon-node': 1.4.0_@chainsafe+blst@0.2.8
-      '@lodestar/config': 1.4.0
-      '@lodestar/db': 1.4.0
-      '@lodestar/light-client': 1.4.0_lfzjzsqji2puhppndhpa2aauce
-      '@lodestar/params': 1.4.0
-      '@lodestar/state-transition': 1.4.0_@chainsafe+blst@0.2.8
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
-      '@lodestar/validator': 1.4.0_lfzjzsqji2puhppndhpa2aauce
+      '@lodestar/api': 1.4.2-rc.0_fastify@3.15.1
+      '@lodestar/beacon-node': 1.4.2-rc.0_@chainsafe+blst@0.2.8
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/db': 1.4.2-rc.0
+      '@lodestar/light-client': 1.4.2-rc.0_lfzjzsqji2puhppndhpa2aauce
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/state-transition': 1.4.2-rc.0_@chainsafe+blst@0.2.8
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
+      '@lodestar/validator': 1.4.2-rc.0_lfzjzsqji2puhppndhpa2aauce
       '@multiformats/multiaddr': 11.0.10
       '@types/lockfile': 1.0.2
       bip39: 3.0.4
@@ -1237,7 +1237,7 @@ packages:
       '@libp2p/interface-peer-info': 1.0.8
       '@libp2p/interface-peer-store': 1.2.3
       '@libp2p/interfaces': 3.3.1
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       '@libp2p/peer-id': 2.0.1
       '@multiformats/mafmt': 11.0.3
       '@multiformats/multiaddr': 11.0.10
@@ -1254,20 +1254,6 @@ packages:
       '@noble/secp256k1': 1.7.0
       err-code: 3.0.1
       multiformats: 11.0.0
-      node-forge: 1.3.1
-      protons-runtime: 4.0.1
-      uint8arrays: 4.0.2
-    dev: true
-
-  /@libp2p/crypto/1.0.9:
-    resolution: {integrity: sha512-7jL6dVhwNTKsmFrB8D+36CRhEner/d/LaJDofCb/FsH5EeY06imkuIlu5Z3WoJv9kF803S45mzfPw+Cpqkp6Zw==}
-    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
-    dependencies:
-      '@libp2p/interface-keys': 1.0.4
-      '@noble/ed25519': 1.7.1
-      '@noble/secp256k1': 1.7.0
-      err-code: 3.0.1
-      multiformats: 10.0.2
       node-forge: 1.3.1
       protons-runtime: 4.0.1
       uint8arrays: 4.0.2
@@ -1388,8 +1374,8 @@ packages:
     resolution: {integrity: sha512-Zgjw0bVd8DDwL5qkh/GA1JCQiEGD16wRQ7nhlGe+tXHdZb8LCP/1/P6ry0v0W6MgxAnO90SegC4T3TGYlsj6hw==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      '@libp2p/interface-peer-info': 1.0.4
-      '@libp2p/interfaces': 3.0.4
+      '@libp2p/interface-peer-info': 1.0.8
+      '@libp2p/interfaces': 3.3.1
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -1401,28 +1387,11 @@ packages:
       multiformats: 10.0.2
     dev: true
 
-  /@libp2p/interface-peer-id/2.0.0:
-    resolution: {integrity: sha512-TZmJy/tfWNvX/n1TWby6V+LP9Pg3ZYJbSkqQfnqp/hCCN3Xhd2KrDTm4LWq5MMunr4Xk9xLUJdK41W2wUF7OQw==}
-    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
-    dependencies:
-      multiformats: 11.0.0
-    dev: true
-
   /@libp2p/interface-peer-id/2.0.1:
     resolution: {integrity: sha512-k01hKHTAZWMOiBC+yyFsmBguEMvhPkXnQtqLtFqga2fVZu8Zve7zFAtQYLhQjeJ4/apeFtO6ddTS8mCE6hl4OA==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
       multiformats: 11.0.0
-    dev: true
-
-  /@libp2p/interface-peer-info/1.0.4:
-    resolution: {integrity: sha512-ILW2j7NMD1jZwWdJyxXY8fv/aiaJf2rOjgQkXgidy1GdaZ7UtNiiyvZmksqfEVlWH6opfd/GbuwrMemzM2E7Xg==}
-    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
-    dependencies:
-      '@libp2p/interface-peer-id': 1.1.0
-      '@multiformats/multiaddr': 11.0.10
-    transitivePeerDependencies:
-      - supports-color
     dev: true
 
   /@libp2p/interface-peer-info/1.0.8:
@@ -1514,26 +1483,9 @@ packages:
       - supports-color
     dev: true
 
-  /@libp2p/interfaces/3.0.4:
-    resolution: {integrity: sha512-e8GZAgr72bT2qfDsIVb9lKDA2itLLGfXnaC18VXsToFUd4kCAe6ggUsRFpCBjrX3aWZ16pRiGy4afprOCfgyIg==}
-    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
-    dev: true
-
   /@libp2p/interfaces/3.3.1:
     resolution: {integrity: sha512-3N+goQt74SmaVOjwpwMPKLNgh1uDQGw8GD12c40Kc86WOq0qvpm3NfACW+H8Su2X6KmWjCSMzk9JWs9+8FtUfg==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
-    dev: true
-
-  /@libp2p/logger/2.0.2:
-    resolution: {integrity: sha512-7XuYoKuce7wTUkVSpll3A/BVlnCVV2kQEfgHtNe8fK8miXCDJFKYm/DhCP1/ZOFs/TrkVt7F/TFJwQ9tlOj3rw==}
-    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
-    dependencies:
-      '@libp2p/interface-peer-id': 1.1.0
-      debug: 4.3.4
-      interface-datastore: 7.0.1
-      multiformats: 10.0.2
-    transitivePeerDependencies:
-      - supports-color
     dev: true
 
   /@libp2p/logger/2.0.5:
@@ -1554,9 +1506,9 @@ packages:
     dependencies:
       '@libp2p/interface-peer-discovery': 1.0.2
       '@libp2p/interface-peer-id': 2.0.1
-      '@libp2p/interface-peer-info': 1.0.4
+      '@libp2p/interface-peer-info': 1.0.8
       '@libp2p/interfaces': 3.3.1
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       '@libp2p/peer-id': 2.0.1
       '@multiformats/multiaddr': 11.0.10
       '@types/multicast-dns': 7.2.1
@@ -1572,7 +1524,7 @@ packages:
     dependencies:
       '@libp2p/interface-connection': 3.0.3
       '@libp2p/interface-stream-muxer': 3.0.5
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       abortable-iterator: 4.0.2
       any-signal: 3.0.1
       benchmark: 2.1.4
@@ -1623,9 +1575,9 @@ packages:
     resolution: {integrity: sha512-CRJmqwNQhDC51sQ9lf6EqEY8HuywwymMVffL2kIYI5ts5k+6gvIXzoSxLf3V3o+OxcroXG4KG0uGxxAi5DUXSA==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      '@libp2p/crypto': 1.0.9
+      '@libp2p/crypto': 1.0.11
       '@libp2p/interface-keys': 1.0.4
-      '@libp2p/interface-peer-id': 2.0.0
+      '@libp2p/interface-peer-id': 2.0.1
       '@libp2p/peer-id': 2.0.1
       multiformats: 11.0.0
       protons-runtime: 4.0.1
@@ -1708,7 +1660,7 @@ packages:
     dependencies:
       '@libp2p/interface-connection': 3.0.3
       '@libp2p/interface-metrics': 4.0.4
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       it-foreach: 1.0.0
       it-stream-types: 1.0.4
       prom-client: 14.1.0
@@ -1720,13 +1672,13 @@ packages:
     resolution: {integrity: sha512-WWViQ+fEL3JWt415UznUR6wQCm+UCi65SNQWQoTRYaCM2DYVCrIRfGpmFWAyKPCr76L6UesucIkZHuyh2c3xNA==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      '@libp2p/crypto': 1.0.9
+      '@libp2p/crypto': 1.0.11
       '@libp2p/interface-connection': 3.0.3
       '@libp2p/interface-peer-id': 2.0.1
       '@libp2p/interface-pubsub': 3.0.6
       '@libp2p/interface-registrar': 2.0.8
       '@libp2p/interfaces': 3.3.1
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       '@libp2p/peer-collections': 3.0.0
       '@libp2p/peer-id': 2.0.1
       '@libp2p/topology': 4.0.1
@@ -1752,7 +1704,7 @@ packages:
       '@libp2p/interface-metrics': 4.0.4
       '@libp2p/interface-transport': 2.1.1
       '@libp2p/interfaces': 3.3.1
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       '@libp2p/utils': 3.0.3
       '@multiformats/mafmt': 11.0.3
       '@multiformats/multiaddr': 11.0.10
@@ -1767,7 +1719,7 @@ packages:
     dependencies:
       '@libp2p/interface-peer-id': 2.0.1
       '@libp2p/interface-registrar': 2.0.8
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       it-all: 2.0.0
     transitivePeerDependencies:
       - supports-color
@@ -1789,7 +1741,7 @@ packages:
       '@achingbrain/ip-address': 8.1.0
       '@libp2p/interface-connection': 3.0.3
       '@libp2p/interface-peer-store': 1.2.3
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       '@multiformats/multiaddr': 11.0.10
       abortable-iterator: 4.0.2
       err-code: 3.0.1
@@ -1801,17 +1753,17 @@ packages:
       - supports-color
     dev: true
 
-  /@lodestar/api/1.4.0_fastify@3.15.1:
-    resolution: {integrity: sha512-/GGAXGW4FiSceA053qvBr/4kcC3EYWcPfovhVzcTawjgQ5e6tl5/21/77aoetUu+rNHoilXDRa6O47gdlZ4vlg==}
+  /@lodestar/api/1.4.2-rc.0_fastify@3.15.1:
+    resolution: {integrity: sha512-EzF4TrQ5i28rrL70Y8O6QeuflcyKKD2d252LSed6GvwgUh30IbBBdmAQj+/TrRKS/zbp/cZD00JYXY9h6uC6bA==}
     peerDependencies:
       fastify: 3.29.4
     dependencies:
       '@chainsafe/persistent-merkle-tree': 0.4.2
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/config': 1.4.0
-      '@lodestar/params': 1.4.0
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
       cross-fetch: 3.1.5
       eventsource: 2.0.2
       fastify: 3.15.1
@@ -1820,17 +1772,17 @@ packages:
       - encoding
     dev: true
 
-  /@lodestar/api/1.4.0_fastify@3.29.4:
-    resolution: {integrity: sha512-/GGAXGW4FiSceA053qvBr/4kcC3EYWcPfovhVzcTawjgQ5e6tl5/21/77aoetUu+rNHoilXDRa6O47gdlZ4vlg==}
+  /@lodestar/api/1.4.2-rc.0_fastify@3.29.4:
+    resolution: {integrity: sha512-EzF4TrQ5i28rrL70Y8O6QeuflcyKKD2d252LSed6GvwgUh30IbBBdmAQj+/TrRKS/zbp/cZD00JYXY9h6uC6bA==}
     peerDependencies:
       fastify: 3.29.4
     dependencies:
       '@chainsafe/persistent-merkle-tree': 0.4.2
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/config': 1.4.0
-      '@lodestar/params': 1.4.0
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
       cross-fetch: 3.1.5
       eventsource: 2.0.2
       fastify: 3.29.4
@@ -1839,15 +1791,15 @@ packages:
       - encoding
     dev: true
 
-  /@lodestar/beacon-node/1.4.0_@chainsafe+blst@0.2.8:
-    resolution: {integrity: sha512-mvYj98mchoEn8PWw168r5ibfgABDcLTrZJ8ujQZQ2BejzU8WKiWOjXJSCgWolZUp8w2S3ZvcvkLOjkOVquGROQ==}
+  /@lodestar/beacon-node/1.4.2-rc.0_@chainsafe+blst@0.2.8:
+    resolution: {integrity: sha512-ocDIv71WD1lp8e7EXhJz8Z6TN7/VWm514xVzM9Ujc5VzfB0oQiPX7RadmAyNeDtjY1EMY84fDR2QldRH404/LA==}
     peerDependencies:
       c-kzg: ^1.0.7
     dependencies:
       '@chainsafe/as-chacha20poly1305': 0.1.0
       '@chainsafe/as-sha256': 0.3.1
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
-      '@chainsafe/discv5': 2.1.1
+      '@chainsafe/discv5': 3.0.0
       '@chainsafe/libp2p-gossipsub': 6.1.0
       '@chainsafe/libp2p-noise': 11.0.0
       '@chainsafe/persistent-merkle-tree': 0.4.2
@@ -1866,17 +1818,17 @@ packages:
       '@libp2p/peer-id-factory': 2.0.1
       '@libp2p/prometheus-metrics': 1.1.3_prom-client@14.1.0
       '@libp2p/tcp': 6.1.1
-      '@lodestar/api': 1.4.0_fastify@3.29.4
-      '@lodestar/config': 1.4.0
-      '@lodestar/db': 1.4.0
-      '@lodestar/fork-choice': 1.4.0_@chainsafe+blst@0.2.8
-      '@lodestar/light-client': 1.4.0_6k57yb4aeacz6u6ckht4rwg7fe
-      '@lodestar/params': 1.4.0
-      '@lodestar/reqresp': 1.4.0_libp2p@0.42.2
-      '@lodestar/state-transition': 1.4.0_@chainsafe+blst@0.2.8
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
-      '@lodestar/validator': 1.4.0_6k57yb4aeacz6u6ckht4rwg7fe
+      '@lodestar/api': 1.4.2-rc.0_fastify@3.29.4
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/db': 1.4.2-rc.0
+      '@lodestar/fork-choice': 1.4.2-rc.0_@chainsafe+blst@0.2.8
+      '@lodestar/light-client': 1.4.2-rc.0_6k57yb4aeacz6u6ckht4rwg7fe
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/reqresp': 1.4.2-rc.0_libp2p@0.42.2
+      '@lodestar/state-transition': 1.4.2-rc.0_@chainsafe+blst@0.2.8
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
+      '@lodestar/validator': 1.4.2-rc.0_6k57yb4aeacz6u6ckht4rwg7fe
       '@multiformats/multiaddr': 11.0.10
       '@types/datastore-level': 3.0.0
       buffer-xor: 2.0.2
@@ -1908,49 +1860,49 @@ packages:
       - supports-color
     dev: true
 
-  /@lodestar/config/1.4.0:
-    resolution: {integrity: sha512-4hGliLUPwAd5cFqA4/4DcfNrthsUIUpyKSP5iQuhJtbRbU5g9JuQevOliWCB1K0SNCP5NcyO6CFqPeurmUPk6g==}
+  /@lodestar/config/1.4.2-rc.0:
+    resolution: {integrity: sha512-MtyZ+Q1Tz6Cy8hmf0pzTxNOUfkpHcGz5xbsNpVwbZmUcZiJuX0URrxoVP206PrQe2XLxLdejWTkagfSVTzDvzw==}
     dependencies:
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/params': 1.4.0
-      '@lodestar/types': 1.4.0
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/types': 1.4.2-rc.0
     dev: true
 
-  /@lodestar/db/1.4.0:
-    resolution: {integrity: sha512-Ld7eiRRcDqB2HGG+hXzxdEQw8nDwYaXBAyFDhmrbqyd4vbLK4y8ZX39r8zizBUGf9/zGJOTolrYsx/f4SAC88g==}
+  /@lodestar/db/1.4.2-rc.0:
+    resolution: {integrity: sha512-mLUWSEf0aElQh/a7neoP64SKyPub33+gVDQ9cuFz7JrryjzoY947PCmH0bg+U+BSJL012FcHOLb1kl9UiixHxg==}
     dependencies:
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/config': 1.4.0
-      '@lodestar/utils': 1.4.0
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
       '@types/levelup': 4.3.3
       it-all: 2.0.0
       level: 8.0.0
     dev: true
 
-  /@lodestar/fork-choice/1.4.0_@chainsafe+blst@0.2.8:
-    resolution: {integrity: sha512-0ldgSRCIb8rcSU6e+jKGY/sg3DkdNYPwwo2aEtLe7AparYADIAZ/9fYXjNKZHqCHj2lMcrA6U3uwtZBDjz+QrQ==}
+  /@lodestar/fork-choice/1.4.2-rc.0_@chainsafe+blst@0.2.8:
+    resolution: {integrity: sha512-Ofa38KRza+z6fP4RfmiWSzaAKV53QNSLwOOGti1RQxgyXOAkYURz03utzdG+FO16GvLdPM8D54rT+bg/U+rroQ==}
     dependencies:
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/config': 1.4.0
-      '@lodestar/params': 1.4.0
-      '@lodestar/state-transition': 1.4.0_@chainsafe+blst@0.2.8
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/state-transition': 1.4.2-rc.0_@chainsafe+blst@0.2.8
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
     transitivePeerDependencies:
       - '@chainsafe/blst'
     dev: true
 
-  /@lodestar/light-client/1.4.0_6k57yb4aeacz6u6ckht4rwg7fe:
-    resolution: {integrity: sha512-iqiVZDh0ZUeS005MlIfS3gJmy6PVLckNEeCOO9+BqPnqcoZMsNqWFs/OK7oqTV6YYNHmJAJStQA1TERNy0djFw==}
+  /@lodestar/light-client/1.4.2-rc.0_6k57yb4aeacz6u6ckht4rwg7fe:
+    resolution: {integrity: sha512-5EL0aKXO0J6Ql4/rtfIGd7H3rjtC2Ygyj3Ic/4FzBh0q/FXtWxi7QJNl/XjAPLL91xXZ/FKLTN6byk5Ihy1PWA==}
     dependencies:
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
       '@chainsafe/persistent-merkle-tree': 0.4.2
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/api': 1.4.0_fastify@3.29.4
-      '@lodestar/config': 1.4.0
-      '@lodestar/params': 1.4.0
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
+      '@lodestar/api': 1.4.2-rc.0_fastify@3.29.4
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
       cross-fetch: 3.1.5
       mitt: 3.0.0
       strict-event-emitter-types: 2.0.0
@@ -1960,17 +1912,17 @@ packages:
       - fastify
     dev: true
 
-  /@lodestar/light-client/1.4.0_lfzjzsqji2puhppndhpa2aauce:
-    resolution: {integrity: sha512-iqiVZDh0ZUeS005MlIfS3gJmy6PVLckNEeCOO9+BqPnqcoZMsNqWFs/OK7oqTV6YYNHmJAJStQA1TERNy0djFw==}
+  /@lodestar/light-client/1.4.2-rc.0_lfzjzsqji2puhppndhpa2aauce:
+    resolution: {integrity: sha512-5EL0aKXO0J6Ql4/rtfIGd7H3rjtC2Ygyj3Ic/4FzBh0q/FXtWxi7QJNl/XjAPLL91xXZ/FKLTN6byk5Ihy1PWA==}
     dependencies:
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
       '@chainsafe/persistent-merkle-tree': 0.4.2
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/api': 1.4.0_fastify@3.15.1
-      '@lodestar/config': 1.4.0
-      '@lodestar/params': 1.4.0
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
+      '@lodestar/api': 1.4.2-rc.0_fastify@3.15.1
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
       cross-fetch: 3.1.5
       mitt: 3.0.0
       strict-event-emitter-types: 2.0.0
@@ -1980,22 +1932,22 @@ packages:
       - fastify
     dev: true
 
-  /@lodestar/params/1.4.0:
-    resolution: {integrity: sha512-nASAsK6zO4Bdu5x9ck2wnpLmmH1ncp5zmLXf1ZxVGmhuMb9OG/ulrr+dawxf2Y8KsN3ioscqjoxmsuB060UlVg==}
+  /@lodestar/params/1.4.2-rc.0:
+    resolution: {integrity: sha512-yCvUqIXkwgGpHEne7Bmrk6z+/E3fJiC+bqLaD/hie7IUk7IKNqNwAWqV4w3x50Wmvoy/J0aCyi24gbc96zykvg==}
     dev: true
 
-  /@lodestar/reqresp/1.4.0_libp2p@0.42.2:
-    resolution: {integrity: sha512-5s8qMyCDwcfwE4Fk4KQlmjRbS5CtZOUen/45B63vAHPYkRgCjiU8xihmVK+C0zNuEUiv5dGp29FncgdM0BYpww==}
+  /@lodestar/reqresp/1.4.2-rc.0_libp2p@0.42.2:
+    resolution: {integrity: sha512-R6NxSbZXc+4TyaO7fkG0wKAf5lK9ezdX2d5XMi5QrsuEdiPjMnFih4vn1NuZCNhCYFE8bFgCVE9Xq/4AR+7maw==}
     peerDependencies:
       libp2p: 0.41.0
     dependencies:
       '@chainsafe/snappy-stream': 5.1.2
       '@libp2p/interface-connection': 3.0.3
       '@libp2p/interface-peer-id': 2.0.1
-      '@lodestar/config': 1.4.0
-      '@lodestar/params': 1.4.0
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
       it-all: 2.0.0
       libp2p: 0.42.2
       snappyjs: 0.7.0
@@ -2006,33 +1958,33 @@ packages:
       - supports-color
     dev: true
 
-  /@lodestar/state-transition/1.4.0_@chainsafe+blst@0.2.8:
-    resolution: {integrity: sha512-/mgqXRuBdxGQvYSixrE+99QXmqJBnHRS5KFXZNCEvKuCppPHOBrFFp8886czBQrQdsi5yHGFJnnFac5Dc9szGw==}
+  /@lodestar/state-transition/1.4.2-rc.0_@chainsafe+blst@0.2.8:
+    resolution: {integrity: sha512-Ujy0j2sifE5mcR04/debvxzf2CcQerzhhDeaERGDxKN42S4xaVfAyp8wxS39yJuJfD27TvbDtcKWqYIIGpxJNg==}
     dependencies:
       '@chainsafe/as-sha256': 0.3.1
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
       '@chainsafe/persistent-merkle-tree': 0.4.2
       '@chainsafe/persistent-ts': 0.19.1
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/config': 1.4.0
-      '@lodestar/params': 1.4.0
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
       bigint-buffer: 1.1.5
       buffer-xor: 2.0.2
     transitivePeerDependencies:
       - '@chainsafe/blst'
     dev: true
 
-  /@lodestar/types/1.4.0:
-    resolution: {integrity: sha512-6IP2bVfxEaSd0czRBW+7DXb4NayNgFYQ4IKW0piu5et2kYKHUIeI1AUxrXycol9g8U0Vo0uRM3DqphSYJAcutQ==}
+  /@lodestar/types/1.4.2-rc.0:
+    resolution: {integrity: sha512-t6ICBmaR6Ew9dcTBhQvb1PN5DFhjVbBENdXSm4YbO5r2HEw2BohPtBy/Dl0j0RzEZ7yZLrPjePUeAfZwwepu5A==}
     dependencies:
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/params': 1.4.0
+      '@lodestar/params': 1.4.2-rc.0
     dev: true
 
-  /@lodestar/utils/1.4.0:
-    resolution: {integrity: sha512-fYGqfsbft6R+ibOHne/9+EoLEkw6ru7uXJBOY5uyB1phKWU0Q+GyQ2B0ue9kSvWHFf3JDNbe/yF8mPbIEUnmkw==}
+  /@lodestar/utils/1.4.2-rc.0:
+    resolution: {integrity: sha512-e0fj0+cGjGNotZsv+T5Ouy4jsKoQ0YHFW4mUQhYz3DywTbNlQhZcP+jvGrrXhJQCmVDLE+xBmQke+Qz5tKKRkg==}
     dependencies:
       '@chainsafe/as-sha256': 0.3.1
       any-signal: 2.1.2
@@ -2043,18 +1995,18 @@ packages:
       winston: 3.8.2
     dev: true
 
-  /@lodestar/validator/1.4.0_6k57yb4aeacz6u6ckht4rwg7fe:
-    resolution: {integrity: sha512-Q6MpFiip0bKXnXA5dVOvspVs44CzScl3/N7wZ2n+V4azI1IiTQ6yDDg5MCjtCRk5L8c9W7UmrxpT+D7ZHxqdFQ==}
+  /@lodestar/validator/1.4.2-rc.0_6k57yb4aeacz6u6ckht4rwg7fe:
+    resolution: {integrity: sha512-1tvXLuJlm5y/fZYrgszzRZzlhZCyxEoo5bVbU+CqQXSzvjenEd9q69eLvb2rY17NLbJ2RvUw/g+3S3RkBcucTg==}
     dependencies:
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/api': 1.4.0_fastify@3.29.4
-      '@lodestar/config': 1.4.0
-      '@lodestar/db': 1.4.0
-      '@lodestar/params': 1.4.0
-      '@lodestar/state-transition': 1.4.0_@chainsafe+blst@0.2.8
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
+      '@lodestar/api': 1.4.2-rc.0_fastify@3.29.4
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/db': 1.4.2-rc.0
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/state-transition': 1.4.2-rc.0_@chainsafe+blst@0.2.8
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
       bigint-buffer: 1.1.5
       cross-fetch: 3.1.5
       strict-event-emitter-types: 2.0.0
@@ -2064,18 +2016,18 @@ packages:
       - fastify
     dev: true
 
-  /@lodestar/validator/1.4.0_lfzjzsqji2puhppndhpa2aauce:
-    resolution: {integrity: sha512-Q6MpFiip0bKXnXA5dVOvspVs44CzScl3/N7wZ2n+V4azI1IiTQ6yDDg5MCjtCRk5L8c9W7UmrxpT+D7ZHxqdFQ==}
+  /@lodestar/validator/1.4.2-rc.0_lfzjzsqji2puhppndhpa2aauce:
+    resolution: {integrity: sha512-1tvXLuJlm5y/fZYrgszzRZzlhZCyxEoo5bVbU+CqQXSzvjenEd9q69eLvb2rY17NLbJ2RvUw/g+3S3RkBcucTg==}
     dependencies:
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/api': 1.4.0_fastify@3.15.1
-      '@lodestar/config': 1.4.0
-      '@lodestar/db': 1.4.0
-      '@lodestar/params': 1.4.0
-      '@lodestar/state-transition': 1.4.0_@chainsafe+blst@0.2.8
-      '@lodestar/types': 1.4.0
-      '@lodestar/utils': 1.4.0
+      '@lodestar/api': 1.4.2-rc.0_fastify@3.15.1
+      '@lodestar/config': 1.4.2-rc.0
+      '@lodestar/db': 1.4.2-rc.0
+      '@lodestar/params': 1.4.2-rc.0
+      '@lodestar/state-transition': 1.4.2-rc.0_@chainsafe+blst@0.2.8
+      '@lodestar/types': 1.4.2-rc.0
+      '@lodestar/utils': 1.4.2-rc.0
       bigint-buffer: 1.1.5
       cross-fetch: 3.1.5
       strict-event-emitter-types: 2.0.0
@@ -4313,8 +4265,8 @@ packages:
     engines: {node: '>= 6'}
     dev: true
 
-  /@truffle/hdwallet-provider/2.1.5_@babel+core@7.19.6:
-    resolution: {integrity: sha512-YHAm+kNxR+rFZ54KXXv5fGgzY4KNMlDo2Ocdr8zvjuMXJ0pLwHp52KzUv8oak1G1IUS4F/7yIs9+6qk2hOoQjQ==}
+  /@truffle/hdwallet-provider/2.1.6_@babel+core@7.19.6:
+    resolution: {integrity: sha512-Yeouaycx/xzi9jtEIkD3CkaHRpEWD/UTuQSjhZD4N2LzK2AQqCwnbxKKcsPnZ+q+h2C/yWpMs5B1u09CJDeSZA==}
     dependencies:
       '@ethereumjs/common': 2.6.5
       '@ethereumjs/tx': 3.5.2
@@ -4326,7 +4278,7 @@ packages:
       ethereum-cryptography: 1.1.2
       ethereum-protocol: 1.0.1
       ethereumjs-util: 7.1.5
-      web3: 1.8.1
+      web3: 1.8.2
       web3-provider-engine: 16.0.3_@babel+core@7.19.6
     transitivePeerDependencies:
       - '@babel/core'
@@ -6328,7 +6280,7 @@ packages:
     resolution: {integrity: sha512-BJe0kXbGFxdgBe6eTWtiGk8z9933CREosiZp7JdBBxdqNud0A3eXR/DA5/0vTarOzD/XTcJMLXzDn84EFbTreA==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       err-code: 3.0.1
       interface-datastore: 7.0.1
       it-all: 1.0.6
@@ -9749,7 +9701,7 @@ packages:
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
       '@achingbrain/nat-port-mapper': 1.0.7
-      '@libp2p/crypto': 1.0.9
+      '@libp2p/crypto': 1.0.11
       '@libp2p/interface-address-manager': 2.0.4
       '@libp2p/interface-connection': 3.0.3
       '@libp2p/interface-connection-encrypter': 3.0.5
@@ -9768,7 +9720,7 @@ packages:
       '@libp2p/interface-stream-muxer': 3.0.5
       '@libp2p/interface-transport': 2.1.1
       '@libp2p/interfaces': 3.3.1
-      '@libp2p/logger': 2.0.2
+      '@libp2p/logger': 2.0.5
       '@libp2p/multistream-select': 3.1.1
       '@libp2p/peer-collections': 3.0.0
       '@libp2p/peer-id': 2.0.1
@@ -12539,7 +12491,7 @@ packages:
   /solidity-bytes-utils/0.1.2_@babel+core@7.19.6:
     resolution: {integrity: sha512-KZLZ4r86EDVQZcxGD5IZfN+06SzXtUaOKbMZgd7g0HR5MAdpdycIZ1wm1+QEOZjPaaiIgzk2vXhTWErOTE03jg==}
     dependencies:
-      '@truffle/hdwallet-provider': 2.1.5_@babel+core@7.19.6
+      '@truffle/hdwallet-provider': 2.1.6_@babel+core@7.19.6
     transitivePeerDependencies:
       - '@babel/core'
       - bufferutil
@@ -13645,8 +13597,8 @@ packages:
       - utf-8-validate
     dev: true
 
-  /web3-bzz/1.8.1:
-    resolution: {integrity: sha512-dJJHS84nvpoxv6ijTMkdUSlRr5beCXNtx4UZcrFLHBva8dT63QEtKdLyDt2AyMJJdVzTCk78uir/6XtVWrdS6w==}
+  /web3-bzz/1.8.2:
+    resolution: {integrity: sha512-1EEnxjPnFnvNWw3XeeKuTR8PBxYd0+XWzvaLK7OJC/Go9O8llLGxrxICbKV+8cgIE0sDRBxiYx02X+6OhoAQ9w==}
     engines: {node: '>=8.0.0'}
     requiresBuild: true
     dependencies:
@@ -13667,12 +13619,12 @@ packages:
       web3-utils: 1.8.0
     dev: true
 
-  /web3-core-helpers/1.8.1:
-    resolution: {integrity: sha512-ClzNO6T1S1gifC+BThw0+GTfcsjLEY8T1qUp6Ly2+w4PntAdNtKahxWKApWJ0l9idqot/fFIDXwO3Euu7I0Xqw==}
+  /web3-core-helpers/1.8.2:
+    resolution: {integrity: sha512-6B1eLlq9JFrfealZBomd1fmlq1o4A09vrCVQSa51ANoib/jllT3atZrRDr0zt1rfI7TSZTZBXdN/aTdeN99DWw==}
     engines: {node: '>=8.0.0'}
     dependencies:
-      web3-eth-iban: 1.8.1
-      web3-utils: 1.8.1
+      web3-eth-iban: 1.8.2
+      web3-utils: 1.8.2
     dev: true
 
   /web3-core-method/1.8.0:
@@ -13686,15 +13638,15 @@ packages:
       web3-utils: 1.8.0
     dev: true
 
-  /web3-core-method/1.8.1:
-    resolution: {integrity: sha512-oYGRodktfs86NrnFwaWTbv2S38JnpPslFwSSARwFv4W9cjbGUW3LDeA5MKD/dRY+ssZ5OaekeMsUCLoGhX68yA==}
+  /web3-core-method/1.8.2:
+    resolution: {integrity: sha512-1qnr5mw5wVyULzLOrk4B+ryO3gfGjGd/fx8NR+J2xCGLf1e6OSjxT9vbfuQ3fErk/NjSTWWreieYWLMhaogcRA==}
     engines: {node: '>=8.0.0'}
     dependencies:
       '@ethersproject/transactions': 5.7.0
-      web3-core-helpers: 1.8.1
-      web3-core-promievent: 1.8.1
-      web3-core-subscriptions: 1.8.1
-      web3-utils: 1.8.1
+      web3-core-helpers: 1.8.2
+      web3-core-promievent: 1.8.2
+      web3-core-subscriptions: 1.8.2
+      web3-utils: 1.8.2
     dev: true
 
   /web3-core-promievent/1.8.0:
@@ -13704,8 +13656,8 @@ packages:
       eventemitter3: 4.0.4
     dev: true
 
-  /web3-core-promievent/1.8.1:
-    resolution: {integrity: sha512-9mxqHlgB0MrZI4oUIRFkuoJMNj3E7btjrMv3sMer/Z9rYR1PfoSc1aAokw4rxKIcAh+ylVtd/acaB2HKB7aRPg==}
+  /web3-core-promievent/1.8.2:
+    resolution: {integrity: sha512-nvkJWDVgoOSsolJldN33tKW6bKKRJX3MCPDYMwP5SUFOA/mCzDEoI88N0JFofDTXkh1k7gOqp1pvwi9heuaxGg==}
     engines: {node: '>=8.0.0'}
     dependencies:
       eventemitter3: 4.0.4
@@ -13725,15 +13677,15 @@ packages:
       - supports-color
     dev: true
 
-  /web3-core-requestmanager/1.8.1:
-    resolution: {integrity: sha512-x+VC2YPPwZ1khvqA6TA69LvfFCOZXsoUVOxmTx/vIN22PrY9KzKhxcE7pBSiGhmab1jtmRYXUbcQSVpAXqL8cw==}
+  /web3-core-requestmanager/1.8.2:
+    resolution: {integrity: sha512-p1d090RYs5Mu7DK1yyc3GCBVZB/03rBtFhYFoS2EruGzOWs/5Q0grgtpwS/DScdRAm8wB8mYEBhY/RKJWF6B2g==}
     engines: {node: '>=8.0.0'}
     dependencies:
       util: 0.12.5
-      web3-core-helpers: 1.8.1
-      web3-providers-http: 1.8.1
-      web3-providers-ipc: 1.8.1
-      web3-providers-ws: 1.8.1
+      web3-core-helpers: 1.8.2
+      web3-providers-http: 1.8.2
+      web3-providers-ipc: 1.8.2
+      web3-providers-ws: 1.8.2
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -13747,12 +13699,12 @@ packages:
       web3-core-helpers: 1.8.0
     dev: true
 
-  /web3-core-subscriptions/1.8.1:
-    resolution: {integrity: sha512-bmCMq5OeA3E2vZUh8Js1HcJbhwtsE+yeMqGC4oIZB3XsL5SLqyKLB/pU+qUYqQ9o4GdcrFTDPhPg1bgvf7p1Pw==}
+  /web3-core-subscriptions/1.8.2:
+    resolution: {integrity: sha512-vXQogHDmAIQcKpXvGiMddBUeP9lnKgYF64+yQJhPNE5PnWr1sAibXuIPV7mIPihpFr/n/DORRj6Wh1pUv9zaTw==}
     engines: {node: '>=8.0.0'}
     dependencies:
       eventemitter3: 4.0.4
-      web3-core-helpers: 1.8.1
+      web3-core-helpers: 1.8.2
     dev: true
 
   /web3-core/1.8.0:
@@ -13771,17 +13723,17 @@ packages:
       - supports-color
     dev: true
 
-  /web3-core/1.8.1:
-    resolution: {integrity: sha512-LbRZlJH2N6nS3n3Eo9Y++25IvzMY7WvYnp4NM/Ajhh97dAdglYs6rToQ2DbL2RLvTYmTew4O/y9WmOk4nq9COw==}
+  /web3-core/1.8.2:
+    resolution: {integrity: sha512-DJTVEAYcNqxkqruJE+Rxp3CIv0y5AZMwPHQmOkz/cz+MM75SIzMTc0AUdXzGyTS8xMF8h3YWMQGgGEy8SBf1PQ==}
     engines: {node: '>=8.0.0'}
     dependencies:
       '@types/bn.js': 5.1.1
       '@types/node': 12.20.55
       bignumber.js: 9.1.0
-      web3-core-helpers: 1.8.1
-      web3-core-method: 1.8.1
-      web3-core-requestmanager: 1.8.1
-      web3-utils: 1.8.1
+      web3-core-helpers: 1.8.2
+      web3-core-method: 1.8.2
+      web3-core-requestmanager: 1.8.2
+      web3-utils: 1.8.2
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -13795,12 +13747,12 @@ packages:
       web3-utils: 1.8.0
     dev: true
 
-  /web3-eth-abi/1.8.1:
-    resolution: {integrity: sha512-0mZvCRTIG0UhDhJwNQJgJxu4b4DyIpuMA0GTfqxqeuqzX4Q/ZvmoNurw0ExTfXaGPP82UUmmdkRi6FdZOx+C6w==}
+  /web3-eth-abi/1.8.2:
+    resolution: {integrity: sha512-Om9g3kaRNjqiNPAgKwGT16y+ZwtBzRe4ZJFGjLiSs6v5I7TPNF+rRMWuKnR6jq0azQZDj6rblvKFMA49/k48Og==}
     engines: {node: '>=8.0.0'}
     dependencies:
       '@ethersproject/abi': 5.7.0
-      web3-utils: 1.8.1
+      web3-utils: 1.8.2
     dev: true
 
   /web3-eth-accounts/1.8.0:
@@ -13823,21 +13775,20 @@ packages:
       - supports-color
     dev: true
 
-  /web3-eth-accounts/1.8.1:
-    resolution: {integrity: sha512-mgzxSYgN54/NsOFBO1Fq1KkXp1S5KlBvI/DlgvajU72rupoFMq6Cu6Yp9GUaZ/w2ij9PzEJuFJk174XwtfMCmg==}
+  /web3-eth-accounts/1.8.2:
+    resolution: {integrity: sha512-c367Ij63VCz9YdyjiHHWLFtN85l6QghgwMQH2B1eM/p9Y5lTlTX7t/Eg/8+f1yoIStXbk2w/PYM2lk+IkbqdLA==}
     engines: {node: '>=8.0.0'}
     dependencies:
       '@ethereumjs/common': 2.5.0
       '@ethereumjs/tx': 3.3.2
-      crypto-browserify: 3.12.0
       eth-lib: 0.2.8
       ethereumjs-util: 7.1.5
       scrypt-js: 3.0.1
       uuid: 9.0.0
-      web3-core: 1.8.1
-      web3-core-helpers: 1.8.1
-      web3-core-method: 1.8.1
-      web3-utils: 1.8.1
+      web3-core: 1.8.2
+      web3-core-helpers: 1.8.2
+      web3-core-method: 1.8.2
+      web3-utils: 1.8.2
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -13860,18 +13811,18 @@ packages:
       - supports-color
     dev: true
 
-  /web3-eth-contract/1.8.1:
-    resolution: {integrity: sha512-1wphnl+/xwCE2io44JKnN+ti3oa47BKRiVzvWd42icwRbcpFfRxH9QH+aQX3u8VZIISNH7dAkTWpGIIJgGFTmg==}
+  /web3-eth-contract/1.8.2:
+    resolution: {integrity: sha512-ID5A25tHTSBNwOPjiXSVzxruz006ULRIDbzWTYIFTp7NJ7vXu/kynKK2ag/ObuTqBpMbobP8nXcA9b5EDkIdQA==}
     engines: {node: '>=8.0.0'}
     dependencies:
       '@types/bn.js': 5.1.1
-      web3-core: 1.8.1
-      web3-core-helpers: 1.8.1
-      web3-core-method: 1.8.1
-      web3-core-promievent: 1.8.1
-      web3-core-subscriptions: 1.8.1
-      web3-eth-abi: 1.8.1
-      web3-utils: 1.8.1
+      web3-core: 1.8.2
+      web3-core-helpers: 1.8.2
+      web3-core-method: 1.8.2
+      web3-core-promievent: 1.8.2
+      web3-core-subscriptions: 1.8.2
+      web3-eth-abi: 1.8.2
+      web3-utils: 1.8.2
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -13894,18 +13845,18 @@ packages:
       - supports-color
     dev: true
 
-  /web3-eth-ens/1.8.1:
-    resolution: {integrity: sha512-FT8xTI9uN8RxeBQa/W8pLa2aoFh4+EE34w7W2271LICKzla1dtLyb6XSdn48vsUcPmhWsTVk9mO9RTU0l4LGQQ==}
+  /web3-eth-ens/1.8.2:
+    resolution: {integrity: sha512-PWph7C/CnqdWuu1+SH4U4zdrK4t2HNt0I4XzPYFdv9ugE8EuojselioPQXsVGvjql+Nt3jDLvQvggPqlMbvwRw==}
     engines: {node: '>=8.0.0'}
     dependencies:
       content-hash: 2.5.2
       eth-ens-namehash: 2.0.8
-      web3-core: 1.8.1
-      web3-core-helpers: 1.8.1
-      web3-core-promievent: 1.8.1
-      web3-eth-abi: 1.8.1
-      web3-eth-contract: 1.8.1
-      web3-utils: 1.8.1
+      web3-core: 1.8.2
+      web3-core-helpers: 1.8.2
+      web3-core-promievent: 1.8.2
+      web3-eth-abi: 1.8.2
+      web3-eth-contract: 1.8.2
+      web3-utils: 1.8.2
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -13919,12 +13870,12 @@ packages:
       web3-utils: 1.8.0
     dev: true
 
-  /web3-eth-iban/1.8.1:
-    resolution: {integrity: sha512-DomoQBfvIdtM08RyMGkMVBOH0vpOIxSSQ+jukWk/EkMLGMWJtXw/K2c2uHAeq3L/VPWNB7zXV2DUEGV/lNE2Dg==}
+  /web3-eth-iban/1.8.2:
+    resolution: {integrity: sha512-h3vNblDWkWMuYx93Q27TAJz6lhzpP93EiC3+45D6xoz983p6si773vntoQ+H+5aZhwglBtoiBzdh7PSSOnP/xQ==}
     engines: {node: '>=8.0.0'}
     dependencies:
       bn.js: 5.2.1
-      web3-utils: 1.8.1
+      web3-utils: 1.8.2
     dev: true
 
   /web3-eth-personal/1.8.0:
@@ -13942,16 +13893,16 @@ packages:
       - supports-color
     dev: true
 
-  /web3-eth-personal/1.8.1:
-    resolution: {integrity: sha512-myIYMvj7SDIoV9vE5BkVdon3pya1WinaXItugoii2VoTcQNPOtBxmYVH+XS5ErzCJlnxzphpQrkywyY64bbbCA==}
+  /web3-eth-personal/1.8.2:
+    resolution: {integrity: sha512-Vg4HfwCr7doiUF/RC+Jz0wT4+cYaXcOWMAW2AHIjHX6Z7Xwa8nrURIeQgeEE62qcEHAzajyAdB1u6bJyTfuCXw==}
     engines: {node: '>=8.0.0'}
     dependencies:
       '@types/node': 12.20.55
-      web3-core: 1.8.1
-      web3-core-helpers: 1.8.1
-      web3-core-method: 1.8.1
-      web3-net: 1.8.1
-      web3-utils: 1.8.1
+      web3-core: 1.8.2
+      web3-core-helpers: 1.8.2
+      web3-core-method: 1.8.2
+      web3-net: 1.8.2
+      web3-utils: 1.8.2
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -13978,22 +13929,22 @@ packages:
       - supports-color
     dev: true
 
-  /web3-eth/1.8.1:
-    resolution: {integrity: sha512-LgyzbhFqiFRd8M8sBXoFN4ztzOnkeckl3H/9lH5ek7AdoRMhBg7tYpYRP3E5qkhd/q+yiZmcUgy1AF6NHrC1wg==}
+  /web3-eth/1.8.2:
+    resolution: {integrity: sha512-JoTiWWc4F4TInpbvDUGb0WgDYJsFhuIjJlinc5ByjWD88Gvh+GKLsRjjFdbqe5YtwIGT4NymwoC5LQd1K6u/QQ==}
     engines: {node: '>=8.0.0'}
     dependencies:
-      web3-core: 1.8.1
-      web3-core-helpers: 1.8.1
-      web3-core-method: 1.8.1
-      web3-core-subscriptions: 1.8.1
-      web3-eth-abi: 1.8.1
-      web3-eth-accounts: 1.8.1
-      web3-eth-contract: 1.8.1
-      web3-eth-ens: 1.8.1
-      web3-eth-iban: 1.8.1
-      web3-eth-personal: 1.8.1
-      web3-net: 1.8.1
-      web3-utils: 1.8.1
+      web3-core: 1.8.2
+      web3-core-helpers: 1.8.2
+      web3-core-method: 1.8.2
+      web3-core-subscriptions: 1.8.2
+      web3-eth-abi: 1.8.2
+      web3-eth-accounts: 1.8.2
+      web3-eth-contract: 1.8.2
+      web3-eth-ens: 1.8.2
+      web3-eth-iban: 1.8.2
+      web3-eth-personal: 1.8.2
+      web3-net: 1.8.2
+      web3-utils: 1.8.2
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -14011,13 +13962,13 @@ packages:
       - supports-color
     dev: true
 
-  /web3-net/1.8.1:
-    resolution: {integrity: sha512-LyEJAwogdFo0UAXZqoSJGFjopdt+kLw0P00FSZn2yszbgcoI7EwC+nXiOsEe12xz4LqpYLOtbR7+gxgiTVjjHQ==}
+  /web3-net/1.8.2:
+    resolution: {integrity: sha512-1itkDMGmbgb83Dg9nporFes9/fxsU7smJ3oRXlFkg4ZHn8YJyP1MSQFPJWWwSc+GrcCFt4O5IrUTvEkHqE3xag==}
     engines: {node: '>=8.0.0'}
     dependencies:
-      web3-core: 1.8.1
-      web3-core-method: 1.8.1
-      web3-utils: 1.8.1
+      web3-core: 1.8.2
+      web3-core-method: 1.8.2
+      web3-utils: 1.8.2
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -14069,14 +14020,14 @@ packages:
       - encoding
     dev: true
 
-  /web3-providers-http/1.8.1:
-    resolution: {integrity: sha512-1Zyts4O9W/UNEPkp+jyL19Jc3D15S4yp8xuLTjVhcUEAlHo24NDWEKxtZGUuHk4HrKL2gp8OlsDbJ7MM+ESDgg==}
+  /web3-providers-http/1.8.2:
+    resolution: {integrity: sha512-2xY94IIEQd16+b+vIBF4IC1p7GVaz9q4EUFscvMUjtEq4ru4Atdzjs9GP+jmcoo49p70II0UV3bqQcz0TQfVyQ==}
     engines: {node: '>=8.0.0'}
     dependencies:
       abortcontroller-polyfill: 1.7.5
       cross-fetch: 3.1.5
       es6-promise: 4.2.8
-      web3-core-helpers: 1.8.1
+      web3-core-helpers: 1.8.2
     transitivePeerDependencies:
       - encoding
     dev: true
@@ -14089,12 +14040,12 @@ packages:
       web3-core-helpers: 1.8.0
     dev: true
 
-  /web3-providers-ipc/1.8.1:
-    resolution: {integrity: sha512-nw/W5nclvi+P2z2dYkLWReKLnocStflWqFl+qjtv0xn3MrUTyXMzSF0+61i77+16xFsTgzo4wS/NWIOVkR0EFA==}
+  /web3-providers-ipc/1.8.2:
+    resolution: {integrity: sha512-p6fqKVGFg+WiXGHWnB1hu43PbvPkDHTz4RgoEzbXugv5rtv5zfYLqm8Ba6lrJOS5ks9kGKR21a0y3NzE3u7V4w==}
     engines: {node: '>=8.0.0'}
     dependencies:
       oboe: 2.1.5
-      web3-core-helpers: 1.8.1
+      web3-core-helpers: 1.8.2
     dev: true
 
   /web3-providers-ws/1.8.0:
@@ -14108,12 +14059,12 @@ packages:
       - supports-color
     dev: true
 
-  /web3-providers-ws/1.8.1:
-    resolution: {integrity: sha512-TNefIDAMpdx57+YdWpYZ/xdofS0P+FfKaDYXhn24ie/tH9G+AB+UBSOKnjN0KSadcRSCMBwGPRiEmNHPavZdsA==}
+  /web3-providers-ws/1.8.2:
+    resolution: {integrity: sha512-3s/4K+wHgbiN+Zrp9YjMq2eqAF6QGABw7wFftPdx+m5hWImV27/MoIx57c6HffNRqZXmCHnfWWFCNHHsi7wXnA==}
     engines: {node: '>=8.0.0'}
     dependencies:
       eventemitter3: 4.0.4
-      web3-core-helpers: 1.8.1
+      web3-core-helpers: 1.8.2
       websocket: 1.0.34
     transitivePeerDependencies:
       - supports-color
@@ -14133,15 +14084,15 @@ packages:
       - supports-color
     dev: true
 
-  /web3-shh/1.8.1:
-    resolution: {integrity: sha512-sqHgarnfcY2Qt3PYS4R6YveHrDy7hmL09yeLLHHCI+RKirmjLVqV0rc5LJWUtlbYI+kDoa5gbgde489M9ZAC0g==}
+  /web3-shh/1.8.2:
+    resolution: {integrity: sha512-uZ+3MAoNcaJsXXNCDnizKJ5viBNeHOFYsCbFhV755Uu52FswzTOw6DtE7yK9nYXMtIhiSgi7nwl1RYzP8pystw==}
     engines: {node: '>=8.0.0'}
     requiresBuild: true
     dependencies:
-      web3-core: 1.8.1
-      web3-core-method: 1.8.1
-      web3-core-subscriptions: 1.8.1
-      web3-net: 1.8.1
+      web3-core: 1.8.2
+      web3-core-method: 1.8.2
+      web3-core-subscriptions: 1.8.2
+      web3-net: 1.8.2
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -14160,8 +14111,8 @@ packages:
       utf8: 3.0.0
     dev: true
 
-  /web3-utils/1.8.1:
-    resolution: {integrity: sha512-LgnM9p6V7rHHUGfpMZod+NST8cRfGzJ1BTXAyNo7A9cJX9LczBfSRxJp+U/GInYe9mby40t3v22AJdlELibnsQ==}
+  /web3-utils/1.8.2:
+    resolution: {integrity: sha512-v7j6xhfLQfY7xQDrUP0BKbaNrmZ2/+egbqP9q3KYmOiPpnvAfol+32slgL0WX/5n8VPvKCK5EZ1HGrAVICSToA==}
     engines: {node: '>=8.0.0'}
     dependencies:
       bn.js: 5.2.1
@@ -14192,18 +14143,18 @@ packages:
       - utf-8-validate
     dev: true
 
-  /web3/1.8.1:
-    resolution: {integrity: sha512-tAqFsQhGv340C9OgRJIuoScN7f7wa1tUvsnnDUMt9YE6J4gcm7TV2Uwv+KERnzvV+xgdeuULYpsioRRNKrUvoQ==}
+  /web3/1.8.2:
+    resolution: {integrity: sha512-92h0GdEHW9wqDICQQKyG4foZBYi0OQkyg4CRml2F7XBl/NG+fu9o6J19kzfFXzSBoA4DnJXbyRgj/RHZv5LRiw==}
     engines: {node: '>=8.0.0'}
     requiresBuild: true
     dependencies:
-      web3-bzz: 1.8.1
-      web3-core: 1.8.1
-      web3-eth: 1.8.1
-      web3-eth-personal: 1.8.1
-      web3-net: 1.8.1
-      web3-shh: 1.8.1
-      web3-utils: 1.8.1
+      web3-bzz: 1.8.2
+      web3-core: 1.8.2
+      web3-eth: 1.8.2
+      web3-eth-personal: 1.8.2
+      web3-net: 1.8.2
+      web3-shh: 1.8.2
+      web3-utils: 1.8.2
     transitivePeerDependencies:
       - bufferutil
       - encoding
