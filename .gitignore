@@ -20,3 +20,5 @@ relaychain/
 .cargo
 
 .DS_Store
+
+.direnv

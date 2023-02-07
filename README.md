@@ -24,10 +24,16 @@ This component includes our end to end tests, that pull together all the above s
 
 We use the Nix package manager to provide a repeatable and maintainable developer environment.
 
-After [installing](https://nixos.org/download.html) Nix, activate a developer shell here in the root of our repo, where `shell.nix` is located:
+After [installing](https://nixos.org/download.html) Nix, enable flakes:
+
+```sh
+echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
+```
+
+Then activate a developer shell in the root of our repo, where `flake.nix` is located:
 
 ```
-nix-shell --run $SHELL
+nix develop --command $SHELL
 ```
 
 To ensure your code editor (such as VS code) can execute tools in the nix env, startup your editor within the interactive shell.
@@ -35,7 +41,7 @@ To ensure your code editor (such as VS code) can execute tools in the nix env, s
 Example for VS Code:
 
 ```
-nix-shell --run $SHELL
+nix develop --command $SHELL
 code .
 ```
 
