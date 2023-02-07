@@ -77,7 +77,7 @@ deploy_ethereum()
     # 2. deploy consensus client
     echo "Starting beacon node"
     start_lodestar
-    
+
     # 3. deploy bridge contracts
     echo "Deploying contracts"
     deploy_contracts
