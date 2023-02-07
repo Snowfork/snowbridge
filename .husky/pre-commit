@@ -1,12 +1,17 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+set -e
+
+echo 'Running pre-commit hook...'
+
 # check typos
-typos .
+chronic typos .
 
 # lint and format for core contracts and typescript codes
-cd core && pnpm lint && pnpm format && cd ..
+cd core && chronic pnpm lint && chronic pnpm format && cd ..
 
 # lint and format for relayer codes
-cd relayer && mage lint && go fmt ./...
+cd relayer && chronic mage lint && chronic go fmt ./...
 
+echo 'Pre-commit hook successful!'
