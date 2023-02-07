@@ -39,12 +39,13 @@
 
                     # parachain
                     rustup
-                    gcc
-                    openssl
                     libiconv
-                    cmake
-                    protobuf
-                    clang
+
+                    # cmake
+                    # gcc
+                    # libiconv
+                    # openssl
+                    # protobuf
 
                     cowsay
                 ];
