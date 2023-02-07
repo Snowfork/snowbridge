@@ -18,12 +18,12 @@ export POLKADOT_DIR=/path/to/polkadot
 # export PARACHAIN_RELAY_ETH_KEY=     # Your Parachain relayer account private key
 # export E2E_TEST_ETH_KEY=            # Your E2E test account private key
 
-# BEEFY_START_BLOCK=                  # Start block to configure beefy client, default value: 15
+# export BEEFY_START_BLOCK=           # Start block to configure beefy client, default value: 15
 
-# RELAYCHAIN_ENDPOINT=                # Relaychain endpoint, default value: ws://localhost:9944
+# export RELAYCHAIN_ENDPOINT=         # Relaychain endpoint, default value: ws://localhost:9944
 
-# POLKADOT_DIR=                       # Relaychain dir, default value: $root_dir/relaychain
+# export POLKADOT_DIR=                # Relaychain dir, default value: $root_dir/relaychain
 
-# POLKADOT_BIN=                       # Relaychain binary, default value: $POLKADOT_DIR/target/release/polkadot
+# export POLKADOT_BIN=                # Relaychain binary, default value: $POLKADOT_DIR/target/release/polkadot
 
-# POLKADOT_VER=                       # Relaychain version, default value: v0.9.30
+# export POLKADOT_VER=                # Relaychain version, default value: v0.9.30
