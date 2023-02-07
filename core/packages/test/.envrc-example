@@ -1,3 +1,5 @@
+source_env ../../../
+
 ## Config for E2E stack
 
 export POLKADOT_DIR=/path/to/polkadot
