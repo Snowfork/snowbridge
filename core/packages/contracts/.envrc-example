@@ -1,4 +1,4 @@
-source_env ../../../
+source_env_if_exists ../../../
 
 # Deployment credentials (only necessary for ropsten and mainnet)
 export ROPSTEN_PRIVATE_KEY=0x0000000000000000000000000000000000000000000000000000000000000000

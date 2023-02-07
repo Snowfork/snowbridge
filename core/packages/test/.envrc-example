@@ -1,4 +1,4 @@
-source_env ../../../
+source_env_if_exists ../../../
 
 ## Config for E2E stack
 
