@@ -41,7 +41,7 @@ pkgs.mkShell {
         protobuf
         clang
 
-        pkgs.cowsay
+        cowsay
     ];
 
 
