@@ -46,8 +46,9 @@ nix develop --command $SHELL
 code .
 ```
 
-To automatically enter this nix shell whenever you open the project, install [`direnv`](https://direnv.net/docs/installation.html) and run `direnv allow` in the
-project root.
+To automatically enter this nix shell whenever you open the project, install
+[`direnv`](https://direnv.net/docs/installation.html), create an `.envrc` with `cp .envrc.example .envrc` and run
+`direnv allow` in the project root.
 
 ## Security
 

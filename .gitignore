@@ -22,3 +22,4 @@ relaychain/
 .DS_Store
 
 .direnv
+.envrc
