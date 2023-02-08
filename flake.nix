@@ -40,24 +40,38 @@
 
                     # parachain
                     rustup
-                    libiconv
 
-                    # cmake
                     gcc
-                    # openssl
+                    libiconv
                     protobuf
+
+                    clang
+                    cmake
+                    openssl
 
                     cowsay
                 ];
 
                 shellHook = ''
+                    # set HOME for direnv and go
+                    #
+                    # direnv needs config, cache & data dirs (DIRENV_CONFIG, XDG_CACHE_HOME & XDG_DATA_HOME
+                    # respectively) that can be automatically set when HOME is available
+                    #
+                    # relayer builds fail without GOPATH & GOCACHE set
+                    # explicitly setting HOME allows go to infer these vars
+                    #
+                    export HOME=~
+                    # export GOPATH=~/go
+                    # export GOCACHE=~/Library/Caches/go-build
+
+                    # export DIRENV_CONFIG=~/.direnv
+                    # export XDG_CACHE_HOME=~/.direnv
+                    # export XDG_DATA_HOME=~/.direnv
+                    eval "$(direnv hook bash)"
+
                     # rocksdb requires a clang.so
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
-
-                    export DIRENV_CONFIG=~/.direnv
-                    export XDG_CACHE_HOME=~/.direnv
-                    export XDG_DATA_HOME=~/.direnv
-                    eval "$(direnv hook bash)"
 
                     cowsay "Snowbridge Dev Environment"
                 '';

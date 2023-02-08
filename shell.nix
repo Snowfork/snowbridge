@@ -34,12 +34,14 @@ pkgs.mkShell {
 
         # parachain
         rustup
+
         gcc
-        openssl
         libiconv
-        cmake
         protobuf
-        clang
+
+        /* openssl */
+        /* cmake */
+        /* clang */
 
         cowsay
     ];
