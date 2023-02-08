@@ -43,10 +43,9 @@
                     libiconv
 
                     # cmake
-                    # gcc
-                    # libiconv
+                    gcc
                     # openssl
-                    # protobuf
+                    protobuf
 
                     cowsay
                 ];
@@ -55,6 +54,9 @@
                     # rocksdb requires a clang.so
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
+                    export DIRENV_CONFIG=~/.direnv
+                    export XDG_CACHE_HOME=~/.direnv
+                    export XDG_DATA_HOME=~/.direnv
                     eval "$(direnv hook bash)"
 
                     cowsay "Snowbridge Dev Environment"
