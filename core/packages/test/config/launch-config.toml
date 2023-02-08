@@ -6,7 +6,7 @@ timeout = 600
 ## Rococo
 [relaychain]
 chain = "rococo-local"
-default_command = "{{output_bin_dir}}/polkadot"
+default_command = "~/.cargo/bin/polkadot"
 default_args = ["-lparachain=debug","--beefy","--enable-offchain-indexing=true","--pruning","archive"]
 
 [relaychain.genesis.runtime]
@@ -45,7 +45,7 @@ id = 1000
 
 [[parachains.collators]]
 command = "{{output_bin_dir}}/snowbridge"
-name = "snowbrige-alice"                              
+name = "snowbrige-alice"
 rpc_port = 8081
 validator = true
 ws_port = 11144
@@ -70,7 +70,7 @@ id = 1001
 
 [[parachains.collators]]
 command = "{{output_bin_dir}}/snowbridge-test-node"
-name = "test-parachain-alice"                              
+name = "test-parachain-alice"
 rpc_port = 8083
 validator = true
 ws_port = 13144
