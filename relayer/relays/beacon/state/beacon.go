@@ -178,7 +178,7 @@ type BeaconStateBellatrixMinimal struct {
 	StateRoots                   [][]byte                `json:"state_roots" ssz-size:"64,32"`
 	HistoricalRoots              [][]byte                `json:"historical_roots" ssz-max:"16777216" ssz-size:"?,32"`
 	Eth1Data                     *Eth1Data               `json:"eth1_data"`
-	Eth1DataVotes                []*Eth1Data             `json:"eth1_data_votes" ssz-max:"16"`
+	Eth1DataVotes                []*Eth1Data             `json:"eth1_data_votes" ssz-max:"32"`
 	Eth1DepositIndex             uint64                  `json:"eth1_deposit_index"`
 	Validators                   []*Validator            `json:"validators" ssz-max:"1099511627776"`
 	Balances                     []uint64                `json:"balances" ssz-max:"1099511627776"`
@@ -191,8 +191,8 @@ type BeaconStateBellatrixMinimal struct {
 	CurrentJustifiedCheckpoint   *Checkpoint             `json:"current_justified_checkpoint"`
 	FinalizedCheckpoint          *Checkpoint             `json:"finalized_checkpoint"`
 	InactivityScores             []uint64                `json:"inactivity_scores" ssz-max:"1099511627776"`
-	CurrentSyncCommittee         *SyncCommittee          `json:"current_sync_committee"`
-	NextSyncCommittee            *SyncCommittee          `json:"next_sync_committee"`
+	CurrentSyncCommittee         *SyncCommitteeMinimal   `json:"current_sync_committee"`
+	NextSyncCommittee            *SyncCommitteeMinimal   `json:"next_sync_committee"`
 	LatestExecutionPayloadHeader *ExecutionPayloadHeader `json:"latest_execution_payload_header"`
 }
 
@@ -219,6 +219,11 @@ type BeaconBlockHeader struct {
 
 type ErrorResponse struct {
 	Message []byte `ssz-max:"256"`
+}
+
+type SyncCommitteeMinimal struct {
+	PubKeys         [][]byte `json:"pubkeys" ssz-size:"32,48"`
+	AggregatePubKey [48]byte `json:"aggregate_pubkey" ssz-size:"48"`
 }
 
 type SyncCommittee struct {

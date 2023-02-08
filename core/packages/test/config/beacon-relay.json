@@ -4,7 +4,7 @@
       "endpoint": "http://127.0.0.1:9596",
       "spec": {
         "minimal": {
-          "slotsInEpoch": 4,
+          "slotsInEpoch": 8,
           "epochsPerSyncCommitteePeriod": 8
         },
         "mainnet": {
