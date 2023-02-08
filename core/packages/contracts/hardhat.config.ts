@@ -5,15 +5,17 @@ import "@nomiclabs/hardhat-etherscan"
 import "@nomiclabs/hardhat-ethers"
 import "@typechain/hardhat"
 import "hardhat-gas-reporter"
-import "hardhat-deploy"
 import "hardhat-contract-sizer"
 
 import "./tasks/contractAddress"
 
 import "tsconfig-paths/register"
 
+import { accounts } from "./test/wallets"
+
 import type { HardhatUserConfig } from "hardhat/config"
 import { ethers } from "ethers"
+import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names"
 
 let INFURA_KEY = process.env.INFURA_PROJECT_ID
 let ROPSTEN_KEY =
@@ -21,16 +23,18 @@ let ROPSTEN_KEY =
     "0x0000000000000000000000000000000000000000000000000000000000000000"
 let ETHERSCAN_KEY = process.env.ETHERSCAN_API_KEY
 
+subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper) => {
+    const paths = await runSuper()
+
+    return paths.filter((p) => !p.endsWith(".t.sol") && !p.endsWith("Deploy.sol"))
+})
+
 const config: HardhatUserConfig = {
     networks: {
         hardhat: {
-            accounts: {
-                mnemonic:
-                    "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
-                accountsBalance: "350000000000000000000000000000000000000",
-            },
+            accounts,
             chainId: 15,
-            loggingEnabled: true,
+            // loggingEnabled: true,
             mining: {
                 auto: true,
             },
