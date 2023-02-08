@@ -395,13 +395,17 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 
 type SyncCommitteePeriodUpdateResponse struct {
 	Data struct {
-		AttestedHeader          HeaderResponse        `json:"attested_header"`
+		AttestedHeader struct {
+			Beacon HeaderResponse `json:"beacon"`
+		} `json:"attested_header"`
 		NextSyncCommittee       SyncCommitteeResponse `json:"next_sync_committee"`
 		NextSyncCommitteeBranch []common.Hash         `json:"next_sync_committee_branch"`
-		FinalizedHeader         HeaderResponse        `json:"finalized_header"`
-		FinalityBranch          []common.Hash         `json:"finality_branch"`
-		SyncAggregate           SyncAggregateResponse `json:"sync_aggregate"`
-		SignatureSlot           string                `json:"signature_slot"`
+		FinalizedHeader         struct {
+			Beacon HeaderResponse `json:"beacon"`
+		} `json:"finalized_header"`
+		FinalityBranch []common.Hash         `json:"finality_branch"`
+		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
+		SignatureSlot  string                `json:"signature_slot"`
 	} `json:"data"`
 }
 
@@ -497,11 +501,15 @@ func (b *BeaconClient) GetCurrentForkVersion(slot uint64) (string, error) {
 
 type LatestFinalisedUpdateResponse struct {
 	Data struct {
-		AttestedHeader  HeaderResponse        `json:"attested_header"`
-		FinalizedHeader HeaderResponse        `json:"finalized_header"`
-		FinalityBranch  []common.Hash         `json:"finality_branch"`
-		SyncAggregate   SyncAggregateResponse `json:"sync_aggregate"`
-		SignatureSlot   string                `json:"signature_slot"`
+		AttestedHeader struct {
+			Beacon HeaderResponse `json:"beacon"`
+		} `json:"attested_header"`
+		FinalizedHeader struct {
+			Beacon HeaderResponse `json:"beacon"`
+		} `json:"finalized_header"`
+		FinalityBranch []common.Hash         `json:"finality_branch"`
+		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
+		SignatureSlot  string                `json:"signature_slot"`
 	} `json:"data"`
 }
 
