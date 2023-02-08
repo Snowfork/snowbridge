@@ -88,7 +88,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
 
-		syncer := syncer.New(lodestarEndpoint, 32, 256, config.Network(network))
+		syncer := syncer.New(lodestarEndpoint, 32, 256, config.ActiveSpec(network))
 
 		beaconHeaderHash := common.HexToHash(beaconHeader)
 
