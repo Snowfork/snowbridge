@@ -516,28 +516,24 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			if !config::IS_MINIMAL {
-				log::info!(target: "ethereum-beacon-client","💫 spec is not minimal, checking ancestry proof");
-				ensure!(
-					Self::is_valid_merkle_branch(
-						update.block_roots_hash,
-						update.block_roots_proof,
-						config::BLOCK_ROOTS_INDEX,
-						config::BLOCK_ROOTS_INDEX,
-						update.finalized_header.state_root
-					),
-					Error::<T>::InvalidAncestryMerkleProof
-				);
-
-				log::info!(target: "ethereum-beacon-client","💫 ancestry proof passed!");
-
-				Self::store_block_root(
+			log::info!(target: "ethereum-beacon-client","💫 checking ancestry proof");
+			ensure!(
+				Self::is_valid_merkle_branch(
 					update.block_roots_hash,
-					block_root,
-				);
-			} else {
-				log::info!(target: "ethereum-beacon-client","💫 spec is minimal, not checking ancestry proof");
-			}
+					update.block_roots_proof,
+					config::BLOCK_ROOTS_INDEX,
+					config::BLOCK_ROOTS_INDEX,
+					update.finalized_header.state_root
+				),
+				Error::<T>::InvalidAncestryMerkleProof
+			);
+
+			log::info!(target: "ethereum-beacon-client","💫 ancestry proof passed!");
+
+			Self::store_block_root(
+				update.block_roots_hash,
+				block_root,
+			);
 
 			Self::store_finalized_header(block_root, update.finalized_header);
 
