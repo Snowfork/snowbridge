@@ -788,7 +788,7 @@ mod beacon_minimal_tests {
 			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
 			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: H256::default(),
-				beacon_slot: update.block.slot,
+				beacon_slot: update.block.slot - 1,
 				import_time: 0,
 			});
 

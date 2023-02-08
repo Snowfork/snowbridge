@@ -120,6 +120,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		BeaconHeaderImported { block_hash: H256, slot: u64 },
 		ExecutionHeaderImported { block_hash: H256, block_number: u64 },
+		SyncCommitteeUpdated { period: u64 },
 	}
 
 	#[pallet::error]
@@ -150,8 +151,10 @@ pub mod pallet {
 		ExecutionHeaderNotLatest,
 		BridgeBlocked,
 		InvalidSyncCommitteeHeaderUpdate,
+		InvalidSyncCommitteePeriodUpdate,
 		InvalidFinalizedHeaderUpdate,
 		InvalidFinalizedPeriodUpdate,
+		InvalidExecutionHeaderUpdate,
 	}
 
 	#[pallet::hooks]
@@ -418,7 +421,13 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
+			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
+			ensure!(
+				current_period + 1 > latest_committee_period,
+				Error::<T>::InvalidSyncCommitteePeriodUpdate
+			);
 			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
+
 			Self::store_finalized_header(block_root, update.finalized_header);
 
 			Ok(())
@@ -496,9 +505,13 @@ pub mod pallet {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
 			let block_slot = update.block.slot;
-			if block_slot > latest_finalized_header_slot {
-				return Err(Error::<T>::HeaderNotFinalized.into())
-			}
+			ensure!(block_slot > latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
+
+			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
+			ensure!(
+				block_slot > execution_header_state.block_number,
+				Error::<T>::InvalidExecutionHeaderUpdate
+			);
 
 			let current_period = Self::compute_current_sync_period(update.block.slot);
 			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
@@ -728,22 +741,15 @@ pub mod pallet {
 		fn store_sync_committee(period: u64, sync_committee: SyncCommitteeOf<T>) {
 			<SyncCommittees<T>>::insert(period, sync_committee);
 
-			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
-
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"💫 Saved sync committee for period {}.",
+				"💫 Updated latest sync committee period stored to {}.",
 				period
 			);
 
-			if period > latest_committee_period {
-				log::trace!(
-					target: "ethereum-beacon-client",
-					"💫 Updated latest sync committee period stored to {}.",
-					period
-				);
-				<LatestSyncCommitteePeriod<T>>::set(period);
-			}
+			<LatestSyncCommitteePeriod<T>>::set(period);
+
+			Self::deposit_event(Event::SyncCommitteeUpdated { period });
 		}
 
 		fn store_finalized_header(block_root: Root, header: BeaconHeader) {
@@ -753,22 +759,16 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"💫 Saved finalized block root {} at slot {}.",
+				"💫 Updated latest finalized block root {} at slot {}.",
 				block_root,
 				slot
 			);
 
-			LatestFinalizedHeaderState::<T>::mutate(move |s| {
+			LatestFinalizedHeaderState::<T>::mutate(|s| {
 				s.import_time = T::TimeProvider::now().as_secs();
 				s.beacon_block_root = block_root;
 				s.beacon_slot = slot;
 			});
-
-			log::trace!(
-				target: "ethereum-beacon-client",
-				"💫 Updated latest finalized slot to {}.",
-				slot
-			);
 
 			Self::deposit_event(Event::BeaconHeaderImported { block_hash: block_root, slot });
 		}
@@ -783,24 +783,19 @@ pub mod pallet {
 
 			<ExecutionHeaders<T>>::insert(block_hash, header);
 
-			let mut execution_header_state = <LatestExecutionHeaderState<T>>::get();
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Updated latest execution block at {} to number {}.",
+				block_hash,
+				block_number
+			);
 
-			let latest_execution_block_number = execution_header_state.block_number;
-
-			if block_number > latest_execution_block_number {
-				log::trace!(
-					target: "ethereum-beacon-client",
-					"💫 Updated latest execution block number to {}.",
-					block_number
-				);
-
-				execution_header_state.beacon_block_root = beacon_block_root;
-				execution_header_state.beacon_slot = beacon_slot;
-				execution_header_state.block_hash = block_hash;
-				execution_header_state.block_number = block_number;
-
-				<LatestExecutionHeaderState<T>>::set(execution_header_state);
-			}
+			LatestExecutionHeaderState::<T>::mutate(|s| {
+				s.beacon_block_root = beacon_block_root;
+				s.beacon_slot = beacon_slot;
+				s.block_hash = block_hash;
+				s.block_number = block_number;
+			});
 
 			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
 		}
