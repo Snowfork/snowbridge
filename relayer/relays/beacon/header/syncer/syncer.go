@@ -119,12 +119,12 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 
 	committeeUpdate := committeeUpdateContainer.Data
 
-	attestedHeader, err := committeeUpdate.AttestedHeader.ToScale()
+	attestedHeader, err := committeeUpdate.AttestedHeader.Beacon.ToScale()
 	if err != nil {
 		return SyncCommitteePeriodUpdate{}, fmt.Errorf("convert attested header to scale: %w", err)
 	}
 
-	finalizedHeader, err := committeeUpdate.FinalizedHeader.ToScale()
+	finalizedHeader, err := committeeUpdate.FinalizedHeader.Beacon.ToScale()
 	if err != nil {
 		return SyncCommitteePeriodUpdate{}, fmt.Errorf("convert finalized header to scale: %w", err)
 	}
@@ -169,12 +169,12 @@ func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, common.Hash, error
 		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch finalized update: %w", err)
 	}
 
-	attestedHeader, err := finalizedUpdate.Data.AttestedHeader.ToScale()
+	attestedHeader, err := finalizedUpdate.Data.AttestedHeader.Beacon.ToScale()
 	if err != nil {
 		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert attested header to scale: %w", err)
 	}
 
-	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.ToScale()
+	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.Beacon.ToScale()
 	if err != nil {
 		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert finalized header to scale: %w", err)
 	}

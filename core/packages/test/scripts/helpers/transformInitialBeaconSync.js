@@ -10,6 +10,7 @@ function parseBeaconHeader(input) {
 
 function transformBeaconForParachain(input) {
   let output = input["data"];
+  output["header"] = output["header"]["beacon"];
   output["header"]["slot"] = parseInt(output["header"]["slot"]);
   output["header"]["proposer_index"] = parseInt(output["header"]["proposer_index"]);
   output["import_time"] = parseInt(input["import_time"]);
