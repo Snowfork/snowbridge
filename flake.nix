@@ -27,6 +27,7 @@
                     direnv
                     typos
                     go-ethereum
+                    cacert
 
                     # typescript packages
                     nodejs-18_x
@@ -51,6 +52,9 @@
                 ];
 
                 shellHook = ''
+                    # rocksdb requires a clang.so
+                    export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
+
                     eval "$(direnv hook bash)"
 
                     cowsay "Snowbridge Dev Environment"
