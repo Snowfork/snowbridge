@@ -33,7 +33,7 @@ echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
 
 Then activate a developer shell in the root of our repo, where [`flake.nix`](./flake.nix) is located:
 
-```
+```sh
 nix develop --command $SHELL
 ```
 
@@ -41,7 +41,7 @@ To ensure your code editor (such as VS Code) can execute tools in the nix shell,
 
 Example for VS Code:
 
-```
+```sh
 nix develop --command $SHELL
 code .
 ```
