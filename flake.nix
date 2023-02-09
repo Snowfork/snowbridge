@@ -68,7 +68,7 @@
                     # rocksdb requires a clang.so
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
-                    cargo install --git https://github.com/paritytech/polkadot --tag v0.9.30 polkadot --locked
+                    cargo install --git https://github.com/paritytech/polkadot --tag v0.9.30 polkadot --locked --root .
 
                     cowsay "Snowbridge Dev Environment"
                 '';
