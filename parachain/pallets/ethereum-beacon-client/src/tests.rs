@@ -703,18 +703,21 @@ mod beacon_minimal_tests {
 
 	#[test]
 	fn it_updates_a_committee_period_sync_update() {
-		let update = get_committee_sync_period_update::<mock_minimal::Test>();
+		let initial_sync = get_initial_sync::<mock_minimal::Test>();
 
-		let current_sync_committee =
-			get_initial_sync::<mock_minimal::Test>().current_sync_committee;
+		let update = get_committee_sync_period_update::<mock_minimal::Test>();
 
 		let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
 			update.attested_header.slot,
 		);
 
 		new_tester::<mock_minimal::Test>().execute_with(|| {
-			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
-			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
+			assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(initial_sync.clone()));
+
+			SyncCommittees::<mock_minimal::Test>::insert(
+				current_period,
+				initial_sync.current_sync_committee,
+			);
 
 			assert_ok!(mock_minimal::EthereumBeaconClient::sync_committee_period_update(
 				mock_minimal::RuntimeOrigin::signed(1),
@@ -1025,7 +1028,7 @@ mod beacon_mainnet_tests {
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
 			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
 				beacon_block_root: H256::default(),
-				beacon_slot: update.block.slot,
+				beacon_slot: update.block.slot - 1,
 				import_time: 0,
 			});
 

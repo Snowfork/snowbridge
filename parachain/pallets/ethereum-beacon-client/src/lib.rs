@@ -423,7 +423,8 @@ pub mod pallet {
 
 			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
 			ensure!(
-				current_period + 1 > latest_committee_period,
+				(current_period + 1 > latest_committee_period) &&
+					!<SyncCommittees<T>>::contains_key(current_period + 1),
 				Error::<T>::InvalidSyncCommitteePeriodUpdate
 			);
 			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
