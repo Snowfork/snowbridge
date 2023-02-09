@@ -34,20 +34,29 @@ build_parachain()
     echo "Runtime is $parachain_runtime"
 
     echo "Building snowbridge parachain"
-    cargo build \
-        --manifest-path "$parachain_dir/Cargo.toml" \
+    (cd $parachain_dir && \
+      cargo build \
+        --manifest-path Cargo.toml \
         --release \
         --no-default-features \
         --features "${parachain_runtime}-native,rococo-native" \
-        --bin snowbridge
+        --bin snowbridge)
     cp "$parachain_dir/target/release/snowbridge" "$output_bin_dir"
 
     echo "Building query tool"
-    cargo build --manifest-path "$parachain_dir/tools/query-events/Cargo.toml" --release --features parachain-snowbase --bin snowbridge-query-events
+    (cd $parachain_dir && \
+      cargo build \
+        --manifest-path tools/query-events/Cargo.toml \
+        --release --features parachain-snowbase \
+        --bin snowbridge-query-events)
     cp "$parachain_dir/target/release/snowbridge-query-events" "$output_bin_dir"
 
     echo "Building test parachain"
-    cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release --bin snowbridge-test-node
+    (cd $parachain_dir && \
+      cargo build \
+        --manifest-path utils/test-parachain/Cargo.toml \
+        --release \
+        --bin snowbridge-test-node)
     cp "$test_collator_bin" "$output_bin_dir"
 }
 
