@@ -409,6 +409,14 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
+			let next_period = current_period + 1;
+			ensure!(
+				(next_period == latest_committee_period + 1) &&
+					!<SyncCommittees<T>>::contains_key(next_period),
+				Error::<T>::InvalidSyncCommitteePeriodUpdate
+			);
+
 			let current_sync_committee = Self::get_sync_committee_for_period(current_period)?;
 			let validators_root = <ValidatorsRoot<T>>::get();
 
@@ -421,13 +429,7 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
-			ensure!(
-				(current_period + 1 > latest_committee_period) &&
-					!<SyncCommittees<T>>::contains_key(current_period + 1),
-				Error::<T>::InvalidSyncCommitteePeriodUpdate
-			);
-			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
+			Self::store_sync_committee(next_period, update.next_sync_committee);
 
 			Self::store_finalized_header(block_root, update.finalized_header);
 

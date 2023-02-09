@@ -26,6 +26,9 @@ benchmarks! {
 		let sync_committee_update = sync_committee_update();
 
 		//initialize SyncCommittees with period in sync_committee_update
+		LatestSyncCommitteePeriod::<T>::set(EthereumBeaconClient::<T>::compute_current_sync_period(
+				sync_committee_update.attested_header.slot,
+			));
 		SyncCommittees::<T>::insert(
 			EthereumBeaconClient::<T>::compute_current_sync_period(
 				sync_committee_update.attested_header.slot,
