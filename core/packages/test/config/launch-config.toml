@@ -6,7 +6,7 @@ timeout = 600
 ## Rococo
 [relaychain]
 chain = "rococo-local"
-default_command = "{{root_dir}}/parachain/.cargo/bin/polkadot"
+default_command = "{{relaychain_bin}}"
 default_args = ["-lparachain=debug","--beefy","--enable-offchain-indexing=true","--pruning","archive"]
 
 [relaychain.genesis.runtime]
