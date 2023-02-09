@@ -62,12 +62,7 @@
                     # explicitly setting HOME allows go to infer these vars
                     #
                     export HOME=~
-                    # export GOPATH=~/go
-                    # export GOCACHE=~/Library/Caches/go-build
 
-                    # export DIRENV_CONFIG=~/.direnv
-                    # export XDG_CACHE_HOME=~/.direnv
-                    # export XDG_DATA_HOME=~/.direnv
                     eval "$(direnv hook bash)"
 
                     # rocksdb requires a clang.so
