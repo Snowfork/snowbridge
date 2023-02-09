@@ -6,7 +6,7 @@
 #   - update `channel = "nightly-OLD_DATE"` below
 #   - update nightly-OLD_DATE in .github/workflows/parachain.yml
 
-channel = "nightly-2023-02-09" # 1.69.0 nightly for unstable features
+channel = "nightly-2022-07-24" # 1.64.0 nightly for unstable features, matching polkadot 0.9.30
 targets = [
     "wasm32-unknown-unknown",
 ]
