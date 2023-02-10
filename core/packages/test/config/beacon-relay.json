@@ -5,11 +5,13 @@
       "spec": {
         "minimal": {
           "slotsInEpoch": 8,
-          "epochsPerSyncCommitteePeriod": 8
+          "epochsPerSyncCommitteePeriod": 8,
+          "maxSlotsPerHistoricalRoot": 64
         },
         "mainnet": {
           "slotsInEpoch": 32,
-          "epochsPerSyncCommitteePeriod": 256
+          "epochsPerSyncCommitteePeriod": 256,
+          "maxSlotsPerHistoricalRoot": 8192
         }
       },
       "activeSpec": "mainnet"

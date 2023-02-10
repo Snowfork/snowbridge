@@ -49,6 +49,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		r.config.Source.Beacon.Endpoint,
 		specSettings.SlotsInEpoch,
 		specSettings.EpochsPerSyncCommitteePeriod,
+		specSettings.MaxSlotsPerHistoricalRoot,
 		r.config.GetActiveSpec(),
 	)
 

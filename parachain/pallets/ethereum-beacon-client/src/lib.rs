@@ -172,7 +172,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
-	StorageMap<_, Identity, H256, H256, OptionQuery>;
+	StorageMap<_, Identity, H256, H256, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
@@ -516,19 +516,20 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			log::info!(target: "ethereum-beacon-client","💫 checking ancestry proof");
+			log::info!(target: "ethereum-beacon-client","💫 checking finalized header block proof ancestry proof");
+
 			ensure!(
 				Self::is_valid_merkle_branch(
 					update.block_roots_hash,
 					update.block_roots_proof,
 					config::BLOCK_ROOTS_INDEX,
-					config::BLOCK_ROOTS_INDEX,
+					config::BLOCK_ROOTS_DEPTH,
 					update.finalized_header.state_root
 				),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
-			log::info!(target: "ethereum-beacon-client","💫 ancestry proof passed!");
+			log::info!(target: "ethereum-beacon-client","💫 finalized header block proof ancestry proof passed!");
 
 			Self::store_block_root(
 				update.block_roots_hash,
@@ -577,20 +578,34 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
 					.into();
 
-			log::info!(
-					target: "ethereum-beacon-client",
-					"got block root proof: {:?}.",
-					update.block_root_proof
-				);
-			/*
-			let stored_block_root = <Final<T>>::get(update.block.slot);
-			let stored_block_root_null = <BlockRoots<T>>::get(90);
+			let finalized_block_root_hash = <FinalizedBeaconHeadersBlockRoot<T>>::get(last_finalized_header.beacon_block_root);
 
-			log::info!(target: "ethereum-beacon-client","💫 stored_block_root_null {}", stored_block_root_null);
+			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get();
+			let depth = max_slots_per_historical_root.ilog2();
+			let index_in_array = block_slot % max_slots_per_historical_root as u64;
+			let leaves_start_index = 2u32.pow(depth as u32) as u64;
+			let leaf_index: u64 = (leaves_start_index + index_in_array) as u64;
 
-			if !config::IS_MINIMAL && stored_block_root != beacon_block_root {
-				return Err(Error::<T>::InvalidBlockRootAtSlot.into())
-			}*/
+			log::info!(target: "ethereum-beacon-client","💫 checking header block proof at index ancestry proof");
+			log::info!(target: "ethereum-beacon-client","💫 leaf: {}", beacon_block_root);
+			log::info!(target: "ethereum-beacon-client","💫 proof: {:?}", update.block_root_proof);
+			log::info!(target: "ethereum-beacon-client","💫 index: {}", leaf_index);
+			log::info!(target: "ethereum-beacon-client","💫 depth of proof: {}", update.block_root_proof.len());
+			log::info!(target: "ethereum-beacon-client","💫 depth: {}", depth);
+			log::info!(target: "ethereum-beacon-client","💫 root: {:?}", finalized_block_root_hash);
+
+			ensure!(
+				Self::is_valid_merkle_branch(
+					beacon_block_root,
+					update.block_root_proof,
+					depth as u64,
+					leaf_index,
+					finalized_block_root_hash
+				),
+				Error::<T>::InvalidAncestryMerkleProof
+			);
+
+			log::info!(target: "ethereum-beacon-client","💫 header block proof at index ancestry proof passed!");
 
 			let current_period = Self::compute_current_sync_period(update.block.slot);
 			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
@@ -914,8 +929,8 @@ pub mod pallet {
 			index: u64,
 			root: Root,
 		) -> bool {
-			if branch.len() != depth as usize {
-				log::error!(target: "ethereum-beacon-client", "Merkle proof branch length doesn't match depth.");
+			if branch.len() as u64 != depth {
+				log::error!(target: "ethereum-beacon-client", "Merkle proof branch length doesn't match depth, expected: {} got: {}", branch.len(), depth);
 
 				return false
 			}

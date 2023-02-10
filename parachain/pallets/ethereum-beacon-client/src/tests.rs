@@ -179,27 +179,25 @@ mod beacon_tests {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 			assert_eq!(
 				mock_minimal::EthereumBeaconClient::is_valid_merkle_branch(
-					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+					hex!("739c33dfd85ec9a5d5b31d1be0f8efc24ba3e98c8c90c1ffd4a90f97805ed023").into(),
 					vec![
-						hex!("0000000000000000000000000000000000000000000000000000000000000000")
+						hex!("007a71dda588429c5c6cb34418f6c599ac454b9f0b901e1b8804b47eb93eb80a")
 							.into(),
-						hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371")
+						hex!("9164dada7c0a9c56175c825225253069f64b582106a66ea4fd0941f65faa5de1")
 							.into(),
-						hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d")
+						hex!("382dc5fea6c9b8cb0a13e231ede3c726667d2a52d696f07c46b4bec8a6bf2edb")
 							.into(),
-						hex!("002c1fe5bc0bd62db6f299a582f2a80a6d5748ccc82e7ed843eaf0ae0739f74a")
+						hex!("341f5ad686213160998378169cccd3bbb33c98a679fc85d104bdbaa30d519f5d")
 							.into(),
-						hex!("d2dc4ba9fd4edff6716984136831e70a6b2e74fca27b8097a820cbbaa5a6e3c3")
-							.into(),
-						hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584")
+						hex!("0566ca9215c67a795ab94f8dd9d7170090e71fa9546dbbb026de04594a284a21")
 							.into(),
 					]
 					.to_vec()
 					.try_into()
 					.expect("proof branch is too long"),
-					6,
-					41,
-					hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
+					5,
+					5,
+					hex!("a869ecc9be7f8950bcc3527f53b5a3e0b5fdc255c96a82280ffd20f6bcef409a").into()
 				),
 				true
 			);

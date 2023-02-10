@@ -140,7 +140,7 @@ type BeaconBlockBodyPhase0 struct {
 	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits" ssz-max:"16"`
 }
 
-type BeaconStateBellatrix struct {
+type BeaconStateBellatrixMainnet struct {
 	GenesisTime                  uint64                  `json:"genesis_time"`
 	GenesisValidatorsRoot        []byte                  `json:"genesis_validators_root" ssz-size:"32"`
 	Slot                         uint64                  `json:"slot"`
@@ -196,8 +196,12 @@ type BeaconStateBellatrixMinimal struct {
 	LatestExecutionPayloadHeader *ExecutionPayloadHeader `json:"latest_execution_payload_header"`
 }
 
-type BlockRootsContainer struct {
+type BlockRootsContainerMainnet struct {
 	BlockRoots [][]byte `json:"block_roots" ssz-size:"8192,32"`
+}
+
+type BlockRootsContainerMinimal struct {
+	BlockRoots [][]byte `json:"block_roots" ssz-size:"64,32"`
 }
 
 type TransactionsRootContainer struct {
@@ -280,6 +284,11 @@ type BeaconState interface {
 	GetTree() (*ssz.Node, error)
 }
 
+type BlockRootsContainer interface {
+	GetTree() (*ssz.Node, error)
+	SetBlockRoots(blockRoots [][]byte)
+}
+
 func (b *BeaconStateBellatrixMinimal) GetSlot() uint64 {
 	return b.Slot
 }
@@ -292,14 +301,22 @@ func (b *BeaconStateBellatrixMinimal) GetBlockRoots() [][]byte {
 	return b.BlockRoots
 }
 
-func (b *BeaconStateBellatrix) GetSlot() uint64 {
+func (b *BeaconStateBellatrixMainnet) GetSlot() uint64 {
 	return b.Slot
 }
 
-func (b *BeaconStateBellatrix) GetLatestBlockHeader() *BeaconBlockHeader {
+func (b *BeaconStateBellatrixMainnet) GetLatestBlockHeader() *BeaconBlockHeader {
 	return b.LatestBlockHeader
 }
 
-func (b *BeaconStateBellatrix) GetBlockRoots() [][]byte {
+func (b *BeaconStateBellatrixMainnet) GetBlockRoots() [][]byte {
 	return b.BlockRoots
+}
+
+func (b *BlockRootsContainerMainnet) SetBlockRoots(blockRoots [][]byte) {
+	b.BlockRoots = blockRoots
+}
+
+func (b *BlockRootsContainerMinimal) SetBlockRoots(blockRoots [][]byte) {
+	b.BlockRoots = blockRoots
 }

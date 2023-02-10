@@ -31,6 +31,7 @@ type Syncer struct {
 	Client                       BeaconClient
 	SlotsInEpoch                 uint64
 	EpochsPerSyncCommitteePeriod uint64
+	MaxSlotsPerHistoricalRoot    int
 	currentFinalizedHeader       CurrentFinalizedHeader
 	activeSpec                   config.ActiveSpec
 }
@@ -42,11 +43,12 @@ type CurrentFinalizedHeader struct {
 	blockRootProofHash common.Hash // just for testing
 }
 
-func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64, activeSpec config.ActiveSpec) *Syncer {
+func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64, maxSlotsPerHistoricalRoot int, activeSpec config.ActiveSpec) *Syncer {
 	return &Syncer{
 		Client:                       *NewBeaconClient(endpoint),
 		SlotsInEpoch:                 slotsInEpoch,
 		EpochsPerSyncCommitteePeriod: epochsPerSyncCommitteePeriod,
+		MaxSlotsPerHistoricalRoot:    maxSlotsPerHistoricalRoot,
 		activeSpec:                   activeSpec,
 	}
 }
@@ -197,14 +199,8 @@ func (s *Syncer) GetBlockRoots(stateRoot string) (types.H256, []types.H256, erro
 
 	const fileName = "beacon_state.ssz"
 
-	path, err := os.Getwd()
-	if err != nil {
-		return types.H256{}, nil, err
-	}
-	log.WithField("path", path).Info("current dir is")
-
 	defer func() {
-		_ = os.Remove(fileName)
+		//_ = os.Remove(fileName)
 	}()
 
 	data, err := os.ReadFile(fileName)
@@ -212,16 +208,12 @@ func (s *Syncer) GetBlockRoots(stateRoot string) (types.H256, []types.H256, erro
 		return types.H256{}, nil, fmt.Errorf("find beacon state file: %w", err)
 	}
 
-	defer func() {
-		_ = os.Remove(fileName)
-	}()
-
 	var beaconState state.BeaconState
 
 	if s.activeSpec == config.Minimal {
 		beaconState = &state.BeaconStateBellatrixMinimal{}
 	} else {
-		beaconState = &state.BeaconStateBellatrix{}
+		beaconState = &state.BeaconStateBellatrixMainnet{}
 	}
 
 	log.WithField("activeSpec", s.activeSpec).Info("active spec")
@@ -229,17 +221,6 @@ func (s *Syncer) GetBlockRoots(stateRoot string) (types.H256, []types.H256, erro
 	err = beaconState.UnmarshalSSZ(data)
 	if err != nil {
 		return types.H256{}, nil, fmt.Errorf("unmarshal beacon state: %w", err)
-	}
-
-	currentBlockHash, err := beaconState.GetLatestBlockHeader().HashTreeRoot()
-	if err != nil {
-		return types.H256{}, nil, fmt.Errorf("get latest block header from state: %w", err)
-	}
-
-	s.currentFinalizedHeader = CurrentFinalizedHeader{
-		slot:       beaconState.GetSlot(),
-		blockHash:  common.BytesToHash(currentBlockHash[:]),
-		blockRoots: beaconState.GetBlockRoots(),
 	}
 
 	stateTree, err := beaconState.GetTree()
@@ -250,10 +231,14 @@ func (s *Syncer) GetBlockRoots(stateRoot string) (types.H256, []types.H256, erro
 	checkStateRoot := stateTree.Hash()
 
 	log.WithFields(log.Fields{
-		"slot":           s.currentFinalizedHeader.slot,
-		"blockHash":      s.currentFinalizedHeader.blockHash,
-		"checkStateRoot": checkStateRoot,
+		"slot":              s.currentFinalizedHeader.slot,
+		"computedStateRoot": common.BytesToHash(checkStateRoot),
+		"stateRoot":         stateRoot,
 	}).Info("setting current finalized header")
+
+	if common.BytesToHash(checkStateRoot).Hex() != stateRoot {
+		return types.H256{}, nil, fmt.Errorf("computed state hash tree root (%s) does not match known state root (%s)", common.BytesToHash(checkStateRoot).Hex(), stateRoot)
+	}
 
 	proof, err := stateTree.Prove(BlockRootGeneralizedIndex)
 	if err != nil {
@@ -265,6 +250,35 @@ func (s *Syncer) GetBlockRoots(stateRoot string) (types.H256, []types.H256, erro
 	scaleBlockRootProof := []types.H256{}
 	for _, proofItem := range proof.Hashes {
 		scaleBlockRootProof = append(scaleBlockRootProof, types.NewH256(proofItem))
+	}
+
+	displayBlockRootProof := []common.Hash{}
+	for _, proofItem := range proof.Hashes {
+		displayBlockRootProof = append(displayBlockRootProof, common.BytesToHash(proofItem))
+	}
+
+	log.WithFields(log.Fields{
+		"leaf":  common.BytesToHash(proof.Leaf),
+		"index": proof.Index,
+		"proof": displayBlockRootProof,
+		"root":  stateRoot,
+	}).Info("proof")
+
+	// sanity check
+	ok, err := ssz.VerifyProof(common.FromHex(stateRoot), proof)
+	if err != nil {
+		log.WithError(err).Info("proof error")
+
+		return types.H256{}, nil, fmt.Errorf("proof error: %w", err)
+	}
+	if !ok {
+		return types.H256{}, nil, fmt.Errorf("proof failed")
+	}
+
+	s.currentFinalizedHeader = CurrentFinalizedHeader{
+		slot:               beaconState.GetSlot(),
+		blockRoots:         beaconState.GetBlockRoots(),
+		blockRootProofHash: common.BytesToHash(proof.Leaf),
 	}
 
 	return types.NewH256(proof.Leaf), scaleBlockRootProof, nil
@@ -297,6 +311,16 @@ func (s *Syncer) GetFinalizedUpdate(latestHeaderRoot common.Hash) (FinalizedHead
 	blockRoot, err := finalizedHeaderSSZ.HashTreeRoot()
 	if err != nil {
 		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("beacon header hash tree root: %w", err)
+	}
+
+	// TODO remove after tests
+	checkBlockRoot, err := s.Client.GetBeaconBlockRoot(uint64(finalizedHeader.Slot))
+	if err != nil {
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch block root: %w", err)
+	}
+
+	if blockRoot != checkBlockRoot {
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("expected block root does not match actual block root as retrieved from API: %w", err)
 	}
 
 	if blockRoot == latestHeaderRoot {
@@ -363,8 +387,14 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
 		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
 	}
 
+	proofScale, err := s.getBlockHeaderAncestryProof(int(blockScale.Slot))
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("get block ancestry proof: %w", err)
+	}
+
 	headerUpdate := HeaderUpdate{
-		Block: blockScale,
+		Block:          blockScale,
+		BlockRootProof: proofScale,
 	}
 
 	return headerUpdate, nil
@@ -381,41 +411,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
 	}
 
-	container := state.BlockRootsContainer{
-		BlockRoots: s.currentFinalizedHeader.blockRoots,
-	}
-
-	maxSlotsPerHistoricalRoot := 8192
-
-	indexInArray := int(blockScale.Slot) % maxSlotsPerHistoricalRoot
-
-	tree, err := container.GetTree() // TODO check memory cost to save this in memory instead of block root array
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("convert block roots to tree: %w", err)
-	}
-
-	treeDepth := math.Floor(math.Log2(float64(maxSlotsPerHistoricalRoot)))
-	leavesStartIndex := int(math.Pow(2, treeDepth))
-	leafIndex := leavesStartIndex + indexInArray
-
-	proof, err := tree.Prove(leafIndex)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("get block proof: %w", err)
-	}
-
-	// TODO remove
-	ok, err := ssz.VerifyProof(s.currentFinalizedHeader.blockRootProofHash[:], proof)
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("proof errored: %w", err)
-	}
-	if ok != true {
-		return HeaderUpdate{}, fmt.Errorf("proof failed: %w", err)
-	}
-
-	proofScale := []types.H256{}
-	for _, proofItem := range proof.Hashes {
-		proofScale = append(proofScale, types.NewH256(proofItem))
-	}
+	proofScale, err := s.getBlockHeaderAncestryProof(int(blockScale.Slot))
 
 	headerUpdate := HeaderUpdate{
 		Block:          blockScale,
@@ -423,6 +419,63 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	}
 
 	return headerUpdate, nil
+}
+
+func (s *Syncer) getBlockHeaderAncestryProof(slot int) ([]types.H256, error) {
+	var blockRootsContainer state.BlockRootsContainer
+
+	if s.activeSpec == config.Minimal {
+		blockRootsContainer = &state.BlockRootsContainerMinimal{}
+	} else {
+		blockRootsContainer = &state.BlockRootsContainerMainnet{}
+	}
+
+	blockRootsContainer.SetBlockRoots(s.currentFinalizedHeader.blockRoots)
+
+	indexInArray := slot % s.MaxSlotsPerHistoricalRoot
+
+	tree, err := blockRootsContainer.GetTree() // TODO check memory cost to save this in memory instead of block root array
+	if err != nil {
+		return nil, fmt.Errorf("convert block roots to tree: %w", err)
+	}
+
+	log.WithField("tree root", common.BytesToHash(tree.Hash())).Info("tree root")
+
+	treeDepth := math.Floor(math.Log2(float64(s.MaxSlotsPerHistoricalRoot)))
+	leavesStartIndex := int(math.Pow(2, treeDepth))
+	leafIndex := leavesStartIndex + indexInArray
+
+	log.WithFields(log.Fields{
+		"treeDepth":                 treeDepth,
+		"leavesStartIndex":          leavesStartIndex,
+		"blockHashAtIndex":          common.BytesToHash(s.currentFinalizedHeader.blockRoots[indexInArray]),
+		"indexInArray":              indexInArray,
+		"leafIndex":                 leafIndex,
+		"slot":                      slot,
+		"blockArray":                s.currentFinalizedHeader.blockRoots,
+		"maxSlotsPerHistoricalRoot": s.MaxSlotsPerHistoricalRoot,
+	}).Info("blockHashAtIndex")
+
+	proof, err := tree.Prove(leafIndex)
+	if err != nil {
+		return nil, fmt.Errorf("get block proof: %w", err)
+	}
+
+	// sanity check
+	ok, err := ssz.VerifyProof(s.currentFinalizedHeader.blockRootProofHash[:], proof)
+	if err != nil {
+		return nil, fmt.Errorf("block proof at index errored: %w", err)
+	}
+	if ok != true {
+		return nil, fmt.Errorf("block proof at index failed")
+	}
+
+	proofScale := []types.H256{}
+	for _, proofItem := range proof.Hashes {
+		proofScale = append(proofScale, types.NewH256(proofItem))
+	}
+
+	return proofScale, nil
 }
 
 func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, error) {

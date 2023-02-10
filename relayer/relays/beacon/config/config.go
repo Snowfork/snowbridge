@@ -12,6 +12,7 @@ type Config struct {
 type SpecSettings struct {
 	SlotsInEpoch                 uint64 `mapstructure:"slotsInEpoch"`
 	EpochsPerSyncCommitteePeriod uint64 `mapstructure:"epochsPerSyncCommitteePeriod"`
+	MaxSlotsPerHistoricalRoot    int    `mapstructure:"maxSlotsPerHistoricalRoot"`
 }
 
 type Spec struct {
