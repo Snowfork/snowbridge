@@ -33,7 +33,7 @@ start_geth() {
 start_lodestar() {
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting lodestar local node"
-        genesisHash=$(curl http://localhost:8545 \
+        genesisHash=$(curl $infura_endpoint_http \
             -X POST \
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')

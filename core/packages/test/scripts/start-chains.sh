@@ -5,7 +5,6 @@ source scripts/set-env.sh
 source scripts/build-binary.sh
 source scripts/deploy-ethereum.sh
 source scripts/deploy-polkadot.sh
-source scripts/configure-contracts.sh
 
 start_chains()
 {   #1 start ethereum and deploy contracts
@@ -14,10 +13,7 @@ start_chains()
     #2 start polkadot relaychain and snowbridge parachain
     echo "Starting relaychain and snowbridge parachain"
     deploy_polkadot
-    #3 initialize bridge contracts
-    echo "Initializing bridge contracts"
-    configure_contracts
-    echo "Chains initialized ready"
+    echo "Chains started!"
 }
 
 if [ -z "${from_start_services:-}" ]; then
