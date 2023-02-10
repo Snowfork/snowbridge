@@ -1,10 +1,12 @@
+#!/usr/bin/env sh
+
+# exports enable use in core/packages/test/config/launch-config.toml
 root_dir="$(realpath ../../..)"
-relaychain_dir="${POLKADOT_DIR:-$root_dir/relaychain}"
-relaychain_version="${POLKADOT_VER:-v0.9.30}"
-export relaychain_bin="${POLKADOT_BIN:-$root_dir/parachain/.cargo/bin/polkadot}"
 parachain_dir="$root_dir/parachain"
 parachain_runtime="${PARACHAIN_RUNTIME:-snowbase}"
 parachain_bin="$parachain_dir/target/release/snowbridge"
+relaychain_version="${POLKADOT_VER:-v0.9.30}"
+relaychain_bin="${POLKADOT_BIN:-$parachain_dir/.cargo/bin/polkadot/$relaychain_version/polkadot}"
 test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-node"
 core_dir="$root_dir/core"
 lodestar_version="${LODESTAR_VER:-1.3.0}"

@@ -6,7 +6,7 @@ timeout = 600
 ## Rococo
 [relaychain]
 chain = "rococo-local"
-default_command = "{{relaychain_bin}}"
+default_command = "{{output_bin_dir}}/polkadot"
 default_args = [
     "-lparachain=debug",
     "--beefy",
