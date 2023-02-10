@@ -20,18 +20,20 @@
         {
             devShells.default = pkgs.mkShell {
                 buildInputs = [
-                    git
+                    cacert
                     curl
+                    direnv
+                    git
                     jq
                     moreutils
-                    direnv
                     typos
-                    go-ethereum
-                    cacert
 
-                    # typescript packages
+                    # typescript
                     nodejs-18_x
                     nodePackages.pnpm
+
+                    # ethereum
+                    go-ethereum
 
                     # relayer
                     go
@@ -39,11 +41,10 @@
                     revive
 
                     # parachain
-                    rustup
-
                     gcc
                     libiconv
                     protobuf
+                    rustup
 
                     clang
                     cmake

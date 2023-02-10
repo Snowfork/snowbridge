@@ -7,7 +7,12 @@ timeout = 600
 [relaychain]
 chain = "rococo-local"
 default_command = "{{relaychain_bin}}"
-default_args = ["-lparachain=debug","--beefy","--enable-offchain-indexing=true","--pruning","archive"]
+default_args = [
+    "-lparachain=debug",
+    "--beefy",
+    "--enable-offchain-indexing=true",
+    "--pruning", "archive",
+]
 
 [relaychain.genesis.runtime]
 session_length_in_blocks = 10

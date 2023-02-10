@@ -16,4 +16,3 @@ if [ -z "${from_start_services:-}" ]; then
     check_tool && cleanup && start_chains
     wait
 fi
-
