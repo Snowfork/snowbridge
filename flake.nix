@@ -27,6 +27,7 @@
                     jq
                     moreutils
                     typos
+                    ps
 
                     # typescript
                     nodejs-18_x
