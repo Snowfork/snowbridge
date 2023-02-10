@@ -19,6 +19,7 @@ rebuild_relaychain(){
         --tag "$relaychain_version" polkadot \
         --locked \
         --root .cargo
+    mkdir -p "$(dirname "$relaychain_bin")"
     cp "$parachain_dir"/.cargo/bin/polkadot "$relaychain_bin" || true
     popd
     true;
