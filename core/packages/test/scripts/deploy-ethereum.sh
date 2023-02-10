@@ -14,8 +14,8 @@ start_geth() {
             --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
             --rpc.allow-unprotected-txs --mine --miner.threads=1 \
             --miner.etherbase=0x0000000000000000000000000000000000000000 \
-            --authrpc.addr="[::1]" \
-            --http.addr="[::1]" \
+            --authrpc.addr="127.0.0.1" \
+            --http.addr="127.0.0.1" \
             --allow-insecure-unlock \
             --authrpc.jwtsecret config/jwtsecret \
             --unlock 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD,0x89b4AB1eF20763630df9743ACF155865600daFF2 \
@@ -44,9 +44,9 @@ start_lodestar() {
             --genesisValidators 8 \
             --genesisTime $timestamp \
             --startValidators "0..7" \
-            --enr.ip6 "::1" \
-            --eth1.providerUrls "http://[::1]:8545" \
-            --execution.urls "http://[::1]:8551" \
+            --enr.ip6 "127.0.0.1" \
+            --eth1.providerUrls "http://127.0.0.1:8545" \
+            --execution.urls "http://127.0.0.1:8551" \
             --dataDir "$output_dir/beacon-$timestamp" \
             --reset \
             --terminal-total-difficulty-override 0 \
