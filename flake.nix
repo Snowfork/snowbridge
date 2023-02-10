@@ -68,7 +68,7 @@
 
                     eval "$(direnv hook bash)"
 
-                    # rocksdb requires a clang.so
+                    # rocksdb requires a clang.so available in LIBCLANG_PATH on Linux
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
                     cowsay "Snowbridge Dev Environment"
