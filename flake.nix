@@ -31,8 +31,8 @@
                     ps
 
                     # typescript
-                    nodejs-18_x
                     nodePackages.pnpm
+                    nodejs-18_x
 
                     # ethereum
                     go-ethereum
@@ -43,14 +43,11 @@
                     revive
 
                     # parachain
+                    clang
                     gcc
                     libiconv
                     protobuf
                     rustup
-
-                    clang
-                    cmake
-                    openssl
 
                     cowsay
                 ];
