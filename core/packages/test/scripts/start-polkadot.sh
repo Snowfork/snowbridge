@@ -4,10 +4,9 @@ set -eu
 source scripts/set-env.sh
 source scripts/build-binary.sh
 source scripts/deploy-polkadot.sh
-source scripts/configure-contracts.sh
 
 start_chains()
-{   
+{
     #1 start polkadot relaychain and snowbridge parachain
     echo "Starting relaychain and snowbridge parachain"
     deploy_polkadot

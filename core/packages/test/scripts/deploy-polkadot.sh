@@ -65,26 +65,6 @@ wait_start() {
     scripts/wait-for-it.sh -t 120 localhost:13144
 }
 
-polkadot_launch() {
-    generate_chain_spec
-    jq \
-        --arg polkadot "$(realpath $relaychain_bin)" \
-        --arg bin "$parachain_bin" \
-        --arg spec "$output_dir/spec.json" \
-        --arg test_collator "$(realpath $test_collator_bin)" \
-        --arg test_spec "$output_dir/test_spec.json" \
-        ' .relaychain.bin = $polkadot
-        | .parachains[0].bin = $bin
-        | .parachains[0].chain = $spec
-        | .parachains[1].bin = $test_collator
-        | .parachains[1].chain = $test_spec
-        ' \
-        config/launch-config.json \
-        > "$output_dir/launch-config.json"
-    npx polkadot-launch "$output_dir/launch-config.json" 2>&1 &
-    wait_start
-}
-
 zombienet_launch() {
     generate_chain_spec
     zombienet spawn config/launch-config.toml --provider=native 2>&1 &
