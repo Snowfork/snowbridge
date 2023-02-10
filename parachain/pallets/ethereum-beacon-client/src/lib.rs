@@ -172,7 +172,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
-	StorageMap<_, Identity, H256, H256, ValueQuery>;
+		StorageMap<_, Identity, H256, H256, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
@@ -527,21 +527,18 @@ pub mod pallet {
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
-			Self::store_block_root(
-				update.block_roots_hash,
-				block_root,
-			);
+			Self::store_block_root(update.block_roots_hash, block_root);
 
 			Self::store_finalized_header(block_root, update.finalized_header);
 
 			Ok(())
 		}
 
-		fn store_block_root(
-			block_roots_hash: H256,
-			finalized_header_block_root: H256,
-		) {
-			<FinalizedBeaconHeadersBlockRoot<T>>::insert(finalized_header_block_root, block_roots_hash);
+		fn store_block_root(block_roots_hash: H256, finalized_header_block_root: H256) {
+			<FinalizedBeaconHeadersBlockRoot<T>>::insert(
+				finalized_header_block_root,
+				block_roots_hash,
+			);
 		}
 
 		fn process_header(update: BlockUpdateOf<T>) -> DispatchResult {
@@ -574,7 +571,8 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
 					.into();
 
-			let finalized_block_root_hash = <FinalizedBeaconHeadersBlockRoot<T>>::get(last_finalized_header.beacon_block_root);
+			let finalized_block_root_hash =
+				<FinalizedBeaconHeadersBlockRoot<T>>::get(last_finalized_header.beacon_block_root);
 
 			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get();
 			let depth = max_slots_per_historical_root.ilog2();
