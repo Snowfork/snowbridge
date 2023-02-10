@@ -511,8 +511,9 @@ pub mod pallet {
 			ensure!(block_slot > latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
 
 			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
+			let execution_payload = update.block.body.execution_payload.clone();
 			ensure!(
-				block_slot > execution_header_state.block_number,
+				execution_payload.block_number > execution_header_state.block_number,
 				Error::<T>::InvalidExecutionHeaderUpdate
 			);
 
@@ -548,8 +549,6 @@ pub mod pallet {
 				validators_root,
 				update.signature_slot,
 			)?;
-
-			let execution_payload = update.block.body.execution_payload;
 
 			let mut fee_recipient = [0u8; 20];
 			let fee_slice = execution_payload.fee_recipient.as_slice();
