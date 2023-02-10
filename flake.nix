@@ -27,6 +27,7 @@
                     jq
                     moreutils
                     typos
+                    # required by zombienet & not available in pure shells on Linux
                     ps
 
                     # typescript
