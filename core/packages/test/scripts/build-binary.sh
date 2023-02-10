@@ -9,7 +9,6 @@ build_relaychain() {
         rebuild_relaychain
     fi
     cp "$relaychain_bin" "$output_bin_dir"/polkadot
-    true;
 }
 
 rebuild_relaychain(){
@@ -22,7 +21,6 @@ rebuild_relaychain(){
     mkdir -p "$(dirname "$relaychain_bin")"
     cp "$parachain_dir"/.cargo/bin/polkadot "$relaychain_bin" || true
     popd
-    true;
 }
 
 build_parachain()
