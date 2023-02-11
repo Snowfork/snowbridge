@@ -8,6 +8,7 @@ start_chains()
 {   #1 start ethereum and deploy contracts
     echo "start ethereum and deploy bridge contrancts"
     deploy_ethereum
+    echo "Chain started!"
 }
 
 if [ -z "${from_start_services:-}" ]; then
