@@ -5,12 +5,13 @@
         nixpkgs.url = "nixpkgs/nixos-22.11";
         rust-overlay.url = "github:oxalica/rust-overlay";
         flake-utils.url  = "github:numtide/flake-utils";
+        foundry.url = "github:shazow/foundry.nix/monthly";
     };
 
-    outputs = { self, nixpkgs, rust-overlay, flake-utils }:
+    outputs = { self, nixpkgs, rust-overlay, flake-utils, foundry }:
     let
         supportedSystems = [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" ];
-        overlays = [ (import rust-overlay) ];
+        overlays = [ (import rust-overlay) foundry.overlay ];
     in
     flake-utils.lib.eachSystem supportedSystems (system:
         let
@@ -35,6 +36,7 @@
                     nodejs-18_x
 
                     # ethereum
+                    foundry-bin
                     go-ethereum
 
                     # relayer
