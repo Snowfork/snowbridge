@@ -11,34 +11,25 @@ func Hex(b []byte) string {
 }
 
 func (wr *EthereumWriter) logFieldsForBasicSubmission(
-	bundle basic.BasicInboundChannelMessageBundle,
+	message basic.BasicInboundChannelMessage,
 	leafProof [][32]byte,
 	hashSides []bool,
 	proof []byte,
 ) log.Fields {
-	var messagesLog []log.Fields
-	for _, item := range bundle.Messages {
-		messagesLog = append(messagesLog, log.Fields{
-			"id":      item.Id,
-			"target":  item.Target,
-			"payload": Hex(item.Payload),
-		})
-	}
-
 	leafProofHexes := make([]string, len(leafProof))
 	for i, leaf := range leafProof {
 		leafProofHexes[i] = Hex(leaf[:])
 	}
 
 	params := log.Fields{
-		"bundle": log.Fields{
-			"nonce":    bundle.Nonce,
-			"account":  Hex(bundle.Account[:]),
-			"messages": messagesLog,
+		"message": log.Fields{
+			"sourceID": Hex(message.SourceId[:]),
+			"nonce":    message.Nonce,
+			"payload":  message.Payload,
 		},
-		"proof":     Hex(proof),
 		"leafProof": leafProofHexes,
 		"hashSides": hashSides,
+		"proof":     Hex(proof),
 	}
 
 	return params

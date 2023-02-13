@@ -46,6 +46,7 @@ impl<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> Default
 			current_sync_committee: Default::default(),
 			current_sync_committee_branch: Default::default(),
 			validators_root: Default::default(),
+			import_time: Default::default(),
 		}
 	}
 }
@@ -151,6 +152,7 @@ pub struct InitialSync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> {
 	pub current_sync_committee: SyncCommittee<SyncCommitteeSize>,
 	pub current_sync_committee_branch: BoundedVec<H256, ProofSize>,
 	pub validators_root: Root,
+	pub import_time: u64,
 }
 
 #[derive(

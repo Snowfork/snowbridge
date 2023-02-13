@@ -11,14 +11,18 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "hardhat compile",
+    "build": "hardhat compile && pnpm build:ffi",
+    "build:sol": "forge build",
+    "build:ffi": "esbuild ./test/ffiWrapper.ts --bundle --platform=node --outfile=./test/ffiWrapper.js",
     "lint": "pnpm lint:solhint && pnpm lint:eslint",
     "lint:solhint": "solhint 'contracts/**/*.sol'",
     "lint:eslint": "eslint .",
     "format": "prettier --write 'contracts/**/*.sol' 'test/**/*.ts'",
     "size": "hardhat size-contracts",
     "coverage": "hardhat coverage --testfiles 'test/*.ts'",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "test:foundry": "pnpm build:ffi && forge test -vvv",
+    "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ contracts/deploy/foundry/Deploy.sol:DeployScript --broadcast -vvvv"
   },
   "devDependencies": {
     "@babel/core": "^7.11.6",
@@ -41,6 +45,7 @@
     "@types/secp256k1": "^4.0.3",
     "@typescript-eslint/eslint-plugin": "^5.42.0",
     "@typescript-eslint/parser": "^5.42.0",
+    "@types/seedrandom": "^3.0.2",
     "bitfield": "^4.1.0",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
@@ -52,7 +57,6 @@
     "find-config": "^1.0.0",
     "hardhat": "^2.12.2",
     "hardhat-contract-sizer": "^2.6.1",
-    "hardhat-deploy": "^0.11.20",
     "hardhat-gas-reporter": "^1.0.9",
     "keccak": "^3.0.2",
     "lodash": "^4.17.21",
@@ -73,7 +77,8 @@
     "tsconfig-paths": "^4.1.0",
     "typechain": "^8.1.0",
     "typescript": "^4.3.2",
-    "unique-filename": "^1.1.1"
+    "unique-filename": "^1.1.1",
+    "esbuild": "^0.17.4"
   },
   "dependencies": {
     "@ethersproject/bytes": "^5.0.0",

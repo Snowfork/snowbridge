@@ -9,14 +9,14 @@ mod test;
 use codec::{Decode, Encode, MaxEncodedLen};
 use ethabi::{self, Token};
 use frame_support::{
-	dispatch::DispatchResult, ensure, traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound,
-	RuntimeDebugNoBound,
+	dispatch::DispatchResult, ensure, pallet_prelude::Member, traits::Get, weights::Weight,
+	BoundedVec, CloneNoBound, Parameter, PartialEqNoBound, RuntimeDebugNoBound,
 };
 use scale_info::TypeInfo;
-use sp_core::{H160, H256};
-use sp_runtime::traits::{Hash, Zero};
+use sp_core::H256;
+use sp_runtime::traits::Hash;
 
-use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*};
+use sp_std::prelude::*;
 
 use sp_io::offchain_index::set;
 
@@ -30,78 +30,39 @@ pub use weights::WeightInfo;
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
 )]
 #[scale_info(skip_type_params(M))]
-#[codec(mel_bound(AccountId: MaxEncodedLen))]
-pub struct EnqueuedMessage<AccountId, M: Get<u32>>
+#[codec(mel_bound(SourceId: MaxEncodedLen))]
+pub struct Message<SourceId, M: Get<u32>>
 where
-	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
+	SourceId: Parameter + Member + MaxEncodedLen,
 {
-	account: AccountId,
-	message: Message<M>,
-}
-
-#[derive(
-	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
-)]
-#[scale_info(skip_type_params(M))]
-#[codec(mel_bound())]
-pub struct Message<M: Get<u32>> {
-	/// Unique message ID
+	/// ID of source parachain
+	source_id: SourceId,
+	/// Unique nonce to prevent replaying messages
 	#[codec(compact)]
-	id: u64,
-	/// Target application on the Ethereum side.
-	target: H160,
+	nonce: u64,
 	/// Payload for target application.
 	payload: BoundedVec<u8, M>,
 }
 
-impl<M: Get<u32>> Into<Token> for Message<M> {
+impl<SourceId, M: Get<u32>> Into<Token> for Message<SourceId, M>
+where
+	SourceId: Decode + Parameter + Member + MaxEncodedLen, //+ TypeInfo,
+{
 	fn into(self) -> Token {
 		Token::Tuple(vec![
-			Token::Uint(self.id.into()),
-			Token::Address(self.target),
+			Token::Bytes(self.source_id.encode()),
+			Token::Uint(self.nonce.into()),
 			Token::Bytes(self.payload.to_vec()),
 		])
 	}
 }
 
-pub type EnqueuedMessageOf<T> =
-	EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
-
-/// Wire-format for committed messages
-#[derive(
-	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
-)]
-#[scale_info(skip_type_params(M, N))]
-#[codec(mel_bound(AccountId: MaxEncodedLen))]
-pub struct MessageBundle<AccountId, M: Get<u32>, N: Get<u32>>
-where
-	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
-{
-	account: AccountId,
-	/// Unique nonce to prevent replaying bundles
-	#[codec(compact)]
-	nonce: u64,
-	messages: BoundedVec<Message<M>, N>,
-}
-
-impl<AccountId, M: Get<u32>, N: Get<u32>> Into<Token> for MessageBundle<AccountId, M, N>
-where
-	AccountId: AsRef<[u8]> + Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
-{
-	fn into(self) -> Token {
-		Token::Tuple(vec![
-			Token::FixedBytes(self.account.as_ref().into()),
-			Token::Uint(self.nonce.into()),
-			Token::Array(self.messages.into_iter().map(|message| message.into()).collect()),
-		])
-	}
-}
-
-pub type MessageBundleOf<T> = MessageBundle<
-	<T as frame_system::Config>::AccountId,
-	<T as Config>::MaxMessagePayloadSize,
-	<T as Config>::MaxMessagesPerCommit,
->;
+// base_weight=(0.75*0.5)*(10**12)=375_000_000_000
+// we leave the extra 10_000_000_000/375_000_000_000=2.66% as margin
+// so we can use at most 365000000000 for the commit call
+// need to rerun benchmarks later to get weight based on the worst case:
+// MaxMessagesPerCommit=20 and MaxMessagePayloadSize=256
+pub const MINIMUM_WEIGHT_REMAIN_IN_BLOCK: Weight = Weight::from_ref_time(10_000_000_000);
 
 pub use pallet::*;
 
@@ -121,6 +82,9 @@ pub mod pallet {
 
 		type Hashing: Hash<Output = H256>;
 
+		/// ID of message source
+		type SourceId: Parameter + Member + PartialEq + MaxEncodedLen;
+
 		/// Max bytes in a message payload
 		#[pallet::constant]
 		type MaxMessagePayloadSize: Get<u32>;
@@ -137,7 +101,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		MessageAccepted(u64),
-		Committed { hash: H256, data: Vec<MessageBundleOf<T>> },
+		Committed { hash: H256, data: Vec<Message<T::SourceId, T::MaxMessagePayloadSize>> },
 	}
 
 	#[pallet::error]
@@ -157,14 +121,14 @@ pub mod pallet {
 
 	/// Messages waiting to be committed.
 	#[pallet::storage]
-	pub(super) type MessageQueue<T: Config> =
-		StorageValue<_, BoundedVec<EnqueuedMessageOf<T>, T::MaxMessagesPerCommit>, ValueQuery>;
+	pub(super) type MessageQueue<T: Config> = StorageValue<
+		_,
+		BoundedVec<Message<T::SourceId, T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, u64, ValueQuery>;
-
-	#[pallet::storage]
-	pub type NextId<T: Config> = StorageValue<_, u64, ValueQuery>;
+	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, T::SourceId, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -190,147 +154,94 @@ pub mod pallet {
 	where
 		T::AccountId: AsRef<[u8]>,
 	{
-		// Generate a message commitment every [`Interval`] blocks.
-		//
+		// Generate a message commitment when the chain is idle with enough remaining weight
 		// The commitment hash is included in an [`AuxiliaryDigestItem`] in the block header,
 		// with the corresponding commitment is persisted offchain.
-		fn on_initialize(now: T::BlockNumber) -> Weight {
-			if (now % Self::interval()).is_zero() {
-				Self::commit()
-			} else {
-				T::WeightInfo::on_initialize_non_interval()
+		fn on_idle(_n: T::BlockNumber, total_weight: Weight) -> Weight {
+			let weight_remaining = total_weight.saturating_sub(T::WeightInfo::on_commit(
+				T::MaxMessagesPerCommit::get(),
+				T::MaxMessagePayloadSize::get(),
+			));
+			if weight_remaining.ref_time() <= MINIMUM_WEIGHT_REMAIN_IN_BLOCK.ref_time() {
+				return total_weight
 			}
+			Self::commit(total_weight)
 		}
 	}
 
-	impl<T: Config> Pallet<T>
-	where
-		T::AccountId: AsRef<[u8]>,
-	{
+	impl<T: Config> Pallet<T> {
 		/// Submit message on the outbound channel
-		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
+		pub fn submit(source_id: &T::SourceId, payload: &[u8]) -> DispatchResult {
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerCommit::get() as usize,
 				Error::<T>::QueueSizeLimitReached,
 			);
-			ensure!(
-				payload.len() <= T::MaxMessagePayloadSize::get() as usize,
-				Error::<T>::PayloadTooLarge,
-			);
 
-			let next_id = <NextId<T>>::get();
-			if next_id.checked_add(1).is_none() {
-				return Err(Error::<T>::Overflow.into())
-			}
+			let message_payload =
+				payload.to_vec().try_into().map_err(|_| Error::<T>::PayloadTooLarge)?;
+			let nonce = <Nonce<T>>::get(source_id);
+			let next_nonce = nonce.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
-			<MessageQueue<T>>::try_append(EnqueuedMessage {
-				account: who.clone(),
-				message: Message {
-					id: next_id,
-					target,
-					payload: payload
-						.to_vec()
-						.try_into()
-						.map_err(|_| Error::<T>::PayloadTooLarge)?,
-				},
+			<MessageQueue<T>>::try_append(Message {
+				source_id: source_id.clone(),
+				nonce,
+				payload: message_payload,
 			})
 			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
-			Self::deposit_event(Event::MessageAccepted(next_id));
+			Self::deposit_event(Event::MessageAccepted(nonce));
 
-			<NextId<T>>::put(next_id + 1);
+			<Nonce<T>>::set(source_id, next_nonce);
 
 			Ok(())
 		}
 
 		/// Commit messages enqueued on the outbound channel.
-		/// For every account id in the enqueued messages, create a message bundle containing the
-		/// messages for that account. Hash the ethabi encoding of these message bundles in a
-		/// Merkle tree to produce a commitment hash. Then:
+		/// Find the Merkle root of all of the messages in the queue. (TODO: take a sublist, later
+		/// use weights to determine the size of the sublist). Use ethabi-encoded messages as the
+		/// leaves of the Merkle tree. Then:
 		/// - Store the commitment hash on the parachain for the Ethereum light client to query.
 		/// - Emit an event with the commitment hash and SCALE-encoded message bundles for a
 		/// relayer to read.
 		/// - Persist the ethabi-encoded message bundles to off-chain storage.
-		fn commit() -> Weight {
+		pub fn commit(_total_weight: Weight) -> Weight {
 			// TODO: SNO-310 consider using mutate here. If some part of emitting message bundles
 			// fails, we don't want the MessageQueue to be empty.
 			let message_queue = <MessageQueue<T>>::take();
 			if message_queue.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages()
+				return T::WeightInfo::on_commit_no_messages()
 			}
 
-			// Store these for the on_initialize call at the end
+			// Store these for the on_commit call at the end
 			let message_count = message_queue.len() as u32;
 			let average_payload_size = Self::average_payload_size(&message_queue);
 
-			let message_bundles = Self::make_message_bundles(message_queue);
-			let eth_message_bundles: Vec<Vec<u8>> = message_bundles
+			let eth_messages: Vec<Vec<u8>> = message_queue
 				.clone()
 				.into_iter()
-				.map(|bundle| ethabi::encode(&vec![bundle.into()]))
+				.map(|msg| ethabi::encode(&vec![msg.into()]))
 				.collect();
 
-			let commitment_hash = merkle_root::<<T as Config>::Hashing, Vec<Vec<u8>>, Vec<u8>>(
-				eth_message_bundles.clone(),
-			);
+			let commitment_hash =
+				merkle_root::<<T as Config>::Hashing, Vec<Vec<u8>>, Vec<u8>>(eth_messages.clone());
 
 			let digest_item = AuxiliaryDigestItem::Commitment(commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
 			Self::deposit_event(Event::Committed {
 				hash: commitment_hash,
-				data: message_bundles.clone(),
+				data: message_queue.to_vec(),
 			});
 
-			set(commitment_hash.as_bytes(), &eth_message_bundles.encode());
+			set(commitment_hash.as_bytes(), &eth_messages.encode());
 
-			T::WeightInfo::on_initialize(message_count, average_payload_size)
-		}
-
-		fn make_message_bundles(
-			message_queue: BoundedVec<EnqueuedMessageOf<T>, <T as Config>::MaxMessagesPerCommit>,
-		) -> Vec<MessageBundleOf<T>> {
-			let account_message_map: BTreeMap<
-				T::AccountId,
-				BoundedVec<Message<T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>,
-			> = message_queue.into_iter().fold(
-				BTreeMap::new(),
-				|mut messages_for_accounts, enqueued_message| {
-					let (account, message) = (enqueued_message.account, enqueued_message.message);
-
-					if let Some(messages) = messages_for_accounts.get_mut(&account) {
-						// We should be able to safely ignore the result here, since we can't have
-						// more messages for a single account than we have in the message queue
-						messages.try_push(message).unwrap();
-					} else {
-						let mut messages = BoundedVec::default();
-						// Safe to ignore the result because we just created the empty BoundedVec
-						messages.try_push(message).unwrap();
-						messages_for_accounts.insert(account, messages);
-					}
-
-					messages_for_accounts
-				},
-			);
-
-			let mut message_bundles: Vec<MessageBundleOf<T>> = Vec::new();
-			for (account, messages) in account_message_map {
-				let next_nonce = <Nonce<T>>::mutate(&account, |nonce| {
-					*nonce = nonce.saturating_add(1);
-					*nonce
-				});
-				let bundle: MessageBundleOf<T> =
-					MessageBundle { account, nonce: next_nonce, messages };
-				message_bundles.push(bundle);
-			}
-
-			message_bundles
+			return T::WeightInfo::on_commit(message_count, average_payload_size)
 		}
 
 		fn average_payload_size(
-			messages: &[EnqueuedMessage<T::AccountId, T::MaxMessagePayloadSize>],
+			messages: &[Message<T::SourceId, T::MaxMessagePayloadSize>],
 		) -> u32 {
-			let sum: usize = messages.iter().fold(0, |acc, x| acc + (*x).message.payload.len());
+			let sum: usize = messages.iter().fold(0, |acc, x| acc + (*x).payload.len());
 			// We overestimate message payload size rather than underestimate.
 			// So add 1 here to account for integer division truncation.
 			(sum / messages.len()).saturating_add(1) as u32

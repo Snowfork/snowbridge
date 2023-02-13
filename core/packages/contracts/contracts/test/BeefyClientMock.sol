@@ -14,4 +14,10 @@ contract BeefyClientMock is BeefyClient {
     ) external pure returns (bytes memory) {
         return encodeCommitment(commitment);
     }
+
+    function minimumSignatureThreshold_public(
+        uint256 validatorSetLen
+    ) external pure returns (uint256) {
+        return minimumSignatureThreshold(validatorSetLen);
+    }
 }

@@ -48,7 +48,7 @@ func NewBeefyListener(
 }
 
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
-	accounts, err := li.config.getAccounts()
+	sourceIDs, err := li.config.getSourceIDs()
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 		paraConn:         li.parachainConnection,
 		eventQueryClient: NewQueryClient(),
 		paraID:           paraID,
-		accounts:         accounts,
+		sourceIDs:        sourceIDs,
 	}
 
 	eg.Go(func() error {
