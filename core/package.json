@@ -2,7 +2,7 @@
   "name": "@snowbridge/core",
   "private": true,
   "engines": {
-    "node": "v18.12.1",
+    "node": "v18.13.0",
     "pnpm": "7.14.2"
   },
   "scripts": {

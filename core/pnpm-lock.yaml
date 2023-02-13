@@ -17,7 +17,7 @@ importers:
       '@polkadot/api': 9.11.1
       '@polkadot/types': 9.11.1
       '@snowbridge/contracts': workspace:*
-      '@types/node': ^18.11.9
+      '@types/node': ^18.13.0
       '@typescript-eslint/eslint-plugin': ^5.42.0
       '@typescript-eslint/parser': ^5.42.0
       eslint: ^8.26.0
@@ -34,7 +34,7 @@ importers:
       '@snowbridge/contracts': link:../contracts
       ethers: 5.7.2
     devDependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
       '@typescript-eslint/eslint-plugin': 5.42.0_6xw5wg2354iw4zujk2f3vyfrzu
       '@typescript-eslint/parser': 5.42.0_wyqvi574yv7oiwfeinomdzmc3m
       eslint: 8.26.0
@@ -42,7 +42,7 @@ importers:
       ethereumjs-abi: 0.6.8
       ethereumjs-util: 7.1.5
       prettier: 2.7.1
-      ts-node: 10.9.1_cbe7ovvae6zqfnmtgctpgpys54
+      ts-node: 10.9.1_54u4tphudisr2z46etlt7y7xge
       typescript: 4.8.4
 
   packages/contracts:
@@ -66,7 +66,7 @@ importers:
       '@types/keccak': ^3.0.1
       '@types/lodash': ^4.14.186
       '@types/mocha': ^10.0.0
-      '@types/node': ^16.3.3
+      '@types/node': ^18.13.0
       '@types/secp256k1': ^4.0.3
       '@types/seedrandom': ^3.0.2
       '@typescript-eslint/eslint-plugin': ^5.42.0
@@ -127,7 +127,7 @@ importers:
       '@types/keccak': 3.0.1
       '@types/lodash': 4.14.187
       '@types/mocha': 10.0.0
-      '@types/node': 16.18.3
+      '@types/node': 18.13.0
       '@types/secp256k1': 4.0.3
       '@types/seedrandom': 3.0.2
       '@typescript-eslint/eslint-plugin': 5.42.0_6xw5wg2354iw4zujk2f3vyfrzu
@@ -160,7 +160,7 @@ importers:
       solidity-coverage: 0.8.2_hardhat@2.12.2
       solidity-docgen: 0.5.17
       temp: 0.9.4
-      ts-node: 10.9.1_e7yvbkxpwwqnzxz2s2bfjt7zx4
+      ts-node: 10.9.1_54u4tphudisr2z46etlt7y7xge
       tsconfig-paths: 4.1.0
       typechain: 8.1.1_typescript@4.8.4
       typescript: 4.8.4
@@ -183,7 +183,7 @@ importers:
       '@polkadot/util': 10.2.3
       '@polkadot/util-crypto': 10.2.3
       '@types/keccak': ^3.0.1
-      '@types/node': ^16.4.2
+      '@types/node': ^18.13.0
       '@types/yargs': ^17.0.2
       '@zombienet/cli': ^1.3.29
       bignumber.js: ^9.0.0
@@ -210,9 +210,9 @@ importers:
       '@polkadot/util': 10.2.3
       '@polkadot/util-crypto': 10.2.3_@polkadot+util@10.2.3
       '@types/keccak': 3.0.1
-      '@types/node': 16.18.3
+      '@types/node': 18.13.0
       '@types/yargs': 17.0.13
-      '@zombienet/cli': 1.3.29
+      '@zombienet/cli': 1.3.29_@polkadot+util@10.2.3
       bignumber.js: 9.1.0
       bn.js: 5.2.1
       c-kzg: 1.0.9
@@ -226,7 +226,7 @@ importers:
       mocha: 8.4.0
       node-fetch: 3.3.0
       rlp: 2.2.7
-      ts-node: 10.9.1_e7yvbkxpwwqnzxz2s2bfjt7zx4
+      ts-node: 10.9.1_54u4tphudisr2z46etlt7y7xge
       typescript: 4.8.4
       ws: 7.5.9
       yargs: 17.6.1
@@ -3287,6 +3287,18 @@ packages:
       '@polkadot/util': 10.2.6
       '@polkadot/util-crypto': 10.2.6
 
+  /@polkadot/keyring/10.2.6_wze3jg67ezifiygi6dx4bs2sfy:
+    resolution: {integrity: sha512-ippK6zLRZFGqlAEKO9SpGPk+AJh798hHjI+WnCpzsHU2qFWqkZtePdv0FMZ9r3XqkA75ftV5ML/+/JctMN3kSg==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@polkadot/util': 10.2.6
+      '@polkadot/util-crypto': 10.2.6
+    dependencies:
+      '@babel/runtime': 7.20.13
+      '@polkadot/util': 10.2.3
+      '@polkadot/util-crypto': 10.2.6_@polkadot+util@10.2.3
+    dev: true
+
   /@polkadot/networks/10.2.3:
     resolution: {integrity: sha512-YE2/UzrYrf8IZpZ4jfK7rWJdXjW10ISqlePzDx02BCkEB7GZj9al9c3m+lJPaqmpwcGPZpn0UVw6UtBSIt4pNA==}
     engines: {node: '>=14.0.0'}
@@ -3564,6 +3576,25 @@ packages:
       ed2curve: 0.3.0
       tweetnacl: 1.0.3
 
+  /@polkadot/util-crypto/10.2.6_@polkadot+util@10.2.3:
+    resolution: {integrity: sha512-UPk7DRFXTEEm2tM7Xy5hcPvhI8C/Ln0KJgCBxYtyBq4yCTrUEtJjQVuDr6yE/cUVtNDDRGUjXIW8rW1mNpMyuA==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@polkadot/util': 10.2.6
+    dependencies:
+      '@babel/runtime': 7.20.13
+      '@noble/hashes': 1.1.5
+      '@noble/secp256k1': 1.7.1
+      '@polkadot/networks': 10.2.6
+      '@polkadot/util': 10.2.3
+      '@polkadot/wasm-crypto': 6.4.1_z7zs7h4hofbwni4zrk6ldq4use
+      '@polkadot/x-bigint': 10.2.6
+      '@polkadot/x-randomvalues': 10.2.6
+      '@scure/base': 1.1.1
+      ed2curve: 0.3.0
+      tweetnacl: 1.0.3
+    dev: true
+
   /@polkadot/util/10.2.3:
     resolution: {integrity: sha512-Zs+G2iFmdG2jUXyiuBF6HMGHdpHX+58yrKPgt1S7kBBh1Odfw3GTX9vljwJ25mznkLhGBjERAmt6wNWuvPmpJA==}
     engines: {node: '>=14.0.0'}
@@ -3612,6 +3643,18 @@ packages:
       '@polkadot/x-randomvalues': 10.2.3
     dev: true
 
+  /@polkadot/wasm-bridge/6.4.1_z7zs7h4hofbwni4zrk6ldq4use:
+    resolution: {integrity: sha512-QZDvz6dsUlbYsaMV5biZgZWkYH9BC5AfhT0f0/knv8+LrbAoQdP3Asbvddw8vyU9sbpuCHXrd4bDLBwUCRfrBQ==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@polkadot/util': '*'
+      '@polkadot/x-randomvalues': '*'
+    dependencies:
+      '@babel/runtime': 7.20.13
+      '@polkadot/util': 10.2.3
+      '@polkadot/x-randomvalues': 10.2.6
+    dev: true
+
   /@polkadot/wasm-crypto-asmjs/6.4.1_@polkadot+util@10.2.3:
     resolution: {integrity: sha512-UxZTwuBZlnODGIQdCsE2Sn/jU0O2xrNQ/TkhRFELfkZXEXTNu4lw6NpaKq7Iey4L+wKd8h4lT3VPVkMcPBLOvA==}
     engines: {node: '>=14.0.0'}
@@ -3658,6 +3701,21 @@ packages:
       '@polkadot/wasm-crypto-asmjs': 6.4.1_@polkadot+util@10.2.3
       '@polkadot/wasm-crypto-wasm': 6.4.1_@polkadot+util@10.2.3
       '@polkadot/x-randomvalues': 10.2.3
+    dev: true
+
+  /@polkadot/wasm-crypto-init/6.4.1_z7zs7h4hofbwni4zrk6ldq4use:
+    resolution: {integrity: sha512-1ALagSi/nfkyFaH6JDYfy/QbicVbSn99K8PV9rctDUfxc7P06R7CoqbjGQ4OMPX6w1WYVPU7B4jPHGLYBlVuMw==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@polkadot/util': '*'
+      '@polkadot/x-randomvalues': '*'
+    dependencies:
+      '@babel/runtime': 7.20.13
+      '@polkadot/util': 10.2.3
+      '@polkadot/wasm-bridge': 6.4.1_z7zs7h4hofbwni4zrk6ldq4use
+      '@polkadot/wasm-crypto-asmjs': 6.4.1_@polkadot+util@10.2.3
+      '@polkadot/wasm-crypto-wasm': 6.4.1_@polkadot+util@10.2.3
+      '@polkadot/x-randomvalues': 10.2.6
     dev: true
 
   /@polkadot/wasm-crypto-wasm/6.4.1_@polkadot+util@10.2.3:
@@ -3712,6 +3770,23 @@ packages:
       '@polkadot/wasm-crypto-wasm': 6.4.1_@polkadot+util@10.2.3
       '@polkadot/wasm-util': 6.4.1_@polkadot+util@10.2.3
       '@polkadot/x-randomvalues': 10.2.3
+    dev: true
+
+  /@polkadot/wasm-crypto/6.4.1_z7zs7h4hofbwni4zrk6ldq4use:
+    resolution: {integrity: sha512-FH+dcDPdhSLJvwL0pMLtn/LIPd62QDPODZRCmDyw+pFjLOMaRBc7raomWUOqyRWJTnqVf/iscc2rLVLNMyt7ag==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@polkadot/util': '*'
+      '@polkadot/x-randomvalues': '*'
+    dependencies:
+      '@babel/runtime': 7.20.13
+      '@polkadot/util': 10.2.3
+      '@polkadot/wasm-bridge': 6.4.1_z7zs7h4hofbwni4zrk6ldq4use
+      '@polkadot/wasm-crypto-asmjs': 6.4.1_@polkadot+util@10.2.3
+      '@polkadot/wasm-crypto-init': 6.4.1_z7zs7h4hofbwni4zrk6ldq4use
+      '@polkadot/wasm-crypto-wasm': 6.4.1_@polkadot+util@10.2.3
+      '@polkadot/wasm-util': 6.4.1_@polkadot+util@10.2.3
+      '@polkadot/x-randomvalues': 10.2.6
     dev: true
 
   /@polkadot/wasm-util/6.4.1_@polkadot+util@10.2.3:
@@ -4231,20 +4306,20 @@ packages:
   /@types/bn.js/4.11.6:
     resolution: {integrity: sha512-pqr857jrp2kPuO9uRjZ3PwnJTjoQy+fcdxvBTvHm6dkmEL9q+hDD/2j/0ELOBPtPnS8LjCX0gI9nbl8lVkadpg==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/bn.js/5.1.1:
     resolution: {integrity: sha512-qNrYbZqMx0uJAfKnKclPh+dTwK33KfLHYqtyODwd5HnXOjnkhc4qgn3BrK6RWyGZm5+sIFE7Q7Vz6QQtJB7w7g==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
 
   /@types/cacheable-request/6.0.2:
     resolution: {integrity: sha512-B3xVo+dlKM6nnKTcmm5ZtY/OL8bOAOd2Olee9M1zft65ox50OzjEHW91sDiU9j6cvW8Ejg1/Qkf4xd2kugApUA==}
     dependencies:
       '@types/http-cache-semantics': 4.0.1
       '@types/keyv': 3.1.4
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
       '@types/responselike': 1.0.0
     dev: true
 
@@ -4261,7 +4336,7 @@ packages:
   /@types/concat-stream/1.6.1:
     resolution: {integrity: sha512-eHE4cQPoj6ngxBZMvVf6Hw7Mh4jMW4U9lpGmS5GBPB9RYxlFg+CHaVN7ErNY4W9XfLIEn20b4VDYaIrbq0q4uA==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/datastore-level/3.0.0:
@@ -4276,7 +4351,7 @@ packages:
   /@types/dns-packet/5.2.4:
     resolution: {integrity: sha512-OAruArypdNxR/tzbmrtoyEuXeNTLaZCpO19BXaNC10T5ACIbvjmvhmV2RDEy2eLc3w8IjK7SY3cvUCcAW+sfoQ==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/ethereum-protocol/1.0.2:
@@ -4288,14 +4363,14 @@ packages:
   /@types/form-data/0.0.33:
     resolution: {integrity: sha512-8BSvG1kGm83cyJITQMZSulnl6QV8jqAGreJsc5tPu1Jq0vTSOiY/k24Wx82JRpWwZSqrala6sd5rWi6aNXvqcw==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/glob/7.2.0:
     resolution: {integrity: sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==}
     dependencies:
       '@types/minimatch': 5.1.2
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/http-cache-semantics/4.0.1:
@@ -4309,13 +4384,13 @@ packages:
   /@types/keccak/3.0.1:
     resolution: {integrity: sha512-/MxAVmtyyeOvZ6dGf3ciLwFRuV5M8DRIyYNFGHYI6UyBW4/XqyO0LZw+JFMvaeY3cHItQAkELclBU1x5ank6mg==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/keyv/3.1.4:
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/level-errors/3.0.0:
@@ -4327,7 +4402,7 @@ packages:
     dependencies:
       '@types/abstract-leveldown': 7.2.0
       '@types/level-errors': 3.0.0
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/lockfile/1.0.2:
@@ -4358,13 +4433,13 @@ packages:
     resolution: {integrity: sha512-A2PmB8MRcNVEkw6wzGT5rtBHqyHOVjiRMkJH+zpJKXipSi+GGkHg6JjNFApDiYK9WefJqkVG0taln1VMl4TGfw==}
     dependencies:
       '@types/dns-packet': 5.2.4
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/node-fetch/2.6.2:
     resolution: {integrity: sha512-DHqhlq5jeESLy19TYhLakJ07kNumXWjcDdxXsLUMJZ6ue8VZJj4kLPQVE/2mdHh3xZziNF1xppu5lwmS53HR+A==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
       form-data: 3.0.1
 
   /@types/node/10.17.60:
@@ -4379,12 +4454,8 @@ packages:
     resolution: {integrity: sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ==}
     dev: true
 
-  /@types/node/16.18.3:
-    resolution: {integrity: sha512-jh6m0QUhIRcZpNv7Z/rpN+ZWXOicUUQbSoWks7Htkbb9IjFQj4kzcX/xFCkjstCj5flMsN8FiSvt+q+Tcs4Llg==}
-    dev: true
-
-  /@types/node/18.11.9:
-    resolution: {integrity: sha512-CRpX21/kGdzjOpFsZSkcrXMGIBWMGNIHXXBVFSH+ggkftxg+XYP20TESbh+zFvFj3EQOl5byk0HTRn1IL6hbqg==}
+  /@types/node/18.13.0:
+    resolution: {integrity: sha512-gC3TazRzGoOnoKAhUx+Q0t8S9Tzs74z7m0ipwGpSqQrleP14hKxP4/JUeEQcD3W1/aIpnWl8pHowI7WokuZpXg==}
 
   /@types/node/8.10.66:
     resolution: {integrity: sha512-tktOkFUA4kXx2hhhrB8bIFb5TbwzS4uOhKEmwiD+NoiL0qtP2OQ9mFldbgD4dV1djrlBYP6eBuQZiWjuHUpqFw==}
@@ -4393,7 +4464,7 @@ packages:
   /@types/pbkdf2/3.1.0:
     resolution: {integrity: sha512-Cf63Rv7jCQ0LaL8tNXmEyqTHuIJxRdlS5vMh1mj5voN4+QFhVZnlZruezqpWYDiJ8UTzhP0VmeLXCmBk66YrMQ==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/prettier/2.7.1:
@@ -4407,7 +4478,7 @@ packages:
   /@types/responselike/1.0.0:
     resolution: {integrity: sha512-85Y2BjiufFzaMIlvJDvTTB8Fxl2xfLo4HgmHzVBz08w4wDePCTjYw66PdrolO0kzli3yam/YCgRufyo1DdQVTA==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/retry/0.12.1:
@@ -4417,7 +4488,7 @@ packages:
   /@types/secp256k1/4.0.3:
     resolution: {integrity: sha512-Da66lEIFeIz9ltsdMZcpQvmrmmoqrfju8pm1BH8WbYjZSwUgCwXLb9C+9XYogwBITnbsSaMdVPb2ekf7TV+03w==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
     dev: true
 
   /@types/seedrandom/3.0.2:
@@ -4452,7 +4523,7 @@ packages:
   /@types/websocket/1.0.5:
     resolution: {integrity: sha512-NbsqiNX9CnEfC1Z0Vf4mE1SgAJ07JnRYcNex7AJ9zAVzmiGHmjKFEk7O4TJIsgv2B1sLEb6owKFZrACwdYngsQ==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
 
   /@types/yargs-parser/21.0.0:
     resolution: {integrity: sha512-iO9ZQHkZxHn4mSakYV0vFHAVDyEOIJQrV2uZ06HxEPcx+mt8swXoZHIbaaJ2crJYFfErySgktuTZ3BeLz+XmFA==}
@@ -4619,13 +4690,13 @@ packages:
       isexe: 2.0.0
     dev: true
 
-  /@zombienet/cli/1.3.29:
+  /@zombienet/cli/1.3.29_@polkadot+util@10.2.3:
     resolution: {integrity: sha512-mXYeOPaRaJFYPWzH7tYSzDrV5Ltr2KFU6VoiNMBv+ZNv2le+f2S35Ytfd9cLq/VXweEE9ZocjMD/VpgVBZ+dog==}
     engines: {node: '>=16'}
     hasBin: true
     dependencies:
       '@zombienet/dsl-parser-wrapper': 0.1.7
-      '@zombienet/orchestrator': 0.0.21
+      '@zombienet/orchestrator': 0.0.21_@polkadot+util@10.2.3
       '@zombienet/utils': 0.0.13
       axios: 0.27.2_debug@4.3.4
       debug: 4.3.4
@@ -4633,6 +4704,7 @@ packages:
       progress: 2.0.3
       typescript: 4.8.4
     transitivePeerDependencies:
+      - '@polkadot/util'
       - bufferutil
       - canvas
       - chokidar
@@ -4644,12 +4716,12 @@ packages:
     resolution: {integrity: sha512-pJqo1LZbNqnL6Of1h67eYtTTu0BLcf+U/nGQtj8pYr0V4XVDWdCYvT4C9kXkrh5964nKz3KGB7Eky43NqRJZqg==}
     dev: true
 
-  /@zombienet/orchestrator/0.0.21:
+  /@zombienet/orchestrator/0.0.21_@polkadot+util@10.2.3:
     resolution: {integrity: sha512-c1osFmESdteMAqqVFwnzNZgEM4SXHwOQLu1HJxiCF9g7J1fXfQ1yDO8YAmWrWMMnNU37dR2SRzZWBKCUy48JIg==}
     dependencies:
       '@polkadot/api': 9.12.1
-      '@polkadot/keyring': 10.2.6
-      '@polkadot/util-crypto': 10.2.6
+      '@polkadot/keyring': 10.2.6_wze3jg67ezifiygi6dx4bs2sfy
+      '@polkadot/util-crypto': 10.2.6_@polkadot+util@10.2.3
       '@zombienet/utils': 0.0.13
       JSONStream: 1.3.5
       axios: 0.27.2_debug@4.3.4
@@ -4668,6 +4740,7 @@ packages:
       typescript: 4.8.4
       yaml: 2.2.1
     transitivePeerDependencies:
+      - '@polkadot/util'
       - bufferutil
       - canvas
       - chokidar
@@ -7873,6 +7946,16 @@ packages:
     resolution: {integrity: sha512-GRnmB5gPyJpAhTQdSZTSp9uaPSvl09KoYcMQtsB9rQoOmzs9dH6ffeccH+Z+cv6P68Hu5bC6JjRh4Ah/mHSNRw==}
     dev: true
 
+  /follow-redirects/1.15.2:
+    resolution: {integrity: sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==}
+    engines: {node: '>=4.0'}
+    peerDependencies:
+      debug: '*'
+    peerDependenciesMeta:
+      debug:
+        optional: true
+    dev: true
+
   /follow-redirects/1.15.2_debug@4.3.4:
     resolution: {integrity: sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==}
     engines: {node: '>=4.0'}
@@ -8505,7 +8588,7 @@ packages:
       solc: 0.7.3_debug@4.3.4
       source-map-support: 0.5.21
       stacktrace-parser: 0.1.10
-      ts-node: 10.9.1_e7yvbkxpwwqnzxz2s2bfjt7zx4
+      ts-node: 10.9.1_54u4tphudisr2z46etlt7y7xge
       tsort: 0.0.1
       typescript: 4.8.4
       undici: 5.13.0
@@ -11588,7 +11671,7 @@ packages:
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.0
       '@types/long': 4.0.2
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
       long: 4.0.0
     dev: true
 
@@ -11607,7 +11690,7 @@ packages:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.0
-      '@types/node': 18.11.9
+      '@types/node': 18.13.0
       long: 5.2.1
     dev: true
 
@@ -12477,7 +12560,7 @@ packages:
     dependencies:
       command-exists: 1.2.9
       commander: 3.0.2
-      follow-redirects: 1.15.2_debug@4.3.4
+      follow-redirects: 1.15.2
       fs-extra: 0.30.0
       js-sha3: 0.8.0
       memorystream: 0.3.1
@@ -12495,7 +12578,7 @@ packages:
     dependencies:
       command-exists: 1.2.9
       commander: 3.0.2
-      follow-redirects: 1.15.2_debug@4.3.4
+      follow-redirects: 1.15.2
       fs-extra: 0.30.0
       js-sha3: 0.8.0
       memorystream: 0.3.1
@@ -13192,7 +13275,7 @@ packages:
       typescript: 4.8.4
     dev: true
 
-  /ts-node/10.9.1_cbe7ovvae6zqfnmtgctpgpys54:
+  /ts-node/10.9.1_54u4tphudisr2z46etlt7y7xge:
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
     hasBin: true
     peerDependencies:
@@ -13211,38 +13294,7 @@ packages:
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.3
-      '@types/node': 18.11.9
-      acorn: 8.8.1
-      acorn-walk: 8.2.0
-      arg: 4.1.3
-      create-require: 1.1.1
-      diff: 4.0.2
-      make-error: 1.3.6
-      typescript: 4.8.4
-      v8-compile-cache-lib: 3.0.1
-      yn: 3.1.1
-    dev: true
-
-  /ts-node/10.9.1_e7yvbkxpwwqnzxz2s2bfjt7zx4:
-    resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
-    hasBin: true
-    peerDependencies:
-      '@swc/core': '>=1.2.50'
-      '@swc/wasm': '>=1.2.50'
-      '@types/node': '*'
-      typescript: '>=2.7'
-    peerDependenciesMeta:
-      '@swc/core':
-        optional: true
-      '@swc/wasm':
-        optional: true
-    dependencies:
-      '@cspotcode/source-map-support': 0.8.1
-      '@tsconfig/node10': 1.0.9
-      '@tsconfig/node12': 1.0.11
-      '@tsconfig/node14': 1.0.3
-      '@tsconfig/node16': 1.0.3
-      '@types/node': 16.18.3
+      '@types/node': 18.13.0
       acorn: 8.8.1
       acorn-walk: 8.2.0
       arg: 4.1.3
