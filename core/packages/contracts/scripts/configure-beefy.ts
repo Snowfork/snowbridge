@@ -8,10 +8,12 @@ import type {
     BeefyId,
 } from "@polkadot/types/interfaces/beefy/types"
 import fs from "fs"
+import path from "path"
 
 let endpoint = process.env.RELAYCHAIN_ENDPOINT || "ws://localhost:9944"
 const beefyStartBlock = process.env.BEEFY_START_BLOCK ? parseInt(process.env.BEEFY_START_BLOCK) : 15
-const BeefyStateFile = process.env.BEEFY_STATE_FILE || "/tmp/snowbridge/beefy-state.json"
+const BeefyStateFile =
+    process.env.BEEFY_STATE_FILE || path.join(process.env.output_dir!, "beefy-state.json")
 
 async function configureBeefy() {
     let api1 = await ApiPromise.create({

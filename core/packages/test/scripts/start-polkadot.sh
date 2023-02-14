@@ -10,10 +10,7 @@ start_chains()
     #1 start polkadot relaychain and snowbridge parachain
     echo "Starting relaychain and snowbridge parachain"
     deploy_polkadot
-    #2 initialize bridge contracts
-    echo "Initializing bridge contracts"
-    configure_contracts
-    echo "Chains initialized ready"
+    echo "Polkadot started!"
 }
 
 if [ -z "${from_start_services:-}" ]; then
