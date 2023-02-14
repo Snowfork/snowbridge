@@ -67,7 +67,7 @@ wait_start() {
 
 zombienet_launch() {
     generate_chain_spec
-    zombienet spawn config/launch-config.toml --provider=native 2>&1 &
+    npx zombienet spawn config/launch-config.toml --provider=native 2>&1 &
     wait_start
 }
 
