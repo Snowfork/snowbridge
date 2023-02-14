@@ -33,7 +33,7 @@ start_geth() {
 start_lodestar() {
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting lodestar local node"
-        genesisHash=$(curl $infura_endpoint_http \
+        genesisHash=$(curl $eth_endpoint_http \
             -X POST \
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
@@ -66,7 +66,7 @@ start_lodestar() {
 deploy_contracts()
 {
     pushd "$contract_dir"
-    forge script --rpc-url $infura_endpoint_http contracts/deploy/foundry/Deploy.sol:DeployScript --broadcast -vvv
+    forge script --rpc-url $eth_endpoint_http contracts/deploy/foundry/Deploy.sol:DeployScript --broadcast -vvv
     node scripts/generateContractInfo.js "$output_dir/contracts.json"
     popd
     echo "Exported contract artifacts: $output_dir/contracts.json"

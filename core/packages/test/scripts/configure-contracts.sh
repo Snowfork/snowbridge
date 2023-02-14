@@ -23,7 +23,7 @@ configure_contracts()
 
     cast send $(address_for BeefyClient) \
     	"initialize(uint64,(uint128,uint128,bytes32),(uint128,uint128,bytes32))" \
-    	--rpc-url $infura_endpoint_http \
+    	--rpc-url $eth_endpoint_http \
     	--private-key $PRIVATE_KEY \
       $beefy_start_block \($current_id,$current_length,$current_root\) \($next_id,$next_length,$next_root\)
 

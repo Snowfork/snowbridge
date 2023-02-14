@@ -20,8 +20,8 @@ ethereum_data_dir="$output_dir/geth"
 export PATH="$output_bin_dir:$PATH"
 
 eth_network="${ETH_NETWORK:-localhost}"
-infura_endpoint_http="${ETH_RPC_ENDPOINT:-http://localhost:8545}/${INFURA_PROJECT_ID:-}"
-infura_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:-}"
+eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://localhost:8545}/${INFURA_PROJECT_ID:-}"
+eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:-}"
 export RANDAO_COMMIT_DELAY=3
 export RANDAO_COMMIT_EXP=8
 export PARAID="${PARA_ID:-1000}"
