@@ -1,6 +1,10 @@
 package scale
 
-import "github.com/snowfork/go-substrate-rpc-client/v4/types"
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
+)
 
 type BeaconHeader struct {
 	Slot          types.U64
@@ -68,7 +72,7 @@ type Deposit struct {
 	Data  DepositData
 }
 
-type DeposiVoluntaryExitt struct {
+type DepositVoluntaryExit struct {
 	Proof []types.H256
 	Data  DepositData
 }
@@ -124,4 +128,14 @@ type CurrentSyncCommittee struct {
 type SyncAggregate struct {
 	SyncCommitteeBits      []byte
 	SyncCommitteeSignature []byte
+}
+
+func (b *BeaconHeader) ToSSZ() *state.BeaconBlockHeader {
+	return &state.BeaconBlockHeader{
+		Slot:          uint64(b.Slot),
+		ProposerIndex: uint64(b.ProposerIndex),
+		ParentRoot:    common.FromHex(b.ParentRoot.Hex()),
+		StateRoot:     common.FromHex(b.StateRoot.Hex()),
+		BodyRoot:      common.FromHex(b.BodyRoot.Hex()),
+	}
 }

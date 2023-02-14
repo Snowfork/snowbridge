@@ -123,7 +123,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) error {
-	syncCommitteeUpdate, err := h.syncer.GetSyncCommitteePeriodUpdate(period)
+	update, err := h.syncer.GetSyncCommitteePeriodUpdate(period)
 
 	switch {
 	case errors.Is(err, syncer.ErrCommitteeUpdateHeaderInDifferentSyncPeriod):
@@ -138,16 +138,16 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		}
 	}
 
-	// TODO add checkpoint
+	h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
 
-	syncCommitteeUpdate.SyncCommitteePeriod = types.NewU64(period)
+	update.Payload.SyncCommitteePeriod = types.NewU64(period)
 
 	log.WithFields(log.Fields{
-		"finalized_header_slot": syncCommitteeUpdate.FinalizedHeader.Slot,
+		"finalized_header_slot": update.Payload.FinalizedHeader.Slot,
 		"period":                period,
 	}).Info("syncing sync committee for period")
 
-	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
+	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.sync_committee_period_update", update.Payload)
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 
 	log.WithFields(log.Fields{
 		"slot":      update.Payload.FinalizedHeader.Slot,
-		"blockRoot": update.FinalizedHeaderHash,
+		"blockRoot": update.FinalizedHeaderBlockRoot,
 	}).Info("syncing finalized header at slot")
 
 	currentSyncPeriod := h.syncer.ComputeSyncPeriodAtSlot(uint64(update.Payload.AttestedHeader.Slot))
@@ -195,10 +195,10 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 
 	// We need a distinction between finalized headers that we've tried to sync, so that we don't try syncing
 	// it over and over again with the same failure.
-	h.cache.Finalized.LastAttemptedSyncHash = update.FinalizedHeaderHash
+	h.cache.Finalized.LastAttemptedSyncHash = update.FinalizedHeaderBlockRoot
 	h.cache.Finalized.LastAttemptedSyncSlot = uint64(update.Payload.FinalizedHeader.Slot)
 
-	h.cache.AddCheckPoint(update.FinalizedHeaderHash, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
+	h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
 
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
@@ -210,10 +210,10 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	// If the finalized header import succeeded, we add it to this cache. This cache is used to determine
 	// from which last finalized header needs to imported (i.e. start and end finalized blocks, to backfill execution
 	// headers in between).
-	h.cache.Finalized.LastSyncedHash = update.FinalizedHeaderHash
+	h.cache.Finalized.LastSyncedHash = update.FinalizedHeaderBlockRoot
 	h.cache.Finalized.LastSyncedSlot = uint64(update.Payload.FinalizedHeader.Slot)
 
-	if lastStoredHeader != update.FinalizedHeaderHash {
+	if lastStoredHeader != update.FinalizedHeaderBlockRoot {
 		return syncer.FinalizedHeaderUpdate{}, ErrFinalizedHeaderNotImported
 	}
 
@@ -244,11 +244,11 @@ func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 		return err
 	}
 
-	if sync.FinalizedHeaderHash == lastAttemptedFinalizedHeader {
+	if sync.FinalizedHeaderBlockRoot == lastAttemptedFinalizedHeader {
 		return ErrFinalizedHeaderUnchanged
 	}
 
-	err = h.SyncHeaders(ctx, secondLastFinalizedHeader, sync.FinalizedHeaderHash)
+	err = h.SyncHeaders(ctx, secondLastFinalizedHeader, sync.FinalizedHeaderBlockRoot)
 	if err != nil {
 		return err
 	}

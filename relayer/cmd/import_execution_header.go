@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"io/ioutil"
 	"strings"
@@ -100,7 +101,20 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 		finalizedUpdate, err := syncer.GetFinalizedUpdate()
 
-		update, err := syncer.GetHeaderUpdate(beaconHeaderHash, finalizedUpdate.BlockRootsTree, uint64(finalizedUpdate.Payload.FinalizedHeader.Slot))
+		err = writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_finalized_header", finalizedUpdate.Payload)
+		if err != nil {
+			return fmt.Errorf("write to parachain: %w", err)
+		}
+		log.Info("imported finalized header")
+
+		checkpoint := cache.State{
+			FinalizedBlockRoot: finalizedUpdate.FinalizedHeaderBlockRoot,
+			BlockRootsTree:     finalizedUpdate.BlockRootsTree,
+			Slot:               uint64(finalizedUpdate.Payload.FinalizedHeader.Slot),
+			Period:             0,
+		}
+
+		update, err := syncer.GetHeaderUpdate(beaconHeaderHash, checkpoint)
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
