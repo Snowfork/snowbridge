@@ -8,6 +8,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
@@ -117,10 +118,11 @@ type FinalizedHeaderUpdate struct {
 }
 
 type HeaderUpdate struct {
-	Block          scale.BeaconBlock
-	SyncAggregate  scale.SyncAggregate
-	SignatureSlot  types.U64
-	BlockRootProof []types.H256
+	Block                         scale.BeaconBlock
+	SyncAggregate                 scale.SyncAggregate
+	SignatureSlot                 types.U64
+	BlockRootProof                []types.H256
+	BlockRootProofFinalizedHeader types.H256
 }
 
 func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSlot uint64) ([]uint64, error) {
@@ -174,7 +176,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 		return SyncCommitteePeriodUpdate{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
-	blockRootsProof, err := s.GetBlockRoots(committeeUpdate.FinalizedHeader.Beacon.StateRoot)
+	blockRootsProof, err := s.GetBlockRoots(committeeUpdate.FinalizedHeader.Beacon.StateRoot, uint64(finalizedHeader.Slot))
 	switch {
 	case errors.Is(err, ErrBeaconStateAvailableYet):
 		log.WithFields(log.Fields{
@@ -207,8 +209,8 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 	return syncCommitteePeriodUpdate, nil
 }
 
-func (s *Syncer) GetBlockRoots(stateRoot string) (BlockRootProof, error) {
-	err := s.Client.DownloadBeaconState(stateRoot)
+func (s *Syncer) GetBlockRoots(stateRoot string, slot uint64) (BlockRootProof, error) {
+	err := s.Client.DownloadBeaconState(fmt.Sprintf("%d", slot))
 	switch {
 	case errors.Is(err, ErrNotFound):
 		return BlockRootProof{}, ErrBeaconStateAvailableYet
@@ -252,6 +254,8 @@ func (s *Syncer) GetBlockRoots(stateRoot string) (BlockRootProof, error) {
 
 	// todo remove
 	if common.BytesToHash(checkStateRoot).Hex() != stateRoot {
+		log.WithField("slot", slot).Info("slot at index")
+
 		return BlockRootProof{}, fmt.Errorf("computed state hash tree root (%s) does not match known state root (%s)", common.BytesToHash(checkStateRoot).Hex(), stateRoot)
 	}
 
@@ -337,7 +341,7 @@ func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, error) {
 		return FinalizedHeaderUpdate{}, fmt.Errorf("expected block root does not match actual block root as retrieved from API: %w", err)
 	}
 
-	blockRootsProof, err := s.GetBlockRoots(finalizedUpdate.Data.FinalizedHeader.Beacon.StateRoot)
+	blockRootsProof, err := s.GetBlockRoots(finalizedUpdate.Data.FinalizedHeader.Beacon.StateRoot, uint64(finalizedHeader.Slot))
 	if err != nil {
 		return FinalizedHeaderUpdate{}, fmt.Errorf("fetch block roots: %w", err)
 	}
@@ -422,7 +426,7 @@ func (s *Syncer) GetLatestFinalizedHeader() (FinalizedHeaderUpdate, error) {
 	}, nil
 }
 
-func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64, blockRootTree *ssz.Node, finalizedSlot uint64) (HeaderUpdate, error) {
+func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64, checkpoint cache.State) (HeaderUpdate, error) {
 	err := ErrNotFound
 	var blockRoot common.Hash
 	tries := 0
@@ -440,10 +444,10 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64, blockRootTree *ssz.Node,
 		}
 	}
 
-	return s.GetHeaderUpdate(blockRoot, blockRootTree, finalizedSlot)
+	return s.GetHeaderUpdate(blockRoot, checkpoint)
 }
 
-func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, blockRootTree *ssz.Node, finalizedSlot uint64) (HeaderUpdate, error) {
+func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint cache.State) (HeaderUpdate, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
 		return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
@@ -460,7 +464,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, blockRootTree *ssz.Node,
 
 	// If slot == finalizedSlot, there won't be an ancestry proof because the header state in question is also the
 	// finalized header
-	if slot == finalizedSlot {
+	if slot == checkpoint.Slot {
 		log.WithFields(log.Fields{"blockRoot": blockRoot, "slot": int(blockScale.Slot)}).Info("no ancestry proof available, finalized block")
 
 		return HeaderUpdate{
@@ -469,11 +473,12 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, blockRootTree *ssz.Node,
 		}, nil
 	}
 
-	proofScale, err := s.getBlockHeaderAncestryProof(int(blockScale.Slot), blockRoot, blockRootTree)
+	proofScale, err := s.getBlockHeaderAncestryProof(int(blockScale.Slot), blockRoot, checkpoint.BlockRootsTree)
 
 	headerUpdate := HeaderUpdate{
-		Block:          blockScale,
-		BlockRootProof: proofScale,
+		Block:                         blockScale,
+		BlockRootProof:                proofScale,
+		BlockRootProofFinalizedHeader: types.NewH256(checkpoint.FinalizedBlockRoot.Bytes()),
 	}
 
 	return headerUpdate, nil
@@ -485,15 +490,6 @@ func (s *Syncer) getBlockHeaderAncestryProof(slot int, blockRoot common.Hash, bl
 	treeDepth := math.Floor(math.Log2(float64(s.MaxSlotsPerHistoricalRoot)))
 	leavesStartIndex := int(math.Pow(2, treeDepth))
 	leafIndex := leavesStartIndex + indexInArray
-
-	log.WithFields(log.Fields{
-		"treeDepth":                 treeDepth,
-		"leavesStartIndex":          leavesStartIndex,
-		"indexInArray":              indexInArray,
-		"leafIndex":                 leafIndex,
-		"slot":                      slot,
-		"maxSlotsPerHistoricalRoot": s.MaxSlotsPerHistoricalRoot,
-	}).Info("blockHashAtIndex")
 
 	proof, err := blockRootTree.Prove(leafIndex)
 	if err != nil {
@@ -571,24 +567,6 @@ func (s *Syncer) ComputeEpochAtSlot(slot uint64) uint64 {
 
 func (s *Syncer) IsStartOfEpoch(slot uint64) bool {
 	return slot%s.SlotsInEpoch == 0
-}
-
-func IsInArray(values []uint64, toCheck uint64) bool {
-	for _, value := range values {
-		if value == toCheck {
-			return true
-		}
-	}
-	return false
-}
-
-func IsInHashArray(values []common.Hash, toCheck common.Hash) bool {
-	for _, value := range values {
-		if value == toCheck {
-			return true
-		}
-	}
-	return false
 }
 
 func hexToBinaryString(rawHex string) string {

@@ -185,6 +185,8 @@ pub struct SyncCommitteePeriodUpdate<
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub sync_committee_period: u64,
 	pub signature_slot: u64,
+	pub block_roots_hash: H256,
+	pub block_roots_proof: BoundedVec<H256, ProofSize>,
 }
 
 #[derive(

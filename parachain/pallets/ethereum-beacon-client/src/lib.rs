@@ -448,8 +448,19 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			Self::store_sync_committee(next_period, update.next_sync_committee);
+			ensure!(
+				Self::is_valid_merkle_branch(
+					update.block_roots_hash,
+					update.block_roots_proof,
+					config::BLOCK_ROOTS_INDEX,
+					config::BLOCK_ROOTS_DEPTH,
+					update.finalized_header.state_root
+				),
+				Error::<T>::InvalidAncestryMerkleProof
+			);
 
+			Self::store_block_root(update.block_roots_hash, block_root);
+			Self::store_sync_committee(next_period, update.next_sync_committee);
 			Self::store_finalized_header(block_root, update.finalized_header);
 
 			Ok(())

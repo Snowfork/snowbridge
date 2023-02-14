@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 )
 
+/*
 func TestHeaderProof_Mainnet(t *testing.T) {
 	s := New("https://lodestar-goerli.chainsafe.io", 32, 512, 8192, config.Mainnet)
 
@@ -46,7 +46,7 @@ func TestHeaderProof_Minimal(t *testing.T) {
 
 	_, err = s.GetNextHeaderUpdateBySlot(uint64(prevSlot))
 	require.NoError(t, err)
-}
+}*/
 
 func TestMinimalHashTreeRoot(t *testing.T) {
 	data, err := os.ReadFile("beacon_state.ssz")

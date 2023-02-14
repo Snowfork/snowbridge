@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	ssz "github.com/ferranbt/fastssz"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"time"
 
@@ -29,7 +28,7 @@ type Header struct {
 
 func New(writer *parachain.ParachainWriter, beaconEndpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64, maxSlotsPerHistoricalRoot int, activeSpec config.ActiveSpec) Header {
 	return Header{
-		cache:  cache.New(),
+		cache:  cache.New(slotsInEpoch, epochsPerSyncCommitteePeriod),
 		writer: writer,
 		syncer: syncer.New(beaconEndpoint, slotsInEpoch, epochsPerSyncCommitteePeriod, maxSlotsPerHistoricalRoot, activeSpec),
 	}
@@ -139,6 +138,8 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		}
 	}
 
+	// TODO add checkpoint
+
 	syncCommitteeUpdate.SyncCommitteePeriod = types.NewU64(period)
 
 	log.WithFields(log.Fields{
@@ -146,24 +147,23 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		"period":                period,
 	}).Info("syncing sync committee for period")
 
-	/*
-		err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
-		if err != nil {
-			return err
-		}
+	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
+	if err != nil {
+		return err
+	}
 
-		lastSyncedSyncCommitteePeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
-		if err != nil {
-			return fmt.Errorf("fetch last synced committee period from parachain: %w", err)
-		}
+	lastSyncedSyncCommitteePeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
+	if err != nil {
+		return fmt.Errorf("fetch last synced committee period from parachain: %w", err)
+	}
 
-		// Period + 1 because the sync committee update contains the next period's sync committee
-		if lastSyncedSyncCommitteePeriod != period+1 {
-			return fmt.Errorf("synced committee period %d not imported successfully", lastSyncedSyncCommitteePeriod)
-		}
+	// Period + 1 because the sync committee update contains the next period's sync committee
+	if lastSyncedSyncCommitteePeriod != period+1 {
+		return fmt.Errorf("synced committee period %d not imported successfully", lastSyncedSyncCommitteePeriod)
+	}
 
-		h.cache.SetLastSyncedSyncCommitteePeriod(period)
-	*/
+	h.cache.SetLastSyncedSyncCommitteePeriod(period)
+
 	return nil
 }
 
@@ -197,7 +197,8 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	// it over and over again with the same failure.
 	h.cache.Finalized.LastAttemptedSyncHash = update.FinalizedHeaderHash
 	h.cache.Finalized.LastAttemptedSyncSlot = uint64(update.Payload.FinalizedHeader.Slot)
-	h.cache.Finalized.BlockRootsTrees[update.FinalizedHeaderHash] = update.BlockRootsTree
+
+	h.cache.AddCheckPoint(update.FinalizedHeaderHash, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
 
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
@@ -247,37 +248,34 @@ func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 		return ErrFinalizedHeaderUnchanged
 	}
 
-	err = h.SyncHeaders(ctx, secondLastFinalizedHeader, sync.FinalizedHeaderHash, h.cache.Finalized.BlockRootsTrees[sync.FinalizedHeaderHash])
+	err = h.SyncHeaders(ctx, secondLastFinalizedHeader, sync.FinalizedHeaderHash)
 	if err != nil {
 		return err
 	}
-
-	// Cleanup block root tree cache, so it doesn't grow too large
-	defer delete(h.cache.Finalized.BlockRootsTrees, sync.FinalizedHeaderHash)
 
 	return nil
 }
 
-func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Hash, blockRootsTree *ssz.Node) error {
-	fromHeaderUpdate, err := h.syncer.GetHeaderUpdate(fromHeader, blockRootsTree, h.cache.Finalized.LastSyncedSlot)
+func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderBlockRoot common.Hash) error {
+	fromHeader, err := h.syncer.Client.GetHeader(fromHeaderBlockRoot)
 	if err != nil {
 		return err
 	}
 
-	toHeaderUpdate, err := h.syncer.GetHeaderUpdate(toHeader, blockRootsTree, h.cache.Finalized.LastSyncedSlot)
+	toHeader, err := h.syncer.Client.GetHeader(toHeaderBlockRoot)
 	if err != nil {
 		return err
 	}
 
-	fromSlot := uint64(fromHeaderUpdate.Block.Slot)
-	toSlot := uint64(toHeaderUpdate.Block.Slot)
+	fromSlot := fromHeader.Slot
+	toSlot := toHeader.Slot
 	totalSlots := toSlot - fromSlot
 
 	log.WithFields(log.Fields{
-		"fromHeader": fromHeader,
+		"fromHeader": fromHeaderBlockRoot,
 		"fromSlot":   fromSlot,
 		"fromEpoch":  h.syncer.ComputeEpochAtSlot(fromSlot),
-		"toHeader":   toHeader,
+		"toHeader":   toHeaderBlockRoot,
 		"toSlot":     toSlot,
 		"toEpoch":    h.syncer.ComputeEpochAtSlot(toSlot),
 		"totalSlots": totalSlots,
@@ -287,7 +285,12 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 
 	currentSlot := fromSlot + 1 // start syncing at next block after last synced block
 
-	headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot, blockRootsTree, toSlot)
+	checkpoint, err := h.cache.GetClosestCheckpoint(currentSlot)
+	if err != nil {
+		return fmt.Errorf("get closest checkpoint: %w", err)
+	}
+
+	headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot, checkpoint)
 	if err != nil {
 		return err
 	}
@@ -326,7 +329,12 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeader, toHeader common.Ha
 
 		// To get the sync witness for the current synced header. This header
 		// will be used as the next update.
-		nextHeaderUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot+1, blockRootsTree, toSlot)
+		checkpoint, err := h.cache.GetClosestCheckpoint(currentSlot)
+		if err != nil {
+			return fmt.Errorf("get closest checkpoint: %w", err)
+		}
+
+		nextHeaderUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot+1, checkpoint)
 		if err != nil {
 			return err
 		}
@@ -362,19 +370,19 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedH
 	err := syncer.ErrBeaconStateAvailableYet
 	var blockRootsProof syncer.BlockRootProof
 
+	finalizedHeader, err := h.syncer.Client.GetHeader(lastFinalizedHeader)
+	if err != nil {
+		return err
+	}
+
 	for err == syncer.ErrBeaconStateAvailableYet {
-		blockRootsProof, err = h.syncer.GetBlockRoots(lastFinalizedHeader.Hex())
+		blockRootsProof, err = h.syncer.GetBlockRoots(finalizedHeader.StateRoot.Hex(), lastFinalizedSlot)
 		if err != nil && !errors.Is(err, syncer.ErrBeaconStateAvailableYet) {
 			return fmt.Errorf("fetch block roots: %w", err)
 		}
-		if err == syncer.ErrBeaconStateAvailableYet {
-			log.WithField("lastFinalizedHeader", lastFinalizedHeader).WithError(err).Warn("beacon state not available for finalized state yet")
-
-			time.Sleep(20 * time.Second)
-		}
 	}
 
-	h.cache.Finalized.BlockRootsTrees[lastFinalizedHeader] = blockRootsProof.Tree
+	h.cache.AddCheckPoint(lastFinalizedHeader, blockRootsProof.Tree, lastFinalizedSlot)
 
 	if executionHeaderState.BlockNumber == 0 {
 		log.Info("start of syncing, no execution header lag found")
@@ -401,7 +409,7 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedH
 		"slotsBacklog":  lastFinalizedSlot - executionHeaderState.BeaconSlot,
 	}).Info("execution headers sync is not up to date with last finalized header, syncing lagging execution headers")
 
-	err = h.SyncHeaders(ctx, executionHeaderState.BeaconBlockRoot, lastFinalizedHeader, blockRootsProof.Tree)
+	err = h.SyncHeaders(ctx, executionHeaderState.BeaconBlockRoot, lastFinalizedHeader)
 	if err != nil {
 		return err
 	}

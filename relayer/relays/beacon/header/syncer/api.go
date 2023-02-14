@@ -549,8 +549,8 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 	return response, nil
 }
 
-func (b *BeaconClient) DownloadBeaconState(stateId string) error {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateId), nil)
+func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) error {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateIdOrSlot), nil)
 	if err != nil {
 		return err
 	}
@@ -574,8 +574,16 @@ func (b *BeaconClient) DownloadBeaconState(stateId string) error {
 		return err
 	}
 
+	defer res.Body.Close()
+	out2, err := os.Create("/Users/claravanstaden/IdeaProjects/snowbridge/beacon_state_backup.ssz")
+	if err != nil {
+		return err
+	}
+
 	defer out.Close()
+	defer out2.Close()
 	io.Copy(out, res.Body)
+	io.Copy(out2, res.Body)
 
 	return nil
 }
