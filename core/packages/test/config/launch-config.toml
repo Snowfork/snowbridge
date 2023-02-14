@@ -8,7 +8,7 @@ timeout = 600
 chain = "rococo-local"
 default_command = "{{output_bin_dir}}/polkadot"
 default_args = [
-    "-lparachain=debug",
+    "-lbeefy=debug,mmr=debug,parachain=debug,xcm=debug",
     "--beefy",
     "--enable-offchain-indexing=true",
     "--pruning", "archive",
@@ -58,7 +58,7 @@ id = 1000
 
         [[parachains.collators.env]]
         name = "RUST_LOG"
-        value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
+        value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace"
 
     [[parachains.collators]]
     command = "{{output_bin_dir}}/snowbridge"
