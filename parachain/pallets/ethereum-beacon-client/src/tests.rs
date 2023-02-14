@@ -767,12 +767,21 @@ mod beacon_minimal_tests {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 			assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(initial_sync.clone()));
 
+			let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
+				update.attested_header.slot,
+			);
+
+			SyncCommittees::<mock_minimal::Test>::insert(
+				current_period,
+				initial_sync.current_sync_committee,
+			);
+
 			assert_err!(
 				mock_minimal::EthereumBeaconClient::sync_committee_period_update(
 					mock_minimal::RuntimeOrigin::signed(1),
 					update.clone(),
 				),
-				Error::<mock_minimal::Test>::InvalidSyncCommitteePeriodUpdate
+				Error::<mock_minimal::Test>::InvalidSyncCommitteePeriodUpdateWithGap
 			);
 		});
 	}
@@ -790,7 +799,10 @@ mod beacon_minimal_tests {
 				update.attested_header.slot,
 			);
 
-			LatestSyncCommitteePeriod::<mock_minimal::Test>::set(current_period + 1);
+			SyncCommittees::<mock_minimal::Test>::insert(
+				current_period,
+				initial_sync.current_sync_committee.clone(),
+			);
 
 			// initialize with period of the next update
 			SyncCommittees::<mock_minimal::Test>::insert(
@@ -798,12 +810,14 @@ mod beacon_minimal_tests {
 				initial_sync.current_sync_committee,
 			);
 
+			LatestSyncCommitteePeriod::<mock_minimal::Test>::set(current_period + 1);
+
 			assert_err!(
 				mock_minimal::EthereumBeaconClient::sync_committee_period_update(
 					mock_minimal::RuntimeOrigin::signed(1),
 					update.clone(),
 				),
-				Error::<mock_minimal::Test>::InvalidSyncCommitteePeriodUpdate
+				Error::<mock_minimal::Test>::InvalidSyncCommitteePeriodUpdateWithDuplication
 			);
 		});
 	}
@@ -831,7 +845,7 @@ mod beacon_minimal_tests {
 			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: Default::default(),
 				import_time,
-				// use a child slot of the next updating to initialize
+				// use a parent slot of the next updating to initialize
 				beacon_slot: update.finalized_header.slot - 1,
 			});
 			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
@@ -938,8 +952,8 @@ mod beacon_minimal_tests {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: H256::default(),
-				// initialize finalized state with the same slot as the next update
-				beacon_slot: update.block.slot,
+				// initialize finalized state with parent slot of the next update
+				beacon_slot: update.block.slot - 1,
 				import_time: 0,
 			});
 

@@ -151,7 +151,8 @@ pub mod pallet {
 		ExecutionHeaderNotLatest,
 		BridgeBlocked,
 		InvalidSyncCommitteeHeaderUpdate,
-		InvalidSyncCommitteePeriodUpdate,
+		InvalidSyncCommitteePeriodUpdateWithGap,
+		InvalidSyncCommitteePeriodUpdateWithDuplication,
 		InvalidFinalizedHeaderUpdate,
 		InvalidFinalizedPeriodUpdate,
 		InvalidExecutionHeaderUpdate,
@@ -410,11 +411,18 @@ pub mod pallet {
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
 			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
+			ensure!(
+				<SyncCommittees<T>>::contains_key(current_period),
+				Error::<T>::SyncCommitteeMissing
+			);
 			let next_period = current_period + 1;
 			ensure!(
-				(next_period == latest_committee_period + 1) &&
-					!<SyncCommittees<T>>::contains_key(next_period),
-				Error::<T>::InvalidSyncCommitteePeriodUpdate
+				!<SyncCommittees<T>>::contains_key(next_period),
+				Error::<T>::InvalidSyncCommitteePeriodUpdateWithDuplication
+			);
+			ensure!(
+				(next_period == latest_committee_period + 1),
+				Error::<T>::InvalidSyncCommitteePeriodUpdateWithGap
 			);
 
 			let current_sync_committee = Self::get_sync_committee_for_period(current_period)?;
