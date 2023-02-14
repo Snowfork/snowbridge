@@ -20,12 +20,14 @@ ethereum_data_dir="$output_dir/geth"
 export PATH="$output_bin_dir:$PATH"
 
 eth_network="${ETH_NETWORK:-localhost}"
-infura_endpoint_http="${ETH_RPC_ENDPOINT:-http://localhost:8545}/${INFURA_PROJECT_ID:-}"
-infura_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:-}"
+eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://localhost:8545}/${INFURA_PROJECT_ID:-}"
+eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:-}"
 export RANDAO_COMMIT_DELAY=3
 export RANDAO_COMMIT_EXP=8
 export PARAID="${PARA_ID:-1000}"
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
+beefy_state_file="${BEEFY_STATE_FILE:-$output_dir/beefy-state.json}"
+beefy_start_block="${BEEFY_START_BLOCK:-15}"
 
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"

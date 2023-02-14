@@ -1,5 +1,3 @@
-import hre from "hardhat"
-
 import { ApiPromise, WsProvider } from "@polkadot/api"
 import { MerkleTree } from "merkletreejs"
 import createKeccakHash from "keccak"
@@ -9,17 +7,15 @@ import type {
     BeefyNextAuthoritySet,
     BeefyId,
 } from "@polkadot/types/interfaces/beefy/types"
+import fs from "fs"
+import path from "path"
 
 let endpoint = process.env.RELAYCHAIN_ENDPOINT || "ws://localhost:9944"
 const beefyStartBlock = process.env.BEEFY_START_BLOCK ? parseInt(process.env.BEEFY_START_BLOCK) : 15
+const BeefyStateFile =
+    process.env.BEEFY_STATE_FILE || path.join(process.env.output_dir!, "beefy-state.json")
 
 async function configureBeefy() {
-    let [signer] = await hre.ethers.getSigners()
-
-    let beefyDeployment = await hre.deployments.get("BeefyClient")
-    let beefyClientContract = new hre.ethers.Contract(beefyDeployment.address, beefyDeployment.abi)
-    let beefyClient = beefyClientContract.connect(signer)
-
     let api1 = await ApiPromise.create({
         provider: new WsProvider(endpoint),
     })
@@ -71,13 +67,8 @@ async function configureBeefy() {
     console.log("Configuring BeefyClient with initial BEEFY state")
     console.log("Validator sets: ", validatorSets)
 
-    let tx = await beefyClient.initialize(
-        beefyStartBlock,
-        validatorSets.current,
-        validatorSets.next
-    )
-
-    await tx.wait()
+    fs.writeFileSync(BeefyStateFile, JSON.stringify({ validatorSets }, null, 2), "utf8")
+    console.log("Beefy state writing to dest file: " + BeefyStateFile)
 
     return
 }
