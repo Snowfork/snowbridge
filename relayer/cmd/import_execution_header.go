@@ -29,6 +29,12 @@ func importExecutionHeaderCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().String("finalized-header", "", "Finalized header to prove execution header against")
+	err = cmd.MarkFlagRequired("finalized-header")
+	if err != nil {
+		return nil
+	}
+
 	cmd.Flags().String("parachain-endpoint", "", "Parachain API URL")
 	err = cmd.MarkFlagRequired("parachain-endpoint")
 	if err != nil {
@@ -66,6 +72,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		privateKeyFile, _ := cmd.Flags().GetString("private-key-file")
 		lodestarEndpoint, _ := cmd.Flags().GetString("lodestar-endpoint")
 		beaconHeader, _ := cmd.Flags().GetString("beacon-header")
+		finalizedHeader, _ := cmd.Flags().GetString("finalized-header")
 		network, _ := cmd.Flags().GetString("network")
 
 		keypair, err := getKeyPair(privateKeyFile)
@@ -89,9 +96,11 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 		syncer := syncer.New(lodestarEndpoint, 32, 256, 8192, config.ActiveSpec(network))
 
-		beaconHeaderHash := common.HexToHash(beaconHeader)
+		beaconHeaderHash := common.HexToHash(finalizedHeader)
 
-		update, err := syncer.GetHeaderUpdate(beaconHeaderHash)
+		finalizedUpdate, err := syncer.GetFinalizedUpdate()
+
+		update, err := syncer.GetHeaderUpdate(beaconHeaderHash, finalizedUpdate.BlockRootsTree, uint64(finalizedUpdate.Payload.FinalizedHeader.Slot))
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}

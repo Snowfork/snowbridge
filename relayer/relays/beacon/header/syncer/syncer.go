@@ -22,7 +22,6 @@ const BlockRootGeneralizedIndex = 37
 
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
-	ErrLocalNetBeaconStateNotSupported            = errors.New("beacon state unmarshalling not yet supported for local net")
 	ErrBeaconStateAvailableYet                    = errors.New("beacon state object not available yet")
 	ErrFinalizedHeaderUnchanged                   = errors.New("finalized header unchanged")
 )
@@ -32,15 +31,7 @@ type Syncer struct {
 	SlotsInEpoch                 uint64
 	EpochsPerSyncCommitteePeriod uint64
 	MaxSlotsPerHistoricalRoot    int
-	currentFinalizedHeader       CurrentFinalizedHeader
 	activeSpec                   config.ActiveSpec
-}
-
-type CurrentFinalizedHeader struct {
-	slot               uint64
-	blockHash          common.Hash
-	blockRoots         [][]byte
-	blockRootProofHash common.Hash // just for testing
 }
 
 func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64, maxSlotsPerHistoricalRoot int, activeSpec config.ActiveSpec) *Syncer {
@@ -90,6 +81,12 @@ type FinalizedBlockUpdate struct {
 	SyncAggregate   SyncAggregate
 }
 
+type BlockRootProof struct {
+	Leaf  types.H256
+	Proof []types.H256
+	Tree  *ssz.Node
+}
+
 type SyncCommitteePeriodUpdate struct {
 	AttestedHeader          scale.BeaconHeader
 	NextSyncCommittee       scale.CurrentSyncCommittee
@@ -99,9 +96,11 @@ type SyncCommitteePeriodUpdate struct {
 	SyncAggregate           scale.SyncAggregate
 	SyncCommitteePeriod     types.U64
 	SignatureSlot           types.U64
+	BlockRootsHash          types.H256
+	BlockRootProof          []types.H256
 }
 
-type FinalizedHeaderUpdate struct {
+type FinalizedHeaderPayload struct {
 	AttestedHeader  scale.BeaconHeader
 	FinalizedHeader scale.BeaconHeader
 	FinalityBranch  []types.H256
@@ -109,6 +108,12 @@ type FinalizedHeaderUpdate struct {
 	SignatureSlot   types.U64
 	BlockRootsHash  types.H256
 	BlockRootProof  []types.H256
+}
+
+type FinalizedHeaderUpdate struct {
+	Payload             FinalizedHeaderPayload
+	FinalizedHeaderHash common.Hash
+	BlockRootsTree      *ssz.Node
 }
 
 type HeaderUpdate struct {
@@ -122,7 +127,7 @@ func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSlot uint64) ([]
 	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(currentSlot)
 
 	//The current sync period's next sync committee should be synced too. So even
-	// if the syncing is up to date with the current period, we still need to sync the current
+	// if the syncing is up-to-date with the current period, we still need to sync the current
 	// period's next sync committee.
 	if lastSyncedPeriod == currentSyncPeriod {
 		return []uint64{currentSyncPeriod}, nil
@@ -169,6 +174,18 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 		return SyncCommitteePeriodUpdate{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
+	blockRootsProof, err := s.GetBlockRoots(committeeUpdate.FinalizedHeader.Beacon.StateRoot)
+	switch {
+	case errors.Is(err, ErrBeaconStateAvailableYet):
+		log.WithFields(log.Fields{
+			"stateRoot": committeeUpdate.FinalizedHeader.Beacon.StateRoot,
+			"slot":      committeeUpdate.FinalizedHeader.Beacon.Slot,
+		}).Info("sync committee update not available yet")
+		//return SyncCommitteePeriodUpdate{}, fmt.Errorf("fetch block roots: %w", err)
+	case err != nil:
+		return SyncCommitteePeriodUpdate{}, fmt.Errorf("fetch block roots: %w", err)
+	}
+
 	syncCommitteePeriodUpdate := SyncCommitteePeriodUpdate{
 		AttestedHeader:          attestedHeader,
 		NextSyncCommittee:       nextSyncCommittee,
@@ -177,6 +194,8 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 		FinalityBranch:          proofBranchToScale(committeeUpdate.FinalityBranch),
 		SyncAggregate:           syncAggregate,
 		SignatureSlot:           types.U64(signatureSlot),
+		BlockRootsHash:          blockRootsProof.Leaf,
+		BlockRootProof:          blockRootsProof.Proof,
 	}
 
 	finalizedHeaderSlot := s.ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
@@ -185,66 +204,62 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 		return syncCommitteePeriodUpdate, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
 	}
 
-	return syncCommitteePeriodUpdate, err
+	return syncCommitteePeriodUpdate, nil
 }
 
-func (s *Syncer) GetBlockRoots(stateRoot string) (types.H256, []types.H256, error) {
+func (s *Syncer) GetBlockRoots(stateRoot string) (BlockRootProof, error) {
 	err := s.Client.DownloadBeaconState(stateRoot)
 	switch {
 	case errors.Is(err, ErrNotFound):
-		return types.H256{}, nil, ErrBeaconStateAvailableYet
+		return BlockRootProof{}, ErrBeaconStateAvailableYet
 	case err != nil:
-		return types.H256{}, nil, err
+		return BlockRootProof{}, err
 	}
 
 	const fileName = "beacon_state.ssz"
 
 	defer func() {
-		//_ = os.Remove(fileName)
+		_ = os.Remove(fileName)
 	}()
 
 	data, err := os.ReadFile(fileName)
 	if err != nil {
-		return types.H256{}, nil, fmt.Errorf("find beacon state file: %w", err)
+		return BlockRootProof{}, fmt.Errorf("find beacon state file: %w", err)
 	}
 
 	var beaconState state.BeaconState
+	var blockRootsContainer state.BlockRootsContainer
 
 	if s.activeSpec == config.Minimal {
+		blockRootsContainer = &state.BlockRootsContainerMinimal{}
 		beaconState = &state.BeaconStateBellatrixMinimal{}
 	} else {
+		blockRootsContainer = &state.BlockRootsContainerMainnet{}
 		beaconState = &state.BeaconStateBellatrixMainnet{}
 	}
 
-	log.WithField("activeSpec", s.activeSpec).Info("active spec")
-
 	err = beaconState.UnmarshalSSZ(data)
 	if err != nil {
-		return types.H256{}, nil, fmt.Errorf("unmarshal beacon state: %w", err)
+		return BlockRootProof{}, fmt.Errorf("unmarshal beacon state: %w", err)
 	}
 
 	stateTree, err := beaconState.GetTree()
 	if err != nil {
-		return types.H256{}, nil, fmt.Errorf("get state tree: %w", err)
+		return BlockRootProof{}, fmt.Errorf("get state tree: %w", err)
 	}
 
 	checkStateRoot := stateTree.Hash()
 
-	log.WithFields(log.Fields{
-		"slot":              s.currentFinalizedHeader.slot,
-		"computedStateRoot": common.BytesToHash(checkStateRoot),
-		"stateRoot":         stateRoot,
-	}).Info("setting current finalized header")
-
+	// todo remove
 	if common.BytesToHash(checkStateRoot).Hex() != stateRoot {
-		return types.H256{}, nil, fmt.Errorf("computed state hash tree root (%s) does not match known state root (%s)", common.BytesToHash(checkStateRoot).Hex(), stateRoot)
+		return BlockRootProof{}, fmt.Errorf("computed state hash tree root (%s) does not match known state root (%s)", common.BytesToHash(checkStateRoot).Hex(), stateRoot)
 	}
 
 	proof, err := stateTree.Prove(BlockRootGeneralizedIndex)
 	if err != nil {
 		log.WithError(err).Info("block proof error")
 
-		return types.H256{}, nil, fmt.Errorf("get block roof proof: %w", err)
+		return BlockRootProof{}, fmt.Errorf("get block roof proof: %w", err)
 	}
 
 	scaleBlockRootProof := []types.H256{}
@@ -252,52 +267,51 @@ func (s *Syncer) GetBlockRoots(stateRoot string) (types.H256, []types.H256, erro
 		scaleBlockRootProof = append(scaleBlockRootProof, types.NewH256(proofItem))
 	}
 
-	displayBlockRootProof := []common.Hash{}
-	for _, proofItem := range proof.Hashes {
-		displayBlockRootProof = append(displayBlockRootProof, common.BytesToHash(proofItem))
-	}
-
-	log.WithFields(log.Fields{
-		"leaf":  common.BytesToHash(proof.Leaf),
-		"index": proof.Index,
-		"proof": displayBlockRootProof,
-		"root":  stateRoot,
-	}).Info("proof")
-
-	// sanity check
+	// todo remove sanity check
 	ok, err := ssz.VerifyProof(common.FromHex(stateRoot), proof)
 	if err != nil {
 		log.WithError(err).Info("proof error")
 
-		return types.H256{}, nil, fmt.Errorf("proof error: %w", err)
+		return BlockRootProof{}, fmt.Errorf("proof error: %w", err)
 	}
 	if !ok {
-		return types.H256{}, nil, fmt.Errorf("proof failed")
+		return BlockRootProof{}, fmt.Errorf("proof failed")
 	}
 
-	s.currentFinalizedHeader = CurrentFinalizedHeader{
-		slot:               beaconState.GetSlot(),
-		blockRoots:         beaconState.GetBlockRoots(),
-		blockRootProofHash: common.BytesToHash(proof.Leaf),
+	blockRootsContainer.SetBlockRoots(beaconState.GetBlockRoots())
+
+	displayBlockRoots := make(map[int]common.Hash)
+
+	for i, blockRootAtIndex := range beaconState.GetBlockRoots() {
+		displayBlockRoots[i] = common.BytesToHash(blockRootAtIndex)
 	}
 
-	return types.NewH256(proof.Leaf), scaleBlockRootProof, nil
+	tree, err := blockRootsContainer.GetTree()
+	if err != nil {
+		return BlockRootProof{}, fmt.Errorf("convert block roots to tree: %w", err)
+	}
+
+	return BlockRootProof{
+		Leaf:  types.NewH256(proof.Leaf),
+		Proof: scaleBlockRootProof,
+		Tree:  tree,
+	}, nil
 }
 
-func (s *Syncer) GetFinalizedUpdate(latestHeaderRoot common.Hash) (FinalizedHeaderUpdate, common.Hash, error) {
+func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, error) {
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch finalized update: %w", err)
+		return FinalizedHeaderUpdate{}, fmt.Errorf("fetch finalized update: %w", err)
 	}
 
 	attestedHeader, err := finalizedUpdate.Data.AttestedHeader.Beacon.ToScale()
 	if err != nil {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert attested header to scale: %w", err)
+		return FinalizedHeaderUpdate{}, fmt.Errorf("convert attested header to scale: %w", err)
 	}
 
 	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.Beacon.ToScale()
 	if err != nil {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert finalized header to scale: %w", err)
+		return FinalizedHeaderUpdate{}, fmt.Errorf("convert finalized header to scale: %w", err)
 	}
 
 	finalizedHeaderSSZ := state.BeaconBlockHeader{
@@ -310,67 +324,111 @@ func (s *Syncer) GetFinalizedUpdate(latestHeaderRoot common.Hash) (FinalizedHead
 
 	blockRoot, err := finalizedHeaderSSZ.HashTreeRoot()
 	if err != nil {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("beacon header hash tree root: %w", err)
+		return FinalizedHeaderUpdate{}, fmt.Errorf("beacon header hash tree root: %w", err)
 	}
 
 	// TODO remove after tests
 	checkBlockRoot, err := s.Client.GetBeaconBlockRoot(uint64(finalizedHeader.Slot))
 	if err != nil {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch block root: %w", err)
+		return FinalizedHeaderUpdate{}, fmt.Errorf("fetch block root: %w", err)
 	}
 
 	if blockRoot != checkBlockRoot {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("expected block root does not match actual block root as retrieved from API: %w", err)
+		return FinalizedHeaderUpdate{}, fmt.Errorf("expected block root does not match actual block root as retrieved from API: %w", err)
 	}
 
-	if blockRoot == latestHeaderRoot {
-		return FinalizedHeaderUpdate{}, common.Hash{}, ErrFinalizedHeaderUnchanged
-	}
-
-	blockRootsHash, blockRootsProof, err := s.GetBlockRoots(finalizedUpdate.Data.FinalizedHeader.Beacon.StateRoot)
-	switch {
-	case errors.Is(err, ErrLocalNetBeaconStateNotSupported):
-		{
-			blockRootsHash = types.H256{} // send empty values for now
-			blockRootsProof = []types.H256{}
-		}
-	case err != nil:
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch block roots: %w", err)
-	}
+	blockRootsProof, err := s.GetBlockRoots(finalizedUpdate.Data.FinalizedHeader.Beacon.StateRoot)
 	if err != nil {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch finalized update: %w", err)
+		return FinalizedHeaderUpdate{}, fmt.Errorf("fetch block roots: %w", err)
 	}
 
 	syncAggregate, err := finalizedUpdate.Data.SyncAggregate.ToScale()
 	if err != nil {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
+		return FinalizedHeaderUpdate{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
 	}
 
 	signatureSlot, err := strconv.ParseUint(finalizedUpdate.Data.SignatureSlot, 10, 64)
 	if err != nil {
-		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("parse signature slot as int: %w", err)
+		return FinalizedHeaderUpdate{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
-	finalizedHeaderUpdate := FinalizedHeaderUpdate{
+	finalizedHeaderUpdate := FinalizedHeaderPayload{
 		AttestedHeader:  attestedHeader,
 		FinalizedHeader: finalizedHeader,
 		FinalityBranch:  proofBranchToScale(finalizedUpdate.Data.FinalityBranch),
 		SyncAggregate:   syncAggregate,
 		SignatureSlot:   types.U64(signatureSlot),
-		BlockRootsHash:  blockRootsHash,
-		BlockRootProof:  blockRootsProof,
+		BlockRootsHash:  blockRootsProof.Leaf,
+		BlockRootProof:  blockRootsProof.Proof,
 	}
 
-	return finalizedHeaderUpdate, blockRoot, nil
+	return FinalizedHeaderUpdate{
+		Payload:             finalizedHeaderUpdate,
+		FinalizedHeaderHash: blockRoot,
+		BlockRootsTree:      blockRootsProof.Tree,
+	}, nil
 }
 
-func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
+func (s *Syncer) GetLatestFinalizedHeader() (FinalizedHeaderUpdate, error) {
+	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
+	if err != nil {
+		return FinalizedHeaderUpdate{}, fmt.Errorf("fetch finalized update: %w", err)
+	}
+
+	attestedHeader, err := finalizedUpdate.Data.AttestedHeader.Beacon.ToScale()
+	if err != nil {
+		return FinalizedHeaderUpdate{}, fmt.Errorf("convert attested header to scale: %w", err)
+	}
+
+	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.Beacon.ToScale()
+	if err != nil {
+		return FinalizedHeaderUpdate{}, fmt.Errorf("convert finalized header to scale: %w", err)
+	}
+
+	finalizedHeaderSSZ := state.BeaconBlockHeader{
+		Slot:          uint64(finalizedHeader.Slot),
+		ProposerIndex: uint64(finalizedHeader.ProposerIndex),
+		ParentRoot:    common.FromHex(finalizedHeader.ParentRoot.Hex()),
+		StateRoot:     common.FromHex(finalizedHeader.StateRoot.Hex()),
+		BodyRoot:      common.FromHex(finalizedHeader.BodyRoot.Hex()),
+	}
+
+	blockRoot, err := finalizedHeaderSSZ.HashTreeRoot()
+	if err != nil {
+		return FinalizedHeaderUpdate{}, fmt.Errorf("beacon header hash tree root: %w", err)
+	}
+
+	syncAggregate, err := finalizedUpdate.Data.SyncAggregate.ToScale()
+	if err != nil {
+		return FinalizedHeaderUpdate{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
+	}
+
+	signatureSlot, err := strconv.ParseUint(finalizedUpdate.Data.SignatureSlot, 10, 64)
+	if err != nil {
+		return FinalizedHeaderUpdate{}, fmt.Errorf("parse signature slot as int: %w", err)
+	}
+
+	finalizedHeaderUpdate := FinalizedHeaderPayload{
+		AttestedHeader:  attestedHeader,
+		FinalizedHeader: finalizedHeader,
+		FinalityBranch:  proofBranchToScale(finalizedUpdate.Data.FinalityBranch),
+		SyncAggregate:   syncAggregate,
+		SignatureSlot:   types.U64(signatureSlot),
+	}
+
+	return FinalizedHeaderUpdate{
+		Payload:             finalizedHeaderUpdate,
+		FinalizedHeaderHash: blockRoot,
+	}, nil
+}
+
+func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64, blockRootTree *ssz.Node, finalizedSlot uint64) (HeaderUpdate, error) {
 	err := ErrNotFound
-	var block BeaconBlockResponse
+	var blockRoot common.Hash
 	tries := 0
 	maxSlotsMissed := int(s.SlotsInEpoch)
 	for errors.Is(err, ErrNotFound) && tries < maxSlotsMissed {
-		block, err = s.Client.GetBeaconBlockBySlot(slot)
+		blockRoot, err = s.Client.GetBeaconBlockRoot(slot)
 		if err != nil && !errors.Is(err, ErrNotFound) {
 			return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
 		}
@@ -382,25 +440,10 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (HeaderUpdate, error) {
 		}
 	}
 
-	blockScale, err := block.ToScale()
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
-	}
-
-	proofScale, err := s.getBlockHeaderAncestryProof(int(blockScale.Slot))
-	if err != nil {
-		return HeaderUpdate{}, fmt.Errorf("get block ancestry proof: %w", err)
-	}
-
-	headerUpdate := HeaderUpdate{
-		Block:          blockScale,
-		BlockRootProof: proofScale,
-	}
-
-	return headerUpdate, nil
+	return s.GetHeaderUpdate(blockRoot, blockRootTree, finalizedSlot)
 }
 
-func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
+func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, blockRootTree *ssz.Node, finalizedSlot uint64) (HeaderUpdate, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
 		return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
@@ -411,7 +454,22 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
 	}
 
-	proofScale, err := s.getBlockHeaderAncestryProof(int(blockScale.Slot))
+	log.WithFields(log.Fields{"blockRoot": blockRoot, "slot": int(blockScale.Slot)}).Info("block root at slot is")
+
+	slot := uint64(blockScale.Slot)
+
+	// If slot == finalizedSlot, there won't be an ancestry proof because the header state in question is also the
+	// finalized header
+	if slot == finalizedSlot {
+		log.WithFields(log.Fields{"blockRoot": blockRoot, "slot": int(blockScale.Slot)}).Info("no ancestry proof available, finalized block")
+
+		return HeaderUpdate{
+			Block:          blockScale,
+			BlockRootProof: []types.H256{},
+		}, nil
+	}
+
+	proofScale, err := s.getBlockHeaderAncestryProof(int(blockScale.Slot), blockRoot, blockRootTree)
 
 	headerUpdate := HeaderUpdate{
 		Block:          blockScale,
@@ -421,25 +479,8 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	return headerUpdate, nil
 }
 
-func (s *Syncer) getBlockHeaderAncestryProof(slot int) ([]types.H256, error) {
-	var blockRootsContainer state.BlockRootsContainer
-
-	if s.activeSpec == config.Minimal {
-		blockRootsContainer = &state.BlockRootsContainerMinimal{}
-	} else {
-		blockRootsContainer = &state.BlockRootsContainerMainnet{}
-	}
-
-	blockRootsContainer.SetBlockRoots(s.currentFinalizedHeader.blockRoots)
-
+func (s *Syncer) getBlockHeaderAncestryProof(slot int, blockRoot common.Hash, blockRootTree *ssz.Node) ([]types.H256, error) {
 	indexInArray := slot % s.MaxSlotsPerHistoricalRoot
-
-	tree, err := blockRootsContainer.GetTree() // TODO check memory cost to save this in memory instead of block root array
-	if err != nil {
-		return nil, fmt.Errorf("convert block roots to tree: %w", err)
-	}
-
-	log.WithField("tree root", common.BytesToHash(tree.Hash())).Info("tree root")
 
 	treeDepth := math.Floor(math.Log2(float64(s.MaxSlotsPerHistoricalRoot)))
 	leavesStartIndex := int(math.Pow(2, treeDepth))
@@ -448,27 +489,29 @@ func (s *Syncer) getBlockHeaderAncestryProof(slot int) ([]types.H256, error) {
 	log.WithFields(log.Fields{
 		"treeDepth":                 treeDepth,
 		"leavesStartIndex":          leavesStartIndex,
-		"blockHashAtIndex":          common.BytesToHash(s.currentFinalizedHeader.blockRoots[indexInArray]),
 		"indexInArray":              indexInArray,
 		"leafIndex":                 leafIndex,
 		"slot":                      slot,
-		"blockArray":                s.currentFinalizedHeader.blockRoots,
 		"maxSlotsPerHistoricalRoot": s.MaxSlotsPerHistoricalRoot,
 	}).Info("blockHashAtIndex")
 
-	proof, err := tree.Prove(leafIndex)
+	proof, err := blockRootTree.Prove(leafIndex)
 	if err != nil {
 		return nil, fmt.Errorf("get block proof: %w", err)
 	}
 
+	if common.BytesToHash(proof.Leaf) != blockRoot {
+		return nil, fmt.Errorf("block root at index (%s) does not match expected block root (%s)", common.BytesToHash(proof.Leaf), blockRoot)
+	}
+
 	// sanity check
-	ok, err := ssz.VerifyProof(s.currentFinalizedHeader.blockRootProofHash[:], proof)
-	if err != nil {
-		return nil, fmt.Errorf("block proof at index errored: %w", err)
-	}
-	if ok != true {
-		return nil, fmt.Errorf("block proof at index failed")
-	}
+	//ok, err := ssz.VerifyProof(s.currentFinalizedHeader.blockRootProofHash[:], proof)
+	//if err != nil {
+	//	return nil, fmt.Errorf("block proof at index errored: %w", err)
+	//}
+	//if ok != true {
+	//	return nil, fmt.Errorf("block proof at index failed")
+	//}
 
 	proofScale := []types.H256{}
 	for _, proofItem := range proof.Hashes {

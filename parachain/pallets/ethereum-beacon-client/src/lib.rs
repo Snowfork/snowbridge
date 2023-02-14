@@ -154,6 +154,8 @@ pub mod pallet {
 		SigningRootHashTreeRootFailed,
 		ForkDataHashTreeRootFailed,
 		ExecutionHeaderNotLatest,
+		UnexpectedHeaderSlotPosition,
+		ExpectedFinalizedHeaderNotStored,
 		BridgeBlocked,
 		InvalidSyncCommitteeHeaderUpdate,
 		InvalidSyncCommitteePeriodUpdateWithGap,
@@ -571,25 +573,12 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
 					.into();
 
-			let finalized_block_root_hash =
-				<FinalizedBeaconHeadersBlockRoot<T>>::get(last_finalized_header.beacon_block_root);
-
-			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get();
-			let depth = max_slots_per_historical_root.ilog2();
-			let index_in_array = block_slot % max_slots_per_historical_root as u64;
-			let leaves_start_index = 2u32.pow(depth as u32) as u64;
-			let leaf_index: u64 = (leaves_start_index + index_in_array) as u64;
-
-			ensure!(
-				Self::is_valid_merkle_branch(
-					beacon_block_root,
-					update.block_root_proof,
-					depth as u64,
-					leaf_index,
-					finalized_block_root_hash
-				),
-				Error::<T>::InvalidAncestryMerkleProof
-			);
+			Self::ancestry_proof(
+				update.block_root_proof,
+				block_slot,
+				beacon_block_root,
+				last_finalized_header.beacon_block_root,
+			)?;
 
 			let current_period = Self::compute_current_sync_period(update.block.slot);
 			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
@@ -614,7 +603,7 @@ pub mod pallet {
 			} else {
 				log::trace!(
 					target: "ethereum-beacon-client",
-					"fee recipient not 20 characters, len is: {}.",
+					"💫 fee recipient not 20 characters, len is: {}.",
 					fee_slice.len()
 				);
 			}
@@ -639,6 +628,63 @@ pub mod pallet {
 				},
 				block_slot,
 				beacon_block_root,
+			);
+
+			Ok(())
+		}
+
+		fn ancestry_proof(
+			block_root_proof: BoundedVec<H256, T::MaxProofBranchSize>,
+			block_slot: u64,
+			beacon_block_root: H256,
+			finalized_header_root: H256,
+		) -> DispatchResult {
+			// If the block root proof is empty, we know that we expect this header to be a
+			// finalized header. We need to check that the header hash matches the finalized header
+			// root at the expected slot.
+			if block_root_proof.len() == 0 {
+				let stored_finalized_header = <FinalizedBeaconHeaders<T>>::get(beacon_block_root);
+				if stored_finalized_header.is_none() {
+					return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
+				}
+
+				let header = stored_finalized_header.unwrap();
+				if header.slot != block_slot {
+					return Err(Error::<T>::UnexpectedHeaderSlotPosition.into())
+				}
+
+				log::info!(
+					target: "ethereum-beacon-client",
+					"💫 ancestry proof using finalized header storage passed.",
+				);
+
+				return Ok(())
+			}
+
+			// Else do the ancestry proof using the block root proof
+			let finalized_block_root_hash =
+				<FinalizedBeaconHeadersBlockRoot<T>>::get(finalized_header_root);
+
+			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get();
+			let depth = max_slots_per_historical_root.ilog2() as u64;
+			let index_in_array = block_slot % max_slots_per_historical_root as u64;
+			let leaves_start_index = 2u32.pow(depth as u32) as u64;
+			let leaf_index: u64 = (leaves_start_index + index_in_array) as u64;
+
+			ensure!(
+				Self::is_valid_merkle_branch(
+					beacon_block_root,
+					block_root_proof,
+					depth,
+					leaf_index,
+					finalized_block_root_hash
+				),
+				Error::<T>::InvalidAncestryMerkleProof
+			);
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 ancestry proof passed.",
 			);
 
 			Ok(())

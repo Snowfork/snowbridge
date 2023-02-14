@@ -14,7 +14,7 @@
           "maxSlotsPerHistoricalRoot": 8192
         }
       },
-      "activeSpec": "mainnet"
+      "activeSpec": "minimal"
     }
   },
   "sink": {

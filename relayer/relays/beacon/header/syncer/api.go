@@ -372,6 +372,10 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == 404 {
+			return common.Hash{}, ErrNotFound
+		}
+
 		return common.Hash{}, fmt.Errorf("fetch beacon block %d: %s", res.StatusCode, HTTPStatusNotOKErrorMessage)
 	}
 

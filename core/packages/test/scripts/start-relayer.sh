@@ -109,18 +109,18 @@ start_relayer()
     ) &
 
     # Launch beacon relay
-    (
-        : > beacon-relay.log
-        while :
-        do
-        echo "Starting beacon relay at $(date)"
-            "${relay_bin}" run beacon \
-                --config $output_dir/beacon-relay.json \
-                --substrate.private-key "//BeaconRelay" \
-                >>beacon-relay.log 2>&1 || true
-            sleep 20
-        done
-    ) &
+    #(
+    #    : > beacon-relay.log
+    #    while :
+    #    do
+    #    echo "Starting beacon relay at $(date)"
+    #        "${relay_bin}" run beacon \
+    #            --config $output_dir/beacon-relay.json \
+    #            --substrate.private-key "//BeaconRelay" \
+    #            >>beacon-relay.log 2>&1 || true
+    #        sleep 20
+    #    done
+    #) &
 
     # Launch execution relay
     (
