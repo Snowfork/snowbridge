@@ -1,9 +1,10 @@
 # Core Typescript Packages
 
 Packages:
-* Solidity Contracts
-* API client
-* Integration tests
+
+- Solidity Contracts
+- API client
+- Integration tests
 
 ## Getting Started
 
@@ -18,6 +19,13 @@ Install [pnpm](https://pnpm.io/):
 ```bash
 corepack enable
 corepack prepare pnpm@7.14.2 --activate
+```
+
+Install [foundry](https://book.getfoundry.sh/getting-started/installation):
+
+```bash
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
 ```
 
 Install all dependencies:

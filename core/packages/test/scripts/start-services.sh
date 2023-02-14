@@ -22,7 +22,11 @@ echo "Starting ethereum and polkadot chains"
 source scripts/start-chains.sh
 start_chains
 
-# 3. start relayer
+# 3. config beefy client
+source scripts/configure-contracts.sh
+configure_contracts
+
+# 4. start relayer
 echo "Starting relayers"
 source scripts/start-relayer.sh
 start_relayer
