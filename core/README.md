@@ -25,6 +25,7 @@ Install [foundry](https://book.getfoundry.sh/getting-started/installation):
 
 ```bash
 curl -L https://foundry.paradigm.xyz | bash
+foundryup
 ```
 
 Install all dependencies:
