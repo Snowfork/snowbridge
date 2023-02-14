@@ -18,11 +18,5 @@
   "devDependencies": {
     "turbo": "^1.6.3",
     "husky": "^8.0.1"
-  },
-  "overrides": {
-    "@polkadot-api@9.6.2>@polkadot/util": "10.1.11",
-    "@polkadot-api@9.6.2>@polkadot/util-crypto": "10.1.11",
-    "@polkadot-types@9.6.2>@polkadot/util": "10.1.11",
-    "@polkadot-types@9.6.2>@polkadot/util-crypto": "10.1.11"
   }
 }
