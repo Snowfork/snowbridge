@@ -88,7 +88,7 @@ benchmarks! {
 
 		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState{
 			beacon_block_root: H256::default(),
-			beacon_slot: block_update.block.slot - 1,
+			beacon_slot: block_update.block.slot,
 			import_time: 0,
 		});
 	}: _(RawOrigin::Signed(caller.clone()), block_update.clone())

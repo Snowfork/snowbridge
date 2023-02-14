@@ -915,7 +915,7 @@ mod beacon_minimal_tests {
 			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
 			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: H256::default(),
-				beacon_slot: update.block.slot - 1,
+				beacon_slot: update.block.slot,
 				import_time: 0,
 			});
 
@@ -960,7 +960,7 @@ mod beacon_minimal_tests {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: H256::default(),
-				beacon_slot: update.block.slot - 1,
+				beacon_slot: update.block.slot,
 				import_time: 0,
 			});
 
@@ -1204,7 +1204,7 @@ mod beacon_mainnet_tests {
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
 			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
 				beacon_block_root: H256::default(),
-				beacon_slot: update.block.slot - 1,
+				beacon_slot: update.block.slot,
 				import_time: 0,
 			});
 

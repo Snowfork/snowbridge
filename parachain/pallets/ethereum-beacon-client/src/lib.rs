@@ -508,7 +508,7 @@ pub mod pallet {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
 			let block_slot = update.block.slot;
-			ensure!(block_slot > latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
+			ensure!(block_slot <= latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
 
 			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
 			let execution_payload = update.block.body.execution_payload.clone();
