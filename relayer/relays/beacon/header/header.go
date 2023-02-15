@@ -99,9 +99,8 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 				"finalized_header": h.cache.Finalized.LastAttemptedSyncHash,
 				"slot":             h.cache.Finalized.LastAttemptedSyncSlot,
 			}
-			log.WithError(err).Info("error is...")
 			switch {
-			case errors.Is(err, syncer.ErrFinalizedHeaderUnchanged):
+			case errors.Is(err, ErrFinalizedHeaderUnchanged):
 				log.WithFields(logFields).Info("not importing unchanged header")
 			case errors.Is(err, ErrFinalizedHeaderNotImported):
 				log.WithFields(logFields).WithError(err).Warn("Not importing header this cycle")
@@ -240,22 +239,17 @@ func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 	lastAttemptedFinalizedHeader := h.cache.Finalized.LastAttemptedSyncHash
 	secondLastFinalizedHeader := h.cache.LastFinalizedHeader()
 
-	log.Info("checking if header changed")
-
 	hasChanged, err := h.syncer.HasFinalizedHeaderChanged(lastAttemptedFinalizedHeader)
 	if err != nil {
-		log.Info("error!")
 		return err
 	}
 
 	if !hasChanged {
-		log.Info("has not changed!")
 		return ErrFinalizedHeaderUnchanged
 	}
 
 	sync, err := h.SyncFinalizedHeader(ctx)
 	if err != nil {
-		log.Info("synced finalized header")
 		return err
 	}
 

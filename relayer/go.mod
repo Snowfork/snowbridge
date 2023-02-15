@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/ethereum/go-ethereum v1.10.26
-	github.com/ferranbt/fastssz v0.1.3-0.20230207100434-52da0e6d9aa7
+	github.com/ferranbt/fastssz v0.1.3
 	github.com/magefile/mage v1.13.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454
@@ -55,7 +55,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
-	github.com/prysmaticlabs/gohashtree v0.0.2-alpha // indirect
 	github.com/rivo/uniseg v0.3.4 // indirect
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rs/cors v1.8.2 // indirect
@@ -80,5 +79,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/prysmaticlabs/prysm/v3 => github.com/snowfork/prysm/v3 v3.0.0-20230124094310-90fbe9d8a1f1

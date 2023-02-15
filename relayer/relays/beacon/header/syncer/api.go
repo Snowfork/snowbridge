@@ -574,16 +574,8 @@ func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) error {
 		return err
 	}
 
-	defer res.Body.Close()
-	out2, err := os.Create("/Users/claravanstaden/IdeaProjects/snowbridge/beacon_state_backup.ssz")
-	if err != nil {
-		return err
-	}
-
 	defer out.Close()
-	defer out2.Close()
 	io.Copy(out, res.Body)
-	io.Copy(out2, res.Body)
 
 	return nil
 }

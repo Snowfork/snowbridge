@@ -654,8 +654,12 @@ pub mod pallet {
 			// finalized header. We need to check that the header hash matches the finalized header
 			// root at the expected slot.
 			if block_root_proof.len() == 0 {
-				let stored_finalized_header = <FinalizedBeaconHeaders<T>>::get(beacon_block_root);
+				let stored_finalized_header = <FinalizedBeaconHeaders<T>>::get(finalized_header_root);
 				if stored_finalized_header.is_none() {
+					log::error!(
+						target: "ethereum-beacon-client",
+						"💫 finalized block root {} slot {} for ancestry proof (for a finalized header) not found.", beacon_block_root, block_slot
+					);
 					return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
 				}
 
@@ -664,17 +668,16 @@ pub mod pallet {
 					return Err(Error::<T>::UnexpectedHeaderSlotPosition.into())
 				}
 
-				log::info!(
-					target: "ethereum-beacon-client",
-					"💫 ancestry proof using finalized header storage passed.",
-				);
-
 				return Ok(())
 			}
 
 			let finalized_block_root_hash = <FinalizedBeaconHeadersBlockRoot<T>>::get(finalized_header_root);
 
 			if finalized_block_root_hash.is_zero() {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"💫 finalized block root {} slot {} for ancestry proof not found.", beacon_block_root, block_slot
+				);
 				return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
 			}
 
@@ -693,11 +696,6 @@ pub mod pallet {
 					finalized_block_root_hash
 				),
 				Error::<T>::InvalidAncestryMerkleProof
-			);
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 ancestry proof passed.",
 			);
 
 			Ok(())

@@ -24,7 +24,6 @@ const BlockRootGeneralizedIndex = 37
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
 	ErrBeaconStateAvailableYet                    = errors.New("beacon state object not available yet")
-	ErrFinalizedHeaderUnchanged                   = errors.New("finalized header unchanged")
 )
 
 type Syncer struct {
@@ -298,6 +297,8 @@ func (s *Syncer) GetBlockRoots(stateRoot string, slot uint64) (BlockRootProof, e
 		displayBlockRoots[i] = common.BytesToHash(blockRootAtIndex)
 	}
 
+	log.WithField("blockRoots", displayBlockRoots).Info(fmt.Sprintf("block for slot %d", slot))
+
 	tree, err := blockRootsContainer.GetTree()
 	if err != nil {
 		return BlockRootProof{}, fmt.Errorf("convert block roots to tree: %w", err)
@@ -379,6 +380,8 @@ func (s *Syncer) HasFinalizedHeaderChanged(lastFinalizedBlockRoot common.Hash) (
 		return false, fmt.Errorf("fetch finalized update: %w", err)
 	}
 
+	log.WithField("latest finalized", finalizedUpdate.Data.FinalizedHeader.Beacon.Slot).Info("latest finalized")
+
 	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.Beacon.ToScale()
 	if err != nil {
 		return false, fmt.Errorf("convert finalized header to scale: %w", err)
@@ -389,7 +392,9 @@ func (s *Syncer) HasFinalizedHeaderChanged(lastFinalizedBlockRoot common.Hash) (
 		return false, fmt.Errorf("beacon header hash tree root: %w", err)
 	}
 
-	return blockRoot == lastFinalizedBlockRoot, nil
+	isTheSame := common.BytesToHash(blockRoot[:]).Hex() != lastFinalizedBlockRoot.Hex()
+
+	return isTheSame, nil
 }
 
 func (s *Syncer) GetLatestFinalizedHeader() (FinalizedHeaderUpdate, error) {
@@ -492,6 +497,8 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint cache.State) 
 		}, nil
 	}
 
+	log.WithFields(log.Fields{"checkpointSlot": checkpoint.Slot}).Info("checkpoint slot used for proof")
+
 	proofScale, err := s.getBlockHeaderAncestryProof(int(blockScale.Slot), blockRoot, checkpoint.BlockRootsTree)
 
 	headerUpdate := HeaderUpdate{
@@ -510,9 +517,16 @@ func (s *Syncer) getBlockHeaderAncestryProof(slot int, blockRoot common.Hash, bl
 	leavesStartIndex := int(math.Pow(2, treeDepth))
 	leafIndex := leavesStartIndex + indexInArray
 
-	log.WithFields(log.Fields{"leafIndex": leafIndex, "slot": slot}).Info("getting proof")
+	log.WithFields(log.Fields{"leafIndex": leafIndex, "slot": slot, "blockRoot": blockRoot}).Info("getting proof")
 
-	blockRootTree.Show(10)
+	if blockRootTree == nil {
+		return nil, fmt.Errorf("tree is nil")
+	}
+
+	if leafIndex == 66 {
+		blockRootTree.Show(10)
+	}
+
 	proof, err := blockRootTree.Prove(leafIndex)
 	if err != nil {
 		return nil, fmt.Errorf("get block proof: %w", err)
