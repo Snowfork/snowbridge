@@ -38,6 +38,8 @@
                     # ethereum
                     foundry-bin
                     go-ethereum
+                    # required for forge install
+                    gnupg
 
                     # relayer
                     go
