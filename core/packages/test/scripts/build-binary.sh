@@ -71,6 +71,9 @@ build_e2e_test() {
     pushd "$core_dir"
     pnpm install
     popd
+    pushd "$contract_dir"
+    forge install
+    popd
 }
 
 install_binary() {
