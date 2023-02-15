@@ -9,6 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+var FinalizedCheckPointNotAvailable = errors.New("finalized checkpoint for block roots proof not available in cache")
+
 type Finalized struct {
 	// Stores the last successfully imported hash
 	LastSyncedHash common.Hash
@@ -67,7 +69,7 @@ func (b *BeaconCache) AddCheckPoint(finalizedHeaderRoot common.Hash, blockRootsT
 		FinalizedBlockRoot: finalizedHeaderRoot,
 		BlockRootsTree:     blockRootsTree,
 		Slot:               slot,
-		Period:             slot / (b.slotsInEpoch * b.epochsPerSyncCommitteePeriod),
+		Period:             slot / (b.slotsInEpoch * b.epochsPerSyncCommitteePeriod), // TODO remove
 	}
 
 	log.WithFields(log.Fields{
@@ -93,7 +95,7 @@ func (b *BeaconCache) calculateClosestCheckpointSlot(slot uint64) (uint64, error
 		}
 	}
 
-	return 0, errors.New("no checkpoint including slot in block roots threshold found")
+	return 0, FinalizedCheckPointNotAvailable
 }
 
 func (b *BeaconCache) GetClosestCheckpoint(slot uint64) (State, error) {

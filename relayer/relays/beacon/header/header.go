@@ -99,6 +99,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 				"finalized_header": h.cache.Finalized.LastAttemptedSyncHash,
 				"slot":             h.cache.Finalized.LastAttemptedSyncSlot,
 			}
+			log.WithError(err).Info("error is...")
 			switch {
 			case errors.Is(err, syncer.ErrFinalizedHeaderUnchanged):
 				log.WithFields(logFields).Info("not importing unchanged header")
@@ -239,13 +240,23 @@ func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 	lastAttemptedFinalizedHeader := h.cache.Finalized.LastAttemptedSyncHash
 	secondLastFinalizedHeader := h.cache.LastFinalizedHeader()
 
-	sync, err := h.SyncFinalizedHeader(ctx)
+	log.Info("checking if header changed")
+
+	hasChanged, err := h.syncer.HasFinalizedHeaderChanged(lastAttemptedFinalizedHeader)
 	if err != nil {
+		log.Info("error!")
 		return err
 	}
 
-	if sync.FinalizedHeaderBlockRoot == lastAttemptedFinalizedHeader {
+	if !hasChanged {
+		log.Info("has not changed!")
 		return ErrFinalizedHeaderUnchanged
+	}
+
+	sync, err := h.SyncFinalizedHeader(ctx)
+	if err != nil {
+		log.Info("synced finalized header")
+		return err
 	}
 
 	err = h.SyncHeaders(ctx, secondLastFinalizedHeader, sync.FinalizedHeaderBlockRoot)
@@ -285,7 +296,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 
 	currentSlot := fromSlot + 1 // start syncing at next block after last synced block
 
-	checkpoint, err := h.cache.GetClosestCheckpoint(currentSlot)
+	checkpoint, err := h.getClosestCheckpoint(currentSlot)
 	if err != nil {
 		return fmt.Errorf("get closest checkpoint: %w", err)
 	}
@@ -327,13 +338,13 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 			"slot": currentSlot,
 		}).Info("fetching header at slot")
 
-		// To get the sync witness for the current synced header. This header
-		// will be used as the next update.
-		checkpoint, err := h.cache.GetClosestCheckpoint(currentSlot)
+		checkpoint, err = h.getClosestCheckpoint(currentSlot)
 		if err != nil {
 			return fmt.Errorf("get closest checkpoint: %w", err)
 		}
 
+		// To get the sync witness for the current synced header. This header
+		// will be used as the next update.
 		nextHeaderUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot+1, checkpoint)
 		if err != nil {
 			return err
@@ -411,7 +422,7 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedH
 
 	err = h.SyncHeaders(ctx, executionHeaderState.BeaconBlockRoot, lastFinalizedHeader)
 	if err != nil {
-		return err
+		return fmt.Errorf("sync headers: %w", err)
 	}
 
 	return nil
@@ -436,4 +447,54 @@ func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSync
 	}
 
 	return nil
+}
+
+func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
+	finalizedHeader, err := h.syncer.Client.GetHeaderBySlot(slot) // TODO if slot empty get previous slot
+	if err != nil {
+		return fmt.Errorf("get header by slot: %w", err)
+	}
+
+	scaleHeader, err := finalizedHeader.ToScale()
+	if err != nil {
+		return fmt.Errorf("header to scale: %w", err)
+	}
+
+	blockRoot, err := scaleHeader.ToSSZ().HashTreeRoot()
+	if err != nil {
+		return fmt.Errorf("header hash root: %w", err)
+	}
+
+	blockRootsProof, err := h.syncer.GetBlockRoots(finalizedHeader.StateRoot.Hex(), slot)
+	if err != nil && !errors.Is(err, syncer.ErrBeaconStateAvailableYet) {
+		return fmt.Errorf("fetch block roots: %w", err)
+	}
+
+	log.Info("populating checkpoint")
+
+	h.cache.AddCheckPoint(blockRoot, blockRootsProof.Tree, slot)
+
+	return nil
+}
+
+func (h *Header) getClosestCheckpoint(slot uint64) (cache.State, error) {
+	checkpoint, err := h.cache.GetClosestCheckpoint(slot)
+	switch {
+	case errors.Is(cache.FinalizedCheckPointNotAvailable, err):
+		err := h.populateFinalizedCheckpoint(h.syncer.CalculateNextCheckpointSlot(slot))
+		if err != nil {
+			return cache.State{}, fmt.Errorf("populate closest checkpoint: %w", err)
+		}
+
+		checkpoint, err = h.cache.GetClosestCheckpoint(slot)
+		if err != nil {
+			return cache.State{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
+		}
+
+		return checkpoint, nil
+	case err != nil:
+		return cache.State{}, fmt.Errorf("get closest checkpoint: %w", err)
+	}
+
+	return checkpoint, nil
 }

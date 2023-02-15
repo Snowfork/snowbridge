@@ -373,6 +373,25 @@ func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, error) {
 	}, nil
 }
 
+func (s *Syncer) HasFinalizedHeaderChanged(lastFinalizedBlockRoot common.Hash) (bool, error) {
+	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
+	if err != nil {
+		return false, fmt.Errorf("fetch finalized update: %w", err)
+	}
+
+	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.Beacon.ToScale()
+	if err != nil {
+		return false, fmt.Errorf("convert finalized header to scale: %w", err)
+	}
+
+	blockRoot, err := finalizedHeader.ToSSZ().HashTreeRoot()
+	if err != nil {
+		return false, fmt.Errorf("beacon header hash tree root: %w", err)
+	}
+
+	return blockRoot == lastFinalizedBlockRoot, nil
+}
+
 func (s *Syncer) GetLatestFinalizedHeader() (FinalizedHeaderUpdate, error) {
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
@@ -491,6 +510,9 @@ func (s *Syncer) getBlockHeaderAncestryProof(slot int, blockRoot common.Hash, bl
 	leavesStartIndex := int(math.Pow(2, treeDepth))
 	leafIndex := leavesStartIndex + indexInArray
 
+	log.WithFields(log.Fields{"leafIndex": leafIndex, "slot": slot}).Info("getting proof")
+
+	blockRootTree.Show(10)
 	proof, err := blockRootTree.Prove(leafIndex)
 	if err != nil {
 		return nil, fmt.Errorf("get block proof: %w", err)
@@ -569,6 +591,17 @@ func (s *Syncer) IsStartOfEpoch(slot uint64) bool {
 	return slot%s.SlotsInEpoch == 0
 }
 
+func (s *Syncer) CalculateNextCheckpointSlot(slot uint64) uint64 {
+	syncPeriod := s.ComputeSyncPeriodAtSlot(slot)
+
+	// on new period boundary
+	if syncPeriod*s.SlotsInEpoch*s.EpochsPerSyncCommitteePeriod == slot {
+		return slot
+	}
+
+	return (syncPeriod + 1) * s.SlotsInEpoch * s.EpochsPerSyncCommitteePeriod
+}
+
 func hexToBinaryString(rawHex string) string {
 	hexString := strings.Replace(rawHex, "0x", "", -1)
 
@@ -641,6 +674,16 @@ func (h HeaderResponse) ToScale() (scale.BeaconHeader, error) {
 		ParentRoot:    types.NewH256(common.HexToHash(h.ParentRoot).Bytes()),
 		StateRoot:     types.NewH256(common.HexToHash(h.StateRoot).Bytes()),
 		BodyRoot:      types.NewH256(common.HexToHash(h.BodyRoot).Bytes()),
+	}, nil
+}
+
+func (h BeaconHeader) ToScale() (scale.BeaconHeader, error) {
+	return scale.BeaconHeader{
+		Slot:          types.NewU64(h.Slot),
+		ProposerIndex: types.NewU64(h.ProposerIndex),
+		ParentRoot:    types.NewH256(h.ParentRoot.Bytes()),
+		StateRoot:     types.NewH256(h.StateRoot.Bytes()),
+		BodyRoot:      types.NewH256(h.BodyRoot.Bytes()),
 	}, nil
 }
 

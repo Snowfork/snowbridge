@@ -588,7 +588,7 @@ pub mod pallet {
 				update.block_root_proof,
 				block_slot,
 				beacon_block_root,
-				last_finalized_header.beacon_block_root,
+				update.block_root_proof_finalized_header,
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.block.slot);
@@ -672,9 +672,11 @@ pub mod pallet {
 				return Ok(())
 			}
 
-			// Else do the ancestry proof using the block root proof
-			let finalized_block_root_hash =
-				<FinalizedBeaconHeadersBlockRoot<T>>::get(finalized_header_root);
+			let finalized_block_root_hash = <FinalizedBeaconHeadersBlockRoot<T>>::get(finalized_header_root);
+
+			if finalized_block_root_hash.is_zero() {
+				return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
+			}
 
 			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get();
 			let depth = max_slots_per_historical_root.ilog2() as u64;
@@ -718,7 +720,7 @@ pub mod pallet {
 			signature_slot: u64,
 		) -> DispatchResult {
 			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
-			// Gathers all the pubkeys of the sync committee members that participated in siging the
+			// Gathers all the pubkeys of the sync committee members that participated in signing the
 			// header.
 			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
 				if *bit == 1 as u8 {

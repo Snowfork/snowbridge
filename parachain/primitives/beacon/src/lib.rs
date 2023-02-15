@@ -284,6 +284,7 @@ pub struct BlockUpdate<
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub signature_slot: u64,
 	pub block_root_proof: BoundedVec<H256, ProofSize>,
+	pub block_root_proof_finalized_header: H256,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
