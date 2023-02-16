@@ -1,7 +1,7 @@
 {
   "source": {
     "ethereum": {
-      "endpoint": "ws://localhost:8546"
+      "endpoint": "ws://127.0.0.1:8546"
     },
     "contracts": {
       "BasicOutboundChannel": null
@@ -10,7 +10,7 @@
   },
   "sink": {
     "parachain": {
-      "endpoint": "ws://localhost:11144",
+      "endpoint": "ws://127.0.0.1:11144",
       "maxWatchedExtrinsics": 32
     }
   }

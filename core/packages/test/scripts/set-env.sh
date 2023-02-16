@@ -1,10 +1,12 @@
+#!/usr/bin/env sh
+
+# exports enable use in core/packages/test/config/launch-config.toml
 root_dir="$(realpath ../../..)"
-relaychain_dir="${POLKADOT_DIR:-$root_dir/relaychain}"
-relaychain_version="${POLKADOT_VER:-v0.9.30}"
-relaychain_bin="${POLKADOT_BIN:-$relaychain_dir/target/release/polkadot}"
 parachain_dir="$root_dir/parachain"
 parachain_runtime="${PARACHAIN_RUNTIME:-snowbase}"
 parachain_bin="$parachain_dir/target/release/snowbridge"
+relaychain_version="${POLKADOT_VER:-v0.9.30}"
+relaychain_bin="${POLKADOT_BIN:-$parachain_dir/.cargo/bin/polkadot.d/$relaychain_version/polkadot}"
 test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-node"
 core_dir="$root_dir/core"
 lodestar_version="${LODESTAR_VER:-1.4.2}"
@@ -20,8 +22,8 @@ ethereum_data_dir="$output_dir/geth"
 export PATH="$output_bin_dir:$PATH"
 
 eth_network="${ETH_NETWORK:-localhost}"
-eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://localhost:8545}/${INFURA_PROJECT_ID:-}"
-eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:-}"
+eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
+eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
 export RANDAO_COMMIT_DELAY=3
 export RANDAO_COMMIT_EXP=8
 export PARAID="${PARA_ID:-1000}"
@@ -38,7 +40,7 @@ basic_parachain_account_ids="${BASIC_PARACHAIN_ACCOUNT_IDS:-0xd43593c715fdd31c61
 # Ethereum addresses for which the relayer will relay messages over the basic channel.
 # This address is for the default eth account used in the E2E tests, taken from test/src/ethclient/index.js.
 basic_eth_addresses="${BASIC_ETH_ADDRESSES:-0x89b4ab1ef20763630df9743acf155865600daff2}"
-beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://localhost:9596}"
+beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 
 
 address_for()
@@ -46,42 +48,9 @@ address_for()
     jq -r ".contracts.${1}.address" "$output_dir/contracts.json"
 }
 
-kill_trap() {
-    trap - SIGTERM
-    pkill -P $$
-}
-
 kill_all() {
-    kill_trap
-    kill_chains
-    kill_relayer
-}
-
-kill_chains() {
-    echo "Killing chains"
-    kill_polkadot
-    kill_ethereum
-}
-
-kill_ethereum() {
-    pkill -9 -f lodestar
-    pkill -9 geth
-}
-
-kill_polkadot() {
-    pkill -9 polkadot
-    pkill -9 snowbridge-test-node
-    pkill -9 snowbridge
-    pkill -9 -f polkadot-launch
-    pkill -9 zombienet
-}
-
-kill_relayer() {
-    echo "Killing relayer"
-    kill_trap
-    sleep 3
-    pkill -9 snowbridge-relay
-    sleep 1
+    trap - SIGTERM
+    kill 0
 }
 
 cleanup() {
@@ -125,20 +94,6 @@ check_tool() {
     if ! [ -x "$(command -v pnpm)" ]; then
         echo 'Error: pnpm is not installed.'
         exit
-    fi
-    if ! [ -x "$(command -v zombienet)" ]; then
-        echo 'Error: zombienet is not installed.'
-        exit
-    fi
-    if [[ "$OSTYPE" =~ ^darwin ]]; then
-        if ! [ -x "$(command -v gdate)" ]; then
-            echo 'Error: gdate is not installed.'
-            exit
-        fi
-        if ! [ -x "$(command -v gsed)" ]; then
-            echo 'Error: gsed is not installed.'
-            exit
-        fi
     fi
 }
 

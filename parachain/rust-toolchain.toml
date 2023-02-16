@@ -1,0 +1,19 @@
+# https://rust-lang.github.io/rustup/overrides.html
+
+[toolchain]
+# To update version:
+#   - Find the latest nightly release that matches RUST_VERSION here: https://github.com/oxalica/rust-overlay/tree/master/manifests/nightly/2023
+#   - update `channel = "nightly-OLD_DATE"` below
+#   - update nightly-OLD_DATE in .github/workflows/parachain.yml
+
+# channel = "1.62.1" # matching polkadot v0.9.30
+channel = "nightly-2022-07-24" # 1.64.0 nightly for unstable features, matching polkadot v0.9.30
+targets = [
+    "wasm32-unknown-unknown",
+]
+
+profile = "default"
+components = [
+    # Rust source code, useful for dev tooling
+    "rust-src"
+]

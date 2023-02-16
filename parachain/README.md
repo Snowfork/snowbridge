@@ -12,22 +12,7 @@ A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 
 ## Development
 
-Follow these steps to prepare your local environment for Substrate development.
-
-### Requirements
-
-Refer to the instructions at the
-[Substrate Developer Hub](https://docs.substrate.io/main-docs/install/).
-
-To add context to the above instructions, the parachain is known to compile with the following versions of Rust:
-
-- stable: 1.62.1
-- nightly: 1.64.0-nightly
-
-### Build
-
-Once the development environment is set up, build the parachain. This command will build the
-[Wasm](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution) and
+This command will build the [Wasm](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution) and
 [native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
 
 Several runtimes can be built:
@@ -43,11 +28,12 @@ cargo build --release --features rococo-native
 
 ## Configuration
 
-Note: This section is not necessary for local development, as there are scripts to auto-configure the parachain.
+Note: This section is not necessary for local development, as there are scripts to auto-configure the parachain in the
+[test directory](../core/packages/test).
 
 For a fully operational chain, further configuration of the initial chain spec is required. The specific configuration will depend heavily on your environment, so this guide will remain high-level.
 
-Build an initial spec for the snowbase runtime:
+After completing a release build of the parachain, build an initial spec for the snowbase runtime:
 
 ```bash
 target/release/snowbridge build-spec --chain snowbase --disable-default-bootnode > spec.json
@@ -58,7 +44,7 @@ Now edit the spec and configure the following:
 2. Contract addresses for the Ether, Erc20, and Dot apps.
 3. Authorized principal for the basic channel
 
-For an example configuration, consult the [setup script](https://github.com/Snowfork/snowbridge/blob/main/test/scripts/start-services.sh) for our local development stack. Specifically the `start_polkadot_launch` bash function.
+For an example configuration, consult the [setup script](https://github.com/Snowfork/snowbridge/blob/main/core/packages/test/scripts/start-services.sh) for our local development stack. Specifically the `start_polkadot_launch` bash function.
 
 ## Tests
 
@@ -119,8 +105,9 @@ cargo install subxt-cli
 ```
 
 Update metadata by fetching it from parachain node (in this case a node in the E2E stack):
+
 ```bash
-subxt metadata --url http://localhost:8081 -f bytes > tools/query-events/metadata.scale
+subxt metadata --url http://127.0.0.1:8081 -f bytes > tools/query-events/metadata.scale
 ```
 
 If you want to update the tool for an already running E2E stack:

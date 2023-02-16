@@ -2,7 +2,7 @@
   "name": "@snowbridge/core",
   "private": true,
   "engines": {
-    "node": "16.18.1",
+    "node": "v18.13.0",
     "pnpm": "7.14.2"
   },
   "scripts": {
@@ -16,7 +16,8 @@
     "coverage": "turbo run coverage"
   },
   "devDependencies": {
+    "husky": "^8.0.1",
     "turbo": "^1.6.3",
-    "husky": "^8.0.1"
+    "pnpm-deduplicate": "^0.4.1"
   }
 }
