@@ -4,37 +4,15 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 ## Requirements
 
-The E2E stack can be run on any system that supports the [Nix](https://nixos.org/explore.html) package manager. This includes Linux, MacOS, and Windows (WSL2).
-
-Make sure to [download](https://nixos.org/download.html) and install the nix package manager.
+The E2E stack can be run on any system that supports the [Nix](https://nixos.org/explore.html) package manager. This
+includes Linux, MacOS, and Windows (WSL2). See the [main README's Development section](../../../README.md#Development) for
+setup instructions. Ensure that you are in a Nix development shell for the remaining instructions.
 
 ## Setup
-
-### Activate nix developer shell
-
-In the root directory of our repository, where `shell.nix` is located, activate a developer shell:
-
-```
-nix-shell
-```
-
-### Install NPM dependencies
-
-Make sure to install dependencies for all packages (contracts, api, test):
-
-```bash
-cd ../.. && pnpm install
-```
 
 ### Configure testnet
 
 All required environment variables have reasonable defaults so normally there is no need to configure them. If necessary, you can override them with an `.envrc` file, using [.envrc-example](.envrc-example) as a template.
-
-e.g: if a `polkadot` binary already built and exist in your local host, override the `POLKADOT_BIN` variable in `.envrc` to the location of the binary:
-
-```
-POLKADOT_BIN=/home/sally/code/polkadot/target/release/polkadot
-```
 
 Once the `.envrc` has been created, let `direnv` load it automatically:
 
@@ -44,19 +22,21 @@ direnv allow
 
 ## Launch the testnet
 
-Run the following script
+Run the following script:
+
 ```bash
 scripts/start-services.sh
 ```
 
-Wait until the "Testnet has been initialized" message
+Wait until the "Testnet has been initialized" message.
 
 Go to polkadot-js and wait until the parachain has started producing blocks:
 https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A11144#/explorer
 
-You can see the relay chain by connecting to https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/explorer
+You can see the relay chain here:
+https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/explorer
 
-Confirm the block number is > 2
+Confirm the block number is > 2.
 
 ## E2E tests
 
@@ -71,6 +51,7 @@ pnpm test:bootstrap
 ```
 
 Now individual tests can be run, like the following:
+
 ```bash
 pnpm test:integration --grep 'should transfer ETH from Ethereum to Substrate \(basic channel\)'
 ```
