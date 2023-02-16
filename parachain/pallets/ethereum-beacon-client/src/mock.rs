@@ -83,6 +83,7 @@ pub mod mock_minimal {
 		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
 		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
 		pub const MaxSlotsPerHistoricalRoot: u32 = 64u32;
+		pub const MaxFinalizedHeaderSlotArray: u32 = 1000u32;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
@@ -117,6 +118,7 @@ pub mod mock_minimal {
 		type MaxAttestationSize = MaxAttestationSize;
 		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 		type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
+		type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
@@ -195,6 +197,7 @@ pub mod mock_mainnet {
 		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
 		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
 		pub const MaxSlotsPerHistoricalRoot: u32 = 8192u32;
+		pub const MaxFinalizedHeaderSlotArray: u32 = 1000u32;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
@@ -229,6 +232,7 @@ pub mod mock_mainnet {
 		type MaxAttestationSize = MaxAttestationSize;
 		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 		type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
+		type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
