@@ -8,7 +8,6 @@ use snowbridge_beacon_primitives::{
 	Deposit, Eth1Data, ExecutionPayload, ForkData, ProposerSlashing, SigningData, SyncAggregate,
 	SyncCommittee, VoluntaryExit,
 };
-use sp_core::H256;
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
 	prelude::{List, Vector},
@@ -457,42 +456,6 @@ pub fn hash_tree_root_beacon_header(
 	let ssz_beacon_header: SSZBeaconBlockHeader = beacon_header.try_into()?;
 
 	hash_tree_root(ssz_beacon_header)
-}
-
-pub fn hash_tree_root_beacon_block<
-	FeeRecipientSize: Get<u32>,
-	LogsBloomSize: Get<u32>,
-	ExtraDataSize: Get<u32>,
-	DepositDataSize: Get<u32>,
-	PublicKeySize: Get<u32>,
-	SignatureSize: Get<u32>,
-	ProofSize: Get<u32>,
-	ProposerSlashingSize: Get<u32>,
-	AttesterSlashingSize: Get<u32>,
-	VoluntaryExitSize: Get<u32>,
-	AttestationSize: Get<u32>,
-	ValidatorCommitteeSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>,
->(
-	beacon_block: BeaconBlock<
-		FeeRecipientSize,
-		LogsBloomSize,
-		ExtraDataSize,
-		DepositDataSize,
-		PublicKeySize,
-		SignatureSize,
-		ProofSize,
-		ProposerSlashingSize,
-		AttesterSlashingSize,
-		VoluntaryExitSize,
-		AttestationSize,
-		ValidatorCommitteeSize,
-		SyncCommitteeSize,
-	>,
-) -> Result<[u8; 32], MerkleizationError> {
-	let ssz_beacon_block: SSZBeaconBlock = beacon_block.try_into()?;
-
-	hash_tree_root(ssz_beacon_block)
 }
 
 pub fn hash_tree_root_beacon_body<

@@ -923,9 +923,7 @@ mod beacon_minimal_tests {
 			mock_minimal::EthereumBeaconClient::compute_current_sync_period(update.block.slot);
 
 		new_tester::<mock_minimal::Test>().execute_with(|| {
-			//let block_root: H256 = merkleization::hash_tree_root_beacon_block(update.block.clone()).unwrap().into();
 			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
-			//BlockRoots::<mock_minimal::Test>::insert(update.block.slot, block_root);
 			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
 			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: H256::default(),

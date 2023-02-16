@@ -112,6 +112,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxSlotsPerHistoricalRoot: Get<u32>;
 		#[pallet::constant]
+		type MaxFinalizedHeaderSlotArray: Get<u32>;
+		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
 		type WeakSubjectivityPeriodSeconds: Get<u32>;
@@ -175,7 +177,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeaderSlots<T: Config> =
-		StorageValue<_, BoundedVec<u64, T::MaxSlotsPerHistoricalRoot>, ValueQuery>; // TODO different value
+		StorageValue<_, BoundedVec<u64, T::MaxFinalizedHeaderSlotArray>, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
@@ -390,8 +392,7 @@ pub mod pallet {
 			};
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, initial_sync.header);
-			<FinalizedBeaconHeaderSlots<T>>::try_mutate(|b_vec| b_vec.try_push(slot))
-				.map_err(|_| <Error<T>>::FinalizedBeaconHeaderSlotsExceeded)?; // TODO prune
+			Self::add_finalized_header_slot(slot)?;
 			<LatestFinalizedHeaderState<T>>::set(last_finalized_header);
 
 			Ok(())
@@ -684,7 +685,8 @@ pub mod pallet {
 				return Ok(())
 			}
 
-			let finalized_block_root_hash = <FinalizedBeaconHeadersBlockRoot<T>>::get(finalized_header_root);
+			let finalized_block_root_hash =
+				<FinalizedBeaconHeadersBlockRoot<T>>::get(finalized_header_root);
 
 			if finalized_block_root_hash.is_zero() {
 				log::error!(
@@ -731,8 +733,8 @@ pub mod pallet {
 			signature_slot: u64,
 		) -> DispatchResult {
 			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
-			// Gathers all the pubkeys of the sync committee members that participated in signing the
-			// header.
+			// Gathers all the pubkeys of the sync committee members that participated in signing
+			// the header.
 			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
 				if *bit == 1 as u8 {
 					let pubk = pubkey.clone();
@@ -885,8 +887,7 @@ pub mod pallet {
 			let slot = header.slot;
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
-			<FinalizedBeaconHeaderSlots<T>>::try_mutate(|b_vec| b_vec.try_push(slot))
-				.map_err(|_| <Error<T>>::FinalizedBeaconHeaderSlotsExceeded)?; // TODO prune
+			Self::add_finalized_header_slot(slot)?;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -902,6 +903,18 @@ pub mod pallet {
 			});
 
 			Self::deposit_event(Event::BeaconHeaderImported { block_hash: block_root, slot });
+
+			Ok(())
+		}
+
+		fn add_finalized_header_slot(slot: u64) -> DispatchResult {
+			<FinalizedBeaconHeaderSlots<T>>::try_mutate(|b_vec| {
+				if b_vec.len() as u32 == T::MaxFinalizedHeaderSlotArray::get() {
+					b_vec.remove(0);
+				}
+				b_vec.try_push(slot)
+			})
+			.map_err(|_| <Error<T>>::FinalizedBeaconHeaderSlotsExceeded)?;
 
 			Ok(())
 		}
