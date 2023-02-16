@@ -28,7 +28,7 @@
                     jq
                     moreutils
                     typos
-                    # required by zombienet & not available in pure shells on Linux
+                    # ps for zombienet, required in pure shells on Linux
                     ps
 
                     # typescript
@@ -38,7 +38,7 @@
                     # ethereum
                     foundry-bin
                     go-ethereum
-                    # required for forge install
+                    # gnupg for forge install
                     gnupg
 
                     # relayer
@@ -69,7 +69,7 @@
 
                     eval "$(direnv hook bash)"
 
-                    # rocksdb requires a clang.so available in LIBCLANG_PATH on Linux
+                    # LIBCLANG_PATH points rocksdb to a clang.so on Linux
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
                     cowsay "Snowbridge Dev Environment"
