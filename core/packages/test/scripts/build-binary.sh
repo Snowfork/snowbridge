@@ -13,7 +13,7 @@ build_relaychain() {
 
 rebuild_relaychain(){
     pushd $parachain_dir
-    RUSTFLAGS="-C target-cpu=native" cargo install \
+    cargo install \
         --git https://github.com/paritytech/polkadot \
         --tag "$relaychain_version" polkadot \
         --locked \
@@ -34,7 +34,7 @@ build_parachain()
     echo "Building snowbridge parachain"
     cd $parachain_dir
 
-    RUSTFLAGS="-C target-cpu=native" cargo build \
+    cargo build \
         --manifest-path Cargo.toml \
         --no-default-features \
         --features "${parachain_runtime}-native,rococo-native" \
@@ -42,14 +42,14 @@ build_parachain()
     cp "$parachain_dir/target/debug/snowbridge" "$output_bin_dir"
 
     echo "Building query tool"
-    RUSTFLAGS="-C target-cpu=native" cargo build \
+    cargo build \
         --manifest-path tools/query-events/Cargo.toml \
         --features parachain-snowbase \
         --bin snowbridge-query-events
     cp "$parachain_dir/target/debug/snowbridge-query-events" "$output_bin_dir"
 
     echo "Building test parachain"
-    RUSTFLAGS="-C target-cpu=native" cargo build \
+    cargo build \
         --manifest-path utils/test-parachain/Cargo.toml \
         --bin snowbridge-test-node
     cp "$test_collator_bin" "$output_bin_dir"
