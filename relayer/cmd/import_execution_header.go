@@ -107,14 +107,13 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		}
 		log.Info("imported finalized header")
 
-		checkpoint := cache.State{
+		checkpoint := cache.Proof{
 			FinalizedBlockRoot: finalizedUpdate.FinalizedHeaderBlockRoot,
 			BlockRootsTree:     finalizedUpdate.BlockRootsTree,
 			Slot:               uint64(finalizedUpdate.Payload.FinalizedHeader.Slot),
-			Period:             0,
 		}
 
-		update, err := syncer.GetHeaderUpdate(beaconHeaderHash, checkpoint)
+		update, err := syncer.GetHeaderUpdateWithAncestryProof(beaconHeaderHash, checkpoint)
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}

@@ -163,6 +163,7 @@ pub mod pallet {
 		InvalidFinalizedHeaderUpdate,
 		InvalidFinalizedPeriodUpdate,
 		InvalidExecutionHeaderUpdate,
+		FinalizedBeaconHeaderSlotsExceeded
 	}
 
 	#[pallet::hooks]
@@ -171,6 +172,10 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeaders<T: Config> =
 		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
+
+	#[pallet::storage]
+	pub(super) type FinalizedBeaconHeaderSlots<T: Config> =
+		StorageValue<_, BoundedVec<u64, T::MaxSlotsPerHistoricalRoot>, ValueQuery>; // TODO different value
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
@@ -376,13 +381,17 @@ pub mod pallet {
 			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 			Self::store_validators_root(initial_sync.validators_root);
 
+			let slot = initial_sync.header.slot;
+
 			let last_finalized_header = FinalizedHeaderState {
 				beacon_block_root: block_root,
-				beacon_slot: initial_sync.header.slot,
+				beacon_slot: slot,
 				import_time: initial_sync.import_time,
 			};
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, initial_sync.header);
+			<FinalizedBeaconHeaderSlots<T>>::try_mutate(|b_vec| b_vec.try_push(slot))
+				.map_err(|_| <Error<T>>::FinalizedBeaconHeaderSlotsExceeded)?; // TODO prune
 			<LatestFinalizedHeaderState<T>>::set(last_finalized_header);
 
 			Ok(())
@@ -461,7 +470,7 @@ pub mod pallet {
 
 			Self::store_block_root(update.block_roots_hash, block_root);
 			Self::store_sync_committee(next_period, update.next_sync_committee);
-			Self::store_finalized_header(block_root, update.finalized_header);
+			Self::store_finalized_header(block_root, update.finalized_header)?;
 
 			Ok(())
 		}
@@ -542,7 +551,7 @@ pub mod pallet {
 
 			Self::store_block_root(update.block_roots_hash, block_root);
 
-			Self::store_finalized_header(block_root, update.finalized_header);
+			Self::store_finalized_header(block_root, update.finalized_header)?;
 
 			Ok(())
 		}
@@ -654,17 +663,21 @@ pub mod pallet {
 			// finalized header. We need to check that the header hash matches the finalized header
 			// root at the expected slot.
 			if block_root_proof.len() == 0 {
-				let stored_finalized_header = <FinalizedBeaconHeaders<T>>::get(finalized_header_root);
+				let stored_finalized_header = <FinalizedBeaconHeaders<T>>::get(beacon_block_root);
 				if stored_finalized_header.is_none() {
 					log::error!(
 						target: "ethereum-beacon-client",
-						"💫 finalized block root {} slot {} for ancestry proof (for a finalized header) not found.", beacon_block_root, block_slot
+						"💫 Finalized block root {} slot {} for ancestry proof (for a finalized header) not found.", beacon_block_root, block_slot
 					);
 					return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
 				}
 
 				let header = stored_finalized_header.unwrap();
 				if header.slot != block_slot {
+					log::error!(
+						target: "ethereum-beacon-client",
+						"💫 Finalized block root {} slot {} does not match expected slot {}.", beacon_block_root, block_slot, header.slot
+					);
 					return Err(Error::<T>::UnexpectedHeaderSlotPosition.into())
 				}
 
@@ -676,7 +689,7 @@ pub mod pallet {
 			if finalized_block_root_hash.is_zero() {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"💫 finalized block root {} slot {} for ancestry proof not found.", beacon_block_root, block_slot
+					"💫 Finalized block root {} slot {} for ancestry proof not found.", beacon_block_root, block_slot
 				);
 				return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
 			}
@@ -868,12 +881,14 @@ pub mod pallet {
 			Self::deposit_event(Event::SyncCommitteeUpdated { period });
 		}
 
-		fn store_finalized_header(block_root: Root, header: BeaconHeader) {
+		fn store_finalized_header(block_root: Root, header: BeaconHeader) -> DispatchResult {
 			let slot = header.slot;
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
+			<FinalizedBeaconHeaderSlots<T>>::try_mutate(|b_vec| b_vec.try_push(slot))
+				.map_err(|_| <Error<T>>::FinalizedBeaconHeaderSlotsExceeded)?; // TODO prune
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Updated latest finalized block root {} at slot {}.",
 				block_root,
@@ -887,6 +902,8 @@ pub mod pallet {
 			});
 
 			Self::deposit_event(Event::BeaconHeaderImported { block_hash: block_root, slot });
+
+			Ok(())
 		}
 
 		fn store_execution_header(

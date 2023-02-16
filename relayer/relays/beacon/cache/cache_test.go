@@ -57,5 +57,37 @@ func TestCalculateClosestCheckpointSlot_WithMoreThanOneCheckpoint(t *testing.T) 
 
 	slot, err := b.calculateClosestCheckpointSlot(2)
 	require.NoError(t, err)
-	require.Equal(t, uint64(32), slot) // taking the first matching checkpoint is fine
+	require.Equal(t, uint64(16), slot) // taking the first matching checkpoint is fine
+}
+
+func TestAddSlot(t *testing.T) {
+	b := BeaconCache{}
+
+	b.addSlot(5)
+	require.Equal(t, []uint64{5}, b.Finalized.Checkpoints.Slots)
+
+	b.addSlot(10)
+	require.Equal(t, []uint64{5, 10}, b.Finalized.Checkpoints.Slots)
+
+	b.addSlot(10) // test duplicate slot add
+	require.Equal(t, []uint64{5, 10}, b.Finalized.Checkpoints.Slots)
+
+	b.addSlot(6) // test duplicate slot add
+	require.Equal(t, []uint64{5, 6, 10}, b.Finalized.Checkpoints.Slots)
+}
+
+func TestAddPruneOldCheckpoints(t *testing.T) {
+	b := New(8, 8)
+
+	for i := 1; i <= FinalizedCheckpointsLimit+20; i++ {
+		b.AddCheckPoint(common.HexToHash("0xe5509a901249bcb4800b644ebb3c666074848ea02d0e85427fff29fe2ec354ec"), nil, uint64(i))
+	}
+
+	require.Equal(t, FinalizedCheckpointsLimit, len(b.Finalized.Checkpoints.Slots))
+
+	for _, checkpoint := range b.Finalized.Checkpoints.Proofs {
+		// check that each slot is within the expected range
+		require.Greater(t, checkpoint.Slot, uint64(20))
+		require.LessOrEqual(t, checkpoint.Slot, uint64(FinalizedCheckpointsLimit+20))
+	}
 }

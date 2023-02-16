@@ -37,21 +37,30 @@ func New(writer *parachain.ParachainWriter, beaconEndpoint string, slotsInEpoch,
 func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	latestSyncedPeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
 	if err != nil {
-		return fmt.Errorf("fetch last sync committee: %w", err)
+		return fmt.Errorf("fetch parachain last sync committee: %w", err)
 	}
 
 	h.cache.SetLastSyncedSyncCommitteePeriod(latestSyncedPeriod)
 
 	log.WithField("period", latestSyncedPeriod).Info("set cache: last beacon synced sync committee period")
 
+	finalizedSlots, err := h.writer.GetFinalizedSlots()
+	if err != nil {
+		return fmt.Errorf("fetch parachain finalized header slots: %w", err)
+	}
+
+	h.cache.AddCheckPointSlots(finalizedSlots)
+
+	log.WithField("finalizedSlots", h.cache.Finalized.Checkpoints.Slots).Info("set cache: finalized checkpoint slots")
+
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return fmt.Errorf("fetch last finalized header state: %w", err)
+		return fmt.Errorf("fetch parachain last finalized header state: %w", err)
 	}
 
 	currentFinalizedHeader, err := h.syncer.GetLatestFinalizedHeader()
 	if err != nil {
-		return fmt.Errorf("fetch last finalized header state: %w", err)
+		return fmt.Errorf("fetch last finalized header state from beacon node: %w", err)
 	}
 
 	err = h.syncLaggingSyncCommitteePeriods(ctx, latestSyncedPeriod, uint64(currentFinalizedHeader.Payload.FinalizedHeader.Slot))
@@ -295,7 +304,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 		return fmt.Errorf("get closest checkpoint: %w", err)
 	}
 
-	headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot, checkpoint)
+	headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(currentSlot, checkpoint)
 	if err != nil {
 		return err
 	}
@@ -328,20 +337,33 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 			headersToSync = []syncer.HeaderUpdate{}
 		}
 
+		nextSlot := currentSlot + 1
+
 		log.WithFields(log.Fields{
-			"slot": currentSlot,
+			"slot": nextSlot,
 		}).Info("fetching header at slot")
 
-		checkpoint, err = h.getClosestCheckpoint(currentSlot)
-		if err != nil {
-			return fmt.Errorf("get closest checkpoint: %w", err)
-		}
+		var nextHeaderUpdate syncer.HeaderUpdate
+		// If this is the last slot we need to sync, don't fetch the ancestry proof for the next slot
+		// because its finalized header won't be synced yet. We still need to fetch the next block for the
+		// sync aggregate though.
+		if currentSlot == toSlot {
+			nextHeaderUpdate, err = h.syncer.GetNextHeaderUpdateBySlot(nextSlot)
+			if err != nil {
+				return fmt.Errorf("get next header update by slot: %w", err)
+			}
+		} else {
+			checkpoint, err = h.getClosestCheckpoint(nextSlot)
+			if err != nil {
+				return fmt.Errorf("get closest checkpoint: %w", err)
+			}
 
-		// To get the sync witness for the current synced header. This header
-		// will be used as the next update.
-		nextHeaderUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot+1, checkpoint)
-		if err != nil {
-			return err
+			// To get the sync witness for the current synced header. This header
+			// will be used as the next update.
+			nextHeaderUpdate, err = h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(nextSlot, checkpoint)
+			if err != nil {
+				return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
+			}
 		}
 
 		headerUpdate.SyncAggregate = nextHeaderUpdate.Block.Body.SyncAggregate
@@ -352,9 +374,6 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 
 		// last slot to be synced, sync headers
 		if currentSlot >= toSlot {
-			log.WithFields(log.Fields{
-				"epoch": epoch,
-			}).Debug("syncing last set of headers in epoch")
 			for _, header := range headersToSync {
 				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Block.Slot))
 				if err != nil {
@@ -372,14 +391,13 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 // Syncs execution headers from the last synced execution header on the parachain to the current finalized header. Lagging execution headers can occur if the relayer
 // stopped while still processing a set of execution headers.
 func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedHeader common.Hash, lastFinalizedSlot uint64, executionHeaderState state.ExecutionHeader) error {
-	err := syncer.ErrBeaconStateAvailableYet
-	var blockRootsProof syncer.BlockRootProof
-
 	finalizedHeader, err := h.syncer.Client.GetHeader(lastFinalizedHeader)
 	if err != nil {
 		return err
 	}
 
+	err = syncer.ErrBeaconStateAvailableYet
+	var blockRootsProof syncer.BlockRootProof
 	for err == syncer.ErrBeaconStateAvailableYet {
 		blockRootsProof, err = h.syncer.GetBlockRoots(finalizedHeader.StateRoot.Hex(), lastFinalizedSlot)
 		if err != nil && !errors.Is(err, syncer.ErrBeaconStateAvailableYet) {
@@ -471,23 +489,34 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 	return nil
 }
 
-func (h *Header) getClosestCheckpoint(slot uint64) (cache.State, error) {
+func (h *Header) getClosestCheckpoint(slot uint64) (cache.Proof, error) {
 	checkpoint, err := h.cache.GetClosestCheckpoint(slot)
+	log.WithFields(log.Fields{"slot": slot, "checkpoint": checkpoint}).Info("got closest checkpoint for slot")
 	switch {
 	case errors.Is(cache.FinalizedCheckPointNotAvailable, err):
-		err := h.populateFinalizedCheckpoint(h.syncer.CalculateNextCheckpointSlot(slot))
+		calculatedCheckpointSlot := h.syncer.CalculateNextCheckpointSlot(slot)
+
+		log.WithFields(log.Fields{"calculatedCheckpointSlot": calculatedCheckpointSlot}).Info("checkpoint slot not available")
+
+		return cache.Proof{}, err
+	case errors.Is(cache.FinalizedCheckPointNotPopulated, err):
+		err := h.populateFinalizedCheckpoint(checkpoint.Slot)
 		if err != nil {
-			return cache.State{}, fmt.Errorf("populate closest checkpoint: %w", err)
+			return cache.Proof{}, fmt.Errorf("populate closest checkpoint: %w", err)
 		}
+
+		log.Info("populated finalized checkpoint")
 
 		checkpoint, err = h.cache.GetClosestCheckpoint(slot)
 		if err != nil {
-			return cache.State{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
+			return cache.Proof{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
 		}
+
+		log.WithFields(log.Fields{"slot": slot, "checkpoint": checkpoint}).Info("checkpoint after populating finalized header")
 
 		return checkpoint, nil
 	case err != nil:
-		return cache.State{}, fmt.Errorf("get closest checkpoint: %w", err)
+		return cache.Proof{}, fmt.Errorf("get closest checkpoint: %w", err)
 	}
 
 	return checkpoint, nil
