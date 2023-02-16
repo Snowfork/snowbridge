@@ -17,8 +17,7 @@ rebuild_relaychain(){
         --git https://github.com/paritytech/polkadot \
         --tag "$relaychain_version" polkadot \
         --locked \
-        --root .cargo \
-        --debug
+        --root .cargo
     mkdir -p "$(dirname "$relaychain_bin")"
     cp "$parachain_dir"/.cargo/bin/polkadot "$relaychain_bin" || true
     popd
