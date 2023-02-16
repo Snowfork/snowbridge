@@ -489,9 +489,14 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		}, nil
 	}
 
-	log.WithFields(log.Fields{"checkpointSlot": checkpoint.Slot, "blockRoot": blockRoot, "slot": int(blockScale.Slot)}).Info("checkpoint slot used for proof")
-
 	proofScale, err := s.getBlockHeaderAncestryProof(int(blockScale.Slot), blockRoot, checkpoint.BlockRootsTree)
+
+	displayProof := []common.Hash{}
+	for _, proof := range proofScale {
+		displayProof = append(displayProof, common.HexToHash(proof.Hex()))
+	}
+
+	log.WithFields(log.Fields{"checkpointSlot": checkpoint.Slot, "blockRoot": blockRoot, "slot": int(blockScale.Slot), "BlockRootProof": displayProof, "BlockRootProofFinalizedHeader": checkpoint.FinalizedBlockRoot}).Info("checkpoint slot used for proof")
 
 	headerUpdate := HeaderUpdate{
 		Block:                         blockScale,
