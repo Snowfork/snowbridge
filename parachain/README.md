@@ -38,7 +38,7 @@ Several runtimes can be built:
 To build with snowbase and snowblink runtimes (the default):
 
 ```bash
-cargo build --release --features rococo-native
+cargo build --features rococo-native
 ```
 
 ## Configuration
@@ -126,8 +126,8 @@ subxt metadata --url http://127.0.0.1:8081 -f bytes > tools/query-events/metadat
 If you want to update the tool for an already running E2E stack:
 
 ```bash
-cargo build --release --manifest-path tools/query-events/Cargo.toml
-cp target/release/snowbridge-query-events /tmp/snowbridge/bin/
+cargo build --manifest-path tools/query-events/Cargo.toml
+cp target/debug/snowbridge-query-events /tmp/snowbridge/bin/
 ```
 
 ## Generating pallet weights from benchmarks
