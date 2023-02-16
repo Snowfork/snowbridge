@@ -126,7 +126,6 @@ members = [
     "pallets/basic-channel/rpc",
     "pallets/basic-channel/merkle-proof",
     "pallets/dispatch",
-    "pallets/ethereum-light-client",
     "pallets/ethereum-beacon-client",
     "pallets/xcm-support",
     "runtime/snowbridge",
@@ -134,8 +133,3 @@ members = [
     "runtime/snowbase",
     "tools/query-events"
 ]
-# exclude = [
-#     "utils/test-parachain/node",
-#     "utils/test-parachain/pallets/test",
-#     "utils/test-parachain/runtime",
-# ]

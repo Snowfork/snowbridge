@@ -2,7 +2,6 @@
 
 pub mod difficulty;
 pub mod ethashdata;
-pub mod ethashproof;
 pub mod header;
 pub mod log;
 pub mod mpt;

@@ -23,7 +23,6 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polka
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
 
 ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", package = "ethabi-decode", rev="6f63405bb33ef4365a1c62b72d499fa0f448118e", default-features = false }
-ethash = { git = "https://github.com/yrong/ethash.git", rev="faf18e591445cb987b8e0e01da80799a05c014ce", default-features = false }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.19"
@@ -41,7 +40,6 @@ std = [
 	"codec/std",
 	"scale-info/std",
 	"ethabi/std",
-	"ethash/std",
 	"ethbloom/std",
 	"ethereum-types/std",
 	"hex/std",
