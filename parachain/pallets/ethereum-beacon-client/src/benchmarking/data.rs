@@ -8,14 +8,10 @@ use snowbridge_beacon_primitives::{
 };
 use sp_core::U256;
 use sp_std::vec;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
 ) -> InitialSync<SyncCommitteeSize, ProofSize> {
-	let time_now = SystemTime::now()
-		.duration_since(UNIX_EPOCH)
-		.expect("Time went backwards")
-		.as_secs();
+	let time_now = 0;
 
 	if config::IS_MINIMAL {
 		return InitialSync{

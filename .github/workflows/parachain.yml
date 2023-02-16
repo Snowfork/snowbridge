@@ -3,16 +3,16 @@ name: parachain
 on:
   push:
     paths:
-      - 'parachain/**'
-      - '!parachain/README.md'
-      - '!parachain/LICENSE'
+      - "parachain/**"
+      - "!parachain/README.md"
+      - "!parachain/LICENSE"
     branches:
       - main
   pull_request:
     paths:
-      - 'parachain/**'
-      - '!parachain/README.md'
-      - '!parachain/LICENSE'
+      - "parachain/**"
+      - "!parachain/README.md"
+      - "!parachain/LICENSE"
 
 jobs:
   fmt:
@@ -75,7 +75,6 @@ jobs:
           args: >-
             --manifest-path parachain/Cargo.toml
             --workspace
-            --exclude snowbridge
             --features runtime-benchmarks
 
   test:
@@ -115,11 +114,6 @@ jobs:
           args: >-
             --manifest-path parachain/Cargo.toml
             --verbose --workspace
-            --exclude snowbridge
-            --exclude snowbridge-runtime
-            --exclude snowblink-runtime
-            --exclude snowbase-runtime
-            --exclude-files '*/mock.rs,*/tests.rs'
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}

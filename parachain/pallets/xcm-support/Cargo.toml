@@ -13,22 +13,22 @@ targets = [ "x86_64-unknown-linux-gnu" ]
 codec = { version = "3.1.5", package = "parity-scale-codec", features = [ "derive" ], default-features = false }
 scale-info = { version = "2.2.0", default-features = false, features = [ "derive" ] }
 
-frame-support = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.30" }
-frame-system = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.30" }
-sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.30" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.30", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.30", default-features = false }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.30", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.38" }
+frame-system = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.38" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.38" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.38", default-features = false }
 
-xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.30", default-features = false }
-xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.30", default-features = false }
-xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.30", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.38", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.38", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.38", default-features = false }
 
 snowbridge-xcm-support-primitives = { path = "../../primitives/xcm-support", default-features = false }
 
 [dev-dependencies]
 serde = { version = "1.0.137" }
-sp-io = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.30" }
 
 [features]
 default = [ "std" ]
@@ -40,6 +40,7 @@ std = [
 	"sp-core/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"sp-io/std",
 	"pallet-xcm/std",
 	"xcm/std",
 	"xcm-executor/std",
