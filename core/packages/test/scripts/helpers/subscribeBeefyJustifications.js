@@ -11,10 +11,10 @@ const { base58Decode, addressToEvm, secp256k1Expand, secp256k1Compress, decodeAd
 const { hexToU8a, u8aToHex, u8aToU8a } = require("@polkadot/util");
 let { bundle } = require("@snowfork/snowbridge-types");
 
-const RELAY_CHAIN_RPC_ENDPOINT = 'ws://localhost:9944';
-const RELAY_CHAIN_HTTP_RPC_ENDPOINT = 'http://localhost:30444';
+const RELAY_CHAIN_RPC_ENDPOINT = 'ws://127.0.0.1:9944';
+const RELAY_CHAIN_HTTP_RPC_ENDPOINT = 'http://127.0.0.1:30444';
 const PARACHAIN_ID = 1000;
-const PARACHAIN_RPC_ENDPOINT = 'ws://localhost:11144';
+const PARACHAIN_RPC_ENDPOINT = 'ws://127.0.0.1:11144';
 
 async function start() {
   const wsProvider = new WsProvider(RELAY_CHAIN_RPC_ENDPOINT);

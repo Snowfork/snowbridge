@@ -61,13 +61,13 @@ generate_chain_spec() {
 }
 
 wait_start() {
-    scripts/wait-for-it.sh -t 120 localhost:11144
-    scripts/wait-for-it.sh -t 120 localhost:13144
+    scripts/wait-for-it.sh -t 120 127.0.0.1:11144
+    scripts/wait-for-it.sh -t 120 127.0.0.1:13144
 }
 
 zombienet_launch() {
     generate_chain_spec
-    zombienet spawn config/launch-config.toml --provider=native 2>&1 &
+    npx zombienet spawn config/launch-config.toml --provider=native 2>&1 &
     wait_start
 }
 

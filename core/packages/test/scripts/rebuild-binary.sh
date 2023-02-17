@@ -9,4 +9,3 @@ mkdir -p "$output_bin_dir"
 rebuild_relaychain
 build_parachain
 build_relayer
-
