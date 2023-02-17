@@ -696,17 +696,15 @@ pub mod pallet {
 				return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
 			}
 
-			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get();
-			let depth = max_slots_per_historical_root.ilog2() as u64;
-			let index_in_array = block_slot % max_slots_per_historical_root as u64;
-			let leaves_start_index = 2u32.pow(depth as u32) as u64;
-			let leaf_index: u64 = (leaves_start_index + index_in_array) as u64;
+			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get() as u64;
+			let index_in_array = block_slot % max_slots_per_historical_root;
+			let leaf_index: u64 = (max_slots_per_historical_root + index_in_array) as u64;
 
 			ensure!(
 				Self::is_valid_merkle_branch(
 					beacon_block_root,
 					block_root_proof,
-					depth,
+					config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH,
 					leaf_index,
 					finalized_block_root_hash
 				),
