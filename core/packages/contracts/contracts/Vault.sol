@@ -7,8 +7,8 @@ contract Vault {
     mapping(bytes32 => uint256) public balances;
 
     // TODO: restrict access to SovereignTreasury
-    function deposit(bytes32 sovereignID, uint256 amount) public {
-        balances[sovereignID] += amount;
+    function deposit(bytes32 sovereignID) public payable {
+        balances[sovereignID] += msg.value;
     }
 
     // TODO: restrict access to SovereignTreasury

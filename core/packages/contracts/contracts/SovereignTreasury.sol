@@ -31,7 +31,7 @@ contract SovereignTreasury {
 
     // Deposit ETH into a sovereign account. Permissionless.
     function deposit(bytes32 sovereignID) external payable {
-        vault.deposit(sovereignID, msg.value);
+        vault.deposit{ value: msg.value }(sovereignID);
     }
 
     // Reward a relayer
