@@ -32,7 +32,7 @@ contract SovereignTreasury {
         vault.deposit{ value: msg.value }(_sovereignID);
     }
 
-    function transfer(bytes32 sovereignID, address recipient, uint256 amount) private {
+    function transfer(bytes32 sovereignID, address payable recipient, uint256 amount) private {
         vault.withdraw(sovereignID, recipient, amount);
     }
 }
