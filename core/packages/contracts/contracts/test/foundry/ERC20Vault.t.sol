@@ -8,6 +8,9 @@ import "../SovereignAccountMock.sol";
 import "../TestToken.sol";
 
 contract ERC20VaultTest is Test {
+    event Deposit(address account, address sender, address token, uint256 amount);
+    event Withdraw(address account, address recipient, address token, uint256 amount);
+
     ERC20Vault private vault;
     TestToken private token;
     SovereignAccountMock private account;
@@ -33,6 +36,10 @@ contract ERC20VaultTest is Test {
 
     function testDepositSuccessful() public {
         account.approveTokenSpend(address(token), address(vault), 100);
+
+        vm.expectEmit(false, false, false, true);
+        emit Deposit(address(this), address(account), address(token), 50);
+
         vault.deposit(address(account), address(token), 50);
 
         assertEq(token.balanceOf(address(account)), 950);
@@ -44,7 +51,11 @@ contract ERC20VaultTest is Test {
     function testWithdrawSuccessful() public {
         testDepositSuccessful();
 
+        vm.expectEmit(false, false, false, true);
+        emit Withdraw(address(this), address(account), address(token), 25);
+
         vault.withdraw(address(account), address(token), 25);
+
         assertEq(token.balanceOf(address(account)), 975);
         assertEq(token.balanceOf(address(vault)), 25);
         assertEq(vault.balances(address(token)), 25);

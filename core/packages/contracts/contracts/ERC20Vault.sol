@@ -24,9 +24,6 @@ contract ERC20Vault is Ownable {
     /// @param amount The amount being withdrawn.
     event Withdraw(address account, address recipient, address token, uint256 amount);
 
-    /// @dev Token Transfer failed.
-    error TokenTransferFailed();
-
     /// @dev Not enough funds to transfer.
     error InsufficientBalance();
 
@@ -39,10 +36,7 @@ contract ERC20Vault is Ownable {
     /// @param amount The amount being deposited.
     function deposit(address sender, address token, uint256 amount) external onlyOwner {
         balances[token] = balances[token] + amount;
-        // TODO: Transfer ERC20 tokens safely. https://linear.app/snowfork/issue/SNO-366
-        if (!IERC20(token).transferFrom(sender, address(this), amount)) {
-            revert TokenTransferFailed();
-        }
+        IERC20(token).safeTransferFrom(sender, address(this), amount);
         emit Deposit(msg.sender, sender, token, amount);
     }
 
