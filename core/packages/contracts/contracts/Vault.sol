@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // This contract actually holds Ether balances for each sovereignID.
 // TODO: transfer ownership from deployer to SovereignTreasury
 contract Vault is Ownable {
+    using Address for address payable;
+
     event Deposited(bytes32 indexed sovereignID, uint256 amount);
     event Withdrawn(bytes32 indexed sovereignID, address recipient, uint256 amount);
 
@@ -23,17 +26,13 @@ contract Vault is Ownable {
         address payable recipient,
         uint256 amount
     ) external onlyOwner {
-        require(_balances[sovereignID] >= amount, "Insufficient funds for withdrawal");
+        require(_balances[sovereignID] >= amount, "Vault: insufficient balance");
 
         _balances[sovereignID] -= amount;
 
         // NB: Keep this transfer after reducing the balance to avoid reentrancy attacks.
         // https://consensys.github.io/smart-contract-best-practices/attacks/reentrancy/
-        // NOTE: Use call instead of transfer or send so that we don't assume a limit on the gas passed to the fallback
-        // function.
-        // https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now
-        (bool success, ) = recipient.call{ value: amount }("");
-        require(success, "Transfer failed");
+        recipient.sendValue(amount);
 
         emit Withdrawn(sovereignID, recipient, amount);
     }
