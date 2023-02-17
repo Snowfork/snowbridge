@@ -6,11 +6,16 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // This contract actually holds Ether balances for each sovereignID.
 // TODO: transfer ownership from deployer to SovereignTreasury
 contract Vault is Ownable {
+    event Deposited(bytes32 indexed sovereignID, uint256 amount);
+    event Withdrawn(bytes32 indexed sovereignID, address recipient, uint256 amount);
+
     // Mapping of sovereignID to balance
     mapping(bytes32 => uint256) private _balances;
 
     function deposit(bytes32 sovereignID) external payable onlyOwner {
         _balances[sovereignID] += msg.value;
+
+        emit Deposited(sovereignID, msg.value);
     }
 
     function withdraw(
@@ -22,12 +27,14 @@ contract Vault is Ownable {
 
         _balances[sovereignID] -= amount;
 
-        // NB: Keep this transfer as the last statement to avoid reentrancy attacks.
+        // NB: Keep this transfer after reducing the balance to avoid reentrancy attacks.
         // https://consensys.github.io/smart-contract-best-practices/attacks/reentrancy/
         // NOTE: Use call instead of transfer or send so that we don't assume a limit on the gas passed to the fallback
         // function.
         // https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now
         (bool success, ) = recipient.call{ value: amount }("");
         require(success, "Transfer failed");
+
+        emit Withdrawn(sovereignID, recipient, amount);
     }
 }

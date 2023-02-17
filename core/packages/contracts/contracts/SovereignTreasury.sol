@@ -6,8 +6,6 @@ import "./Vault.sol";
 contract SovereignTreasury {
     Vault public vault;
 
-    // TODO: emit events?
-
     constructor(Vault _vault) {
         vault = _vault;
     }
