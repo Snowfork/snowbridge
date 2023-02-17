@@ -10,6 +10,7 @@ import "./OutboundChannel.sol";
 /// @notice A contract for managing ethereum native tokens.
 /// @dev Manages locking, unlocking ERC20 tokens in the vault. Initializes ethereum native tokens on the substrate side via create.
 contract NativeTokens is Ownable {
+    /// TODO: Re-use action and Message structs for all components.
     enum Action {
         Unlock
     }
@@ -32,6 +33,14 @@ contract NativeTokens is Ownable {
     /// @param token The token locked.
     /// @param amount The amount locked.
     event Locked(address sender, bytes32 recipient, address token, uint256 amount);
+
+    /// @notice Funds where unlocked.
+    /// @dev Emitted once the funds are unlocked.
+    /// @param sender The substrate address which initiated the unlock.
+    /// @param recipient The ethereyn address that will receive the funds.
+    /// @param token The token unlocked.
+    /// @param amount The amount unlocked.
+    event Unlocked(bytes32 sender, address recipient, address token, uint256 amount);
 
     /// @dev The vault where ERC20 tokens are locked.
     ERC20Vault public immutable vault;
@@ -67,12 +76,27 @@ contract NativeTokens is Ownable {
         emit Locked(msg.sender, recipient, token, amount);
     }
 
-    function handle(bytes32 origin, bytes calldata message) external onlyOwner {}
-
     function create(
         address token,
         string calldata name,
         string calldata symbol,
         uint8 decimals
     ) public {}
+
+    function handle(bytes32 origin, bytes calldata message) external onlyOwner {
+        /// TODO: require origin is statemint.
+        Message memory decoded = abi.decode(message, (Message));
+        if(decoded.action == Action.Unlock) {
+          unlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
+        } else {
+            revert("NativeTokesn: unknown action");
+        }
+    }
+
+    function unlock(bytes32 origin, UnlockPayload memory payload) private {
+      if(payload.amount > 0) {
+        vault.withdraw(payload.recipient, payload.token, payload.amount);
+      }
+      emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
+    }
 }
