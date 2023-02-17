@@ -68,6 +68,8 @@
                     export HOME=~
 
                     eval "$(direnv hook bash)"
+                    
+                    cd core && (pnpm install &>/tmp/$$ || cat /tmp/$$) && cd -
 
                     # LIBCLANG_PATH points rocksdb to a clang.so on Linux
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"

@@ -7,7 +7,7 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "postinstall": "cd .. && husky install && cd core/packages/test && ./scripts/hack-ethereum.sh",
+    "postinstall": "cd .. && husky install && cd core/packages/test && ./scripts/hack-ethereum.sh && cd ../contracts && forge install",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",

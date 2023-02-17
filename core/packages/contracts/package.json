@@ -71,7 +71,6 @@
     "seedrandom": "^3.0.5",
     "solc": "^0.7.6",
     "solhint": "^3.3.7",
-    "solidity-bytes-utils": "^0.1.2",
     "solidity-coverage": "^0.8.2",
     "solidity-docgen": "^0.5.10",
     "temp": "^0.9.1",
