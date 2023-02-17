@@ -4,35 +4,69 @@ use crate::Pallet as EthereumBeaconClient;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
 
-mod data;
+#[cfg(feature = "minimal")]
+mod data_minimal;
+#[cfg(feature = "minimal")]
+use data_minimal::*;
+
+#[cfg(not(feature = "minimal"))]
+mod data_mainnet;
+#[cfg(not(feature = "minimal"))]
+use data_mainnet::*;
 
 benchmarks! {
 	sync_committee_period_update {
+
 		let caller: T::AccountId = whitelisted_caller();
 
-		let initial_sync_data = data::initial_sync();
-		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone()).unwrap();
+		let initial_sync_data = initial_sync();
 
-		let update = data::sync_committee_update();
+		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
 
-	}: sync_committee_period_update(RawOrigin::Signed(caller.clone()), update.clone())
+		let sync_committee_update = sync_committee_update();
+
+		//initialize SyncCommittees with period in sync_committee_update
+		LatestSyncCommitteePeriod::<T>::set(EthereumBeaconClient::<T>::compute_current_sync_period(
+				sync_committee_update.attested_header.slot,
+			));
+		SyncCommittees::<T>::insert(
+			EthereumBeaconClient::<T>::compute_current_sync_period(
+				sync_committee_update.attested_header.slot,
+			),
+			initial_sync_data.current_sync_committee,
+		);
+
+	}: sync_committee_period_update(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
 	verify {
-		assert!(<SyncCommittees<T>>::get(update.sync_committee_period+1).pubkeys.len() > 0);
+		assert!(<SyncCommittees<T>>::get(sync_committee_update.sync_committee_period+1).pubkeys.len() > 0);
 	}
 
 	import_finalized_header {
 		let caller: T::AccountId = whitelisted_caller();
 
-		EthereumBeaconClient::<T>::initial_sync(data::initial_sync()).unwrap();
+		let initial_sync_data = initial_sync();
 
-		let sync_update: SyncCommitteePeriodUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize> = data::sync_committee_update();
-		SyncCommittees::<T>::set(sync_update.sync_committee_period+1, sync_update.next_sync_committee);
+		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
 
-		let finalized_header = data::finalized_header_update();
+		let finalized_header_update = finalized_header_update();
 
-	}: _(RawOrigin::Signed(caller.clone()), finalized_header.clone())
+		SyncCommittees::<T>::insert(
+			EthereumBeaconClient::<T>::compute_current_sync_period(
+				finalized_header_update.attested_header.slot,
+			),
+			initial_sync_data.current_sync_committee,
+		);
+
+		//initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
+		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState {
+			beacon_block_root: Default::default(),
+			import_time: initial_sync_data.import_time + 51200,
+			beacon_slot: finalized_header_update.finalized_header.slot - 1,
+		});
+
+	}: _(RawOrigin::Signed(caller.clone()), finalized_header_update.clone())
 	verify {
-		let header_hash_bytes = merkleization::hash_tree_root_beacon_header(finalized_header.finalized_header).unwrap();
+		let header_hash_bytes = merkleization::hash_tree_root_beacon_header(finalized_header_update.finalized_header).unwrap();
 
 		let header_hash: H256 = header_hash_bytes.into();
 
@@ -42,12 +76,15 @@ benchmarks! {
 	import_execution_header {
 		let caller: T::AccountId = whitelisted_caller();
 
-		EthereumBeaconClient::<T>::initial_sync(data::initial_sync()).unwrap();
+		let initial_sync_data = initial_sync();
 
-		let sync_update: SyncCommitteePeriodUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize> = data::sync_committee_update();
-		SyncCommittees::<T>::set(sync_update.sync_committee_period+1, sync_update.next_sync_committee);
+		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
 
-		let block_update = data::block_update();
+		let block_update = block_update();
+
+		SyncCommittees::<T>::insert(EthereumBeaconClient::<T>::compute_current_sync_period(
+				block_update.block.slot,
+			), initial_sync_data.current_sync_committee);
 
 		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState{
 			beacon_block_root: H256::default(),
@@ -62,6 +99,14 @@ benchmarks! {
 	}
 }
 
+#[cfg(feature = "minimal")]
+impl_benchmark_test_suite!(
+	EthereumBeaconClient,
+	crate::mock::new_tester::<crate::mock::mock_minimal::Test>(),
+	crate::mock::mock_minimal::Test,
+);
+
+#[cfg(not(feature = "minimal"))]
 impl_benchmark_test_suite!(
 	EthereumBeaconClient,
 	crate::mock::new_tester::<crate::mock::mock_mainnet::Test>(),
