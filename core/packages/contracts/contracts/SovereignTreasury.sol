@@ -20,7 +20,7 @@ contract SovereignTreasury {
             // TODO: how do we know that the recipient address is payable?
             WithdrawPayload memory payload = abi.decode(message.payload, (WithdrawPayload));
 
-            transfer(sovereignID, payload.recipient, payload.amount);
+            vault.withdraw(sovereignID, payload.recipient, payload.amount);
         }
 
         // TODO: refund relayer
@@ -32,18 +32,6 @@ contract SovereignTreasury {
     // Deposit ETH into a sovereign account. Permissionless.
     function deposit(bytes32 sovereignID) external payable {
         vault.deposit{ value: msg.value }(sovereignID);
-    }
-
-    // Reward a relayer
-    function transfer(bytes32 sovereignID, address payable recipient, uint256 amount) private {
-        require(msg.value >= amount, "Insufficient funds for transfer");
-
-        vault.withdraw(sovereignID, amount);
-
-        // NB: Keep this transfer as the last statement to avoid reentrancy attacks.
-        // https://consensys.github.io/smart-contract-best-practices/attacks/reentrancy/
-        (bool success, ) = recipient.call{ value: amount }("");
-        require(success, "Transfer failed");
     }
 }
 

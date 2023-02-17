@@ -12,9 +12,14 @@ contract Vault {
     }
 
     // TODO: restrict access to SovereignTreasury
-    function withdraw(bytes32 sovereignID, uint256 amount) external {
+    function withdraw(bytes32 sovereignID, address payable recipient, uint256 amount) external {
         require(balances[sovereignID] >= amount, "Insufficient funds for withdrawal");
 
         balances[sovereignID] -= amount;
+
+        // NB: Keep this transfer as the last statement to avoid reentrancy attacks.
+        // https://consensys.github.io/smart-contract-best-practices/attacks/reentrancy/
+        (bool success, ) = recipient.call{ value: amount }("");
+        require(success, "Transfer failed");
     }
 }
