@@ -16,7 +16,7 @@ on:
 
 jobs:
   fmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
@@ -35,14 +35,14 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: nightly-2023-02-06
           target: wasm32-unknown-unknown
           components: rustfmt
       - name: cargo fmt
         run: cd parachain && cargo +nightly fmt -- --check --config-path rustfmt.toml && cd -
 
   check:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
@@ -65,13 +65,13 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.62.1
+          toolchain: 1.69.0
           target: wasm32-unknown-unknown
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
-          toolchain: 1.62.1
+          toolchain: 1.69.0
           args: >-
             --manifest-path parachain/Cargo.toml
             --workspace
@@ -79,7 +79,7 @@ jobs:
 
   test:
     needs: check
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
@@ -100,7 +100,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.62.1
+          toolchain: 1.69.0
           target: wasm32-unknown-unknown
       - uses: actions-rs/install@v0.1.2
         with:
@@ -117,4 +117,4 @@ jobs:
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
-          toolchain: 1.62.1
+          toolchain: 1.69.0
