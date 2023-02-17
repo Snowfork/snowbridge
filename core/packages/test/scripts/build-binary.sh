@@ -66,19 +66,9 @@ build_relayer()
     cp $relay_bin "$output_bin_dir"
 }
 
-build_e2e_test() {
-    echo "Building tests"
-    pushd "$core_dir"
-    pnpm install
-    popd
-    pushd "$contract_dir"
-    popd
-}
-
 install_binary() {
     echo "Building and installing binaries."
     build_relaychain
     build_parachain
     build_relayer
-    build_e2e_test
 }

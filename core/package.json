@@ -2,12 +2,11 @@
   "name": "@snowbridge/core",
   "private": true,
   "engines": {
-    "node": "v18.13.0",
+    "node": "v18.12.1",
     "pnpm": "7.14.2"
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "postinstall": "cd .. && husky install && cd core/packages/test && ./scripts/hack-ethereum.sh",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
