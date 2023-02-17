@@ -2,31 +2,13 @@
 
 Packages:
 
-- Solidity Contracts
-- API client
-- Integration tests
+- [Solidity Contracts](packages/contracts/README.md)
+- [API Client](packages/api/README.md)
+- [Integration tests](packages/test/README.md)
+
+See the [main README's Development section](../README.md#Development) for setup instructions.
 
 ## Getting Started
-
-Install [nvm](https://github.com/nvm-sh/) and activate nodejs:
-
-```bash
-nvm use
-```
-
-Install [pnpm](https://pnpm.io/):
-
-```bash
-corepack enable
-corepack prepare pnpm@7.14.2 --activate
-```
-
-Install [foundry](https://book.getfoundry.sh/getting-started/installation):
-
-```bash
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-```
 
 Install all dependencies:
 

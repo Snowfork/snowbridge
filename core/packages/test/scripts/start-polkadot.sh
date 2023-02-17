@@ -15,7 +15,7 @@ start_chains()
 
 if [ -z "${from_start_services:-}" ]; then
     echo "start polkadot only!"
-    trap kill_polkadot SIGINT SIGTERM EXIT
+    trap kill_all SIGINT SIGTERM EXIT
     check_tool && build_relaychain && build_parachain && start_chains
     wait
 fi

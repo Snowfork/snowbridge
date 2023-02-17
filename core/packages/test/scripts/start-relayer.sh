@@ -131,8 +131,8 @@ start_relayer()
 
 if [ -z "${from_start_services:-}" ]; then
     echo "start relayers only!"
-    trap kill_relayer SIGINT SIGTERM EXIT
-    check_tool && build_relayer && kill_relayer && rm -rf *relay.log && start_relayer
+    trap kill_all SIGINT SIGTERM EXIT
+    check_tool && build_relayer && rm -rf *relay.log && start_relayer
     wait
 fi
 

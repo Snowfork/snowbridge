@@ -193,21 +193,21 @@ When this is complete `Testnet has been initialized` will be printed to the term
 
     The relay chain can be accessed via the polkadot.js web using the following url:
 
-    [https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A9944#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A9944#/explorer)
+    [https://polkadot.js.org/apps/?rpc=ws%3A%2F%127.0.0.1%3A9944#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A9944#/explorer)
 3.  Parachain
 
     The Snowbridge parachain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `11144.log`, `11155.log`
 
     The Snowbridge parachain can be accessed via the polkadot.js web using the following url:
 
-    [https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144#/explorer)
+    [https://polkadot.js.org/apps/?rpc=ws%3A%2F%127.0.0.1%3A11144#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144#/explorer)
 4.  Test Parachain
 
     The third-party test parachain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `13144.log`, `13155.log`
 
     The Snowbridge Test parachain can be accessed via the polkadot.js web using the following url:
 
-    [https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A13144#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A13144#/explorer)
+    [https://polkadot.js.org/apps/?rpc=ws%3A%2F%127.0.0.1%3A13144#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A13144#/explorer)
 5. Relayers
 
 The relayers log files can be found in the `core/packages/test` subdirectory of the `snowbridge` repo.

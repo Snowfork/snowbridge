@@ -38,18 +38,15 @@ start_lodestar() {
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
 
-        if [[ "$OSTYPE" =~ ^darwin ]]
-        then
-            timestamp=$(gdate -d'+10second' +%s)
-        else
-            timestamp=$(date -d'+10second' +%s)
-        fi
+        timestamp=$(date -d'+10second' +%s)
 
         npx lodestar dev \
             --genesisValidators 8 \
             --genesisTime $timestamp \
             --startValidators "0..7" \
-            --enr.ip "127.0.0.1" \
+            --enr.ip6 "127.0.0.1" \
+            --eth1.providerUrls "http://127.0.0.1:8545" \
+            --execution.urls "http://127.0.0.1:8551" \
             --dataDir "$output_dir/beacon-$timestamp" \
             --reset \
             --terminal-total-difficulty-override 0 \
