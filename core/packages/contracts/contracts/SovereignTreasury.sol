@@ -13,14 +13,14 @@ contract SovereignTreasury {
     }
 
     // Handle a message from the bridge.
-    function handle(bytes32 sovereignID, bytes calldata _message) external {
+    function handle(bytes32 _sovereignID, bytes calldata _message) external {
         Message memory message = abi.decode(_message, (Message));
 
         if (message.action == Action.Withdraw) {
             // TODO: how do we know that the recipient address is payable?
             WithdrawPayload memory payload = abi.decode(message.payload, (WithdrawPayload));
 
-            vault.withdraw(sovereignID, payload.recipient, payload.amount);
+            vault.withdraw(_sovereignID, payload.recipient, payload.amount);
         }
 
         // TODO: refund relayer
@@ -30,8 +30,8 @@ contract SovereignTreasury {
     }
 
     // Deposit ETH into a sovereign account. Permissionless.
-    function deposit(bytes32 sovereignID) external payable {
-        vault.deposit{ value: msg.value }(sovereignID);
+    function deposit(bytes32 _sovereignID) external payable {
+        vault.deposit{ value: msg.value }(_sovereignID);
     }
 }
 
