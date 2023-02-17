@@ -66,13 +66,13 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.69.0
+          toolchain: nightly-2023-02-06
           target: wasm32-unknown-unknown
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
-          toolchain: 1.69.0
+          toolchain: nightly-2023-02-06
           args: >-
             --manifest-path parachain/Cargo.toml
             --workspace
@@ -101,7 +101,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.69.0
+          toolchain: nightly-2023-02-06
           target: wasm32-unknown-unknown
       - name: test beacon client with minimal feature
         uses: actions-rs/cargo@v1
@@ -113,7 +113,7 @@ jobs:
             --package snowbridge-ethereum-beacon-client
             --features runtime-benchmarks
             --features minimal
-          toolchain: 1.69.0
+          toolchain: nightly-2023-02-06
       - uses: actions-rs/install@v0.1.2
         with:
           crate: cargo-tarpaulin
@@ -129,4 +129,4 @@ jobs:
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
-          toolchain: 1.69.0
+          toolchain: nightly-2023-02-06
