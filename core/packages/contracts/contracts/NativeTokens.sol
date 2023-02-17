@@ -86,17 +86,17 @@ contract NativeTokens is Ownable {
     function handle(bytes32 origin, bytes calldata message) external onlyOwner {
         /// TODO: require origin is statemint.
         Message memory decoded = abi.decode(message, (Message));
-        if(decoded.action == Action.Unlock) {
-          unlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
+        if (decoded.action == Action.Unlock) {
+            unlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
         } else {
             revert("NativeTokesn: unknown action");
         }
     }
 
     function unlock(bytes32 origin, UnlockPayload memory payload) private {
-      if(payload.amount > 0) {
-        vault.withdraw(payload.recipient, payload.token, payload.amount);
-      }
-      emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
+        if (payload.amount > 0) {
+            vault.withdraw(payload.recipient, payload.token, payload.amount);
+        }
+        emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
     }
 }
