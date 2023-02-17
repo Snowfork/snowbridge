@@ -72,7 +72,6 @@ build_e2e_test() {
     pnpm install
     popd
     pushd "$contract_dir"
-    forge install
     popd
 }
 
