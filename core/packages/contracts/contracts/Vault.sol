@@ -19,6 +19,9 @@ contract Vault {
 
         // NB: Keep this transfer as the last statement to avoid reentrancy attacks.
         // https://consensys.github.io/smart-contract-best-practices/attacks/reentrancy/
+        // NOTE: Use call instead of transfer or send so that we don't assume a limit on the gas passed to the fallback
+        // function.
+        // https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now
         (bool success, ) = recipient.call{ value: amount }("");
         require(success, "Transfer failed");
     }
