@@ -20,7 +20,7 @@ contract SovereignTreasury {
             // TODO: how do we know that the recipient address is payable?
             WithdrawPayload memory payload = abi.decode(message.payload, (WithdrawPayload));
 
-            vault.withdraw(_sovereignID, payload.recipient, payload.amount);
+            transfer(_sovereignID, payload.recipient, payload.amount);
         }
 
         // TODO: refund relayer
@@ -32,6 +32,10 @@ contract SovereignTreasury {
     // Deposit ETH into a sovereign account. Permissionless.
     function deposit(bytes32 _sovereignID) external payable {
         vault.deposit{ value: msg.value }(_sovereignID);
+    }
+
+    function transfer(bytes32 sovereignID, address recipient, uint256 amount) private {
+        vault.withdraw(sovereignID, recipient, amount);
     }
 }
 
