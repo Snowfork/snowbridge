@@ -23,11 +23,15 @@ const (
 )
 
 type BeaconClientTracker interface {
-	GetHeader(block_root common.Hash) (BeaconHeader, error)
+	GetHeader(blockRoot common.Hash) (BeaconHeader, error)
 	GetHeaderBySlot(slot uint64) (BeaconHeader, error)
 	GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error)
 	GetBeaconBlock(slot uint64) (BeaconBlockResponse, error)
+	GetInitialSync(blockRoot string) (BootstrapResponse, error)
+	GetFinalizedCheckpoint() (FinalizedCheckpoint, error)
+	GetGenesis() (Genesis, error)
 	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
+	GetBootstrap(blockRoot common.Hash) (Bootstrap, error)
 }
 
 var (
@@ -47,43 +51,164 @@ func NewBeaconClient(endpoint string) *BeaconClient {
 	}
 }
 
-type HeaderResponse struct {
-	Slot          string `json:"slot"`
-	ProposerIndex string `json:"proposer_index"`
-	ParentRoot    string `json:"parent_root"`
-	StateRoot     string `json:"state_root"`
-	BodyRoot      string `json:"body_root"`
-}
-
-type SyncCommitteeResponse struct {
-	Pubkeys         []string `json:"pubkeys"`
-	AggregatePubkey string   `json:"aggregate_pubkey"`
-}
-
-type BranchResponse []string
-
-type BeaconHeaderResponse struct {
-	Data struct {
-		Root      string `json:"root"`
-		Canonical bool   `json:"canonical"`
-		Header    struct {
-			Message   HeaderResponse `json:"message"`
-			Signature string         `json:"signature"`
-		} `json:"header"`
-	} `json:"data"`
-}
-
-type SyncAggregateResponse struct {
-	SyncCommitteeBits      string `json:"sync_committee_bits"`
-	SyncCommitteeSignature string `json:"sync_committee_signature"`
-}
-
 type BeaconHeader struct {
 	Slot          uint64
 	ProposerIndex uint64
 	ParentRoot    common.Hash
 	StateRoot     common.Hash
 	BodyRoot      common.Hash
+}
+
+type Bootstrap struct {
+	Header                     BeaconHeader
+	CurrentSyncCommittee       SyncCommitteeResponse
+	CurrentSyncCommitteeBranch []common.Hash
+}
+
+type Genesis struct {
+	ValidatorsRoot common.Hash
+	Time           uint64
+}
+
+type BeaconBlock struct {
+	Slot          uint64
+	ProposerIndex uint64
+	ParentRoot    common.Hash
+	StateRoot     common.Hash
+	BodyRoot      common.Hash
+}
+
+type FinalizedCheckpoint struct {
+	FinalizedBlockRoot common.Hash
+}
+
+func (h *HeaderResponse) ToBeaconHeader() (BeaconHeader, error) {
+	slot, err := toUint64(h.Slot)
+	if err != nil {
+		return BeaconHeader{}, err
+	}
+
+	proposerIndex, err := toUint64(h.ProposerIndex)
+	if err != nil {
+		return BeaconHeader{}, err
+	}
+
+	return BeaconHeader{
+		Slot:          slot,
+		ProposerIndex: proposerIndex,
+		ParentRoot:    common.HexToHash(h.ParentRoot),
+		StateRoot:     common.HexToHash(h.StateRoot),
+		BodyRoot:      common.HexToHash(h.BodyRoot),
+	}, nil
+}
+
+func (b *BeaconClient) GetBootstrap(blockRoot common.Hash) (Bootstrap, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/bootstrap/%s", b.endpoint, blockRoot), nil)
+	if err != nil {
+		return Bootstrap{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
+	}
+
+	req.Header.Set("accept", "application/json")
+	res, err := b.httpClient.Do(req)
+	if err != nil {
+		return Bootstrap{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return Bootstrap{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
+	}
+
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return Bootstrap{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
+	}
+
+	var response BootstrapResponse
+	err = json.Unmarshal(bodyBytes, &response)
+	if err != nil {
+		return Bootstrap{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
+	}
+
+	beaconHeader, err := response.Data.Header.ToBeaconHeader()
+	if err != nil {
+		return Bootstrap{}, fmt.Errorf("convert header to beacon header: %w", err)
+	}
+
+	return Bootstrap{
+		Header:                     beaconHeader,
+		CurrentSyncCommittee:       response.Data.CurrentSyncCommittee,
+		CurrentSyncCommitteeBranch: response.Data.CurrentSyncCommitteeBranch,
+	}, nil
+}
+
+func (b *BeaconClient) GetGenesis() (Genesis, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/genesiss", b.endpoint), nil)
+	if err != nil {
+		return Genesis{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
+	}
+
+	req.Header.Set("accept", "application/json")
+	res, err := b.httpClient.Do(req)
+	if err != nil {
+		return Genesis{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return Genesis{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
+	}
+
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return Genesis{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
+	}
+
+	var response GenesisResponse
+	err = json.Unmarshal(bodyBytes, &response)
+	if err != nil {
+		return Genesis{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
+	}
+
+	time, err := toUint64(response.Data.Time)
+	if err != nil {
+		return Genesis{}, fmt.Errorf("convert genesis time string to uint64: %w", err)
+	}
+
+	return Genesis{
+		ValidatorsRoot: common.HexToHash(response.Data.GenesisValidatorsRoot),
+		Time:           time,
+	}, nil
+}
+
+func (b *BeaconClient) GetFinalizedCheckpoint() (FinalizedCheckpoint, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/head/finality_checkpoint", b.endpoint), nil)
+	if err != nil {
+		return FinalizedCheckpoint{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
+	}
+
+	req.Header.Set("accept", "application/json")
+	res, err := b.httpClient.Do(req)
+	if err != nil {
+		return FinalizedCheckpoint{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return FinalizedCheckpoint{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
+	}
+
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return FinalizedCheckpoint{}, fmt.Errorf("%s: %d", ReadResponseBodyErrorMessage, res.StatusCode)
+	}
+
+	var response FinalizedCheckpointResponse
+	err = json.Unmarshal(bodyBytes, &response)
+	if err != nil {
+		return FinalizedCheckpoint{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
+	}
+
+	return FinalizedCheckpoint{
+		FinalizedBlockRoot: common.HexToHash(response.Data.Finalized.Root),
+	}, nil
 }
 
 func (b *BeaconClient) GetHeaderBySlot(slot uint64) (BeaconHeader, error) {
@@ -182,119 +307,6 @@ func (b *BeaconClient) GetHeader(blockRoot common.Hash) (BeaconHeader, error) {
 		StateRoot:     common.HexToHash(response.Data.Header.Message.StateRoot),
 		BodyRoot:      common.HexToHash(response.Data.Header.Message.BodyRoot),
 	}, nil
-}
-
-type SignedHeaderResponse struct {
-	Message   HeaderResponse `json:"message"`
-	Signature []byte         `json:"signature"`
-}
-
-type CheckpointResponse struct {
-	Epoch string `json:"epoch"`
-	Root  string `json:"root"`
-}
-
-type DepositDataResponse struct {
-	Pubkey                string `json:"pubkey"`
-	WithdrawalCredentials string `json:"withdrawal_credentials"`
-	Amount                string `json:"amount"`
-	Signature             string `json:"signature"`
-}
-
-type DepositResponse struct {
-	Proof []string            `json:"proof"`
-	Data  DepositDataResponse `json:"data"`
-}
-
-type AttestationDataResponse struct {
-	Slot            string             `json:"slot"`
-	Index           string             `json:"index"`
-	BeaconBlockRoot string             `json:"beacon_block_root"`
-	Source          CheckpointResponse `json:"source"`
-	Target          CheckpointResponse `json:"target"`
-}
-
-type IndexedAttestationResponse struct {
-	AttestingIndices []string                `json:"attesting_indices"`
-	Data             AttestationDataResponse `json:"data"`
-	Signature        string                  `json:"signature"`
-}
-
-type AttesterSlashingResponse struct {
-	Attestation1 IndexedAttestationResponse `json:"attestation_1"`
-	Attestation2 IndexedAttestationResponse `json:"attestation_2"`
-}
-
-type ProposerSlashingResponse struct {
-	SignedHeader1 SignedHeaderResponse `json:"signed_header_1"`
-	SignedHeader2 SignedHeaderResponse `json:"signed_header_2"`
-}
-
-type AttestationResponse struct {
-	AggregationBits string                  `json:"aggregation_bits"`
-	Data            AttestationDataResponse `json:"data"`
-	Signature       string                  `json:"signature"`
-}
-
-type VoluntaryExitResponse struct {
-	Epoch          string `json:"epoch"`
-	ValidatorIndex string `json:"validator_index"`
-}
-
-type ErrorMessage struct {
-	StatusCode int    `json:"statusCode"`
-	Error      string `json:"error"`
-	Message    string `json:"message"`
-}
-
-type BeaconBlockResponse struct {
-	Data struct {
-		Message struct {
-			Slot          string `json:"slot"`
-			ProposerIndex string `json:"proposer_index"`
-			ParentRoot    string `json:"parent_root"`
-			StateRoot     string `json:"state_root"`
-			Body          struct {
-				RandaoReveal string `json:"randao_reveal"`
-				Eth1Data     struct {
-					DepositRoot  string `json:"deposit_root"`
-					DepositCount string `json:"deposit_count"`
-					BlockHash    string `json:"block_hash"`
-				} `json:"eth1_data"`
-				Graffiti          string                     `json:"graffiti"`
-				ProposerSlashings []ProposerSlashingResponse `json:"proposer_slashings"`
-				AttesterSlashings []AttesterSlashingResponse `json:"attester_slashings"`
-				Attestations      []AttestationResponse      `json:"attestations"`
-				Deposits          []DepositResponse          `json:"deposits"`
-				VoluntaryExits    []VoluntaryExitResponse    `json:"voluntary_exits"`
-				SyncAggregate     SyncAggregateResponse      `json:"sync_aggregate"`
-				ExecutionPayload  struct {
-					ParentHash    string   `json:"parent_hash"`
-					FeeRecipient  string   `json:"fee_recipient"`
-					StateRoot     string   `json:"state_root"`
-					ReceiptsRoot  string   `json:"receipts_root"`
-					LogsBloom     string   `json:"logs_bloom"`
-					PrevRandao    string   `json:"prev_randao"`
-					BlockNumber   string   `json:"block_number"`
-					GasLimit      string   `json:"gas_limit"`
-					GasUsed       string   `json:"gas_used"`
-					Timestamp     string   `json:"timestamp"`
-					ExtraData     string   `json:"extra_data"`
-					BaseFeePerGas string   `json:"base_fee_per_gas"`
-					BlockHash     string   `json:"block_hash"`
-					Transactions  []string `json:"transactions"`
-				} `json:"execution_payload"`
-			} `json:"body"`
-		} `json:"message"`
-	} `json:"data"`
-}
-
-type BeaconBlock struct {
-	Slot          uint64
-	ProposerIndex uint64
-	ParentRoot    common.Hash
-	StateRoot     common.Hash
-	BodyRoot      common.Hash
 }
 
 func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error) {

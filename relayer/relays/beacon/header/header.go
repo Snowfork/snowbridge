@@ -391,15 +391,10 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 // Syncs execution headers from the last synced execution header on the parachain to the current finalized header. Lagging execution headers can occur if the relayer
 // stopped while still processing a set of execution headers.
 func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedHeader common.Hash, lastFinalizedSlot uint64, executionHeaderState state.ExecutionHeader) error {
-	finalizedHeader, err := h.syncer.Client.GetHeader(lastFinalizedHeader)
-	if err != nil {
-		return err
-	}
-
-	err = syncer.ErrBeaconStateAvailableYet
+	err := syncer.ErrBeaconStateAvailableYet
 	var blockRootsProof syncer.BlockRootProof
 	for err == syncer.ErrBeaconStateAvailableYet {
-		blockRootsProof, err = h.syncer.GetBlockRoots(finalizedHeader.StateRoot.Hex(), lastFinalizedSlot)
+		blockRootsProof, err = h.syncer.GetBlockRoots(lastFinalizedSlot)
 		if err != nil && !errors.Is(err, syncer.ErrBeaconStateAvailableYet) {
 			return fmt.Errorf("fetch block roots: %w", err)
 		}
@@ -477,7 +472,7 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 		return fmt.Errorf("header hash root: %w", err)
 	}
 
-	blockRootsProof, err := h.syncer.GetBlockRoots(finalizedHeader.StateRoot.Hex(), slot)
+	blockRootsProof, err := h.syncer.GetBlockRoots(slot)
 	if err != nil && !errors.Is(err, syncer.ErrBeaconStateAvailableYet) {
 		return fmt.Errorf("fetch block roots: %w", err)
 	}
