@@ -79,7 +79,6 @@ jobs:
             --features runtime-benchmarks
 
   test:
-    needs: check
     runs-on: ubuntu-22.04
     env:
       CARGO_INCREMENTAL: 0
@@ -98,6 +97,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - uses: arduino/setup-protoc@v1
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
