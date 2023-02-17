@@ -32,6 +32,7 @@ contract Vault is Ownable {
 
         // NB: Keep this transfer after reducing the balance to avoid reentrancy attacks.
         // https://consensys.github.io/smart-contract-best-practices/attacks/reentrancy/
+        // https://docs.soliditylang.org/en/v0.8.18/security-considerations.html#re-entrancy
         recipient.sendValue(amount);
 
         emit Withdrawn(sovereignID, recipient, amount);
