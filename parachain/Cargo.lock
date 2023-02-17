@@ -10617,7 +10617,6 @@ dependencies = [
  "snowbridge-ethereum-beacon-client",
  "snowbridge-runtime-common",
  "snowbridge-runtime-primitives",
- "snowbridge-xcm-support",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
@@ -10684,7 +10683,6 @@ dependencies = [
  "snowbridge-ethereum-beacon-client",
  "snowbridge-runtime-common",
  "snowbridge-runtime-primitives",
- "snowbridge-xcm-support",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
@@ -10999,7 +10997,6 @@ dependencies = [
  "snowbridge-ethereum-beacon-client",
  "snowbridge-runtime-common",
  "snowbridge-runtime-primitives",
- "snowbridge-xcm-support",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
@@ -11054,36 +11051,6 @@ dependencies = [
  "rustc-hex",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "snowbridge-xcm-support"
-version = "0.1.1"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-xcm",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "snowbridge-xcm-support-primitives",
- "sp-core 7.0.0",
- "sp-io 7.0.0",
- "sp-runtime 7.0.0",
- "sp-std 5.0.0",
- "xcm",
- "xcm-builder",
- "xcm-executor",
-]
-
-[[package]]
-name = "snowbridge-xcm-support-primitives"
-version = "0.1.1"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core 7.0.0",
 ]
 
 [[package]]

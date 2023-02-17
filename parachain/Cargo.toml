@@ -102,8 +102,8 @@ snowbase-runtime-benchmarks = [ "snowbase-runtime/runtime-benchmarks" ]
 polkadot-runtime-benchmarks = [ "polkadot-service/runtime-benchmarks" ]
 
 runtime-benchmarks = [
-	"frame-benchmarking/runtime-benchmarks",
-	"frame-benchmarking-cli/runtime-benchmarks",
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-benchmarking-cli/runtime-benchmarks",
     "polkadot-cli/runtime-benchmarks",
 ]
 
@@ -120,14 +120,12 @@ members = [
     "primitives/core",
     "primitives/ethereum",
     "primitives/testutils",
-    "primitives/xcm-support",
     "primitives/runtime",
     "pallets/basic-channel",
     "pallets/basic-channel/rpc",
     "pallets/basic-channel/merkle-proof",
     "pallets/dispatch",
     "pallets/ethereum-beacon-client",
-    "pallets/xcm-support",
     "runtime/snowbridge",
     "runtime/snowblink",
     "runtime/snowbase",

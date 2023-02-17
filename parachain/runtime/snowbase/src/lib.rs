@@ -569,10 +569,6 @@ impl pallet_assets::Config for Runtime {
 
 // Our pallets
 
-impl snowbridge_xcm_support::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
-
 impl dispatch::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeEvent = RuntimeEvent;
@@ -651,11 +647,6 @@ impl ethereum_beacon_client::Config for Runtime {
 	type ForkVersions = ChainForkVersions;
 	type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 	type WeightInfo = weights::ethereum_beacon_client::SnowbridgeWeight<Self>;
-}
-
-parameter_types! {
-	// TODO: Remove the assets pallet, then we can remove this
-	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
 }
 
 parameter_types! {
@@ -739,13 +730,9 @@ construct_runtime!(
 		// Bridge Infrastructure
 		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
 		BasicOutboundChannel: basic_channel_outbound::{Pallet, Config<T>, Storage, Event<T>} = 13,
-		// 14 and 15 were used for the incentivized inbound and outbound channels respectively
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 16,
 		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config<T>, Storage, Event<T>} = 18,
 		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
-		// 20 was used for the asset registry pallet
-		XcmSupport: snowbridge_xcm_support::{Pallet, Storage, Config, Event<T>} = 21,
-
 		// XCM
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 22,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 23,
