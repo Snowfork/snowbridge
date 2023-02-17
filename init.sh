@@ -10,4 +10,4 @@ echo "Install foundry libraries"
 cd core/packages/contracts && forge install && cd -
 
 echo "Install husky hook"
-husky install
+./core/node_modules/.bin/husky install
