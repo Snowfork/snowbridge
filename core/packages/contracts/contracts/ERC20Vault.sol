@@ -30,7 +30,7 @@ contract ERC20Vault is Ownable {
     /// @dev Not enough funds to transfer.
     error InsufficientBalance();
 
-    /* State */
+    /// @dev stores the total balance of each token locked in the vault.
     mapping(address => uint256) public balances;
 
     /// @dev Accepts a ERC20 Token from the caller.

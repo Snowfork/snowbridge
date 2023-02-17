@@ -13,53 +13,52 @@ contract ERC20VaultTest is Test {
     SovereignAccountMock private account;
 
     function setUp() public {
-      vault = new ERC20Vault();
-      token = new TestToken("Test", "T");
-      account = new SovereignAccountMock();
+        vault = new ERC20Vault();
+        token = new TestToken("Test", "T");
+        account = new SovereignAccountMock();
 
-      token.mint(address(account), 1000);
+        token.mint(address(account), 1000);
     }
 
     function testInsufficientBalance() public {
-      vm.expectRevert(ERC20Vault.InsufficientBalance.selector);
-      vault.withdraw(address(account), address(token), 100);
+        vm.expectRevert(ERC20Vault.InsufficientBalance.selector);
+        vault.withdraw(address(account), address(token), 100);
     }
 
     function testTokenTransferFailedInsufficientAllowance() public {
-      account.approveTokenSpend(address(token), address(vault), 50);
-      vm.expectRevert("ERC20: insufficient allowance");
-      vault.deposit(address(account), address(token), 100);
+        account.approveTokenSpend(address(token), address(vault), 50);
+        vm.expectRevert("ERC20: insufficient allowance");
+        vault.deposit(address(account), address(token), 100);
     }
 
     function testDepositSuccessful() public {
-      account.approveTokenSpend(address(token), address(vault), 100);
-      vault.deposit(address(account), address(token), 50);
+        account.approveTokenSpend(address(token), address(vault), 100);
+        vault.deposit(address(account), address(token), 50);
 
-      assertEq(token.balanceOf(address(account)), 950);
-      assertEq(token.balanceOf(address(vault)), 50);
-      assertEq(token.allowance(address(account), address(vault)), 50);
-      assertEq(vault.balances(address(token)), 50);
+        assertEq(token.balanceOf(address(account)), 950);
+        assertEq(token.balanceOf(address(vault)), 50);
+        assertEq(token.allowance(address(account), address(vault)), 50);
+        assertEq(vault.balances(address(token)), 50);
     }
 
     function testWithdrawSuccessful() public {
-      testDepositSuccessful();
+        testDepositSuccessful();
 
-      vault.withdraw(address(account), address(token), 25);
-      assertEq(token.balanceOf(address(account)), 975);
-      assertEq(token.balanceOf(address(vault)), 25);
-      assertEq(vault.balances(address(token)), 25);
+        vault.withdraw(address(account), address(token), 25);
+        assertEq(token.balanceOf(address(account)), 975);
+        assertEq(token.balanceOf(address(vault)), 25);
+        assertEq(vault.balances(address(token)), 25);
     }
 
     function testNonOwnerCannotWithdraw() public {
-      vault.transferOwnership(address(account));
-      vm.expectRevert("Ownable: caller is not the owner");
-      vault.withdraw(address(account), address(token), 25);
+        vault.transferOwnership(address(account));
+        vm.expectRevert("Ownable: caller is not the owner");
+        vault.withdraw(address(account), address(token), 25);
     }
 
     function testNonOwnerCannotDeposit() public {
-      vault.transferOwnership(address(account));
-      vm.expectRevert("Ownable: caller is not the owner");
-      vault.withdraw(address(account), address(token), 25);
+        vault.transferOwnership(address(account));
+        vm.expectRevert("Ownable: caller is not the owner");
+        vault.withdraw(address(account), address(token), 25);
     }
 }
-
