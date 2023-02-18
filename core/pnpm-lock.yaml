@@ -172,9 +172,6 @@ importers:
   packages/contracts/lib/forge-std:
     specifiers: {}
 
-  packages/contracts/lib/forge-std/lib/ds-test:
-    specifiers: {}
-
   packages/test:
     specifiers:
       '@chainsafe/lodestar': 1.4.2
