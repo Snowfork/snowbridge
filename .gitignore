@@ -13,7 +13,7 @@ node_modules/
 # asdf plugin versions
 .tool-versions
 
-relaychain/
+/relaychain/
 .vscode
 
 .rustup

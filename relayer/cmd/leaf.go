@@ -19,13 +19,12 @@ func leafCmd() *cobra.Command {
 		RunE:  LeafFn,
 	}
 
-	cmd.Flags().StringP("url", "u", "", "Polkadot URL")
-	cmd.MarkFlagRequired("url")
+	cmd.Flags().StringP("url", "u", "ws://127.0.0.1:9944", "Polkadot URL")
 
-	cmd.Flags().Uint64(
-		"leaf-index",
-		1,
-		"Leaf index",
+	cmd.Flags().Uint32(
+		"block-number",
+		40,
+		"Block Number",
 	)
 
 	cmd.Flags().BytesHex(
@@ -40,11 +39,13 @@ func leafCmd() *cobra.Command {
 func LeafFn(cmd *cobra.Command, _ []string) error {
 
 	url, _ := cmd.Flags().GetString("url")
-	leafIndex, _ := cmd.Flags().GetUint64("leaf-index")
+	blockNumber, _ := cmd.Flags().GetUint32("block-number")
 	blockHashHex, _ := cmd.Flags().GetBytesHex("block-hash")
 
 	var blockHash types.Hash
-	copy(blockHash[:], blockHashHex[0:32])
+	if len(blockHashHex) >= 32 {
+		copy(blockHash[:], blockHashHex[0:32])
+	}
 
 	ctx := cmd.Context()
 
@@ -54,8 +55,11 @@ func LeafFn(cmd *cobra.Command, _ []string) error {
 		log.Error(err)
 		return err
 	}
+	if len(blockHashHex) == 0 {
+		blockHash, _ = conn.API().RPC.Chain.GetBlockHash(uint64(blockNumber))
+	}
 
-	proof, err := conn.API().RPC.MMR.GenerateProof(leafIndex, blockHash)
+	proof, err := conn.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
 	if err != nil {
 		return err
 	}
@@ -67,6 +71,9 @@ func LeafFn(cmd *cobra.Command, _ []string) error {
 		uint64(proof.Proof.LeafCount),
 		proof.Proof.Items,
 	)
+	if err != nil {
+		return err
+	}
 
 	leafEncoded, err := types.EncodeToBytes(simpleProof.Leaf)
 	if err != nil {
