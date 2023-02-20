@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "./utils/MessageProtocol.sol";
 import "./ERC20Vault.sol";
 import "./OutboundChannel.sol";
 
@@ -10,21 +11,6 @@ import "./OutboundChannel.sol";
 /// @notice A contract for managing ethereum native tokens.
 /// @dev Manages locking, unlocking ERC20 tokens in the vault. Initializes ethereum native tokens on the substrate side via create.
 contract NativeTokens is Ownable {
-    /// TODO: Re-use action and Message structs for all components.
-
-    /// @notice Describes the type of message.
-    enum Action {
-        Unlock
-    }
-
-    /// @notice Message format.
-    struct Message {
-        /// @notice The action type.
-        Action action;
-        /// @notice The message payload.
-        bytes payload;
-    }
-
     /// @notice Unlock payload format.
     struct UnlockPayload {
         /// @notice The ERC20 token to unlock.
@@ -120,8 +106,8 @@ contract NativeTokens is Ownable {
     /// @param message The message enqueued from substrate.
     function handle(bytes32 origin, bytes calldata message) external onlyOwner {
         /// TODO: require origin is statemint.
-        Message memory decoded = abi.decode(message, (Message));
-        if (decoded.action == Action.Unlock) {
+        MessageProtocol.Message memory decoded = abi.decode(message, (MessageProtocol.Message));
+        if (decoded.action == MessageProtocol.Action.Unlock) {
             unlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
         } else {
             revert("NativeTokens: unknown action");
