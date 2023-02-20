@@ -20,11 +20,6 @@ contract SovereignTreasury {
 
             transfer(_sovereignID, payload.recipient, payload.amount);
         }
-
-        // TODO: refund relayer
-        // TODO: reward relayer
-        /* uint256 rewardAmount = 1; */
-        /* transfer(sovereignID, msg.sender, rewardAmount); */
     }
 
     // Deposit ETH into a sovereign account. Permissionless.
