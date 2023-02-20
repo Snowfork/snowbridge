@@ -42,6 +42,10 @@ contract NativeTokens is Ownable {
     /// @param amount The amount unlocked.
     event Unlocked(bytes32 sender, address recipient, address token, uint256 amount);
 
+    /// @notice a token was created in Statemint.
+    /// @dev Emitted after enqueueing a a create token message to substrate.
+    event Created(address token);
+
     /// @dev The vault where ERC20 tokens are locked.
     ERC20Vault public immutable vault;
 
@@ -66,22 +70,40 @@ contract NativeTokens is Ownable {
     /// @param amount The amount to lock.
     function lock(address token, bytes32 recipient, uint256 amount) public {
         require(amount > 0, "NativeTokes: non zero amount");
+        require(token != address(0), "NativeTokes: non zero address");
+        require(recipient != 0, "NativeTokes: non zero recipient");
+
         vault.deposit(msg.sender, token, amount);
 
         /// TODO: Encode a call
         bytes memory call;
         /// TODO: Get weight
         uint64 weight = 1_000_000;
+
         outboundChannel.submit(msg.sender, call, weight);
         emit Locked(msg.sender, recipient, token, amount);
     }
 
+    /// @notice Creates a native token.
+    /// @dev Enqueues a create native token message to substrate.
+    /// @param token The ERC20 token address.
+    /// @param name The name of the ERC20 token.
+    /// @param symbol The symbol of the ERC20 token.
+    /// @param decimals The decimals for the ERC20 token.
     function create(
         address token,
         string calldata name,
         string calldata symbol,
         uint8 decimals
-    ) public {}
+    ) public {
+        /// TODO: Encode a call
+        bytes memory call;
+        /// TODO: Get weight
+        uint64 weight = 1_000_000;
+
+        outboundChannel.submit(msg.sender, call, weight);
+        emit Created(token);
+    }
 
     function handle(bytes32 origin, bytes calldata message) external onlyOwner {
         /// TODO: require origin is statemint.
