@@ -23,6 +23,18 @@ rebuild_relaychain(){
     popd
 }
 
+build_relaychain_from_source(){
+    if [ ! -d "$relaychain_dir" ] ; then
+        echo "clone polkadot project to $relaychain_dir"
+        git clone https://github.com/paritytech/polkadot.git $relaychain_dir
+    fi
+    pushd $relaychain_dir
+    git fetch origin && git checkout release-$relaychain_version
+    cargo build --release
+    cp "$relaychain_dir/target/release/polkadot" "$output_bin_dir"
+    popd
+}
+
 build_parachain()
 {
     if [ "$eth_network" != "localhost" ]; then
@@ -68,7 +80,8 @@ build_relayer()
 
 install_binary() {
     echo "Building and installing binaries."
-    build_relaychain
+    # todo: interim change will revert later when polkadot-0.9.38 released 
+    build_relaychain_from_source
     build_parachain
     build_relayer
 }
