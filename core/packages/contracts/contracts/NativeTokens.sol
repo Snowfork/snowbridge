@@ -28,19 +28,19 @@ contract NativeTokens is Ownable {
 
     /// @notice Funds where locked.
     /// @dev Emitted once the funds are locked and a message is successfully queued.
-    /// @param sender The address which initiated the lock.
+    /// @param origin The address which initiated the lock.
     /// @param recipient The substrate address that will receive the funds.
     /// @param token The token locked.
     /// @param amount The amount locked.
-    event Locked(address sender, bytes32 recipient, address token, uint256 amount);
+    event Locked(address origin, bytes32 recipient, address token, uint256 amount);
 
     /// @notice Funds where unlocked.
     /// @dev Emitted once the funds are unlocked.
-    /// @param sender The substrate address which initiated the unlock.
+    /// @param origin The substrate address which initiated the unlock.
     /// @param recipient The ethereyn address that will receive the funds.
     /// @param token The token unlocked.
     /// @param amount The amount unlocked.
-    event Unlocked(bytes32 sender, address recipient, address token, uint256 amount);
+    event Unlocked(bytes32 origin, address recipient, address token, uint256 amount);
 
     /// @notice a token was created in Statemint.
     /// @dev Emitted after enqueueing a a create token message to substrate.
@@ -73,6 +73,7 @@ contract NativeTokens is Ownable {
         require(token != address(0), "NativeTokes: non zero address");
         require(recipient != 0, "NativeTokes: non zero recipient");
 
+        /// TODO: Implement a max locked amount.
         vault.deposit(msg.sender, token, amount);
 
         /// TODO: Encode a call
