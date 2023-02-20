@@ -112,7 +112,7 @@ contract NativeTokens is Ownable {
         if (decoded.action == Action.Unlock) {
             unlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
         } else {
-            revert("NativeTokesn: unknown action");
+            revert("NativeTokens: unknown action");
         }
     }
 
