@@ -11,18 +11,27 @@ import "./OutboundChannel.sol";
 /// @dev Manages locking, unlocking ERC20 tokens in the vault. Initializes ethereum native tokens on the substrate side via create.
 contract NativeTokens is Ownable {
     /// TODO: Re-use action and Message structs for all components.
+
+    /// @notice Describes the type of message.
     enum Action {
         Unlock
     }
 
+    /// @notice Message format.
     struct Message {
+        /// @notice The action type.
         Action action;
+        /// @notice The message payload.
         bytes payload;
     }
 
+    /// @notice Unlock payload format.
     struct UnlockPayload {
+        /// @notice The ERC20 token to unlock.
         address token;
+        /// @notice The destination address that will receive unlocked funds.
         address recipient;
+        /// @notice The amount to unlock.
         uint256 amount;
     }
 
@@ -36,8 +45,7 @@ contract NativeTokens is Ownable {
 
     /// @notice Funds where unlocked.
     /// @dev Emitted once the funds are unlocked.
-    /// @param origin The substrate address which initiated the unlock.
-    /// @param recipient The ethereyn address that will receive the funds.
+    /// @param origin The substrate address which initiated the unlock. / @param recipient The ethereyn address that will receive the funds.
     /// @param token The token unlocked.
     /// @param amount The amount unlocked.
     event Unlocked(bytes32 origin, address recipient, address token, uint256 amount);
@@ -106,6 +114,10 @@ contract NativeTokens is Ownable {
         emit Created(token);
     }
 
+    /// @notice Handles messages coming in over the bridge.
+    /// @dev Processes messages from inbound channel.
+    /// @param origin The hashed substrate sovereign account.
+    /// @param message The message enqueued from substrate.
     function handle(bytes32 origin, bytes calldata message) external onlyOwner {
         /// TODO: require origin is statemint.
         Message memory decoded = abi.decode(message, (Message));
@@ -116,6 +128,9 @@ contract NativeTokens is Ownable {
         }
     }
 
+    /// @notice Unlocks funds from the vault and sends it to recipient.
+    /// @param origin The hashed substrate sovereign account.
+    /// @param payload A decoded unlock payload.
     function unlock(bytes32 origin, UnlockPayload memory payload) private {
         if (payload.amount > 0) {
             vault.withdraw(payload.recipient, payload.token, payload.amount);
