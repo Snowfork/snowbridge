@@ -83,20 +83,20 @@ type VoluntaryExit struct {
 }
 
 type ExecutionPayload struct {
-	ParentHash    types.H256
-	FeeRecipient  []byte
-	StateRoot     types.H256
-	ReceiptsRoot  types.H256
-	LogsBloom     []byte
-	PrevRandao    types.H256
-	BlockNumber   types.U64
-	GasLimit      types.U64
-	GasUsed       types.U64
-	Timestamp     types.U64
-	ExtraData     []byte
-	BaseFeePerGas types.U256
-	BlockHash     types.H256
-	Transactions  types.H256
+	ParentHash       types.H256
+	FeeRecipient     []byte
+	StateRoot        types.H256
+	ReceiptsRoot     types.H256
+	LogsBloom        []byte
+	PrevRandao       types.H256
+	BlockNumber      types.U64
+	GasLimit         types.U64
+	GasUsed          types.U64
+	Timestamp        types.U64
+	ExtraData        []byte
+	BaseFeePerGas    types.U256
+	BlockHash        types.H256
+	TransactionsRoot types.H256
 }
 
 type Body struct {

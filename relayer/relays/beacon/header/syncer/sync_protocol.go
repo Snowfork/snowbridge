@@ -84,3 +84,7 @@ func hexStringToByteArray(hexString string) ([]byte, error) {
 
 	return bytes, nil
 }
+
+func bytesToHexString(bytes []byte) string {
+	return "0x" + hex.EncodeToString(bytes)
+}

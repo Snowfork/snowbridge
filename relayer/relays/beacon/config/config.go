@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"github.com/snowfork/snowbridge/relayer/config"
 )
 
@@ -42,6 +43,14 @@ func (c Config) GetSpecSettings() SpecSettings {
 	return c.Source.Beacon.Spec.Mainnet
 }
 
+func (c Config) GetSpecSettingsBySpec(spec ActiveSpec) SpecSettings {
+	if spec.IsMinimal() {
+		return c.Source.Beacon.Spec.Minimal
+	}
+
+	return c.Source.Beacon.Spec.Mainnet
+}
+
 type ActiveSpec string
 
 const (
@@ -65,5 +74,20 @@ func (a ActiveSpec) IsMainnet() bool {
 }
 
 func (a ActiveSpec) IsMinimal() bool {
-	return a == Mainnet
+	return a == Minimal
+}
+
+func ToSpec(spec string) (ActiveSpec, error) {
+	switch spec {
+	case string(Mainnet):
+		return Mainnet, nil
+	case string(Minimal):
+		return Minimal, nil
+	default:
+		return Minimal, errors.New("spec is not a valid value")
+	}
+}
+
+func (a ActiveSpec) ToString() string {
+	return string(a)
 }

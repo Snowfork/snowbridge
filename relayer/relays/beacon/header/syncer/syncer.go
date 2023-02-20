@@ -150,7 +150,7 @@ func (s *Syncer) GetInitialSync() (InitialSync, error) {
 
 	bootstrap, err := s.Client.GetBootstrap(checkpoint.FinalizedBlockRoot)
 	if err != nil {
-		return InitialSync{}, fmt.Errorf("get finalized checkpoint: %w", err)
+		return InitialSync{}, fmt.Errorf("get bootstrap: %w", err)
 	}
 
 	genesis, err := s.Client.GetGenesis()
@@ -184,6 +184,8 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 	if err != nil {
 		return SyncCommitteePeriodUpdate{}, fmt.Errorf("convert finalized header to scale: %w", err)
 	}
+
+	log.WithFields(log.Fields{"finalizedHeader": common.HexToHash(finalizedHeader.StateRoot.Hex())}).Info("getting block root proof")
 
 	nextSyncCommittee, err := committeeUpdate.NextSyncCommittee.ToScale()
 	if err != nil {
@@ -221,6 +223,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 			SignatureSlot:           types.U64(signatureSlot),
 			BlockRootsHash:          blockRootsProof.Leaf,
 			BlockRootProof:          blockRootsProof.Proof,
+			SyncCommitteePeriod:     types.U64(from),
 		},
 		FinalizedHeaderBlockRoot: finalizedHeaderBlockRoot,
 		BlockRootsTree:           blockRootsProof.Tree,
@@ -276,7 +279,9 @@ func (s *Syncer) GetBlockRoots(slot uint64) (BlockRootProof, error) {
 		return BlockRootProof{}, fmt.Errorf("get state tree: %w", err)
 	}
 
-	_ = stateTree.Hash() // necessary to populate the proof tree values
+	stateCheck := stateTree.Hash() // necessary to populate the proof tree values
+
+	log.WithFields(log.Fields{"spec": s.activeSpec, "stateHash": common.BytesToHash(stateCheck)}).Info("getting block root proof")
 
 	proof, err := stateTree.Prove(BlockRootGeneralizedIndex)
 	if err != nil {

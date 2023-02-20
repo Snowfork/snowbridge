@@ -9,7 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
@@ -148,8 +147,6 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 	}
 
 	h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
-
-	update.Payload.SyncCommitteePeriod = types.NewU64(period)
 
 	log.WithFields(log.Fields{
 		"finalized_header_slot": update.Payload.FinalizedHeader.Slot,
@@ -447,7 +444,6 @@ func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSync
 
 	for _, period := range periodsToSync {
 		err := h.SyncCommitteePeriodUpdate(ctx, period)
-		//log.WithField("period", period).Info("sync period")
 		if err != nil {
 			return err
 		}

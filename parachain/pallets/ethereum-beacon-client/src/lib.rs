@@ -458,6 +458,12 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
+			log::info!(target: "ethereum-beacon-client", "💫 update.block_roots_hash: {:?}.", update.block_roots_hash);
+			log::info!(target: "ethereum-beacon-client", "💫 update.block_roots_proof: {:?}.", update.block_roots_proof);
+			log::info!(target: "ethereum-beacon-client", "💫 BLOCK_ROOTS_INDEX: {:?}.", config::BLOCK_ROOTS_INDEX);
+			log::info!(target: "ethereum-beacon-client", "💫 BLOCK_ROOTS_DEPTH: {:?}.", config::BLOCK_ROOTS_DEPTH);
+			log::info!(target: "ethereum-beacon-client", "💫 update.finalized_header.state_root: {:?}.", update.finalized_header.state_root);
+
 			ensure!(
 				Self::is_valid_merkle_branch(
 					update.block_roots_hash,
@@ -699,6 +705,11 @@ pub mod pallet {
 			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get() as u64;
 			let index_in_array = block_slot % max_slots_per_historical_root;
 			let leaf_index: u64 = (max_slots_per_historical_root + index_in_array) as u64;
+
+			log::info!(
+					target: "ethereum-beacon-client",
+					"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH, leaf_index
+				);
 
 			ensure!(
 				Self::is_valid_merkle_branch(

@@ -2,6 +2,22 @@ package syncer
 
 import "github.com/ethereum/go-ethereum/common"
 
+type SyncCommitteePeriodUpdateResponse struct {
+	Data struct {
+		AttestedHeader struct {
+			Beacon HeaderResponse `json:"beacon"`
+		} `json:"attested_header"`
+		NextSyncCommittee       SyncCommitteeResponse `json:"next_sync_committee"`
+		NextSyncCommitteeBranch []common.Hash         `json:"next_sync_committee_branch"`
+		FinalizedHeader         struct {
+			Beacon HeaderResponse `json:"beacon"`
+		} `json:"finalized_header"`
+		FinalityBranch []common.Hash         `json:"finality_branch"`
+		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
+		SignatureSlot  string                `json:"signature_slot"`
+	} `json:"data"`
+}
+
 type BeaconBlockResponse struct {
 	Data struct {
 		Message struct {
@@ -46,7 +62,9 @@ type BeaconBlockResponse struct {
 
 type BootstrapResponse struct {
 	Data struct {
-		Header                     HeaderResponse        `json:"header"`
+		Header struct {
+			Beacon HeaderResponse `json:"beacon"`
+		} `json:"header"`
 		CurrentSyncCommittee       SyncCommitteeResponse `json:"current_sync_committee"`
 		CurrentSyncCommitteeBranch []common.Hash         `json:"current_sync_committee_branch"`
 	} `json:"data"`

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
@@ -52,11 +51,11 @@ func NewBeaconClient(endpoint string) *BeaconClient {
 }
 
 type BeaconHeader struct {
-	Slot          uint64
-	ProposerIndex uint64
-	ParentRoot    common.Hash
-	StateRoot     common.Hash
-	BodyRoot      common.Hash
+	Slot          uint64      `json:"slot"`
+	ProposerIndex uint64      `json:"proposer_index"`
+	ParentRoot    common.Hash `json:"parent_root"`
+	StateRoot     common.Hash `json:"state_root"`
+	BodyRoot      common.Hash `json:"body_root"`
 }
 
 type Bootstrap struct {
@@ -129,7 +128,7 @@ func (b *BeaconClient) GetBootstrap(blockRoot common.Hash) (Bootstrap, error) {
 		return Bootstrap{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
-	beaconHeader, err := response.Data.Header.ToBeaconHeader()
+	beaconHeader, err := response.Data.Header.Beacon.ToBeaconHeader()
 	if err != nil {
 		return Bootstrap{}, fmt.Errorf("convert header to beacon header: %w", err)
 	}
@@ -142,7 +141,7 @@ func (b *BeaconClient) GetBootstrap(blockRoot common.Hash) (Bootstrap, error) {
 }
 
 func (b *BeaconClient) GetGenesis() (Genesis, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/genesiss", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/genesis", b.endpoint), nil)
 	if err != nil {
 		return Genesis{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
@@ -180,7 +179,7 @@ func (b *BeaconClient) GetGenesis() (Genesis, error) {
 }
 
 func (b *BeaconClient) GetFinalizedCheckpoint() (FinalizedCheckpoint, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/head/finality_checkpoint", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/head/finality_checkpoints", b.endpoint), nil)
 	if err != nil {
 		return FinalizedCheckpoint{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
@@ -239,8 +238,6 @@ func (b *BeaconClient) GetHeaderBySlot(slot uint64) (BeaconHeader, error) {
 		return BeaconHeader{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
-	log.WithField("body", string(bodyBytes)).Info("GetHeaderBySlot")
-
 	slotFromResponse, err := strconv.ParseUint(response.Data.Header.Message.Slot, 10, 64)
 	if err != nil {
 		return BeaconHeader{}, fmt.Errorf("parse slot as int: %w", err)
@@ -288,8 +285,6 @@ func (b *BeaconClient) GetHeader(blockRoot common.Hash) (BeaconHeader, error) {
 		return BeaconHeader{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
-	log.WithField("body", string(bodyBytes)).Info("GetHeader")
-
 	slotScale, err := strconv.ParseUint(response.Data.Header.Message.Slot, 10, 64)
 	if err != nil {
 		return BeaconHeader{}, fmt.Errorf("parse slot as int: %w", err)
@@ -330,8 +325,6 @@ func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse,
 		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
-	log.WithField("body", string(bodyBytes)).Info("GetBeaconBlock")
-
 	var response BeaconBlockResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
@@ -366,8 +359,6 @@ func (b *BeaconClient) GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, e
 	if err != nil {
 		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
-
-	log.WithField("body", string(bodyBytes)).Info("GetBeaconBlockBySlot")
 
 	var response BeaconBlockResponse
 
@@ -404,8 +395,6 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 		return common.Hash{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
-	log.WithField("body", string(bodyBytes)).Info("GetBeaconBlockRoot")
-
 	var response struct {
 		Data struct {
 			Root string `json:"root"`
@@ -418,22 +407,6 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	}
 
 	return common.HexToHash(response.Data.Root), nil
-}
-
-type SyncCommitteePeriodUpdateResponse struct {
-	Data struct {
-		AttestedHeader struct {
-			Beacon HeaderResponse `json:"beacon"`
-		} `json:"attested_header"`
-		NextSyncCommittee       SyncCommitteeResponse `json:"next_sync_committee"`
-		NextSyncCommitteeBranch []common.Hash         `json:"next_sync_committee_branch"`
-		FinalizedHeader         struct {
-			Beacon HeaderResponse `json:"beacon"`
-		} `json:"finalized_header"`
-		FinalityBranch []common.Hash         `json:"finality_branch"`
-		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
-		SignatureSlot  string                `json:"signature_slot"`
-	} `json:"data"`
 }
 
 func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error) {
@@ -472,8 +445,6 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteeP
 	if err != nil {
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
-
-	log.WithField("body", string(bodyBytes)).Info("GetSyncCommitteePeriodUpdate")
 
 	var response []SyncCommitteePeriodUpdateResponse
 
@@ -531,8 +502,6 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 	if err != nil {
 		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
-
-	log.WithField("body", string(bodyBytes)).Info("GetLatestFinalizedUpdate")
 
 	var response LatestFinalisedUpdateResponse
 
