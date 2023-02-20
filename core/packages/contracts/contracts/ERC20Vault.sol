@@ -30,7 +30,7 @@ contract ERC20Vault is Ownable {
     /// @dev stores the total balance of each token locked in the vault.
     mapping(address => uint256) public balances;
 
-    /// @dev Accepts a ERC20 Token from the caller.
+    /// @dev Accepts an amount of a token from the caller.
     /// @param sender The address of the sender.
     /// @param token The address of the Token.
     /// @param amount The amount being deposited.
@@ -40,7 +40,7 @@ contract ERC20Vault is Ownable {
         emit Deposit(msg.sender, sender, token, amount);
     }
 
-    /// @dev Returns ETH to the caller.
+    /// @dev Returns an amount of a token to the caller.
     /// @param recipient The address that will receive funds.
     /// @param token The address of the Token.
     /// @param amount The amount being deposited.
