@@ -15,6 +15,10 @@ contract Vault is Ownable {
     // Mapping of sovereignID to balance
     mapping(bytes32 => uint256) private _balances;
 
+    receive() external payable {
+        revert("Must use deposit function");
+    }
+
     function deposit(bytes32 sovereignID) external payable onlyOwner {
         _balances[sovereignID] += msg.value;
 
@@ -26,6 +30,7 @@ contract Vault is Ownable {
         address payable recipient,
         uint256 amount
     ) external onlyOwner {
+        require(amount > 0, "Vault: must withdraw a positive amount");
         require(_balances[sovereignID] >= amount, "Vault: insufficient balance");
 
         _balances[sovereignID] -= amount;
