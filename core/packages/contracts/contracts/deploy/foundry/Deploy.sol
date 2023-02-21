@@ -6,6 +6,7 @@ import "../../BeefyClient.sol";
 import "../../ParachainClient.sol";
 import "../../BasicInboundChannel.sol";
 import "../../BasicOutboundChannel.sol";
+import "../../NativeTokens.sol";
 import "forge-std/console.sol";
 
 contract DeployScript is Script {
@@ -25,6 +26,15 @@ contract DeployScript is Script {
         BasicOutboundChannel outboundChannel = new BasicOutboundChannel();
         outboundChannel.initialize(deployer, new address[](0));
         console.log("address of outboundChannel is: %s", address(outboundChannel));
+
+        ERC20Vault erc20vault = new ERC20Vault();
+        console.log("address of ERC20Vault is: %s", address(erc20vault));
+
+        NativeTokens nativeTokens = new NativeTokens(erc20vault, outboundChannel);
+        nativeTokens.transferOwnership(address(inboundChannel));
+        erc20vault.transferOwnership(address(nativeTokens));
+        console.log("address of NativeTokens is: %s", address(nativeTokens));
+
         vm.stopBroadcast();
     }
 }

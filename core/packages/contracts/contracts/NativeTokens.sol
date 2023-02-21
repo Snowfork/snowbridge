@@ -48,13 +48,10 @@ contract NativeTokens is Ownable {
 
     /// @notice Initializes the NativeTokens contract with a vault and channels.
     /// @param _vault The vault to use to `lock`/`unlock` tokens.
-    /// @param inboundChannel The owning channel allowed to call `handle` function.
     /// @param _outboundChannel The channel used to queue lock and create messages.
-    constructor(ERC20Vault _vault, address inboundChannel, OutboundChannel _outboundChannel) {
+    constructor(ERC20Vault _vault, OutboundChannel _outboundChannel) {
         vault = _vault;
         outboundChannel = _outboundChannel;
-        //TODO: Potentially move this to deployment/setup scripts and then we can drop inboundChannel parameter.
-        transferOwnership(inboundChannel);
     }
 
     /// @notice Locks tokens to mint on substrate.
