@@ -4,8 +4,8 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-// This contract actually holds Ether balances for each sovereignID.
 // TODO: transfer ownership from deployer to SovereignTreasury
+// This contract actually holds Ether balances for each sovereignID.
 contract Vault is Ownable {
     using Address for address payable;
 
