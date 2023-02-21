@@ -16,7 +16,6 @@ contract SovereignTreasury is Ownable {
         Message memory message = abi.decode(_message, (Message));
 
         if (message.action == Action.Withdraw) {
-            // TODO: how do we know that the recipient address is payable?
             WithdrawPayload memory payload = abi.decode(message.payload, (WithdrawPayload));
 
             transfer(_sovereignID, payload.recipient, payload.amount);
