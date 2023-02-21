@@ -80,8 +80,7 @@ build_relayer()
 
 install_binary() {
     echo "Building and installing binaries."
-    # todo: interim change will revert later when polkadot-0.9.38 released 
-    build_relaychain_from_source
+    build_relaychain
     build_parachain
     build_relayer
 }
