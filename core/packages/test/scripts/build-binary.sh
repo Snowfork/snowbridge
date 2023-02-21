@@ -25,10 +25,6 @@ rebuild_relaychain(){
 
 build_parachain()
 {
-    if [ "$eth_network" != "localhost" ]; then
-        parachain_runtime="snowblink"
-    fi
-
     echo "Runtime is $parachain_runtime"
 
     echo "Building snowbridge parachain"
