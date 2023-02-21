@@ -11,7 +11,7 @@ generate_chain_spec() {
     while [ -z "$initial_beacon_block" ] || [ "$initial_beacon_block" == "0x0000000000000000000000000000000000000000000000000000000000000000" ]
     do
         echo "Waiting for beacon chain to finalize to get initial block..."
-        initial_beacon_block=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
+        initial_beacon_block=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/states/justified/finality_checkpoints" \
             | jq -r '.data.finalized.root')
         sleep 3
     done
