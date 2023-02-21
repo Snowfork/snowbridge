@@ -70,7 +70,7 @@ pub mod mock_minimal {
 
 	parameter_types! {
 		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
-		pub const MaxProofBranchSize: u32 = 6;
+		pub const MaxProofBranchSize: u32 = 20;
 		pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
 		pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
 		pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
@@ -184,7 +184,7 @@ pub mod mock_mainnet {
 
 	parameter_types! {
 		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
-		pub const MaxProofBranchSize: u32 = 6;
+		pub const MaxProofBranchSize: u32 = 20;
 		pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
 		pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
 		pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
@@ -356,13 +356,18 @@ fn attester_slashing_from_file<T: crate::Config>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
+fn get_config_setting() -> String {
+	return match config::IS_MINIMAL {
+		true => "minimal".to_owned(),
+		false => "mainnet".to_owned(),
+	}
+}
+
 fn add_file_prefix(name: &str) -> String {
-	let prefix = match config::IS_MINIMAL {
-		true => "minimal_",
-		false => "mainnet_",
-	};
+	let prefix = get_config_setting();
 
 	let mut result = prefix.to_owned();
+	result.push_str("_");
 	result.push_str(name);
 	result
 }
@@ -378,10 +383,13 @@ pub fn get_committee_sync_period_update<T: crate::Config>(
 	sync_committee_update_from_file::<T>(&add_file_prefix("sync_committee_update.json"))
 }
 
-pub fn get_committee_sync_hash_tree_root_test_data<T: crate::Config>(
+pub fn get_committee_sync_ssz_test_data<T: crate::Config>(
 ) -> SyncCommittee<T::MaxSyncCommitteeSize>
 {
-	sync_committee_from_file::<T>(&add_file_prefix("sync_committee_hash_tree_root.json"))
+	let mut filename: String = "ssz_test_".to_owned();
+	filename.push_str(&get_config_setting());
+	filename.push_str("_sync_committee.json");
+	sync_committee_from_file::<T>(filename.as_str())
 }
 
 pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
@@ -417,7 +425,10 @@ pub fn get_beacon_block_body<T: crate::Config>() -> Body<
 	T::MaxValidatorsPerCommittee,
 	T::MaxSyncCommitteeSize,
 > {
-	beacon_block_body_from_file::<T>(&add_file_prefix("beacon_block_body_hash_tree_root.json"))
+	let mut filename: String = "ssz_test_".to_owned();
+	filename.push_str(&get_config_setting());
+	filename.push_str("_beacon_block_body.json");
+	beacon_block_body_from_file::<T>(filename.as_str())
 }
 
 pub fn get_finalized_header_update<T: crate::Config>(
@@ -459,5 +470,5 @@ pub fn get_bls_signature_verify_test_data<T: crate::Config>() -> BLSSignatureVer
 
 pub fn get_attester_slashing<T: crate::Config>(
 ) -> AttesterSlashing<T::MaxValidatorsPerCommittee, T::MaxSignatureSize> {
-	attester_slashing_from_file::<T>("attester_slashing.json")
+	attester_slashing_from_file::<T>("szz_test_attester_slashing.json")
 }

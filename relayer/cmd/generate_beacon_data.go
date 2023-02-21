@@ -43,11 +43,11 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		endpoint := ""
 
-		if activeSpec.IsMinimal() {
-			endpoint = "http://127.0.0.1:9596"
-		} else {
-			endpoint = "https://lodestar-goerli.chainsafe.io"
-		}
+		//if activeSpec.IsMinimal() {
+		endpoint = "http://127.0.0.1:9596"
+		//} else {
+		//	endpoint = "https://lodestar-goerli.chainsafe.io"
+		//}
 
 		viper.SetConfigFile("core/packages/test/config/beacon-relay.json")
 		if err := viper.ReadInConfig(); err != nil {

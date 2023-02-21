@@ -1,0 +1,37 @@
+{
+ "attested_header": {
+  "slot": 5039683,
+  "proposer_index": 114229,
+  "parent_root": "0xc5eb1e3d7fc3f3c4898b547c64bdc9a4e47bdb616fd6af55cc5be679dad6020e",
+  "state_root": "0x2b8f80b51503f6ec92d222977d86bdcb6c248e7787150d880e61df3c8a8a21a9",
+  "body_root": "0x418167332730ed9b2c214eee2713841266acf961e8a0046177d780a6dfebde17"
+ },
+ "finalized_header": {
+  "slot": 5039616,
+  "proposer_index": 47771,
+  "parent_root": "0x72f205e4adabb5b3e45604102f1fabc570a4ac6dca39e8dbe0f33cce55893185",
+  "state_root": "0xf1cf9941f232a0cffbdb54d4fa0c53aebc00df35bd7d8f24bc717585107fb431",
+  "body_root": "0x1474756dcb6dacdf533ca16824af5239c102573b4bb936b8291c648b0742a933"
+ },
+ "finality_branch": [
+  "0x3067020000000000000000000000000000000000000000000000000000000000",
+  "0x7bfee113511db778de4abedd94ba9e35eb68e59be8b1d938d0e238bd1c3ad6d8",
+  "0xa63362989392f33cc8fb34d7c1b7a3034d88eed838c533721a04872c4f7b8112",
+  "0xd711f47785239f62b7d6fccab06cc9d7d86df6a9bef2ed742e75f8f4bc449347",
+  "0x8a8f9fe095c36af9f8a986e5fe53be5b510b920bd2d11c5b86d784247a486f1d",
+  "0xb8fe1d198fbb28a972c39f5053e35904b1edfd6a6d95b71f4d71d7f95e89ed20"
+ ],
+ "sync_aggregate": {
+  "sync_committee_bits": "0xad7afbefffbff75ffefbeefb6efba3fed7feedafffbde5f7fdcdf7d77dff7f3f9f9dbec5f9cfbeffddefff37e5efe225f6feddaefdffb6b7ffdfdfcdeb3ab487",
+  "sync_committee_signature": "0xa217cf3a695a2e7926103e33ec6d54ac7153dca56975d8e0a68c83d82b759f11c192666273479ffa32af1c25988938680766bdd1f81a299d6dbe479b8aeb2f8bd09565858e6abadd88d50b2536a4cf367d6325a48d7f8a2cb1c031bd360ba622"
+ },
+ "signature_slot": 5039684,
+ "block_roots_hash": "0x8bcd51da24ee84816561d802b5e5c36794a9edbde16c06c3068bad8b68782403",
+ "block_roots_proof": [
+  "0xcf900155b98ac4d3c59c40766ae1042dbd27f5e9bc451e734d3424ad93de28cd",
+  "0x100985a390c2bd1f6c679e0200fae6c74aa9eee1a0f3db39527205353c2a4682",
+  "0x34b1faa5f83d2ee9b56f40007ef6b5ee7973a26e28621abbd7a69b6d3385cc0f",
+  "0x3315b4d0fcfdc3479df3806c4a2ed2464fa69406837436de4650dbe6a951b888",
+  "0x28a8708140c5a1ffe5f9a08c7d848b6b20edee28bab697cbd79d7ba49709900b"
+ ]
+}

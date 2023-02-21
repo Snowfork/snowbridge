@@ -1031,7 +1031,7 @@ mod beacon_minimal_tests {
 
 	#[test]
 	pub fn test_hash_tree_root_sync_committee() {
-		let sync_committee = get_committee_sync_hash_tree_root_test_data::<mock_mainnet::Test>();
+		let sync_committee = get_committee_sync_ssz_test_data::<mock_mainnet::Test>();
 		let hash_root_result =
 			merkleization::hash_tree_root_sync_committee(sync_committee);
 		assert_ok!(&hash_root_result);
@@ -1087,7 +1087,7 @@ mod beacon_mainnet_tests {
 	use crate::{
 		config, merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
 		Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
-		LatestFinalizedHeaderState, LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
+		LatestFinalizedHeaderState, LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot, FinalizedBeaconHeadersBlockRoot
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -1159,7 +1159,7 @@ mod beacon_mainnet_tests {
 			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
 				beacon_block_root: Default::default(),
 				import_time,
-				beacon_slot: slot,
+				beacon_slot: slot - 1,
 			});
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
 
@@ -1197,7 +1197,7 @@ mod beacon_mainnet_tests {
 			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
 				beacon_block_root: Default::default(),
 				import_time,
-				beacon_slot: slot,
+				beacon_slot: slot - 1,
 			});
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
 
@@ -1221,14 +1221,20 @@ mod beacon_mainnet_tests {
 		let current_period =
 			mock_mainnet::EthereumBeaconClient::compute_current_sync_period(update.block.slot);
 
+		let finalized_update =
+			get_finalized_header_update::<mock_mainnet::Test>();
+		let finalized_slot = finalized_update.finalized_header.slot;
+		let finalized_block_root: H256 = merkleization::hash_tree_root_beacon_header(finalized_update.finalized_header).unwrap().into();
+
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
 			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
 			LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
-				beacon_block_root: H256::default(),
-				beacon_slot: update.block.slot,
+				beacon_block_root: finalized_block_root,
+				beacon_slot: finalized_slot,
 				import_time: 0,
 			});
+			FinalizedBeaconHeadersBlockRoot::<mock_mainnet::Test>::insert(finalized_block_root, finalized_update.block_roots_hash);
 
 			assert_ok!(mock_mainnet::EthereumBeaconClient::import_execution_header(
 				mock_mainnet::RuntimeOrigin::signed(1),
@@ -1244,7 +1250,7 @@ mod beacon_mainnet_tests {
 
 	#[test]
 	pub fn test_hash_tree_root_sync_committee() {
-		let sync_committee = get_committee_sync_hash_tree_root_test_data::<mock_mainnet::Test>();
+		let sync_committee = get_committee_sync_ssz_test_data::<mock_mainnet::Test>();
 		let hash_root_result =
 			merkleization::hash_tree_root_sync_committee(sync_committee);
 		assert_ok!(&hash_root_result);
@@ -1252,7 +1258,7 @@ mod beacon_mainnet_tests {
 		let hash_root: H256 = hash_root_result.unwrap().into();
 		assert_eq!(
 			hash_root,
-			hex!("a18ae4d83f81638e41ae4bd43b005b2730b0710cb178ffb50766c93ea3d812c9").into()
+			hex!("99daf976424b62249669bc842e9b8e5a5a2960d1d81d98c3267f471409c3c841").into()
 		);
 	}
 
@@ -1269,7 +1275,7 @@ mod beacon_mainnet_tests {
 		let hash_root: H256 = hash_root_result.unwrap().into();
 		assert_eq!(
 			hash_root,
-			hex!("e9581ec84c95cd3e02f17ee304bca3202fb843111aa36af9698a1ff64373f1dd").into()
+			hex!("1208701b694c575848ffaf81ce56e3dadc7746601cab9d7a8cde93ca041a4a13").into()
 		);
 	}
 
