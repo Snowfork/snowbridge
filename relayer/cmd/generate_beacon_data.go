@@ -99,8 +99,6 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get finalized header update: %w", err)
 		}
 
-		log.WithField("finalizedHeaderUpdate", finalizedHeaderUpdate).Info("finalizedHeaderUpdate")
-
 		err = writeJSONToFile(finalizedHeaderUpdate.Payload.ToJSON(), activeSpec.ToString()+"_finalized_header_update")
 		if err != nil {
 			return fmt.Errorf("write finalized header update to file: %w", err)

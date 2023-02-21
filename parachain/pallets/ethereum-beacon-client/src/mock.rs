@@ -292,6 +292,14 @@ fn sync_committee_update_from_file<T: crate::Config>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
+fn sync_committee_from_file<T: crate::Config>(
+	name: &str,
+) -> SyncCommittee<T::MaxSyncCommitteeSize>
+{
+	let filepath = fixture_path(name);
+	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
+}
+
 fn finalized_header_update_from_file<T: crate::Config>(
 	name: &str,
 ) -> FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize> {
@@ -320,6 +328,27 @@ fn block_update_from_file<T: crate::Config>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
+fn beacon_block_body_from_file<T: crate::Config>(
+	name: &str,
+) -> Body<
+	T::MaxFeeRecipientSize,
+	T::MaxLogsBloomSize,
+	T::MaxExtraDataSize,
+	T::MaxDepositDataSize,
+	T::MaxPublicKeySize,
+	T::MaxSignatureSize,
+	T::MaxProofBranchSize,
+	T::MaxProposerSlashingSize,
+	T::MaxAttesterSlashingSize,
+	T::MaxVoluntaryExitSize,
+	T::MaxAttestationSize,
+	T::MaxValidatorsPerCommittee,
+	T::MaxSyncCommitteeSize,
+> {
+	let filepath = fixture_path(name);
+	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
+}
+
 fn attester_slashing_from_file<T: crate::Config>(
 	name: &str,
 ) -> AttesterSlashing<T::MaxValidatorsPerCommittee, T::MaxSignatureSize> {
@@ -330,7 +359,7 @@ fn attester_slashing_from_file<T: crate::Config>(
 fn add_file_prefix(name: &str) -> String {
 	let prefix = match config::IS_MINIMAL {
 		true => "minimal_",
-		false => "goerli_",
+		false => "mainnet_",
 	};
 
 	let mut result = prefix.to_owned();
@@ -349,6 +378,12 @@ pub fn get_committee_sync_period_update<T: crate::Config>(
 	sync_committee_update_from_file::<T>(&add_file_prefix("sync_committee_update.json"))
 }
 
+pub fn get_committee_sync_hash_tree_root_test_data<T: crate::Config>(
+) -> SyncCommittee<T::MaxSyncCommitteeSize>
+{
+	sync_committee_from_file::<T>(&add_file_prefix("sync_committee_hash_tree_root.json"))
+}
+
 pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
 	T::MaxFeeRecipientSize,
 	T::MaxLogsBloomSize,
@@ -365,6 +400,24 @@ pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
 	T::MaxSyncCommitteeSize,
 > {
 	block_update_from_file::<T>(&add_file_prefix("block_update.json"))
+}
+
+pub fn get_beacon_block_body<T: crate::Config>() -> Body<
+	T::MaxFeeRecipientSize,
+	T::MaxLogsBloomSize,
+	T::MaxExtraDataSize,
+	T::MaxDepositDataSize,
+	T::MaxPublicKeySize,
+	T::MaxSignatureSize,
+	T::MaxProofBranchSize,
+	T::MaxProposerSlashingSize,
+	T::MaxAttesterSlashingSize,
+	T::MaxVoluntaryExitSize,
+	T::MaxAttestationSize,
+	T::MaxValidatorsPerCommittee,
+	T::MaxSyncCommitteeSize,
+> {
+	beacon_block_body_from_file::<T>(&add_file_prefix("beacon_block_body_hash_tree_root.json"))
 }
 
 pub fn get_finalized_header_update<T: crate::Config>(

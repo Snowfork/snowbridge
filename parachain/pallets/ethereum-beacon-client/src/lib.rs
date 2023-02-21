@@ -458,12 +458,6 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			log::info!(target: "ethereum-beacon-client", "💫 update.block_roots_hash: {:?}.", update.block_roots_hash);
-			log::info!(target: "ethereum-beacon-client", "💫 update.block_roots_proof: {:?}.", update.block_roots_proof);
-			log::info!(target: "ethereum-beacon-client", "💫 BLOCK_ROOTS_INDEX: {:?}.", config::BLOCK_ROOTS_INDEX);
-			log::info!(target: "ethereum-beacon-client", "💫 BLOCK_ROOTS_DEPTH: {:?}.", config::BLOCK_ROOTS_DEPTH);
-			log::info!(target: "ethereum-beacon-client", "💫 update.finalized_header.state_root: {:?}.", update.finalized_header.state_root);
-
 			ensure!(
 				Self::is_valid_merkle_branch(
 					update.block_roots_hash,
