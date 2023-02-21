@@ -4,18 +4,17 @@ set -eu
 source scripts/set-env.sh
 source scripts/build-binary.sh
 
-start_relayer()
-{
-    echo "Starting relay services"
-
+config_relayer(){
     # Configure beefy relay
     jq \
         --arg k1 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_gas_limit $eth_gas_limt \
     '
       .sink.contracts.BeefyClient = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
     ' \
     config/beefy-relay.json > $output_dir/beefy-relay.json
 
@@ -71,7 +70,14 @@ start_relayer()
     | .source.basicChannelAddresses = ($basic_eth_addresses | split(","))
     ' \
     config/execution-relay.json > $output_dir/execution-relay.json
+}
 
+start_relayer()
+{
+    # Config relayer
+    echo "Config relay services"
+    config_relayer
+    echo "Starting relay services"
     # Launch beefy relay
     (
         : > beefy-relay.log
