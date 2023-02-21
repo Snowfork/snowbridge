@@ -3,7 +3,8 @@ pragma solidity ^0.8.9;
 
 import "./Vault.sol";
 
-contract SovereignTreasury {
+// TODO: transfer ownership from deployer to inbound channel
+contract SovereignTreasury is Ownable {
     Vault public vault;
 
     constructor(Vault _vault) {
@@ -11,7 +12,7 @@ contract SovereignTreasury {
     }
 
     // Handle a message from the bridge.
-    function handle(bytes32 _sovereignID, bytes calldata _message) external {
+    function handle(bytes32 _sovereignID, bytes calldata _message) external onlyOwner {
         Message memory message = abi.decode(_message, (Message));
 
         if (message.action == Action.Withdraw) {
