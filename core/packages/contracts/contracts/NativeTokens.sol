@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import "./utils/MessageProtocol.sol";
 import "./ERC20Vault.sol";
@@ -39,7 +40,9 @@ contract NativeTokens is Ownable {
 
     /// @notice a token was created in Statemint.
     /// @dev Emitted after enqueueing a a create token message to substrate.
-    event Created(address token);
+    /// @param token The address of the token created.
+    // TODO: Remove name, symbol and decimals.
+    event Created(address token, string name, string symbol, uint8 decimals);
 
     /// @dev Zero amount.
     error ZeroAmount();
@@ -85,12 +88,12 @@ contract NativeTokens is Ownable {
         if (token == address(0)) revert ZeroAddressToken();
         if (recipient == bytes32(0)) revert ZeroAddressRecipient();
 
-        /// TODO: Implement a max locked amount.
+        // TODO: Implement a max locked amount.
         vault.deposit(msg.sender, token, amount);
 
-        /// TODO: Encode a call
+        // TODO: Encode a call
         bytes memory call;
-        /// TODO: Get weight
+        // TODO: Get weight
         uint64 weight = 1_000_000;
 
         emit Locked(msg.sender, recipient, token, amount);
@@ -100,21 +103,21 @@ contract NativeTokens is Ownable {
     /// @notice Creates a native token.
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
-    /// @param name The name of the ERC20 token.
-    /// @param symbol The symbol of the ERC20 token.
-    /// @param decimals The decimals for the ERC20 token.
-    function create(
-        address token,
-        string calldata name,
-        string calldata symbol,
-        uint8 decimals
-    ) public {
-        /// TODO: Encode a call
+    function create(address token) public {
+        if (token == address(0)) revert ZeroAddressToken();
+
+        IERC20Metadata metadata = IERC20Metadata(token);
+        // TODO: Use metadata to encode the call.
+        string memory name = metadata.name();
+        string memory symbol = metadata.symbol();
+        uint8 decimals = metadata.decimals();
+
+        // TODO: Encode a call
         bytes memory call;
-        /// TODO: Get weight
+        // TODO: Get weight
         uint64 weight = 1_000_000;
 
-        emit Created(token);
+        emit Created(token, name, symbol, decimals);
         outboundChannel.submit(msg.sender, call, weight);
     }
 

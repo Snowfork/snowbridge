@@ -15,7 +15,7 @@ contract NativeTokensTest is Test {
     event Withdraw(address account, address recipient, address token, uint256 amount);
     event Locked(address origin, bytes32 recipient, address token, uint256 amount);
     event Unlocked(bytes32 origin, address recipient, address token, uint256 amount);
-    event Created(address token);
+    event Created(address token, string name, string symbol, uint8 decimals);
     event Message(address account, bytes payload, uint64 weight);
 
     ERC20Vault private vault;
@@ -124,5 +124,21 @@ contract NativeTokensTest is Test {
         assertEq(token.balanceOf(address(vault)), 50);
         assertEq(token.allowance(address(account2), address(vault)), 50);
         assertEq(vault.balances(address(token)), 50);
+    }
+
+    function testCreateRevertsZeroAddressToken() public {
+        vm.expectRevert(NativeTokens.ZeroAddressToken.selector);
+        nativeTokens.create(address(0));
+    }
+
+    function testCreateSuccessful() public {
+        bytes memory call;
+        vm.expectEmit(false, false, false, true, address(nativeTokens));
+        emit Created(address(token), "Test", "T", 18);
+
+        vm.expectEmit(false, false, false, true, address(outboundChannel));
+        emit Message(address(this), call, 1_000_000);
+
+        nativeTokens.create(address(token));
     }
 }
