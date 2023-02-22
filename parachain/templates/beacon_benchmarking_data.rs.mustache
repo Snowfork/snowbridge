@@ -310,7 +310,7 @@ pub fn block_update<
                     gas_used: {{HeaderUpdate.Block.Body.ExecutionPayload.GasUsed}},
                     timestamp: {{HeaderUpdate.Block.Body.ExecutionPayload.Timestamp}},
                     extra_data: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.ExtraData}}").to_vec().try_into().expect("extra data too long"),
-                    base_fee_per_gas: U256::from({{HeaderUpdate.Block.Body.ExecutionPayload.BaseFeePerGas}} as u32),
+                    base_fee_per_gas: U256::from({{HeaderUpdate.Block.Body.ExecutionPayload.BaseFeePerGas}} as u64),
                     block_hash: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.BlockHash}}").into(),
                     transactions_root: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.TransactionRoot}}").into(),
                 }

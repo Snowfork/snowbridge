@@ -3411,7 +3411,7 @@ pub fn block_update<
                     gas_used: 21429162,
                     timestamp: 1676983368,
                     extra_data: hex!("4d616465206f6e20746865206d6f6f6e20627920426c6f636b6e6174697665").to_vec().try_into().expect("extra data too long"),
-                    base_fee_per_gas: U256::from(100312076162 as u32),
+                    base_fee_per_gas: U256::from(100312076162 as u64),
                     block_hash: hex!("62cca277191d4812bb753246a1671a965e26283af85a5563ccb7c2a03561e9fe").into(),
                     transactions_root: hex!("246bbe3acca6910c67523d2785c5ceb3341b66712a9bf8dd3d47e4dff2406b5b").into(),
                 }
