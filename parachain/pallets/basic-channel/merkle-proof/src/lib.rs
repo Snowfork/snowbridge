@@ -262,16 +262,15 @@ where
 		Leaf::Hash(hash) => hash,
 	};
 
+	let hash_len = <H as sp_core::Hasher>::LENGTH;
 	let mut combined = [0_u8; 64];
-	let mut position = leaf_index;
-	let mut width = number_of_leaves;
 	let computed = proof.into_iter().fold(leaf_hash, |a, b| {
-		if position % 2 == 1 || position + 1 == width {
-			combined[0..32].copy_from_slice(b.as_ref());
-			combined[32..64].copy_from_slice(a.as_ref());
+		if a < b {
+			combined[..hash_len].copy_from_slice(&a.as_ref());
+			combined[hash_len..].copy_from_slice(&b.as_ref());
 		} else {
-			combined[0..32].copy_from_slice(a.as_ref());
-			combined[32..64].copy_from_slice(b.as_ref());
+			combined[..hash_len].copy_from_slice(&b.as_ref());
+			combined[hash_len..].copy_from_slice(&a.as_ref());
 		}
 		let hash = <H as Hash>::hash(&combined);
 		#[cfg(feature = "debug")]
@@ -282,8 +281,6 @@ where
 			hex::encode(hash),
 			hex::encode(combined)
 		);
-		position /= 2;
-		width = ((width - 1) / 2) + 1;
 		hash
 	});
 
@@ -309,8 +306,9 @@ where
 	log::debug!("[merkelize_row]");
 	next.clear();
 
+	let hash_len = <H as sp_core::Hasher>::LENGTH;
 	let mut index = 0;
-	let mut combined = [0_u8; 64];
+	let mut combined = vec![0_u8; hash_len * 2];
 	loop {
 		let a = iter.next();
 		let b = iter.next();
@@ -322,8 +320,13 @@ where
 		index += 2;
 		match (a, b) {
 			(Some(a), Some(b)) => {
-				combined[0..32].copy_from_slice(a.as_ref());
-				combined[32..64].copy_from_slice(b.as_ref());
+				if a < b {
+					combined[..hash_len].copy_from_slice(a.as_ref());
+					combined[hash_len..].copy_from_slice(b.as_ref());
+				} else {
+					combined[..hash_len].copy_from_slice(b.as_ref());
+					combined[hash_len..].copy_from_slice(a.as_ref());
+				}
 
 				next.push(<H as Hash>::hash(&combined));
 			},
