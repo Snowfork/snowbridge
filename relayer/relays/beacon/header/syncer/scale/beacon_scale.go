@@ -2,9 +2,67 @@ package scale
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	ssz "github.com/ferranbt/fastssz"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 )
+
+type BlockRootProof struct {
+	Leaf  types.H256
+	Proof []types.H256
+	Tree  *ssz.Node
+}
+
+type InitialSync struct {
+	Header                     BeaconHeader
+	CurrentSyncCommittee       SyncCommittee
+	CurrentSyncCommitteeBranch []types.H256
+	ValidatorsRoot             types.H256
+	ImportTime                 types.U64
+}
+
+type SyncCommitteePeriodUpdate struct {
+	Payload                  SyncCommitteePeriodPayload
+	FinalizedHeaderBlockRoot common.Hash
+	BlockRootsTree           *ssz.Node
+}
+
+type SyncCommitteePeriodPayload struct {
+	AttestedHeader          BeaconHeader
+	NextSyncCommittee       SyncCommittee
+	NextSyncCommitteeBranch []types.H256
+	FinalizedHeader         BeaconHeader
+	FinalityBranch          []types.H256
+	SyncAggregate           SyncAggregate
+	SyncCommitteePeriod     types.U64
+	SignatureSlot           types.U64
+	BlockRootsHash          types.H256
+	BlockRootProof          []types.H256
+}
+
+type FinalizedHeaderPayload struct {
+	AttestedHeader  BeaconHeader
+	FinalizedHeader BeaconHeader
+	FinalityBranch  []types.H256
+	SyncAggregate   SyncAggregate
+	SignatureSlot   types.U64
+	BlockRootsHash  types.H256
+	BlockRootProof  []types.H256
+}
+
+type FinalizedHeaderUpdate struct {
+	Payload                  FinalizedHeaderPayload
+	FinalizedHeaderBlockRoot common.Hash
+	BlockRootsTree           *ssz.Node
+}
+
+type HeaderUpdate struct {
+	Block                         BeaconBlock
+	SyncAggregate                 SyncAggregate
+	SignatureSlot                 types.U64
+	BlockRootProof                []types.H256
+	BlockRootProofFinalizedHeader types.H256
+}
 
 type BeaconHeader struct {
 	Slot          types.U64
@@ -120,7 +178,7 @@ type BeaconBlock struct {
 	Body          Body
 }
 
-type CurrentSyncCommittee struct {
+type SyncCommittee struct {
 	Pubkeys         [][48]byte
 	AggregatePubkey [48]byte
 }

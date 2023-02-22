@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -173,11 +174,11 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 	return nil
 }
 
-func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeaderUpdate, error) {
+func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeaderUpdate, error) {
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
 	update, err := h.syncer.GetFinalizedUpdate()
 	if err != nil {
-		return syncer.FinalizedHeaderUpdate{}, fmt.Errorf("fetch finalized header update: %w", err)
+		return scale.FinalizedHeaderUpdate{}, fmt.Errorf("fetch finalized header update: %w", err)
 	}
 
 	log.WithFields(log.Fields{
@@ -190,13 +191,13 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	if h.cache.LastSyncedSyncCommitteePeriod < currentSyncPeriod {
 		err = h.syncLaggingSyncCommitteePeriods(ctx, h.cache.LastSyncedSyncCommitteePeriod, uint64(update.Payload.AttestedHeader.Slot))
 		if err != nil {
-			return syncer.FinalizedHeaderUpdate{}, fmt.Errorf("sync lagging sync committee periods: %w", err)
+			return scale.FinalizedHeaderUpdate{}, fmt.Errorf("sync lagging sync committee periods: %w", err)
 		}
 	}
 
 	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_finalized_header", update.Payload)
 	if err != nil {
-		return syncer.FinalizedHeaderUpdate{}, fmt.Errorf("write to parachain: %w", err)
+		return scale.FinalizedHeaderUpdate{}, fmt.Errorf("write to parachain: %w", err)
 	}
 
 	// We need a distinction between finalized headers that we've tried to sync, so that we don't try syncing
@@ -208,7 +209,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return syncer.FinalizedHeaderUpdate{}, fmt.Errorf("fetch last finalized header state: %w", err)
+		return scale.FinalizedHeaderUpdate{}, fmt.Errorf("fetch last finalized header state: %w", err)
 	}
 
 	lastStoredHeader := lastFinalizedHeaderState.BeaconBlockRoot
@@ -220,13 +221,13 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	h.cache.Finalized.LastSyncedSlot = uint64(update.Payload.FinalizedHeader.Slot)
 
 	if lastStoredHeader != update.FinalizedHeaderBlockRoot {
-		return syncer.FinalizedHeaderUpdate{}, ErrFinalizedHeaderNotImported
+		return scale.FinalizedHeaderUpdate{}, ErrFinalizedHeaderNotImported
 	}
 
 	return update, err
 }
 
-func (h *Header) SyncHeader(ctx context.Context, headerUpdate syncer.HeaderUpdate, slotsLeft uint64) error {
+func (h *Header) SyncHeader(ctx context.Context, headerUpdate scale.HeaderUpdate, slotsLeft uint64) error {
 	log.WithFields(log.Fields{
 		"slot":                 headerUpdate.Block.Slot,
 		"slotsLeftToSync":      slotsLeft,
@@ -292,7 +293,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 		"totalSlots": totalSlots,
 	}).Info("starting to back-fill headers")
 
-	headersToSync := []syncer.HeaderUpdate{}
+	headersToSync := []scale.HeaderUpdate{}
 
 	currentSlot := fromSlot + 1 // start syncing at next block after last synced block
 
@@ -331,7 +332,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 			}
 
 			// new epoch, start with clean array
-			headersToSync = []syncer.HeaderUpdate{}
+			headersToSync = []scale.HeaderUpdate{}
 		}
 
 		nextSlot := currentSlot + 1
@@ -340,7 +341,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 			"slot": nextSlot,
 		}).Info("fetching header at slot")
 
-		var nextHeaderUpdate syncer.HeaderUpdate
+		var nextHeaderUpdate scale.HeaderUpdate
 		// If this is the last slot we need to sync, don't fetch the ancestry proof for the next slot
 		// because its finalized header won't be synced yet. We still need to fetch the next block for the
 		// sync aggregate though.
@@ -389,7 +390,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 // stopped while still processing a set of execution headers.
 func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedHeader common.Hash, lastFinalizedSlot uint64, executionHeaderState state.ExecutionHeader) error {
 	err := syncer.ErrBeaconStateAvailableYet
-	var blockRootsProof syncer.BlockRootProof
+	var blockRootsProof scale.BlockRootProof
 	for err == syncer.ErrBeaconStateAvailableYet {
 		blockRootsProof, err = h.syncer.GetBlockRoots(lastFinalizedSlot)
 		if err != nil && !errors.Is(err, syncer.ErrBeaconStateAvailableYet) {

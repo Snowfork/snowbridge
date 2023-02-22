@@ -45,11 +45,11 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		endpoint := ""
 
-		//if activeSpec.IsMinimal() {
-		endpoint = "http://127.0.0.1:9596"
-		//} else {
-		//	endpoint = "https://lodestar-goerli.chainsafe.io"
-		//}
+		if activeSpec.IsMinimal() {
+			endpoint = "http://127.0.0.1:9596"
+		} else {
+			endpoint = "https://lodestar-goerli.chainsafe.io"
+		}
 
 		viper.SetConfigFile("core/packages/test/config/beacon-relay.json")
 		if err := viper.ReadInConfig(); err != nil {
@@ -68,10 +68,12 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
 
-		initialSync, err := s.GetInitialSync()
+		initialSyncScale, err := s.GetInitialSync()
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
+
+		initialSync := initialSyncScale.ToJSON()
 
 		initialSyncHeaderSlot := initialSync.Header.Slot
 

@@ -6,7 +6,7 @@ import (
 	"github.com/cbroglie/mustache"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
+	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -23,10 +23,10 @@ func generateBeaconBenchmarkDataCmd() *cobra.Command {
 }
 
 type Data struct {
-	InitialSync           syncer.InitialSync
-	SyncCommitteeUpdate   syncer.SyncCommitteePeriodPayloadJSON
-	FinalizedHeaderUpdate syncer.FinalizedHeaderPayloadJSON
-	HeaderUpdate          syncer.HeaderUpdatePayloadJSON
+	InitialSync           beaconjson.InitialSync
+	SyncCommitteeUpdate   beaconjson.SyncCommitteeUpdate
+	FinalizedHeaderUpdate beaconjson.FinalizedHeaderUpdate
+	HeaderUpdate          beaconjson.HeaderUpdate
 }
 
 const (
@@ -66,7 +66,7 @@ func generateBenchmarkDataFiles(spec config.ActiveSpec) error {
 		return err
 	}
 
-	initialSync := syncer.InitialSync{}
+	initialSync := beaconjson.InitialSync{}
 
 	err = json.Unmarshal(initialSyncJSON, &initialSync)
 	if err != nil {
@@ -78,7 +78,7 @@ func generateBenchmarkDataFiles(spec config.ActiveSpec) error {
 		return err
 	}
 
-	syncCommitteeUpdate := syncer.SyncCommitteePeriodPayloadJSON{}
+	syncCommitteeUpdate := beaconjson.SyncCommitteeUpdate{}
 
 	err = json.Unmarshal(syncCommitteeUpdateJSON, &syncCommitteeUpdate)
 	if err != nil {
@@ -90,7 +90,7 @@ func generateBenchmarkDataFiles(spec config.ActiveSpec) error {
 		return err
 	}
 
-	finalizedUpdate := syncer.FinalizedHeaderPayloadJSON{}
+	finalizedUpdate := beaconjson.FinalizedHeaderUpdate{}
 
 	err = json.Unmarshal(finalizedHeaderJSON, &finalizedUpdate)
 	if err != nil {
@@ -102,7 +102,7 @@ func generateBenchmarkDataFiles(spec config.ActiveSpec) error {
 		return err
 	}
 
-	headerUpdate := syncer.HeaderUpdatePayloadJSON{}
+	headerUpdate := beaconjson.HeaderUpdate{}
 
 	err = json.Unmarshal(headerUpdateJSON, &headerUpdate)
 	if err != nil {
