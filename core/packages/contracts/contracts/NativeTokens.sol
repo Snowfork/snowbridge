@@ -111,7 +111,7 @@ contract NativeTokens is Ownable {
         require(origin == allowedOrigin, "NativeTokens: unknown origin");
         MessageProtocol.Message memory decoded = abi.decode(message, (MessageProtocol.Message));
         if (decoded.action == MessageProtocol.Action.Unlock) {
-            unlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
+            doUnlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
         } else {
             revert("NativeTokens: unknown action");
         }
@@ -120,7 +120,7 @@ contract NativeTokens is Ownable {
     /// @notice Unlocks funds from the vault and sends it to recipient.
     /// @param origin The hashed substrate sovereign account.
     /// @param payload A decoded unlock payload.
-    function unlock(bytes32 origin, UnlockPayload memory payload) private {
+    function doUnlock(bytes32 origin, UnlockPayload memory payload) private {
         emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
         if (payload.amount > 0) {
             vault.withdraw(payload.recipient, payload.token, payload.amount);
