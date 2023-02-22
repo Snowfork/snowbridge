@@ -3,15 +3,16 @@ package api
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"strconv"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
-	"math/big"
-	"strconv"
-	"strings"
 )
 
 type SyncCommitteePeriodUpdateResponse struct {

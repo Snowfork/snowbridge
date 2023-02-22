@@ -1,8 +1,9 @@
 package syncer
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIsStartOfEpoch(t *testing.T) {

@@ -3,6 +3,10 @@ package syncer
 import (
 	"errors"
 	"fmt"
+	"math"
+	"os"
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
 	log "github.com/sirupsen/logrus"
@@ -13,9 +17,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
-	"math"
-	"os"
-	"strconv"
 )
 
 const BlockRootGeneralizedIndex = 37
