@@ -73,7 +73,7 @@
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
                     echo "Initializing Snowbridge Dev Environment..."
-                    cd core && pnpm install && cd -
+                    (cd core && pnpm install)
 
                     cowsay "Snowbridge Dev Environment Ready"
                 '';
