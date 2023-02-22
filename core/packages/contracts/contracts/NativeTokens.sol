@@ -41,6 +41,21 @@ contract NativeTokens is Ownable {
     /// @dev Emitted after enqueueing a a create token message to substrate.
     event Created(address token);
 
+    /// @dev Zero amount.
+    error ZeroAmount();
+
+    /// @dev Zero addressed token.
+    error ZeroAddressToken();
+
+    /// @dev Zero addressed recipient.
+    error ZeroAddressRecipient();
+
+    /// @dev the origin provided is unauthorized.
+    error UnauthorizedOrigin();
+
+    /// @dev the message action is unsupported.
+    error UnsupportedMessageAction();
+
     /// @dev the origin that
     bytes32 public immutable allowedOrigin;
 
@@ -66,9 +81,9 @@ contract NativeTokens is Ownable {
     /// @param recipient The recipient on the substrate side.
     /// @param amount The amount to lock.
     function lock(address token, bytes32 recipient, uint256 amount) public {
-        require(amount > 0, "NativeTokens: zero amount");
-        require(token != address(0), "NativeTokens: zero address token");
-        require(recipient != bytes32(0), "NativeTokens: zero address recipient");
+        if (amount == 0) revert ZeroAmount();
+        if (token == address(0)) revert ZeroAddressToken();
+        if (recipient == bytes32(0)) revert ZeroAddressRecipient();
 
         /// TODO: Implement a max locked amount.
         vault.deposit(msg.sender, token, amount);
@@ -108,12 +123,13 @@ contract NativeTokens is Ownable {
     /// @param origin The hashed substrate sovereign account.
     /// @param message The message enqueued from substrate.
     function handle(bytes32 origin, bytes calldata message) external onlyOwner {
-        require(origin == allowedOrigin, "NativeTokens: unknown origin");
+        if (origin != allowedOrigin) revert UnauthorizedOrigin();
+
         MessageProtocol.Message memory decoded = abi.decode(message, (MessageProtocol.Message));
         if (decoded.action == MessageProtocol.Action.Unlock) {
             doUnlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
         } else {
-            revert("NativeTokens: unknown action");
+            revert UnsupportedMessageAction();
         }
     }
 

@@ -46,14 +46,14 @@ contract NativeTokensTest is Test {
 
     function testHandleRevertsUnknownAction() public {
         MessageProtocol.Message memory message;
-        vm.expectRevert("NativeTokens: unknown action");
+        vm.expectRevert(NativeTokens.UnsupportedMessageAction.selector);
         nativeTokens.handle(origin, abi.encode(message));
     }
 
     function testHandleRevertsUnknownOrigin() public {
         MessageProtocol.Message memory message;
         bytes32 unknownOrigin = keccak256("UNKNOWN_ORIGIN");
-        vm.expectRevert("NativeTokens: unknown origin");
+        vm.expectRevert(NativeTokens.UnauthorizedOrigin.selector);
         nativeTokens.handle(unknownOrigin, abi.encode(message));
     }
 
@@ -91,17 +91,17 @@ contract NativeTokensTest is Test {
     }
 
     function testLockRevertsZeroAmount() public {
-        vm.expectRevert("NativeTokens: zero amount");
+        vm.expectRevert(NativeTokens.ZeroAmount.selector);
         nativeTokens.lock(address(0), bytes32(0), 0);
     }
 
     function testLockRevertsZeroAddressRecipient() public {
-        vm.expectRevert("NativeTokens: zero address recipient");
+        vm.expectRevert(NativeTokens.ZeroAddressRecipient.selector);
         nativeTokens.lock(address(token), bytes32(0), 100);
     }
 
     function testLockRevertsZeroAddressToken() public {
-        vm.expectRevert("NativeTokens: zero address token");
+        vm.expectRevert(NativeTokens.ZeroAddressToken.selector);
         nativeTokens.lock(address(0), recipient, 100);
     }
 
