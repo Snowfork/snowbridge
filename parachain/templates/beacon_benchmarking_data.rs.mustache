@@ -1,6 +1,6 @@
 // Generated, do not edit!
 // To generate, run from snowbridge dir:
-// clear && mage -d relayer build && relayer/build/snowbridge-relay generate-beacon-benchmark-data
+// clear && mage -d relayer build && relayer/build/snowbridge-relay generate-beacon-benchmark-data && cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
@@ -25,9 +25,9 @@ pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
         },
         current_sync_committee: SyncCommittee{
             pubkeys: vec![
-                {{#InitialSync.CurrentSyncCommittee.Pubkeys}}
-                    PublicKey(hex!("{{.}}").into()),
-                {{/InitialSync.CurrentSyncCommittee.Pubkeys}}
+            {{#InitialSync.CurrentSyncCommittee.Pubkeys}}
+                PublicKey(hex!("{{.}}").into()),
+            {{/InitialSync.CurrentSyncCommittee.Pubkeys}}
             ].try_into().expect("too many pubkeys"),
             aggregate_pubkey: PublicKey(hex!("{{InitialSync.CurrentSyncCommittee.AggregatePubkey}}").into())
         },
