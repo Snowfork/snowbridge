@@ -59,9 +59,9 @@ type BeaconHeader struct {
 }
 
 type Bootstrap struct {
-	Header                     BeaconHeader
-	CurrentSyncCommittee       SyncCommitteeResponse
-	CurrentSyncCommitteeBranch []common.Hash
+	Header                     BeaconHeaderJSON
+	CurrentSyncCommittee       SyncCommitteeJSON
+	CurrentSyncCommitteeBranch []string
 }
 
 type Genesis struct {
@@ -128,14 +128,27 @@ func (b *BeaconClient) GetBootstrap(blockRoot common.Hash) (Bootstrap, error) {
 		return Bootstrap{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
-	beaconHeader, err := response.Data.Header.Beacon.ToBeaconHeader()
+	slot, err := toUint64(response.Data.Header.Beacon.Slot)
 	if err != nil {
-		return Bootstrap{}, fmt.Errorf("convert header to beacon header: %w", err)
+		return Bootstrap{}, fmt.Errorf("convert slot to int: %w", err)
+	}
+
+	proposerIndex, err := toUint64(response.Data.Header.Beacon.ProposerIndex)
+	if err != nil {
+		return Bootstrap{}, fmt.Errorf("convert proposer index to int: %w", err)
+	}
+
+	beaconHeader := BeaconHeaderJSON{
+		Slot:          slot,
+		ProposerIndex: proposerIndex,
+		ParentRoot:    response.Data.Header.Beacon.ParentRoot,
+		StateRoot:     response.Data.Header.Beacon.StateRoot,
+		BodyRoot:      response.Data.Header.Beacon.BodyRoot,
 	}
 
 	return Bootstrap{
 		Header:                     beaconHeader,
-		CurrentSyncCommittee:       response.Data.CurrentSyncCommittee,
+		CurrentSyncCommittee:       SyncCommitteeJSON(response.Data.CurrentSyncCommittee),
 		CurrentSyncCommitteeBranch: response.Data.CurrentSyncCommitteeBranch,
 	}, nil
 }

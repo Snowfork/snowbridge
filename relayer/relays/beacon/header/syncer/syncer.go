@@ -61,14 +61,6 @@ type SyncAggregate struct {
 	SyncCommitteeSignature []byte
 }
 
-type InitialSync struct {
-	Header                     BeaconHeader          `json:"header"`
-	CurrentSyncCommittee       SyncCommitteeResponse `json:"current_sync_committee"`
-	CurrentSyncCommitteeBranch []common.Hash         `json:"current_sync_committee_branch"`
-	ValidatorsRoot             common.Hash           `json:"validators_root"`
-	ImportTime                 uint64                `json:"import_time"`
-}
-
 type FinalizedBlockUpdate struct {
 	FinalizedHeader Header
 	FinalityBranch  []common.Hash
@@ -160,9 +152,9 @@ func (s *Syncer) GetInitialSync() (InitialSync, error) {
 
 	return InitialSync{
 		Header:                     bootstrap.Header,
-		CurrentSyncCommittee:       bootstrap.CurrentSyncCommittee,
+		CurrentSyncCommittee:       SyncCommitteeJSON(bootstrap.CurrentSyncCommittee),
 		CurrentSyncCommitteeBranch: bootstrap.CurrentSyncCommitteeBranch,
-		ValidatorsRoot:             genesis.ValidatorsRoot,
+		ValidatorsRoot:             genesis.ValidatorsRoot.Hex(),
 		ImportTime:                 genesis.Time,
 	}, nil
 }

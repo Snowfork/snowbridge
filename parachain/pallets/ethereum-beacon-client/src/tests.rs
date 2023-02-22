@@ -676,16 +676,16 @@ mod beacon_tests {
 #[cfg(feature = "minimal")]
 mod beacon_minimal_tests {
 	use crate::{
-		config, merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
-		Error, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders,
-		FinalizedHeaderState, LatestExecutionHeaderState, LatestFinalizedHeaderState,
-		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
+		config, merkleization, merkleization::MerkleizationError, mock::*,
+		pallet::FinalizedBeaconHeadersBlockRoot, ssz::SSZBeaconBlockBody, Error,
+		ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
+		LatestExecutionHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
+		SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
 	use sp_core::H256;
 	use std::time::{SystemTime, UNIX_EPOCH};
-	use crate::pallet::FinalizedBeaconHeadersBlockRoot;
 
 	#[test]
 	fn it_syncs_from_an_initial_checkpoint() {
@@ -847,7 +847,9 @@ mod beacon_minimal_tests {
 			LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: Default::default(),
 				import_time,
-				// set the last imported finalized header to an older finalized header. Necessary for long range attack check and finalized header to be imported must not have been imported already.
+				// set the last imported finalized header to an older finalized header. Necessary
+				// for long range attack check and finalized header to be imported must not have
+				// been imported already.
 				beacon_slot: update.finalized_header.slot - 1,
 			});
 			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
@@ -923,10 +925,12 @@ mod beacon_minimal_tests {
 		let current_sync_committee =
 			get_initial_sync::<mock_minimal::Test>().current_sync_committee;
 
-		let finalized_update =
-			get_finalized_header_update::<mock_minimal::Test>();
+		let finalized_update = get_finalized_header_update::<mock_minimal::Test>();
 		let finalized_slot = finalized_update.finalized_header.slot;
-		let finalized_block_root: H256 = merkleization::hash_tree_root_beacon_header(finalized_update.finalized_header).unwrap().into();
+		let finalized_block_root: H256 =
+			merkleization::hash_tree_root_beacon_header(finalized_update.finalized_header)
+				.unwrap()
+				.into();
 
 		let current_period =
 			mock_minimal::EthereumBeaconClient::compute_current_sync_period(update.block.slot);
@@ -939,7 +943,10 @@ mod beacon_minimal_tests {
 				beacon_slot: finalized_slot,
 				import_time: 0,
 			});
-			FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(finalized_block_root, finalized_update.block_roots_hash);
+			FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(
+				finalized_block_root,
+				finalized_update.block_roots_hash,
+			);
 
 			assert_ok!(mock_minimal::EthereumBeaconClient::import_execution_header(
 				mock_minimal::RuntimeOrigin::signed(1),
@@ -1032,8 +1039,7 @@ mod beacon_minimal_tests {
 	#[test]
 	pub fn test_hash_tree_root_sync_committee() {
 		let sync_committee = get_committee_sync_ssz_test_data::<mock_mainnet::Test>();
-		let hash_root_result =
-			merkleization::hash_tree_root_sync_committee(sync_committee);
+		let hash_root_result = merkleization::hash_tree_root_sync_committee(sync_committee);
 		assert_ok!(&hash_root_result);
 
 		let hash_root: H256 = hash_root_result.unwrap().into();
@@ -1046,8 +1052,7 @@ mod beacon_minimal_tests {
 	#[test]
 	pub fn test_hash_block_body() {
 		let block_update = get_beacon_block_body::<mock_minimal::Test>();
-		let payload: Result<SSZBeaconBlockBody, MerkleizationError> =
-			block_update.try_into();
+		let payload: Result<SSZBeaconBlockBody, MerkleizationError> = block_update.try_into();
 		assert_ok!(&payload);
 
 		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
@@ -1086,8 +1091,9 @@ mod beacon_minimal_tests {
 mod beacon_mainnet_tests {
 	use crate::{
 		config, merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
-		Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
-		LatestFinalizedHeaderState, LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot, FinalizedBeaconHeadersBlockRoot
+		Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedBeaconHeadersBlockRoot,
+		FinalizedHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
+		SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -1221,10 +1227,12 @@ mod beacon_mainnet_tests {
 		let current_period =
 			mock_mainnet::EthereumBeaconClient::compute_current_sync_period(update.block.slot);
 
-		let finalized_update =
-			get_finalized_header_update::<mock_mainnet::Test>();
+		let finalized_update = get_finalized_header_update::<mock_mainnet::Test>();
 		let finalized_slot = finalized_update.finalized_header.slot;
-		let finalized_block_root: H256 = merkleization::hash_tree_root_beacon_header(finalized_update.finalized_header).unwrap().into();
+		let finalized_block_root: H256 =
+			merkleization::hash_tree_root_beacon_header(finalized_update.finalized_header)
+				.unwrap()
+				.into();
 
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
 			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
@@ -1234,7 +1242,10 @@ mod beacon_mainnet_tests {
 				beacon_slot: finalized_slot,
 				import_time: 0,
 			});
-			FinalizedBeaconHeadersBlockRoot::<mock_mainnet::Test>::insert(finalized_block_root, finalized_update.block_roots_hash);
+			FinalizedBeaconHeadersBlockRoot::<mock_mainnet::Test>::insert(
+				finalized_block_root,
+				finalized_update.block_roots_hash,
+			);
 
 			assert_ok!(mock_mainnet::EthereumBeaconClient::import_execution_header(
 				mock_mainnet::RuntimeOrigin::signed(1),
@@ -1251,8 +1262,7 @@ mod beacon_mainnet_tests {
 	#[test]
 	pub fn test_hash_tree_root_sync_committee() {
 		let sync_committee = get_committee_sync_ssz_test_data::<mock_mainnet::Test>();
-		let hash_root_result =
-			merkleization::hash_tree_root_sync_committee(sync_committee);
+		let hash_root_result = merkleization::hash_tree_root_sync_committee(sync_committee);
 		assert_ok!(&hash_root_result);
 
 		let hash_root: H256 = hash_root_result.unwrap().into();
@@ -1265,8 +1275,7 @@ mod beacon_mainnet_tests {
 	#[test]
 	pub fn test_hash_block_body() {
 		let block_update = get_beacon_block_body::<mock_minimal::Test>();
-		let payload: Result<SSZBeaconBlockBody, MerkleizationError> =
-			block_update.try_into();
+		let payload: Result<SSZBeaconBlockBody, MerkleizationError> = block_update.try_into();
 		assert_ok!(&payload);
 
 		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());

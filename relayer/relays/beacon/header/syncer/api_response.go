@@ -66,7 +66,7 @@ type BootstrapResponse struct {
 			Beacon HeaderResponse `json:"beacon"`
 		} `json:"header"`
 		CurrentSyncCommittee       SyncCommitteeResponse `json:"current_sync_committee"`
-		CurrentSyncCommitteeBranch []common.Hash         `json:"current_sync_committee_branch"`
+		CurrentSyncCommitteeBranch []string              `json:"current_sync_committee_branch"`
 	} `json:"data"`
 }
 

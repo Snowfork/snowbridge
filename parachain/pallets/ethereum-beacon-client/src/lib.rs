@@ -165,7 +165,7 @@ pub mod pallet {
 		InvalidFinalizedHeaderUpdate,
 		InvalidFinalizedPeriodUpdate,
 		InvalidExecutionHeaderUpdate,
-		FinalizedBeaconHeaderSlotsExceeded
+		FinalizedBeaconHeaderSlotsExceeded,
 	}
 
 	#[pallet::hooks]
@@ -701,9 +701,9 @@ pub mod pallet {
 			let leaf_index: u64 = (max_slots_per_historical_root + index_in_array) as u64;
 
 			log::info!(
-					target: "ethereum-beacon-client",
-					"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH, leaf_index
-				);
+				target: "ethereum-beacon-client",
+				"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH, leaf_index
+			);
 
 			ensure!(
 				Self::is_valid_merkle_branch(

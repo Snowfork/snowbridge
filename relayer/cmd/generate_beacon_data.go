@@ -29,6 +29,8 @@ func generateBeaconDataCmd() *cobra.Command {
 	return cmd
 }
 
+const pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
+
 func generateBeaconData(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		spec, err := cmd.Flags().GetString("spec")
@@ -147,7 +149,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 func writeJSONToFile(data interface{}, filename string) error {
 	file, _ := json.MarshalIndent(data, "", " ")
 
-	f, err := os.OpenFile("parachain/pallets/ethereum-beacon-client/tests/fixtures/"+filename+".json", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	f, err := os.OpenFile(fmt.Sprintf("%s/%s.json", pathToBeaconTestFixtureFiles, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 
 	if err != nil {
 		return fmt.Errorf("create file: %w", err)

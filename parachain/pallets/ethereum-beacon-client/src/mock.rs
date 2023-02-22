@@ -294,8 +294,7 @@ fn sync_committee_update_from_file<T: crate::Config>(
 
 fn sync_committee_from_file<T: crate::Config>(
 	name: &str,
-) -> SyncCommittee<T::MaxSyncCommitteeSize>
-{
+) -> SyncCommittee<T::MaxSyncCommitteeSize> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -383,8 +382,7 @@ pub fn get_committee_sync_period_update<T: crate::Config>(
 	sync_committee_update_from_file::<T>(&add_file_prefix("sync_committee_update.json"))
 }
 
-pub fn get_committee_sync_ssz_test_data<T: crate::Config>(
-) -> SyncCommittee<T::MaxSyncCommitteeSize>
+pub fn get_committee_sync_ssz_test_data<T: crate::Config>() -> SyncCommittee<T::MaxSyncCommitteeSize>
 {
 	let mut filename: String = "ssz_test_".to_owned();
 	filename.push_str(&get_config_setting());
