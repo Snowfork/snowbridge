@@ -31,7 +31,8 @@ contract NativeTokens is Ownable {
 
     /// @notice Funds where unlocked.
     /// @dev Emitted once the funds are unlocked.
-    /// @param origin The substrate address which initiated the unlock. / @param recipient The ethereyn address that will receive the funds.
+    /// @param origin The substrate address which initiated the unlock.
+    /// @param recipient The ethereyn address that will receive the funds.
     /// @param token The token unlocked.
     /// @param amount The amount unlocked.
     event Unlocked(bytes32 origin, address recipient, address token, uint256 amount);
@@ -39,6 +40,9 @@ contract NativeTokens is Ownable {
     /// @notice a token was created in Statemint.
     /// @dev Emitted after enqueueing a a create token message to substrate.
     event Created(address token);
+
+    /// @dev the origin that
+    bytes32 public immutable allowedOrigin;
 
     /// @dev The vault where ERC20 tokens are locked.
     ERC20Vault public immutable vault;
@@ -49,9 +53,11 @@ contract NativeTokens is Ownable {
     /// @notice Initializes the NativeTokens contract with a vault and channels.
     /// @param _vault The vault to use to `lock`/`unlock` tokens.
     /// @param _outboundChannel The channel used to queue lock and create messages.
-    constructor(ERC20Vault _vault, OutboundChannel _outboundChannel) {
+    /// @param _allowedOrigin The origin allowed to call handle.
+    constructor(ERC20Vault _vault, OutboundChannel _outboundChannel, bytes32 _allowedOrigin) {
         vault = _vault;
         outboundChannel = _outboundChannel;
+        allowedOrigin = _allowedOrigin;
     }
 
     /// @notice Locks tokens to mint on substrate.
@@ -60,9 +66,9 @@ contract NativeTokens is Ownable {
     /// @param recipient The recipient on the substrate side.
     /// @param amount The amount to lock.
     function lock(address token, bytes32 recipient, uint256 amount) public {
-        require(amount > 0, "NativeTokes: non zero amount");
-        require(token != address(0), "NativeTokes: non zero address");
-        require(recipient != 0, "NativeTokes: non zero recipient");
+        require(amount > 0, "NativeTokens: zero amount");
+        require(token != address(0), "NativeTokens: zero address token");
+        require(recipient != bytes32(0), "NativeTokens: zero address recipient");
 
         /// TODO: Implement a max locked amount.
         vault.deposit(msg.sender, token, amount);
@@ -72,8 +78,8 @@ contract NativeTokens is Ownable {
         /// TODO: Get weight
         uint64 weight = 1_000_000;
 
-        outboundChannel.submit(msg.sender, call, weight);
         emit Locked(msg.sender, recipient, token, amount);
+        outboundChannel.submit(msg.sender, call, weight);
     }
 
     /// @notice Creates a native token.
@@ -93,8 +99,8 @@ contract NativeTokens is Ownable {
         /// TODO: Get weight
         uint64 weight = 1_000_000;
 
-        outboundChannel.submit(msg.sender, call, weight);
         emit Created(token);
+        outboundChannel.submit(msg.sender, call, weight);
     }
 
     /// @notice Handles messages coming in over the bridge.
@@ -102,7 +108,7 @@ contract NativeTokens is Ownable {
     /// @param origin The hashed substrate sovereign account.
     /// @param message The message enqueued from substrate.
     function handle(bytes32 origin, bytes calldata message) external onlyOwner {
-        /// TODO: require origin is statemint.
+        require(origin == allowedOrigin, "NativeTokens: unknown origin");
         MessageProtocol.Message memory decoded = abi.decode(message, (MessageProtocol.Message));
         if (decoded.action == MessageProtocol.Action.Unlock) {
             unlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
@@ -115,9 +121,9 @@ contract NativeTokens is Ownable {
     /// @param origin The hashed substrate sovereign account.
     /// @param payload A decoded unlock payload.
     function unlock(bytes32 origin, UnlockPayload memory payload) private {
+        emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
         if (payload.amount > 0) {
             vault.withdraw(payload.recipient, payload.token, payload.amount);
         }
-        emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
     }
 }

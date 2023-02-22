@@ -30,9 +30,13 @@ contract DeployScript is Script {
         ERC20Vault erc20vault = new ERC20Vault();
         console.log("address of ERC20Vault is: %s", address(erc20vault));
 
-        NativeTokens nativeTokens = new NativeTokens(erc20vault, outboundChannel);
-        nativeTokens.transferOwnership(address(inboundChannel));
+        bytes32 allowOrigin = vm.envBytes32("TOKENS_ALLOWED_ORIGIN");
+        console.log("configured tokens allowed origin:");
+        console.logBytes32(allowOrigin);
+        NativeTokens nativeTokens = new NativeTokens(erc20vault, outboundChannel, allowOrigin);
+        outboundChannel.authorizeDefaultOperator(address(nativeTokens));
         erc20vault.transferOwnership(address(nativeTokens));
+        nativeTokens.transferOwnership(address(inboundChannel));
         console.log("address of NativeTokens is: %s", address(nativeTokens));
 
         vm.stopBroadcast();

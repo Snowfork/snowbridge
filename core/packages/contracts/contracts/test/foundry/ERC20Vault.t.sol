@@ -1,8 +1,9 @@
 pragma solidity ^0.8.9;
 
-import "../../ERC20Vault.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
+
+import "../../ERC20Vault.sol";
 
 import "../SovereignAccountMock.sol";
 import "../TestToken.sol";

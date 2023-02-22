@@ -8,6 +8,9 @@ source_up_if_exists
 # export RELAYCHAIN_ENDPOINT=         # Relaychain endpoint, default value: ws://localhost:9944
 # export PARACHAIN_RUNTIME=           # Runtime type of parachain should be one of snowbase|snowblink|snowbridge
 
+## The allowed origin for native and foreign token contracts
+export TOKENS_ALLOWED_ORIGIN=0x09b636bf387d256bd35ebf301c2da34fdee53b42f6a4648ad126156034d4a2db # The allowed origin for native and foreign token contracts
+
 ## Run E2E on Goerli
 
 # export INFURA_PROJECT_ID=           # Your Infura project id
