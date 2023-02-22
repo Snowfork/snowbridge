@@ -61,13 +61,6 @@ build_parachain()
         --bin snowbridge-query-events
     cp "$parachain_dir/target/release/snowbridge-query-events" "$output_bin_dir"
 
-    echo "Building test parachain"
-    cargo build \
-        --manifest-path utils/test-parachain/Cargo.toml \
-        --release \
-        --bin snowbridge-test-node
-    cp "$test_collator_bin" "$output_bin_dir"
-
     cd -
 }
 
