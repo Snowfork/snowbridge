@@ -1,6 +1,4 @@
-source_up_if_exists
-
-export PRIVATE_KEY=0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77
-export RANDAO_COMMIT_DELAY=3
-export RANDAO_COMMIT_EXP=8
-export PARAID=1000
+// export PRIVATE_KEY=0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77
+// export RANDAO_COMMIT_DELAY=3
+// export RANDAO_COMMIT_EXP=8
+// export PARAID=1000
