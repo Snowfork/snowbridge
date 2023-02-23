@@ -12,13 +12,13 @@ contract SovereignTreasury is Ownable {
     }
 
     // Handle a message from the bridge.
-    function handle(bytes32 sovereignID, bytes calldata message) external onlyOwner {
+    function handle(bytes32 origin, bytes calldata message) external onlyOwner {
         Message memory message = abi.decode(message, (Message));
 
         if (message.action == Action.Withdraw) {
             WithdrawPayload memory payload = abi.decode(message.payload, (WithdrawPayload));
 
-            transfer(sovereignID, payload.recipient, payload.amount);
+            transfer(origin, payload.recipient, payload.amount);
         }
     }
 
