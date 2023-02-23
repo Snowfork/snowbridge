@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "./Vault.sol";
+import "./EtherVault.sol";
 
 // TODO: transfer ownership from deployer to inbound channel
 contract SovereignTreasury is Ownable {
-    Vault public vault;
+    EtherVault public vault;
 
-    constructor(Vault vault) {
+    constructor(EtherVault vault) {
         vault = vault;
     }
 

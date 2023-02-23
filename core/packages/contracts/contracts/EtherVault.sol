@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 // TODO: transfer ownership from deployer to SovereignTreasury
 // This contract actually holds Ether balances for each sovereignID.
-contract Vault is Ownable {
+contract EtherVault is Ownable {
     using Address for address payable;
 
     event Deposited(bytes32 indexed sovereignID, uint256 amount);
@@ -26,8 +26,8 @@ contract Vault is Ownable {
     }
 
     function withdraw(bytes32 sovereignID, WithdrawPayload memory payload) external onlyOwner {
-        require(payload.amount > 0, "Vault: must withdraw a positive amount");
-        require(balances[sovereignID] >= payload.amount, "Vault: insufficient balance");
+        require(payload.amount > 0, "EtherVault: must withdraw a positive amount");
+        require(balances[sovereignID] >= payload.amount, "EtherVault: insufficient balance");
 
         balances[sovereignID] -= payload.amount;
 
