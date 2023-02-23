@@ -185,7 +185,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.SyncCommitteeP
 }
 
 func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
-	err := s.Client.DownloadBeaconState(fmt.Sprintf("%d", slot))
+	beaconStateFilename, err := s.Client.DownloadBeaconState(fmt.Sprintf("%d", slot))
 	switch {
 	case errors.Is(err, api.ErrNotFound):
 		return scale.BlockRootProof{}, ErrBeaconStateAvailableYet
@@ -193,13 +193,11 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 		return scale.BlockRootProof{}, err
 	}
 
-	const fileName = "beacon_state.ssz"
-
 	defer func() {
-		_ = os.Remove(fileName)
+		_ = os.Remove(beaconStateFilename)
 	}()
 
-	data, err := os.ReadFile(fileName)
+	data, err := os.ReadFile(beaconStateFilename)
 	if err != nil {
 		return scale.BlockRootProof{}, fmt.Errorf("find beacon state file: %w", err)
 	}

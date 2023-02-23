@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
@@ -432,33 +433,34 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 	return response, nil
 }
 
-func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) error {
+func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) (string, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateIdOrSlot), nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 	req.Header.Add("Accept", "application/octet-stream")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if res.StatusCode != http.StatusOK {
 		if res.StatusCode == 404 {
-			return ErrNotFound
+			return "", ErrNotFound
 		}
 
-		return fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
+		return "", fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
 	}
 
+	filename := fmt.Sprintf("beacon_state_%d.ssz", time.Now().UnixNano())
 	defer res.Body.Close()
-	out, err := os.Create("beacon_state.ssz")
+	out, err := os.Create(filename)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	defer out.Close()
 	io.Copy(out, res.Body)
 
-	return nil
+	return filename, nil
 }

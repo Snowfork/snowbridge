@@ -3,10 +3,12 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cbroglie/mustache"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
+	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
@@ -29,7 +31,18 @@ func generateBeaconDataCmd() *cobra.Command {
 	return cmd
 }
 
-const pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
+type Data struct {
+	InitialSync           beaconjson.InitialSync
+	SyncCommitteeUpdate   beaconjson.SyncCommitteeUpdate
+	FinalizedHeaderUpdate beaconjson.FinalizedHeaderUpdate
+	HeaderUpdate          beaconjson.HeaderUpdate
+}
+
+const (
+	pathToBeaconBenchmarkData    = "parachain/pallets/ethereum-beacon-client/src/benchmarking"
+	pathToBenchmarkDataTemplate  = "parachain/templates/beacon_benchmarking_data.rs.mustache"
+	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
+)
 
 func generateBeaconData(cmd *cobra.Command, _ []string) error {
 	err := func() error {
@@ -72,72 +85,97 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
-
 		initialSync := initialSyncScale.ToJSON()
-
 		initialSyncHeaderSlot := initialSync.Header.Slot
-
-		syncCommitteePeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
-
 		err = writeJSONToFile(initialSync, activeSpec.ToString()+"_initial_sync")
 		if err != nil {
 			return fmt.Errorf("write initial sync to file: %w", err)
 		}
-
 		log.Info("created initial sync file")
 
-		committeeUpdate, err := s.GetSyncCommitteePeriodUpdate(syncCommitteePeriod)
+		log.Info("downloading beacon state, this can take a few minutes...")
+		syncCommitteePeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
+		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(syncCommitteePeriod)
 		if err != nil {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
-
-		err = writeJSONToFile(committeeUpdate.Payload.ToJSON(), activeSpec.ToString()+"_sync_committee_update")
+		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
+		err = writeJSONToFile(syncCommitteeUpdate, activeSpec.ToString()+"_sync_committee_update")
 		if err != nil {
 			return fmt.Errorf("write sync committee update to file: %w", err)
 		}
-
 		log.Info("created sync committee update file")
 
-		finalizedHeaderUpdate, err := s.GetFinalizedUpdate()
+		log.Info("downloading beacon state, this can take a few minutes...")
+		finalizedUpdateScale, err := s.GetFinalizedUpdate()
 		if err != nil {
 			return fmt.Errorf("get finalized header update: %w", err)
 		}
-
-		err = writeJSONToFile(finalizedHeaderUpdate.Payload.ToJSON(), activeSpec.ToString()+"_finalized_header_update")
+		finalizedUpdate := finalizedUpdateScale.Payload.ToJSON()
+		err = writeJSONToFile(finalizedUpdate, activeSpec.ToString()+"_finalized_header_update")
 		if err != nil {
 			return fmt.Errorf("write finalized header update to file: %w", err)
 		}
-
 		log.Info("created finalized header update file")
 
-		blockUpdateSlot := uint64(finalizedHeaderUpdate.Payload.FinalizedHeader.Slot - 2)
-
+		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot - 2)
 		checkPoint := cache.Proof{
-			FinalizedBlockRoot: finalizedHeaderUpdate.FinalizedHeaderBlockRoot,
-			BlockRootsTree:     finalizedHeaderUpdate.BlockRootsTree,
-			Slot:               uint64(finalizedHeaderUpdate.Payload.FinalizedHeader.Slot),
+			FinalizedBlockRoot: finalizedUpdateScale.FinalizedHeaderBlockRoot,
+			BlockRootsTree:     finalizedUpdateScale.BlockRootsTree,
+			Slot:               uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot),
 		}
-
-		blockUpdate, err := s.GetNextHeaderUpdateBySlotWithAncestryProof(blockUpdateSlot, checkPoint)
+		headerUpdateScale, err := s.GetNextHeaderUpdateBySlotWithAncestryProof(blockUpdateSlot, checkPoint)
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
-		nextBlockUpdate, err := s.GetNextHeaderUpdateBySlot(blockUpdateSlot + 1)
+		nextHeaderUpdateScale, err := s.GetNextHeaderUpdateBySlot(blockUpdateSlot + 1)
 		if err != nil {
 			return fmt.Errorf("get next header update to get sync aggregate: %w", err)
 		}
-
-		log.WithField("nextBlockUpdate", nextBlockUpdate.Block.Body.SyncAggregate).Info("next block")
-
-		blockUpdate.SyncAggregate = nextBlockUpdate.Block.Body.SyncAggregate
-		blockUpdate.SignatureSlot = nextBlockUpdate.Block.Slot
-
-		err = writeJSONToFile(blockUpdate.ToJSON(), activeSpec.ToString()+"_block_update")
+		headerUpdateScale.SyncAggregate = nextHeaderUpdateScale.Block.Body.SyncAggregate
+		headerUpdateScale.SignatureSlot = nextHeaderUpdateScale.Block.Slot
+		headerUpdate := headerUpdateScale.ToJSON()
+		err = writeJSONToFile(headerUpdate, activeSpec.ToString()+"_block_update")
 		if err != nil {
 			return fmt.Errorf("write block update to file: %w", err)
 		}
 
-		log.Info("created block update")
+		log.Info("created header update file")
+
+		log.Info("now updating benchmarking data files")
+
+		// Rust file hexes require the 0x of hashes to be removed
+		initialSync.RemoveLeadingZeroHashes()
+		syncCommitteeUpdate.RemoveLeadingZeroHashes()
+		finalizedUpdate.RemoveLeadingZeroHashes()
+		headerUpdate.RemoveLeadingZeroHashes()
+
+		data := Data{
+			InitialSync:           initialSync,
+			SyncCommitteeUpdate:   syncCommitteeUpdate,
+			FinalizedHeaderUpdate: finalizedUpdate,
+			HeaderUpdate:          headerUpdate,
+		}
+
+		log.WithFields(log.Fields{
+			"location": pathToBeaconTestFixtureFiles,
+			"spec":     activeSpec,
+		}).Info("rendering file using mustache")
+
+		rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
+		filename := fmt.Sprintf("data_%s.rs", activeSpec)
+
+		log.WithFields(log.Fields{
+			"location": pathToBeaconBenchmarkData,
+			"filename": filename,
+		}).Info("writing result file")
+
+		err = writeBenchmarkDataFile(filename, rendered)
+		if err != nil {
+			return err
+		}
+
+		log.WithField("spec", activeSpec).Info("done")
 
 		return nil
 	}()
@@ -160,6 +198,24 @@ func writeJSONToFile(data interface{}, filename string) error {
 	defer f.Close()
 
 	_, err = f.Write(file)
+
+	if err != nil {
+		return fmt.Errorf("write to file: %w", err)
+	}
+
+	return nil
+}
+
+func writeBenchmarkDataFile(filename, fileContents string) error {
+	f, err := os.OpenFile(fmt.Sprintf("%s/%s", pathToBeaconBenchmarkData, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+
+	if err != nil {
+		return fmt.Errorf("create file: %w", err)
+	}
+
+	defer f.Close()
+
+	_, err = f.Write([]byte(fileContents))
 
 	if err != nil {
 		return fmt.Errorf("write to file: %w", err)

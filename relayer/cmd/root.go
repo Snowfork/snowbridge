@@ -29,7 +29,6 @@ func init() {
 	rootCmd.AddCommand(parachainHeadProofCmd())
 	rootCmd.AddCommand(importExecutionHeaderCmd())
 	rootCmd.AddCommand(generateBeaconDataCmd())
-	rootCmd.AddCommand(generateBeaconBenchmarkDataCmd())
 }
 
 func Execute() {
