@@ -13,14 +13,14 @@ contract Vault is Ownable {
     event Withdrawn(bytes32 indexed sovereignID, address recipient, uint256 amount);
 
     // Mapping of sovereignID to balance
-    mapping(bytes32 => uint256) private _balances;
+    mapping(bytes32 => uint256) private balances;
 
     receive() external payable {
         revert("Must use deposit function");
     }
 
     function deposit(bytes32 sovereignID) external payable onlyOwner {
-        _balances[sovereignID] += msg.value;
+        balances[sovereignID] += msg.value;
 
         emit Deposited(sovereignID, msg.value);
     }
@@ -31,9 +31,9 @@ contract Vault is Ownable {
         uint256 amount
     ) external onlyOwner {
         require(amount > 0, "Vault: must withdraw a positive amount");
-        require(_balances[sovereignID] >= amount, "Vault: insufficient balance");
+        require(balances[sovereignID] >= amount, "Vault: insufficient balance");
 
-        _balances[sovereignID] -= amount;
+        balances[sovereignID] -= amount;
 
         // NB: Keep this transfer after reducing the balance to avoid reentrancy attacks.
         // https://consensys.github.io/smart-contract-best-practices/attacks/reentrancy/
