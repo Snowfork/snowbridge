@@ -84,9 +84,15 @@ contract NativeTokens is Ownable {
     /// @param recipient The recipient on the substrate side.
     /// @param amount The amount to lock.
     function lock(address token, bytes32 recipient, uint256 amount) public {
-        if (amount == 0) revert ZeroAmount();
-        if (token == address(0)) revert ZeroAddressToken();
-        if (recipient == bytes32(0)) revert ZeroAddressRecipient();
+        if (amount == 0) {
+            revert ZeroAmount();
+        }
+        if (token == address(0)) {
+            revert ZeroAddressToken();
+        }
+        if (recipient == bytes32(0)) {
+            revert ZeroAddressRecipient();
+        }
 
         // TODO: Implement a max locked amount.
         vault.deposit(msg.sender, token, amount);
@@ -104,7 +110,9 @@ contract NativeTokens is Ownable {
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
     function create(address token) public {
-        if (token == address(0)) revert ZeroAddressToken();
+        if (token == address(0)) {
+            revert ZeroAddressToken();
+        }
 
         IERC20Metadata metadata = IERC20Metadata(token);
         // TODO: Use metadata to encode the call.
@@ -126,7 +134,9 @@ contract NativeTokens is Ownable {
     /// @param origin The hashed substrate sovereign account.
     /// @param message The message enqueued from substrate.
     function handle(bytes32 origin, bytes calldata message) external onlyOwner {
-        if (origin != allowedOrigin) revert UnauthorizedOrigin();
+        if (origin != allowedOrigin) {
+            revert UnauthorizedOrigin();
+        }
 
         MessageProtocol.Message memory decoded = abi.decode(message, (MessageProtocol.Message));
         if (decoded.action == MessageProtocol.Action.Unlock) {
