@@ -13,8 +13,8 @@ import "../TestToken.sol";
 contract NativeTokensTest is Test {
     event Deposit(address account, address sender, address token, uint256 amount);
     event Withdraw(address account, address recipient, address token, uint256 amount);
-    event Locked(address origin, bytes32 recipient, address token, uint256 amount);
-    event Unlocked(bytes32 origin, address recipient, address token, uint256 amount);
+    event Locked(address origin, bytes32 recipient, address token, uint128 amount);
+    event Unlocked(bytes32 origin, address recipient, address token, uint128 amount);
     event Created(address token, string name, string symbol, uint8 decimals);
     event Message(address account, bytes payload, uint64 weight);
 

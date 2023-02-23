@@ -33,7 +33,7 @@ contract NativeTokens is Ownable {
         /// @dev The destination address that will receive unlocked funds.
         address recipient;
         /// @dev The amount to unlock.
-        uint256 amount;
+        uint128 amount;
     }
 
     /// @dev Emitted once the funds are locked and a message is successfully queued.
@@ -41,14 +41,14 @@ contract NativeTokens is Ownable {
     /// @param recipient The substrate address that will receive the funds.
     /// @param token The token locked.
     /// @param amount The amount locked.
-    event Locked(address origin, bytes32 recipient, address token, uint256 amount);
+    event Locked(address origin, bytes32 recipient, address token, uint128 amount);
 
     /// @dev Emitted once the funds are unlocked.
     /// @param origin The substrate address which initiated the unlock.
     /// @param recipient The ethereyn address that will receive the funds.
     /// @param token The token unlocked.
     /// @param amount The amount unlocked.
-    event Unlocked(bytes32 origin, address recipient, address token, uint256 amount);
+    event Unlocked(bytes32 origin, address recipient, address token, uint128 amount);
 
     /// @dev Emitted after enqueueing a a create token message to substrate.
     /// @param token The address of the token created.
@@ -93,7 +93,7 @@ contract NativeTokens is Ownable {
     /// @param token The token to lock.
     /// @param recipient The recipient on the substrate side.
     /// @param amount The amount to lock.
-    function lock(address token, bytes32 recipient, uint256 amount) public {
+    function lock(address token, bytes32 recipient, uint128 amount) public {
         if (amount == 0) {
             revert ZeroAmount();
         }
