@@ -44,12 +44,6 @@ contract NativeTokensTest is Test {
         token.mint(address(account2), 500);
     }
 
-    function testHandleRevertsUnknownAction() public {
-        NativeTokens.Message memory message;
-        vm.expectRevert(NativeTokens.UnsupportedMessageAction.selector);
-        nativeTokens.handle(origin, abi.encode(message));
-    }
-
     function testHandleRevertsUnknownOrigin() public {
         NativeTokens.Message memory message;
         bytes32 unknownOrigin = keccak256("UNKNOWN_ORIGIN");

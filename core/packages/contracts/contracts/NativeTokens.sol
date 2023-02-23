@@ -12,8 +12,6 @@ import "./OutboundChannel.sol";
 contract NativeTokens is Ownable {
     /// @dev Describes the type of message.
     enum Action {
-        /// @dev The default value for messages created.
-        Uninitialized,
         /// @dev A message which unlocks funds for native tokens.
         Unlock
     }
