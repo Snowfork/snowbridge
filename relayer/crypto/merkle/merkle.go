@@ -3,6 +3,7 @@
 package merkle
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -11,14 +12,6 @@ import (
 	"math"
 
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
-)
-
-// Position constants are used in merkle path nodes to denote
-// whether the node was a left child or right child. This allows
-// hash concatenation can be performed correctly.
-const (
-	POSITION_LEFT  = "left"
-	POSITION_RIGHT = "right"
 )
 
 func depth(n int) int {
@@ -33,8 +26,7 @@ type Hasher interface {
 // Node is used to represent the steps of a merkle path.
 // This structure is not used within the Tree structure.
 type Node struct {
-	Hash     []byte `json:"hash"`
-	Position string `json:"position"`
+	Hash []byte `json:"hash"`
 }
 
 // The Hash value is encoded into a base64 string
@@ -149,9 +141,9 @@ func (t *Tree) MerklePath(preLeaf []byte) []*Node {
 
 		// if i is odd we want to get the left sibling
 		if index%2 != 0 {
-			path = append(path, &Node{Hash: level[index-1], Position: POSITION_LEFT})
+			path = append(path, &Node{Hash: level[index-1]})
 		} else {
-			path = append(path, &Node{Hash: level[index+1], Position: POSITION_RIGHT})
+			path = append(path, &Node{Hash: level[index+1]})
 		}
 
 		index = nextIndex
@@ -192,8 +184,11 @@ func (t *Tree) Hash(preLeaves [][]byte, h Hasher) error {
 		for j := 0; j < len(level)-1; j += 2 {
 			left := level[j]
 			right := level[j+1]
-
-			nextLevel[k] = h.Hash(append(left, right...))
+			if bytes.Compare(left, right) < 0 {
+				nextLevel[k] = h.Hash(append(left, right...))
+			} else {
+				nextLevel[k] = h.Hash(append(right, left...))
+			}
 			k += 1
 		}
 
@@ -220,7 +215,7 @@ func Prove(preLeaf, root []byte, path []*Node, h Hasher) bool {
 	hash := leaf
 
 	for _, node := range path {
-		if node.Position == POSITION_LEFT {
+		if bytes.Compare(node.Hash, hash) < 0 {
 			hash = append(node.Hash, hash...)
 		} else {
 			hash = append(hash, node.Hash...)
