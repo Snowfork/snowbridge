@@ -95,16 +95,6 @@ contract NativeTokensTest is Test {
         nativeTokens.lock(address(0), bytes32(0), 0);
     }
 
-    function testLockRevertsZeroAddressRecipient() public {
-        vm.expectRevert(NativeTokens.ZeroAddressRecipient.selector);
-        nativeTokens.lock(address(token), bytes32(0), 100);
-    }
-
-    function testLockRevertsZeroAddressToken() public {
-        vm.expectRevert(NativeTokens.ZeroAddressToken.selector);
-        nativeTokens.lock(address(0), recipient, 100);
-    }
-
     function testLockSuccessful() public {
         token.approve(address(vault), 100);
 
@@ -124,11 +114,6 @@ contract NativeTokensTest is Test {
         assertEq(token.balanceOf(address(vault)), 50);
         assertEq(token.allowance(address(account2), address(vault)), 50);
         assertEq(vault.balances(address(token)), 50);
-    }
-
-    function testCreateRevertsZeroAddressToken() public {
-        vm.expectRevert(NativeTokens.ZeroAddressToken.selector);
-        nativeTokens.create(address(0));
     }
 
     function testCreateSuccessful() public {

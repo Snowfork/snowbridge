@@ -58,12 +58,6 @@ contract NativeTokens is Ownable {
     /// @dev Zero amount.
     error ZeroAmount();
 
-    /// @dev Zero addressed token.
-    error ZeroAddressToken();
-
-    /// @dev Zero addressed recipient.
-    error ZeroAddressRecipient();
-
     /// @dev the origin provided is unauthorized.
     error UnauthorizedOrigin();
 
@@ -97,12 +91,6 @@ contract NativeTokens is Ownable {
         if (amount == 0) {
             revert ZeroAmount();
         }
-        if (token == address(0)) {
-            revert ZeroAddressToken();
-        }
-        if (recipient == bytes32(0)) {
-            revert ZeroAddressRecipient();
-        }
 
         // TODO: Implement a max locked amount.
         vault.deposit(msg.sender, token, amount);
@@ -119,10 +107,6 @@ contract NativeTokens is Ownable {
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
     function create(address token) public {
-        if (token == address(0)) {
-            revert ZeroAddressToken();
-        }
-
         IERC20Metadata metadata = IERC20Metadata(token);
         // TODO: Use metadata to encode the call.
         string memory name = metadata.name();
