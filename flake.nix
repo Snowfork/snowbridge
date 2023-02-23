@@ -16,6 +16,9 @@
     flake-utils.lib.eachSystem supportedSystems (system:
         let
             pkgs = import nixpkgs { inherit system overlays; };
+            cwd = builtins.toString ./.;
+            rust =
+              pkgs.rust-bin.fromRustupToolchainFile "${cwd}/parachain/rust-toolchain.toml";
         in
         with pkgs;
         {
@@ -51,7 +54,7 @@
                     gcc
                     libiconv
                     protobuf
-                    rustup
+                    rust
 
                     cowsay
                 ];
