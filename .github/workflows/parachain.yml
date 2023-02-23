@@ -13,6 +13,7 @@ on:
       - 'parachain/**'
       - '!parachain/README.md'
       - '!parachain/LICENSE'
+  workflow_dispatch:
 
 jobs:
   fmt:
@@ -103,6 +104,17 @@ jobs:
           profile: minimal
           toolchain: 1.62.1
           target: wasm32-unknown-unknown
+      - name: test beacon client with minimal feature
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: >-
+            --manifest-path parachain/Cargo.toml
+            --verbose
+            --package snowbridge-ethereum-beacon-client
+            --features runtime-benchmarks
+            --features minimal
+          toolchain: 1.62.1
       - uses: actions-rs/install@v0.1.2
         with:
           crate: cargo-tarpaulin
