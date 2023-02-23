@@ -154,9 +154,6 @@ contract NativeTokens is Ownable {
         }
     }
 
-    /// @dev Unlocks funds from the vault and sends it to recipient.
-    /// @param origin The hashed substrate sovereign account.
-    /// @param payload A decoded unlock payload.
     function doUnlock(bytes32 origin, UnlockPayload memory payload) private {
         emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
         if (payload.amount > 0) {
