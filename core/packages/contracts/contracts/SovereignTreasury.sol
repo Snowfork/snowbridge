@@ -18,7 +18,7 @@ contract SovereignTreasury is Ownable {
         if (message.action == Action.Withdraw) {
             WithdrawPayload memory payload = abi.decode(message.payload, (WithdrawPayload));
 
-            transfer(origin, payload.recipient, payload.amount);
+            transfer(origin, payload);
         }
     }
 
@@ -27,8 +27,8 @@ contract SovereignTreasury is Ownable {
         vault.deposit{ value: msg.value }(sovereignID);
     }
 
-    function transfer(bytes32 sovereignID, address payable recipient, uint256 amount) private {
-        vault.withdraw(sovereignID, recipient, amount);
+    function transfer(bytes32 sovereignID, WithdrawPayload memory payload) private {
+        vault.withdraw(sovereignID, payload);
     }
 }
 
@@ -41,9 +41,4 @@ enum Action {
     // Withdraw from sovereign account and transfer to recipient.
     // Parachain teams will occasionally send this message to retrieve collected fees.
     Withdraw
-}
-
-struct WithdrawPayload {
-    address payable recipient;
-    uint256 amount;
 }
