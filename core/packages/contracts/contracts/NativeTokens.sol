@@ -4,25 +4,38 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import "./utils/MessageProtocol.sol";
 import "./ERC20Vault.sol";
 import "./OutboundChannel.sol";
 
 /// @title Native Tokens
-/// @notice A contract for managing ethereum native tokens.
 /// @dev Manages locking, unlocking ERC20 tokens in the vault. Initializes ethereum native tokens on the substrate side via create.
 contract NativeTokens is Ownable {
-    /// @notice Unlock payload format.
+    /// @dev Describes the type of message.
+    enum Action {
+        /// @dev The default value for messages created.
+        Uninitialized,
+        /// @dev A message which unlocks funds for native tokens.
+        Unlock
+    }
+
+    /// @dev Message format.
+    struct Message {
+        /// @dev The action type.
+        Action action;
+        /// @dev The message payload.
+        bytes payload;
+    }
+
+    /// @dev Unlock payload format.
     struct UnlockPayload {
-        /// @notice The ERC20 token to unlock.
+        /// @dev The ERC20 token to unlock.
         address token;
-        /// @notice The destination address that will receive unlocked funds.
+        /// @dev The destination address that will receive unlocked funds.
         address recipient;
-        /// @notice The amount to unlock.
+        /// @dev The amount to unlock.
         uint256 amount;
     }
 
-    /// @notice Funds where locked.
     /// @dev Emitted once the funds are locked and a message is successfully queued.
     /// @param origin The address which initiated the lock.
     /// @param recipient The substrate address that will receive the funds.
@@ -30,7 +43,6 @@ contract NativeTokens is Ownable {
     /// @param amount The amount locked.
     event Locked(address origin, bytes32 recipient, address token, uint256 amount);
 
-    /// @notice Funds where unlocked.
     /// @dev Emitted once the funds are unlocked.
     /// @param origin The substrate address which initiated the unlock.
     /// @param recipient The ethereyn address that will receive the funds.
@@ -38,7 +50,6 @@ contract NativeTokens is Ownable {
     /// @param amount The amount unlocked.
     event Unlocked(bytes32 origin, address recipient, address token, uint256 amount);
 
-    /// @notice a token was created in Statemint.
     /// @dev Emitted after enqueueing a a create token message to substrate.
     /// @param token The address of the token created.
     // TODO: Remove name, symbol and decimals.
@@ -68,7 +79,7 @@ contract NativeTokens is Ownable {
     /// @dev The channel used to enqueue messages for lock and create functions.
     OutboundChannel public immutable outboundChannel;
 
-    /// @notice Initializes the NativeTokens contract with a vault and channels.
+    /// @dev Initializes the NativeTokens contract with a vault and channels.
     /// @param _vault The vault to use to `lock`/`unlock` tokens.
     /// @param _outboundChannel The channel used to queue lock and create messages.
     /// @param _allowedOrigin The origin allowed to call handle.
@@ -78,7 +89,6 @@ contract NativeTokens is Ownable {
         allowedOrigin = _allowedOrigin;
     }
 
-    /// @notice Locks tokens to mint on substrate.
     /// @dev Locks an amount of ERC20 Tokens in the vault and enqueues a mint message. Requires the allowance to be set on the ERC20 token where the spender is the vault.
     /// @param token The token to lock.
     /// @param recipient The recipient on the substrate side.
@@ -106,7 +116,6 @@ contract NativeTokens is Ownable {
         outboundChannel.submit(msg.sender, call, weight);
     }
 
-    /// @notice Creates a native token.
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
     function create(address token) public {
@@ -129,7 +138,6 @@ contract NativeTokens is Ownable {
         outboundChannel.submit(msg.sender, call, weight);
     }
 
-    /// @notice Handles messages coming in over the bridge.
     /// @dev Processes messages from inbound channel.
     /// @param origin The hashed substrate sovereign account.
     /// @param message The message enqueued from substrate.
@@ -138,15 +146,15 @@ contract NativeTokens is Ownable {
             revert UnauthorizedOrigin();
         }
 
-        MessageProtocol.Message memory decoded = abi.decode(message, (MessageProtocol.Message));
-        if (decoded.action == MessageProtocol.Action.Unlock) {
+        Message memory decoded = abi.decode(message, (Message));
+        if (decoded.action == Action.Unlock) {
             doUnlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
         } else {
             revert UnsupportedMessageAction();
         }
     }
 
-    /// @notice Unlocks funds from the vault and sends it to recipient.
+    /// @dev Unlocks funds from the vault and sends it to recipient.
     /// @param origin The hashed substrate sovereign account.
     /// @param payload A decoded unlock payload.
     function doUnlock(bytes32 origin, UnlockPayload memory payload) private {

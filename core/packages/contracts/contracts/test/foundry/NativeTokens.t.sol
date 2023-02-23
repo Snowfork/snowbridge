@@ -45,13 +45,13 @@ contract NativeTokensTest is Test {
     }
 
     function testHandleRevertsUnknownAction() public {
-        MessageProtocol.Message memory message;
+        NativeTokens.Message memory message;
         vm.expectRevert(NativeTokens.UnsupportedMessageAction.selector);
         nativeTokens.handle(origin, abi.encode(message));
     }
 
     function testHandleRevertsUnknownOrigin() public {
-        MessageProtocol.Message memory message;
+        NativeTokens.Message memory message;
         bytes32 unknownOrigin = keccak256("UNKNOWN_ORIGIN");
         vm.expectRevert(NativeTokens.UnauthorizedOrigin.selector);
         nativeTokens.handle(unknownOrigin, abi.encode(message));
@@ -59,7 +59,7 @@ contract NativeTokensTest is Test {
 
     function testHandleRevertsUnknownSender() public {
         nativeTokens.transferOwnership(address(account1));
-        MessageProtocol.Message memory message;
+        NativeTokens.Message memory message;
         vm.expectRevert("Ownable: caller is not the owner");
         nativeTokens.handle(origin, abi.encode(message));
     }
@@ -78,8 +78,8 @@ contract NativeTokensTest is Test {
         payload.recipient = address(account1);
         payload.amount = 50;
 
-        MessageProtocol.Message memory message;
-        message.action = MessageProtocol.Action.Unlock;
+        NativeTokens.Message memory message;
+        message.action = NativeTokens.Action.Unlock;
         message.payload = abi.encode(payload);
         nativeTokens.handle(origin, abi.encode(message));
 
