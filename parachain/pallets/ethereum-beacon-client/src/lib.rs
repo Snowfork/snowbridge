@@ -10,6 +10,10 @@ pub mod weights;
 mod ssz;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_mainnet;
+#[cfg(test)]
+mod tests_minimal;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
