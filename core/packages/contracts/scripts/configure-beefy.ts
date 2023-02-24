@@ -81,7 +81,7 @@ function createMerkleTree(leaves: Buffer[]) {
     const leafHashes = leaves.map((value) => hasher(value))
     const tree = new MerkleTree(leafHashes, hasher, {
         sortLeaves: false,
-        sortPairs: false,
+        sortPairs: true,
     })
     return tree
 }
