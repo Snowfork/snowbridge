@@ -338,8 +338,9 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 		nextSlot := currentSlot + 1
 
 		log.WithFields(log.Fields{
-			"slot": nextSlot,
-		}).Info("fetching header at slot")
+			"currentSlot": currentSlot,
+			"nextSlot":    nextSlot,
+		}).Info("fetching next header at slot")
 
 		var nextHeaderUpdate scale.HeaderUpdate
 		// If this is the last slot we need to sync, don't fetch the ancestry proof for the next slot
@@ -483,7 +484,7 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 
 func (h *Header) getClosestCheckpoint(slot uint64) (cache.Proof, error) {
 	checkpoint, err := h.cache.GetClosestCheckpoint(slot)
-	log.WithFields(log.Fields{"slot": slot, "checkpoint": checkpoint}).Info("got closest checkpoint for slot")
+
 	switch {
 	case errors.Is(cache.FinalizedCheckPointNotAvailable, err):
 		calculatedCheckpointSlot := h.syncer.CalculateNextCheckpointSlot(slot)

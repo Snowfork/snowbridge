@@ -3,7 +3,6 @@ package syncer
 import (
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 
@@ -31,6 +30,7 @@ type Syncer struct {
 	SlotsInEpoch                 uint64
 	EpochsPerSyncCommitteePeriod uint64
 	MaxSlotsPerHistoricalRoot    int
+	BlockRootIndexProofDepth     int
 	activeSpec                   config.ActiveSpec
 }
 
@@ -378,13 +378,15 @@ func (s *Syncer) GetLatestFinalizedHeader() (scale.FinalizedHeaderUpdate, error)
 
 func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
 	err := api.ErrNotFound
-	var blockRoot common.Hash
+	var header api.BeaconHeader
 	tries := 0
 	maxSlotsMissed := int(s.SlotsInEpoch)
 	for errors.Is(err, api.ErrNotFound) && tries < maxSlotsMissed {
-		blockRoot, err = s.Client.GetBeaconBlockRoot(slot)
+		// Need to use GetHeaderBySlot instead of GetBeaconBlockRoot here because GetBeaconBlockRoot
+		// returns the previous slot's block root if there is no block at the given slot
+		header, err = s.Client.GetHeaderBySlot(slot)
 		if err != nil && !errors.Is(err, api.ErrNotFound) {
-			return blockRoot, fmt.Errorf("fetch block: %w", err)
+			return common.Hash{}, fmt.Errorf("fetch block: %w", err)
 		}
 
 		if errors.Is(err, api.ErrNotFound) {
@@ -393,6 +395,29 @@ func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
 			slot = slot + 1
 		}
 	}
+
+	beaconHeader := state.BeaconBlockHeader{
+		Slot:          header.Slot,
+		ProposerIndex: header.ProposerIndex,
+		ParentRoot:    header.ParentRoot.Bytes(),
+		StateRoot:     header.StateRoot.Bytes(),
+		BodyRoot:      header.BodyRoot.Bytes(),
+	}
+
+	computedRoot, err := beaconHeader.HashTreeRoot()
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	blockRoot, err := s.Client.GetBeaconBlockRoot(header.Slot)
+	if err != nil && !errors.Is(err, api.ErrNotFound) {
+		return blockRoot, fmt.Errorf("fetch block: %w", err)
+	}
+
+	log.WithFields(log.Fields{
+		"computedRoot": common.BytesToHash(computedRoot[:]),
+		"blockRoot":    blockRoot,
+	}).Info("block roots")
 
 	return blockRoot, nil
 }
@@ -445,8 +470,6 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 	// If slot == finalizedSlot, there won't be an ancestry proof because the header state in question is also the
 	// finalized header
 	if slot == checkpoint.Slot {
-		log.WithFields(log.Fields{"blockRoot": blockRoot, "slot": int(blockScale.Slot)}).Info("no ancestry proof available, finalized block")
-
 		return scale.HeaderUpdate{
 			Block:          blockScale,
 			BlockRootProof: []types.H256{},
@@ -460,8 +483,6 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		displayProof = append(displayProof, common.HexToHash(proof.Hex()))
 	}
 
-	log.WithFields(log.Fields{"checkpointSlot": checkpoint.Slot, "blockRoot": blockRoot, "slot": int(blockScale.Slot), "BlockRootProof": displayProof, "BlockRootProofFinalizedHeader": checkpoint.FinalizedBlockRoot}).Info("checkpoint slot used for proof")
-
 	headerUpdate := scale.HeaderUpdate{
 		Block:                         blockScale,
 		BlockRootProof:                proofScale,
@@ -473,10 +494,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 
 func (s *Syncer) getBlockHeaderAncestryProof(slot int, blockRoot common.Hash, blockRootTree *ssz.Node) ([]types.H256, error) {
 	indexInArray := slot % s.MaxSlotsPerHistoricalRoot
-
-	treeDepth := math.Floor(math.Log2(float64(s.MaxSlotsPerHistoricalRoot)))
-	leavesStartIndex := int(math.Pow(2, treeDepth))
-	leafIndex := leavesStartIndex + indexInArray
+	leafIndex := s.MaxSlotsPerHistoricalRoot + indexInArray
 
 	if blockRootTree == nil {
 		return nil, fmt.Errorf("block root tree is nil")

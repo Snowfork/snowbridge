@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	ssz "github.com/ferranbt/fastssz"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 )
 
 type SyncCommitteePeriodUpdateResponse struct {
@@ -705,7 +705,6 @@ func (c CheckpointResponse) ToScale() (scale.Checkpoint, error) {
 	}, nil
 }
 
-// todo test replacement
 func getTransactionsHashTreeRoot(transactions []string) (types.H256, error) {
 	resultTransactions := [][]byte{}
 
@@ -717,38 +716,13 @@ func getTransactionsHashTreeRoot(transactions []string) (types.H256, error) {
 		resultTransactions = append(resultTransactions, decodeString)
 	}
 
-	hh := ssz.DefaultHasherPool.Get()
+	transactionsContainer := state.TransactionsRootContainer{}
+	transactionsContainer.Transactions = resultTransactions
 
-	indx := hh.Index()
-
-	{
-		subIndx := hh.Index()
-		num := uint64(len(resultTransactions))
-		if num > 1048576 {
-			err := ssz.ErrIncorrectListSize
-			return types.H256{}, err
-		}
-		for _, elem := range resultTransactions {
-			{
-				elemIndx := hh.Index()
-				byteLen := uint64(len(elem))
-				if byteLen > 1073741824 {
-					err := ssz.ErrIncorrectListSize
-					return types.H256{}, err
-				}
-				hh.AppendBytes32(elem)
-				hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
-			}
-		}
-		hh.MerkleizeWithMixin(subIndx, num, 1048576)
-	}
-
-	hh.Merkleize(indx)
-
-	root, err := hh.HashRoot()
+	transactionsRoot, err := transactionsContainer.HashTreeRoot()
 	if err != nil {
 		return types.H256{}, err
 	}
 
-	return types.NewH256(root[:]), nil
+	return types.NewH256(transactionsRoot[:]), nil
 }

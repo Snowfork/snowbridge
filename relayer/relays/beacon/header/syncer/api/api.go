@@ -165,6 +165,10 @@ func (b *BeaconClient) GetHeaderBySlot(slot uint64) (BeaconHeader, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == 404 {
+			return BeaconHeader{}, ErrNotFound
+		}
+
 		return BeaconHeader{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
