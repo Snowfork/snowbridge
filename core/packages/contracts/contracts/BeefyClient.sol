@@ -329,7 +329,10 @@ contract BeefyClient is Ownable {
             revert StaleCommitment();
         }
 
-        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+        if (
+            leaf.nextAuthoritySetID != nextValidatorSet.id &&
+            leaf.nextAuthoritySetID != nextValidatorSet.id + 1
+        ) {
             revert InvalidMMRLeaf();
         }
 
