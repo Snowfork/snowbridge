@@ -75,7 +75,10 @@
                     # LIBCLANG_PATH points rocksdb to a clang.so on Linux
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
-                    cowsay "Snowbridge Dev Environment"
+                    echo "Initializing Snowbridge Dev Environment..."
+                    (cd core && pnpm install)
+
+                    cowsay "Snowbridge Dev Environment Ready"
                 '';
             };
         }
