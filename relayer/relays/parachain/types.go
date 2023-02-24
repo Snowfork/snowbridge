@@ -85,7 +85,7 @@ type BasicOutboundChannelMessage struct {
 
 func (m BasicOutboundChannelMessage) IntoInboundMessage() basic.BasicInboundChannelMessage {
 	return basic.BasicInboundChannelMessage{
-		SourceId: m.SourceID,
+		SourceID: m.SourceID,
 		Nonce:    (*big.Int)(&m.Nonce).Uint64(),
 		Payload:  m.Payload,
 	}

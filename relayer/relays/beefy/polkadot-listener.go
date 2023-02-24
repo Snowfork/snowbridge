@@ -105,7 +105,7 @@ func (li *PolkadotListener) scanCommitments(
 							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
 							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
 						},
-					}).Info("Discarded commitment")
+					}).Warn("Discarded commitment with depth not fast forward")
 					continue
 				}
 

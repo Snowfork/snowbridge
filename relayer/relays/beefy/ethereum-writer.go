@@ -259,7 +259,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 			msg.Proof,
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("initial submit: %w", err)
+			return nil, nil, fmt.Errorf("initial submit with handover: %w", err)
 		}
 	} else {
 		tx, err = wr.contract.SubmitInitial(
@@ -329,7 +329,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 
 		log.WithField("txHash", tx.Hash().Hex()).
 			WithFields(logFields).
-			Info("Sent SubmitFinal transaction")
+			Info("Sent SubmitFinalWithHandover transaction")
 
 		return tx, nil
 	} else { // revive:disable-line

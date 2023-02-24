@@ -23,7 +23,7 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 
 	params := log.Fields{
 		"message": log.Fields{
-			"sourceID": Hex(message.SourceId[:]),
+			"sourceID": Hex(message.SourceID[:]),
 			"nonce":    message.Nonce,
 			"payload":  message.Payload,
 		},
