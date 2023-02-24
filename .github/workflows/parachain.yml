@@ -17,7 +17,7 @@ on:
 
 jobs:
   fmt:
-    runs-on: ubuntu-22.04
+    runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
@@ -43,7 +43,7 @@ jobs:
         run: cd parachain && cargo +nightly fmt -- --check --config-path rustfmt.toml && cd -
 
   check:
-    runs-on: ubuntu-22.04
+    runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
@@ -80,7 +80,7 @@ jobs:
 
   test:
     needs: check
-    runs-on: ubuntu-22.04
+    runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
