@@ -9,7 +9,7 @@ config_relayer(){
     jq \
         --arg k1 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg eth_gas_limit $eth_gas_limt \
+        --arg eth_gas_limit $eth_gas_limit \
     '
       .sink.contracts.BeefyClient = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
@@ -24,12 +24,14 @@ config_relayer(){
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg basic_parachain_account_ids $basic_parachain_account_ids \
+        --arg eth_gas_limit $eth_gas_limit \
     '
       .source.contracts.BasicInboundChannel = $k1
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.BasicInboundChannel = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source.basicChannelAccounts = ($basic_parachain_account_ids | split(","))
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json

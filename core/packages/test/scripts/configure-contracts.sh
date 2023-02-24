@@ -22,8 +22,8 @@ configure_contracts()
     next_root=$(sed -e 's/^"//' -e 's/"$//' <<< $next_root)
 
     echo "Transact call to initialize BeefyClient"
-    # sometimes send transact with cast will fail in goerli network
-    # temporary resolved by manually setting --gas-price and --gas-limit
+    # sometimes sending transact with cast will fail on the goerli network
+    # temporarily resolved by manually setting --gas-price and --gas-limit
     cast send $(address_for BeefyClient) \
     	"initialize(uint64,(uint128,uint128,bytes32),(uint128,uint128,bytes32))" \
     	--rpc-url $eth_endpoint_http \

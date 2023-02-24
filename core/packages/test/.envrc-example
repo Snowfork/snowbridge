@@ -1,3 +1,5 @@
+source_up_if_exists
+
 ## Config for E2E stack
 
 # export POLKADOT_VER=                # Relaychain version, default value: v0.9.30
