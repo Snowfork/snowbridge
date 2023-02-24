@@ -22,6 +22,7 @@ rebuild_relaychain(){
     popd
 }
 
+# Only for debug purpose when relaychain branch not released
 build_relaychain_from_source(){
     if [ ! -d "$relaychain_dir" ] ; then
         echo "clone polkadot project to $relaychain_dir"
