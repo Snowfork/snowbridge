@@ -16,6 +16,9 @@
     flake-utils.lib.eachSystem supportedSystems (system:
         let
             pkgs = import nixpkgs { inherit system overlays; };
+            cwd = builtins.toString ./.;
+            rust =
+              pkgs.rust-bin.fromRustupToolchainFile "${cwd}/parachain/rust-toolchain.toml";
         in
         with pkgs;
         {
@@ -51,7 +54,7 @@
                     gcc
                     libiconv
                     protobuf
-                    rustup
+                    rust
 
                     cowsay
                 ];
@@ -74,8 +77,8 @@
                     # LIBCLANG_PATH points rocksdb to a clang.so on Linux
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
-                    echo "Initializing Dev Environment..."
-                    ./init.sh
+                    echo "Initializing Snowbridge Dev Environment..."
+                    (cd core && pnpm install)
 
                     cowsay "Snowbridge Dev Environment Ready"
                 '';

@@ -13,13 +13,12 @@ build_relaychain() {
 
 rebuild_relaychain(){
     pushd $parachain_dir
+    mkdir -p $relaychain_dir
     cargo install \
         --git https://github.com/paritytech/polkadot \
         --tag "$relaychain_version" polkadot \
         --locked \
-        --root .cargo
-    mkdir -p "$(dirname "$relaychain_bin")"
-    cp "$parachain_dir"/.cargo/bin/polkadot "$relaychain_bin" || true
+        --root $relaychain_dir #add version path to root to avoid recompiling when switch between versions 
     popd
 }
 
@@ -37,10 +36,6 @@ build_relaychain_from_source(){
 
 build_parachain()
 {
-    if [ "$eth_network" != "localhost" ]; then
-        parachain_runtime="snowblink"
-    fi
-
     echo "Runtime is $parachain_runtime"
 
     echo "Building snowbridge parachain"
@@ -77,3 +72,8 @@ install_binary() {
     build_parachain
     build_relayer
 }
+
+if [ -z "${from_start_services:-}" ]; then
+    echo "build binaries only!"
+    install_binary
+fi

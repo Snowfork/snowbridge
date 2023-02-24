@@ -12,7 +12,7 @@ generate_chain_spec() {
     do
         echo "Waiting for beacon chain to finalize to get initial block..."
         initial_beacon_block=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
-            | jq -r '.data.finalized.root')
+            | jq -r '.data.finalized.root' || true)
         sleep 3
     done
 
@@ -23,8 +23,10 @@ generate_chain_spec() {
     do
         echo "Waiting for beacon to get initial bootstrap..."
         bootstrap_data=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block")
-        bootstrap_header=$(jq -r '.data.header' <<< "$bootstrap_data")
-        slot=$(jq -r '.data.header.beacon.slot' <<< "$bootstrap_data")
+        # sometimes will get http 503 error from the above bootstrap endpoint in goerli network 
+        # so add true here to ignore the error and just retry
+        bootstrap_header=$(jq -r '.data.header' <<< "$bootstrap_data" || true)
+        slot=$(jq -r '.data.header.beacon.slot' <<< "$bootstrap_data" || true)
         sleep 3
     done
 
@@ -48,16 +50,6 @@ generate_chain_spec() {
     cat "$output_dir/initialBeaconSync_tmp2.json" | node scripts/helpers/transformInitialBeaconSync.js | sponge "$output_dir/initialBeaconSync.json"
 
     cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
-
-    echo "Generating test chain specification"
-    "$test_collator_bin" build-spec --disable-default-bootnode > "$output_dir/test_spec.json"
-
-    echo "Updating test chain specification"
-    jq \
-        ' .genesis.runtime.parachainInfo.parachainId = 1001
-        | .para_id = 1001
-        ' \
-        "$output_dir/test_spec.json" | sponge "$output_dir/test_spec.json"
 }
 
 wait_start() {
