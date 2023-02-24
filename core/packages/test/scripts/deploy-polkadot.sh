@@ -50,16 +50,6 @@ generate_chain_spec() {
     cat "$output_dir/initialBeaconSync_tmp2.json" | node scripts/helpers/transformInitialBeaconSync.js | sponge "$output_dir/initialBeaconSync.json"
 
     cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
-
-    echo "Generating test chain specification"
-    "$test_collator_bin" build-spec --disable-default-bootnode > "$output_dir/test_spec.json"
-
-    echo "Updating test chain specification"
-    jq \
-        ' .genesis.runtime.parachainInfo.parachainId = 1001
-        | .para_id = 1001
-        ' \
-        "$output_dir/test_spec.json" | sponge "$output_dir/test_spec.json"
 }
 
 wait_start() {

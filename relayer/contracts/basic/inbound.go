@@ -37,7 +37,7 @@ type BasicInboundChannelMessage struct {
 
 // BasicInboundChannelMetaData contains all meta data concerning the BasicInboundChannel contract.
 var BasicInboundChannelMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"sourceID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"sourceID\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"parachainHeaderProof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"sourceID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"sourceID\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bool[]\",\"name\":\"hashSides\",\"type\":\"bool[]\"},{\"internalType\":\"bytes\",\"name\":\"parachainHeaderProof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // BasicInboundChannelABI is the input ABI used to generate the binding from.
@@ -329,6 +329,141 @@ func (_BasicInboundChannel *BasicInboundChannelSession) Submit(message BasicInbo
 // Solidity: function submit((bytes32,uint64,bytes) message, bytes32[] leafProof, bytes parachainHeaderProof) returns()
 func (_BasicInboundChannel *BasicInboundChannelTransactorSession) Submit(message BasicInboundChannelMessage, leafProof [][32]byte, parachainHeaderProof []byte) (*types.Transaction, error) {
 	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, message, leafProof, parachainHeaderProof)
+}
+
+// BasicInboundChannelMessageDispatchedIterator is returned from FilterMessageDispatched and is used to iterate over the raw logs and unpacked data for MessageDispatched events raised by the BasicInboundChannel contract.
+type BasicInboundChannelMessageDispatchedIterator struct {
+	Event *BasicInboundChannelMessageDispatched // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BasicInboundChannelMessageDispatchedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BasicInboundChannelMessageDispatched)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BasicInboundChannelMessageDispatched)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BasicInboundChannelMessageDispatchedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BasicInboundChannelMessageDispatchedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BasicInboundChannelMessageDispatched represents a MessageDispatched event raised by the BasicInboundChannel contract.
+type BasicInboundChannelMessageDispatched struct {
+	SourceID [32]byte
+	Nonce    uint64
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterMessageDispatched is a free log retrieval operation binding the contract event 0xc799cfcb5e2e85a0259b8a763245692fb69e6b3dd5319566347caf981b204e1c.
+//
+// Solidity: event MessageDispatched(bytes32 sourceID, uint64 nonce)
+func (_BasicInboundChannel *BasicInboundChannelFilterer) FilterMessageDispatched(opts *bind.FilterOpts) (*BasicInboundChannelMessageDispatchedIterator, error) {
+
+	logs, sub, err := _BasicInboundChannel.contract.FilterLogs(opts, "MessageDispatched")
+	if err != nil {
+		return nil, err
+	}
+	return &BasicInboundChannelMessageDispatchedIterator{contract: _BasicInboundChannel.contract, event: "MessageDispatched", logs: logs, sub: sub}, nil
+}
+
+// WatchMessageDispatched is a free log subscription operation binding the contract event 0xc799cfcb5e2e85a0259b8a763245692fb69e6b3dd5319566347caf981b204e1c.
+//
+// Solidity: event MessageDispatched(bytes32 sourceID, uint64 nonce)
+func (_BasicInboundChannel *BasicInboundChannelFilterer) WatchMessageDispatched(opts *bind.WatchOpts, sink chan<- *BasicInboundChannelMessageDispatched) (event.Subscription, error) {
+
+	logs, sub, err := _BasicInboundChannel.contract.WatchLogs(opts, "MessageDispatched")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BasicInboundChannelMessageDispatched)
+				if err := _BasicInboundChannel.contract.UnpackLog(event, "MessageDispatched", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseMessageDispatched is a log parse operation binding the contract event 0xc799cfcb5e2e85a0259b8a763245692fb69e6b3dd5319566347caf981b204e1c.
+//
+// Solidity: event MessageDispatched(bytes32 sourceID, uint64 nonce)
+func (_BasicInboundChannel *BasicInboundChannelFilterer) ParseMessageDispatched(log types.Log) (*BasicInboundChannelMessageDispatched, error) {
+	event := new(BasicInboundChannelMessageDispatched)
+	if err := _BasicInboundChannel.contract.UnpackLog(event, "MessageDispatched", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 
 // BasicInboundChannelMessageDispatchedIterator is returned from FilterMessageDispatched and is used to iterate over the raw logs and unpacked data for MessageDispatched events raised by the BasicInboundChannel contract.
