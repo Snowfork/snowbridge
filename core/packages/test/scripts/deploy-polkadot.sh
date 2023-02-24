@@ -12,7 +12,7 @@ generate_chain_spec() {
     do
         echo "Waiting for beacon chain to finalize to get initial block..."
         initial_beacon_block=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
-            | jq -r '.data.finalized.root')
+            | jq -r '.data.finalized.root' || true)
         sleep 3
     done
 
@@ -23,8 +23,10 @@ generate_chain_spec() {
     do
         echo "Waiting for beacon to get initial bootstrap..."
         bootstrap_data=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block")
-        bootstrap_header=$(jq -r '.data.header' <<< "$bootstrap_data")
-        slot=$(jq -r '.data.header.beacon.slot' <<< "$bootstrap_data")
+        # sometimes will get http 503 error from the above bootstrap endpoint in goerli network 
+        # so add true here to ignore the error and just retry
+        bootstrap_header=$(jq -r '.data.header' <<< "$bootstrap_data" || true)
+        slot=$(jq -r '.data.header.beacon.slot' <<< "$bootstrap_data" || true)
         sleep 3
     done
 
