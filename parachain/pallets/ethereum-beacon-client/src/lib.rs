@@ -114,13 +114,13 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxValidatorsPerCommittee: Get<u32>;
 		#[pallet::constant]
-		type MaxSlotsPerHistoricalRoot: Get<u32>;
+		type MaxSlotsPerHistoricalRoot: Get<u64>;
 		#[pallet::constant]
 		type MaxFinalizedHeaderSlotArray: Get<u32>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
-		type WeakSubjectivityPeriodSeconds: Get<u32>;
+		type WeakSubjectivityPeriodSeconds: Get<u64>;
 	}
 
 	#[pallet::event]
@@ -700,9 +700,9 @@ pub mod pallet {
 				return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
 			}
 
-			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get() as u64;
+			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get();
 			let index_in_array = block_slot % max_slots_per_historical_root;
-			let leaf_index: u64 = (max_slots_per_historical_root + index_in_array) as u64;
+			let leaf_index = max_slots_per_historical_root + index_in_array;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -1007,7 +1007,7 @@ pub mod pallet {
 			index: u64,
 			root: Root,
 		) -> bool {
-			if branch.len() != depth as usize {
+			if branch.len() as u64 != depth {
 				log::error!(target: "ethereum-beacon-client", "Merkle proof branch length doesn't match depth.");
 
 				return false
