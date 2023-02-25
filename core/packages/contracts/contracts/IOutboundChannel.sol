@@ -2,5 +2,5 @@
 pragma solidity ^0.8.9;
 
 interface IOutboundChannel {
-    function submit(bytes calldata dest, bytes calldata payload) external;
+    function submit(bytes calldata dest, bytes calldata payload) external payable;
 }

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import "./TokenVault.sol";
@@ -12,7 +13,7 @@ import "./OutboundChannel.sol";
 /// @title Native Tokens
 /// @dev Manages locking, unlocking ERC20 tokens in the vault. Initializes ethereum native
 /// tokens on the substrate side via create.
-contract NativeTokens is Ownable {
+contract NativeTokens is AccessControl {
     /// @dev Describes the type of message.
     enum Action {
         Unlock
@@ -47,19 +48,23 @@ contract NativeTokens is Ownable {
 
     /* State */
 
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant SENDER_ROLE = keccak256("SENDER_ROLE");
+
     bytes32 public immutable peerID;
     bytes public immutable peer;
 
-    ERC20Vault public immutable vault;
+    TokenVault public immutable vault;
     OutboundChannel public immutable outboundChannel;
 
     /* Errors */
 
     error InvalidAmount();
-    error InvalidMessage();
     error Unauthorized();
 
-    constructor(ERC20Vault _vault, OutboundChannel _outboundChannel, bytes32 _peer) {
+    constructor(TokenVault _vault, OutboundChannel _outboundChannel, bytes32 _peer) {
+        _grantRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(SENDER_ROLE, ADMIN_ROLE);
         vault = _vault;
         outboundChannel = _outboundChannel;
         peer = _peer;
@@ -71,7 +76,7 @@ contract NativeTokens is Ownable {
     /// @param token The token to lock.
     /// @param recipient The recipient on the substrate side.
     /// @param amount The amount to lock.
-    function lock(address token, bytes recipient, uint128 amount) public {
+    function lock(address token, bytes recipient, uint128 amount) external {
         if (amount == 0) {
             revert InvalidAmount();
         }
@@ -79,7 +84,7 @@ contract NativeTokens is Ownable {
         vault.deposit(msg.sender, token, amount);
 
         bytes memory payload = NativeTokensTypes.Mint(peer, token, recipient, amount);
-        outboundChannel.submit(peer, payload);
+        outboundChannel.submit{value: msg.value}(peer, payload);
 
         emit Locked(recipient, token, amount);
     }
@@ -88,7 +93,6 @@ contract NativeTokens is Ownable {
     /// @param token The ERC20 token address.
     function create(address token) external {
         IERC20Metadata metadata = IERC20Metadata(token);
-
         bytes memory name = bytes(metadata.name());
         if (name.length > 32) {
             name = hex"";
@@ -100,7 +104,7 @@ contract NativeTokens is Ownable {
         uint8 decimals = metadata.decimals();
 
         bytes memory payload = NativeTokensTypes.Create(peer, token, name, symbol, decimals);
-        outboundChannel.submit(peerID, payload);
+        outboundChannel.submit{value: msg.value}(peerID, payload);
 
         emit Created(token);
     }
@@ -108,21 +112,16 @@ contract NativeTokens is Ownable {
     /// @dev Processes messages from inbound channel.
     /// @param origin The multilocation of the source parachain
     /// @param message The message enqueued from substrate.
-    function handle(bytes origin, bytes calldata message) external onlyOwner {
+    function handle(bytes origin, bytes calldata message) external onlyRole(SENDER_ROLE) {
         if (peerID != keccak256(origin)) {
             revert Unauthorized();
         }
 
         Message memory decoded = abi.decode(message, (Message));
         if (decoded.action == Action.Unlock) {
-            doUnlock(origin, abi.decode(decoded.payload, (UnlockPayload)));
-        } else {
-            revert InvalidMessage();
+            UnlockPayload memory payload = abi.decode(decoded.payload, (UnlockPayload));
+            vault.withdraw(payload.recipient, payload.token, payload.amount);
+            emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
         }
-    }
-
-    function doUnlock(bytes32 origin, UnlockPayload memory payload) internal {
-        vault.withdraw(payload.recipient, payload.token, payload.amount);
-        emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
     }
 }

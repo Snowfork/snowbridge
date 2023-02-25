@@ -3,12 +3,17 @@ pragma solidity ^0.8.9;
 
 import "./ParachainClient.sol";
 import "./utils/MerkleProof.sol";
-import "./IController.sol";
+import "./IRecipient.sol";
+import "./ISovereignTreasury.sol";
 
-contract BasicInboundChannel {
+contract InboundChannel {
     mapping(bytes => uint64) public nonce;
 
     ParachainClient public parachainClient;
+
+    ISovereignTreasury public sovereignTreasury;
+
+    uint256 public reward;
 
     struct Message {
         bytes origin;
@@ -19,8 +24,13 @@ contract BasicInboundChannel {
 
     event MessageDispatched(bytes origin, uint64 nonce);
 
-    constructor(ParachainClient _parachainClient) {
+    error InvalidProof();
+    error InvalidNonce();
+
+    constructor(ParachainClient _parachainClient, ISovereignTreasury _sovereignTreasury, uint256 _reward) {
         parachainClient = _parachainClient;
+        sovereignTreasury = _sovereignTreasury;
+        reward = _reward;
     }
 
     function submit(
@@ -30,14 +40,20 @@ contract BasicInboundChannel {
         bytes calldata parachainHeaderProof
     ) external {
         bytes32 commitment = MerkleProof.processProof(message, leafProof, hashSides);
-        require(
-            parachainClient.verifyCommitment(commitment, parachainHeaderProof),
-            "Invalid proof"
-        );
-        require(message.nonce == nonce[message.origin] + 1, "Invalid nonce");
+        if (!parachainClient.verifyCommitment(commitment, parachainHeaderProof)) {
+            revert InvalidProof();
+        }
+        if (message.nonce != nonce[message.origin] + 1) {
+            revert InvalidNonce();
+        }
+
         nonce[message.origin]++;
 
-        IController(message.dest).handle(origin, message.payload);
+        // dispatch message
+        try IRecipient(message.dest).handle(message.origin, message.payload) {} catch {}
+
+        // reward the relayer
+        sovereignTreasury.withdraw(message.origin, msg.sender, reward);
 
         emit MessageDispatched(message.origin, message.nonce);
     }
