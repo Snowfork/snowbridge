@@ -35,10 +35,7 @@ library SubstrateTypes {
     }
 
     function Bytes(bytes input) internal pure returns (bytes memory) {
-        return bytes.concat(
-            ScaleCodec.encodeCompactUint(input.length),
-            input
-        );
+        return bytes.concat(ScaleCodec.encodeCompactUint(input.length), input);
     }
 
     /**
@@ -51,7 +48,8 @@ library SubstrateTypes {
         bytes memory symbol,
         uint8 decimals
     ) internal pure {
-        return bytes.concat(
+        return
+            bytes.concat(
                 hex"00",
                 hex"00",
                 dest,
@@ -59,6 +57,6 @@ library SubstrateTypes {
                 Bytes(name),
                 Bytes(symbol),
                 decimals
-        );
+            );
     }
 }

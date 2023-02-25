@@ -110,29 +110,32 @@ library ScaleCodec {
     }
 
     function encodeCompactUint(uint256 value) internal pure returns (bytes memory) {
-        if (value <= 2**6 - 1) {
+        if (value <= 2 ** 6 - 1) {
             // add single byte flag
             return abi.encodePacked(uint8(value << 2));
-        } else if (value <= 2**14 - 1) {
+        } else if (value <= 2 ** 14 - 1) {
             // add two byte flag and create little endian encoding
             return abi.encodePacked(ScaleCodec.reverse16(uint16(((value << 2) + 1))));
-        } else if (value <= 2**30 - 1) {
+        } else if (value <= 2 ** 30 - 1) {
             // add four byte flag and create little endian encoding
             return abi.encodePacked(ScaleCodec.reverse32(uint32((value << 2)) + 2));
         } else {
-            if (value <= 2**62 - 1) {
+            if (value <= 2 ** 62 - 1) {
                 uint8 numBytes = getLengthBytes(value);
                 uint8 prefix = ((numBytes - 4) << 2) + 3;
-                bytes memory paddedWithZeros = abi.encodePacked(ScaleCodec.reverse64(uint64((value << 8)) + prefix));
+                bytes memory paddedWithZeros = abi.encodePacked(
+                    ScaleCodec.reverse64(uint64((value << 8)) + prefix)
+                );
                 bytes memory encodedValue = Bytes.removeEndingZero(paddedWithZeros);
                 return encodedValue;
             } else {
                 uint8 numBytes = getLengthBytes(value);
                 uint8 prefix = ((numBytes - 4) << 2) + 3;
-                bytes memory paddedWithZeros = abi.encodePacked(ScaleCodec.reverse128(uint128((value << 8)) + prefix));
+                bytes memory paddedWithZeros = abi.encodePacked(
+                    ScaleCodec.reverse128(uint128((value << 8)) + prefix)
+                );
                 bytes memory encodedValue = Bytes.removeEndingZero(paddedWithZeros);
                 return encodedValue;
-
             }
         }
     }
