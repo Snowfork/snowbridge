@@ -3,22 +3,21 @@ pragma solidity ^0.8.9;
 
 import "./ParachainClient.sol";
 import "./utils/MerkleProof.sol";
+import "./IController.sol";
 
 contract BasicInboundChannel {
-    uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
-    uint256 public constant GAS_BUFFER = 60000;
-
-    mapping(bytes32 => uint64) public nonce;
+    mapping(bytes => uint64) public nonce;
 
     ParachainClient public parachainClient;
 
     struct Message {
-        bytes32 sourceID;
+        bytes origin;
         uint64 nonce;
+        address dest;
         bytes payload;
     }
 
-    event MessageDispatched(bytes32 sourceID, uint64 nonce);
+    event MessageDispatched(bytes origin, uint64 nonce);
 
     constructor(ParachainClient _parachainClient) {
         parachainClient = _parachainClient;
@@ -35,13 +34,12 @@ contract BasicInboundChannel {
             parachainClient.verifyCommitment(commitment, parachainHeaderProof),
             "Invalid proof"
         );
-        require(message.nonce == nonce[message.sourceID] + 1, "Invalid nonce");
-        require(gasleft() >= MAX_GAS_PER_MESSAGE + GAS_BUFFER, "insufficient gas");
-        nonce[message.sourceID]++;
-        dispatch(message);
+        require(message.nonce == nonce[message.origin] + 1, "Invalid nonce");
+        nonce[message.origin]++;
+
+        IController(message.dest).handle(origin, message.payload);
+
+        emit MessageDispatched(message.origin, message.nonce);
     }
 
-    function dispatch(Message calldata message) internal {
-        emit MessageDispatched(message.sourceID, message.nonce);
-    }
 }

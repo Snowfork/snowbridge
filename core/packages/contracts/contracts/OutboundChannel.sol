@@ -9,9 +9,9 @@ contract OutboundChannel is IOutboundChannel, AccessControl {
 
     bytes32 public constant SUBMIT_ROLE = keccak256("SUBMIT_ROLE");
 
-    mapping(bytes32 => uint64) public nonce;
+    mapping(bytes => uint64) public nonce;
 
-    event Message(bytes32 dest, uint64 nonce, bytes payload);
+    event Message(bytes dest, uint64 nonce, bytes payload);
 
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -21,7 +21,7 @@ contract OutboundChannel is IOutboundChannel, AccessControl {
         grantRole(SUBMIT_ROLE, app);
     }
 
-    function submit(bytes32 dest, bytes calldata payload) external override onlyRole(SUBMIT_ROLE) {
+    function submit(bytes calldata dest, bytes calldata payload) external override onlyRole(SUBMIT_ROLE) {
         nonce[dest] = nonce[dest] + 1;
         emit Message(dest, nonce[dest], payload);
     }

@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import "./ERC20Vault.sol";
+import "./TokenVault.sol";
 import "./SubstrateTypes.sol";
 import "./NativeTokensTypes.sol";
 import "./OutboundChannel.sol";
@@ -79,7 +79,7 @@ contract NativeTokens is Ownable {
         vault.deposit(msg.sender, token, amount);
 
         bytes memory payload = NativeTokensTypes.Mint(peer, token, recipient, amount);
-        outboundChannel.submit(peerID, payload);
+        outboundChannel.submit(peer, payload);
 
         emit Locked(recipient, token, amount);
     }
@@ -106,10 +106,10 @@ contract NativeTokens is Ownable {
     }
 
     /// @dev Processes messages from inbound channel.
-    /// @param origin The hashed multilocation of the source parachain
+    /// @param origin The multilocation of the source parachain
     /// @param message The message enqueued from substrate.
-    function handle(bytes32 origin, bytes calldata message) external onlyOwner {
-        if (origin != peerID) {
+    function handle(bytes origin, bytes calldata message) external onlyOwner {
+        if (peerID != keccak256(origin)) {
             revert Unauthorized();
         }
 
@@ -121,10 +121,8 @@ contract NativeTokens is Ownable {
         }
     }
 
-    function doUnlock(bytes32 origin, UnlockPayload memory payload) private {
+    function doUnlock(bytes32 origin, UnlockPayload memory payload) internal {
+        vault.withdraw(payload.recipient, payload.token, payload.amount);
         emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
-        if (payload.amount > 0) {
-            vault.withdraw(payload.recipient, payload.token, payload.amount);
-        }
     }
 }
