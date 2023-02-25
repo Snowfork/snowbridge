@@ -10803,6 +10803,7 @@ dependencies = [
 name = "snowbridge-basic-channel-merkle-proof"
 version = "0.1.1"
 dependencies = [
+ "array-bytes 4.2.0",
  "env_logger 0.9.3",
  "hex",
  "hex-literal",

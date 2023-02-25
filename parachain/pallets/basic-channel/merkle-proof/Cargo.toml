@@ -19,6 +19,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 hex-literal = { version = "0.3.4" }
 env_logger = "0.9"
 hex = "0.4"
+array-bytes = "4.1"
 
 [features]
 default = [ "std" ]
