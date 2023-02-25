@@ -53,23 +53,16 @@ contract NativeTokens is Ownable {
     // TODO: Remove name, symbol and decimals.
     event Created(address token, string name, string symbol, uint8 decimals);
 
-    /// @dev Zero amount.
-    error ZeroAmount();
+    /* State */
 
-    /// @dev the origin provided is unauthorized.
-    error UnauthorizedOrigin();
-
-    /// @dev the message action is unsupported.
-    error UnsupportedMessageAction();
-
-    /// @dev the origin that
     bytes32 public immutable allowedOrigin;
-
-    /// @dev The vault where ERC20 tokens are locked.
     ERC20Vault public immutable vault;
-
-    /// @dev The channel used to enqueue messages for lock and create functions.
     OutboundChannel public immutable outboundChannel;
+
+    /* Errors */
+    error InvalidAmount();
+    error InvalidMessage();
+    error Unauthorized();
 
     /// @dev Initializes the NativeTokens contract with a vault and channels.
     /// @param _vault The vault to use to `lock`/`unlock` tokens.
@@ -81,13 +74,14 @@ contract NativeTokens is Ownable {
         allowedOrigin = _allowedOrigin;
     }
 
-    /// @dev Locks an amount of ERC20 Tokens in the vault and enqueues a mint message. Requires the allowance to be set on the ERC20 token where the spender is the vault.
+    /// @dev Locks an amount of ERC20 Tokens in the vault and enqueues a mint message.
+    /// Requires the allowance to be set on the ERC20 token where the spender is the vault.
     /// @param token The token to lock.
     /// @param recipient The recipient on the substrate side.
     /// @param amount The amount to lock.
     function lock(address token, bytes32 recipient, uint128 amount) public {
         if (amount == 0) {
-            revert ZeroAmount();
+            revert InvalidAmount();
         }
 
         // TODO: Implement a max locked amount.
