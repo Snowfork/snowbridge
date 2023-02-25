@@ -353,7 +353,8 @@ contract BeefyClient is Ownable {
         }
 
         currentValidatorSet = nextValidatorSet;
-        nextValidatorSet.id = leaf.nextAuthoritySetID;
+        // todo: workaround and need to check if a bug in substrate
+        nextValidatorSet.id = leaf.nextAuthoritySetID + 1;
         nextValidatorSet.length = leaf.nextAuthoritySetLen;
         nextValidatorSet.root = leaf.nextAuthoritySetRoot;
 

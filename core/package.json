@@ -13,11 +13,13 @@
     "lint": "turbo run lint",
     "format": "turbo run format",
     "size": "turbo run size",
-    "coverage": "turbo run coverage"
+    "coverage": "turbo run coverage",
+    "remixd": "./node_modules/.bin/remixd"
   },
   "devDependencies": {
     "husky": "^8.0.1",
     "turbo": "^1.6.3",
-    "pnpm-deduplicate": "^0.4.1"
+    "pnpm-deduplicate": "^0.4.1",
+    "@remix-project/remixd": "^0.6.1"
   }
 }
