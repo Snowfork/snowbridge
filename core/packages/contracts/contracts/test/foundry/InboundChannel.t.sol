@@ -1,0 +1,6 @@
+
+
+contract InboundChannelTest is Test {
+
+
+}

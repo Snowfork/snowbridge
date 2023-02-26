@@ -34,29 +34,7 @@ library SubstrateTypes {
         return hex"00";
     }
 
-    function Bytes(bytes input) internal pure returns (bytes memory) {
+    function VecU8(bytes memory input) internal pure returns (bytes memory) {
         return bytes.concat(ScaleCodec.encodeCompactUint(input.length), input);
-    }
-
-    /**
-     * @dev Encodes Action::NativeTokens(NativeTokens::Create)
-     */
-    function NativeTokensCreate(
-        bytes memory dest,
-        address token,
-        bytes memory name,
-        bytes memory symbol,
-        uint8 decimals
-    ) internal pure {
-        return
-            bytes.concat(
-                hex"00",
-                hex"00",
-                dest,
-                abi.encodePacked(token),
-                Bytes(name),
-                Bytes(symbol),
-                decimals
-            );
     }
 }

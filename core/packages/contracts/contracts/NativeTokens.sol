@@ -38,10 +38,10 @@ contract NativeTokens is AccessControl {
     }
 
     /// @dev Emitted once the funds are locked and a message is successfully queued.
-    event Locked(address origin, bytes32 recipient, address token, uint128 amount);
+    event Locked(bytes recipient, address token, uint128 amount);
 
     /// @dev Emitted once the funds are unlocked.
-    event Unlocked(bytes32 origin, address recipient, address token, uint128 amount);
+    event Unlocked(address recipient, address token, uint128 amount);
 
     /// @dev Emitted after enqueueing a a create token message to substrate.
     event Created(address token);
@@ -52,17 +52,17 @@ contract NativeTokens is AccessControl {
     bytes32 public constant SENDER_ROLE = keccak256("SENDER_ROLE");
 
     bytes32 public immutable peerID;
-    bytes public immutable peer;
+    bytes public peer;
 
     TokenVault public immutable vault;
-    OutboundChannel public immutable outboundChannel;
+    IOutboundChannel public immutable outboundChannel;
 
     /* Errors */
 
     error InvalidAmount();
     error Unauthorized();
 
-    constructor(TokenVault _vault, OutboundChannel _outboundChannel, bytes32 _peer) {
+    constructor(TokenVault _vault, IOutboundChannel _outboundChannel, bytes memory _peer) {
         _grantRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(SENDER_ROLE, ADMIN_ROLE);
         vault = _vault;
@@ -76,7 +76,7 @@ contract NativeTokens is AccessControl {
     /// @param token The token to lock.
     /// @param recipient The recipient on the substrate side.
     /// @param amount The amount to lock.
-    function lock(address token, bytes recipient, uint128 amount) external {
+    function lock(address token, bytes calldata recipient, uint128 amount) external payable {
         if (amount == 0) {
             revert InvalidAmount();
         }
@@ -91,20 +91,20 @@ contract NativeTokens is AccessControl {
 
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
-    function create(address token) external {
+    function create(address token) external payable {
         IERC20Metadata metadata = IERC20Metadata(token);
         bytes memory name = bytes(metadata.name());
         if (name.length > 32) {
             name = hex"";
         }
-        string memory symbol = bytes(metadata.symbol());
+        bytes memory symbol = bytes(metadata.symbol());
         if (symbol.length > 32) {
             symbol = hex"";
         }
         uint8 decimals = metadata.decimals();
 
         bytes memory payload = NativeTokensTypes.Create(peer, token, name, symbol, decimals);
-        outboundChannel.submit{value: msg.value}(peerID, payload);
+        outboundChannel.submit{value: msg.value}(peer, payload);
 
         emit Created(token);
     }
@@ -112,7 +112,7 @@ contract NativeTokens is AccessControl {
     /// @dev Processes messages from inbound channel.
     /// @param origin The multilocation of the source parachain
     /// @param message The message enqueued from substrate.
-    function handle(bytes origin, bytes calldata message) external onlyRole(SENDER_ROLE) {
+    function handle(bytes calldata origin, bytes calldata message) external onlyRole(SENDER_ROLE) {
         if (peerID != keccak256(origin)) {
             revert Unauthorized();
         }
@@ -121,7 +121,7 @@ contract NativeTokens is AccessControl {
         if (decoded.action == Action.Unlock) {
             UnlockPayload memory payload = abi.decode(decoded.payload, (UnlockPayload));
             vault.withdraw(payload.recipient, payload.token, payload.amount);
-            emit Unlocked(origin, payload.recipient, payload.token, payload.amount);
+            emit Unlocked(payload.recipient, payload.token, payload.amount);
         }
     }
 }

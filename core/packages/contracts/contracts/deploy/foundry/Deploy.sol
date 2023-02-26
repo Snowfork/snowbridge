@@ -4,9 +4,12 @@ pragma solidity ^0.8.9;
 import "forge-std/Script.sol";
 import "../../BeefyClient.sol";
 import "../../ParachainClient.sol";
-import "../../BasicInboundChannel.sol";
-import "../../BasicOutboundChannel.sol";
+import "../../InboundChannel.sol";
+import "../../OutboundChannel.sol";
 import "../../NativeTokens.sol";
+import "../../EtherVault.sol";
+import "../../SovereignTreasury.sol";
+import "../../ISovereignTreasury.sol";
 import "forge-std/console.sol";
 
 contract DeployScript is Script {
@@ -16,28 +19,39 @@ contract DeployScript is Script {
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.rememberKey(privateKey);
         vm.startBroadcast(deployer);
+
+        // SovereignTreasury
+        EtherVault etherVault = new EtherVault();
+        SovereignTreasury treasury = new SovereignTreasury(etherVault);
+        etherVault.transferOwnership(address(treasury));
+
+        // BeefyClient
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
         BeefyClient beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
+
+        // ParachainClient
         uint32 paraId = uint32(vm.envUint("PARAID"));
         ParachainClient parachainClient = new ParachainClient(beefyClient, paraId);
-        BasicInboundChannel inboundChannel = new BasicInboundChannel(parachainClient);
-        console.log("address of inboundChannel is: %s", address(inboundChannel));
-        BasicOutboundChannel outboundChannel = new BasicOutboundChannel();
-        outboundChannel.initialize(deployer, new address[](0));
-        console.log("address of outboundChannel is: %s", address(outboundChannel));
 
-        ERC20Vault erc20vault = new ERC20Vault();
-        console.log("address of ERC20Vault is: %s", address(erc20vault));
+        // InboundChannel
+        uint256 relayerReward = vm.envUint("RELAYER_REWARD");
+        InboundChannel inboundChannel = new InboundChannel(parachainClient, treasury, relayerReward);
 
-        bytes32 allowOrigin = vm.envBytes32("TOKENS_ALLOWED_ORIGIN");
-        console.log("configured tokens allowed origin:");
-        console.logBytes32(allowOrigin);
-        NativeTokens nativeTokens = new NativeTokens(erc20vault, outboundChannel, allowOrigin);
-        outboundChannel.authorizeDefaultOperator(address(nativeTokens));
-        erc20vault.transferOwnership(address(nativeTokens));
-        nativeTokens.transferOwnership(address(inboundChannel));
-        console.log("address of NativeTokens is: %s", address(nativeTokens));
+        // OutboundChannel
+        uint256 relayerFee = vm.envUint("RELAYER_FEE");
+        OutboundChannel outboundChannel = new OutboundChannel(treasury, relayerFee);
+
+        // NativeTokens
+        bytes memory peer = vm.envBytes("TOKENS_ALLOWED_ORIGIN");
+        TokenVault tokenVault = new TokenVault();
+        NativeTokens nativeTokens = new NativeTokens(tokenVault, outboundChannel, peer);
+        tokenVault.transferOwnership(address(nativeTokens));
+
+        // Setup access rights
+        nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(inboundChannel));
+        treasury.grantRole(treasury.SENDER_ROLE(), address(inboundChannel));
+        treasury.grantRole(treasury.WITHDRAW_ROLE(), address(inboundChannel));
 
         vm.stopBroadcast();
     }

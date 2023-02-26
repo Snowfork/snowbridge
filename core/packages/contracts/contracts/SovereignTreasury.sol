@@ -2,9 +2,10 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./ISovereignTreasury.sol";
 import "./EtherVault.sol";
 
-contract SovereignTreasury is AccessControl {
+contract SovereignTreasury is ISovereignTreasury, AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
     bytes32 public constant SENDER_ROLE = keccak256("SENDER_ROLE");
@@ -34,20 +35,19 @@ contract SovereignTreasury is AccessControl {
         vault = _vault;
     }
 
-    // Deposit ETH into a sovereign account. Permissionless.
-    function deposit(bytes calldata sovereign) external override payable {
+    function deposit(bytes calldata sovereign) external payable {
         vault.deposit{value: msg.value}(sovereign);
     }
 
-    function withdraw(bytes calldata sovereign, address payable recipient, uint256 amount) external override onlyRole(WITHDRAW_ROLE) {
-        vault.withdraw(origin, payload.recipient, payload.amount);
+    function withdraw(bytes calldata sovereign, address payable recipient, uint256 amount) external onlyRole(WITHDRAW_ROLE) {
+        vault.withdraw(sovereign, recipient, amount);
     }
 
     // Handle a message from the bridge.
     function handle(bytes calldata origin, bytes calldata message) external onlyRole(SENDER_ROLE) {
         Message memory decoded = abi.decode(message, (Message));
         if (decoded.action == Action.Withdraw) {
-            WithdrawPayload payload = abi.decode(decoded.payload, (WithdrawPayload));
+            WithdrawPayload memory payload = abi.decode(decoded.payload, (WithdrawPayload));
             vault.withdraw(origin, payload.recipient, payload.amount);
         }
     }

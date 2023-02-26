@@ -4,8 +4,6 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract EtherVault is Ownable {
-    using Address for address payable;
-
     event Deposited(bytes indexed sovereign, uint256 amount);
     event Withdrawn(bytes indexed sovereign, address recipient, uint256 amount);
 

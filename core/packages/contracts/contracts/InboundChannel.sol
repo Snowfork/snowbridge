@@ -8,11 +8,8 @@ import "./ISovereignTreasury.sol";
 
 contract InboundChannel {
     mapping(bytes => uint64) public nonce;
-
     ParachainClient public parachainClient;
-
     ISovereignTreasury public sovereignTreasury;
-
     uint256 public reward;
 
     struct Message {
@@ -53,7 +50,7 @@ contract InboundChannel {
         try IRecipient(message.dest).handle(message.origin, message.payload) {} catch {}
 
         // reward the relayer
-        sovereignTreasury.withdraw(message.origin, msg.sender, reward);
+        sovereignTreasury.withdraw(message.origin, payable(msg.sender), reward);
 
         emit MessageDispatched(message.origin, message.nonce);
     }

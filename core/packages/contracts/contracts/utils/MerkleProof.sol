@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "../BasicInboundChannel.sol";
+import "../InboundChannel.sol";
 
 library MerkleProof {
     function processProof(
-        BasicInboundChannel.Message calldata leaf,
+        InboundChannel.Message calldata leaf,
         bytes32[] calldata proof,
         bool[] calldata hashSides
     ) public pure returns (bytes32) {

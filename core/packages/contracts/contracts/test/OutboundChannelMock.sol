@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "../OutboundChannel.sol";
+import "../IOutboundChannel.sol";
 
-contract OutboundChannelMock is OutboundChannel {
-    event Message(address account, bytes payload, uint64 weight);
+contract OutboundChannelMock is IOutboundChannel {
+    event Message(bytes dest, bytes payload);
 
-    function submit(address account, bytes calldata payload, uint64 weight) external {
-        emit Message(account, payload, weight);
+    function submit(bytes calldata dest, bytes calldata payload) external payable {
+        emit Message(dest, payload);
     }
 }

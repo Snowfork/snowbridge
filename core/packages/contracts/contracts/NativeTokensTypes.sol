@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.9;
 
 import "./ScaleCodec.sol";
 import "./SubstrateTypes.sol";
@@ -12,13 +14,14 @@ library NativeTokensTypes {
         address token,
         bytes memory recipient,
         uint128 amount
-    ) internal pure {
+    ) internal pure returns (bytes memory) {
         return
             bytes.concat(
                 dest,
                 hex"00",
                 hex"00",
                 abi.encodePacked(token),
+                recipient,
                 ScaleCodec.encodeU128(amount),
                 SubstrateTypes.None()
             );
@@ -34,16 +37,16 @@ library NativeTokensTypes {
         bytes memory name,
         bytes memory symbol,
         uint8 decimals
-    ) internal pure {
+    ) internal pure returns (bytes memory) {
         return
             bytes.concat(
                 dest,
                 hex"00",
                 hex"00",
                 abi.encodePacked(token),
-                Bytes(name),
-                Bytes(symbol),
-                decimals
+                SubstrateTypes.VecU8(name),
+                SubstrateTypes.VecU8(symbol),
+                ScaleCodec.encodeU8(decimals)
             );
     }
 }
