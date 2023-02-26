@@ -16,3 +16,4 @@ cache/
 broadcast/
 test/ffiWrapper.js
 tsconfig.tsbuildinfo
+test/**/data/*.json.keep
