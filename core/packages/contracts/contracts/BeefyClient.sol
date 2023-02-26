@@ -353,7 +353,8 @@ contract BeefyClient is Ownable {
         }
 
         currentValidatorSet = nextValidatorSet;
-        // todo: workaround and need to check if a bug in substrate
+        // Workaround for change in https://github.com/paritytech/polkadot/pull/6577
+        // and discussions here in https://github.com/paritytech/substrate/issues/11797
         nextValidatorSet.id = leaf.nextAuthoritySetID + 1;
         nextValidatorSet.length = leaf.nextAuthoritySetLen;
         nextValidatorSet.root = leaf.nextAuthoritySetRoot;
