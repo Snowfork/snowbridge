@@ -61,7 +61,7 @@ func (li *PolkadotListener) scanCommitments(
 	currentValidatorSet uint64,
 	requests chan<- Request,
 ) error {
-	in, err := ScanSafeCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock, li.config.Source.BeefyActivationBlock)
+	in, err := ScanSafeCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1, li.config.Source.BeefyActivationBlock)
 	if err != nil {
 		return fmt.Errorf("scan commitments: %w", err)
 	}
