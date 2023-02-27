@@ -2,12 +2,14 @@
 pragma solidity ^0.8.9;
 
 import "forge-std/Script.sol";
-import "../../BeefyClient.sol";
-import "../../ParachainClient.sol";
+import "forge-std/console.sol";
+
 import "../../BasicInboundChannel.sol";
 import "../../BasicOutboundChannel.sol";
+import "../../BeefyClient.sol";
+import "../../ChannelRegistry.sol";
 import "../../NativeTokens.sol";
-import "forge-std/console.sol";
+import "../../ParachainClient.sol";
 
 contract DeployScript is Script {
     function setUp() public {}
@@ -26,6 +28,12 @@ contract DeployScript is Script {
         BasicOutboundChannel outboundChannel = new BasicOutboundChannel();
         outboundChannel.initialize(deployer, new address[](0));
         console.log("address of outboundChannel is: %s", address(outboundChannel));
+
+        ChannelRegistry channelRegistry = new ChannelRegistry();
+        console.log("address of ChannelRegistry is: %s", address(channelRegistry));
+
+        channelRegistry.updateChannel(0, address(inboundChannel), address(outboundChannel));
+        console.log("ChannelRegistry is configured for channel 0.");
 
         ERC20Vault erc20vault = new ERC20Vault();
         console.log("address of ERC20Vault is: %s", address(erc20vault));
