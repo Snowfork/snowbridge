@@ -46,6 +46,9 @@ contract NativeTokens is AccessControl {
     /// @dev Emitted after enqueueing a a create token message to substrate.
     event Created(address token);
 
+    /// @dev Set a new outbound channel.
+    event OutboundChannelUpdated(address newOutBoundChannel);
+
     /* State */
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -55,7 +58,7 @@ contract NativeTokens is AccessControl {
     bytes public peer;
 
     TokenVault public immutable vault;
-    IOutboundChannel public immutable outboundChannel;
+    IOutboundChannel public outboundChannel;
 
     /* Errors */
 
@@ -123,5 +126,10 @@ contract NativeTokens is AccessControl {
             vault.withdraw(payload.recipient, payload.token, payload.amount);
             emit Unlocked(payload.recipient, payload.token, payload.amount);
         }
+    }
+
+    function setOutboundChannel(IOutboundChannel _outboundChannel) external onlyRole(ADMIN_ROLE) {
+        outboundChannel = _outboundChannel;
+        emit OutboundChannelUpdated(address(_outboundChannel));
     }
 }

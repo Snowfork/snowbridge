@@ -2,10 +2,11 @@
 pragma solidity ^0.8.9;
 
 import "./BeefyClient.sol";
+import "./IParachainClient.sol";
 import "./utils/MerkleProof.sol";
 import "./ScaleCodec.sol";
 
-contract ParachainClient {
+contract ParachainClient is IParachainClient {
     BeefyClient public immutable beefyClient;
     uint32 public immutable parachainID;
     bytes4 public immutable encodedParachainID;
