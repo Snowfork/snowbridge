@@ -13,7 +13,7 @@ start_geth() {
         geth --vmdebug --datadir "$ethereum_data_dir" --networkid 15 \
             --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
             --rpc.allow-unprotected-txs --mine --miner.threads=1 \
-            --miner.etherbase=0x0000000000000000000000000000000000000000 \
+            --miner.etherbase=0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD \
             --authrpc.addr="127.0.0.1" \
             --http.addr="127.0.0.1" \
             --allow-insecure-unlock \
