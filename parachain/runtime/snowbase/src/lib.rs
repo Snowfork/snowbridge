@@ -575,7 +575,7 @@ impl basic_channel_outbound::Config for Runtime {
 
 parameter_types! {
 	pub const MaxSyncCommitteeSize: u32 = 32;
-	pub const MaxProofBranchSize: u32 = 10;
+	pub const MaxProofBranchSize: u32 = 20;
 	pub const MaxExtraDataSize: u32 = 32;
 	pub const MaxLogsBloomSize: u32 = 256;
 	pub const MaxFeeRecipientSize: u32 = 20;
@@ -587,6 +587,8 @@ parameter_types! {
 	pub const MaxVoluntaryExitSize: u32 = 16;
 	pub const MaxAttestationSize: u32 = 128;
 	pub const MaxValidatorsPerCommittee: u32 = 2048;
+	pub const MaxSlotsPerHistoricalRoot: u64 = 64;
+	pub const MaxFinalizedHeaderSlotArray: u32 = 1000;
 	pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 	pub const ChainForkVersions: ForkVersions = ForkVersions{
 		genesis: Fork {
@@ -620,6 +622,8 @@ impl ethereum_beacon_client::Config for Runtime {
 	type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
 	type MaxAttestationSize = MaxAttestationSize;
 	type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+	type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
+	type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 	type ForkVersions = ChainForkVersions;
 	type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 	type WeightInfo = weights::ethereum_beacon_client::SnowbridgeWeight<Self>;

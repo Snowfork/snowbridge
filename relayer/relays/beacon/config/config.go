@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"github.com/snowfork/snowbridge/relayer/config"
 )
 
@@ -12,6 +13,7 @@ type Config struct {
 type SpecSettings struct {
 	SlotsInEpoch                 uint64 `mapstructure:"slotsInEpoch"`
 	EpochsPerSyncCommitteePeriod uint64 `mapstructure:"epochsPerSyncCommitteePeriod"`
+	MaxSlotsPerHistoricalRoot    int    `mapstructure:"maxSlotsPerHistoricalRoot"`
 }
 
 type Spec struct {
@@ -39,4 +41,53 @@ func (c Config) GetSpecSettings() SpecSettings {
 	}
 
 	return c.Source.Beacon.Spec.Mainnet
+}
+
+func (c Config) GetSpecSettingsBySpec(spec ActiveSpec) SpecSettings {
+	if spec.IsMinimal() {
+		return c.Source.Beacon.Spec.Minimal
+	}
+
+	return c.Source.Beacon.Spec.Mainnet
+}
+
+type ActiveSpec string
+
+const (
+	Mainnet ActiveSpec = "mainnet"
+	Minimal ActiveSpec = "minimal"
+)
+
+func (c Config) GetActiveSpec() ActiveSpec {
+	switch c.Source.Beacon.ActiveSpec {
+	case string(Mainnet):
+		return Mainnet
+	case string(Minimal):
+		return Minimal
+	default:
+		return Mainnet
+	}
+}
+
+func (a ActiveSpec) IsMainnet() bool {
+	return a == Mainnet
+}
+
+func (a ActiveSpec) IsMinimal() bool {
+	return a == Minimal
+}
+
+func ToSpec(spec string) (ActiveSpec, error) {
+	switch spec {
+	case string(Mainnet):
+		return Mainnet, nil
+	case string(Minimal):
+		return Minimal, nil
+	default:
+		return Minimal, errors.New("spec is not a valid value")
+	}
+}
+
+func (a ActiveSpec) ToString() string {
+	return string(a)
 }
