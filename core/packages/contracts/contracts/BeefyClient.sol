@@ -329,10 +329,7 @@ contract BeefyClient is Ownable {
             revert StaleCommitment();
         }
 
-        if (
-            leaf.nextAuthoritySetID != nextValidatorSet.id &&
-            leaf.nextAuthoritySetID != nextValidatorSet.id + 1
-        ) {
+        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
             revert InvalidMMRLeaf();
         }
 
@@ -353,9 +350,7 @@ contract BeefyClient is Ownable {
         }
 
         currentValidatorSet = nextValidatorSet;
-        // Workaround for change in https://github.com/paritytech/polkadot/pull/6577
-        // and discussions here in https://github.com/paritytech/substrate/issues/11797
-        nextValidatorSet.id = currentValidatorSet.id + 1;
+        nextValidatorSet.id = leaf.nextAuthoritySetID;
         nextValidatorSet.length = leaf.nextAuthoritySetLen;
         nextValidatorSet.root = leaf.nextAuthoritySetRoot;
 

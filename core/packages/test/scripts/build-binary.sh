@@ -22,16 +22,17 @@ rebuild_relaychain(){
     popd
 }
 
-# Only for debug purpose when relaychain branch not released
+# Only for debug purpose when we need to do some customization in relaychain
 build_relaychain_from_source(){
-    if [ ! -d "$relaychain_dir" ] ; then
-        echo "clone polkadot project to $relaychain_dir"
-        git clone https://github.com/paritytech/polkadot.git $relaychain_dir
+    relaychain_src_dir="$relaychain_dir/src"
+    if [ ! -d "$relaychain_src_dir" ] ; then
+        echo "clone polkadot project to $relaychain_src_dir"
+        git clone https://github.com/paritytech/polkadot.git $relaychain_src_dir
     fi
-    pushd $relaychain_dir
-    git fetch origin && git checkout release-$relaychain_version
+    pushd $relaychain_src_dir
+    git switch release-$relaychain_version
     cargo build --release
-    cp "$relaychain_dir/target/release/polkadot" "$output_bin_dir"
+    cp "$relaychain_src_dir/target/release/polkadot" "$output_bin_dir"
     popd
 }
 
