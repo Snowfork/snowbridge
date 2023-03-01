@@ -308,19 +308,12 @@ fn finalized_header_update_from_file<T: crate::Config>(
 
 fn block_update_from_file<T: crate::Config>(
 	name: &str,
-) -> BlockUpdate<
+) -> HeaderUpdate<
 	T::MaxFeeRecipientSize,
 	T::MaxLogsBloomSize,
 	T::MaxExtraDataSize,
-	T::MaxDepositDataSize,
-	T::MaxPublicKeySize,
 	T::MaxSignatureSize,
 	T::MaxProofBranchSize,
-	T::MaxProposerSlashingSize,
-	T::MaxAttesterSlashingSize,
-	T::MaxVoluntaryExitSize,
-	T::MaxAttestationSize,
-	T::MaxValidatorsPerCommittee,
 	T::MaxSyncCommitteeSize,
 > {
 	let filepath = fixture_path(name);
@@ -391,18 +384,10 @@ pub fn get_committee_sync_ssz_test_data<T: crate::Config>() -> SyncCommittee<T::
 }
 
 pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
-	T::MaxFeeRecipientSize,
 	T::MaxLogsBloomSize,
 	T::MaxExtraDataSize,
-	T::MaxDepositDataSize,
-	T::MaxPublicKeySize,
 	T::MaxSignatureSize,
 	T::MaxProofBranchSize,
-	T::MaxProposerSlashingSize,
-	T::MaxAttesterSlashingSize,
-	T::MaxVoluntaryExitSize,
-	T::MaxAttestationSize,
-	T::MaxValidatorsPerCommittee,
 	T::MaxSyncCommitteeSize,
 > {
 	block_update_from_file::<T>(&add_file_prefix("block_update.json"))

@@ -22,6 +22,9 @@ pub const FINALIZED_ROOT_INDEX: u64 = 41;
 pub const BLOCK_ROOTS_DEPTH: u64 = 5;
 pub const BLOCK_ROOTS_INDEX: u64 = 5;
 
+pub const EXECUTION_HEADER_DEPTH: u64 = 4;
+pub const EXECUTION_HEADER_INDEX: u64 = 25;
+
 pub const MAX_PROPOSER_SLASHINGS: usize = 16;
 pub const MAX_ATTESTER_SLASHINGS: usize = 2;
 pub const MAX_ATTESTATIONS: usize = 128;

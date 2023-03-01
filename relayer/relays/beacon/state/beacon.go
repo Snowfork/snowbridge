@@ -1,6 +1,8 @@
 package state
 
-import ssz "github.com/ferranbt/fastssz"
+import (
+	ssz "github.com/ferranbt/fastssz"
+)
 
 type Checkpoint struct {
 	Epoch uint64 `json:"epoch"`
@@ -116,20 +118,15 @@ type AttesterSlashing struct {
 	Attestation2 *IndexedAttestation `json:"attestation_2"`
 }
 
-type BeaconBlock struct {
-	Slot          uint64                 `json:"slot"`
-	ProposerIndex uint64                 `json:"proposer_index"`
-	ParentRoot    []byte                 `json:"parent_root" ssz-size:"32"`
-	StateRoot     []byte                 `json:"state_root" ssz-size:"32"`
-	Body          *BeaconBlockBodyPhase0 `json:"body"`
+type BeaconBlockBellatrix struct {
+	Slot          uint64                    `json:"slot"`
+	ProposerIndex uint64                    `json:"proposer_index"`
+	ParentRoot    []byte                    `json:"parent_root" ssz-size:"32"`
+	StateRoot     []byte                    `json:"state_root" ssz-size:"32"`
+	Body          *BeaconBlockBodyBellatrix `json:"body"`
 }
 
-type SignedBeaconBlock struct {
-	Block     *BeaconBlock `json:"message"`
-	Signature []byte       `json:"signature" ssz-size:"96"`
-}
-
-type BeaconBlockBodyPhase0 struct {
+type BeaconBlockBodyBellatrix struct {
 	RandaoReveal      []byte                 `json:"randao_reveal" ssz-size:"96"`
 	Eth1Data          *Eth1Data              `json:"eth1_data"`
 	Graffiti          [32]byte               `json:"graffiti" ssz-size:"32"`
@@ -138,6 +135,8 @@ type BeaconBlockBodyPhase0 struct {
 	Attestations      []*Attestation         `json:"attestations" ssz-max:"128"`
 	Deposits          []*Deposit             `json:"deposits" ssz-max:"16"`
 	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits" ssz-max:"16"`
+	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
+	ExecutionPayload  *ExecutionPayload      `json:"execution_payload"`
 }
 
 type BeaconStateBellatrixMainnet struct {

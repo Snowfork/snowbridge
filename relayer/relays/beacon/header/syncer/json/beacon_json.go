@@ -132,11 +132,13 @@ type BlockBody struct {
 }
 
 type HeaderUpdate struct {
-	Block                         Block         `json:"block"`
-	SyncAggregate                 SyncAggregate `json:"sync_aggregate"`
-	SignatureSlot                 uint64        `json:"signature_slot"`
-	BlockRootProof                []string      `json:"block_root_proof"`
-	BlockRootProofFinalizedHeader string        `json:"block_root_proof_finalized_header"`
+	BeaconHeader              BeaconHeader     `json:"block"`
+	ExecutionHeader           ExecutionPayload `json:"execution_header"`
+	ExecutionBranch           []string         `json:"execution_branch"`
+	SyncAggregate             SyncAggregate    `json:"sync_aggregate"`
+	SignatureSlot             uint64           `json:"signature_slot"`
+	BlockRootBranch           []string         `json:"block_root_proof"`
+	BlockRootBranchHeaderRoot string           `json:"block_root_proof_finalized_header"`
 }
 
 type Attestation struct {
@@ -295,10 +297,12 @@ func (f *FinalizedHeaderUpdate) RemoveLeadingZeroHashes() {
 }
 
 func (h *HeaderUpdate) RemoveLeadingZeroHashes() {
-	h.Block.RemoveLeadingZeroHashes()
+	h.BeaconHeader.RemoveLeadingZeroHashes()
+	h.ExecutionHeader.RemoveLeadingZeroHashes()
+	h.ExecutionBranch = removeLeadingZeroHashForSlice(h.ExecutionBranch)
 	h.SyncAggregate.RemoveLeadingZeroHashes()
-	h.BlockRootProof = removeLeadingZeroHashForSlice(h.BlockRootProof)
-	h.BlockRootProofFinalizedHeader = removeLeadingZeroHash(h.BlockRootProofFinalizedHeader)
+	h.BlockRootBranch = removeLeadingZeroHashForSlice(h.BlockRootBranch)
+	h.BlockRootBranchHeaderRoot = removeLeadingZeroHash(h.BlockRootBranchHeaderRoot)
 }
 
 func removeLeadingZeroHashForSlice(s []string) []string {

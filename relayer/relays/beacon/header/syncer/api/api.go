@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"io"
 	"net/http"
 	"os"
@@ -250,35 +251,35 @@ func (b *BeaconClient) GetHeader(blockRoot common.Hash) (BeaconHeader, error) {
 	}, nil
 }
 
-func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error) {
+func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (state.BeaconBlockBellatrix, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
 	if err != nil {
-		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
+		return state.BeaconBlockBellatrix{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
-	req.Header.Set("accept", "application/json")
+	req.Header.Add("Accept", "application/octet-stream")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
+		return state.BeaconBlockBellatrix{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return BeaconBlockResponse{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
+		return state.BeaconBlockBellatrix{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
+		return state.BeaconBlockBellatrix{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
-	var response BeaconBlockResponse
+	beaconBlock := state.BeaconBlockBellatrix{}
 
-	err = json.Unmarshal(bodyBytes, &response)
+	err = beaconBlock.UnmarshalSSZ(bodyBytes)
 	if err != nil {
-		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
+		return state.BeaconBlockBellatrix{}, fmt.Errorf("unmarshal block ssz: %w", err)
 	}
 
-	return response, nil
+	return beaconBlock, nil
 }
 
 func (b *BeaconClient) GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error) {
@@ -442,6 +443,7 @@ func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) (string, error)
 	if err != nil {
 		return "", err
 	}
+
 	req.Header.Add("Accept", "application/octet-stream")
 	res, err := b.httpClient.Do(req)
 	if err != nil {

@@ -1,8 +1,10 @@
 package api
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"math/big"
 	"strconv"
 	"strings"
@@ -725,4 +727,46 @@ func getTransactionsHashTreeRoot(transactions []string) (types.H256, error) {
 	}
 
 	return types.NewH256(transactionsRoot[:]), nil
+}
+
+func ExecutionPayloadToScale(e *state.ExecutionPayload) (scale.ExecutionPayload, error) {
+	transactionsContainer := state.TransactionsRootContainer{}
+	transactionsContainer.Transactions = e.Transactions
+
+	transactionsRoot, err := transactionsContainer.HashTreeRoot()
+	if err != nil {
+		return scale.ExecutionPayload{}, err
+	}
+
+	baseFeePerGas := binary.BigEndian.Uint64(e.BaseFeePerGas[:])
+	stringValue, err := strconv.Atoi(string(e.BaseFeePerGas[:]))
+	if err != nil {
+		return scale.ExecutionPayload{}, err
+	}
+
+	log.WithFields(log.Fields{"converted_u256": baseFeePerGas, "original": stringValue}).Info("converted int")
+
+	return scale.ExecutionPayload{
+		ParentHash:       types.NewH256(e.ParentHash[:]),
+		FeeRecipient:     e.FeeRecipient[:],
+		StateRoot:        types.NewH256(e.StateRoot[:]),
+		ReceiptsRoot:     types.NewH256(e.ReceiptsRoot[:]),
+		LogsBloom:        e.LogsBloom[:],
+		PrevRandao:       types.NewH256(e.PrevRandao[:]),
+		BlockNumber:      types.NewU64(e.BlockNumber),
+		GasLimit:         types.NewU64(e.GasLimit),
+		GasUsed:          types.NewU64(e.GasUsed),
+		Timestamp:        types.NewU64(e.Timestamp),
+		ExtraData:        e.ExtraData,
+		BaseFeePerGas:    types.NewU256(*big.NewInt(int64(baseFeePerGas))),
+		BlockHash:        types.NewH256(e.BlockHash[:]),
+		TransactionsRoot: transactionsRoot,
+	}, nil
+}
+
+func SyncAggregateToScale(s *state.SyncAggregate) scale.SyncAggregate {
+	return scale.SyncAggregate{
+		SyncCommitteeBits:      s.SyncCommitteeBits,
+		SyncCommitteeSignature: s.SyncCommitteeSignature[:],
+	}
 }

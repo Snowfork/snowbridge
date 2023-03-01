@@ -43,108 +43,14 @@ func (p FinalizedHeaderPayload) ToJSON() json.FinalizedHeaderUpdate {
 }
 
 func (h HeaderUpdate) ToJSON() json.HeaderUpdate {
-	proposerSlashings := []json.ProposerSlashing{}
-	for _, proposerSlashing := range h.Block.Body.ProposerSlashings {
-		proposerSlashings = append(proposerSlashings, json.ProposerSlashing{
-			SignedHeader1: json.SignedHeader{
-				Message:   proposerSlashing.SignedHeader1.Message.ToJSON(),
-				Signature: util.BytesToHexString(proposerSlashing.SignedHeader1.Signature),
-			},
-			SignedHeader2: json.SignedHeader{
-				Message:   proposerSlashing.SignedHeader2.Message.ToJSON(),
-				Signature: util.BytesToHexString(proposerSlashing.SignedHeader2.Signature),
-			},
-		})
-	}
-
-	attesterSlashings := []json.AttesterSlashing{}
-	for _, attesterSlashing := range h.Block.Body.AttesterSlashings {
-		attesterSlashings = append(attesterSlashings, json.AttesterSlashing{
-			Attestation1: json.IndexedAttestation{
-				AttestingIndices: util.ToUint64Array(attesterSlashing.Attestation1.AttestingIndices),
-				Data:             attesterSlashing.Attestation1.Data.ToJSON(),
-				Signature:        util.BytesToHexString(attesterSlashing.Attestation1.Signature),
-			},
-			Attestation2: json.IndexedAttestation{
-				AttestingIndices: util.ToUint64Array(attesterSlashing.Attestation2.AttestingIndices),
-				Data:             attesterSlashing.Attestation2.Data.ToJSON(),
-				Signature:        util.BytesToHexString(attesterSlashing.Attestation2.Signature),
-			},
-		})
-	}
-
-	attestations := []json.Attestation{}
-	for _, attestation := range h.Block.Body.Attestations {
-		attestations = append(attestations, json.Attestation{
-			AggregationBits: util.BytesToHexString(attestation.AggregationBits),
-			Data:            attestation.Data.ToJSON(),
-			Signature:       util.BytesToHexString(attestation.Signature),
-		})
-	}
-
-	deposits := []json.Deposit{}
-	for _, deposit := range h.Block.Body.Deposits {
-		deposits = append(deposits, json.Deposit{
-			Proof: util.ScaleBranchToString(deposit.Proof),
-			Data: json.DepositData{
-				Pubkey:                util.BytesToHexString(deposit.Data.Pubkey),
-				WithdrawalCredentials: deposit.Data.WithdrawalCredentials.Hex(),
-				Amount:                uint64(deposit.Data.Amount),
-				Signature:             util.BytesToHexString(deposit.Data.Signature),
-			},
-		})
-	}
-
-	voluntaryExits := []json.VoluntaryExit{}
-	for _, voluntaryExit := range h.Block.Body.VoluntaryExits {
-		voluntaryExits = append(voluntaryExits, json.VoluntaryExit{
-			Epoch:          uint64(voluntaryExit.Epoch),
-			ValidatorIndex: uint64(voluntaryExit.ValidaterIndex),
-		})
-	}
-
 	return json.HeaderUpdate{
-		Block: json.Block{
-			Slot:          uint64(h.Block.Slot),
-			ProposerIndex: uint64(h.Block.ProposerIndex),
-			ParentRoot:    h.Block.ParentRoot.Hex(),
-			StateRoot:     h.Block.StateRoot.Hex(),
-			Body: json.BlockBody{
-				RandaoReveal: util.BytesToHexString(h.Block.Body.RandaoReveal),
-				Eth1Data: json.Eth1Data{
-					DepositRoot:  h.Block.Body.Eth1Data.DepositRoot.Hex(),
-					DepositCount: uint64(h.Block.Body.Eth1Data.DepositCount),
-					BlockHash:    h.Block.Body.Eth1Data.BlockHash.Hex(),
-				},
-				Graffiti:          h.Block.Body.Graffiti.Hex(),
-				ProposerSlashings: proposerSlashings,
-				AttesterSlashings: attesterSlashings,
-				Attestations:      attestations,
-				Deposits:          deposits,
-				VoluntaryExits:    voluntaryExits,
-				SyncAggregate:     h.Block.Body.SyncAggregate.ToJSON(),
-				ExecutionPayload: json.ExecutionPayload{
-					ParentHash:      h.Block.Body.ExecutionPayload.ParentHash.Hex(),
-					FeeRecipient:    util.BytesToHexString(h.Block.Body.ExecutionPayload.FeeRecipient),
-					StateRoot:       h.Block.Body.ExecutionPayload.StateRoot.Hex(),
-					ReceiptsRoot:    h.Block.Body.ExecutionPayload.ReceiptsRoot.Hex(),
-					LogsBloom:       util.BytesToHexString(h.Block.Body.ExecutionPayload.LogsBloom),
-					PrevRandao:      h.Block.Body.ExecutionPayload.PrevRandao.Hex(),
-					BlockNumber:     uint64(h.Block.Body.ExecutionPayload.BlockNumber),
-					GasLimit:        uint64(h.Block.Body.ExecutionPayload.GasLimit),
-					GasUsed:         uint64(h.Block.Body.ExecutionPayload.GasUsed),
-					Timestamp:       uint64(h.Block.Body.ExecutionPayload.Timestamp),
-					ExtraData:       util.BytesToHexString(h.Block.Body.ExecutionPayload.ExtraData),
-					BaseFeePerGas:   h.Block.Body.ExecutionPayload.BaseFeePerGas.Uint64(),
-					BlockHash:       h.Block.Body.ExecutionPayload.BlockHash.Hex(),
-					TransactionRoot: h.Block.Body.ExecutionPayload.TransactionsRoot.Hex(),
-				},
-			},
-		},
-		SyncAggregate:                 h.SyncAggregate.ToJSON(),
-		SignatureSlot:                 uint64(h.SignatureSlot),
-		BlockRootProof:                util.ScaleBranchToString(h.BlockRootProof),
-		BlockRootProofFinalizedHeader: h.BlockRootProofFinalizedHeader.Hex(),
+		BeaconHeader:              h.Payload.BeaconHeader.ToJSON(),
+		ExecutionHeader:           h.Payload.ExecutionHeader.ToJSON(),
+		ExecutionBranch:           util.ScaleBranchToString(h.Payload.ExecutionBranch),
+		SyncAggregate:             h.Payload.SyncAggregate.ToJSON(),
+		SignatureSlot:             uint64(h.Payload.SignatureSlot),
+		BlockRootBranch:           util.ScaleBranchToString(h.Payload.BlockRootBranch),
+		BlockRootBranchHeaderRoot: h.Payload.BlockRootBranchHeaderRoot.Hex(),
 	}
 }
 
@@ -155,6 +61,25 @@ func (b *BeaconHeader) ToJSON() json.BeaconHeader {
 		ParentRoot:    b.ParentRoot.Hex(),
 		StateRoot:     b.StateRoot.Hex(),
 		BodyRoot:      b.BodyRoot.Hex(),
+	}
+}
+
+func (e *ExecutionPayload) ToJSON() json.ExecutionPayload {
+	return json.ExecutionPayload{
+		ParentHash:      e.ParentHash.Hex(),
+		FeeRecipient:    util.BytesToHexString(e.FeeRecipient),
+		StateRoot:       e.StateRoot.Hex(),
+		ReceiptsRoot:    e.ReceiptsRoot.Hex(),
+		LogsBloom:       util.BytesToHexString(e.LogsBloom),
+		PrevRandao:      e.PrevRandao.Hex(),
+		BlockNumber:     uint64(e.BlockNumber),
+		GasLimit:        uint64(e.GasLimit),
+		GasUsed:         uint64(e.GasUsed),
+		Timestamp:       uint64(e.Timestamp),
+		ExtraData:       util.BytesToHexString(e.ExtraData),
+		BaseFeePerGas:   e.BaseFeePerGas.Uint64(),
+		BlockHash:       e.BlockHash.Hex(),
+		TransactionRoot: e.TransactionsRoot.Hex(),
 	}
 }
 

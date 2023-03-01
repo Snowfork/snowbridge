@@ -9,11 +9,11 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 )
 
-func ScaleBranchToHex(proofs []types.H256) []common.Hash {
-	branch := []common.Hash{}
+func BytesBranchToScale(proofs [][]byte) []types.H256 {
+	branch := []types.H256{}
 
 	for _, proof := range proofs {
-		branch = append(branch, common.HexToHash(proof.Hex()))
+		branch = append(branch, types.NewH256(proof))
 	}
 
 	return branch
