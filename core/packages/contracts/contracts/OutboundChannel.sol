@@ -26,11 +26,14 @@ contract OutboundChannel is IOutboundChannel, AccessControl {
         fee = _fee;
     }
 
-    function submit(bytes calldata dest, bytes calldata payload) external payable onlyRole(SUBMIT_ROLE) {
+    function submit(
+        bytes calldata dest,
+        bytes calldata payload
+    ) external payable onlyRole(SUBMIT_ROLE) {
         if (msg.value < fee) {
             revert FeePaymentToLow();
         }
-        sovereignTreasury.deposit{value: msg.value}(dest);
+        sovereignTreasury.deposit{ value: msg.value }(dest);
         nonce[dest] = nonce[dest] + 1;
         emit Message(dest, nonce[dest], payload);
     }

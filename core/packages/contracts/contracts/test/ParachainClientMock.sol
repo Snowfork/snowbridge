@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "../IParachainClient.sol";
 
 contract ParachainClientMock is IParachainClient {
-    function verifyCommitment(bytes32, bytes calldata) external override pure returns (bool) {
+    function verifyCommitment(bytes32, bytes calldata) external pure override returns (bool) {
         return true;
     }
 }

@@ -5,7 +5,7 @@ import "./ScaleCodec.sol";
 import "./SubstrateTypes.sol";
 
 library NativeTokensTypes {
-   /**
+    /**
      * @dev Encodes Action::NativeTokens(NativeTokens::Mint)
      */
     // solhint-disable-next-line func-name-mixedcase
@@ -27,7 +27,7 @@ library NativeTokensTypes {
             );
     }
 
-   /**
+    /**
      * @dev Encodes Action::NativeTokens(NativeTokens::Create)
      */
     // solhint-disable-next-line func-name-mixedcase

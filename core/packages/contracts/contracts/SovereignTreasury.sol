@@ -36,10 +36,14 @@ contract SovereignTreasury is ISovereignTreasury, AccessControl {
     }
 
     function deposit(bytes calldata sovereign) external payable {
-        vault.deposit{value: msg.value}(sovereign);
+        vault.deposit{ value: msg.value }(sovereign);
     }
 
-    function withdraw(bytes calldata sovereign, address payable recipient, uint256 amount) external onlyRole(WITHDRAW_ROLE) {
+    function withdraw(
+        bytes calldata sovereign,
+        address payable recipient,
+        uint256 amount
+    ) external onlyRole(WITHDRAW_ROLE) {
         vault.withdraw(sovereign, recipient, amount);
     }
 

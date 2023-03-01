@@ -5,14 +5,13 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 import { InboundChannel } from "../../InboundChannel.sol";
-import { EtherVault  } from "../../EtherVault.sol";
+import { EtherVault } from "../../EtherVault.sol";
 import { IParachainClient } from "../../IParachainClient.sol";
-import { SovereignTreasury  } from "../../SovereignTreasury.sol";
+import { SovereignTreasury } from "../../SovereignTreasury.sol";
 import { ParachainClientMock } from "../ParachainClientMock.sol";
 import { RecipientMock } from "../RecipientMock.sol";
 
 contract InboundChannelTest is Test {
-
     InboundChannel public channel;
     RecipientMock public recipient;
 
@@ -29,7 +28,7 @@ contract InboundChannelTest is Test {
         etherVault.transferOwnership(address(treasury));
 
         deal(address(this), 100 ether);
-        treasury.deposit{value: 50 ether}(bytes("statemint"));
+        treasury.deposit{ value: 50 ether }(bytes("statemint"));
 
         channel = new InboundChannel(parachainClient, treasury, 100 wei);
 
@@ -41,16 +40,10 @@ contract InboundChannelTest is Test {
         hoax(relayer, 100 ether);
 
         channel.submit(
-            InboundChannel.Message(
-                bytes("statemint"),
-                1,
-                address(recipient),
-                hex"deadbeef"
-            ),
+            InboundChannel.Message(bytes("statemint"), 1, address(recipient), hex"deadbeef"),
             proof,
             hashSides,
             hex"deadbeef"
         );
     }
-
 }

@@ -23,7 +23,11 @@ contract EtherVault is Ownable {
         emit Deposited(sovereign, msg.value);
     }
 
-    function withdraw(bytes calldata sovereign, address recipient, uint256 amount) external onlyOwner {
+    function withdraw(
+        bytes calldata sovereign,
+        address recipient,
+        uint256 amount
+    ) external onlyOwner {
         if (amount == 0) {
             revert ZeroAmount();
         }
@@ -37,7 +41,7 @@ contract EtherVault is Ownable {
         // NB: Keep this transfer after reducing the balance to avoid reentrancy attacks.
         // https://consensys.github.io/smart-contract-best-practices/attacks/reentrancy/
         // https://docs.soliditylang.org/en/v0.8.18/security-considerations.html#re-entrancy
-        (bool success, ) = recipient.call{value: amount}("");
+        (bool success, ) = recipient.call{ value: amount }("");
         if (!success) {
             revert CannotSendFunds();
         }

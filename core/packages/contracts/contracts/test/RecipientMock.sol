@@ -5,10 +5,10 @@ import { IRecipient } from "../IRecipient.sol";
 
 contract RecipientMock is IRecipient {
     uint256 foo;
+
     function handle(bytes calldata, bytes calldata) external {
         while (true) {
             foo++;
         }
     }
-
 }

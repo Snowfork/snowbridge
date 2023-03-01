@@ -32,7 +32,11 @@ contract InboundChannel is AccessControl {
     error InvalidProof();
     error InvalidNonce();
 
-    constructor(IParachainClient _parachainClient, ISovereignTreasury _sovereignTreasury, uint256 _reward) {
+    constructor(
+        IParachainClient _parachainClient,
+        ISovereignTreasury _sovereignTreasury,
+        uint256 _reward
+    ) {
         _grantRole(ADMIN_ROLE, msg.sender);
         parachainClient = _parachainClient;
         sovereignTreasury = _sovereignTreasury;
@@ -77,12 +81,16 @@ contract InboundChannel is AccessControl {
         emit HandlerUpdated(id, address(handler));
     }
 
-    function updateParachainClient(IParachainClient _parachainClient) external onlyRole(ADMIN_ROLE) {
+    function updateParachainClient(
+        IParachainClient _parachainClient
+    ) external onlyRole(ADMIN_ROLE) {
         parachainClient = _parachainClient;
         emit ParachainClientUpdated(address(_parachainClient));
     }
 
-    function updateSovereignTreasury(ISovereignTreasury _sovereignTreasury) external onlyRole(ADMIN_ROLE) {
+    function updateSovereignTreasury(
+        ISovereignTreasury _sovereignTreasury
+    ) external onlyRole(ADMIN_ROLE) {
         sovereignTreasury = _sovereignTreasury;
         emit SovereignTreasuryUpdated(address(_sovereignTreasury));
     }
