@@ -129,5 +129,6 @@ members = [
     "runtime/snowbridge",
     "runtime/snowblink",
     "runtime/snowbase",
-    "tools/query-events"
+    "tools/query-events",
+    "tools/call-index"
 ]
