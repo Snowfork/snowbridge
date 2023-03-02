@@ -151,3 +151,50 @@ target/release/snowbridge benchmark pallet \
   --output=pallets/basic-channel/src/inbound/weights.rs \
   --template=templates/module-weight-template.hbs
 ```
+
+## Generating beacon test fixtures and benchmarking data
+
+### Minimal Spec
+
+To generate `minimal` test data and benchmarking data, make sure to start the local E2E setup to spin up a local beacon node instance to connect to:
+
+```bash
+cd core/packages/test
+./scripts/start-services.sh
+```
+
+Wait for output `Testnet has been initialized`.
+
+In a separate terminal, from the `snowbridge` directory, run:
+
+```bash
+mage -d relayer build && relayer/build/snowbridge-relay generate-beacon-data --spec "minimal" && cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
+```
+
+### Mainnet Spec
+
+To generate `mainnet` test data and benchmarking data, we can connect to the Lodestar Goerli public node. The script already connects to the Lodestar node, so no need to start up additional services.
+In the event of the Lodestar node not being available, you can start up your own stack with these commands:
+
+```bash
+geth --goerli --http --http.api eth,net,engine,admin --authrpc.jwtsecret consensus/jwt.hex
+./lodestar beacon --dataDir="../../ethereum/lodestar-beacondata-goerli" --network="goerli" --rest.namespace="*" --jwt-secret="../../ethereum/consensus/jwt.hex" --checkpointSyncUrl="https://sync-goerli.beaconcha.in"
+```
+
+Naturally, if you run your own setup you would need to install Geth and Lodestar locally and also update the API endpoint to `http://127.0.0.1:9596` in `relayer/cmd/generate-beacon-data.go`.
+
+From the `snowbridge` directory, run:
+
+```bash
+mage -d relayer build && relayer/build/snowbridge-relay generate-beacon-data --spec "mainnet" && cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
+```
+
+### Testing
+
+To test the data after regenerating, run:
+
+```bash
+cd parachain/pallets/ethereum-beacon-client
+cargo test
+cargo test --features "minimal"
+```

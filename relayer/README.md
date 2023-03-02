@@ -40,6 +40,15 @@ Generate the bindings in the [contracts](contracts/) directory:
 go generate ./...
 ```
 
+## SSZ Encodings
+
+To generate the SSZ encodings:
+
+```
+git clone https://github.com/ferranbt/fastssz.git
+go run sszgen/*.go --path ../snowbridge/relayer/relays/beacon/state/beacon.go --objs BeaconStateBellatrixMainnet,BeaconStateBellatrixMinimal,BlockRootsContainerMainnet,BlockRootsContainerMinimal,TransactionsRootContainer
+```
+
 ## Configuration
 
 Note: For local development and testing, we use our E2E test stack described [here](../core/packages/test/README.md). It automatically generates suitable relayer configurations for testing.

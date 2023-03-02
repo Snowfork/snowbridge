@@ -70,7 +70,7 @@ pub mod mock_minimal {
 
 	parameter_types! {
 		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
-		pub const MaxProofBranchSize: u32 = 6;
+		pub const MaxProofBranchSize: u32 = 20;
 		pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
 		pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
 		pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
@@ -82,6 +82,8 @@ pub mod mock_minimal {
 		pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
 		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
 		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
+		pub const MaxSlotsPerHistoricalRoot: u64 = 64;
+		pub const MaxFinalizedHeaderSlotArray: u32 = 1000;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
@@ -115,6 +117,8 @@ pub mod mock_minimal {
 		type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
 		type MaxAttestationSize = MaxAttestationSize;
 		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+		type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
+		type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
@@ -180,7 +184,7 @@ pub mod mock_mainnet {
 
 	parameter_types! {
 		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
-		pub const MaxProofBranchSize: u32 = 6;
+		pub const MaxProofBranchSize: u32 = 20;
 		pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
 		pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
 		pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
@@ -192,6 +196,8 @@ pub mod mock_mainnet {
 		pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
 		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
 		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
+		pub const MaxSlotsPerHistoricalRoot: u64 = 8192;
+		pub const MaxFinalizedHeaderSlotArray: u32 = 1000;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
@@ -225,6 +231,8 @@ pub mod mock_mainnet {
 		type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
 		type MaxAttestationSize = MaxAttestationSize;
 		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
+		type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
+		type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
@@ -284,6 +292,13 @@ fn sync_committee_update_from_file<T: crate::Config>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
+fn sync_committee_from_file<T: crate::Config>(
+	name: &str,
+) -> SyncCommittee<T::MaxSyncCommitteeSize> {
+	let filepath = fixture_path(name);
+	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
+}
+
 fn finalized_header_update_from_file<T: crate::Config>(
 	name: &str,
 ) -> FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize> {
@@ -312,6 +327,27 @@ fn block_update_from_file<T: crate::Config>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
+fn beacon_block_body_from_file<T: crate::Config>(
+	name: &str,
+) -> Body<
+	T::MaxFeeRecipientSize,
+	T::MaxLogsBloomSize,
+	T::MaxExtraDataSize,
+	T::MaxDepositDataSize,
+	T::MaxPublicKeySize,
+	T::MaxSignatureSize,
+	T::MaxProofBranchSize,
+	T::MaxProposerSlashingSize,
+	T::MaxAttesterSlashingSize,
+	T::MaxVoluntaryExitSize,
+	T::MaxAttestationSize,
+	T::MaxValidatorsPerCommittee,
+	T::MaxSyncCommitteeSize,
+> {
+	let filepath = fixture_path(name);
+	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
+}
+
 fn attester_slashing_from_file<T: crate::Config>(
 	name: &str,
 ) -> AttesterSlashing<T::MaxValidatorsPerCommittee, T::MaxSignatureSize> {
@@ -319,13 +355,18 @@ fn attester_slashing_from_file<T: crate::Config>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
+fn get_config_setting() -> String {
+	return match config::IS_MINIMAL {
+		true => "minimal".to_owned(),
+		false => "mainnet".to_owned(),
+	}
+}
+
 fn add_file_prefix(name: &str) -> String {
-	let prefix = match config::IS_MINIMAL {
-		true => "minimal_",
-		false => "goerli_",
-	};
+	let prefix = get_config_setting();
 
 	let mut result = prefix.to_owned();
+	result.push_str("_");
 	result.push_str(name);
 	result
 }
@@ -339,6 +380,14 @@ pub fn get_committee_sync_period_update<T: crate::Config>(
 ) -> SyncCommitteePeriodUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize>
 {
 	sync_committee_update_from_file::<T>(&add_file_prefix("sync_committee_update.json"))
+}
+
+pub fn get_committee_sync_ssz_test_data<T: crate::Config>() -> SyncCommittee<T::MaxSyncCommitteeSize>
+{
+	let mut filename: String = "ssz_test_".to_owned();
+	filename.push_str(&get_config_setting());
+	filename.push_str("_sync_committee.json");
+	sync_committee_from_file::<T>(filename.as_str())
 }
 
 pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
@@ -357,6 +406,27 @@ pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
 	T::MaxSyncCommitteeSize,
 > {
 	block_update_from_file::<T>(&add_file_prefix("block_update.json"))
+}
+
+pub fn get_beacon_block_body<T: crate::Config>() -> Body<
+	T::MaxFeeRecipientSize,
+	T::MaxLogsBloomSize,
+	T::MaxExtraDataSize,
+	T::MaxDepositDataSize,
+	T::MaxPublicKeySize,
+	T::MaxSignatureSize,
+	T::MaxProofBranchSize,
+	T::MaxProposerSlashingSize,
+	T::MaxAttesterSlashingSize,
+	T::MaxVoluntaryExitSize,
+	T::MaxAttestationSize,
+	T::MaxValidatorsPerCommittee,
+	T::MaxSyncCommitteeSize,
+> {
+	let mut filename: String = "ssz_test_".to_owned();
+	filename.push_str(&get_config_setting());
+	filename.push_str("_beacon_block_body.json");
+	beacon_block_body_from_file::<T>(filename.as_str())
 }
 
 pub fn get_finalized_header_update<T: crate::Config>(
@@ -398,5 +468,5 @@ pub fn get_bls_signature_verify_test_data<T: crate::Config>() -> BLSSignatureVer
 
 pub fn get_attester_slashing<T: crate::Config>(
 ) -> AttesterSlashing<T::MaxValidatorsPerCommittee, T::MaxSignatureSize> {
-	attester_slashing_from_file::<T>("attester_slashing.json")
+	attester_slashing_from_file::<T>("szz_test_attester_slashing.json")
 }

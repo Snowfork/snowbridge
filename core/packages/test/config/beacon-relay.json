@@ -4,15 +4,17 @@
       "endpoint": "http://127.0.0.1:9596",
       "spec": {
         "minimal": {
-          "slotsInEpoch": 4,
-          "epochsPerSyncCommitteePeriod": 8
+          "slotsInEpoch": 8,
+          "epochsPerSyncCommitteePeriod": 8,
+          "maxSlotsPerHistoricalRoot": 64
         },
         "mainnet": {
           "slotsInEpoch": 32,
-          "epochsPerSyncCommitteePeriod": 256
+          "epochsPerSyncCommitteePeriod": 256,
+          "maxSlotsPerHistoricalRoot": 8192
         }
       },
-      "activeSpec": "mainnet"
+      "activeSpec": "minimal"
     }
   },
   "sink": {
