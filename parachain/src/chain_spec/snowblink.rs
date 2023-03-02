@@ -2,7 +2,7 @@ use cumulus_primitives_core::ParaId;
 use sc_service::ChainType;
 use snowblink_runtime::{AccountId, AuraId, GenesisConfig, WASM_BINARY};
 use sp_core::sr25519;
-use sp_runtime::{bounded_vec, traits::AccountIdConversion};
+use sp_runtime::bounded_vec;
 
 use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 
@@ -59,7 +59,7 @@ pub fn get_chain_spec() -> ChainSpec {
 		None,
 		None,
 		Some(props),
-		Extensions { relay_chain: "kusama-local".into(), para_id: 1000 },
+		Extensions { relay_chain: "rococo-local".into(), para_id: 1000 },
 	)
 }
 

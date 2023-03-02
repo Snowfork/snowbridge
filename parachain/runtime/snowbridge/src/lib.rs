@@ -31,7 +31,8 @@ pub use frame_support::{
 	match_types, parameter_types,
 	traits::{
 		tokens::fungible::ItemOf, AsEnsureOriginWithArg, Contains, EitherOfDiverse,
-		EqualPrivilegeOnly, Everything, IsInVec, KeyOwnerProofSystem, Nothing, Randomness,
+		EqualPrivilegeOnly, Everything, IsInVec, KeyOwnerProofSystem, Nothing, PalletInfoAccess,
+		Randomness,
 	},
 	weights::{
 		constants::{
@@ -57,7 +58,7 @@ use pallet_xcm::XcmPassthrough;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
-	AsPrefixedGeneralIndex, ConvertedConcreteAssetId, CurrencyAdapter, EnsureXcmOrigin,
+	AsPrefixedGeneralIndex, ConvertedConcreteId, CurrencyAdapter, EnsureXcmOrigin,
 	FixedWeightBounds, FungiblesAdapter, IsConcrete, NativeAsset, NoChecking, ParentAsSuperuser,
 	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
@@ -258,10 +259,10 @@ impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
-	pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
+	pub const RelayNetwork: NetworkId = NetworkId::Rococo;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
-	pub const Local: MultiLocation = Here.into_location();
+	pub Local: MultiLocation = PalletInstance(<Assets as PalletInfoAccess>::index() as u8).into();
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub UniversalLocation: InteriorMultiLocation =
 		X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
@@ -283,7 +284,7 @@ pub type FungiblesTransactor = FungiblesAdapter<
 	// Use this fungibles implementation:
 	Assets,
 	// Use this currency when it is a fungible asset matching the given location or name:
-	ConvertedConcreteAssetId<u32, Balance, AsPrefixedGeneralIndex<Local, u32, JustTry>, JustTry>,
+	ConvertedConcreteId<u32, Balance, AsPrefixedGeneralIndex<Local, u32, JustTry>, JustTry>,
 	// Convert MultiLocation into a native chain account ID:
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):

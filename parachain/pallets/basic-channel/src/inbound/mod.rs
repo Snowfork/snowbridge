@@ -92,6 +92,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(100_000_000)]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			ensure_signed(origin)?;
