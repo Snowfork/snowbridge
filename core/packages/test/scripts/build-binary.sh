@@ -8,7 +8,7 @@ build_relaychain() {
         echo "Building polkadot binary as $relaychain_bin"
         rebuild_relaychain
     fi
-    cp "$relaychain_bin" "$output_bin_dir"/polkadot
+    mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
 }
 
 rebuild_relaychain(){
