@@ -16,7 +16,6 @@ use data_mainnet::*;
 
 benchmarks! {
 	sync_committee_period_update {
-
 		let caller: T::AccountId = whitelisted_caller();
 
 		let initial_sync_data = initial_sync();
@@ -86,11 +85,23 @@ benchmarks! {
 				block_update.block.slot,
 			), initial_sync_data.current_sync_committee);
 
+		let finalized_update: FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize> = finalized_header_update();
+
+		let finalized_slot = finalized_update.finalized_header.slot;
+		let finalized_block_root: H256 =
+			merkleization::hash_tree_root_beacon_header(finalized_update.finalized_header)
+				.unwrap()
+				.into();
+
 		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState{
-			beacon_block_root: H256::default(),
-			beacon_slot: block_update.block.slot,
+			beacon_block_root: finalized_block_root,
+			beacon_slot: finalized_slot,
 			import_time: 0,
 		});
+		FinalizedBeaconHeadersBlockRoot::<T>::insert(
+			finalized_block_root,
+			finalized_update.block_roots_hash,
+		);
 	}: _(RawOrigin::Signed(caller.clone()), block_update.clone())
 	verify {
 		let block_hash: H256 = block_update.block.body.execution_payload.block_hash;

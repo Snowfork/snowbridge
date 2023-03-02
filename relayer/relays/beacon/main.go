@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -50,6 +49,8 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		r.config.Source.Beacon.Endpoint,
 		specSettings.SlotsInEpoch,
 		specSettings.EpochsPerSyncCommitteePeriod,
+		specSettings.MaxSlotsPerHistoricalRoot,
+		r.config.GetActiveSpec(),
 	)
 
 	return headers.Sync(ctx, eg)
