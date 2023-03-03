@@ -79,8 +79,17 @@ func (li *PolkadotListener) scanCommitments(
 			}
 
 			if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet+1 {
+				// Workaround for https://github.com/paritytech/polkadot/pull/6577
+				if uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID) != result.SignedCommitment.Commitment.ValidatorSetID+1 {
+					log.WithFields(log.Fields{
+						"commitment": log.Fields{
+							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
+							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
+						},
+					}).Info("Discarded invalid handover commitment with BeefyNextAuthoritySet not change")
+					continue
+				}
 				currentValidatorSet++
-
 				validators, err := li.queryBeefyAuthorities(result.BlockHash)
 				if err != nil {
 					return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
@@ -105,7 +114,7 @@ func (li *PolkadotListener) scanCommitments(
 							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
 							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
 						},
-					}).Info("Discarded commitment")
+					}).Warn("Discarded commitment with depth not fast forward")
 					continue
 				}
 
@@ -154,4 +163,18 @@ func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]subst
 	}
 
 	return authorities, nil
+}
+
+func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (types.BeefyNextAuthoritySet, error) {
+	var nextAuthoritySet types.BeefyNextAuthoritySet
+	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "MmrLeaf", "BeefyNextAuthorities", nil, nil)
+	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &nextAuthoritySet, blockHash)
+	if err != nil {
+		return nextAuthoritySet, err
+	}
+	if !ok {
+		return nextAuthoritySet, fmt.Errorf("beefy nextAuthoritySet not found")
+	}
+
+	return nextAuthoritySet, nil
 }

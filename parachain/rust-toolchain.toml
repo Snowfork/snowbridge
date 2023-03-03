@@ -14,5 +14,6 @@ targets = [
 profile = "default"
 components = [
     # Rust source code, useful for dev tooling
-    "rust-src"
+    "rust-src",
+    "rustfmt"
 ]

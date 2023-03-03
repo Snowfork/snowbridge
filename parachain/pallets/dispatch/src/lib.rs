@@ -37,8 +37,8 @@ where
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> OuterOrigin {
-		OuterOrigin::from(RawOrigin(H160::repeat_byte(1)))
+	fn try_successful_origin() -> Result<OuterOrigin, ()> {
+		Ok(OuterOrigin::from(RawOrigin(H160::repeat_byte(1))))
 	}
 }
 

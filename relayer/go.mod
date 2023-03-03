@@ -3,12 +3,13 @@ module github.com/snowfork/snowbridge/relayer
 go 1.18
 
 require (
+	github.com/cbroglie/mustache v1.4.0
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/ferranbt/fastssz v0.1.3
 	github.com/magefile/mage v1.13.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454
-	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20220330174912-586a653ad92d
+	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230302162444-c35c3a35cc25
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.1
@@ -19,7 +20,7 @@ require (
 	github.com/ChainSafe/go-schnorrkel v1.0.0 // indirect
 	github.com/VictoriaMetrics/fastcache v1.10.0 // indirect
 	github.com/allegro/bigcache v1.2.1 // indirect
-	github.com/cbroglie/mustache v1.4.0 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

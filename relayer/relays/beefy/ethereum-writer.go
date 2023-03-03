@@ -170,10 +170,10 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return fmt.Errorf("monitoring failed for transaction SubmitFinal (%v): %w", tx.Hash().Hex(), err)
 	}
 	if !success {
-		return fmt.Errorf("transaction SubmitFinal failed (%v)", tx.Hash().Hex())
+		return fmt.Errorf("transaction SubmitFinal failed (%v),handover (%v)", tx.Hash().Hex(), task.IsHandover)
 	}
 
-	log.WithField("tx", tx.Hash().Hex()).Debug("Transaction SubmitFinal succeeded")
+	log.WithFields(logrus.Fields{"tx": tx.Hash().Hex(), "handover": task.IsHandover}).Debug("Transaction SubmitFinal succeeded")
 
 	return nil
 
@@ -259,7 +259,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 			msg.Proof,
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("initial submit: %w", err)
+			return nil, nil, fmt.Errorf("initial submit with handover: %w", err)
 		}
 	} else {
 		tx, err = wr.contract.SubmitInitial(
@@ -272,12 +272,12 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 			return nil, nil, fmt.Errorf("initial submit: %w", err)
 		}
 	}
-
 	log.WithFields(logrus.Fields{
 		"txHash":         tx.Hash().Hex(),
 		"CommitmentHash": "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
 		"BlockNumber":    task.SignedCommitment.Commitment.BlockNumber,
 		"ValidatorSetID": task.SignedCommitment.Commitment.ValidatorSetID,
+		"HandOver":       task.IsHandover,
 	}).Info("Transaction submitted for initial verification")
 
 	return tx, initialBitfield, nil
@@ -329,7 +329,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 
 		log.WithField("txHash", tx.Hash().Hex()).
 			WithFields(logFields).
-			Info("Sent SubmitFinal transaction")
+			Info("Sent SubmitFinalWithHandover transaction")
 
 		return tx, nil
 	} else { // revive:disable-line

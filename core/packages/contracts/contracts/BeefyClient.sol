@@ -3,10 +3,10 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./utils/Bitfield.sol";
 import "./utils/MMRProof.sol";
 import "./ScaleCodec.sol";
-import "./utils/MerkleProof.sol";
 
 /**
  * @title BeefyClient
@@ -210,7 +210,7 @@ contract BeefyClient is Ownable {
         ValidatorProof calldata proof
     ) internal {
         // Check if merkle proof is valid based on the validatorSetRoot
-        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
+        if (!isValidatorInSet(vset, proof.account, proof.proof)) {
             revert InvalidValidatorProof();
         }
 
@@ -463,7 +463,7 @@ contract BeefyClient is Ownable {
                 revert InvalidValidatorProof();
             }
 
-            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
+            if (!isValidatorInSet(vset, proof.account, proof.proof)) {
                 revert InvalidValidatorProof();
             }
 
@@ -507,25 +507,16 @@ contract BeefyClient is Ownable {
     /**
      * @dev Checks if a validators address is a member of the merkle tree
      * @param addr The address of the validator to check
-     * @param index The index of the validator to check, starting at 0
      * @param proof Merkle proof required for validation of the address
      * @return true if the validator is in the set
      */
     function isValidatorInSet(
         ValidatorSet memory vset,
         address addr,
-        uint256 index,
         bytes32[] calldata proof
     ) internal pure returns (bool) {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
-        return
-            MerkleProof.verifyMerkleLeafAtPosition(
-                vset.root,
-                hashedLeaf,
-                index,
-                vset.length,
-                proof
-            );
+        return MerkleProof.verify(proof, vset.root, hashedLeaf);
     }
 
     /**

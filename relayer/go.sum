@@ -544,8 +544,12 @@ github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d/go.mod h1
 github.com/smartystreets/goconvey v1.6.4/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
 github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454 h1:aKd0iBLZGBzMAjhOQ969tmzgh7/2FZxL5qvJ/+lHZRs=
 github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454/go.mod h1:C5irsRKMm2oEfPRjAJlvPKHtRZrXhcWLS0Z2IMXneSE=
-github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20220330174912-586a653ad92d h1:qHj1wA1ouzfpbM3ZuTlUwnP+fiyZqE82+aHSbqs3ATs=
-github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20220330174912-586a653ad92d/go.mod h1:MVk5+w9icYU7MViYFm7CKYhx1VMj6DpN2tWO6s4OK5g=
+github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230222084249-a54344a28717 h1:lU66MVEQbBjLFD6idyESqCr43+nFp5K78RWtyzfeIZg=
+github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230222084249-a54344a28717/go.mod h1:MVk5+w9icYU7MViYFm7CKYhx1VMj6DpN2tWO6s4OK5g=
+github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230224184655-4d4fbf1cfb0f h1:NcnWkjJdYaHBVEGqLiyETA4DEahoB+1+ITjbvzND6Sk=
+github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230224184655-4d4fbf1cfb0f/go.mod h1:MVk5+w9icYU7MViYFm7CKYhx1VMj6DpN2tWO6s4OK5g=
+github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230302162444-c35c3a35cc25 h1:1RQmliW/U4mFoHnVHgdO1xJfB9GTJSUUusa52zZYigU=
+github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230302162444-c35c3a35cc25/go.mod h1:MVk5+w9icYU7MViYFm7CKYhx1VMj6DpN2tWO6s4OK5g=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spaolacci/murmur3 v1.0.1-0.20190317074736-539464a789e9/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spf13/afero v1.8.2 h1:xehSyVa0YnHWsJ49JFljMpg1HX19V6NDZ1fkm1Xznbo=

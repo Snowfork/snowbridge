@@ -9,9 +9,12 @@ echo 'Running pre-commit hook...'
 chronic typos .
 
 # lint and format for core contracts and typescript codes
-cd core && chronic pnpm lint && chronic pnpm format && cd ..
+(cd core && chronic pnpm lint && chronic pnpm format)
 
 # lint and format for relayer codes
-cd relayer && chronic mage lint && chronic go fmt ./...
+(cd relayer && chronic mage lint && chronic go fmt ./...)
+
+# cargo fmt
+(cd parachain && SKIP_WASM_BUILD= cargo fmt --all)
 
 echo 'Pre-commit hook successful!'

@@ -8,7 +8,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-20.04
+    runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
@@ -25,14 +25,14 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable-2022-01-20
+          toolchain: nightly-2022-11-15
           target: wasm32-unknown-unknown
       - name: build
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --manifest-path parachain/Cargo.toml --release
+          args: --manifest-path parachain/Cargo.toml --workspace --release
       - uses: actions/upload-artifact@v1
         with:
-          name: artemis-node
-          path: parachain/target/release/artemis-node
+          name: snowbridge-node
+          path: parachain/target/release/snowbridge

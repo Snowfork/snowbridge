@@ -85,7 +85,7 @@ pub mod pallet {
 			let origin_location: MultiLocation = MultiLocation {
 				parents: 0,
 				interior: Junctions::X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: recipient.into(),
 				}),
 			};
@@ -124,20 +124,17 @@ pub mod pallet {
 							},
 							weight_limit: Unlimited,
 						},
-						DepositAsset {
-							assets: Wild(All),
-							max_assets: 2,
-							beneficiary: origin_location.clone(),
-						},
+						DepositAsset { assets: Wild(All), beneficiary: origin_location.clone() },
 					]),
-					max_assets: 2,
 				},
 			]);
 
 			let weight =
 				T::Weigher::weight(&mut message).map_err(|_| Error::<T>::UnweighableMessage)?;
 
-			T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
+			let hash = message.using_encoded(sp_io::hashing::blake2_256);
+
+			T::XcmExecutor::execute_xcm_in_credit(origin_location, message, hash, weight, weight)
 				.ensure_complete()
 				.map_err(|err| {
 					log::error!("Xcm execution failed. Reason: {:?}", err);

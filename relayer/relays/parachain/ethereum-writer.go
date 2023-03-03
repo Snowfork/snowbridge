@@ -212,7 +212,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 	}
 
 	tx, err := wr.basicInboundChannel.Submit(
-		options, message, commitmentProof.Proof.InnerHashes, commitmentProof.Proof.HashSides, opaqueProof,
+		options, message, commitmentProof.Proof.InnerHashes, opaqueProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction BasicInboundChannel.submit: %w", err)

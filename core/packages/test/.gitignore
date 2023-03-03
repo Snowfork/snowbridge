@@ -6,6 +6,7 @@ dist/
 genesis.ssz
 
 *.log
+*.log.keep
 rococo-local-raw.json
 rococo-local.json
 
