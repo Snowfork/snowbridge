@@ -72,21 +72,21 @@ id = 2000
 chain = "statemint-local"
 cumulus_based = true
 
-	  # run alice as parachain collator
-	  [[parachains.collators]]
-	  name = "statemint-alice"
-	  validator = true
-	  command = "{{output_bin_dir}}/polkadot-parachain"
+    # run alice as parachain collator
+    [[parachains.collators]]
+    name = "statemint-alice"
+    validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
 
         [[parachains.collators.env]]
         name = "RUST_LOG"
         value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
 
-	  # run bob as parachain collator
-	  [[parachains.collators]]
-	  name = "statemint-bob"
-	  validator = true
-	  command = "{{output_bin_dir}}/polkadot-parachain"
+    # run bob as parachain collator
+    [[parachains.collators]]
+    name = "statemint-bob"
+    validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
 
 # Bridge Hub
 [[parachains]]
@@ -94,21 +94,21 @@ id = 1013
 chain = "bridge-hub-rococo-local"
 cumulus_based = true
 
-	  # run alice as parachain collator
-	  [[parachains.collators]]
-	  name = "bh-alice"
-	  validator = true
-	  command = "{{output_bin_dir}}/polkadot-parachain"
+    # run alice as parachain collator
+    [[parachains.collators]]
+    name = "bh-alice"
+    validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
 
         [[parachains.collators.env]]
         name = "RUST_LOG"
         value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
 
-	  # run bob as parachain collator
-	  [[parachains.collators]]
-	  name = "bh-bob"
-	  validator = true
-	  command = "{{output_bin_dir}}/polkadot-parachain"
+    # run bob as parachain collator
+    [[parachains.collators]]
+    name = "bh-bob"
+    validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
 
 # Statemint -> BridgeHub
 [[hrmp_channels]]
