@@ -37,7 +37,7 @@ type BasicInboundChannelMessage struct {
 
 // BasicInboundChannelMetaData contains all meta data concerning the BasicInboundChannel contract.
 var BasicInboundChannelMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"sourceID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"sourceID\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bool[]\",\"name\":\"hashSides\",\"type\":\"bool[]\"},{\"internalType\":\"bytes\",\"name\":\"parachainHeaderProof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"sourceID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"sourceID\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"parachainHeaderProof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // BasicInboundChannelABI is the input ABI used to generate the binding from.
@@ -310,25 +310,25 @@ func (_BasicInboundChannel *BasicInboundChannelCallerSession) ParachainClient() 
 	return _BasicInboundChannel.Contract.ParachainClient(&_BasicInboundChannel.CallOpts)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xb690a07e.
+// Submit is a paid mutator transaction binding the contract method 0x2d7fb474.
 //
-// Solidity: function submit((bytes32,uint64,bytes) message, bytes32[] leafProof, bool[] hashSides, bytes parachainHeaderProof) returns()
-func (_BasicInboundChannel *BasicInboundChannelTransactor) Submit(opts *bind.TransactOpts, message BasicInboundChannelMessage, leafProof [][32]byte, hashSides []bool, parachainHeaderProof []byte) (*types.Transaction, error) {
-	return _BasicInboundChannel.contract.Transact(opts, "submit", message, leafProof, hashSides, parachainHeaderProof)
+// Solidity: function submit((bytes32,uint64,bytes) message, bytes32[] leafProof, bytes parachainHeaderProof) returns()
+func (_BasicInboundChannel *BasicInboundChannelTransactor) Submit(opts *bind.TransactOpts, message BasicInboundChannelMessage, leafProof [][32]byte, parachainHeaderProof []byte) (*types.Transaction, error) {
+	return _BasicInboundChannel.contract.Transact(opts, "submit", message, leafProof, parachainHeaderProof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xb690a07e.
+// Submit is a paid mutator transaction binding the contract method 0x2d7fb474.
 //
-// Solidity: function submit((bytes32,uint64,bytes) message, bytes32[] leafProof, bool[] hashSides, bytes parachainHeaderProof) returns()
-func (_BasicInboundChannel *BasicInboundChannelSession) Submit(message BasicInboundChannelMessage, leafProof [][32]byte, hashSides []bool, parachainHeaderProof []byte) (*types.Transaction, error) {
-	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, message, leafProof, hashSides, parachainHeaderProof)
+// Solidity: function submit((bytes32,uint64,bytes) message, bytes32[] leafProof, bytes parachainHeaderProof) returns()
+func (_BasicInboundChannel *BasicInboundChannelSession) Submit(message BasicInboundChannelMessage, leafProof [][32]byte, parachainHeaderProof []byte) (*types.Transaction, error) {
+	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, message, leafProof, parachainHeaderProof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xb690a07e.
+// Submit is a paid mutator transaction binding the contract method 0x2d7fb474.
 //
-// Solidity: function submit((bytes32,uint64,bytes) message, bytes32[] leafProof, bool[] hashSides, bytes parachainHeaderProof) returns()
-func (_BasicInboundChannel *BasicInboundChannelTransactorSession) Submit(message BasicInboundChannelMessage, leafProof [][32]byte, hashSides []bool, parachainHeaderProof []byte) (*types.Transaction, error) {
-	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, message, leafProof, hashSides, parachainHeaderProof)
+// Solidity: function submit((bytes32,uint64,bytes) message, bytes32[] leafProof, bytes parachainHeaderProof) returns()
+func (_BasicInboundChannel *BasicInboundChannelTransactorSession) Submit(message BasicInboundChannelMessage, leafProof [][32]byte, parachainHeaderProof []byte) (*types.Transaction, error) {
+	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, message, leafProof, parachainHeaderProof)
 }
 
 // BasicInboundChannelMessageDispatchedIterator is returned from FilterMessageDispatched and is used to iterate over the raw logs and unpacked data for MessageDispatched events raised by the BasicInboundChannel contract.

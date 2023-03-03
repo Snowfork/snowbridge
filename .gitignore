@@ -23,3 +23,4 @@ node_modules/
 
 .direnv
 .envrc
+parachain/build_rs_cov.profraw
