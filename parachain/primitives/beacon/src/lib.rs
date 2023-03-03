@@ -185,6 +185,8 @@ pub struct SyncCommitteePeriodUpdate<
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub sync_committee_period: u64,
 	pub signature_slot: u64,
+	pub block_roots_hash: H256,
+	pub block_roots_proof: BoundedVec<H256, ProofSize>,
 }
 
 #[derive(
@@ -202,7 +204,7 @@ pub struct SyncCommitteePeriodUpdate<
 	feature = "std",
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SignatureSize, ProofSize, SyncCommitteeSize))]
+#[scale_info(skip_type_params(SignatureSize, ProofSize, SyncCommitteeSize,))]
 #[codec(mel_bound())]
 pub struct FinalizedHeaderUpdate<
 	SignatureSize: Get<u32>,
@@ -214,6 +216,8 @@ pub struct FinalizedHeaderUpdate<
 	pub finality_branch: BoundedVec<H256, ProofSize>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub signature_slot: u64,
+	pub block_roots_hash: H256,
+	pub block_roots_proof: BoundedVec<H256, ProofSize>,
 }
 
 #[derive(
@@ -279,6 +283,8 @@ pub struct BlockUpdate<
 	>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub signature_slot: u64,
+	pub block_root_proof: BoundedVec<H256, ProofSize>,
+	pub block_root_proof_finalized_header: H256,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]

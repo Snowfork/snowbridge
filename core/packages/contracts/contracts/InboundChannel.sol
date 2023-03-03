@@ -2,9 +2,9 @@
 pragma solidity ^0.8.9;
 
 import "./ParachainClient.sol";
-import "./utils/MerkleProof.sol";
 import "./IRecipient.sol";
 import "./ISovereignTreasury.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract InboundChannel is AccessControl {
@@ -46,10 +46,10 @@ contract InboundChannel is AccessControl {
     function submit(
         Message calldata message,
         bytes32[] calldata leafProof,
-        bool[] calldata hashSides,
         bytes calldata parachainHeaderProof
     ) external {
-        bytes32 commitment = MerkleProof.processProof(message, leafProof, hashSides);
+        bytes32 leafHash = keccak256(abi.encode(message));
+        bytes32 commitment = MerkleProof.processProof(message, leafProof);
         if (!parachainClient.verifyCommitment(commitment, parachainHeaderProof)) {
             revert InvalidProof();
         }

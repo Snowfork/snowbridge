@@ -3,47 +3,20 @@ name: parachain
 on:
   push:
     paths:
-      - 'parachain/**'
-      - '!parachain/README.md'
-      - '!parachain/LICENSE'
+      - "parachain/**"
+      - "!parachain/README.md"
+      - "!parachain/LICENSE"
     branches:
       - main
   pull_request:
     paths:
-      - 'parachain/**'
-      - '!parachain/README.md'
-      - '!parachain/LICENSE'
+      - "parachain/**"
+      - "!parachain/README.md"
+      - "!parachain/LICENSE"
   workflow_dispatch:
 
-jobs:
-  fmt:
-    runs-on: ubuntu-20.04
-    env:
-      CARGO_INCREMENTAL: 0
-      RUST_BACKTRACE: 1
-      RUSTFLAGS: -C debuginfo=1
-      SKIP_WASM_BUILD: 1
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v1
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          target: wasm32-unknown-unknown
-          components: rustfmt
-      - name: cargo fmt
-        run: cd parachain && cargo +nightly fmt -- --check --config-path rustfmt.toml && cd -
-
   check:
-    runs-on: ubuntu-20.04
+    runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
@@ -66,22 +39,21 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.62.1
+          toolchain: nightly-2022-11-15
           target: wasm32-unknown-unknown
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
-          toolchain: 1.62.1
+          toolchain: nightly-2022-11-15
           args: >-
             --manifest-path parachain/Cargo.toml
             --workspace
-            --exclude snowbridge
             --features runtime-benchmarks
 
   test:
     needs: check
-    runs-on: ubuntu-20.04
+    runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
@@ -99,10 +71,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - uses: arduino/setup-protoc@v1
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.62.1
+          toolchain: nightly-2022-11-15
           target: wasm32-unknown-unknown
       - name: test beacon client with minimal feature
         uses: actions-rs/cargo@v1
@@ -114,7 +87,7 @@ jobs:
             --package snowbridge-ethereum-beacon-client
             --features runtime-benchmarks
             --features minimal
-          toolchain: 1.62.1
+          toolchain: nightly-2022-11-15
       - uses: actions-rs/install@v0.1.2
         with:
           crate: cargo-tarpaulin
@@ -127,12 +100,11 @@ jobs:
           args: >-
             --manifest-path parachain/Cargo.toml
             --verbose --workspace
-            --exclude snowbridge
-            --exclude snowbridge-runtime
-            --exclude snowblink-runtime
+            --exclude snowbridge 
+            --exclude snowbridge-runtime 
+            --exclude snowblink-runtime 
             --exclude snowbase-runtime
-            --exclude-files '*/mock.rs,*/tests.rs'
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
-          toolchain: 1.62.1
+          toolchain: nightly-2022-11-15

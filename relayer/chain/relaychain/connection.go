@@ -94,30 +94,7 @@ func (co *Connection) GenerateProofForBlock(
 		"blockHash":   latestBeefyBlockHash.Hex(),
 	}).Debug("Getting MMR Leaf for block...")
 
-	// We expect 1 mmr leaf for each block. However, some chains only started using beefy late
-	// in their existence, so there are no leafs for blocks produced before beefy was activated.
-	// We subtract the block in which beefy was activated on the chain to account for this.
-	//
-	// LeafIndex(currentBlock, activationBlock) := currentBlock - activationBlock
-	//
-	// Example: LeafIndex(5, 3) = 2
-	//
-	// Block Number: 1 -> 2 -> 3 -> 4 -> 5
-	// Leaf Index:             0 -> 1 -> 2
-	//                         ^         ^
-	//                         |         |
-	//                         |         Leaf we want
-	//                         |
-	//                         Activation Block
-	//
-	var leafIndex uint64
-	if beefyActivationBlock == 0 {
-		leafIndex = blockNumber
-	} else {
-		leafIndex = blockNumber - beefyActivationBlock
-	}
-
-	proofResponse, err := co.API().RPC.MMR.GenerateProof(leafIndex, latestBeefyBlockHash)
+	proofResponse, err := co.API().RPC.MMR.GenerateProof(uint32(blockNumber), latestBeefyBlockHash)
 	if err != nil {
 		return types.GenerateMMRProofResponse{}, err
 	}

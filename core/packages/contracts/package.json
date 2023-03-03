@@ -11,7 +11,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "hardhat compile && pnpm build:ffi",
+    "build": "pnpm build:sol && pnpm build:ffi",
     "build:sol": "forge build",
     "build:ffi": "esbuild ./test/ffiWrapper.ts --bundle --platform=node --outfile=./test/ffiWrapper.js",
     "lint": "pnpm lint:solhint && pnpm lint:eslint",
@@ -20,8 +20,8 @@
     "format": "prettier --write 'contracts/**/*.sol' 'test/**/*.ts'",
     "size": "hardhat size-contracts",
     "coverage": "hardhat coverage --testfiles 'test/*.ts'",
-    "test": "hardhat test",
-    "test:foundry": "pnpm build:ffi && forge test -vvv",
+    "test": "pnpm test:foundry",
+    "test:foundry": "pnpm build && forge test -vvv",
     "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ contracts/deploy/foundry/Deploy.sol:DeployScript --broadcast -vvvv"
   },
   "devDependencies": {

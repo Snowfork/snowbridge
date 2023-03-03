@@ -3,8 +3,8 @@ pragma solidity ^0.8.9;
 
 import "./BeefyClient.sol";
 import "./IParachainClient.sol";
-import "./utils/MerkleProof.sol";
 import "./ScaleCodec.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract ParachainClient is IParachainClient {
     BeefyClient public immutable beefyClient;
@@ -55,11 +55,9 @@ contract ParachainClient is IParachainClient {
         );
 
         // Compute the merkle root hash of all parachain heads
-        bytes32 parachainHeadsRoot = MerkleProof.computeRootFromProofAtPosition(
-            parachainHeadHash,
-            proof.headProof.pos,
-            proof.headProof.width,
-            proof.headProof.proof
+        bytes32 parachainHeadsRoot = MerkleProof.processProof(
+            proof.headProof.proof,
+            parachainHeadHash
         );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);

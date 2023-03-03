@@ -1,8 +1,8 @@
 use cumulus_primitives_core::ParaId;
 use sc_service::ChainType;
-use snowblink_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
+use snowblink_runtime::{AccountId, AuraId, GenesisConfig, WASM_BINARY};
 use sp_core::sr25519;
-use sp_runtime::{bounded_vec, traits::AccountIdConversion};
+use sp_runtime::bounded_vec;
 
 use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 
@@ -95,20 +95,7 @@ fn testnet_genesis(
 			source_channel: Default::default(),
 		},
 		basic_outbound_channel: snowblink_runtime::BasicOutboundChannelConfig { interval: 1 },
-		assets: snowblink_runtime::AssetsConfig {
-			// Initialize the wrapped Ether asset
-			assets: vec![(
-				0,
-				EtherAppPalletId::get()
-					.try_into_account()
-					.expect("Cannot convert PalletId to AccountId."),
-				true,
-				1,
-			)],
-			metadata: vec![],
-			accounts: vec![],
-		},
-		xcm_support: snowblink_runtime::XcmSupportConfig {},
+		assets: Default::default(),
 		ethereum_beacon_client: snowblink_runtime::EthereumBeaconClientConfig {
 			initial_sync: Default::default(),
 		},

@@ -3,18 +3,18 @@ name: ethereum
 on:
   push:
     paths:
-      - 'core/**'
-      - '!core/**/README.md'
+      - "core/**"
+      - "!core/**/README.md"
     branches:
       - main
   pull_request:
     paths:
-      - 'core/**'
-      - '!core/**/README.md'
+      - "core/**"
+      - "!core/**/README.md"
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: snowbridge-runner
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v1
@@ -27,11 +27,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18.12.1
-          cache: 'pnpm'
+          cache: "pnpm"
           cache-dependency-path: core/pnpm-lock.yaml
       - name: Install dependencies
         working-directory: core
         run: pnpm install --frozen-lockfile
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
       - name: Build
         working-directory: core
         run: pnpm build

@@ -20,8 +20,7 @@ func subBeefyCmd() *cobra.Command {
 		RunE:  SubBeefyFn,
 	}
 
-	cmd.Flags().StringP("url", "u", "", "Polkadot URL")
-	cmd.MarkFlagRequired("url")
+	cmd.Flags().StringP("url", "u", "ws://127.0.0.1:9944", "Polkadot URL")
 
 	cmd.Flags().UintP(
 		"para-id",
@@ -73,7 +72,7 @@ func subBeefyJustifications(ctx context.Context, cmd *cobra.Command) error {
 				return err
 			}
 
-			proof, err := conn.API().RPC.MMR.GenerateProof(uint64(blockNumber-1), blockHash)
+			proof, err := conn.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
 			if err != nil {
 				return err
 			}
@@ -85,6 +84,9 @@ func subBeefyJustifications(ctx context.Context, cmd *cobra.Command) error {
 				uint64(proof.Proof.LeafCount),
 				proof.Proof.Items,
 			)
+			if err != nil {
+				return err
+			}
 
 			leafEncoded, err := types.EncodeToBytes(simpleProof.Leaf)
 			if err != nil {
@@ -152,7 +154,7 @@ func printCommitment(commitment *types.SignedCommitment, conn *relaychain.Connec
 		return err
 	}
 
-	proof, err := conn.API().RPC.MMR.GenerateProof(uint64(blockNumber-1), blockHash)
+	proof, err := conn.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
 	if err != nil {
 		return err
 	}

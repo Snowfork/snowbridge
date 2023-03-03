@@ -65,39 +65,3 @@ id = 1000
     name = "snowbrige-bob"
     validator = true
     args = ["--enable-offchain-indexing=true","--pruning=archive"]
-
-# Test Parachain
-[[parachains]]
-add_to_genesis = true
-chain_spec_path = "{{output_dir}}/test_spec.json"
-cumulus_based = true
-id = 1001
-
-    [[parachains.collators]]
-    command = "{{output_bin_dir}}/snowbridge-test-node"
-    name = "test-parachain-alice"
-    rpc_port = 8083
-    validator = true
-    ws_port = 13144
-
-        [[parachains.collators.env]]
-        name = "RUST_LOG"
-        value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
-
-    [[parachains.collators]]
-    command = "{{output_bin_dir}}/snowbridge-test-node"
-    name = "test-parachain-bob"
-    validator = true
-
-# XCM Channels
-[[hrmp_channels]]
-max_capacity = 8
-max_message_size = 512
-recipient = 1000
-sender = 1001
-
-[[hrmp_channels]]
-max_capacity = 8
-max_message_size = 512
-recipient = 1001
-sender = 1000

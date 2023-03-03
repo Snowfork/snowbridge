@@ -9,26 +9,25 @@ serde = { version = "1.0.137", optional = true }
 serde-big-array = { version = "0.3.2", optional = true, features = [ "const-generics" ] }
 codec = { package = "parity-scale-codec", version = "3.1.5", default-features = false, features = [ "derive" ] }
 scale-info = { version = "2.2.0", default-features = false, features = [ "derive" ] }
-ethbloom = { version = "0.12.1", default-features = false }
-ethereum-types = { version = "0.13.1", default-features = false, features = [ "codec", "rlp", "serialize" ] }
+ethbloom = { version = "0.13.0", default-features = false }
+ethereum-types = { version = "0.14.1", default-features = false, features = [ "codec", "rlp", "serialize" ] }
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 hex-literal = { version = "0.3.4", default-features = false }
 parity-bytes = { version = "0.1.2", default-features = false }
 rlp = { version = "0.5", default-features = false }
 #getrandom = { version = "0.2.1", features = [ "js" ] }
 
-sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.30", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.30", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.30", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.30", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
 
-ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
-ethash = { git = "https://github.com/snowfork/ethash.git", branch = "master", default-features = false }
+ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", package = "ethabi-decode", rev="6f63405bb33ef4365a1c62b72d499fa0f448118e", default-features = false }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.19"
 snowbridge-testutils = { path = "../../primitives/testutils" }
-rand = "0.7.3"
+rand = "0.8.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = "1.0.68"
 
@@ -41,7 +40,6 @@ std = [
 	"codec/std",
 	"scale-info/std",
 	"ethabi/std",
-	"ethash/std",
 	"ethbloom/std",
 	"ethereum-types/std",
 	"hex/std",
