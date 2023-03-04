@@ -15,14 +15,13 @@
     "build:sol": "forge build",
     "build:ffi": "esbuild ./test/ffiWrapper.ts --bundle --platform=node --outfile=./test/ffiWrapper.js",
     "lint": "pnpm lint:solhint && pnpm lint:eslint",
-    "lint:solhint": "solhint 'contracts/**/*.sol'",
+    "lint:solhint": "solhint 'src/**/*.sol'",
     "lint:eslint": "eslint .",
-    "format": "prettier --write 'contracts/**/*.sol' 'test/**/*.ts'",
+    "format": "prettier --write 'src/**/*.sol'",
     "size": "hardhat size-contracts",
-    "coverage": "hardhat coverage --testfiles 'test/*.ts'",
     "test": "pnpm test:foundry",
     "test:foundry": "pnpm build && forge test -vvv",
-    "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ contracts/deploy/foundry/Deploy.sol:DeployScript --broadcast -vvvv"
+    "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ contracts/deploy/Deploy.sol:DeployScript --broadcast -vvvv"
   },
   "devDependencies": {
     "@babel/core": "^7.11.6",

@@ -8,7 +8,6 @@ artifacts/
 .deployments/
 coverage.json
 coverage/
-src/
 .vscode/
 deployments/
 out/
