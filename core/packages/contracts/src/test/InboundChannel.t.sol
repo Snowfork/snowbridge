@@ -39,11 +39,7 @@ contract InboundChannelTest is Test {
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);
 
-        channel.submit(
-            InboundChannel.Message(origin, 1, 1, hex"deadbeef"),
-            proof,
-            hex"deadbeef"
-        );
+        channel.submit(InboundChannel.Message(origin, 1, 1, hex"deadbeef"), proof, hex"deadbeef");
 
         assertEq(vault.balances(origin), 49 ether);
         assertEq(relayer.balance, 2 ether);
@@ -57,10 +53,6 @@ contract InboundChannelTest is Test {
         hoax(relayer, 1 ether);
 
         vm.expectRevert(Vault.InsufficientBalance.selector);
-        channel.submit(
-            InboundChannel.Message(origin, 1, 1, hex"deadbeef"),
-            proof,
-            hex"deadbeef"
-        );
+        channel.submit(InboundChannel.Message(origin, 1, 1, hex"deadbeef"), proof, hex"deadbeef");
     }
 }

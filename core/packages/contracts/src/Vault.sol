@@ -12,10 +12,16 @@ contract Vault is IVault, AccessControl {
     error ZeroAmount();
     error CannotSendFunds();
 
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
 
     // Mapping of sovereign to balance
     mapping(bytes => uint256) public balances;
+
+    constructor() {
+        _grantRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(WITHDRAW_ROLE, ADMIN_ROLE);
+    }
 
     receive() external payable {
         revert("Must use deposit function");

@@ -35,11 +35,7 @@ contract DeployScript is Script {
 
         // InboundChannel
         uint256 relayerReward = vm.envUint("RELAYER_REWARD");
-        InboundChannel inboundChannel = new InboundChannel(
-            parachainClient,
-            vault,
-            relayerReward
-        );
+        InboundChannel inboundChannel = new InboundChannel(parachainClient, vault, relayerReward);
 
         // OutboundChannel
         uint256 relayerFee = vm.envUint("RELAYER_FEE");
