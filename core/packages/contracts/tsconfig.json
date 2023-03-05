@@ -15,15 +15,13 @@
     "declarationMap": true,
     "skipLibCheck": false,
     "baseUrl": ".",
-    "rootDir": "src",
     "noEmitOnError": true,
     "sourceMap": true
   },
   "ts-node": {
     "require": ["tsconfig-paths/register"]
   },
-  "exclude": ["node_modules", "dist"],
   "include": [
-    "src/**/*.ts", "hardhat.config.ts"
+    "types/**/*.ts",
   ]
 }

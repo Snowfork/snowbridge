@@ -1,12 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import "../../TokenVault.sol";
-
-import "../SovereignAccountMock.sol";
-import "../TestToken.sol";
+import "../TokenVault.sol";
+import "./mocks/SovereignAccountMock.sol";
+import "./mocks/TestToken.sol";
 
 contract TokenVaultTest is Test {
     event Deposit(address sender, address token, uint256 amount);

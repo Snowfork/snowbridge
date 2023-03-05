@@ -4,12 +4,12 @@ pragma solidity ^0.8.9;
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 
-import "../../NativeTokens.sol";
-import "../../TokenVault.sol";
+import "../NativeTokens.sol";
+import "../TokenVault.sol";
 
-import "../OutboundChannelMock.sol";
-import "../SovereignAccountMock.sol";
-import "../TestToken.sol";
+import "./mocks/OutboundChannelMock.sol";
+import "./mocks/SovereignAccountMock.sol";
+import "./mocks/TestToken.sol";
 
 contract NativeTokensTest is Test {
     event Locked(bytes recipient, address token, uint128 amount);

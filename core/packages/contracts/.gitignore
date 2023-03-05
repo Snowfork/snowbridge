@@ -13,6 +13,7 @@ deployments/
 out/
 cache/
 broadcast/
-test/ffiWrapper.js
+types/
+src/test/scripts/ffiWrapper.js
 tsconfig.tsbuildinfo
 test/**/data/*.json.keep

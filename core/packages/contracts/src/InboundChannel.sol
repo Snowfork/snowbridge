@@ -5,13 +5,13 @@ import "openzeppelin/utils/cryptography/MerkleProof.sol";
 import "openzeppelin/access/AccessControl.sol";
 import "./ParachainClient.sol";
 import "./IRecipient.sol";
-import "./ISovereignTreasury.sol";
+import "./IVault.sol";
 
 contract InboundChannel is AccessControl {
     mapping(bytes => uint64) public nonce;
     mapping(uint16 => IRecipient) handlers;
     IParachainClient public parachainClient;
-    ISovereignTreasury public sovereignTreasury;
+    IVault public vault;
     uint256 public reward;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -26,7 +26,7 @@ contract InboundChannel is AccessControl {
     event MessageDispatched(bytes origin, uint64 nonce);
     event HandlerUpdated(uint16 id, address handler);
     event ParachainClientUpdated(address parachainClient);
-    event SovereignTreasuryUpdated(address sovereignTreasury);
+    event VaultUpdated(address vault);
     event RewardUpdated(uint256 reward);
 
     error InvalidProof();
@@ -34,12 +34,12 @@ contract InboundChannel is AccessControl {
 
     constructor(
         IParachainClient _parachainClient,
-        ISovereignTreasury _sovereignTreasury,
+        IVault _vault,
         uint256 _reward
     ) {
         _grantRole(ADMIN_ROLE, msg.sender);
         parachainClient = _parachainClient;
-        sovereignTreasury = _sovereignTreasury;
+        vault = _vault;
         reward = _reward;
     }
 
@@ -49,7 +49,7 @@ contract InboundChannel is AccessControl {
         bytes calldata parachainHeaderProof
     ) external {
         bytes32 leafHash = keccak256(abi.encode(message));
-        bytes32 commitment = MerkleProof.processProof(message, leafProof);
+        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
         if (!parachainClient.verifyCommitment(commitment, parachainHeaderProof)) {
             revert InvalidProof();
         }
@@ -62,7 +62,7 @@ contract InboundChannel is AccessControl {
         // reward the relayer
         // Should revert if there are not enough funds. In which case, the origin
         // should top up the funds and have a relayer resend the message.
-        sovereignTreasury.withdraw(message.origin, payable(msg.sender), reward);
+        vault.withdraw(message.origin, payable(msg.sender), reward);
 
         // Check if there is known handler, otherwise fail silently.
         IRecipient handler = handlers[message.handler];
@@ -88,11 +88,11 @@ contract InboundChannel is AccessControl {
         emit ParachainClientUpdated(address(_parachainClient));
     }
 
-    function updateSovereignTreasury(
-        ISovereignTreasury _sovereignTreasury
+    function updateVault(
+        IVault _vault
     ) external onlyRole(ADMIN_ROLE) {
-        sovereignTreasury = _sovereignTreasury;
-        emit SovereignTreasuryUpdated(address(_sovereignTreasury));
+        vault = _vault;
+        emit VaultUpdated(address(_vault));
     }
 
     function updateReward(uint256 _reward) external onlyRole(ADMIN_ROLE) {

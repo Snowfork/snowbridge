@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "openzeppelin/access/Ownable.sol";
+import "openzeppelin/access/AccessControl.sol";
+import "./IVault.sol";
 
-contract EtherVault is Ownable {
+contract Vault is IVault, AccessControl {
     event Deposited(bytes indexed sovereign, uint256 amount);
     event Withdrawn(bytes indexed sovereign, address recipient, uint256 amount);
 
@@ -11,23 +12,25 @@ contract EtherVault is Ownable {
     error ZeroAmount();
     error CannotSendFunds();
 
+    bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
+
     // Mapping of sovereign to balance
-    mapping(bytes => uint256) private balances;
+    mapping(bytes => uint256) public balances;
 
     receive() external payable {
         revert("Must use deposit function");
     }
 
-    function deposit(bytes calldata sovereign) external payable onlyOwner {
+    function deposit(bytes calldata sovereign) external payable {
         balances[sovereign] += msg.value;
         emit Deposited(sovereign, msg.value);
     }
 
     function withdraw(
         bytes calldata sovereign,
-        address recipient,
+        address payable recipient,
         uint256 amount
-    ) external onlyOwner {
+    ) external onlyRole(WITHDRAW_ROLE) {
         if (amount == 0) {
             revert ZeroAmount();
         }
@@ -38,9 +41,6 @@ contract EtherVault is Ownable {
 
         balances[sovereign] -= amount;
 
-        // NB: Keep this transfer after reducing the balance to avoid reentrancy attacks.
-        // https://consensys.github.io/smart-contract-best-practices/attacks/reentrancy/
-        // https://docs.soliditylang.org/en/v0.8.18/security-considerations.html#re-entrancy
         (bool success, ) = recipient.call{ value: amount }("");
         if (!success) {
             revert CannotSendFunds();

@@ -8,9 +8,9 @@ import "../ParachainClient.sol";
 import "../InboundChannel.sol";
 import "../OutboundChannel.sol";
 import "../NativeTokens.sol";
-import "../EtherVault.sol";
+import "../Vault.sol";
 import "../SovereignTreasury.sol";
-import "../ISovereignTreasury.sol";
+import "../IVault.sol";
 
 contract DeployScript is Script {
     function setUp() public {}
@@ -21,9 +21,8 @@ contract DeployScript is Script {
         vm.startBroadcast(deployer);
 
         // SovereignTreasury
-        EtherVault etherVault = new EtherVault();
-        SovereignTreasury treasury = new SovereignTreasury(etherVault);
-        etherVault.transferOwnership(address(treasury));
+        Vault vault = new Vault();
+        SovereignTreasury treasury = new SovereignTreasury(vault);
 
         // BeefyClient
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
@@ -38,13 +37,13 @@ contract DeployScript is Script {
         uint256 relayerReward = vm.envUint("RELAYER_REWARD");
         InboundChannel inboundChannel = new InboundChannel(
             parachainClient,
-            treasury,
+            vault,
             relayerReward
         );
 
         // OutboundChannel
         uint256 relayerFee = vm.envUint("RELAYER_FEE");
-        OutboundChannel outboundChannel = new OutboundChannel(treasury, relayerFee);
+        OutboundChannel outboundChannel = new OutboundChannel(vault, relayerFee);
 
         // NativeTokens
         bytes memory peer = vm.envBytes("TOKENS_ALLOWED_ORIGIN");
@@ -52,10 +51,13 @@ contract DeployScript is Script {
         NativeTokens nativeTokens = new NativeTokens(tokenVault, outboundChannel, peer);
         tokenVault.transferOwnership(address(nativeTokens));
 
-        // Setup access rights
+        // Allow inbound channel to send messages to NativeTokens and SovereignTreasury
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(inboundChannel));
         treasury.grantRole(treasury.SENDER_ROLE(), address(inboundChannel));
-        treasury.grantRole(treasury.WITHDRAW_ROLE(), address(inboundChannel));
+
+        // Allow InboundChannel and SovereignTreasury to withdraw from vault
+        vault.grantRole(vault.WITHDRAW_ROLE(), address(inboundChannel));
+        vault.grantRole(vault.WITHDRAW_ROLE(), address(treasury));
 
         vm.stopBroadcast();
     }

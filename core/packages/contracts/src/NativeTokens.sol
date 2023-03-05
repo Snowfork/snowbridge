@@ -55,7 +55,7 @@ contract NativeTokens is AccessControl {
     bytes32 public constant SENDER_ROLE = keccak256("SENDER_ROLE");
 
     bytes32 public immutable peerID;
-    bytes public immutable peer;
+    bytes public peer;
 
     TokenVault public immutable vault;
     IOutboundChannel public outboundChannel;

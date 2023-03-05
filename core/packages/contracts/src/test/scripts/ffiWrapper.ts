@@ -2,12 +2,12 @@
 import { ValidatorSet, createRandomSubset, readSetBits } from "./helpers"
 import { ethers } from "ethers"
 import fs from "fs"
-import type { BeefyClient } from "../src/contracts/BeefyClient"
+import type { BeefyClient } from "../../../types/BeefyClient"
 import { accounts } from "./wallets"
 
 const encoder = new ethers.utils.AbiCoder()
 const command = process.argv[2]
-const fixtureData = JSON.parse(fs.readFileSync("./test/beefy/data/beefy-commitment.json", "utf8"))
+const fixtureData = JSON.parse(fs.readFileSync("src/test/data/beefy-commitment.json", "utf8"))
 const validatorSetID = fixtureData.params.id
 const validatorSetSize = process.env["FixedSet"] == "true" ? accounts.length : 300
 const commitHash = fixtureData.commitmentHash

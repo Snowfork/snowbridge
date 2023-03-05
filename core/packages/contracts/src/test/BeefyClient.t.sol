@@ -1,11 +1,12 @@
 pragma solidity ^0.8.9;
 
-import "../BeefyClientMock.sol";
-import "../../ScaleCodec.sol";
-import "../../utils/Bitfield.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
+import "openzeppelin/utils/Strings.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
+
+import "./mocks/BeefyClientMock.sol";
+import "../ScaleCodec.sol";
+import "../utils/Bitfield.sol";
 
 interface CheatCodes {
     function prank(address) external;
@@ -51,7 +52,7 @@ contract BeefyClientTest is Test {
 
         // Allocate for input variables
         string[] memory inputs = new string[](10);
-        inputs[0] = "test/ffiWrapper.js";
+        inputs[0] = "src/test/scripts/ffiWrapper.js";
         // Always add type of command as first arguments
         inputs[1] = "GenerateInitialSet";
         // generate initial fixture data with ffi
