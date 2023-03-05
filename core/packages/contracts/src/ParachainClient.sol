@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
+import "openzeppelin/utils/cryptography/MerkleProof.sol";
 import "./BeefyClient.sol";
 import "./IParachainClient.sol";
 import "./ScaleCodec.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract ParachainClient is IParachainClient {
     BeefyClient public immutable beefyClient;

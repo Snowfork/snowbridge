@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "openzeppelin/utils/cryptography/ECDSA.sol";
+import "openzeppelin/utils/cryptography/MerkleProof.sol";
+import "openzeppelin/access/Ownable.sol";
 import "./utils/Bitfield.sol";
 import "./utils/MMRProof.sol";
 import "./ScaleCodec.sol";

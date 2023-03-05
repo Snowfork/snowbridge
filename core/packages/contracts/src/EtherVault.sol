@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "openzeppelin/access/Ownable.sol";
 
 contract EtherVault is Ownable {
     event Deposited(bytes indexed sovereign, uint256 amount);

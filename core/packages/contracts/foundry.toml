@@ -2,9 +2,9 @@
 solc_version = '0.8.9'
 via_ir = false
 test = 'contracts/test'
-allow_paths = ["node_modules/@openzeppelin/contracts"]
 remappings = [
     'ds-test=lib/ds-test/src/',
     'forge-std=lib/forge-std/src/',
+    'openzeppelin=lib/openzeppelin-contracts/contracts/',
 ]
 ffi = true

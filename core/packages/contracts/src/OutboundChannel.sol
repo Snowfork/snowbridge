@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "openzeppelin/access/AccessControl.sol";
 import "./IOutboundChannel.sol";
 import "./ISovereignTreasury.sol";
 

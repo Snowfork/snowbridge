@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import "openzeppelin/token/ERC20/ERC20.sol";
+import "openzeppelin/access/Ownable.sol";
+import "openzeppelin/token/ERC20/extensions/draft-ERC20Permit.sol";
 
 /// @custom:security-contact contact@snowfork.com
 contract WrappedToken is ERC20, Ownable, ERC20Permit {

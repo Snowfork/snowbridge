@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
+import "openzeppelin/utils/cryptography/MerkleProof.sol";
+import "openzeppelin/access/AccessControl.sol";
 import "./ParachainClient.sol";
 import "./IRecipient.sol";
 import "./ISovereignTreasury.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract InboundChannel is AccessControl {
     mapping(bytes => uint64) public nonce;

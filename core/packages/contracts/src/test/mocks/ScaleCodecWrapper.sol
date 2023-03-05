@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import "../ScaleCodec.sol";
+import "../../ScaleCodec.sol";
 
 contract ScaleCodecWrapper {
     function encodeU256(uint256 input) external pure returns (bytes32) {
