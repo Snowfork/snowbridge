@@ -17,6 +17,7 @@ contract OutboundChannel is IOutboundChannel, AccessControl {
     event Message(bytes dest, uint64 nonce, bytes payload);
 
     event FeeUpdated(uint256 fee);
+
     error FeePaymentToLow();
 
     constructor(IVault _vault, uint256 _fee) {
@@ -26,15 +27,12 @@ contract OutboundChannel is IOutboundChannel, AccessControl {
         fee = _fee;
     }
 
-    function submit(
-        bytes calldata dest,
-        bytes calldata payload
-    ) external payable onlyRole(SUBMIT_ROLE) {
+    function submit(bytes calldata dest, bytes calldata payload) external payable onlyRole(SUBMIT_ROLE) {
         if (msg.value < fee) {
             revert FeePaymentToLow();
         }
         nonce[dest] = nonce[dest] + 1;
-        vault.deposit{ value: msg.value }(dest);
+        vault.deposit{value: msg.value}(dest);
         emit Message(dest, nonce[dest], payload);
     }
 
