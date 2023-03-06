@@ -2,7 +2,6 @@
 set -eu
 
 source scripts/set-env.sh
-source scripts/build-binary.sh
 
 config_relayer(){
     # Configure beefy relay
@@ -135,6 +134,13 @@ start_relayer()
             sleep 20
         done
     ) &
+}
+
+build_relayer()
+{
+    echo "Building relayer"
+    mage -d "$relay_dir" build
+    cp $relay_bin "$output_bin_dir"
 }
 
 if [ -z "${from_start_services:-}" ]; then
