@@ -68,8 +68,22 @@ build_relayer()
     cp $relay_bin "$output_bin_dir"
 }
 
+build_ethereum() {
+    echo "Building geth binary"
+    if [ ! -d "$geth_dir" ] ; then
+        echo "clone go ethereum project to $geth_dir"
+        git clone https://github.com/ethereum/go-ethereum.git $geth_dir
+    fi
+    pushd $geth_dir
+    git checkout tags/$geth_version
+    make geth
+    cp "$geth_dir/build/bin/geth" "$output_bin_dir"
+    popd
+}
+
 install_binary() {
     echo "Building and installing binaries."
+    build_ethereum
     build_relaychain
     build_parachain
     build_relayer

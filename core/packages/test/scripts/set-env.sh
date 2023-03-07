@@ -10,6 +10,8 @@ relaychain_dir="$parachain_dir/.cargo/$relaychain_version"
 relaychain_bin="${POLKADOT_BIN:-$relaychain_dir/bin/polkadot}"
 core_dir="$root_dir/core"
 lodestar_version="${LODESTAR_VER:-1.5.0}"
+geth_version="${GETH_VER:-v1.11.2}"
+geth_dir="$root_dir/../go-ethereum/$geth_version"
 contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
@@ -74,10 +76,6 @@ check_tool() {
     fi
     if ! [ -x "$(command -v jq)" ]; then
         echo 'Error: jq is not installed.'
-        exit
-    fi
-    if ! [ -x "$(command -v geth)" ]; then
-        echo 'Error: geth is not installed.'
         exit
     fi
     if ! [ -x "$(command -v sponge)" ]; then

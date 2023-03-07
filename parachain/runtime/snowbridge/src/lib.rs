@@ -626,6 +626,10 @@ parameter_types! {
 			version: [2, 0, 0, 0], // 0x02000000
 			epoch: 144896,
 		},
+		capella: Fork {
+			version: [3, 0, 0, 0], // 0x03000000
+			epoch: u64::MAX,
+		},
 	};
 }
 

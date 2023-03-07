@@ -207,10 +207,10 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	if s.activeSpec == config.Minimal {
 		blockRootsContainer = &state.BlockRootsContainerMinimal{}
-		beaconState = &state.BeaconStateBellatrixMinimal{}
+		beaconState = &state.BeaconStateCapellaMinimal{}
 	} else {
 		blockRootsContainer = &state.BlockRootsContainerMainnet{}
-		beaconState = &state.BeaconStateBellatrixMainnet{}
+		beaconState = &state.BeaconStateCapellaMainnet{}
 	}
 
 	err = beaconState.UnmarshalSSZ(data)

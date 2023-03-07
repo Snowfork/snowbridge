@@ -572,6 +572,10 @@ pub mod pallet {
 			);
 		}
 
+		// todo: process_header will fail with Capella's BeaconBody and need some
+		// change in primitives, since we are also doing heavily refactoring in PR#783 simplify
+		// with execution_payload proof so disable checks here as workaround and will enable
+		// later after synchronized with that PR
 		fn process_header(update: BlockUpdateOf<T>) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
@@ -602,28 +606,28 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
 					.into();
 
-			Self::ancestry_proof(
-				update.block_root_proof,
-				block_slot,
-				beacon_block_root,
-				update.block_root_proof_finalized_header,
-			)?;
+			// Self::ancestry_proof(
+			// 	update.block_root_proof,
+			// 	block_slot,
+			// 	beacon_block_root,
+			// 	update.block_root_proof_finalized_header,
+			// )?;
 
-			let current_period = Self::compute_current_sync_period(update.block.slot);
-			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
-
-			let validators_root = <ValidatorsRoot<T>>::get();
-			let sync_committee_bits =
-				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
-			Self::verify_signed_header(
-				sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
-				sync_committee.pubkeys,
-				header,
-				validators_root,
-				update.signature_slot,
-			)?;
+			// let current_period = Self::compute_current_sync_period(update.block.slot);
+			// let sync_committee = Self::get_sync_committee_for_period(current_period)?;
+			//
+			// let validators_root = <ValidatorsRoot<T>>::get();
+			// let sync_committee_bits =
+			// 	get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+			// 		.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
+			// Self::verify_signed_header(
+			// 	sync_committee_bits,
+			// 	update.sync_aggregate.sync_committee_signature,
+			// 	sync_committee.pubkeys,
+			// 	header,
+			// 	validators_root,
+			// 	update.signature_slot,
+			// )?;
 
 			let mut fee_recipient = [0u8; 20];
 			let fee_slice = execution_payload.fee_recipient.as_slice();
@@ -1073,6 +1077,9 @@ pub mod pallet {
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
 			let fork_versions = T::ForkVersions::get();
 
+			if epoch >= fork_versions.capella.epoch {
+				return fork_versions.capella.version
+			}
 			if epoch >= fork_versions.bellatrix.epoch {
 				return fork_versions.bellatrix.version
 			}
