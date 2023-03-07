@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"io"
 	"net/http"
@@ -44,12 +45,14 @@ var (
 type BeaconClient struct {
 	httpClient http.Client
 	endpoint   string
+	activeSpec config.ActiveSpec
 }
 
-func NewBeaconClient(endpoint string) *BeaconClient {
+func NewBeaconClient(endpoint string, activeSpec config.ActiveSpec) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
+		activeSpec,
 	}
 }
 
@@ -251,35 +254,42 @@ func (b *BeaconClient) GetHeader(blockRoot common.Hash) (BeaconHeader, error) {
 	}, nil
 }
 
-func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (state.BeaconBlockBellatrix, error) {
+func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (state.BeaconBlock, error) {
+	var beaconBlock state.BeaconBlock
+
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
 	if err != nil {
-		return state.BeaconBlockBellatrix{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
+		return beaconBlock, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
-	req.Header.Add("Accept", "application/octet-stream")
+	req.Header.Add("Accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		return state.BeaconBlockBellatrix{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
+		return beaconBlock, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return state.BeaconBlockBellatrix{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
+		return beaconBlock, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
+
+	blockResponse := BeaconBlockResponse{}
 
 	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return state.BeaconBlockBellatrix{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
+		return beaconBlock, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
-	beaconBlock := state.BeaconBlockBellatrix{}
-
-	err = beaconBlock.UnmarshalSSZ(bodyBytes)
+	err = json.Unmarshal(bodyBytes, &blockResponse)
 	if err != nil {
-		return state.BeaconBlockBellatrix{}, fmt.Errorf("unmarshal block ssz: %w", err)
+		return beaconBlock, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
-	return beaconBlock, nil
+	ssz, err := blockResponse.ToSSZ(b.activeSpec)
+	if err != nil {
+		return nil, err
+	}
+
+	return ssz, nil
 }
 
 func (b *BeaconClient) GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error) {

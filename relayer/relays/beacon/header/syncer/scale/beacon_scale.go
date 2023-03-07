@@ -142,6 +142,11 @@ type DepositVoluntaryExit struct {
 	Data  DepositData
 }
 
+type SignedVoluntaryExit struct {
+	Exit      VoluntaryExit
+	Signature []byte
+}
+
 type VoluntaryExit struct {
 	Epoch          types.U64
 	ValidaterIndex types.U64
@@ -172,7 +177,7 @@ type Body struct {
 	AttesterSlashings []AttesterSlashing
 	Attestations      []Attestation
 	Deposits          []Deposit
-	VoluntaryExits    []VoluntaryExit
+	VoluntaryExits    []SignedVoluntaryExit
 	SyncAggregate     SyncAggregate
 	ExecutionPayload  ExecutionPayload
 }

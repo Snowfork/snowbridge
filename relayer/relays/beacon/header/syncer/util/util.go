@@ -81,3 +81,51 @@ func HexStringToPublicKey(hexString string) ([48]byte, error) {
 
 	return pubkeyBytes, nil
 }
+
+func HexStringTo32Bytes(hexString string) ([32]byte, error) {
+	var pubkeyBytes [32]byte
+	key, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	copy(pubkeyBytes[:], key)
+
+	return pubkeyBytes, nil
+}
+
+func HexStringTo96Bytes(hexString string) ([96]byte, error) {
+	var pubkeyBytes [96]byte
+	key, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
+	if err != nil {
+		return [96]byte{}, err
+	}
+
+	copy(pubkeyBytes[:], key)
+
+	return pubkeyBytes, nil
+}
+
+func HexStringTo20Bytes(hexString string) ([20]byte, error) {
+	var pubkeyBytes [20]byte
+	key, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
+	if err != nil {
+		return [20]byte{}, err
+	}
+
+	copy(pubkeyBytes[:], key)
+
+	return pubkeyBytes, nil
+}
+
+func HexStringTo256Bytes(hexString string) ([256]byte, error) {
+	var pubkeyBytes [256]byte
+	key, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
+	if err != nil {
+		return [256]byte{}, err
+	}
+
+	copy(pubkeyBytes[:], key)
+
+	return pubkeyBytes, nil
+}

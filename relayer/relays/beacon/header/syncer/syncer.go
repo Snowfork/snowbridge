@@ -36,7 +36,7 @@ type Syncer struct {
 
 func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64, maxSlotsPerHistoricalRoot int, activeSpec config.ActiveSpec) *Syncer {
 	return &Syncer{
-		Client:                       *api.NewBeaconClient(endpoint),
+		Client:                       *api.NewBeaconClient(endpoint, activeSpec),
 		SlotsInEpoch:                 slotsInEpoch,
 		EpochsPerSyncCommitteePeriod: epochsPerSyncCommitteePeriod,
 		MaxSlotsPerHistoricalRoot:    maxSlotsPerHistoricalRoot,
@@ -442,7 +442,7 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, err
 		return scale.HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
 	}
 
-	header, err := s.Client.GetHeaderBySlot(block.Slot)
+	header, err := s.Client.GetHeaderBySlot(block.GetBeaconSlot())
 	if err != nil {
 		return scale.HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
 	}
@@ -452,12 +452,12 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, err
 		return scale.HeaderUpdate{}, fmt.Errorf("beacon header to scale: %w", err)
 	}
 
-	executionPayloadScale, err := api.ExecutionPayloadToScale(block.Body.ExecutionPayload)
+	executionPayloadScale, err := api.ExecutionPayloadToScale(block.GetExecutionPayload())
 	if err != nil {
 		return scale.HeaderUpdate{}, err
 	}
 
-	nextSyncCommittee := api.SyncAggregateToScale(block.Body.SyncAggregate)
+	nextSyncCommittee := api.SyncAggregateToScale(block.GetSyncAggregate())
 
 	tree, err := block.GetTree()
 	if err != nil {
@@ -489,7 +489,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		return scale.HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
 	}
 
-	header, err := s.Client.GetHeaderBySlot(block.Slot)
+	header, err := s.Client.GetHeaderBySlot(block.GetBeaconSlot())
 	if err != nil {
 		return scale.HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
 	}
@@ -499,12 +499,12 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		return scale.HeaderUpdate{}, fmt.Errorf("beacon header to scale: %w", err)
 	}
 
-	executionPayloadScale, err := api.ExecutionPayloadToScale(block.Body.ExecutionPayload)
+	executionPayloadScale, err := api.ExecutionPayloadToScale(block.GetExecutionPayload())
 	if err != nil {
 		return scale.HeaderUpdate{}, err
 	}
 
-	nextSyncCommittee := api.SyncAggregateToScale(block.Body.SyncAggregate)
+	nextSyncCommittee := api.SyncAggregateToScale(block.GetSyncAggregate())
 
 	tree, err := block.GetTree()
 	if err != nil {
@@ -520,7 +520,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 
 	// If slot == finalizedSlot, there won't be an ancestry proof because the header state in question is also the
 	// finalized header
-	if block.Slot == checkpoint.Slot {
+	if block.GetBeaconSlot() == checkpoint.Slot {
 		return scale.HeaderUpdate{
 			Payload: scale.HeaderUpdatePayload{
 				BeaconHeader:    beaconHeader,
@@ -532,7 +532,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		}, nil
 	}
 
-	proofScale, err := s.getBlockHeaderAncestryProof(int(block.Slot), blockRoot, checkpoint.BlockRootsTree)
+	proofScale, err := s.getBlockHeaderAncestryProof(int(block.GetBeaconSlot()), blockRoot, checkpoint.BlockRootsTree)
 
 	displayProof := []common.Hash{}
 	for _, proof := range proofScale {
@@ -584,7 +584,7 @@ func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, e
 		return scale.SyncAggregate{}, fmt.Errorf("fetch block: %w", err)
 	}
 
-	return api.SyncAggregateToScale(block.Body.SyncAggregate), nil
+	return api.SyncAggregateToScale(block.GetSyncAggregate()), nil
 }
 
 func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, types.U64, error) {
