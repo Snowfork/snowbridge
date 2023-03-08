@@ -133,6 +133,7 @@ pub mod pallet {
 		SyncCommitteeParticipantsNotSupermajority,
 		InvalidHeaderMerkleProof,
 		InvalidSyncCommitteeMerkleProof,
+		InvalidExecutionHeaderProof,
 		InvalidAncestryMerkleProof,
 		InvalidSignature,
 		InvalidSignaturePoint,
@@ -588,21 +589,27 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 			let execution_root_hash: H256 = execution_root.into();
 
+			let beacon_block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(update.beacon_header.clone())
+					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
+					.into();
+
+			log::info!(target: "ethereum-beacon-client", "💫 execution_root_hash: {}.", execution_root_hash);
+			log::info!(target: "ethereum-beacon-client", "💫 update.execution_branch: {:?}.", update.execution_branch);
+			log::info!(target: "ethereum-beacon-client", "💫 EXECUTION_HEADER_DEPTH: {}.", config::EXECUTION_HEADER_DEPTH);
+			log::info!(target: "ethereum-beacon-client", "💫 EXECUTION_HEADER_INDEX: {}.", config::EXECUTION_HEADER_INDEX);
+			log::info!(target: "ethereum-beacon-client", "💫 beacon_block_root: {}.", beacon_block_root);
+
 			ensure!(
 				Self::is_valid_merkle_branch(
 					execution_root_hash,
 					update.execution_branch,
 					config::EXECUTION_HEADER_DEPTH,
 					config::EXECUTION_HEADER_INDEX,
-					update.beacon_header.body_root
+					beacon_block_root
 				),
-				Error::<T>::InvalidAncestryMerkleProof
+				Error::<T>::InvalidExecutionHeaderProof
 			);
-
-			let beacon_block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(update.beacon_header.clone())
-					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-					.into();
 
 			Self::ancestry_proof(
 				update.block_root_branch,

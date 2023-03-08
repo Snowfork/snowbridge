@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	ssz "github.com/ferranbt/fastssz"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
@@ -55,6 +56,23 @@ func TestDownloadBlock(t *testing.T) {
 
 	fmt.Println("slot")
 	fmt.Println(beaconBlock.GetBeaconSlot())
+
+	proof, err := tree.Prove(201)
+	require.NoError(t, err)
+
+	fmt.Println("leaf:" + common.BytesToHash(proof.Leaf[:]).Hex())
+	for _, proofItem := range proof.Hashes {
+		fmt.Println(common.BytesToHash(proofItem[:]))
+	}
+
+	root, err := beaconBlock.GetExecutionPayload().HashTreeRoot()
+	require.NoError(t, err)
+
+	require.Equal(t, common.BytesToHash(root[:]), common.BytesToHash(proof.Leaf[:]))
+
+	ok, err := ssz.VerifyProof(hash, proof)
+	require.NoError(t, err)
+	require.True(t, ok)
 
 	require.Equal(t, beaconBlockRoot, common.BytesToHash(hash))
 }

@@ -511,12 +511,23 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		return scale.HeaderUpdate{}, err
 	}
 
-	tree.Hash()
+	treeHash := tree.Hash()
 
-	proof, err := tree.Prove(25)
+	proof, err := tree.Prove(201)
 	if err != nil {
 		return scale.HeaderUpdate{}, err
 	}
+
+	displayProofs := []common.Hash{}
+	for _, proofItem := range proof.Hashes {
+		displayProofs = append(displayProofs, common.BytesToHash(proofItem[:]))
+	}
+
+	log.WithFields(log.Fields{
+		"execution_root": common.BytesToHash(proof.Leaf[:]).Hex(),
+		"proofs":         displayProofs,
+		"block_root":     common.BytesToHash(treeHash),
+	}).Info(fmt.Sprintf("proof for slot %d", block.GetBeaconSlot()))
 
 	// If slot == finalizedSlot, there won't be an ancestry proof because the header state in question is also the
 	// finalized header
