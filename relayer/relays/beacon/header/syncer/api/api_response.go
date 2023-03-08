@@ -629,7 +629,6 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 	}
 
 	attestations := []*state.Attestation{}
-
 	for _, attestation := range body.Attestations {
 		attestationSSZ, err := attestation.ToSSZ()
 		if err != nil {
@@ -640,7 +639,6 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 	}
 
 	deposits := []*state.Deposit{}
-
 	for _, deposit := range body.Deposits {
 		depositScale, err := deposit.ToSSZ()
 		if err != nil {
@@ -681,10 +679,20 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 		return nil, err
 	}
 
-	baseFeePerGas, err := util.HexStringTo32Bytes(executionPayload.BaseFeePerGas)
-	if err != nil {
+	n := new(big.Int)
+	n, ok := n.SetString(executionPayload.BaseFeePerGas, 10)
+	if !ok {
 		return nil, err
 	}
+
+	baseFeePerGas := n.Bytes()
+
+	// convert to little endian, ew
+	for i := 0; i < len(baseFeePerGas)/2; i++ {
+		baseFeePerGas[i], baseFeePerGas[len(baseFeePerGas)-i-1] = baseFeePerGas[len(baseFeePerGas)-i-1], baseFeePerGas[i]
+	}
+	var baseFeePerGasBytes [32]byte
+	copy(baseFeePerGasBytes[:], baseFeePerGas)
 
 	blockHash, err := util.HexStringTo32Bytes(executionPayload.BlockHash)
 	if err != nil {
@@ -696,7 +704,7 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 		return nil, err
 	}
 
-	logsBloom, err := util.HexStringTo256Bytes(executionPayload.FeeRecipient)
+	logsBloom, err := util.HexStringTo256Bytes(executionPayload.LogsBloom)
 	if err != nil {
 		return nil, err
 	}
@@ -783,7 +791,7 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 					GasUsed:       gasUsed,
 					Timestamp:     timestamp,
 					ExtraData:     extraData,
-					BaseFeePerGas: baseFeePerGas,
+					BaseFeePerGas: baseFeePerGasBytes,
 					BlockHash:     blockHash,
 					Transactions:  transactions,
 				},
@@ -837,7 +845,7 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 				GasUsed:       gasUsed,
 				Timestamp:     timestamp,
 				ExtraData:     extraData,
-				BaseFeePerGas: baseFeePerGas,
+				BaseFeePerGas: baseFeePerGasBytes,
 				BlockHash:     blockHash,
 				Transactions:  transactions,
 			},

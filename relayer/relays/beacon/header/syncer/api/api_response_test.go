@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -38,6 +39,14 @@ func TestDownloadBlock(t *testing.T) {
 	beaconBlock, err := api.GetBeaconBlock(common.HexToHash("0x0be966e6710e7fe240fc93435a56f8a40f2c338b60cffdc67dd7f6f25d3016fc"))
 	require.NoError(t, err)
 
+	execHtr, err := beaconBlock.GetExecutionPayload().HashTreeRoot()
+	require.Equal(t, "0x6282d3f6de498b2ce0764adf601498d5695190396abe804e95f15de8b8e2810e", common.BytesToHash(execHtr[:]).Hex())
+
+	fmt.Println(common.BytesToHash(execHtr[:]))
+
+	beaconBlockRoot, err := api.GetBeaconBlockRoot(beaconBlock.GetBeaconSlot())
+	require.NoError(t, err)
+
 	tree, err := beaconBlock.GetTree()
 	require.NoError(t, err)
 
@@ -45,7 +54,32 @@ func TestDownloadBlock(t *testing.T) {
 
 	fmt.Println("slot")
 	fmt.Println(beaconBlock.GetBeaconSlot())
-	fmt.Println(common.BytesToHash(hash))
+
+	require.Equal(t, beaconBlockRoot, common.BytesToHash(hash))
+}
+
+func TestDownloadBlock_ExecutionHeaderPayload(t *testing.T) {
+	api := NewBeaconClient("https://lodestar-goerli.chainsafe.io", config.Mainnet)
+
+	beaconBlock, err := api.GetBeaconBlock(common.HexToHash("0x0be966e6710e7fe240fc93435a56f8a40f2c338b60cffdc67dd7f6f25d3016fc"))
+	require.NoError(t, err)
+
+	exec := beaconBlock.GetExecutionPayload()
+	execHtr, err := exec.HashTreeRoot()
+
+	fmt.Println("parent root:" + common.BytesToHash(exec.ParentHash[:]).Hex())
+	fmt.Println("fee recipient:" + util.BytesToHexString(exec.FeeRecipient[:]))
+	fmt.Println("state root:" + common.BytesToHash(exec.StateRoot[:]).Hex())
+	fmt.Println("receipts root:" + common.BytesToHash(exec.ReceiptsRoot[:]).Hex())
+	fmt.Println("logs bloom:" + util.BytesToHexString(exec.LogsBloom[:]))
+	fmt.Println("prev_randao:" + util.BytesToHexString(exec.PrevRandao[:]))
+	fmt.Printf("block_number: %d\n", exec.BlockNumber)
+	fmt.Printf("gas_limit: %d\n", exec.GasLimit)
+	fmt.Printf("gas_used: %d\n", exec.GasUsed)
+	fmt.Printf("timestamp: %d\n", exec.Timestamp)
+	fmt.Println("extra_data:" + util.BytesToHexString(exec.ExtraData[:]))
+
+	require.Equal(t, "0x6282d3f6de498b2ce0764adf601498d5695190396abe804e95f15de8b8e2810e", common.BytesToHash(execHtr[:]).Hex())
 }
 
 func TestDownloadBlockMinimal(t *testing.T) {
