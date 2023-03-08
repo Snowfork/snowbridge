@@ -45,8 +45,8 @@ go generate ./...
 To generate the SSZ encodings:
 
 ```
-git clone https://github.com/ferranbt/fastssz.git
-go run sszgen/*.go --path ../snowbridge/relayer/relays/beacon/state/beacon.go --objs BeaconStateBellatrixMainnet,BeaconStateBellatrixMinimal,BlockRootsContainerMainnet,BlockRootsContainerMinimal,TransactionsRootContainer
+go install github.com/ferranbt/fastssz/sszgen
+sszgen --path relays/beacon/state/beacon.go --objs BeaconStateBellatrixMainnet,BeaconStateBellatrixMinimal,BeaconStateCapellaMinimal,BeaconStateCapellaMainnet,BlockRootsContainerMainnet,BlockRootsContainerMinimal,TransactionsRootContainer
 ```
 
 ## Configuration

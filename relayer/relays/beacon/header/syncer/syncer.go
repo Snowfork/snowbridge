@@ -205,14 +205,31 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	var beaconState state.BeaconState
 	var blockRootsContainer state.BlockRootsContainer
 
+	epoch := s.ComputeEpochAtSlot(slot)
+
 	if s.activeSpec == config.Minimal {
 		blockRootsContainer = &state.BlockRootsContainerMinimal{}
-		beaconState = &state.BeaconStateCapellaMinimal{}
+		if epoch >= config.Minimal_CapellaForkEpoch {
+			beaconState = &state.BeaconStateCapellaMinimal{}
+		} else {
+			beaconState = &state.BeaconStateBellatrixMinimal{}
+		}
 	} else {
 		blockRootsContainer = &state.BlockRootsContainerMainnet{}
-		beaconState = &state.BeaconStateCapellaMainnet{}
+		if s.activeSpec == config.GOERLI {
+			if epoch >= config.Goerli_CapellaForkEpoch {
+				beaconState = &state.BeaconStateCapellaMainnet{}
+			} else {
+				beaconState = &state.BeaconStateBellatrixMainnet{}
+			}
+		} else if s.activeSpec == config.Mainnet {
+			if epoch >= config.Mainnet_CapellaForkEpoch {
+				beaconState = &state.BeaconStateCapellaMainnet{}
+			} else {
+				beaconState = &state.BeaconStateBellatrixMainnet{}
+			}
+		}
 	}
-
 	err = beaconState.UnmarshalSSZ(data)
 	if err != nil {
 		return scale.BlockRootProof{}, fmt.Errorf("unmarshal beacon state: %w", err)

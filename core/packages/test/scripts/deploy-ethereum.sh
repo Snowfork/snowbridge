@@ -6,6 +6,11 @@ source scripts/set-env.sh
 start_geth() {
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local node"
+        timestamp=$(date -d'+960second' +%s)
+        jq --arg timestamp $timestamp \
+        '.config.ShanghaiTime = $timestamp' \
+        config/genesis.json > $output_dir/genesis.json
+
         cp config/genesis.json "$output_dir/genesis.json"
         geth init --datadir "$ethereum_data_dir" "$output_dir/genesis.json"
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key0.prv
@@ -53,7 +58,7 @@ start_lodestar() {
             --genesisEth1Hash $genesisHash \
             --params.ALTAIR_FORK_EPOCH 0 \
             --params.BELLATRIX_FORK_EPOCH 0 \
-            --params.CAPELLA_FORK_EPOCH 0 \
+            --params.CAPELLA_FORK_EPOCH 20 \
             --eth1=true \
             --rest.namespace="*" \
             --jwt-secret config/jwtsecret \

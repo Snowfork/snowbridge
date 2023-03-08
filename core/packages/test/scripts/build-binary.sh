@@ -69,16 +69,12 @@ build_relayer()
 }
 
 build_ethereum() {
-    echo "Building geth binary"
-    if [ ! -d "$geth_dir" ] ; then
-        echo "clone go ethereum project to $geth_dir"
-        git clone https://github.com/ethereum/go-ethereum.git $geth_dir
+    if [ ! -f "$geth_dir/geth" ]; then
+        echo "Building geth binary"
+        mkdir -p $geth_dir
+        GOBIN=$geth_dir go install -v -x github.com/ethereum/go-ethereum/cmd/geth@$geth_version
     fi
-    pushd $geth_dir
-    git checkout tags/$geth_version
-    make geth
-    cp "$geth_dir/build/bin/geth" "$output_bin_dir"
-    popd
+    cp "$geth_dir/geth" "$output_bin_dir"
 }
 
 install_binary() {

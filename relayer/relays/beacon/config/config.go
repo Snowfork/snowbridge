@@ -2,6 +2,8 @@ package config
 
 import (
 	"errors"
+	"math"
+
 	"github.com/snowfork/snowbridge/relayer/config"
 )
 
@@ -56,10 +58,23 @@ type ActiveSpec string
 const (
 	Mainnet ActiveSpec = "mainnet"
 	Minimal ActiveSpec = "minimal"
+	GOERLI  ActiveSpec = "goerli"
+)
+
+const (
+	// Minimal_CapellaForkEpoch todo
+	// for fork upgrading test in minimal spec locally
+	Minimal_CapellaForkEpoch uint64 = 20
+	Goerli_CapellaForkEpoch  uint64 = 162304
+	// Mainnet_CapellaForkEpoch
+	// todo: change when timeline of Capella upgrade in mainnet finalized
+	Mainnet_CapellaForkEpoch uint64 = math.MaxUint64
 )
 
 func (c Config) GetActiveSpec() ActiveSpec {
 	switch c.Source.Beacon.ActiveSpec {
+	case string(GOERLI):
+		return GOERLI
 	case string(Mainnet):
 		return Mainnet
 	case string(Minimal):
@@ -77,12 +92,18 @@ func (a ActiveSpec) IsMinimal() bool {
 	return a == Minimal
 }
 
+func (a ActiveSpec) IsGoerli() bool {
+	return a == GOERLI
+}
+
 func ToSpec(spec string) (ActiveSpec, error) {
 	switch spec {
 	case string(Mainnet):
 		return Mainnet, nil
 	case string(Minimal):
 		return Minimal, nil
+	case string(GOERLI):
+		return GOERLI, nil
 	default:
 		return Minimal, errors.New("spec is not a valid value")
 	}

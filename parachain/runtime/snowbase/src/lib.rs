@@ -630,7 +630,7 @@ parameter_types! {
 		},
 		capella: Fork {
 			version: [3, 0, 0, 1], // 0x03000001
-			epoch: 0,
+			epoch: 20,
 		},
 	};
 }

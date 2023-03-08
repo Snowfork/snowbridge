@@ -14,7 +14,7 @@
     "londonBlock": 0,
     "ethash": {},
     "terminalTotalDifficulty": 0,
-    "ShanghaiTime": 0
+    "ShanghaiTime": null
   },
   "difficulty": "0x9FFE0",
   "gasLimit": "80000000",
