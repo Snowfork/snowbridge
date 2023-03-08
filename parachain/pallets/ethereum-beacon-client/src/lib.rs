@@ -578,6 +578,12 @@ pub mod pallet {
 				Error::<T>::InvalidExecutionHeaderUpdate
 			);
 
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 base fee per gas is: {}.",
+				execution_payload.base_fee_per_gas
+			);
+
 			let execution_root = merkleization::hash_tree_root_execution_header(execution_payload.clone())
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 			let execution_root_hash: H256 = execution_root.into();

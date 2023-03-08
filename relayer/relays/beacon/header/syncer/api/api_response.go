@@ -1,10 +1,8 @@
 package api
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"math/big"
 	"strconv"
@@ -1288,13 +1286,12 @@ func ExecutionPayloadToScale(e *state.ExecutionPayload) (scale.ExecutionPayload,
 		return scale.ExecutionPayload{}, err
 	}
 
-	baseFeePerGas := binary.BigEndian.Uint64(e.BaseFeePerGas[:])
-	stringValue, err := strconv.Atoi(string(e.BaseFeePerGas[:]))
-	if err != nil {
-		return scale.ExecutionPayload{}, err
+	for i := 0; i < len(e.BaseFeePerGas)/2; i++ {
+		e.BaseFeePerGas[i], e.BaseFeePerGas[len(e.BaseFeePerGas)-i-1] = e.BaseFeePerGas[len(e.BaseFeePerGas)-i-1], e.BaseFeePerGas[i]
 	}
 
-	log.WithFields(log.Fields{"converted_u256": baseFeePerGas, "original": stringValue}).Info("converted int")
+	baseFeePerGas := big.Int{}
+	baseFeePerGas.SetBytes(e.BaseFeePerGas[:])
 
 	return scale.ExecutionPayload{
 		ParentHash:       types.NewH256(e.ParentHash[:]),
@@ -1308,7 +1305,7 @@ func ExecutionPayloadToScale(e *state.ExecutionPayload) (scale.ExecutionPayload,
 		GasUsed:          types.NewU64(e.GasUsed),
 		Timestamp:        types.NewU64(e.Timestamp),
 		ExtraData:        e.ExtraData,
-		BaseFeePerGas:    types.NewU256(*big.NewInt(int64(baseFeePerGas))),
+		BaseFeePerGas:    types.NewU256(baseFeePerGas),
 		BlockHash:        types.NewH256(e.BlockHash[:]),
 		TransactionsRoot: transactionsRoot,
 	}, nil

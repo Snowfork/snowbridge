@@ -8,6 +8,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/stretchr/testify/require"
 	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"testing"
@@ -56,6 +57,33 @@ func TestDownloadBlock(t *testing.T) {
 	fmt.Println(beaconBlock.GetBeaconSlot())
 
 	require.Equal(t, beaconBlockRoot, common.BytesToHash(hash))
+}
+
+func TestBaseFeePerGas(t *testing.T) {
+	strValue := "161912342325"
+
+	n := new(big.Int)
+	n, ok := n.SetString(strValue, 10)
+	require.True(t, ok)
+
+	baseFeePerGas := n.Bytes()
+
+	// convert to little endian, ew
+	for i := 0; i < len(baseFeePerGas)/2; i++ {
+		baseFeePerGas[i], baseFeePerGas[len(baseFeePerGas)-i-1] = baseFeePerGas[len(baseFeePerGas)-i-1], baseFeePerGas[i]
+	}
+	var baseFeePerGasBytes [32]byte
+	copy(baseFeePerGasBytes[:], baseFeePerGas)
+
+	fmt.Println(baseFeePerGas)
+
+	for i := 0; i < len(baseFeePerGas)/2; i++ {
+		baseFeePerGas[i], baseFeePerGas[len(baseFeePerGas)-i-1] = baseFeePerGas[len(baseFeePerGas)-i-1], baseFeePerGas[i]
+	}
+
+	s := new(big.Int)
+	s.SetBytes(baseFeePerGas)
+	fmt.Println(s.String())
 }
 
 func TestDownloadBlock_ExecutionHeaderPayload(t *testing.T) {
