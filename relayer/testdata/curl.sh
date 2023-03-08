@@ -4,7 +4,7 @@ beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 
 # finality_update
 curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/finality_update" | jq -r "." > finality_update.json
-finalized_block_number=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/finality_update" | jq -r ".data.finalized_header.beacon.block_number")
+finalized_block_number=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/finality_update" | jq -r ".data.finalized_header.beacon.slot")
 echo "finalized_block_number is: $finalized_block_number"
 
 # get block_root by block_number

@@ -6,12 +6,11 @@ source scripts/set-env.sh
 start_geth() {
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local node"
+        # after 16 mins will try the Shapella upgrade 
         timestamp=$(date -d'+960second' +%s)
-        jq --arg timestamp $timestamp \
+        jq --argjson timestamp $timestamp \
         '.config.ShanghaiTime = $timestamp' \
         config/genesis.json > $output_dir/genesis.json
-
-        cp config/genesis.json "$output_dir/genesis.json"
         geth init --datadir "$ethereum_data_dir" "$output_dir/genesis.json"
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key0.prv
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key1.prv
