@@ -44,20 +44,15 @@ func TestDownloadBlock(t *testing.T) {
 	execHtr, err := beaconBlock.GetExecutionPayload().HashTreeRoot()
 	require.Equal(t, "0x6282d3f6de498b2ce0764adf601498d5695190396abe804e95f15de8b8e2810e", common.BytesToHash(execHtr[:]).Hex())
 
-	fmt.Println(common.BytesToHash(execHtr[:]))
-
-	beaconBlockRoot, err := api.GetBeaconBlockRoot(beaconBlock.GetBeaconSlot())
+	tree, err := beaconBlock.GetBlockBodyTree()
 	require.NoError(t, err)
 
-	tree, err := beaconBlock.GetTree()
-	require.NoError(t, err)
-
-	hash := tree.Hash()
+	_ = tree.Hash()
 
 	fmt.Println("slot")
 	fmt.Println(beaconBlock.GetBeaconSlot())
 
-	proof, err := tree.Prove(201)
+	proof, err := tree.Prove(25)
 	require.NoError(t, err)
 
 	fmt.Println("leaf:" + common.BytesToHash(proof.Leaf[:]).Hex())
@@ -65,16 +60,12 @@ func TestDownloadBlock(t *testing.T) {
 		fmt.Println(common.BytesToHash(proofItem[:]))
 	}
 
-	root, err := beaconBlock.GetExecutionPayload().HashTreeRoot()
+	root, err := beaconBlock.GetBodyRoot()
 	require.NoError(t, err)
 
-	require.Equal(t, common.BytesToHash(root[:]), common.BytesToHash(proof.Leaf[:]))
-
-	ok, err := ssz.VerifyProof(hash, proof)
+	ok, err := ssz.VerifyProof(root[:], proof)
 	require.NoError(t, err)
 	require.True(t, ok)
-
-	require.Equal(t, beaconBlockRoot, common.BytesToHash(hash))
 }
 
 func TestBaseFeePerGas(t *testing.T) {

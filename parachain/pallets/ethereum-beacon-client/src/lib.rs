@@ -160,7 +160,9 @@ pub mod pallet {
 		InvalidSyncCommitteeHeaderUpdate,
 		InvalidSyncCommitteePeriodUpdateWithGap,
 		InvalidSyncCommitteePeriodUpdateWithDuplication,
-		InvalidFinalizedHeaderUpdate,
+		InvalidSignatureSlot,
+		InvalidAttestedHeaderSlot,
+		DuplicateFinalizedHeaderUpdate,
 		InvalidFinalizedPeriodUpdate,
 		InvalidExecutionHeaderUpdate,
 		FinalizedBeaconHeaderSlotsExceeded,
@@ -480,12 +482,10 @@ pub mod pallet {
 
 		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
-			ensure!(
-				update.signature_slot > update.attested_header.slot &&
-					update.attested_header.slot >= update.finalized_header.slot &&
-					update.finalized_header.slot > last_finalized_header.beacon_slot,
-				Error::<T>::InvalidFinalizedHeaderUpdate
-			);
+			ensure!(update.signature_slot > update.attested_header.slot, Error::<T>::InvalidSignatureSlot);
+			ensure!(update.attested_header.slot >= update.finalized_header.slot, Error::<T>::InvalidAttestedHeaderSlot);
+			ensure!(update.finalized_header.slot > last_finalized_header.beacon_slot, Error::<T>::DuplicateFinalizedHeaderUpdate);
+
 			let import_time = last_finalized_header.import_time;
 			let weak_subjectivity_period_check =
 				import_time + T::WeakSubjectivityPeriodSeconds::get() as u64;
@@ -579,26 +579,9 @@ pub mod pallet {
 				Error::<T>::InvalidExecutionHeaderUpdate
 			);
 
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 base fee per gas is: {}.",
-				execution_payload.base_fee_per_gas
-			);
-
 			let execution_root = merkleization::hash_tree_root_execution_header(execution_payload.clone())
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 			let execution_root_hash: H256 = execution_root.into();
-
-			let beacon_block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(update.beacon_header.clone())
-					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-					.into();
-
-			log::info!(target: "ethereum-beacon-client", "💫 execution_root_hash: {}.", execution_root_hash);
-			log::info!(target: "ethereum-beacon-client", "💫 update.execution_branch: {:?}.", update.execution_branch);
-			log::info!(target: "ethereum-beacon-client", "💫 EXECUTION_HEADER_DEPTH: {}.", config::EXECUTION_HEADER_DEPTH);
-			log::info!(target: "ethereum-beacon-client", "💫 EXECUTION_HEADER_INDEX: {}.", config::EXECUTION_HEADER_INDEX);
-			log::info!(target: "ethereum-beacon-client", "💫 beacon_block_root: {}.", beacon_block_root);
 
 			ensure!(
 				Self::is_valid_merkle_branch(
@@ -606,10 +589,15 @@ pub mod pallet {
 					update.execution_branch,
 					config::EXECUTION_HEADER_DEPTH,
 					config::EXECUTION_HEADER_INDEX,
-					beacon_block_root
+					update.beacon_header.body_root
 				),
 				Error::<T>::InvalidExecutionHeaderProof
 			);
+
+			let beacon_block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(update.beacon_header.clone())
+					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
+					.into();
 
 			Self::ancestry_proof(
 				update.block_root_branch,

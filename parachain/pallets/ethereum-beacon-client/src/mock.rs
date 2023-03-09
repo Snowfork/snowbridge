@@ -393,27 +393,6 @@ pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
 	block_update_from_file::<T>(&add_file_prefix("block_update.json"))
 }
 
-pub fn get_beacon_block_body<T: crate::Config>() -> Body<
-	T::MaxFeeRecipientSize,
-	T::MaxLogsBloomSize,
-	T::MaxExtraDataSize,
-	T::MaxDepositDataSize,
-	T::MaxPublicKeySize,
-	T::MaxSignatureSize,
-	T::MaxProofBranchSize,
-	T::MaxProposerSlashingSize,
-	T::MaxAttesterSlashingSize,
-	T::MaxVoluntaryExitSize,
-	T::MaxAttestationSize,
-	T::MaxValidatorsPerCommittee,
-	T::MaxSyncCommitteeSize,
-> {
-	let mut filename: String = "ssz_test_".to_owned();
-	filename.push_str(&get_config_setting());
-	filename.push_str("_beacon_block_body.json");
-	beacon_block_body_from_file::<T>(filename.as_str())
-}
-
 pub fn get_finalized_header_update<T: crate::Config>(
 ) -> FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize> {
 	finalized_header_update_from_file::<T>(&add_file_prefix("finalized_header_update.json"))

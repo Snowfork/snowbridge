@@ -18,7 +18,10 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 )
 
-const BlockRootGeneralizedIndex = 37
+const (
+	BlockRootGeneralizedIndex        = 37
+	ExecutionPayloadGeneralizedIndex = 25
+)
 
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
@@ -459,14 +462,7 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, err
 
 	nextSyncCommittee := api.SyncAggregateToScale(block.GetSyncAggregate())
 
-	tree, err := block.GetTree()
-	if err != nil {
-		return scale.HeaderUpdate{}, err
-	}
-
-	tree.Hash()
-
-	proof, err := tree.Prove(25)
+	executionHeaderBranch, err := s.getExecutionHeaderBranch(block)
 	if err != nil {
 		return scale.HeaderUpdate{}, err
 	}
@@ -475,7 +471,7 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, err
 		Payload: scale.HeaderUpdatePayload{
 			BeaconHeader:    beaconHeader,
 			ExecutionHeader: executionPayloadScale,
-			ExecutionBranch: util.BytesBranchToScale(proof.Hashes),
+			ExecutionBranch: executionHeaderBranch,
 		},
 		NextSyncAggregate: nextSyncCommittee,
 	}
@@ -506,28 +502,10 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 
 	nextSyncCommittee := api.SyncAggregateToScale(block.GetSyncAggregate())
 
-	tree, err := block.GetTree()
+	executionHeaderBranch, err := s.getExecutionHeaderBranch(block)
 	if err != nil {
 		return scale.HeaderUpdate{}, err
 	}
-
-	treeHash := tree.Hash()
-
-	proof, err := tree.Prove(201)
-	if err != nil {
-		return scale.HeaderUpdate{}, err
-	}
-
-	displayProofs := []common.Hash{}
-	for _, proofItem := range proof.Hashes {
-		displayProofs = append(displayProofs, common.BytesToHash(proofItem[:]))
-	}
-
-	log.WithFields(log.Fields{
-		"execution_root": common.BytesToHash(proof.Leaf[:]).Hex(),
-		"proofs":         displayProofs,
-		"block_root":     common.BytesToHash(treeHash),
-	}).Info(fmt.Sprintf("proof for slot %d", block.GetBeaconSlot()))
 
 	// If slot == finalizedSlot, there won't be an ancestry proof because the header state in question is also the
 	// finalized header
@@ -536,7 +514,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 			Payload: scale.HeaderUpdatePayload{
 				BeaconHeader:    beaconHeader,
 				ExecutionHeader: executionPayloadScale,
-				ExecutionBranch: util.BytesBranchToScale(proof.Hashes),
+				ExecutionBranch: executionHeaderBranch,
 				BlockRootBranch: []types.H256{},
 			},
 			NextSyncAggregate: nextSyncCommittee,
@@ -554,7 +532,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		Payload: scale.HeaderUpdatePayload{
 			BeaconHeader:              beaconHeader,
 			ExecutionHeader:           executionPayloadScale,
-			ExecutionBranch:           util.BytesBranchToScale(proof.Hashes),
+			ExecutionBranch:           executionHeaderBranch,
 			BlockRootBranch:           proofScale,
 			BlockRootBranchHeaderRoot: types.NewH256(checkpoint.FinalizedBlockRoot.Bytes()),
 		},
@@ -581,12 +559,20 @@ func (s *Syncer) getBlockHeaderAncestryProof(slot int, blockRoot common.Hash, bl
 		return nil, fmt.Errorf("block root at index (%s) does not match expected block root (%s)", common.BytesToHash(proof.Leaf), blockRoot)
 	}
 
-	proofScale := []types.H256{}
-	for _, proofItem := range proof.Hashes {
-		proofScale = append(proofScale, types.NewH256(proofItem))
+	return util.BytesBranchToScale(proof.Hashes), nil
+}
+
+func (s *Syncer) getExecutionHeaderBranch(block state.BeaconBlock) ([]types.H256, error) {
+	tree, err := block.GetBlockBodyTree()
+	if err != nil {
+		return nil, err
 	}
 
-	return proofScale, nil
+	tree.Hash()
+
+	proof, err := tree.Prove(ExecutionPayloadGeneralizedIndex)
+
+	return util.BytesBranchToScale(proof.Hashes), nil
 }
 
 func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, error) {

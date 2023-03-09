@@ -375,22 +375,6 @@ mod beacon_minimal_tests {
 	}
 
 	#[test]
-	pub fn test_hash_block_body() {
-		let block_update = get_beacon_block_body::<mock_minimal::Test>();
-		let payload: Result<SSZBeaconBlockBody, MerkleizationError> = block_update.try_into();
-		assert_ok!(&payload);
-
-		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
-		assert_ok!(&hash_root_result);
-
-		let hash_root: H256 = hash_root_result.unwrap().into();
-		assert_eq!(
-			hash_root,
-			hex!("341cb361e0b9eb81cdb4979fe52ea0f4100699d989239379cf0e0017a9befd0c").into()
-		);
-	}
-
-	#[test]
 	pub fn test_bls_fast_aggregate_verify() {
 		let test_data = get_bls_signature_verify_test_data::<mock_minimal::Test>();
 

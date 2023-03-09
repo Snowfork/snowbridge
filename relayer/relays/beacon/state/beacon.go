@@ -314,12 +314,18 @@ type SyncAggregate interface {
 	GetSyncAggregateSignature() [96]byte
 }
 
+type BeaconBlockBody interface {
+	GetTree() (*ssz.Node, error)
+}
+
 type BeaconBlock interface {
 	UnmarshalSSZ(buf []byte) error
 	GetBeaconSlot() uint64
 	GetExecutionPayload() *ExecutionPayload
 	GetSyncAggregate() SyncAggregate
 	GetTree() (*ssz.Node, error)
+	GetBlockBodyTree() (*ssz.Node, error)
+	GetBodyRoot() ([32]byte, error)
 }
 
 type BlockRootsContainer interface {
@@ -385,6 +391,22 @@ func (b *BeaconBlockBellatrixMainnet) GetBeaconSlot() uint64 {
 
 func (b *BeaconBlockBellatrixMainnet) GetExecutionPayload() *ExecutionPayload {
 	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockBellatrixMinimal) GetBlockBodyTree() (*ssz.Node, error) {
+	return b.Body.GetTree()
+}
+
+func (b *BeaconBlockBellatrixMainnet) GetBlockBodyTree() (*ssz.Node, error) {
+	return b.Body.GetTree()
+}
+
+func (b *BeaconBlockBellatrixMinimal) GetBodyRoot() ([32]byte, error) {
+	return b.Body.HashTreeRoot()
+}
+
+func (b *BeaconBlockBellatrixMainnet) GetBodyRoot() ([32]byte, error) {
+	return b.Body.HashTreeRoot()
 }
 
 func (b *BeaconBlockBellatrixMainnet) GetSyncAggregate() SyncAggregate {
