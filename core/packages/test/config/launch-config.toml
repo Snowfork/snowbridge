@@ -77,6 +77,8 @@ cumulus_based = true
     name = "statemint-alice"
     validator = true
     command = "{{output_bin_dir}}/polkadot-parachain"
+    rpc_port = 8082
+    ws_port = 12144
 
         [[parachains.collators.env]]
         name = "RUST_LOG"
@@ -99,6 +101,8 @@ cumulus_based = true
     name = "bh-alice"
     validator = true
     command = "{{output_bin_dir}}/polkadot-parachain"
+    rpc_port = 8083
+    ws_port = 13144
 
         [[parachains.collators.env]]
         name = "RUST_LOG"
