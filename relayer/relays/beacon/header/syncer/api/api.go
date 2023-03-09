@@ -284,7 +284,7 @@ func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (state.BeaconBlock, e
 		return beaconBlock, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
-	ssz, err := blockResponse.ToSSZ(b.activeSpec)
+	ssz, err := blockResponse.ToFastSSZ(b.activeSpec)
 	if err != nil {
 		return nil, err
 	}

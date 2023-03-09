@@ -25,8 +25,8 @@ func (p SyncCommitteePeriodPayload) ToJSON() json.SyncCommitteeUpdate {
 		SyncAggregate:           p.SyncAggregate.ToJSON(),
 		SyncCommitteePeriod:     uint64(p.SyncCommitteePeriod),
 		SignatureSlot:           uint64(p.SignatureSlot),
-		BlockRootsHash:          p.BlockRootsHash.Hex(),
-		BlockRootProof:          util.ScaleBranchToString(p.BlockRootProof),
+		BlockRootsRoot:          p.BlockRootsHash.Hex(),
+		BlockRootBranch:         util.ScaleBranchToString(p.BlockRootProof),
 	}
 }
 
@@ -37,8 +37,8 @@ func (p FinalizedHeaderPayload) ToJSON() json.FinalizedHeaderUpdate {
 		FinalityBranch:  util.ScaleBranchToString(p.FinalityBranch),
 		SyncAggregate:   p.SyncAggregate.ToJSON(),
 		SignatureSlot:   uint64(p.SignatureSlot),
-		BlockRootsHash:  p.BlockRootsHash.Hex(),
-		BlockRootProof:  util.ScaleBranchToString(p.BlockRootProof),
+		BlockRootsRoot:  p.BlockRootsHash.Hex(),
+		BlockRootBranch: util.ScaleBranchToString(p.BlockRootProof),
 	}
 }
 

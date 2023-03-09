@@ -155,7 +155,7 @@ mod beacon_mainnet_tests {
 			});
 			FinalizedBeaconHeadersBlockRoot::<mock_mainnet::Test>::insert(
 				finalized_block_root,
-				finalized_update.block_roots_hash,
+				finalized_update.block_roots_root,
 			);
 
 			assert_ok!(mock_mainnet::EthereumBeaconClient::import_execution_header(

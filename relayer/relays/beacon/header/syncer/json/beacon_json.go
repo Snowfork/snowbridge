@@ -39,8 +39,8 @@ type SyncCommitteeUpdate struct {
 	SyncAggregate           SyncAggregate `json:"sync_aggregate"`
 	SyncCommitteePeriod     uint64        `json:"sync_committee_period"`
 	SignatureSlot           uint64        `json:"signature_slot"`
-	BlockRootsHash          string        `json:"block_roots_hash"`
-	BlockRootProof          []string      `json:"block_roots_proof"`
+	BlockRootsRoot          string        `json:"block_roots_root"`
+	BlockRootBranch         []string      `json:"block_roots_branch"`
 }
 
 type FinalizedHeaderUpdate struct {
@@ -49,8 +49,8 @@ type FinalizedHeaderUpdate struct {
 	FinalityBranch  []string      `json:"finality_branch"`
 	SyncAggregate   SyncAggregate `json:"sync_aggregate"`
 	SignatureSlot   uint64        `json:"signature_slot"`
-	BlockRootsHash  string        `json:"block_roots_hash"`
-	BlockRootProof  []string      `json:"block_roots_proof"`
+	BlockRootsRoot  string        `json:"block_roots_root"`
+	BlockRootBranch []string      `json:"block_roots_branch"`
 }
 
 type ProposerSlashing struct {
@@ -283,8 +283,8 @@ func (s *SyncCommitteeUpdate) RemoveLeadingZeroHashes() {
 	s.FinalizedHeader.RemoveLeadingZeroHashes()
 	s.FinalityBranch = removeLeadingZeroHashForSlice(s.FinalityBranch)
 	s.SyncAggregate.RemoveLeadingZeroHashes()
-	s.BlockRootsHash = removeLeadingZeroHash(s.BlockRootsHash)
-	s.BlockRootProof = removeLeadingZeroHashForSlice(s.BlockRootProof)
+	s.BlockRootsRoot = removeLeadingZeroHash(s.BlockRootsRoot)
+	s.BlockRootBranch = removeLeadingZeroHashForSlice(s.BlockRootBranch)
 }
 
 func (f *FinalizedHeaderUpdate) RemoveLeadingZeroHashes() {
@@ -292,8 +292,8 @@ func (f *FinalizedHeaderUpdate) RemoveLeadingZeroHashes() {
 	f.FinalizedHeader.RemoveLeadingZeroHashes()
 	f.FinalityBranch = removeLeadingZeroHashForSlice(f.FinalityBranch)
 	f.SyncAggregate.RemoveLeadingZeroHashes()
-	f.BlockRootsHash = removeLeadingZeroHash(f.BlockRootsHash)
-	f.BlockRootProof = removeLeadingZeroHashForSlice(f.BlockRootProof)
+	f.BlockRootsRoot = removeLeadingZeroHash(f.BlockRootsRoot)
+	f.BlockRootBranch = removeLeadingZeroHashForSlice(f.BlockRootBranch)
 }
 
 func (h *HeaderUpdate) RemoveLeadingZeroHashes() {

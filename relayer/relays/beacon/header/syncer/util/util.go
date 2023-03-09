@@ -129,3 +129,12 @@ func HexStringTo256Bytes(hexString string) ([256]byte, error) {
 
 	return pubkeyBytes, nil
 }
+
+// ChangeByteOrder is used to convert a byte array to little endian or big endianness.
+func ChangeByteOrder(b []byte) []byte {
+	for i := 0; i < len(b)/2; i++ {
+		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
+	}
+
+	return b
+}

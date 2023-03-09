@@ -271,7 +271,7 @@ mod beacon_minimal_tests {
 			});
 			FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(
 				finalized_block_root,
-				finalized_update.block_roots_hash,
+				finalized_update.block_roots_root,
 			);
 
 			assert_ok!(mock_minimal::EthereumBeaconClient::import_execution_header(

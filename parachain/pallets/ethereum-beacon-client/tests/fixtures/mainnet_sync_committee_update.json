@@ -551,8 +551,8 @@
  },
  "sync_committee_period": 629,
  "signature_slot": 5153693,
- "block_roots_hash": "0x2bc4a0f1b07f9758aced8e8a3883015a916164ac046e6bc31be3117f40704e1b",
- "block_roots_proof": [
+ "block_roots_root": "0x2bc4a0f1b07f9758aced8e8a3883015a916164ac046e6bc31be3117f40704e1b",
+ "block_roots_branch": [
   "0xa48959810ae0ca78a0cf4fcdfbf10085d5e1bc03109460c4b087ff75d50dbbc9",
   "0x7ac2ab4154279845bcabfff8230fa95786753eeba70581eb0501536f47086712",
   "0xeeed52815e18f21f30363a55941b40da670d895b428140fce05cdfa238ed0af8",

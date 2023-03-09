@@ -298,7 +298,7 @@ func (h *HeaderResponse) ToScale() (scale.BeaconHeader, error) {
 	}, nil
 }
 
-func (h *HeaderResponse) ToSSZ() (*state.BeaconBlockHeader, error) {
+func (h *HeaderResponse) ToFastSSZ() (*state.BeaconBlockHeader, error) {
 	slot, err := util.ToUint64(h.Slot)
 	if err != nil {
 		return nil, err
@@ -556,7 +556,11 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 	}, nil
 }
 
-func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBlock, error) {
+// ToFastSSZ can be removed once Lodestar supports returning block data as SSZ instead of JSON only.
+// Because it only returns JSON, we need this interim step where we convert the block JSON to the data
+// types that the FastSSZ lib expects. When Lodestar supports SSZ block response, we can remove all these
+// and directly unmarshal SSZ bytes to state.BeaconBlock.
+func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec) (state.BeaconBlock, error) {
 	data := b.Data.Message
 
 	slot, err := util.ToUint64(data.Slot)
@@ -608,7 +612,7 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 
 	proposerSlashings := []*state.ProposerSlashing{}
 	for _, proposerSlashing := range body.ProposerSlashings {
-		proposerSlashingSSZ, err := proposerSlashing.ToSSZ()
+		proposerSlashingSSZ, err := proposerSlashing.ToFastSSZ()
 		if err != nil {
 			return nil, err
 		}
@@ -618,7 +622,7 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 
 	attesterSlashings := []*state.AttesterSlashing{}
 	for _, attesterSlashing := range body.AttesterSlashings {
-		attesterSlashingSSZ, err := attesterSlashing.ToSSZ()
+		attesterSlashingSSZ, err := attesterSlashing.ToFastSSZ()
 		if err != nil {
 			return nil, err
 		}
@@ -628,7 +632,7 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 
 	attestations := []*state.Attestation{}
 	for _, attestation := range body.Attestations {
-		attestationSSZ, err := attestation.ToSSZ()
+		attestationSSZ, err := attestation.ToFastSSZ()
 		if err != nil {
 			return nil, err
 		}
@@ -638,7 +642,7 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 
 	deposits := []*state.Deposit{}
 	for _, deposit := range body.Deposits {
-		depositScale, err := deposit.ToSSZ()
+		depositScale, err := deposit.ToFastSSZ()
 		if err != nil {
 			return nil, err
 		}
@@ -648,7 +652,7 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 
 	voluntaryExits := []*state.SignedVoluntaryExit{}
 	for _, voluntaryExit := range body.VoluntaryExits {
-		voluntaryExitSSZ, err := voluntaryExit.ToSSZ()
+		voluntaryExitSSZ, err := voluntaryExit.ToFastSSZ()
 		if err != nil {
 			return nil, err
 		}
@@ -683,12 +687,9 @@ func (b BeaconBlockResponse) ToSSZ(activeSpec config.ActiveSpec) (state.BeaconBl
 		return nil, err
 	}
 
-	baseFeePerGas := n.Bytes()
+	// FastSSZ expects a little endian byte array
+	baseFeePerGas := util.ChangeByteOrder(n.Bytes())
 
-	// convert to little endian, ew
-	for i := 0; i < len(baseFeePerGas)/2; i++ {
-		baseFeePerGas[i], baseFeePerGas[len(baseFeePerGas)-i-1] = baseFeePerGas[len(baseFeePerGas)-i-1], baseFeePerGas[i]
-	}
 	var baseFeePerGasBytes [32]byte
 	copy(baseFeePerGasBytes[:], baseFeePerGas)
 
@@ -868,13 +869,13 @@ func (p ProposerSlashingResponse) ToScale() (scale.ProposerSlashing, error) {
 	}, nil
 }
 
-func (p ProposerSlashingResponse) ToSSZ() (*state.ProposerSlashing, error) {
-	signedHeader1, err := p.SignedHeader1.ToSSZ()
+func (p ProposerSlashingResponse) ToFastSSZ() (*state.ProposerSlashing, error) {
+	signedHeader1, err := p.SignedHeader1.ToFastSSZ()
 	if err != nil {
 		return nil, err
 	}
 
-	signedHeader2, err := p.SignedHeader2.ToSSZ()
+	signedHeader2, err := p.SignedHeader2.ToFastSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -902,13 +903,13 @@ func (a AttesterSlashingResponse) ToScale() (scale.AttesterSlashing, error) {
 	}, nil
 }
 
-func (a AttesterSlashingResponse) ToSSZ() (*state.AttesterSlashing, error) {
-	attestation1, err := a.Attestation1.ToSSZ()
+func (a AttesterSlashingResponse) ToFastSSZ() (*state.AttesterSlashing, error) {
+	attestation1, err := a.Attestation1.ToFastSSZ()
 	if err != nil {
 		return nil, err
 	}
 
-	attestation2, err := a.Attestation2.ToSSZ()
+	attestation2, err := a.Attestation2.ToFastSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -942,8 +943,8 @@ func (a AttestationResponse) ToScale() (scale.Attestation, error) {
 	}, nil
 }
 
-func (a AttestationResponse) ToSSZ() (*state.Attestation, error) {
-	data, err := a.Data.ToSSZ()
+func (a AttestationResponse) ToFastSSZ() (*state.Attestation, error) {
+	data, err := a.Data.ToFastSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -990,7 +991,7 @@ func (d SignedVoluntaryExitResponse) ToScale() (scale.SignedVoluntaryExit, error
 	}, nil
 }
 
-func (d SignedVoluntaryExitResponse) ToSSZ() (*state.SignedVoluntaryExit, error) {
+func (d SignedVoluntaryExitResponse) ToFastSSZ() (*state.SignedVoluntaryExit, error) {
 	epoch, err := util.ToUint64(d.Message.Epoch)
 	if err != nil {
 		return nil, err
@@ -1048,7 +1049,7 @@ func (d DepositResponse) ToScale() (scale.Deposit, error) {
 	}, nil
 }
 
-func (d DepositResponse) ToSSZ() (*state.Deposit, error) {
+func (d DepositResponse) ToFastSSZ() (*state.Deposit, error) {
 	proofs := [][]byte{}
 	for _, proofData := range d.Proof {
 		proofs = append(proofs, common.HexToHash(proofData).Bytes())
@@ -1097,8 +1098,8 @@ func (s SignedHeaderResponse) ToScale() (scale.SignedHeader, error) {
 	}, nil
 }
 
-func (s SignedHeaderResponse) ToSSZ() (*state.SignedBeaconBlockHeader, error) {
-	message, err := s.Message.ToSSZ()
+func (s SignedHeaderResponse) ToFastSSZ() (*state.SignedBeaconBlockHeader, error) {
+	message, err := s.Message.ToFastSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -1138,8 +1139,8 @@ func (i IndexedAttestationResponse) ToScale() (scale.IndexedAttestation, error) 
 	}, nil
 }
 
-func (i IndexedAttestationResponse) ToSSZ() (*state.IndexedAttestation, error) {
-	data, err := i.Data.ToSSZ()
+func (i IndexedAttestationResponse) ToFastSSZ() (*state.IndexedAttestation, error) {
+	data, err := i.Data.ToFastSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -1196,7 +1197,7 @@ func (a AttestationDataResponse) ToScale() (scale.AttestationData, error) {
 	}, nil
 }
 
-func (a AttestationDataResponse) ToSSZ() (*state.AttestationData, error) {
+func (a AttestationDataResponse) ToFastSSZ() (*state.AttestationData, error) {
 	slot, err := util.ToUint64(a.Slot)
 	if err != nil {
 		return nil, err
@@ -1207,12 +1208,12 @@ func (a AttestationDataResponse) ToSSZ() (*state.AttestationData, error) {
 		return nil, err
 	}
 
-	source, err := a.Source.ToSSZ()
+	source, err := a.Source.ToFastSSZ()
 	if err != nil {
 		return nil, err
 	}
 
-	target, err := a.Target.ToSSZ()
+	target, err := a.Target.ToFastSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -1243,7 +1244,7 @@ func (c CheckpointResponse) ToScale() (scale.Checkpoint, error) {
 	}, nil
 }
 
-func (c CheckpointResponse) ToSSZ() (*state.Checkpoint, error) {
+func (c CheckpointResponse) ToFastSSZ() (*state.Checkpoint, error) {
 	epoch, err := util.ToUint64(c.Epoch)
 	if err != nil {
 		return nil, err
@@ -1286,12 +1287,9 @@ func ExecutionPayloadToScale(e *state.ExecutionPayload) (scale.ExecutionPayload,
 		return scale.ExecutionPayload{}, err
 	}
 
-	for i := 0; i < len(e.BaseFeePerGas)/2; i++ {
-		e.BaseFeePerGas[i], e.BaseFeePerGas[len(e.BaseFeePerGas)-i-1] = e.BaseFeePerGas[len(e.BaseFeePerGas)-i-1], e.BaseFeePerGas[i]
-	}
-
 	baseFeePerGas := big.Int{}
-	baseFeePerGas.SetBytes(e.BaseFeePerGas[:])
+	// Change BaseFeePerGas back from little endianness to big endianness
+	baseFeePerGas.SetBytes(util.ChangeByteOrder(e.BaseFeePerGas[:]))
 
 	return scale.ExecutionPayload{
 		ParentHash:       types.NewH256(e.ParentHash[:]),

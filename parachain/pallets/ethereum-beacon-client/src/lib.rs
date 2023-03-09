@@ -91,21 +91,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxFeeRecipientSize: Get<u32>;
 		#[pallet::constant]
-		type MaxDepositDataSize: Get<u32>;
-		#[pallet::constant]
 		type MaxPublicKeySize: Get<u32>;
 		#[pallet::constant]
 		type MaxSignatureSize: Get<u32>;
-		#[pallet::constant]
-		type MaxProposerSlashingSize: Get<u32>;
-		#[pallet::constant]
-		type MaxAttesterSlashingSize: Get<u32>;
-		#[pallet::constant]
-		type MaxVoluntaryExitSize: Get<u32>;
-		#[pallet::constant]
-		type MaxAttestationSize: Get<u32>;
-		#[pallet::constant]
-		type MaxValidatorsPerCommittee: Get<u32>;
 		#[pallet::constant]
 		type MaxSlotsPerHistoricalRoot: Get<u64>;
 		#[pallet::constant]
@@ -464,8 +452,8 @@ pub mod pallet {
 
 			ensure!(
 				Self::is_valid_merkle_branch(
-					update.block_roots_hash,
-					update.block_roots_proof,
+					update.block_roots_root,
+					update.block_roots_branch,
 					config::BLOCK_ROOTS_INDEX,
 					config::BLOCK_ROOTS_DEPTH,
 					update.finalized_header.state_root
@@ -473,7 +461,7 @@ pub mod pallet {
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
-			Self::store_block_root(update.block_roots_hash, block_root);
+			Self::store_block_root(update.block_roots_root, block_root);
 			Self::store_sync_committee(next_period, update.next_sync_committee);
 			Self::store_finalized_header(block_root, update.finalized_header)?;
 
@@ -552,8 +540,8 @@ pub mod pallet {
 
 			ensure!(
 				Self::is_valid_merkle_branch(
-					update.block_roots_hash,
-					update.block_roots_proof,
+					update.block_roots_root,
+					update.block_roots_branch,
 					config::BLOCK_ROOTS_INDEX,
 					config::BLOCK_ROOTS_DEPTH,
 					update.finalized_header.state_root
@@ -561,7 +549,7 @@ pub mod pallet {
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
-			Self::store_block_root(update.block_roots_hash, block_root);
+			Self::store_block_root(update.block_roots_root, block_root);
 
 			Self::store_finalized_header(block_root, update.finalized_header)?;
 

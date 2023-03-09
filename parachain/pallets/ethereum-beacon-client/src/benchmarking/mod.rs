@@ -79,10 +79,10 @@ benchmarks! {
 
 		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
 
-		let block_update = block_update();
+		let header_update = header_update();
 
 		SyncCommittees::<T>::insert(EthereumBeaconClient::<T>::compute_current_sync_period(
-				block_update.block.slot,
+				header_update.beacon_header.slot,
 			), initial_sync_data.current_sync_committee);
 
 		let finalized_update: FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize> = finalized_header_update();
@@ -100,11 +100,11 @@ benchmarks! {
 		});
 		FinalizedBeaconHeadersBlockRoot::<T>::insert(
 			finalized_block_root,
-			finalized_update.block_roots_hash,
+			finalized_update.block_roots_root,
 		);
-	}: _(RawOrigin::Signed(caller.clone()), block_update.clone())
+	}: _(RawOrigin::Signed(caller.clone()), header_update.clone())
 	verify {
-		let block_hash: H256 = block_update.block.body.execution_payload.block_hash;
+		let block_hash: H256 = header_update.execution_header.block_hash;
 
 		<ExecutionHeaders<T>>::get(block_hash).unwrap();
 	}
