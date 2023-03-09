@@ -3,8 +3,8 @@
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-    Attestation, AttestationData, BeaconBlock, BeaconHeader, BlockUpdate, Body, Checkpoint,
-    Eth1Data, ExecutionPayload, FinalizedHeaderUpdate, InitialSync, PublicKey, SyncAggregate,
+    Attestation, AttestationData, BeaconHeader, BlockUpdate, Body, Checkpoint, Eth1Data,
+    ExecutionPayload, FinalizedHeaderUpdate, HeaderUpdate, InitialSync, PublicKey, SyncAggregate,
     SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use sp_core::U256;
@@ -149,43 +149,43 @@ pub fn header_update<
 > {
     return HeaderUpdate{
         beacon_header: BeaconBlock{
-            slot: {{HeaderUpdate.Payload.BeaconHeader.Slot}},
-            proposer_index: {{HeaderUpdate.Payload.BeaconHeader.ProposerIndex}},
-            parent_root: hex!("{{HeaderUpdate.Payload.BeaconHeader.ParentRoot}}").into(),
-            state_root: hex!("{{HeaderUpdate.Payload.BeaconHeader.StateRoot}}").into(),
-            body_root: hex!("{{HeaderUpdate.Payload.BeaconHeader.BodyRoot}}").into(),
+            slot: {{HeaderUpdate.BeaconHeader.Slot}},
+            proposer_index: {{HeaderUpdate.BeaconHeader.ProposerIndex}},
+            parent_root: hex!("{{HeaderUpdate.BeaconHeader.ParentRoot}}").into(),
+            state_root: hex!("{{HeaderUpdate.BeaconHeader.StateRoot}}").into(),
+            body_root: hex!("{{HeaderUpdate.BeaconHeader.BodyRoot}}").into(),
         },
-        execution_payload: ExecutionPayload{
-            parent_hash: hex!("{{HeaderUpdate.Payload.ExecutionPayload.ParentHash}}").into(),
-            fee_recipient: hex!("{{HeaderUpdate.Payload.ExecutionPayload.FeeRecipient}}").to_vec().try_into().expect("fee recipient too long"),
-            state_root: hex!("{{HeaderUpdate.Payload.ExecutionPayload.StateRoot}}").into(),
-            receipts_root: hex!("{{HeaderUpdate.Payload.ExecutionPayload.ReceiptsRoot}}").into(),
-            logs_bloom: hex!("{{HeaderUpdate.Payload.ExecutionPayload.LogsBloom}}").to_vec().try_into().expect("logs bloom too long"),
-            prev_randao: hex!("{{HeaderUpdate.Payload.ExecutionPayload.PrevRandao}}").into(),
-            block_number: {{HeaderUpdate.Payload.ExecutionPayload.BlockNumber}},
-            gas_limit: {{HeaderUpdate.Payload.ExecutionPayload.GasLimit}},
-            gas_used: {{HeaderUpdate.Payload.ExecutionPayload.GasUsed}},
-            timestamp: {{HeaderUpdate.Payload.ExecutionPayload.Timestamp}},
-            extra_data: hex!("{{HeaderUpdate.Payload.ExecutionPayload.ExtraData}}").to_vec().try_into().expect("extra data too long"),
-            base_fee_per_gas: U256::from({{HeaderUpdate.Payload.ExecutionPayload.BaseFeePerGas}} as u64),
-            block_hash: hex!("{{HeaderUpdate.Payload.ExecutionPayload.BlockHash}}").into(),
-            transactions_root: hex!("{{HeaderUpdate.Payload.ExecutionPayload.TransactionRoot}}").into(),
+        execution_header: ExecutionPayload{
+            parent_hash: hex!("{{HeaderUpdate.ExecutionHeader.ParentHash}}").into(),
+            fee_recipient: hex!("{{HeaderUpdate.ExecutionHeader.FeeRecipient}}").to_vec().try_into().expect("fee recipient too long"),
+            state_root: hex!("{{HeaderUpdate.ExecutionHeader.StateRoot}}").into(),
+            receipts_root: hex!("{{HeaderUpdate.ExecutionHeader.ReceiptsRoot}}").into(),
+            logs_bloom: hex!("{{HeaderUpdate.ExecutionHeader.LogsBloom}}").to_vec().try_into().expect("logs bloom too long"),
+            prev_randao: hex!("{{HeaderUpdate.ExecutionHeader.PrevRandao}}").into(),
+            block_number: {{HeaderUpdate.ExecutionHeader.BlockNumber}},
+            gas_limit: {{HeaderUpdate.ExecutionHeader.GasLimit}},
+            gas_used: {{HeaderUpdate.ExecutionHeader.GasUsed}},
+            timestamp: {{HeaderUpdate.ExecutionHeader.Timestamp}},
+            extra_data: hex!("{{HeaderUpdate.ExecutionHeader.ExtraData}}").to_vec().try_into().expect("extra data too long"),
+            base_fee_per_gas: U256::from({{HeaderUpdate.ExecutionHeader.BaseFeePerGas}} as u64),
+            block_hash: hex!("{{HeaderUpdate.ExecutionHeader.BlockHash}}").into(),
+            transactions_root: hex!("{{HeaderUpdate.ExecutionHeader.TransactionRoot}}").into(),
         },
         execution_branch: vec![
-        {{#HeaderUpdate.Payload.ExecutionBranch}}
+        {{#HeaderUpdate.ExecutionBranch}}
             hex!("{{.}}").into(),
-        {{/HeaderUpdate.Payload.ExecutionBranch}}
+        {{/HeaderUpdate.ExecutionBranch}}
         ].try_into().expect("too many branch proof items"),
         sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("{{HeaderUpdate.Payload.SyncAggregate.SyncCommitteeBits}}").to_vec().try_into().expect("too many sync committee bits"),
-            sync_committee_signature: hex!("{{HeaderUpdate.Payload.SyncAggregate.SyncCommitteeSignature}}").to_vec().try_into().expect("signature too long"),
+            sync_committee_bits: hex!("{{HeaderUpdate.SyncAggregate.SyncCommitteeBits}}").to_vec().try_into().expect("too many sync committee bits"),
+            sync_committee_signature: hex!("{{HeaderUpdate.SyncAggregate.SyncCommitteeSignature}}").to_vec().try_into().expect("signature too long"),
         },
-        signature_slot: {{HeaderUpdate.Payload.SignatureSlot}},
+        signature_slot: {{HeaderUpdate.SignatureSlot}},
         block_root_branch: vec![
-        {{#HeaderUpdate.Payload.BlockRootProof}}
+        {{#HeaderUpdate.BlockRootBranch}}
             hex!("{{.}}").into(),
-        {{/HeaderUpdate.Payload.BlockRootProof}}
+        {{/HeaderUpdate.BlockRootBranch}}
         ].try_into().expect("too many branch proof items"),
-        block_root_branch_header_root: hex!("{{HeaderUpdate.Payload.BlockRootProofFinalizedHeader}}").into(),
+        block_root_branch_header_root: hex!("{{HeaderUpdate.BlockRootBranchHeaderRoot}}").into(),
     };
 }

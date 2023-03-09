@@ -3,12 +3,13 @@ use core::array::TryFromSliceError;
 use crate::{config, ssz::*};
 use byte_slice_cast::AsByteSlice;
 use frame_support::{traits::Get, BoundedVec};
-use snowbridge_beacon_primitives::{BeaconHeader, ExecutionPayload, ForkData, SigningData, SyncAggregate, SyncCommittee};
+use snowbridge_beacon_primitives::{
+	BeaconHeader, ExecutionPayload, ForkData, SigningData, SyncAggregate, SyncCommittee,
+};
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
 	prelude::{List, Vector},
-	Bitvector, Deserialize, DeserializeError, SimpleSerialize as SimpleSerializeTrait,
-	U256,
+	Bitvector, Deserialize, DeserializeError, SimpleSerialize as SimpleSerializeTrait, U256,
 };
 
 #[derive(Debug, PartialEq)]
@@ -36,7 +37,7 @@ impl From<DeserializeError> for MerkleizationError {
 }
 
 impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
-TryFrom<ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>> for SSZExecutionPayload
+	TryFrom<ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>> for SSZExecutionPayload
 {
 	type Error = MerkleizationError;
 
@@ -57,7 +58,7 @@ TryFrom<ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>> for SS
 			extra_data: List::<u8, { config::MAX_EXTRA_DATA_BYTES }>::try_from(
 				execution_payload.extra_data.into_inner(),
 			)
-				.map_err(|_| MerkleizationError::ListError)?,
+			.map_err(|_| MerkleizationError::ListError)?,
 			base_fee_per_gas: U256::try_from_bytes_le(
 				&(execution_payload.base_fee_per_gas.as_byte_slice()),
 			)?,
@@ -82,7 +83,7 @@ impl TryFrom<BeaconHeader> for SSZBeaconBlockHeader {
 }
 
 impl<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>>
-TryFrom<SyncAggregate<SyncCommitteeBitsSize, SignatureSize>> for SSZSyncAggregate
+	TryFrom<SyncAggregate<SyncCommitteeBitsSize, SignatureSize>> for SSZSyncAggregate
 {
 	type Error = MerkleizationError;
 
@@ -113,11 +114,7 @@ pub fn hash_tree_root_execution_header<
 	LogsBloomSize: Get<u32>,
 	ExtraDataSize: Get<u32>,
 >(
-	execution_header: ExecutionPayload<
-		FeeRecipientSize,
-		LogsBloomSize,
-		ExtraDataSize,
-	>,
+	execution_header: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 ) -> Result<[u8; 32], MerkleizationError> {
 	let ssz_execution_payload: SSZExecutionPayload = execution_header.try_into()?;
 

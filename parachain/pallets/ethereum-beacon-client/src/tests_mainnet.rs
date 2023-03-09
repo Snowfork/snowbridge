@@ -1,10 +1,9 @@
 #[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
 	use crate::{
-		config, merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
-		Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedBeaconHeadersBlockRoot,
-		FinalizedHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
-		SyncCommittees, ValidatorsRoot,
+		config, merkleization, mock::*, Error, ExecutionHeaders, FinalizedBeaconHeaders,
+		FinalizedBeaconHeadersBlockRoot, FinalizedHeaderState, LatestFinalizedHeaderState,
+		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -135,8 +134,9 @@ mod beacon_mainnet_tests {
 		let current_sync_committee =
 			get_initial_sync::<mock_mainnet::Test>().current_sync_committee;
 
-		let current_period =
-			mock_mainnet::EthereumBeaconClient::compute_current_sync_period(update.block.slot);
+		let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
+			update.beacon_header.slot,
+		);
 
 		let finalized_update = get_finalized_header_update::<mock_mainnet::Test>();
 		let finalized_slot = finalized_update.finalized_header.slot;
@@ -163,8 +163,7 @@ mod beacon_mainnet_tests {
 				update.clone()
 			));
 
-			let execution_block_root: H256 =
-				update.block.body.execution_payload.block_hash.clone().into();
+			let execution_block_root: H256 = update.execution_header.block_hash.clone().into();
 
 			assert!(<ExecutionHeaders<mock_mainnet::Test>>::contains_key(execution_block_root));
 		});

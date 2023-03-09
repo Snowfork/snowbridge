@@ -4,14 +4,12 @@ mod beacon_tests {
 		config, merkleization,
 		merkleization::MerkleizationError,
 		mock::*,
-		ssz::{SSZExecutionPayload, SSZSyncAggregate, },
+		ssz::{SSZExecutionPayload, SSZSyncAggregate},
 		BeaconHeader, Error, PublicKey,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
-	use snowbridge_beacon_primitives::{
-		Attestation, AttestationData, Checkpoint, Eth1Data, ExecutionPayload, SyncAggregate,
-	};
+	use snowbridge_beacon_primitives::{ExecutionPayload, SyncAggregate};
 	use sp_core::{H256, U256};
 	use ssz_rs::prelude::Vector;
 

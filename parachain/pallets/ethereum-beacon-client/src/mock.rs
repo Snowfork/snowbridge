@@ -3,7 +3,7 @@ use crate as ethereum_beacon_client;
 use frame_support::parameter_types;
 use frame_system as system;
 use pallet_timestamp;
-use snowbridge_beacon_primitives::{AttesterSlashing, BeaconHeader, Fork, ForkVersions};
+use snowbridge_beacon_primitives::{BeaconHeader, Fork, ForkVersions};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -286,7 +286,7 @@ fn finalized_header_update_from_file<T: crate::Config>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn block_update_from_file<T: crate::Config>(
+fn header_update_from_file<T: crate::Config>(
 	name: &str,
 ) -> HeaderUpdate<
 	T::MaxFeeRecipientSize,
@@ -296,13 +296,6 @@ fn block_update_from_file<T: crate::Config>(
 	T::MaxProofBranchSize,
 	T::MaxSyncCommitteeSize,
 > {
-	let filepath = fixture_path(name);
-	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
-}
-
-fn attester_slashing_from_file<T: crate::Config>(
-	name: &str,
-) -> AttesterSlashing<T::MaxValidatorsPerCommittee, T::MaxSignatureSize> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -350,7 +343,7 @@ pub fn get_header_update<T: crate::Config>() -> HeaderUpdate<
 	T::MaxProofBranchSize,
 	T::MaxSyncCommitteeSize,
 > {
-	block_update_from_file::<T>(&add_file_prefix("block_update.json"))
+	header_update_from_file::<T>(&add_file_prefix("header_update.json"))
 }
 
 pub fn get_finalized_header_update<T: crate::Config>(
@@ -388,9 +381,4 @@ pub fn get_bls_signature_verify_test_data<T: crate::Config>() -> BLSSignatureVer
 		validators_root: initial_sync.validators_root,
 		signature_slot: finalized_update.signature_slot,
 	}
-}
-
-pub fn get_attester_slashing<T: crate::Config>(
-) -> AttesterSlashing<T::MaxValidatorsPerCommittee, T::MaxSignatureSize> {
-	attester_slashing_from_file::<T>("szz_test_attester_slashing.json")
 }

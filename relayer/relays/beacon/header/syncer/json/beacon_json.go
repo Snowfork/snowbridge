@@ -132,13 +132,13 @@ type BlockBody struct {
 }
 
 type HeaderUpdate struct {
-	BeaconHeader              BeaconHeader     `json:"block"`
+	BeaconHeader              BeaconHeader     `json:"beacon_header"`
 	ExecutionHeader           ExecutionPayload `json:"execution_header"`
 	ExecutionBranch           []string         `json:"execution_branch"`
 	SyncAggregate             SyncAggregate    `json:"sync_aggregate"`
 	SignatureSlot             uint64           `json:"signature_slot"`
-	BlockRootBranch           []string         `json:"block_root_proof"`
-	BlockRootBranchHeaderRoot string           `json:"block_root_proof_finalized_header"`
+	BlockRootBranch           []string         `json:"block_root_branch"`
+	BlockRootBranchHeaderRoot string           `json:"block_root_branch_header_root"`
 }
 
 type Attestation struct {
