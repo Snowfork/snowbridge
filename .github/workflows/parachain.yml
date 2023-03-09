@@ -13,7 +13,6 @@ on:
       - "parachain/**"
       - "!parachain/README.md"
       - "!parachain/LICENSE"
-  workflow_dispatch:
 
 jobs:
   check:
