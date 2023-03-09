@@ -1,5 +1,4 @@
 import { ethers } from "ethers"
-import { HardhatNetworkAccountUserConfig } from "hardhat/types"
 
 const DEPLOYER_PRIVATE_KEY = (process.env.DEPLOYER_PRIVATE_KEY || "").trim()
 const DEPLOYER_MNEMONIC = (
@@ -9,7 +8,7 @@ const DEPLOYER_MNEMONIC = (
 
 const balance = "350000000000000000000000000000000000000"
 
-export const accounts: HardhatNetworkAccountUserConfig[] = [
+export const accounts = [
     {
         privateKey: "0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77",
         balance,

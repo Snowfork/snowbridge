@@ -16,10 +16,13 @@ contract InboundChannel is AccessControl {
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
+    uint256 public constant GAS_BUFFER = 100000;
+
     struct Message {
         bytes origin;
         uint64 nonce;
         uint16 handler;
+        uint256 gas;
         bytes payload;
     }
 
@@ -31,6 +34,8 @@ contract InboundChannel is AccessControl {
 
     error InvalidProof();
     error InvalidNonce();
+    error InvalidHandler();
+    error NotEnoughGas();
 
     constructor(IParachainClient _parachainClient, IVault _vault, uint256 _reward) {
         _grantRole(ADMIN_ROLE, msg.sender);
@@ -39,11 +44,9 @@ contract InboundChannel is AccessControl {
         reward = _reward;
     }
 
-    function submit(
-        Message calldata message,
-        bytes32[] calldata leafProof,
-        bytes calldata parachainHeaderProof
-    ) external {
+    function submit(Message calldata message, bytes32[] calldata leafProof, bytes calldata parachainHeaderProof)
+        external
+    {
         bytes32 leafHash = keccak256(abi.encode(message));
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
         if (!parachainClient.verifyCommitment(commitment, parachainHeaderProof)) {
@@ -60,16 +63,18 @@ contract InboundChannel is AccessControl {
         // should top up the funds and have a relayer resend the message.
         vault.withdraw(message.origin, payable(msg.sender), reward);
 
-        // Check if there is known handler, otherwise fail silently.
         IRecipient handler = handlers[message.handler];
         if (address(handler) == address(0)) {
-            return;
-        } else {
-            // dispatch message
-            // TODO: Should revert on out-of-gas errors. Need to verify.
-            try handler.handle(message.origin, message.payload) {} catch {}
-            emit MessageDispatched(message.origin, message.nonce);
+            revert InvalidHandler();
         }
+
+        // Ensure relayers pass enough gas for message to execute
+        if (gasleft() < message.gas + GAS_BUFFER) {
+            revert NotEnoughGas();
+        }
+
+        try handler.handle{gas: message.gas}(message.origin, message.payload) {} catch {}
+        emit MessageDispatched(message.origin, message.nonce);
     }
 
     function updateHandler(uint16 id, IRecipient handler) external onlyRole(ADMIN_ROLE) {
@@ -77,9 +82,7 @@ contract InboundChannel is AccessControl {
         emit HandlerUpdated(id, address(handler));
     }
 
-    function updateParachainClient(
-        IParachainClient _parachainClient
-    ) external onlyRole(ADMIN_ROLE) {
+    function updateParachainClient(IParachainClient _parachainClient) external onlyRole(ADMIN_ROLE) {
         parachainClient = _parachainClient;
         emit ParachainClientUpdated(address(_parachainClient));
     }

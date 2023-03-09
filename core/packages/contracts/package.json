@@ -11,10 +11,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "pnpm build:sol && pnpm build:types && pnpm build:ffi",
+    "build": "pnpm build:sol && pnpm build:types",
     "build:sol": "forge build",
     "build:types": "typechain --target ethers-v5 'out/**/!(*.t|test).sol/!(*.abi).json' --out-dir types",
-    "build:ffi": "esbuild ./src/test/scripts/ffiWrapper.ts --bundle --platform=node --outfile=./src/test/scripts/ffiWrapper.js",
     "lint": "pnpm lint:solhint",
     "lint:solhint": "solhint 'src/**/*.sol'",
     "format": "prettier --write 'src/**/*.sol'",
