@@ -65,7 +65,7 @@ mod beacon_mainnet_tests {
 			update.attested_header.slot,
 		);
 
-		let slot = initial_sync.header.slot;
+		let slot = update.finalized_header.slot;
 		let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT); // Goerli genesis time + finalized header update time
 		let mock_pallet_time = import_time + 3600; // plus one hour
 
@@ -103,7 +103,7 @@ mod beacon_mainnet_tests {
 			update.attested_header.slot,
 		);
 
-		let slot = initial_sync.header.slot;
+		let slot = update.finalized_header.slot;
 		let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT);
 		let mock_pallet_time = import_time + 100800; // plus 28 hours
 
