@@ -20,7 +20,7 @@ build_relaychain() {
 }
 
 rebuild_cumulus(){
-    pushd $parachain_dir
+    pushd $root_dir/parachain
     mkdir -p $cumulus_dir
     cargo install \
         --git https://github.com/paritytech/cumulus \
@@ -31,7 +31,7 @@ rebuild_cumulus(){
 }
 
 rebuild_relaychain(){
-    pushd $parachain_dir
+    pushd $root_dir/parachain
     mkdir -p $relaychain_dir
     cargo install \
         --git https://github.com/paritytech/polkadot \
@@ -39,45 +39,6 @@ rebuild_relaychain(){
         --locked \
         --root $relaychain_dir #add version path to root to avoid recompiling when switch between versions 
     popd
-}
-
-# Only for debug purpose when we need to do some customization in relaychain
-build_relaychain_from_source(){
-    relaychain_src_dir="$relaychain_dir/src"
-    if [ ! -d "$relaychain_src_dir" ] ; then
-        echo "clone polkadot project to $relaychain_src_dir"
-        git clone https://github.com/paritytech/polkadot.git $relaychain_src_dir
-    fi
-    pushd $relaychain_src_dir
-    git switch release-$relaychain_version
-    cargo build --release
-    cp "$relaychain_src_dir/target/release/polkadot" "$output_bin_dir"
-    popd
-}
-
-build_parachain()
-{
-    echo "Runtime is $parachain_runtime"
-
-    echo "Building snowbridge parachain"
-    cd $parachain_dir
-
-    cargo build \
-        --manifest-path Cargo.toml \
-        --release \
-        --no-default-features \
-        --features "${parachain_runtime}-native,rococo-native" \
-        --bin snowbridge
-    cp "$parachain_dir/target/release/snowbridge" "$output_bin_dir"
-
-    echo "Building query tool"
-    cargo build \
-        --manifest-path tools/query-events/Cargo.toml \
-        --release --features parachain-snowbase \
-        --bin snowbridge-query-events
-    cp "$parachain_dir/target/release/snowbridge-query-events" "$output_bin_dir"
-
-    cd -
 }
 
 build_relayer()
@@ -91,7 +52,6 @@ install_binary() {
     echo "Building and installing binaries."
     build_cumulus
     build_relaychain
-    build_parachain
     build_relayer
 }
 

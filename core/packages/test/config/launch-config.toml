@@ -66,6 +66,33 @@ default_args = [
 #    validator = true
 #    args = ["--enable-offchain-indexing=true","--pruning=archive"]
 
+## Bridge Hub
+[[parachains]]
+id = 1013
+add_to_genesis = true
+chain_spec_path = "{{output_dir}}/spec.json"
+cumulus_based = true
+
+    # run alice as parachain collator
+    [[parachains.collators]]
+    name = "bh-alice"
+    validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
+    rpc_port = 8081
+    ws_port = 11144
+    args = ["--enable-offchain-indexing=true","--pruning=archive"]
+
+        [[parachains.collators.env]]
+        name = "RUST_LOG"
+        value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace"
+
+    # run bob as parachain collator
+    [[parachains.collators]]
+    name = "bh-bob"
+    validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
+    args = ["--enable-offchain-indexing=true","--pruning=archive"]
+
 ## Statemine
 [[parachains]]
 id = 2000
@@ -89,32 +116,6 @@ cumulus_based = true
     name = "statemine-bob"
     validator = true
     command = "{{output_bin_dir}}/polkadot-parachain"
-
-## Bridge Hub
-[[parachains]]
-id = 1013
-chain = "bridge-hub-rococo-local"
-cumulus_based = true
-
-    # run alice as parachain collator
-    [[parachains.collators]]
-    name = "bh-alice"
-    validator = true
-    command = "{{output_bin_dir}}/polkadot-parachain"
-    rpc_port = 8083
-    ws_port = 13144
-    args = ["--enable-offchain-indexing=true","--pruning=archive"]
-
-        [[parachains.collators.env]]
-        name = "RUST_LOG"
-        value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace"
-
-    # run bob as parachain collator
-    [[parachains.collators]]
-    name = "bh-bob"
-    validator = true
-    command = "{{output_bin_dir}}/polkadot-parachain"
-    args = ["--enable-offchain-indexing=true","--pruning=archive"]
 
 # Statemine -> BridgeHub
 [[hrmp_channels]]
