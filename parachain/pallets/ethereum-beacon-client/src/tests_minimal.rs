@@ -1,8 +1,8 @@
 #[cfg(feature = "minimal")]
 mod beacon_minimal_tests {
 	use crate::{
-		config, merkleization, merkleization::MerkleizationError, mock::*,
-		pallet::FinalizedBeaconHeadersBlockRoot, ssz::SSZBeaconBlockBody, Error,
+		config, merkleization, mock::*,
+		pallet::FinalizedBeaconHeadersBlockRoot, Error,
 		ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
 		LatestExecutionHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
 		SyncCommittees, ValidatorsRoot,
@@ -212,7 +212,7 @@ mod beacon_minimal_tests {
 					mock_minimal::RuntimeOrigin::signed(1),
 					update.clone()
 				),
-				Error::<mock_minimal::Test>::InvalidFinalizedHeaderUpdate
+				Error::<mock_minimal::Test>::DuplicateFinalizedHeaderUpdate
 			);
 		});
 	}

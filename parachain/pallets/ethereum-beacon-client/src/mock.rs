@@ -3,7 +3,7 @@ use crate as ethereum_beacon_client;
 use frame_support::parameter_types;
 use frame_system as system;
 use pallet_timestamp;
-use snowbridge_beacon_primitives::{AttesterSlashing, BeaconHeader, Body, Fork, ForkVersions};
+use snowbridge_beacon_primitives::{AttesterSlashing, BeaconHeader, Fork, ForkVersions};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -244,26 +244,6 @@ pub fn new_tester<T: crate::Config>() -> sp_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<T>().unwrap().into()
 }
 
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct BlockBodyTest<T: crate::Config> {
-	pub body: Body<
-		T::MaxFeeRecipientSize,
-		T::MaxLogsBloomSize,
-		T::MaxExtraDataSize,
-		T::MaxDepositDataSize,
-		T::MaxPublicKeySize,
-		T::MaxSignatureSize,
-		T::MaxProofBranchSize,
-		T::MaxProposerSlashingSize,
-		T::MaxAttesterSlashingSize,
-		T::MaxVoluntaryExitSize,
-		T::MaxAttestationSize,
-		T::MaxValidatorsPerCommittee,
-		T::MaxSyncCommitteeSize,
-	>,
-	pub result: H256,
-}
-
 pub struct BLSSignatureVerifyTest {
 	pub sync_committee_bits: Vec<u8>,
 	pub sync_committee_signature: Vec<u8>,
@@ -320,27 +300,6 @@ fn block_update_from_file<T: crate::Config>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn beacon_block_body_from_file<T: crate::Config>(
-	name: &str,
-) -> Body<
-	T::MaxFeeRecipientSize,
-	T::MaxLogsBloomSize,
-	T::MaxExtraDataSize,
-	T::MaxDepositDataSize,
-	T::MaxPublicKeySize,
-	T::MaxSignatureSize,
-	T::MaxProofBranchSize,
-	T::MaxProposerSlashingSize,
-	T::MaxAttesterSlashingSize,
-	T::MaxVoluntaryExitSize,
-	T::MaxAttestationSize,
-	T::MaxValidatorsPerCommittee,
-	T::MaxSyncCommitteeSize,
-> {
-	let filepath = fixture_path(name);
-	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
-}
-
 fn attester_slashing_from_file<T: crate::Config>(
 	name: &str,
 ) -> AttesterSlashing<T::MaxValidatorsPerCommittee, T::MaxSignatureSize> {
@@ -383,7 +342,8 @@ pub fn get_committee_sync_ssz_test_data<T: crate::Config>() -> SyncCommittee<T::
 	sync_committee_from_file::<T>(filename.as_str())
 }
 
-pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
+pub fn get_header_update<T: crate::Config>() -> HeaderUpdate<
+	T::MaxFeeRecipientSize,
 	T::MaxLogsBloomSize,
 	T::MaxExtraDataSize,
 	T::MaxSignatureSize,

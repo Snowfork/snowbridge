@@ -3,11 +3,7 @@ use core::array::TryFromSliceError;
 use crate::{config, ssz::*};
 use byte_slice_cast::AsByteSlice;
 use frame_support::{traits::Get, BoundedVec};
-use snowbridge_beacon_primitives::{
-	BeaconHeader,
-	ExecutionPayload, ForkData,  SigningData,
-	SyncCommittee,
-};
+use snowbridge_beacon_primitives::{BeaconHeader, ExecutionPayload, ForkData, SigningData, SyncAggregate, SyncCommittee};
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
 	prelude::{List, Vector},
@@ -81,6 +77,25 @@ impl TryFrom<BeaconHeader> for SSZBeaconBlockHeader {
 			parent_root: beacon_header.parent_root.as_bytes().try_into()?,
 			state_root: beacon_header.state_root.as_bytes().try_into()?,
 			body_root: beacon_header.body_root.as_bytes().try_into()?,
+		})
+	}
+}
+
+impl<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>>
+TryFrom<SyncAggregate<SyncCommitteeBitsSize, SignatureSize>> for SSZSyncAggregate
+{
+	type Error = MerkleizationError;
+
+	fn try_from(
+		sync_aggregate: SyncAggregate<SyncCommitteeBitsSize, SignatureSize>,
+	) -> Result<Self, Self::Error> {
+		Ok(SSZSyncAggregate {
+			sync_committee_bits: Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(
+				&sync_aggregate.sync_committee_bits,
+			)?,
+			sync_committee_signature: Vector::<u8, 96>::from_iter(
+				sync_aggregate.sync_committee_signature,
+			),
 		})
 	}
 }
