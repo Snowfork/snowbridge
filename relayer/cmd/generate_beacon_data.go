@@ -132,10 +132,10 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get next header update to get sync aggregate: %w", err)
 		}
-		headerUpdateScale.SyncAggregate = nextHeaderUpdateScale.Block.Body.SyncAggregate
-		headerUpdateScale.SignatureSlot = nextHeaderUpdateScale.Block.Slot
+		headerUpdateScale.Payload.SyncAggregate = nextHeaderUpdateScale.NextSyncAggregate
+		headerUpdateScale.Payload.SignatureSlot = nextHeaderUpdateScale.Payload.BeaconHeader.Slot
 		headerUpdate := headerUpdateScale.ToJSON()
-		err = writeJSONToFile(headerUpdate, activeSpec.ToString()+"_block_update")
+		err = writeJSONToFile(headerUpdate, activeSpec.ToString()+"_header_update")
 		if err != nil {
 			return fmt.Errorf("write block update to file: %w", err)
 		}

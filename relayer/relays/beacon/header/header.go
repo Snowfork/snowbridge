@@ -229,13 +229,13 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeader
 
 func (h *Header) SyncHeader(ctx context.Context, headerUpdate scale.HeaderUpdate, slotsLeft uint64) error {
 	log.WithFields(log.Fields{
-		"slot":                 headerUpdate.Block.Slot,
+		"slot":                 headerUpdate.Payload.BeaconHeader.Slot,
 		"slotsLeftToSync":      slotsLeft,
-		"executionBlockRoot":   headerUpdate.Block.Body.ExecutionPayload.BlockHash.Hex(),
-		"executionBlockNumber": headerUpdate.Block.Body.ExecutionPayload.BlockNumber,
+		"executionBlockRoot":   headerUpdate.Payload.ExecutionHeader.BlockHash.Hex(),
+		"executionBlockNumber": headerUpdate.Payload.ExecutionHeader.BlockNumber,
 	}).Info("Syncing header between last two finalized headers")
 
-	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
+	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate.Payload)
 	if err != nil {
 		return fmt.Errorf("write to parachain: %w", err)
 	}
@@ -325,7 +325,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 				"epoch": epoch - 1,
 			}).Debug("syncing header in epoch")
 			for _, header := range headersToSync {
-				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Block.Slot))
+				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Payload.BeaconHeader.Slot))
 				if err != nil {
 					return err
 				}
@@ -365,8 +365,8 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 			}
 		}
 
-		headerUpdate.SyncAggregate = nextHeaderUpdate.Block.Body.SyncAggregate
-		headerUpdate.SignatureSlot = nextHeaderUpdate.Block.Slot
+		headerUpdate.Payload.SyncAggregate = nextHeaderUpdate.NextSyncAggregate
+		headerUpdate.Payload.SignatureSlot = nextHeaderUpdate.Payload.BeaconHeader.Slot
 
 		headersToSync = append(headersToSync, headerUpdate)
 		headerUpdate = nextHeaderUpdate
@@ -374,14 +374,14 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 		// last slot to be synced, sync headers
 		if currentSlot >= toSlot {
 			for _, header := range headersToSync {
-				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Block.Slot))
+				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Payload.BeaconHeader.Slot))
 				if err != nil {
 					return err
 				}
 			}
 		}
 
-		currentSlot = uint64(nextHeaderUpdate.Block.Slot)
+		currentSlot = uint64(nextHeaderUpdate.Payload.BeaconHeader.Slot)
 	}
 
 	return nil

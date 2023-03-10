@@ -1,10 +1,9 @@
 #[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
 	use crate::{
-		config, merkleization, merkleization::MerkleizationError, mock::*, ssz::SSZBeaconBlockBody,
-		Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedBeaconHeadersBlockRoot,
-		FinalizedHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
-		SyncCommittees, ValidatorsRoot,
+		config, merkleization, mock::*, Error, ExecutionHeaders, FinalizedBeaconHeaders,
+		FinalizedBeaconHeadersBlockRoot, FinalizedHeaderState, LatestFinalizedHeaderState,
+		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -66,7 +65,7 @@ mod beacon_mainnet_tests {
 			update.attested_header.slot,
 		);
 
-		let slot = initial_sync.header.slot;
+		let slot = update.finalized_header.slot;
 		let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT); // Goerli genesis time + finalized header update time
 		let mock_pallet_time = import_time + 3600; // plus one hour
 
@@ -104,7 +103,7 @@ mod beacon_mainnet_tests {
 			update.attested_header.slot,
 		);
 
-		let slot = initial_sync.header.slot;
+		let slot = update.finalized_header.slot;
 		let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT);
 		let mock_pallet_time = import_time + 100800; // plus 28 hours
 
@@ -135,8 +134,9 @@ mod beacon_mainnet_tests {
 		let current_sync_committee =
 			get_initial_sync::<mock_mainnet::Test>().current_sync_committee;
 
-		let current_period =
-			mock_mainnet::EthereumBeaconClient::compute_current_sync_period(update.block.slot);
+		let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
+			update.beacon_header.slot,
+		);
 
 		let finalized_update = get_finalized_header_update::<mock_mainnet::Test>();
 		let finalized_slot = finalized_update.finalized_header.slot;
@@ -155,7 +155,7 @@ mod beacon_mainnet_tests {
 			});
 			FinalizedBeaconHeadersBlockRoot::<mock_mainnet::Test>::insert(
 				finalized_block_root,
-				finalized_update.block_roots_hash,
+				finalized_update.block_roots_root,
 			);
 
 			assert_ok!(mock_mainnet::EthereumBeaconClient::import_execution_header(
@@ -163,8 +163,7 @@ mod beacon_mainnet_tests {
 				update.clone()
 			));
 
-			let execution_block_root: H256 =
-				update.block.body.execution_payload.block_hash.clone().into();
+			let execution_block_root: H256 = update.execution_header.block_hash.clone().into();
 
 			assert!(<ExecutionHeaders<mock_mainnet::Test>>::contains_key(execution_block_root));
 		});
@@ -180,22 +179,6 @@ mod beacon_mainnet_tests {
 		assert_eq!(
 			hash_root,
 			hex!("99daf976424b62249669bc842e9b8e5a5a2960d1d81d98c3267f471409c3c841").into()
-		);
-	}
-
-	#[test]
-	pub fn test_hash_block_body() {
-		let block_update = get_beacon_block_body::<mock_minimal::Test>();
-		let payload: Result<SSZBeaconBlockBody, MerkleizationError> = block_update.try_into();
-		assert_ok!(&payload);
-
-		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
-		assert_ok!(&hash_root_result);
-
-		let hash_root: H256 = hash_root_result.unwrap().into();
-		assert_eq!(
-			hash_root,
-			hex!("1208701b694c575848ffaf81ce56e3dadc7746601cab9d7a8cde93ca041a4a13").into()
 		);
 	}
 

@@ -3,9 +3,8 @@
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-	Attestation, AttestationData, BeaconBlock, BeaconHeader, BlockUpdate, Body, Checkpoint,
-	Eth1Data, ExecutionPayload, FinalizedHeaderUpdate, InitialSync, PublicKey, SyncAggregate,
-	SyncCommittee, SyncCommitteePeriodUpdate,
+	BeaconHeader, ExecutionPayload, FinalizedHeaderUpdate, HeaderUpdate, InitialSync, PublicKey,
+	SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use sp_core::U256;
 use sp_std::vec;
@@ -16,11 +15,11 @@ pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
 
 	return InitialSync{
         header: BeaconHeader{
-            slot: 216,
-            proposer_index: 1,
-            parent_root: hex!("4c626195440e400fdc3a30270dadd75fc1678f601cf87687b545d6a1e23ee685").into(),
-            state_root: hex!("056e45a3f966785da94d1579018f09650f7063a04227e20b4c2a648b68988d4c").into(),
-            body_root: hex!("49001673147a98309084f5dcd0c8ef48500c5c7593159293029376ff0c70a9b1").into(),
+            slot: 200,
+            proposer_index: 2,
+            parent_root: hex!("ab567bdc9d0d0ee3aff95dc66511af7351d91b02bda2c3f7a6c4192e6075f976").into(),
+            state_root: hex!("73cb8a053c734d92da7ba6eed9210bb099ac56e74c7c5a7269310898b80226be").into(),
+            body_root: hex!("5c2029e17e0e074502f9e81b37610f704cc0b6a803c99ca66eba5a1332c72cae").into(),
         },
         current_sync_committee: SyncCommittee{
             pubkeys: vec![
@@ -61,10 +60,10 @@ pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
         },
         current_sync_committee_branch: vec![
                 hex!("6e3b291c7aa80c720a25e601cdb538dda7155fe7330d2b5aa1f33401c63cf8b9").into(),
-                hex!("f8d2de71cc4152339c1101aa4c169ac0caa3e63817f3a1c6ab7f2d61f6c926e0").into(),
-                hex!("4de05d85c13cdafe23b8f7d0b12dfe6cf1960f0f01b050a99932d544d47577cb").into(),
-                hex!("b86c7fefd5aefc50eaca8665680eff4e322db7bc557334df7ec96dd3ffdb5427").into(),
-                hex!("ce95ed5e1749c2ca40ead1998f91f8de8d022458d734993a5a31837d3b27f631").into(),
+                hex!("c6b55d6b09cfa95f704029a868cbd0cf134eb760f320405752081ef4fa4c18e9").into(),
+                hex!("04b2bc5912e7c803a7ac48ccbdaa5533d424a14ca873aaf87145fd211d28ff7e").into(),
+                hex!("4658e5975fd9c7ff18ce8202289d4114fde3a7d985eaec2a281e7fadedd67eac").into(),
+                hex!("f230f50ffcb833561d6732695d178f80f0bd99ec5b9b26ceae253825f7699ced").into(),
         ].try_into().expect("too many branch proof items"),
         validators_root: hex!("270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69").into(),
         import_time: time_now + 97200, // now + 27 hour sync committee period
@@ -80,9 +79,9 @@ pub fn sync_committee_update<
         attested_header: BeaconHeader {
             slot: 208,
             proposer_index: 4,
-            parent_root: hex!("185c4b5b20d1a8aa6e09fbfa34c7e424c14189677e7e35c91f8a12d9f2fc4c54").into(),
-            state_root: hex!("7ca712a4e14fd5411e3674696a8d067c3acb3e31715b5c91f67eecd53eda2b75").into(),
-            body_root: hex!("53404be3eb579982a31f14381d3740b62d25049baec06cca7f561c81e5d1c208").into(),
+            parent_root: hex!("b316179f69cf2be27ee7044df0b9f44b792deb91c7664c939956d0d017db421e").into(),
+            state_root: hex!("d575509adcd7a596da7ce306eaa41e04b9699ee1f26f7dd2fc44c17b7d84f96f").into(),
+            body_root: hex!("0d2d1b55270bce3232c56afe54b679a625d73eb1dd310a92b266d24d54b38125").into(),
         },
         next_sync_committee: SyncCommittee {
             pubkeys: vec![
@@ -123,39 +122,39 @@ pub fn sync_committee_update<
         },
         next_sync_committee_branch: vec![
             hex!("c4f39befd9b88e6e3f73e13c1d97cddbc6d6d7a57301f2f8de8c78894ba2947b").into(),
-            hex!("879d6110ad12fbf45a3e0c252fe82b9e7c9233bbfb9d449bdec61d171bd0c730").into(),
-            hex!("3e7e43d069ca0f1a0b07ff084845e473f3a27ced2f9d2986fd359f522f283f58").into(),
-            hex!("af8b6c2031f4416d94bd15b5b99c00727f7e6bd5dfdbc72562c652737f787086").into(),
-            hex!("24b381ed8ec9d704469da41c4a71cd7c7dd556f6e8c337a74501ab659a92094c").into(),
+            hex!("db604d9db0f3ece524ccc55294062dd538efe1674bf6d1c6725bad70127eec35").into(),
+            hex!("7f3b6f9d1d413e91fdc814ed8a1448aeb3934cc98d499496a80c50bd1ba5d86b").into(),
+            hex!("34181f50415dc2af5efeffae79cbb99316b5efcf5fdae5f07267c6db5cda1ad3").into(),
+            hex!("15a182f6a09df7ee2c91003d0077de5150878ade3fb802d3a07100c95fe7b328").into(),
         ].try_into().expect("too many branch proof items"),
         finalized_header: BeaconHeader{
             slot: 192,
             proposer_index: 5,
-            parent_root: hex!("2ef59091ad9d08eca5576d9c6326d91c9cd8410e4d1d57642ff506f219366d74").into(),
-            state_root: hex!("eb2c6e75b18c515ba0b7c4d28aef63e434dceff60dcc0bba9bdcab5ef713c4cd").into(),
-            body_root: hex!("0c2e222c43ca25d489cabb9853bebb5f6e745215c07de9d0f0fb95551234de9f").into(),
+            parent_root: hex!("497c585329b632e1b143b637a4d50332fe64537009716274aac718e3e1f71167").into(),
+            state_root: hex!("a167e61746e5b7e03270e7d436c17bf122d72f58d29e21f7fadafcd47fa55271").into(),
+            body_root: hex!("771b0681987c94ad90048c6c140c877b0c82b9c93dc2465ac9533b4fbe4bb7f2").into(),
         },
         finality_branch: vec![
             hex!("1800000000000000000000000000000000000000000000000000000000000000").into(),
             hex!("10c726fac935bf9657cc7476d3cfa7bedec5983dcfb59e8a7df6d0a619e108d7").into(),
             hex!("2eba56447b4d9f2467804b7d9165bfc03934bb98f3a4a09f7d6cfd7bb2c08c55").into(),
-            hex!("3e7e43d069ca0f1a0b07ff084845e473f3a27ced2f9d2986fd359f522f283f58").into(),
-            hex!("af8b6c2031f4416d94bd15b5b99c00727f7e6bd5dfdbc72562c652737f787086").into(),
-            hex!("24b381ed8ec9d704469da41c4a71cd7c7dd556f6e8c337a74501ab659a92094c").into(),
+            hex!("7f3b6f9d1d413e91fdc814ed8a1448aeb3934cc98d499496a80c50bd1ba5d86b").into(),
+            hex!("34181f50415dc2af5efeffae79cbb99316b5efcf5fdae5f07267c6db5cda1ad3").into(),
+            hex!("15a182f6a09df7ee2c91003d0077de5150878ade3fb802d3a07100c95fe7b328").into(),
         ].try_into().expect("too many branch proof items"),
         sync_aggregate: SyncAggregate{
             sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("too many sync committee bits"),
-            sync_committee_signature: hex!("a3abb787d4dca690e0f59a1d0d1983b667374bc416b987347030b63fb653c017ef3c562cab15a344acf149ade04307ee16c93f2bc52609b23abd6a6e04192ba924fd30fd683498814112617a925ffe2e1184fc13461249c1ff5ef3bbbb985f6d").to_vec().try_into().expect("signature too long"),
+            sync_committee_signature: hex!("a9fc120c6294911bf03c73faf81dd8e0f0f8ae1f93f86d532e8cbffaa01379f43314e6f339f721d9b261837946a17e060f8e318ce81942a79107c988ec0ae7867f22ee7d1baf9b982d3499f4bf87cbf6ef6fd2362a7711d10dd193ca637e33b9").to_vec().try_into().expect("signature too long"),
         },
         sync_committee_period: 3,
         signature_slot: 209,
-        block_roots_hash: hex!("2bb5d4fcb468b19aaf54b2356810aa6f03e043d0c7a641b11133d17d2402c141").into(),
-        block_roots_proof: vec![
-            hex!("03c399d8a611cbc47280f6e32d38aa0fee0675093e0c7fa0652e1c1c6c8e63ac").into(),
-            hex!("71f874d608a29f108677f1aebd164c2d5e76c6490d9c030fb0490b7ef814d055").into(),
-            hex!("e0fc1ad228ce5ec0a2183baf4894a301d7463b844716abebef12a1266d58d699").into(),
+        block_roots_root: hex!("f4d7598c249fba7c65f26bc2ddae4fef09a4b200fc4d91143c7d0b38e99ff376").into(),
+        block_roots_branch: vec![
+            hex!("f0772725d68f543e36e2cd0b07c88be5a799ddbc7672ab59900d4ab296c67197").into(),
+            hex!("9b0dae7ad28ddb6f78514e711527a477cc2eacbef755a92ee6e5add41403888a").into(),
+            hex!("77128194df217d1a536785d1004dd64bbcf24f06e4b28a010b5acca487c7e252").into(),
             hex!("24e95cd68d21c97fce75ed53754a633c53583b4902b90d055d4b09cb3ed2d3aa").into(),
-            hex!("84dc394303560ffb659357af762e2efce64ce619c391892831ef5e68093cb321").into(),
+            hex!("9a97ae266eb3bcc182faad3724913b69dba4c838928f56d1a72710691a661b64").into(),
         ].try_into().expect("too many branch proof items"),
     };
 }
@@ -167,148 +166,101 @@ pub fn finalized_header_update<
 >() -> FinalizedHeaderUpdate<SignatureSize, ProofSize, SyncCommitteeSize> {
 	return FinalizedHeaderUpdate{
         attested_header: BeaconHeader {
-            slot: 232,
-            proposer_index: 5,
-            parent_root: hex!("758c08c7e45b3dd372b7c31cba1c65c084883a885fb2932f566167ce8cad92b5").into(),
-            state_root: hex!("3c1591e61f48740994d3682cd21ecde60a4a4b42614c8450470d4d2090418cf3").into(),
-            body_root: hex!("eefaf1152971f718cb3d0ead944e4142a52da8f5f081e706d5c750deac0d5978").into(),
-        },
-        finalized_header: BeaconHeader{
             slot: 216,
             proposer_index: 1,
-            parent_root: hex!("4c626195440e400fdc3a30270dadd75fc1678f601cf87687b545d6a1e23ee685").into(),
-            state_root: hex!("056e45a3f966785da94d1579018f09650f7063a04227e20b4c2a648b68988d4c").into(),
-            body_root: hex!("49001673147a98309084f5dcd0c8ef48500c5c7593159293029376ff0c70a9b1").into(),
+            parent_root: hex!("4020995a48095741a25a7f1e6d584a82fd612f64859dca246bc9b3f6581d12aa").into(),
+            state_root: hex!("bc32a12c080feed42674fb2266ef6630f21a3bb27d2e3eeeb8b9a805eaae300b").into(),
+            body_root: hex!("bb159dd6d107afb139e1e8ed51c9a832ea90b6c42528d120ff5ba4bcadc634cd").into(),
+        },
+        finalized_header: BeaconHeader{
+            slot: 200,
+            proposer_index: 2,
+            parent_root: hex!("ab567bdc9d0d0ee3aff95dc66511af7351d91b02bda2c3f7a6c4192e6075f976").into(),
+            state_root: hex!("73cb8a053c734d92da7ba6eed9210bb099ac56e74c7c5a7269310898b80226be").into(),
+            body_root: hex!("5c2029e17e0e074502f9e81b37610f704cc0b6a803c99ca66eba5a1332c72cae").into(),
         },
         finality_branch: vec![
-            hex!("1b00000000000000000000000000000000000000000000000000000000000000").into(),
+            hex!("1900000000000000000000000000000000000000000000000000000000000000").into(),
             hex!("10c726fac935bf9657cc7476d3cfa7bedec5983dcfb59e8a7df6d0a619e108d7").into(),
             hex!("2eba56447b4d9f2467804b7d9165bfc03934bb98f3a4a09f7d6cfd7bb2c08c55").into(),
-            hex!("fd208630fcb52072dfec1d5fd88e6eb11b1473141a570df0be22643f20aabfab").into(),
-            hex!("7a24beb995c072f82522f18f02e9c28049afa7fca5421a67df5f772559767564").into(),
-            hex!("d7fec40856dc66b0a1d9bffd5d73aa7e046e2384456730eb374b0cf95fd4490f").into(),
+            hex!("bfc2809829f9da224e6846933fe0f1addf6ce66702fab8be33e53887cc8242e4").into(),
+            hex!("327c4336daa90bf3c6733281f93ef87dd66ca87fc5731509b72926301a1bf4d7").into(),
+            hex!("82e90a0a6764bf036a50c170d62a335ec9e16c43f21396dbf2ba4c2e6889ae85").into(),
         ].try_into().expect("too many branch proof items"),
         sync_aggregate: SyncAggregate{
             sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("too many sync committee bits"),
-            sync_committee_signature: hex!("8697e5adf70d45e41ea3f0f3e15607993c2888ec40eb1553e7ec3acbdb386a6acaf2246a4eebfee26a40432eecea214f08155124980009e9dc929ab2ad962295e9aaa1fe9d57ba0c4630d5bc489680eb5122479a1fabc0faf27de2e953547f75").to_vec().try_into().expect("signature too long"),
+            sync_committee_signature: hex!("8951893b2b640e71429656fcd76c32ead866521e28abd543e863e3581f463f067d47841a61fb007390d5656ab6c8719803d09bcc6b8e7d5e9037527a130284ca12cd6b57adadf845dadee0df3b94189de19f2026347688f63ac8b3ef3d8c5353").to_vec().try_into().expect("signature too long"),
         },
-        signature_slot: 233,
-        block_roots_hash: hex!("ed9b426a06683ac4c10d95756da5a583371220d9173cfcf29b2b454447372ba9").into(),
-        block_roots_proof: vec![
-            hex!("5a37e5ea830c9074d4a7055f51791b17f2f894f801bdd72399480c0e4738e893").into(),
-            hex!("ed9a8665714d87df3e991aec903ab951545161be0c1eb18173167cb222c75086").into(),
-            hex!("562e789ca67052ccbd0e72e8dbd859a5e1eb162160b5882fa7d123a6a8cec43d").into(),
-            hex!("e7fe1dd46977d2e03b94b6ce117e30acb1abd8a2097b3f43e94aa12c57d22f26").into(),
-            hex!("eb28790335bfe2e6fc2d43e34416cc7a4be33db80e063f86063af6a99126c591").into(),
+        signature_slot: 217,
+        block_roots_root: hex!("cad4079987df885cf6abfc9a9b9f0246a5b3c1f0482984e0a56ef45c7d61d0f8").into(),
+        block_roots_branch: vec![
+            hex!("5083c8e8187533037a9651ca553b84c95bb0926526a63d0a998d3e224e1fe73a").into(),
+            hex!("f4f97a1ce9eab3921d12a717a03e0be24653526fff7ae56a431ed149aba54efc").into(),
+            hex!("2f4117e62050ee570b92bbe8fe8a4698225dea683287e1ab74bca230da2be698").into(),
+            hex!("ea18f0e7e613d0e6ba96f2220331878c67069901d6a4aefc6c67ee195fc2c9b4").into(),
+            hex!("56c631e11f081d15d8ef709720942e26469c2d5681211a632f3b3adfa59b4f2e").into(),
         ].try_into().expect("too many branch proof items")
     };
 }
 
-pub fn block_update<
+pub fn header_update<
 	FeeRecipientSize: Get<u32>,
 	LogsBloomSize: Get<u32>,
 	ExtraDataSize: Get<u32>,
-	DepositDataSize: Get<u32>,
-	PublicKeySize: Get<u32>,
 	SignatureSize: Get<u32>,
 	ProofSize: Get<u32>,
-	ProposerSlashingSize: Get<u32>,
-	AttesterSlashingSize: Get<u32>,
-	VoluntaryExitSize: Get<u32>,
-	AttestationSize: Get<u32>,
-	ValidatorCommitteeSize: Get<u32>,
 	SyncCommitteeSize: Get<u32>,
->() -> BlockUpdate<
+>() -> HeaderUpdate<
 	FeeRecipientSize,
 	LogsBloomSize,
 	ExtraDataSize,
-	DepositDataSize,
-	PublicKeySize,
 	SignatureSize,
 	ProofSize,
-	ProposerSlashingSize,
-	AttesterSlashingSize,
-	VoluntaryExitSize,
-	AttestationSize,
-	ValidatorCommitteeSize,
 	SyncCommitteeSize,
 > {
-	return BlockUpdate{
-        block: BeaconBlock{
-            slot: 214,
+	return HeaderUpdate{
+        beacon_header: BeaconHeader{
+            slot: 198,
             proposer_index: 3,
-            parent_root: hex!("04cf9164c9d06c6d7a6d9fa21f0f199b9bf429794d5549ff11fe867f9f3a903f").into(),
-            state_root: hex!("bb297d601613d629f33f84019eeb1759b2e1b0d8e262f9a6892e3331f6d22d80").into(),
-            body: Body{
-                randao_reveal: hex!("819e25760a789e7a2783f8758aacf6953c5c09464c4cee31d7044b81e6b7946987d75210635dcbcc68c4a3e7910cbc611994adad53ec987e4ebcfa17de7a1c2ebd57a322f7048ced98ebf45346e18f1713df6d00d3e592a7392479340d4309b3").to_vec().try_into().expect("randao reveal too long"),
-                eth1_data: Eth1Data{
-                    deposit_root: hex!("6a0f9d6cb0868daa22c365563bb113b05f7568ef9ee65fdfeb49a319eaf708cf").into(),
-                    deposit_count: 8,
-                    block_hash: hex!("6f13d8e3bc84f30d3cd546587cde300b4e60890e5ee14c9529fd27b83cf09361").into(),
-                },
-                graffiti: hex!("4c6f6465737461722d76312e342e322f636c6172612f534e4f2d3338392d6164").into(),
-                proposer_slashings: vec![
-                ].try_into().expect("too many proposer slashings"),
-                attester_slashings: vec![
-                ].try_into().expect("too many attester slashings"),
-                attestations: vec![
-                    Attestation{
-                        aggregation_bits: hex!("03").to_vec().try_into().expect("aggregation bits too long"),
-                        data: AttestationData{
-                            slot: 213,
-                            index: 0,
-                            beacon_block_root: hex!("04cf9164c9d06c6d7a6d9fa21f0f199b9bf429794d5549ff11fe867f9f3a903f").into(),
-                            source: Checkpoint{
-                                epoch: 25,
-                                root: hex!("fa7c738f848376e19c31c91b7abbec142ee0bf102f44716b239b897d2c042cae").into()
-                            },
-                            target: Checkpoint{
-                                epoch: 26,
-                                root: hex!("caea346f897947c09303776ce45a89ccd3302ccc8cfa5e3324818f394eccb121").into()
-                            },
-                        },
-                        signature: hex!("b1d92a4a47409ca0115bba864d5a4facdddce8dcf18f66a4081a3442cfbb341f1859e4864aaef018756d34553b347d571574183444c7148f16e948afd8c1422cf7c62dc529e96f2533c9fc7119a20417631e80e8fe0b690b2ce386946d556305").to_vec().try_into().expect("signature too long"),
-                    },
-                ].try_into().expect("too many attestations"),
-                deposits: vec![
-                ].try_into().expect("too many deposits"),
-                voluntary_exits:vec![
-                ].try_into().expect("too many voluntary exits"),
-                sync_aggregate: SyncAggregate{
-                    sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("too many sync committee bits"),
-                    sync_committee_signature: hex!("9203e8600bb9f6054f775ccdbb38adef0e7c6b8480e715b38cd048ddbc23826bd4b145b6c8f9cfdfb6bb7a9abd06b2b2016cdb4cc89dff1974d6cadb9b6afc6478017f7e1a6fa1f924b760f1590c9e6609be920b861646cdee8ee8bf0957c461").to_vec().try_into().expect("signature too long"),
-                },
-                execution_payload: ExecutionPayload{
-                    parent_hash: hex!("f3db4f1da803d174f67306d688ff5bf9b3922574661c8cf6b4eaaa39507028f6").into(),
-                    fee_recipient: hex!("0000000000000000000000000000000000000000").to_vec().try_into().expect("fee recipient too long"),
-                    state_root: hex!("6254153699ff00695ae866851b31d888ad555cf64c03d3d4eba72e757552bc7b").into(),
-                    receipts_root: hex!("94e76de6c16bedae315aec5eda36ae6605f7679006610b9d1c24720d263354f5").into(),
-                    logs_bloom: hex!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000200000000").to_vec().try_into().expect("logs bloom too long"),
-                    prev_randao: hex!("0a0fb124d6a965d3268d3e894a8cb888df2750287742cd0c17a67fbd2827399b").into(),
-                    block_number: 214,
-                    gas_limit: 64906292,
-                    gas_used: 106196,
-                    timestamp: 1677137686,
-                    extra_data: hex!("").to_vec().try_into().expect("extra data too long"),
-                    base_fee_per_gas: U256::from(7 as u64),
-                    block_hash: hex!("16375e9ec3eba78222284425fbbd4f6e4adf1934f00304e886d9bfb9137a2681").into(),
-                    transactions_root: hex!("474ae4fd560957b99d20c81ea03d98ec3d2ef8285602e96d1c50be2b8ddd2397").into(),
-                }
-            }
+            parent_root: hex!("c1099800778c36b1c3c81aed5e106d284b8d7dd7b595f54f448fb8d3a49842d8").into(),
+            state_root: hex!("d4b15f3e012f030600478a2e2f926d2a4bdc11e5a272358774b6ade313741c7c").into(),
+            body_root: hex!("f6774295e2367becc1194183039734ba1ad8d635e6cb8bd8e823af268d7e4460").into(),
         },
+        execution_header: ExecutionPayload{
+            parent_hash: hex!("86ab41761054378f348183cb6c35d9775c3c9975c0139bca8d67661f228bfba3").into(),
+            fee_recipient: hex!("0000000000000000000000000000000000000000").to_vec().try_into().expect("fee recipient too long"),
+            state_root: hex!("06f05ca47fff28a16c76564d8f2af2f8469dc64719bd2ec639300c84325758dc").into(),
+            receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
+            logs_bloom: hex!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").to_vec().try_into().expect("logs bloom too long"),
+            prev_randao: hex!("eb0207e113d9c93fae653b4b7fc8a73c1a462c66f30c91623791d0e11bccc273").into(),
+            block_number: 198,
+            gas_limit: 65928898,
+            gas_used: 0,
+            timestamp: 1678359385,
+            extra_data: hex!("").to_vec().try_into().expect("extra data too long"),
+            base_fee_per_gas: U256::from(7 as u64),
+            block_hash: hex!("1cde65ff8185db267ad62e60940dedc3fc284ae8aa70fb1a23f85f7e3cb42f82").into(),
+            transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
+        },
+        execution_branch: vec![
+            hex!("4e4c59c066d8211a499e5ae32adfab353faff1bc59d779eabe3f4a0ee2e212b7").into(),
+            hex!("f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b").into(),
+            hex!("db56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71").into(),
+            hex!("6e31b6d6b26f260e9cb14e972ffac5fde67e3193ddcbe9ce756d7b94a4a94560").into(),
+        ].try_into().expect("too many branch proof items"),
         sync_aggregate: SyncAggregate{
             sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("too many sync committee bits"),
-            sync_committee_signature: hex!("93f2ba364d3a927f6185f14dc61f0d3cdbefdf1a0106b20a62715538698f3cc0b18e9fb70c3815e49ab43822a28a6d4b0ddcba727ce76b8a8928cbcbd225eadb4cdb47f5f7e14719654e834ad6efbe57d645fb3298e8b8a63eea4c1183e07bc9").to_vec().try_into().expect("signature too long"),
+            sync_committee_signature: hex!("b6921f93d481e1294f47ce11d4a49d9cfd8cf7d57b3031f5f9e3f68180d2519904f0e2cba0d8e9213a2e56061d91136414b3e1ec3a414af1c1c6b0f0c47c0eec644538019990b5413083f2ceeea13a5739a3b0332bf55dc22bbfbc19b662e107").to_vec().try_into().expect("signature too long"),
         },
-        signature_slot: 215,
-        block_root_proof: vec![
-            hex!("4c626195440e400fdc3a30270dadd75fc1678f601cf87687b545d6a1e23ee685").into(),
-            hex!("85f7b9dcec9ca7f03c2b420a1843229db76f3207375e9f23ce95553eb443d04f").into(),
-            hex!("0aa90e0879b6fbd708e046957c7f49ac7cb73c6d0bd31eae49a4794a14096df0").into(),
-            hex!("e042f5e342ed4c79ff540770526e22399561e2ad5d99cbd97982669e2b59aab9").into(),
-            hex!("d391778afd6c5bda5d6acb04356213f4c728bb904d3164087d9940be2d443018").into(),
-            hex!("d9fd3a2f11cdd74fc05b8aacdfb59abab320580473be6e9ad2ac243758496eac").into(),
+        signature_slot: 199,
+        block_root_branch: vec![
+            hex!("ab567bdc9d0d0ee3aff95dc66511af7351d91b02bda2c3f7a6c4192e6075f976").into(),
+            hex!("d19186b993d9550b1246a00cfaf7c6335347ceb2ce0e329f9554bb56793e27dc").into(),
+            hex!("4dc98a6388a37d7a715a812e22b0afbe7d414074b88d1e0b4744566a82b9986e").into(),
+            hex!("2ab20473cf89877a4002fcd21745753874f32f5cb33d11f7937e4772c28b8e30").into(),
+            hex!("1681bc3367bcb133d24066ca9e46e898ec9bb34e2dac3989ed9b6f1cd6b9b5cf").into(),
+            hex!("82900d73e1753f4e82f484de7987f05557720d040dedfbe193180c56754d7210").into(),
         ].try_into().expect("too many branch proof items"),
-        block_root_proof_finalized_header: hex!("d82ea96bca6bc36a1c07cde9bdf05d9777cf4d2d33cb56817f52167ff94e9c24").into(),
+        block_root_branch_header_root: hex!("485f6e00c2bdede47af56e235ca39ed794a30273d005f0d9c7770cbdb5346da5").into(),
     };
 }

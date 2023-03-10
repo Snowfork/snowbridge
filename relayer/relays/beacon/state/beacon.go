@@ -1,6 +1,8 @@
 package state
 
-import ssz "github.com/ferranbt/fastssz"
+import (
+	ssz "github.com/ferranbt/fastssz"
+)
 
 type Checkpoint struct {
 	Epoch uint64 `json:"epoch"`
@@ -116,20 +118,15 @@ type AttesterSlashing struct {
 	Attestation2 *IndexedAttestation `json:"attestation_2"`
 }
 
-type BeaconBlock struct {
-	Slot          uint64                 `json:"slot"`
-	ProposerIndex uint64                 `json:"proposer_index"`
-	ParentRoot    []byte                 `json:"parent_root" ssz-size:"32"`
-	StateRoot     []byte                 `json:"state_root" ssz-size:"32"`
-	Body          *BeaconBlockBodyPhase0 `json:"body"`
+type BeaconBlockBellatrixMinimal struct {
+	Slot          uint64                           `json:"slot"`
+	ProposerIndex uint64                           `json:"proposer_index"`
+	ParentRoot    []byte                           `json:"parent_root" ssz-size:"32"`
+	StateRoot     []byte                           `json:"state_root" ssz-size:"32"`
+	Body          *BeaconBlockBodyBellatrixMinimal `json:"body"`
 }
 
-type SignedBeaconBlock struct {
-	Block     *BeaconBlock `json:"message"`
-	Signature []byte       `json:"signature" ssz-size:"96"`
-}
-
-type BeaconBlockBodyPhase0 struct {
+type BeaconBlockBodyBellatrixMinimal struct {
 	RandaoReveal      []byte                 `json:"randao_reveal" ssz-size:"96"`
 	Eth1Data          *Eth1Data              `json:"eth1_data"`
 	Graffiti          [32]byte               `json:"graffiti" ssz-size:"32"`
@@ -138,6 +135,29 @@ type BeaconBlockBodyPhase0 struct {
 	Attestations      []*Attestation         `json:"attestations" ssz-max:"128"`
 	Deposits          []*Deposit             `json:"deposits" ssz-max:"16"`
 	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits" ssz-max:"16"`
+	SyncAggregate     *SyncAggregateMinimal  `json:"sync_aggregate"`
+	ExecutionPayload  *ExecutionPayload      `json:"execution_payload"`
+}
+
+type BeaconBlockBellatrixMainnet struct {
+	Slot          uint64                           `json:"slot"`
+	ProposerIndex uint64                           `json:"proposer_index"`
+	ParentRoot    []byte                           `json:"parent_root" ssz-size:"32"`
+	StateRoot     []byte                           `json:"state_root" ssz-size:"32"`
+	Body          *BeaconBlockBodyBellatrixMainnet `json:"body"`
+}
+
+type BeaconBlockBodyBellatrixMainnet struct {
+	RandaoReveal      []byte                 `json:"randao_reveal" ssz-size:"96"`
+	Eth1Data          *Eth1Data              `json:"eth1_data"`
+	Graffiti          [32]byte               `json:"graffiti" ssz-size:"32"`
+	ProposerSlashings []*ProposerSlashing    `json:"proposer_slashings" ssz-max:"16"`
+	AttesterSlashings []*AttesterSlashing    `json:"attester_slashings" ssz-max:"2"`
+	Attestations      []*Attestation         `json:"attestations" ssz-max:"128"`
+	Deposits          []*Deposit             `json:"deposits" ssz-max:"16"`
+	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits" ssz-max:"16"`
+	SyncAggregate     *SyncAggregateMainnet  `json:"sync_aggregate"`
+	ExecutionPayload  *ExecutionPayload      `json:"execution_payload"`
 }
 
 type BeaconStateBellatrixMainnet struct {
@@ -235,8 +255,13 @@ type SyncCommittee struct {
 	AggregatePubKey [48]byte `json:"aggregate_pubkey" ssz-size:"48"`
 }
 
-type SyncAggregate struct {
+type SyncAggregateMainnet struct {
 	SyncCommitteeBits      []byte   `json:"sync_committee_bits" ssz-size:"64"`
+	SyncCommitteeSignature [96]byte `json:"sync_committee_signature" ssz-size:"96"`
+}
+
+type SyncAggregateMinimal struct {
+	SyncCommitteeBits      []byte   `json:"sync_committee_bits" ssz-size:"4"`
 	SyncCommitteeSignature [96]byte `json:"sync_committee_signature" ssz-size:"96"`
 }
 
@@ -284,6 +309,25 @@ type BeaconState interface {
 	GetTree() (*ssz.Node, error)
 }
 
+type SyncAggregate interface {
+	GetSyncAggregateBits() []byte
+	GetSyncAggregateSignature() [96]byte
+}
+
+type BeaconBlockBody interface {
+	GetTree() (*ssz.Node, error)
+}
+
+type BeaconBlock interface {
+	UnmarshalSSZ(buf []byte) error
+	GetBeaconSlot() uint64
+	GetExecutionPayload() *ExecutionPayload
+	GetSyncAggregate() SyncAggregate
+	GetTree() (*ssz.Node, error)
+	GetBlockBodyTree() (*ssz.Node, error)
+	GetBodyRoot() ([32]byte, error)
+}
+
 type BlockRootsContainer interface {
 	GetTree() (*ssz.Node, error)
 	SetBlockRoots(blockRoots [][]byte)
@@ -319,4 +363,60 @@ func (b *BlockRootsContainerMainnet) SetBlockRoots(blockRoots [][]byte) {
 
 func (b *BlockRootsContainerMinimal) SetBlockRoots(blockRoots [][]byte) {
 	b.BlockRoots = blockRoots
+}
+
+func (b *BeaconBlockBellatrixMinimal) GetBeaconSlot() uint64 {
+	return b.Slot
+}
+
+func (b *BeaconBlockBellatrixMinimal) GetExecutionPayload() *ExecutionPayload {
+	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockBellatrixMinimal) GetSyncAggregate() SyncAggregate {
+	return b.Body.SyncAggregate
+}
+
+func (s *SyncAggregateMinimal) GetSyncAggregateBits() []byte {
+	return s.SyncCommitteeBits
+}
+
+func (s *SyncAggregateMinimal) GetSyncAggregateSignature() [96]byte {
+	return s.SyncCommitteeSignature
+}
+
+func (b *BeaconBlockBellatrixMainnet) GetBeaconSlot() uint64 {
+	return b.Slot
+}
+
+func (b *BeaconBlockBellatrixMainnet) GetExecutionPayload() *ExecutionPayload {
+	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockBellatrixMinimal) GetBlockBodyTree() (*ssz.Node, error) {
+	return b.Body.GetTree()
+}
+
+func (b *BeaconBlockBellatrixMainnet) GetBlockBodyTree() (*ssz.Node, error) {
+	return b.Body.GetTree()
+}
+
+func (b *BeaconBlockBellatrixMinimal) GetBodyRoot() ([32]byte, error) {
+	return b.Body.HashTreeRoot()
+}
+
+func (b *BeaconBlockBellatrixMainnet) GetBodyRoot() ([32]byte, error) {
+	return b.Body.HashTreeRoot()
+}
+
+func (b *BeaconBlockBellatrixMainnet) GetSyncAggregate() SyncAggregate {
+	return b.Body.SyncAggregate
+}
+
+func (s *SyncAggregateMainnet) GetSyncAggregateBits() []byte {
+	return s.SyncCommitteeBits
+}
+
+func (s *SyncAggregateMainnet) GetSyncAggregateSignature() [96]byte {
+	return s.SyncCommitteeSignature
 }

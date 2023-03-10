@@ -3,7 +3,7 @@ use crate as ethereum_beacon_client;
 use frame_support::parameter_types;
 use frame_system as system;
 use pallet_timestamp;
-use snowbridge_beacon_primitives::{AttesterSlashing, BeaconHeader, Body, Fork, ForkVersions};
+use snowbridge_beacon_primitives::{BeaconHeader, Fork, ForkVersions};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -74,14 +74,8 @@ pub mod mock_minimal {
 		pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
 		pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
 		pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
-		pub const MaxDepositDataSize: u32 = config::MAX_DEPOSITS as u32;
 		pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
 		pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
-		pub const MaxProposerSlashingSize: u32 = config::MAX_PROPOSER_SLASHINGS as u32;
-		pub const MaxAttesterSlashingSize: u32 = config::MAX_ATTESTER_SLASHINGS as u32;
-		pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
-		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
-		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
 		pub const MaxSlotsPerHistoricalRoot: u64 = 64;
 		pub const MaxFinalizedHeaderSlotArray: u32 = 1000;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
@@ -109,14 +103,8 @@ pub mod mock_minimal {
 		type MaxExtraDataSize = MaxExtraDataSize;
 		type MaxLogsBloomSize = MaxLogsBloomSize;
 		type MaxFeeRecipientSize = MaxFeeRecipientSize;
-		type MaxDepositDataSize = MaxDepositDataSize;
 		type MaxPublicKeySize = MaxPublicKeySize;
 		type MaxSignatureSize = MaxSignatureSize;
-		type MaxProposerSlashingSize = MaxProposerSlashingSize;
-		type MaxAttesterSlashingSize = MaxAttesterSlashingSize;
-		type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
-		type MaxAttestationSize = MaxAttestationSize;
-		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 		type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
 		type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 		type ForkVersions = ChainForkVersions;
@@ -188,14 +176,8 @@ pub mod mock_mainnet {
 		pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
 		pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
 		pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
-		pub const MaxDepositDataSize: u32 = config::MAX_DEPOSITS as u32;
 		pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
 		pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
-		pub const MaxProposerSlashingSize: u32 = config::MAX_PROPOSER_SLASHINGS as u32;
-		pub const MaxAttesterSlashingSize: u32 = config::MAX_ATTESTER_SLASHINGS as u32;
-		pub const MaxVoluntaryExitSize: u32 = config::MAX_VOLUNTARY_EXITS as u32;
-		pub const MaxAttestationSize: u32 = config::MAX_ATTESTATIONS as u32;
-		pub const MaxValidatorsPerCommittee: u32 = config::MAX_VALIDATORS_PER_COMMITTEE as u32;
 		pub const MaxSlotsPerHistoricalRoot: u64 = 8192;
 		pub const MaxFinalizedHeaderSlotArray: u32 = 1000;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
@@ -223,14 +205,8 @@ pub mod mock_mainnet {
 		type MaxExtraDataSize = MaxExtraDataSize;
 		type MaxLogsBloomSize = MaxLogsBloomSize;
 		type MaxFeeRecipientSize = MaxFeeRecipientSize;
-		type MaxDepositDataSize = MaxDepositDataSize;
 		type MaxPublicKeySize = MaxPublicKeySize;
 		type MaxSignatureSize = MaxSignatureSize;
-		type MaxProposerSlashingSize = MaxProposerSlashingSize;
-		type MaxAttesterSlashingSize = MaxAttesterSlashingSize;
-		type MaxVoluntaryExitSize = MaxVoluntaryExitSize;
-		type MaxAttestationSize = MaxAttestationSize;
-		type MaxValidatorsPerCommittee = MaxValidatorsPerCommittee;
 		type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
 		type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 		type ForkVersions = ChainForkVersions;
@@ -242,26 +218,6 @@ pub mod mock_mainnet {
 // Build genesis storage according to the mock runtime.
 pub fn new_tester<T: crate::Config>() -> sp_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<T>().unwrap().into()
-}
-
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct BlockBodyTest<T: crate::Config> {
-	pub body: Body<
-		T::MaxFeeRecipientSize,
-		T::MaxLogsBloomSize,
-		T::MaxExtraDataSize,
-		T::MaxDepositDataSize,
-		T::MaxPublicKeySize,
-		T::MaxSignatureSize,
-		T::MaxProofBranchSize,
-		T::MaxProposerSlashingSize,
-		T::MaxAttesterSlashingSize,
-		T::MaxVoluntaryExitSize,
-		T::MaxAttestationSize,
-		T::MaxValidatorsPerCommittee,
-		T::MaxSyncCommitteeSize,
-	>,
-	pub result: H256,
 }
 
 pub struct BLSSignatureVerifyTest {
@@ -306,51 +262,16 @@ fn finalized_header_update_from_file<T: crate::Config>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn block_update_from_file<T: crate::Config>(
+fn header_update_from_file<T: crate::Config>(
 	name: &str,
-) -> BlockUpdate<
+) -> HeaderUpdate<
 	T::MaxFeeRecipientSize,
 	T::MaxLogsBloomSize,
 	T::MaxExtraDataSize,
-	T::MaxDepositDataSize,
-	T::MaxPublicKeySize,
 	T::MaxSignatureSize,
 	T::MaxProofBranchSize,
-	T::MaxProposerSlashingSize,
-	T::MaxAttesterSlashingSize,
-	T::MaxVoluntaryExitSize,
-	T::MaxAttestationSize,
-	T::MaxValidatorsPerCommittee,
 	T::MaxSyncCommitteeSize,
 > {
-	let filepath = fixture_path(name);
-	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
-}
-
-fn beacon_block_body_from_file<T: crate::Config>(
-	name: &str,
-) -> Body<
-	T::MaxFeeRecipientSize,
-	T::MaxLogsBloomSize,
-	T::MaxExtraDataSize,
-	T::MaxDepositDataSize,
-	T::MaxPublicKeySize,
-	T::MaxSignatureSize,
-	T::MaxProofBranchSize,
-	T::MaxProposerSlashingSize,
-	T::MaxAttesterSlashingSize,
-	T::MaxVoluntaryExitSize,
-	T::MaxAttestationSize,
-	T::MaxValidatorsPerCommittee,
-	T::MaxSyncCommitteeSize,
-> {
-	let filepath = fixture_path(name);
-	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
-}
-
-fn attester_slashing_from_file<T: crate::Config>(
-	name: &str,
-) -> AttesterSlashing<T::MaxValidatorsPerCommittee, T::MaxSignatureSize> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -390,43 +311,15 @@ pub fn get_committee_sync_ssz_test_data<T: crate::Config>() -> SyncCommittee<T::
 	sync_committee_from_file::<T>(filename.as_str())
 }
 
-pub fn get_header_update<T: crate::Config>() -> BlockUpdate<
+pub fn get_header_update<T: crate::Config>() -> HeaderUpdate<
 	T::MaxFeeRecipientSize,
 	T::MaxLogsBloomSize,
 	T::MaxExtraDataSize,
-	T::MaxDepositDataSize,
-	T::MaxPublicKeySize,
 	T::MaxSignatureSize,
 	T::MaxProofBranchSize,
-	T::MaxProposerSlashingSize,
-	T::MaxAttesterSlashingSize,
-	T::MaxVoluntaryExitSize,
-	T::MaxAttestationSize,
-	T::MaxValidatorsPerCommittee,
 	T::MaxSyncCommitteeSize,
 > {
-	block_update_from_file::<T>(&add_file_prefix("block_update.json"))
-}
-
-pub fn get_beacon_block_body<T: crate::Config>() -> Body<
-	T::MaxFeeRecipientSize,
-	T::MaxLogsBloomSize,
-	T::MaxExtraDataSize,
-	T::MaxDepositDataSize,
-	T::MaxPublicKeySize,
-	T::MaxSignatureSize,
-	T::MaxProofBranchSize,
-	T::MaxProposerSlashingSize,
-	T::MaxAttesterSlashingSize,
-	T::MaxVoluntaryExitSize,
-	T::MaxAttestationSize,
-	T::MaxValidatorsPerCommittee,
-	T::MaxSyncCommitteeSize,
-> {
-	let mut filename: String = "ssz_test_".to_owned();
-	filename.push_str(&get_config_setting());
-	filename.push_str("_beacon_block_body.json");
-	beacon_block_body_from_file::<T>(filename.as_str())
+	header_update_from_file::<T>(&add_file_prefix("header_update.json"))
 }
 
 pub fn get_finalized_header_update<T: crate::Config>(
@@ -464,9 +357,4 @@ pub fn get_bls_signature_verify_test_data<T: crate::Config>() -> BLSSignatureVer
 		validators_root: initial_sync.validators_root,
 		signature_slot: finalized_update.signature_slot,
 	}
-}
-
-pub fn get_attester_slashing<T: crate::Config>(
-) -> AttesterSlashing<T::MaxValidatorsPerCommittee, T::MaxSignatureSize> {
-	attester_slashing_from_file::<T>("szz_test_attester_slashing.json")
 }
