@@ -15,10 +15,11 @@ contract SovereignTreasury is AccessControl {
         bytes payload;
     }
 
-    enum Action
-    // Withdraw from sovereign account and transfer to recipient.
-    // Parachain teams will occasionally send this message to retrieve collected fees.
-    {Withdraw}
+    enum Action {
+        // Withdraw from sovereign account and transfer to recipient.
+        // Parachain teams will occasionally send this message to retrieve collected fees.
+        Withdraw
+    }
 
     struct WithdrawPayload {
         address payable recipient;
