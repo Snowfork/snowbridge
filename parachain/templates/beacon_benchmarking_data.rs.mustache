@@ -3,9 +3,8 @@
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-    Attestation, AttestationData, BeaconBlock, BeaconHeader, BlockUpdate, Body, Checkpoint,
-    Eth1Data, ExecutionPayload, FinalizedHeaderUpdate, InitialSync, PublicKey, SyncAggregate,
-    SyncCommittee, SyncCommitteePeriodUpdate,
+    BeaconHeader, ExecutionPayload, FinalizedHeaderUpdate, HeaderUpdate, InitialSync, PublicKey,
+    SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use sp_core::U256;
 use sp_std::vec;
@@ -84,11 +83,11 @@ pub fn sync_committee_update<
         },
         sync_committee_period: {{SyncCommitteeUpdate.SyncCommitteePeriod}},
         signature_slot: {{SyncCommitteeUpdate.SignatureSlot}},
-        block_roots_hash: hex!("{{SyncCommitteeUpdate.BlockRootsHash}}").into(),
-        block_roots_proof: vec![
-        {{#SyncCommitteeUpdate.BlockRootProof}}
+        block_roots_root: hex!("{{SyncCommitteeUpdate.BlockRootsRoot}}").into(),
+        block_roots_branch: vec![
+        {{#SyncCommitteeUpdate.BlockRootBranch}}
             hex!("{{.}}").into(),
-        {{/SyncCommitteeUpdate.BlockRootProof}}
+        {{/SyncCommitteeUpdate.BlockRootBranch}}
         ].try_into().expect("too many branch proof items"),
     };
 }
@@ -123,208 +122,69 @@ pub fn finalized_header_update<
             sync_committee_signature: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeSignature}}").to_vec().try_into().expect("signature too long"),
         },
         signature_slot: {{FinalizedHeaderUpdate.SignatureSlot}},
-        block_roots_hash: hex!("{{FinalizedHeaderUpdate.BlockRootsHash}}").into(),
-        block_roots_proof: vec![
-        {{#FinalizedHeaderUpdate.BlockRootProof}}
+        block_roots_root: hex!("{{FinalizedHeaderUpdate.BlockRootsRoot}}").into(),
+        block_roots_branch: vec![
+        {{#FinalizedHeaderUpdate.BlockRootBranch}}
             hex!("{{.}}").into(),
-        {{/FinalizedHeaderUpdate.BlockRootProof}}
+        {{/FinalizedHeaderUpdate.BlockRootBranch}}
         ].try_into().expect("too many branch proof items")
     };
 }
 
-pub fn block_update<
+pub fn header_update<
     FeeRecipientSize: Get<u32>,
     LogsBloomSize: Get<u32>,
     ExtraDataSize: Get<u32>,
-    DepositDataSize: Get<u32>,
-    PublicKeySize: Get<u32>,
     SignatureSize: Get<u32>,
     ProofSize: Get<u32>,
-    ProposerSlashingSize: Get<u32>,
-    AttesterSlashingSize: Get<u32>,
-    VoluntaryExitSize: Get<u32>,
-    AttestationSize: Get<u32>,
-    ValidatorCommitteeSize: Get<u32>,
     SyncCommitteeSize: Get<u32>,
->() -> BlockUpdate<
+>() -> HeaderUpdate<
     FeeRecipientSize,
     LogsBloomSize,
     ExtraDataSize,
-    DepositDataSize,
-    PublicKeySize,
     SignatureSize,
     ProofSize,
-    ProposerSlashingSize,
-    AttesterSlashingSize,
-    VoluntaryExitSize,
-    AttestationSize,
-    ValidatorCommitteeSize,
     SyncCommitteeSize,
 > {
-    return BlockUpdate{
-        block: BeaconBlock{
-            slot: {{HeaderUpdate.Block.Slot}},
-            proposer_index: {{HeaderUpdate.Block.ProposerIndex}},
-            parent_root: hex!("{{HeaderUpdate.Block.ParentRoot}}").into(),
-            state_root: hex!("{{HeaderUpdate.Block.StateRoot}}").into(),
-            body: Body{
-                randao_reveal: hex!("{{HeaderUpdate.Block.Body.RandaoReveal}}").to_vec().try_into().expect("randao reveal too long"),
-                eth1_data: Eth1Data{
-                    deposit_root: hex!("{{HeaderUpdate.Block.Body.Eth1Data.DepositRoot}}").into(),
-                    deposit_count: {{HeaderUpdate.Block.Body.Eth1Data.DepositCount}},
-                    block_hash: hex!("{{HeaderUpdate.Block.Body.Eth1Data.BlockHash}}").into(),
-                },
-                graffiti: hex!("{{HeaderUpdate.Block.Body.Graffiti}}").into(),
-                proposer_slashings: vec![
-                {{#HeaderUpdate.Block.Body.ProposerSlashings}}
-                    ProposerSlashing{
-                        signed_header_1: SignedHeader{
-                            message: BeaconHeader{
-                                slot: {{SignedHeader1.Message.Slot}},
-                                proposer_index: {{SignedHeader1.Message.ProposerIndex}},
-                                parent_root: hex!("{{SignedHeader1.Message.ParentRoot}}").into(),
-                                state_root: hex!("{{SignedHeader1.Message.StateRoot}}").into(),
-                                body_root: hex!("{{SignedHeader1.Message.StateRoot}}").into(),
-                            },
-                            signature: hex!("{{SignedHeader1.Signature}}").to_vec().try_into().expect("signature too long")
-                        },
-                        signed_header_2: SignedHeader{
-                            message: BeaconHeader{
-                            slot: {{SignedHeader2.Message.Slot}},
-                            proposer_index: {{SignedHeader2.Message.ProposerIndex}},
-                            parent_root: hex!("{{SignedHeader2.Message.ParentRoot}}").into(),
-                            state_root: hex!("{{SignedHeader2.Message.StateRoot}}").into(),
-                            body_root: hex!("{{SignedHeader2.Message.StateRoot}}").into(),
-                            },
-                            signature: hex!("{{SignedHeader2.Signature}}").to_vec().try_into().expect("signature too long")
-                        }
-                    },
-                {{/HeaderUpdate.Block.Body.ProposerSlashings}}
-                ].try_into().expect("too many proposer slashings"),
-                attester_slashings: vec![
-                {{#HeaderUpdate.Block.Body.AttesterSlashings}}
-                    AttesterSlashing{
-                        attestation_1: IndexedAttestation{
-                            attesting_indices: [
-                                {{#Attestation1.AttestingIndices}}
-                                    {{.}}
-                                {{/Attestation1.AttestingIndices}}
-                            ],
-                            data: AttestationData{
-                                slot: {{Attestation1.Data.Slot}},
-                                proposer_index: {{Attestation1.Data.ProposerIndex}},
-                                beacon_block_root: {{Attestation1.Data.BeaconBlockRoot}},
-                                source: Checkpoint{
-                                    epoch: {{Attestation1.Data.Source.Epoch}},
-                                    root: hex!("{{Attestation1.Data.Source.Root}}").into()
-                                },
-                                target: Checkpoint{
-                                    epoch: {{Attestation1.Data.Target.Epoch}},
-                                    root: hex!("{{Attestation1.Data.Target.Root}}").into()
-                            },
-                            signature: hex!("{{Attestation1.Signature}}").to_vec().try_into().expect("signature too long")
-                        },
-                        attestation_2: IndexedAttestation{
-                            attesting_indices: [
-                            {{#Attestation2.AttestingIndices}}
-                                {{.}}
-                            {{/Attestation2.AttestingIndices}}
-                            ],
-                            data: AttestationData{
-                                slot: {{Attestation2.Data.Slot}},
-                                proposer_index: {{Attestation2.Data.ProposerIndex}},
-                                beacon_block_root: {{Attestation2.Data.BeaconBlockRoot}},
-                                source: Checkpoint{
-                                    epoch: {{Attestation2.Data.Source.Epoch}},
-                                    root: hex!("{{Attestation2.Data.Source.Root}}").into()
-                                },
-                                target: Checkpoint{
-                                    epoch: {{Attestation2.Data.Target.Epoch}},
-                                    root: hex!("{{Attestation2.Data.Target.Root}}").into()
-                                },
-                            signature: hex!("{{Attestation2.Signature}}").to_vec().try_into().expect("signature too long")
-                        }
-                    },
-                {{/HeaderUpdate.Block.Body.AttesterSlashings}}
-                ].try_into().expect("too many attester slashings"),
-                attestations: vec![
-                {{#HeaderUpdate.Block.Body.Attestations}}
-                    Attestation{
-                        aggregation_bits: hex!("{{AggregationBits}}").to_vec().try_into().expect("aggregation bits too long"),
-                        data: AttestationData{
-                            slot: {{Data.Slot}},
-                            index: {{Data.Index}},
-                            beacon_block_root: hex!("{{Data.BeaconBlockRoot}}").into(),
-                            source: Checkpoint{
-                                epoch: {{Data.Source.Epoch}},
-                                root: hex!("{{Data.Source.Root}}").into()
-                            },
-                            target: Checkpoint{
-                                epoch: {{Data.Target.Epoch}},
-                                root: hex!("{{Data.Target.Root}}").into()
-                            },
-                        },
-                        signature: hex!("{{Signature}}").to_vec().try_into().expect("signature too long"),
-                    },
-                {{/HeaderUpdate.Block.Body.Attestations}}
-                ].try_into().expect("too many attestations"),
-                deposits: vec![
-                {{#HeaderUpdate.Block.Body.Deposits}}
-                    Deposit{
-                        proof: vec![
-                        {{#Proof}}
-                            hex!("{{.}}").into(),
-                        {{/Proof}}
-                        ].try_into().expect("too many proof items"),
-                        data: DepositData{
-                            pubkey: hex!("{{Data.Pubkey}}").to_vec().try_into().expect("pubkey too long"),
-                            withdrawal_credentials: hex!("{{Data.WithdrawalCredentials}}").int(),
-                            amount: {{Data.Amount}},
-                            signature: hex!("{{Data.Signature}}").to_vec().try_into().expect("signature too long"),
-                        }
-                    },
-                {{/HeaderUpdate.Block.Body.Deposits}}
-                ].try_into().expect("too many deposits"),
-                voluntary_exits:vec![
-                {{#HeaderUpdate.Block.Body.VoluntaryExits}}
-                    VoluntaryExit{
-                        epoch: {{Epoch}},
-                        validator_index: {{ValidatorIndex}},
-                    },
-                {{/HeaderUpdate.Block.Body.VoluntaryExits}}
-                ].try_into().expect("too many voluntary exits"),
-                sync_aggregate: SyncAggregate{
-                    sync_committee_bits: hex!("{{HeaderUpdate.Block.Body.SyncAggregate.SyncCommitteeBits}}").to_vec().try_into().expect("too many sync committee bits"),
-                    sync_committee_signature: hex!("{{HeaderUpdate.Block.Body.SyncAggregate.SyncCommitteeSignature}}").to_vec().try_into().expect("signature too long"),
-                },
-                execution_payload: ExecutionPayload{
-                    parent_hash: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.ParentHash}}").into(),
-                    fee_recipient: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.FeeRecipient}}").to_vec().try_into().expect("fee recipient too long"),
-                    state_root: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.StateRoot}}").into(),
-                    receipts_root: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.ReceiptsRoot}}").into(),
-                    logs_bloom: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.LogsBloom}}").to_vec().try_into().expect("logs bloom too long"),
-                    prev_randao: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.PrevRandao}}").into(),
-                    block_number: {{HeaderUpdate.Block.Body.ExecutionPayload.BlockNumber}},
-                    gas_limit: {{HeaderUpdate.Block.Body.ExecutionPayload.GasLimit}},
-                    gas_used: {{HeaderUpdate.Block.Body.ExecutionPayload.GasUsed}},
-                    timestamp: {{HeaderUpdate.Block.Body.ExecutionPayload.Timestamp}},
-                    extra_data: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.ExtraData}}").to_vec().try_into().expect("extra data too long"),
-                    base_fee_per_gas: U256::from({{HeaderUpdate.Block.Body.ExecutionPayload.BaseFeePerGas}} as u64),
-                    block_hash: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.BlockHash}}").into(),
-                    transactions_root: hex!("{{HeaderUpdate.Block.Body.ExecutionPayload.TransactionRoot}}").into(),
-                }
-            }
+    return HeaderUpdate{
+        beacon_header: BeaconHeader{
+            slot: {{HeaderUpdate.BeaconHeader.Slot}},
+            proposer_index: {{HeaderUpdate.BeaconHeader.ProposerIndex}},
+            parent_root: hex!("{{HeaderUpdate.BeaconHeader.ParentRoot}}").into(),
+            state_root: hex!("{{HeaderUpdate.BeaconHeader.StateRoot}}").into(),
+            body_root: hex!("{{HeaderUpdate.BeaconHeader.BodyRoot}}").into(),
         },
+        execution_header: ExecutionPayload{
+            parent_hash: hex!("{{HeaderUpdate.ExecutionHeader.ParentHash}}").into(),
+            fee_recipient: hex!("{{HeaderUpdate.ExecutionHeader.FeeRecipient}}").to_vec().try_into().expect("fee recipient too long"),
+            state_root: hex!("{{HeaderUpdate.ExecutionHeader.StateRoot}}").into(),
+            receipts_root: hex!("{{HeaderUpdate.ExecutionHeader.ReceiptsRoot}}").into(),
+            logs_bloom: hex!("{{HeaderUpdate.ExecutionHeader.LogsBloom}}").to_vec().try_into().expect("logs bloom too long"),
+            prev_randao: hex!("{{HeaderUpdate.ExecutionHeader.PrevRandao}}").into(),
+            block_number: {{HeaderUpdate.ExecutionHeader.BlockNumber}},
+            gas_limit: {{HeaderUpdate.ExecutionHeader.GasLimit}},
+            gas_used: {{HeaderUpdate.ExecutionHeader.GasUsed}},
+            timestamp: {{HeaderUpdate.ExecutionHeader.Timestamp}},
+            extra_data: hex!("{{HeaderUpdate.ExecutionHeader.ExtraData}}").to_vec().try_into().expect("extra data too long"),
+            base_fee_per_gas: U256::from({{HeaderUpdate.ExecutionHeader.BaseFeePerGas}} as u64),
+            block_hash: hex!("{{HeaderUpdate.ExecutionHeader.BlockHash}}").into(),
+            transactions_root: hex!("{{HeaderUpdate.ExecutionHeader.TransactionRoot}}").into(),
+        },
+        execution_branch: vec![
+        {{#HeaderUpdate.ExecutionBranch}}
+            hex!("{{.}}").into(),
+        {{/HeaderUpdate.ExecutionBranch}}
+        ].try_into().expect("too many branch proof items"),
         sync_aggregate: SyncAggregate{
             sync_committee_bits: hex!("{{HeaderUpdate.SyncAggregate.SyncCommitteeBits}}").to_vec().try_into().expect("too many sync committee bits"),
             sync_committee_signature: hex!("{{HeaderUpdate.SyncAggregate.SyncCommitteeSignature}}").to_vec().try_into().expect("signature too long"),
         },
         signature_slot: {{HeaderUpdate.SignatureSlot}},
-        block_root_proof: vec![
-        {{#HeaderUpdate.BlockRootProof}}
+        block_root_branch: vec![
+        {{#HeaderUpdate.BlockRootBranch}}
             hex!("{{.}}").into(),
-        {{/HeaderUpdate.BlockRootProof}}
+        {{/HeaderUpdate.BlockRootBranch}}
         ].try_into().expect("too many branch proof items"),
-        block_root_proof_finalized_header: hex!("{{HeaderUpdate.BlockRootProofFinalizedHeader}}").into(),
+        block_root_branch_header_root: hex!("{{HeaderUpdate.BlockRootBranchHeaderRoot}}").into(),
     };
 }

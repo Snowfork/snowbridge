@@ -15,6 +15,7 @@ on:
       - "!parachain/LICENSE"
   workflow_dispatch:
 
+jobs:
   check:
     runs-on: snowbridge-runner
     env:

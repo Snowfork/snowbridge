@@ -39,8 +39,8 @@ type SyncCommitteeUpdate struct {
 	SyncAggregate           SyncAggregate `json:"sync_aggregate"`
 	SyncCommitteePeriod     uint64        `json:"sync_committee_period"`
 	SignatureSlot           uint64        `json:"signature_slot"`
-	BlockRootsHash          string        `json:"block_roots_hash"`
-	BlockRootProof          []string      `json:"block_roots_proof"`
+	BlockRootsRoot          string        `json:"block_roots_root"`
+	BlockRootBranch         []string      `json:"block_roots_branch"`
 }
 
 type FinalizedHeaderUpdate struct {
@@ -49,8 +49,8 @@ type FinalizedHeaderUpdate struct {
 	FinalityBranch  []string      `json:"finality_branch"`
 	SyncAggregate   SyncAggregate `json:"sync_aggregate"`
 	SignatureSlot   uint64        `json:"signature_slot"`
-	BlockRootsHash  string        `json:"block_roots_hash"`
-	BlockRootProof  []string      `json:"block_roots_proof"`
+	BlockRootsRoot  string        `json:"block_roots_root"`
+	BlockRootBranch []string      `json:"block_roots_branch"`
 }
 
 type ProposerSlashing struct {
@@ -132,11 +132,13 @@ type BlockBody struct {
 }
 
 type HeaderUpdate struct {
-	Block                         Block         `json:"block"`
-	SyncAggregate                 SyncAggregate `json:"sync_aggregate"`
-	SignatureSlot                 uint64        `json:"signature_slot"`
-	BlockRootProof                []string      `json:"block_root_proof"`
-	BlockRootProofFinalizedHeader string        `json:"block_root_proof_finalized_header"`
+	BeaconHeader              BeaconHeader     `json:"beacon_header"`
+	ExecutionHeader           ExecutionPayload `json:"execution_header"`
+	ExecutionBranch           []string         `json:"execution_branch"`
+	SyncAggregate             SyncAggregate    `json:"sync_aggregate"`
+	SignatureSlot             uint64           `json:"signature_slot"`
+	BlockRootBranch           []string         `json:"block_root_branch"`
+	BlockRootBranchHeaderRoot string           `json:"block_root_branch_header_root"`
 }
 
 type Attestation struct {
@@ -281,8 +283,8 @@ func (s *SyncCommitteeUpdate) RemoveLeadingZeroHashes() {
 	s.FinalizedHeader.RemoveLeadingZeroHashes()
 	s.FinalityBranch = removeLeadingZeroHashForSlice(s.FinalityBranch)
 	s.SyncAggregate.RemoveLeadingZeroHashes()
-	s.BlockRootsHash = removeLeadingZeroHash(s.BlockRootsHash)
-	s.BlockRootProof = removeLeadingZeroHashForSlice(s.BlockRootProof)
+	s.BlockRootsRoot = removeLeadingZeroHash(s.BlockRootsRoot)
+	s.BlockRootBranch = removeLeadingZeroHashForSlice(s.BlockRootBranch)
 }
 
 func (f *FinalizedHeaderUpdate) RemoveLeadingZeroHashes() {
@@ -290,15 +292,17 @@ func (f *FinalizedHeaderUpdate) RemoveLeadingZeroHashes() {
 	f.FinalizedHeader.RemoveLeadingZeroHashes()
 	f.FinalityBranch = removeLeadingZeroHashForSlice(f.FinalityBranch)
 	f.SyncAggregate.RemoveLeadingZeroHashes()
-	f.BlockRootsHash = removeLeadingZeroHash(f.BlockRootsHash)
-	f.BlockRootProof = removeLeadingZeroHashForSlice(f.BlockRootProof)
+	f.BlockRootsRoot = removeLeadingZeroHash(f.BlockRootsRoot)
+	f.BlockRootBranch = removeLeadingZeroHashForSlice(f.BlockRootBranch)
 }
 
 func (h *HeaderUpdate) RemoveLeadingZeroHashes() {
-	h.Block.RemoveLeadingZeroHashes()
+	h.BeaconHeader.RemoveLeadingZeroHashes()
+	h.ExecutionHeader.RemoveLeadingZeroHashes()
+	h.ExecutionBranch = removeLeadingZeroHashForSlice(h.ExecutionBranch)
 	h.SyncAggregate.RemoveLeadingZeroHashes()
-	h.BlockRootProof = removeLeadingZeroHashForSlice(h.BlockRootProof)
-	h.BlockRootProofFinalizedHeader = removeLeadingZeroHash(h.BlockRootProofFinalizedHeader)
+	h.BlockRootBranch = removeLeadingZeroHashForSlice(h.BlockRootBranch)
+	h.BlockRootBranchHeaderRoot = removeLeadingZeroHash(h.BlockRootBranchHeaderRoot)
 }
 
 func removeLeadingZeroHashForSlice(s []string) []string {

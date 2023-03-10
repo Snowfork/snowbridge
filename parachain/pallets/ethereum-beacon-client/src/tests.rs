@@ -4,17 +4,12 @@ mod beacon_tests {
 		config, merkleization,
 		merkleization::MerkleizationError,
 		mock::*,
-		ssz::{
-			SSZAttestation, SSZAttestationData, SSZAttesterSlashing, SSZCheckpoint, SSZEth1Data,
-			SSZExecutionPayload, SSZSyncAggregate,
-		},
+		ssz::{SSZExecutionPayload, SSZSyncAggregate},
 		BeaconHeader, Error, PublicKey,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
-	use snowbridge_beacon_primitives::{
-		Attestation, AttestationData, Checkpoint, Eth1Data, ExecutionPayload, SyncAggregate,
-	};
+	use snowbridge_beacon_primitives::{ExecutionPayload, SyncAggregate};
 	use sp_core::{H256, U256};
 	use ssz_rs::prelude::Vector;
 
@@ -487,25 +482,6 @@ mod beacon_tests {
 	}
 
 	#[test]
-	pub fn test_hash_eth1_data() {
-		let payload: Result<SSZEth1Data, MerkleizationError> = Eth1Data {
-			deposit_root: hex!("d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e")
-				.into(),
-			deposit_count: 0,
-			block_hash: hex!("0000000000000000000000000000000000000000000000000000000000000000")
-				.into(),
-		}
-		.try_into();
-		assert_ok!(&payload);
-
-		let hash_root = merkleization::hash_tree_root(payload.unwrap());
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("aa247f2dfbb6e5d77b7e9f637f9bb70842cbec34cb4238d5bcb491f4e4b3fa5e")
-		);
-	}
-
-	#[test]
 	pub fn test_hash_sync_aggregate() {
 		let sync_aggregate: SyncAggregate<mock_minimal::MaxSyncCommitteeSize, mock_minimal::MaxSignatureSize> = match config::IS_MINIMAL {
 			true => SyncAggregate{
@@ -570,106 +546,6 @@ mod beacon_tests {
 		assert_eq!(
 			hash_root.unwrap(),
 			hex!("4c74e6119faeee22c04ef02fb6d8db26799753e2a9efcde6ea60cbac1f38cfd2")
-		);
-	}
-
-	#[test]
-	pub fn test_hash_tree_root_attestation() {
-		let payload: Result<SSZAttestation, MerkleizationError> =
-            Attestation::<mock_minimal::MaxValidatorsPerCommittee, mock_minimal::MaxSignatureSize>{
-                aggregation_bits: hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec().try_into().expect("aggregation bits are too long"),
-                data: AttestationData{
-                    slot: 484119,
-                    index: 0,
-                    beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                    source: Checkpoint{
-                        epoch: 15127,
-                        root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                    },
-                    target: Checkpoint{
-                        epoch: 15128,
-                        root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                    }
-                },
-                signature: hex!("af8e57aadf092443bd6675927ca84875419233fb7a5eb3ae626621d3339fe738b00af4a0edcc55efbe1198a815600784074388d366c4add789aa6126bb1ec5ed63ad8d8f22b5f158ae4c25d46b08d46d1188f7ed7e8f99d96ff6c3c69a240c18").to_vec().try_into().expect("signature is too long"),
-            }.try_into();
-
-		assert_ok!(&payload);
-
-		let hash_root = merkleization::hash_tree_root(payload.unwrap());
-
-		assert_ok!(&hash_root);
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("a60acb46465c9eda6047e2cc18b3d509b7610efcbc7a02d28aea3ffa67e89f5a")
-		);
-	}
-
-	#[test]
-	pub fn test_hash_tree_root_attestation_data() {
-		let payload: Result<SSZAttestationData, MerkleizationError> = AttestationData {
-			slot: 484119,
-			index: 25,
-			beacon_block_root: hex!(
-				"2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5"
-			)
-			.into(),
-			source: Checkpoint {
-				epoch: 15127,
-				root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75")
-					.into(),
-			},
-			target: Checkpoint {
-				epoch: 15128,
-				root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7")
-					.into(),
-			},
-		}
-		.try_into();
-
-		assert_ok!(&payload);
-
-		let hash_root = merkleization::hash_tree_root(payload.unwrap());
-
-		assert_ok!(&hash_root);
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("351d24efe677a40e3b687f8c95821158c3a3bb7c41c43b51187d4c1df690c849")
-		);
-	}
-
-	#[test]
-	pub fn test_hash_tree_root_checkpoint() {
-		let payload: Result<SSZCheckpoint, MerkleizationError> = Checkpoint {
-			epoch: 15127,
-			root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-		}
-		.try_into();
-
-		assert_ok!(&payload);
-
-		let hash_root = merkleization::hash_tree_root(payload.unwrap());
-
-		assert_ok!(&hash_root);
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("c83bfcaa363a349b6869d70dcfe430f6199f8da7b01eb92d05a0860efe19dcec")
-		);
-	}
-
-	#[test]
-	pub fn test_hash_tree_root_attester_slashing() {
-		let payload: Result<SSZAttesterSlashing, MerkleizationError> =
-			get_attester_slashing::<mock_minimal::Test>().try_into();
-
-		assert_ok!(&payload);
-
-		let hash_root = merkleization::hash_tree_root(payload.unwrap());
-
-		assert_ok!(&hash_root);
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("b1d13ea52fbb24639eee459fdd37e60c56710b51ef07eb32e525f3099dea9251")
 		);
 	}
 }

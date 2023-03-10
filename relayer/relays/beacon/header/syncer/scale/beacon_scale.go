@@ -56,12 +56,19 @@ type FinalizedHeaderUpdate struct {
 	BlockRootsTree           *ssz.Node
 }
 
+type HeaderUpdatePayload struct {
+	BeaconHeader              BeaconHeader
+	ExecutionHeader           ExecutionPayload
+	ExecutionBranch           []types.H256
+	SyncAggregate             SyncAggregate
+	SignatureSlot             types.U64
+	BlockRootBranch           []types.H256
+	BlockRootBranchHeaderRoot types.H256
+}
+
 type HeaderUpdate struct {
-	Block                         BeaconBlock
-	SyncAggregate                 SyncAggregate
-	SignatureSlot                 types.U64
-	BlockRootProof                []types.H256
-	BlockRootProofFinalizedHeader types.H256
+	Payload           HeaderUpdatePayload
+	NextSyncAggregate SyncAggregate
 }
 
 type BeaconHeader struct {
@@ -135,6 +142,11 @@ type DepositVoluntaryExit struct {
 	Data  DepositData
 }
 
+type SignedVoluntaryExit struct {
+	Exit      VoluntaryExit
+	Signature []byte
+}
+
 type VoluntaryExit struct {
 	Epoch          types.U64
 	ValidaterIndex types.U64
@@ -165,7 +177,7 @@ type Body struct {
 	AttesterSlashings []AttesterSlashing
 	Attestations      []Attestation
 	Deposits          []Deposit
-	VoluntaryExits    []VoluntaryExit
+	VoluntaryExits    []SignedVoluntaryExit
 	SyncAggregate     SyncAggregate
 	ExecutionPayload  ExecutionPayload
 }

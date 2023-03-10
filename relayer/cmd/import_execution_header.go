@@ -117,18 +117,18 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
-		log.WithField("slot", update.Block.Slot).Info("found block at slot")
+		log.WithField("slot", update.Payload.BeaconHeader.Slot).Info("found block at slot")
 
-		syncAggregate, signatureSlot, err := syncer.GetSyncAggregateForSlot(uint64(update.Block.Slot) + 1)
+		syncAggregate, signatureSlot, err := syncer.GetSyncAggregateForSlot(uint64(update.Payload.BeaconHeader.Slot) + 1)
 		if err != nil {
 			return fmt.Errorf("get sync aggregate: %w", err)
 		}
 		log.Info("found sync aggregate")
 
-		update.SyncAggregate = syncAggregate
-		update.SignatureSlot = signatureSlot
+		update.Payload.SyncAggregate = syncAggregate
+		update.Payload.SignatureSlot = signatureSlot
 
-		err = writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_execution_header", update)
+		err = writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_execution_header", update.Payload)
 		if err != nil {
 			return fmt.Errorf("write to parachain: %w", err)
 		}

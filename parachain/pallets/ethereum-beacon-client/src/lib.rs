@@ -24,9 +24,9 @@ use crate::merkleization::get_sync_committee_bits;
 use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
 use frame_system::ensure_signed;
 use snowbridge_beacon_primitives::{
-	BeaconHeader, BlockUpdate, Domain, ExecutionHeader, ExecutionHeaderState, FinalizedHeaderState,
-	FinalizedHeaderUpdate, ForkData, ForkVersion, InitialSync, PublicKey, Root, SigningData,
-	SyncCommittee, SyncCommitteePeriodUpdate,
+	BeaconHeader, Domain, ExecutionHeader, ExecutionHeaderState, FinalizedHeaderState,
+	FinalizedHeaderUpdate, ForkData, ForkVersion, HeaderUpdate, InitialSync, PublicKey, Root,
+	SigningData, SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
@@ -35,19 +35,12 @@ use sp_std::prelude::*;
 
 pub use pallet::*;
 
-pub type BlockUpdateOf<T> = BlockUpdate<
+pub type HeaderUpdateOf<T> = HeaderUpdate<
 	<T as Config>::MaxFeeRecipientSize,
 	<T as Config>::MaxLogsBloomSize,
 	<T as Config>::MaxExtraDataSize,
-	<T as Config>::MaxDepositDataSize,
-	<T as Config>::MaxPublicKeySize,
 	<T as Config>::MaxSignatureSize,
 	<T as Config>::MaxProofBranchSize,
-	<T as Config>::MaxProposerSlashingSize,
-	<T as Config>::MaxAttesterSlashingSize,
-	<T as Config>::MaxVoluntaryExitSize,
-	<T as Config>::MaxAttestationSize,
-	<T as Config>::MaxValidatorsPerCommittee,
 	<T as Config>::MaxSyncCommitteeSize,
 >;
 pub type InitialSyncOf<T> =
@@ -98,21 +91,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxFeeRecipientSize: Get<u32>;
 		#[pallet::constant]
-		type MaxDepositDataSize: Get<u32>;
-		#[pallet::constant]
 		type MaxPublicKeySize: Get<u32>;
 		#[pallet::constant]
 		type MaxSignatureSize: Get<u32>;
-		#[pallet::constant]
-		type MaxProposerSlashingSize: Get<u32>;
-		#[pallet::constant]
-		type MaxAttesterSlashingSize: Get<u32>;
-		#[pallet::constant]
-		type MaxVoluntaryExitSize: Get<u32>;
-		#[pallet::constant]
-		type MaxAttestationSize: Get<u32>;
-		#[pallet::constant]
-		type MaxValidatorsPerCommittee: Get<u32>;
 		#[pallet::constant]
 		type MaxSlotsPerHistoricalRoot: Get<u64>;
 		#[pallet::constant]
@@ -140,6 +121,7 @@ pub mod pallet {
 		SyncCommitteeParticipantsNotSupermajority,
 		InvalidHeaderMerkleProof,
 		InvalidSyncCommitteeMerkleProof,
+		InvalidExecutionHeaderProof,
 		InvalidAncestryMerkleProof,
 		InvalidSignature,
 		InvalidSignaturePoint,
@@ -166,7 +148,9 @@ pub mod pallet {
 		InvalidSyncCommitteeHeaderUpdate,
 		InvalidSyncCommitteePeriodUpdateWithGap,
 		InvalidSyncCommitteePeriodUpdateWithDuplication,
-		InvalidFinalizedHeaderUpdate,
+		InvalidSignatureSlot,
+		InvalidAttestedHeaderSlot,
+		DuplicateFinalizedHeaderUpdate,
 		InvalidFinalizedPeriodUpdate,
 		InvalidExecutionHeaderUpdate,
 		FinalizedBeaconHeaderSlotsExceeded,
@@ -323,14 +307,14 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
-			update: BlockUpdateOf<T>,
+			update: HeaderUpdateOf<T>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
 			Self::check_bridge_blocked_state()?;
 
-			let slot = update.block.slot;
-			let block_hash = update.block.body.execution_payload.block_hash;
+			let slot = update.beacon_header.slot;
+			let block_hash = update.execution_header.block_hash;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -468,8 +452,8 @@ pub mod pallet {
 
 			ensure!(
 				Self::is_valid_merkle_branch(
-					update.block_roots_hash,
-					update.block_roots_proof,
+					update.block_roots_root,
+					update.block_roots_branch,
 					config::BLOCK_ROOTS_INDEX,
 					config::BLOCK_ROOTS_DEPTH,
 					update.finalized_header.state_root
@@ -477,7 +461,7 @@ pub mod pallet {
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
-			Self::store_block_root(update.block_roots_hash, block_root);
+			Self::store_block_root(update.block_roots_root, block_root);
 			Self::store_sync_committee(next_period, update.next_sync_committee);
 			Self::store_finalized_header(block_root, update.finalized_header)?;
 
@@ -487,11 +471,18 @@ pub mod pallet {
 		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			ensure!(
-				update.signature_slot > update.attested_header.slot &&
-					update.attested_header.slot >= update.finalized_header.slot &&
-					update.finalized_header.slot > last_finalized_header.beacon_slot,
-				Error::<T>::InvalidFinalizedHeaderUpdate
+				update.signature_slot > update.attested_header.slot,
+				Error::<T>::InvalidSignatureSlot
 			);
+			ensure!(
+				update.attested_header.slot >= update.finalized_header.slot,
+				Error::<T>::InvalidAttestedHeaderSlot
+			);
+			ensure!(
+				update.finalized_header.slot > last_finalized_header.beacon_slot,
+				Error::<T>::DuplicateFinalizedHeaderUpdate
+			);
+
 			let import_time = last_finalized_header.import_time;
 			let weak_subjectivity_period_check =
 				import_time + T::WeakSubjectivityPeriodSeconds::get() as u64;
@@ -549,8 +540,8 @@ pub mod pallet {
 
 			ensure!(
 				Self::is_valid_merkle_branch(
-					update.block_roots_hash,
-					update.block_roots_proof,
+					update.block_roots_root,
+					update.block_roots_branch,
 					config::BLOCK_ROOTS_INDEX,
 					config::BLOCK_ROOTS_DEPTH,
 					update.finalized_header.state_root
@@ -558,7 +549,7 @@ pub mod pallet {
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
-			Self::store_block_root(update.block_roots_hash, block_root);
+			Self::store_block_root(update.block_roots_root, block_root);
 
 			Self::store_finalized_header(block_root, update.finalized_header)?;
 
@@ -572,62 +563,63 @@ pub mod pallet {
 			);
 		}
 
-		// todo: process_header will fail with Capella's BeaconBody and need some
-		// change in primitives, since we are also doing heavily refactoring in PR#783 simplify
-		// with execution_payload proof so disable checks here as workaround and will enable
-		// later after synchronized with that PR
-		fn process_header(update: BlockUpdateOf<T>) -> DispatchResult {
+		fn process_header(update: HeaderUpdateOf<T>) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
-			let block_slot = update.block.slot;
+			let block_slot = update.beacon_header.slot;
 			ensure!(block_slot <= latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
 
 			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
-			let execution_payload = update.block.body.execution_payload.clone();
+			let execution_payload = update.execution_header.clone();
 			ensure!(
 				execution_payload.block_number > execution_header_state.block_number,
 				Error::<T>::InvalidExecutionHeaderUpdate
 			);
 
-			let body_root = merkleization::hash_tree_root_beacon_body(update.block.body.clone())
-				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
-			let body_root_hash: H256 = body_root.into();
+			let execution_root =
+				merkleization::hash_tree_root_execution_header(execution_payload.clone())
+					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
+			let execution_root_hash: H256 = execution_root.into();
 
-			let header = BeaconHeader {
-				slot: update.block.slot,
-				proposer_index: update.block.proposer_index,
-				parent_root: update.block.parent_root,
-				state_root: update.block.state_root,
-				body_root: body_root_hash,
-			};
+			ensure!(
+				Self::is_valid_merkle_branch(
+					execution_root_hash,
+					update.execution_branch,
+					config::EXECUTION_HEADER_DEPTH,
+					config::EXECUTION_HEADER_INDEX,
+					update.beacon_header.body_root
+				),
+				Error::<T>::InvalidExecutionHeaderProof
+			);
 
 			let beacon_block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(header.clone())
+				merkleization::hash_tree_root_beacon_header(update.beacon_header.clone())
 					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
 					.into();
 
-			// Self::ancestry_proof(
-			// 	update.block_root_proof,
-			// 	block_slot,
-			// 	beacon_block_root,
-			// 	update.block_root_proof_finalized_header,
-			// )?;
+			Self::ancestry_proof(
+				update.block_root_branch,
+				block_slot,
+				beacon_block_root,
+				update.block_root_branch_header_root,
+			)?;
 
-			// let current_period = Self::compute_current_sync_period(update.block.slot);
-			// let sync_committee = Self::get_sync_committee_for_period(current_period)?;
-			//
-			// let validators_root = <ValidatorsRoot<T>>::get();
-			// let sync_committee_bits =
-			// 	get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-			// 		.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
-			// Self::verify_signed_header(
-			// 	sync_committee_bits,
-			// 	update.sync_aggregate.sync_committee_signature,
-			// 	sync_committee.pubkeys,
-			// 	header,
-			// 	validators_root,
-			// 	update.signature_slot,
-			// )?;
+			let current_period = Self::compute_current_sync_period(update.beacon_header.slot);
+			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
+
+			let validators_root = <ValidatorsRoot<T>>::get();
+			let sync_committee_bits =
+				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
+
+			Self::verify_signed_header(
+				sync_committee_bits,
+				update.sync_aggregate.sync_committee_signature,
+				sync_committee.pubkeys,
+				update.beacon_header,
+				validators_root,
+				update.signature_slot,
+			)?;
 
 			let mut fee_recipient = [0u8; 20];
 			let fee_slice = execution_payload.fee_recipient.as_slice();
