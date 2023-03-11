@@ -23,8 +23,8 @@ rebuild_cumulus(){
     pushd $root_dir/parachain
     mkdir -p $cumulus_dir
     cargo install \
-        --git https://github.com/paritytech/cumulus \
-        --tag "$cumulus_version" polkadot-parachain-bin \
+        --git https://github.com/Snowfork/cumulus \
+        --branch "$cumulus_version" polkadot-parachain-bin \
         --locked \
         --root $cumulus_dir #add version path to root to avoid recompiling when switch between versions 
     popd
