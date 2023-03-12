@@ -7,5 +7,8 @@ source_up_if_exists
 # export PARAID=1000
 
 ## The allowed origin for native and foreign token contracts
-export TOKENS_ALLOWED_ORIGIN=0x09b636bf387d256bd35ebf301c2da34fdee53b42f6a4648ad126156034d4a2db
+export STATEMINT_LOCATION=0x09b636bf387d256bd35ebf301c2da34fdee53b42f6a4648ad126156034d4a2db
+
+# Fee to create a token
+export CREATE_TOKEN_FEE="1000000000000000000"
 

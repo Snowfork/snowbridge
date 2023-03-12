@@ -42,9 +42,13 @@ contract DeployScript is Script {
         OutboundChannel outboundChannel = new OutboundChannel(vault, relayerFee);
 
         // NativeTokens
-        bytes memory peer = vm.envBytes("TOKENS_ALLOWED_ORIGIN");
         TokenVault tokenVault = new TokenVault();
-        NativeTokens nativeTokens = new NativeTokens(tokenVault, outboundChannel, peer);
+        NativeTokens nativeTokens = new NativeTokens(
+            tokenVault,
+            outboundChannel,
+            vm.envBytes("STATEMINT_LOCATION"),
+            vm.envUint("CREATE_TOKEN_FEE")
+        );
         tokenVault.transferOwnership(address(nativeTokens));
 
         // Allow inbound channel to send messages to NativeTokens and SovereignTreasury

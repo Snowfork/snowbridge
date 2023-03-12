@@ -31,7 +31,7 @@ contract NativeTokensTest is Test {
 
         outboundChannel = new OutboundChannelMock();
         vault = new TokenVault();
-        nativeTokens = new NativeTokens(vault, outboundChannel, peer);
+        nativeTokens = new NativeTokens(vault, outboundChannel, peer, 1);
         vault.transferOwnership(address(nativeTokens));
 
         account1 = new SovereignAccountMock();
@@ -100,9 +100,23 @@ contract NativeTokensTest is Test {
     }
 
     function testCreateSuccessful() public {
+        uint256 fee = nativeTokens.createTokenFee();
+
         vm.expectEmit(false, false, false, true, address(nativeTokens));
         emit Created(address(token));
 
-        nativeTokens.create(address(token));
+        nativeTokens.create{value: fee}(address(token));
+    }
+
+    function testCreateFailOnBadFeePayment() public {
+        uint256 fee = nativeTokens.createTokenFee();
+        vm.expectRevert(NativeTokens.NoFundsforCreateToken.selector);
+        nativeTokens.create{value: fee - 1}(address(this));
+    }
+
+    function testCreateFailOnBadToken() public {
+        uint256 fee = nativeTokens.createTokenFee();
+        vm.expectRevert();
+        nativeTokens.create{value: fee}(address(this));
     }
 }

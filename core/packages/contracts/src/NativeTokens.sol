@@ -15,9 +15,7 @@ import "./OutboundChannel.sol";
 /// tokens on the substrate side via create.
 contract NativeTokens is AccessControl {
     /// @dev Describes the type of message.
-    enum Action {
-        Unlock
-    }
+    enum Action {Unlock}
 
     /// @dev Message format.
     struct Message {
@@ -60,18 +58,22 @@ contract NativeTokens is AccessControl {
     TokenVault public immutable vault;
     IOutboundChannel public outboundChannel;
 
+    uint256 public createTokenFee;
+
     /* Errors */
 
     error InvalidAmount();
     error Unauthorized();
+    error NoFundsforCreateToken();
 
-    constructor(TokenVault _vault, IOutboundChannel _outboundChannel, bytes memory _peer) {
+    constructor(TokenVault _vault, IOutboundChannel _outboundChannel, bytes memory _peer, uint256 _createTokenFee) {
         _grantRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(SENDER_ROLE, ADMIN_ROLE);
         vault = _vault;
         outboundChannel = _outboundChannel;
         peer = _peer;
         peerID = keccak256(_peer);
+        createTokenFee = _createTokenFee;
     }
 
     /// @dev Locks an amount of ERC20 Tokens in the vault and enqueues a mint message.
@@ -87,7 +89,7 @@ contract NativeTokens is AccessControl {
         vault.deposit(msg.sender, token, amount);
 
         bytes memory payload = NativeTokensTypes.Mint(peer, token, recipient, amount);
-        outboundChannel.submit{ value: msg.value }(peer, payload);
+        outboundChannel.submit{value: msg.value}(peer, payload);
 
         emit Locked(recipient, token, amount);
     }
@@ -95,6 +97,11 @@ contract NativeTokens is AccessControl {
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
     function create(address token) external payable {
+        // to avoid spam, charge a fee for creating a new token
+        if (msg.value < createTokenFee) {
+            revert NoFundsforCreateToken();
+        }
+
         IERC20Metadata metadata = IERC20Metadata(token);
         bytes memory name = bytes(metadata.name());
         if (name.length > 32) {
@@ -107,7 +114,7 @@ contract NativeTokens is AccessControl {
         uint8 decimals = metadata.decimals();
 
         bytes memory payload = NativeTokensTypes.Create(peer, token, name, symbol, decimals);
-        outboundChannel.submit{ value: msg.value }(peer, payload);
+        outboundChannel.submit{value: msg.value}(peer, payload);
 
         emit Created(token);
     }
