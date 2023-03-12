@@ -73,7 +73,11 @@ contract InboundChannel is AccessControl {
         reward = _reward;
     }
 
-    function submit(Message calldata message, bytes32[] calldata leafProof, bytes calldata headerProof) external {
+    function submit(
+        Message calldata message,
+        bytes32[] calldata leafProof,
+        bytes calldata headerProof
+    ) external {
         bytes32 leafHash = keccak256(abi.encode(message));
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
         if (!parachainClient.verifyCommitment(commitment, headerProof)) {
@@ -114,7 +118,7 @@ contract InboundChannel is AccessControl {
 
         // Forward message to handler for execution
         // Errors from the handler are ignored so as not to block the channel at the current nonce
-        try recipient.handle{gas: gasToForward}(message.origin, message.payload) {
+        try recipient.handle{ gas: gasToForward }(message.origin, message.payload) {
             result.succeeded = true;
         } catch Error(string memory reason) {
             result.errorReason = reason;
@@ -132,7 +136,9 @@ contract InboundChannel is AccessControl {
         emit HandlerUpdated(id, handler);
     }
 
-    function updateParachainClient(IParachainClient _parachainClient) external onlyRole(ADMIN_ROLE) {
+    function updateParachainClient(
+        IParachainClient _parachainClient
+    ) external onlyRole(ADMIN_ROLE) {
         parachainClient = _parachainClient;
         emit ParachainClientUpdated(address(_parachainClient));
     }
