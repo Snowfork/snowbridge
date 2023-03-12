@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import "./Memory.sol";
 
@@ -16,8 +16,8 @@ library Bytes {
         if (self.length != other.length) {
             return false;
         }
-        uint addr;
-        uint addr2;
+        uint256 addr;
+        uint256 addr2;
         assembly {
             addr := add(self, /*BYTES_HEADER_SIZE*/ 32)
             addr2 := add(other, /*BYTES_HEADER_SIZE*/ 32)
@@ -82,13 +82,13 @@ library Bytes {
     }
 
     function toBytes16(bytes memory self, uint256 offset) internal pure returns (bytes16 out) {
-        for (uint i = 0; i < 16; i++) {
+        for (uint256 i = 0; i < 16; i++) {
             out |= bytes16(bytes1(self[offset + i]) & 0xFF) >> (i * 8);
         }
     }
 
     function toBytes8(bytes memory self, uint256 offset) internal pure returns (bytes8 out) {
-        for (uint i = 0; i < 8; i++) {
+        for (uint256 i = 0; i < 8; i++) {
             out |= bytes8(bytes1(self[offset + i]) & 0xFF) >> (i * 8);
         }
     }
@@ -112,10 +112,10 @@ library Bytes {
     }
 
     function removeLeadingZero(bytes memory data) internal pure returns (bytes memory) {
-        uint length = data.length;
+        uint256 length = data.length;
 
-        uint startIndex = 0;
-        for (uint i = 0; i < length; i++) {
+        uint256 startIndex = 0;
+        for (uint256 i = 0; i < length; i++) {
             if (data[i] != 0) {
                 startIndex = i;
                 break;
@@ -126,10 +126,10 @@ library Bytes {
     }
 
     function removeEndingZero(bytes memory data) internal pure returns (bytes memory) {
-        uint length = data.length;
+        uint256 length = data.length;
 
-        uint endIndex = 0;
-        for (uint i = length - 1; i >= 0; i--) {
+        uint256 endIndex = 0;
+        for (uint256 i = length - 1; i >= 0; i--) {
             if (data[i] != 0) {
                 endIndex = i;
                 break;
@@ -140,10 +140,10 @@ library Bytes {
     }
 
     function reverse(bytes memory inbytes) internal pure returns (bytes memory) {
-        uint inlength = inbytes.length;
+        uint256 inlength = inbytes.length;
         bytes memory outbytes = new bytes(inlength);
 
-        for (uint i = 0; i <= inlength - 1; i++) {
+        for (uint256 i = 0; i <= inlength - 1; i++) {
             outbytes[i] = inbytes[inlength - i - 1];
         }
 
