@@ -110,7 +110,8 @@ mod beacon_minimal_tests {
 				Error::<mock_minimal::Test>::InvalidSyncCommitteePeriodUpdateWithGap
 			);
 		});
-	}*/
+	}
+	*/
 
 	#[test]
 	fn it_updates_a_invalid_committee_period_sync_update_with_duplicate_entry() {

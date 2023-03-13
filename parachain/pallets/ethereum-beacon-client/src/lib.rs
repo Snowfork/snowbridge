@@ -381,14 +381,14 @@ pub mod pallet {
 
 			log::info!(
 				target: "ethereum-beacon-client",
-				"💫 Received header update for slot {}.",
+				"💫 Received capella header update for slot {}.",
 				slot
 			);
 
 			if let Err(err) = Self::process_header_capella(update) {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"💫 Header update failed with error {:?}",
+					"💫 Capella header update failed with error {:?}",
 					err
 				);
 				return Err(err)
@@ -473,7 +473,15 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+			let signature_slot_period = Self::compute_current_sync_period(update.signature_slot);
 			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 latest committee period is: {}, attested_header period is: {}, signature_slot period is: {}",
+				latest_committee_period,
+				current_period,
+				signature_slot_period
+			);
 			ensure!(
 				<SyncCommittees<T>>::contains_key(current_period),
 				Error::<T>::SyncCommitteeMissing
@@ -726,6 +734,13 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 
 			let execution_root_hash: H256 = execution_root.into();
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 capella execution root: {}. and beacon body root: {}.",
+				execution_root_hash,
+				update.beacon_header.body_root
+			);
 
 			ensure!(
 				Self::is_valid_merkle_branch(

@@ -442,7 +442,6 @@ func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
 	return blockRoot, nil
 }
 
-// TODO: for capella support
 func (s *Syncer) GetNextHeaderUpdateBySlotWithAncestryProof(slot uint64, checkpoint cache.Proof) (scale.HeaderUpdate, error) {
 	blockRoot, err := s.getNextBlockRootBySlot(slot)
 	if err != nil {
@@ -452,7 +451,15 @@ func (s *Syncer) GetNextHeaderUpdateBySlotWithAncestryProof(slot uint64, checkpo
 	return s.GetHeaderUpdateWithAncestryProof(blockRoot, checkpoint)
 }
 
-// TODO: for capella support
+func (s *Syncer) GetNextCapellaHeaderUpdateBySlotWithAncestryProof(slot uint64, checkpoint cache.Proof) (scale.HeaderUpdateCapella, error) {
+	blockRoot, err := s.getNextBlockRootBySlot(slot)
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, fmt.Errorf("get next block root by slot: %w", err)
+	}
+
+	return s.GetCapellaHeaderUpdateWithAncestryProof(blockRoot, checkpoint)
+}
+
 func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, error) {
 	blockRoot, err := s.getNextBlockRootBySlot(slot)
 	if err != nil {
@@ -498,7 +505,51 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, err
 	return headerUpdate, nil
 }
 
-// TODO: for capella support
+func (s *Syncer) GetNextCapellaHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdateCapella, error) {
+	blockRoot, err := s.getNextBlockRootBySlot(slot)
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, fmt.Errorf("get next block root by slot: %w", err)
+	}
+
+	block, err := s.Client.GetBeaconBlock(blockRoot)
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, fmt.Errorf("fetch block: %w", err)
+	}
+
+	header, err := s.Client.GetHeaderBySlot(block.GetBeaconSlot())
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, fmt.Errorf("fetch block: %w", err)
+	}
+
+	beaconHeader, err := header.ToScale()
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, fmt.Errorf("beacon header to scale: %w", err)
+	}
+
+	executionPayloadScale, err := api.CapellaExecutionPayloadToScale(block.GetExecutionPayloadCapella(), s.activeSpec)
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, err
+	}
+
+	nextSyncCommittee := api.SyncAggregateToScale(block.GetSyncAggregate())
+
+	executionHeaderBranch, err := s.getExecutionHeaderBranch(block)
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, err
+	}
+
+	headerUpdate := scale.HeaderUpdateCapella{
+		Payload: scale.HeaderUpdatePayloadCapella{
+			BeaconHeader:    beaconHeader,
+			ExecutionHeader: executionPayloadScale,
+			ExecutionBranch: executionHeaderBranch,
+		},
+		NextSyncAggregate: nextSyncCommittee,
+	}
+
+	return headerUpdate, nil
+}
+
 func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpoint cache.Proof) (scale.HeaderUpdate, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
@@ -542,6 +593,9 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 	}
 
 	proofScale, err := s.getBlockHeaderAncestryProof(int(block.GetBeaconSlot()), blockRoot, checkpoint.BlockRootsTree)
+	if err != nil {
+		return scale.HeaderUpdate{}, err
+	}
 
 	displayProof := []common.Hash{}
 	for _, proof := range proofScale {
@@ -550,6 +604,67 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 
 	headerUpdate := scale.HeaderUpdate{
 		Payload: scale.HeaderUpdatePayload{
+			BeaconHeader:              beaconHeader,
+			ExecutionHeader:           executionPayloadScale,
+			ExecutionBranch:           executionHeaderBranch,
+			BlockRootBranch:           proofScale,
+			BlockRootBranchHeaderRoot: types.NewH256(checkpoint.FinalizedBlockRoot.Bytes()),
+		},
+		NextSyncAggregate: nextSyncCommittee,
+	}
+
+	return headerUpdate, nil
+}
+
+func (s *Syncer) GetCapellaHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpoint cache.Proof) (scale.HeaderUpdateCapella, error) {
+	block, err := s.Client.GetBeaconBlock(blockRoot)
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, fmt.Errorf("fetch block: %w", err)
+	}
+
+	header, err := s.Client.GetHeaderBySlot(block.GetBeaconSlot())
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, fmt.Errorf("fetch block: %w", err)
+	}
+
+	beaconHeader, err := header.ToScale()
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, fmt.Errorf("beacon header to scale: %w", err)
+	}
+
+	executionPayloadScale, err := api.CapellaExecutionPayloadToScale(block.GetExecutionPayloadCapella(), s.activeSpec)
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, err
+	}
+
+	nextSyncCommittee := api.SyncAggregateToScale(block.GetSyncAggregate())
+
+	executionHeaderBranch, err := s.getExecutionHeaderBranch(block)
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, err
+	}
+
+	// If slot == finalizedSlot, there won't be an ancestry proof because the header state in question is also the
+	// finalized header
+	if block.GetBeaconSlot() == checkpoint.Slot {
+		return scale.HeaderUpdateCapella{
+			Payload: scale.HeaderUpdatePayloadCapella{
+				BeaconHeader:    beaconHeader,
+				ExecutionHeader: executionPayloadScale,
+				ExecutionBranch: executionHeaderBranch,
+				BlockRootBranch: []types.H256{},
+			},
+			NextSyncAggregate: nextSyncCommittee,
+		}, nil
+	}
+
+	proofScale, err := s.getBlockHeaderAncestryProof(int(block.GetBeaconSlot()), blockRoot, checkpoint.BlockRootsTree)
+	if err != nil {
+		return scale.HeaderUpdateCapella{}, err
+	}
+
+	headerUpdate := scale.HeaderUpdateCapella{
+		Payload: scale.HeaderUpdatePayloadCapella{
 			BeaconHeader:              beaconHeader,
 			ExecutionHeader:           executionPayloadScale,
 			ExecutionBranch:           executionHeaderBranch,

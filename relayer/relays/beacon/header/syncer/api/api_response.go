@@ -1486,7 +1486,7 @@ func ExecutionPayloadToScale(e *state.ExecutionPayload) (scale.ExecutionPayload,
 	}, nil
 }
 
-func ExecutionPayloadCapellaToScale(e *state.ExecutionPayloadCapella) (scale.ExecutionPayloadCapella, error) {
+func CapellaExecutionPayloadToScale(e *state.ExecutionPayloadCapella, activeSpec config.ActiveSpec) (scale.ExecutionPayloadCapella, error) {
 	transactionsContainer := state.TransactionsRootContainer{}
 	transactionsContainer.Transactions = e.Transactions
 
@@ -1495,9 +1495,17 @@ func ExecutionPayloadCapellaToScale(e *state.ExecutionPayloadCapella) (scale.Exe
 		return scale.ExecutionPayloadCapella{}, err
 	}
 
-	withdrawalContainer := state.WithdrawalsRootContainer{}
-	withdrawalContainer.Withdrawals = e.Withdrawals
-	withdrawalRoot, err := withdrawalContainer.HashTreeRoot()
+	var withdrawalRoot types.H256
+
+	if activeSpec == config.Minimal {
+		withdrawalContainer := state.WithdrawalsRootContainerMinimal{}
+		withdrawalContainer.Withdrawals = e.Withdrawals
+		withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
+	} else {
+		withdrawalContainer := state.WithdrawalsRootContainerMainnet{}
+		withdrawalContainer.Withdrawals = e.Withdrawals
+		withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
+	}
 	if err != nil {
 		return scale.ExecutionPayloadCapella{}, err
 	}

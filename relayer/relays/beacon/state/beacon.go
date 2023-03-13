@@ -509,7 +509,11 @@ type Withdrawal struct {
 	Amount         uint64   `json:"amount"`
 }
 
-type WithdrawalsRootContainer struct {
+type WithdrawalsRootContainerMinimal struct {
+	Withdrawals []*Withdrawal `ssz-max:"4" json:"withdrawals"`
+}
+
+type WithdrawalsRootContainerMainnet struct {
 	Withdrawals []*Withdrawal `ssz-max:"16" json:"withdrawals"`
 }
 
