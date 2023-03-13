@@ -28,7 +28,7 @@ function run() {
     data['genesis']['runtime']['parachainInfo']['parachainId'] = 1000;
     data['para_id'] = 1000;
 
-    data['genesis']['runtime']['basicInboundChannel']['sourceChannel'] = contracts['contracts']['BasicOutboundChannel']['address'];
+    data['genesis']['runtime']['basicInboundChannel']['sourceChannel'] = contracts['contracts']['OutboundChannel']['address'];
 
     console.log(JSON.stringify(
       data,
