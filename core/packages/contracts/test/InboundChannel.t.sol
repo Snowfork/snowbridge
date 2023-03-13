@@ -4,11 +4,11 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import { InboundChannel } from "../InboundChannel.sol";
-import { Vault } from "../Vault.sol";
-import { IParachainClient } from "../IParachainClient.sol";
-import { ParachainClientMock } from "./mocks/ParachainClientMock.sol";
-import { RecipientMock } from "./mocks/RecipientMock.sol";
+import {InboundChannel} from "../src/InboundChannel.sol";
+import {Vault} from "../src/Vault.sol";
+import {IParachainClient} from "../src/IParachainClient.sol";
+import {ParachainClientMock} from "./mocks/ParachainClientMock.sol";
+import {RecipientMock} from "./mocks/RecipientMock.sol";
 
 contract InboundChannelTest is Test {
     InboundChannel public channel;
@@ -37,7 +37,7 @@ contract InboundChannelTest is Test {
     }
 
     function testSubmit() public {
-        vault.deposit{ value: 50 ether }(origin);
+        vault.deposit{value: 50 ether}(origin);
 
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);
@@ -49,7 +49,7 @@ contract InboundChannelTest is Test {
     }
 
     function testSubmitShouldFailInvalidProof() public {
-        vault.deposit{ value: 50 ether }(origin);
+        vault.deposit{value: 50 ether}(origin);
 
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);
@@ -59,7 +59,7 @@ contract InboundChannelTest is Test {
     }
 
     function testSubmitShouldFailInvalidNonce() public {
-        vault.deposit{ value: 50 ether }(origin);
+        vault.deposit{value: 50 ether}(origin);
 
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);
@@ -70,7 +70,7 @@ contract InboundChannelTest is Test {
 
     // Test that submission fails if origin does not have sufficient funds to pay relayer
     function testSubmitShouldFailInsufficientBalance() public {
-        vault.deposit{ value: 0.1 ether }(origin);
+        vault.deposit{value: 0.1 ether}(origin);
 
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);
@@ -80,7 +80,7 @@ contract InboundChannelTest is Test {
     }
 
     function testSubmitShouldNotFailOnHandlerFailure() public {
-        vault.deposit{ value: 50 ether }(origin);
+        vault.deposit{value: 50 ether}(origin);
 
         recipient.setShouldFail();
         vm.expectEmit(false, false, false, true);
@@ -96,7 +96,7 @@ contract InboundChannelTest is Test {
     }
 
     function testSubmitShouldNotFailOnHandlerPanic() public {
-        vault.deposit{ value: 50 ether }(origin);
+        vault.deposit{value: 50 ether}(origin);
 
         recipient.setShouldPanic();
         vm.expectEmit(false, false, false, true);
@@ -112,7 +112,7 @@ contract InboundChannelTest is Test {
     }
 
     function testSubmitShouldNotFailOnHandlerOOG() public {
-        vault.deposit{ value: 50 ether }(origin);
+        vault.deposit{value: 50 ether}(origin);
 
         recipient.setShouldConsumeAllGas();
         vm.expectEmit(false, false, false, true);

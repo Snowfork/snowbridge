@@ -4,8 +4,8 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import { OutboundChannel } from "../OutboundChannel.sol";
-import { Vault } from "../Vault.sol";
+import {OutboundChannel} from "../src/OutboundChannel.sol";
+import {Vault} from "../src/Vault.sol";
 
 contract OutboundChannelTest is Test {
     Vault public vault;
@@ -21,14 +21,14 @@ contract OutboundChannelTest is Test {
     }
 
     function testSubmit() public {
-        channel.submit{ value: 1 ether }(dest, message);
+        channel.submit{value: 1 ether}(dest, message);
         vault.balances(dest);
         assertEq(vault.balances(dest), 1 ether);
     }
 
     function testSubmitFailFeePaymentTooLow() public {
         vm.expectRevert(OutboundChannel.FeePaymentToLow.selector);
-        channel.submit{ value: 0.5 ether }(dest, message);
+        channel.submit{value: 0.5 ether}(dest, message);
         assertEq(vault.balances(dest), 0 ether);
     }
 }

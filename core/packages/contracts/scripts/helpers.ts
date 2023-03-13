@@ -8,7 +8,7 @@ import secp256k1 from "secp256k1"
 import seedrandom from "seedrandom"
 import { keccak256, entropyToMnemonic } from "ethers/lib/utils"
 
-import type { BeefyClient } from "../../../types/BeefyClient"
+import type { BeefyClient } from "../types/BeefyClient"
 
 let readSetBits = (bitfield: ethers.BigNumber[]): number[] => {
     let bits = bitfield

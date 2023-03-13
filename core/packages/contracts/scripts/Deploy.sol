@@ -3,14 +3,14 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-import "../BeefyClient.sol";
-import "../ParachainClient.sol";
-import "../InboundChannel.sol";
-import "../OutboundChannel.sol";
-import "../NativeTokens.sol";
-import "../Vault.sol";
-import "../SovereignTreasury.sol";
-import "../IVault.sol";
+import "../src/BeefyClient.sol";
+import "../src/ParachainClient.sol";
+import "../src/InboundChannel.sol";
+import "../src/OutboundChannel.sol";
+import "../src/NativeTokens.sol";
+import "../src/Vault.sol";
+import "../src/SovereignTreasury.sol";
+import "../src/IVault.sol";
 
 contract DeployScript is Script {
     function setUp() public {}

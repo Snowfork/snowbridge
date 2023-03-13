@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import { IRecipient } from "../../IRecipient.sol";
+import {IRecipient} from "../../src/IRecipient.sol";
 
 contract RecipientMock is IRecipient {
     bool shouldFail;

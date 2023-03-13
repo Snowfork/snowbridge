@@ -66,7 +66,7 @@ deploy_contracts()
         --rpc-url $eth_endpoint_http \
         --broadcast \
         -vvv \
-        src/deploy/Deploy.sol:DeployScript
+        scripts/Deploy.sol:DeployScript
     node scripts/generateContractInfo.js "$output_dir/contracts.json"
     popd
     echo "Exported contract artifacts: $output_dir/contracts.json"

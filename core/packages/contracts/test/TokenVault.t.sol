@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import "../TokenVault.sol";
+import "../src/TokenVault.sol";
 import "./mocks/SovereignAccountMock.sol";
 import "./mocks/TestToken.sol";
 

@@ -20,7 +20,7 @@
     "size": "hardhat size-contracts",
     "test": "pnpm test:foundry",
     "test:foundry": "pnpm build && forge test -vvv",
-    "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ src/deploy/Deploy.sol:DeployScript --broadcast -vvvv"
+    "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ scripts/Deploy.sol:DeployScript --broadcast -vvvv"
   },
   "devDependencies": {
     "@babel/core": "^7.11.6",
