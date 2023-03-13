@@ -55,21 +55,23 @@ type BeaconBlockResponse struct {
 				VoluntaryExits    []SignedVoluntaryExitResponse `json:"voluntary_exits"`
 				SyncAggregate     SyncAggregateResponse         `json:"sync_aggregate"`
 				ExecutionPayload  struct {
-					ParentHash    string   `json:"parent_hash"`
-					FeeRecipient  string   `json:"fee_recipient"`
-					StateRoot     string   `json:"state_root"`
-					ReceiptsRoot  string   `json:"receipts_root"`
-					LogsBloom     string   `json:"logs_bloom"`
-					PrevRandao    string   `json:"prev_randao"`
-					BlockNumber   string   `json:"block_number"`
-					GasLimit      string   `json:"gas_limit"`
-					GasUsed       string   `json:"gas_used"`
-					Timestamp     string   `json:"timestamp"`
-					ExtraData     string   `json:"extra_data"`
-					BaseFeePerGas string   `json:"base_fee_per_gas"`
-					BlockHash     string   `json:"block_hash"`
-					Transactions  []string `json:"transactions"`
+					ParentHash    string               `json:"parent_hash"`
+					FeeRecipient  string               `json:"fee_recipient"`
+					StateRoot     string               `json:"state_root"`
+					ReceiptsRoot  string               `json:"receipts_root"`
+					LogsBloom     string               `json:"logs_bloom"`
+					PrevRandao    string               `json:"prev_randao"`
+					BlockNumber   string               `json:"block_number"`
+					GasLimit      string               `json:"gas_limit"`
+					GasUsed       string               `json:"gas_used"`
+					Timestamp     string               `json:"timestamp"`
+					ExtraData     string               `json:"extra_data"`
+					BaseFeePerGas string               `json:"base_fee_per_gas"`
+					BlockHash     string               `json:"block_hash"`
+					Transactions  []string             `json:"transactions"`
+					Withdrawals   []WithdrawalResponse `json:"withdrawals"`
 				} `json:"execution_payload"`
+				BlsToExecutionChanges []SignedBLSToExecutionChangeResponse `json:"bls_to_execution_changes"`
 			} `json:"body"`
 		} `json:"message"`
 	} `json:"data"`
@@ -296,6 +298,69 @@ func (h *HeaderResponse) ToScale() (scale.BeaconHeader, error) {
 		ParentRoot:    types.NewH256(common.HexToHash(h.ParentRoot).Bytes()),
 		StateRoot:     types.NewH256(common.HexToHash(h.StateRoot).Bytes()),
 		BodyRoot:      types.NewH256(common.HexToHash(h.BodyRoot).Bytes()),
+	}, nil
+}
+
+type WithdrawalResponse struct {
+	Index          string `json:"index"`
+	ValidatorIndex string `json:"validator_index"`
+	Address        string `json:"address"`
+	Amount         string `json:"amount"`
+}
+
+type BLSToExecutionChangeResponse struct {
+	ValidatorIndex     string `json:"validator_index"`
+	FromBlsPubkey      string `json:"from_bls_pubkey"`
+	ToExecutionAddress string `json:"to_execution_address"`
+}
+
+type SignedBLSToExecutionChangeResponse struct {
+	Message   *BLSToExecutionChangeResponse `json:"message,omitempty"`
+	Signature string                        `json:"signature,omitempty"`
+}
+
+func (s *SignedBLSToExecutionChangeResponse) ToFastSSZ() (*state.SignedBLSToExecutionChange, error) {
+	validateIndex, err := util.ToUint64(s.Message.ValidatorIndex)
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := util.HexStringToPublicKey(s.Message.FromBlsPubkey)
+	if err != nil {
+		return nil, err
+	}
+	address, err := util.HexStringTo20Bytes(s.Message.ToExecutionAddress)
+	if err != nil {
+		return nil, err
+	}
+	signature, err := util.HexStringTo96Bytes(s.Signature)
+	if err != nil {
+		return nil, err
+	}
+	return &state.SignedBLSToExecutionChange{Message: &state.BLSToExecutionChange{ValidatorIndex: validateIndex, FromBlsPubkey: pubKey[:], ToExecutionAddress: address[:]}, Signature: signature[:]}, nil
+}
+
+func (w *WithdrawalResponse) ToFastSSZ() (*state.Withdrawal, error) {
+	index, err := util.ToUint64(w.Index)
+	if err != nil {
+		return nil, err
+	}
+	validatorIndex, err := util.ToUint64(w.ValidatorIndex)
+	if err != nil {
+		return nil, err
+	}
+	address, err := util.HexStringTo20Bytes(w.Address)
+	if err != nil {
+		return nil, err
+	}
+	amount, err := util.ToUint64(w.Amount)
+	if err != nil {
+		return nil, err
+	}
+	return &state.Withdrawal{
+		Index:          index,
+		ValidatorIndex: validatorIndex,
+		Address:        address,
+		Amount:         amount,
 	}, nil
 }
 
@@ -561,7 +626,7 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 // Because it only returns JSON, we need this interim step where we convert the block JSON to the data
 // types that the FastSSZ lib expects. When Lodestar supports SSZ block response, we can remove all these
 // and directly unmarshal SSZ bytes to state.BeaconBlock.
-func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec) (state.BeaconBlock, error) {
+func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint64) (state.BeaconBlock, error) {
 	data := b.Data.Message
 
 	slot, err := util.ToUint64(data.Slot)
@@ -724,6 +789,15 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec) (state.Beac
 		transactions = append(transactions, transactionSSZ)
 	}
 
+	withdrawals := []*state.Withdrawal{}
+	for _, withdrawalResponse := range executionPayload.Withdrawals {
+		withdrawalSSZ, err := withdrawalResponse.ToFastSSZ()
+		if err != nil {
+			return nil, err
+		}
+		withdrawals = append(withdrawals, withdrawalSSZ)
+	}
+
 	blockNumber, err := util.ToUint64(executionPayload.BlockNumber)
 	if err != nil {
 		return nil, err
@@ -744,30 +818,117 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec) (state.Beac
 		return nil, err
 	}
 
+	syncCommitteeBits, err := util.HexStringToByteArray(body.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return nil, err
+	}
+
+	syncCommitteeSignature, err := util.HexStringTo96Bytes(body.SyncAggregate.SyncCommitteeSignature)
+	if err != nil {
+		return nil, err
+	}
+
+	beaconBlockCommon := state.BeaconBlockCommon{
+		Slot:          slot,
+		ProposerIndex: proposerIndex,
+		ParentRoot:    parentRoot,
+		StateRoot:     stateRoot,
+	}
+
+	beaconBlockBodyCommon := state.BeaconBlockBodyCommon{
+		RandaoReveal: randaoReveal,
+		Eth1Data: &state.Eth1Data{
+			DepositRoot:  eth1DepositRoot,
+			DepositCount: eth1DepositCount,
+			BlockHash:    eth1BlockHash,
+		},
+		Graffiti:          graffiti,
+		ProposerSlashings: proposerSlashings,
+		AttesterSlashings: attesterSlashings,
+		Attestations:      attestations,
+		Deposits:          deposits,
+		VoluntaryExits:    voluntaryExits,
+	}
+
+	blsExecutionChanges := []*state.SignedBLSToExecutionChange{}
+
+	for _, changeResponse := range body.BlsToExecutionChanges {
+		changeSSZ, err := changeResponse.ToFastSSZ()
+		if err != nil {
+			return nil, err
+		}
+		blsExecutionChanges = append(blsExecutionChanges, changeSSZ)
+	}
+
 	if activeSpec == config.Minimal {
-		syncCommitteeBits, err := util.HexStringToByteArray(body.SyncAggregate.SyncCommitteeBits)
-		if err != nil {
-			return nil, err
+		if epoch >= config.Minimal_CapellaForkEpoch {
+			return &state.BeaconBlockCapellaMinimal{
+				BeaconBlockCommon: beaconBlockCommon,
+				Body: &state.BeaconBlockBodyCapellaMinimal{
+					BeaconBlockBodyCommon: beaconBlockBodyCommon,
+					SyncAggregate: &state.SyncAggregateMinimal{
+						SyncCommitteeBits:      syncCommitteeBits,
+						SyncCommitteeSignature: syncCommitteeSignature,
+					},
+					ExecutionPayload: &state.ExecutionPayloadCapella{
+						ExecutionPayload: state.ExecutionPayload{
+							ParentHash:    parentHash,
+							FeeRecipient:  feeRecipient,
+							StateRoot:     executionStateRoot,
+							ReceiptsRoot:  receiptsRoot,
+							LogsBloom:     logsBloom,
+							PrevRandao:    prevRando,
+							BlockNumber:   blockNumber,
+							GasLimit:      gasLimit,
+							GasUsed:       gasUsed,
+							Timestamp:     timestamp,
+							ExtraData:     extraData,
+							BaseFeePerGas: baseFeePerGasBytes,
+							BlockHash:     blockHash,
+							Transactions:  transactions,
+						},
+						Withdrawals: withdrawals, // new for Capella
+					},
+					BlsToExecutionChanges: blsExecutionChanges, // new for Capella
+				},
+			}, nil
+		} else {
+			return &state.BeaconBlockBellatrixMinimal{
+				BeaconBlockCommon: beaconBlockCommon,
+				Body: &state.BeaconBlockBodyBellatrixMinimal{
+					BeaconBlockBodyCommon: beaconBlockBodyCommon,
+					SyncAggregate: &state.SyncAggregateMinimal{
+						SyncCommitteeBits:      syncCommitteeBits,
+						SyncCommitteeSignature: syncCommitteeSignature,
+					},
+					ExecutionPayload: &state.ExecutionPayload{
+						ParentHash:    parentHash,
+						FeeRecipient:  feeRecipient,
+						StateRoot:     executionStateRoot,
+						ReceiptsRoot:  receiptsRoot,
+						LogsBloom:     logsBloom,
+						PrevRandao:    prevRando,
+						BlockNumber:   blockNumber,
+						GasLimit:      gasLimit,
+						GasUsed:       gasUsed,
+						Timestamp:     timestamp,
+						ExtraData:     extraData,
+						BaseFeePerGas: baseFeePerGasBytes,
+						BlockHash:     blockHash,
+						Transactions:  transactions,
+					},
+				},
+			}, nil
 		}
-
-		syncCommitteeSignature, err := util.HexStringTo96Bytes(body.SyncAggregate.SyncCommitteeSignature)
-		if err != nil {
-			return nil, err
-		}
-
-		syncAggregate := &state.SyncAggregateMinimal{
-			SyncCommitteeBits:      syncCommitteeBits,
-			SyncCommitteeSignature: syncCommitteeSignature,
-		}
-
-		return &state.BeaconBlockBellatrixMinimal{
+	} else {
+		beaconBlockCapella := state.BeaconBlockCapellaMainnet{
 			BeaconBlockCommon: state.BeaconBlockCommon{
 				Slot:          slot,
 				ProposerIndex: proposerIndex,
 				ParentRoot:    parentRoot,
 				StateRoot:     stateRoot,
 			},
-			Body: &state.BeaconBlockBodyBellatrixMinimal{
+			Body: &state.BeaconBlockBodyCapellaMainnet{
 				BeaconBlockBodyCommon: state.BeaconBlockBodyCommon{
 					RandaoReveal: randaoReveal,
 					Eth1Data: &state.Eth1Data{
@@ -782,7 +943,58 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec) (state.Beac
 					Deposits:          deposits,
 					VoluntaryExits:    voluntaryExits,
 				},
-				SyncAggregate: syncAggregate,
+				SyncAggregate: &state.SyncAggregateMainnet{
+					SyncCommitteeBits:      syncCommitteeBits,
+					SyncCommitteeSignature: syncCommitteeSignature,
+				},
+				ExecutionPayload: &state.ExecutionPayloadCapella{
+					ExecutionPayload: state.ExecutionPayload{
+						ParentHash:    parentHash,
+						FeeRecipient:  feeRecipient,
+						StateRoot:     executionStateRoot,
+						ReceiptsRoot:  receiptsRoot,
+						LogsBloom:     logsBloom,
+						PrevRandao:    prevRando,
+						BlockNumber:   blockNumber,
+						GasLimit:      gasLimit,
+						GasUsed:       gasUsed,
+						Timestamp:     timestamp,
+						ExtraData:     extraData,
+						BaseFeePerGas: baseFeePerGasBytes,
+						BlockHash:     blockHash,
+						Transactions:  transactions,
+					},
+					Withdrawals: withdrawals, // new for Capella
+				},
+				BlsToExecutionChanges: blsExecutionChanges, // new for Capella
+			},
+		}
+		beaconBlockBellatrix := state.BeaconBlockBellatrixMainnet{
+			BeaconBlockCommon: state.BeaconBlockCommon{
+				Slot:          slot,
+				ProposerIndex: proposerIndex,
+				ParentRoot:    parentRoot,
+				StateRoot:     stateRoot,
+			},
+			Body: &state.BeaconBlockBodyBellatrixMainnet{
+				BeaconBlockBodyCommon: state.BeaconBlockBodyCommon{
+					RandaoReveal: randaoReveal,
+					Eth1Data: &state.Eth1Data{
+						DepositRoot:  eth1DepositRoot,
+						DepositCount: eth1DepositCount,
+						BlockHash:    eth1BlockHash,
+					},
+					Graffiti:          graffiti,
+					ProposerSlashings: proposerSlashings,
+					AttesterSlashings: attesterSlashings,
+					Attestations:      attestations,
+					Deposits:          deposits,
+					VoluntaryExits:    voluntaryExits,
+				},
+				SyncAggregate: &state.SyncAggregateMainnet{
+					SyncCommitteeBits:      syncCommitteeBits,
+					SyncCommitteeSignature: syncCommitteeSignature,
+				},
 				ExecutionPayload: &state.ExecutionPayload{
 					ParentHash:    parentHash,
 					FeeRecipient:  feeRecipient,
@@ -800,65 +1012,21 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec) (state.Beac
 					Transactions:  transactions,
 				},
 			},
-		}, nil
+		}
+		if activeSpec == config.GOERLI {
+			if epoch >= config.Goerli_CapellaForkEpoch {
+				return &beaconBlockCapella, nil
+			} else {
+				return &beaconBlockBellatrix, nil
+			}
+		} else {
+			if epoch >= config.Mainnet_CapellaForkEpoch {
+				return &beaconBlockCapella, nil
+			} else {
+				return &beaconBlockBellatrix, nil
+			}
+		}
 	}
-
-	syncCommitteeBits, err := util.HexStringToByteArray(body.SyncAggregate.SyncCommitteeBits)
-	if err != nil {
-		return nil, err
-	}
-
-	syncCommitteeSignature, err := util.HexStringTo96Bytes(body.SyncAggregate.SyncCommitteeSignature)
-	if err != nil {
-		return nil, err
-	}
-
-	syncAggregate := &state.SyncAggregateMainnet{
-		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: syncCommitteeSignature,
-	}
-
-	return &state.BeaconBlockBellatrixMainnet{
-		BeaconBlockCommon: state.BeaconBlockCommon{
-			Slot:          slot,
-			ProposerIndex: proposerIndex,
-			ParentRoot:    parentRoot,
-			StateRoot:     stateRoot,
-		},
-		Body: &state.BeaconBlockBodyBellatrixMainnet{
-			BeaconBlockBodyCommon: state.BeaconBlockBodyCommon{
-				RandaoReveal: randaoReveal,
-				Eth1Data: &state.Eth1Data{
-					DepositRoot:  eth1DepositRoot,
-					DepositCount: eth1DepositCount,
-					BlockHash:    eth1BlockHash,
-				},
-				Graffiti:          graffiti,
-				ProposerSlashings: proposerSlashings,
-				AttesterSlashings: attesterSlashings,
-				Attestations:      attestations,
-				Deposits:          deposits,
-				VoluntaryExits:    voluntaryExits,
-			},
-			SyncAggregate: syncAggregate,
-			ExecutionPayload: &state.ExecutionPayload{
-				ParentHash:    parentHash,
-				FeeRecipient:  feeRecipient,
-				StateRoot:     executionStateRoot,
-				ReceiptsRoot:  receiptsRoot,
-				LogsBloom:     logsBloom,
-				PrevRandao:    prevRando,
-				BlockNumber:   blockNumber,
-				GasLimit:      gasLimit,
-				GasUsed:       gasUsed,
-				Timestamp:     timestamp,
-				ExtraData:     extraData,
-				BaseFeePerGas: baseFeePerGasBytes,
-				BlockHash:     blockHash,
-				Transactions:  transactions,
-			},
-		},
-	}, nil
 }
 
 func (p ProposerSlashingResponse) ToScale() (scale.ProposerSlashing, error) {
@@ -1315,6 +1483,45 @@ func ExecutionPayloadToScale(e *state.ExecutionPayload) (scale.ExecutionPayload,
 		BaseFeePerGas:    types.NewU256(baseFeePerGas),
 		BlockHash:        types.NewH256(e.BlockHash[:]),
 		TransactionsRoot: transactionsRoot,
+	}, nil
+}
+
+func ExecutionPayloadCapellaToScale(e *state.ExecutionPayloadCapella) (scale.ExecutionPayloadCapella, error) {
+	transactionsContainer := state.TransactionsRootContainer{}
+	transactionsContainer.Transactions = e.Transactions
+
+	transactionsRoot, err := transactionsContainer.HashTreeRoot()
+	if err != nil {
+		return scale.ExecutionPayloadCapella{}, err
+	}
+
+	withdrawalContainer := state.WithdrawalsRootContainer{}
+	withdrawalContainer.Withdrawals = e.Withdrawals
+	withdrawalRoot, err := withdrawalContainer.HashTreeRoot()
+	if err != nil {
+		return scale.ExecutionPayloadCapella{}, err
+	}
+
+	baseFeePerGas := big.Int{}
+	// Change BaseFeePerGas back from little endianness to big endianness
+	baseFeePerGas.SetBytes(util.ChangeByteOrder(e.BaseFeePerGas[:]))
+
+	return scale.ExecutionPayloadCapella{
+		ParentHash:       types.NewH256(e.ParentHash[:]),
+		FeeRecipient:     e.FeeRecipient[:],
+		StateRoot:        types.NewH256(e.StateRoot[:]),
+		ReceiptsRoot:     types.NewH256(e.ReceiptsRoot[:]),
+		LogsBloom:        e.LogsBloom[:],
+		PrevRandao:       types.NewH256(e.PrevRandao[:]),
+		BlockNumber:      types.NewU64(e.BlockNumber),
+		GasLimit:         types.NewU64(e.GasLimit),
+		GasUsed:          types.NewU64(e.GasUsed),
+		Timestamp:        types.NewU64(e.Timestamp),
+		ExtraData:        e.ExtraData,
+		BaseFeePerGas:    types.NewU256(baseFeePerGas),
+		BlockHash:        types.NewH256(e.BlockHash[:]),
+		TransactionsRoot: transactionsRoot,
+		WithdrawalsRoot:  withdrawalRoot,
 	}, nil
 }
 

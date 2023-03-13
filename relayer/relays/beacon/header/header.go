@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
@@ -236,6 +237,21 @@ func (h *Header) SyncHeader(ctx context.Context, headerUpdate scale.HeaderUpdate
 	}).Info("Syncing header between last two finalized headers")
 
 	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate.Payload)
+	if err != nil {
+		return fmt.Errorf("write to parachain: %w", err)
+	}
+	return nil
+}
+
+func (h *Header) SyncHeaderCapella(ctx context.Context, headerUpdate scale.HeaderUpdateCapella, slotsLeft uint64) error {
+	log.WithFields(log.Fields{
+		"slot":                 headerUpdate.Payload.BeaconHeader.Slot,
+		"slotsLeftToSync":      slotsLeft,
+		"executionBlockRoot":   headerUpdate.Payload.ExecutionHeader.BlockHash.Hex(),
+		"executionBlockNumber": headerUpdate.Payload.ExecutionHeader.BlockNumber,
+	}).Info("Syncing capella header between last two finalized headers")
+
+	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header_capella", headerUpdate.Payload)
 	if err != nil {
 		return fmt.Errorf("write to parachain: %w", err)
 	}

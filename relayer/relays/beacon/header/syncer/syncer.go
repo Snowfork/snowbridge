@@ -39,7 +39,7 @@ type Syncer struct {
 
 func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64, maxSlotsPerHistoricalRoot int, activeSpec config.ActiveSpec) *Syncer {
 	return &Syncer{
-		Client:                       *api.NewBeaconClient(endpoint, activeSpec),
+		Client:                       *api.NewBeaconClient(endpoint, activeSpec, slotsInEpoch),
 		SlotsInEpoch:                 slotsInEpoch,
 		EpochsPerSyncCommitteePeriod: epochsPerSyncCommitteePeriod,
 		MaxSlotsPerHistoricalRoot:    maxSlotsPerHistoricalRoot,
@@ -442,6 +442,7 @@ func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
 	return blockRoot, nil
 }
 
+// TODO: for capella support
 func (s *Syncer) GetNextHeaderUpdateBySlotWithAncestryProof(slot uint64, checkpoint cache.Proof) (scale.HeaderUpdate, error) {
 	blockRoot, err := s.getNextBlockRootBySlot(slot)
 	if err != nil {
@@ -451,6 +452,7 @@ func (s *Syncer) GetNextHeaderUpdateBySlotWithAncestryProof(slot uint64, checkpo
 	return s.GetHeaderUpdateWithAncestryProof(blockRoot, checkpoint)
 }
 
+// TODO: for capella support
 func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, error) {
 	blockRoot, err := s.getNextBlockRootBySlot(slot)
 	if err != nil {
@@ -496,6 +498,7 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, err
 	return headerUpdate, nil
 }
 
+// TODO: for capella support
 func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpoint cache.Proof) (scale.HeaderUpdate, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {

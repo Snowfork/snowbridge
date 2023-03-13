@@ -173,7 +173,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return fmt.Errorf("transaction SubmitFinal failed (%v),handover (%v)", tx.Hash().Hex(), task.IsHandover)
 	}
 
-	log.WithFields(logrus.Fields{"tx": tx.Hash().Hex(), "handover": task.IsHandover}).Debug("Transaction SubmitFinal succeeded")
+	log.WithFields(logrus.Fields{"tx": tx.Hash().Hex(), "handover": task.IsHandover, "BlockNumber": task.SignedCommitment.Commitment.BlockNumber}).Debug("Transaction SubmitFinal succeeded")
 
 	return nil
 

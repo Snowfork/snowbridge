@@ -4,7 +4,8 @@ use crate::{config, ssz::*};
 use byte_slice_cast::AsByteSlice;
 use frame_support::{traits::Get, BoundedVec};
 use snowbridge_beacon_primitives::{
-	BeaconHeader, ExecutionPayload, ForkData, SigningData, SyncAggregate, SyncCommittee,
+	BeaconHeader, ExecutionPayload, ExecutionPayloadCapella, ForkData, SigningData, SyncAggregate,
+	SyncCommittee,
 };
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
@@ -68,6 +69,40 @@ impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32
 	}
 }
 
+impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
+	TryFrom<ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
+	for SSZExecutionPayloadCapella
+{
+	type Error = MerkleizationError;
+
+	fn try_from(
+		execution_payload: ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	) -> Result<Self, Self::Error> {
+		Ok(SSZExecutionPayloadCapella {
+			parent_hash: execution_payload.parent_hash.as_bytes().try_into()?,
+			fee_recipient: Vector::<u8, 20>::from_iter(execution_payload.fee_recipient),
+			state_root: execution_payload.state_root.as_bytes().try_into()?,
+			receipts_root: execution_payload.receipts_root.as_bytes().try_into()?,
+			logs_bloom: Vector::<u8, 256>::from_iter(execution_payload.logs_bloom),
+			prev_randao: execution_payload.prev_randao.as_bytes().try_into()?,
+			block_number: execution_payload.block_number,
+			gas_limit: execution_payload.gas_limit,
+			gas_used: execution_payload.gas_used,
+			timestamp: execution_payload.timestamp,
+			extra_data: List::<u8, { config::MAX_EXTRA_DATA_BYTES }>::try_from(
+				execution_payload.extra_data.into_inner(),
+			)
+			.map_err(|_| MerkleizationError::ListError)?,
+			base_fee_per_gas: U256::try_from_bytes_le(
+				&(execution_payload.base_fee_per_gas.as_byte_slice()),
+			)?,
+			block_hash: execution_payload.block_hash.as_bytes().try_into()?,
+			transactions_root: execution_payload.transactions_root.as_bytes().try_into()?,
+			withdrawals_root: execution_payload.withdrawals_root.as_bytes().try_into()?,
+		})
+	}
+}
+
 impl TryFrom<BeaconHeader> for SSZBeaconBlockHeader {
 	type Error = MerkleizationError;
 
@@ -117,6 +152,18 @@ pub fn hash_tree_root_execution_header<
 	execution_header: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 ) -> Result<[u8; 32], MerkleizationError> {
 	let ssz_execution_payload: SSZExecutionPayload = execution_header.try_into()?;
+
+	hash_tree_root(ssz_execution_payload)
+}
+
+pub fn hash_tree_root_execution_header_capella<
+	FeeRecipientSize: Get<u32>,
+	LogsBloomSize: Get<u32>,
+	ExtraDataSize: Get<u32>,
+>(
+	execution_header: ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+) -> Result<[u8; 32], MerkleizationError> {
+	let ssz_execution_payload: SSZExecutionPayloadCapella = execution_header.try_into()?;
 
 	hash_tree_root(ssz_execution_payload)
 }

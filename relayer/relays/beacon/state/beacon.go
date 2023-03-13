@@ -158,36 +158,6 @@ type BeaconBlockBodyBellatrixMainnet struct {
 	ExecutionPayload *ExecutionPayload     `json:"execution_payload"`
 }
 
-type BLSToExecutionChange struct {
-	ValidatorIndex     uint64 `json:"validator_index,omitempty"`
-	FromBlsPubkey      []byte `json:"from_bls_pubkey,omitempty" ssz-size:"48"`
-	ToExecutionAddress []byte `json:"to_execution_address,omitempty" ssz-size:"20"`
-}
-
-type SignedBLSToExecutionChange struct {
-	Message   *BLSToExecutionChange `json:"message,omitempty"`
-	Signature []byte                `json:"signature,omitempty" ssz-size:"96"`
-}
-
-type BeaconBlockCapellaMinimal struct {
-	BeaconBlockCommon
-	Body *BeaconBlockBodyCapellaMinimal `json:"body"`
-}
-
-type BeaconBlockBodyCapellaMinimal struct {
-	BeaconBlockBodyCommon
-	SyncAggregate         *SyncAggregateMinimal           `json:"sync_aggregate"`
-	ExecutionPayload      *ExecutionPayloadCapellaMinimal `json:"execution_payload"`
-	BlsToExecutionChanges []*SignedBLSToExecutionChange   `json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
-}
-
-type BeaconBlockBodyCapellaMainnet struct {
-	BeaconBlockBodyCommon
-	SyncAggregate         *SyncAggregateMainnet           `json:"sync_aggregate"`
-	ExecutionPayload      *ExecutionPayloadCapellaMainnet `json:"execution_payload"`
-	BlsToExecutionChanges []*SignedBLSToExecutionChange   `json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
-}
-
 type BeaconStateCommonMainnet struct {
 	GenesisTime                 uint64             `json:"genesis_time"`
 	GenesisValidatorsRoot       []byte             `json:"genesis_validators_root" ssz-size:"32"`
@@ -220,14 +190,6 @@ type BeaconStateBellatrixMainnet struct {
 	LatestExecutionPayloadHeader *ExecutionPayloadHeader `json:"latest_execution_payload_header"`
 }
 
-type BeaconStateCapellaMainnet struct {
-	BeaconStateCommonMainnet
-	LatestExecutionPayloadHeader *ExecutionPayloadHeaderCapella `json:"latest_execution_payload_header"`
-	NextWithdrawalIndex          uint64                         `json:"next_withdrawal_index,omitempty"`
-	NextWithdrawalValidatorIndex uint64                         `json:"next_withdrawal_validator_index,omitempty"`
-	HistoricalSummaries          []*HistoricalSummary           `json:"historical_summaries,omitempty" ssz-max:"16777216"`
-}
-
 type BeaconStateCommonMinimal struct {
 	GenesisTime                 uint64                `json:"genesis_time"`
 	GenesisValidatorsRoot       []byte                `json:"genesis_validators_root" ssz-size:"32"`
@@ -246,7 +208,7 @@ type BeaconStateCommonMinimal struct {
 	Slashings                   []uint64              `json:"slashings" ssz-size:"64"`
 	PreviousEpochParticipation  []byte                `json:"previous_epoch_participation" ssz-max:"1099511627776"`
 	CurrentEpochParticipation   []byte                `json:"current_epoch_participation" ssz-max:"1099511627776"`
-	JustificationBits           []byte                `json:"justification_bits" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector4" ssz-size:"1"`
+	JustificationBits           []byte                `json:"justification_bits" ssz-size:"1"`
 	PreviousJustifiedCheckpoint *Checkpoint           `json:"previous_justified_checkpoint"`
 	CurrentJustifiedCheckpoint  *Checkpoint           `json:"current_justified_checkpoint"`
 	FinalizedCheckpoint         *Checkpoint           `json:"finalized_checkpoint"`
@@ -258,19 +220,6 @@ type BeaconStateCommonMinimal struct {
 type BeaconStateBellatrixMinimal struct {
 	BeaconStateCommonMinimal
 	LatestExecutionPayloadHeader *ExecutionPayloadHeader `json:"latest_execution_payload_header"`
-}
-
-type HistoricalSummary struct {
-	BlockSummaryRoot []byte `json:"block_summary_root,omitempty" ssz-size:"32"`
-	StateSummaryRoot []byte `json:"state_summary_root,omitempty" ssz-size:"32"`
-}
-
-type BeaconStateCapellaMinimal struct {
-	BeaconStateCommonMinimal
-	LatestExecutionPayloadHeader *ExecutionPayloadHeaderCapella `json:"latest_execution_payload_header"`
-	NextWithdrawalIndex          uint64                         `json:"next_withdrawal_index,omitempty"`
-	NextWithdrawalValidatorIndex uint64                         `json:"next_withdrawal_validator_index,omitempty"`
-	HistoricalSummaries          []*HistoricalSummary           `json:"historical_summaries,omitempty" ssz-max:"16777216"`
 }
 
 type BlockRootsContainerMainnet struct {
@@ -322,14 +271,24 @@ type SyncAggregateMinimal struct {
 	SyncCommitteeSignature [96]byte `json:"sync_committee_signature" ssz-size:"96"`
 }
 
-type Withdrawal struct {
-	Index          uint64 `json:"index"`
-	ValidatorIndex uint64 `json:"validator_index"`
-	Address        []byte `json:"address" ssz-size:"20"`
-	Amount         uint64 `json:"amount"`
+type BeaconState interface {
+	UnmarshalSSZ(buf []byte) error
+	GetSlot() uint64
+	GetLatestBlockHeader() *BeaconBlockHeader
+	GetBlockRoots() [][]byte
+	GetTree() (*ssz.Node, error)
 }
 
-// bellatrix
+type SyncAggregate interface {
+	GetSyncAggregateBits() []byte
+	GetSyncAggregateSignature() [96]byte
+}
+
+type BeaconBlockBody interface {
+	GetTree() (*ssz.Node, error)
+}
+
+// Bellatrix
 type ExecutionPayload struct {
 	ParentHash    [32]byte  `ssz-size:"32" json:"parent_hash"`
 	FeeRecipient  [20]byte  `ssz-size:"20" json:"fee_recipient"`
@@ -364,51 +323,20 @@ type ExecutionPayloadHeader struct {
 	TransactionsRoot []byte `json:"transactions_root" ssz-size:"32"`
 }
 
-type ExecutionPayloadCapellaMinimal struct {
-	ExecutionPayload
-	Withdrawals []*Withdrawal `ssz-max:"4" json:"withdrawals"`
-}
-
-type ExecutionPayloadCapellaMainnet struct {
-	ExecutionPayload
-	Withdrawals []*Withdrawal `ssz-max:"16" json:"withdrawals"`
-}
-
-type ExecutionPayloadHeaderCapella struct {
-	ExecutionPayloadHeader
-	WithdrawalsRoot []byte `json:"withdrawals_root" ssz-size:"32"`
-}
-
-type BeaconState interface {
-	UnmarshalSSZ(buf []byte) error
-	GetSlot() uint64
-	GetLatestBlockHeader() *BeaconBlockHeader
-	GetBlockRoots() [][]byte
+type BlockRootsContainer interface {
 	GetTree() (*ssz.Node, error)
-}
-
-type SyncAggregate interface {
-	GetSyncAggregateBits() []byte
-	GetSyncAggregateSignature() [96]byte
-}
-
-type BeaconBlockBody interface {
-	GetTree() (*ssz.Node, error)
+	SetBlockRoots(blockRoots [][]byte)
 }
 
 type BeaconBlock interface {
 	UnmarshalSSZ(buf []byte) error
 	GetBeaconSlot() uint64
 	GetExecutionPayload() *ExecutionPayload
+	GetExecutionPayloadCapella() *ExecutionPayloadCapella
 	GetSyncAggregate() SyncAggregate
 	GetTree() (*ssz.Node, error)
 	GetBlockBodyTree() (*ssz.Node, error)
 	GetBodyRoot() ([32]byte, error)
-}
-
-type BlockRootsContainer interface {
-	GetTree() (*ssz.Node, error)
-	SetBlockRoots(blockRoots [][]byte)
 }
 
 func (b *BeaconStateBellatrixMinimal) GetSlot() uint64 {
@@ -420,18 +348,6 @@ func (b *BeaconStateBellatrixMinimal) GetLatestBlockHeader() *BeaconBlockHeader 
 }
 
 func (b *BeaconStateBellatrixMinimal) GetBlockRoots() [][]byte {
-	return b.BlockRoots
-}
-
-func (b *BeaconStateCapellaMinimal) GetSlot() uint64 {
-	return b.Slot
-}
-
-func (b *BeaconStateCapellaMinimal) GetLatestBlockHeader() *BeaconBlockHeader {
-	return b.LatestBlockHeader
-}
-
-func (b *BeaconStateCapellaMinimal) GetBlockRoots() [][]byte {
 	return b.BlockRoots
 }
 
@@ -463,8 +379,20 @@ func (b *BeaconBlockBellatrixMinimal) GetExecutionPayload() *ExecutionPayload {
 	return b.Body.ExecutionPayload
 }
 
+func (b *BeaconBlockBellatrixMinimal) GetExecutionPayloadCapella() *ExecutionPayloadCapella {
+	return nil
+}
+
 func (b *BeaconBlockBellatrixMinimal) GetSyncAggregate() SyncAggregate {
 	return b.Body.SyncAggregate
+}
+
+func (b *BeaconBlockBellatrixMinimal) GetBlockBodyTree() (*ssz.Node, error) {
+	return b.Body.GetTree()
+}
+
+func (b *BeaconBlockBellatrixMinimal) GetBodyRoot() ([32]byte, error) {
+	return b.Body.HashTreeRoot()
 }
 
 func (s *SyncAggregateMinimal) GetSyncAggregateBits() []byte {
@@ -483,6 +411,10 @@ func (b *BeaconBlockBellatrixMainnet) GetExecutionPayload() *ExecutionPayload {
 	return b.Body.ExecutionPayload
 }
 
+func (b *BeaconBlockBellatrixMainnet) GetExecutionPayloadCapella() *ExecutionPayloadCapella {
+	return nil
+}
+
 func (b *BeaconBlockBellatrixMainnet) GetBlockBodyTree() (*ssz.Node, error) {
 	return b.Body.GetTree()
 }
@@ -495,20 +427,150 @@ func (b *BeaconBlockBellatrixMainnet) GetSyncAggregate() SyncAggregate {
 	return b.Body.SyncAggregate
 }
 
-func (b *BeaconBlockBellatrixMinimal) GetBlockBodyTree() (*ssz.Node, error) {
-	return b.Body.GetTree()
-}
-
-func (b *BeaconBlockBellatrixMinimal) GetBodyRoot() ([32]byte, error) {
-	return b.Body.HashTreeRoot()
-}
-
 func (s *SyncAggregateMainnet) GetSyncAggregateBits() []byte {
 	return s.SyncCommitteeBits
 }
 
 func (s *SyncAggregateMainnet) GetSyncAggregateSignature() [96]byte {
 	return s.SyncCommitteeSignature
+}
+
+// Capella structures
+type ExecutionPayloadCapella struct {
+	ExecutionPayload
+	Withdrawals []*Withdrawal `ssz-max:"16" json:"withdrawals"`
+}
+
+type ExecutionPayloadHeaderCapella struct {
+	ExecutionPayloadHeader
+	WithdrawalsRoot []byte `json:"withdrawals_root" ssz-size:"32"`
+}
+
+type BLSToExecutionChange struct {
+	ValidatorIndex     uint64 `json:"validator_index,omitempty"`
+	FromBlsPubkey      []byte `json:"from_bls_pubkey,omitempty" ssz-size:"48"`
+	ToExecutionAddress []byte `json:"to_execution_address,omitempty" ssz-size:"20"`
+}
+
+type SignedBLSToExecutionChange struct {
+	Message   *BLSToExecutionChange `json:"message,omitempty"`
+	Signature []byte                `json:"signature,omitempty" ssz-size:"96"`
+}
+
+type BeaconBlockCapellaMinimal struct {
+	BeaconBlockCommon
+	Body *BeaconBlockBodyCapellaMinimal `json:"body"`
+}
+
+type BeaconBlockCapellaMainnet struct {
+	BeaconBlockCommon
+	Body *BeaconBlockBodyCapellaMainnet `json:"body"`
+}
+
+type BeaconBlockBodyCapellaMinimal struct {
+	BeaconBlockBodyCommon
+	SyncAggregate         *SyncAggregateMinimal         `json:"sync_aggregate"`
+	ExecutionPayload      *ExecutionPayloadCapella      `json:"execution_payload"`
+	BlsToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
+}
+
+type BeaconBlockBodyCapellaMainnet struct {
+	BeaconBlockBodyCommon
+	SyncAggregate         *SyncAggregateMainnet         `json:"sync_aggregate"`
+	ExecutionPayload      *ExecutionPayloadCapella      `json:"execution_payload"`
+	BlsToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
+}
+
+type BeaconStateCapellaMainnet struct {
+	BeaconStateCommonMainnet
+	LatestExecutionPayloadHeader *ExecutionPayloadHeaderCapella `json:"latest_execution_payload_header"`
+	NextWithdrawalIndex          uint64                         `json:"next_withdrawal_index,omitempty"`
+	NextWithdrawalValidatorIndex uint64                         `json:"next_withdrawal_validator_index,omitempty"`
+	HistoricalSummaries          []*HistoricalSummary           `json:"historical_summaries,omitempty" ssz-max:"16777216"`
+}
+
+type HistoricalSummary struct {
+	BlockSummaryRoot []byte `json:"block_summary_root,omitempty" ssz-size:"32"`
+	StateSummaryRoot []byte `json:"state_summary_root,omitempty" ssz-size:"32"`
+}
+
+type BeaconStateCapellaMinimal struct {
+	BeaconStateCommonMinimal
+	LatestExecutionPayloadHeader *ExecutionPayloadHeaderCapella `json:"latest_execution_payload_header"`
+	NextWithdrawalIndex          uint64                         `json:"next_withdrawal_index,omitempty"`
+	NextWithdrawalValidatorIndex uint64                         `json:"next_withdrawal_validator_index,omitempty"`
+	HistoricalSummaries          []*HistoricalSummary           `json:"historical_summaries,omitempty" ssz-max:"16777216"`
+}
+
+type Withdrawal struct {
+	Index          uint64   `json:"index"`
+	ValidatorIndex uint64   `json:"validator_index"`
+	Address        [20]byte `json:"address" ssz-size:"20"`
+	Amount         uint64   `json:"amount"`
+}
+
+type WithdrawalsRootContainer struct {
+	Withdrawals []*Withdrawal `ssz-max:"16" json:"withdrawals"`
+}
+
+func (b *BeaconBlockCapellaMinimal) GetBeaconSlot() uint64 {
+	return b.Slot
+}
+
+func (b *BeaconBlockCapellaMinimal) GetExecutionPayload() *ExecutionPayload {
+	return &b.Body.ExecutionPayload.ExecutionPayload
+}
+
+func (b *BeaconBlockCapellaMinimal) GetExecutionPayloadCapella() *ExecutionPayloadCapella {
+	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockCapellaMinimal) GetSyncAggregate() SyncAggregate {
+	return b.Body.SyncAggregate
+}
+
+func (b *BeaconBlockCapellaMinimal) GetBlockBodyTree() (*ssz.Node, error) {
+	return b.Body.GetTree()
+}
+
+func (b *BeaconBlockCapellaMinimal) GetBodyRoot() ([32]byte, error) {
+	return b.Body.HashTreeRoot()
+}
+
+func (b *BeaconBlockCapellaMainnet) GetBeaconSlot() uint64 {
+	return b.Slot
+}
+
+func (b *BeaconBlockCapellaMainnet) GetExecutionPayload() *ExecutionPayload {
+	return &b.Body.ExecutionPayload.ExecutionPayload
+}
+
+func (b *BeaconBlockCapellaMainnet) GetExecutionPayloadCapella() *ExecutionPayloadCapella {
+	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockCapellaMainnet) GetSyncAggregate() SyncAggregate {
+	return b.Body.SyncAggregate
+}
+
+func (b *BeaconBlockCapellaMainnet) GetBlockBodyTree() (*ssz.Node, error) {
+	return b.Body.GetTree()
+}
+
+func (b *BeaconBlockCapellaMainnet) GetBodyRoot() ([32]byte, error) {
+	return b.Body.HashTreeRoot()
+}
+
+func (b *BeaconStateCapellaMinimal) GetSlot() uint64 {
+	return b.Slot
+}
+
+func (b *BeaconStateCapellaMinimal) GetLatestBlockHeader() *BeaconBlockHeader {
+	return b.LatestBlockHeader
+}
+
+func (b *BeaconStateCapellaMinimal) GetBlockRoots() [][]byte {
+	return b.BlockRoots
 }
 
 func (b *BeaconStateCapellaMainnet) GetSlot() uint64 {

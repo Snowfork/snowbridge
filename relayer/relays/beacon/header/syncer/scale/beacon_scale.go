@@ -66,8 +66,23 @@ type HeaderUpdatePayload struct {
 	BlockRootBranchHeaderRoot types.H256
 }
 
+type HeaderUpdatePayloadCapella struct {
+	BeaconHeader              BeaconHeader
+	ExecutionHeader           ExecutionPayloadCapella
+	ExecutionBranch           []types.H256
+	SyncAggregate             SyncAggregate
+	SignatureSlot             types.U64
+	BlockRootBranch           []types.H256
+	BlockRootBranchHeaderRoot types.H256
+}
+
 type HeaderUpdate struct {
 	Payload           HeaderUpdatePayload
+	NextSyncAggregate SyncAggregate
+}
+
+type HeaderUpdateCapella struct {
+	Payload           HeaderUpdatePayloadCapella
 	NextSyncAggregate SyncAggregate
 }
 
@@ -152,6 +167,17 @@ type VoluntaryExit struct {
 	ValidaterIndex types.U64
 }
 
+type BLSToExecutionChange struct {
+	ValidatorIndex     types.U64
+	FromBlsPubkey      []byte
+	ToExecutionAddress []byte
+}
+
+type SignedBLSToExecutionChange struct {
+	Message   *BLSToExecutionChange
+	Signature []byte
+}
+
 type ExecutionPayload struct {
 	ParentHash       types.H256
 	FeeRecipient     []byte
@@ -169,6 +195,24 @@ type ExecutionPayload struct {
 	TransactionsRoot types.H256
 }
 
+type ExecutionPayloadCapella struct {
+	ParentHash       types.H256
+	FeeRecipient     []byte
+	StateRoot        types.H256
+	ReceiptsRoot     types.H256
+	LogsBloom        []byte
+	PrevRandao       types.H256
+	BlockNumber      types.U64
+	GasLimit         types.U64
+	GasUsed          types.U64
+	Timestamp        types.U64
+	ExtraData        []byte
+	BaseFeePerGas    types.U256
+	BlockHash        types.H256
+	TransactionsRoot types.H256
+	WithdrawalsRoot  types.H256
+}
+
 type Body struct {
 	RandaoReveal      []byte
 	Eth1Data          Eth1Data
@@ -182,12 +226,34 @@ type Body struct {
 	ExecutionPayload  ExecutionPayload
 }
 
+type BodyCapella struct {
+	RandaoReveal          []byte
+	Eth1Data              Eth1Data
+	Graffiti              types.H256
+	ProposerSlashings     []ProposerSlashing
+	AttesterSlashings     []AttesterSlashing
+	Attestations          []Attestation
+	Deposits              []Deposit
+	VoluntaryExits        []SignedVoluntaryExit
+	SyncAggregate         SyncAggregate
+	ExecutionPayload      ExecutionPayloadCapella
+	BlsToExecutionChanges []*SignedBLSToExecutionChange
+}
+
 type BeaconBlock struct {
 	Slot          types.U64
 	ProposerIndex types.U64
 	ParentRoot    types.H256
 	StateRoot     types.H256
 	Body          Body
+}
+
+type BeaconBlockCapella struct {
+	Slot          types.U64
+	ProposerIndex types.U64
+	ParentRoot    types.H256
+	StateRoot     types.H256
+	Body          BodyCapella
 }
 
 type SyncCommittee struct {

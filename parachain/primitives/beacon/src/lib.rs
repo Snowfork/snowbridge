@@ -269,6 +269,54 @@ pub struct HeaderUpdate<
 	pub block_root_branch_header_root: H256,
 }
 
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+)]
+#[scale_info(skip_type_params(
+	FeeRecipientSize,
+	LogsBloomSize,
+	ExtraDataSize,
+	DepositDataSize,
+	PublicKeySize,
+	SignatureSize,
+	ProofSize,
+	ProposerSlashingSize,
+	AttesterSlashingSize,
+	VoluntaryExitSize,
+	AttestationSize,
+	ValidatorCommitteeSize,
+	SyncCommitteeSize
+))]
+#[codec(mel_bound())]
+pub struct HeaderUpdateCapella<
+	FeeRecipientSize: Get<u32>,
+	LogsBloomSize: Get<u32>,
+	ExtraDataSize: Get<u32>,
+	SignatureSize: Get<u32>,
+	ProofSize: Get<u32>,
+	SyncCommitteeSize: Get<u32>,
+> {
+	pub beacon_header: BeaconHeader,
+	pub execution_header: ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	pub execution_branch: BoundedVec<H256, ProofSize>,
+	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
+	pub signature_slot: u64,
+	pub block_root_branch: BoundedVec<H256, ProofSize>,
+	pub block_root_branch_header_root: H256,
+}
+
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct ForkData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
@@ -309,6 +357,36 @@ pub struct ExecutionHeader<LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>> {
 	pub base_fee_per_gas: U256,
 	pub block_hash: H256,
 	pub transactions_root: H256,
+}
+
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+#[scale_info(skip_type_params(LogsBloomSize, ExtraDataSize))]
+#[codec(mel_bound())]
+pub struct ExecutionHeaderCapella<LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>> {
+	pub parent_hash: H256,
+	pub fee_recipient: H160,
+	pub state_root: H256,
+	pub receipts_root: H256,
+	pub logs_bloom: BoundedVec<u8, LogsBloomSize>,
+	pub prev_randao: H256,
+	pub block_number: u64,
+	pub gas_limit: u64,
+	pub gas_used: u64,
+	pub timestamp: u64,
+	pub extra_data: BoundedVec<u8, ExtraDataSize>,
+	pub base_fee_per_gas: U256,
+	pub block_hash: H256,
+	pub transactions_root: H256,
+	pub withdrawals_root: H256,
 }
 
 /// Sync committee as it is stored in the runtime storage.
@@ -409,6 +487,49 @@ pub struct ExecutionPayload<
 	pub base_fee_per_gas: U256,
 	pub block_hash: H256,
 	pub transactions_root: H256,
+}
+
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+)]
+#[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize))]
+#[codec(mel_bound())]
+pub struct ExecutionPayloadCapella<
+	FeeRecipientSize: Get<u32>,
+	LogsBloomSize: Get<u32>,
+	ExtraDataSize: Get<u32>,
+> {
+	pub parent_hash: H256,
+	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
+	pub fee_recipient: BoundedVec<u8, FeeRecipientSize>,
+	pub state_root: H256,
+	pub receipts_root: H256,
+	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
+	pub logs_bloom: BoundedVec<u8, LogsBloomSize>,
+	pub prev_randao: H256,
+	pub block_number: u64,
+	pub gas_limit: u64,
+	pub gas_used: u64,
+	pub timestamp: u64,
+	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
+	pub extra_data: BoundedVec<u8, ExtraDataSize>,
+	#[cfg_attr(feature = "std", serde(deserialize_with = "from_int_to_u256"))]
+	pub base_fee_per_gas: U256,
+	pub block_hash: H256,
+	pub transactions_root: H256,
+	pub withdrawals_root: H256,
 }
 
 impl<S: Get<u32>, M: Get<u32>> ExecutionHeader<S, M> {

@@ -24,9 +24,10 @@ use crate::merkleization::get_sync_committee_bits;
 use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
 use frame_system::ensure_signed;
 use snowbridge_beacon_primitives::{
-	BeaconHeader, Domain, ExecutionHeader, ExecutionHeaderState, FinalizedHeaderState,
-	FinalizedHeaderUpdate, ForkData, ForkVersion, HeaderUpdate, InitialSync, PublicKey, Root,
-	SigningData, SyncCommittee, SyncCommitteePeriodUpdate,
+	BeaconHeader, Domain, ExecutionHeader, ExecutionHeaderCapella, ExecutionHeaderState,
+	FinalizedHeaderState, FinalizedHeaderUpdate, ForkData, ForkVersion, HeaderUpdate,
+	HeaderUpdateCapella, InitialSync, PublicKey, Root, SigningData, SyncCommittee,
+	SyncCommitteePeriodUpdate,
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
@@ -36,6 +37,14 @@ use sp_std::prelude::*;
 pub use pallet::*;
 
 pub type HeaderUpdateOf<T> = HeaderUpdate<
+	<T as Config>::MaxFeeRecipientSize,
+	<T as Config>::MaxLogsBloomSize,
+	<T as Config>::MaxExtraDataSize,
+	<T as Config>::MaxSignatureSize,
+	<T as Config>::MaxProofBranchSize,
+	<T as Config>::MaxSyncCommitteeSize,
+>;
+pub type HeaderUpdateOfCapella<T> = HeaderUpdateCapella<
 	<T as Config>::MaxFeeRecipientSize,
 	<T as Config>::MaxLogsBloomSize,
 	<T as Config>::MaxExtraDataSize,
@@ -57,6 +66,8 @@ pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<
 >;
 pub type ExecutionHeaderOf<T> =
 	ExecutionHeader<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
+pub type ExecutionHeaderOfCapella<T> =
+	ExecutionHeaderCapella<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
 pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
 
 #[frame_support::pallet]
@@ -353,6 +364,45 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::call_index(4)]
+		#[pallet::weight(T::WeightInfo::import_execution_header())]
+		#[transactional]
+		pub fn import_execution_header_capella(
+			origin: OriginFor<T>,
+			update: HeaderUpdateOfCapella<T>,
+		) -> DispatchResult {
+			let _sender = ensure_signed(origin)?;
+
+			Self::check_bridge_blocked_state()?;
+
+			let slot = update.beacon_header.slot;
+			let block_hash = update.execution_header.block_hash;
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Received header update for slot {}.",
+				slot
+			);
+
+			if let Err(err) = Self::process_header_capella(update) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"💫 Header update failed with error {:?}",
+					err
+				);
+				return Err(err)
+			}
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Stored execution header {} at beacon slot {}.",
+				block_hash,
+				slot
+			);
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -579,6 +629,102 @@ pub mod pallet {
 			let execution_root =
 				merkleization::hash_tree_root_execution_header(execution_payload.clone())
 					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
+			let execution_root_hash: H256 = execution_root.into();
+
+			ensure!(
+				Self::is_valid_merkle_branch(
+					execution_root_hash,
+					update.execution_branch,
+					config::EXECUTION_HEADER_DEPTH,
+					config::EXECUTION_HEADER_INDEX,
+					update.beacon_header.body_root
+				),
+				Error::<T>::InvalidExecutionHeaderProof
+			);
+
+			let beacon_block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(update.beacon_header.clone())
+					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
+					.into();
+
+			Self::ancestry_proof(
+				update.block_root_branch,
+				block_slot,
+				beacon_block_root,
+				update.block_root_branch_header_root,
+			)?;
+
+			let current_period = Self::compute_current_sync_period(update.beacon_header.slot);
+			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
+
+			let validators_root = <ValidatorsRoot<T>>::get();
+			let sync_committee_bits =
+				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
+
+			Self::verify_signed_header(
+				sync_committee_bits,
+				update.sync_aggregate.sync_committee_signature,
+				sync_committee.pubkeys,
+				update.beacon_header,
+				validators_root,
+				update.signature_slot,
+			)?;
+
+			let mut fee_recipient = [0u8; 20];
+			let fee_slice = execution_payload.fee_recipient.as_slice();
+			if fee_slice.len() == 20 {
+				fee_recipient[0..20].copy_from_slice(&(fee_slice));
+			} else {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"💫 fee recipient not 20 characters, len is: {}.",
+					fee_slice.len()
+				);
+			}
+
+			Self::store_execution_header(
+				execution_payload.block_hash,
+				ExecutionHeader {
+					parent_hash: execution_payload.parent_hash,
+					fee_recipient: H160::from(fee_recipient),
+					state_root: execution_payload.state_root,
+					receipts_root: execution_payload.receipts_root,
+					logs_bloom: execution_payload.logs_bloom,
+					prev_randao: execution_payload.prev_randao,
+					block_number: execution_payload.block_number,
+					gas_used: execution_payload.gas_used,
+					gas_limit: execution_payload.gas_limit,
+					timestamp: execution_payload.timestamp,
+					extra_data: execution_payload.extra_data,
+					base_fee_per_gas: execution_payload.base_fee_per_gas,
+					block_hash: execution_payload.block_hash,
+					transactions_root: execution_payload.transactions_root,
+				},
+				block_slot,
+				beacon_block_root,
+			);
+
+			Ok(())
+		}
+
+		fn process_header_capella(update: HeaderUpdateOfCapella<T>) -> DispatchResult {
+			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
+			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
+			let block_slot = update.beacon_header.slot;
+			ensure!(block_slot <= latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
+
+			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
+			let execution_payload = update.execution_header.clone();
+			ensure!(
+				execution_payload.block_number > execution_header_state.block_number,
+				Error::<T>::InvalidExecutionHeaderUpdate
+			);
+
+			let execution_root =
+				merkleization::hash_tree_root_execution_header_capella(execution_payload.clone())
+					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
+
 			let execution_root_hash: H256 = execution_root.into();
 
 			ensure!(
