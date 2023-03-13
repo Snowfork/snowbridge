@@ -17,7 +17,7 @@
     "lint": "pnpm lint:solhint",
     "lint:solhint": "solhint 'src/**/*.sol'",
     "format": "prettier --write 'src/**/*.sol'",
-    "size": "hardhat size-contracts",
+    "size": "forge build --sizes",
     "test": "pnpm test:foundry",
     "test:foundry": "pnpm build && forge test -vvv",
     "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ scripts/Deploy.sol:DeployScript --broadcast -vvvv"
