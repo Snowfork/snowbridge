@@ -1,7 +1,7 @@
 #[cfg(feature = "minimal")]
 mod beacon_minimal_tests {
 	use crate::{
-		config, merkleization, mock::*, pallet::FinalizedBeaconHeadersBlockRoot, Error,
+		config::minimal, merkleization, mock::*, pallet::FinalizedBeaconHeadersBlockRoot, Error,
 		ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
 		LatestExecutionHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
 		SyncCommittees, ValidatorsRoot,
@@ -163,7 +163,7 @@ mod beacon_minimal_tests {
 			.expect("Time went backwards")
 			.as_secs();
 
-		let import_time = time_now + (update.finalized_header.slot * config::SECONDS_PER_SLOT); // Goerli genesis time + finalized header update time
+		let import_time = time_now + (update.finalized_header.slot * minimal::SECONDS_PER_SLOT); // Goerli genesis time + finalized header update time
 		let mock_pallet_time = import_time + 3600; // plus one hour
 
 		new_tester::<mock_minimal::Test>().execute_with(|| {
@@ -364,7 +364,10 @@ mod beacon_minimal_tests {
 	#[test]
 	pub fn test_hash_tree_root_sync_committee() {
 		let sync_committee = get_committee_sync_ssz_test_data::<mock_mainnet::Test>();
-		let hash_root_result = merkleization::hash_tree_root_sync_committee(sync_committee);
+		let hash_root_result = merkleization::hash_tree_root_sync_committee::<
+			_,
+			{ minimal::SYNC_COMMITTEE_SIZE },
+		>(sync_committee);
 		assert_ok!(&hash_root_result);
 
 		let hash_root: H256 = hash_root_result.unwrap().into();
@@ -379,9 +382,10 @@ mod beacon_minimal_tests {
 		let test_data = get_bls_signature_verify_test_data::<mock_minimal::Test>();
 
 		let sync_committee_bits =
-			merkleization::get_sync_committee_bits::<mock_minimal::MaxSyncCommitteeSize>(
-				test_data.sync_committee_bits.try_into().expect("too many sync committee bits"),
-			);
+			merkleization::get_sync_committee_bits::<
+				mock_minimal::MaxSyncCommitteeSize,
+				{ minimal::SYNC_COMMITTEE_SIZE },
+			>(test_data.sync_committee_bits.try_into().expect("too many sync committee bits"));
 
 		assert_ok!(&sync_committee_bits);
 

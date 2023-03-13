@@ -82,8 +82,12 @@ impl TryFrom<BeaconHeader> for SSZBeaconBlockHeader {
 	}
 }
 
-impl<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>>
-	TryFrom<SyncAggregate<SyncCommitteeBitsSize, SignatureSize>> for SSZSyncAggregate
+impl<
+		SyncCommitteeBitsSize: Get<u32>,
+		SignatureSize: Get<u32>,
+		const SYNC_COMMITTEE_SIZE: usize,
+	> TryFrom<SyncAggregate<SyncCommitteeBitsSize, SignatureSize>>
+	for SSZSyncAggregate<SYNC_COMMITTEE_SIZE>
 {
 	type Error = MerkleizationError;
 
@@ -91,9 +95,7 @@ impl<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>>
 		sync_aggregate: SyncAggregate<SyncCommitteeBitsSize, SignatureSize>,
 	) -> Result<Self, Self::Error> {
 		Ok(SSZSyncAggregate {
-			sync_committee_bits: Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(
-				&sync_aggregate.sync_committee_bits,
-			)?,
+			sync_committee_bits: Bitvector::deserialize(&sync_aggregate.sync_committee_bits)?,
 			sync_committee_signature: Vector::<u8, 96>::from_iter(
 				sync_aggregate.sync_committee_signature,
 			),
@@ -121,7 +123,7 @@ pub fn hash_tree_root_execution_header<
 	hash_tree_root(ssz_execution_payload)
 }
 
-pub fn hash_tree_root_sync_committee<S: Get<u32>>(
+pub fn hash_tree_root_sync_committee<S: Get<u32>, const SYNC_COMMITTEE_SIZE: usize>(
 	sync_committee: SyncCommittee<S>,
 ) -> Result<[u8; 32], MerkleizationError> {
 	let mut pubkeys_vec = Vec::new();
@@ -132,10 +134,9 @@ pub fn hash_tree_root_sync_committee<S: Get<u32>>(
 		pubkeys_vec.push(conv_pubkey);
 	}
 
-	let pubkeys =
-		Vector::<Vector<u8, { config::PUBKEY_SIZE }>, { config::SYNC_COMMITTEE_SIZE }>::from_iter(
-			pubkeys_vec.clone(),
-		);
+	let pubkeys = Vector::<Vector<u8, { config::PUBKEY_SIZE }>, SYNC_COMMITTEE_SIZE>::from_iter(
+		pubkeys_vec.clone(),
+	);
 
 	let agg = Vector::<u8, { config::PUBKEY_SIZE }>::from_iter(sync_committee.aggregate_pubkey.0);
 
@@ -170,10 +171,13 @@ pub fn hash_tree_root<T: SimpleSerializeTrait>(
 	}
 }
 
-pub fn get_sync_committee_bits<SyncCommitteeBitsSize: Get<u32>>(
+pub fn get_sync_committee_bits<
+	SyncCommitteeBitsSize: Get<u32>,
+	const SYNC_COMMITTEE_SIZE: usize,
+>(
 	bits_hex: BoundedVec<u8, SyncCommitteeBitsSize>,
 ) -> Result<Vec<u8>, MerkleizationError> {
-	let bitv = Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(&bits_hex).map_err(
+	let bitv = Bitvector::<SYNC_COMMITTEE_SIZE>::deserialize(&bits_hex).map_err(
 		//|_| MerkleizationError::InvalidInput
 		|e| -> MerkleizationError {
 			match e {

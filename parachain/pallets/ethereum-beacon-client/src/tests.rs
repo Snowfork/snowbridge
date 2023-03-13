@@ -1,7 +1,7 @@
 mod beacon_tests {
 	use crate as ethereum_beacon_client;
 	use crate::{
-		config, merkleization,
+		merkleization,
 		merkleization::MerkleizationError,
 		mock::*,
 		ssz::{SSZExecutionPayload, SSZSyncAggregate},
@@ -12,6 +12,13 @@ mod beacon_tests {
 	use snowbridge_beacon_primitives::{ExecutionPayload, SyncAggregate};
 	use sp_core::{H256, U256};
 	use ssz_rs::prelude::Vector;
+
+	pub(crate) mod config {
+		#[cfg(not(feature = "minimal"))]
+		pub(crate) use crate::config::mainnet::*;
+		#[cfg(feature = "minimal")]
+		pub(crate) use crate::config::minimal::*;
+	}
 
 	#[test]
 	pub fn test_get_sync_committee_sum() {
@@ -300,6 +307,7 @@ mod beacon_tests {
 
 		let sync_committee_bits = merkleization::get_sync_committee_bits::<
 			mock_minimal::MaxSyncCommitteeSize,
+			{ config::SYNC_COMMITTEE_SIZE },
 		>(bits.try_into().expect("too many sync committee bits"));
 
 		assert_ok!(&sync_committee_bits);
@@ -328,6 +336,7 @@ mod beacon_tests {
 
 		let sync_committee_bits = merkleization::get_sync_committee_bits::<
 			mock_minimal::MaxSyncCommitteeSize,
+			{ config::SYNC_COMMITTEE_SIZE },
 		>(bits.try_into().expect("invalid sync committee bits"));
 
 		assert_err!(
@@ -353,6 +362,7 @@ mod beacon_tests {
 
 		let sync_committee_bits = merkleization::get_sync_committee_bits::<
 			mock_minimal::MaxSyncCommitteeSize,
+			{ config::SYNC_COMMITTEE_SIZE },
 		>(bits.try_into().expect("invalid sync committee bits"));
 
 		assert_err!(
@@ -499,7 +509,8 @@ mod beacon_tests {
 				hex!("e6dcad4f60ce9ff8a587b110facbaf94721f06cd810b6d8bf6cffa641272808d").into(),
 		};
 
-		let payload: Result<SSZSyncAggregate, MerkleizationError> = sync_aggregate.try_into();
+		let payload: Result<SSZSyncAggregate<{ config::SYNC_COMMITTEE_SIZE }>, MerkleizationError> =
+			sync_aggregate.try_into();
 		assert_ok!(&payload);
 
 		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());

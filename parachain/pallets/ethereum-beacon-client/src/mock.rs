@@ -13,7 +13,7 @@ use std::{fs::File, path::PathBuf};
 
 pub mod mock_minimal {
 	use super::*;
-
+	use crate::config::minimal;
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -69,7 +69,7 @@ pub mod mock_minimal {
 	}
 
 	parameter_types! {
-		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
+		pub const MaxSyncCommitteeSize: u32 = minimal::SYNC_COMMITTEE_SIZE as u32;
 		pub const MaxProofBranchSize: u32 = 20;
 		pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
 		pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
@@ -110,11 +110,17 @@ pub mod mock_minimal {
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
+
+		const SLOTS_PER_EPOCH: u64 = minimal::SLOTS_PER_EPOCH;
+		const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = minimal::EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+		const SYNC_COMMITTEE_SIZE: usize = minimal::SYNC_COMMITTEE_SIZE;
+		const BLOCK_ROOT_AT_INDEX_PROOF_DEPTH: u64 = minimal::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH;
 	}
 }
 
 pub mod mock_mainnet {
 	use super::*;
+	use crate::config::mainnet;
 
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
@@ -171,7 +177,7 @@ pub mod mock_mainnet {
 	}
 
 	parameter_types! {
-		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
+		pub const MaxSyncCommitteeSize: u32 = mainnet::SYNC_COMMITTEE_SIZE as u32;
 		pub const MaxProofBranchSize: u32 = 20;
 		pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
 		pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
@@ -212,6 +218,11 @@ pub mod mock_mainnet {
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
+
+		const SLOTS_PER_EPOCH: u64 = mainnet::SLOTS_PER_EPOCH;
+		const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = mainnet::EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+		const SYNC_COMMITTEE_SIZE: usize = mainnet::SYNC_COMMITTEE_SIZE;
+		const BLOCK_ROOT_AT_INDEX_PROOF_DEPTH: u64 = mainnet::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH;
 	}
 }
 
@@ -276,11 +287,13 @@ fn header_update_from_file<T: crate::Config>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn get_config_setting() -> String {
-	return match config::IS_MINIMAL {
-		true => "minimal".to_owned(),
-		false => "mainnet".to_owned(),
-	}
+#[cfg(feature = "minimal")]
+fn get_config_setting() -> &'static str {
+	"minimal"
+}
+#[cfg(not(feature = "minimal"))]
+fn get_config_setting() -> &'static str {
+	"mainnet"
 }
 
 fn add_file_prefix(name: &str) -> String {

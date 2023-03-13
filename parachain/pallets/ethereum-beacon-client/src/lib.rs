@@ -1,5 +1,7 @@
 //! # Ethereum Beacon Client
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
 
 pub mod config;
 mod merkleization;
@@ -102,6 +104,11 @@ pub mod pallet {
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
 		type WeakSubjectivityPeriodSeconds: Get<u64>;
+
+		const SLOTS_PER_EPOCH: u64;
+		const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64;
+		const SYNC_COMMITTEE_SIZE: usize;
+		const BLOCK_ROOT_AT_INDEX_PROOF_DEPTH: u64;
 	}
 
 	#[pallet::event]
@@ -211,12 +218,15 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T>
+	where
+		[(); T::SYNC_COMMITTEE_SIZE]: Sized,
+	{
 		fn build(&self) {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Sync committee size is: {}",
-				config::SYNC_COMMITTEE_SIZE
+				T::SYNC_COMMITTEE_SIZE
 			);
 
 			if let Some(initial_sync) = self.initial_sync.clone() {
@@ -226,7 +236,10 @@ pub mod pallet {
 	}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+	impl<T: Config> Pallet<T>
+	where
+		[(); T::SYNC_COMMITTEE_SIZE]: Sized,
+	{
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::sync_committee_period_update())]
 		#[transactional]
@@ -355,9 +368,12 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> Pallet<T> {
+	impl<T: Config> Pallet<T>
+	where
+		[(); T::SYNC_COMMITTEE_SIZE]: Sized,
+	{
 		fn process_initial_sync(initial_sync: InitialSyncOf<T>) -> DispatchResult {
-			Self::verify_sync_committee(
+			Self::verify_sync_committee::<{ T::SYNC_COMMITTEE_SIZE }>(
 				initial_sync.current_sync_committee.clone(),
 				initial_sync.current_sync_committee_branch,
 				initial_sync.header.state_root,
@@ -398,11 +414,12 @@ pub mod pallet {
 					update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidSyncCommitteeHeaderUpdate
 			);
-			let sync_committee_bits =
-				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
+			let sync_committee_bits = get_sync_committee_bits::<_, { T::SYNC_COMMITTEE_SIZE }>(
+				update.sync_aggregate.sync_committee_bits.clone(),
+			)
+			.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
-			Self::verify_sync_committee(
+			Self::verify_sync_committee::<{ T::SYNC_COMMITTEE_SIZE }>(
 				update.next_sync_committee.clone(),
 				update.next_sync_committee_branch,
 				update.attested_header.state_root,
@@ -501,9 +518,10 @@ pub mod pallet {
 				return Err(Error::<T>::BridgeBlocked.into())
 			}
 
-			let sync_committee_bits =
-				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
+			let sync_committee_bits = get_sync_committee_bits::<_, { T::SYNC_COMMITTEE_SIZE }>(
+				update.sync_aggregate.sync_committee_bits.clone(),
+			)
+			.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
 			let block_root: H256 =
@@ -608,9 +626,10 @@ pub mod pallet {
 			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
 
 			let validators_root = <ValidatorsRoot<T>>::get();
-			let sync_committee_bits =
-				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
+			let sync_committee_bits = get_sync_committee_bits::<_, { T::SYNC_COMMITTEE_SIZE }>(
+				update.sync_aggregate.sync_committee_bits.clone(),
+			)
+			.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
 
 			Self::verify_signed_header(
 				sync_committee_bits,
@@ -706,14 +725,14 @@ pub mod pallet {
 
 			log::info!(
 				target: "ethereum-beacon-client",
-				"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH, leaf_index
+				"💫 Depth: {} leaf_index: {}", T::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH, leaf_index
 			);
 
 			ensure!(
 				Self::is_valid_merkle_branch(
 					beacon_block_root,
 					block_root_proof,
-					config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH,
+					T::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH,
 					leaf_index,
 					finalized_block_root_hash
 				),
@@ -751,7 +770,7 @@ pub mod pallet {
 
 			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(
 				signature_slot,
-				config::SLOTS_PER_EPOCH,
+				T::SLOTS_PER_EPOCH,
 			));
 			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
 			// Domains are used for for seeds, for signatures, and for selecting aggregators.
@@ -831,15 +850,18 @@ pub mod pallet {
 			Ok(hash_root.into())
 		}
 
-		fn verify_sync_committee(
+		fn verify_sync_committee<const SYNC_COMMITTEE_SIZE: usize>(
 			sync_committee: SyncCommitteeOf<T>,
 			sync_committee_branch: BoundedVec<H256, T::MaxProofBranchSize>,
 			header_state_root: H256,
 			depth: u64,
 			index: u64,
 		) -> DispatchResult {
-			let sync_committee_root = merkleization::hash_tree_root_sync_committee(sync_committee)
-				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
+			let sync_committee_root = merkleization::hash_tree_root_sync_committee::<
+				_,
+				SYNC_COMMITTEE_SIZE,
+			>(sync_committee)
+			.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
 			ensure!(
 				Self::is_valid_merkle_branch(
@@ -968,7 +990,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn compute_current_sync_period(slot: u64) -> u64 {
-			slot / config::SLOTS_PER_EPOCH / config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+			slot / T::SLOTS_PER_EPOCH / T::EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 		}
 
 		/// Return the domain for the domain_type and fork_version.
@@ -1127,7 +1149,10 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> Verifier for Pallet<T> {
+	impl<T: Config> Verifier for Pallet<T>
+	where
+		[(); T::SYNC_COMMITTEE_SIZE]: Sized,
+	{
 		/// Verify a message by verifying the existence of the corresponding
 		/// Ethereum log in a block. Returns the log if successful.
 		fn verify(message: &Message) -> Result<(Log, u64), DispatchError> {

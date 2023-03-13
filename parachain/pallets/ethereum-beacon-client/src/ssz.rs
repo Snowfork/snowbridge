@@ -16,14 +16,14 @@ pub struct SSZBeaconBlockHeader {
 }
 
 #[derive(Default, SimpleSerialize)]
-pub struct SSZSyncCommittee {
-	pub pubkeys: Vector<Vector<u8, { config::PUBKEY_SIZE }>, { config::SYNC_COMMITTEE_SIZE }>,
+pub struct SSZSyncCommittee<const SYNC_COMMITTEE_SIZE: usize> {
+	pub pubkeys: Vector<Vector<u8, { config::PUBKEY_SIZE }>, SYNC_COMMITTEE_SIZE>,
 	pub aggregate_pubkey: Vector<u8, { config::PUBKEY_SIZE }>,
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
-pub struct SSZSyncAggregate {
-	pub sync_committee_bits: Bitvector<{ config::SYNC_COMMITTEE_SIZE }>,
+pub struct SSZSyncAggregate<const SYNC_COMMITTEE_SIZE: usize> {
+	pub sync_committee_bits: Bitvector<SYNC_COMMITTEE_SIZE>,
 	pub sync_committee_signature: Vector<u8, { config::SIGNATURE_SIZE }>,
 }
 

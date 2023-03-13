@@ -1,14 +1,5 @@
-#[cfg(feature = "minimal")]
-mod minimal;
-
-#[cfg(not(feature = "minimal"))]
-mod mainnet;
-
-#[cfg(feature = "minimal")]
-pub use minimal::*;
-
-#[cfg(not(feature = "minimal"))]
-pub use mainnet::*;
+pub mod mainnet;
+pub mod minimal;
 
 pub const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
 pub const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;

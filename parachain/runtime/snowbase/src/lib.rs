@@ -2,6 +2,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -10,6 +12,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod weights;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use ethereum_beacon_client::config::minimal;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, ConstU32, OpaqueMetadata};
@@ -599,14 +602,14 @@ impl basic_channel_outbound::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaxSyncCommitteeSize: u32 = 32;
+	pub const MaxSyncCommitteeSize: u32 = minimal::SYNC_COMMITTEE_SIZE as u32;
 	pub const MaxProofBranchSize: u32 = 20;
 	pub const MaxExtraDataSize: u32 = 32;
 	pub const MaxLogsBloomSize: u32 = 256;
 	pub const MaxFeeRecipientSize: u32 = 20;
 	pub const MaxPublicKeySize: u32 = 48;
 	pub const MaxSignatureSize: u32 = 96;
-	pub const MaxSlotsPerHistoricalRoot: u64 = 64;
+	pub const MaxSlotsPerHistoricalRoot: u64 = minimal::SLOTS_PER_HISTORICAL_ROOT as u64;
 	pub const MaxFinalizedHeaderSlotArray: u32 = 1000;
 	pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 	pub const ChainForkVersions: ForkVersions = ForkVersions{
@@ -640,6 +643,11 @@ impl ethereum_beacon_client::Config for Runtime {
 	type ForkVersions = ChainForkVersions;
 	type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 	type WeightInfo = weights::ethereum_beacon_client::SnowbridgeWeight<Self>;
+
+	const SLOTS_PER_EPOCH: u64 = minimal::SLOTS_PER_EPOCH;
+	const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = minimal::EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+	const SYNC_COMMITTEE_SIZE: usize = minimal::SYNC_COMMITTEE_SIZE;
+	const BLOCK_ROOT_AT_INDEX_PROOF_DEPTH: u64 = minimal::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH;
 }
 
 parameter_types! {

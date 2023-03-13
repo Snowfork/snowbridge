@@ -72,7 +72,7 @@ runtime-primitives = { path = "../../primitives/runtime", default-features = fal
 
 snowbridge-basic-channel = { path = "../../pallets/basic-channel", default-features = false }
 dispatch = { path = "../../pallets/dispatch", package = "snowbridge-dispatch", default-features = false }
-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client", package = "snowbridge-ethereum-beacon-client", default-features = false, features=["minimal"]}
+ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client", package = "snowbridge-ethereum-beacon-client", default-features = false }
 runtime-common = { path = "../common", package = "snowbridge-runtime-common", default-features = false }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
 
