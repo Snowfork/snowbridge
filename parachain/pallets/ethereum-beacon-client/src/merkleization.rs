@@ -127,15 +127,17 @@ pub fn hash_tree_root_sync_committee<S: Get<u32>>(
 	let mut pubkeys_vec = Vec::new();
 
 	for pubkey in sync_committee.pubkeys.iter() {
-		let conv_pubkey = Vector::<u8, 48>::from_iter(pubkey.0);
+		let conv_pubkey = Vector::<u8, { config::PUBKEY_SIZE }>::from_iter(pubkey.0);
 
 		pubkeys_vec.push(conv_pubkey);
 	}
 
 	let pubkeys =
-		Vector::<Vector<u8, 48>, { config::SYNC_COMMITTEE_SIZE }>::from_iter(pubkeys_vec.clone());
+		Vector::<Vector<u8, { config::PUBKEY_SIZE }>, { config::SYNC_COMMITTEE_SIZE }>::from_iter(
+			pubkeys_vec.clone(),
+		);
 
-	let agg = Vector::<u8, 48>::from_iter(sync_committee.aggregate_pubkey.0);
+	let agg = Vector::<u8, { config::PUBKEY_SIZE }>::from_iter(sync_committee.aggregate_pubkey.0);
 
 	hash_tree_root(SSZSyncCommittee { pubkeys, aggregate_pubkey: agg })
 }
