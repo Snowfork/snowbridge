@@ -165,12 +165,7 @@ contract BeefyClient is Ownable {
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
         nextValidatorSet = _nextValidatorSet;
-
-        // NOTE: Disabling renouncing of ownership to support lean BEEFY.
-        // This will be added back once full BEEFY is supported.
-        // See SNO-294, SNO-297
-        //
-        // renounceOwnership();
+        renounceOwnership();
     }
 
     /* Public Functions */
@@ -181,11 +176,10 @@ contract BeefyClient is Ownable {
      * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof the validator proof
      */
-    function submitInitial(
-        bytes32 commitmentHash,
-        uint256[] calldata bitfield,
-        ValidatorProof calldata proof
-    ) external payable {
+    function submitInitial(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof)
+        external
+        payable
+    {
         doSubmitInitial(currentValidatorSet, commitmentHash, bitfield, proof);
     }
 
@@ -226,13 +220,8 @@ contract BeefyClient is Ownable {
             revert NotEnoughClaims();
         }
 
-        tasks[createTaskID(msg.sender, commitmentHash)] = Task(
-            msg.sender,
-            uint64(block.number),
-            uint32(vset.length),
-            0,
-            keccak256(abi.encodePacked(bitfield))
-        );
+        tasks[createTaskID(msg.sender, commitmentHash)] =
+            Task(msg.sender, uint64(block.number), uint32(vset.length), 0, keccak256(abi.encodePacked(bitfield)));
     }
 
     /**
@@ -257,7 +246,7 @@ contract BeefyClient is Ownable {
         }
 
         // Post-merge, the difficulty opcode now returns PREVRANDAO
-        task.prevRandao = block.difficulty;
+        task.prevRandao = block.prevrandao;
     }
 
     /**
@@ -265,11 +254,9 @@ contract BeefyClient is Ownable {
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param proofs a struct containing the data needed to verify all validator signatures
      */
-    function submitFinal(
-        Commitment calldata commitment,
-        uint256[] calldata bitfield,
-        ValidatorProof[] calldata proofs
-    ) public {
+    function submitFinal(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof[] calldata proofs)
+        public
+    {
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         bytes32 taskID = createTaskID(msg.sender, commitmentHash);
         Task storage task = tasks[taskID];
@@ -340,10 +327,7 @@ contract BeefyClient is Ownable {
         verifyCommitment(commitmentHash, bitfield, nextValidatorSet, task, proofs);
 
         bool leafIsValid = MMRProof.verifyLeafProof(
-            commitment.payload.mmrRootHash,
-            keccak256(encodeMMRLeaf(leaf)),
-            leafProof,
-            leafProofOrder
+            commitment.payload.mmrRootHash, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
         );
         if (!leafIsValid) {
             revert InvalidMMRLeafProof();
@@ -365,20 +349,17 @@ contract BeefyClient is Ownable {
      * @param leafHash contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
      */
-    function verifyMMRLeafProof(
-        bytes32 leafHash,
-        bytes32[] calldata proof,
-        uint256 proofOrder
-    ) external view returns (bool) {
+    function verifyMMRLeafProof(bytes32 leafHash, bytes32[] calldata proof, uint256 proofOrder)
+        external
+        view
+        returns (bool)
+    {
         return MMRProof.verifyLeafProof(latestMMRRoot, leafHash, proof, proofOrder);
     }
 
     /* Private Functions */
 
-    function createTaskID(
-        address account,
-        bytes32 commitmentHash
-    ) internal pure returns (bytes32 value) {
+    function createTaskID(address account, bytes32 commitmentHash) internal pure returns (bytes32 value) {
         assembly {
             mstore(0x00, account)
             mstore(0x20, commitmentHash)
@@ -443,18 +424,14 @@ contract BeefyClient is Ownable {
     ) internal view {
         // verify the validator multiproof
         uint256 signatureCount = minimumSignatureThreshold(vset.length);
-        uint256[] memory finalbitfield = Bitfield.randomNBitsWithPriorCheck(
-            task.prevRandao,
-            bitfield,
-            signatureCount,
-            vset.length
-        );
+        uint256[] memory finalbitfield =
+            Bitfield.randomNBitsWithPriorCheck(task.prevRandao, bitfield, signatureCount, vset.length);
 
         if (proofs.length != signatureCount) {
             revert InvalidValidatorProof();
         }
 
-        for (uint256 i = 0; i < signatureCount; ) {
+        for (uint256 i = 0; i < signatureCount;) {
             ValidatorProof calldata proof = proofs[i];
 
             (uint256 x, uint8 y) = Bitfield.toLocation(proof.index);
@@ -481,27 +458,25 @@ contract BeefyClient is Ownable {
     }
 
     function encodeCommitment(Commitment calldata commitment) internal pure returns (bytes memory) {
-        return
-            bytes.concat(
-                commitment.payload.prefix,
-                commitment.payload.mmrRootHash,
-                commitment.payload.suffix,
-                ScaleCodec.encodeU32(commitment.blockNumber),
-                ScaleCodec.encodeU64(commitment.validatorSetID)
-            );
+        return bytes.concat(
+            commitment.payload.prefix,
+            commitment.payload.mmrRootHash,
+            commitment.payload.suffix,
+            ScaleCodec.encodeU32(commitment.blockNumber),
+            ScaleCodec.encodeU64(commitment.validatorSetID)
+        );
     }
 
     function encodeMMRLeaf(MMRLeaf calldata leaf) internal pure returns (bytes memory) {
-        return
-            bytes.concat(
-                ScaleCodec.encodeU8(leaf.version),
-                ScaleCodec.encodeU32(leaf.parentNumber),
-                leaf.parentHash,
-                ScaleCodec.encodeU64(leaf.nextAuthoritySetID),
-                ScaleCodec.encodeU32(leaf.nextAuthoritySetLen),
-                leaf.nextAuthoritySetRoot,
-                leaf.parachainHeadsRoot
-            );
+        return bytes.concat(
+            ScaleCodec.encodeU8(leaf.version),
+            ScaleCodec.encodeU32(leaf.parentNumber),
+            leaf.parentHash,
+            ScaleCodec.encodeU64(leaf.nextAuthoritySetID),
+            ScaleCodec.encodeU32(leaf.nextAuthoritySetLen),
+            leaf.nextAuthoritySetRoot,
+            leaf.parachainHeadsRoot
+        );
     }
 
     /**
@@ -510,11 +485,11 @@ contract BeefyClient is Ownable {
      * @param proof Merkle proof required for validation of the address
      * @return true if the validator is in the set
      */
-    function isValidatorInSet(
-        ValidatorSet memory vset,
-        address addr,
-        bytes32[] calldata proof
-    ) internal pure returns (bool) {
+    function isValidatorInSet(ValidatorSet memory vset, address addr, bytes32[] calldata proof)
+        internal
+        pure
+        returns (bool)
+    {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
         return MerkleProof.verify(proof, vset.root, hashedLeaf);
     }
@@ -522,27 +497,25 @@ contract BeefyClient is Ownable {
     /**
      * @dev Helper to create an initial validator bitfield.
      */
-    function createInitialBitfield(
-        uint256[] calldata bitsToSet,
-        uint256 length
-    ) external pure returns (uint256[] memory) {
+    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
+        external
+        pure
+        returns (uint256[] memory)
+    {
         return Bitfield.createBitfield(bitsToSet, length);
     }
 
     /**
      * @dev Helper to create a final bitfield, with random validator selections.
      */
-    function createFinalBitfield(
-        bytes32 commitmentHash,
-        uint256[] calldata bitfield
-    ) external view returns (uint256[] memory) {
+    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
+        external
+        view
+        returns (uint256[] memory)
+    {
         Task storage task = tasks[createTaskID(msg.sender, commitmentHash)];
-        return
-            Bitfield.randomNBitsWithPriorCheck(
-                task.prevRandao,
-                bitfield,
-                minimumSignatureThreshold(task.validatorSetLen),
-                task.validatorSetLen
-            );
+        return Bitfield.randomNBitsWithPriorCheck(
+            task.prevRandao, bitfield, minimumSignatureThreshold(task.validatorSetLen), task.validatorSetLen
+        );
     }
 }
