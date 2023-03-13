@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import {ScaleCodec} from "../ScaleCodec.sol";
+import { ScaleCodec } from "../ScaleCodec.sol";
 
 contract ScaleCodecTest is Test {
     function testEncodeU256() public {

@@ -105,18 +105,18 @@ contract NativeTokensTest is Test {
         vm.expectEmit(false, false, false, true, address(nativeTokens));
         emit Created(address(token));
 
-        nativeTokens.create{value: fee}(address(token));
+        nativeTokens.create{ value: fee }(address(token));
     }
 
     function testCreateFailOnBadFeePayment() public {
         uint256 fee = nativeTokens.createTokenFee();
         vm.expectRevert(NativeTokens.NoFundsforCreateToken.selector);
-        nativeTokens.create{value: fee - 1}(address(this));
+        nativeTokens.create{ value: fee - 1 }(address(this));
     }
 
     function testCreateFailOnBadToken() public {
         uint256 fee = nativeTokens.createTokenFee();
         vm.expectRevert();
-        nativeTokens.create{value: fee}(address(this));
+        nativeTokens.create{ value: fee }(address(this));
     }
 }

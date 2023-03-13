@@ -1,11 +1,3 @@
-import { ethers } from "ethers"
-
-const DEPLOYER_PRIVATE_KEY = (process.env.DEPLOYER_PRIVATE_KEY || "").trim()
-const DEPLOYER_MNEMONIC = (
-    process.env.DEPLOYER_MNEMONIC ||
-    "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
-).trim()
-
 const balance = "350000000000000000000000000000000000000"
 
 export const accounts = [
@@ -28,12 +20,7 @@ export const accounts = [
     {
         privateKey: "0x27ae0c7b8d7c698e41b173265490a4c64b4e39ae78599166e003f868f12140fd",
         balance,
-    },
-    {
-        privateKey:
-            DEPLOYER_PRIVATE_KEY || ethers.Wallet.fromMnemonic(DEPLOYER_MNEMONIC).privateKey,
-        balance,
-    },
+    }
 ]
 
 export default {
