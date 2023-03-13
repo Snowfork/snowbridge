@@ -10,3 +10,9 @@ remappings = [
     'openzeppelin=lib/openzeppelin-contracts/contracts/',
 ]
 ffi = true
+
+
+ignored_error_codes = [
+    # prevrandao not supported by Anvil VM
+    9432
+]
