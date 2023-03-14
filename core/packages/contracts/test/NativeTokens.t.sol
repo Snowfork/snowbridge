@@ -32,6 +32,7 @@ contract NativeTokensTest is Test {
         vault = new TokenVault();
         nativeTokens = new NativeTokens(vault, outboundChannel, peer, 1);
         vault.grantRole(vault.WITHDRAW_ROLE(), address(nativeTokens));
+        vault.grantRole(vault.DEPOSIT_ROLE(), address(nativeTokens));
 
         account1 = makeAddr("account1");
         account2 = address(this);

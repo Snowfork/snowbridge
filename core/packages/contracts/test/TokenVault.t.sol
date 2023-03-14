@@ -23,6 +23,8 @@ contract TokenVaultTest is Test {
         account = makeAddr("statemint");
 
         vault.grantRole(vault.WITHDRAW_ROLE(), address(this));
+        vault.grantRole(vault.DEPOSIT_ROLE(), address(this));
+
         token.mint(address(account), 1000);
     }
 

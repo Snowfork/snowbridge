@@ -59,7 +59,9 @@ contract DeployScript is Script {
         vault.grantRole(vault.WITHDRAW_ROLE(), address(treasury));
 
         // Allow NativeTokens to withdraw from TokenVault
-        tokenVault.grantRole(vault.WITHDRAW_ROLE(), address(nativeTokens));
+        tokenVault.grantRole(tokenVault.WITHDRAW_ROLE(), address(nativeTokens));
+        tokenVault.grantRole(tokenVault.DEPOSIT_ROLE(), address(nativeTokens));
+
 
         vm.stopBroadcast();
     }
