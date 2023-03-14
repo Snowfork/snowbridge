@@ -49,7 +49,6 @@ contract DeployScript is Script {
             vm.envBytes("STATEMINT_LOCATION"),
             vm.envUint("CREATE_TOKEN_FEE")
         );
-        tokenVault.transferOwnership(address(nativeTokens));
 
         // Allow inbound channel to send messages to NativeTokens and SovereignTreasury
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(inboundChannel));
@@ -58,6 +57,9 @@ contract DeployScript is Script {
         // Allow InboundChannel and SovereignTreasury to withdraw from vault
         vault.grantRole(vault.WITHDRAW_ROLE(), address(inboundChannel));
         vault.grantRole(vault.WITHDRAW_ROLE(), address(treasury));
+
+        // Allow NativeTokens to withdraw from TokenVault
+        tokenVault.grantRole(vault.WITHDRAW_ROLE(), address(nativeTokens));
 
         vm.stopBroadcast();
     }

@@ -8,7 +8,6 @@ import "../src/NativeTokens.sol";
 import "../src/TokenVault.sol";
 
 import "./mocks/OutboundChannelMock.sol";
-import "./mocks/SovereignAccountMock.sol";
 import "./mocks/TestToken.sol";
 
 contract NativeTokensTest is Test {
@@ -20,7 +19,7 @@ contract NativeTokensTest is Test {
     NativeTokens private nativeTokens;
     IOutboundChannel private outboundChannel;
     TestToken private token;
-    SovereignAccountMock private account1;
+    address private account1;
     address private account2;
 
     bytes private constant peer = "/Polkadot/Para(Statemint)";
@@ -32,9 +31,9 @@ contract NativeTokensTest is Test {
         outboundChannel = new OutboundChannelMock();
         vault = new TokenVault();
         nativeTokens = new NativeTokens(vault, outboundChannel, peer, 1);
-        vault.transferOwnership(address(nativeTokens));
+        vault.grantRole(vault.WITHDRAW_ROLE(), address(nativeTokens));
 
-        account1 = new SovereignAccountMock();
+        account1 = makeAddr("account1");
         account2 = address(this);
 
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(this));

@@ -3,24 +3,26 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
+import "openzeppelin/token/ERC20/IERC20.sol";
 
 import "../src/TokenVault.sol";
-import "./mocks/SovereignAccountMock.sol";
 import "./mocks/TestToken.sol";
 
 contract TokenVaultTest is Test {
     event Deposit(address sender, address token, uint256 amount);
     event Withdraw(address recipient, address token, uint256 amount);
 
-    TokenVault private vault;
-    TestToken private token;
-    SovereignAccountMock private account;
+    TokenVault vault;
+    TestToken token;
+    address account;
 
     function setUp() public {
         vault = new TokenVault();
         token = new TestToken("TestToken", "T");
-        account = new SovereignAccountMock();
 
+        account = makeAddr("statemint");
+
+        vault.grantRole(vault.WITHDRAW_ROLE(), address(this));
         token.mint(address(account), 1000);
     }
 
@@ -30,13 +32,16 @@ contract TokenVaultTest is Test {
     }
 
     function testTokenTransferFailedInsufficientAllowance() public {
-        account.approveTokenSpend(address(token), address(vault), 50);
+        hoax(account);
+        IERC20(token).approve(address(vault), 50);
+
         vm.expectRevert("ERC20: insufficient allowance");
         vault.deposit(address(account), address(token), 100);
     }
 
     function testDepositSuccessful() public {
-        account.approveTokenSpend(address(token), address(vault), 100);
+        hoax(account);
+        IERC20(token).approve(address(vault), 100);
 
         vm.expectEmit(false, false, false, true);
         emit Deposit(address(account), address(token), 50);
@@ -63,14 +68,10 @@ contract TokenVaultTest is Test {
     }
 
     function testNonOwnerCannotWithdraw() public {
-        vault.transferOwnership(address(account));
-        vm.expectRevert("Ownable: caller is not the owner");
-        vault.withdraw(address(account), address(token), 25);
-    }
-
-    function testNonOwnerCannotDeposit() public {
-        vault.transferOwnership(address(account));
-        vm.expectRevert("Ownable: caller is not the owner");
+        vault.revokeRole(vault.WITHDRAW_ROLE(), address(this));
+        vm.expectRevert(
+            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0x5d8e12c39142ff96d79d04d15d1ba1269e4fe57bb9d26f43523628b34ba108ec"
+        );
         vault.withdraw(address(account), address(token), 25);
     }
 }
