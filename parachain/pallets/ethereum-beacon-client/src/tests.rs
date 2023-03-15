@@ -305,10 +305,17 @@ mod beacon_tests {
 			false => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b").to_vec(),
 		};
 
-		let sync_committee_bits = merkleization::get_sync_committee_bits::<
-			mock_minimal::MaxSyncCommitteeSize,
-			{ config::SYNC_COMMITTEE_SIZE },
-		>(bits.try_into().expect("too many sync committee bits"));
+		let sync_committee_bits = if config::IS_MINIMAL {
+			merkleization::get_sync_committee_bits::<
+				mock_minimal::MaxSyncCommitteeSize,
+				{ config::SYNC_COMMITTEE_SIZE },
+			>(bits.try_into().expect("invalid sync committee bits"))
+		} else {
+			merkleization::get_sync_committee_bits::<
+				mock_mainnet::MaxSyncCommitteeSize,
+				{ config::SYNC_COMMITTEE_SIZE },
+			>(bits.try_into().expect("invalid sync committee bits"))
+		};
 
 		assert_ok!(&sync_committee_bits);
 
@@ -334,10 +341,17 @@ mod beacon_tests {
 			false => 64,
 		};
 
-		let sync_committee_bits = merkleization::get_sync_committee_bits::<
-			mock_minimal::MaxSyncCommitteeSize,
-			{ config::SYNC_COMMITTEE_SIZE },
-		>(bits.try_into().expect("invalid sync committee bits"));
+		let sync_committee_bits = if config::IS_MINIMAL {
+			merkleization::get_sync_committee_bits::<
+				mock_minimal::MaxSyncCommitteeSize,
+				{ config::SYNC_COMMITTEE_SIZE },
+			>(bits.try_into().expect("invalid sync committee bits"))
+		} else {
+			merkleization::get_sync_committee_bits::<
+				mock_mainnet::MaxSyncCommitteeSize,
+				{ config::SYNC_COMMITTEE_SIZE },
+			>(bits.try_into().expect("invalid sync committee bits"))
+		};
 
 		assert_err!(
 			sync_committee_bits,
@@ -360,10 +374,17 @@ mod beacon_tests {
 			false => 64,
 		};
 
-		let sync_committee_bits = merkleization::get_sync_committee_bits::<
-			mock_minimal::MaxSyncCommitteeSize,
-			{ config::SYNC_COMMITTEE_SIZE },
-		>(bits.try_into().expect("invalid sync committee bits"));
+		let sync_committee_bits = if config::IS_MINIMAL {
+			merkleization::get_sync_committee_bits::<
+				mock_minimal::MaxSyncCommitteeSize,
+				{ config::SYNC_COMMITTEE_SIZE },
+			>(bits.try_into().expect("invalid sync committee bits"))
+		} else {
+			merkleization::get_sync_committee_bits::<
+				mock_mainnet::MaxSyncCommitteeSize,
+				{ config::SYNC_COMMITTEE_SIZE },
+			>(bits.try_into().expect("invalid sync committee bits"))
+		};
 
 		assert_err!(
 			sync_committee_bits,
@@ -493,31 +514,45 @@ mod beacon_tests {
 
 	#[test]
 	pub fn test_hash_sync_aggregate() {
-		let sync_aggregate: SyncAggregate<mock_minimal::MaxSyncCommitteeSize, mock_minimal::MaxSignatureSize> = match config::IS_MINIMAL {
-			true => SyncAggregate{
+		if config::IS_MINIMAL {
+			let sync_aggregate: SyncAggregate<mock_minimal::MaxSyncCommitteeSize, mock_minimal::MaxSignatureSize> = SyncAggregate{
 				sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("sync committee bits are too long"),
 				sync_committee_signature: hex!("99b0a4c6b69f17a876c65364e164c74b9cdd75dfd3b7f9b60b850cfb9394091ed501e2c190b8349f1b903bca44dd556a0c20fd9cd34dec3906921f1424359a4870356557b70261eee14bf49d8f3c62dfcdb37206cb34991c379eee46510602bd").to_vec().try_into().expect("signature is too long"),
-			},
-			false => SyncAggregate{
+			};
+			let expected_hash_root: H256 =
+				hex!("6b3a4d0172d3d2075a924b84538621af4a2c9148f26e90e2608a6aae4283e68d").into();
+
+			let payload: Result<
+				SSZSyncAggregate<{ config::SYNC_COMMITTEE_SIZE }>,
+				MerkleizationError,
+			> = sync_aggregate.try_into();
+			assert_ok!(&payload);
+
+			let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
+			assert_ok!(&hash_root_result);
+
+			let hash_root: H256 = hash_root_result.unwrap().into();
+			assert_eq!(hash_root, expected_hash_root);
+		} else {
+			let sync_aggregate: SyncAggregate<mock_mainnet::MaxSyncCommitteeSize, mock_mainnet::MaxSignatureSize> = SyncAggregate {
 				sync_committee_bits: hex!("cefffffefffffff767fffbedffffeffffeeffdffffdebffffff7f7dbdf7fffdffffbffcfffdff79dfffbbfefff2ffffff7ddeff7ffffc98ff7fbfffffffffff7").to_vec().try_into().expect("sync committee bits are too long"),
 				sync_committee_signature: hex!("8af1a8577bba419fe054ee49b16ed28e081dda6d3ba41651634685e890992a0b675e20f8d9f2ec137fe9eb50e838aa6117f9f5410e2e1024c4b4f0e098e55144843ce90b7acde52fe7b94f2a1037342c951dc59f501c92acf7ed944cb6d2b5f7").to_vec().try_into().expect("signature is too long"),
-			},
-		};
-		let expected_hash_root: H256 = match config::IS_MINIMAL {
-			true => hex!("6b3a4d0172d3d2075a924b84538621af4a2c9148f26e90e2608a6aae4283e68d").into(),
-			false =>
-				hex!("e6dcad4f60ce9ff8a587b110facbaf94721f06cd810b6d8bf6cffa641272808d").into(),
-		};
+			};
+			let expected_hash_root: H256 =
+				hex!("e6dcad4f60ce9ff8a587b110facbaf94721f06cd810b6d8bf6cffa641272808d").into();
 
-		let payload: Result<SSZSyncAggregate<{ config::SYNC_COMMITTEE_SIZE }>, MerkleizationError> =
-			sync_aggregate.try_into();
-		assert_ok!(&payload);
+			let payload: Result<
+				SSZSyncAggregate<{ config::SYNC_COMMITTEE_SIZE }>,
+				MerkleizationError,
+			> = sync_aggregate.try_into();
+			assert_ok!(&payload);
 
-		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
-		assert_ok!(&hash_root_result);
+			let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
+			assert_ok!(&hash_root_result);
 
-		let hash_root: H256 = hash_root_result.unwrap().into();
-		assert_eq!(hash_root, expected_hash_root);
+			let hash_root: H256 = hash_root_result.unwrap().into();
+			assert_eq!(hash_root, expected_hash_root);
+		}
 	}
 
 	#[test]
