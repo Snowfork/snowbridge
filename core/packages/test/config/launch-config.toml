@@ -41,31 +41,6 @@ default_args = [
     name = "rococo-dave"
     validator = true
 
-## Snowbridge
-#[[parachains]]
-#add_to_genesis = true
-#chain_spec_path = "{{output_dir}}/spec.json"
-#cumulus_based = true
-#id = 1000
-#
-#    [[parachains.collators]]
-#    command = "{{output_bin_dir}}/snowbridge"
-#    name = "snowbrige-alice"
-#    rpc_port = 8081
-#    validator = true
-#    ws_port = 11144
-#    args = ["--enable-offchain-indexing=true","--pruning=archive"]
-#
-#        [[parachains.collators.env]]
-#        name = "RUST_LOG"
-#        value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace"
-#
-#    [[parachains.collators]]
-#    command = "{{output_bin_dir}}/snowbridge"
-#    name = "snowbrige-bob"
-#    validator = true
-#    args = ["--enable-offchain-indexing=true","--pruning=archive"]
-
 ## Bridge Hub
 [[parachains]]
 id = 1013
