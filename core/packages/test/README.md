@@ -38,6 +38,31 @@ https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/explorer
 
 Confirm the block number is > 2.
 
+### Using a custom Cumulus build for BridgeHub and Statemine
+
+By default `scripts/start-services.sh` will use `cargo` to install the `polkadot-parachain` binary from the [Snowbridge/cumulus](https://github.com/Snowfork/cumulus) forks `snowbridge` branch.
+
+To use a custom version of cumulus:
+
+1. Clone a cumulus repo. In the example below we clone the [Snowbridge/cumulus](https://github.com/Snowfork/cumulus) fork.
+
+```console
+git clone https://github.com/Snowfork/cumulus.git -b snowbridge
+```
+
+2. Build `polkadot-parachain` bin.
+
+```console
+cd cumulus
+cargo build --release --bin polkadot-parachain
+```
+
+3.  Set `CUMULUS_BIN` in `core/packages/test/.envrc` and `direnv allow`.
+
+```sh
+export CUMULUS_BIN=/path/to/cumulus/target/release/polkadot-parachain
+```
+
 ## E2E tests
 
 These tests are meant to closely replicate real-world behaviour. This means that they also replicate real-world delays and confirmation times. This can take up to 4 minutes per test and around 40 minutes for all tests.
@@ -70,7 +95,8 @@ The bootstrap tests will be called automatically as part of the full suite.
 
 The `start-services.sh` script writes the following logs:
 
-- Parachain nodes: {alice,bob,11144,11155}.log
+- BridgeHub nodes: {alice,bob,11144,11155}.log
+- Statemine nodes: {alice,bob,11144,11155}.log
 - Relay services: {beefy,parachain,beacon}-relay.log
 - Geth (execution client): /tmp/snowbridge/geth.log
 - Lodestar (beacon client): /tmp/snowbridge/lodestar.log
