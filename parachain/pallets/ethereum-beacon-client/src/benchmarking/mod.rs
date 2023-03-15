@@ -15,6 +15,7 @@ mod data_mainnet;
 use data_mainnet::*;
 
 benchmarks! {
+	where_clause { where [(); T::SYNC_COMMITTEE_SIZE]: Sized }
 	sync_committee_period_update {
 		let caller: T::AccountId = whitelisted_caller();
 
