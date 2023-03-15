@@ -1,14 +1,18 @@
 [profile.default]
-solc_version = '0.8.9'
+solc_version = '0.8.19'
+optimizer = true
+optimizer_runs = 20_000
 via_ir = false
-src = 'contracts'
-out = 'out'
-libs = ["lib","node_modules"]
-test = 'contracts/test'
-allow_paths = ["node_modules/@openzeppelin/contracts"]
+test = 'test'
 remappings = [
     'ds-test=lib/ds-test/src/',
     'forge-std=lib/forge-std/src/',
-    '@openzeppelin=node_modules/@openzeppelin'
+    'openzeppelin=lib/openzeppelin-contracts/contracts/',
 ]
 ffi = true
+
+
+ignored_error_codes = [
+    # prevrandao not supported by Anvil VM
+    9432
+]

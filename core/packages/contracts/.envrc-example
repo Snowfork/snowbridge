@@ -1,11 +1,20 @@
 source_up_if_exists
 
-## Config only for foundry test
-# export PRIVATE_KEY=0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77
-# export RANDAO_COMMIT_DELAY=3
-# export RANDAO_COMMIT_EXP=8
-# export PARAID=1000
+# Config for deploy script
 
-## The allowed origin for native and foreign token contracts
-export TOKENS_ALLOWED_ORIGIN=0x09b636bf387d256bd35ebf301c2da34fdee53b42f6a4648ad126156034d4a2db
+## BeefyClient
+export RANDAO_COMMIT_DELAY=3
+export RANDAO_COMMIT_EXP=8
 
+## ParachainClient
+export PARAID=1000
+
+## OutboundChannel
+export RELAYER_FEE=100
+
+## InboundChannel
+export RELAYER_REWARD=100
+
+## NativeTokens
+export STATEMINT_LOCATION=0x09b636bf387d256bd35ebf301c2da34fdee53b42f6a4648ad126156034d4a2db
+export CREATE_TOKEN_FEE="1000000000000000000"

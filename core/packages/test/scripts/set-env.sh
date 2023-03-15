@@ -25,10 +25,7 @@ eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
 eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
 eth_gas_limit="${ETH_GAS_LIMIT:-5000000}"
-export RANDAO_COMMIT_DELAY=3
-export RANDAO_COMMIT_EXP=8
-export PARAID="${PARA_ID:-1000}"
-export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
+
 beefy_state_file="${BEEFY_STATE_FILE:-$output_dir/beefy-state.json}"
 beefy_start_block="${BEEFY_START_BLOCK:-15}"
 
@@ -43,6 +40,27 @@ basic_parachain_account_ids="${BASIC_PARACHAIN_ACCOUNT_IDS:-0xd43593c715fdd31c61
 basic_eth_addresses="${BASIC_ETH_ADDRESSES:-0x89b4ab1ef20763630df9743acf155865600daff2}"
 beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 
+# Config for deploying contracts
+
+## Deployment key
+export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
+
+## BeefyClient
+export RANDAO_COMMIT_DELAY=3
+export RANDAO_COMMIT_EXP=8
+
+## ParachainClient
+export PARAID=1000
+
+## OutboundChannel
+export RELAYER_FEE=100
+
+## InboundChannel
+export RELAYER_REWARD=100
+
+## NativeTokens
+export STATEMINT_LOCATION=0x09b636bf387d256bd35ebf301c2da34fdee53b42f6a4648ad126156034d4a2db
+export CREATE_TOKEN_FEE="1000000000000000000"
 
 address_for()
 {

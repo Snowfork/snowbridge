@@ -3,12 +3,14 @@ set -eu
 
 start=$(date +%s)
 
+from_start_services=true
+
 source scripts/set-env.sh
 source scripts/build-binary.sh
-from_start_services=true
 
 trap kill_all SIGINT SIGTERM EXIT
 cleanup
+
 # 0. check required tools
 echo "Check building tools"
 check_tool
