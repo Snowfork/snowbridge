@@ -7,8 +7,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-mod weights;
-
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use sp_api::impl_runtime_apis;
@@ -643,7 +641,7 @@ impl ethereum_beacon_client::Config for Runtime {
 	type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 	type ForkVersions = ChainForkVersions;
 	type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
-	type WeightInfo = weights::ethereum_beacon_client::SnowbridgeWeight<Self>;
+	type WeightInfo = ethereum_beacon_client::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
