@@ -68,8 +68,11 @@ start_lodestar() {
 deploy_contracts()
 {
     pushd "$contract_dir"
-    forge script --rpc-url $eth_endpoint_http contracts/deploy/foundry/Deploy.sol:DeployScript \
-    --broadcast -vvv || true # "|| true" can be removed once https://github.com/foundry-rs/foundry/pull/4010 has been released
+    forge script \
+        --rpc-url $eth_endpoint_http \
+        --broadcast \
+        -vvv \
+        scripts/Deploy.sol:DeployScript
     node scripts/generateContractInfo.js "$output_dir/contracts.json"
     popd
     echo "Exported contract artifacts: $output_dir/contracts.json"

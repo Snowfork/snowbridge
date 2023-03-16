@@ -1,2 +1,10 @@
 [files]
-extend-exclude = ["**/*.yaml","**/*.json","**/fixtures/*.js","**/*ffi*.js","**/*mock*.rs","**/*data*.rs"]
+extend-exclude = [
+    "core/packages/contracts/lib",
+    "**/*.yaml",
+    "**/*.json",
+    "**/fixtures/*.js",
+    "**/*ffi*.js",
+    "**/*mock*.rs",
+    "**/*data*.rs"
+]

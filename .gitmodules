@@ -5,3 +5,7 @@
 [submodule "core/packages/contracts/lib/ds-test"]
 	path = core/packages/contracts/lib/ds-test
 	url = https://github.com/dapphub/ds-test
+[submodule "core/packages/contracts/lib/openzeppelin-contracts"]
+	path = core/packages/contracts/lib/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
+	branch = v4.8.2
