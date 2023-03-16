@@ -236,7 +236,11 @@ func (h *Header) SyncHeader(ctx context.Context, headerUpdate scale.HeaderUpdate
 		"executionBlockNumber": headerUpdate.Payload.ExecutionHeader.BlockNumber,
 	}).Info("Syncing header between last two finalized headers")
 
-	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate.Payload)
+	updatePayload := scale.VersionedHeaderUpdatePayload{
+		Bellatrix: &headerUpdate.Payload,
+	}
+
+	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_versioned_execution_header", updatePayload)
 	if err != nil {
 		return fmt.Errorf("write to parachain: %w", err)
 	}
@@ -251,7 +255,11 @@ func (h *Header) SyncCapellaHeader(ctx context.Context, headerUpdate scale.Heade
 		"executionBlockNumber": headerUpdate.Payload.ExecutionHeader.BlockNumber,
 	}).Info("Syncing capella header between last two finalized headers")
 
-	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header_capella", headerUpdate.Payload)
+	updatePayload := scale.VersionedHeaderUpdatePayload{
+		Capella: &headerUpdate.Payload,
+	}
+
+	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_versioned_execution_header", updatePayload)
 	if err != nil {
 		return fmt.Errorf("write to parachain: %w", err)
 	}

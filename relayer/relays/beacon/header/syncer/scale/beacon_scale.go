@@ -3,6 +3,7 @@ package scale
 import (
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 )
@@ -84,6 +85,23 @@ type HeaderUpdate struct {
 type HeaderUpdateCapella struct {
 	Payload           HeaderUpdatePayloadCapella
 	NextSyncAggregate SyncAggregate
+}
+
+type VersionedHeaderUpdatePayload struct {
+	Bellatrix *HeaderUpdatePayload
+	Capella   *HeaderUpdatePayloadCapella
+}
+
+func (m VersionedHeaderUpdatePayload) Encode(encoder scale.Encoder) error {
+	var err error
+	if m.Capella != nil {
+		encoder.PushByte(1)
+		err = encoder.Encode(m.Capella)
+	} else {
+		encoder.PushByte(0)
+		err = encoder.Encode(m.Bellatrix)
+	}
+	return err
 }
 
 type BeaconHeader struct {

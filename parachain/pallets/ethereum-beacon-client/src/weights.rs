@@ -35,7 +35,7 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	fn sync_committee_period_update() -> Weight;
 	fn import_finalized_header() -> Weight;
-	fn import_execution_header() -> Weight;
+	fn import_versioned_execution_header() -> Weight;
 }
 
 /// Weights for ethereum_beacon_client using the Snowbridge node and recommended hardware.
@@ -51,7 +51,7 @@ impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
-	fn import_execution_header() -> Weight {
+	fn import_versioned_execution_header() -> Weight {
 		Weight::from_ref_time(166_011_885_000 as u64)
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -70,7 +70,7 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(3))
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
-	fn import_execution_header() -> Weight {
+	fn import_versioned_execution_header() -> Weight {
 		Weight::from_ref_time(166_011_885_000 as u64)
 			.saturating_add(RocksDbWeight::get().reads(3))
 			.saturating_add(RocksDbWeight::get().writes(1))

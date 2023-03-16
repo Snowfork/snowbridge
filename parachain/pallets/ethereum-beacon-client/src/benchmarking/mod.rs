@@ -72,7 +72,7 @@ benchmarks! {
 		<FinalizedBeaconHeaders<T>>::get(header_hash).unwrap();
 	}
 
-	import_execution_header {
+	import_versioned_execution_header {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let initial_sync_data = initial_sync();
@@ -80,6 +80,8 @@ benchmarks! {
 		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
 
 		let header_update = header_update();
+
+		let versioned_header_update = VersionedHeaderUpdate::Bellatrix(header_update.clone());
 
 		SyncCommittees::<T>::insert(EthereumBeaconClient::<T>::compute_current_sync_period(
 				header_update.beacon_header.slot,
@@ -102,7 +104,7 @@ benchmarks! {
 			finalized_block_root,
 			finalized_update.block_roots_root,
 		);
-	}: _(RawOrigin::Signed(caller.clone()), header_update.clone())
+	}: _(RawOrigin::Signed(caller.clone()), versioned_header_update.clone())
 	verify {
 		let block_hash: H256 = header_update.execution_header.block_hash;
 

@@ -34,6 +34,12 @@ use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_std::prelude::*;
 
+use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
+use scale_info::TypeInfo;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 pub use pallet::*;
 
 pub type HeaderUpdateOf<T> = HeaderUpdate<
@@ -44,7 +50,7 @@ pub type HeaderUpdateOf<T> = HeaderUpdate<
 	<T as Config>::MaxProofBranchSize,
 	<T as Config>::MaxSyncCommitteeSize,
 >;
-pub type HeaderUpdateOfCapella<T> = HeaderUpdateCapella<
+pub type CapellaHeaderUpdateOf<T> = HeaderUpdateCapella<
 	<T as Config>::MaxFeeRecipientSize,
 	<T as Config>::MaxLogsBloomSize,
 	<T as Config>::MaxExtraDataSize,
@@ -52,6 +58,22 @@ pub type HeaderUpdateOfCapella<T> = HeaderUpdateCapella<
 	<T as Config>::MaxProofBranchSize,
 	<T as Config>::MaxSyncCommitteeSize,
 >;
+
+#[derive(
+	Encode, Decode, TypeInfo, MaxEncodedLen, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+)]
+#[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
+pub enum VersionedHeaderUpdate<T: pallet::Config> {
+	Bellatrix(HeaderUpdateOf<T>),
+	Capella(CapellaHeaderUpdateOf<T>),
+}
+
 pub type InitialSyncOf<T> =
 	InitialSync<<T as Config>::MaxSyncCommitteeSize, <T as Config>::MaxProofBranchSize>;
 pub type SyncCommitteePeriodUpdateOf<T> = SyncCommitteePeriodUpdate<
@@ -314,41 +336,51 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::import_execution_header())]
+		#[pallet::weight(T::WeightInfo::import_versioned_execution_header())]
 		#[transactional]
-		pub fn import_execution_header(
+		pub fn import_versioned_execution_header(
 			origin: OriginFor<T>,
-			update: HeaderUpdateOf<T>,
+			versioned_update: VersionedHeaderUpdate<T>,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
 			Self::check_bridge_blocked_state()?;
 
-			let slot = update.beacon_header.slot;
-			let block_hash = update.execution_header.block_hash;
+			let slot: u64;
+			let block_hash: H256;
+			let result: DispatchResult;
 
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Received header update for slot {}.",
-				slot
-			);
-
-			if let Err(err) = Self::process_header(update) {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"💫 Header update failed with error {:?}",
-					err
-				);
-				return Err(err)
+			match versioned_update {
+				VersionedHeaderUpdate::Bellatrix(update) => {
+					slot = update.beacon_header.slot;
+					block_hash = update.execution_header.block_hash;
+					result = Self::process_header(update);
+				},
+				VersionedHeaderUpdate::Capella(update) => {
+					slot = update.beacon_header.slot;
+					block_hash = update.execution_header.block_hash;
+					result = Self::process_header_capella(update);
+				},
 			}
 
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Stored execution header {} at beacon slot {}.",
-				block_hash,
-				slot
-			);
-
+			match result {
+				Err(err) => {
+					log::error!(
+						target: "ethereum-beacon-client",
+						"💫 Capella header update failed with error {:?}",
+						err
+					);
+					return Err(err)
+				},
+				_ => {
+					log::info!(
+						target: "ethereum-beacon-client",
+						"💫 Stored execution header {} at beacon slot {}.",
+						block_hash,
+						slot
+					);
+				},
+			}
 			Ok(())
 		}
 
@@ -361,45 +393,6 @@ pub mod pallet {
 			<Blocked<T>>::set(false);
 
 			log::info!(target: "ethereum-beacon-client","💫 syncing bridge from governance provided checkpoint.");
-
-			Ok(())
-		}
-
-		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::import_execution_header())]
-		#[transactional]
-		pub fn import_execution_header_capella(
-			origin: OriginFor<T>,
-			update: HeaderUpdateOfCapella<T>,
-		) -> DispatchResult {
-			let _sender = ensure_signed(origin)?;
-
-			Self::check_bridge_blocked_state()?;
-
-			let slot = update.beacon_header.slot;
-			let block_hash = update.execution_header.block_hash;
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Received capella header update for slot {}.",
-				slot
-			);
-
-			if let Err(err) = Self::process_header_capella(update) {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"💫 Capella header update failed with error {:?}",
-					err
-				);
-				return Err(err)
-			}
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Stored execution header {} at beacon slot {}.",
-				block_hash,
-				slot
-			);
 
 			Ok(())
 		}
@@ -716,7 +709,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_header_capella(update: HeaderUpdateOfCapella<T>) -> DispatchResult {
+		fn process_header_capella(update: CapellaHeaderUpdateOf<T>) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
 			let block_slot = update.beacon_header.slot;
