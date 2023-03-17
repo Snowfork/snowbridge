@@ -4,7 +4,7 @@ use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
 	BeaconHeader, ExecutionPayload, FinalizedHeaderUpdate, HeaderUpdate, InitialSync, PublicKey,
-	SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
+	SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate, VersionedExecutionPayload,
 };
 use sp_core::U256;
 use sp_std::vec;
@@ -226,7 +226,7 @@ pub fn header_update<
             state_root: hex!("d4b15f3e012f030600478a2e2f926d2a4bdc11e5a272358774b6ade313741c7c").into(),
             body_root: hex!("f6774295e2367becc1194183039734ba1ad8d635e6cb8bd8e823af268d7e4460").into(),
         },
-        execution_header: ExecutionPayload{
+        execution_header: VersionedExecutionPayload::Bellatrix(ExecutionPayload{
             parent_hash: hex!("86ab41761054378f348183cb6c35d9775c3c9975c0139bca8d67661f228bfba3").into(),
             fee_recipient: hex!("0000000000000000000000000000000000000000").to_vec().try_into().expect("fee recipient too long"),
             state_root: hex!("06f05ca47fff28a16c76564d8f2af2f8469dc64719bd2ec639300c84325758dc").into(),
@@ -241,7 +241,7 @@ pub fn header_update<
             base_fee_per_gas: U256::from(7 as u64),
             block_hash: hex!("1cde65ff8185db267ad62e60940dedc3fc284ae8aa70fb1a23f85f7e3cb42f82").into(),
             transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
-        },
+        }),
         execution_branch: vec![
             hex!("4e4c59c066d8211a499e5ae32adfab353faff1bc59d779eabe3f4a0ee2e212b7").into(),
             hex!("f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b").into(),

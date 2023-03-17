@@ -79,6 +79,7 @@ build_ethereum() {
 
 install_binary() {
     echo "Building and installing binaries."
+    mkdir -p $output_bin_dir
     build_ethereum
     build_relaychain
     build_parachain

@@ -3,7 +3,7 @@ mod beacon_mainnet_tests {
 	use crate::{
 		config, merkleization, mock::*, Error, ExecutionHeaders, FinalizedBeaconHeaders,
 		FinalizedBeaconHeadersBlockRoot, FinalizedHeaderState, LatestFinalizedHeaderState,
-		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot, VersionedHeaderUpdate,
+		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -157,14 +157,14 @@ mod beacon_mainnet_tests {
 				finalized_block_root,
 				finalized_update.block_roots_root,
 			);
-			let versioned_header_update = VersionedHeaderUpdate::Bellatrix(update.clone());
 
 			assert_ok!(mock_mainnet::EthereumBeaconClient::import_versioned_execution_header(
 				mock_mainnet::RuntimeOrigin::signed(1),
-				versioned_header_update
+				update.clone()
 			));
 
-			let execution_block_root: H256 = update.execution_header.block_hash.clone().into();
+			let execution_block_root: H256 =
+				update.execution_header.to_payload().unwrap().block_hash;
 
 			assert!(<ExecutionHeaders<mock_mainnet::Test>>::contains_key(execution_block_root));
 		});

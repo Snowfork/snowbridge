@@ -222,14 +222,7 @@ pub struct FinalizedHeaderUpdate<
 }
 
 #[derive(
-	Default,
-	Encode,
-	Decode,
-	CloneNoBound,
-	PartialEqNoBound,
-	RuntimeDebugNoBound,
-	TypeInfo,
-	MaxEncodedLen,
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
@@ -261,55 +254,7 @@ pub struct HeaderUpdate<
 	SyncCommitteeSize: Get<u32>,
 > {
 	pub beacon_header: BeaconHeader,
-	pub execution_header: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
-	pub execution_branch: BoundedVec<H256, ProofSize>,
-	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
-	pub signature_slot: u64,
-	pub block_root_branch: BoundedVec<H256, ProofSize>,
-	pub block_root_branch_header_root: H256,
-}
-
-#[derive(
-	Default,
-	Encode,
-	Decode,
-	CloneNoBound,
-	PartialEqNoBound,
-	RuntimeDebugNoBound,
-	TypeInfo,
-	MaxEncodedLen,
-)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(
-	feature = "std",
-	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
-)]
-#[scale_info(skip_type_params(
-	FeeRecipientSize,
-	LogsBloomSize,
-	ExtraDataSize,
-	DepositDataSize,
-	PublicKeySize,
-	SignatureSize,
-	ProofSize,
-	ProposerSlashingSize,
-	AttesterSlashingSize,
-	VoluntaryExitSize,
-	AttestationSize,
-	ValidatorCommitteeSize,
-	SyncCommitteeSize
-))]
-#[codec(mel_bound())]
-pub struct HeaderUpdateCapella<
-	FeeRecipientSize: Get<u32>,
-	LogsBloomSize: Get<u32>,
-	ExtraDataSize: Get<u32>,
-	SignatureSize: Get<u32>,
-	ProofSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>,
-> {
-	pub beacon_header: BeaconHeader,
-	pub execution_header: ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	pub execution_header: VersionedExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 	pub execution_branch: BoundedVec<H256, ProofSize>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub signature_slot: u64,
@@ -359,34 +304,45 @@ pub struct ExecutionHeader<LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>> {
 	pub transactions_root: H256,
 }
 
-#[derive(
-	Default,
-	Encode,
-	Decode,
-	CloneNoBound,
-	PartialEqNoBound,
-	RuntimeDebugNoBound,
-	TypeInfo,
-	MaxEncodedLen,
-)]
-#[scale_info(skip_type_params(LogsBloomSize, ExtraDataSize))]
-#[codec(mel_bound())]
-pub struct ExecutionHeaderCapella<LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>> {
-	pub parent_hash: H256,
-	pub fee_recipient: H160,
-	pub state_root: H256,
-	pub receipts_root: H256,
-	pub logs_bloom: BoundedVec<u8, LogsBloomSize>,
-	pub prev_randao: H256,
-	pub block_number: u64,
-	pub gas_limit: u64,
-	pub gas_used: u64,
-	pub timestamp: u64,
-	pub extra_data: BoundedVec<u8, ExtraDataSize>,
-	pub base_fee_per_gas: U256,
-	pub block_hash: H256,
-	pub transactions_root: H256,
-	pub withdrawals_root: H256,
+#[derive(Debug, PartialEq)]
+pub enum ConvertError {
+	FromCapellaPayloadToBellatrixError,
+	FromExecutionPayloadToHeaderError,
+}
+
+impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
+	TryFrom<ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
+	for ExecutionHeader<LogsBloomSize, ExtraDataSize>
+{
+	type Error = ConvertError;
+
+	fn try_from(
+		execution_payload: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	) -> Result<Self, Self::Error> {
+		let mut fee_recipient = [0u8; 20];
+		let fee_slice = execution_payload.fee_recipient.as_slice();
+		if fee_slice.len() == 20 {
+			fee_recipient[0..20].copy_from_slice(&(fee_slice));
+		} else {
+			return Err(ConvertError::FromExecutionPayloadToHeaderError)
+		}
+		Ok(ExecutionHeader {
+			parent_hash: execution_payload.parent_hash,
+			fee_recipient: H160::from(fee_recipient),
+			state_root: execution_payload.state_root,
+			receipts_root: execution_payload.receipts_root,
+			logs_bloom: execution_payload.logs_bloom,
+			prev_randao: execution_payload.prev_randao,
+			block_number: execution_payload.block_number,
+			gas_used: execution_payload.gas_used,
+			gas_limit: execution_payload.gas_limit,
+			timestamp: execution_payload.timestamp,
+			extra_data: execution_payload.extra_data,
+			base_fee_per_gas: execution_payload.base_fee_per_gas,
+			block_hash: execution_payload.block_hash,
+			transactions_root: execution_payload.transactions_root,
+		})
+	}
 }
 
 /// Sync committee as it is stored in the runtime storage.
@@ -489,6 +445,34 @@ pub struct ExecutionPayload<
 	pub transactions_root: H256,
 }
 
+impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
+	TryFrom<ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
+	for ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>
+{
+	type Error = ConvertError;
+
+	fn try_from(
+		payload: ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	) -> Result<Self, Self::Error> {
+		Ok(ExecutionPayload {
+			parent_hash: payload.parent_hash,
+			fee_recipient: payload.fee_recipient,
+			state_root: payload.state_root,
+			receipts_root: payload.receipts_root,
+			logs_bloom: payload.logs_bloom,
+			prev_randao: payload.prev_randao,
+			block_number: payload.block_number,
+			gas_limit: payload.gas_limit,
+			gas_used: payload.gas_used,
+			timestamp: payload.timestamp,
+			extra_data: payload.extra_data,
+			base_fee_per_gas: payload.base_fee_per_gas,
+			block_hash: payload.block_hash,
+			transactions_root: payload.transactions_root,
+		})
+	}
+}
+
 #[derive(
 	Default,
 	Encode,
@@ -530,6 +514,55 @@ pub struct ExecutionPayloadCapella<
 	pub block_hash: H256,
 	pub transactions_root: H256,
 	pub withdrawals_root: H256,
+}
+
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+)]
+#[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize))]
+#[codec(mel_bound())]
+pub enum VersionedExecutionPayload<
+	FeeRecipientSize: Get<u32>,
+	LogsBloomSize: Get<u32>,
+	ExtraDataSize: Get<u32>,
+> {
+	Bellatrix(ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>),
+	Capella(ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>),
+}
+
+impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
+	VersionedExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>
+{
+	pub fn to_payload(
+		&self,
+	) -> Result<ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>, ConvertError> {
+		match self {
+			VersionedExecutionPayload::Bellatrix(execution_payload) =>
+				Ok(execution_payload.clone()),
+			VersionedExecutionPayload::Capella(capella_execution_payload) =>
+				capella_execution_payload.clone().try_into(),
+		}
+	}
+
+	pub fn to_header(&self) -> Result<ExecutionHeader<LogsBloomSize, ExtraDataSize>, ConvertError> {
+		match self {
+			VersionedExecutionPayload::Bellatrix(execution_payload) =>
+				execution_payload.clone().try_into(),
+			VersionedExecutionPayload::Capella(capella_execution_payload) => {
+				let execution_payload: ExecutionPayload<
+					FeeRecipientSize,
+					LogsBloomSize,
+					ExtraDataSize,
+				> = capella_execution_payload.clone().try_into()?;
+				execution_payload.try_into()
+			},
+		}
+	}
 }
 
 impl<S: Get<u32>, M: Get<u32>> ExecutionHeader<S, M> {

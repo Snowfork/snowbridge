@@ -81,8 +81,6 @@ benchmarks! {
 
 		let header_update = header_update();
 
-		let versioned_header_update = VersionedHeaderUpdate::Bellatrix(header_update.clone());
-
 		SyncCommittees::<T>::insert(EthereumBeaconClient::<T>::compute_current_sync_period(
 				header_update.beacon_header.slot,
 			), initial_sync_data.current_sync_committee);
@@ -104,9 +102,11 @@ benchmarks! {
 			finalized_block_root,
 			finalized_update.block_roots_root,
 		);
-	}: _(RawOrigin::Signed(caller.clone()), versioned_header_update.clone())
+	}: _(RawOrigin::Signed(caller.clone()), header_update.clone())
 	verify {
-		let block_hash: H256 = header_update.execution_header.block_hash;
+		let execution_header: ExecutionPayloadOf<T> = header_update.execution_header.to_payload().unwrap();
+
+		let block_hash: H256 = execution_header.block_hash;
 
 		<ExecutionHeaders<T>>::get(block_hash).unwrap();
 	}

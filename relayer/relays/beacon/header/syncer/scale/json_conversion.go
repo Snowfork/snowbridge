@@ -54,6 +54,14 @@ func (h HeaderUpdate) ToJSON() json.HeaderUpdate {
 	}
 }
 
+func (v *VersionedExecutionPayload) ToJSON() json.VersionedExecutionPayload {
+	if v.Bellatrix != nil {
+		return json.VersionedExecutionPayload{Bellatrix: v.Bellatrix.ToJSON()}
+	} else {
+		return json.VersionedExecutionPayload{Capella: v.Capella.ToJSON()}
+	}
+}
+
 func (b *BeaconHeader) ToJSON() json.BeaconHeader {
 	return json.BeaconHeader{
 		Slot:          uint64(b.Slot),
@@ -64,8 +72,8 @@ func (b *BeaconHeader) ToJSON() json.BeaconHeader {
 	}
 }
 
-func (e *ExecutionPayload) ToJSON() json.ExecutionPayload {
-	return json.ExecutionPayload{
+func (e *ExecutionPayload) ToJSON() *(json.ExecutionPayload) {
+	return &json.ExecutionPayload{
 		ParentHash:      e.ParentHash.Hex(),
 		FeeRecipient:    util.BytesToHexString(e.FeeRecipient),
 		StateRoot:       e.StateRoot.Hex(),
@@ -80,6 +88,26 @@ func (e *ExecutionPayload) ToJSON() json.ExecutionPayload {
 		BaseFeePerGas:   e.BaseFeePerGas.Uint64(),
 		BlockHash:       e.BlockHash.Hex(),
 		TransactionRoot: e.TransactionsRoot.Hex(),
+	}
+}
+
+func (e *ExecutionPayloadCapella) ToJSON() *(json.ExecutionPayloadCapella) {
+	return &json.ExecutionPayloadCapella{
+		ParentHash:      e.ParentHash.Hex(),
+		FeeRecipient:    util.BytesToHexString(e.FeeRecipient),
+		StateRoot:       e.StateRoot.Hex(),
+		ReceiptsRoot:    e.ReceiptsRoot.Hex(),
+		LogsBloom:       util.BytesToHexString(e.LogsBloom),
+		PrevRandao:      e.PrevRandao.Hex(),
+		BlockNumber:     uint64(e.BlockNumber),
+		GasLimit:        uint64(e.GasLimit),
+		GasUsed:         uint64(e.GasUsed),
+		Timestamp:       uint64(e.Timestamp),
+		ExtraData:       util.BytesToHexString(e.ExtraData),
+		BaseFeePerGas:   e.BaseFeePerGas.Uint64(),
+		BlockHash:       e.BlockHash.Hex(),
+		TransactionRoot: e.TransactionsRoot.Hex(),
+		WithdrawalsRoot: e.WithdrawalsRoot.Hex(),
 	}
 }
 

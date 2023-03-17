@@ -4,7 +4,7 @@ mod beacon_minimal_tests {
 		config, merkleization, mock::*, pallet::FinalizedBeaconHeadersBlockRoot, Error,
 		ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
 		LatestExecutionHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
-		SyncCommittees, ValidatorsRoot, VersionedHeaderUpdate,
+		SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -275,14 +275,13 @@ mod beacon_minimal_tests {
 				finalized_update.block_roots_root,
 			);
 
-			let versioned_header_update = VersionedHeaderUpdate::Bellatrix(update.clone());
-
 			assert_ok!(mock_minimal::EthereumBeaconClient::import_versioned_execution_header(
 				mock_minimal::RuntimeOrigin::signed(1),
-				versioned_header_update
+				update.clone()
 			));
 
-			let execution_block_root: H256 = update.execution_header.block_hash.clone().into();
+			let execution_block_root: H256 =
+				update.execution_header.to_payload().unwrap().block_hash;
 
 			assert!(<ExecutionHeaders<mock_minimal::Test>>::contains_key(execution_block_root));
 		});
@@ -300,12 +299,10 @@ mod beacon_minimal_tests {
 				import_time: 0,
 			});
 
-			let versioned_header_update = VersionedHeaderUpdate::Bellatrix(update.clone());
-
 			assert_err!(
 				mock_minimal::EthereumBeaconClient::import_versioned_execution_header(
 					mock_minimal::RuntimeOrigin::signed(1),
-					versioned_header_update
+					update.clone()
 				),
 				Error::<mock_minimal::Test>::HeaderNotFinalized
 			);
@@ -328,15 +325,13 @@ mod beacon_minimal_tests {
 				beacon_slot: 0,
 				block_hash: Default::default(),
 				// initialize with the same block_number in execution_payload of the next update
-				block_number: update.execution_header.block_number,
+				block_number: update.execution_header.to_payload().unwrap().block_number,
 			});
-
-			let versioned_header_update = VersionedHeaderUpdate::Bellatrix(update.clone());
 
 			assert_err!(
 				mock_minimal::EthereumBeaconClient::import_versioned_execution_header(
 					mock_minimal::RuntimeOrigin::signed(1),
-					versioned_header_update
+					update.clone()
 				),
 				Error::<mock_minimal::Test>::InvalidExecutionHeaderUpdate
 			);

@@ -59,17 +59,7 @@ type FinalizedHeaderUpdate struct {
 
 type HeaderUpdatePayload struct {
 	BeaconHeader              BeaconHeader
-	ExecutionHeader           ExecutionPayload
-	ExecutionBranch           []types.H256
-	SyncAggregate             SyncAggregate
-	SignatureSlot             types.U64
-	BlockRootBranch           []types.H256
-	BlockRootBranchHeaderRoot types.H256
-}
-
-type HeaderUpdatePayloadCapella struct {
-	BeaconHeader              BeaconHeader
-	ExecutionHeader           ExecutionPayloadCapella
+	ExecutionHeader           VersionedExecutionPayload
 	ExecutionBranch           []types.H256
 	SyncAggregate             SyncAggregate
 	SignatureSlot             types.U64
@@ -82,24 +72,19 @@ type HeaderUpdate struct {
 	NextSyncAggregate SyncAggregate
 }
 
-type HeaderUpdateCapella struct {
-	Payload           HeaderUpdatePayloadCapella
-	NextSyncAggregate SyncAggregate
+type VersionedExecutionPayload struct {
+	Bellatrix *ExecutionPayload
+	Capella   *ExecutionPayloadCapella
 }
 
-type VersionedHeaderUpdatePayload struct {
-	Bellatrix *HeaderUpdatePayload
-	Capella   *HeaderUpdatePayloadCapella
-}
-
-func (m VersionedHeaderUpdatePayload) Encode(encoder scale.Encoder) error {
+func (v VersionedExecutionPayload) Encode(encoder scale.Encoder) error {
 	var err error
-	if m.Capella != nil {
+	if v.Capella != nil {
 		encoder.PushByte(1)
-		err = encoder.Encode(m.Capella)
+		err = encoder.Encode(v.Capella)
 	} else {
 		encoder.PushByte(0)
-		err = encoder.Encode(m.Bellatrix)
+		err = encoder.Encode(v.Bellatrix)
 	}
 	return err
 }

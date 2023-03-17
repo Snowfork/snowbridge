@@ -5,7 +5,7 @@ use byte_slice_cast::AsByteSlice;
 use frame_support::{traits::Get, BoundedVec};
 use snowbridge_beacon_primitives::{
 	BeaconHeader, ExecutionPayload, ExecutionPayloadCapella, ForkData, SigningData, SyncAggregate,
-	SyncCommittee,
+	SyncCommittee, VersionedExecutionPayload,
 };
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
@@ -149,23 +149,22 @@ pub fn hash_tree_root_execution_header<
 	LogsBloomSize: Get<u32>,
 	ExtraDataSize: Get<u32>,
 >(
-	execution_header: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	versioned_execution_payload: VersionedExecutionPayload<
+		FeeRecipientSize,
+		LogsBloomSize,
+		ExtraDataSize,
+	>,
 ) -> Result<[u8; 32], MerkleizationError> {
-	let ssz_execution_payload: SSZExecutionPayload = execution_header.try_into()?;
-
-	hash_tree_root(ssz_execution_payload)
-}
-
-pub fn hash_tree_root_execution_header_capella<
-	FeeRecipientSize: Get<u32>,
-	LogsBloomSize: Get<u32>,
-	ExtraDataSize: Get<u32>,
->(
-	execution_header: ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
-) -> Result<[u8; 32], MerkleizationError> {
-	let ssz_execution_payload: SSZExecutionPayloadCapella = execution_header.try_into()?;
-
-	hash_tree_root(ssz_execution_payload)
+	match versioned_execution_payload {
+		VersionedExecutionPayload::Bellatrix(execution_payload) => {
+			let ssz_execution_payload: SSZExecutionPayload = execution_payload.try_into()?;
+			hash_tree_root(ssz_execution_payload)
+		},
+		VersionedExecutionPayload::Capella(execution_payload) => {
+			let ssz_execution_payload: SSZExecutionPayloadCapella = execution_payload.try_into()?;
+			hash_tree_root(ssz_execution_payload)
+		},
+	}
 }
 
 pub fn hash_tree_root_sync_committee<S: Get<u32>>(

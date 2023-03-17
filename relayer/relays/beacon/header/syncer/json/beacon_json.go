@@ -95,6 +95,11 @@ type Block struct {
 	Body          BlockBody `json:"body"`
 }
 
+type VersionedExecutionPayload struct {
+	Bellatrix *ExecutionPayload        `json:"Bellatrix"`
+	Capella   *ExecutionPayloadCapella `json:"Capella"`
+}
+
 type ExecutionPayload struct {
 	ParentHash      string `json:"parent_hash"`
 	FeeRecipient    string `json:"fee_recipient"`
@@ -110,6 +115,24 @@ type ExecutionPayload struct {
 	BaseFeePerGas   uint64 `json:"base_fee_per_gas"`
 	BlockHash       string `json:"block_hash"`
 	TransactionRoot string `json:"transactions_root"`
+}
+
+type ExecutionPayloadCapella struct {
+	ParentHash      string `json:"parent_hash"`
+	FeeRecipient    string `json:"fee_recipient"`
+	StateRoot       string `json:"state_root"`
+	ReceiptsRoot    string `json:"receipts_root"`
+	LogsBloom       string `json:"logs_bloom"`
+	PrevRandao      string `json:"prev_randao"`
+	BlockNumber     uint64 `json:"block_number"`
+	GasLimit        uint64 `json:"gas_limit"`
+	GasUsed         uint64 `json:"gas_used"`
+	Timestamp       uint64 `json:"timestamp"`
+	ExtraData       string `json:"extra_data"`
+	BaseFeePerGas   uint64 `json:"base_fee_per_gas"`
+	BlockHash       string `json:"block_hash"`
+	TransactionRoot string `json:"transactions_root"`
+	WithdrawalsRoot string `json:"withdrawals_root"`
 }
 
 type Eth1Data struct {
@@ -132,13 +155,13 @@ type BlockBody struct {
 }
 
 type HeaderUpdate struct {
-	BeaconHeader              BeaconHeader     `json:"beacon_header"`
-	ExecutionHeader           ExecutionPayload `json:"execution_header"`
-	ExecutionBranch           []string         `json:"execution_branch"`
-	SyncAggregate             SyncAggregate    `json:"sync_aggregate"`
-	SignatureSlot             uint64           `json:"signature_slot"`
-	BlockRootBranch           []string         `json:"block_root_branch"`
-	BlockRootBranchHeaderRoot string           `json:"block_root_branch_header_root"`
+	BeaconHeader              BeaconHeader              `json:"beacon_header"`
+	ExecutionHeader           VersionedExecutionPayload `json:"execution_header"`
+	ExecutionBranch           []string                  `json:"execution_branch"`
+	SyncAggregate             SyncAggregate             `json:"sync_aggregate"`
+	SignatureSlot             uint64                    `json:"signature_slot"`
+	BlockRootBranch           []string                  `json:"block_root_branch"`
+	BlockRootBranchHeaderRoot string                    `json:"block_root_branch_header_root"`
 }
 
 type Attestation struct {
@@ -263,6 +286,27 @@ func (e *ExecutionPayload) RemoveLeadingZeroHashes() {
 	e.ExtraData = removeLeadingZeroHash(e.ExtraData)
 	e.BlockHash = removeLeadingZeroHash(e.BlockHash)
 	e.TransactionRoot = removeLeadingZeroHash(e.TransactionRoot)
+}
+
+func (e *ExecutionPayloadCapella) RemoveLeadingZeroHashes() {
+	e.ParentHash = removeLeadingZeroHash(e.ParentHash)
+	e.FeeRecipient = removeLeadingZeroHash(e.FeeRecipient)
+	e.StateRoot = removeLeadingZeroHash(e.StateRoot)
+	e.ReceiptsRoot = removeLeadingZeroHash(e.ReceiptsRoot)
+	e.LogsBloom = removeLeadingZeroHash(e.LogsBloom)
+	e.PrevRandao = removeLeadingZeroHash(e.PrevRandao)
+	e.ExtraData = removeLeadingZeroHash(e.ExtraData)
+	e.BlockHash = removeLeadingZeroHash(e.BlockHash)
+	e.TransactionRoot = removeLeadingZeroHash(e.TransactionRoot)
+	e.WithdrawalsRoot = removeLeadingZeroHash(e.WithdrawalsRoot)
+}
+
+func (v *VersionedExecutionPayload) RemoveLeadingZeroHashes() {
+	if v.Capella != nil {
+		v.Capella.RemoveLeadingZeroHashes()
+	} else {
+		v.Bellatrix.RemoveLeadingZeroHashes()
+	}
 }
 
 func (i *InitialSync) RemoveLeadingZeroHashes() {

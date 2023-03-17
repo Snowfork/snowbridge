@@ -229,37 +229,25 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeader
 }
 
 func (h *Header) SyncHeader(ctx context.Context, headerUpdate scale.HeaderUpdate, slotsLeft uint64) error {
+
+	var blockHash string
+	var blockNumber uint64
+	if headerUpdate.Payload.ExecutionHeader.Capella != nil {
+		blockHash = headerUpdate.Payload.ExecutionHeader.Capella.BlockHash.Hex()
+		blockNumber = uint64(headerUpdate.Payload.ExecutionHeader.Capella.BlockNumber)
+	} else {
+		blockHash = headerUpdate.Payload.ExecutionHeader.Bellatrix.BlockHash.Hex()
+		blockNumber = uint64(headerUpdate.Payload.ExecutionHeader.Bellatrix.BlockNumber)
+	}
+
 	log.WithFields(log.Fields{
 		"slot":                 headerUpdate.Payload.BeaconHeader.Slot,
 		"slotsLeftToSync":      slotsLeft,
-		"executionBlockRoot":   headerUpdate.Payload.ExecutionHeader.BlockHash.Hex(),
-		"executionBlockNumber": headerUpdate.Payload.ExecutionHeader.BlockNumber,
+		"executionBlockRoot":   blockHash,
+		"executionBlockNumber": blockNumber,
 	}).Info("Syncing header between last two finalized headers")
 
-	updatePayload := scale.VersionedHeaderUpdatePayload{
-		Bellatrix: &headerUpdate.Payload,
-	}
-
-	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_versioned_execution_header", updatePayload)
-	if err != nil {
-		return fmt.Errorf("write to parachain: %w", err)
-	}
-	return nil
-}
-
-func (h *Header) SyncCapellaHeader(ctx context.Context, headerUpdate scale.HeaderUpdateCapella, slotsLeft uint64) error {
-	log.WithFields(log.Fields{
-		"slot":                 headerUpdate.Payload.BeaconHeader.Slot,
-		"slotsLeftToSync":      slotsLeft,
-		"executionBlockRoot":   headerUpdate.Payload.ExecutionHeader.BlockHash.Hex(),
-		"executionBlockNumber": headerUpdate.Payload.ExecutionHeader.BlockNumber,
-	}).Info("Syncing capella header between last two finalized headers")
-
-	updatePayload := scale.VersionedHeaderUpdatePayload{
-		Capella: &headerUpdate.Payload,
-	}
-
-	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_versioned_execution_header", updatePayload)
+	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_versioned_execution_header", headerUpdate.Payload)
 	if err != nil {
 		return fmt.Errorf("write to parachain: %w", err)
 	}
@@ -318,7 +306,6 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 	}).Info("starting to back-fill headers")
 
 	headersToSync := []scale.HeaderUpdate{}
-	capellaHeadersToSync := []scale.HeaderUpdateCapella{}
 
 	currentSlot := fromSlot + 1 // start syncing at next block after last synced block
 
@@ -327,8 +314,9 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 		return fmt.Errorf("get closest checkpoint: %w", err)
 	}
 
+	headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(currentSlot, checkpoint)
 	if err != nil {
-		return err
+		return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
 	}
 
 	for currentSlot <= toSlot {
@@ -351,46 +339,27 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 			for _, header := range headersToSync {
 				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Payload.BeaconHeader.Slot))
 				if err != nil {
-					return err
-				}
-			}
-			for _, header := range capellaHeadersToSync {
-				err := h.SyncCapellaHeader(ctx, header, toSlot-uint64(header.Payload.BeaconHeader.Slot))
-				if err != nil {
-					return err
+					return fmt.Errorf("sync execution header: %w", err)
 				}
 			}
 
 			// new epoch, start with clean array
 			headersToSync = []scale.HeaderUpdate{}
-			capellaHeadersToSync = []scale.HeaderUpdateCapella{}
 		}
 
-		var headerUpdate scale.HeaderUpdate
-		var capellaHeaderUpdate scale.HeaderUpdateCapella
-		if h.syncer.IsCapellaForking(currentSlot) {
-			capellaHeaderUpdate, err = h.syncer.GetNextCapellaHeaderUpdateBySlotWithAncestryProof(currentSlot, checkpoint)
-		} else {
-			headerUpdate, err = h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(currentSlot, checkpoint)
-		}
-
-		var nextHeaderUpdate scale.HeaderUpdate
-		var nextCapellaHeaderUpdate scale.HeaderUpdateCapella
 		nextSlot := currentSlot + 1
+
 		log.WithFields(log.Fields{
 			"currentSlot": currentSlot,
 			"nextSlot":    nextSlot,
 		}).Info("fetching next header at slot")
 
+		var nextHeaderUpdate scale.HeaderUpdate
 		// If this is the last slot we need to sync, don't fetch the ancestry proof for the next slot
 		// because its finalized header won't be synced yet. We still need to fetch the next block for the
 		// sync aggregate though.
 		if currentSlot == toSlot {
-			if h.syncer.IsCapellaForking(currentSlot) {
-				nextCapellaHeaderUpdate, err = h.syncer.GetNextCapellaHeaderUpdateBySlot(nextSlot)
-			} else {
-				nextHeaderUpdate, err = h.syncer.GetNextHeaderUpdateBySlot(nextSlot)
-			}
+			nextHeaderUpdate, err = h.syncer.GetNextHeaderUpdateBySlot(nextSlot)
 			if err != nil {
 				return fmt.Errorf("get next header update by slot: %w", err)
 			}
@@ -402,29 +371,17 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 
 			// To get the sync witness for the current synced header. This header
 			// will be used as the next update.
-			if h.syncer.IsCapellaForking(currentSlot) {
-				nextCapellaHeaderUpdate, err = h.syncer.GetNextCapellaHeaderUpdateBySlotWithAncestryProof(nextSlot, checkpoint)
-			} else {
-				nextHeaderUpdate, err = h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(nextSlot, checkpoint)
-			}
+			nextHeaderUpdate, err = h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(nextSlot, checkpoint)
 			if err != nil {
 				return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
 			}
 		}
 
-		if h.syncer.IsCapellaForking(currentSlot) {
-			capellaHeaderUpdate.Payload.SyncAggregate = nextCapellaHeaderUpdate.NextSyncAggregate
-			capellaHeaderUpdate.Payload.SignatureSlot = nextCapellaHeaderUpdate.Payload.BeaconHeader.Slot
+		headerUpdate.Payload.SyncAggregate = nextHeaderUpdate.NextSyncAggregate
+		headerUpdate.Payload.SignatureSlot = nextHeaderUpdate.Payload.BeaconHeader.Slot
 
-			capellaHeadersToSync = append(capellaHeadersToSync, capellaHeaderUpdate)
-			capellaHeaderUpdate = nextCapellaHeaderUpdate
-		} else {
-			headerUpdate.Payload.SyncAggregate = nextHeaderUpdate.NextSyncAggregate
-			headerUpdate.Payload.SignatureSlot = nextHeaderUpdate.Payload.BeaconHeader.Slot
-
-			headersToSync = append(headersToSync, headerUpdate)
-			headerUpdate = nextHeaderUpdate
-		}
+		headersToSync = append(headersToSync, headerUpdate)
+		headerUpdate = nextHeaderUpdate
 
 		// last slot to be synced, sync headers
 		if currentSlot >= toSlot {
@@ -434,18 +391,8 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 					return err
 				}
 			}
-			for _, header := range capellaHeadersToSync {
-				err := h.SyncCapellaHeader(ctx, header, toSlot-uint64(header.Payload.BeaconHeader.Slot))
-				if err != nil {
-					return err
-				}
-			}
 		}
-		if h.syncer.IsCapellaForking(currentSlot) {
-			currentSlot = uint64(nextCapellaHeaderUpdate.Payload.BeaconHeader.Slot)
-		} else {
-			currentSlot = uint64(nextHeaderUpdate.Payload.BeaconHeader.Slot)
-		}
+		currentSlot = uint64(nextHeaderUpdate.Payload.BeaconHeader.Slot)
 	}
 
 	return nil

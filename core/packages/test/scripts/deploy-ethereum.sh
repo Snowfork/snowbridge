@@ -6,8 +6,13 @@ source scripts/set-env.sh
 start_geth() {
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local node"
-        # after 16 mins will try the Shapella upgrade 
-        timestamp=$(date -d'+960second' +%s)
+        # after 960 secs will try the Shapella upgrade
+        # use gdate here for raw macos without nix
+        if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
+            timestamp=$(gdate -d'+960second' +%s)
+        else
+            timestamp=$(date -d'+960second' +%s)
+        fi
         jq --argjson timestamp $timestamp \
         '.config.ShanghaiTime = $timestamp' \
         config/genesis.json > $output_dir/genesis.json
@@ -42,7 +47,11 @@ start_lodestar() {
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
 
-        timestamp=$(date -d'+10second' +%s)
+        if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
+            timestamp=$(gdate -d'+10second' +%s)
+        else
+            timestamp=$(date -d'+10second' +%s)
+        fi
 
         npx lodestar dev \
             --genesisValidators 8 \
