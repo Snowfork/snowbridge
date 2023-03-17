@@ -96,8 +96,8 @@ The bootstrap tests will be called automatically as part of the full suite.
 The `start-services.sh` script writes the following logs:
 
 - Rococo relaychain nodes: {rococo-alice,rococo-bob,rococo-charlie,9944}.log
-- BridgeHub nodes: {bh-alice,bh-bob,11144}.log
-- Statemine nodes: {statemine-alice,statemine-bob,12144}.log
+- BridgeHub nodes: {bridgehub01,bridgehub02,11144}.log
+- Statemine nodes: {statemine01,statemine02,12144}.log
 - Relay services: {beefy,parachain,beacon}-relay.log
 - Geth (execution client): /tmp/snowbridge/geth.log
 - Lodestar (beacon client): /tmp/snowbridge/lodestar.log

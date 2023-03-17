@@ -50,7 +50,7 @@ cumulus_based = true
 
     # run alice as parachain collator
     [[parachains.collators]]
-    name = "bh-alice"
+    name = "bridgehub01"
     validator = true
     command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8081
@@ -63,7 +63,7 @@ cumulus_based = true
 
     # run bob as parachain collator
     [[parachains.collators]]
-    name = "bh-bob"
+    name = "bridgehub02"
     validator = true
     command = "{{output_bin_dir}}/polkadot-parachain"
     args = ["--enable-offchain-indexing=true","--pruning=archive"]
@@ -76,7 +76,7 @@ cumulus_based = true
 
     # run alice as parachain collator
     [[parachains.collators]]
-    name = "statemine-alice"
+    name = "statemine01"
     validator = true
     command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8082
@@ -88,7 +88,7 @@ cumulus_based = true
 
     # run bob as parachain collator
     [[parachains.collators]]
-    name = "statemine-bob"
+    name = "statemine02"
     validator = true
     command = "{{output_bin_dir}}/polkadot-parachain"
 
