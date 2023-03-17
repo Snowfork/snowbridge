@@ -13,7 +13,7 @@ let { bundle } = require("@snowfork/snowbridge-types");
 
 const RELAY_CHAIN_RPC_ENDPOINT = 'ws://127.0.0.1:9944';
 const RELAY_CHAIN_HTTP_RPC_ENDPOINT = 'http://127.0.0.1:30444';
-const PARACHAIN_ID = 1000;
+const PARACHAIN_ID = 1013;
 const PARACHAIN_RPC_ENDPOINT = 'ws://127.0.0.1:11144';
 
 async function start() {

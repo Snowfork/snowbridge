@@ -70,8 +70,8 @@ cumulus_based = true
 
 ## Statemine
 [[parachains]]
-id = 2000
-chain = "statemine-local"
+id = 1000
+chain = "statemine-rococo-local"
 cumulus_based = true
 
     # run alice as parachain collator
@@ -97,11 +97,11 @@ cumulus_based = true
 max_capacity = 8
 max_message_size = 512
 recipient = 1013
-sender = 2000
+sender = 1000
 
 # BridgeHub -> Statemine
 [[hrmp_channels]]
 max_capacity = 8
 max_message_size = 512
-recipient = 2000
+recipient = 1000
 sender = 1013
