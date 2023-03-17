@@ -26,7 +26,7 @@ function run() {
     data['genesis']['runtime']['ethereumBeaconClient']['initialSync'] = initialSync;
     data['genesis']['runtime']['ethereumBeaconClient']['initialSync']['import_time'] = getTimestampInSeconds()
 
-    //data['genesis']['runtime']['basicInboundChannel']['sourceChannel'] = contracts['contracts']['OutboundChannel']['address'];
+    data['genesis']['runtime']['basicInboundChannel']['sourceChannel'] = contracts['contracts']['OutboundChannel']['address'];
 
     console.log(JSON.stringify(
       data,
