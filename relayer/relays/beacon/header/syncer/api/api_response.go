@@ -602,7 +602,7 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 			Deposits:          deposits,
 			VoluntaryExits:    voluntaryExits,
 			SyncAggregate:     syncAggregate,
-			ExecutionPayload: scale.ExecutionPayload{
+			ExecutionPayload: scale.ExecutionPayloadHeaderCapella{
 				ParentHash:       types.NewH256(common.HexToHash(executionPayload.ParentHash).Bytes()),
 				FeeRecipient:     feeRecipient,
 				StateRoot:        types.NewH256(common.HexToHash(executionPayload.StateRoot).Bytes()),
@@ -828,28 +828,6 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint6
 		return nil, err
 	}
 
-	beaconBlockCommon := state.BeaconBlockCommon{
-		Slot:          slot,
-		ProposerIndex: proposerIndex,
-		ParentRoot:    parentRoot,
-		StateRoot:     stateRoot,
-	}
-
-	beaconBlockBodyCommon := state.BeaconBlockBodyCommon{
-		RandaoReveal: randaoReveal,
-		Eth1Data: &state.Eth1Data{
-			DepositRoot:  eth1DepositRoot,
-			DepositCount: eth1DepositCount,
-			BlockHash:    eth1BlockHash,
-		},
-		Graffiti:          graffiti,
-		ProposerSlashings: proposerSlashings,
-		AttesterSlashings: attesterSlashings,
-		Attestations:      attestations,
-		Deposits:          deposits,
-		VoluntaryExits:    voluntaryExits,
-	}
-
 	blsExecutionChanges := []*state.SignedBLSToExecutionChange{}
 
 	for _, changeResponse := range body.BlsToExecutionChanges {
@@ -861,141 +839,29 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint6
 	}
 
 	if activeSpec == config.Minimal {
-		if epoch >= config.Minimal_CapellaForkEpoch {
-			return &state.BeaconBlockCapellaMinimal{
-				BeaconBlockCommon: beaconBlockCommon,
-				Body: &state.BeaconBlockBodyCapellaMinimal{
-					BeaconBlockBodyCommon: beaconBlockBodyCommon,
-					SyncAggregate: &state.SyncAggregateMinimal{
-						SyncCommitteeBits:      syncCommitteeBits,
-						SyncCommitteeSignature: syncCommitteeSignature,
-					},
-					ExecutionPayload: &state.ExecutionPayloadCapella{
-						ExecutionPayload: state.ExecutionPayload{
-							ParentHash:    parentHash,
-							FeeRecipient:  feeRecipient,
-							StateRoot:     executionStateRoot,
-							ReceiptsRoot:  receiptsRoot,
-							LogsBloom:     logsBloom,
-							PrevRandao:    prevRando,
-							BlockNumber:   blockNumber,
-							GasLimit:      gasLimit,
-							GasUsed:       gasUsed,
-							Timestamp:     timestamp,
-							ExtraData:     extraData,
-							BaseFeePerGas: baseFeePerGasBytes,
-							BlockHash:     blockHash,
-							Transactions:  transactions,
-						},
-						Withdrawals: withdrawals, // new for Capella
-					},
-					BlsToExecutionChanges: blsExecutionChanges, // new for Capella
+		return &state.BeaconBlockCapellaMinimal{
+			Slot:          slot,
+			ProposerIndex: proposerIndex,
+			ParentRoot:    parentRoot,
+			StateRoot:     stateRoot,
+			Body: &state.BeaconBlockBodyCapellaMinimal{
+				RandaoReveal: randaoReveal,
+				Eth1Data: &state.Eth1Data{
+					DepositRoot:  eth1DepositRoot,
+					DepositCount: eth1DepositCount,
+					BlockHash:    eth1BlockHash,
 				},
-			}, nil
-		} else {
-			return &state.BeaconBlockBellatrixMinimal{
-				BeaconBlockCommon: beaconBlockCommon,
-				Body: &state.BeaconBlockBodyBellatrixMinimal{
-					BeaconBlockBodyCommon: beaconBlockBodyCommon,
-					SyncAggregate: &state.SyncAggregateMinimal{
-						SyncCommitteeBits:      syncCommitteeBits,
-						SyncCommitteeSignature: syncCommitteeSignature,
-					},
-					ExecutionPayload: &state.ExecutionPayload{
-						ParentHash:    parentHash,
-						FeeRecipient:  feeRecipient,
-						StateRoot:     executionStateRoot,
-						ReceiptsRoot:  receiptsRoot,
-						LogsBloom:     logsBloom,
-						PrevRandao:    prevRando,
-						BlockNumber:   blockNumber,
-						GasLimit:      gasLimit,
-						GasUsed:       gasUsed,
-						Timestamp:     timestamp,
-						ExtraData:     extraData,
-						BaseFeePerGas: baseFeePerGasBytes,
-						BlockHash:     blockHash,
-						Transactions:  transactions,
-					},
-				},
-			}, nil
-		}
-	} else {
-		beaconBlockCapella := state.BeaconBlockCapellaMainnet{
-			BeaconBlockCommon: state.BeaconBlockCommon{
-				Slot:          slot,
-				ProposerIndex: proposerIndex,
-				ParentRoot:    parentRoot,
-				StateRoot:     stateRoot,
-			},
-			Body: &state.BeaconBlockBodyCapellaMainnet{
-				BeaconBlockBodyCommon: state.BeaconBlockBodyCommon{
-					RandaoReveal: randaoReveal,
-					Eth1Data: &state.Eth1Data{
-						DepositRoot:  eth1DepositRoot,
-						DepositCount: eth1DepositCount,
-						BlockHash:    eth1BlockHash,
-					},
-					Graffiti:          graffiti,
-					ProposerSlashings: proposerSlashings,
-					AttesterSlashings: attesterSlashings,
-					Attestations:      attestations,
-					Deposits:          deposits,
-					VoluntaryExits:    voluntaryExits,
-				},
-				SyncAggregate: &state.SyncAggregateMainnet{
+				Graffiti:          graffiti,
+				ProposerSlashings: proposerSlashings,
+				AttesterSlashings: attesterSlashings,
+				Attestations:      attestations,
+				Deposits:          deposits,
+				VoluntaryExits:    voluntaryExits,
+				SyncAggregate: &state.SyncAggregateMinimal{
 					SyncCommitteeBits:      syncCommitteeBits,
 					SyncCommitteeSignature: syncCommitteeSignature,
 				},
 				ExecutionPayload: &state.ExecutionPayloadCapella{
-					ExecutionPayload: state.ExecutionPayload{
-						ParentHash:    parentHash,
-						FeeRecipient:  feeRecipient,
-						StateRoot:     executionStateRoot,
-						ReceiptsRoot:  receiptsRoot,
-						LogsBloom:     logsBloom,
-						PrevRandao:    prevRando,
-						BlockNumber:   blockNumber,
-						GasLimit:      gasLimit,
-						GasUsed:       gasUsed,
-						Timestamp:     timestamp,
-						ExtraData:     extraData,
-						BaseFeePerGas: baseFeePerGasBytes,
-						BlockHash:     blockHash,
-						Transactions:  transactions,
-					},
-					Withdrawals: withdrawals, // new for Capella
-				},
-				BlsToExecutionChanges: blsExecutionChanges, // new for Capella
-			},
-		}
-		beaconBlockBellatrix := state.BeaconBlockBellatrixMainnet{
-			BeaconBlockCommon: state.BeaconBlockCommon{
-				Slot:          slot,
-				ProposerIndex: proposerIndex,
-				ParentRoot:    parentRoot,
-				StateRoot:     stateRoot,
-			},
-			Body: &state.BeaconBlockBodyBellatrixMainnet{
-				BeaconBlockBodyCommon: state.BeaconBlockBodyCommon{
-					RandaoReveal: randaoReveal,
-					Eth1Data: &state.Eth1Data{
-						DepositRoot:  eth1DepositRoot,
-						DepositCount: eth1DepositCount,
-						BlockHash:    eth1BlockHash,
-					},
-					Graffiti:          graffiti,
-					ProposerSlashings: proposerSlashings,
-					AttesterSlashings: attesterSlashings,
-					Attestations:      attestations,
-					Deposits:          deposits,
-					VoluntaryExits:    voluntaryExits,
-				},
-				SyncAggregate: &state.SyncAggregateMainnet{
-					SyncCommitteeBits:      syncCommitteeBits,
-					SyncCommitteeSignature: syncCommitteeSignature,
-				},
-				ExecutionPayload: &state.ExecutionPayload{
 					ParentHash:    parentHash,
 					FeeRecipient:  feeRecipient,
 					StateRoot:     executionStateRoot,
@@ -1010,22 +876,54 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint6
 					BaseFeePerGas: baseFeePerGasBytes,
 					BlockHash:     blockHash,
 					Transactions:  transactions,
+					Withdrawals:   withdrawals, // new for Capella
 				},
+				BlsToExecutionChanges: blsExecutionChanges, // new for Capella
 			},
-		}
-		if activeSpec == config.GOERLI {
-			if epoch >= config.Goerli_CapellaForkEpoch {
-				return &beaconBlockCapella, nil
-			} else {
-				return &beaconBlockBellatrix, nil
-			}
-		} else {
-			if epoch >= config.Mainnet_CapellaForkEpoch {
-				return &beaconBlockCapella, nil
-			} else {
-				return &beaconBlockBellatrix, nil
-			}
-		}
+		}, nil
+	} else {
+		return &state.BeaconBlockCapellaMainnet{
+			Slot:          slot,
+			ProposerIndex: proposerIndex,
+			ParentRoot:    parentRoot,
+			StateRoot:     stateRoot,
+			Body: &state.BeaconBlockBodyCapellaMainnet{
+				RandaoReveal: randaoReveal,
+				Eth1Data: &state.Eth1Data{
+					DepositRoot:  eth1DepositRoot,
+					DepositCount: eth1DepositCount,
+					BlockHash:    eth1BlockHash,
+				},
+				Graffiti:          graffiti,
+				ProposerSlashings: proposerSlashings,
+				AttesterSlashings: attesterSlashings,
+				Attestations:      attestations,
+				Deposits:          deposits,
+				VoluntaryExits:    voluntaryExits,
+				SyncAggregate: &state.SyncAggregateMainnet{
+					SyncCommitteeBits:      syncCommitteeBits,
+					SyncCommitteeSignature: syncCommitteeSignature,
+				},
+				ExecutionPayload: &state.ExecutionPayloadCapella{
+					ParentHash:    parentHash,
+					FeeRecipient:  feeRecipient,
+					StateRoot:     executionStateRoot,
+					ReceiptsRoot:  receiptsRoot,
+					LogsBloom:     logsBloom,
+					PrevRandao:    prevRando,
+					BlockNumber:   blockNumber,
+					GasLimit:      gasLimit,
+					GasUsed:       gasUsed,
+					Timestamp:     timestamp,
+					ExtraData:     extraData,
+					BaseFeePerGas: baseFeePerGasBytes,
+					BlockHash:     blockHash,
+					Transactions:  transactions,
+					Withdrawals:   withdrawals, // new for Capella
+				},
+				BlsToExecutionChanges: blsExecutionChanges, // new for Capella
+			},
+		}, nil
 	}
 }
 
@@ -1455,44 +1353,13 @@ func getTransactionsHashTreeRoot(transactions []string) (types.H256, error) {
 	return types.NewH256(transactionsRoot[:]), nil
 }
 
-func ExecutionPayloadToScale(e *state.ExecutionPayload) (scale.ExecutionPayload, error) {
+func CapellaExecutionPayloadToScale(e *state.ExecutionPayloadCapella, activeSpec config.ActiveSpec) (scale.ExecutionPayloadHeaderCapella, error) {
 	transactionsContainer := state.TransactionsRootContainer{}
 	transactionsContainer.Transactions = e.Transactions
 
 	transactionsRoot, err := transactionsContainer.HashTreeRoot()
 	if err != nil {
-		return scale.ExecutionPayload{}, err
-	}
-
-	baseFeePerGas := big.Int{}
-	// Change BaseFeePerGas back from little endianness to big endianness
-	baseFeePerGas.SetBytes(util.ChangeByteOrder(e.BaseFeePerGas[:]))
-
-	return scale.ExecutionPayload{
-		ParentHash:       types.NewH256(e.ParentHash[:]),
-		FeeRecipient:     e.FeeRecipient[:],
-		StateRoot:        types.NewH256(e.StateRoot[:]),
-		ReceiptsRoot:     types.NewH256(e.ReceiptsRoot[:]),
-		LogsBloom:        e.LogsBloom[:],
-		PrevRandao:       types.NewH256(e.PrevRandao[:]),
-		BlockNumber:      types.NewU64(e.BlockNumber),
-		GasLimit:         types.NewU64(e.GasLimit),
-		GasUsed:          types.NewU64(e.GasUsed),
-		Timestamp:        types.NewU64(e.Timestamp),
-		ExtraData:        e.ExtraData,
-		BaseFeePerGas:    types.NewU256(baseFeePerGas),
-		BlockHash:        types.NewH256(e.BlockHash[:]),
-		TransactionsRoot: transactionsRoot,
-	}, nil
-}
-
-func CapellaExecutionPayloadToScale(e *state.ExecutionPayloadCapella, activeSpec config.ActiveSpec) (scale.ExecutionPayloadCapella, error) {
-	transactionsContainer := state.TransactionsRootContainer{}
-	transactionsContainer.Transactions = e.Transactions
-
-	transactionsRoot, err := transactionsContainer.HashTreeRoot()
-	if err != nil {
-		return scale.ExecutionPayloadCapella{}, err
+		return scale.ExecutionPayloadHeaderCapella{}, err
 	}
 
 	var withdrawalRoot types.H256
@@ -1507,14 +1374,14 @@ func CapellaExecutionPayloadToScale(e *state.ExecutionPayloadCapella, activeSpec
 		withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
 	}
 	if err != nil {
-		return scale.ExecutionPayloadCapella{}, err
+		return scale.ExecutionPayloadHeaderCapella{}, err
 	}
 
 	baseFeePerGas := big.Int{}
-	// Change BaseFeePerGas back from little endianness to big endianness
+	// Change BaseFeePerGas back from little-endian to big-endian
 	baseFeePerGas.SetBytes(util.ChangeByteOrder(e.BaseFeePerGas[:]))
 
-	return scale.ExecutionPayloadCapella{
+	return scale.ExecutionPayloadHeaderCapella{
 		ParentHash:       types.NewH256(e.ParentHash[:]),
 		FeeRecipient:     e.FeeRecipient[:],
 		StateRoot:        types.NewH256(e.StateRoot[:]),

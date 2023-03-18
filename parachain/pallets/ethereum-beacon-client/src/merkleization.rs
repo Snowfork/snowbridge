@@ -4,8 +4,8 @@ use crate::{config, ssz::*};
 use byte_slice_cast::AsByteSlice;
 use frame_support::{traits::Get, BoundedVec};
 use snowbridge_beacon_primitives::{
-	BeaconHeader, ExecutionPayload, ExecutionPayloadCapella, ForkData, SigningData, SyncAggregate,
-	SyncCommittee, VersionedExecutionPayload,
+	BeaconHeader, ExecutionPayloadHeaderCapella, ForkData, SigningData, SyncAggregate,
+	SyncCommittee, VersionedExecutionPayloadHeader,
 };
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
@@ -38,47 +38,19 @@ impl From<DeserializeError> for MerkleizationError {
 }
 
 impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
-	TryFrom<ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>> for SSZExecutionPayload
+	TryFrom<ExecutionPayloadHeaderCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
+	for SSZExecutionPayloadHeader
 {
 	type Error = MerkleizationError;
 
 	fn try_from(
-		execution_payload: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+		execution_payload: ExecutionPayloadHeaderCapella<
+			FeeRecipientSize,
+			LogsBloomSize,
+			ExtraDataSize,
+		>,
 	) -> Result<Self, Self::Error> {
-		Ok(SSZExecutionPayload {
-			parent_hash: execution_payload.parent_hash.as_bytes().try_into()?,
-			fee_recipient: Vector::<u8, 20>::from_iter(execution_payload.fee_recipient),
-			state_root: execution_payload.state_root.as_bytes().try_into()?,
-			receipts_root: execution_payload.receipts_root.as_bytes().try_into()?,
-			logs_bloom: Vector::<u8, 256>::from_iter(execution_payload.logs_bloom),
-			prev_randao: execution_payload.prev_randao.as_bytes().try_into()?,
-			block_number: execution_payload.block_number,
-			gas_limit: execution_payload.gas_limit,
-			gas_used: execution_payload.gas_used,
-			timestamp: execution_payload.timestamp,
-			extra_data: List::<u8, { config::MAX_EXTRA_DATA_BYTES }>::try_from(
-				execution_payload.extra_data.into_inner(),
-			)
-			.map_err(|_| MerkleizationError::ListError)?,
-			base_fee_per_gas: U256::try_from_bytes_le(
-				&(execution_payload.base_fee_per_gas.as_byte_slice()),
-			)?,
-			block_hash: execution_payload.block_hash.as_bytes().try_into()?,
-			transactions_root: execution_payload.transactions_root.as_bytes().try_into()?,
-		})
-	}
-}
-
-impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
-	TryFrom<ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
-	for SSZExecutionPayloadCapella
-{
-	type Error = MerkleizationError;
-
-	fn try_from(
-		execution_payload: ExecutionPayloadCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
-	) -> Result<Self, Self::Error> {
-		Ok(SSZExecutionPayloadCapella {
+		Ok(SSZExecutionPayloadHeader {
 			parent_hash: execution_payload.parent_hash.as_bytes().try_into()?,
 			fee_recipient: Vector::<u8, 20>::from_iter(execution_payload.fee_recipient),
 			state_root: execution_payload.state_root.as_bytes().try_into()?,
@@ -149,19 +121,15 @@ pub fn hash_tree_root_execution_header<
 	LogsBloomSize: Get<u32>,
 	ExtraDataSize: Get<u32>,
 >(
-	versioned_execution_payload: VersionedExecutionPayload<
+	versioned_execution_payload: VersionedExecutionPayloadHeader<
 		FeeRecipientSize,
 		LogsBloomSize,
 		ExtraDataSize,
 	>,
 ) -> Result<[u8; 32], MerkleizationError> {
 	match versioned_execution_payload {
-		VersionedExecutionPayload::Bellatrix(execution_payload) => {
-			let ssz_execution_payload: SSZExecutionPayload = execution_payload.try_into()?;
-			hash_tree_root(ssz_execution_payload)
-		},
-		VersionedExecutionPayload::Capella(execution_payload) => {
-			let ssz_execution_payload: SSZExecutionPayloadCapella = execution_payload.try_into()?;
+		VersionedExecutionPayloadHeader::Capella(execution_payload) => {
+			let ssz_execution_payload: SSZExecutionPayloadHeader = execution_payload.try_into()?;
 			hash_tree_root(ssz_execution_payload)
 		},
 	}

@@ -62,8 +62,7 @@ const (
 )
 
 const (
-	// For fork upgrading test locally
-	Minimal_CapellaForkEpoch uint64 = 20
+	Minimal_CapellaForkEpoch uint64 = 0
 	Goerli_CapellaForkEpoch  uint64 = 162304
 	// TODO: change when timeline of Capella upgrade in mainnet finalized
 	Mainnet_CapellaForkEpoch uint64 = math.MaxUint64

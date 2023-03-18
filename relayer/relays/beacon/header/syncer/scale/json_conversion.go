@@ -45,7 +45,7 @@ func (p FinalizedHeaderPayload) ToJSON() json.FinalizedHeaderUpdate {
 func (h HeaderUpdate) ToJSON() json.HeaderUpdate {
 	return json.HeaderUpdate{
 		BeaconHeader:              h.Payload.BeaconHeader.ToJSON(),
-		ExecutionHeader:           h.Payload.ExecutionHeader.ToJSON(),
+		VersionedExecutionHeader:  h.Payload.VersionedExecutionHeader.ToJSON(),
 		ExecutionBranch:           util.ScaleBranchToString(h.Payload.ExecutionBranch),
 		SyncAggregate:             h.Payload.SyncAggregate.ToJSON(),
 		SignatureSlot:             uint64(h.Payload.SignatureSlot),
@@ -55,11 +55,7 @@ func (h HeaderUpdate) ToJSON() json.HeaderUpdate {
 }
 
 func (v *VersionedExecutionPayload) ToJSON() json.VersionedExecutionPayload {
-	if v.Bellatrix != nil {
-		return json.VersionedExecutionPayload{Bellatrix: v.Bellatrix.ToJSON()}
-	} else {
-		return json.VersionedExecutionPayload{Capella: v.Capella.ToJSON()}
-	}
+	return json.VersionedExecutionPayload{Capella: v.Capella.ToJSON()}
 }
 
 func (b *BeaconHeader) ToJSON() json.BeaconHeader {
@@ -72,27 +68,8 @@ func (b *BeaconHeader) ToJSON() json.BeaconHeader {
 	}
 }
 
-func (e *ExecutionPayload) ToJSON() *(json.ExecutionPayload) {
-	return &json.ExecutionPayload{
-		ParentHash:      e.ParentHash.Hex(),
-		FeeRecipient:    util.BytesToHexString(e.FeeRecipient),
-		StateRoot:       e.StateRoot.Hex(),
-		ReceiptsRoot:    e.ReceiptsRoot.Hex(),
-		LogsBloom:       util.BytesToHexString(e.LogsBloom),
-		PrevRandao:      e.PrevRandao.Hex(),
-		BlockNumber:     uint64(e.BlockNumber),
-		GasLimit:        uint64(e.GasLimit),
-		GasUsed:         uint64(e.GasUsed),
-		Timestamp:       uint64(e.Timestamp),
-		ExtraData:       util.BytesToHexString(e.ExtraData),
-		BaseFeePerGas:   e.BaseFeePerGas.Uint64(),
-		BlockHash:       e.BlockHash.Hex(),
-		TransactionRoot: e.TransactionsRoot.Hex(),
-	}
-}
-
-func (e *ExecutionPayloadCapella) ToJSON() *(json.ExecutionPayloadCapella) {
-	return &json.ExecutionPayloadCapella{
+func (e *ExecutionPayloadHeaderCapella) ToJSON() *(json.ExecutionPayloadHeaderCapella) {
+	return &json.ExecutionPayloadHeaderCapella{
 		ParentHash:      e.ParentHash.Hex(),
 		FeeRecipient:    util.BytesToHexString(e.FeeRecipient),
 		StateRoot:       e.StateRoot.Hex(),

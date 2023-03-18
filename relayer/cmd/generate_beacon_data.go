@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+
 	"github.com/cbroglie/mustache"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
@@ -11,7 +13,6 @@ import (
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
 )
 
 func generateBeaconDataCmd() *cobra.Command {
@@ -24,6 +25,11 @@ func generateBeaconDataCmd() *cobra.Command {
 
 	cmd.Flags().String("spec", "", "Valid values are mainnet or minimal")
 	err := cmd.MarkFlagRequired("spec")
+	if err != nil {
+		return nil
+	}
+
+	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
 	if err != nil {
 		return nil
 	}
@@ -56,13 +62,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get spec: %w", err)
 		}
 
-		endpoint := ""
-
-		if activeSpec.IsMinimal() {
-			endpoint = "http://127.0.0.1:9596"
-		} else {
-			endpoint = "https://lodestar-goerli.chainsafe.io"
-		}
+		endpoint, err := cmd.Flags().GetString("url")
 
 		viper.SetConfigFile("core/packages/test/config/beacon-relay.json")
 		if err := viper.ReadInConfig(); err != nil {

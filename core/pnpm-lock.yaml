@@ -150,7 +150,7 @@ importers:
 
   packages/test:
     specifiers:
-      '@chainsafe/lodestar': 1.5.0
+      '@chainsafe/lodestar': 1.5.1
       '@polkadot/api': 9.11.1
       '@polkadot/types': 9.11.1
       '@polkadot/util': 10.2.3
@@ -177,7 +177,7 @@ importers:
       ws: ^7.4.6
       yargs: ^17.0.1
     devDependencies:
-      '@chainsafe/lodestar': 1.5.0_c-kzg@1.0.9+fastify@3.15.1
+      '@chainsafe/lodestar': 1.5.1_c-kzg@1.0.9+fastify@3.15.1
       '@polkadot/api': 9.11.1
       '@polkadot/types': 9.11.1
       '@polkadot/util': 10.2.3
@@ -613,8 +613,8 @@ packages:
       - supports-color
     dev: true
 
-  /@chainsafe/lodestar/1.5.0_c-kzg@1.0.9+fastify@3.15.1:
-    resolution: {integrity: sha512-jSsVxBHYV2Fvd0AL7lcvfb26tB6Qvd9tJbwex1IIh1aQ2g+p4Bdr24vmg0tBLrz0SXZ6QMw9c3J8aSp/Zv9I2A==}
+  /@chainsafe/lodestar/1.5.1_c-kzg@1.0.9+fastify@3.15.1:
+    resolution: {integrity: sha512-WluQrT0T/awgRWEdxXnH4htVa+ROvlKDVrf1KpauBqBhrTZDr6gbC4sRZRupA70z1fpNnVRSJACosqFn6nWBpQ==}
     hasBin: true
     dependencies:
       '@chainsafe/as-sha256': 0.3.1

@@ -24,9 +24,9 @@ use crate::merkleization::get_sync_committee_bits;
 use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
 use frame_system::ensure_signed;
 use snowbridge_beacon_primitives::{
-	BeaconHeader, Domain, ExecutionHeader, ExecutionHeaderState, ExecutionPayload,
-	FinalizedHeaderState, FinalizedHeaderUpdate, ForkData, ForkVersion, HeaderUpdate, InitialSync,
-	PublicKey, Root, SigningData, SyncCommittee, SyncCommitteePeriodUpdate,
+	BeaconHeader, Domain, ExecutionHeader, ExecutionHeaderState, FinalizedHeaderState,
+	FinalizedHeaderUpdate, ForkData, ForkVersion, HeaderUpdate, InitialSync, PublicKey, Root,
+	SigningData, SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
@@ -58,15 +58,12 @@ pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<
 	<T as Config>::MaxProofBranchSize,
 	<T as Config>::MaxSyncCommitteeSize,
 >;
-pub type ExecutionHeaderOf<T> =
-	ExecutionHeader<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
-pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
-
-pub type ExecutionPayloadOf<T> = ExecutionPayload<
+pub type ExecutionHeaderOf<T> = ExecutionHeader<
 	<T as Config>::MaxFeeRecipientSize,
 	<T as Config>::MaxLogsBloomSize,
 	<T as Config>::MaxExtraDataSize,
 >;
+pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -579,18 +576,20 @@ pub mod pallet {
 
 			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
 
-			let execution_payload: ExecutionPayloadOf<T> = update
-				.execution_header
-				.to_payload()
+			let execution_header: ExecutionHeaderOf<T> = update
+				.versioned_execution_header
+				.clone()
+				.try_into()
 				.map_err(|_| Error::<T>::VersionedExecutionPayloadMappingFailed)?;
 			ensure!(
-				execution_payload.block_number > execution_header_state.block_number,
+				execution_header.block_number > execution_header_state.block_number,
 				Error::<T>::InvalidExecutionHeaderUpdate
 			);
 
-			let execution_root =
-				merkleization::hash_tree_root_execution_header(update.execution_header.clone())
-					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
+			let execution_root = merkleization::hash_tree_root_execution_header(
+				update.versioned_execution_header.clone(),
+			)
+			.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 			let execution_root_hash: H256 = execution_root.into();
 
 			ensure!(
@@ -633,13 +632,14 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			let block_hash = execution_payload.block_hash;
+			let block_hash = execution_header.block_hash;
 
-			let header: ExecutionHeaderOf<T> = execution_payload
-				.try_into()
-				.map_err(|_| Error::<T>::VersionedExecutionPayloadMappingFailed)?;
-
-			Self::store_execution_header(block_hash, header, block_slot, beacon_block_root);
+			Self::store_execution_header(
+				block_hash,
+				execution_header,
+				block_slot,
+				beacon_block_root,
+			);
 
 			Ok(())
 		}

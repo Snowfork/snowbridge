@@ -232,12 +232,9 @@ func (h *Header) SyncHeader(ctx context.Context, headerUpdate scale.HeaderUpdate
 
 	var blockHash string
 	var blockNumber uint64
-	if headerUpdate.Payload.ExecutionHeader.Capella != nil {
-		blockHash = headerUpdate.Payload.ExecutionHeader.Capella.BlockHash.Hex()
-		blockNumber = uint64(headerUpdate.Payload.ExecutionHeader.Capella.BlockNumber)
-	} else {
-		blockHash = headerUpdate.Payload.ExecutionHeader.Bellatrix.BlockHash.Hex()
-		blockNumber = uint64(headerUpdate.Payload.ExecutionHeader.Bellatrix.BlockNumber)
+	if headerUpdate.Payload.VersionedExecutionHeader.Capella != nil {
+		blockHash = headerUpdate.Payload.VersionedExecutionHeader.Capella.BlockHash.Hex()
+		blockNumber = uint64(headerUpdate.Payload.VersionedExecutionHeader.Capella.BlockNumber)
 	}
 
 	log.WithFields(log.Fields{

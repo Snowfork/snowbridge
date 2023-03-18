@@ -17,3 +17,5 @@ rococo-local.json
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+ethereum-goerli
+testdata

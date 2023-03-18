@@ -3,8 +3,8 @@
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-    BeaconHeader, ExecutionPayload, FinalizedHeaderUpdate, HeaderUpdate, InitialSync, PublicKey,
-    SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
+    BeaconHeader, ExecutionPayloadHeaderCapella, FinalizedHeaderUpdate, HeaderUpdate, InitialSync, PublicKey,
+    SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate, VersionedExecutionPayloadHeader
 };
 use sp_core::U256;
 use sp_std::vec;
@@ -154,22 +154,23 @@ pub fn header_update<
             state_root: hex!("{{HeaderUpdate.BeaconHeader.StateRoot}}").into(),
             body_root: hex!("{{HeaderUpdate.BeaconHeader.BodyRoot}}").into(),
         },
-        execution_header: ExecutionPayload{
-            parent_hash: hex!("{{HeaderUpdate.ExecutionHeader.ParentHash}}").into(),
-            fee_recipient: hex!("{{HeaderUpdate.ExecutionHeader.FeeRecipient}}").to_vec().try_into().expect("fee recipient too long"),
-            state_root: hex!("{{HeaderUpdate.ExecutionHeader.StateRoot}}").into(),
-            receipts_root: hex!("{{HeaderUpdate.ExecutionHeader.ReceiptsRoot}}").into(),
-            logs_bloom: hex!("{{HeaderUpdate.ExecutionHeader.LogsBloom}}").to_vec().try_into().expect("logs bloom too long"),
-            prev_randao: hex!("{{HeaderUpdate.ExecutionHeader.PrevRandao}}").into(),
-            block_number: {{HeaderUpdate.ExecutionHeader.BlockNumber}},
-            gas_limit: {{HeaderUpdate.ExecutionHeader.GasLimit}},
-            gas_used: {{HeaderUpdate.ExecutionHeader.GasUsed}},
-            timestamp: {{HeaderUpdate.ExecutionHeader.Timestamp}},
-            extra_data: hex!("{{HeaderUpdate.ExecutionHeader.ExtraData}}").to_vec().try_into().expect("extra data too long"),
-            base_fee_per_gas: U256::from({{HeaderUpdate.ExecutionHeader.BaseFeePerGas}} as u64),
-            block_hash: hex!("{{HeaderUpdate.ExecutionHeader.BlockHash}}").into(),
-            transactions_root: hex!("{{HeaderUpdate.ExecutionHeader.TransactionRoot}}").into(),
-        },
+        versioned_execution_header: VersionedExecutionPayloadHeader::Capella(ExecutionPayloadHeaderCapella{
+            parent_hash: hex!("{{HeaderUpdate.VersionedExecutionHeader.Capella.ParentHash}}").into(),
+            fee_recipient: hex!("{{HeaderUpdate.VersionedExecutionHeader.Capella.FeeRecipient}}").to_vec().try_into().expect("fee recipient too long"),
+            state_root: hex!("{{HeaderUpdate.VersionedExecutionHeader.Capella.StateRoot}}").into(),
+            receipts_root: hex!("{{HeaderUpdate.VersionedExecutionHeader.Capella.ReceiptsRoot}}").into(),
+            logs_bloom: hex!("{{HeaderUpdate.VersionedExecutionHeader.Capella.LogsBloom}}").to_vec().try_into().expect("logs bloom too long"),
+            prev_randao: hex!("{{HeaderUpdate.VersionedExecutionHeader.Capella.PrevRandao}}").into(),
+            block_number: {{HeaderUpdate.VersionedExecutionHeader.Capella.BlockNumber}},
+            gas_limit: {{HeaderUpdate.VersionedExecutionHeader.Capella.GasLimit}},
+            gas_used: {{HeaderUpdate.VersionedExecutionHeader.Capella.GasUsed}},
+            timestamp: {{HeaderUpdate.VersionedExecutionHeader.Capella.Timestamp}},
+            extra_data: hex!("{{HeaderUpdate.VersionedExecutionHeader.Capella.ExtraData}}").to_vec().try_into().expect("extra data too long"),
+            base_fee_per_gas: U256::from({{HeaderUpdate.VersionedExecutionHeader.Capella.BaseFeePerGas}} as u64),
+            block_hash: hex!("{{HeaderUpdate.VersionedExecutionHeader.Capella.BlockHash}}").into(),
+            transactions_root: hex!("{{HeaderUpdate.VersionedExecutionHeader.Capella.TransactionRoot}}").into(),
+            withdrawals_root: hex!("{{HeaderUpdate.VersionedExecutionHeader.Capella.WithdrawalsRoot}}").into(),
+        }),
         execution_branch: vec![
         {{#HeaderUpdate.ExecutionBranch}}
             hex!("{{.}}").into(),

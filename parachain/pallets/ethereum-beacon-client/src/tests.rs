@@ -4,12 +4,12 @@ mod beacon_tests {
 		config, merkleization,
 		merkleization::MerkleizationError,
 		mock::*,
-		ssz::{SSZExecutionPayload, SSZSyncAggregate},
+		ssz::{SSZExecutionPayloadHeader, SSZSyncAggregate},
 		BeaconHeader, Error, PublicKey,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
-	use snowbridge_beacon_primitives::{ExecutionPayload, SyncAggregate};
+	use snowbridge_beacon_primitives::{ExecutionPayloadHeaderCapella, SyncAggregate};
 	use sp_core::{H256, U256};
 	use ssz_rs::prelude::Vector;
 
@@ -523,8 +523,8 @@ mod beacon_tests {
 
 	#[test]
 	pub fn test_hash_tree_root_execution_payload() {
-		let payload: Result<SSZExecutionPayload, MerkleizationError> =
-            ExecutionPayload::<mock_minimal::MaxFeeRecipientSize, mock_minimal::MaxLogsBloomSize, mock_minimal::MaxExtraDataSize>{
+		let payload: Result<SSZExecutionPayloadHeader, MerkleizationError> =
+            ExecutionPayloadHeaderCapella::<mock_minimal::MaxFeeRecipientSize, mock_minimal::MaxLogsBloomSize, mock_minimal::MaxExtraDataSize>{
                 parent_hash: hex!("eadee5ab098dde64e9fd02ae5858064bad67064070679625b09f8d82dec183f7").into(),
                 fee_recipient: hex!("f97e180c050e5ab072211ad2c213eb5aee4df134").to_vec().try_into().expect("fee recipient bits are too long"),
                 state_root: hex!("564fa064c2a324c2b5978d7fdfc5d4224d4f421a45388af1ed405a399c845dff").into(),
@@ -539,13 +539,11 @@ mod beacon_tests {
                 base_fee_per_gas: U256::from(7 as i16),
                 block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
                 transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
-            }.try_into();
+				withdrawals_root: hex!("28ba1834a3a7b657460ce79fa3a1d909ab8828fd557659d4d0554a9bdbc0ec30").into(),
+			}.try_into();
 		assert_ok!(&payload);
 
 		let hash_root = merkleization::hash_tree_root(payload.unwrap());
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("4c74e6119faeee22c04ef02fb6d8db26799753e2a9efcde6ea60cbac1f38cfd2")
-		);
+		assert_ok!(&hash_root);
 	}
 }

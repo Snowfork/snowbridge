@@ -96,28 +96,10 @@ type Block struct {
 }
 
 type VersionedExecutionPayload struct {
-	Bellatrix *ExecutionPayload        `json:"Bellatrix"`
-	Capella   *ExecutionPayloadCapella `json:"Capella"`
+	Capella *ExecutionPayloadHeaderCapella `json:"Capella"`
 }
 
-type ExecutionPayload struct {
-	ParentHash      string `json:"parent_hash"`
-	FeeRecipient    string `json:"fee_recipient"`
-	StateRoot       string `json:"state_root"`
-	ReceiptsRoot    string `json:"receipts_root"`
-	LogsBloom       string `json:"logs_bloom"`
-	PrevRandao      string `json:"prev_randao"`
-	BlockNumber     uint64 `json:"block_number"`
-	GasLimit        uint64 `json:"gas_limit"`
-	GasUsed         uint64 `json:"gas_used"`
-	Timestamp       uint64 `json:"timestamp"`
-	ExtraData       string `json:"extra_data"`
-	BaseFeePerGas   uint64 `json:"base_fee_per_gas"`
-	BlockHash       string `json:"block_hash"`
-	TransactionRoot string `json:"transactions_root"`
-}
-
-type ExecutionPayloadCapella struct {
+type ExecutionPayloadHeaderCapella struct {
 	ParentHash      string `json:"parent_hash"`
 	FeeRecipient    string `json:"fee_recipient"`
 	StateRoot       string `json:"state_root"`
@@ -142,21 +124,21 @@ type Eth1Data struct {
 }
 
 type BlockBody struct {
-	RandaoReveal      string             `json:"randao_reveal"`
-	Eth1Data          Eth1Data           `json:"eth1_data"`
-	Graffiti          string             `json:"graffiti"`
-	ProposerSlashings []ProposerSlashing `json:"proposer_slashings"`
-	AttesterSlashings []AttesterSlashing `json:"attester_slashings"`
-	Attestations      []Attestation      `json:"attestations"`
-	Deposits          []Deposit          `json:"deposits"`
-	VoluntaryExits    []VoluntaryExit    `json:"voluntary_exits"`
-	SyncAggregate     SyncAggregate      `json:"sync_aggregate"`
-	ExecutionPayload  ExecutionPayload   `json:"execution_payload"`
+	RandaoReveal      string                        `json:"randao_reveal"`
+	Eth1Data          Eth1Data                      `json:"eth1_data"`
+	Graffiti          string                        `json:"graffiti"`
+	ProposerSlashings []ProposerSlashing            `json:"proposer_slashings"`
+	AttesterSlashings []AttesterSlashing            `json:"attester_slashings"`
+	Attestations      []Attestation                 `json:"attestations"`
+	Deposits          []Deposit                     `json:"deposits"`
+	VoluntaryExits    []VoluntaryExit               `json:"voluntary_exits"`
+	SyncAggregate     SyncAggregate                 `json:"sync_aggregate"`
+	ExecutionPayload  ExecutionPayloadHeaderCapella `json:"execution_payload"`
 }
 
 type HeaderUpdate struct {
 	BeaconHeader              BeaconHeader              `json:"beacon_header"`
-	ExecutionHeader           VersionedExecutionPayload `json:"execution_header"`
+	VersionedExecutionHeader  VersionedExecutionPayload `json:"versioned_execution_header"`
 	ExecutionBranch           []string                  `json:"execution_branch"`
 	SyncAggregate             SyncAggregate             `json:"sync_aggregate"`
 	SignatureSlot             uint64                    `json:"signature_slot"`
@@ -276,19 +258,7 @@ func (b *Block) RemoveLeadingZeroHashes() {
 	b.Body.ExecutionPayload.RemoveLeadingZeroHashes()
 }
 
-func (e *ExecutionPayload) RemoveLeadingZeroHashes() {
-	e.ParentHash = removeLeadingZeroHash(e.ParentHash)
-	e.FeeRecipient = removeLeadingZeroHash(e.FeeRecipient)
-	e.StateRoot = removeLeadingZeroHash(e.StateRoot)
-	e.ReceiptsRoot = removeLeadingZeroHash(e.ReceiptsRoot)
-	e.LogsBloom = removeLeadingZeroHash(e.LogsBloom)
-	e.PrevRandao = removeLeadingZeroHash(e.PrevRandao)
-	e.ExtraData = removeLeadingZeroHash(e.ExtraData)
-	e.BlockHash = removeLeadingZeroHash(e.BlockHash)
-	e.TransactionRoot = removeLeadingZeroHash(e.TransactionRoot)
-}
-
-func (e *ExecutionPayloadCapella) RemoveLeadingZeroHashes() {
+func (e *ExecutionPayloadHeaderCapella) RemoveLeadingZeroHashes() {
 	e.ParentHash = removeLeadingZeroHash(e.ParentHash)
 	e.FeeRecipient = removeLeadingZeroHash(e.FeeRecipient)
 	e.StateRoot = removeLeadingZeroHash(e.StateRoot)
@@ -304,8 +274,6 @@ func (e *ExecutionPayloadCapella) RemoveLeadingZeroHashes() {
 func (v *VersionedExecutionPayload) RemoveLeadingZeroHashes() {
 	if v.Capella != nil {
 		v.Capella.RemoveLeadingZeroHashes()
-	} else {
-		v.Bellatrix.RemoveLeadingZeroHashes()
 	}
 }
 
@@ -342,7 +310,7 @@ func (f *FinalizedHeaderUpdate) RemoveLeadingZeroHashes() {
 
 func (h *HeaderUpdate) RemoveLeadingZeroHashes() {
 	h.BeaconHeader.RemoveLeadingZeroHashes()
-	h.ExecutionHeader.RemoveLeadingZeroHashes()
+	h.VersionedExecutionHeader.RemoveLeadingZeroHashes()
 	h.ExecutionBranch = removeLeadingZeroHashForSlice(h.ExecutionBranch)
 	h.SyncAggregate.RemoveLeadingZeroHashes()
 	h.BlockRootBranch = removeLeadingZeroHashForSlice(h.BlockRootBranch)

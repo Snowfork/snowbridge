@@ -59,7 +59,7 @@ type FinalizedHeaderUpdate struct {
 
 type HeaderUpdatePayload struct {
 	BeaconHeader              BeaconHeader
-	ExecutionHeader           VersionedExecutionPayload
+	VersionedExecutionHeader  VersionedExecutionPayload
 	ExecutionBranch           []types.H256
 	SyncAggregate             SyncAggregate
 	SignatureSlot             types.U64
@@ -73,18 +73,15 @@ type HeaderUpdate struct {
 }
 
 type VersionedExecutionPayload struct {
-	Bellatrix *ExecutionPayload
-	Capella   *ExecutionPayloadCapella
+	Capella *ExecutionPayloadHeaderCapella
 }
 
 func (v VersionedExecutionPayload) Encode(encoder scale.Encoder) error {
 	var err error
 	if v.Capella != nil {
-		encoder.PushByte(1)
-		err = encoder.Encode(v.Capella)
-	} else {
+		// current version as 0 and next as 1, at most 2 versions required here
 		encoder.PushByte(0)
-		err = encoder.Encode(v.Bellatrix)
+		err = encoder.Encode(v.Capella)
 	}
 	return err
 }
@@ -181,24 +178,7 @@ type SignedBLSToExecutionChange struct {
 	Signature []byte
 }
 
-type ExecutionPayload struct {
-	ParentHash       types.H256
-	FeeRecipient     []byte
-	StateRoot        types.H256
-	ReceiptsRoot     types.H256
-	LogsBloom        []byte
-	PrevRandao       types.H256
-	BlockNumber      types.U64
-	GasLimit         types.U64
-	GasUsed          types.U64
-	Timestamp        types.U64
-	ExtraData        []byte
-	BaseFeePerGas    types.U256
-	BlockHash        types.H256
-	TransactionsRoot types.H256
-}
-
-type ExecutionPayloadCapella struct {
+type ExecutionPayloadHeaderCapella struct {
 	ParentHash       types.H256
 	FeeRecipient     []byte
 	StateRoot        types.H256
@@ -226,7 +206,7 @@ type Body struct {
 	Deposits          []Deposit
 	VoluntaryExits    []SignedVoluntaryExit
 	SyncAggregate     SyncAggregate
-	ExecutionPayload  ExecutionPayload
+	ExecutionPayload  ExecutionPayloadHeaderCapella
 }
 
 type BodyCapella struct {
@@ -239,7 +219,7 @@ type BodyCapella struct {
 	Deposits              []Deposit
 	VoluntaryExits        []SignedVoluntaryExit
 	SyncAggregate         SyncAggregate
-	ExecutionPayload      ExecutionPayloadCapella
+	ExecutionPayload      ExecutionPayloadHeaderCapella
 	BlsToExecutionChanges []*SignedBLSToExecutionChange
 }
 

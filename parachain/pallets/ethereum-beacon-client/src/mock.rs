@@ -94,9 +94,7 @@ pub mod mock_minimal {
 			},
 			capella: Fork {
 				version: [3, 0, 0, 1], // 0x03000001
-				// set 1000 here not break current bellatrix tests
-				// will add some capella specifically fixture data later
-				epoch: 1000,
+				epoch: 0,
 			},
 		};
 	}
