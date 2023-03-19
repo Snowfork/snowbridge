@@ -32,7 +32,11 @@ contract TokenVault is AccessControl {
         _setRoleAdmin(DEPOSIT_ROLE, ADMIN_ROLE);
     }
 
-    function deposit(address sender, address token, uint128 amount) external onlyRole(DEPOSIT_ROLE) {
+    function deposit(
+        address sender,
+        address token,
+        uint128 amount
+    ) external onlyRole(DEPOSIT_ROLE) {
         balance[token] += amount;
         IERC20(token).safeTransferFrom(sender, address(this), amount);
         emit Deposit(sender, token, amount);

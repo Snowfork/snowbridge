@@ -95,7 +95,7 @@ type Block struct {
 	Body          BlockBody `json:"body"`
 }
 
-type ExecutionPayload struct {
+type ExecutionPayloadHeaderCapella struct {
 	ParentHash      string `json:"parent_hash"`
 	FeeRecipient    string `json:"fee_recipient"`
 	StateRoot       string `json:"state_root"`
@@ -110,6 +110,7 @@ type ExecutionPayload struct {
 	BaseFeePerGas   uint64 `json:"base_fee_per_gas"`
 	BlockHash       string `json:"block_hash"`
 	TransactionRoot string `json:"transactions_root"`
+	WithdrawalsRoot string `json:"withdrawals_root"`
 }
 
 type Eth1Data struct {
@@ -119,26 +120,26 @@ type Eth1Data struct {
 }
 
 type BlockBody struct {
-	RandaoReveal      string             `json:"randao_reveal"`
-	Eth1Data          Eth1Data           `json:"eth1_data"`
-	Graffiti          string             `json:"graffiti"`
-	ProposerSlashings []ProposerSlashing `json:"proposer_slashings"`
-	AttesterSlashings []AttesterSlashing `json:"attester_slashings"`
-	Attestations      []Attestation      `json:"attestations"`
-	Deposits          []Deposit          `json:"deposits"`
-	VoluntaryExits    []VoluntaryExit    `json:"voluntary_exits"`
-	SyncAggregate     SyncAggregate      `json:"sync_aggregate"`
-	ExecutionPayload  ExecutionPayload   `json:"execution_payload"`
+	RandaoReveal      string                        `json:"randao_reveal"`
+	Eth1Data          Eth1Data                      `json:"eth1_data"`
+	Graffiti          string                        `json:"graffiti"`
+	ProposerSlashings []ProposerSlashing            `json:"proposer_slashings"`
+	AttesterSlashings []AttesterSlashing            `json:"attester_slashings"`
+	Attestations      []Attestation                 `json:"attestations"`
+	Deposits          []Deposit                     `json:"deposits"`
+	VoluntaryExits    []VoluntaryExit               `json:"voluntary_exits"`
+	SyncAggregate     SyncAggregate                 `json:"sync_aggregate"`
+	ExecutionPayload  ExecutionPayloadHeaderCapella `json:"execution_payload"`
 }
 
 type HeaderUpdate struct {
-	BeaconHeader              BeaconHeader     `json:"beacon_header"`
-	ExecutionHeader           ExecutionPayload `json:"execution_header"`
-	ExecutionBranch           []string         `json:"execution_branch"`
-	SyncAggregate             SyncAggregate    `json:"sync_aggregate"`
-	SignatureSlot             uint64           `json:"signature_slot"`
-	BlockRootBranch           []string         `json:"block_root_branch"`
-	BlockRootBranchHeaderRoot string           `json:"block_root_branch_header_root"`
+	BeaconHeader              BeaconHeader                  `json:"beacon_header"`
+	ExecutionHeader           ExecutionPayloadHeaderCapella `json:"execution_header"`
+	ExecutionBranch           []string                      `json:"execution_branch"`
+	SyncAggregate             SyncAggregate                 `json:"sync_aggregate"`
+	SignatureSlot             uint64                        `json:"signature_slot"`
+	BlockRootBranch           []string                      `json:"block_root_branch"`
+	BlockRootBranchHeaderRoot string                        `json:"block_root_branch_header_root"`
 }
 
 type Attestation struct {
@@ -253,7 +254,7 @@ func (b *Block) RemoveLeadingZeroHashes() {
 	b.Body.ExecutionPayload.RemoveLeadingZeroHashes()
 }
 
-func (e *ExecutionPayload) RemoveLeadingZeroHashes() {
+func (e *ExecutionPayloadHeaderCapella) RemoveLeadingZeroHashes() {
 	e.ParentHash = removeLeadingZeroHash(e.ParentHash)
 	e.FeeRecipient = removeLeadingZeroHash(e.FeeRecipient)
 	e.StateRoot = removeLeadingZeroHash(e.StateRoot)
@@ -263,6 +264,7 @@ func (e *ExecutionPayload) RemoveLeadingZeroHashes() {
 	e.ExtraData = removeLeadingZeroHash(e.ExtraData)
 	e.BlockHash = removeLeadingZeroHash(e.BlockHash)
 	e.TransactionRoot = removeLeadingZeroHash(e.TransactionRoot)
+	e.WithdrawalsRoot = removeLeadingZeroHash(e.WithdrawalsRoot)
 }
 
 func (i *InitialSync) RemoveLeadingZeroHashes() {

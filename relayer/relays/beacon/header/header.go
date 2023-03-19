@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
@@ -228,11 +229,15 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeader
 }
 
 func (h *Header) SyncHeader(ctx context.Context, headerUpdate scale.HeaderUpdate, slotsLeft uint64) error {
+
+	blockHash := headerUpdate.Payload.ExecutionHeader.BlockHash.Hex()
+	blockNumber := uint64(headerUpdate.Payload.ExecutionHeader.BlockNumber)
+
 	log.WithFields(log.Fields{
 		"slot":                 headerUpdate.Payload.BeaconHeader.Slot,
 		"slotsLeftToSync":      slotsLeft,
-		"executionBlockRoot":   headerUpdate.Payload.ExecutionHeader.BlockHash.Hex(),
-		"executionBlockNumber": headerUpdate.Payload.ExecutionHeader.BlockNumber,
+		"executionBlockRoot":   blockHash,
+		"executionBlockNumber": blockNumber,
 	}).Info("Syncing header between last two finalized headers")
 
 	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate.Payload)
@@ -259,8 +264,8 @@ func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
 	err = h.SyncHeaders(ctx, secondLastFinalizedHeader, sync.FinalizedHeaderBlockRoot)
+
 	if err != nil {
 		return err
 	}
@@ -304,7 +309,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 
 	headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(currentSlot, checkpoint)
 	if err != nil {
-		return err
+		return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
 	}
 
 	for currentSlot <= toSlot {
@@ -327,7 +332,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 			for _, header := range headersToSync {
 				err := h.SyncHeader(ctx, header, toSlot-uint64(header.Payload.BeaconHeader.Slot))
 				if err != nil {
-					return err
+					return fmt.Errorf("sync execution header: %w", err)
 				}
 			}
 
@@ -380,7 +385,6 @@ func (h *Header) SyncHeaders(ctx context.Context, fromHeaderBlockRoot, toHeaderB
 				}
 			}
 		}
-
 		currentSlot = uint64(nextHeaderUpdate.Payload.BeaconHeader.Slot)
 	}
 

@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
@@ -43,16 +44,18 @@ var (
 )
 
 type BeaconClient struct {
-	httpClient http.Client
-	endpoint   string
-	activeSpec config.ActiveSpec
+	httpClient   http.Client
+	endpoint     string
+	activeSpec   config.ActiveSpec
+	slotsInEpoch uint64
 }
 
-func NewBeaconClient(endpoint string, activeSpec config.ActiveSpec) *BeaconClient {
+func NewBeaconClient(endpoint string, activeSpec config.ActiveSpec, slotsInEpoch uint64) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
 		activeSpec,
+		slotsInEpoch,
 	}
 }
 
@@ -284,7 +287,13 @@ func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (state.BeaconBlock, e
 		return beaconBlock, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
-	ssz, err := blockResponse.ToFastSSZ(b.activeSpec)
+	data := blockResponse.Data.Message
+	slot, err := util.ToUint64(data.Slot)
+	if err != nil {
+		return nil, err
+	}
+
+	ssz, err := blockResponse.ToFastSSZ(b.activeSpec, slot/b.slotsInEpoch)
 	if err != nil {
 		return nil, err
 	}

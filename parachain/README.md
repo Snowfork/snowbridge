@@ -177,11 +177,9 @@ To generate `mainnet` test data and benchmarking data, we can connect to the Lod
 In the event of the Lodestar node not being available, you can start up your own stack with these commands:
 
 ```bash
-geth --goerli --http --http.api eth,net,engine,admin --authrpc.jwtsecret consensus/jwt.hex
-./lodestar beacon --dataDir="../../ethereum/lodestar-beacondata-goerli" --network="goerli" --rest.namespace="*" --jwt-secret="../../ethereum/consensus/jwt.hex" --checkpointSyncUrl="https://sync-goerli.beaconcha.in"
+cd core/packages/test
+./scripts/start-goerli.sh
 ```
-
-Naturally, if you run your own setup you would need to install Geth and Lodestar locally and also update the API endpoint to `http://127.0.0.1:9596` in `relayer/cmd/generate-beacon-data.go`.
 
 From the `snowbridge` directory, run:
 

@@ -1,9 +1,9 @@
 #[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
 	use crate::{
-		config, merkleization, mock::*, Error, ExecutionHeaders, FinalizedBeaconHeaders,
-		FinalizedBeaconHeadersBlockRoot, FinalizedHeaderState, LatestFinalizedHeaderState,
-		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
+		config, merkleization, mock::*, Error, ExecutionHeader, ExecutionHeaders,
+		FinalizedBeaconHeaders, FinalizedBeaconHeadersBlockRoot, FinalizedHeaderState,
+		LatestFinalizedHeaderState, LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -163,9 +163,11 @@ mod beacon_mainnet_tests {
 				update.clone()
 			));
 
-			let execution_block_root: H256 = update.execution_header.block_hash.clone().into();
+			let execution_header: ExecutionHeader = update.execution_header.try_into().unwrap();
 
-			assert!(<ExecutionHeaders<mock_mainnet::Test>>::contains_key(execution_block_root));
+			assert!(<ExecutionHeaders<mock_mainnet::Test>>::contains_key(
+				execution_header.block_hash
+			));
 		});
 	}
 

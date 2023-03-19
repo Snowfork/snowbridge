@@ -2,7 +2,6 @@
 set -eu
 
 source scripts/set-env.sh
-source scripts/build-binary.sh
 
 config_relayer(){
     # Configure beefy relay
@@ -46,7 +45,7 @@ config_relayer(){
     ' \
     config/ethereum-relay.json > $output_dir/ethereum-relay.json
 
-    active_spec="mainnet"
+    active_spec=$eth_network
     if [ "$eth_network" == "localhost" ]; then
        active_spec="minimal"
     fi
@@ -135,6 +134,13 @@ start_relayer()
             sleep 20
         done
     ) &
+}
+
+build_relayer()
+{
+    echo "Building relayer"
+    mage -d "$relay_dir" build
+    cp $relay_bin "$output_bin_dir"
 }
 
 if [ -z "${from_start_services:-}" ]; then

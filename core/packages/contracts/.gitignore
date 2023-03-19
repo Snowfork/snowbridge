@@ -15,4 +15,3 @@ cache/
 broadcast/
 types/
 tsconfig.tsbuildinfo
-test/**/data/*.json.keep

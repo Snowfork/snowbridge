@@ -3,7 +3,7 @@
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-    BeaconHeader, ExecutionPayload, FinalizedHeaderUpdate, HeaderUpdate, InitialSync, PublicKey,
+    BeaconHeader, ExecutionPayloadHeaderCapella, FinalizedHeaderUpdate, HeaderUpdate, InitialSync, PublicKey,
     SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use sp_core::U256;
@@ -154,7 +154,7 @@ pub fn header_update<
             state_root: hex!("{{HeaderUpdate.BeaconHeader.StateRoot}}").into(),
             body_root: hex!("{{HeaderUpdate.BeaconHeader.BodyRoot}}").into(),
         },
-        execution_header: ExecutionPayload{
+        execution_header: ExecutionPayloadHeaderCapella{
             parent_hash: hex!("{{HeaderUpdate.ExecutionHeader.ParentHash}}").into(),
             fee_recipient: hex!("{{HeaderUpdate.ExecutionHeader.FeeRecipient}}").to_vec().try_into().expect("fee recipient too long"),
             state_root: hex!("{{HeaderUpdate.ExecutionHeader.StateRoot}}").into(),
@@ -169,6 +169,7 @@ pub fn header_update<
             base_fee_per_gas: U256::from({{HeaderUpdate.ExecutionHeader.BaseFeePerGas}} as u64),
             block_hash: hex!("{{HeaderUpdate.ExecutionHeader.BlockHash}}").into(),
             transactions_root: hex!("{{HeaderUpdate.ExecutionHeader.TransactionRoot}}").into(),
+            withdrawals_root: hex!("{{HeaderUpdate.ExecutionHeader.WithdrawalsRoot}}").into(),
         },
         execution_branch: vec![
         {{#HeaderUpdate.ExecutionBranch}}

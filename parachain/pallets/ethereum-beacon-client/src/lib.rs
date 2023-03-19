@@ -33,6 +33,8 @@ use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_std::prelude::*;
 
+use frame_support::{traits::Get, BoundedVec};
+
 pub use pallet::*;
 
 pub type HeaderUpdateOf<T> = HeaderUpdate<
@@ -55,8 +57,6 @@ pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<
 	<T as Config>::MaxProofBranchSize,
 	<T as Config>::MaxSyncCommitteeSize,
 >;
-pub type ExecutionHeaderOf<T> =
-	ExecutionHeader<<T as Config>::MaxLogsBloomSize, <T as Config>::MaxExtraDataSize>;
 pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
 
 #[frame_support::pallet]
@@ -70,7 +70,7 @@ pub mod pallet {
 	use snowbridge_beacon_primitives::ForkVersions;
 	use snowbridge_core::Proof;
 	use snowbridge_ethereum::{Header as EthereumHeader, Log, Receipt};
-	use sp_core::{H160, U256};
+	use sp_core::U256;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -154,6 +154,7 @@ pub mod pallet {
 		InvalidFinalizedPeriodUpdate,
 		InvalidExecutionHeaderUpdate,
 		FinalizedBeaconHeaderSlotsExceeded,
+		ExecutionHeaderMappingFailed,
 	}
 
 	#[pallet::hooks]
@@ -173,7 +174,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
-		StorageMap<_, Identity, H256, ExecutionHeaderOf<T>, OptionQuery>;
+		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
@@ -423,7 +424,15 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+			let signature_slot_period = Self::compute_current_sync_period(update.signature_slot);
 			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 latest committee period is: {}, attested_header period is: {}, signature_slot period is: {}",
+				latest_committee_period,
+				current_period,
+				signature_slot_period
+			);
 			ensure!(
 				<SyncCommittees<T>>::contains_key(current_period),
 				Error::<T>::SyncCommitteeMissing
@@ -570,14 +579,19 @@ pub mod pallet {
 			ensure!(block_slot <= latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
 
 			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
-			let execution_payload = update.execution_header.clone();
+
+			let execution_header: ExecutionHeader = update
+				.execution_header
+				.clone()
+				.try_into()
+				.map_err(|_| Error::<T>::ExecutionHeaderMappingFailed)?;
 			ensure!(
-				execution_payload.block_number > execution_header_state.block_number,
+				execution_header.block_number > execution_header_state.block_number,
 				Error::<T>::InvalidExecutionHeaderUpdate
 			);
 
 			let execution_root =
-				merkleization::hash_tree_root_execution_header(execution_payload.clone())
+				merkleization::hash_tree_root_execution_header(update.execution_header.clone())
 					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 			let execution_root_hash: H256 = execution_root.into();
 
@@ -621,36 +635,11 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			let mut fee_recipient = [0u8; 20];
-			let fee_slice = execution_payload.fee_recipient.as_slice();
-			if fee_slice.len() == 20 {
-				fee_recipient[0..20].copy_from_slice(&(fee_slice));
-			} else {
-				log::trace!(
-					target: "ethereum-beacon-client",
-					"💫 fee recipient not 20 characters, len is: {}.",
-					fee_slice.len()
-				);
-			}
+			let block_hash = execution_header.block_hash;
 
 			Self::store_execution_header(
-				execution_payload.block_hash,
-				ExecutionHeader {
-					parent_hash: execution_payload.parent_hash,
-					fee_recipient: H160::from(fee_recipient),
-					state_root: execution_payload.state_root,
-					receipts_root: execution_payload.receipts_root,
-					logs_bloom: execution_payload.logs_bloom,
-					prev_randao: execution_payload.prev_randao,
-					block_number: execution_payload.block_number,
-					gas_used: execution_payload.gas_used,
-					gas_limit: execution_payload.gas_limit,
-					timestamp: execution_payload.timestamp,
-					extra_data: execution_payload.extra_data,
-					base_fee_per_gas: execution_payload.base_fee_per_gas,
-					block_hash: execution_payload.block_hash,
-					transactions_root: execution_payload.transactions_root,
-				},
+				block_hash,
+				execution_header,
 				block_slot,
 				beacon_block_root,
 			);
@@ -928,7 +917,7 @@ pub mod pallet {
 
 		fn store_execution_header(
 			block_hash: H256,
-			header: ExecutionHeaderOf<T>,
+			header: ExecutionHeader,
 			beacon_slot: u64,
 			beacon_block_root: H256,
 		) {
@@ -1069,6 +1058,9 @@ pub mod pallet {
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
 			let fork_versions = T::ForkVersions::get();
 
+			if epoch >= fork_versions.capella.epoch {
+				return fork_versions.capella.version
+			}
 			if epoch >= fork_versions.bellatrix.epoch {
 				return fork_versions.bellatrix.version
 			}
@@ -1106,7 +1098,7 @@ pub mod pallet {
 		// in the block given by proof.block_hash. Inclusion is only
 		// recognized if the block has been finalized.
 		fn verify_receipt_inclusion(
-			stored_header: ExecutionHeaderOf<T>,
+			stored_header: ExecutionHeader,
 			proof: &Proof,
 		) -> Result<Receipt, DispatchError> {
 			let result = stored_header

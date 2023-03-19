@@ -150,7 +150,7 @@ importers:
 
   packages/test:
     specifiers:
-      '@chainsafe/lodestar': 1.4.2
+      '@chainsafe/lodestar': 1.5.1
       '@polkadot/api': 9.11.1
       '@polkadot/types': 9.11.1
       '@polkadot/util': 10.2.3
@@ -177,7 +177,7 @@ importers:
       ws: ^7.4.6
       yargs: ^17.0.1
     devDependencies:
-      '@chainsafe/lodestar': 1.4.2_c-kzg@1.0.9+fastify@3.15.1
+      '@chainsafe/lodestar': 1.5.1_c-kzg@1.0.9+fastify@3.15.1
       '@polkadot/api': 9.11.1
       '@polkadot/types': 9.11.1
       '@polkadot/util': 10.2.3
@@ -613,8 +613,8 @@ packages:
       - supports-color
     dev: true
 
-  /@chainsafe/lodestar/1.4.2_c-kzg@1.0.9+fastify@3.15.1:
-    resolution: {integrity: sha512-6HM9FzR16gZ4XZU2A2M1SPplskwSrm2O+GjB2g5k0fHoZMmQN1LppkYJWK/iYYe+IDvi1ViD+ZHP8yQTgd1xwg==}
+  /@chainsafe/lodestar/1.5.1_c-kzg@1.0.9+fastify@3.15.1:
+    resolution: {integrity: sha512-WluQrT0T/awgRWEdxXnH4htVa+ROvlKDVrf1KpauBqBhrTZDr6gbC4sRZRupA70z1fpNnVRSJACosqFn6nWBpQ==}
     hasBin: true
     dependencies:
       '@chainsafe/as-sha256': 0.3.1
@@ -625,16 +625,16 @@ packages:
       '@chainsafe/discv5': 3.0.0
       '@chainsafe/ssz': 0.9.2
       '@libp2p/peer-id-factory': 2.0.1
-      '@lodestar/api': 1.4.2_fastify@3.15.1
-      '@lodestar/beacon-node': 1.4.2_moxmbsbrotuxyz2nenltmioibe
-      '@lodestar/config': 1.4.2
-      '@lodestar/db': 1.4.2
-      '@lodestar/light-client': 1.4.2_lfzjzsqji2puhppndhpa2aauce
-      '@lodestar/params': 1.4.2
-      '@lodestar/state-transition': 1.4.2_@chainsafe+blst@0.2.8
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
-      '@lodestar/validator': 1.4.2_lfzjzsqji2puhppndhpa2aauce
+      '@lodestar/api': 1.5.1_fastify@3.15.1
+      '@lodestar/beacon-node': 1.5.1_moxmbsbrotuxyz2nenltmioibe
+      '@lodestar/config': 1.5.1
+      '@lodestar/db': 1.5.1
+      '@lodestar/light-client': 1.5.1_lfzjzsqji2puhppndhpa2aauce
+      '@lodestar/params': 1.5.1
+      '@lodestar/state-transition': 1.5.1_@chainsafe+blst@0.2.8
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
+      '@lodestar/validator': 1.5.1_lfzjzsqji2puhppndhpa2aauce
       '@multiformats/multiaddr': 11.0.10
       '@types/lockfile': 1.0.2
       bip39: 3.0.4
@@ -1868,17 +1868,17 @@ packages:
       - supports-color
     dev: true
 
-  /@lodestar/api/1.4.2_fastify@3.15.1:
-    resolution: {integrity: sha512-zObTMB3UK8iThxjzYTVEbkEvm5USaToLOt8NdgBR7YJQxJLAYt36a04D4Dk/XKHPjrkYEpRSZtZDNqXWi2gg9A==}
+  /@lodestar/api/1.5.1_fastify@3.15.1:
+    resolution: {integrity: sha512-fmwM2Jd6ieddiP4371dqpDL/vTVsDvsGBqrK+bxC71JoaOLkcFFeInKa3xAy4yIPUuORKBvl4tjtJEruJ0rmjQ==}
     peerDependencies:
       fastify: 3.29.4
     dependencies:
       '@chainsafe/persistent-merkle-tree': 0.4.2
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/config': 1.4.2
-      '@lodestar/params': 1.4.2
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
+      '@lodestar/config': 1.5.1
+      '@lodestar/params': 1.5.1
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
       cross-fetch: 3.1.5
       eventsource: 2.0.2
       fastify: 3.15.1
@@ -1887,17 +1887,17 @@ packages:
       - encoding
     dev: true
 
-  /@lodestar/api/1.4.2_fastify@3.29.4:
-    resolution: {integrity: sha512-zObTMB3UK8iThxjzYTVEbkEvm5USaToLOt8NdgBR7YJQxJLAYt36a04D4Dk/XKHPjrkYEpRSZtZDNqXWi2gg9A==}
+  /@lodestar/api/1.5.1_fastify@3.29.4:
+    resolution: {integrity: sha512-fmwM2Jd6ieddiP4371dqpDL/vTVsDvsGBqrK+bxC71JoaOLkcFFeInKa3xAy4yIPUuORKBvl4tjtJEruJ0rmjQ==}
     peerDependencies:
       fastify: 3.29.4
     dependencies:
       '@chainsafe/persistent-merkle-tree': 0.4.2
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/config': 1.4.2
-      '@lodestar/params': 1.4.2
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
+      '@lodestar/config': 1.5.1
+      '@lodestar/params': 1.5.1
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
       cross-fetch: 3.1.5
       eventsource: 2.0.2
       fastify: 3.29.4
@@ -1906,8 +1906,8 @@ packages:
       - encoding
     dev: true
 
-  /@lodestar/beacon-node/1.4.2_moxmbsbrotuxyz2nenltmioibe:
-    resolution: {integrity: sha512-9DmzYO07QlO6Gn/3PVqdcl1sU5rXWAupji1BPg4/gMnttb7aKHhHYcRmxqos4O8xlwVz5iwigwLbBbS5RWCENw==}
+  /@lodestar/beacon-node/1.5.1_moxmbsbrotuxyz2nenltmioibe:
+    resolution: {integrity: sha512-WKT9vs6obDbwpaA4OpkOEezdz0vM83yFamHtmQPeiqM9buZtXS2fILGYTNINgp1grgy+p+/9wWLwI7SyoVgqFg==}
     peerDependencies:
       c-kzg: ^1.0.7
     dependencies:
@@ -1933,17 +1933,17 @@ packages:
       '@libp2p/peer-id-factory': 2.0.1
       '@libp2p/prometheus-metrics': 1.1.3_prom-client@14.1.0
       '@libp2p/tcp': 6.1.1
-      '@lodestar/api': 1.4.2_fastify@3.29.4
-      '@lodestar/config': 1.4.2
-      '@lodestar/db': 1.4.2
-      '@lodestar/fork-choice': 1.4.2_@chainsafe+blst@0.2.8
-      '@lodestar/light-client': 1.4.2_6k57yb4aeacz6u6ckht4rwg7fe
-      '@lodestar/params': 1.4.2
-      '@lodestar/reqresp': 1.4.2_libp2p@0.42.2
-      '@lodestar/state-transition': 1.4.2_@chainsafe+blst@0.2.8
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
-      '@lodestar/validator': 1.4.2_6k57yb4aeacz6u6ckht4rwg7fe
+      '@lodestar/api': 1.5.1_fastify@3.29.4
+      '@lodestar/config': 1.5.1
+      '@lodestar/db': 1.5.1
+      '@lodestar/fork-choice': 1.5.1_@chainsafe+blst@0.2.8
+      '@lodestar/light-client': 1.5.1_6k57yb4aeacz6u6ckht4rwg7fe
+      '@lodestar/params': 1.5.1
+      '@lodestar/reqresp': 1.5.1_libp2p@0.42.2
+      '@lodestar/state-transition': 1.5.1_@chainsafe+blst@0.2.8
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
+      '@lodestar/validator': 1.5.1_6k57yb4aeacz6u6ckht4rwg7fe
       '@multiformats/multiaddr': 11.0.10
       '@types/datastore-level': 3.0.0
       buffer-xor: 2.0.2
@@ -1976,49 +1976,49 @@ packages:
       - supports-color
     dev: true
 
-  /@lodestar/config/1.4.2:
-    resolution: {integrity: sha512-JjiuPewGA/Xb519qiDvxepzaiJrYW5bXtl/ak38DlHn8te7HWDykZy/tjuoRHBGLulrAQJTAW4ceilpcmcmwgQ==}
+  /@lodestar/config/1.5.1:
+    resolution: {integrity: sha512-t7aVR+FRFokErCOFgyRc7jWyXv5Ef8oCejSQRQ0FaIEjKFcZLz7NTDGHzCcTy+1UeOFiBr0Z3RokpOfpDAo+sg==}
     dependencies:
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/params': 1.4.2
-      '@lodestar/types': 1.4.2
+      '@lodestar/params': 1.5.1
+      '@lodestar/types': 1.5.1
     dev: true
 
-  /@lodestar/db/1.4.2:
-    resolution: {integrity: sha512-IpwUiuobfvKCZAIiygfn9E+7D64cPMXx68ABwTyWUPN1DqUNXTHifBkitYd6Je8R1UNQIEE0odBGzxKQBMCF3A==}
+  /@lodestar/db/1.5.1:
+    resolution: {integrity: sha512-sTgxice0WfHIRa9yNZOJ/xpWi3AdfMa3xgXYFSB/nvNZLrpCAQfK3sCFSutkOTsTqG626QPlzoOF8LTCFtb1mw==}
     dependencies:
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/config': 1.4.2
-      '@lodestar/utils': 1.4.2
+      '@lodestar/config': 1.5.1
+      '@lodestar/utils': 1.5.1
       '@types/levelup': 4.3.3
       it-all: 2.0.0
       level: 8.0.0
     dev: true
 
-  /@lodestar/fork-choice/1.4.2_@chainsafe+blst@0.2.8:
-    resolution: {integrity: sha512-uf9C2J9NmKLsFHnwySxaYHP+BXZYBlkX7IJ5nHtfy5pIGaatSK8Sga8o2kd6xD1Xyj04LhJdYHJRq2wHVyQuOQ==}
+  /@lodestar/fork-choice/1.5.1_@chainsafe+blst@0.2.8:
+    resolution: {integrity: sha512-cfN2x7baBwUnbrC0r65Ad6o4YCJCMZbEMZKV15nN5KerEyB+lQEYDUxao3Hi/VsGT6A0V18vIluhArM9Ie/QCw==}
     dependencies:
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/config': 1.4.2
-      '@lodestar/params': 1.4.2
-      '@lodestar/state-transition': 1.4.2_@chainsafe+blst@0.2.8
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
+      '@lodestar/config': 1.5.1
+      '@lodestar/params': 1.5.1
+      '@lodestar/state-transition': 1.5.1_@chainsafe+blst@0.2.8
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
     transitivePeerDependencies:
       - '@chainsafe/blst'
     dev: true
 
-  /@lodestar/light-client/1.4.2_6k57yb4aeacz6u6ckht4rwg7fe:
-    resolution: {integrity: sha512-j59xpt8X8A22sIWgwXkFO24hcuVmOGxZqHRLBzZ00ytLriIAW1m2aBDJZsFz6hgbOIFxFUYE6kFEx+3W/MmfOw==}
+  /@lodestar/light-client/1.5.1_6k57yb4aeacz6u6ckht4rwg7fe:
+    resolution: {integrity: sha512-1dH4YvxVmodNGGGREZXhj7O6GT7BmKWveNNUlkVOIzaAc4a2MtlaXRKdaHOesDLnNqL6k0RTu5AJ4CwoRldQgg==}
     dependencies:
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
       '@chainsafe/persistent-merkle-tree': 0.4.2
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/api': 1.4.2_fastify@3.29.4
-      '@lodestar/config': 1.4.2
-      '@lodestar/params': 1.4.2
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
+      '@lodestar/api': 1.5.1_fastify@3.29.4
+      '@lodestar/config': 1.5.1
+      '@lodestar/params': 1.5.1
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
       cross-fetch: 3.1.5
       mitt: 3.0.0
       strict-event-emitter-types: 2.0.0
@@ -2028,17 +2028,17 @@ packages:
       - fastify
     dev: true
 
-  /@lodestar/light-client/1.4.2_lfzjzsqji2puhppndhpa2aauce:
-    resolution: {integrity: sha512-j59xpt8X8A22sIWgwXkFO24hcuVmOGxZqHRLBzZ00ytLriIAW1m2aBDJZsFz6hgbOIFxFUYE6kFEx+3W/MmfOw==}
+  /@lodestar/light-client/1.5.1_lfzjzsqji2puhppndhpa2aauce:
+    resolution: {integrity: sha512-1dH4YvxVmodNGGGREZXhj7O6GT7BmKWveNNUlkVOIzaAc4a2MtlaXRKdaHOesDLnNqL6k0RTu5AJ4CwoRldQgg==}
     dependencies:
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
       '@chainsafe/persistent-merkle-tree': 0.4.2
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/api': 1.4.2_fastify@3.15.1
-      '@lodestar/config': 1.4.2
-      '@lodestar/params': 1.4.2
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
+      '@lodestar/api': 1.5.1_fastify@3.15.1
+      '@lodestar/config': 1.5.1
+      '@lodestar/params': 1.5.1
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
       cross-fetch: 3.1.5
       mitt: 3.0.0
       strict-event-emitter-types: 2.0.0
@@ -2048,22 +2048,22 @@ packages:
       - fastify
     dev: true
 
-  /@lodestar/params/1.4.2:
-    resolution: {integrity: sha512-3yAnzum6jQ+KVweAM4we+E8mI/BPHFPY334/082LSCPzzlxIft7P/4kRvp/Z9g86ivD2b2VKC1SSgdJIBWFNyg==}
+  /@lodestar/params/1.5.1:
+    resolution: {integrity: sha512-ulXGYY1RNJKm5bNxELxaDjPos3SVk9IiO9yDUc370SOVq6CV8fb0O5j0yVG5UgZymawuU1LzxOhlClGo/Y68DQ==}
     dev: true
 
-  /@lodestar/reqresp/1.4.2_libp2p@0.42.2:
-    resolution: {integrity: sha512-CGM4xNZGrovJ89cTTZ8DyUpXemFf0x3tOdaPv7HajlkR/4SVC0JZael0fezywQ2p3VtNplEw/9ZyJd2o7jKFrA==}
+  /@lodestar/reqresp/1.5.1_libp2p@0.42.2:
+    resolution: {integrity: sha512-koMHsC1NdNGPp29tsd5lzrgCbUQZXkxKMX4cj8BUY2dG3X7pR5FXNY4+ztmBRvSdv9pf4mVWtCPXsMPSVWZyEA==}
     peerDependencies:
       libp2p: 0.41.0
     dependencies:
       '@chainsafe/snappy-stream': 5.1.2
       '@libp2p/interface-connection': 3.0.3
       '@libp2p/interface-peer-id': 2.0.1
-      '@lodestar/config': 1.4.2
-      '@lodestar/params': 1.4.2
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
+      '@lodestar/config': 1.5.1
+      '@lodestar/params': 1.5.1
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
       it-all: 2.0.0
       libp2p: 0.42.2
       snappyjs: 0.7.0
@@ -2074,33 +2074,33 @@ packages:
       - supports-color
     dev: true
 
-  /@lodestar/state-transition/1.4.2_@chainsafe+blst@0.2.8:
-    resolution: {integrity: sha512-bBUc6f68/+iH90OPyzTyBUqQePD37FgQAoN7a4JMDdh++lyQJmi3MJlsa9bavyS2WU7YSRFflGpf1M2jo3zJFQ==}
+  /@lodestar/state-transition/1.5.1_@chainsafe+blst@0.2.8:
+    resolution: {integrity: sha512-+qSkoqnd2zH/ExbN6V6AydSvKCbWEUtRdzszs7itINmtduCbHN1EhxGEXGyF0bn7jfWih6wp/MzuvH7/pWDPTQ==}
     dependencies:
       '@chainsafe/as-sha256': 0.3.1
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
       '@chainsafe/persistent-merkle-tree': 0.4.2
       '@chainsafe/persistent-ts': 0.19.1
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/config': 1.4.2
-      '@lodestar/params': 1.4.2
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
+      '@lodestar/config': 1.5.1
+      '@lodestar/params': 1.5.1
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
       bigint-buffer: 1.1.5
       buffer-xor: 2.0.2
     transitivePeerDependencies:
       - '@chainsafe/blst'
     dev: true
 
-  /@lodestar/types/1.4.2:
-    resolution: {integrity: sha512-1jBURYfM+PF/vFsWaX3WjVYudLpmNDRjrsp+/WuEmucF+E/XYK5hUlyQ56Ph/JhBuB8hOZh/MUSnE3d62sEqUQ==}
+  /@lodestar/types/1.5.1:
+    resolution: {integrity: sha512-0fnNfPIpr/aPrgwsWZMN33dVoN5xCviqZDFZIFzw59BAH4NMGlcfmU/daXcWIxSoshJYxmt/NKi5DiRV3u2nwg==}
     dependencies:
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/params': 1.4.2
+      '@lodestar/params': 1.5.1
     dev: true
 
-  /@lodestar/utils/1.4.2:
-    resolution: {integrity: sha512-bRYeP4XqhG4t6G58ZPxJxU5Rzk4TlSr7QOVeASsoE0AZYTt9W11ZCBSJd/7lXP+3Kv4qhBLby+LVo6XLAiVRCg==}
+  /@lodestar/utils/1.5.1:
+    resolution: {integrity: sha512-1vaWxXhWdV/rgQWdLBPQULB2yPnGUZUPWJgBR53LNKwD8JiPDCRz7923W9Nlqy8AHsKsf5Ub8+P+0BcGGote3A==}
     dependencies:
       '@chainsafe/as-sha256': 0.3.1
       any-signal: 2.1.2
@@ -2111,18 +2111,18 @@ packages:
       winston: 3.8.2
     dev: true
 
-  /@lodestar/validator/1.4.2_6k57yb4aeacz6u6ckht4rwg7fe:
-    resolution: {integrity: sha512-xZhg/qlUEwoBmVfzhWlyOsGHdQuCKz2GLvMFIV96UyRSv9KgJWxlTWpUIoTkPlGfFEmwR+xAGcNx+uGzHpp1mQ==}
+  /@lodestar/validator/1.5.1_6k57yb4aeacz6u6ckht4rwg7fe:
+    resolution: {integrity: sha512-Dnh3oI7C8+VRnIYIMyiLVmN1IdAuCA/BjKE4DwZwoEWkVLJGKLiF3UlL2UD0YJt8eCGrnsfky2pBaP0/CX6aoA==}
     dependencies:
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/api': 1.4.2_fastify@3.29.4
-      '@lodestar/config': 1.4.2
-      '@lodestar/db': 1.4.2
-      '@lodestar/params': 1.4.2
-      '@lodestar/state-transition': 1.4.2_@chainsafe+blst@0.2.8
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
+      '@lodestar/api': 1.5.1_fastify@3.29.4
+      '@lodestar/config': 1.5.1
+      '@lodestar/db': 1.5.1
+      '@lodestar/params': 1.5.1
+      '@lodestar/state-transition': 1.5.1_@chainsafe+blst@0.2.8
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
       bigint-buffer: 1.1.5
       cross-fetch: 3.1.5
       strict-event-emitter-types: 2.0.0
@@ -2132,18 +2132,18 @@ packages:
       - fastify
     dev: true
 
-  /@lodestar/validator/1.4.2_lfzjzsqji2puhppndhpa2aauce:
-    resolution: {integrity: sha512-xZhg/qlUEwoBmVfzhWlyOsGHdQuCKz2GLvMFIV96UyRSv9KgJWxlTWpUIoTkPlGfFEmwR+xAGcNx+uGzHpp1mQ==}
+  /@lodestar/validator/1.5.1_lfzjzsqji2puhppndhpa2aauce:
+    resolution: {integrity: sha512-Dnh3oI7C8+VRnIYIMyiLVmN1IdAuCA/BjKE4DwZwoEWkVLJGKLiF3UlL2UD0YJt8eCGrnsfky2pBaP0/CX6aoA==}
     dependencies:
       '@chainsafe/bls': 7.1.1_@chainsafe+blst@0.2.8
       '@chainsafe/ssz': 0.9.2
-      '@lodestar/api': 1.4.2_fastify@3.15.1
-      '@lodestar/config': 1.4.2
-      '@lodestar/db': 1.4.2
-      '@lodestar/params': 1.4.2
-      '@lodestar/state-transition': 1.4.2_@chainsafe+blst@0.2.8
-      '@lodestar/types': 1.4.2
-      '@lodestar/utils': 1.4.2
+      '@lodestar/api': 1.5.1_fastify@3.15.1
+      '@lodestar/config': 1.5.1
+      '@lodestar/db': 1.5.1
+      '@lodestar/params': 1.5.1
+      '@lodestar/state-transition': 1.5.1_@chainsafe+blst@0.2.8
+      '@lodestar/types': 1.5.1
+      '@lodestar/utils': 1.5.1
       bigint-buffer: 1.1.5
       cross-fetch: 3.1.5
       strict-event-emitter-types: 2.0.0
@@ -6825,8 +6825,6 @@ packages:
     dependencies:
       nan: 2.17.0
       node-pre-gyp: 0.13.0
-    transitivePeerDependencies:
-      - supports-color
     dev: true
     bundledDependencies:
       - node-pre-gyp
@@ -9666,8 +9664,6 @@ packages:
       prom-client: 14.1.0
     optionalDependencies:
       gc-stats: 1.4.0
-    transitivePeerDependencies:
-      - supports-color
     dev: true
 
   /promise-inflight/1.0.1:

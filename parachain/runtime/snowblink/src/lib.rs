@@ -620,6 +620,10 @@ parameter_types! {
 			version: [2, 0, 16, 32], // 0x02001020
 			epoch: 112260,
 		},
+		capella: Fork {
+			version: [3, 0, 16, 32], // 0x03001020
+			epoch: 162304,
+		},
 	};
 }
 
