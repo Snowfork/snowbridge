@@ -1,7 +1,7 @@
 #[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
 	use crate::{
-		config, merkleization, mock::*, Error, ExecutionHeaderOf, ExecutionHeaders,
+		config, merkleization, mock::*, Error, ExecutionHeader, ExecutionHeaders,
 		FinalizedBeaconHeaders, FinalizedBeaconHeadersBlockRoot, FinalizedHeaderState,
 		LatestFinalizedHeaderState, LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
 	};
@@ -163,7 +163,7 @@ mod beacon_mainnet_tests {
 				update.clone()
 			));
 
-			let execution_header: ExecutionHeaderOf<mock_mainnet::Test> =
+			let execution_header: ExecutionHeader =
 				update.versioned_execution_header.try_into().unwrap();
 
 			assert!(<ExecutionHeaders<mock_mainnet::Test>>::contains_key(

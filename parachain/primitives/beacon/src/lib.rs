@@ -7,7 +7,7 @@ use snowbridge_ethereum::mpt;
 use sp_core::{H160, H256, U256};
 use sp_io::hashing::keccak_256;
 use sp_runtime::RuntimeDebug;
-use sp_std::{marker::PhantomData, prelude::*};
+use sp_std::prelude::*;
 
 #[cfg(feature = "std")]
 use core::fmt::Formatter;
@@ -288,27 +288,13 @@ pub struct SigningData {
 )]
 #[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize))]
 #[codec(mel_bound())]
-pub struct ExecutionHeader<
-	FeeRecipientSize: Get<u32>,
-	LogsBloomSize: Get<u32>,
-	ExtraDataSize: Get<u32>,
-> {
+pub struct ExecutionHeader {
 	pub parent_hash: H256,
+	pub block_hash: H256,
+	pub block_number: u64,
 	pub fee_recipient: H160,
 	pub state_root: H256,
 	pub receipts_root: H256,
-	pub logs_bloom: BoundedVec<u8, LogsBloomSize>,
-	pub prev_randao: H256,
-	pub block_number: u64,
-	pub gas_limit: u64,
-	pub gas_used: u64,
-	pub timestamp: u64,
-	pub extra_data: BoundedVec<u8, ExtraDataSize>,
-	pub base_fee_per_gas: U256,
-	pub block_hash: H256,
-	pub transactions_root: H256,
-	pub withdrawals_root: H256,
-	_marker: PhantomData<FeeRecipientSize>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -318,7 +304,7 @@ pub enum ConvertError {
 
 impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
 	TryFrom<ExecutionPayloadHeaderCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
-	for ExecutionHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>
+	for ExecutionHeader
 {
 	type Error = ConvertError;
 
@@ -338,21 +324,11 @@ impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32
 		}
 		Ok(ExecutionHeader {
 			parent_hash: execution_payload.parent_hash,
+			block_hash: execution_payload.block_hash,
+			block_number: execution_payload.block_number,
 			fee_recipient: H160::from(fee_recipient),
 			state_root: execution_payload.state_root,
 			receipts_root: execution_payload.receipts_root,
-			logs_bloom: execution_payload.logs_bloom,
-			prev_randao: execution_payload.prev_randao,
-			block_number: execution_payload.block_number,
-			gas_used: execution_payload.gas_used,
-			gas_limit: execution_payload.gas_limit,
-			timestamp: execution_payload.timestamp,
-			extra_data: execution_payload.extra_data,
-			base_fee_per_gas: execution_payload.base_fee_per_gas,
-			block_hash: execution_payload.block_hash,
-			transactions_root: execution_payload.transactions_root,
-			withdrawals_root: execution_payload.withdrawals_root,
-			_marker: Default::default(),
 		})
 	}
 }
@@ -478,7 +454,7 @@ pub enum VersionedExecutionPayloadHeader<
 
 impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
 	TryFrom<VersionedExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
-	for ExecutionHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>
+	for ExecutionHeader
 {
 	type Error = ConvertError;
 
@@ -497,9 +473,7 @@ impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32
 	}
 }
 
-impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
-	ExecutionHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>
-{
+impl ExecutionHeader {
 	// Copied from ethereum_snowbridge::header
 	pub fn check_receipt_proof(
 		&self,

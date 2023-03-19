@@ -104,7 +104,7 @@ benchmarks! {
 		);
 	}: _(RawOrigin::Signed(caller.clone()), header_update.clone())
 	verify {
-		let header: ExecutionHeaderOf<T> = header_update.versioned_execution_header.try_into().unwrap();
+		let header: ExecutionHeader = header_update.versioned_execution_header.try_into().unwrap();
 		<ExecutionHeaders<T>>::get(header.block_hash).unwrap();
 	}
 }

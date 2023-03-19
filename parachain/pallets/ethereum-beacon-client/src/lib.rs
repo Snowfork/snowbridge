@@ -58,11 +58,6 @@ pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<
 	<T as Config>::MaxProofBranchSize,
 	<T as Config>::MaxSyncCommitteeSize,
 >;
-pub type ExecutionHeaderOf<T> = ExecutionHeader<
-	<T as Config>::MaxFeeRecipientSize,
-	<T as Config>::MaxLogsBloomSize,
-	<T as Config>::MaxExtraDataSize,
->;
 pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
 
 #[frame_support::pallet]
@@ -180,7 +175,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
-		StorageMap<_, Identity, H256, ExecutionHeaderOf<T>, OptionQuery>;
+		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
@@ -576,7 +571,7 @@ pub mod pallet {
 
 			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
 
-			let execution_header: ExecutionHeaderOf<T> = update
+			let execution_header: ExecutionHeader = update
 				.versioned_execution_header
 				.clone()
 				.try_into()
@@ -914,7 +909,7 @@ pub mod pallet {
 
 		fn store_execution_header(
 			block_hash: H256,
-			header: ExecutionHeaderOf<T>,
+			header: ExecutionHeader,
 			beacon_slot: u64,
 			beacon_block_root: H256,
 		) {
@@ -1095,7 +1090,7 @@ pub mod pallet {
 		// in the block given by proof.block_hash. Inclusion is only
 		// recognized if the block has been finalized.
 		fn verify_receipt_inclusion(
-			stored_header: ExecutionHeaderOf<T>,
+			stored_header: ExecutionHeader,
 			proof: &Proof,
 		) -> Result<Receipt, DispatchError> {
 			let result = stored_header

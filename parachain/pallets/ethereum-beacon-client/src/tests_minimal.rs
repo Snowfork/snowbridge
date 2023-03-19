@@ -2,7 +2,7 @@
 mod beacon_minimal_tests {
 	use crate::{
 		config, merkleization, mock::*, pallet::FinalizedBeaconHeadersBlockRoot, Error,
-		ExecutionHeaderOf, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders,
+		ExecutionHeader, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders,
 		FinalizedHeaderState, LatestExecutionHeaderState, LatestFinalizedHeaderState,
 		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
 	};
@@ -280,7 +280,7 @@ mod beacon_minimal_tests {
 				update.clone()
 			));
 
-			let execution_header: ExecutionHeaderOf<mock_minimal::Test> =
+			let execution_header: ExecutionHeader =
 				update.versioned_execution_header.try_into().unwrap();
 
 			assert!(<ExecutionHeaders<mock_minimal::Test>>::contains_key(
@@ -322,7 +322,7 @@ mod beacon_minimal_tests {
 				import_time: 0,
 			});
 
-			let execution_header: ExecutionHeaderOf<mock_minimal::Test> =
+			let execution_header: ExecutionHeader =
 				update.versioned_execution_header.clone().try_into().unwrap();
 
 			LatestExecutionHeaderState::<mock_minimal::Test>::set(ExecutionHeaderState {
