@@ -4,12 +4,12 @@ mod beacon_tests {
 		config, merkleization,
 		merkleization::MerkleizationError,
 		mock::*,
-		ssz::{SSZExecutionPayloadHeaderCapella, SSZSyncAggregate},
+		ssz::{SSZExecutionPayloadHeader, SSZSyncAggregate},
 		BeaconHeader, Error, PublicKey,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
-	use snowbridge_beacon_primitives::{ExecutionPayloadHeaderCapella, SyncAggregate};
+	use snowbridge_beacon_primitives::{ExecutionPayloadHeader, SyncAggregate};
 	use sp_core::{H256, U256};
 	use ssz_rs::prelude::Vector;
 
@@ -523,8 +523,8 @@ mod beacon_tests {
 
 	#[test]
 	pub fn test_hash_tree_root_execution_payload() {
-		let payload: Result<SSZExecutionPayloadHeaderCapella, MerkleizationError> =
-            ExecutionPayloadHeaderCapella::<mock_minimal::MaxFeeRecipientSize, mock_minimal::MaxLogsBloomSize, mock_minimal::MaxExtraDataSize>{
+		let payload: Result<SSZExecutionPayloadHeader, MerkleizationError> =
+            ExecutionPayloadHeader::<mock_minimal::MaxFeeRecipientSize, mock_minimal::MaxLogsBloomSize, mock_minimal::MaxExtraDataSize>{
                 parent_hash: hex!("eadee5ab098dde64e9fd02ae5858064bad67064070679625b09f8d82dec183f7").into(),
                 fee_recipient: hex!("f97e180c050e5ab072211ad2c213eb5aee4df134").to_vec().try_into().expect("fee recipient bits are too long"),
                 state_root: hex!("564fa064c2a324c2b5978d7fdfc5d4224d4f421a45388af1ed405a399c845dff").into(),

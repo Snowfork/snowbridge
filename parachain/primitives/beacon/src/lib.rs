@@ -254,8 +254,7 @@ pub struct HeaderUpdate<
 	SyncCommitteeSize: Get<u32>,
 > {
 	pub beacon_header: BeaconHeader,
-	pub execution_header:
-		ExecutionPayloadHeaderCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	pub execution_header: ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 	pub execution_branch: BoundedVec<H256, ProofSize>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub signature_slot: u64,
@@ -286,8 +285,6 @@ pub struct SigningData {
 	TypeInfo,
 	MaxEncodedLen,
 )]
-#[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize))]
-#[codec(mel_bound())]
 pub struct ExecutionHeader {
 	pub parent_hash: H256,
 	pub block_hash: H256,
@@ -303,17 +300,13 @@ pub enum ConvertError {
 }
 
 impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
-	TryFrom<ExecutionPayloadHeaderCapella<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
+	TryFrom<ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
 	for ExecutionHeader
 {
 	type Error = ConvertError;
 
 	fn try_from(
-		execution_payload: ExecutionPayloadHeaderCapella<
-			FeeRecipientSize,
-			LogsBloomSize,
-			ExtraDataSize,
-		>,
+		execution_payload: ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 	) -> Result<Self, Self::Error> {
 		let mut fee_recipient = [0u8; 20];
 		let fee_slice = execution_payload.fee_recipient.as_slice();
@@ -408,7 +401,7 @@ pub struct SyncAggregate<SyncCommitteeSize: Get<u32>, SignatureSize: Get<u32>> {
 )]
 #[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize))]
 #[codec(mel_bound())]
-pub struct ExecutionPayloadHeaderCapella<
+pub struct ExecutionPayloadHeader<
 	FeeRecipientSize: Get<u32>,
 	LogsBloomSize: Get<u32>,
 	ExtraDataSize: Get<u32>,

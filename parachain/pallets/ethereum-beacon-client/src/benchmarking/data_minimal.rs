@@ -3,7 +3,7 @@
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-	BeaconHeader, ExecutionPayloadHeaderCapella, FinalizedHeaderUpdate, HeaderUpdate, InitialSync,
+	BeaconHeader, ExecutionPayloadHeader, FinalizedHeaderUpdate, HeaderUpdate, InitialSync,
 	PublicKey, SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use sp_core::U256;
@@ -226,7 +226,7 @@ pub fn header_update<
             state_root: hex!("0db33febe0d69ec00eeab7961cb3d3e9a16ccc59f1314a5b67d2887be37e624d").into(),
             body_root: hex!("cbfb4d27fd2e98f38921914e5e79b357684769b3adfaa17861b423f7f63f37b1").into(),
         },
-        execution_header: ExecutionPayloadHeaderCapella {
+        execution_header: ExecutionPayloadHeader {
             parent_hash: hex!("3fe1542912d40d01821fbee41809db8e53a8cbae0d854cb0e5a9d94247fbc031").into(),
             fee_recipient: hex!("0000000000000000000000000000000000000000").to_vec().try_into().expect("fee recipient too long"),
             state_root: hex!("251f215b8f0bb2caceac8cf469f0bf4daf1d0a8e319b506a02ab4a0362e31083").into(),
