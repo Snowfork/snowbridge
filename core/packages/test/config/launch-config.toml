@@ -41,18 +41,19 @@ default_args = [
     name = "rococo-dave"
     validator = true
 
-# Snowbridge
+## Bridge Hub
 [[parachains]]
+id = 1013
 add_to_genesis = true
 chain_spec_path = "{{output_dir}}/spec.json"
 cumulus_based = true
-id = 1000
 
+    # run alice as parachain collator
     [[parachains.collators]]
-    command = "{{output_bin_dir}}/snowbridge"
-    name = "snowbrige-alice"
-    rpc_port = 8081
+    name = "bridgehub01"
     validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
+    rpc_port = 8081
     ws_port = 11144
     args = ["--enable-offchain-indexing=true","--pruning=archive"]
 
@@ -60,8 +61,47 @@ id = 1000
         name = "RUST_LOG"
         value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace"
 
+    # run bob as parachain collator
     [[parachains.collators]]
-    command = "{{output_bin_dir}}/snowbridge"
-    name = "snowbrige-bob"
+    name = "bridgehub02"
     validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
     args = ["--enable-offchain-indexing=true","--pruning=archive"]
+
+## Statemine
+[[parachains]]
+id = 1000
+chain = "statemine-local"
+cumulus_based = true
+
+    # run alice as parachain collator
+    [[parachains.collators]]
+    name = "statemine01"
+    validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
+    rpc_port = 8082
+    ws_port = 12144
+
+        [[parachains.collators.env]]
+        name = "RUST_LOG"
+        value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
+
+    # run bob as parachain collator
+    [[parachains.collators]]
+    name = "statemine02"
+    validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
+
+# Statemine -> BridgeHub
+[[hrmp_channels]]
+max_capacity = 8
+max_message_size = 512
+recipient = 1013
+sender = 1000
+
+# BridgeHub -> Statemine
+[[hrmp_channels]]
+max_capacity = 8
+max_message_size = 512
+recipient = 1000
+sender = 1013
