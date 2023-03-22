@@ -45,7 +45,7 @@ config_relayer(){
     ' \
     config/ethereum-relay.json > $output_dir/ethereum-relay.json
 
-    active_spec=$eth_network
+    active_spec="mainnet"
     if [ "$eth_network" == "localhost" ]; then
        active_spec="minimal"
     fi
