@@ -58,7 +58,7 @@ type FinalizedHeaderUpdate struct {
 
 type HeaderUpdatePayload struct {
 	BeaconHeader              BeaconHeader
-	ExecutionHeader           ExecutionPayload
+	ExecutionHeader           ExecutionPayloadHeaderCapella
 	ExecutionBranch           []types.H256
 	SyncAggregate             SyncAggregate
 	SignatureSlot             types.U64
@@ -152,7 +152,18 @@ type VoluntaryExit struct {
 	ValidaterIndex types.U64
 }
 
-type ExecutionPayload struct {
+type BLSToExecutionChange struct {
+	ValidatorIndex     types.U64
+	FromBlsPubkey      []byte
+	ToExecutionAddress []byte
+}
+
+type SignedBLSToExecutionChange struct {
+	Message   *BLSToExecutionChange
+	Signature []byte
+}
+
+type ExecutionPayloadHeaderCapella struct {
 	ParentHash       types.H256
 	FeeRecipient     []byte
 	StateRoot        types.H256
@@ -167,6 +178,7 @@ type ExecutionPayload struct {
 	BaseFeePerGas    types.U256
 	BlockHash        types.H256
 	TransactionsRoot types.H256
+	WithdrawalsRoot  types.H256
 }
 
 type Body struct {
@@ -179,7 +191,21 @@ type Body struct {
 	Deposits          []Deposit
 	VoluntaryExits    []SignedVoluntaryExit
 	SyncAggregate     SyncAggregate
-	ExecutionPayload  ExecutionPayload
+	ExecutionPayload  ExecutionPayloadHeaderCapella
+}
+
+type BodyCapella struct {
+	RandaoReveal          []byte
+	Eth1Data              Eth1Data
+	Graffiti              types.H256
+	ProposerSlashings     []ProposerSlashing
+	AttesterSlashings     []AttesterSlashing
+	Attestations          []Attestation
+	Deposits              []Deposit
+	VoluntaryExits        []SignedVoluntaryExit
+	SyncAggregate         SyncAggregate
+	ExecutionPayload      ExecutionPayloadHeaderCapella
+	BlsToExecutionChanges []*SignedBLSToExecutionChange
 }
 
 type BeaconBlock struct {
@@ -188,6 +214,14 @@ type BeaconBlock struct {
 	ParentRoot    types.H256
 	StateRoot     types.H256
 	Body          Body
+}
+
+type BeaconBlockCapella struct {
+	Slot          types.U64
+	ProposerIndex types.U64
+	ParentRoot    types.H256
+	StateRoot     types.H256
+	Body          BodyCapella
 }
 
 type SyncCommittee struct {

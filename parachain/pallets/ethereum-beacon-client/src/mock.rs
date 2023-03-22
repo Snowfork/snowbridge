@@ -92,6 +92,10 @@ pub mod mock_minimal {
 				version: [2, 0, 0, 1], // 0x02000001
 				epoch: 0,
 			},
+			capella: Fork {
+				version: [3, 0, 0, 1], // 0x03000001
+				epoch: 0,
+			},
 		};
 	}
 
@@ -193,6 +197,10 @@ pub mod mock_mainnet {
 			bellatrix: Fork {
 				version: [2, 0, 16, 32], // 0x02001020
 				epoch: 112260,
+			},
+			capella: Fork {
+				version: [3, 0, 16, 32], // 0x03001020
+				epoch: 162304,
 			},
 		};
 	}

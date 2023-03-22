@@ -6,11 +6,13 @@ bridge_hub_runtime="${PARACHAIN_RUNTIME:-bridge-hub-rococo-local}"
 relaychain_version="${POLKADOT_VER:-v0.9.38}"
 relaychain_dir="$root_dir/parachain/.cargo/$relaychain_version"
 relaychain_bin="${POLKADOT_BIN:-$relaychain_dir/bin/polkadot}"
-cumulus_version="${CUMULUS_VER:-snowbridge}"
+cumulus_version="${CUMULUS_VER:-snowbridge-v0.9.38}"
 cumulus_dir="$root_dir/parachain/.cargo/$cumulus_version"
 cumulus_bin="${CUMULUS_BIN:-$cumulus_dir/bin/polkadot-parachain}"
 core_dir="$root_dir/core"
-lodestar_version="${LODESTAR_VER:-1.4.2}"
+lodestar_version="${LODESTAR_VER:-1.5.1}"
+geth_version="${GETH_VER:-v1.11.2}"
+geth_dir="$root_dir/../go-ethereum/$geth_version"
 contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
@@ -93,10 +95,6 @@ check_tool() {
     fi
     if ! [ -x "$(command -v jq)" ]; then
         echo 'Error: jq is not installed.'
-        exit
-    fi
-    if ! [ -x "$(command -v geth)" ]; then
-        echo 'Error: geth is not installed.'
         exit
     fi
     if ! [ -x "$(command -v sponge)" ]; then

@@ -39,7 +39,7 @@ type Syncer struct {
 
 func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64, maxSlotsPerHistoricalRoot int, activeSpec config.ActiveSpec) *Syncer {
 	return &Syncer{
-		Client:                       *api.NewBeaconClient(endpoint, activeSpec),
+		Client:                       *api.NewBeaconClient(endpoint, activeSpec, slotsInEpoch),
 		SlotsInEpoch:                 slotsInEpoch,
 		EpochsPerSyncCommitteePeriod: epochsPerSyncCommitteePeriod,
 		MaxSlotsPerHistoricalRoot:    maxSlotsPerHistoricalRoot,
@@ -210,10 +210,10 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	if s.activeSpec == config.Minimal {
 		blockRootsContainer = &state.BlockRootsContainerMinimal{}
-		beaconState = &state.BeaconStateBellatrixMinimal{}
+		beaconState = &state.BeaconStateCapellaMinimal{}
 	} else {
 		blockRootsContainer = &state.BlockRootsContainerMainnet{}
-		beaconState = &state.BeaconStateBellatrixMainnet{}
+		beaconState = &state.BeaconStateCapellaMainnet{}
 	}
 
 	err = beaconState.UnmarshalSSZ(data)
@@ -455,7 +455,7 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, err
 		return scale.HeaderUpdate{}, fmt.Errorf("beacon header to scale: %w", err)
 	}
 
-	executionPayloadScale, err := api.ExecutionPayloadToScale(block.GetExecutionPayload())
+	executionPayloadScale, err := api.CapellaExecutionPayloadToScale(block.GetExecutionPayload(), s.activeSpec)
 	if err != nil {
 		return scale.HeaderUpdate{}, err
 	}
@@ -495,7 +495,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		return scale.HeaderUpdate{}, fmt.Errorf("beacon header to scale: %w", err)
 	}
 
-	executionPayloadScale, err := api.ExecutionPayloadToScale(block.GetExecutionPayload())
+	executionPayloadScale, err := api.CapellaExecutionPayloadToScale(block.GetExecutionPayload(), s.activeSpec)
 	if err != nil {
 		return scale.HeaderUpdate{}, err
 	}
@@ -522,6 +522,9 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 	}
 
 	proofScale, err := s.getBlockHeaderAncestryProof(int(block.GetBeaconSlot()), blockRoot, checkpoint.BlockRootsTree)
+	if err != nil {
+		return scale.HeaderUpdate{}, err
+	}
 
 	displayProof := []common.Hash{}
 	for _, proof := range proofScale {

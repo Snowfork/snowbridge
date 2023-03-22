@@ -48,8 +48,19 @@ build_relayer()
     cp $relay_bin "$output_bin_dir"
 }
 
+build_ethereum() {
+    if [ ! -f "$geth_dir/geth" ]; then
+        echo "Building geth binary"
+        mkdir -p $geth_dir
+        GOBIN=$geth_dir go install -v -x github.com/ethereum/go-ethereum/cmd/geth@$geth_version
+    fi
+    cp "$geth_dir/geth" "$output_bin_dir"
+}
+
 install_binary() {
     echo "Building and installing binaries."
+    mkdir -p $output_bin_dir
+    build_ethereum
     build_cumulus
     build_relaychain
     build_relayer

@@ -26,6 +26,7 @@ pub struct ForkVersions {
 	pub genesis: Fork,
 	pub altair: Fork,
 	pub bellatrix: Fork,
+	pub capella: Fork,
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -221,14 +222,7 @@ pub struct FinalizedHeaderUpdate<
 }
 
 #[derive(
-	Default,
-	Encode,
-	Decode,
-	CloneNoBound,
-	PartialEqNoBound,
-	RuntimeDebugNoBound,
-	TypeInfo,
-	MaxEncodedLen,
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(
@@ -260,7 +254,7 @@ pub struct HeaderUpdate<
 	SyncCommitteeSize: Get<u32>,
 > {
 	pub beacon_header: BeaconHeader,
-	pub execution_header: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	pub execution_header: ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 	pub execution_branch: BoundedVec<H256, ProofSize>,
 	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
 	pub signature_slot: u64,
@@ -291,23 +285,45 @@ pub struct SigningData {
 	TypeInfo,
 	MaxEncodedLen,
 )]
-#[scale_info(skip_type_params(LogsBloomSize, ExtraDataSize))]
-#[codec(mel_bound())]
-pub struct ExecutionHeader<LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>> {
+pub struct ExecutionHeader {
 	pub parent_hash: H256,
+	pub block_hash: H256,
+	pub block_number: u64,
 	pub fee_recipient: H160,
 	pub state_root: H256,
 	pub receipts_root: H256,
-	pub logs_bloom: BoundedVec<u8, LogsBloomSize>,
-	pub prev_randao: H256,
-	pub block_number: u64,
-	pub gas_limit: u64,
-	pub gas_used: u64,
-	pub timestamp: u64,
-	pub extra_data: BoundedVec<u8, ExtraDataSize>,
-	pub base_fee_per_gas: U256,
-	pub block_hash: H256,
-	pub transactions_root: H256,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ConvertError {
+	FromExecutionPayloadToHeaderError,
+}
+
+impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
+	TryFrom<ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
+	for ExecutionHeader
+{
+	type Error = ConvertError;
+
+	fn try_from(
+		execution_payload: ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	) -> Result<Self, Self::Error> {
+		let mut fee_recipient = [0u8; 20];
+		let fee_slice = execution_payload.fee_recipient.as_slice();
+		if fee_slice.len() == 20 {
+			fee_recipient[0..20].copy_from_slice(&(fee_slice));
+		} else {
+			return Err(ConvertError::FromExecutionPayloadToHeaderError)
+		}
+		Ok(ExecutionHeader {
+			parent_hash: execution_payload.parent_hash,
+			block_hash: execution_payload.block_hash,
+			block_number: execution_payload.block_number,
+			fee_recipient: H160::from(fee_recipient),
+			state_root: execution_payload.state_root,
+			receipts_root: execution_payload.receipts_root,
+		})
+	}
 }
 
 /// Sync committee as it is stored in the runtime storage.
@@ -385,7 +401,7 @@ pub struct SyncAggregate<SyncCommitteeSize: Get<u32>, SignatureSize: Get<u32>> {
 )]
 #[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize))]
 #[codec(mel_bound())]
-pub struct ExecutionPayload<
+pub struct ExecutionPayloadHeader<
 	FeeRecipientSize: Get<u32>,
 	LogsBloomSize: Get<u32>,
 	ExtraDataSize: Get<u32>,
@@ -408,9 +424,10 @@ pub struct ExecutionPayload<
 	pub base_fee_per_gas: U256,
 	pub block_hash: H256,
 	pub transactions_root: H256,
+	pub withdrawals_root: H256,
 }
 
-impl<S: Get<u32>, M: Get<u32>> ExecutionHeader<S, M> {
+impl ExecutionHeader {
 	// Copied from ethereum_snowbridge::header
 	pub fn check_receipt_proof(
 		&self,

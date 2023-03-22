@@ -58,6 +58,12 @@ const (
 	Minimal ActiveSpec = "minimal"
 )
 
+const (
+	Minimal_CapellaForkEpoch uint64 = 0
+	Goerli_CapellaForkEpoch  uint64 = 162304
+	Mainnet_CapellaForkEpoch uint64 = 194048
+)
+
 func (c Config) GetActiveSpec() ActiveSpec {
 	switch c.Source.Beacon.ActiveSpec {
 	case string(Mainnet):

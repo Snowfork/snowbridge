@@ -40,7 +40,7 @@ pub struct SSZSigningData {
 }
 
 #[derive(Default, SimpleSerialize, Clone, Debug)]
-pub struct SSZExecutionPayload {
+pub struct SSZExecutionPayloadHeader {
 	pub parent_hash: [u8; 32],
 	pub fee_recipient: Vector<u8, { config::MAX_FEE_RECIPIENT_SIZE }>,
 	pub state_root: [u8; 32],
@@ -55,4 +55,5 @@ pub struct SSZExecutionPayload {
 	pub base_fee_per_gas: U256,
 	pub block_hash: [u8; 32],
 	pub transactions_root: [u8; 32],
+	pub withdrawals_root: [u8; 32],
 }

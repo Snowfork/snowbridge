@@ -4,7 +4,7 @@ use crate::{config, ssz::*};
 use byte_slice_cast::AsByteSlice;
 use frame_support::{traits::Get, BoundedVec};
 use snowbridge_beacon_primitives::{
-	BeaconHeader, ExecutionPayload, ForkData, SigningData, SyncAggregate, SyncCommittee,
+	BeaconHeader, ExecutionPayloadHeader, ForkData, SigningData, SyncAggregate, SyncCommittee,
 };
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
@@ -37,14 +37,15 @@ impl From<DeserializeError> for MerkleizationError {
 }
 
 impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
-	TryFrom<ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>> for SSZExecutionPayload
+	TryFrom<ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
+	for SSZExecutionPayloadHeader
 {
 	type Error = MerkleizationError;
 
 	fn try_from(
-		execution_payload: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+		execution_payload: ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 	) -> Result<Self, Self::Error> {
-		Ok(SSZExecutionPayload {
+		Ok(SSZExecutionPayloadHeader {
 			parent_hash: execution_payload.parent_hash.as_bytes().try_into()?,
 			fee_recipient: Vector::<u8, 20>::from_iter(execution_payload.fee_recipient),
 			state_root: execution_payload.state_root.as_bytes().try_into()?,
@@ -64,6 +65,7 @@ impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32
 			)?,
 			block_hash: execution_payload.block_hash.as_bytes().try_into()?,
 			transactions_root: execution_payload.transactions_root.as_bytes().try_into()?,
+			withdrawals_root: execution_payload.withdrawals_root.as_bytes().try_into()?,
 		})
 	}
 }
@@ -114,10 +116,9 @@ pub fn hash_tree_root_execution_header<
 	LogsBloomSize: Get<u32>,
 	ExtraDataSize: Get<u32>,
 >(
-	execution_header: ExecutionPayload<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
+	execution_header: ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
 ) -> Result<[u8; 32], MerkleizationError> {
-	let ssz_execution_payload: SSZExecutionPayload = execution_header.try_into()?;
-
+	let ssz_execution_payload: SSZExecutionPayloadHeader = execution_header.try_into()?;
 	hash_tree_root(ssz_execution_payload)
 }
 

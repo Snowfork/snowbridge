@@ -64,8 +64,8 @@ func (b *BeaconHeader) ToJSON() json.BeaconHeader {
 	}
 }
 
-func (e *ExecutionPayload) ToJSON() json.ExecutionPayload {
-	return json.ExecutionPayload{
+func (e *ExecutionPayloadHeaderCapella) ToJSON() json.ExecutionPayloadHeaderCapella {
+	return json.ExecutionPayloadHeaderCapella{
 		ParentHash:      e.ParentHash.Hex(),
 		FeeRecipient:    util.BytesToHexString(e.FeeRecipient),
 		StateRoot:       e.StateRoot.Hex(),
@@ -80,6 +80,7 @@ func (e *ExecutionPayload) ToJSON() json.ExecutionPayload {
 		BaseFeePerGas:   e.BaseFeePerGas.Uint64(),
 		BlockHash:       e.BlockHash.Hex(),
 		TransactionRoot: e.TransactionsRoot.Hex(),
+		WithdrawalsRoot: e.WithdrawalsRoot.Hex(),
 	}
 }
 

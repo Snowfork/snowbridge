@@ -2,9 +2,9 @@
 mod beacon_minimal_tests {
 	use crate::{
 		config, merkleization, mock::*, pallet::FinalizedBeaconHeadersBlockRoot, Error,
-		ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
-		LatestExecutionHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
-		SyncCommittees, ValidatorsRoot,
+		ExecutionHeader, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders,
+		FinalizedHeaderState, LatestExecutionHeaderState, LatestFinalizedHeaderState,
+		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
@@ -110,7 +110,8 @@ mod beacon_minimal_tests {
 				Error::<mock_minimal::Test>::InvalidSyncCommitteePeriodUpdateWithGap
 			);
 		});
-	}*/
+	}
+	*/
 
 	#[test]
 	fn it_updates_a_invalid_committee_period_sync_update_with_duplicate_entry() {
@@ -279,9 +280,11 @@ mod beacon_minimal_tests {
 				update.clone()
 			));
 
-			let execution_block_root: H256 = update.execution_header.block_hash.clone().into();
+			let execution_header: ExecutionHeader = update.execution_header.try_into().unwrap();
 
-			assert!(<ExecutionHeaders<mock_minimal::Test>>::contains_key(execution_block_root));
+			assert!(<ExecutionHeaders<mock_minimal::Test>>::contains_key(
+				execution_header.block_hash
+			));
 		});
 	}
 
@@ -318,12 +321,15 @@ mod beacon_minimal_tests {
 				import_time: 0,
 			});
 
+			let execution_header: ExecutionHeader =
+				update.execution_header.clone().try_into().unwrap();
+
 			LatestExecutionHeaderState::<mock_minimal::Test>::set(ExecutionHeaderState {
 				beacon_block_root: Default::default(),
 				beacon_slot: 0,
 				block_hash: Default::default(),
 				// initialize with the same block_number in execution_payload of the next update
-				block_number: update.execution_header.block_number,
+				block_number: execution_header.block_number,
 			});
 
 			assert_err!(
