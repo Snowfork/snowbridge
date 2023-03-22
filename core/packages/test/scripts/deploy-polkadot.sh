@@ -5,7 +5,7 @@ source scripts/set-env.sh
 
 generate_chain_spec() {
     echo "Generating chain specification"
-    "$parachain_bin" build-spec --chain "$parachain_runtime" --disable-default-bootnode > "$output_dir/spec.json"
+    "$cumulus_bin" build-spec --chain "$bridge_hub_runtime" --disable-default-bootnode > "$output_dir/spec.json"
 
     initial_beacon_block=""
     while [ -z "$initial_beacon_block" ] || [ "$initial_beacon_block" == "0x0000000000000000000000000000000000000000000000000000000000000000" ]

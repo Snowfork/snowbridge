@@ -2,12 +2,13 @@
 
 # exports enable use in core/packages/test/config/launch-config.toml
 root_dir="$(realpath ../../..)"
-parachain_dir="$root_dir/parachain"
-parachain_runtime="${PARACHAIN_RUNTIME:-snowbase}"
-parachain_bin="$parachain_dir/target/release/snowbridge"
+bridge_hub_runtime="${PARACHAIN_RUNTIME:-bridge-hub-rococo-local}"
 relaychain_version="${POLKADOT_VER:-v0.9.38}"
-relaychain_dir="$parachain_dir/.cargo/$relaychain_version"
+relaychain_dir="$root_dir/parachain/.cargo/$relaychain_version"
 relaychain_bin="${POLKADOT_BIN:-$relaychain_dir/bin/polkadot}"
+cumulus_version="${CUMULUS_VER:-snowbridge}"
+cumulus_dir="$root_dir/parachain/.cargo/$cumulus_version"
+cumulus_bin="${CUMULUS_BIN:-$cumulus_dir/bin/polkadot-parachain}"
 core_dir="$root_dir/core"
 lodestar_version="${LODESTAR_VER:-1.5.1}"
 geth_version="${GETH_VER:-v1.11.2}"
@@ -15,7 +16,7 @@ geth_dir="$root_dir/../go-ethereum/$geth_version"
 contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
-[ "$parachain_runtime" = "snowbase" ] &&
+[ "$bridge_hub_runtime" = "bridge-hub-rococo-local" ] &&
    seconds_per_slot=6 ||
    seconds_per_slot=12
 export output_dir=/tmp/snowbridge
@@ -52,7 +53,7 @@ export RANDAO_COMMIT_DELAY=3
 export RANDAO_COMMIT_EXP=8
 
 ## ParachainClient
-export PARAID=1000
+export PARAID=1013
 
 ## OutboundChannel
 export RELAYER_FEE=100

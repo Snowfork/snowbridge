@@ -25,7 +25,7 @@ func subBeefyCmd() *cobra.Command {
 	cmd.Flags().UintP(
 		"para-id",
 		"i",
-		1000,
+		1013,
 		"Parachain ID",
 	)
 
