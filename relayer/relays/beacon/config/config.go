@@ -2,8 +2,6 @@ package config
 
 import (
 	"errors"
-	"math"
-
 	"github.com/snowfork/snowbridge/relayer/config"
 )
 
@@ -64,8 +62,7 @@ const (
 const (
 	Minimal_CapellaForkEpoch uint64 = 0
 	Goerli_CapellaForkEpoch  uint64 = 162304
-	// TODO: change when timeline of Capella upgrade in mainnet finalized
-	Mainnet_CapellaForkEpoch uint64 = math.MaxUint64
+	Mainnet_CapellaForkEpoch uint64 = 194048
 )
 
 func (c Config) GetActiveSpec() ActiveSpec {
