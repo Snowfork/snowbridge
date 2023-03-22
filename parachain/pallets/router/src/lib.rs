@@ -1,9 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-	dispatch::{DispatchResult},
-};
-
+use frame_support::dispatch::DispatchResult;
 
 use snowbridge_router_primitives::{Action, NativeTokensAction};
 
@@ -33,25 +30,16 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {}
 
 	#[pallet::event]
-	pub enum Event<T: Config> {
-
-	}
+	pub enum Event<T: Config> {}
 
 	impl<T: Config> Pallet<T> {
 		pub fn handle_action(action: &Action) -> DispatchResult {
 			match action {
-				Action::NativeTokens(subaction) => {
-					match subaction {
-						NativeTokensAction::Create { .. } => {
-							Ok(())
-						},
-						_ => {
-							Ok(())
-						}
-					}					
+				Action::NativeTokens(subaction) => match subaction {
+					NativeTokensAction::Create { .. } => Ok(()),
+					_ => Ok(()),
 				},
 			}
 		}
 	}
-
 }
