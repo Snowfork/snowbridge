@@ -11056,6 +11056,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowbridge-router"
+version = "0.1.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-core",
+ "snowbridge-router-primitives",
+ "sp-core 7.0.0",
+ "sp-io 7.0.0",
+ "sp-keyring",
+ "sp-runtime 7.0.0",
+ "sp-std 5.0.0",
+]
+
+[[package]]
+name = "snowbridge-router-primitives"
+version = "0.1.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "rustc-hex",
+ "scale-info",
+ "serde",
+ "sp-core 7.0.0",
+ "sp-runtime 7.0.0",
+ "sp-std 5.0.0",
+ "xcm",
+]
+
+[[package]]
 name = "snowbridge-runtime"
 version = "0.1.1"
 dependencies = [
