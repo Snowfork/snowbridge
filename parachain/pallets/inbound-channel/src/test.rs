@@ -20,10 +20,7 @@ use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
 
-use crate::{
-	self as inbound_channel,
-	envelope::Envelope, Error,
-};
+use crate::{self as inbound_channel, envelope::Envelope, Error};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -111,9 +108,7 @@ pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
 	new_tester_with_config(inbound_channel::GenesisConfig { source_channel })
 }
 
-pub fn new_tester_with_config(
-	config: inbound_channel::GenesisConfig,
-) -> sp_io::TestExternalities {
+pub fn new_tester_with_config(config: inbound_channel::GenesisConfig) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
