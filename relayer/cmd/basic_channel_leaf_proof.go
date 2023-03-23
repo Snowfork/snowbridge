@@ -49,7 +49,7 @@ func BasicChannelLeafProofFn(cmd *cobra.Command, _ []string) error {
 	}
 
 	var proofHex string
-	err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", commitmentHash.Hex(), leafIndex)
+	err = api.Client.Call(&proofHex, "outboundChannel_getMerkleProof", commitmentHash.Hex(), leafIndex)
 	if err != nil {
 		return fmt.Errorf("call rpc: %w", err)
 	}

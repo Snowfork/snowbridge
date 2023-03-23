@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
@@ -14,14 +14,14 @@ import (
 type InitialRequestParams struct {
 	CommitmentHash [32]byte
 	Bitfield       []*big.Int
-	Proof          beefyclient.BeefyClientValidatorProof
+	Proof          contracts.BeefyClientValidatorProof
 }
 
 type FinalRequestParams struct {
-	Commitment     beefyclient.BeefyClientCommitment
+	Commitment     contracts.BeefyClientCommitment
 	Bitfield       []*big.Int
-	Proofs         []beefyclient.BeefyClientValidatorProof
-	Leaf           beefyclient.BeefyClientMMRLeaf
+	Proofs         []contracts.BeefyClientValidatorProof
+	Leaf           contracts.BeefyClientMMRLeaf
 	LeafProof      [][32]byte
 	LeafProofOrder *big.Int
 }
@@ -68,7 +68,7 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	msg := InitialRequestParams{
 		CommitmentHash: *commitmentHash,
 		Bitfield:       initialBitfield,
-		Proof: beefyclient.BeefyClientValidatorProof{
+		Proof: contracts.BeefyClientValidatorProof{
 			V:       v,
 			R:       _r,
 			S:       s,
@@ -109,7 +109,7 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 }
 
 func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfield []*big.Int) (*FinalRequestParams, error) {
-	validatorProofs := []beefyclient.BeefyClientValidatorProof{}
+	validatorProofs := []contracts.BeefyClientValidatorProof{}
 
 	for _, validatorIndex := range validatorIndices {
 		ok, beefySig := r.SignedCommitment.Signatures[validatorIndex].Unwrap()
@@ -128,7 +128,7 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 			return nil, err
 		}
 
-		validatorProofs = append(validatorProofs, beefyclient.BeefyClientValidatorProof{
+		validatorProofs = append(validatorProofs, contracts.BeefyClientValidatorProof{
 			V:       v,
 			R:       _r,
 			S:       s,
@@ -143,13 +143,13 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 		return nil, err
 	}
 
-	commitment := beefyclient.BeefyClientCommitment{
+	commitment := contracts.BeefyClientCommitment{
 		Payload:        *payload,
 		BlockNumber:    r.SignedCommitment.Commitment.BlockNumber,
 		ValidatorSetID: r.SignedCommitment.Commitment.ValidatorSetID,
 	}
 
-	inputLeaf := beefyclient.BeefyClientMMRLeaf{
+	inputLeaf := contracts.BeefyClientMMRLeaf{
 		Version:              uint8(r.Proof.Leaf.Version),
 		ParentNumber:         uint32(r.Proof.Leaf.ParentNumberAndHash.ParentNumber),
 		ParentHash:           r.Proof.Leaf.ParentNumberAndHash.Hash,
@@ -178,7 +178,7 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 
 // Builds a payload which is partially SCALE-encoded. This is more efficient for the light client to verify
 // as it does not have to implement a fully fledged SCALE-encoder.
-func buildPayload(items []types.PayloadItem) (*beefyclient.BeefyClientPayload, error) {
+func buildPayload(items []types.PayloadItem) (*contracts.BeefyClientPayload, error) {
 	index := -1
 
 	for i, payloadItem := range items {
@@ -219,7 +219,7 @@ func buildPayload(items []types.PayloadItem) (*beefyclient.BeefyClientPayload, e
 		return nil, fmt.Errorf("expected 2 slices")
 	}
 
-	return &beefyclient.BeefyClientPayload{
+	return &contracts.BeefyClientPayload{
 		MmrRootHash: mmrRootHash,
 		Prefix:      slices[0],
 		Suffix:      slices[1],

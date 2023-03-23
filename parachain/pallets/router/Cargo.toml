@@ -25,7 +25,6 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
 
-
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38" }
 hex-literal = { version = "0.3.4" }

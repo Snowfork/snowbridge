@@ -15,11 +15,10 @@ import (
 type Message struct {
 	writer    *parachain.ParachainWriter
 	listener  *EthereumListener
-	addresses []common.Address
 }
 
-func New(writer *parachain.ParachainWriter, listener *EthereumListener, addresses []common.Address) (*Message, error) {
-	return &Message{writer, listener, addresses}, nil
+func New(writer *parachain.ParachainWriter, listener *EthereumListener) (*Message, error) {
+	return &Message{writer, listener}, nil
 }
 
 func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
@@ -75,22 +74,17 @@ func (m *Message) Sync(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (m *Message) syncBasic(ctx context.Context, eg *errgroup.Group, secondLastSyncedBlockNumber, lastSyncedBlockNumber uint64) error {
-	addressNonceMap := make(map[common.Address]uint64, len(m.addresses))
-	for _, address := range m.addresses {
-		addressNonceMap[address] = 1
-	}
-
+func (m *Message) sync(ctx context.Context, eg *errgroup.Group, secondLastSyncedBlockNumber, lastSyncedBlockNumber uint64) error {
 	log.WithFields(log.Fields{
 		"start": secondLastSyncedBlockNumber,
 		"end":   lastSyncedBlockNumber,
 	}).Info("fetching basic channel messages")
-	basicPayload, err := m.listener.ProcessBasicEvents(ctx, secondLastSyncedBlockNumber, lastSyncedBlockNumber, addressNonceMap)
+	payload, err := m.listener.ProcessEvents(ctx, secondLastSyncedBlockNumber, lastSyncedBlockNumber)
 	if err != nil {
 		return err
 	}
 
-	return m.writeBasicMessages(ctx, basicPayload)
+	return m.writeBasicMessages(ctx, payload)
 }
 
 func (m *Message) writeBasicMessages(ctx context.Context, payload ParachainPayload) error {
@@ -171,7 +165,7 @@ func (m *Message) syncUnprocessedBasicMessages(ctx context.Context) (uint64, err
 		"block_number": lastVerifiedBlockNumber,
 		"nonces":       addressNonzeroNonceMap,
 	}).Info("checking last synced basic channel messages on startup")
-	basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber, addressNonzeroNonceMap)
+	basicPayload, err := m.listener.ProcessEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber, addressNonzeroNonceMap)
 	if err != nil {
 		return 0, err
 	}

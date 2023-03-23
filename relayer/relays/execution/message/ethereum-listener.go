@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/snowfork/snowbridge/relayer/contracts/basic"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/relays/execution/config"
 	"golang.org/x/sync/errgroup"
 )
@@ -20,16 +20,16 @@ type ParachainPayload struct {
 }
 
 type EventContainer struct {
-	Event  *etypes.Log
-	Origin common.Address
-	Nonce  uint64
+	Event *etypes.Log
+	Dest  []byte
+	Nonce uint64
 }
 
 type EthereumListener struct {
-	config               *config.SourceConfig
-	conn                 *ethereum.Connection
-	basicOutboundChannel *basic.BasicOutboundChannel
-	headerCache          *ethereum.HeaderCache
+	config          *config.SourceConfig
+	conn            *ethereum.Connection
+	outboundChannel *contracts.OutboundChannel
+	headerCache     *ethereum.HeaderCache
 }
 
 func NewEthereumListener(
@@ -37,9 +37,9 @@ func NewEthereumListener(
 	conn *ethereum.Connection,
 ) *EthereumListener {
 	return &EthereumListener{
-		config:               config,
-		conn:                 conn,
-		basicOutboundChannel: nil,
+		config:          config,
+		conn:            conn,
+		outboundChannel: nil,
 	}
 }
 
@@ -56,24 +56,24 @@ func (li *EthereumListener) Start(
 		return err
 	}
 
-	address := common.HexToAddress(li.config.Contracts.BasicOutboundChannel)
-	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.Client())
+	address := common.HexToAddress(li.config.Contracts.OutboundChannel)
+	outboundChannel, err := contracts.NewOutboundChannel(address, li.conn.Client())
 	if err != nil {
 		return err
 	}
-	li.basicOutboundChannel = basicOutboundChannel
+	li.outboundChannel = outboundChannel
 
 	return nil
 }
 
-func (li *EthereumListener) ProcessBasicEvents(
+func (li *EthereumListener) ProcessEvents(
 	ctx context.Context,
 	start uint64,
 	end uint64,
 	addressNonceMap map[common.Address]uint64,
 ) (ParachainPayload, error) {
 	filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
-	basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, addressNonceMap, &filterOptions)
+	basicEvents, err := li.queryEvents(li.outboundChannel, addressNonceMap, &filterOptions)
 	if err != nil {
 		return ParachainPayload{}, err
 	}
@@ -86,7 +86,7 @@ func (li *EthereumListener) ProcessBasicEvents(
 	return ParachainPayload{Messages: messages}, nil
 }
 
-func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChannel, addressNonceMap map[common.Address]uint64, options *bind.FilterOpts) ([]EventContainer, error) {
+func (li *EthereumListener) queryEvents(contract *contracts.OutboundChannel, addressNonceMap map[common.Address]uint64, options *bind.FilterOpts) ([]EventContainer, error) {
 	var events []EventContainer
 
 	iter, err := contract.FilterMessage(options)
@@ -104,13 +104,11 @@ func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChanne
 			break
 		}
 
-		if addressNonceMap[iter.Event.Account] != 0 {
-			events = append(events, EventContainer{
-				Event:  &iter.Event.Raw,
-				Origin: iter.Event.Account,
-				Nonce:  iter.Event.Nonce,
-			})
-		}
+		events = append(events, EventContainer{
+			Event: &iter.Event.Raw,
+			Dest:  iter.Event.Dest,
+			Nonce: iter.Event.Nonce,
+		})
 	}
 	return events, nil
 }

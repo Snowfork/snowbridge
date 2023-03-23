@@ -4,7 +4,7 @@ use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::DispatchError,
 	parameter_types,
-	traits::{Everything, GenesisBuild},
+	traits::{Everything, ConstU64, GenesisBuild},
 };
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
@@ -15,15 +15,34 @@ use sp_runtime::{
 };
 use sp_std::convert::From;
 
-use snowbridge_core::{Message, MessageDispatch, Proof};
+use snowbridge_core::{Message, Proof};
 use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
+
+use polkadot_parachain::primitives::Sibling;
+use xcm::latest::prelude::*;
 
 use crate::{self as inbound_channel, envelope::Envelope, Error};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+parameter_types! {
+	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Rococo);
+}
+
+/// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
+/// when determining ownership of accounts for asset transacting and when attempting to use XCM
+/// `Transact` in order to determine the dispatch Origin.
+pub type LocationToAccountId = (
+	// The parent (Relay-chain) origin converts to the parent `AccountId`.
+	ParentIsPreset<AccountId>,
+	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
+	AccountId32Aliases<RelayNetwork, AccountId>,
+);
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -32,7 +51,8 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		BasicInboundChannel: inbound_channel::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		InboundChannel: inbound_channel::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -61,7 +81,7 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -69,6 +89,23 @@ impl frame_system::Config for Test {
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
+
+parameter_types! {
+	pub const ExistentialDeposit: u64 = 1;
+}
+
+impl pallet_balances::Config for Test {
+	type Balance = u64;
+	type DustRemoval = ();
+	type RuntimeEvent = RuntimeEvent;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+}
+
 // Mock verifier
 pub struct MockVerifier;
 
@@ -83,24 +120,12 @@ impl Verifier for MockVerifier {
 	}
 }
 
-// Mock Dispatch
-pub struct MockMessageDispatch;
-
-impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
-	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_dispatch_event(
-		_: MessageId,
-	) -> Option<<Test as frame_system::Config>::RuntimeEvent> {
-		None
-	}
-}
-
 impl inbound_channel::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
-	type MessageDispatch = MockMessageDispatch;
+	type Token = Balances;
+	type Reward = ConstU64<10>;
+	type LocationToAccountId = LocationToAccountId;
 	type WeightInfo = ();
 }
 

@@ -18,7 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/bitfield"
 
 	log "github.com/sirupsen/logrus"
@@ -27,7 +27,7 @@ import (
 type EthereumWriter struct {
 	config          *SinkConfig
 	conn            *ethereum.Connection
-	contract        *beefyclient.BeefyClient
+	contract        *contracts.BeefyClient
 	blockWaitPeriod uint64
 }
 
@@ -44,7 +44,7 @@ func NewEthereumWriter(
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, requests <-chan Request) error {
 
 	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
-	contract, err := beefyclient.NewBeefyClient(address, wr.conn.Client())
+	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}

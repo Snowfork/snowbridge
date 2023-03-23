@@ -16,8 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/snowfork/snowbridge/relayer/contracts/basic"
-	"github.com/snowfork/snowbridge/relayer/contracts/opaqueproof"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -28,7 +27,7 @@ import (
 type EthereumWriter struct {
 	config              *SinkConfig
 	conn                *ethereum.Connection
-	basicInboundChannel *basic.BasicInboundChannel
+	inboundChannel *contracts.InboundChannel
 	tasks               <-chan *Task
 	abiPacker           abi.Arguments
 	abiBasicUnpacker    abi.Arguments
@@ -42,30 +41,30 @@ func NewEthereumWriter(
 	return &EthereumWriter{
 		config:              config,
 		conn:                conn,
-		basicInboundChannel: nil,
+		inboundChannel: nil,
 		tasks:               tasks,
 	}, nil
 }
 
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	address := common.HexToAddress(wr.config.Contracts.BasicInboundChannel)
-	basicChannel, err := basic.NewBasicInboundChannel(address, wr.conn.Client())
+	address := common.HexToAddress(wr.config.Contracts.InboundChannel)
+	basicChannel, err := contracts.NewInboundChannel(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}
-	wr.basicInboundChannel = basicChannel
+	wr.inboundChannel = basicChannel
 
-	opaqueProofABI, err := abi.JSON(strings.NewReader(opaqueproof.OpaqueProofABI))
+	opaqueProofABI, err := abi.JSON(strings.NewReader(contracts.OpaqueProofABI))
 	if err != nil {
 		return err
 	}
 	wr.abiPacker = opaqueProofABI.Methods["dummy"].Inputs
 
-	basicInboundChannelABI, err := abi.JSON(strings.NewReader(basic.BasicInboundChannelABI))
+	inboundChannelABI, err := abi.JSON(strings.NewReader(contracts.InboundChannelABI))
 	if err != nil {
 		return err
 	}
-	wr.abiBasicUnpacker = abi.Arguments{basicInboundChannelABI.Methods["submit"].Inputs[0]}
+	wr.abiBasicUnpacker = abi.Arguments{inboundChannelABI.Methods["submit"].Inputs[0]}
 
 	eg.Go(func() error {
 		err := wr.writeMessagesLoop(ctx)
@@ -153,7 +152,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 ) error {
 	message := commitmentProof.Message.IntoInboundMessage()
 
-	paraHeadProof := opaqueproof.ParachainClientHeadProof{
+	paraHeadProof := contracts.ParachainClientHeadProof{
 		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
 		Width: big.NewInt(int64(proof.MerkleProofData.NumberOfLeaves)),
 		Proof: proof.MerkleProofData.Proof,
@@ -190,11 +189,11 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		merkleProofItems = append(merkleProofItems, proofItem)
 	}
 
-	finalProof := opaqueproof.ParachainClientProof{
+	finalProof := contracts.ParachainClientProof{
 		HeadPrefix: prefix,
 		HeadSuffix: suffix,
 		HeadProof:  paraHeadProof,
-		LeafPartial: opaqueproof.ParachainClientMMRLeafPartial{
+		LeafPartial: contracts.ParachainClientMMRLeafPartial{
 			Version:              uint8(proof.MMRProof.Leaf.Version),
 			ParentNumber:         uint32(proof.MMRProof.Leaf.ParentNumberAndHash.ParentNumber),
 			ParentHash:           proof.MMRProof.Leaf.ParentNumberAndHash.Hash,
@@ -211,7 +210,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("pack proof: %w", err)
 	}
 
-	tx, err := wr.basicInboundChannel.Submit(
+	tx, err := wr.inboundChannel.Submit(
 		options, message, commitmentProof.Proof.InnerHashes, opaqueProof,
 	)
 	if err != nil {

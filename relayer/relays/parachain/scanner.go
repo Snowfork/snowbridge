@@ -1,3 +1,6 @@
+// TODO: Make work with latest parachain->ethereum protocol
+//go:build exclude
+
 package parachain
 
 import (

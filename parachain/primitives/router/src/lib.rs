@@ -1,12 +1,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_core::H160;
+use sp_core::RuntimeDebug;
+use codec::{Encode, Decode};
 use xcm::latest::prelude::*;
 
+/// An inbound message that has had its outer envelope decoded.
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub enum Action {
 	NativeTokens(NativeTokensAction),
 }
 
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub enum NativeTokensAction {
 	Create {
 		token: H160,

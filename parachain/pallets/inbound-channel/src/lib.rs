@@ -9,12 +9,20 @@ pub mod weights;
 mod test;
 
 use frame_system::ensure_signed;
-use snowbridge_core::{Message, MessageDispatch, MessageId, Verifier};
+use snowbridge_core::{Message, Verifier};
 use sp_core::H160;
 use sp_std::convert::TryFrom;
+use xcm_executor::traits::Convert;
 
 use envelope::Envelope;
 pub use weights::WeightInfo;
+
+use xcm::latest::prelude::*;
+
+use frame_support::traits::fungible::{Inspect, Transfer};
+
+type BalanceOf<T> =
+        <<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 pub use pallet::*;
 
@@ -25,7 +33,6 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
@@ -37,11 +44,14 @@ pub mod pallet {
 		/// Verifier module for message verification.
 		type Verifier: Verifier;
 
-		/// Verifier module for message verification.
-		type MessageDispatch: MessageDispatch<Self, MessageId>;
+		type Token: Transfer<Self::AccountId>;
+
+		type LocationToAccountId: Convert<MultiLocation, Self::AccountId>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
+
+		type Reward: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::hooks]
@@ -58,6 +68,8 @@ pub mod pallet {
 		InvalidEnvelope,
 		/// Message has an unexpected nonce.
 		InvalidNonce,
+		/// Cannot convert location
+		InvalidAccountConversion
 	}
 
 	/// Source channel on the ethereum side
@@ -66,7 +78,7 @@ pub mod pallet {
 	pub type SourceChannel<T: Config> = StorageValue<_, H160, ValueQuery>;
 
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, H160, u64, ValueQuery>;
+	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, MultiLocation, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub type LatestVerifiedBlockNumber<T: Config> = StorageValue<_, u64, ValueQuery>;
@@ -95,7 +107,7 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight(100_000_000)]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
-			ensure_signed(origin)?;
+			let who = ensure_signed(origin)?;
 			// submit message to verifier for verification
 			let (log, block_number) = T::Verifier::verify(&message)?;
 
@@ -109,7 +121,7 @@ pub mod pallet {
 			}
 
 			// Verify message nonce
-			<Nonce<T>>::try_mutate(envelope.account, |nonce| -> DispatchResult {
+			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {
 				if envelope.nonce != *nonce + 1 {
 					Err(Error::<T>::InvalidNonce.into())
 				} else {
@@ -118,8 +130,9 @@ pub mod pallet {
 				}
 			})?;
 
-			let message_id = MessageId::new(envelope.account, envelope.nonce);
-			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
+			// Reward relayer from the sovereign account of the destination parachain
+			let dest_account = T::LocationToAccountId::convert(envelope.dest).map_err(|_| Error::<T>::InvalidAccountConversion)?;
+			T::Token::transfer(&dest_account, &who, T::Reward::get(), true)?;
 
 			<LatestVerifiedBlockNumber<T>>::set(block_number);
 
