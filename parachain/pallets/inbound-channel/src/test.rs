@@ -21,8 +21,8 @@ use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 use hex_literal::hex;
 
 use crate::{
-	inbound as basic_inbound_channel,
-	inbound::{envelope::Envelope, Error},
+	self as inbound_channel,
+	envelope::Envelope, Error,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -35,7 +35,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		BasicInboundChannel: basic_inbound_channel::{Pallet, Call, Storage, Event<T>},
+		BasicInboundChannel: inbound_channel::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -100,7 +100,7 @@ impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
 	}
 }
 
-impl basic_inbound_channel::Config for Test {
+impl inbound_channel::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
 	type MessageDispatch = MockMessageDispatch;
@@ -108,11 +108,11 @@ impl basic_inbound_channel::Config for Test {
 }
 
 pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
-	new_tester_with_config(basic_inbound_channel::GenesisConfig { source_channel })
+	new_tester_with_config(inbound_channel::GenesisConfig { source_channel })
 }
 
 pub fn new_tester_with_config(
-	config: basic_inbound_channel::GenesisConfig,
+	config: inbound_channel::GenesisConfig,
 ) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 

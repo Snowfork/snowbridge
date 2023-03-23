@@ -13,7 +13,7 @@ use sp_runtime::{
 };
 use sp_std::convert::From;
 
-use crate::outbound as basic_outbound_channel;
+use crate::{self as outbound_channel};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -25,7 +25,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		BasicOutboundChannel: basic_outbound_channel::{Pallet, Config<T>, Storage, Event<T>},
+		BasicOutboundChannel: outbound_channel::{Pallet, Config<T>, Storage, Event<T>},
 	}
 );
 
@@ -68,7 +68,7 @@ parameter_types! {
 	pub const MaxMessagesPerCommit: u32 = 20;
 }
 
-impl basic_outbound_channel::Config for Test {
+impl outbound_channel::Config for Test {
 	type SourceId = AccountId;
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
@@ -80,8 +80,8 @@ impl basic_outbound_channel::Config for Test {
 pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	let config: basic_outbound_channel::GenesisConfig<Test> =
-		basic_outbound_channel::GenesisConfig { interval: 1u64 };
+	let config: outbound_channel::GenesisConfig<Test> =
+		outbound_channel::GenesisConfig { interval: 1u64 };
 	config.assimilate_storage(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
