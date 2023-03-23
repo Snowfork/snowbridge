@@ -3218,29 +3218,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
-name = "snowbridge-basic-channel"
-version = "0.1.1"
-dependencies = [
- "ethabi-decode 1.3.3 (git+https://github.com/Snowfork/ethabi-decode.git?branch=master)",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "parity-scale-codec",
- "rlp",
- "scale-info",
- "serde",
- "snowbridge-basic-channel-merkle-proof",
- "snowbridge-core",
- "snowbridge-ethereum",
- "sp-core 7.0.0",
- "sp-io 7.0.0",
- "sp-keyring",
- "sp-runtime 7.0.0",
- "sp-std 5.0.0",
-]
-
-[[package]]
 name = "snowbridge-basic-channel-merkle-proof"
 version = "0.1.1"
 dependencies = [
@@ -3303,25 +3280,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-dispatch"
-version = "0.1.1"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "snowbridge-core",
- "sp-core 7.0.0",
- "sp-io 7.0.0",
- "sp-keyring",
- "sp-runtime 7.0.0",
- "sp-std 5.0.0",
-]
-
-[[package]]
 name = "snowbridge-ethereum"
 version = "0.1.0"
 dependencies = [
@@ -3373,6 +3331,50 @@ dependencies = [
  "sp-std 5.0.0",
  "ssz-rs",
  "ssz-rs-derive",
+]
+
+[[package]]
+name = "snowbridge-inbound-channel"
+version = "0.1.1"
+dependencies = [
+ "ethabi-decode 1.3.3 (git+https://github.com/Snowfork/ethabi-decode.git?branch=master)",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec",
+ "rlp",
+ "scale-info",
+ "serde",
+ "snowbridge-core",
+ "snowbridge-ethereum",
+ "sp-core 7.0.0",
+ "sp-io 7.0.0",
+ "sp-keyring",
+ "sp-runtime 7.0.0",
+ "sp-std 5.0.0",
+]
+
+[[package]]
+name = "snowbridge-outbound-channel"
+version = "0.1.1"
+dependencies = [
+ "ethabi-decode 1.3.3 (git+https://github.com/Snowfork/ethabi-decode.git?branch=master)",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec",
+ "rlp",
+ "scale-info",
+ "serde",
+ "snowbridge-basic-channel-merkle-proof",
+ "snowbridge-core",
+ "sp-core 7.0.0",
+ "sp-io 7.0.0",
+ "sp-keyring",
+ "sp-runtime 7.0.0",
+ "sp-std 5.0.0",
 ]
 
 [[package]]

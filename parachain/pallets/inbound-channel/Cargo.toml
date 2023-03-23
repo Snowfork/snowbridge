@@ -1,6 +1,6 @@
 [package]
-name = "snowbridge-basic-channel"
-description = "Snowbridge Basic Channel"
+name = "snowbridge-inbound-channel"
+description = "Snowbridge Inbound Channel"
 version = "0.1.1"
 edition = "2021"
 authors = [ "Snowfork <contact@snowfork.com>" ]
@@ -26,7 +26,6 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
-snowbridge-basic-channel-merkle-proof = { path = "merkle-proof", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
@@ -50,7 +49,6 @@ std = [
     "sp-io/std",
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
-    "snowbridge-basic-channel-merkle-proof/std",
     "ethabi/std"
 ]
 runtime-benchmarks = [
