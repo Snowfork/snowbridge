@@ -3,10 +3,12 @@ members = [
     "primitives/core",
     "primitives/ethereum",
     "primitives/testutils",
+    "primitives/router",
     "pallets/inbound-channel",
     "pallets/outbound-channel",
     "pallets/outbound-channel/rpc",
     "pallets/outbound-channel/merkle-proof",
+    "pallets/router",
     "pallets/ethereum-beacon-client",
     "tools/query-events",
     "tools/call-index"
