@@ -11,7 +11,7 @@ start_chains()
     echo "start ethereum and deploy bridge contrancts"
     deploy_ethereum
     #2 start polkadot relaychain and snowbridge parachain
-    echo "Starting relaychain and snowbridge parachain"
+    echo "Starting Polkadot, BridgeHub, and Snowbridge"
     deploy_polkadot
     echo "Chains started!"
 }
