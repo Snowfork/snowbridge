@@ -373,6 +373,7 @@ mod beacon_minimal_tests {
 				update.execution_header.clone().try_into().unwrap();
 
 			LatestExecutionHeaderState::<mock_minimal::Test>::set(ExecutionHeaderState {
+				beacon_block_root: Default::default(),
 				beacon_slot: 0,
 				block_hash: Default::default(),
 				// initialize with the same block_number in execution_payload of the next update

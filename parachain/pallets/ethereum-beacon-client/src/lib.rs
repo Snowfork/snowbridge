@@ -675,7 +675,7 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			Self::store_execution_header(execution_header, beacon_slot)?;
+			Self::store_execution_header(execution_header, beacon_slot, beacon_block_root)?;
 
 			Ok(())
 		}
@@ -985,7 +985,11 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_execution_header(header: ExecutionHeader, beacon_slot: u64) -> DispatchResult {
+		fn store_execution_header(
+			header: ExecutionHeader,
+			beacon_slot: u64,
+			beacon_block_root: H256,
+		) -> DispatchResult {
 			let block_number = header.block_number;
 			let block_hash = header.block_hash;
 
@@ -1013,6 +1017,7 @@ pub mod pallet {
 
 			<ExecutionHeaders<T>>::insert(block_hash, header);
 			LatestExecutionHeaderState::<T>::mutate(|s| {
+				s.beacon_block_root = beacon_block_root;
 				s.beacon_slot = beacon_slot;
 				s.block_hash = block_hash;
 				s.block_number = block_number;

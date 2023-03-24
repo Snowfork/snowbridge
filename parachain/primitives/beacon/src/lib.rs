@@ -125,6 +125,7 @@ impl<'de> Deserialize<'de> for PublicKey {
 
 #[derive(Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct ExecutionHeaderState {
+	pub beacon_block_root: H256,
 	pub beacon_slot: u64,
 	pub block_hash: H256,
 	pub block_number: u64,
