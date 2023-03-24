@@ -25,5 +25,5 @@ source_up_if_exists
 # export PARACHAIN_RELAY_ETH_KEY=     # Your Parachain relayer account private key
 # export E2E_TEST_ETH_KEY=            # Your E2E test account private key
 
-export CUMULUS_VER=snowbridge
+# export CUMULUS_VER=snowbridge       # For dev setup change to some feature branch
 

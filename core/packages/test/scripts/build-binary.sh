@@ -31,12 +31,7 @@ rebuild_cumulus(){
 }
 
 build_cumulus_from_source(){
-    cumulus_src=$root_dir/cumulus
-    if [ ! -d "$cumulus_src" ] ; then
-        git clone https://github.com/Snowfork/cumulus $cumulus_src
-    fi
-    pushd $cumulus_src
-    git fetch origin && git switch $cumulus_version
+    pushd $root_dir/cumulus
     cargo build --release --bin polkadot-parachain
     cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
     popd
