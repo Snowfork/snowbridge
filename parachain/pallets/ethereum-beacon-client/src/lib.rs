@@ -18,10 +18,16 @@ mod tests_minimal;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+use sp_std::marker::PhantomData;
 pub use weights::WeightInfo;
 
 use crate::merkleization::get_sync_committee_bits;
-use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
+use frame_support::{
+	dispatch::DispatchResult,
+	log,
+	traits::{Get, UnixTime},
+	transactional, BoundedVec,
+};
 use frame_system::ensure_signed;
 use snowbridge_beacon_primitives::{
 	BeaconHeader, Domain, ExecutionHeader, ExecutionHeaderState, FinalizedHeaderState,
@@ -32,8 +38,6 @@ use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_std::prelude::*;
-
-use frame_support::{traits::Get, BoundedVec};
 
 pub use pallet::*;
 
@@ -58,6 +62,24 @@ pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<
 	<T as Config>::MaxSyncCommitteeSize,
 >;
 pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
+
+// Todo: cached all data in 1 sync_committee_period
+// need to finalize and move to bridge runtime before production ready
+pub const MAX_SYNC_COMMITTEE_CACHED: u32 = 256;
+pub struct MaxSyncCommitteeCachedGet<T>(PhantomData<T>);
+impl<T: Config> Get<u32> for MaxSyncCommitteeCachedGet<T> {
+	fn get() -> u32 {
+		MAX_SYNC_COMMITTEE_CACHED
+	}
+}
+
+pub const MAX_EXECUTION_HEADER_CACHED: u32 = 8192;
+pub struct MaxExecutionHeaderCachedGet<T>(PhantomData<T>);
+impl<T: Config> Get<u32> for MaxExecutionHeaderCachedGet<T> {
+	fn get() -> u32 {
+		MAX_EXECUTION_HEADER_CACHED
+	}
+}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -155,6 +177,9 @@ pub mod pallet {
 		InvalidExecutionHeaderUpdate,
 		FinalizedBeaconHeaderSlotsExceeded,
 		ExecutionHeaderMappingFailed,
+		BoundedFinalityHeaderExceed,
+		BoundedExecutionHeaderExceed,
+		BoundedSyncCommitteeExceed,
 	}
 
 	#[pallet::hooks]
@@ -172,15 +197,29 @@ pub mod pallet {
 	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
 		StorageMap<_, Identity, H256, H256, ValueQuery>;
 
+	/// Auxiliary storage used to pruning finalizedBeaconHeaders
+	#[pallet::storage]
+	pub(super) type FinalizedBeaconHeadersList<T: Config> =
+		StorageValue<_, BoundedVec<H256, T::MaxFinalizedHeaderSlotArray>, ValueQuery>;
+
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
 		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
+	/// Auxiliary storage used to pruning ExecutionHeaders
+	#[pallet::storage]
+	pub(super) type ExecutionHeadersList<T: Config> =
+		StorageValue<_, BoundedVec<H256, MaxExecutionHeaderCachedGet<T>>, ValueQuery>;
+
 	/// Current sync committee corresponding to the active header.
-	/// TODO  prune older sync committees than xxx
 	#[pallet::storage]
 	pub(super) type SyncCommittees<T: Config> =
 		StorageMap<_, Identity, u64, SyncCommitteeOf<T>, ValueQuery>;
+
+	/// Auxiliary storage used to pruning SyncCommittees
+	#[pallet::storage]
+	pub(super) type SyncCommitteesList<T: Config> =
+		StorageValue<_, BoundedVec<u64, MaxSyncCommitteeCachedGet<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
@@ -373,7 +412,7 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
 					.into();
 
-			Self::store_sync_committee(period, initial_sync.current_sync_committee);
+			Self::store_sync_committee(period, initial_sync.current_sync_committee)?;
 			Self::store_validators_root(initial_sync.validators_root);
 
 			let slot = initial_sync.header.slot;
@@ -386,6 +425,8 @@ pub mod pallet {
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, initial_sync.header);
 			Self::add_finalized_header_slot(slot)?;
+			<FinalizedBeaconHeadersList<T>>::try_append(block_root)
+				.map_err(|_| Error::<T>::BoundedFinalityHeaderExceed)?;
 			<LatestFinalizedHeaderState<T>>::set(last_finalized_header);
 
 			Ok(())
@@ -470,9 +511,13 @@ pub mod pallet {
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
-			Self::store_block_root(update.block_roots_root, block_root);
-			Self::store_sync_committee(next_period, update.next_sync_committee);
-			Self::store_finalized_header(block_root, update.finalized_header)?;
+			Self::store_sync_committee(next_period, update.next_sync_committee)?;
+
+			Self::store_finalized_header(
+				block_root,
+				update.finalized_header,
+				update.block_roots_root,
+			)?;
 
 			Ok(())
 		}
@@ -558,25 +603,20 @@ pub mod pallet {
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
-			Self::store_block_root(update.block_roots_root, block_root);
-
-			Self::store_finalized_header(block_root, update.finalized_header)?;
+			Self::store_finalized_header(
+				block_root,
+				update.finalized_header,
+				update.block_roots_root,
+			)?;
 
 			Ok(())
-		}
-
-		fn store_block_root(block_roots_hash: H256, finalized_header_block_root: H256) {
-			<FinalizedBeaconHeadersBlockRoot<T>>::insert(
-				finalized_header_block_root,
-				block_roots_hash,
-			);
 		}
 
 		fn process_header(update: HeaderUpdateOf<T>) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
-			let block_slot = update.beacon_header.slot;
-			ensure!(block_slot <= latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
+			let beacon_slot = update.beacon_header.slot;
+			ensure!(beacon_slot <= latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
 
 			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
 
@@ -613,7 +653,7 @@ pub mod pallet {
 
 			Self::ancestry_proof(
 				update.block_root_branch,
-				block_slot,
+				beacon_slot,
 				beacon_block_root,
 				update.block_root_branch_header_root,
 			)?;
@@ -635,14 +675,7 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			let block_hash = execution_header.block_hash;
-
-			Self::store_execution_header(
-				block_hash,
-				execution_header,
-				block_slot,
-				beacon_block_root,
-			);
+			Self::store_execution_header(execution_header, beacon_slot)?;
 
 			Ok(())
 		}
@@ -693,7 +726,7 @@ pub mod pallet {
 			let index_in_array = block_slot % max_slots_per_historical_root;
 			let leaf_index = max_slots_per_historical_root + index_in_array;
 
-			log::info!(
+			log::debug!(
 				target: "ethereum-beacon-client",
 				"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH, leaf_index
 			);
@@ -865,25 +898,60 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_sync_committee(period: u64, sync_committee: SyncCommitteeOf<T>) {
-			<SyncCommittees<T>>::insert(period, sync_committee);
+		fn store_sync_committee(period: u64, sync_committee: SyncCommitteeOf<T>) -> DispatchResult {
+			<SyncCommitteesList<T>>::try_mutate(|vec| {
+				if vec.len() as u32 == MAX_SYNC_COMMITTEE_CACHED {
+					let period = vec.remove(0);
+					<SyncCommittees<T>>::remove(period);
+					log::debug!(
+						target: "ethereum-beacon-client",
+						"💫 Pruning oldest sync committee period stored to {}.",
+						period
+					);
+				}
+				vec.try_push(period)
+			})
+			.map_err(|_| <Error<T>>::BoundedSyncCommitteeExceed)?;
 
-			log::trace!(
+			log::debug!(
 				target: "ethereum-beacon-client",
 				"💫 Updated latest sync committee period stored to {}.",
 				period
 			);
 
+			<SyncCommittees<T>>::insert(period, sync_committee);
 			<LatestSyncCommitteePeriod<T>>::set(period);
 
 			Self::deposit_event(Event::SyncCommitteeUpdated { period });
+
+			Ok(())
 		}
 
-		fn store_finalized_header(block_root: Root, header: BeaconHeader) -> DispatchResult {
+		fn store_finalized_header(
+			block_root: Root,
+			header: BeaconHeader,
+			block_roots_root: Root,
+		) -> DispatchResult {
 			let slot = header.slot;
 
-			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
 			Self::add_finalized_header_slot(slot)?;
+
+			<FinalizedBeaconHeadersList<T>>::try_mutate(|vec| {
+				if vec.len() as u32 == T::MaxFinalizedHeaderSlotArray::get() {
+					let key = vec.remove(0);
+					<FinalizedBeaconHeadersBlockRoot<T>>::remove(key);
+					if let Some(header) = <FinalizedBeaconHeaders<T>>::take(key) {
+						log::debug!(
+							target: "ethereum-beacon-client",
+							"💫 Pruning oldest finalized block root {} at slot {}.",
+							block_root,
+							header.slot
+						);
+					}
+				}
+				vec.try_push(block_root)
+			})
+			.map_err(|_| <Error<T>>::BoundedFinalityHeaderExceed)?;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -892,6 +960,8 @@ pub mod pallet {
 				slot
 			);
 
+			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
+			<FinalizedBeaconHeadersBlockRoot<T>>::insert(block_root, block_roots_root);
 			LatestFinalizedHeaderState::<T>::mutate(|s| {
 				s.import_time = T::TimeProvider::now().as_secs();
 				s.beacon_block_root = block_root;
@@ -915,15 +985,24 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_execution_header(
-			block_hash: H256,
-			header: ExecutionHeader,
-			beacon_slot: u64,
-			beacon_block_root: H256,
-		) {
+		fn store_execution_header(header: ExecutionHeader, beacon_slot: u64) -> DispatchResult {
 			let block_number = header.block_number;
+			let block_hash = header.block_hash;
 
-			<ExecutionHeaders<T>>::insert(block_hash, header);
+			<ExecutionHeadersList<T>>::try_mutate(|vec| {
+				if vec.len() as u32 == MAX_EXECUTION_HEADER_CACHED {
+					if let Some(header) = <ExecutionHeaders<T>>::take(vec.remove(0)) {
+						log::debug!(
+							target: "ethereum-beacon-client",
+							"💫 Pruning oldest execution block at {} to number {}.",
+							header.block_hash,
+							header.block_number
+						);
+					}
+				}
+				vec.try_push(block_hash)
+			})
+			.map_err(|_| <Error<T>>::BoundedExecutionHeaderExceed)?;
 
 			log::trace!(
 				target: "ethereum-beacon-client",
@@ -932,14 +1011,16 @@ pub mod pallet {
 				block_number
 			);
 
+			<ExecutionHeaders<T>>::insert(block_hash, header);
 			LatestExecutionHeaderState::<T>::mutate(|s| {
-				s.beacon_block_root = beacon_block_root;
 				s.beacon_slot = beacon_slot;
 				s.block_hash = block_hash;
 				s.block_number = block_number;
 			});
 
 			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
+
+			Ok(())
 		}
 
 		fn store_validators_root(validators_root: H256) {

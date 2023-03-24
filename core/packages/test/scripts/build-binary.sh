@@ -30,6 +30,18 @@ rebuild_cumulus(){
     popd
 }
 
+build_cumulus_from_source(){
+    cumulus_src=$root_dir/cumulus
+    if [ ! -d "$cumulus_src" ] ; then
+        git clone https://github.com/Snowfork/cumulus $cumulus_src
+    fi
+    pushd $cumulus_src
+    git fetch origin && git switch $cumulus_version
+    cargo build --release --bin polkadot-parachain
+    cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
+    popd
+}
+
 rebuild_relaychain(){
     pushd $root_dir/parachain
     mkdir -p $relaychain_dir
@@ -61,7 +73,7 @@ install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
     build_ethereum
-    build_cumulus
+    build_cumulus_from_source
     build_relaychain
     build_relayer
 }

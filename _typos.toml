@@ -6,5 +6,6 @@ extend-exclude = [
     "**/fixtures/*.js",
     "**/*ffi*.js",
     "**/*mock*.rs",
-    "**/*data*.rs"
+    "**/*data*.rs",
+    "cumulus/**"
 ]
