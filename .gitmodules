@@ -9,3 +9,7 @@
 	path = core/packages/contracts/lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
 	branch = v4.8.2
+[submodule "cumulus"]
+	path = cumulus
+	url = https://github.com/Snowfork/cumulus
+	branch = snowbridge
