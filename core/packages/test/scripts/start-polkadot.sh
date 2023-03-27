@@ -8,7 +8,7 @@ source scripts/deploy-polkadot.sh
 start_chains()
 {
     #1 start polkadot relaychain and snowbridge parachain
-    echo "Starting relaychain and snowbridge parachain"
+    echo "Starting Polkadot, BridgeHub and Statemint
     deploy_polkadot
     echo "Polkadot started!"
 }

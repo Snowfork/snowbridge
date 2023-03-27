@@ -12,3 +12,4 @@
 [submodule "cumulus"]
 	path = cumulus
 	url = https://github.com/Snowfork/cumulus
+	branch = snowbridge
