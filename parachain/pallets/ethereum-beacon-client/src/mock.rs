@@ -97,6 +97,8 @@ pub mod mock_minimal {
 				epoch: 0,
 			},
 		};
+		pub const MaxSyncCommitteeCachedSize: u32 = 256;
+		pub const MaxExecutionHeaderCachedSize: u32 = 8192;
 	}
 
 	impl ethereum_beacon_client::Config for Test {
@@ -113,6 +115,8 @@ pub mod mock_minimal {
 		type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
+		type MaxSyncCommitteeCachedSize = MaxSyncCommitteeCachedSize;
+		type MaxExecutionHeaderCachedSize = MaxExecutionHeaderCachedSize;
 		type WeightInfo = ();
 	}
 }
@@ -203,6 +207,8 @@ pub mod mock_mainnet {
 				epoch: 162304,
 			},
 		};
+		pub const MaxSyncCommitteeCachedSize: u32 = 256;
+		pub const MaxExecutionHeaderCachedSize: u32 = 8192;
 	}
 
 	impl ethereum_beacon_client::Config for Test {
@@ -219,6 +225,8 @@ pub mod mock_mainnet {
 		type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
+		type MaxSyncCommitteeCachedSize = MaxSyncCommitteeCachedSize;
+		type MaxExecutionHeaderCachedSize = MaxExecutionHeaderCachedSize;
 		type WeightInfo = ();
 	}
 }

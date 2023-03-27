@@ -18,7 +18,6 @@ mod tests_minimal;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-use sp_std::marker::PhantomData;
 pub use weights::WeightInfo;
 
 use crate::merkleization::get_sync_committee_bits;
@@ -63,24 +62,6 @@ pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<
 >;
 pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
 
-// Todo: cached all data in 1 sync_committee_period
-// need to finalize and move to bridge runtime before production ready
-pub const MAX_SYNC_COMMITTEE_CACHED: u32 = 256;
-pub struct MaxSyncCommitteeCachedGet<T>(PhantomData<T>);
-impl<T: Config> Get<u32> for MaxSyncCommitteeCachedGet<T> {
-	fn get() -> u32 {
-		MAX_SYNC_COMMITTEE_CACHED
-	}
-}
-
-pub const MAX_EXECUTION_HEADER_CACHED: u32 = 8192;
-pub struct MaxExecutionHeaderCachedGet<T>(PhantomData<T>);
-impl<T: Config> Get<u32> for MaxExecutionHeaderCachedGet<T> {
-	fn get() -> u32 {
-		MAX_EXECUTION_HEADER_CACHED
-	}
-}
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -123,7 +104,12 @@ pub mod pallet {
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
+		#[pallet::constant]
 		type WeakSubjectivityPeriodSeconds: Get<u64>;
+		#[pallet::constant]
+		type MaxSyncCommitteeCachedSize: Get<u32>;
+		#[pallet::constant]
+		type MaxExecutionHeaderCachedSize: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -209,7 +195,7 @@ pub mod pallet {
 	/// Auxiliary storage used to pruning ExecutionHeaders
 	#[pallet::storage]
 	pub(super) type ExecutionHeadersList<T: Config> =
-		StorageValue<_, BoundedVec<H256, MaxExecutionHeaderCachedGet<T>>, ValueQuery>;
+		StorageValue<_, BoundedVec<H256, T::MaxExecutionHeaderCachedSize>, ValueQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	#[pallet::storage]
@@ -219,7 +205,7 @@ pub mod pallet {
 	/// Auxiliary storage used to pruning SyncCommittees
 	#[pallet::storage]
 	pub(super) type SyncCommitteesList<T: Config> =
-		StorageValue<_, BoundedVec<u64, MaxSyncCommitteeCachedGet<T>>, ValueQuery>;
+		StorageValue<_, BoundedVec<u64, T::MaxSyncCommitteeCachedSize>, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
@@ -900,7 +886,7 @@ pub mod pallet {
 
 		fn store_sync_committee(period: u64, sync_committee: SyncCommitteeOf<T>) -> DispatchResult {
 			<SyncCommitteesList<T>>::try_mutate(|vec| {
-				if vec.len() as u32 == MAX_SYNC_COMMITTEE_CACHED {
+				if vec.len() as u32 == T::MaxSyncCommitteeCachedSize::get() {
 					let period = vec.remove(0);
 					<SyncCommittees<T>>::remove(period);
 					log::debug!(
@@ -994,7 +980,7 @@ pub mod pallet {
 			let block_hash = header.block_hash;
 
 			<ExecutionHeadersList<T>>::try_mutate(|vec| {
-				if vec.len() as u32 == MAX_EXECUTION_HEADER_CACHED {
+				if vec.len() as u32 == T::MaxExecutionHeaderCachedSize::get() {
 					if let Some(header) = <ExecutionHeaders<T>>::take(vec.remove(0)) {
 						log::debug!(
 							target: "ethereum-beacon-client",
