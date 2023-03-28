@@ -69,15 +69,15 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 	return proof, nil
 }
 
-type OutboundChannelMessage struct {
+type OutboundQueueMessage struct {
 	Origin  []byte
 	Nonce   types.UCompact
 	Handler uint16
 	Payload []byte
 }
 
-func (m OutboundChannelMessage) IntoInboundMessage() contracts.InboundChannelMessage {
-	return contracts.InboundChannelMessage{
+func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundQueueMessage {
+	return contracts.InboundQueueMessage{
 		Origin:  m.Origin,
 		Nonce:   (*big.Int)(&m.Nonce).Uint64(),
 		Handler: m.Handler,
@@ -86,6 +86,6 @@ func (m OutboundChannelMessage) IntoInboundMessage() contracts.InboundChannelMes
 }
 
 type MessageProof struct {
-	Message OutboundChannelMessage
+	Message OutboundQueueMessage
 	Proof   MerkleProof
 }

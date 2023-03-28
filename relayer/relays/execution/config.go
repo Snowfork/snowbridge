@@ -19,7 +19,7 @@ type SourceConfig struct {
 type Address []byte
 
 type ContractsConfig struct {
-	OutboundChannel string `mapstructure:"OutboundChannel"`
+	OutboundQueue string `mapstructure:"OutboundQueue"`
 }
 
 type SinkConfig struct {

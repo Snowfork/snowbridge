@@ -63,8 +63,8 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	address := common.HexToAddress(r.config.Source.Contracts.OutboundChannel)
-	contract, err := contracts.NewOutboundChannel(address, ethconn.Client())
+	address := common.HexToAddress(r.config.Source.Contracts.OutboundQueue)
+	contract, err := contracts.NewOutboundQueue(address, ethconn.Client())
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		Context: ctx,
 	}
 
-	messages := make(chan *contracts.OutboundChannelMessage)
+	messages := make(chan *contracts.OutboundQueueMessage)
 
 	key, err := types.EncodeToBytes(r.config.Source.LaneID)
 	if err != nil {
@@ -114,7 +114,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				return fmt.Errorf("make outgoing message: %w", err)
 			}
 
-			err = writer.WriteToParachainAndWatch(ctx, "InboundChannel.submit", inboundMsg)
+			err = writer.WriteToParachainAndWatch(ctx, "InboundQueue.submit", inboundMsg)
 			if err != nil {
 				return fmt.Errorf("write to parachain: %w", err)
 			}
@@ -125,7 +125,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 func (r *Relay) makeInboundMessage(
 	ctx context.Context,
 	headerCache *ethereum.HeaderCache,
-	event *contracts.OutboundChannelMessage,
+	event *contracts.OutboundQueueMessage,
 ) (*parachain.Message, error) {
 	receiptTrie, err := headerCache.GetReceiptTrie(ctx, event.Raw.BlockHash)
 	if err != nil {

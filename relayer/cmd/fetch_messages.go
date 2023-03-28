@@ -91,7 +91,7 @@ func getEthContractEventsAndTrie(
 	var address common.Address
 
 	address = common.HexToAddress(viper.GetString("bo-channel"))
-	outboundChannel, err := contracts.NewOutboundChannel(address, conn.Client())
+	outboundQueue, err := contracts.NewOutboundQueue(address, conn.Client())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -112,7 +112,7 @@ func getEthContractEventsAndTrie(
 		return nil, nil, err
 	}
 
-	basicEvents, err := getEthBasicMessages(ctx, outboundChannel, block.NumberU64(), index)
+	basicEvents, err := getEthBasicMessages(ctx, outboundQueue, block.NumberU64(), index)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,7 +122,7 @@ func getEthContractEventsAndTrie(
 
 func getEthBasicMessages(
 	ctx context.Context,
-	contract *contracts.OutboundChannel,
+	contract *contracts.OutboundQueue,
 	blockNumber uint64,
 	index uint64,
 ) ([]*gethTypes.Log, error) {

@@ -14,7 +14,7 @@ contract OutboundQueue is IOutboundQueue, AccessControl {
     IVault public vault;
     uint256 public fee;
 
-    event Message(bytes indexeddest, uint64 nonce, bytes payload);
+    event Message(bytes indexed dest, uint64 nonce, bytes payload);
 
     event FeeUpdated(uint256 fee);
 

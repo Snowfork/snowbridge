@@ -11,7 +11,7 @@ func Hex(b []byte) string {
 }
 
 func (wr *EthereumWriter) logFieldsForBasicSubmission(
-	message contracts.InboundChannelMessage,
+	message contracts.InboundQueueMessage,
 	leafProof [][32]byte,
 	hashSides []bool,
 	proof []byte,

@@ -22,7 +22,7 @@ type inputItem struct {
 
 type BasicChannelEvent struct {
 	Hash     types.H256
-	Messages []OutboundChannelMessage
+	Messages []OutboundQueueMessage
 }
 
 type QueryClient struct {
@@ -76,7 +76,7 @@ func (q *QueryClient) QueryEvent(ctx context.Context, api string, blockHash type
 			return nil, err
 		}
 
-		var messages []OutboundChannelMessage
+		var messages []OutboundQueueMessage
 		err = types.DecodeFromHexString(item.Data, &messages)
 		if err != nil {
 			return nil, err

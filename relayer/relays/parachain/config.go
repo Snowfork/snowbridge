@@ -20,7 +20,7 @@ type SourceConfig struct {
 
 type SourceContractsConfig struct {
 	BeefyClient    string `mapstructure:"BeefyClient"`
-	InboundChannel string `mapstructure:"InboundChannel"`
+	InboundQueue string `mapstructure:"InboundQueue"`
 }
 
 type SinkConfig struct {
@@ -29,5 +29,5 @@ type SinkConfig struct {
 }
 
 type SinkContractsConfig struct {
-	InboundChannel string `mapstructure:"InboundChannel"`
+	InboundQueue string `mapstructure:"InboundQueue"`
 }

@@ -27,7 +27,7 @@ import (
 type EthereumWriter struct {
 	config           *SinkConfig
 	conn             *ethereum.Connection
-	inboundChannel   *contracts.InboundChannel
+	inboundQueue   *contracts.InboundQueue
 	tasks            <-chan *Task
 	abiPacker        abi.Arguments
 	abiBasicUnpacker abi.Arguments
@@ -41,18 +41,18 @@ func NewEthereumWriter(
 	return &EthereumWriter{
 		config:         config,
 		conn:           conn,
-		inboundChannel: nil,
+		inboundQueue: nil,
 		tasks:          tasks,
 	}, nil
 }
 
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	address := common.HexToAddress(wr.config.Contracts.InboundChannel)
-	basicChannel, err := contracts.NewInboundChannel(address, wr.conn.Client())
+	address := common.HexToAddress(wr.config.Contracts.InboundQueue)
+	basicChannel, err := contracts.NewInboundQueue(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}
-	wr.inboundChannel = basicChannel
+	wr.inboundQueue = basicChannel
 
 	opaqueProofABI, err := abi.JSON(strings.NewReader(contracts.OpaqueProofABI))
 	if err != nil {
@@ -60,11 +60,11 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	wr.abiPacker = opaqueProofABI.Methods["dummy"].Inputs
 
-	inboundChannelABI, err := abi.JSON(strings.NewReader(contracts.InboundChannelABI))
+	inboundQueueABI, err := abi.JSON(strings.NewReader(contracts.InboundQueueABI))
 	if err != nil {
 		return err
 	}
-	wr.abiBasicUnpacker = abi.Arguments{inboundChannelABI.Methods["submit"].Inputs[0]}
+	wr.abiBasicUnpacker = abi.Arguments{inboundQueueABI.Methods["submit"].Inputs[0]}
 
 	eg.Go(func() error {
 		err := wr.writeMessagesLoop(ctx)
@@ -210,11 +210,11 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("pack proof: %w", err)
 	}
 
-	tx, err := wr.inboundChannel.Submit(
+	tx, err := wr.inboundQueue.Submit(
 		options, message, commitmentProof.Proof.InnerHashes, opaqueProof,
 	)
 	if err != nil {
-		return fmt.Errorf("send transaction BasicInboundChannel.submit: %w", err)
+		return fmt.Errorf("send transaction BasicInboundQueue.submit: %w", err)
 	}
 
 	hasher := &keccak.Keccak256{}
@@ -233,7 +233,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 			"parachainBlockNumber": proof.Header.Number,
 			"beefyBlock":           proof.MMRProof.Blockhash.Hex(),
 		}).
-		Info("Sent transaction BasicInboundChannel.submit")
+		Info("Sent transaction BasicInboundQueue.submit")
 
 	return nil
 }

@@ -83,8 +83,8 @@ func (s *Scanner) findTasks(
 	paraBlock uint64,
 	paraHash types.Hash,
 ) ([]*Task, error) {
-	basicContract, err := basic.NewBasicInboundChannel(common.HexToAddress(
-		s.config.Contracts.BasicInboundChannel),
+	basicContract, err := basic.NewBasicInboundQueue(common.HexToAddress(
+		s.config.Contracts.BasicInboundQueue),
 		s.ethConn.Client(),
 	)
 	if err != nil {
@@ -107,7 +107,7 @@ func (s *Scanner) findTasks(
 			"sourceID": types.HexEncodeToString(sourceID[:]),
 		}).Info("Checked latest nonce delivered to ethereum basic channel")
 
-		paraBasicNonceKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "BasicOutboundChannel", "Nonce", sourceID[:], nil)
+		paraBasicNonceKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "BasicOutboundQueue", "Nonce", sourceID[:], nil)
 		if err != nil {
 			return nil, fmt.Errorf("create storage key for sourceID '%v': %w", types.HexEncodeToString(sourceID[:]), err)
 		}
@@ -218,7 +218,7 @@ func (s *Scanner) findTasksImpl(
 
 			if !scanBasicChannelDone {
 				if events == nil {
-					return nil, fmt.Errorf("event basicOutboundChannel.Committed not found in block")
+					return nil, fmt.Errorf("event basicOutboundQueue.Committed not found in block")
 				}
 
 				digestItemHash := digestItem.AsCommitment.Hash
@@ -364,7 +364,7 @@ func scanForBasicChannelProofs(
 	digestItemHash types.H256,
 	basicChannelSourceNonces map[types.AccountID]uint64,
 	basicChannelScanSources map[types.AccountID]bool,
-	messages []BasicOutboundChannelMessage,
+	messages []BasicOutboundQueueMessage,
 ) (*struct {
 	proofs   []MessageProof
 	scanDone bool
@@ -435,7 +435,7 @@ func fetchMessageProof(
 	api *gsrpc.SubstrateAPI,
 	commitmentHash types.H256,
 	messageIndex int,
-	message BasicOutboundChannelMessage,
+	message BasicOutboundQueueMessage,
 ) (MessageProof, error) {
 	var proofHex string
 	var rawProof RawMerkleProof
@@ -446,9 +446,9 @@ func fetchMessageProof(
 		return messageProof, fmt.Errorf("encode commitmentHash(%v): %w", commitmentHash, err)
 	}
 
-	err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", commitmentHashHex, messageIndex)
+	err = api.Client.Call(&proofHex, "basicOutboundQueue_getMerkleProof", commitmentHashHex, messageIndex)
 	if err != nil {
-		return messageProof, fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof(%v, %v): %w", commitmentHash, messageIndex, err)
+		return messageProof, fmt.Errorf("call rpc basicOutboundQueue_getMerkleProof(%v, %v): %w", commitmentHash, messageIndex, err)
 	}
 
 	err = types.DecodeFromHexString(proofHex, &rawProof)

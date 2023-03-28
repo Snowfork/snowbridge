@@ -28,135 +28,135 @@ var (
 	_ = event.NewSubscription
 )
 
-// InboundChannelDispatchResult is an auto generated low-level Go binding around an user-defined struct.
-type InboundChannelDispatchResult struct {
+// InboundQueueDispatchResult is an auto generated low-level Go binding around an user-defined struct.
+type InboundQueueDispatchResult struct {
 	Succeeded       bool
 	ErrorReason     string
 	ErrorPanicCode  *big.Int
 	ErrorReturnData []byte
 }
 
-// InboundChannelHandler is an auto generated low-level Go binding around an user-defined struct.
-type InboundChannelHandler struct {
+// InboundQueueHandler is an auto generated low-level Go binding around an user-defined struct.
+type InboundQueueHandler struct {
 	Recipient    common.Address
 	GasToForward uint32
 }
 
-// InboundChannelMessage is an auto generated low-level Go binding around an user-defined struct.
-type InboundChannelMessage struct {
+// InboundQueueMessage is an auto generated low-level Go binding around an user-defined struct.
+type InboundQueueMessage struct {
 	Origin  []byte
 	Nonce   uint64
 	Handler uint16
 	Payload []byte
 }
 
-// InboundChannelMetaData contains all meta data concerning the InboundChannel contract.
-var InboundChannelMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"},{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidHandler\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotEnoughGas\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"gasToForward\",\"type\":\"uint32\"}],\"indexed\":false,\"internalType\":\"structInboundChannel.Handler\",\"name\":\"handler\",\"type\":\"tuple\"}],\"name\":\"HandlerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"origin\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"bool\",\"name\":\"succeeded\",\"type\":\"bool\"},{\"internalType\":\"string\",\"name\":\"errorReason\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"errorPanicCode\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"errorReturnData\",\"type\":\"bytes\"}],\"indexed\":false,\"internalType\":\"structInboundChannel.DispatchResult\",\"name\":\"result\",\"type\":\"tuple\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"parachainClient\",\"type\":\"address\"}],\"name\":\"ParachainClientUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"name\":\"RewardUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vault\",\"type\":\"address\"}],\"name\":\"VaultUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reward\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"origin\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"uint16\",\"name\":\"handler\",\"type\":\"uint16\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structInboundChannel.Message\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"headerProof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"gasToForward\",\"type\":\"uint32\"}],\"internalType\":\"structInboundChannel.Handler\",\"name\":\"handler\",\"type\":\"tuple\"}],\"name\":\"updateHandler\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"name\":\"updateParachainClient\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"name\":\"updateReward\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"}],\"name\":\"updateVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vault\",\"outputs\":[{\"internalType\":\"contractIVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+// InboundQueueMetaData contains all meta data concerning the InboundQueue contract.
+var InboundQueueMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"},{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidHandler\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotEnoughGas\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"gasToForward\",\"type\":\"uint32\"}],\"indexed\":false,\"internalType\":\"structInboundQueue.Handler\",\"name\":\"handler\",\"type\":\"tuple\"}],\"name\":\"HandlerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"origin\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"bool\",\"name\":\"succeeded\",\"type\":\"bool\"},{\"internalType\":\"string\",\"name\":\"errorReason\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"errorPanicCode\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"errorReturnData\",\"type\":\"bytes\"}],\"indexed\":false,\"internalType\":\"structInboundQueue.DispatchResult\",\"name\":\"result\",\"type\":\"tuple\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"parachainClient\",\"type\":\"address\"}],\"name\":\"ParachainClientUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"name\":\"RewardUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vault\",\"type\":\"address\"}],\"name\":\"VaultUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reward\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"origin\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"uint16\",\"name\":\"handler\",\"type\":\"uint16\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structInboundQueue.Message\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"headerProof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"gasToForward\",\"type\":\"uint32\"}],\"internalType\":\"structInboundQueue.Handler\",\"name\":\"handler\",\"type\":\"tuple\"}],\"name\":\"updateHandler\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"name\":\"updateParachainClient\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"name\":\"updateReward\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"}],\"name\":\"updateVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vault\",\"outputs\":[{\"internalType\":\"contractIVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
-// InboundChannelABI is the input ABI used to generate the binding from.
-// Deprecated: Use InboundChannelMetaData.ABI instead.
-var InboundChannelABI = InboundChannelMetaData.ABI
+// InboundQueueABI is the input ABI used to generate the binding from.
+// Deprecated: Use InboundQueueMetaData.ABI instead.
+var InboundQueueABI = InboundQueueMetaData.ABI
 
-// InboundChannel is an auto generated Go binding around an Ethereum contract.
-type InboundChannel struct {
-	InboundChannelCaller     // Read-only binding to the contract
-	InboundChannelTransactor // Write-only binding to the contract
-	InboundChannelFilterer   // Log filterer for contract events
+// InboundQueue is an auto generated Go binding around an Ethereum contract.
+type InboundQueue struct {
+	InboundQueueCaller     // Read-only binding to the contract
+	InboundQueueTransactor // Write-only binding to the contract
+	InboundQueueFilterer   // Log filterer for contract events
 }
 
-// InboundChannelCaller is an auto generated read-only Go binding around an Ethereum contract.
-type InboundChannelCaller struct {
+// InboundQueueCaller is an auto generated read-only Go binding around an Ethereum contract.
+type InboundQueueCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InboundChannelTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type InboundChannelTransactor struct {
+// InboundQueueTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type InboundQueueTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InboundChannelFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type InboundChannelFilterer struct {
+// InboundQueueFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type InboundQueueFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InboundChannelSession is an auto generated Go binding around an Ethereum contract,
+// InboundQueueSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
-type InboundChannelSession struct {
-	Contract     *InboundChannel   // Generic contract binding to set the session for
+type InboundQueueSession struct {
+	Contract     *InboundQueue     // Generic contract binding to set the session for
 	CallOpts     bind.CallOpts     // Call options to use throughout this session
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// InboundChannelCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// InboundQueueCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
-type InboundChannelCallerSession struct {
-	Contract *InboundChannelCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts         // Call options to use throughout this session
+type InboundQueueCallerSession struct {
+	Contract *InboundQueueCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts       // Call options to use throughout this session
 }
 
-// InboundChannelTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// InboundQueueTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
-type InboundChannelTransactorSession struct {
-	Contract     *InboundChannelTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
+type InboundQueueTransactorSession struct {
+	Contract     *InboundQueueTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// InboundChannelRaw is an auto generated low-level Go binding around an Ethereum contract.
-type InboundChannelRaw struct {
-	Contract *InboundChannel // Generic contract binding to access the raw methods on
+// InboundQueueRaw is an auto generated low-level Go binding around an Ethereum contract.
+type InboundQueueRaw struct {
+	Contract *InboundQueue // Generic contract binding to access the raw methods on
 }
 
-// InboundChannelCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type InboundChannelCallerRaw struct {
-	Contract *InboundChannelCaller // Generic read-only contract binding to access the raw methods on
+// InboundQueueCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type InboundQueueCallerRaw struct {
+	Contract *InboundQueueCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// InboundChannelTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type InboundChannelTransactorRaw struct {
-	Contract *InboundChannelTransactor // Generic write-only contract binding to access the raw methods on
+// InboundQueueTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type InboundQueueTransactorRaw struct {
+	Contract *InboundQueueTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewInboundChannel creates a new instance of InboundChannel, bound to a specific deployed contract.
-func NewInboundChannel(address common.Address, backend bind.ContractBackend) (*InboundChannel, error) {
-	contract, err := bindInboundChannel(address, backend, backend, backend)
+// NewInboundQueue creates a new instance of InboundQueue, bound to a specific deployed contract.
+func NewInboundQueue(address common.Address, backend bind.ContractBackend) (*InboundQueue, error) {
+	contract, err := bindInboundQueue(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannel{InboundChannelCaller: InboundChannelCaller{contract: contract}, InboundChannelTransactor: InboundChannelTransactor{contract: contract}, InboundChannelFilterer: InboundChannelFilterer{contract: contract}}, nil
+	return &InboundQueue{InboundQueueCaller: InboundQueueCaller{contract: contract}, InboundQueueTransactor: InboundQueueTransactor{contract: contract}, InboundQueueFilterer: InboundQueueFilterer{contract: contract}}, nil
 }
 
-// NewInboundChannelCaller creates a new read-only instance of InboundChannel, bound to a specific deployed contract.
-func NewInboundChannelCaller(address common.Address, caller bind.ContractCaller) (*InboundChannelCaller, error) {
-	contract, err := bindInboundChannel(address, caller, nil, nil)
+// NewInboundQueueCaller creates a new read-only instance of InboundQueue, bound to a specific deployed contract.
+func NewInboundQueueCaller(address common.Address, caller bind.ContractCaller) (*InboundQueueCaller, error) {
+	contract, err := bindInboundQueue(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelCaller{contract: contract}, nil
+	return &InboundQueueCaller{contract: contract}, nil
 }
 
-// NewInboundChannelTransactor creates a new write-only instance of InboundChannel, bound to a specific deployed contract.
-func NewInboundChannelTransactor(address common.Address, transactor bind.ContractTransactor) (*InboundChannelTransactor, error) {
-	contract, err := bindInboundChannel(address, nil, transactor, nil)
+// NewInboundQueueTransactor creates a new write-only instance of InboundQueue, bound to a specific deployed contract.
+func NewInboundQueueTransactor(address common.Address, transactor bind.ContractTransactor) (*InboundQueueTransactor, error) {
+	contract, err := bindInboundQueue(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelTransactor{contract: contract}, nil
+	return &InboundQueueTransactor{contract: contract}, nil
 }
 
-// NewInboundChannelFilterer creates a new log filterer instance of InboundChannel, bound to a specific deployed contract.
-func NewInboundChannelFilterer(address common.Address, filterer bind.ContractFilterer) (*InboundChannelFilterer, error) {
-	contract, err := bindInboundChannel(address, nil, nil, filterer)
+// NewInboundQueueFilterer creates a new log filterer instance of InboundQueue, bound to a specific deployed contract.
+func NewInboundQueueFilterer(address common.Address, filterer bind.ContractFilterer) (*InboundQueueFilterer, error) {
+	contract, err := bindInboundQueue(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelFilterer{contract: contract}, nil
+	return &InboundQueueFilterer{contract: contract}, nil
 }
 
-// bindInboundChannel binds a generic wrapper to an already deployed contract.
-func bindInboundChannel(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(InboundChannelABI))
+// bindInboundQueue binds a generic wrapper to an already deployed contract.
+func bindInboundQueue(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(InboundQueueABI))
 	if err != nil {
 		return nil, err
 	}
@@ -167,46 +167,46 @@ func bindInboundChannel(address common.Address, caller bind.ContractCaller, tran
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_InboundChannel *InboundChannelRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _InboundChannel.Contract.InboundChannelCaller.contract.Call(opts, result, method, params...)
+func (_InboundQueue *InboundQueueRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _InboundQueue.Contract.InboundQueueCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_InboundChannel *InboundChannelRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _InboundChannel.Contract.InboundChannelTransactor.contract.Transfer(opts)
+func (_InboundQueue *InboundQueueRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _InboundQueue.Contract.InboundQueueTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_InboundChannel *InboundChannelRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _InboundChannel.Contract.InboundChannelTransactor.contract.Transact(opts, method, params...)
+func (_InboundQueue *InboundQueueRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _InboundQueue.Contract.InboundQueueTransactor.contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_InboundChannel *InboundChannelCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _InboundChannel.Contract.contract.Call(opts, result, method, params...)
+func (_InboundQueue *InboundQueueCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _InboundQueue.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_InboundChannel *InboundChannelTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _InboundChannel.Contract.contract.Transfer(opts)
+func (_InboundQueue *InboundQueueTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _InboundQueue.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_InboundChannel *InboundChannelTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _InboundChannel.Contract.contract.Transact(opts, method, params...)
+func (_InboundQueue *InboundQueueTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _InboundQueue.Contract.contract.Transact(opts, method, params...)
 }
 
 // ADMINROLE is a free data retrieval call binding the contract method 0x75b238fc.
 //
 // Solidity: function ADMIN_ROLE() view returns(bytes32)
-func (_InboundChannel *InboundChannelCaller) ADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
+func (_InboundQueue *InboundQueueCaller) ADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
-	err := _InboundChannel.contract.Call(opts, &out, "ADMIN_ROLE")
+	err := _InboundQueue.contract.Call(opts, &out, "ADMIN_ROLE")
 
 	if err != nil {
 		return *new([32]byte), err
@@ -221,23 +221,23 @@ func (_InboundChannel *InboundChannelCaller) ADMINROLE(opts *bind.CallOpts) ([32
 // ADMINROLE is a free data retrieval call binding the contract method 0x75b238fc.
 //
 // Solidity: function ADMIN_ROLE() view returns(bytes32)
-func (_InboundChannel *InboundChannelSession) ADMINROLE() ([32]byte, error) {
-	return _InboundChannel.Contract.ADMINROLE(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueSession) ADMINROLE() ([32]byte, error) {
+	return _InboundQueue.Contract.ADMINROLE(&_InboundQueue.CallOpts)
 }
 
 // ADMINROLE is a free data retrieval call binding the contract method 0x75b238fc.
 //
 // Solidity: function ADMIN_ROLE() view returns(bytes32)
-func (_InboundChannel *InboundChannelCallerSession) ADMINROLE() ([32]byte, error) {
-	return _InboundChannel.Contract.ADMINROLE(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueCallerSession) ADMINROLE() ([32]byte, error) {
+	return _InboundQueue.Contract.ADMINROLE(&_InboundQueue.CallOpts)
 }
 
 // DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
 //
 // Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
-func (_InboundChannel *InboundChannelCaller) DEFAULTADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
+func (_InboundQueue *InboundQueueCaller) DEFAULTADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
-	err := _InboundChannel.contract.Call(opts, &out, "DEFAULT_ADMIN_ROLE")
+	err := _InboundQueue.contract.Call(opts, &out, "DEFAULT_ADMIN_ROLE")
 
 	if err != nil {
 		return *new([32]byte), err
@@ -252,23 +252,23 @@ func (_InboundChannel *InboundChannelCaller) DEFAULTADMINROLE(opts *bind.CallOpt
 // DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
 //
 // Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
-func (_InboundChannel *InboundChannelSession) DEFAULTADMINROLE() ([32]byte, error) {
-	return _InboundChannel.Contract.DEFAULTADMINROLE(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _InboundQueue.Contract.DEFAULTADMINROLE(&_InboundQueue.CallOpts)
 }
 
 // DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
 //
 // Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
-func (_InboundChannel *InboundChannelCallerSession) DEFAULTADMINROLE() ([32]byte, error) {
-	return _InboundChannel.Contract.DEFAULTADMINROLE(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueCallerSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _InboundQueue.Contract.DEFAULTADMINROLE(&_InboundQueue.CallOpts)
 }
 
 // GASBUFFER is a free data retrieval call binding the contract method 0xc7e67360.
 //
 // Solidity: function GAS_BUFFER() view returns(uint256)
-func (_InboundChannel *InboundChannelCaller) GASBUFFER(opts *bind.CallOpts) (*big.Int, error) {
+func (_InboundQueue *InboundQueueCaller) GASBUFFER(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _InboundChannel.contract.Call(opts, &out, "GAS_BUFFER")
+	err := _InboundQueue.contract.Call(opts, &out, "GAS_BUFFER")
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -283,23 +283,23 @@ func (_InboundChannel *InboundChannelCaller) GASBUFFER(opts *bind.CallOpts) (*bi
 // GASBUFFER is a free data retrieval call binding the contract method 0xc7e67360.
 //
 // Solidity: function GAS_BUFFER() view returns(uint256)
-func (_InboundChannel *InboundChannelSession) GASBUFFER() (*big.Int, error) {
-	return _InboundChannel.Contract.GASBUFFER(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueSession) GASBUFFER() (*big.Int, error) {
+	return _InboundQueue.Contract.GASBUFFER(&_InboundQueue.CallOpts)
 }
 
 // GASBUFFER is a free data retrieval call binding the contract method 0xc7e67360.
 //
 // Solidity: function GAS_BUFFER() view returns(uint256)
-func (_InboundChannel *InboundChannelCallerSession) GASBUFFER() (*big.Int, error) {
-	return _InboundChannel.Contract.GASBUFFER(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueCallerSession) GASBUFFER() (*big.Int, error) {
+	return _InboundQueue.Contract.GASBUFFER(&_InboundQueue.CallOpts)
 }
 
 // GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
 //
 // Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
-func (_InboundChannel *InboundChannelCaller) GetRoleAdmin(opts *bind.CallOpts, role [32]byte) ([32]byte, error) {
+func (_InboundQueue *InboundQueueCaller) GetRoleAdmin(opts *bind.CallOpts, role [32]byte) ([32]byte, error) {
 	var out []interface{}
-	err := _InboundChannel.contract.Call(opts, &out, "getRoleAdmin", role)
+	err := _InboundQueue.contract.Call(opts, &out, "getRoleAdmin", role)
 
 	if err != nil {
 		return *new([32]byte), err
@@ -314,23 +314,23 @@ func (_InboundChannel *InboundChannelCaller) GetRoleAdmin(opts *bind.CallOpts, r
 // GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
 //
 // Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
-func (_InboundChannel *InboundChannelSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
-	return _InboundChannel.Contract.GetRoleAdmin(&_InboundChannel.CallOpts, role)
+func (_InboundQueue *InboundQueueSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _InboundQueue.Contract.GetRoleAdmin(&_InboundQueue.CallOpts, role)
 }
 
 // GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
 //
 // Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
-func (_InboundChannel *InboundChannelCallerSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
-	return _InboundChannel.Contract.GetRoleAdmin(&_InboundChannel.CallOpts, role)
+func (_InboundQueue *InboundQueueCallerSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _InboundQueue.Contract.GetRoleAdmin(&_InboundQueue.CallOpts, role)
 }
 
 // HasRole is a free data retrieval call binding the contract method 0x91d14854.
 //
 // Solidity: function hasRole(bytes32 role, address account) view returns(bool)
-func (_InboundChannel *InboundChannelCaller) HasRole(opts *bind.CallOpts, role [32]byte, account common.Address) (bool, error) {
+func (_InboundQueue *InboundQueueCaller) HasRole(opts *bind.CallOpts, role [32]byte, account common.Address) (bool, error) {
 	var out []interface{}
-	err := _InboundChannel.contract.Call(opts, &out, "hasRole", role, account)
+	err := _InboundQueue.contract.Call(opts, &out, "hasRole", role, account)
 
 	if err != nil {
 		return *new(bool), err
@@ -345,23 +345,23 @@ func (_InboundChannel *InboundChannelCaller) HasRole(opts *bind.CallOpts, role [
 // HasRole is a free data retrieval call binding the contract method 0x91d14854.
 //
 // Solidity: function hasRole(bytes32 role, address account) view returns(bool)
-func (_InboundChannel *InboundChannelSession) HasRole(role [32]byte, account common.Address) (bool, error) {
-	return _InboundChannel.Contract.HasRole(&_InboundChannel.CallOpts, role, account)
+func (_InboundQueue *InboundQueueSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _InboundQueue.Contract.HasRole(&_InboundQueue.CallOpts, role, account)
 }
 
 // HasRole is a free data retrieval call binding the contract method 0x91d14854.
 //
 // Solidity: function hasRole(bytes32 role, address account) view returns(bool)
-func (_InboundChannel *InboundChannelCallerSession) HasRole(role [32]byte, account common.Address) (bool, error) {
-	return _InboundChannel.Contract.HasRole(&_InboundChannel.CallOpts, role, account)
+func (_InboundQueue *InboundQueueCallerSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _InboundQueue.Contract.HasRole(&_InboundQueue.CallOpts, role, account)
 }
 
 // Nonce is a free data retrieval call binding the contract method 0x4e765004.
 //
 // Solidity: function nonce(bytes ) view returns(uint64)
-func (_InboundChannel *InboundChannelCaller) Nonce(opts *bind.CallOpts, arg0 []byte) (uint64, error) {
+func (_InboundQueue *InboundQueueCaller) Nonce(opts *bind.CallOpts, arg0 []byte) (uint64, error) {
 	var out []interface{}
-	err := _InboundChannel.contract.Call(opts, &out, "nonce", arg0)
+	err := _InboundQueue.contract.Call(opts, &out, "nonce", arg0)
 
 	if err != nil {
 		return *new(uint64), err
@@ -376,23 +376,23 @@ func (_InboundChannel *InboundChannelCaller) Nonce(opts *bind.CallOpts, arg0 []b
 // Nonce is a free data retrieval call binding the contract method 0x4e765004.
 //
 // Solidity: function nonce(bytes ) view returns(uint64)
-func (_InboundChannel *InboundChannelSession) Nonce(arg0 []byte) (uint64, error) {
-	return _InboundChannel.Contract.Nonce(&_InboundChannel.CallOpts, arg0)
+func (_InboundQueue *InboundQueueSession) Nonce(arg0 []byte) (uint64, error) {
+	return _InboundQueue.Contract.Nonce(&_InboundQueue.CallOpts, arg0)
 }
 
 // Nonce is a free data retrieval call binding the contract method 0x4e765004.
 //
 // Solidity: function nonce(bytes ) view returns(uint64)
-func (_InboundChannel *InboundChannelCallerSession) Nonce(arg0 []byte) (uint64, error) {
-	return _InboundChannel.Contract.Nonce(&_InboundChannel.CallOpts, arg0)
+func (_InboundQueue *InboundQueueCallerSession) Nonce(arg0 []byte) (uint64, error) {
+	return _InboundQueue.Contract.Nonce(&_InboundQueue.CallOpts, arg0)
 }
 
 // ParachainClient is a free data retrieval call binding the contract method 0x1674f9b7.
 //
 // Solidity: function parachainClient() view returns(address)
-func (_InboundChannel *InboundChannelCaller) ParachainClient(opts *bind.CallOpts) (common.Address, error) {
+func (_InboundQueue *InboundQueueCaller) ParachainClient(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
-	err := _InboundChannel.contract.Call(opts, &out, "parachainClient")
+	err := _InboundQueue.contract.Call(opts, &out, "parachainClient")
 
 	if err != nil {
 		return *new(common.Address), err
@@ -407,23 +407,23 @@ func (_InboundChannel *InboundChannelCaller) ParachainClient(opts *bind.CallOpts
 // ParachainClient is a free data retrieval call binding the contract method 0x1674f9b7.
 //
 // Solidity: function parachainClient() view returns(address)
-func (_InboundChannel *InboundChannelSession) ParachainClient() (common.Address, error) {
-	return _InboundChannel.Contract.ParachainClient(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueSession) ParachainClient() (common.Address, error) {
+	return _InboundQueue.Contract.ParachainClient(&_InboundQueue.CallOpts)
 }
 
 // ParachainClient is a free data retrieval call binding the contract method 0x1674f9b7.
 //
 // Solidity: function parachainClient() view returns(address)
-func (_InboundChannel *InboundChannelCallerSession) ParachainClient() (common.Address, error) {
-	return _InboundChannel.Contract.ParachainClient(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueCallerSession) ParachainClient() (common.Address, error) {
+	return _InboundQueue.Contract.ParachainClient(&_InboundQueue.CallOpts)
 }
 
 // Reward is a free data retrieval call binding the contract method 0x228cb733.
 //
 // Solidity: function reward() view returns(uint256)
-func (_InboundChannel *InboundChannelCaller) Reward(opts *bind.CallOpts) (*big.Int, error) {
+func (_InboundQueue *InboundQueueCaller) Reward(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _InboundChannel.contract.Call(opts, &out, "reward")
+	err := _InboundQueue.contract.Call(opts, &out, "reward")
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -438,23 +438,23 @@ func (_InboundChannel *InboundChannelCaller) Reward(opts *bind.CallOpts) (*big.I
 // Reward is a free data retrieval call binding the contract method 0x228cb733.
 //
 // Solidity: function reward() view returns(uint256)
-func (_InboundChannel *InboundChannelSession) Reward() (*big.Int, error) {
-	return _InboundChannel.Contract.Reward(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueSession) Reward() (*big.Int, error) {
+	return _InboundQueue.Contract.Reward(&_InboundQueue.CallOpts)
 }
 
 // Reward is a free data retrieval call binding the contract method 0x228cb733.
 //
 // Solidity: function reward() view returns(uint256)
-func (_InboundChannel *InboundChannelCallerSession) Reward() (*big.Int, error) {
-	return _InboundChannel.Contract.Reward(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueCallerSession) Reward() (*big.Int, error) {
+	return _InboundQueue.Contract.Reward(&_InboundQueue.CallOpts)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_InboundChannel *InboundChannelCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
+func (_InboundQueue *InboundQueueCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
-	err := _InboundChannel.contract.Call(opts, &out, "supportsInterface", interfaceId)
+	err := _InboundQueue.contract.Call(opts, &out, "supportsInterface", interfaceId)
 
 	if err != nil {
 		return *new(bool), err
@@ -469,23 +469,23 @@ func (_InboundChannel *InboundChannelCaller) SupportsInterface(opts *bind.CallOp
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_InboundChannel *InboundChannelSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
-	return _InboundChannel.Contract.SupportsInterface(&_InboundChannel.CallOpts, interfaceId)
+func (_InboundQueue *InboundQueueSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _InboundQueue.Contract.SupportsInterface(&_InboundQueue.CallOpts, interfaceId)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_InboundChannel *InboundChannelCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
-	return _InboundChannel.Contract.SupportsInterface(&_InboundChannel.CallOpts, interfaceId)
+func (_InboundQueue *InboundQueueCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _InboundQueue.Contract.SupportsInterface(&_InboundQueue.CallOpts, interfaceId)
 }
 
 // Vault is a free data retrieval call binding the contract method 0xfbfa77cf.
 //
 // Solidity: function vault() view returns(address)
-func (_InboundChannel *InboundChannelCaller) Vault(opts *bind.CallOpts) (common.Address, error) {
+func (_InboundQueue *InboundQueueCaller) Vault(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
-	err := _InboundChannel.contract.Call(opts, &out, "vault")
+	err := _InboundQueue.contract.Call(opts, &out, "vault")
 
 	if err != nil {
 		return *new(common.Address), err
@@ -500,188 +500,188 @@ func (_InboundChannel *InboundChannelCaller) Vault(opts *bind.CallOpts) (common.
 // Vault is a free data retrieval call binding the contract method 0xfbfa77cf.
 //
 // Solidity: function vault() view returns(address)
-func (_InboundChannel *InboundChannelSession) Vault() (common.Address, error) {
-	return _InboundChannel.Contract.Vault(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueSession) Vault() (common.Address, error) {
+	return _InboundQueue.Contract.Vault(&_InboundQueue.CallOpts)
 }
 
 // Vault is a free data retrieval call binding the contract method 0xfbfa77cf.
 //
 // Solidity: function vault() view returns(address)
-func (_InboundChannel *InboundChannelCallerSession) Vault() (common.Address, error) {
-	return _InboundChannel.Contract.Vault(&_InboundChannel.CallOpts)
+func (_InboundQueue *InboundQueueCallerSession) Vault() (common.Address, error) {
+	return _InboundQueue.Contract.Vault(&_InboundQueue.CallOpts)
 }
 
 // GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
 //
 // Solidity: function grantRole(bytes32 role, address account) returns()
-func (_InboundChannel *InboundChannelTransactor) GrantRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _InboundChannel.contract.Transact(opts, "grantRole", role, account)
+func (_InboundQueue *InboundQueueTransactor) GrantRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _InboundQueue.contract.Transact(opts, "grantRole", role, account)
 }
 
 // GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
 //
 // Solidity: function grantRole(bytes32 role, address account) returns()
-func (_InboundChannel *InboundChannelSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _InboundChannel.Contract.GrantRole(&_InboundChannel.TransactOpts, role, account)
+func (_InboundQueue *InboundQueueSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _InboundQueue.Contract.GrantRole(&_InboundQueue.TransactOpts, role, account)
 }
 
 // GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
 //
 // Solidity: function grantRole(bytes32 role, address account) returns()
-func (_InboundChannel *InboundChannelTransactorSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _InboundChannel.Contract.GrantRole(&_InboundChannel.TransactOpts, role, account)
+func (_InboundQueue *InboundQueueTransactorSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _InboundQueue.Contract.GrantRole(&_InboundQueue.TransactOpts, role, account)
 }
 
 // RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
 //
 // Solidity: function renounceRole(bytes32 role, address account) returns()
-func (_InboundChannel *InboundChannelTransactor) RenounceRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _InboundChannel.contract.Transact(opts, "renounceRole", role, account)
+func (_InboundQueue *InboundQueueTransactor) RenounceRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _InboundQueue.contract.Transact(opts, "renounceRole", role, account)
 }
 
 // RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
 //
 // Solidity: function renounceRole(bytes32 role, address account) returns()
-func (_InboundChannel *InboundChannelSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _InboundChannel.Contract.RenounceRole(&_InboundChannel.TransactOpts, role, account)
+func (_InboundQueue *InboundQueueSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _InboundQueue.Contract.RenounceRole(&_InboundQueue.TransactOpts, role, account)
 }
 
 // RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
 //
 // Solidity: function renounceRole(bytes32 role, address account) returns()
-func (_InboundChannel *InboundChannelTransactorSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _InboundChannel.Contract.RenounceRole(&_InboundChannel.TransactOpts, role, account)
+func (_InboundQueue *InboundQueueTransactorSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _InboundQueue.Contract.RenounceRole(&_InboundQueue.TransactOpts, role, account)
 }
 
 // RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
 //
 // Solidity: function revokeRole(bytes32 role, address account) returns()
-func (_InboundChannel *InboundChannelTransactor) RevokeRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _InboundChannel.contract.Transact(opts, "revokeRole", role, account)
+func (_InboundQueue *InboundQueueTransactor) RevokeRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _InboundQueue.contract.Transact(opts, "revokeRole", role, account)
 }
 
 // RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
 //
 // Solidity: function revokeRole(bytes32 role, address account) returns()
-func (_InboundChannel *InboundChannelSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _InboundChannel.Contract.RevokeRole(&_InboundChannel.TransactOpts, role, account)
+func (_InboundQueue *InboundQueueSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _InboundQueue.Contract.RevokeRole(&_InboundQueue.TransactOpts, role, account)
 }
 
 // RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
 //
 // Solidity: function revokeRole(bytes32 role, address account) returns()
-func (_InboundChannel *InboundChannelTransactorSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _InboundChannel.Contract.RevokeRole(&_InboundChannel.TransactOpts, role, account)
+func (_InboundQueue *InboundQueueTransactorSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _InboundQueue.Contract.RevokeRole(&_InboundQueue.TransactOpts, role, account)
 }
 
 // Submit is a paid mutator transaction binding the contract method 0x824960a2.
 //
 // Solidity: function submit((bytes,uint64,uint16,bytes) message, bytes32[] leafProof, bytes headerProof) returns()
-func (_InboundChannel *InboundChannelTransactor) Submit(opts *bind.TransactOpts, message InboundChannelMessage, leafProof [][32]byte, headerProof []byte) (*types.Transaction, error) {
-	return _InboundChannel.contract.Transact(opts, "submit", message, leafProof, headerProof)
+func (_InboundQueue *InboundQueueTransactor) Submit(opts *bind.TransactOpts, message InboundQueueMessage, leafProof [][32]byte, headerProof []byte) (*types.Transaction, error) {
+	return _InboundQueue.contract.Transact(opts, "submit", message, leafProof, headerProof)
 }
 
 // Submit is a paid mutator transaction binding the contract method 0x824960a2.
 //
 // Solidity: function submit((bytes,uint64,uint16,bytes) message, bytes32[] leafProof, bytes headerProof) returns()
-func (_InboundChannel *InboundChannelSession) Submit(message InboundChannelMessage, leafProof [][32]byte, headerProof []byte) (*types.Transaction, error) {
-	return _InboundChannel.Contract.Submit(&_InboundChannel.TransactOpts, message, leafProof, headerProof)
+func (_InboundQueue *InboundQueueSession) Submit(message InboundQueueMessage, leafProof [][32]byte, headerProof []byte) (*types.Transaction, error) {
+	return _InboundQueue.Contract.Submit(&_InboundQueue.TransactOpts, message, leafProof, headerProof)
 }
 
 // Submit is a paid mutator transaction binding the contract method 0x824960a2.
 //
 // Solidity: function submit((bytes,uint64,uint16,bytes) message, bytes32[] leafProof, bytes headerProof) returns()
-func (_InboundChannel *InboundChannelTransactorSession) Submit(message InboundChannelMessage, leafProof [][32]byte, headerProof []byte) (*types.Transaction, error) {
-	return _InboundChannel.Contract.Submit(&_InboundChannel.TransactOpts, message, leafProof, headerProof)
+func (_InboundQueue *InboundQueueTransactorSession) Submit(message InboundQueueMessage, leafProof [][32]byte, headerProof []byte) (*types.Transaction, error) {
+	return _InboundQueue.Contract.Submit(&_InboundQueue.TransactOpts, message, leafProof, headerProof)
 }
 
 // UpdateHandler is a paid mutator transaction binding the contract method 0x094440f3.
 //
 // Solidity: function updateHandler(uint16 id, (address,uint32) handler) returns()
-func (_InboundChannel *InboundChannelTransactor) UpdateHandler(opts *bind.TransactOpts, id uint16, handler InboundChannelHandler) (*types.Transaction, error) {
-	return _InboundChannel.contract.Transact(opts, "updateHandler", id, handler)
+func (_InboundQueue *InboundQueueTransactor) UpdateHandler(opts *bind.TransactOpts, id uint16, handler InboundQueueHandler) (*types.Transaction, error) {
+	return _InboundQueue.contract.Transact(opts, "updateHandler", id, handler)
 }
 
 // UpdateHandler is a paid mutator transaction binding the contract method 0x094440f3.
 //
 // Solidity: function updateHandler(uint16 id, (address,uint32) handler) returns()
-func (_InboundChannel *InboundChannelSession) UpdateHandler(id uint16, handler InboundChannelHandler) (*types.Transaction, error) {
-	return _InboundChannel.Contract.UpdateHandler(&_InboundChannel.TransactOpts, id, handler)
+func (_InboundQueue *InboundQueueSession) UpdateHandler(id uint16, handler InboundQueueHandler) (*types.Transaction, error) {
+	return _InboundQueue.Contract.UpdateHandler(&_InboundQueue.TransactOpts, id, handler)
 }
 
 // UpdateHandler is a paid mutator transaction binding the contract method 0x094440f3.
 //
 // Solidity: function updateHandler(uint16 id, (address,uint32) handler) returns()
-func (_InboundChannel *InboundChannelTransactorSession) UpdateHandler(id uint16, handler InboundChannelHandler) (*types.Transaction, error) {
-	return _InboundChannel.Contract.UpdateHandler(&_InboundChannel.TransactOpts, id, handler)
+func (_InboundQueue *InboundQueueTransactorSession) UpdateHandler(id uint16, handler InboundQueueHandler) (*types.Transaction, error) {
+	return _InboundQueue.Contract.UpdateHandler(&_InboundQueue.TransactOpts, id, handler)
 }
 
 // UpdateParachainClient is a paid mutator transaction binding the contract method 0x33b9d6ee.
 //
 // Solidity: function updateParachainClient(address _parachainClient) returns()
-func (_InboundChannel *InboundChannelTransactor) UpdateParachainClient(opts *bind.TransactOpts, _parachainClient common.Address) (*types.Transaction, error) {
-	return _InboundChannel.contract.Transact(opts, "updateParachainClient", _parachainClient)
+func (_InboundQueue *InboundQueueTransactor) UpdateParachainClient(opts *bind.TransactOpts, _parachainClient common.Address) (*types.Transaction, error) {
+	return _InboundQueue.contract.Transact(opts, "updateParachainClient", _parachainClient)
 }
 
 // UpdateParachainClient is a paid mutator transaction binding the contract method 0x33b9d6ee.
 //
 // Solidity: function updateParachainClient(address _parachainClient) returns()
-func (_InboundChannel *InboundChannelSession) UpdateParachainClient(_parachainClient common.Address) (*types.Transaction, error) {
-	return _InboundChannel.Contract.UpdateParachainClient(&_InboundChannel.TransactOpts, _parachainClient)
+func (_InboundQueue *InboundQueueSession) UpdateParachainClient(_parachainClient common.Address) (*types.Transaction, error) {
+	return _InboundQueue.Contract.UpdateParachainClient(&_InboundQueue.TransactOpts, _parachainClient)
 }
 
 // UpdateParachainClient is a paid mutator transaction binding the contract method 0x33b9d6ee.
 //
 // Solidity: function updateParachainClient(address _parachainClient) returns()
-func (_InboundChannel *InboundChannelTransactorSession) UpdateParachainClient(_parachainClient common.Address) (*types.Transaction, error) {
-	return _InboundChannel.Contract.UpdateParachainClient(&_InboundChannel.TransactOpts, _parachainClient)
+func (_InboundQueue *InboundQueueTransactorSession) UpdateParachainClient(_parachainClient common.Address) (*types.Transaction, error) {
+	return _InboundQueue.Contract.UpdateParachainClient(&_InboundQueue.TransactOpts, _parachainClient)
 }
 
 // UpdateReward is a paid mutator transaction binding the contract method 0x425c8abd.
 //
 // Solidity: function updateReward(uint256 _reward) returns()
-func (_InboundChannel *InboundChannelTransactor) UpdateReward(opts *bind.TransactOpts, _reward *big.Int) (*types.Transaction, error) {
-	return _InboundChannel.contract.Transact(opts, "updateReward", _reward)
+func (_InboundQueue *InboundQueueTransactor) UpdateReward(opts *bind.TransactOpts, _reward *big.Int) (*types.Transaction, error) {
+	return _InboundQueue.contract.Transact(opts, "updateReward", _reward)
 }
 
 // UpdateReward is a paid mutator transaction binding the contract method 0x425c8abd.
 //
 // Solidity: function updateReward(uint256 _reward) returns()
-func (_InboundChannel *InboundChannelSession) UpdateReward(_reward *big.Int) (*types.Transaction, error) {
-	return _InboundChannel.Contract.UpdateReward(&_InboundChannel.TransactOpts, _reward)
+func (_InboundQueue *InboundQueueSession) UpdateReward(_reward *big.Int) (*types.Transaction, error) {
+	return _InboundQueue.Contract.UpdateReward(&_InboundQueue.TransactOpts, _reward)
 }
 
 // UpdateReward is a paid mutator transaction binding the contract method 0x425c8abd.
 //
 // Solidity: function updateReward(uint256 _reward) returns()
-func (_InboundChannel *InboundChannelTransactorSession) UpdateReward(_reward *big.Int) (*types.Transaction, error) {
-	return _InboundChannel.Contract.UpdateReward(&_InboundChannel.TransactOpts, _reward)
+func (_InboundQueue *InboundQueueTransactorSession) UpdateReward(_reward *big.Int) (*types.Transaction, error) {
+	return _InboundQueue.Contract.UpdateReward(&_InboundQueue.TransactOpts, _reward)
 }
 
 // UpdateVault is a paid mutator transaction binding the contract method 0xe7563f3f.
 //
 // Solidity: function updateVault(address _vault) returns()
-func (_InboundChannel *InboundChannelTransactor) UpdateVault(opts *bind.TransactOpts, _vault common.Address) (*types.Transaction, error) {
-	return _InboundChannel.contract.Transact(opts, "updateVault", _vault)
+func (_InboundQueue *InboundQueueTransactor) UpdateVault(opts *bind.TransactOpts, _vault common.Address) (*types.Transaction, error) {
+	return _InboundQueue.contract.Transact(opts, "updateVault", _vault)
 }
 
 // UpdateVault is a paid mutator transaction binding the contract method 0xe7563f3f.
 //
 // Solidity: function updateVault(address _vault) returns()
-func (_InboundChannel *InboundChannelSession) UpdateVault(_vault common.Address) (*types.Transaction, error) {
-	return _InboundChannel.Contract.UpdateVault(&_InboundChannel.TransactOpts, _vault)
+func (_InboundQueue *InboundQueueSession) UpdateVault(_vault common.Address) (*types.Transaction, error) {
+	return _InboundQueue.Contract.UpdateVault(&_InboundQueue.TransactOpts, _vault)
 }
 
 // UpdateVault is a paid mutator transaction binding the contract method 0xe7563f3f.
 //
 // Solidity: function updateVault(address _vault) returns()
-func (_InboundChannel *InboundChannelTransactorSession) UpdateVault(_vault common.Address) (*types.Transaction, error) {
-	return _InboundChannel.Contract.UpdateVault(&_InboundChannel.TransactOpts, _vault)
+func (_InboundQueue *InboundQueueTransactorSession) UpdateVault(_vault common.Address) (*types.Transaction, error) {
+	return _InboundQueue.Contract.UpdateVault(&_InboundQueue.TransactOpts, _vault)
 }
 
-// InboundChannelHandlerUpdatedIterator is returned from FilterHandlerUpdated and is used to iterate over the raw logs and unpacked data for HandlerUpdated events raised by the InboundChannel contract.
-type InboundChannelHandlerUpdatedIterator struct {
-	Event *InboundChannelHandlerUpdated // Event containing the contract specifics and raw log
+// InboundQueueHandlerUpdatedIterator is returned from FilterHandlerUpdated and is used to iterate over the raw logs and unpacked data for HandlerUpdated events raised by the InboundQueue contract.
+type InboundQueueHandlerUpdatedIterator struct {
+	Event *InboundQueueHandlerUpdated // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -695,7 +695,7 @@ type InboundChannelHandlerUpdatedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *InboundChannelHandlerUpdatedIterator) Next() bool {
+func (it *InboundQueueHandlerUpdatedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -704,7 +704,7 @@ func (it *InboundChannelHandlerUpdatedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(InboundChannelHandlerUpdated)
+			it.Event = new(InboundQueueHandlerUpdated)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -719,7 +719,7 @@ func (it *InboundChannelHandlerUpdatedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(InboundChannelHandlerUpdated)
+		it.Event = new(InboundQueueHandlerUpdated)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -735,42 +735,42 @@ func (it *InboundChannelHandlerUpdatedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *InboundChannelHandlerUpdatedIterator) Error() error {
+func (it *InboundQueueHandlerUpdatedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *InboundChannelHandlerUpdatedIterator) Close() error {
+func (it *InboundQueueHandlerUpdatedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// InboundChannelHandlerUpdated represents a HandlerUpdated event raised by the InboundChannel contract.
-type InboundChannelHandlerUpdated struct {
+// InboundQueueHandlerUpdated represents a HandlerUpdated event raised by the InboundQueue contract.
+type InboundQueueHandlerUpdated struct {
 	Id      uint16
-	Handler InboundChannelHandler
+	Handler InboundQueueHandler
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
 // FilterHandlerUpdated is a free log retrieval operation binding the contract event 0x6c2fc0cb577f29b9193278b7dacc4fb7e2e96a881a16c58e9fb8b4a60ad44c02.
 //
 // Solidity: event HandlerUpdated(uint16 id, (address,uint32) handler)
-func (_InboundChannel *InboundChannelFilterer) FilterHandlerUpdated(opts *bind.FilterOpts) (*InboundChannelHandlerUpdatedIterator, error) {
+func (_InboundQueue *InboundQueueFilterer) FilterHandlerUpdated(opts *bind.FilterOpts) (*InboundQueueHandlerUpdatedIterator, error) {
 
-	logs, sub, err := _InboundChannel.contract.FilterLogs(opts, "HandlerUpdated")
+	logs, sub, err := _InboundQueue.contract.FilterLogs(opts, "HandlerUpdated")
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelHandlerUpdatedIterator{contract: _InboundChannel.contract, event: "HandlerUpdated", logs: logs, sub: sub}, nil
+	return &InboundQueueHandlerUpdatedIterator{contract: _InboundQueue.contract, event: "HandlerUpdated", logs: logs, sub: sub}, nil
 }
 
 // WatchHandlerUpdated is a free log subscription operation binding the contract event 0x6c2fc0cb577f29b9193278b7dacc4fb7e2e96a881a16c58e9fb8b4a60ad44c02.
 //
 // Solidity: event HandlerUpdated(uint16 id, (address,uint32) handler)
-func (_InboundChannel *InboundChannelFilterer) WatchHandlerUpdated(opts *bind.WatchOpts, sink chan<- *InboundChannelHandlerUpdated) (event.Subscription, error) {
+func (_InboundQueue *InboundQueueFilterer) WatchHandlerUpdated(opts *bind.WatchOpts, sink chan<- *InboundQueueHandlerUpdated) (event.Subscription, error) {
 
-	logs, sub, err := _InboundChannel.contract.WatchLogs(opts, "HandlerUpdated")
+	logs, sub, err := _InboundQueue.contract.WatchLogs(opts, "HandlerUpdated")
 	if err != nil {
 		return nil, err
 	}
@@ -780,8 +780,8 @@ func (_InboundChannel *InboundChannelFilterer) WatchHandlerUpdated(opts *bind.Wa
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(InboundChannelHandlerUpdated)
-				if err := _InboundChannel.contract.UnpackLog(event, "HandlerUpdated", log); err != nil {
+				event := new(InboundQueueHandlerUpdated)
+				if err := _InboundQueue.contract.UnpackLog(event, "HandlerUpdated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -805,18 +805,18 @@ func (_InboundChannel *InboundChannelFilterer) WatchHandlerUpdated(opts *bind.Wa
 // ParseHandlerUpdated is a log parse operation binding the contract event 0x6c2fc0cb577f29b9193278b7dacc4fb7e2e96a881a16c58e9fb8b4a60ad44c02.
 //
 // Solidity: event HandlerUpdated(uint16 id, (address,uint32) handler)
-func (_InboundChannel *InboundChannelFilterer) ParseHandlerUpdated(log types.Log) (*InboundChannelHandlerUpdated, error) {
-	event := new(InboundChannelHandlerUpdated)
-	if err := _InboundChannel.contract.UnpackLog(event, "HandlerUpdated", log); err != nil {
+func (_InboundQueue *InboundQueueFilterer) ParseHandlerUpdated(log types.Log) (*InboundQueueHandlerUpdated, error) {
+	event := new(InboundQueueHandlerUpdated)
+	if err := _InboundQueue.contract.UnpackLog(event, "HandlerUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// InboundChannelMessageDispatchedIterator is returned from FilterMessageDispatched and is used to iterate over the raw logs and unpacked data for MessageDispatched events raised by the InboundChannel contract.
-type InboundChannelMessageDispatchedIterator struct {
-	Event *InboundChannelMessageDispatched // Event containing the contract specifics and raw log
+// InboundQueueMessageDispatchedIterator is returned from FilterMessageDispatched and is used to iterate over the raw logs and unpacked data for MessageDispatched events raised by the InboundQueue contract.
+type InboundQueueMessageDispatchedIterator struct {
+	Event *InboundQueueMessageDispatched // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -830,7 +830,7 @@ type InboundChannelMessageDispatchedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *InboundChannelMessageDispatchedIterator) Next() bool {
+func (it *InboundQueueMessageDispatchedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -839,7 +839,7 @@ func (it *InboundChannelMessageDispatchedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(InboundChannelMessageDispatched)
+			it.Event = new(InboundQueueMessageDispatched)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -854,7 +854,7 @@ func (it *InboundChannelMessageDispatchedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(InboundChannelMessageDispatched)
+		it.Event = new(InboundQueueMessageDispatched)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -870,43 +870,43 @@ func (it *InboundChannelMessageDispatchedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *InboundChannelMessageDispatchedIterator) Error() error {
+func (it *InboundQueueMessageDispatchedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *InboundChannelMessageDispatchedIterator) Close() error {
+func (it *InboundQueueMessageDispatchedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// InboundChannelMessageDispatched represents a MessageDispatched event raised by the InboundChannel contract.
-type InboundChannelMessageDispatched struct {
+// InboundQueueMessageDispatched represents a MessageDispatched event raised by the InboundQueue contract.
+type InboundQueueMessageDispatched struct {
 	Origin []byte
 	Nonce  uint64
-	Result InboundChannelDispatchResult
+	Result InboundQueueDispatchResult
 	Raw    types.Log // Blockchain specific contextual infos
 }
 
 // FilterMessageDispatched is a free log retrieval operation binding the contract event 0x3aaa5c2dcc1be357b3aac5b7a4dbb2ecdae5b819f7fc5a48fea27b42aa705b79.
 //
 // Solidity: event MessageDispatched(bytes origin, uint64 nonce, (bool,string,uint256,bytes) result)
-func (_InboundChannel *InboundChannelFilterer) FilterMessageDispatched(opts *bind.FilterOpts) (*InboundChannelMessageDispatchedIterator, error) {
+func (_InboundQueue *InboundQueueFilterer) FilterMessageDispatched(opts *bind.FilterOpts) (*InboundQueueMessageDispatchedIterator, error) {
 
-	logs, sub, err := _InboundChannel.contract.FilterLogs(opts, "MessageDispatched")
+	logs, sub, err := _InboundQueue.contract.FilterLogs(opts, "MessageDispatched")
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelMessageDispatchedIterator{contract: _InboundChannel.contract, event: "MessageDispatched", logs: logs, sub: sub}, nil
+	return &InboundQueueMessageDispatchedIterator{contract: _InboundQueue.contract, event: "MessageDispatched", logs: logs, sub: sub}, nil
 }
 
 // WatchMessageDispatched is a free log subscription operation binding the contract event 0x3aaa5c2dcc1be357b3aac5b7a4dbb2ecdae5b819f7fc5a48fea27b42aa705b79.
 //
 // Solidity: event MessageDispatched(bytes origin, uint64 nonce, (bool,string,uint256,bytes) result)
-func (_InboundChannel *InboundChannelFilterer) WatchMessageDispatched(opts *bind.WatchOpts, sink chan<- *InboundChannelMessageDispatched) (event.Subscription, error) {
+func (_InboundQueue *InboundQueueFilterer) WatchMessageDispatched(opts *bind.WatchOpts, sink chan<- *InboundQueueMessageDispatched) (event.Subscription, error) {
 
-	logs, sub, err := _InboundChannel.contract.WatchLogs(opts, "MessageDispatched")
+	logs, sub, err := _InboundQueue.contract.WatchLogs(opts, "MessageDispatched")
 	if err != nil {
 		return nil, err
 	}
@@ -916,8 +916,8 @@ func (_InboundChannel *InboundChannelFilterer) WatchMessageDispatched(opts *bind
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(InboundChannelMessageDispatched)
-				if err := _InboundChannel.contract.UnpackLog(event, "MessageDispatched", log); err != nil {
+				event := new(InboundQueueMessageDispatched)
+				if err := _InboundQueue.contract.UnpackLog(event, "MessageDispatched", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -941,18 +941,18 @@ func (_InboundChannel *InboundChannelFilterer) WatchMessageDispatched(opts *bind
 // ParseMessageDispatched is a log parse operation binding the contract event 0x3aaa5c2dcc1be357b3aac5b7a4dbb2ecdae5b819f7fc5a48fea27b42aa705b79.
 //
 // Solidity: event MessageDispatched(bytes origin, uint64 nonce, (bool,string,uint256,bytes) result)
-func (_InboundChannel *InboundChannelFilterer) ParseMessageDispatched(log types.Log) (*InboundChannelMessageDispatched, error) {
-	event := new(InboundChannelMessageDispatched)
-	if err := _InboundChannel.contract.UnpackLog(event, "MessageDispatched", log); err != nil {
+func (_InboundQueue *InboundQueueFilterer) ParseMessageDispatched(log types.Log) (*InboundQueueMessageDispatched, error) {
+	event := new(InboundQueueMessageDispatched)
+	if err := _InboundQueue.contract.UnpackLog(event, "MessageDispatched", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// InboundChannelParachainClientUpdatedIterator is returned from FilterParachainClientUpdated and is used to iterate over the raw logs and unpacked data for ParachainClientUpdated events raised by the InboundChannel contract.
-type InboundChannelParachainClientUpdatedIterator struct {
-	Event *InboundChannelParachainClientUpdated // Event containing the contract specifics and raw log
+// InboundQueueParachainClientUpdatedIterator is returned from FilterParachainClientUpdated and is used to iterate over the raw logs and unpacked data for ParachainClientUpdated events raised by the InboundQueue contract.
+type InboundQueueParachainClientUpdatedIterator struct {
+	Event *InboundQueueParachainClientUpdated // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -966,7 +966,7 @@ type InboundChannelParachainClientUpdatedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *InboundChannelParachainClientUpdatedIterator) Next() bool {
+func (it *InboundQueueParachainClientUpdatedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -975,7 +975,7 @@ func (it *InboundChannelParachainClientUpdatedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(InboundChannelParachainClientUpdated)
+			it.Event = new(InboundQueueParachainClientUpdated)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -990,7 +990,7 @@ func (it *InboundChannelParachainClientUpdatedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(InboundChannelParachainClientUpdated)
+		it.Event = new(InboundQueueParachainClientUpdated)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1006,19 +1006,19 @@ func (it *InboundChannelParachainClientUpdatedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *InboundChannelParachainClientUpdatedIterator) Error() error {
+func (it *InboundQueueParachainClientUpdatedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *InboundChannelParachainClientUpdatedIterator) Close() error {
+func (it *InboundQueueParachainClientUpdatedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// InboundChannelParachainClientUpdated represents a ParachainClientUpdated event raised by the InboundChannel contract.
-type InboundChannelParachainClientUpdated struct {
+// InboundQueueParachainClientUpdated represents a ParachainClientUpdated event raised by the InboundQueue contract.
+type InboundQueueParachainClientUpdated struct {
 	ParachainClient common.Address
 	Raw             types.Log // Blockchain specific contextual infos
 }
@@ -1026,21 +1026,21 @@ type InboundChannelParachainClientUpdated struct {
 // FilterParachainClientUpdated is a free log retrieval operation binding the contract event 0x2eb3efb9388b586c251856bc1b31af67a4015796cf665e600df15d2a42e2ba41.
 //
 // Solidity: event ParachainClientUpdated(address parachainClient)
-func (_InboundChannel *InboundChannelFilterer) FilterParachainClientUpdated(opts *bind.FilterOpts) (*InboundChannelParachainClientUpdatedIterator, error) {
+func (_InboundQueue *InboundQueueFilterer) FilterParachainClientUpdated(opts *bind.FilterOpts) (*InboundQueueParachainClientUpdatedIterator, error) {
 
-	logs, sub, err := _InboundChannel.contract.FilterLogs(opts, "ParachainClientUpdated")
+	logs, sub, err := _InboundQueue.contract.FilterLogs(opts, "ParachainClientUpdated")
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelParachainClientUpdatedIterator{contract: _InboundChannel.contract, event: "ParachainClientUpdated", logs: logs, sub: sub}, nil
+	return &InboundQueueParachainClientUpdatedIterator{contract: _InboundQueue.contract, event: "ParachainClientUpdated", logs: logs, sub: sub}, nil
 }
 
 // WatchParachainClientUpdated is a free log subscription operation binding the contract event 0x2eb3efb9388b586c251856bc1b31af67a4015796cf665e600df15d2a42e2ba41.
 //
 // Solidity: event ParachainClientUpdated(address parachainClient)
-func (_InboundChannel *InboundChannelFilterer) WatchParachainClientUpdated(opts *bind.WatchOpts, sink chan<- *InboundChannelParachainClientUpdated) (event.Subscription, error) {
+func (_InboundQueue *InboundQueueFilterer) WatchParachainClientUpdated(opts *bind.WatchOpts, sink chan<- *InboundQueueParachainClientUpdated) (event.Subscription, error) {
 
-	logs, sub, err := _InboundChannel.contract.WatchLogs(opts, "ParachainClientUpdated")
+	logs, sub, err := _InboundQueue.contract.WatchLogs(opts, "ParachainClientUpdated")
 	if err != nil {
 		return nil, err
 	}
@@ -1050,8 +1050,8 @@ func (_InboundChannel *InboundChannelFilterer) WatchParachainClientUpdated(opts 
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(InboundChannelParachainClientUpdated)
-				if err := _InboundChannel.contract.UnpackLog(event, "ParachainClientUpdated", log); err != nil {
+				event := new(InboundQueueParachainClientUpdated)
+				if err := _InboundQueue.contract.UnpackLog(event, "ParachainClientUpdated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1075,18 +1075,18 @@ func (_InboundChannel *InboundChannelFilterer) WatchParachainClientUpdated(opts 
 // ParseParachainClientUpdated is a log parse operation binding the contract event 0x2eb3efb9388b586c251856bc1b31af67a4015796cf665e600df15d2a42e2ba41.
 //
 // Solidity: event ParachainClientUpdated(address parachainClient)
-func (_InboundChannel *InboundChannelFilterer) ParseParachainClientUpdated(log types.Log) (*InboundChannelParachainClientUpdated, error) {
-	event := new(InboundChannelParachainClientUpdated)
-	if err := _InboundChannel.contract.UnpackLog(event, "ParachainClientUpdated", log); err != nil {
+func (_InboundQueue *InboundQueueFilterer) ParseParachainClientUpdated(log types.Log) (*InboundQueueParachainClientUpdated, error) {
+	event := new(InboundQueueParachainClientUpdated)
+	if err := _InboundQueue.contract.UnpackLog(event, "ParachainClientUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// InboundChannelRewardUpdatedIterator is returned from FilterRewardUpdated and is used to iterate over the raw logs and unpacked data for RewardUpdated events raised by the InboundChannel contract.
-type InboundChannelRewardUpdatedIterator struct {
-	Event *InboundChannelRewardUpdated // Event containing the contract specifics and raw log
+// InboundQueueRewardUpdatedIterator is returned from FilterRewardUpdated and is used to iterate over the raw logs and unpacked data for RewardUpdated events raised by the InboundQueue contract.
+type InboundQueueRewardUpdatedIterator struct {
+	Event *InboundQueueRewardUpdated // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1100,7 +1100,7 @@ type InboundChannelRewardUpdatedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *InboundChannelRewardUpdatedIterator) Next() bool {
+func (it *InboundQueueRewardUpdatedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1109,7 +1109,7 @@ func (it *InboundChannelRewardUpdatedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(InboundChannelRewardUpdated)
+			it.Event = new(InboundQueueRewardUpdated)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1124,7 +1124,7 @@ func (it *InboundChannelRewardUpdatedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(InboundChannelRewardUpdated)
+		it.Event = new(InboundQueueRewardUpdated)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1140,19 +1140,19 @@ func (it *InboundChannelRewardUpdatedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *InboundChannelRewardUpdatedIterator) Error() error {
+func (it *InboundQueueRewardUpdatedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *InboundChannelRewardUpdatedIterator) Close() error {
+func (it *InboundQueueRewardUpdatedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// InboundChannelRewardUpdated represents a RewardUpdated event raised by the InboundChannel contract.
-type InboundChannelRewardUpdated struct {
+// InboundQueueRewardUpdated represents a RewardUpdated event raised by the InboundQueue contract.
+type InboundQueueRewardUpdated struct {
 	Reward *big.Int
 	Raw    types.Log // Blockchain specific contextual infos
 }
@@ -1160,21 +1160,21 @@ type InboundChannelRewardUpdated struct {
 // FilterRewardUpdated is a free log retrieval operation binding the contract event 0xcb94909754d27c309adf4167150f1f7aa04de40b6a0e6bb98b2ae80a2bf438f6.
 //
 // Solidity: event RewardUpdated(uint256 reward)
-func (_InboundChannel *InboundChannelFilterer) FilterRewardUpdated(opts *bind.FilterOpts) (*InboundChannelRewardUpdatedIterator, error) {
+func (_InboundQueue *InboundQueueFilterer) FilterRewardUpdated(opts *bind.FilterOpts) (*InboundQueueRewardUpdatedIterator, error) {
 
-	logs, sub, err := _InboundChannel.contract.FilterLogs(opts, "RewardUpdated")
+	logs, sub, err := _InboundQueue.contract.FilterLogs(opts, "RewardUpdated")
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelRewardUpdatedIterator{contract: _InboundChannel.contract, event: "RewardUpdated", logs: logs, sub: sub}, nil
+	return &InboundQueueRewardUpdatedIterator{contract: _InboundQueue.contract, event: "RewardUpdated", logs: logs, sub: sub}, nil
 }
 
 // WatchRewardUpdated is a free log subscription operation binding the contract event 0xcb94909754d27c309adf4167150f1f7aa04de40b6a0e6bb98b2ae80a2bf438f6.
 //
 // Solidity: event RewardUpdated(uint256 reward)
-func (_InboundChannel *InboundChannelFilterer) WatchRewardUpdated(opts *bind.WatchOpts, sink chan<- *InboundChannelRewardUpdated) (event.Subscription, error) {
+func (_InboundQueue *InboundQueueFilterer) WatchRewardUpdated(opts *bind.WatchOpts, sink chan<- *InboundQueueRewardUpdated) (event.Subscription, error) {
 
-	logs, sub, err := _InboundChannel.contract.WatchLogs(opts, "RewardUpdated")
+	logs, sub, err := _InboundQueue.contract.WatchLogs(opts, "RewardUpdated")
 	if err != nil {
 		return nil, err
 	}
@@ -1184,8 +1184,8 @@ func (_InboundChannel *InboundChannelFilterer) WatchRewardUpdated(opts *bind.Wat
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(InboundChannelRewardUpdated)
-				if err := _InboundChannel.contract.UnpackLog(event, "RewardUpdated", log); err != nil {
+				event := new(InboundQueueRewardUpdated)
+				if err := _InboundQueue.contract.UnpackLog(event, "RewardUpdated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1209,18 +1209,18 @@ func (_InboundChannel *InboundChannelFilterer) WatchRewardUpdated(opts *bind.Wat
 // ParseRewardUpdated is a log parse operation binding the contract event 0xcb94909754d27c309adf4167150f1f7aa04de40b6a0e6bb98b2ae80a2bf438f6.
 //
 // Solidity: event RewardUpdated(uint256 reward)
-func (_InboundChannel *InboundChannelFilterer) ParseRewardUpdated(log types.Log) (*InboundChannelRewardUpdated, error) {
-	event := new(InboundChannelRewardUpdated)
-	if err := _InboundChannel.contract.UnpackLog(event, "RewardUpdated", log); err != nil {
+func (_InboundQueue *InboundQueueFilterer) ParseRewardUpdated(log types.Log) (*InboundQueueRewardUpdated, error) {
+	event := new(InboundQueueRewardUpdated)
+	if err := _InboundQueue.contract.UnpackLog(event, "RewardUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// InboundChannelRoleAdminChangedIterator is returned from FilterRoleAdminChanged and is used to iterate over the raw logs and unpacked data for RoleAdminChanged events raised by the InboundChannel contract.
-type InboundChannelRoleAdminChangedIterator struct {
-	Event *InboundChannelRoleAdminChanged // Event containing the contract specifics and raw log
+// InboundQueueRoleAdminChangedIterator is returned from FilterRoleAdminChanged and is used to iterate over the raw logs and unpacked data for RoleAdminChanged events raised by the InboundQueue contract.
+type InboundQueueRoleAdminChangedIterator struct {
+	Event *InboundQueueRoleAdminChanged // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1234,7 +1234,7 @@ type InboundChannelRoleAdminChangedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *InboundChannelRoleAdminChangedIterator) Next() bool {
+func (it *InboundQueueRoleAdminChangedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1243,7 +1243,7 @@ func (it *InboundChannelRoleAdminChangedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(InboundChannelRoleAdminChanged)
+			it.Event = new(InboundQueueRoleAdminChanged)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1258,7 +1258,7 @@ func (it *InboundChannelRoleAdminChangedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(InboundChannelRoleAdminChanged)
+		it.Event = new(InboundQueueRoleAdminChanged)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1274,19 +1274,19 @@ func (it *InboundChannelRoleAdminChangedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *InboundChannelRoleAdminChangedIterator) Error() error {
+func (it *InboundQueueRoleAdminChangedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *InboundChannelRoleAdminChangedIterator) Close() error {
+func (it *InboundQueueRoleAdminChangedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// InboundChannelRoleAdminChanged represents a RoleAdminChanged event raised by the InboundChannel contract.
-type InboundChannelRoleAdminChanged struct {
+// InboundQueueRoleAdminChanged represents a RoleAdminChanged event raised by the InboundQueue contract.
+type InboundQueueRoleAdminChanged struct {
 	Role              [32]byte
 	PreviousAdminRole [32]byte
 	NewAdminRole      [32]byte
@@ -1296,7 +1296,7 @@ type InboundChannelRoleAdminChanged struct {
 // FilterRoleAdminChanged is a free log retrieval operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
 //
 // Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
-func (_InboundChannel *InboundChannelFilterer) FilterRoleAdminChanged(opts *bind.FilterOpts, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (*InboundChannelRoleAdminChangedIterator, error) {
+func (_InboundQueue *InboundQueueFilterer) FilterRoleAdminChanged(opts *bind.FilterOpts, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (*InboundQueueRoleAdminChangedIterator, error) {
 
 	var roleRule []interface{}
 	for _, roleItem := range role {
@@ -1311,17 +1311,17 @@ func (_InboundChannel *InboundChannelFilterer) FilterRoleAdminChanged(opts *bind
 		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
 	}
 
-	logs, sub, err := _InboundChannel.contract.FilterLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	logs, sub, err := _InboundQueue.contract.FilterLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelRoleAdminChangedIterator{contract: _InboundChannel.contract, event: "RoleAdminChanged", logs: logs, sub: sub}, nil
+	return &InboundQueueRoleAdminChangedIterator{contract: _InboundQueue.contract, event: "RoleAdminChanged", logs: logs, sub: sub}, nil
 }
 
 // WatchRoleAdminChanged is a free log subscription operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
 //
 // Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
-func (_InboundChannel *InboundChannelFilterer) WatchRoleAdminChanged(opts *bind.WatchOpts, sink chan<- *InboundChannelRoleAdminChanged, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (event.Subscription, error) {
+func (_InboundQueue *InboundQueueFilterer) WatchRoleAdminChanged(opts *bind.WatchOpts, sink chan<- *InboundQueueRoleAdminChanged, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (event.Subscription, error) {
 
 	var roleRule []interface{}
 	for _, roleItem := range role {
@@ -1336,7 +1336,7 @@ func (_InboundChannel *InboundChannelFilterer) WatchRoleAdminChanged(opts *bind.
 		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
 	}
 
-	logs, sub, err := _InboundChannel.contract.WatchLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	logs, sub, err := _InboundQueue.contract.WatchLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1346,8 +1346,8 @@ func (_InboundChannel *InboundChannelFilterer) WatchRoleAdminChanged(opts *bind.
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(InboundChannelRoleAdminChanged)
-				if err := _InboundChannel.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+				event := new(InboundQueueRoleAdminChanged)
+				if err := _InboundQueue.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1371,18 +1371,18 @@ func (_InboundChannel *InboundChannelFilterer) WatchRoleAdminChanged(opts *bind.
 // ParseRoleAdminChanged is a log parse operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
 //
 // Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
-func (_InboundChannel *InboundChannelFilterer) ParseRoleAdminChanged(log types.Log) (*InboundChannelRoleAdminChanged, error) {
-	event := new(InboundChannelRoleAdminChanged)
-	if err := _InboundChannel.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+func (_InboundQueue *InboundQueueFilterer) ParseRoleAdminChanged(log types.Log) (*InboundQueueRoleAdminChanged, error) {
+	event := new(InboundQueueRoleAdminChanged)
+	if err := _InboundQueue.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// InboundChannelRoleGrantedIterator is returned from FilterRoleGranted and is used to iterate over the raw logs and unpacked data for RoleGranted events raised by the InboundChannel contract.
-type InboundChannelRoleGrantedIterator struct {
-	Event *InboundChannelRoleGranted // Event containing the contract specifics and raw log
+// InboundQueueRoleGrantedIterator is returned from FilterRoleGranted and is used to iterate over the raw logs and unpacked data for RoleGranted events raised by the InboundQueue contract.
+type InboundQueueRoleGrantedIterator struct {
+	Event *InboundQueueRoleGranted // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1396,7 +1396,7 @@ type InboundChannelRoleGrantedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *InboundChannelRoleGrantedIterator) Next() bool {
+func (it *InboundQueueRoleGrantedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1405,7 +1405,7 @@ func (it *InboundChannelRoleGrantedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(InboundChannelRoleGranted)
+			it.Event = new(InboundQueueRoleGranted)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1420,7 +1420,7 @@ func (it *InboundChannelRoleGrantedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(InboundChannelRoleGranted)
+		it.Event = new(InboundQueueRoleGranted)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1436,19 +1436,19 @@ func (it *InboundChannelRoleGrantedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *InboundChannelRoleGrantedIterator) Error() error {
+func (it *InboundQueueRoleGrantedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *InboundChannelRoleGrantedIterator) Close() error {
+func (it *InboundQueueRoleGrantedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// InboundChannelRoleGranted represents a RoleGranted event raised by the InboundChannel contract.
-type InboundChannelRoleGranted struct {
+// InboundQueueRoleGranted represents a RoleGranted event raised by the InboundQueue contract.
+type InboundQueueRoleGranted struct {
 	Role    [32]byte
 	Account common.Address
 	Sender  common.Address
@@ -1458,7 +1458,7 @@ type InboundChannelRoleGranted struct {
 // FilterRoleGranted is a free log retrieval operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
 //
 // Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
-func (_InboundChannel *InboundChannelFilterer) FilterRoleGranted(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*InboundChannelRoleGrantedIterator, error) {
+func (_InboundQueue *InboundQueueFilterer) FilterRoleGranted(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*InboundQueueRoleGrantedIterator, error) {
 
 	var roleRule []interface{}
 	for _, roleItem := range role {
@@ -1473,17 +1473,17 @@ func (_InboundChannel *InboundChannelFilterer) FilterRoleGranted(opts *bind.Filt
 		senderRule = append(senderRule, senderItem)
 	}
 
-	logs, sub, err := _InboundChannel.contract.FilterLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	logs, sub, err := _InboundQueue.contract.FilterLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelRoleGrantedIterator{contract: _InboundChannel.contract, event: "RoleGranted", logs: logs, sub: sub}, nil
+	return &InboundQueueRoleGrantedIterator{contract: _InboundQueue.contract, event: "RoleGranted", logs: logs, sub: sub}, nil
 }
 
 // WatchRoleGranted is a free log subscription operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
 //
 // Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
-func (_InboundChannel *InboundChannelFilterer) WatchRoleGranted(opts *bind.WatchOpts, sink chan<- *InboundChannelRoleGranted, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+func (_InboundQueue *InboundQueueFilterer) WatchRoleGranted(opts *bind.WatchOpts, sink chan<- *InboundQueueRoleGranted, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
 
 	var roleRule []interface{}
 	for _, roleItem := range role {
@@ -1498,7 +1498,7 @@ func (_InboundChannel *InboundChannelFilterer) WatchRoleGranted(opts *bind.Watch
 		senderRule = append(senderRule, senderItem)
 	}
 
-	logs, sub, err := _InboundChannel.contract.WatchLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	logs, sub, err := _InboundQueue.contract.WatchLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1508,8 +1508,8 @@ func (_InboundChannel *InboundChannelFilterer) WatchRoleGranted(opts *bind.Watch
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(InboundChannelRoleGranted)
-				if err := _InboundChannel.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+				event := new(InboundQueueRoleGranted)
+				if err := _InboundQueue.contract.UnpackLog(event, "RoleGranted", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1533,18 +1533,18 @@ func (_InboundChannel *InboundChannelFilterer) WatchRoleGranted(opts *bind.Watch
 // ParseRoleGranted is a log parse operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
 //
 // Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
-func (_InboundChannel *InboundChannelFilterer) ParseRoleGranted(log types.Log) (*InboundChannelRoleGranted, error) {
-	event := new(InboundChannelRoleGranted)
-	if err := _InboundChannel.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+func (_InboundQueue *InboundQueueFilterer) ParseRoleGranted(log types.Log) (*InboundQueueRoleGranted, error) {
+	event := new(InboundQueueRoleGranted)
+	if err := _InboundQueue.contract.UnpackLog(event, "RoleGranted", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// InboundChannelRoleRevokedIterator is returned from FilterRoleRevoked and is used to iterate over the raw logs and unpacked data for RoleRevoked events raised by the InboundChannel contract.
-type InboundChannelRoleRevokedIterator struct {
-	Event *InboundChannelRoleRevoked // Event containing the contract specifics and raw log
+// InboundQueueRoleRevokedIterator is returned from FilterRoleRevoked and is used to iterate over the raw logs and unpacked data for RoleRevoked events raised by the InboundQueue contract.
+type InboundQueueRoleRevokedIterator struct {
+	Event *InboundQueueRoleRevoked // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1558,7 +1558,7 @@ type InboundChannelRoleRevokedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *InboundChannelRoleRevokedIterator) Next() bool {
+func (it *InboundQueueRoleRevokedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1567,7 +1567,7 @@ func (it *InboundChannelRoleRevokedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(InboundChannelRoleRevoked)
+			it.Event = new(InboundQueueRoleRevoked)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1582,7 +1582,7 @@ func (it *InboundChannelRoleRevokedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(InboundChannelRoleRevoked)
+		it.Event = new(InboundQueueRoleRevoked)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1598,19 +1598,19 @@ func (it *InboundChannelRoleRevokedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *InboundChannelRoleRevokedIterator) Error() error {
+func (it *InboundQueueRoleRevokedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *InboundChannelRoleRevokedIterator) Close() error {
+func (it *InboundQueueRoleRevokedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// InboundChannelRoleRevoked represents a RoleRevoked event raised by the InboundChannel contract.
-type InboundChannelRoleRevoked struct {
+// InboundQueueRoleRevoked represents a RoleRevoked event raised by the InboundQueue contract.
+type InboundQueueRoleRevoked struct {
 	Role    [32]byte
 	Account common.Address
 	Sender  common.Address
@@ -1620,7 +1620,7 @@ type InboundChannelRoleRevoked struct {
 // FilterRoleRevoked is a free log retrieval operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
 //
 // Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
-func (_InboundChannel *InboundChannelFilterer) FilterRoleRevoked(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*InboundChannelRoleRevokedIterator, error) {
+func (_InboundQueue *InboundQueueFilterer) FilterRoleRevoked(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*InboundQueueRoleRevokedIterator, error) {
 
 	var roleRule []interface{}
 	for _, roleItem := range role {
@@ -1635,17 +1635,17 @@ func (_InboundChannel *InboundChannelFilterer) FilterRoleRevoked(opts *bind.Filt
 		senderRule = append(senderRule, senderItem)
 	}
 
-	logs, sub, err := _InboundChannel.contract.FilterLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	logs, sub, err := _InboundQueue.contract.FilterLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelRoleRevokedIterator{contract: _InboundChannel.contract, event: "RoleRevoked", logs: logs, sub: sub}, nil
+	return &InboundQueueRoleRevokedIterator{contract: _InboundQueue.contract, event: "RoleRevoked", logs: logs, sub: sub}, nil
 }
 
 // WatchRoleRevoked is a free log subscription operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
 //
 // Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
-func (_InboundChannel *InboundChannelFilterer) WatchRoleRevoked(opts *bind.WatchOpts, sink chan<- *InboundChannelRoleRevoked, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+func (_InboundQueue *InboundQueueFilterer) WatchRoleRevoked(opts *bind.WatchOpts, sink chan<- *InboundQueueRoleRevoked, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
 
 	var roleRule []interface{}
 	for _, roleItem := range role {
@@ -1660,7 +1660,7 @@ func (_InboundChannel *InboundChannelFilterer) WatchRoleRevoked(opts *bind.Watch
 		senderRule = append(senderRule, senderItem)
 	}
 
-	logs, sub, err := _InboundChannel.contract.WatchLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	logs, sub, err := _InboundQueue.contract.WatchLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1670,8 +1670,8 @@ func (_InboundChannel *InboundChannelFilterer) WatchRoleRevoked(opts *bind.Watch
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(InboundChannelRoleRevoked)
-				if err := _InboundChannel.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+				event := new(InboundQueueRoleRevoked)
+				if err := _InboundQueue.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1695,18 +1695,18 @@ func (_InboundChannel *InboundChannelFilterer) WatchRoleRevoked(opts *bind.Watch
 // ParseRoleRevoked is a log parse operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
 //
 // Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
-func (_InboundChannel *InboundChannelFilterer) ParseRoleRevoked(log types.Log) (*InboundChannelRoleRevoked, error) {
-	event := new(InboundChannelRoleRevoked)
-	if err := _InboundChannel.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+func (_InboundQueue *InboundQueueFilterer) ParseRoleRevoked(log types.Log) (*InboundQueueRoleRevoked, error) {
+	event := new(InboundQueueRoleRevoked)
+	if err := _InboundQueue.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// InboundChannelVaultUpdatedIterator is returned from FilterVaultUpdated and is used to iterate over the raw logs and unpacked data for VaultUpdated events raised by the InboundChannel contract.
-type InboundChannelVaultUpdatedIterator struct {
-	Event *InboundChannelVaultUpdated // Event containing the contract specifics and raw log
+// InboundQueueVaultUpdatedIterator is returned from FilterVaultUpdated and is used to iterate over the raw logs and unpacked data for VaultUpdated events raised by the InboundQueue contract.
+type InboundQueueVaultUpdatedIterator struct {
+	Event *InboundQueueVaultUpdated // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1720,7 +1720,7 @@ type InboundChannelVaultUpdatedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *InboundChannelVaultUpdatedIterator) Next() bool {
+func (it *InboundQueueVaultUpdatedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1729,7 +1729,7 @@ func (it *InboundChannelVaultUpdatedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(InboundChannelVaultUpdated)
+			it.Event = new(InboundQueueVaultUpdated)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1744,7 +1744,7 @@ func (it *InboundChannelVaultUpdatedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(InboundChannelVaultUpdated)
+		it.Event = new(InboundQueueVaultUpdated)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1760,19 +1760,19 @@ func (it *InboundChannelVaultUpdatedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *InboundChannelVaultUpdatedIterator) Error() error {
+func (it *InboundQueueVaultUpdatedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *InboundChannelVaultUpdatedIterator) Close() error {
+func (it *InboundQueueVaultUpdatedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// InboundChannelVaultUpdated represents a VaultUpdated event raised by the InboundChannel contract.
-type InboundChannelVaultUpdated struct {
+// InboundQueueVaultUpdated represents a VaultUpdated event raised by the InboundQueue contract.
+type InboundQueueVaultUpdated struct {
 	Vault common.Address
 	Raw   types.Log // Blockchain specific contextual infos
 }
@@ -1780,21 +1780,21 @@ type InboundChannelVaultUpdated struct {
 // FilterVaultUpdated is a free log retrieval operation binding the contract event 0x161584aed96e7f34998117c9ad67e2d21ff46d2a42775c22b11ed282f3c7b2cd.
 //
 // Solidity: event VaultUpdated(address vault)
-func (_InboundChannel *InboundChannelFilterer) FilterVaultUpdated(opts *bind.FilterOpts) (*InboundChannelVaultUpdatedIterator, error) {
+func (_InboundQueue *InboundQueueFilterer) FilterVaultUpdated(opts *bind.FilterOpts) (*InboundQueueVaultUpdatedIterator, error) {
 
-	logs, sub, err := _InboundChannel.contract.FilterLogs(opts, "VaultUpdated")
+	logs, sub, err := _InboundQueue.contract.FilterLogs(opts, "VaultUpdated")
 	if err != nil {
 		return nil, err
 	}
-	return &InboundChannelVaultUpdatedIterator{contract: _InboundChannel.contract, event: "VaultUpdated", logs: logs, sub: sub}, nil
+	return &InboundQueueVaultUpdatedIterator{contract: _InboundQueue.contract, event: "VaultUpdated", logs: logs, sub: sub}, nil
 }
 
 // WatchVaultUpdated is a free log subscription operation binding the contract event 0x161584aed96e7f34998117c9ad67e2d21ff46d2a42775c22b11ed282f3c7b2cd.
 //
 // Solidity: event VaultUpdated(address vault)
-func (_InboundChannel *InboundChannelFilterer) WatchVaultUpdated(opts *bind.WatchOpts, sink chan<- *InboundChannelVaultUpdated) (event.Subscription, error) {
+func (_InboundQueue *InboundQueueFilterer) WatchVaultUpdated(opts *bind.WatchOpts, sink chan<- *InboundQueueVaultUpdated) (event.Subscription, error) {
 
-	logs, sub, err := _InboundChannel.contract.WatchLogs(opts, "VaultUpdated")
+	logs, sub, err := _InboundQueue.contract.WatchLogs(opts, "VaultUpdated")
 	if err != nil {
 		return nil, err
 	}
@@ -1804,8 +1804,8 @@ func (_InboundChannel *InboundChannelFilterer) WatchVaultUpdated(opts *bind.Watc
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(InboundChannelVaultUpdated)
-				if err := _InboundChannel.contract.UnpackLog(event, "VaultUpdated", log); err != nil {
+				event := new(InboundQueueVaultUpdated)
+				if err := _InboundQueue.contract.UnpackLog(event, "VaultUpdated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1829,9 +1829,9 @@ func (_InboundChannel *InboundChannelFilterer) WatchVaultUpdated(opts *bind.Watc
 // ParseVaultUpdated is a log parse operation binding the contract event 0x161584aed96e7f34998117c9ad67e2d21ff46d2a42775c22b11ed282f3c7b2cd.
 //
 // Solidity: event VaultUpdated(address vault)
-func (_InboundChannel *InboundChannelFilterer) ParseVaultUpdated(log types.Log) (*InboundChannelVaultUpdated, error) {
-	event := new(InboundChannelVaultUpdated)
-	if err := _InboundChannel.contract.UnpackLog(event, "VaultUpdated", log); err != nil {
+func (_InboundQueue *InboundQueueFilterer) ParseVaultUpdated(log types.Log) (*InboundQueueVaultUpdated, error) {
+	event := new(InboundQueueVaultUpdated)
+	if err := _InboundQueue.contract.UnpackLog(event, "VaultUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
