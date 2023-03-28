@@ -5,7 +5,7 @@ source scripts/set-env.sh
 
 generate_chain_spec() {
     echo "Generating chain specification"
-    "$cumulus_bin" build-spec --chain "$bridge_hub_runtime" --disable-default-bootnode > "$output_dir/spec.json"
+    "$output_bin_dir/polkadot-parachain" build-spec --chain "$bridge_hub_runtime" --disable-default-bootnode > "$output_dir/spec.json"
 
     initial_beacon_block=""
     while [ -z "$initial_beacon_block" ] || [ "$initial_beacon_block" == "0x0000000000000000000000000000000000000000000000000000000000000000" ]
@@ -23,7 +23,7 @@ generate_chain_spec() {
     do
         echo "Waiting for beacon to get initial bootstrap..."
         bootstrap_data=$(curl -s "$beacon_endpoint_http/eth/v1/beacon/light_client/bootstrap/$initial_beacon_block")
-        # sometimes will get http 503 error from the above bootstrap endpoint in goerli network 
+        # sometimes will get http 503 error from the above bootstrap endpoint in goerli network
         # so add true here to ignore the error and just retry
         bootstrap_header=$(jq -r '.data.header' <<< "$bootstrap_data" || true)
         slot=$(jq -r '.data.header.beacon.slot' <<< "$bootstrap_data" || true)
