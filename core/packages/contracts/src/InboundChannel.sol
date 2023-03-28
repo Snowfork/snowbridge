@@ -33,7 +33,7 @@ contract InboundChannel is AccessControl {
     struct Message {
         bytes origin;
         uint64 nonce;
-        uint16 handler;
+        address handler;
         bytes payload;
     }
 

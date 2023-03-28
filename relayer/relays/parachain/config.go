@@ -15,11 +15,11 @@ type SourceConfig struct {
 	Ethereum  config.EthereumConfig  `mapstructure:"ethereum"`
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
 	// Block number when Beefy was activated
-	BeefyActivationBlock  uint64   `mapstructure:"beefy-activation-block"`
+	BeefyActivationBlock uint64 `mapstructure:"beefy-activation-block"`
 }
 
 type SourceContractsConfig struct {
-	BeefyClient         string `mapstructure:"BeefyClient"`
+	BeefyClient    string `mapstructure:"BeefyClient"`
 	InboundChannel string `mapstructure:"InboundChannel"`
 }
 

@@ -1,4 +1,4 @@
-use codec::{DecodeAll};
+use codec::DecodeAll;
 use ethabi::{Event, Param, ParamKind, Token};
 use snowbridge_ethereum::{log::Log, H160};
 
@@ -46,7 +46,8 @@ impl TryFrom<Log> for Envelope {
 		let mut iter = tokens.into_iter();
 
 		let dest = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Bytes(dest) => MultiLocation::decode_all(&mut dest.as_ref()).map_err(|_| EnvelopeDecodeError)?,
+			Token::Bytes(dest) =>
+				MultiLocation::decode_all(&mut dest.as_ref()).map_err(|_| EnvelopeDecodeError)?,
 			_ => return Err(EnvelopeDecodeError),
 		};
 
@@ -56,7 +57,8 @@ impl TryFrom<Log> for Envelope {
 		};
 
 		let action = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Bytes(payload) => Action::decode_all(&mut payload.as_ref()).map_err(|_| EnvelopeDecodeError)?,
+			Token::Bytes(payload) =>
+				Action::decode_all(&mut payload.as_ref()).map_err(|_| EnvelopeDecodeError)?,
 			_ => return Err(EnvelopeDecodeError),
 		};
 

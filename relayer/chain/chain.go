@@ -9,8 +9,6 @@ type Message interface{}
 
 // Message from ethereum
 type EthereumOutboundMessage struct {
-	Call   string
-	Args   []interface{}
 	Origin common.Address
 	Nonce  uint64
 }

@@ -14,6 +14,8 @@ use sp_core::H160;
 use sp_std::convert::TryFrom;
 use xcm_executor::traits::Convert;
 
+use sp_std::collections::btree_set::BTreeSet;
+
 use envelope::Envelope;
 pub use weights::WeightInfo;
 
@@ -22,7 +24,7 @@ use xcm::latest::prelude::*;
 use frame_support::traits::fungible::{Inspect, Transfer};
 
 type BalanceOf<T> =
-        <<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+	<<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 pub use pallet::*;
 
@@ -63,42 +65,39 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Message came from an invalid outbound channel on the Ethereum side.
-		InvalidSourceChannel,
+		InvalidChannel,
 		/// Message has an invalid envelope.
 		InvalidEnvelope,
 		/// Message has an unexpected nonce.
 		InvalidNonce,
 		/// Cannot convert location
-		InvalidAccountConversion
+		InvalidAccountConversion,
 	}
 
-	/// Source channel on the ethereum side
 	#[pallet::storage]
-	#[pallet::getter(fn source_channel)]
-	pub type SourceChannel<T: Config> = StorageValue<_, H160, ValueQuery>;
+	#[pallet::getter(fn peer)]
+	pub type AllowList<T: Config> = StorageValue<_, BTreeSet<H160>, ValueQuery>;
 
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, MultiLocation, u64, ValueQuery>;
 
-	#[pallet::storage]
-	pub type LatestVerifiedBlockNumber<T: Config> = StorageValue<_, u64, ValueQuery>;
-
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
-		pub source_channel: H160,
+		pub allowlist: Vec<H160>,
 	}
 
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self { source_channel: Default::default() }
+			Self { allowlist: Default::default() }
 		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
-			<SourceChannel<T>>::put(self.source_channel);
+			let allowlist: BTreeSet<H160> = BTreeSet::from_iter(self.allowlist.into_iter());
+			<AllowList<T>>::put(allowlist);
 		}
 	}
 
@@ -116,8 +115,9 @@ pub mod pallet {
 
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
-			if envelope.channel != <SourceChannel<T>>::get() {
-				return Err(Error::<T>::InvalidSourceChannel.into())
+			let allowlist = <AllowList<T>>::get();
+			if !allowlist.contains(&envelope.channel) {
+				return Err(Error::<T>::InvalidChannel.into())
 			}
 
 			// Verify message nonce
@@ -131,10 +131,9 @@ pub mod pallet {
 			})?;
 
 			// Reward relayer from the sovereign account of the destination parachain
-			let dest_account = T::LocationToAccountId::convert(envelope.dest).map_err(|_| Error::<T>::InvalidAccountConversion)?;
+			let dest_account = T::LocationToAccountId::convert(envelope.dest)
+				.map_err(|_| Error::<T>::InvalidAccountConversion)?;
 			T::Token::transfer(&dest_account, &who, T::Reward::get(), true)?;
-
-			<LatestVerifiedBlockNumber<T>>::set(block_number);
 
 			Ok(())
 		}

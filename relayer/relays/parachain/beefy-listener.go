@@ -160,7 +160,7 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	// if err != nil {
 	//   return err
 	// }
-	var err error;
+	var err error
 	var tasks []*Task
 
 	for _, task := range tasks {

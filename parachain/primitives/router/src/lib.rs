@@ -1,8 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_core::H160;
-use sp_core::RuntimeDebug;
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
+use sp_core::{RuntimeDebug, H160};
 use xcm::latest::prelude::*;
 
 /// An inbound message that has had its outer envelope decoded.

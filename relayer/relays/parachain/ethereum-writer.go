@@ -25,12 +25,12 @@ import (
 )
 
 type EthereumWriter struct {
-	config              *SinkConfig
-	conn                *ethereum.Connection
-	inboundChannel *contracts.InboundChannel
-	tasks               <-chan *Task
-	abiPacker           abi.Arguments
-	abiBasicUnpacker    abi.Arguments
+	config           *SinkConfig
+	conn             *ethereum.Connection
+	inboundChannel   *contracts.InboundChannel
+	tasks            <-chan *Task
+	abiPacker        abi.Arguments
+	abiBasicUnpacker abi.Arguments
 }
 
 func NewEthereumWriter(
@@ -39,10 +39,10 @@ func NewEthereumWriter(
 	tasks <-chan *Task,
 ) (*EthereumWriter, error) {
 	return &EthereumWriter{
-		config:              config,
-		conn:                conn,
+		config:         config,
+		conn:           conn,
 		inboundChannel: nil,
-		tasks:               tasks,
+		tasks:          tasks,
 	}, nil
 }
 

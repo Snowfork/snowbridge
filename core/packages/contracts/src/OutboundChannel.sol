@@ -14,7 +14,7 @@ contract OutboundChannel is IOutboundChannel, AccessControl {
     IVault public vault;
     uint256 public fee;
 
-    event Message(bytes dest, uint64 nonce, bytes payload);
+    event Message(bytes indexed dest, uint64 nonce, bytes payload);
 
     event FeeUpdated(uint256 fee);
 

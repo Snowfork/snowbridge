@@ -4,7 +4,7 @@ use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::DispatchError,
 	parameter_types,
-	traits::{Everything, ConstU64, GenesisBuild},
+	traits::{ConstU64, Everything, GenesisBuild},
 };
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
