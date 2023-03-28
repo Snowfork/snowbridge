@@ -27,7 +27,7 @@ import (
 type EthereumWriter struct {
 	config           *SinkConfig
 	conn             *ethereum.Connection
-	inboundQueue   *contracts.InboundQueue
+	inboundQueue     *contracts.InboundQueue
 	tasks            <-chan *Task
 	abiPacker        abi.Arguments
 	abiBasicUnpacker abi.Arguments
@@ -39,10 +39,10 @@ func NewEthereumWriter(
 	tasks <-chan *Task,
 ) (*EthereumWriter, error) {
 	return &EthereumWriter{
-		config:         config,
-		conn:           conn,
+		config:       config,
+		conn:         conn,
 		inboundQueue: nil,
-		tasks:          tasks,
+		tasks:        tasks,
 	}, nil
 }
 

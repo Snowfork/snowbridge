@@ -19,7 +19,7 @@ type SourceConfig struct {
 }
 
 type SourceContractsConfig struct {
-	BeefyClient    string `mapstructure:"BeefyClient"`
+	BeefyClient  string `mapstructure:"BeefyClient"`
 	InboundQueue string `mapstructure:"InboundQueue"`
 }
 
