@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 mod envelope;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -11,8 +13,11 @@ mod test;
 use frame_system::ensure_signed;
 use snowbridge_core::{Message, Verifier};
 use sp_core::{ConstU32, H160};
-use sp_std::{collections::btree_set::BTreeSet, convert::TryFrom};
+use sp_std::{convert::TryFrom};
 use xcm_executor::traits::Convert;
+
+#[cfg(feature = "std")]
+use sp_std::collections::btree_set::BTreeSet;
 
 use frame_support::storage::bounded_btree_set::BoundedBTreeSet;
 

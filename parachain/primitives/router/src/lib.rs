@@ -3,6 +3,7 @@
 use codec::{Decode, Encode};
 use sp_core::{RuntimeDebug, H160};
 use xcm::latest::prelude::*;
+use sp_std::prelude::*;
 
 /// An inbound message that has had its outer envelope decoded.
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
