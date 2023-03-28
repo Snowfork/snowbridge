@@ -7,7 +7,7 @@ import "forge-std/console2.sol";
 import "../src/NativeTokens.sol";
 import "../src/TokenVault.sol";
 
-import "./mocks/OutboundChannelMock.sol";
+import "./mocks/OutboundQueueMock.sol";
 import "./mocks/TestToken.sol";
 
 contract NativeTokensTest is Test {
@@ -17,7 +17,7 @@ contract NativeTokensTest is Test {
 
     TokenVault private vault;
     NativeTokens private nativeTokens;
-    IOutboundChannel private outboundChannel;
+    IOutboundQueue private outboundQueue;
     TestToken private token;
     address private account1;
     address private account2;
@@ -28,9 +28,9 @@ contract NativeTokensTest is Test {
     function setUp() public {
         token = new TestToken("TestToken", "T");
 
-        outboundChannel = new OutboundChannelMock();
+        outboundQueue = new OutboundQueueMock();
         vault = new TokenVault();
-        nativeTokens = new NativeTokens(vault, outboundChannel, peer, 1);
+        nativeTokens = new NativeTokens(vault, outboundQueue, peer, 1);
         vault.grantRole(vault.WITHDRAW_ROLE(), address(nativeTokens));
         vault.grantRole(vault.DEPOSIT_ROLE(), address(nativeTokens));
 

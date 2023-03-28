@@ -8,7 +8,7 @@ import "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import "./TokenVault.sol";
 import "./SubstrateTypes.sol";
 import "./NativeTokensTypes.sol";
-import "./OutboundChannel.sol";
+import "./OutboundQueue.sol";
 
 /// @title Native Tokens
 /// @dev Manages locking, unlocking ERC20 tokens in the vault. Initializes ethereum native
@@ -47,7 +47,7 @@ contract NativeTokens is AccessControl {
     event Created(address token);
 
     /// @dev Set a new outbound channel.
-    event OutboundChannelUpdated(address newOutBoundChannel);
+    event OutboundQueueUpdated(address newOutBoundChannel);
 
     /* State */
 
@@ -58,7 +58,7 @@ contract NativeTokens is AccessControl {
     bytes public peer;
 
     TokenVault public immutable vault;
-    IOutboundChannel public outboundChannel;
+    IOutboundQueue public outboundChannel;
 
     uint256 public createTokenFee;
 
@@ -70,7 +70,7 @@ contract NativeTokens is AccessControl {
 
     constructor(
         TokenVault _vault,
-        IOutboundChannel _outboundChannel,
+        IOutboundQueue _outboundChannel,
         bytes memory _peer,
         uint256 _createTokenFee
     ) {
@@ -142,8 +142,8 @@ contract NativeTokens is AccessControl {
         }
     }
 
-    function setOutboundChannel(IOutboundChannel _outboundChannel) external onlyRole(ADMIN_ROLE) {
+    function setOutboundQueue(IOutboundQueue _outboundChannel) external onlyRole(ADMIN_ROLE) {
         outboundChannel = _outboundChannel;
-        emit OutboundChannelUpdated(address(_outboundChannel));
+        emit OutboundQueueUpdated(address(_outboundChannel));
     }
 }

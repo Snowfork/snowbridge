@@ -11,7 +11,7 @@ use sp_runtime::traits::Keccak256;
 
 use std::sync::Arc;
 
-use snowbridge_basic_channel_merkle_proof::merkle_proof;
+use snowbridge_outbound_queue_merkle_proof::merkle_proof;
 
 pub struct BasicChannel<T: OffchainStorage> {
 	storage: Arc<RwLock<T>>,
@@ -28,7 +28,7 @@ struct Leaves(pub Vec<Vec<u8>>);
 
 #[rpc(server)]
 pub trait BasicChannelApi {
-	#[method(name = "basicOutboundChannel_getMerkleProof")]
+	#[method(name = "outboundQueue_getMerkleProof")]
 	fn get_merkle_proof(&self, commitment_hash: H256, leaf_index: u64) -> Result<Bytes>;
 }
 

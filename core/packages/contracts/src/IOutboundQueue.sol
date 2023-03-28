@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-interface IOutboundChannel {
+interface IOutboundQueue {
     function submit(bytes calldata dest, bytes calldata payload) external payable;
 }

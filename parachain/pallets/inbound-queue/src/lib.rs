@@ -10,11 +10,11 @@ mod test;
 
 use frame_system::ensure_signed;
 use snowbridge_core::{Message, Verifier};
-use sp_core::H160;
-use sp_std::convert::TryFrom;
+use sp_core::{ConstU32, H160};
+use sp_std::{collections::btree_set::BTreeSet, convert::TryFrom};
 use xcm_executor::traits::Convert;
 
-use sp_std::collections::btree_set::BTreeSet;
+use frame_support::storage::bounded_btree_set::BoundedBTreeSet;
 
 use envelope::Envelope;
 pub use weights::WeightInfo;
@@ -25,6 +25,8 @@ use frame_support::traits::fungible::{Inspect, Transfer};
 
 type BalanceOf<T> =
 	<<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+
+type AllowListLength = ConstU32<8>;
 
 pub use pallet::*;
 
@@ -76,7 +78,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn peer)]
-	pub type AllowList<T: Config> = StorageValue<_, BTreeSet<H160>, ValueQuery>;
+	pub type AllowList<T: Config> =
+		StorageValue<_, BoundedBTreeSet<H160, AllowListLength>, ValueQuery>;
 
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, MultiLocation, u64, ValueQuery>;
@@ -96,7 +99,10 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
-			let allowlist: BTreeSet<H160> = BTreeSet::from_iter(self.allowlist.into_iter());
+			let allowlist: BoundedBTreeSet<H160, AllowListLength> =
+				BTreeSet::from_iter(self.allowlist.clone().into_iter())
+					.try_into()
+					.expect("exceeded bound");
 			<AllowList<T>>::put(allowlist);
 		}
 	}
@@ -108,7 +114,7 @@ pub mod pallet {
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			// submit message to verifier for verification
-			let (log, block_number) = T::Verifier::verify(&message)?;
+			let log = T::Verifier::verify(&message)?;
 
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;

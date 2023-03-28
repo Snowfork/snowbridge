@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "../../src/IOutboundChannel.sol";
+import "../../src/IOutboundQueue.sol";
 
-contract OutboundChannelMock is IOutboundChannel {
+contract OutboundQueueMock is IOutboundQueue {
     event Message(bytes dest, bytes payload);
 
     function submit(bytes calldata dest, bytes calldata payload) external payable {

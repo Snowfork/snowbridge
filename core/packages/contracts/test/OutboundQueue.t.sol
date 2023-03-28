@@ -4,19 +4,19 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import {OutboundChannel} from "../src/OutboundChannel.sol";
+import {OutboundQueue} from "../src/OutboundQueue.sol";
 import {Vault} from "../src/Vault.sol";
 
-contract OutboundChannelTest is Test {
+contract OutboundQueueTest is Test {
     Vault public vault;
-    OutboundChannel public channel;
+    OutboundQueue public channel;
 
     bytes dest = bytes("statemint");
     bytes message = bytes("message");
 
     function setUp() public {
         vault = new Vault();
-        channel = new OutboundChannel(vault, 1 ether);
+        channel = new OutboundQueue(vault, 1 ether);
         channel.grantRole(channel.SUBMIT_ROLE(), address(this));
     }
 
@@ -27,7 +27,7 @@ contract OutboundChannelTest is Test {
     }
 
     function testSubmitFailFeePaymentTooLow() public {
-        vm.expectRevert(OutboundChannel.FeePaymentToLow.selector);
+        vm.expectRevert(OutboundQueue.FeePaymentToLow.selector);
         channel.submit{value: 0.5 ether}(dest, message);
         assertEq(vault.balances(dest), 0 ether);
     }

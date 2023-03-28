@@ -7,7 +7,7 @@ import "./ParachainClient.sol";
 import "./IRecipient.sol";
 import "./IVault.sol";
 
-contract InboundChannel is AccessControl {
+contract InboundQueue is AccessControl {
     // Nonce for each origin
     mapping(bytes => uint64) public nonce;
 
@@ -33,7 +33,7 @@ contract InboundChannel is AccessControl {
     struct Message {
         bytes origin;
         uint64 nonce;
-        address handler;
+        uint16 handler;
         bytes payload;
     }
 

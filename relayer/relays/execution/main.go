@@ -122,8 +122,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 }
 
-
-
 func (r *Relay) makeInboundMessage(
 	ctx context.Context,
 	headerCache *ethereum.HeaderCache,

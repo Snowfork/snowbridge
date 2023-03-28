@@ -2,10 +2,10 @@
 pragma solidity ^0.8.19;
 
 import "openzeppelin/access/AccessControl.sol";
-import "./IOutboundChannel.sol";
+import "./IOutboundQueue.sol";
 import "./IVault.sol";
 
-contract OutboundChannel is IOutboundChannel, AccessControl {
+contract OutboundQueue is IOutboundQueue, AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant SUBMIT_ROLE = keccak256("SUBMIT_ROLE");
 
@@ -14,7 +14,7 @@ contract OutboundChannel is IOutboundChannel, AccessControl {
     IVault public vault;
     uint256 public fee;
 
-    event Message(bytes indexed dest, uint64 nonce, bytes payload);
+    event Message(bytes indexeddest, uint64 nonce, bytes payload);
 
     event FeeUpdated(uint256 fee);
 

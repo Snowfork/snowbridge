@@ -1,6 +1,6 @@
 [package]
-name = "snowbridge-inbound-channel"
-description = "Snowbridge Inbound Channel"
+name = "snowbridge-outbound-queue"
+description = "Snowbridge Outbound Queue"
 version = "0.1.1"
 edition = "2021"
 authors = [ "Snowfork <contact@snowfork.com>" ]
@@ -19,22 +19,16 @@ rlp = { version = "0.5", default-features = false, optional = true }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
-snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
-snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
+snowbridge-outbound-queue-merkle-proof = { path = "merkle-proof", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
-xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.38", default-features = false }
-xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.38", default-features = false }
-
 [dev-dependencies]
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38" }
 hex-literal = { version = "0.3.4" }
@@ -48,18 +42,14 @@ std = [
     "scale-info/std",
     "frame-support/std",
     "frame-system/std",
-    "pallet-balances/std",
     "frame-benchmarking/std",
     "sp-core/std",
     "sp-runtime/std",
     "sp-std/std",
     "sp-io/std",
     "snowbridge-core/std",
-    "snowbridge-ethereum/std",
-    "snowbridge-router-primitives/std",
-    "ethabi/std",
-    "xcm/std",
-    "xcm-executor/std"
+    "snowbridge-outbound-queue-merkle-proof/std",
+    "ethabi/std"
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",

@@ -1,6 +1,6 @@
 [package]
-name = "snowbridge-basic-channel-merkle-proof"
-description = "Snowbridge Basic Channel"
+name = "snowbridge-outbound-queue-merkle-proof"
+description = "Snowbridge Outbound Queue Merkle Prover"
 version = "0.1.1"
 edition = "2021"
 authors = [ "Snowfork <contact@snowfork.com>" ]
