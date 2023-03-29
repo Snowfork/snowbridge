@@ -24,21 +24,17 @@ default_args = [
         validation_upgrade_delay = 2
 
     [[relaychain.nodes]]
-    name = "rococo-alice"
+    name = "rococo01"
     rpc_port = 30444
     validator = true
     ws_port = 9944
 
     [[relaychain.nodes]]
-    name = "rococo-bob"
+    name = "rococo02"
     validator = true
 
     [[relaychain.nodes]]
-    name = "rococo-charlie"
-    validator = true
-
-    [[relaychain.nodes]]
-    name = "rococo-dave"
+    name = "rococo03"
     validator = true
 
 ## Bridge Hub
@@ -55,18 +51,12 @@ cumulus_based = true
     command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8081
     ws_port = 11144
-    args = ["--enable-offchain-indexing=true","--pruning=archive"]
+    args = ["--enable-offchain-indexing=true", "--pruning=archive", "--force-authoring"]
 
         [[parachains.collators.env]]
         name = "RUST_LOG"
         value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace"
 
-    # run bob as parachain collator
-    [[parachains.collators]]
-    name = "bridgehub02"
-    validator = true
-    command = "{{output_bin_dir}}/polkadot-parachain"
-    args = ["--enable-offchain-indexing=true","--pruning=archive"]
 
 ## Statemine
 [[parachains]]
@@ -81,16 +71,12 @@ cumulus_based = true
     command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8082
     ws_port = 12144
+    args = ["--force-authoring"]
 
         [[parachains.collators.env]]
         name = "RUST_LOG"
         value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
 
-    # run bob as parachain collator
-    [[parachains.collators]]
-    name = "statemine02"
-    validator = true
-    command = "{{output_bin_dir}}/polkadot-parachain"
 
 # Statemine -> BridgeHub
 [[hrmp_channels]]

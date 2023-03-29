@@ -1,0 +1,16 @@
+[package]
+name = "snowbridge-smoketest"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures = "0.3.27"
+tokio = { version = "1.26", features = ["rt-multi-thread", "macros", "time"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "full", "bit-vec"] }
+hex = "0.4.3"
+hex-literal = "0.3.4"
+clap = { version = "3.2.5", features = [ "derive" ] }
+subxt = { git = "https://github.com/paritytech/subxt.git", tag = "v0.27.1" }
+ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = false, features = ["abigen"] }

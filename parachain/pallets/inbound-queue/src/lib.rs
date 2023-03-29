@@ -13,7 +13,7 @@ mod test;
 use frame_system::ensure_signed;
 use snowbridge_core::{Message, Verifier};
 use sp_core::{ConstU32, H160};
-use sp_std::{convert::TryFrom};
+use sp_std::convert::TryFrom;
 use xcm_executor::traits::Convert;
 
 #[cfg(feature = "std")]

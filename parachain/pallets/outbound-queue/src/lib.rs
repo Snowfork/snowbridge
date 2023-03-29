@@ -16,9 +16,9 @@ use frame_support::{
 };
 use scale_info::TypeInfo;
 use sp_core::H256;
+use sp_io::offchain_index::set;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
-use sp_io::offchain_index::set;
 
 use snowbridge_core::types::AuxiliaryDigestItem;
 use snowbridge_outbound_queue_merkle_proof::merkle_root;
