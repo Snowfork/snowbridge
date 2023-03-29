@@ -15,4 +15,4 @@
 	branch = channels-v3
 [submodule "core/packages/contracts/lib/canonical-weth"]
 	path = core/packages/contracts/lib/canonical-weth
-	url = https://github.com/gnosis/canonical-weth
+	url = https://github.com/snowfork/canonical-weth

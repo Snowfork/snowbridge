@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 
+import "canonical-weth/WETH9.sol";
+
 import "../src/NativeTokens.sol";
 import "../src/TokenVault.sol";
 
@@ -27,6 +29,8 @@ contract NativeTokensTest is Test {
 
     function setUp() public {
         token = new TestToken("TestToken", "T");
+
+        tokker = new WETH9();
 
         outboundQueue = new OutboundQueueMock();
         vault = new TokenVault();
