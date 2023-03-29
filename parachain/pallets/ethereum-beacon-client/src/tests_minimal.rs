@@ -244,7 +244,7 @@ mod beacon_minimal_tests {
 			// fill FinalizedBeaconHeadersList until full
 			for _ in 0..=max_slots {
 				<FinalizedBeaconHeadersList<mock_minimal::Test>>::try_append(H256::default())
-					.map_err(|_| Error::<mock_minimal::Test>::BoundedFinalityHeaderExceed)
+					.map_err(|_| Error::<mock_minimal::Test>::FinalityHeaderBoundsExceed)
 					.expect("no err");
 			}
 
