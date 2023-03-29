@@ -20,7 +20,7 @@ contract NativeTokensTest is Test {
     TokenVault private vault;
     NativeTokens private nativeTokens;
     IOutboundQueue private outboundQueue;
-    TestToken private token;
+    WETH9 private token;
     address private account1;
     address private account2;
 
@@ -28,9 +28,7 @@ contract NativeTokensTest is Test {
     bytes private constant recipient = "/Alice";
 
     function setUp() public {
-        token = new TestToken("TestToken", "T");
-
-        tokker = new WETH9();
+        token = new WETH9();
 
         outboundQueue = new OutboundQueueMock();
         vault = new TokenVault();
@@ -43,8 +41,12 @@ contract NativeTokensTest is Test {
 
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(this));
 
-        token.mint(address(account1), 500);
-        token.mint(address(account2), 500);
+        // create tokens for account 1
+        hoax(account1);
+        token.deposit{value: 500}();
+
+        // create tokens for account 2
+        token.deposit{value: 500}();
     }
 
     function testHandleRevertsUnknownOrigin() public {

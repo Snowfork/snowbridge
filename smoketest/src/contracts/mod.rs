@@ -52,4 +52,5 @@ pub mod strings;
 pub mod substrate_types;
 pub mod token_vault;
 pub mod vault;
+pub mod weth9;
 pub mod wrapped_token;

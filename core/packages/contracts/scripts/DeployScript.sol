@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
+import "canonical-weth/WETH9.sol";
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
 import "../src/BeefyClient.sol";
@@ -49,6 +50,9 @@ contract DeployScript is Script {
             vm.envBytes("STATEMINT_LOCATION"),
             vm.envUint("CREATE_TOKEN_FEE")
         );
+
+        // Deploy WETH for testing
+        new WETH9();
 
         // Allow inbound channel to send messages to NativeTokens and SovereignTreasury
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(inboundQueue));
