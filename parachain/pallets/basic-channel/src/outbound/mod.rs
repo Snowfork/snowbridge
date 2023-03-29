@@ -62,7 +62,7 @@ where
 // so we can use at most 365000000000 for the commit call
 // need to rerun benchmarks later to get weight based on the worst case:
 // MaxMessagesPerCommit=20 and MaxMessagePayloadSize=256
-pub const MINIMUM_WEIGHT_REMAIN_IN_BLOCK: Weight = Weight::from_ref_time(10_000_000_000);
+pub const MINIMUM_WEIGHT_REMAIN_IN_BLOCK: Weight = Weight::from_parts(10_000_000_000, 0);
 
 pub use pallet::*;
 
