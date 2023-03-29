@@ -77,7 +77,7 @@ pub mod mock_minimal {
 		pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
 		pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
 		pub const MaxSlotsPerHistoricalRoot: u64 = 64;
-		pub const MaxFinalizedHeaderSlotArray: u32 = 1000;
+		pub const MaxFinalizedHeaderSlotArray: u32 = 1;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
@@ -97,8 +97,8 @@ pub mod mock_minimal {
 				epoch: 0,
 			},
 		};
-		pub const MaxSyncCommitteeCachedSize: u32 = 256;
-		pub const MaxExecutionHeaderCachedSize: u32 = 8192;
+		pub const MaxSyncCommitteeCachedSize: u32 = 1;
+		pub const MaxExecutionHeaderCachedSize: u32 = 1;
 	}
 
 	impl ethereum_beacon_client::Config for Test {
@@ -187,7 +187,7 @@ pub mod mock_mainnet {
 		pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
 		pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
 		pub const MaxSlotsPerHistoricalRoot: u64 = 8192;
-		pub const MaxFinalizedHeaderSlotArray: u32 = 1000;
+		pub const MaxFinalizedHeaderSlotArray: u32 = 1;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
@@ -207,8 +207,8 @@ pub mod mock_mainnet {
 				epoch: 162304,
 			},
 		};
-		pub const MaxSyncCommitteeCachedSize: u32 = 256;
-		pub const MaxExecutionHeaderCachedSize: u32 = 8192;
+		pub const MaxSyncCommitteeCachedSize: u32 = 1;
+		pub const MaxExecutionHeaderCachedSize: u32 = 1;
 	}
 
 	impl ethereum_beacon_client::Config for Test {
