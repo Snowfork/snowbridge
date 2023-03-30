@@ -11,22 +11,19 @@ pub mod weights;
 mod test;
 
 use frame_system::ensure_signed;
-use snowbridge_core::{Message, Verifier};
 use sp_core::{ConstU32, H160};
 use sp_std::convert::TryFrom;
-use xcm_executor::traits::Convert;
-
-#[cfg(feature = "std")]
-use sp_std::collections::btree_set::BTreeSet;
-
+use sp_runtime::traits::AccountIdConversion;
 use frame_support::storage::bounded_btree_set::BoundedBTreeSet;
+use frame_support::traits::fungible::{Inspect, Transfer};
+use polkadot_parachain::primitives::{Id as ParaId};
 
+use snowbridge_core::{Message, Verifier};
 use envelope::Envelope;
 pub use weights::WeightInfo;
 
-use xcm::latest::prelude::*;
-
-use frame_support::traits::fungible::{Inspect, Transfer};
+#[cfg(feature = "std")]
+use sp_std::collections::btree_set::BTreeSet;
 
 type BalanceOf<T> =
 	<<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
@@ -55,8 +52,6 @@ pub mod pallet {
 
 		type Token: Transfer<Self::AccountId>;
 
-		type LocationToAccountId: Convert<MultiLocation, Self::AccountId>;
-
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
 
@@ -72,7 +67,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Message came from an invalid outbound channel on the Ethereum side.
-		InvalidChannel,
+		InvalidOutboundQueue,
 		/// Message has an invalid envelope.
 		InvalidEnvelope,
 		/// Message has an unexpected nonce.
@@ -87,7 +82,7 @@ pub mod pallet {
 		StorageValue<_, BoundedBTreeSet<H160, AllowListLength>, ValueQuery>;
 
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, MultiLocation, u64, ValueQuery>;
+	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -128,7 +123,7 @@ pub mod pallet {
 			// outbound channel on the ethereum side
 			let allowlist = <AllowList<T>>::get();
 			if !allowlist.contains(&envelope.channel) {
-				return Err(Error::<T>::InvalidChannel.into())
+				return Err(Error::<T>::InvalidOutboundQueue.into())
 			}
 
 			// Verify message nonce
@@ -142,8 +137,7 @@ pub mod pallet {
 			})?;
 
 			// Reward relayer from the sovereign account of the destination parachain
-			let dest_account = T::LocationToAccountId::convert(envelope.dest)
-				.map_err(|_| Error::<T>::InvalidAccountConversion)?;
+			let dest_account = envelope.dest.into_account_truncating();
 			T::Token::transfer(&dest_account, &who, T::Reward::get(), true)?;
 
 			Ok(())

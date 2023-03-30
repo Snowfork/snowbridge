@@ -1,20 +1,18 @@
 use codec::DecodeAll;
 use ethabi::{Event, Param, ParamKind, Token};
 use snowbridge_ethereum::{log::Log, H160};
+use polkadot_parachain::primitives::{Id as ParaId};
 
 use snowbridge_router_primitives::Action;
 
 use sp_core::RuntimeDebug;
 use sp_std::{convert::TryFrom, prelude::*};
 
-use xcm::latest::prelude::*;
-
 // Used to decode a raw Ethereum log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
-	signature: "Message(address,address,uint64,bytes)",
+	signature: "Message(uint32,uint64,bytes)",
 	inputs: &[
-		Param { kind: ParamKind::Address, indexed: false },
-		Param { kind: ParamKind::Address, indexed: false },
+		Param { kind: ParamKind::Uint(32), indexed: true },
 		Param { kind: ParamKind::Uint(64), indexed: false },
 		Param { kind: ParamKind::Bytes, indexed: false },
 	],
@@ -26,8 +24,8 @@ static EVENT_ABI: &Event = &Event {
 pub struct Envelope {
 	/// The address of the outbound channel on Ethereum that forwarded this message.
 	pub channel: H160,
-	/// The account on Ethereum that authorized the source to send the message.
-	pub dest: MultiLocation,
+	/// The destination parachain.
+	pub dest: ParaId,
 	/// A nonce for enforcing replay protection and ordering.
 	pub nonce: u64,
 	/// The inner payload generated from the source application.
@@ -46,8 +44,7 @@ impl TryFrom<Log> for Envelope {
 		let mut iter = tokens.into_iter();
 
 		let dest = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Bytes(dest) =>
-				MultiLocation::decode_all(&mut dest.as_ref()).map_err(|_| EnvelopeDecodeError)?,
+			Token::Uint(dest) => dest.low_u32().into(),
 			_ => return Err(EnvelopeDecodeError),
 		};
 

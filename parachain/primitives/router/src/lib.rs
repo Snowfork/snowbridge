@@ -23,6 +23,6 @@ pub enum NativeTokensAction {
 		token: H160,
 		recipient: MultiLocation, // Recipient of funds on final destination
 		amount: u128,
-		forward: Option<MultiLocation>, // Optional location of a final parachain to forward funds
+		forward: Option<u32>, // Optional location of a final parachain to forward funds
 	},
 }

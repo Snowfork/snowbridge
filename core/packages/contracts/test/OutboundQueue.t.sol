@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "forge-std/Test.sol";
-import "forge-std/console.sol";
+import {Test} from "forge-std/Test.sol";
 
 import {OutboundQueue} from "../src/OutboundQueue.sol";
 import {Vault} from "../src/Vault.sol";
+import {ParaID} from "../src/Types.sol";
 
 contract OutboundQueueTest is Test {
     Vault public vault;
     OutboundQueue public channel;
 
-    bytes dest = bytes("statemint");
+    ParaID dest = ParaID.wrap(1001);
     bytes message = bytes("message");
 
     function setUp() public {

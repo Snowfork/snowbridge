@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "./ScaleCodec.sol";
+import {ParaID} from "./Types.sol";
 
 /**
  * @title SCALE encoders for common Substrate types
@@ -25,6 +26,10 @@ library SubstrateTypes {
         return abi.encodePacked(account);
     }
 
+    function VecU8(bytes memory input) internal pure returns (bytes memory) {
+        return bytes.concat(ScaleCodec.encodeCompactUint(input.length), input);
+    }
+
     /**
      * @dev Encodes `Option::None`: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
      * @return bytes SCALE-encoded bytes
@@ -34,7 +39,12 @@ library SubstrateTypes {
         return hex"00";
     }
 
-    function VecU8(bytes memory input) internal pure returns (bytes memory) {
-        return bytes.concat(ScaleCodec.encodeCompactUint(input.length), input);
+    // solhint-disable-next-line func-name-mixedcase
+    function OptionParaID(ParaID v) internal pure returns (bytes memory) {
+        if (v.isNone()) {
+            return hex"00";
+        } else {
+            return bytes.concat(hex"01", ScaleCodec.encodeU32(ParaID.unwrap(v)));
+        }
     }
 }

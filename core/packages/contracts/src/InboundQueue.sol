@@ -10,10 +10,10 @@ import {ParaID} from "./Types.sol";
 
 contract InboundQueue is AccessControl {
     // Nonce for each origin
-    mapping(ParaID => uint64) public nonce;
+    mapping(ParaID origin => uint64) public nonce;
 
     // Registered message handlers
-    mapping(uint16 => Handler) public handlers;
+    mapping(uint16 handlerID => Handler) public handlers;
 
     // Light client message verifier
     IParachainClient public parachainClient;
@@ -24,7 +24,7 @@ contract InboundQueue is AccessControl {
     // The relayer reward for submitting a message
     uint256 public reward;
 
-    // The governance contract, which is a proxy for Polkadot governance, administers via this role
+    // The governance contract which is a proxy for Polkadot governance, administers via this role
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     // Relayers must provide enough gas to cover message dispatch plus this buffer
@@ -48,15 +48,18 @@ contract InboundQueue is AccessControl {
 
     // The result of message dispatch
     struct DispatchResult {
-        // Whether the dispatch succeeded
-        bool succeeded;
-        // Various error signifiers
-        string errorReason;
-        uint256 errorPanicCode;
-        bytes errorReturnData;
+        DispatchStatus status;
+        bytes reason;
     }
 
-    event MessageDispatched(ParaID origin, uint64 nonce, DispatchResult result);
+    enum DispatchStatus {
+        Success,
+        Error,
+        Panic,
+        Other
+    }
+
+    event MessageDispatched(ParaID indexed origin, uint64 indexed nonce, DispatchResult result);
     event HandlerUpdated(uint16 id, Handler handler);
     event ParachainClientUpdated(address parachainClient);
     event VaultUpdated(address vault);
@@ -111,18 +114,20 @@ contract InboundQueue is AccessControl {
             revert NotEnoughGas();
         }
 
-        DispatchResult memory result = DispatchResult(false, "", 0, hex"");
+        DispatchResult memory result = DispatchResult(DispatchStatus.Success, hex"");
 
         // Forward message to handler for execution
         // Errors from the handler are ignored so as not to block the channel at the current nonce
-        try recipient.handle{gas: gasToForward}(message.origin, message.payload) {
-            result.succeeded = true;
-        } catch Error(string memory reason) {
-            result.errorReason = reason;
+        try recipient.handle{gas: gasToForward}(message.origin, message.payload) {}
+        catch Error(string memory reason) {
+            result.status = DispatchStatus.Error;
+            result.reason = bytes(reason);
         } catch Panic(uint256 errorCode) {
-            result.errorPanicCode = errorCode;
+            result.status = DispatchStatus.Panic;
+            result.reason = abi.encode(errorCode);
         } catch (bytes memory returnData) {
-            result.errorReturnData = returnData;
+            result.status = DispatchStatus.Other;
+            result.reason = returnData;
         }
 
         emit MessageDispatched(message.origin, message.nonce, result);

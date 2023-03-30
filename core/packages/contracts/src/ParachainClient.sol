@@ -41,47 +41,29 @@ contract ParachainClient is IParachainClient {
         encodedParachainID = ScaleCodec.encodeU32(_parachainID);
     }
 
-    function verifyCommitment(
-        bytes32 commitment,
-        bytes calldata opaqueProof
-    ) external view returns (bool) {
+    function verifyCommitment(bytes32 commitment, bytes calldata opaqueProof) external view returns (bool) {
         Proof memory proof = abi.decode(opaqueProof, (Proof));
 
         // Compute the merkle leaf hash of our parachain
-        bytes32 parachainHeadHash = createParachainMerkleLeaf(
-            commitment,
-            proof.headPrefix,
-            proof.headSuffix
-        );
+        bytes32 parachainHeadHash = createParachainMerkleLeaf(commitment, proof.headPrefix, proof.headSuffix);
 
         // Compute the merkle root hash of all parachain heads
-        bytes32 parachainHeadsRoot = MerkleProof.processProof(
-            proof.headProof.proof,
-            parachainHeadHash
-        );
+        bytes32 parachainHeadsRoot = MerkleProof.processProof(proof.headProof.proof, parachainHeadHash);
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
         return beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
     }
 
-    function createParachainMerkleLeaf(
-        bytes32 commitment,
-        bytes memory headPrefix,
-        bytes memory headSuffix
-    ) internal view returns (bytes32) {
-        bytes memory encodedHead = bytes.concat(
-            encodedParachainID,
-            headPrefix,
-            commitment,
-            headSuffix
-        );
+    function createParachainMerkleLeaf(bytes32 commitment, bytes memory headPrefix, bytes memory headSuffix)
+        internal
+        view
+        returns (bytes32)
+    {
+        bytes memory encodedHead = bytes.concat(encodedParachainID, headPrefix, commitment, headSuffix);
         return keccak256(encodedHead);
     }
 
-    function createMMRLeaf(
-        MMRLeafPartial memory leaf,
-        bytes32 parachainHeadsRoot
-    ) internal pure returns (bytes32) {
+    function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot) internal pure returns (bytes32) {
         bytes memory encodedLeaf = bytes.concat(
             ScaleCodec.encodeU8(leaf.version),
             ScaleCodec.encodeU32(leaf.parentNumber),

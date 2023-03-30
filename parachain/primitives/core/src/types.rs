@@ -1,6 +1,6 @@
 //! Types for representing messages
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, CompactAs, MaxEncodedLen};
 use frame_support::{scale_info::TypeInfo, RuntimeDebug};
 use sp_core::{H160, H256};
 use sp_runtime::DigestItem;
@@ -53,5 +53,32 @@ pub enum AuxiliaryDigestItem {
 impl Into<DigestItem> for AuxiliaryDigestItem {
 	fn into(self) -> DigestItem {
 		DigestItem::Other(self.encode())
+	}
+}
+
+/// Parachain id.
+///
+/// This is an equivalent of the `polkadot_parachain::Id`, which is a compact-encoded `u32`.
+#[derive(
+	Clone,
+	CompactAs,
+	Copy,
+	Decode,
+	Default,
+	Encode,
+	Eq,
+	Hash,
+	MaxEncodedLen,
+	Ord,
+	PartialEq,
+	PartialOrd,
+	RuntimeDebug,
+	TypeInfo,
+)]
+pub struct ParaId(pub u32);
+
+impl From<u32> for ParaId {
+	fn from(id: u32) -> Self {
+			ParaId(id)
 	}
 }

@@ -10,12 +10,10 @@ contract OutboundQueue is IOutboundQueue, AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant SUBMIT_ROLE = keccak256("SUBMIT_ROLE");
 
-    mapping(ParaID => uint64) public nonce;
+    mapping(ParaID dest => uint64) public nonce;
 
     IVault public vault;
     uint256 public fee;
-
-    event Message(ParaID indexed dest, uint64 nonce, bytes payload);
 
     event FeeUpdated(uint256 fee);
 

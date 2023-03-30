@@ -4,13 +4,14 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 
-import "canonical-weth/WETH9.sol";
+import {WETH9} from "canonical-weth/WETH9.sol";
 
-import "../src/NativeTokens.sol";
-import "../src/TokenVault.sol";
+import {IOutboundQueue} from "../src/IOutboundQueue.sol";
+import {NativeTokens} from "../src/NativeTokens.sol";
+import {TokenVault} from "../src/TokenVault.sol";
+import {ParaID} from "../src/Types.sol";
 
-import "./mocks/OutboundQueueMock.sol";
-import "./mocks/TestToken.sol";
+import {OutboundQueueMock} from "./mocks/OutboundQueueMock.sol";
 
 contract NativeTokensTest is Test {
     event Locked(bytes recipient, address token, uint128 amount);
@@ -24,7 +25,7 @@ contract NativeTokensTest is Test {
     address private account1;
     address private account2;
 
-    bytes private constant peer = "/Polkadot/Para(Statemint)";
+    ParaID private constant ASSET_HUB = ParaID.wrap(1001);
     bytes private constant recipient = "/Alice";
 
     function setUp() public {
@@ -32,7 +33,7 @@ contract NativeTokensTest is Test {
 
         outboundQueue = new OutboundQueueMock();
         vault = new TokenVault();
-        nativeTokens = new NativeTokens(vault, outboundQueue, peer, 1);
+        nativeTokens = new NativeTokens(vault, outboundQueue, ASSET_HUB, 1);
         vault.grantRole(vault.WITHDRAW_ROLE(), address(nativeTokens));
         vault.grantRole(vault.DEPOSIT_ROLE(), address(nativeTokens));
 
@@ -51,16 +52,15 @@ contract NativeTokensTest is Test {
 
     function testHandleRevertsUnknownOrigin() public {
         NativeTokens.Message memory message;
-        bytes memory unknownOrigin = "UNKNOWN_ORIGIN";
         vm.expectRevert(NativeTokens.Unauthorized.selector);
-        nativeTokens.handle(unknownOrigin, abi.encode(message));
+        nativeTokens.handle(ParaID.wrap(4056), abi.encode(message));
     }
 
     function testHandleRevertsUnknownSender() public {
         NativeTokens.Message memory message;
         nativeTokens.revokeRole(nativeTokens.SENDER_ROLE(), address(this));
         vm.expectRevert();
-        nativeTokens.handle(peer, abi.encode(message));
+        nativeTokens.handle(ASSET_HUB, abi.encode(message));
     }
 
     function testHandleUnlockMessageSuccessful() public {
@@ -77,7 +77,7 @@ contract NativeTokensTest is Test {
         NativeTokens.Message memory message;
         message.action = NativeTokens.Action.Unlock;
         message.payload = abi.encode(payload);
-        nativeTokens.handle(peer, abi.encode(message));
+        nativeTokens.handle(ASSET_HUB, abi.encode(message));
 
         assertEq(token.balanceOf(address(account1)), 550);
         assertEq(token.balanceOf(address(account2)), 450);
@@ -88,16 +88,21 @@ contract NativeTokensTest is Test {
 
     function testLockRevertsZeroAmount() public {
         vm.expectRevert(NativeTokens.InvalidAmount.selector);
-        nativeTokens.lock(address(token), recipient, 0);
+        nativeTokens.lock(address(token), ParaID.wrap(0), recipient, 0);
     }
 
     function testLockSuccessful() public {
         token.approve(address(vault), 100);
 
+        vm.recordLogs();
+
         vm.expectEmit(false, false, false, true, address(nativeTokens));
         emit Locked(recipient, address(token), 50);
 
-        nativeTokens.lock(address(token), recipient, 50);
+        nativeTokens.lock(address(token), ParaID.wrap(0), recipient, 50);
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries[3].topics[0], keccak256("Message(uint32,uint64,bytes)"));
 
         assertEq(token.balanceOf(address(account2)), 450);
         assertEq(token.balanceOf(address(vault)), 50);

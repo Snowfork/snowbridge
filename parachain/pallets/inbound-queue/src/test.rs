@@ -20,29 +20,10 @@ use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
 
-use polkadot_parachain::primitives::Sibling;
-use xcm::latest::prelude::*;
-
-use crate::{self as inbound_channel, envelope::Envelope, Error};
+use crate::{self as inbound_queue, envelope::Envelope, Error};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-
-parameter_types! {
-	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Rococo);
-}
-
-/// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
-/// when determining ownership of accounts for asset transacting and when attempting to use XCM
-/// `Transact` in order to determine the dispatch Origin.
-pub type LocationToAccountId = (
-	// The parent (Relay-chain) origin converts to the parent `AccountId`.
-	ParentIsPreset<AccountId>,
-	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
-	SiblingParachainConvertsVia<Sibling, AccountId>,
-	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
-	AccountId32Aliases<RelayNetwork, AccountId>,
-);
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -52,7 +33,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		InboundChannel: inbound_channel::{Pallet, Call, Storage, Event<T>},
+		InboundQueue: inbound_queue::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -120,20 +101,19 @@ impl Verifier for MockVerifier {
 	}
 }
 
-impl inbound_channel::Config for Test {
+impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
 	type Token = Balances;
 	type Reward = ConstU64<10>;
-	type LocationToAccountId = LocationToAccountId;
 	type WeightInfo = ();
 }
 
 pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
-	new_tester_with_config(inbound_channel::GenesisConfig { allowlist: vec![source_channel] })
+	new_tester_with_config(inbound_queue::GenesisConfig { allowlist: vec![source_channel] })
 }
 
-pub fn new_tester_with_config(config: inbound_channel::GenesisConfig) -> sp_io::TestExternalities {
+pub fn new_tester_with_config(config: inbound_queue::GenesisConfig) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
@@ -143,7 +123,7 @@ pub fn new_tester_with_config(config: inbound_channel::GenesisConfig) -> sp_io::
 	ext
 }
 
-fn parse_origin(message: Message) -> H160 {
+fn parse_dest(message: Message) -> ParaId {
 	let log = MockVerifier::verify(&message)
 		.map_err(|err| {
 			println!("mock verify: {:?}", err);
@@ -203,7 +183,7 @@ const MESSAGE_DATA_1: [u8; 251] = hex!(
 );
 
 #[test]
-fn test_submit_with_invalid_source_channel() {
+fn test_submit_with_invalid_outbound_queue() {
 	new_tester(H160::zero()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
@@ -218,8 +198,8 @@ fn test_submit_with_invalid_source_channel() {
 			},
 		};
 		assert_noop!(
-			BasicInboundChannel::submit(origin.clone(), message.clone()),
-			Error::<Test>::InvalidSourceChannel
+			InboundQueue::submit(origin.clone(), message.clone()),
+			Error::<Test>::InvalidOutboundQueue
 		);
 	});
 }
@@ -239,10 +219,10 @@ fn test_submit() {
 				data: Default::default(),
 			},
 		};
-		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_1.clone()));
+		assert_ok!(InboundQueue::submit(origin.clone(), message_1.clone()));
 
-		let event_origin = parse_origin(message_1);
-		let nonce: u64 = <Nonce<Test>>::get(event_origin.clone());
+		let event_dest = parse_dest(message_1);
+		let nonce: u64 = <Nonce<Test>>::get(event_dest.clone());
 		assert_eq!(nonce, 1);
 
 		// Submit message 2
@@ -254,10 +234,10 @@ fn test_submit() {
 				data: Default::default(),
 			},
 		};
-		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_2.clone()));
+		assert_ok!(InboundQueue::submit(origin.clone(), message_2.clone()));
 
-		let event_origin_2 = parse_origin(message_2);
-		let nonce: u64 = <Nonce<Test>>::get(event_origin_2.clone());
+		let event_dest_2 = parse_dest(message_2);
+		let nonce: u64 = <Nonce<Test>>::get(event_dest_2.clone());
 		assert_eq!(nonce, 2);
 	});
 }
@@ -277,15 +257,15 @@ fn test_submit_with_invalid_nonce() {
 				data: Default::default(),
 			},
 		};
-		assert_ok!(BasicInboundChannel::submit(origin.clone(), message.clone()));
+		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 
-		let event_origin = parse_origin(message.clone());
-		let nonce: u64 = <Nonce<Test>>::get(event_origin);
+		let event_dest = parse_dest(message.clone());
+		let nonce: u64 = <Nonce<Test>>::get(event_dest);
 		assert_eq!(nonce, 1);
 
 		// Submit the same again
 		assert_noop!(
-			BasicInboundChannel::submit(origin.clone(), message.clone()),
+			InboundQueue::submit(origin.clone(), message.clone()),
 			Error::<Test>::InvalidNonce
 		);
 	});

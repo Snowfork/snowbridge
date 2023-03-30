@@ -17,7 +17,7 @@ contract Vault is IVault, AccessControl {
     bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
 
     // Mapping of sovereign to balance
-    mapping(ParaID => uint256) public balances;
+    mapping(ParaID sovereign => uint256) public balances;
 
     constructor() {
         _grantRole(ADMIN_ROLE, msg.sender);
