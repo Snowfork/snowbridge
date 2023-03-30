@@ -97,7 +97,7 @@ pub mod mock_minimal {
 				epoch: 0,
 			},
 		};
-		pub const MaxSyncCommitteeCachedSize: u32 = 1;
+		pub const MaxSyncCommitteeCachedSize: u32 = 2;
 		pub const MaxExecutionHeaderCachedSize: u32 = 1;
 	}
 
@@ -207,7 +207,7 @@ pub mod mock_mainnet {
 				epoch: 162304,
 			},
 		};
-		pub const MaxSyncCommitteeCachedSize: u32 = 1;
+		pub const MaxSyncCommitteeCachedSize: u32 = 2;
 		pub const MaxExecutionHeaderCachedSize: u32 = 1;
 	}
 
