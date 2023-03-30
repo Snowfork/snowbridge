@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-interface IVault {
-    function deposit(bytes calldata sovereign) external payable;
+import {ParaID} from "./Types.sol";
 
-    function withdraw(bytes calldata sovereign, address payable recipient, uint256 amount) external;
+interface IVault {
+    function deposit(ParaID sovereign) external payable;
+
+    function withdraw(ParaID sovereign, address payable recipient, uint256 amount) external;
 }

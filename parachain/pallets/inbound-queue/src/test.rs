@@ -110,9 +110,9 @@ impl pallet_balances::Config for Test {
 pub struct MockVerifier;
 
 impl Verifier for MockVerifier {
-	fn verify(message: &Message) -> Result<(Log, u64), DispatchError> {
+	fn verify(message: &Message) -> Result<Log, DispatchError> {
 		let log: Log = rlp::decode(&message.data).unwrap();
-		Ok((log, 0))
+		Ok(log)
 	}
 
 	fn initialize_storage(_: Vec<EthereumHeader>, _: U256, _: u8) -> Result<(), &'static str> {
@@ -130,7 +130,7 @@ impl inbound_channel::Config for Test {
 }
 
 pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
-	new_tester_with_config(inbound_channel::GenesisConfig { source_channel })
+	new_tester_with_config(inbound_channel::GenesisConfig { allowlist: vec![source_channel] })
 }
 
 pub fn new_tester_with_config(config: inbound_channel::GenesisConfig) -> sp_io::TestExternalities {
@@ -144,7 +144,7 @@ pub fn new_tester_with_config(config: inbound_channel::GenesisConfig) -> sp_io::
 }
 
 fn parse_origin(message: Message) -> H160 {
-	let (log, _) = MockVerifier::verify(&message)
+	let log = MockVerifier::verify(&message)
 		.map_err(|err| {
 			println!("mock verify: {:?}", err);
 			err
@@ -156,7 +156,7 @@ fn parse_origin(message: Message) -> H160 {
 			err
 		})
 		.unwrap();
-	envelope.account
+	envelope.dest
 }
 
 // The originating channel address for the messages below

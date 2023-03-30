@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "openzeppelin/access/AccessControl.sol";
-import "./IVault.sol";
+import {AccessControl} from "openzeppelin/access/AccessControl.sol";
+import {IVault} from "./IVault.sol";
+import {ParaID} from "./Types.sol";
 
 contract SovereignTreasury is AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -15,11 +16,10 @@ contract SovereignTreasury is AccessControl {
         bytes payload;
     }
 
-    enum Action {
-        // Withdraw from sovereign account and transfer to recipient.
-        // Parachain teams will occasionally send this message to retrieve collected fees.
-        Withdraw
-    }
+    enum Action
+    // Withdraw from sovereign account and transfer to recipient.
+    // Parachain teams will occasionally send this message to retrieve collected fees.
+    {Withdraw}
 
     struct WithdrawPayload {
         address payable recipient;
@@ -33,7 +33,7 @@ contract SovereignTreasury is AccessControl {
     }
 
     // Handle a message from the bridge.
-    function handle(bytes calldata origin, bytes calldata message) external onlyRole(SENDER_ROLE) {
+    function handle(ParaID origin, bytes calldata message) external onlyRole(SENDER_ROLE) {
         Message memory decoded = abi.decode(message, (Message));
         if (decoded.action == Action.Withdraw) {
             WithdrawPayload memory payload = abi.decode(decoded.payload, (WithdrawPayload));

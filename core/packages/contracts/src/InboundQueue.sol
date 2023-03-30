@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "openzeppelin/utils/cryptography/MerkleProof.sol";
-import "openzeppelin/access/AccessControl.sol";
-import "./ParachainClient.sol";
-import "./IRecipient.sol";
-import "./IVault.sol";
+import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
+import {AccessControl} from "openzeppelin/access/AccessControl.sol";
+import {IParachainClient} from "./ParachainClient.sol";
+import {IRecipient} from "./IRecipient.sol";
+import {IVault} from "./IVault.sol";
+import {ParaID} from "./Types.sol";
 
 contract InboundQueue is AccessControl {
     // Nonce for each origin
-    mapping(bytes => uint64) public nonce;
+    mapping(ParaID => uint64) public nonce;
 
     // Registered message handlers
-    mapping(uint16 => Handler) handlers;
+    mapping(uint16 => Handler) public handlers;
 
     // Light client message verifier
     IParachainClient public parachainClient;
@@ -31,7 +32,7 @@ contract InboundQueue is AccessControl {
 
     // Inbound message from BridgeHub parachain
     struct Message {
-        bytes origin;
+        ParaID origin;
         uint64 nonce;
         uint16 handler;
         bytes payload;
@@ -55,7 +56,7 @@ contract InboundQueue is AccessControl {
         bytes errorReturnData;
     }
 
-    event MessageDispatched(bytes origin, uint64 nonce, DispatchResult result);
+    event MessageDispatched(ParaID origin, uint64 nonce, DispatchResult result);
     event HandlerUpdated(uint16 id, Handler handler);
     event ParachainClientUpdated(address parachainClient);
     event VaultUpdated(address vault);
@@ -73,11 +74,7 @@ contract InboundQueue is AccessControl {
         reward = _reward;
     }
 
-    function submit(
-        Message calldata message,
-        bytes32[] calldata leafProof,
-        bytes calldata headerProof
-    ) external {
+    function submit(Message calldata message, bytes32[] calldata leafProof, bytes calldata headerProof) external {
         bytes32 leafHash = keccak256(abi.encode(message));
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
         if (!parachainClient.verifyCommitment(commitment, headerProof)) {
@@ -118,7 +115,7 @@ contract InboundQueue is AccessControl {
 
         // Forward message to handler for execution
         // Errors from the handler are ignored so as not to block the channel at the current nonce
-        try recipient.handle{ gas: gasToForward }(message.origin, message.payload) {
+        try recipient.handle{gas: gasToForward}(message.origin, message.payload) {
             result.succeeded = true;
         } catch Error(string memory reason) {
             result.errorReason = reason;
@@ -136,9 +133,7 @@ contract InboundQueue is AccessControl {
         emit HandlerUpdated(id, handler);
     }
 
-    function updateParachainClient(
-        IParachainClient _parachainClient
-    ) external onlyRole(ADMIN_ROLE) {
+    function updateParachainClient(IParachainClient _parachainClient) external onlyRole(ADMIN_ROLE) {
         parachainClient = _parachainClient;
         emit ParachainClientUpdated(address(_parachainClient));
     }
