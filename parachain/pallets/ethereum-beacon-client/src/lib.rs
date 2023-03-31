@@ -163,9 +163,10 @@ pub mod pallet {
 		InvalidExecutionHeaderUpdate,
 		FinalizedBeaconHeaderSlotsExceeded,
 		ExecutionHeaderMappingFailed,
-		FinalityHeaderBoundsExceed,
-		ExecutionHeaderBoundsExceed,
-		SyncCommitteeBoundsExceed,
+		FinalityHeaderBoundsExceeded,
+		ExecutionHeaderBoundsExceeded,
+		SyncCommitteeBoundsExceeded,
+		CheckpointSyncMappingFailed,
 	}
 
 	#[pallet::hooks]
@@ -412,7 +413,7 @@ pub mod pallet {
 			<FinalizedBeaconHeaders<T>>::insert(block_root, initial_sync.header);
 			Self::add_finalized_header_slot(slot)?;
 			<FinalizedBeaconHeadersList<T>>::try_append(block_root)
-				.map_err(|_| Error::<T>::FinalityHeaderBoundsExceed)?;
+				.map_err(|_| Error::<T>::FinalityHeaderBoundsExceeded)?;
 			<LatestFinalizedHeaderState<T>>::set(last_finalized_header);
 
 			Ok(())
@@ -897,7 +898,7 @@ pub mod pallet {
 				}
 				vec.try_push(period)
 			})
-			.map_err(|_| <Error<T>>::SyncCommitteeBoundsExceed)?;
+			.map_err(|_| <Error<T>>::SyncCommitteeBoundsExceeded)?;
 
 			log::debug!(
 				target: "ethereum-beacon-client",
@@ -937,7 +938,7 @@ pub mod pallet {
 				}
 				vec.try_push(block_root)
 			})
-			.map_err(|_| <Error<T>>::FinalityHeaderBoundsExceed)?;
+			.map_err(|_| <Error<T>>::FinalityHeaderBoundsExceeded)?;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -992,7 +993,7 @@ pub mod pallet {
 				}
 				vec.try_push(block_hash)
 			})
-			.map_err(|_| <Error<T>>::ExecutionHeaderBoundsExceed)?;
+			.map_err(|_| <Error<T>>::ExecutionHeaderBoundsExceeded)?;
 
 			log::trace!(
 				target: "ethereum-beacon-client",
