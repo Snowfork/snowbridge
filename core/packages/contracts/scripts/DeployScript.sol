@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "canonical-weth/WETH9.sol";
-import "forge-std/Script.sol";
-import "forge-std/console.sol";
-import "../src/BeefyClient.sol";
-import "../src/ParachainClient.sol";
-import "../src/InboundQueue.sol";
-import "../src/OutboundQueue.sol";
-import "../src/NativeTokens.sol";
-import "../src/Vault.sol";
-import "../src/SovereignTreasury.sol";
-import "../src/IVault.sol";
+import {WETH9} from "canonical-weth/WETH9.sol";
+import {Script} from "forge-std/Script.sol";
+import {BeefyClient} from "../src/BeefyClient.sol";
+import {ParachainClient} from "../src/ParachainClient.sol";
+import {InboundQueue} from "../src/InboundQueue.sol";
+import {OutboundQueue} from "../src/OutboundQueue.sol";
+import {NativeTokens} from "../src/NativeTokens.sol";
+import {TokenVault} from "../src/TokenVault.sol";
+import {Vault} from "../src/Vault.sol";
+import {IVault} from "../src/IVault.sol";
+import {SovereignTreasury} from "../src/SovereignTreasury.sol";
+import {ParaID} from "../src/Types.sol";
 
 contract DeployScript is Script {
     function setUp() public {}
@@ -31,7 +32,7 @@ contract DeployScript is Script {
         BeefyClient beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
 
         // ParachainClient
-        uint32 paraId = uint32(vm.envUint("PARAID"));
+        uint32 paraId = uint32(vm.envUint("BRIDGE_HUB_PARAID"));
         ParachainClient parachainClient = new ParachainClient(beefyClient, paraId);
 
         // InboundQueue
@@ -47,7 +48,7 @@ contract DeployScript is Script {
         NativeTokens nativeTokens = new NativeTokens(
             tokenVault,
             outboundQueue,
-            vm.envBytes("STATEMINT_LOCATION"),
+            ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID"))),
             vm.envUint("CREATE_TOKEN_FEE")
         );
 
@@ -65,7 +66,6 @@ contract DeployScript is Script {
         // Allow NativeTokens to withdraw from TokenVault
         tokenVault.grantRole(tokenVault.WITHDRAW_ROLE(), address(nativeTokens));
         tokenVault.grantRole(tokenVault.DEPOSIT_ROLE(), address(nativeTokens));
-
 
         vm.stopBroadcast();
     }

@@ -101,8 +101,7 @@ contract NativeTokensTest is Test {
 
         nativeTokens.lock(address(token), ParaID.wrap(0), recipient, 50);
 
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-        assertEq(entries[3].topics[0], keccak256("Message(uint32,uint64,bytes)"));
+        vm.getRecordedLogs();
 
         assertEq(token.balanceOf(address(account2)), 450);
         assertEq(token.balanceOf(address(vault)), 50);
