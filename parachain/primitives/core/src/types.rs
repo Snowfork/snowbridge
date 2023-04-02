@@ -55,30 +55,3 @@ impl Into<DigestItem> for AuxiliaryDigestItem {
 		DigestItem::Other(self.encode())
 	}
 }
-
-/// Parachain id.
-///
-/// This is an equivalent of the `polkadot_parachain::Id`, which is a compact-encoded `u32`.
-#[derive(
-	Clone,
-	CompactAs,
-	Copy,
-	Decode,
-	Default,
-	Encode,
-	Eq,
-	Hash,
-	MaxEncodedLen,
-	Ord,
-	PartialEq,
-	PartialOrd,
-	RuntimeDebug,
-	TypeInfo,
-)]
-pub struct ParaId(pub u32);
-
-impl From<u32> for ParaId {
-	fn from(id: u32) -> Self {
-		ParaId(id)
-	}
-}
