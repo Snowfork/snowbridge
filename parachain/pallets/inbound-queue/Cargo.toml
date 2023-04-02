@@ -16,16 +16,16 @@ scale-info = { version = "2.2.0", default-features = false, features = [ "derive
 hex-literal = { version = "0.3.4", optional = true }
 rlp = { version = "0.5", default-features = false, optional = true }
 
-frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38", default-features = false  }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "master", default-features = false  }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
@@ -33,8 +33,8 @@ snowbridge-router-primitives = { path = "../../primitives/router", default-featu
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
-frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38" }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38" }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 hex-literal = { version = "0.3.4" }
 rlp = { version = "0.5" }
 

@@ -1,6 +1,6 @@
 //! Types for representing messages
 
-use codec::{CompactAs, Decode, Encode, MaxEncodedLen};
+use codec::{Decode, Encode};
 use frame_support::{scale_info::TypeInfo, RuntimeDebug};
 use sp_core::{H160, H256};
 use sp_runtime::DigestItem;

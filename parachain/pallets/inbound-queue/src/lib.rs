@@ -12,7 +12,7 @@ mod test;
 
 use frame_support::{
 	storage::bounded_btree_set::BoundedBTreeSet,
-	traits::fungible::{Inspect, Transfer},
+	traits::fungible::{Inspect, Mutate},
 };
 use frame_system::ensure_signed;
 use polkadot_parachain::primitives::Id as ParaId;
@@ -39,10 +39,9 @@ pub mod pallet {
 
 	use super::*;
 
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -52,7 +51,7 @@ pub mod pallet {
 		/// Verifier module for message verification.
 		type Verifier: Verifier;
 
-		type Token: Transfer<Self::AccountId>;
+		type Token: Mutate<Self::AccountId>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -140,7 +139,7 @@ pub mod pallet {
 
 			// Reward relayer from the sovereign account of the destination parachain
 			let dest_account = envelope.dest.into_account_truncating();
-			T::Token::transfer(&dest_account, &who, T::Reward::get(), true)?;
+			T::Token::transfer(&who, &dest_account, T::Reward::get(), Preservation::Expendable)?;
 
 			Ok(())
 		}

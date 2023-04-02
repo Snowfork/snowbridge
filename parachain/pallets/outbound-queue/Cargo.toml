@@ -10,27 +10,27 @@ repository = "https://github.com/Snowfork/snowbridge"
 targets = [ "x86_64-unknown-linux-gnu" ]
 
 [dependencies]
-serde = { version = "1.0.137", optional = true }
+serde = { version = "1.0.156", optional = true }
 codec = { version = "3.1.5", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
-scale-info = { version = "2.2.0", default-features = false, features = [ "derive" ] }
+scale-info = { version = "2.3.1", default-features = false, features = [ "derive" ] }
 hex-literal = { version = "0.3.4", optional = true }
 rlp = { version = "0.5", default-features = false, optional = true }
 
-frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-outbound-queue-merkle-proof = { path = "merkle-proof", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
-frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38" }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38" }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 hex-literal = { version = "0.3.4" }
 rlp = { version = "0.5" }
 
