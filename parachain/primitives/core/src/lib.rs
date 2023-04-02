@@ -12,7 +12,7 @@ use sp_std::prelude::*;
 
 pub mod types;
 
-pub use types::{Message, MessageId, MessageNonce, Proof, ParaId};
+pub use types::{Message, MessageId, MessageNonce, ParaId, Proof};
 
 /// A trait for verifying messages.
 ///

@@ -1,6 +1,6 @@
 //! Types for representing messages
 
-use codec::{Decode, Encode, CompactAs, MaxEncodedLen};
+use codec::{CompactAs, Decode, Encode, MaxEncodedLen};
 use frame_support::{scale_info::TypeInfo, RuntimeDebug};
 use sp_core::{H160, H256};
 use sp_runtime::DigestItem;
@@ -79,6 +79,6 @@ pub struct ParaId(pub u32);
 
 impl From<u32> for ParaId {
 	fn from(id: u32) -> Self {
-			ParaId(id)
+		ParaId(id)
 	}
 }
