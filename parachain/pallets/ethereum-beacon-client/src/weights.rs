@@ -42,17 +42,17 @@ pub trait WeightInfo {
 pub struct SnowbridgeWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 	fn sync_committee_period_update() -> Weight {
-		Weight::from_ref_time(175_039_777_000 as u64)
+		Weight::from_parts(175_039_777_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
 	fn import_finalized_header() -> Weight {
-		Weight::from_ref_time(171_871_518_000 as u64)
+		Weight::from_parts(171_871_518_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	fn import_execution_header() -> Weight {
-		Weight::from_ref_time(166_011_885_000 as u64)
+		Weight::from_parts(166_011_885_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -61,17 +61,17 @@ impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn sync_committee_period_update() -> Weight {
-		Weight::from_ref_time(175_039_777_000 as u64)
+		Weight::from_parts(175_039_777_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(4))
 			.saturating_add(RocksDbWeight::get().writes(2))
 	}
 	fn import_finalized_header() -> Weight {
-		Weight::from_ref_time(171_871_518_000 as u64)
+		Weight::from_parts(171_871_518_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(3))
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 	fn import_execution_header() -> Weight {
-		Weight::from_ref_time(166_011_885_000 as u64)
+		Weight::from_parts(166_011_885_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(3))
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
