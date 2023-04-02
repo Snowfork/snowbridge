@@ -1,7 +1,7 @@
 use codec::DecodeAll;
 use ethabi::{Event, Param, ParamKind, Token};
+use polkadot_parachain::primitives::Id as ParaId;
 use snowbridge_ethereum::{log::Log, H160};
-use polkadot_parachain::primitives::{Id as ParaId};
 
 use snowbridge_router_primitives::Action;
 

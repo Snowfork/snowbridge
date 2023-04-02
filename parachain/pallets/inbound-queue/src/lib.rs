@@ -10,16 +10,18 @@ pub mod weights;
 #[cfg(test)]
 mod test;
 
+use frame_support::{
+	storage::bounded_btree_set::BoundedBTreeSet,
+	traits::fungible::{Inspect, Transfer},
+};
 use frame_system::ensure_signed;
+use polkadot_parachain::primitives::Id as ParaId;
 use sp_core::{ConstU32, H160};
-use sp_std::convert::TryFrom;
 use sp_runtime::traits::AccountIdConversion;
-use frame_support::storage::bounded_btree_set::BoundedBTreeSet;
-use frame_support::traits::fungible::{Inspect, Transfer};
-use polkadot_parachain::primitives::{Id as ParaId};
+use sp_std::convert::TryFrom;
 
-use snowbridge_core::{Message, Verifier};
 use envelope::Envelope;
+use snowbridge_core::{Message, Verifier};
 pub use weights::WeightInfo;
 
 #[cfg(feature = "std")]
