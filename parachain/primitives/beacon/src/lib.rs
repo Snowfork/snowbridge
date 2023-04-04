@@ -157,6 +157,37 @@ pub struct InitialSync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> {
 }
 
 #[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+	feature = "std",
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+)]
+#[scale_info(skip_type_params(SyncCommitteeSize, ProofSize))]
+#[codec(mel_bound())]
+pub struct CheckpointSync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> {
+	pub header: BeaconHeader,
+	pub current_sync_committee: SyncCommittee<SyncCommitteeSize>,
+	pub current_sync_committee_branch: BoundedVec<H256, ProofSize>,
+}
+
+impl<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>
+	TryFrom<InitialSync<SyncCommitteeSize, ProofSize>>
+	for CheckpointSync<SyncCommitteeSize, ProofSize>
+{
+	type Error = ConvertError;
+
+	fn try_from(init_sync: InitialSync<SyncCommitteeSize, ProofSize>) -> Result<Self, Self::Error> {
+		Ok(CheckpointSync {
+			header: init_sync.header,
+			current_sync_committee: init_sync.current_sync_committee,
+			current_sync_committee_branch: init_sync.current_sync_committee_branch,
+		})
+	}
+}
+
+#[derive(
 	Default,
 	Encode,
 	Decode,
