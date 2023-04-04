@@ -5,7 +5,7 @@ use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::traits::OnInitialize;
 
 #[allow(unused_imports)]
-use crate::outbound::Pallet as BasicOutboundChannel;
+use crate::Pallet as OutboundQueue;
 
 benchmarks! {
 	where_clause {
@@ -29,7 +29,7 @@ benchmarks! {
 
 		let block_number = Interval::<T>::get();
 
-	}: { BasicOutboundChannel::<T>::commit(Weight::MAX) }
+	}: { OutboundQueue::<T>::commit(Weight::MAX) }
 	verify {
 		assert_eq!(<MessageQueue<T>>::get().len(), 0);
 	}
@@ -41,11 +41,11 @@ benchmarks! {
 
 		let block_number = Interval::<T>::get();
 
-	}: { BasicOutboundChannel::<T>::on_initialize(block_number) }
+	}: { OutboundQueue::<T>::on_initialize(block_number) }
 }
 
 impl_benchmark_test_suite!(
-	BasicOutboundChannel,
-	crate::outbound::test::new_tester(),
-	crate::outbound::test::Test,
+	OutboundQueue,
+	crate::test::new_tester(),
+	crate::test::Test,
 );
