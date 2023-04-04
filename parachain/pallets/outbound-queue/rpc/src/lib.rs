@@ -13,11 +13,11 @@ use std::sync::Arc;
 
 use snowbridge_outbound_queue_merkle_proof::merkle_proof;
 
-pub struct BasicChannel<T: OffchainStorage> {
+pub struct OutboundQueue<T: OffchainStorage> {
 	storage: Arc<RwLock<T>>,
 }
 
-impl<T: OffchainStorage> BasicChannel<T> {
+impl<T: OffchainStorage> OutboundQueue<T> {
 	pub fn new(storage: T) -> Self {
 		Self { storage: Arc::new(RwLock::new(storage)) }
 	}
@@ -27,12 +27,12 @@ impl<T: OffchainStorage> BasicChannel<T> {
 struct Leaves(pub Vec<Vec<u8>>);
 
 #[rpc(server)]
-pub trait BasicChannelApi {
+pub trait OutboundQueueApi {
 	#[method(name = "outboundQueue_getMerkleProof")]
 	fn get_merkle_proof(&self, commitment_hash: H256, leaf_index: u64) -> Result<Bytes>;
 }
 
-impl<T> BasicChannelApiServer for BasicChannel<T>
+impl<T> OutboundQueueApiServer for OutboundQueue<T>
 where
 	T: OffchainStorage + 'static,
 {
@@ -76,7 +76,7 @@ where
 
 #[cfg(test)]
 mod tests {
-	use crate::{BasicChannel, BasicChannelApiServer};
+	use crate::{OutboundQueue, OutboundQueueApiServer};
 	use codec::Encode;
 	use jsonrpsee::{
 		core::Error,
@@ -117,9 +117,9 @@ mod tests {
 		prefix: &'a [u8],
 		key: &'a [u8],
 		value: Option<Vec<u8>>,
-	) -> BasicChannel<MockOffchainStorage<'a>> {
+	) -> OutboundQueue<MockOffchainStorage<'a>> {
 		let storage = MockOffchainStorage { prefix, key, value };
-		BasicChannel::new(storage)
+		OutboundQueue::new(storage)
 	}
 
 	#[ignore]

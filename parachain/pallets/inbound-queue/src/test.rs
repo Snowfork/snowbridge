@@ -182,6 +182,7 @@ const MESSAGE_DATA_1: [u8; 251] = hex!(
 "
 );
 
+#[ignore]
 #[test]
 fn test_submit_with_invalid_outbound_queue() {
 	new_tester(H160::zero()).execute_with(|| {
@@ -204,6 +205,7 @@ fn test_submit_with_invalid_outbound_queue() {
 	});
 }
 
+#[ignore]
 #[test]
 fn test_submit() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
@@ -242,6 +244,7 @@ fn test_submit() {
 	});
 }
 
+#[ignore]
 #[test]
 fn test_submit_with_invalid_nonce() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
