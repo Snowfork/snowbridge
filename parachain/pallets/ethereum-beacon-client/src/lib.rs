@@ -356,7 +356,7 @@ pub mod pallet {
 
 			<Blocked<T>>::set(true);
 
-			log::info!(target: "ethereum-beacon-client","bridge emergency blocked from governance.");
+			log::info!(target: "ethereum-beacon-client","💫 bridge emergency blocked from governance.");
 
 			Self::deposit_event(Event::BridgeBlocked { blocked: true });
 
