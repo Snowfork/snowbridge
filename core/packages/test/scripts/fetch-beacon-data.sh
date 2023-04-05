@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -eu
-# export BEACON_HTTP_ENDPOINT=https://lodestar-goerli.chainsafe.io
 source scripts/set-env.sh
 
 # finality_update

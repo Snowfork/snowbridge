@@ -115,7 +115,8 @@ pub mod pallet {
 		BeaconHeaderImported { block_hash: H256, slot: u64 },
 		ExecutionHeaderImported { block_hash: H256, block_number: u64 },
 		SyncCommitteeUpdated { period: u64 },
-		BridgeBlocked { blocked: bool },
+		Activated,
+		Deactivated,
 	}
 
 	#[pallet::error]
@@ -358,7 +359,7 @@ pub mod pallet {
 
 			log::info!(target: "ethereum-beacon-client","💫 bridge emergency blocked from governance.");
 
-			Self::deposit_event(Event::BridgeBlocked { blocked: true });
+			Self::deposit_event(Event::Deactivated);
 
 			Ok(())
 		}
@@ -369,6 +370,7 @@ pub mod pallet {
 		pub fn unblock_bridge(
 			origin: OriginFor<T>,
 			check_points: Option<Vec<CheckpointSyncOf<T>>>,
+			unblocked: bool,
 		) -> DispatchResult {
 			let _sender = ensure_root(origin)?;
 
@@ -379,9 +381,12 @@ pub mod pallet {
 				}
 			}
 
-			<Blocked<T>>::set(false);
-
-			Self::deposit_event(Event::BridgeBlocked { blocked: false });
+			// for multiple check_points does not fit in one block, separate data into multiple
+			// calls with unblocked flag set as true in the last one
+			if unblocked {
+				<Blocked<T>>::set(false);
+				Self::deposit_event(Event::Activated);
+			}
 
 			Ok(())
 		}
