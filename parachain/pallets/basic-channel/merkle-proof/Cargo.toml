@@ -16,7 +16,7 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "maste
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 [dev-dependencies]
-hex-literal = { version = "0.3.4" }
+hex-literal = { version = "0.4.0" }
 env_logger = "0.9"
 hex = "0.4"
 array-bytes = "4.1"
