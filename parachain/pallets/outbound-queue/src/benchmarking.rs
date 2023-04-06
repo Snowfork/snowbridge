@@ -44,8 +44,4 @@ benchmarks! {
 	}: { OutboundQueue::<T>::on_initialize(block_number) }
 }
 
-impl_benchmark_test_suite!(
-	OutboundQueue,
-	crate::test::new_tester(),
-	crate::test::Test,
-);
+impl_benchmark_test_suite!(OutboundQueue, crate::test::new_tester(), crate::test::Test,);
