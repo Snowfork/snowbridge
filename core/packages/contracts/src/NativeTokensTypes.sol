@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "./ScaleCodec.sol";
-import "./SubstrateTypes.sol";
+import { ScaleCodec } from "./ScaleCodec.sol";
+import { SubstrateTypes } from "./SubstrateTypes.sol";
+import { ParaID } from "./Types.sol";
 
 library NativeTokensTypes {
     /**
@@ -10,20 +11,19 @@ library NativeTokensTypes {
      */
     // solhint-disable-next-line func-name-mixedcase
     function Mint(
-        bytes memory dest,
         address token,
+        ParaID dest,
         bytes memory recipient,
         uint128 amount
     ) internal pure returns (bytes memory) {
         return
             bytes.concat(
-                dest,
                 hex"00",
                 hex"00",
                 abi.encodePacked(token),
+                SubstrateTypes.OptionParaID(dest),
                 recipient,
-                ScaleCodec.encodeU128(amount),
-                SubstrateTypes.None()
+                ScaleCodec.encodeU128(amount)
             );
     }
 
@@ -32,7 +32,6 @@ library NativeTokensTypes {
      */
     // solhint-disable-next-line func-name-mixedcase
     function Create(
-        bytes memory dest,
         address token,
         bytes memory name,
         bytes memory symbol,
@@ -40,9 +39,8 @@ library NativeTokensTypes {
     ) internal pure returns (bytes memory) {
         return
             bytes.concat(
-                dest,
                 hex"00",
-                hex"00",
+                hex"01",
                 abi.encodePacked(token),
                 SubstrateTypes.VecU8(name),
                 SubstrateTypes.VecU8(symbol),

@@ -3,7 +3,7 @@ package parachain
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/contracts/basic"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 )
 
 func Hex(b []byte) string {
@@ -11,7 +11,7 @@ func Hex(b []byte) string {
 }
 
 func (wr *EthereumWriter) logFieldsForBasicSubmission(
-	message basic.BasicInboundChannelMessage,
+	message contracts.InboundQueueMessage,
 	leafProof [][32]byte,
 	hashSides []bool,
 	proof []byte,
@@ -23,9 +23,9 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 
 	params := log.Fields{
 		"message": log.Fields{
-			"sourceID": Hex(message.SourceID[:]),
-			"nonce":    message.Nonce,
-			"payload":  message.Payload,
+			"origin":  Hex(message.Origin),
+			"nonce":   message.Nonce,
+			"payload": message.Payload,
 		},
 		"leafProof": leafProofHexes,
 		"hashSides": hashSides,

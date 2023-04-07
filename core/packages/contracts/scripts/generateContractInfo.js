@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const NetworkId = process.env.ETH_NETWORK_ID || 15;
-const DeployInfoFile = `./broadcast/Deploy.sol/${NetworkId}/run-latest.json`;
+const DeployInfoFile = `./broadcast/DeployScript.sol/${NetworkId}/run-latest.json`;
 const BuildInfoDir = "./out";
 const DestFile =
   process.argv.length >= 3 ? process.argv[2] : "/tmp/snowbridge/contracts.json";

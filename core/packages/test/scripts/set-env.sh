@@ -53,7 +53,7 @@ export RANDAO_COMMIT_DELAY=3
 export RANDAO_COMMIT_EXP=8
 
 ## ParachainClient
-export PARAID=1013
+export BRIDGE_HUB_PARAID=1001
 
 ## OutboundChannel
 export RELAYER_FEE=100
@@ -62,7 +62,7 @@ export RELAYER_FEE=100
 export RELAYER_REWARD=100
 
 ## NativeTokens
-export STATEMINT_LOCATION=0x09b636bf387d256bd35ebf301c2da34fdee53b42f6a4648ad126156034d4a2db
+export ASSET_HUB_PARAID=1000
 export CREATE_TOKEN_FEE="1000000000000000000"
 
 address_for()

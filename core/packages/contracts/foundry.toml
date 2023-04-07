@@ -5,6 +5,7 @@ optimizer_runs = 20_000
 via_ir = false
 test = 'test'
 remappings = [
+    'canonical-weth=lib/canonical-weth/contracts/',
     'ds-test=lib/ds-test/src/',
     'forge-std=lib/forge-std/src/',
     'openzeppelin=lib/openzeppelin-contracts/contracts/',

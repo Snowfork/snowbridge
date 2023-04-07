@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import {IRecipient} from "../../src/IRecipient.sol";
+import {ParaID} from "../../src/Types.sol";
 
 contract RecipientMock is IRecipient {
     bool shouldFail;
@@ -30,7 +31,7 @@ contract RecipientMock is IRecipient {
         shouldConsumeAllGas = true;
     }
 
-    function handle(bytes calldata, bytes calldata) external {
+    function handle(ParaID, bytes calldata) external {
         if (shouldFail) {
             revert("failed");
         }

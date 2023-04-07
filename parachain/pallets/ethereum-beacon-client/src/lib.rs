@@ -342,7 +342,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(1000)]
+		#[pallet::weight({1000})]
 		#[transactional]
 		pub fn unblock_bridge(origin: OriginFor<T>) -> DispatchResult {
 			let _sender = ensure_root(origin)?;
@@ -1121,7 +1121,7 @@ pub mod pallet {
 	impl<T: Config> Verifier for Pallet<T> {
 		/// Verify a message by verifying the existence of the corresponding
 		/// Ethereum log in a block. Returns the log if successful.
-		fn verify(message: &Message) -> Result<(Log, u64), DispatchError> {
+		fn verify(message: &Message) -> Result<Log, DispatchError> {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Verifying message with block hash {}",
@@ -1130,8 +1130,6 @@ pub mod pallet {
 
 			let stored_header = <ExecutionHeaders<T>>::get(message.proof.block_hash)
 				.ok_or(Error::<T>::MissingHeader)?;
-
-			let block_number = stored_header.block_number;
 
 			let receipt = match Self::verify_receipt_inclusion(stored_header, &message.proof) {
 				Ok(receipt) => receipt,
@@ -1180,7 +1178,7 @@ pub mod pallet {
 				message.proof.block_hash,
 			);
 
-			Ok((log, block_number))
+			Ok(log)
 		}
 
 		// Empty implementation, not necessary for the beacon client,
