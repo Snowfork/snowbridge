@@ -30,7 +30,7 @@ var (
 
 // OutboundQueueMetaData contains all meta data concerning the OutboundQueue contract.
 var OutboundQueueMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_fee\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"FeePaymentToLow\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"fee\",\"type\":\"uint256\"}],\"name\":\"FeeUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes\",\"name\":\"dest\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"Message\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SUBMIT_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"fee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"dest\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newFee\",\"type\":\"uint256\"}],\"name\":\"updateFee\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vault\",\"outputs\":[{\"internalType\":\"contractIVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_fee\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"FeePaymentToLow\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"fee\",\"type\":\"uint256\"}],\"name\":\"FeeUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"dest\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"Message\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SUBMIT_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"fee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"dest\",\"type\":\"uint32\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"dest\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newFee\",\"type\":\"uint256\"}],\"name\":\"updateFee\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vault\",\"outputs\":[{\"internalType\":\"contractIVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // OutboundQueueABI is the input ABI used to generate the binding from.
@@ -365,12 +365,12 @@ func (_OutboundQueue *OutboundQueueCallerSession) HasRole(role [32]byte, account
 	return _OutboundQueue.Contract.HasRole(&_OutboundQueue.CallOpts, role, account)
 }
 
-// Nonce is a free data retrieval call binding the contract method 0x4e765004.
+// Nonce is a free data retrieval call binding the contract method 0x141c4985.
 //
-// Solidity: function nonce(bytes ) view returns(uint64)
-func (_OutboundQueue *OutboundQueueCaller) Nonce(opts *bind.CallOpts, arg0 []byte) (uint64, error) {
+// Solidity: function nonce(uint32 dest) view returns(uint64)
+func (_OutboundQueue *OutboundQueueCaller) Nonce(opts *bind.CallOpts, dest uint32) (uint64, error) {
 	var out []interface{}
-	err := _OutboundQueue.contract.Call(opts, &out, "nonce", arg0)
+	err := _OutboundQueue.contract.Call(opts, &out, "nonce", dest)
 
 	if err != nil {
 		return *new(uint64), err
@@ -382,18 +382,18 @@ func (_OutboundQueue *OutboundQueueCaller) Nonce(opts *bind.CallOpts, arg0 []byt
 
 }
 
-// Nonce is a free data retrieval call binding the contract method 0x4e765004.
+// Nonce is a free data retrieval call binding the contract method 0x141c4985.
 //
-// Solidity: function nonce(bytes ) view returns(uint64)
-func (_OutboundQueue *OutboundQueueSession) Nonce(arg0 []byte) (uint64, error) {
-	return _OutboundQueue.Contract.Nonce(&_OutboundQueue.CallOpts, arg0)
+// Solidity: function nonce(uint32 dest) view returns(uint64)
+func (_OutboundQueue *OutboundQueueSession) Nonce(dest uint32) (uint64, error) {
+	return _OutboundQueue.Contract.Nonce(&_OutboundQueue.CallOpts, dest)
 }
 
-// Nonce is a free data retrieval call binding the contract method 0x4e765004.
+// Nonce is a free data retrieval call binding the contract method 0x141c4985.
 //
-// Solidity: function nonce(bytes ) view returns(uint64)
-func (_OutboundQueue *OutboundQueueCallerSession) Nonce(arg0 []byte) (uint64, error) {
-	return _OutboundQueue.Contract.Nonce(&_OutboundQueue.CallOpts, arg0)
+// Solidity: function nonce(uint32 dest) view returns(uint64)
+func (_OutboundQueue *OutboundQueueCallerSession) Nonce(dest uint32) (uint64, error) {
+	return _OutboundQueue.Contract.Nonce(&_OutboundQueue.CallOpts, dest)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -521,24 +521,24 @@ func (_OutboundQueue *OutboundQueueTransactorSession) RevokeRole(role [32]byte, 
 	return _OutboundQueue.Contract.RevokeRole(&_OutboundQueue.TransactOpts, role, account)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x39b973ad.
+// Submit is a paid mutator transaction binding the contract method 0xa0397a86.
 //
-// Solidity: function submit(bytes dest, bytes payload) payable returns()
-func (_OutboundQueue *OutboundQueueTransactor) Submit(opts *bind.TransactOpts, dest []byte, payload []byte) (*types.Transaction, error) {
+// Solidity: function submit(uint32 dest, bytes payload) payable returns()
+func (_OutboundQueue *OutboundQueueTransactor) Submit(opts *bind.TransactOpts, dest uint32, payload []byte) (*types.Transaction, error) {
 	return _OutboundQueue.contract.Transact(opts, "submit", dest, payload)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x39b973ad.
+// Submit is a paid mutator transaction binding the contract method 0xa0397a86.
 //
-// Solidity: function submit(bytes dest, bytes payload) payable returns()
-func (_OutboundQueue *OutboundQueueSession) Submit(dest []byte, payload []byte) (*types.Transaction, error) {
+// Solidity: function submit(uint32 dest, bytes payload) payable returns()
+func (_OutboundQueue *OutboundQueueSession) Submit(dest uint32, payload []byte) (*types.Transaction, error) {
 	return _OutboundQueue.Contract.Submit(&_OutboundQueue.TransactOpts, dest, payload)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x39b973ad.
+// Submit is a paid mutator transaction binding the contract method 0xa0397a86.
 //
-// Solidity: function submit(bytes dest, bytes payload) payable returns()
-func (_OutboundQueue *OutboundQueueTransactorSession) Submit(dest []byte, payload []byte) (*types.Transaction, error) {
+// Solidity: function submit(uint32 dest, bytes payload) payable returns()
+func (_OutboundQueue *OutboundQueueTransactorSession) Submit(dest uint32, payload []byte) (*types.Transaction, error) {
 	return _OutboundQueue.Contract.Submit(&_OutboundQueue.TransactOpts, dest, payload)
 }
 
@@ -766,40 +766,48 @@ func (it *OutboundQueueMessageIterator) Close() error {
 
 // OutboundQueueMessage represents a Message event raised by the OutboundQueue contract.
 type OutboundQueueMessage struct {
-	Dest    common.Hash
+	Dest    uint32
 	Nonce   uint64
 	Payload []byte
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterMessage is a free log retrieval operation binding the contract event 0xb68e760461a2cd8661cea966252574a5355ad3ed096afdd6572c65ef50bb7cd7.
+// FilterMessage is a free log retrieval operation binding the contract event 0x1b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ad.
 //
-// Solidity: event Message(bytes indexed dest, uint64 nonce, bytes payload)
-func (_OutboundQueue *OutboundQueueFilterer) FilterMessage(opts *bind.FilterOpts, dest [][]byte) (*OutboundQueueMessageIterator, error) {
+// Solidity: event Message(uint32 indexed dest, uint64 indexed nonce, bytes payload)
+func (_OutboundQueue *OutboundQueueFilterer) FilterMessage(opts *bind.FilterOpts, dest []uint32, nonce []uint64) (*OutboundQueueMessageIterator, error) {
 
 	var destRule []interface{}
 	for _, destItem := range dest {
 		destRule = append(destRule, destItem)
 	}
+	var nonceRule []interface{}
+	for _, nonceItem := range nonce {
+		nonceRule = append(nonceRule, nonceItem)
+	}
 
-	logs, sub, err := _OutboundQueue.contract.FilterLogs(opts, "Message", destRule)
+	logs, sub, err := _OutboundQueue.contract.FilterLogs(opts, "Message", destRule, nonceRule)
 	if err != nil {
 		return nil, err
 	}
 	return &OutboundQueueMessageIterator{contract: _OutboundQueue.contract, event: "Message", logs: logs, sub: sub}, nil
 }
 
-// WatchMessage is a free log subscription operation binding the contract event 0xb68e760461a2cd8661cea966252574a5355ad3ed096afdd6572c65ef50bb7cd7.
+// WatchMessage is a free log subscription operation binding the contract event 0x1b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ad.
 //
-// Solidity: event Message(bytes indexed dest, uint64 nonce, bytes payload)
-func (_OutboundQueue *OutboundQueueFilterer) WatchMessage(opts *bind.WatchOpts, sink chan<- *OutboundQueueMessage, dest [][]byte) (event.Subscription, error) {
+// Solidity: event Message(uint32 indexed dest, uint64 indexed nonce, bytes payload)
+func (_OutboundQueue *OutboundQueueFilterer) WatchMessage(opts *bind.WatchOpts, sink chan<- *OutboundQueueMessage, dest []uint32, nonce []uint64) (event.Subscription, error) {
 
 	var destRule []interface{}
 	for _, destItem := range dest {
 		destRule = append(destRule, destItem)
 	}
+	var nonceRule []interface{}
+	for _, nonceItem := range nonce {
+		nonceRule = append(nonceRule, nonceItem)
+	}
 
-	logs, sub, err := _OutboundQueue.contract.WatchLogs(opts, "Message", destRule)
+	logs, sub, err := _OutboundQueue.contract.WatchLogs(opts, "Message", destRule, nonceRule)
 	if err != nil {
 		return nil, err
 	}
@@ -831,9 +839,9 @@ func (_OutboundQueue *OutboundQueueFilterer) WatchMessage(opts *bind.WatchOpts, 
 	}), nil
 }
 
-// ParseMessage is a log parse operation binding the contract event 0xb68e760461a2cd8661cea966252574a5355ad3ed096afdd6572c65ef50bb7cd7.
+// ParseMessage is a log parse operation binding the contract event 0x1b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ad.
 //
-// Solidity: event Message(bytes indexed dest, uint64 nonce, bytes payload)
+// Solidity: event Message(uint32 indexed dest, uint64 indexed nonce, bytes payload)
 func (_OutboundQueue *OutboundQueueFilterer) ParseMessage(log types.Log) (*OutboundQueueMessage, error) {
 	event := new(OutboundQueueMessage)
 	if err := _OutboundQueue.contract.UnpackLog(event, "Message", log); err != nil {

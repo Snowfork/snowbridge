@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
@@ -75,12 +74,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	messages := make(chan *contracts.OutboundQueueMessage)
 
-	key, err := types.EncodeToBytes(r.config.Source.LaneID)
-	if err != nil {
-		return fmt.Errorf("encode to bytes: %w", err)
-	}
-
-	sub, err := contract.WatchMessage(&opts, messages, [][]byte{key})
+	sub, err := contract.WatchMessage(&opts, messages, []uint32{r.config.Source.LaneID}, []uint64{})
 	if err != nil {
 		return fmt.Errorf("create subscription: %w", err)
 	}
@@ -93,8 +87,11 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		case err := <-sub.Err():
 			return fmt.Errorf("message subscription: %w", err)
 		case outboundMsg := <-messages:
+			log.Info("found message")
+
 			// wait until light client is updated with execution headers
 			for {
+				log.Info("waiting")
 				executionHeaderState, err := writer.GetLastExecutionHeaderState()
 				if err != nil {
 					return fmt.Errorf("fetch last execution header state: %w", err)
@@ -109,12 +106,14 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				}
 			}
 
+			log.Info("sending")
+
 			inboundMsg, err := r.makeInboundMessage(ctx, headerCache, outboundMsg)
 			if err != nil {
 				return fmt.Errorf("make outgoing message: %w", err)
 			}
 
-			err = writer.WriteToParachainAndWatch(ctx, "InboundQueue.submit", inboundMsg)
+			err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
 			if err != nil {
 				return fmt.Errorf("write to parachain: %w", err)
 			}

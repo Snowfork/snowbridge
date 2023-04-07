@@ -35,19 +35,9 @@ config_relayer(){
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
-    # Configure ethereum relay
-    jq \
-        --arg k1 "$(address_for BasicOutboundChannel)" \
-        --arg eth_endpoint_ws $eth_endpoint_ws \
-    '
-      .source.contracts.BasicOutboundChannel = $k1
-    | .source.ethereum.endpoint = $eth_endpoint_ws
-    ' \
-    config/ethereum-relay.json > $output_dir/ethereum-relay.json
-
     active_spec="mainnet"
     if [ "$eth_network" == "localhost" ]; then
-       active_spec="minimal"
+        active_spec="minimal"
     fi
 
     # Configure beacon relay
@@ -63,12 +53,12 @@ config_relayer(){
     # Configure execution relay
     jq \
         --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg k1 "$(address_for BasicOutboundChannel)" \
-        --arg basic_eth_addresses $basic_eth_addresses \
+        --arg k1 "$(address_for OutboundQueue)" \
+        --arg laneID $ASSET_HUB_PARAID \
     '
       .source.ethereum.endpoint = $eth_endpoint_ws
-    | .source.contracts.BasicOutboundChannel = $k1
-    | .source.basicChannelAddresses = ($basic_eth_addresses | split(","))
+    | .source.contracts.OutboundQueue = $k1
+    | .source."lane-id" = $laneID
     ' \
     config/execution-relay.json > $output_dir/execution-relay.json
 }
