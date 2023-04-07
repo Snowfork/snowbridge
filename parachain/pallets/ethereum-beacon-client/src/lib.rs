@@ -342,7 +342,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(1000)]
+		#[pallet::weight({1000})]
 		#[transactional]
 		pub fn unblock_bridge(origin: OriginFor<T>) -> DispatchResult {
 			let _sender = ensure_root(origin)?;
