@@ -9,7 +9,7 @@ export RANDAO_COMMIT_EXP=8
 ## ParachainClient
 export PARAID=1000
 
-## OutboundChannel
+## OutboundQueue
 export RELAYER_FEE=100
 
 ## InboundChannel

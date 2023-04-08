@@ -93,19 +93,21 @@ start_relayer()
         done
     ) &
 
+    # FIXME: Disabled until the relay is updated to the latest architecture
+    #
     # Launch parachain relay
-    (
-        : > parachain-relay.log
-        while :
-        do
-          echo "Starting parachain relay at $(date)"
-            "${relay_bin}" run parachain \
-                --config "$output_dir/parachain-relay.json" \
-                --ethereum.private-key $parachain_relay_eth_key \
-                >>parachain-relay.log 2>&1 || true
-            sleep 20
-        done
-    ) &
+    # (
+    #     : > parachain-relay.log
+    #     while :
+    #     do
+    #       echo "Starting parachain relay at $(date)"
+    #         "${relay_bin}" run parachain \
+    #             --config "$output_dir/parachain-relay.json" \
+    #             --ethereum.private-key $parachain_relay_eth_key \
+    #             >>parachain-relay.log 2>&1 || true
+    #         sleep 20
+    #     done
+    # ) &
 
     # Launch beacon relay
     (

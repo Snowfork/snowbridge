@@ -16,7 +16,7 @@
     "build:types": "typechain --target ethers-v5 'out/**/!(*.t|test).sol/!(*.abi).json' --out-dir types",
     "lint": "pnpm lint:solhint",
     "lint:solhint": "solhint 'src/**/*.sol'",
-    "format": "prettier --write 'src/**/*.sol'",
+    "format": "forge fmt",
     "size": "forge build --sizes",
     "test": "pnpm test:foundry",
     "test:foundry": "pnpm build && forge test -vvv",

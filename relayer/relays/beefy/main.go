@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 
 	log "github.com/sirupsen/logrus"
@@ -83,7 +83,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error) {
 	address := common.HexToAddress(relay.config.Sink.Contracts.BeefyClient)
-	contract, err := beefyclient.NewBeefyClient(address, relay.ethereumConn.Client())
+	contract, err := contracts.NewBeefyClient(address, relay.ethereumConn.Client())
 	if err != nil {
 		return 0, 0, err
 	}

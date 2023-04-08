@@ -14,7 +14,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 
 	log "github.com/sirupsen/logrus"
@@ -23,12 +23,14 @@ import (
 type BeefyListener struct {
 	config              *SourceConfig
 	ethereumConn        *ethereum.Connection
-	beefyClientContract *beefyclient.BeefyClient
+	beefyClientContract *contracts.BeefyClient
 	relaychainConn      *relaychain.Connection
 	parachainConnection *parachain.Connection
 	paraID              uint32
 	tasks               chan<- *Task
-	scanner             *Scanner
+
+	// TODO: https://linear.app/snowfork/issue/SNO-425
+	// scanner             *Scanner
 }
 
 func NewBeefyListener(
@@ -48,14 +50,9 @@ func NewBeefyListener(
 }
 
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
-	sourceIDs, err := li.config.getSourceIDs()
-	if err != nil {
-		return err
-	}
-
 	// Set up light client bridge contract
 	address := common.HexToAddress(li.config.Contracts.BeefyClient)
-	beefyClientContract, err := beefyclient.NewBeefyClient(address, li.ethereumConn.Client())
+	beefyClientContract, err := contracts.NewBeefyClient(address, li.ethereumConn.Client())
 	if err != nil {
 		return err
 	}
@@ -77,15 +74,15 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	li.paraID = paraID
 
-	li.scanner = &Scanner{
-		config:           li.config,
-		ethConn:          li.ethereumConn,
-		relayConn:        li.relaychainConn,
-		paraConn:         li.parachainConnection,
-		eventQueryClient: NewQueryClient(),
-		paraID:           paraID,
-		sourceIDs:        sourceIDs,
-	}
+	// TODO: https://linear.app/snowfork/issue/SNO-425
+	// li.scanner = &Scanner{
+	// 	config:           li.config,
+	// 	ethConn:          li.ethereumConn,
+	// 	relayConn:        li.relaychainConn,
+	// 	paraConn:         li.parachainConnection,
+	// 	eventQueryClient: NewQueryClient(),
+	// 	paraID:           paraID,
+	// }
 
 	eg.Go(func() error {
 		defer close(li.tasks)
@@ -158,10 +155,13 @@ func (li *BeefyListener) subscribeNewMMRRoots(ctx context.Context) error {
 }
 
 func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) error {
-	tasks, err := li.scanner.Scan(ctx, beefyBlockNumber)
-	if err != nil {
-		return err
-	}
+	// TODO: https://linear.app/snowfork/issue/SNO-425
+	// tasks, err := li.scanner.Scan(ctx, beefyBlockNumber)
+	// if err != nil {
+	//   return err
+	// }
+	var err error
+	var tasks []*Task
 
 	for _, task := range tasks {
 		// do final proof generation right before sending. The proof needs to be fresh.
@@ -184,8 +184,8 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 func (li *BeefyListener) queryBeefyClientEvents(
 	ctx context.Context, start uint64,
 	end *uint64,
-) ([]*beefyclient.BeefyClientNewMMRRoot, error) {
-	var events []*beefyclient.BeefyClientNewMMRRoot
+) ([]*contracts.BeefyClientNewMMRRoot, error) {
+	var events []*contracts.BeefyClientNewMMRRoot
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
 	iter, err := li.beefyClientContract.FilterNewMMRRoot(&filterOps)

@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/execution"
-	"github.com/snowfork/snowbridge/relayer/relays/execution/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -50,7 +49,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	var config config.Config
+	var config execution.Config
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		return err

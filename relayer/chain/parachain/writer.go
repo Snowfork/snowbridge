@@ -192,7 +192,7 @@ func (wr *ParachainWriter) GetLastSyncedSyncCommitteePeriod() (uint64, error) {
 }
 
 func (wr *ParachainWriter) GetLastBasicChannelBlockNumber() (uint64, error) {
-	return wr.getNumberFromParachain("BasicInboundChannel", "LatestVerifiedBlockNumber")
+	return wr.getNumberFromParachain("BasicInboundQueue", "LatestVerifiedBlockNumber")
 }
 
 func (wr *ParachainWriter) GetLastBasicChannelNonceByAddresses(addresses []common.Address) (map[common.Address]uint64, error) {
@@ -211,7 +211,7 @@ func (wr *ParachainWriter) GetLastBasicChannelNonceByAddresses(addresses []commo
 }
 
 func (wr *ParachainWriter) GetLastBasicChannelNonceByAddress(address common.Address) (uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicInboundChannel", "Nonce", address[:], nil)
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "BasicInboundQueue", "Nonce", address[:], nil)
 	if err != nil {
 		return 0, fmt.Errorf("create storage key for basic channel nonces: %w", err)
 	}

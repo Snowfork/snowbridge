@@ -1,5 +1,6 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
+//go:build exclude
 
 package cmd
 
@@ -20,7 +21,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/contracts/basic"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 )
 
 func fetchMessagesCmd() *cobra.Command {
@@ -90,7 +91,7 @@ func getEthContractEventsAndTrie(
 	var address common.Address
 
 	address = common.HexToAddress(viper.GetString("bo-channel"))
-	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, conn.Client())
+	outboundQueue, err := contracts.NewOutboundQueue(address, conn.Client())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -111,7 +112,7 @@ func getEthContractEventsAndTrie(
 		return nil, nil, err
 	}
 
-	basicEvents, err := getEthBasicMessages(ctx, basicOutboundChannel, block.NumberU64(), index)
+	basicEvents, err := getEthBasicMessages(ctx, outboundQueue, block.NumberU64(), index)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -121,7 +122,7 @@ func getEthContractEventsAndTrie(
 
 func getEthBasicMessages(
 	ctx context.Context,
-	contract *basic.BasicOutboundChannel,
+	contract *contracts.OutboundQueue,
 	blockNumber uint64,
 	index uint64,
 ) ([]*gethTypes.Log, error) {

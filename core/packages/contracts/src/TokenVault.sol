@@ -24,7 +24,7 @@ contract TokenVault is AccessControl {
     bytes32 public constant DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
 
     /// @dev stores the total balance of each token locked in the vault.
-    mapping(address => uint128) public balance;
+    mapping(address token => uint128) public balance;
 
     constructor() {
         _grantRole(ADMIN_ROLE, msg.sender);
@@ -32,21 +32,13 @@ contract TokenVault is AccessControl {
         _setRoleAdmin(DEPOSIT_ROLE, ADMIN_ROLE);
     }
 
-    function deposit(
-        address sender,
-        address token,
-        uint128 amount
-    ) external onlyRole(DEPOSIT_ROLE) {
+    function deposit(address sender, address token, uint128 amount) external onlyRole(DEPOSIT_ROLE) {
         balance[token] += amount;
         IERC20(token).safeTransferFrom(sender, address(this), amount);
         emit Deposit(sender, token, amount);
     }
 
-    function withdraw(
-        address recipient,
-        address token,
-        uint128 amount
-    ) external onlyRole(WITHDRAW_ROLE) {
+    function withdraw(address recipient, address token, uint128 amount) external onlyRole(WITHDRAW_ROLE) {
         if (amount > balance[token]) {
             revert InsufficientBalance();
         }

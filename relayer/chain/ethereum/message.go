@@ -12,13 +12,12 @@ import (
 	etrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*chain.EthereumOutboundMessage, error) {
+func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*parachain.Message, error) {
 	// RLP encode event log's Address, Topics, and Data
 	var buf bytes.Buffer
 	err := event.EncodeRLP(&buf)
@@ -53,13 +52,5 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*chain.E
 		"eventIndex": m.Proof.TxIndex,
 	}).Debug("Generated message from Ethereum log")
 
-	var args []interface{}
-	args = append(args, m)
-
-	message := chain.EthereumOutboundMessage{
-		Call: "BasicInboundChannel.submit",
-		Args: args,
-	}
-
-	return &message, nil
+	return &m, nil
 }
