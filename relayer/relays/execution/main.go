@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
@@ -17,8 +18,11 @@ import (
 )
 
 type Relay struct {
-	config  *Config
-	keypair *sr25519.Keypair
+	config   *Config
+	keypair  *sr25519.Keypair
+	paraconn *parachain.Connection
+	ethconn  *ethereum.Connection
+	outboundQueueContract *contracts.OutboundQueue
 }
 
 func NewRelay(
@@ -67,6 +71,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
+	r.outboundQueueContract = contract
 
 	opts := bind.WatchOpts{
 		Context: ctx,
@@ -120,6 +125,109 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		}
 	}
 }
+
+func (r *Relay) fetchLatestParachainNonce() (uint64, error) {
+	paraID := r.config.Source.LaneID
+	encodedParaID, err := types.EncodeToBytes(r.config.Source.LaneID)
+	if err != nil {
+		return 0, err
+	}
+
+	paraNonceKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueue", "Nonce", encodedParaID, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create storage key for EthereumInboundQueue.Nonce(%v): %w",
+		paraID, err)
+	}
+	var paraNonce uint64
+	ok, err := r.paraconn.API().RPC.State.GetStorageLatest(paraNonceKey, &paraNonce)
+	if err != nil {
+		return 0, fmt.Errorf("fetch storage EthereumInboundQueue.Nonce(%v): %w",
+		paraID, err)
+	}
+	if !ok {
+		paraNonce = 0
+	}
+
+	return paraNonce, nil
+}
+
+func (r *Relay) fetchLatestEthereumNonce(ctx context.Context) (uint64, error) {
+	opts := bind.CallOpts{
+		Pending: false,
+		Context: ctx,
+	}
+	nonce, err := r.outboundQueueContract.Nonce(&opts, r.config.Source.LaneID)
+	if err != nil {
+		return 0, fmt.Errorf("fetch OutboundQueue.Nonce(%v): %w", r.config.Source.LaneID, err)
+	}
+
+	return nonce, nil
+}
+
+const BLOCKS_PER_QUERY = 4096
+
+func (r *Relay) findEvents(ctx context.Context, latestFinalizedBlockNumber uint64, start uint64) ([]*contracts.OutboundQueueMessage, error) {
+
+	paraID := r.config.Source.LaneID
+
+	var allEvents []*contracts.OutboundQueueMessage
+
+	pivot := latestFinalizedBlockNumber
+
+	for {
+		opts := bind.FilterOpts{
+			Start: pivot - BLOCKS_PER_QUERY,
+			End: &pivot,
+			Context: ctx,
+		}
+
+		done, events, err := r.findEventsWithFilter(&opts, paraID, start)
+		if err != nil {
+			return nil, fmt.Errorf("filter events: %w", err)
+		}
+
+		if len(events) > 0 {
+			allEvents = append(allEvents, events...)
+		}
+
+		if done {
+			break
+		}
+	}
+
+	return allEvents, nil
+}
+
+func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start uint64) (bool, []*contracts.OutboundQueueMessage, error) {
+	iter, err := r.outboundQueueContract.FilterMessage(opts, []uint32{paraID}, []uint64{})
+	if err != nil {
+		return false, nil, err
+	}
+
+	var events []*contracts.OutboundQueueMessage
+	done := false
+
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return false, nil, err
+			}
+			break
+		}
+
+		events = append(events, iter.Event)
+		if iter.Event.Nonce == start {
+			done = true
+			iter.Close()
+			break
+		}
+	}
+
+	return done, events, nil
+}
+
 
 func (r *Relay) makeInboundMessage(
 	ctx context.Context,

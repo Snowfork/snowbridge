@@ -12,7 +12,7 @@ type Config struct {
 type SourceConfig struct {
 	Ethereum  config.EthereumConfig `mapstructure:"ethereum"`
 	Contracts ContractsConfig       `mapstructure:"contracts"`
-	LaneID    uint32             `mapstructure:"lane-id"`
+	LaneID    uint32                `mapstructure:"lane-id"`
 }
 
 type Address []byte
@@ -24,4 +24,3 @@ type ContractsConfig struct {
 type SinkConfig struct {
 	Parachain config.ParachainConfig `mapstructure:"parachain"`
 }
-
