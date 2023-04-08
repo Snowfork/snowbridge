@@ -221,7 +221,7 @@ importers:
         specifier: 9.11.1
         version: 9.11.1(supports-color@7.2.0)
       '@polkadot/api-cli':
-        specifier: beta
+        specifier: 0.51.12-0
         version: 0.51.12-0(supports-color@7.2.0)
       '@polkadot/types':
         specifier: 9.11.1
@@ -236,31 +236,31 @@ importers:
         specifier: ^3.0.1
         version: 3.0.1
       '@types/node':
-        specifier: ^18.15.11
-        version: 18.15.11
+        specifier: ^18.13.0
+        version: 18.13.0
       '@types/yargs':
-        specifier: ^17.0.24
+        specifier: ^17.0.2
         version: 17.0.24
       '@zombienet/cli':
-        specifier: ^1.3.43
+        specifier: ^1.3.29
         version: 1.3.43(@polkadot/util@10.2.3)(supports-color@7.2.0)
       bignumber.js:
-        specifier: ^9.1.1
-        version: 9.1.1
+        specifier: ^9.0.0
+        version: 9.1.0
       bn.js:
-        specifier: ^5.2.1
+        specifier: ^5.2.0
         version: 5.2.1
       c-kzg:
-        specifier: ^1.1.3
+        specifier: ^1.0.7
         version: 1.1.3
       chai:
-        specifier: ^4.3.7
-        version: 4.3.7
+        specifier: ^4.2.0
+        version: 4.3.6
       chai-as-promised:
         specifier: ^7.1.1
-        version: 7.1.1(chai@4.3.7)
+        version: 7.1.1(chai@4.3.6)
       chai-bignumber:
-        specifier: ^3.1.0
+        specifier: ^3.0.0
         version: 3.1.0
       esm:
         specifier: ^3.2.25
@@ -272,28 +272,28 @@ importers:
         specifier: 3.15.1
         version: 3.15.1(supports-color@7.2.0)
       keccak:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.0.2
+        version: 3.0.2
       mocha:
-        specifier: ^8.4.0
+        specifier: ^8.1.3
         version: 8.4.0
       node-fetch:
-        specifier: ^3.3.1
+        specifier: ^3.3.0
         version: 3.3.1
       rlp:
-        specifier: ^2.2.7
+        specifier: ^2.2.6
         version: 2.2.7
       ts-node:
-        specifier: ^10.9.1
-        version: 10.9.1(@types/node@18.15.11)(typescript@4.9.5)
+        specifier: ^10.1.0
+        version: 10.9.1(@types/node@18.13.0)(typescript@4.8.4)
       typescript:
-        specifier: ^4.9.5
-        version: 4.9.5
+        specifier: ^4.3.5
+        version: 4.8.4
       ws:
-        specifier: ^7.5.9
-        version: 7.5.9
+        specifier: ^7.4.6
+        version: 7.4.6
       yargs:
-        specifier: ^17.7.1
+        specifier: ^17.0.1
         version: 17.7.2
 
 packages:
@@ -6569,15 +6569,6 @@ packages:
       chai: '>= 2.1.2 < 5'
     dependencies:
       chai: 4.3.6
-      check-error: 1.0.2
-    dev: true
-
-  /chai-as-promised@7.1.1(chai@4.3.7):
-    resolution: {integrity: sha512-azL6xMoi+uxu6z4rhWQ1jbdUhOMhis2PvscD/xjLqNMkv3BPPp2JyyuTHOrf9BOosGpNQ11v6BKv/g57RXbiaA==}
-    peerDependencies:
-      chai: '>= 2.1.2 < 5'
-    dependencies:
-      chai: 4.3.7
       check-error: 1.0.2
     dev: true
 
@@ -13477,7 +13468,7 @@ packages:
     engines: {node: '>=6'}
     dependencies:
       psl: 1.9.0
-      punycode: 2.1.1
+      punycode: 2.3.0
       universalify: 0.2.0
       url-parse: 1.5.10
     dev: true
@@ -13546,44 +13537,13 @@ packages:
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.3
       '@types/node': 18.13.0
-      acorn: 8.8.1
+      acorn: 8.8.2
       acorn-walk: 8.2.0
       arg: 4.1.3
       create-require: 1.1.1
       diff: 4.0.2
       make-error: 1.3.6
       typescript: 4.8.4
-      v8-compile-cache-lib: 3.0.1
-      yn: 3.1.1
-    dev: true
-
-  /ts-node@10.9.1(@types/node@18.15.11)(typescript@4.9.5):
-    resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
-    hasBin: true
-    peerDependencies:
-      '@swc/core': '>=1.2.50'
-      '@swc/wasm': '>=1.2.50'
-      '@types/node': '*'
-      typescript: '>=2.7'
-    peerDependenciesMeta:
-      '@swc/core':
-        optional: true
-      '@swc/wasm':
-        optional: true
-    dependencies:
-      '@cspotcode/source-map-support': 0.8.1
-      '@tsconfig/node10': 1.0.9
-      '@tsconfig/node12': 1.0.11
-      '@tsconfig/node14': 1.0.3
-      '@tsconfig/node16': 1.0.3
-      '@types/node': 18.15.11
-      acorn: 8.8.1
-      acorn-walk: 8.2.0
-      arg: 4.1.3
-      create-require: 1.1.1
-      diff: 4.0.2
-      make-error: 1.3.6
-      typescript: 4.9.5
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
     dev: true
