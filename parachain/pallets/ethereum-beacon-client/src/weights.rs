@@ -36,6 +36,10 @@ pub trait WeightInfo {
 	fn sync_committee_period_update() -> Weight;
 	fn import_finalized_header() -> Weight;
 	fn import_execution_header() -> Weight;
+	fn block_bridge() -> Weight;
+	fn begin_recovery() -> Weight;
+	fn sync_recovery() -> Weight;
+	fn unblock_bridge() -> Weight;
 }
 
 /// Weights for ethereum_beacon_client using the Snowbridge node and recommended hardware.
@@ -56,6 +60,25 @@ impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
+	// These weight are just by estimation and need benchmark later
+	fn block_bridge() -> Weight {
+		Weight::from_parts(1_000_000_000 as u64, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	fn begin_recovery() -> Weight {
+		Weight::from_parts(10_000_000_000 as u64, 0)
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	fn sync_recovery() -> Weight {
+		Weight::from_parts(175_039_777_000 as u64, 0)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	fn unblock_bridge() -> Weight {
+		Weight::from_parts(1_000_000_000 as u64, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
 }
 
 // For backwards compatibility and tests
@@ -73,6 +96,24 @@ impl WeightInfo for () {
 	fn import_execution_header() -> Weight {
 		Weight::from_parts(166_011_885_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(3))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn block_bridge() -> Weight {
+		Weight::from_parts(1_000_000_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn begin_recovery() -> Weight {
+		Weight::from_parts(10_000_000_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(3))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn sync_recovery() -> Weight {
+		Weight::from_parts(175_039_777_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	fn unblock_bridge() -> Weight {
+		Weight::from_parts(1_000_000_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 }

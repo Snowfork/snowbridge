@@ -1,12 +1,14 @@
 #[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
 	use crate::{
-		config, merkleization, mock::*, Error, ExecutionHeader, ExecutionHeaders,
-		FinalizedBeaconHeaders, FinalizedBeaconHeadersBlockRoot, FinalizedHeaderState,
-		LatestFinalizedHeaderState, LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
+		config, merkleization, merkleization::hash_tree_root_check_point, mock::*,
+		CheckpointSyncOf, Error, ExecutionHeader, ExecutionHeaders, FinalizedBeaconHeaders,
+		FinalizedBeaconHeadersBlockRoot, FinalizedHeaderState, LatestFinalizedHeaderState,
+		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
+	use snowbridge_beacon_primitives::CheckPointRoot;
 	use sp_core::H256;
 
 	#[test]
@@ -203,5 +205,35 @@ mod beacon_mainnet_tests {
 			test_data.validators_root,
 			test_data.signature_slot,
 		));
+	}
+
+	#[test]
+	pub fn test_checkpoint_recovery() {
+		let initial_sync = get_initial_sync::<mock_mainnet::Test>();
+		new_tester::<mock_mainnet::Test>().execute_with(|| {
+			let checkpoint: CheckpointSyncOf<mock_mainnet::Test> = initial_sync.try_into().unwrap();
+			let checkpoint_root: CheckPointRoot =
+				hash_tree_root_check_point(checkpoint.clone()).unwrap();
+			assert_ok!(mock_mainnet::EthereumBeaconClient::begin_recovery(
+				mock_mainnet::RuntimeOrigin::root(),
+				vec![checkpoint_root],
+			));
+			assert_ok!(mock_mainnet::EthereumBeaconClient::sync_recovery(
+				mock_mainnet::RuntimeOrigin::signed(1),
+				checkpoint.clone(),
+			));
+
+			// construct an invalid checkpoint
+			let mut invalid_checkpoint = checkpoint.clone();
+			invalid_checkpoint.header.slot = 1;
+			invalid_checkpoint.current_sync_committee.aggregate_pubkey.0[0] = 1;
+			assert_err!(
+				mock_mainnet::EthereumBeaconClient::sync_recovery(
+					mock_mainnet::RuntimeOrigin::signed(1),
+					invalid_checkpoint
+				),
+				Error::<mock_mainnet::Test>::CheckpointInvalid
+			);
+		});
 	}
 }

@@ -4,7 +4,8 @@ use crate::{config, ssz::*};
 use byte_slice_cast::AsByteSlice;
 use frame_support::{traits::Get, BoundedVec};
 use snowbridge_beacon_primitives::{
-	BeaconHeader, ExecutionPayloadHeader, ForkData, SigningData, SyncAggregate, SyncCommittee,
+	BeaconHeader, CheckpointSync, ExecutionPayloadHeader, ForkData, SigningData, SyncAggregate,
+	SyncCommittee,
 };
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
@@ -125,20 +126,8 @@ pub fn hash_tree_root_execution_header<
 pub fn hash_tree_root_sync_committee<S: Get<u32>>(
 	sync_committee: SyncCommittee<S>,
 ) -> Result<[u8; 32], MerkleizationError> {
-	let mut pubkeys_vec = Vec::new();
-
-	for pubkey in sync_committee.pubkeys.iter() {
-		let conv_pubkey = Vector::<u8, 48>::from_iter(pubkey.0);
-
-		pubkeys_vec.push(conv_pubkey);
-	}
-
-	let pubkeys =
-		Vector::<Vector<u8, 48>, { config::SYNC_COMMITTEE_SIZE }>::from_iter(pubkeys_vec.clone());
-
-	let agg = Vector::<u8, 48>::from_iter(sync_committee.aggregate_pubkey.0);
-
-	hash_tree_root(SSZSyncCommittee { pubkeys, aggregate_pubkey: agg })
+	let ssz_sync_committee: SSZSyncCommittee = sync_committee.try_into()?;
+	hash_tree_root(ssz_sync_committee)
 }
 
 pub fn hash_tree_root_fork_data(fork_data: ForkData) -> Result<[u8; 32], MerkleizationError> {
@@ -194,4 +183,46 @@ pub fn get_sync_committee_bits<SyncCommitteeBitsSize: Get<u32>>(
 	let result = bitv.iter().map(|bit| if bit == true { 1 } else { 0 }).collect::<Vec<_>>();
 
 	Ok(result)
+}
+
+impl<SyncCommitteeSize: Get<u32>> TryFrom<SyncCommittee<SyncCommitteeSize>> for SSZSyncCommittee {
+	type Error = MerkleizationError;
+
+	fn try_from(sync_committee: SyncCommittee<SyncCommitteeSize>) -> Result<Self, Self::Error> {
+		let mut pubkeys_vec = Vec::new();
+		for pubkey in sync_committee.pubkeys.iter() {
+			let conv_pubkey = Vector::<u8, { config::PUBKEY_SIZE }>::from_iter(pubkey.0);
+			pubkeys_vec.push(conv_pubkey);
+		}
+		let pubkeys =
+			Vector::<Vector<u8, {config::PUBKEY_SIZE}>, { config::SYNC_COMMITTEE_SIZE }>::from_iter(
+				pubkeys_vec.clone(),
+			);
+		let aggregate_pubkey =
+			Vector::<u8, { config::PUBKEY_SIZE }>::from_iter(sync_committee.aggregate_pubkey.0);
+		Ok(SSZSyncCommittee { pubkeys, aggregate_pubkey })
+	}
+}
+
+impl<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>
+	TryFrom<CheckpointSync<SyncCommitteeSize, ProofSize>> for SSZCheckpointSync
+{
+	type Error = MerkleizationError;
+
+	fn try_from(
+		check_point: CheckpointSync<SyncCommitteeSize, ProofSize>,
+	) -> Result<Self, Self::Error> {
+		Ok(SSZCheckpointSync {
+			header: check_point.header.try_into()?,
+			current_sync_committee: check_point.current_sync_committee.try_into()?,
+		})
+	}
+}
+
+pub fn hash_tree_root_check_point<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
+	check_point: CheckpointSync<SyncCommitteeSize, ProofSize>,
+) -> Result<[u8; 32], MerkleizationError> {
+	let ssz_check_point: SSZCheckpointSync = check_point.try_into()?;
+
+	hash_tree_root(ssz_check_point)
 }

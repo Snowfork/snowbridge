@@ -71,8 +71,9 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
+	use crate::merkleization::hash_tree_root_check_point;
 	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
-	use snowbridge_beacon_primitives::ForkVersions;
+	use snowbridge_beacon_primitives::{CheckPointRoot, ForkVersions};
 	use snowbridge_core::Proof;
 	use snowbridge_ethereum::{Header as EthereumHeader, Log, Receipt};
 	use sp_core::U256;
@@ -163,6 +164,8 @@ pub mod pallet {
 		FinalizedBeaconHeaderSlotsExceeded,
 		ExecutionHeaderMappingFailed,
 		CheckpointSyncMappingFailed,
+		CheckpointHashTreeRootFailed,
+		CheckpointInvalid,
 	}
 
 	#[pallet::hooks]
@@ -205,6 +208,10 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type Blocked<T: Config> = StorageValue<_, bool, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type AuthorizedCheckPoints<T: Config> =
+		StorageMap<_, Identity, CheckPointRoot, bool, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -350,7 +357,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(1_000_000_000)]
+		#[pallet::weight(T::WeightInfo::block_bridge())]
 		#[transactional]
 		pub fn block_bridge(origin: OriginFor<T>) -> DispatchResult {
 			let _sender = ensure_root(origin)?;
@@ -365,29 +372,45 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight(10_000_000_000)]
+		#[pallet::weight(T::WeightInfo::begin_recovery())]
 		#[transactional]
-		pub fn unblock_bridge(
+		pub fn begin_recovery(
 			origin: OriginFor<T>,
-			check_points: Option<Vec<CheckpointSyncOf<T>>>,
-			unblocked: bool,
+			check_points: Vec<CheckPointRoot>,
 		) -> DispatchResult {
-			let _sender = ensure_root(origin)?;
-
-			log::info!(target: "ethereum-beacon-client","💫 unblock bridge from governance with provided checkpoints.");
-			if check_points.is_some() {
-				for check_point in check_points.unwrap() {
-					Self::process_checkpoint_sync(check_point)?;
-				}
+			ensure_root(origin)?;
+			for check_point in check_points {
+				<AuthorizedCheckPoints<T>>::insert(check_point, true)
 			}
+			Ok(())
+		}
 
-			// for multiple check_points does not fit in one block, separate data into multiple
-			// calls with unblocked flag set as true in the last one
-			if unblocked {
-				<Blocked<T>>::set(false);
-				Self::deposit_event(Event::Activated);
-			}
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::sync_recovery())]
+		#[transactional]
+		pub fn sync_recovery(
+			origin: OriginFor<T>,
+			checkpoint: CheckpointSyncOf<T>,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+			let checkpoint_root: CheckPointRoot = hash_tree_root_check_point(checkpoint.clone())
+				.map_err(|_| Error::<T>::CheckpointHashTreeRootFailed)?
+				.into();
+			ensure!(
+				<AuthorizedCheckPoints<T>>::contains_key(checkpoint_root),
+				Error::<T>::CheckpointInvalid
+			);
+			Self::process_checkpoint_sync(checkpoint)?;
+			Ok(())
+		}
 
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::unblock_bridge())]
+		#[transactional]
+		pub fn unblock_bridge(origin: OriginFor<T>) -> DispatchResult {
+			ensure_root(origin)?;
+			<Blocked<T>>::set(false);
+			Self::deposit_event(Event::Activated);
 			Ok(())
 		}
 	}

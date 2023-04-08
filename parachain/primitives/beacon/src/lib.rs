@@ -20,6 +20,7 @@ pub type Root = H256;
 pub type Domain = H256;
 pub type ValidatorIndex = u64;
 pub type ForkVersion = [u8; 4];
+pub type CheckPointRoot = [u8; 32];
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct ForkVersions {

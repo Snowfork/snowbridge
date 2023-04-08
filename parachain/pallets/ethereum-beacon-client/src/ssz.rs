@@ -15,7 +15,7 @@ pub struct SSZBeaconBlockHeader {
 	pub body_root: [u8; 32],
 }
 
-#[derive(Default, SimpleSerialize)]
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZSyncCommittee {
 	pub pubkeys: Vector<Vector<u8, { config::PUBKEY_SIZE }>, { config::SYNC_COMMITTEE_SIZE }>,
 	pub aggregate_pubkey: Vector<u8, { config::PUBKEY_SIZE }>,
@@ -56,4 +56,10 @@ pub struct SSZExecutionPayloadHeader {
 	pub block_hash: [u8; 32],
 	pub transactions_root: [u8; 32],
 	pub withdrawals_root: [u8; 32],
+}
+
+#[derive(Default, SimpleSerialize, Clone, Debug)]
+pub struct SSZCheckpointSync {
+	pub header: SSZBeaconBlockHeader,
+	pub current_sync_committee: SSZSyncCommittee,
 }
