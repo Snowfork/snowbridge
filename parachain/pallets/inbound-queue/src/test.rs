@@ -20,7 +20,7 @@ use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
 
-use crate::{self as inbound_queue, envelope::Envelope, Error};
+use crate::{self as inbound_queue, envelope::Envelope, Error, Event as InboundQueueEvent};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -101,16 +101,38 @@ impl Verifier for MockVerifier {
 	}
 }
 
+use snowbridge_router_primitives::{ConvertTokenAddress, InboundMessageConverter};
+
+parameter_types! {
+	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 1};
+}
+
 impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
 	type Token = Balances;
-	type Reward = ConstU64<10>;
+	type Reward = ConstU64<100>;
+	type MessageConversion = InboundMessageConverter<ConvertTokenAddress<EthereumNetwork>>;
+	type XcmSender = ();
 	type WeightInfo = ();
 }
 
-pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
-	new_tester_with_config(inbound_queue::GenesisConfig { allowlist: vec![source_channel] })
+fn last_events(n: usize) -> Vec<RuntimeEvent> {
+	frame_system::Pallet::<Test>::events()
+		.into_iter()
+		.rev()
+		.take(n)
+		.rev()
+		.map(|e| e.event)
+		.collect()
+}
+
+fn expect_events(e: Vec<RuntimeEvent>) {
+	assert_eq!(last_events(e.len()), e);
+}
+
+pub fn new_tester(outbound_queue_address: H160) -> sp_io::TestExternalities {
+	new_tester_with_config(inbound_queue::GenesisConfig { allowlist: vec![outbound_queue_address] })
 }
 
 pub fn new_tester_with_config(config: inbound_queue::GenesisConfig) -> sp_io::TestExternalities {
@@ -140,51 +162,30 @@ fn parse_dest(message: Message) -> ParaId {
 }
 
 // The originating channel address for the messages below
-const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["86d9ac0bab011917f57b9e9607833b4340f9d4f8"];
+const OUTBOUND_QUEUE_ADDRESS: [u8; 20] = hex!["87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d"];
 
-// Ethereum Log:
-//   address: 0xe4ab635d0bdc5668b3fcb4eaee1dec587998f4af (outbound channel contract)
-//   topics: ...
-//   data:
-//     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
-//     nonce: 1
-//     payload ...
-const MESSAGE_DATA_0: [u8; 254] = hex!(
+const OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
 	"
 	f8fc9487d1f7fdfee7f651fabc8bfcb6e086c278b77a7df863a01b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ada000000000000000000000000000000000000000000000000000000000000003e8a00000000000000000000000000000000000000000000000000000000000000001b880000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000290001f8f7758fbcefd546eaeff7de24aff666b6228e730000000000e8890423c78a00000000000000000000000000000000000000000000000000000000000000
 	"
 );
 
-// Ethereum Log:
-//   address: 0xe4ab635d0bdc5668b3fcb4eaee1dec587998f4af (outbound channel contract)
-//   topics: ...
-//   data:
-//     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
-//     nonce: 1
-//     payload ...
-const MESSAGE_DATA_1: [u8; 251] = hex!(
-	"
-	f8f99486d9ac0bab011917f57b9e9607833b4340f9d4f8e1a0daab80e8986999
-	7d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562fb8c00000000000
-	0000000000000089b4ab1ef20763630df9743acf155865600daff20000000000
-	0000000000000004e00e6d2e9ea1e2af553de02a5172120bfa5c3e0000000000
-	0000000000000000000000000000000000000000000000000000020000000000
-	0000000000000000000000000000000000000000000000000000800000000000
-	0000000000000000000000000000000000000000000000000000206172626974
-	726172792d7061796c6f6164000000000000000000000000000000
-"
-);
+use polkadot_parachain::primitives::Id as ParaId;
 
-#[ignore]
 #[test]
 fn test_submit_with_invalid_outbound_queue() {
 	new_tester(H160::zero()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
+		// Deposit funds into sovereign account of Asset Hub (Statemint)
+		let dest_para: ParaId = 1000u32.into();
+		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let _ = Balances::mint_into(&sovereign_account, 10000);
+
 		// Submit message
 		let message = Message {
-			data: MESSAGE_DATA_0.into(),
+			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -200,52 +201,46 @@ fn test_submit_with_invalid_outbound_queue() {
 
 #[test]
 fn test_submit() {
-	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
+	new_tester(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
-		// Submit message 1
-		let message_1 = Message {
-			data: MESSAGE_DATA_0.into(),
+		// Deposit funds into sovereign account of Asset Hub (Statemint)
+		let dest_para: ParaId = 1000u32.into();
+		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		println!("account: {}", sovereign_account);
+		let _ = Balances::mint_into(&sovereign_account, 10000);
+
+		// Submit message
+		let message = Message {
+			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
 		};
-		assert_ok!(InboundQueue::submit(origin.clone(), message_1.clone()));
-
-		// let event_dest = parse_dest(message_1);
-		// let nonce: u64 = <Nonce<Test>>::get(event_dest.clone());
-		// assert_eq!(nonce, 1);
-
-		// // Submit message 2
-		// let message_2 = Message {
-		// 	data: MESSAGE_DATA_1.into(),
-		// 	proof: Proof {
-		// 		block_hash: Default::default(),
-		// 		tx_index: Default::default(),
-		// 		data: Default::default(),
-		// 	},
-		// };
-		// assert_ok!(InboundQueue::submit(origin.clone(), message_2.clone()));
-
-		// let event_dest_2 = parse_dest(message_2);
-		// let nonce: u64 = <Nonce<Test>>::get(event_dest_2.clone());
-		// assert_eq!(nonce, 2);
+		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
+		expect_events(vec![InboundQueueEvent::MessageReceived {
+			dest: dest_para,
+			nonce: 1,
+			// dummy xcm sender doesn't actually send messages
+			result: MessageDispatchResult::NotDispatched(xcm::v3::SendError::NotApplicable),
+		}
+		.into()]);
 	});
 }
 
 #[ignore]
 #[test]
 fn test_submit_with_invalid_nonce() {
-	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
+	new_tester(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Submit message
 		let message = Message {
-			data: MESSAGE_DATA_0.into(),
+			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),

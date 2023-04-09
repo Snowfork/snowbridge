@@ -3,6 +3,8 @@ package execution
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -18,10 +20,10 @@ import (
 )
 
 type Relay struct {
-	config   *Config
-	keypair  *sr25519.Keypair
-	paraconn *parachain.Connection
-	ethconn  *ethereum.Connection
+	config                *Config
+	keypair               *sr25519.Keypair
+	paraconn              *parachain.Connection
+	ethconn               *ethereum.Connection
 	outboundQueueContract *contracts.OutboundQueue
 }
 
@@ -43,11 +45,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
+	r.paraconn = paraconn
 
 	err = ethconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
+	r.ethconn = ethconn
 
 	writer := parachain.NewParachainWriter(
 		paraconn,
@@ -73,54 +77,49 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	r.outboundQueueContract = contract
 
-	opts := bind.WatchOpts{
-		Context: ctx,
-	}
-
-	messages := make(chan *contracts.OutboundQueueMessage)
-
-	sub, err := contract.WatchMessage(&opts, messages, []uint32{r.config.Source.LaneID}, []uint64{})
-	if err != nil {
-		return fmt.Errorf("create subscription: %w", err)
-	}
-	defer sub.Unsubscribe()
-
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case err := <-sub.Err():
-			return fmt.Errorf("message subscription: %w", err)
-		case outboundMsg := <-messages:
-			log.Info("found message")
+		case <-time.After(12 * time.Second):
+			log.Info("Polling")
 
-			// wait until light client is updated with execution headers
-			for {
-				log.Info("waiting")
-				executionHeaderState, err := writer.GetLastExecutionHeaderState()
+			executionHeaderState, err := writer.GetLastExecutionHeaderState()
+			if err != nil {
+				return err
+			}
+
+			paraNonce, err := r.fetchLatestParachainNonce()
+			if err != nil {
+				return err
+			} 
+
+			ethNonce, err := r.fetchEthereumNonce(ctx, executionHeaderState.BlockNumber)
+			if err != nil {
+				return err
+			}
+
+			log.WithFields(log.Fields{
+				"paraNonce": paraNonce,
+				"ethNonce": ethNonce,
+			}).Info("Polled Nonces")
+
+			if paraNonce == ethNonce {
+				continue
+			}
+
+			events, err := r.findEvents(ctx, executionHeaderState.BlockNumber, paraNonce + 1)
+
+			for _, ev := range events {
+				inboundMsg, err := r.makeInboundMessage(ctx, headerCache, ev)
 				if err != nil {
-					return fmt.Errorf("fetch last execution header state: %w", err)
+					return fmt.Errorf("make outgoing message: %w", err)
 				}
-				if outboundMsg.Raw.BlockNumber <= executionHeaderState.BlockNumber {
-					break
+	
+				err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
+				if err != nil {
+					return fmt.Errorf("write to parachain: %w", err)
 				}
-				select {
-				case <-ctx.Done():
-					return nil
-				case <-time.After(6 * time.Second):
-				}
-			}
-
-			log.Info("sending")
-
-			inboundMsg, err := r.makeInboundMessage(ctx, headerCache, outboundMsg)
-			if err != nil {
-				return fmt.Errorf("make outgoing message: %w", err)
-			}
-
-			err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
-			if err != nil {
-				return fmt.Errorf("write to parachain: %w", err)
 			}
 		}
 	}
@@ -136,13 +135,13 @@ func (r *Relay) fetchLatestParachainNonce() (uint64, error) {
 	paraNonceKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueue", "Nonce", encodedParaID, nil)
 	if err != nil {
 		return 0, fmt.Errorf("create storage key for EthereumInboundQueue.Nonce(%v): %w",
-		paraID, err)
+			paraID, err)
 	}
 	var paraNonce uint64
 	ok, err := r.paraconn.API().RPC.State.GetStorageLatest(paraNonceKey, &paraNonce)
 	if err != nil {
 		return 0, fmt.Errorf("fetch storage EthereumInboundQueue.Nonce(%v): %w",
-		paraID, err)
+			paraID, err)
 	}
 	if !ok {
 		paraNonce = 0
@@ -151,9 +150,10 @@ func (r *Relay) fetchLatestParachainNonce() (uint64, error) {
 	return paraNonce, nil
 }
 
-func (r *Relay) fetchLatestEthereumNonce(ctx context.Context) (uint64, error) {
+func (r *Relay) fetchEthereumNonce(ctx context.Context, blockNumber uint64) (uint64, error) {
 	opts := bind.CallOpts{
 		Pending: false,
+		BlockNumber: new(big.Int).SetUint64(blockNumber),
 		Context: ctx,
 	}
 	nonce, err := r.outboundQueueContract.Nonce(&opts, r.config.Source.LaneID)
@@ -164,7 +164,7 @@ func (r *Relay) fetchLatestEthereumNonce(ctx context.Context) (uint64, error) {
 	return nonce, nil
 }
 
-const BLOCKS_PER_QUERY = 4096
+const BlocksPerQuery = 4096
 
 func (r *Relay) findEvents(ctx context.Context, latestFinalizedBlockNumber uint64, start uint64) ([]*contracts.OutboundQueueMessage, error) {
 
@@ -172,12 +172,21 @@ func (r *Relay) findEvents(ctx context.Context, latestFinalizedBlockNumber uint6
 
 	var allEvents []*contracts.OutboundQueueMessage
 
-	pivot := latestFinalizedBlockNumber
+	blockNumber := latestFinalizedBlockNumber
 
 	for {
+		log.Info("loop")
+
+		var begin uint64
+		if blockNumber < BlocksPerQuery {
+			begin = 0
+		} else {
+			begin = blockNumber - BlocksPerQuery
+		}
+	
 		opts := bind.FilterOpts{
-			Start: pivot - BLOCKS_PER_QUERY,
-			End: &pivot,
+			Start:   begin,
+			End:     &blockNumber,
 			Context: ctx,
 		}
 
@@ -190,10 +199,16 @@ func (r *Relay) findEvents(ctx context.Context, latestFinalizedBlockNumber uint6
 			allEvents = append(allEvents, events...)
 		}
 
-		if done {
+		blockNumber = begin
+
+		if done || begin == 0 {
 			break
 		}
 	}
+
+	sort.SliceStable(allEvents, func(i, j int) bool {
+		return allEvents[i].Nonce < allEvents[j].Nonce
+	})
 
 	return allEvents, nil
 }
@@ -227,7 +242,6 @@ func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start
 
 	return done, events, nil
 }
-
 
 func (r *Relay) makeInboundMessage(
 	ctx context.Context,

@@ -7,7 +7,7 @@ import {ParaID} from "./Types.sol";
 
 library NativeTokensTypes {
     /**
-     * @dev Encodes Action::NativeTokens(NativeTokens::Create)
+     * @dev Encodes Payload::NativeTokens(NativeTokens::Create)
      */
     // solhint-disable-next-line func-name-mixedcase
     function Create(address token, bytes memory name, bytes memory symbol, uint8 decimals)
@@ -26,7 +26,7 @@ library NativeTokensTypes {
     }
 
     /**
-     * @dev Encodes Action::NativeTokens(NativeTokens::Mint)
+     * @dev Encodes Payload::NativeTokens(NativeTokens::Mint)
      */
     // solhint-disable-next-line func-name-mixedcase
     function Mint(address token, ParaID dest, bytes memory recipient, uint128 amount)

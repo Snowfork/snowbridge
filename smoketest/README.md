@@ -1,16 +1,16 @@
 # Smoketests
 
-# Bindings
-
-## Parachains
-
-BridgeHub
-```shell
-subxt codegen --url http://localhost:11144 | rustfmt --edition 2021 --emit=stdout > src/parachains/bridgehub/mod.rs
+Before running deposit funds into Statemint's sovereign account on BridgeHub:
+```
+5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ
 ```
 
-## Ethereum Contracts
+This is necessary to cover relaying fees
+
+# Bindings
+
+Generate bindings:
 
 ```shell
-forge bind --module --overwrite --bindings-path src/contracts --root ../core/packages/contracts
+./make-bindings.sh
 ```

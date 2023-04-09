@@ -1,9 +1,6 @@
-use codec::DecodeAll;
 use ethabi::{Event, Param, ParamKind, Token};
 use polkadot_parachain::primitives::Id as ParaId;
 use snowbridge_ethereum::{log::Log, H160};
-
-use snowbridge_router_primitives::Action;
 
 use sp_core::RuntimeDebug;
 use sp_std::{convert::TryFrom, prelude::*};
@@ -13,7 +10,7 @@ static EVENT_ABI: &Event = &Event {
 	signature: "Message(uint32,uint64,bytes)",
 	inputs: &[
 		Param { kind: ParamKind::Uint(32), indexed: true },
-		Param { kind: ParamKind::Uint(64), indexed: false },
+		Param { kind: ParamKind::Uint(64), indexed: true },
 		Param { kind: ParamKind::Bytes, indexed: false },
 	],
 	anonymous: false,
@@ -29,7 +26,7 @@ pub struct Envelope {
 	/// A nonce for enforcing replay protection and ordering.
 	pub nonce: u64,
 	/// The inner payload generated from the source application.
-	pub action: Action,
+	pub payload: Vec<u8>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
@@ -53,12 +50,11 @@ impl TryFrom<Log> for Envelope {
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		let action = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Bytes(payload) =>
-				Action::decode_all(&mut payload.as_ref()).map_err(|_| EnvelopeDecodeError)?,
+		let payload = match iter.next().ok_or(EnvelopeDecodeError)? {
+			Token::Bytes(payload) => payload,
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		Ok(Self { channel: log.address, dest, nonce, action })
+		Ok(Self { channel: log.address, dest, nonce, payload })
 	}
 }

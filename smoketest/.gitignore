@@ -15,3 +15,7 @@
 
 # The cache for chain data in container
 .local
+
+src/parachains/bridgehub.rs
+src/contracts
+
