@@ -14,3 +14,9 @@ Generate bindings:
 ```shell
 ./make-bindings.sh
 ```
+
+# Run Tests
+
+```
+cargo test
+```
