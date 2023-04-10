@@ -11,7 +11,7 @@ use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	MultiSignature, TokenError,
+	ArithmeticError, MultiSignature, TokenError,
 };
 use sp_std::convert::From;
 
@@ -287,7 +287,9 @@ fn test_submit_no_funds_to_reward_relayers() {
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
-			TokenError::FundsUnavailable
+			// should actually be `NoFunds`. See this bug in substrate:
+			// https://github.com/paritytech/substrate/issues/13866
+			ArithmeticError::Underflow
 		);
 	});
 }
