@@ -50,19 +50,21 @@ contract UpgradeProxyTest is Test {
 
         upgradeProxy.grantRole(upgradeProxy.SENDER_ROLE(), address(this));
 
-        // create upgrader instances
+        // create upgrade tasks
         upgradeTask = new UpgradeTask(outboundQueue);
         failedUpgradeTask = new FailingUpgradeTask();
     }
 
-    function testUpgrade() public {
-        // execute upgrader
-        bytes memory message = abi.encode(
+    function createUpgradeMessage(IUpgradeTask task) internal returns (bytes memory) {
+        return abi.encode(
             UpgradeProxy.Message(
                 UpgradeProxy.Action.Upgrade,
-                abi.encode(UpgradeProxy.UpgradePayload(address(upgradeTask)))));
-        upgradeProxy.handle(origin, message);
+                abi.encode(UpgradeProxy.UpgradePayload(address(task)))));
+    }
 
+    function testUpgrade() public {
+        bytes memory message = createUpgradeMessage(upgradeTask);
+        upgradeProxy.handle(origin, message);
         assertEq(outboundQueue.fee(), 2 ether);
     }
 
@@ -72,10 +74,7 @@ contract UpgradeProxyTest is Test {
     }
 
     function testUpgradeFail() public {
-        bytes memory message = abi.encode(
-            UpgradeProxy.Message(
-                UpgradeProxy.Action.Upgrade,
-                abi.encode(UpgradeProxy.UpgradePayload(address(failedUpgradeTask)))));
+        bytes memory message = createUpgradeMessage(failedUpgradeTask);
         vm.expectRevert(UpgradeProxy.UpgradeFailed.selector);
         upgradeProxy.handle(origin, message);
     }
