@@ -70,7 +70,7 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 }
 
 type OutboundQueueMessage struct {
-	Origin  []byte
+	Origin  uint32
 	Nonce   types.UCompact
 	Handler uint16
 	Payload []byte

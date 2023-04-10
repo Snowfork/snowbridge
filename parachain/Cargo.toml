@@ -8,7 +8,6 @@ members = [
     "pallets/outbound-queue",
     "pallets/outbound-queue/rpc",
     "pallets/outbound-queue/merkle-proof",
-    "pallets/router",
     "pallets/ethereum-beacon-client",
     "tools/query-events",
     "tools/call-index"

@@ -10,6 +10,7 @@ pub mod weights;
 #[cfg(test)]
 mod test;
 
+use codec::DecodeAll;
 use frame_support::{
 	storage::bounded_btree_set::BoundedBTreeSet,
 	traits::fungible::{Inspect, Mutate},
@@ -22,15 +23,32 @@ use sp_std::convert::TryFrom;
 
 use envelope::Envelope;
 use snowbridge_core::{Message, Verifier};
+use snowbridge_router_primitives::{ConvertMessage, Payload};
+
+use xcm::latest::{send_xcm, SendError};
+
 pub use weights::WeightInfo;
 
 #[cfg(feature = "std")]
 use sp_std::collections::btree_set::BTreeSet;
 
+use frame_support::{CloneNoBound, EqNoBound, PartialEqNoBound};
+
+use codec::{Decode, Encode};
+
+use scale_info::TypeInfo;
+
 type BalanceOf<T> =
 	<<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 type AllowListLength = ConstU32<8>;
+
+#[derive(CloneNoBound, EqNoBound, PartialEqNoBound, Encode, Decode, Debug, TypeInfo)]
+pub enum MessageDispatchResult {
+	InvalidPayload,
+	Dispatched,
+	NotDispatched(SendError),
+}
 
 pub use pallet::*;
 
@@ -41,6 +59,7 @@ pub mod pallet {
 
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
+	use xcm::v3::SendXcm;
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -48,22 +67,27 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-		/// Verifier module for message verification.
 		type Verifier: Verifier;
 
 		type Token: Mutate<Self::AccountId>;
 
-		/// Weight information for extrinsics in this pallet
-		type WeightInfo: WeightInfo;
-
 		type Reward: Get<BalanceOf<Self>>;
+
+		type MessageConversion: ConvertMessage;
+
+		type XcmSender: SendXcm;
+
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::event]
-	pub enum Event<T> {}
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T> {
+		MessageReceived { dest: ParaId, nonce: u64, result: MessageDispatchResult },
+	}
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -138,8 +162,35 @@ pub mod pallet {
 			})?;
 
 			// Reward relayer from the sovereign account of the destination parachain
-			let dest_account = envelope.dest.into_account_truncating();
-			T::Token::transfer(&who, &dest_account, T::Reward::get(), Preservation::Expendable)?;
+			// Expected to fail if sovereign account has no funds
+			let sovereign_account = envelope.dest.into_account_truncating();
+			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
+
+			// Dispatch message. From this point, any errors are masked, i.e the extrinsic will
+			// succeed even if the message was not successfully dispatched.
+
+			if let Ok(payload) = Payload::decode_all(&mut envelope.payload.as_ref()) {
+				let (dest, xcm) =
+					T::MessageConversion::convert(envelope.channel, envelope.dest.into(), payload);
+				match send_xcm::<T::XcmSender>(dest, xcm) {
+					Ok(_) => Self::deposit_event(Event::MessageReceived {
+						dest: envelope.dest,
+						nonce: envelope.nonce,
+						result: MessageDispatchResult::Dispatched,
+					}),
+					Err(err) => Self::deposit_event(Event::MessageReceived {
+						dest: envelope.dest,
+						nonce: envelope.nonce,
+						result: MessageDispatchResult::NotDispatched(err),
+					}),
+				}
+			} else {
+				Self::deposit_event(Event::MessageReceived {
+					dest: envelope.dest,
+					nonce: envelope.nonce,
+					result: MessageDispatchResult::InvalidPayload,
+				})
+			}
 
 			Ok(())
 		}
