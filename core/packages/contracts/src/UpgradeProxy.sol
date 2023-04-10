@@ -15,13 +15,12 @@ contract UpgradeProxy is AccessControl {
         bytes payload;
     }
 
-    enum Action
-    // Withdraw from sovereign account and transfer to recipient.
-    // Parachain teams will occasionally send this message to retrieve collected fees.
-    {Upgrade}
+    enum Action {
+        Upgrade
+    }
 
     struct UpgradePayload {
-        address upgrader;
+        address task;
     }
 
     error InvalidMessage();
@@ -49,7 +48,7 @@ contract UpgradeProxy is AccessControl {
 
         UpgradePayload memory payload = abi.decode(decoded.payload, (UpgradePayload));
 
-        (bool success,) = payload.upgrader.delegatecall(abi.encodeCall(IUpgradeTask.run, ()));
+        (bool success,) = payload.task.delegatecall(abi.encodeCall(IUpgradeTask.run, ()));
         if (!success) {
             revert UpgradeFailed();
         }

@@ -34,8 +34,8 @@ contract FailingUpgradeTask is IUpgradeTask, AccessControl {
 
 contract UpgradeProxyTest is Test {
     UpgradeProxy public upgradeProxy;
-    IUpgradeTask public upgrader;
-    IUpgradeTask public failingUpgrader;
+    IUpgradeTask public upgradeTask;
+    IUpgradeTask public failedUpgradeTask;
 
     OutboundQueue public outboundQueue;
 
@@ -51,8 +51,8 @@ contract UpgradeProxyTest is Test {
         upgradeProxy.grantRole(upgradeProxy.SENDER_ROLE(), address(this));
 
         // create upgrader instances
-        upgrader = new UpgradeTask(outboundQueue);
-        failingUpgrader = new FailingUpgradeTask();
+        upgradeTask = new UpgradeTask(outboundQueue);
+        failedUpgradeTask = new FailingUpgradeTask();
     }
 
     function testUpgrade() public {
@@ -60,7 +60,7 @@ contract UpgradeProxyTest is Test {
         bytes memory message = abi.encode(
             UpgradeProxy.Message(
                 UpgradeProxy.Action.Upgrade,
-                abi.encode(UpgradeProxy.UpgradePayload(address(upgrader)))));
+                abi.encode(UpgradeProxy.UpgradePayload(address(upgradeTask)))));
         upgradeProxy.handle(origin, message);
 
         assertEq(outboundQueue.fee(), 2 ether);
@@ -71,11 +71,11 @@ contract UpgradeProxyTest is Test {
         upgradeProxy.handle(ParaID.wrap(3), hex"deadbeef");
     }
 
-    function testUpgradeUpgraderFail() public {
+    function testUpgradeFail() public {
         bytes memory message = abi.encode(
             UpgradeProxy.Message(
                 UpgradeProxy.Action.Upgrade,
-                abi.encode(UpgradeProxy.UpgradePayload(address(failingUpgrader)))));
+                abi.encode(UpgradeProxy.UpgradePayload(address(failedUpgradeTask)))));
         vm.expectRevert(UpgradeProxy.UpgradeFailed.selector);
         upgradeProxy.handle(origin, message);
     }
