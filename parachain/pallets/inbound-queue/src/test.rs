@@ -265,8 +265,6 @@ fn test_submit_with_invalid_nonce() {
 	});
 }
 
-use pallet_balances::Error as BalancesError;
-
 #[test]
 fn test_submit_no_funds_to_reward_relayers() {
 	new_tester(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
