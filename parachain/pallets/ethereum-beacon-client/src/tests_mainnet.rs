@@ -1,7 +1,7 @@
 #[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
 	use crate::{
-		config, merkleization, merkleization::hash_tree_root_check_point, mock::*,
+		config, merkleization, merkleization::hash_tree_root_check_point, mock::*, pallet::Blocked,
 		CheckpointSyncOf, Error, ExecutionHeader, ExecutionHeaders, FinalizedBeaconHeaders,
 		FinalizedBeaconHeadersBlockRoot, FinalizedHeaderState, LatestFinalizedHeaderState,
 		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
@@ -42,6 +42,7 @@ mod beacon_mainnet_tests {
 			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
 			LatestSyncCommitteePeriod::<mock_mainnet::Test>::set(current_period);
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
+			Blocked::<mock_mainnet::Test>::set(false);
 
 			assert_ok!(mock_mainnet::EthereumBeaconClient::sync_committee_period_update(
 				mock_mainnet::RuntimeOrigin::signed(1),
@@ -80,6 +81,7 @@ mod beacon_mainnet_tests {
 				beacon_slot: slot - 1,
 			});
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<mock_mainnet::Test>());
+			Blocked::<mock_mainnet::Test>::set(false);
 
 			assert_ok!(mock_mainnet::EthereumBeaconClient::import_finalized_header(
 				mock_mainnet::RuntimeOrigin::signed(1),
@@ -159,6 +161,7 @@ mod beacon_mainnet_tests {
 				finalized_block_root,
 				finalized_update.block_roots_root,
 			);
+			Blocked::<mock_mainnet::Test>::set(false);
 
 			assert_ok!(mock_mainnet::EthereumBeaconClient::import_execution_header(
 				mock_mainnet::RuntimeOrigin::signed(1),

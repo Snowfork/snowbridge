@@ -1,7 +1,7 @@
 #[cfg(feature = "minimal")]
 mod beacon_minimal_tests {
 	use crate::{
-		config, merkleization, mock::*, pallet::FinalizedBeaconHeadersBlockRoot, Error,
+		config, merkleization, mock::*, pallet::FinalizedBeaconHeadersBlockRoot, Blocked, Error,
 		ExecutionHeader, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders,
 		FinalizedHeaderState, LatestExecutionHeaderState, LatestFinalizedHeaderState,
 		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
@@ -179,6 +179,7 @@ mod beacon_minimal_tests {
 			});
 			SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
 			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<mock_minimal::Test>());
+			Blocked::<mock_minimal::Test>::set(false);
 
 			assert_ok!(mock_minimal::EthereumBeaconClient::import_finalized_header(
 				mock_minimal::RuntimeOrigin::signed(1),
@@ -205,6 +206,7 @@ mod beacon_minimal_tests {
 				// initialize with the same slot as the next updating
 				beacon_slot: update.finalized_header.slot,
 			});
+			Blocked::<mock_minimal::Test>::set(false);
 
 			// update with same slot as last finalized will fail
 			assert_err!(
@@ -274,6 +276,7 @@ mod beacon_minimal_tests {
 				finalized_block_root,
 				finalized_update.block_roots_root,
 			);
+			Blocked::<mock_minimal::Test>::set(false);
 
 			assert_ok!(mock_minimal::EthereumBeaconClient::import_execution_header(
 				mock_minimal::RuntimeOrigin::signed(1),
@@ -299,6 +302,7 @@ mod beacon_minimal_tests {
 				beacon_slot: update.beacon_header.slot - 1,
 				import_time: 0,
 			});
+			Blocked::<mock_minimal::Test>::set(false);
 
 			assert_err!(
 				mock_minimal::EthereumBeaconClient::import_execution_header(
@@ -331,6 +335,7 @@ mod beacon_minimal_tests {
 				// initialize with the same block_number in execution_payload of the next update
 				block_number: execution_header.block_number,
 			});
+			Blocked::<mock_minimal::Test>::set(false);
 
 			assert_err!(
 				mock_minimal::EthereumBeaconClient::import_execution_header(
@@ -356,6 +361,7 @@ mod beacon_minimal_tests {
 				beacon_slot: update.finalized_header.slot - 1,
 				import_time: 0,
 			});
+			Blocked::<mock_minimal::Test>::set(false);
 
 			assert_err!(
 				mock_minimal::EthereumBeaconClient::import_finalized_header(

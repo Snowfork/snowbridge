@@ -207,7 +207,12 @@ pub mod pallet {
 	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type Blocked<T: Config> = StorageValue<_, bool, ValueQuery>;
+	pub(super) type Blocked<T: Config> = StorageValue<_, bool, ValueQuery, DefaultBlockState<T>>;
+
+	#[pallet::type_value]
+	pub fn DefaultBlockState<T: Config>() -> bool {
+		true
+	}
 
 	#[pallet::storage]
 	pub(super) type AuthorizedCheckPoints<T: Config> =
@@ -413,6 +418,15 @@ pub mod pallet {
 			Self::deposit_event(Event::Activated);
 			Ok(())
 		}
+
+		#[pallet::call_index(7)]
+		#[pallet::weight(T::WeightInfo::init_sync())]
+		#[transactional]
+		pub fn init_sync(origin: OriginFor<T>, initial_sync: InitialSyncOf<T>) -> DispatchResult {
+			ensure_root(origin)?;
+			Self::process_initial_sync(initial_sync)?;
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -422,6 +436,7 @@ pub mod pallet {
 				initial_sync.try_into().map_err(|_| Error::<T>::CheckpointSyncMappingFailed)?;
 			Self::process_checkpoint_sync(checkpoint)?;
 			<ValidatorsRoot<T>>::set(validators_root);
+			<Blocked<T>>::set(false);
 			Ok(())
 		}
 

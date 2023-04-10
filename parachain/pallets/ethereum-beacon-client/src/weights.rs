@@ -40,6 +40,7 @@ pub trait WeightInfo {
 	fn begin_recovery() -> Weight;
 	fn sync_recovery() -> Weight;
 	fn unblock_bridge() -> Weight;
+	fn init_sync() -> Weight;
 }
 
 /// Weights for ethereum_beacon_client using the Snowbridge node and recommended hardware.
@@ -79,6 +80,11 @@ impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 		Weight::from_parts(1_000_000_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
+	fn init_sync() -> Weight {
+		Weight::from_parts(200_000_000_000 as u64, 0)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(3))
+	}
 }
 
 // For backwards compatibility and tests
@@ -115,5 +121,10 @@ impl WeightInfo for () {
 	fn unblock_bridge() -> Weight {
 		Weight::from_parts(1_000_000_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn init_sync() -> Weight {
+		Weight::from_parts(200_000_000_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(3))
 	}
 }
