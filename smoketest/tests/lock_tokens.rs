@@ -14,6 +14,8 @@ use codec::Encode;
 
 use xcm::v3::MultiLocation;
 
+// The deployment addresses of the following contracts are stable, unless we modify the order in
+// contracts are deployed in DeployScript.sol.
 const ETHEREUM_API: &str = "http://localhost:8545";
 const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
 const NATIVE_TOKENS_CONTRACT: &str = "0x83428c7db9815f482a39a1715684dCF755021997";
