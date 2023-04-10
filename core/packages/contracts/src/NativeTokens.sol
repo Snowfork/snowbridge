@@ -1,24 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import { Ownable } from "openzeppelin/access/Ownable.sol";
-import { AccessControl } from "openzeppelin/access/AccessControl.sol";
-import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
+import {Ownable} from "openzeppelin/access/Ownable.sol";
+import {AccessControl} from "openzeppelin/access/AccessControl.sol";
+import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
-import { TokenVault } from "./TokenVault.sol";
-import { SubstrateTypes } from "./SubstrateTypes.sol";
-import { NativeTokensTypes } from "./NativeTokensTypes.sol";
-import { IOutboundQueue } from "./OutboundQueue.sol";
-import { ParaID } from "./Types.sol";
+import {TokenVault} from "./TokenVault.sol";
+import {SubstrateTypes} from "./SubstrateTypes.sol";
+import {NativeTokensTypes} from "./NativeTokensTypes.sol";
+import {IOutboundQueue} from "./OutboundQueue.sol";
+import {ParaID} from "./Types.sol";
 
 /// @title Native Tokens
 /// @dev Manages locking, unlocking ERC20 tokens in the vault. Initializes ethereum native
 /// tokens on the substrate side via create.
 contract NativeTokens is AccessControl {
     /// @dev Describes the type of message.
-    enum Action {
-        Unlock
-    }
+    enum Action {Unlock}
 
     /// @dev Message format.
     struct Message {
@@ -69,13 +67,9 @@ contract NativeTokens is AccessControl {
     error Unauthorized();
     error NoFundsforCreateToken();
 
-    constructor(
-        TokenVault _vault,
-        IOutboundQueue _outboundQueue,
-        ParaID _assetHubParaID,
-        uint256 _createTokenFee
-    ) {
+    constructor(TokenVault _vault, IOutboundQueue _outboundQueue, ParaID _assetHubParaID, uint256 _createTokenFee) {
         _grantRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(SENDER_ROLE, ADMIN_ROLE);
         vault = _vault;
         outboundQueue = _outboundQueue;
@@ -88,12 +82,7 @@ contract NativeTokens is AccessControl {
     /// @param token The token to lock.
     /// @param recipient The recipient on the substrate side.
     /// @param amount The amount to lock.
-    function lock(
-        address token,
-        ParaID dest,
-        bytes calldata recipient,
-        uint128 amount
-    ) external payable {
+    function lock(address token, ParaID dest, bytes calldata recipient, uint128 amount) external payable {
         if (amount == 0) {
             revert InvalidAmount();
         }
@@ -101,7 +90,7 @@ contract NativeTokens is AccessControl {
         vault.deposit(msg.sender, token, amount);
 
         bytes memory payload = NativeTokensTypes.Mint(token, dest, recipient, amount);
-        outboundQueue.submit{ value: msg.value }(assetHubParaID, payload);
+        outboundQueue.submit{value: msg.value}(assetHubParaID, payload);
 
         emit Locked(recipient, token, amount);
     }
@@ -126,7 +115,7 @@ contract NativeTokens is AccessControl {
         uint8 decimals = metadata.decimals();
 
         bytes memory payload = NativeTokensTypes.Create(token, name, symbol, decimals);
-        outboundQueue.submit{ value: msg.value }(assetHubParaID, payload);
+        outboundQueue.submit{value: msg.value}(assetHubParaID, payload);
 
         emit Created(token);
     }

@@ -11,6 +11,7 @@ import {NativeTokens} from "../src/NativeTokens.sol";
 import {TokenVault} from "../src/TokenVault.sol";
 import {Vault} from "../src/Vault.sol";
 import {IVault} from "../src/IVault.sol";
+import {UpgradeProxy} from "../src/UpgradeProxy.sol";
 import {SovereignTreasury} from "../src/SovereignTreasury.sol";
 import {ParaID} from "../src/Types.sol";
 
@@ -55,9 +56,18 @@ contract DeployScript is Script {
         // Deploy WETH for testing
         new WETH9();
 
-        // Allow inbound channel to send messages to NativeTokens and SovereignTreasury
+        // Upgrades
+        UpgradeProxy upgradeProxy = new UpgradeProxy(ParaID.wrap(paraId));
+
+        // Allow inbound queue to send messages to handlers
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(inboundQueue));
         treasury.grantRole(treasury.SENDER_ROLE(), address(inboundQueue));
+        upgradeProxy.grantRole(treasury.SENDER_ROLE(), address(inboundQueue));
+
+        // Allow handlers to send messages to outbound queue
+        outboundQueue.grantRole(outboundQueue.SUBMIT_ROLE(), address(nativeTokens));
+        outboundQueue.grantRole(outboundQueue.SUBMIT_ROLE(), address(treasury));
+        outboundQueue.grantRole(outboundQueue.SUBMIT_ROLE(), address(upgradeProxy));
 
         // Allow InboundQueue and SovereignTreasury to withdraw from vault
         vault.grantRole(vault.WITHDRAW_ROLE(), address(inboundQueue));
@@ -67,8 +77,27 @@ contract DeployScript is Script {
         tokenVault.grantRole(tokenVault.WITHDRAW_ROLE(), address(nativeTokens));
         tokenVault.grantRole(tokenVault.DEPOSIT_ROLE(), address(nativeTokens));
 
-        // Allow NativeTokens to send messages to OutboundQueue
-        outboundQueue.grantRole(outboundQueue.SUBMIT_ROLE(), address(nativeTokens));
+        // Move ownership of everything to Upgrades app
+
+        treasury.grantRole(treasury.ADMIN_ROLE(), address(upgradeProxy));
+        treasury.revokeRole(treasury.ADMIN_ROLE(), address(this));
+
+        nativeTokens.grantRole(nativeTokens.ADMIN_ROLE(), address(upgradeProxy));
+        nativeTokens.revokeRole(nativeTokens.ADMIN_ROLE(), address(this));
+
+        vault.grantRole(vault.ADMIN_ROLE(), address(upgradeProxy));
+        vault.revokeRole(vault.ADMIN_ROLE(), address(this));
+
+        tokenVault.grantRole(tokenVault.ADMIN_ROLE(), address(upgradeProxy));
+        tokenVault.revokeRole(tokenVault.ADMIN_ROLE(), address(this));
+
+        inboundQueue.grantRole(inboundQueue.ADMIN_ROLE(), address(upgradeProxy));
+        inboundQueue.revokeRole(inboundQueue.ADMIN_ROLE(), address(this));
+
+        outboundQueue.grantRole(outboundQueue.ADMIN_ROLE(), address(upgradeProxy));
+        outboundQueue.revokeRole(outboundQueue.ADMIN_ROLE(), address(this));
+
+        upgradeProxy.revokeRole(upgradeProxy.ADMIN_ROLE(), address(this));
 
         vm.stopBroadcast();
     }

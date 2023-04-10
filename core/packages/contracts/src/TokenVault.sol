@@ -28,6 +28,7 @@ contract TokenVault is AccessControl {
 
     constructor() {
         _grantRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(WITHDRAW_ROLE, ADMIN_ROLE);
         _setRoleAdmin(DEPOSIT_ROLE, ADMIN_ROLE);
     }
