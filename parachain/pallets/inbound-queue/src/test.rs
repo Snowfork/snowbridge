@@ -4,14 +4,14 @@ use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::DispatchError,
 	parameter_types,
-	traits::{ConstU64, Everything, GenesisBuild},
+	traits::{tokens::WithdrawConsequence, ConstU64, Everything, GenesisBuild},
 };
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	MultiSignature,
+	MultiSignature, TokenError,
 };
 use sp_std::convert::From;
 
@@ -101,10 +101,10 @@ impl Verifier for MockVerifier {
 	}
 }
 
-use snowbridge_router_primitives::{ConvertTokenAddress, InboundMessageConverter};
+use snowbridge_router_primitives::InboundMessageConverter;
 
 parameter_types! {
-	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 1};
+	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15};
 }
 
 impl inbound_queue::Config for Test {
@@ -112,7 +112,7 @@ impl inbound_queue::Config for Test {
 	type Verifier = MockVerifier;
 	type Token = Balances;
 	type Reward = ConstU64<100>;
-	type MessageConversion = InboundMessageConverter<ConvertTokenAddress<EthereumNetwork>>;
+	type MessageConversion = InboundMessageConverter<EthereumNetwork>;
 	type XcmSender = ();
 	type WeightInfo = ();
 }
@@ -173,33 +173,6 @@ const OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
 use polkadot_parachain::primitives::Id as ParaId;
 
 #[test]
-fn test_submit_with_invalid_outbound_queue() {
-	new_tester(H160::zero()).execute_with(|| {
-		let relayer: AccountId = Keyring::Bob.into();
-		let origin = RuntimeOrigin::signed(relayer);
-
-		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
-		let _ = Balances::mint_into(&sovereign_account, 10000);
-
-		// Submit message
-		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
-			proof: Proof {
-				block_hash: Default::default(),
-				tx_index: Default::default(),
-				data: Default::default(),
-			},
-		};
-		assert_noop!(
-			InboundQueue::submit(origin.clone(), message.clone()),
-			Error::<Test>::InvalidOutboundQueue
-		);
-	});
-}
-
-#[test]
 fn test_submit() {
 	new_tester(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
@@ -231,12 +204,43 @@ fn test_submit() {
 	});
 }
 
-#[ignore]
+#[test]
+fn test_submit_with_invalid_outbound_queue() {
+	new_tester(H160::zero()).execute_with(|| {
+		let relayer: AccountId = Keyring::Bob.into();
+		let origin = RuntimeOrigin::signed(relayer);
+
+		// Deposit funds into sovereign account of Asset Hub (Statemint)
+		let dest_para: ParaId = 1000u32.into();
+		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let _ = Balances::mint_into(&sovereign_account, 10000);
+
+		// Submit message
+		let message = Message {
+			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+		};
+		assert_noop!(
+			InboundQueue::submit(origin.clone(), message.clone()),
+			Error::<Test>::InvalidOutboundQueue
+		);
+	});
+}
+
 #[test]
 fn test_submit_with_invalid_nonce() {
 	new_tester(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
+
+		// Deposit funds into sovereign account of Asset Hub (Statemint)
+		let dest_para: ParaId = 1000u32.into();
+		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		// Submit message
 		let message = Message {
@@ -257,6 +261,35 @@ fn test_submit_with_invalid_nonce() {
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
 			Error::<Test>::InvalidNonce
+		);
+	});
+}
+
+use pallet_balances::Error as BalancesError;
+
+#[test]
+fn test_submit_no_funds_to_reward_relayers() {
+	new_tester(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+		let relayer: AccountId = Keyring::Bob.into();
+		let origin = RuntimeOrigin::signed(relayer);
+
+		// Create sovereign account for Asset Hub (Statemint), but with no funds to cover rewards
+		let dest_para: ParaId = 1000u32.into();
+		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		assert_ok!(Balances::mint_into(&sovereign_account, 2));
+
+		// Submit message
+		let message = Message {
+			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+		};
+		assert_noop!(
+			InboundQueue::submit(origin.clone(), message.clone()),
+			TokenError::FundsUnavailable
 		);
 	});
 }
