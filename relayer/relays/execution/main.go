@@ -3,6 +3,8 @@ package execution
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -18,8 +20,11 @@ import (
 )
 
 type Relay struct {
-	config  *Config
-	keypair *sr25519.Keypair
+	config                *Config
+	keypair               *sr25519.Keypair
+	paraconn              *parachain.Connection
+	ethconn               *ethereum.Connection
+	outboundQueueContract *contracts.OutboundQueue
 }
 
 func NewRelay(
@@ -40,11 +45,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
+	r.paraconn = paraconn
 
 	err = ethconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
+	r.ethconn = ethconn
 
 	writer := parachain.NewParachainWriter(
 		paraconn,
@@ -68,58 +75,172 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
-
-	opts := bind.WatchOpts{
-		Context: ctx,
-	}
-
-	messages := make(chan *contracts.OutboundQueueMessage)
-
-	key, err := types.EncodeToBytes(r.config.Source.LaneID)
-	if err != nil {
-		return fmt.Errorf("encode to bytes: %w", err)
-	}
-
-	sub, err := contract.WatchMessage(&opts, messages, [][]byte{key})
-	if err != nil {
-		return fmt.Errorf("create subscription: %w", err)
-	}
-	defer sub.Unsubscribe()
+	r.outboundQueueContract = contract
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case err := <-sub.Err():
-			return fmt.Errorf("message subscription: %w", err)
-		case outboundMsg := <-messages:
-			// wait until light client is updated with execution headers
-			for {
-				executionHeaderState, err := writer.GetLastExecutionHeaderState()
+		case <-time.After(12 * time.Second):
+			log.Info("Polling")
+
+			executionHeaderState, err := writer.GetLastExecutionHeaderState()
+			if err != nil {
+				return err
+			}
+
+			paraNonce, err := r.fetchLatestParachainNonce()
+			if err != nil {
+				return err
+			}
+
+			ethNonce, err := r.fetchEthereumNonce(ctx, executionHeaderState.BlockNumber)
+			if err != nil {
+				return err
+			}
+
+			log.WithFields(log.Fields{
+				"paraNonce": paraNonce,
+				"ethNonce":  ethNonce,
+			}).Info("Polled Nonces")
+
+			if paraNonce == ethNonce {
+				continue
+			}
+
+			events, err := r.findEvents(ctx, executionHeaderState.BlockNumber, paraNonce+1)
+
+			for _, ev := range events {
+				inboundMsg, err := r.makeInboundMessage(ctx, headerCache, ev)
 				if err != nil {
-					return fmt.Errorf("fetch last execution header state: %w", err)
+					return fmt.Errorf("make outgoing message: %w", err)
 				}
-				if outboundMsg.Raw.BlockNumber <= executionHeaderState.BlockNumber {
-					break
-				}
-				select {
-				case <-ctx.Done():
-					return nil
-				case <-time.After(6 * time.Second):
-				}
-			}
 
-			inboundMsg, err := r.makeInboundMessage(ctx, headerCache, outboundMsg)
-			if err != nil {
-				return fmt.Errorf("make outgoing message: %w", err)
-			}
-
-			err = writer.WriteToParachainAndWatch(ctx, "InboundQueue.submit", inboundMsg)
-			if err != nil {
-				return fmt.Errorf("write to parachain: %w", err)
+				err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
+				if err != nil {
+					return fmt.Errorf("write to parachain: %w", err)
+				}
 			}
 		}
 	}
+}
+
+func (r *Relay) fetchLatestParachainNonce() (uint64, error) {
+	paraID := r.config.Source.LaneID
+	encodedParaID, err := types.EncodeToBytes(r.config.Source.LaneID)
+	if err != nil {
+		return 0, err
+	}
+
+	paraNonceKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueue", "Nonce", encodedParaID, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create storage key for EthereumInboundQueue.Nonce(%v): %w",
+			paraID, err)
+	}
+	var paraNonce uint64
+	ok, err := r.paraconn.API().RPC.State.GetStorageLatest(paraNonceKey, &paraNonce)
+	if err != nil {
+		return 0, fmt.Errorf("fetch storage EthereumInboundQueue.Nonce(%v): %w",
+			paraID, err)
+	}
+	if !ok {
+		paraNonce = 0
+	}
+
+	return paraNonce, nil
+}
+
+func (r *Relay) fetchEthereumNonce(ctx context.Context, blockNumber uint64) (uint64, error) {
+	opts := bind.CallOpts{
+		Pending:     false,
+		BlockNumber: new(big.Int).SetUint64(blockNumber),
+		Context:     ctx,
+	}
+	nonce, err := r.outboundQueueContract.Nonce(&opts, r.config.Source.LaneID)
+	if err != nil {
+		return 0, fmt.Errorf("fetch OutboundQueue.Nonce(%v): %w", r.config.Source.LaneID, err)
+	}
+
+	return nonce, nil
+}
+
+const BlocksPerQuery = 4096
+
+func (r *Relay) findEvents(ctx context.Context, latestFinalizedBlockNumber uint64, start uint64) ([]*contracts.OutboundQueueMessage, error) {
+
+	paraID := r.config.Source.LaneID
+
+	var allEvents []*contracts.OutboundQueueMessage
+
+	blockNumber := latestFinalizedBlockNumber
+
+	for {
+		log.Info("loop")
+
+		var begin uint64
+		if blockNumber < BlocksPerQuery {
+			begin = 0
+		} else {
+			begin = blockNumber - BlocksPerQuery
+		}
+
+		opts := bind.FilterOpts{
+			Start:   begin,
+			End:     &blockNumber,
+			Context: ctx,
+		}
+
+		done, events, err := r.findEventsWithFilter(&opts, paraID, start)
+		if err != nil {
+			return nil, fmt.Errorf("filter events: %w", err)
+		}
+
+		if len(events) > 0 {
+			allEvents = append(allEvents, events...)
+		}
+
+		blockNumber = begin
+
+		if done || begin == 0 {
+			break
+		}
+	}
+
+	sort.SliceStable(allEvents, func(i, j int) bool {
+		return allEvents[i].Nonce < allEvents[j].Nonce
+	})
+
+	return allEvents, nil
+}
+
+func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start uint64) (bool, []*contracts.OutboundQueueMessage, error) {
+	iter, err := r.outboundQueueContract.FilterMessage(opts, []uint32{paraID}, []uint64{})
+	if err != nil {
+		return false, nil, err
+	}
+
+	var events []*contracts.OutboundQueueMessage
+	done := false
+
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return false, nil, err
+			}
+			break
+		}
+
+		events = append(events, iter.Event)
+		if iter.Event.Nonce == start {
+			done = true
+			iter.Close()
+			break
+		}
+	}
+
+	return done, events, nil
 }
 
 func (r *Relay) makeInboundMessage(
