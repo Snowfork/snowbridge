@@ -37,7 +37,7 @@ statemine_trap_message() {
                             {
                               "ExportMessage": {
                                 "network": {
-                                    "Ethereum": { chainId: 1337 }
+                                    "Ethereum": { chainId: 1 }
                                 },
                                 "destination": {
                                   "Here": "Null"
@@ -99,7 +99,7 @@ bridgehub_trap_message() {
                             {
                               "ExportMessage": {
                                 "network": {
-                                    "Ethereum": { chainId: 1337 }
+                                    "Ethereum": { chainId: 1 }
                                 },
                                 "destination": {
                                   "Here": "Null"
