@@ -11,8 +11,6 @@ mod ssz;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
-mod tests_mainnet;
-#[cfg(test)]
 mod tests_minimal;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -530,8 +528,8 @@ pub mod pallet {
 				Self::is_valid_merkle_branch(
 					update.block_roots_root,
 					update.block_roots_branch,
-					config::BLOCK_ROOTS_INDEX,
 					config::BLOCK_ROOTS_DEPTH,
+					config::BLOCK_ROOTS_INDEX,
 					update.finalized_header.state_root
 				),
 				Error::<T>::InvalidAncestryMerkleProof
@@ -622,8 +620,8 @@ pub mod pallet {
 				Self::is_valid_merkle_branch(
 					update.block_roots_root,
 					update.block_roots_branch,
-					config::BLOCK_ROOTS_INDEX,
 					config::BLOCK_ROOTS_DEPTH,
+					config::BLOCK_ROOTS_INDEX,
 					update.finalized_header.state_root
 				),
 				Error::<T>::InvalidAncestryMerkleProof

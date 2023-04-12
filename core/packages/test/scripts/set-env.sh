@@ -19,6 +19,7 @@ relay_bin="$relay_dir/build/snowbridge-relay"
 [ "$bridge_hub_runtime" = "bridge-hub-rococo-local" ] &&
    seconds_per_slot=6 ||
    seconds_per_slot=12
+active_spec="${ACTIVE_SPEC:-minimal}"
 export output_dir=/tmp/snowbridge
 export output_bin_dir="$output_dir/bin"
 ethereum_data_dir="$output_dir/geth"

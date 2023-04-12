@@ -4,14 +4,7 @@ use crate::Pallet as EthereumBeaconClient;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
 
-#[cfg(feature = "minimal")]
-mod data_minimal;
-#[cfg(feature = "minimal")]
-use data_minimal::*;
-
-#[cfg(not(feature = "minimal"))]
 mod data_mainnet;
-#[cfg(not(feature = "minimal"))]
 use data_mainnet::*;
 
 benchmarks! {
@@ -109,14 +102,6 @@ benchmarks! {
 	}
 }
 
-#[cfg(feature = "minimal")]
-impl_benchmark_test_suite!(
-	EthereumBeaconClient,
-	crate::mock::new_tester::<crate::mock::mock_minimal::Test>(),
-	crate::mock::mock_minimal::Test,
-);
-
-#[cfg(not(feature = "minimal"))]
 impl_benchmark_test_suite!(
 	EthereumBeaconClient,
 	crate::mock::new_tester::<crate::mock::mock_mainnet::Test>(),

@@ -35,10 +35,15 @@ config_relayer(){
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
-    active_spec="mainnet"
-    if [ "$eth_network" == "localhost" ]; then
-        active_spec="minimal"
-    fi
+    # Configure ethereum relay
+    jq \
+        --arg k1 "$(address_for BasicOutboundChannel)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+    '
+      .source.contracts.BasicOutboundChannel = $k1
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    ' \
+    config/ethereum-relay.json > $output_dir/ethereum-relay.json
 
     # Configure beacon relay
     jq \
