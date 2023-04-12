@@ -22,7 +22,7 @@ use frame_support::{
 	log,
 	traits::{Get, UnixTime},
 	transactional,
-	weights::Weight,
+	weights::{constants::RocksDbWeight, Weight},
 	BoundedVec,
 };
 use frame_system::ensure_signed;
@@ -72,9 +72,66 @@ pub trait WeightInfo {
 	fn sync_recovery() -> Weight;
 	fn unblock_bridge() -> Weight;
 	fn init_sync() -> Weight;
-	fn sync_committee_period_update_without_verify_signed_header() -> Weight;
-	fn verify_sync_committee_period_update_signatures() -> Weight;
-	fn sync_committee_period_update_signatures_fast_aggregate_without_verify() -> Weight;
+	fn update_only_with_verify_signed_header() -> Weight;
+	fn update_without_bls_fast_aggregate_verify() -> Weight;
+	fn update_with_bls_aggregate_but_without_verify() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn sync_committee_period_update() -> Weight {
+		Weight::from_parts(75_930_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 72217))
+			.saturating_add(RocksDbWeight::get().reads(8))
+			.saturating_add(RocksDbWeight::get().writes(6))
+	}
+	fn import_finalized_header() -> Weight {
+		Weight::from_parts(72_439_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 43615))
+			.saturating_add(RocksDbWeight::get().reads(6))
+			.saturating_add(RocksDbWeight::get().writes(4))
+	}
+	fn import_execution_header() -> Weight {
+		Weight::from_parts(72_202_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 37729))
+			.saturating_add(RocksDbWeight::get().reads(6))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	fn update_only_with_verify_signed_header() -> Weight {
+		Weight::from_parts(74_629_000_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	fn update_without_bls_fast_aggregate_verify() -> Weight {
+		Weight::from_parts(1_294_000_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(8))
+			.saturating_add(RocksDbWeight::get().writes(6))
+	}
+	fn update_with_bls_aggregate_but_without_verify() -> Weight {
+		Weight::from_parts(57_098_000_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	fn block_bridge() -> Weight {
+		Weight::from_parts(10_000_000 as u64, 0).saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn begin_recovery() -> Weight {
+		Weight::from_parts(100_000_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(3))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn sync_recovery() -> Weight {
+		Weight::from_parts(1_000_000_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	fn unblock_bridge() -> Weight {
+		Weight::from_parts(10_000_000 as u64, 0).saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn init_sync() -> Weight {
+		Weight::from_parts(1_000_000_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(3))
+	}
 }
 
 #[frame_support::pallet]
@@ -441,10 +498,11 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(8)]
-		#[pallet::weight(T::WeightInfo::sync_committee_period_update_without_verify_signed_header())]
+		/// Sync committee update with verify_signed_header only
+		#[pallet::call_index(9)]
+		#[pallet::weight(T::WeightInfo::update_only_with_verify_signed_header())]
 		#[transactional]
-		pub fn sync_committee_period_update_without_verify_signed_header(
+		pub fn update_only_with_verify_signed_header(
 			origin: OriginFor<T>,
 			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
 		) -> DispatchResult {
@@ -452,57 +510,37 @@ pub mod pallet {
 
 			Self::check_bridge_blocked_state()?;
 
-			let sync_committee_period = sync_committee_period_update.sync_committee_period;
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Received sync committee update for period {}. Applying update",
-				sync_committee_period
-			);
-
-			if let Err(err) =
-				Self::process_sync_committee_period_update_without_verify_signed_header(
-					sync_committee_period_update,
-				) {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"💫 Sync committee period update failed with error {:?}",
-					err
-				);
-				return Err(err)
-			}
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Sync committee period update for period {} succeeded.",
-				sync_committee_period
-			);
+			Self::do_update_only_with_verify_signed_header(sync_committee_period_update)?;
 
 			Ok(())
 		}
 
-		#[pallet::call_index(9)]
-		#[pallet::weight(T::WeightInfo::verify_sync_committee_period_update_signatures())]
-		#[transactional]
-		pub fn verify_sync_committee_period_update_signatures(
-			_origin: OriginFor<T>,
-			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
-		) -> DispatchResult {
-			Self::do_verify_sync_committee_period_update_signatures(sync_committee_period_update)?;
-			Ok(())
-		}
-
+		/// Sync committee update update without `bls_fast_aggregate_verify`
 		#[pallet::call_index(10)]
-		#[pallet::weight(
-			T::WeightInfo::sync_committee_period_update_signatures_fast_aggregate_without_verify()
-		)]
+		#[pallet::weight(T::WeightInfo::update_without_bls_fast_aggregate_verify())]
 		#[transactional]
-		pub fn sync_committee_period_update_signatures_fast_aggregate_without_verify(
+		pub fn update_without_bls_fast_aggregate_verify(
+			origin: OriginFor<T>,
+			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
+		) -> DispatchResult {
+			let _sender = ensure_signed(origin)?;
+
+			Self::check_bridge_blocked_state()?;
+
+			Self::do_update_without_bls_fast_aggregate_verify(sync_committee_period_update)?;
+
+			Ok(())
+		}
+
+		/// Sync committee update with `bls_fast_aggregate` but ignore verification
+		#[pallet::call_index(11)]
+		#[pallet::weight(T::WeightInfo::update_with_bls_aggregate_but_without_verify())]
+		#[transactional]
+		pub fn update_with_bls_aggregate_but_without_verify(
 			_origin: OriginFor<T>,
 			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
 		) -> DispatchResult {
-			Self::do_sync_committee_period_update_signatures_fast_aggregate_without_verify(
-				sync_committee_period_update,
-			)?;
+			Self::do_update_with_bls_aggregate_but_without_verify(sync_committee_period_update)?;
 			Ok(())
 		}
 	}
@@ -626,7 +664,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_sync_committee_period_update_without_verify_signed_header(
+		fn do_update_without_bls_fast_aggregate_verify(
 			update: SyncCommitteePeriodUpdateOf<T>,
 		) -> DispatchResult {
 			ensure!(
@@ -682,6 +720,18 @@ pub mod pallet {
 				Error::<T>::InvalidSyncCommitteePeriodUpdateWithGap
 			);
 
+			let current_sync_committee = Self::get_sync_committee_for_period(current_period)?;
+			let validators_root = <ValidatorsRoot<T>>::get();
+
+			Self::verify_signed_header_without_bls_fast_aggregate_verify(
+				sync_committee_bits,
+				update.sync_aggregate.sync_committee_signature,
+				current_sync_committee.pubkeys,
+				update.attested_header,
+				validators_root,
+				update.signature_slot,
+			)?;
+
 			ensure!(
 				Self::is_valid_merkle_branch(
 					update.block_roots_root,
@@ -704,24 +754,18 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn do_verify_sync_committee_period_update_signatures(
+		fn do_update_only_with_verify_signed_header(
 			update: SyncCommitteePeriodUpdateOf<T>,
 		) -> DispatchResult {
+			ensure!(
+				update.signature_slot > update.attested_header.slot &&
+					update.attested_header.slot >= update.finalized_header.slot,
+				Error::<T>::InvalidSyncCommitteeHeaderUpdate
+			);
+
 			let sync_committee_bits =
 				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
-
-			let block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-					.into();
-			Self::verify_header(
-				block_root,
-				update.finality_branch,
-				update.attested_header.state_root,
-				config::FINALIZED_ROOT_DEPTH,
-				config::FINALIZED_ROOT_INDEX,
-			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
 
@@ -740,7 +784,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn do_sync_committee_period_update_signatures_fast_aggregate_without_verify(
+		fn do_update_with_bls_aggregate_but_without_verify(
 			update: SyncCommitteePeriodUpdateOf<T>,
 		) -> DispatchResult {
 			let sync_committee_bits =
@@ -1041,6 +1085,37 @@ pub mod pallet {
 				signing_root,
 				sync_committee_signature,
 			)?;
+
+			Ok(())
+		}
+
+		pub(super) fn verify_signed_header_without_bls_fast_aggregate_verify(
+			sync_committee_bits: Vec<u8>,
+			_sync_committee_signature: BoundedVec<u8, T::MaxSignatureSize>,
+			sync_committee_pubkeys: BoundedVec<PublicKey, T::MaxSyncCommitteeSize>,
+			header: BeaconHeader,
+			validators_root: H256,
+			signature_slot: u64,
+		) -> DispatchResult {
+			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
+			// Gathers all the pubkeys of the sync committee members that participated in signing
+			// the header.
+			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
+				if *bit == 1 as u8 {
+					let pubk = pubkey.clone();
+					participant_pubkeys.push(pubk);
+				}
+			}
+
+			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(
+				signature_slot,
+				config::SLOTS_PER_EPOCH,
+			));
+			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
+			// Domains are used for for seeds, for signatures, and for selecting aggregators.
+			let domain = Self::compute_domain(domain_type, fork_version, validators_root)?;
+			// Hash tree root of SigningData - object root + domain
+			let _signing_root = Self::compute_signing_root(header, domain)?;
 
 			Ok(())
 		}

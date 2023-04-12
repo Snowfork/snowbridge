@@ -101,7 +101,7 @@ benchmarks! {
 		<ExecutionHeaders<T>>::get(header.block_hash).unwrap();
 	}
 
-	sync_committee_period_update_without_verify_signed_header {
+	update_only_with_verify_signed_header {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let initial_sync_data = initial_sync();
@@ -121,12 +121,9 @@ benchmarks! {
 			initial_sync_data.current_sync_committee,
 		);
 
-	}: sync_committee_period_update_without_verify_signed_header(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
-	verify {
-		assert!(<SyncCommittees<T>>::get(sync_committee_update.sync_committee_period+1).pubkeys.len() > 0);
-	}
+	}: update_only_with_verify_signed_header(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
 
-	verify_sync_committee_period_update_signatures {
+	update_without_bls_fast_aggregate_verify {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let initial_sync_data = initial_sync();
@@ -146,9 +143,9 @@ benchmarks! {
 			initial_sync_data.current_sync_committee,
 		);
 
-	}: verify_sync_committee_period_update_signatures(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
+	}: update_without_bls_fast_aggregate_verify(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
 
-	sync_committee_period_update_signatures_fast_aggregate_without_verify {
+	update_with_bls_aggregate_but_without_verify {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let initial_sync_data = initial_sync();
@@ -168,7 +165,7 @@ benchmarks! {
 			initial_sync_data.current_sync_committee,
 		);
 
-	}: sync_committee_period_update_signatures_fast_aggregate_without_verify(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
+	}: update_with_bls_aggregate_but_without_verify(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
 }
 
 impl_benchmark_test_suite!(
