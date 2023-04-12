@@ -2,13 +2,13 @@
 
 set -eu
 
-seed="${BRIDGEHUB_WS_URL:-//Ferdie}"
+seed="${SEED:-//Alice}"
 
 bridge_hub_ws_url="${BRIDGE_HUB_WS_URL:-ws://127.0.0.1:11144}"
 bridge_hub_para_id="${BRIDGE_HUB_PARA_ID:-1013}"
 
 statemine_ws_url="${STATEMINE_WS_URL:-ws://127.0.0.1:12144}"
-statemine_para_id="${BRIDGE_HUB_PARA_ID:-1000}"
+statemine_para_id="${STATEMINE_PARA_ID:-1000}"
 
 statemine_trap_message() {
     echo Sending trap message.
@@ -29,6 +29,11 @@ statemine_trap_message() {
                        '
                        {
                           "V3": [
+                            {
+                              "UnpaidExecution": {
+                                "weight_limit": "Unlimited"
+                              }
+                            },
                             {
                               "ExportMessage": {
                                 "network": {
@@ -80,12 +85,17 @@ bridgehub_trap_message() {
                     --arg bridge_hub_para_id "$bridge_hub_para_id" \
                     '{ "V3": { "parents": 1, "interior": { "X1": { "Parachain": $bridge_hub_para_id } } } }')
 
-    local weight='{ "refTime": 10000000, "proofSize": 10000 }'
+    local weight='{ "refTime": 900000000, "proofSize": 10000 }'
 
     local message=$(jq --null-input \
                        '
                        {
                           "V3": [
+                            {
+                              "UnpaidExecution": {
+                                "weight_limit": "Unlimited"
+                              }
+                            },
                             {
                               "ExportMessage": {
                                 "network": {
