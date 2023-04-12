@@ -35,16 +35,6 @@ config_relayer(){
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
-    # Configure ethereum relay
-    jq \
-        --arg k1 "$(address_for BasicOutboundChannel)" \
-        --arg eth_endpoint_ws $eth_endpoint_ws \
-    '
-      .source.contracts.BasicOutboundChannel = $k1
-    | .source.ethereum.endpoint = $eth_endpoint_ws
-    ' \
-    config/ethereum-relay.json > $output_dir/ethereum-relay.json
-
     # Configure beacon relay
     jq \
         --arg beacon_endpoint_http $beacon_endpoint_http \
