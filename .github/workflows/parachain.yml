@@ -86,7 +86,6 @@ jobs:
             --manifest-path parachain/Cargo.toml
             --verbose
             --package snowbridge-ethereum-beacon-client
-            --features runtime-benchmarks
             --features minimal
           toolchain: nightly-2022-11-15
       - uses: actions-rs/install@v0.1.2
