@@ -100,6 +100,75 @@ benchmarks! {
 		let header: ExecutionHeader = header_update.execution_header.try_into().unwrap();
 		<ExecutionHeaders<T>>::get(header.block_hash).unwrap();
 	}
+
+	sync_committee_period_update_without_verify_signed_header {
+		let caller: T::AccountId = whitelisted_caller();
+
+		let initial_sync_data = initial_sync();
+
+		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
+
+		let sync_committee_update = sync_committee_update();
+
+		//initialize SyncCommittees with period in sync_committee_update
+		LatestSyncCommitteePeriod::<T>::set(EthereumBeaconClient::<T>::compute_current_sync_period(
+				sync_committee_update.attested_header.slot,
+			));
+		SyncCommittees::<T>::insert(
+			EthereumBeaconClient::<T>::compute_current_sync_period(
+				sync_committee_update.attested_header.slot,
+			),
+			initial_sync_data.current_sync_committee,
+		);
+
+	}: sync_committee_period_update_without_verify_signed_header(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
+	verify {
+		assert!(<SyncCommittees<T>>::get(sync_committee_update.sync_committee_period+1).pubkeys.len() > 0);
+	}
+
+	verify_sync_committee_period_update_signatures {
+		let caller: T::AccountId = whitelisted_caller();
+
+		let initial_sync_data = initial_sync();
+
+		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
+
+		let sync_committee_update = sync_committee_update();
+
+		//initialize SyncCommittees with period in sync_committee_update
+		LatestSyncCommitteePeriod::<T>::set(EthereumBeaconClient::<T>::compute_current_sync_period(
+				sync_committee_update.attested_header.slot,
+			));
+		SyncCommittees::<T>::insert(
+			EthereumBeaconClient::<T>::compute_current_sync_period(
+				sync_committee_update.attested_header.slot,
+			),
+			initial_sync_data.current_sync_committee,
+		);
+
+	}: verify_sync_committee_period_update_signatures(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
+
+	sync_committee_period_update_signatures_fast_aggregate_without_verify {
+		let caller: T::AccountId = whitelisted_caller();
+
+		let initial_sync_data = initial_sync();
+
+		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
+
+		let sync_committee_update = sync_committee_update();
+
+		//initialize SyncCommittees with period in sync_committee_update
+		LatestSyncCommitteePeriod::<T>::set(EthereumBeaconClient::<T>::compute_current_sync_period(
+				sync_committee_update.attested_header.slot,
+			));
+		SyncCommittees::<T>::insert(
+			EthereumBeaconClient::<T>::compute_current_sync_period(
+				sync_committee_update.attested_header.slot,
+			),
+			initial_sync_data.current_sync_committee,
+		);
+
+	}: sync_committee_period_update_signatures_fast_aggregate_without_verify(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
 }
 
 impl_benchmark_test_suite!(

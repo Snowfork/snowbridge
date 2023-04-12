@@ -16,14 +16,14 @@ mod tests_minimal;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-pub use weights::WeightInfo;
-
 use crate::merkleization::get_sync_committee_bits;
 use frame_support::{
 	dispatch::DispatchResult,
 	log,
 	traits::{Get, UnixTime},
-	transactional, BoundedVec,
+	transactional,
+	weights::Weight,
+	BoundedVec,
 };
 use frame_system::ensure_signed;
 use snowbridge_beacon_primitives::{
@@ -61,6 +61,21 @@ pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<
 pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
 pub type CheckpointSyncOf<T> =
 	CheckpointSync<<T as Config>::MaxSyncCommitteeSize, <T as Config>::MaxProofBranchSize>;
+
+/// Weight functions needed for ethereum_beacon_client.
+pub trait WeightInfo {
+	fn sync_committee_period_update() -> Weight;
+	fn import_finalized_header() -> Weight;
+	fn import_execution_header() -> Weight;
+	fn block_bridge() -> Weight;
+	fn begin_recovery() -> Weight;
+	fn sync_recovery() -> Weight;
+	fn unblock_bridge() -> Weight;
+	fn init_sync() -> Weight;
+	fn sync_committee_period_update_without_verify_signed_header() -> Weight;
+	fn verify_sync_committee_period_update_signatures() -> Weight;
+	fn sync_committee_period_update_signatures_fast_aggregate_without_verify() -> Weight;
+}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -103,9 +118,9 @@ pub mod pallet {
 		type MaxFinalizedHeaderSlotArray: Get<u32>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
-		type WeightInfo: WeightInfo;
 		#[pallet::constant]
 		type WeakSubjectivityPeriodSeconds: Get<u64>;
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -425,6 +440,71 @@ pub mod pallet {
 			Self::process_initial_sync(initial_sync)?;
 			Ok(())
 		}
+
+		#[pallet::call_index(8)]
+		#[pallet::weight(T::WeightInfo::sync_committee_period_update_without_verify_signed_header())]
+		#[transactional]
+		pub fn sync_committee_period_update_without_verify_signed_header(
+			origin: OriginFor<T>,
+			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
+		) -> DispatchResult {
+			let _sender = ensure_signed(origin)?;
+
+			Self::check_bridge_blocked_state()?;
+
+			let sync_committee_period = sync_committee_period_update.sync_committee_period;
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Received sync committee update for period {}. Applying update",
+				sync_committee_period
+			);
+
+			if let Err(err) =
+				Self::process_sync_committee_period_update_without_verify_signed_header(
+					sync_committee_period_update,
+				) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"💫 Sync committee period update failed with error {:?}",
+					err
+				);
+				return Err(err)
+			}
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Sync committee period update for period {} succeeded.",
+				sync_committee_period
+			);
+
+			Ok(())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight(T::WeightInfo::verify_sync_committee_period_update_signatures())]
+		#[transactional]
+		pub fn verify_sync_committee_period_update_signatures(
+			_origin: OriginFor<T>,
+			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
+		) -> DispatchResult {
+			Self::do_verify_sync_committee_period_update_signatures(sync_committee_period_update)?;
+			Ok(())
+		}
+
+		#[pallet::call_index(10)]
+		#[pallet::weight(
+			T::WeightInfo::sync_committee_period_update_signatures_fast_aggregate_without_verify()
+		)]
+		#[transactional]
+		pub fn sync_committee_period_update_signatures_fast_aggregate_without_verify(
+			_origin: OriginFor<T>,
+			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
+		) -> DispatchResult {
+			Self::do_sync_committee_period_update_signatures_fast_aggregate_without_verify(
+				sync_committee_period_update,
+			)?;
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -541,6 +621,156 @@ pub mod pallet {
 				block_root,
 				update.finalized_header,
 				Some(update.block_roots_root),
+			)?;
+
+			Ok(())
+		}
+
+		fn process_sync_committee_period_update_without_verify_signed_header(
+			update: SyncCommitteePeriodUpdateOf<T>,
+		) -> DispatchResult {
+			ensure!(
+				update.signature_slot > update.attested_header.slot &&
+					update.attested_header.slot >= update.finalized_header.slot,
+				Error::<T>::InvalidSyncCommitteeHeaderUpdate
+			);
+			let sync_committee_bits =
+				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
+			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
+			Self::verify_sync_committee(
+				update.next_sync_committee.clone(),
+				update.next_sync_committee_branch,
+				update.attested_header.state_root,
+				config::NEXT_SYNC_COMMITTEE_DEPTH,
+				config::NEXT_SYNC_COMMITTEE_INDEX,
+			)?;
+
+			let block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
+					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
+					.into();
+			Self::verify_header(
+				block_root,
+				update.finality_branch,
+				update.attested_header.state_root,
+				config::FINALIZED_ROOT_DEPTH,
+				config::FINALIZED_ROOT_INDEX,
+			)?;
+
+			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+			let signature_slot_period = Self::compute_current_sync_period(update.signature_slot);
+			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 latest committee period is: {}, attested_header period is: {}, signature_slot period is: {}",
+				latest_committee_period,
+				current_period,
+				signature_slot_period
+			);
+			ensure!(
+				<SyncCommittees<T>>::contains_key(current_period),
+				Error::<T>::SyncCommitteeMissing
+			);
+			let next_period = current_period + 1;
+			ensure!(
+				!<SyncCommittees<T>>::contains_key(next_period),
+				Error::<T>::InvalidSyncCommitteePeriodUpdateWithDuplication
+			);
+			ensure!(
+				(next_period == latest_committee_period + 1),
+				Error::<T>::InvalidSyncCommitteePeriodUpdateWithGap
+			);
+
+			ensure!(
+				Self::is_valid_merkle_branch(
+					update.block_roots_root,
+					update.block_roots_branch,
+					config::BLOCK_ROOTS_DEPTH,
+					config::BLOCK_ROOTS_INDEX,
+					update.finalized_header.state_root
+				),
+				Error::<T>::InvalidAncestryMerkleProof
+			);
+
+			Self::store_sync_committee(next_period, update.next_sync_committee)?;
+
+			Self::store_finalized_header(
+				block_root,
+				update.finalized_header,
+				Some(update.block_roots_root),
+			)?;
+
+			Ok(())
+		}
+
+		fn do_verify_sync_committee_period_update_signatures(
+			update: SyncCommitteePeriodUpdateOf<T>,
+		) -> DispatchResult {
+			let sync_committee_bits =
+				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
+
+			let block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
+					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
+					.into();
+			Self::verify_header(
+				block_root,
+				update.finality_branch,
+				update.attested_header.state_root,
+				config::FINALIZED_ROOT_DEPTH,
+				config::FINALIZED_ROOT_INDEX,
+			)?;
+
+			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+
+			let current_sync_committee = Self::get_sync_committee_for_period(current_period)?;
+			let validators_root = <ValidatorsRoot<T>>::get();
+
+			Self::verify_signed_header(
+				sync_committee_bits,
+				update.sync_aggregate.sync_committee_signature,
+				current_sync_committee.pubkeys,
+				update.attested_header,
+				validators_root,
+				update.signature_slot,
+			)?;
+
+			Ok(())
+		}
+
+		fn do_sync_committee_period_update_signatures_fast_aggregate_without_verify(
+			update: SyncCommitteePeriodUpdateOf<T>,
+		) -> DispatchResult {
+			let sync_committee_bits =
+				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
+
+			let block_root: H256 =
+				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
+					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
+					.into();
+			Self::verify_header(
+				block_root,
+				update.finality_branch,
+				update.attested_header.state_root,
+				config::FINALIZED_ROOT_DEPTH,
+				config::FINALIZED_ROOT_INDEX,
+			)?;
+
+			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+
+			let current_sync_committee = Self::get_sync_committee_for_period(current_period)?;
+			let validators_root = <ValidatorsRoot<T>>::get();
+
+			Self::fast_aggregate_without_verify(
+				sync_committee_bits,
+				update.sync_aggregate.sync_committee_signature,
+				current_sync_committee.pubkeys,
+				update.attested_header,
+				validators_root,
+				update.signature_slot,
 			)?;
 
 			Ok(())
@@ -815,6 +1045,44 @@ pub mod pallet {
 			Ok(())
 		}
 
+		pub(super) fn fast_aggregate_without_verify(
+			sync_committee_bits: Vec<u8>,
+			sync_committee_signature: BoundedVec<u8, T::MaxSignatureSize>,
+			sync_committee_pubkeys: BoundedVec<PublicKey, T::MaxSyncCommitteeSize>,
+			header: BeaconHeader,
+			validators_root: H256,
+			signature_slot: u64,
+		) -> DispatchResult {
+			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
+			// Gathers all the pubkeys of the sync committee members that participated in signing
+			// the header.
+			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
+				if *bit == 1 as u8 {
+					let pubk = pubkey.clone();
+					participant_pubkeys.push(pubk);
+				}
+			}
+
+			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(
+				signature_slot,
+				config::SLOTS_PER_EPOCH,
+			));
+			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
+			// Domains are used for for seeds, for signatures, and for selecting aggregators.
+			let domain = Self::compute_domain(domain_type, fork_version, validators_root)?;
+			// Hash tree root of SigningData - object root + domain
+			let signing_root = Self::compute_signing_root(header, domain)?;
+
+			// Verify sync committee aggregate signature.
+			Self::bls_fast_aggregate_without_verify(
+				participant_pubkeys,
+				signing_root,
+				sync_committee_signature,
+			)?;
+
+			Ok(())
+		}
+
 		pub(super) fn compute_epoch_at_slot(signature_slot: u64, slots_per_epoch: u64) -> u64 {
 			return signature_slot / slots_per_epoch
 		}
@@ -855,6 +1123,38 @@ pub mod pallet {
 				),
 				Error::<T>::SignatureVerificationFailed
 			);
+
+			Ok(())
+		}
+
+		pub(super) fn bls_fast_aggregate_without_verify(
+			pubkeys: Vec<PublicKey>,
+			_message: H256,
+			signature: BoundedVec<u8, T::MaxSignatureSize>,
+		) -> DispatchResult {
+			let sig = Signature::from_bytes(&signature[..]);
+			if let Err(_e) = sig {
+				return Err(Error::<T>::InvalidSignature.into())
+			}
+
+			let _agg_sig = AggregateSignature::from_signature(&sig.unwrap());
+
+			let public_keys_res: Result<Vec<milagro_bls::PublicKey>, _> = pubkeys
+				.iter()
+				.map(|bytes| milagro_bls::PublicKey::from_bytes_unchecked(&bytes.0))
+				.collect();
+			if let Err(e) = public_keys_res {
+				match e {
+					AmclError::InvalidPoint => return Err(Error::<T>::InvalidSignaturePoint.into()),
+					_ => return Err(Error::<T>::InvalidSignature.into()),
+				};
+			}
+
+			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
+			if let Err(e) = agg_pub_key_res {
+				log::error!(target: "ethereum-beacon-client", "💫 invalid public keys: {:?}.", e);
+				return Err(Error::<T>::InvalidAggregatePublicKeys.into())
+			}
 
 			Ok(())
 		}

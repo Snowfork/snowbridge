@@ -30,19 +30,7 @@
 
 use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use sp_std::marker::PhantomData;
-
-/// Weight functions needed for ethereum_beacon_client.
-pub trait WeightInfo {
-	fn sync_committee_period_update() -> Weight;
-	fn import_finalized_header() -> Weight;
-	fn import_execution_header() -> Weight;
-	fn block_bridge() -> Weight;
-	fn begin_recovery() -> Weight;
-	fn sync_recovery() -> Weight;
-	fn unblock_bridge() -> Weight;
-	fn init_sync() -> Weight;
-}
-
+use crate::WeightInfo;
 /// Weights for ethereum_beacon_client using the Snowbridge node and recommended hardware.
 pub struct SnowbridgeWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
@@ -85,6 +73,21 @@ impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
+	fn sync_committee_period_update_without_verify_signed_header() -> Weight {
+		Weight::from_parts(175_039_777_000 as u64, 0)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	fn verify_sync_committee_period_update_signatures() -> Weight {
+		Weight::from_parts(175_039_777_000 as u64, 0)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	fn sync_committee_period_update_signatures_fast_aggregate_without_verify() -> Weight {
+		Weight::from_parts(175_039_777_000 as u64, 0)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
 }
 
 // For backwards compatibility and tests
@@ -126,5 +129,20 @@ impl WeightInfo for () {
 		Weight::from_parts(200_000_000_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(4))
 			.saturating_add(RocksDbWeight::get().writes(3))
+	}
+	fn sync_committee_period_update_without_verify_signed_header() -> Weight {
+		Weight::from_parts(175_039_777_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	fn verify_sync_committee_period_update_signatures() -> Weight {
+		Weight::from_parts(175_039_777_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	fn sync_committee_period_update_signatures_fast_aggregate_without_verify() -> Weight {
+		Weight::from_parts(175_039_777_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
 	}
 }
