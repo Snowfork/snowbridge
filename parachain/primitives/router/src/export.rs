@@ -5,16 +5,12 @@ use xcm::v3::prelude::*;
 use xcm_executor::traits::ExportXcm;
 
 pub enum OutboundPayload {
-	NativeTokensOutbound(NativeTokensOutboundPayload)
+	NativeTokensOutbound(NativeTokensOutboundPayload),
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub enum NativeTokensOutboundPayload {
-	Unlock {
-		address: H160,
-		recipient: H160,
-		amount: u128,
-	},
+	Unlock { address: H160, recipient: H160, amount: u128 },
 }
 
 pub trait ConvertOutboundMessage {
@@ -33,17 +29,17 @@ pub struct ToBridgeEthereumHaulBlopExporter;
 impl ExportXcm for ToBridgeEthereumHaulBlopExporter {
 	type Ticket = (Vec<u8>, XcmHash);
 
-    fn validate(
+	fn validate(
 		_network: NetworkId,
 		_channel: u32,
 		_universal_source: &mut Option<InteriorMultiLocation>,
 		_destination: &mut Option<InteriorMultiLocation>,
 		_message: &mut Option<Xcm<()>>,
 	) -> SendResult<Self::Ticket> {
-        todo!()
-    }
+		todo!()
+	}
 
-    fn deliver(_ticket: Self::Ticket) -> Result<XcmHash, SendError> {
-        todo!()
-    }
+	fn deliver(_ticket: Self::Ticket) -> Result<XcmHash, SendError> {
+		todo!()
+	}
 }
