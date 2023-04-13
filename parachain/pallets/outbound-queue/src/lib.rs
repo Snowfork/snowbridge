@@ -21,6 +21,7 @@ use sp_io::offchain_index::set;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
+use snowbridge_core::SubmitMessage;
 use snowbridge_core::types::AuxiliaryDigestItem;
 use snowbridge_outbound_queue_merkle_proof::merkle_root;
 
@@ -161,7 +162,7 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> Pallet<T> {
+	impl <T: Config> SubmitMessage<T::SourceId> for Pallet<T> {
 		/// Submit message on the outbound channel
 		pub fn submit(origin: &ParaId, handler: u16, payload: &[u8]) -> DispatchResult {
 			ensure!(
@@ -188,7 +189,9 @@ pub mod pallet {
 
 			Ok(())
 		}
+	}
 
+	impl<T: Config> Pallet<T> {
 		/// Commit messages enqueued on the outbound channel.
 		/// Find the Merkle root of all of the messages in the queue. (TODO: take a sublist, later
 		/// use weights to determine the size of the sublist). Use ethabi-encoded messages as the

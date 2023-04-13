@@ -9,6 +9,7 @@
 use frame_support::dispatch::DispatchError;
 use snowbridge_ethereum::{Header, Log, U256};
 use sp_std::prelude::*;
+use sp_runtime::DispatchResult;
 
 pub mod ringbuffer;
 pub mod types;
@@ -27,4 +28,8 @@ pub trait Verifier {
 		initial_difficulty: U256,
 		descendants_until_final: u8,
 	) -> Result<(), &'static str>;
+}
+
+pub trait SubmitMessage<SourceId> {
+	fn submit(source_id: &SourceId, payload: &[u8]) -> DispatchResult;
 }

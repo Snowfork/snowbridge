@@ -3712,6 +3712,7 @@ dependencies = [
  "rustc-hex",
  "scale-info",
  "serde",
+ "snowbridge-core",
  "sp-core 7.0.0",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
