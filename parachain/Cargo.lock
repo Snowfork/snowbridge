@@ -3651,6 +3651,7 @@ dependencies = [
  "serde",
  "snowbridge-core",
  "snowbridge-outbound-queue-merkle-proof",
+ "snowbridge-router-primitives",
  "sp-core 7.0.0",
  "sp-io 7.0.0",
  "sp-keyring",
@@ -3716,6 +3717,7 @@ dependencies = [
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
  "xcm",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -5783,6 +5785,25 @@ dependencies = [
  "serde",
  "sp-weights",
  "xcm-procedural",
+]
+
+[[package]]
+name = "xcm-executor"
+version = "0.9.39"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#e164da65873f11bf8c583e81f6d82c21b005cfe4"
+dependencies = [
+ "environmental",
+ "frame-support",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "sp-arithmetic 6.0.0",
+ "sp-core 7.0.0",
+ "sp-io 7.0.0",
+ "sp-runtime 7.0.0",
+ "sp-std 5.0.0",
+ "sp-weights",
+ "xcm",
 ]
 
 [[package]]

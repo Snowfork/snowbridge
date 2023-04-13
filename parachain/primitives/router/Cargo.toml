@@ -16,6 +16,7 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 [dev-dependencies]
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
@@ -31,5 +32,6 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
     "xcm/std",
+    "xcm-executor/std",
 ]
 runtime-benchmarks = []
