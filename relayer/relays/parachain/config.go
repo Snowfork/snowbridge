@@ -16,6 +16,7 @@ type SourceConfig struct {
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
 	// Block number when Beefy was activated
 	BeefyActivationBlock uint64 `mapstructure:"beefy-activation-block"`
+	SourceID             uint32 `mapstructure:"sourceID"`
 }
 
 type SourceContractsConfig struct {

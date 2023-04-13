@@ -28,9 +28,7 @@ type BeefyListener struct {
 	parachainConnection *parachain.Connection
 	paraID              uint32
 	tasks               chan<- *Task
-
-	// TODO: https://linear.app/snowfork/issue/SNO-425
-	// scanner             *Scanner
+	scanner             *Scanner
 }
 
 func NewBeefyListener(
@@ -71,18 +69,16 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	if !ok {
 		return fmt.Errorf("parachain id missing")
 	}
-
 	li.paraID = paraID
 
-	// TODO: https://linear.app/snowfork/issue/SNO-425
-	// li.scanner = &Scanner{
-	// 	config:           li.config,
-	// 	ethConn:          li.ethereumConn,
-	// 	relayConn:        li.relaychainConn,
-	// 	paraConn:         li.parachainConnection,
-	// 	eventQueryClient: NewQueryClient(),
-	// 	paraID:           paraID,
-	// }
+	li.scanner = &Scanner{
+		config:           li.config,
+		ethConn:          li.ethereumConn,
+		relayConn:        li.relaychainConn,
+		paraConn:         li.parachainConnection,
+		eventQueryClient: NewQueryClient(),
+		paraID:           paraID,
+	}
 
 	eg.Go(func() error {
 		defer close(li.tasks)
@@ -155,13 +151,10 @@ func (li *BeefyListener) subscribeNewMMRRoots(ctx context.Context) error {
 }
 
 func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) error {
-	// TODO: https://linear.app/snowfork/issue/SNO-425
-	// tasks, err := li.scanner.Scan(ctx, beefyBlockNumber)
-	// if err != nil {
-	//   return err
-	// }
-	var err error
-	var tasks []*Task
+	tasks, err := li.scanner.Scan(ctx, beefyBlockNumber)
+	if err != nil {
+		return err
+	}
 
 	for _, task := range tasks {
 		// do final proof generation right before sending. The proof needs to be fresh.
