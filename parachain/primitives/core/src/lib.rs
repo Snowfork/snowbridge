@@ -8,8 +8,8 @@
 
 use frame_support::dispatch::DispatchError;
 use snowbridge_ethereum::{Header, Log, U256};
-use sp_std::prelude::*;
 use sp_runtime::DispatchResult;
+use sp_std::prelude::*;
 
 pub mod ringbuffer;
 pub mod types;

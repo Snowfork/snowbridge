@@ -1,8 +1,7 @@
 use codec::{Decode, Encode};
 use snowbridge_core::SubmitMessage;
 use sp_core::{RuntimeDebug, H160};
-use sp_std::prelude::*;
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
 use xcm_executor::traits::ExportXcm;
 
@@ -27,8 +26,13 @@ pub enum NativeTokensOutboundPayload {
 // 	}
 // }
 
-pub struct ToBridgeEthereumHaulBlopExporter<Submitter, SourceId>(PhantomData<Submitter>,PhantomData<SourceId>);
-impl <Submitter: SubmitMessage<SourceId>, SourceId> ExportXcm for ToBridgeEthereumHaulBlopExporter<Submitter, SourceId> {
+pub struct ToBridgeEthereumHaulBlopExporter<Submitter, SourceId>(
+	PhantomData<Submitter>,
+	PhantomData<SourceId>,
+);
+impl<Submitter: SubmitMessage<SourceId>, SourceId> ExportXcm
+	for ToBridgeEthereumHaulBlopExporter<Submitter, SourceId>
+{
 	type Ticket = (Vec<u8>, XcmHash);
 
 	fn validate(

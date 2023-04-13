@@ -21,8 +21,7 @@ use sp_io::offchain_index::set;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use snowbridge_core::SubmitMessage;
-use snowbridge_core::types::AuxiliaryDigestItem;
+use snowbridge_core::{types::AuxiliaryDigestItem, SubmitMessage};
 use snowbridge_outbound_queue_merkle_proof::merkle_root;
 
 pub use weights::WeightInfo;
@@ -162,7 +161,7 @@ pub mod pallet {
 		}
 	}
 
-	impl <T: Config> SubmitMessage<T::SourceId> for Pallet<T> {
+	impl<T: Config> SubmitMessage<T::SourceId> for Pallet<T> {
 		/// Submit message on the outbound channel
 		pub fn submit(origin: &ParaId, handler: u16, payload: &[u8]) -> DispatchResult {
 			ensure!(
