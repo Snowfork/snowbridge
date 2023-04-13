@@ -28,6 +28,7 @@ contract SovereignTreasury is AccessControl {
 
     constructor(IVault _vault) {
         _grantRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(SENDER_ROLE, ADMIN_ROLE);
         vault = _vault;
     }

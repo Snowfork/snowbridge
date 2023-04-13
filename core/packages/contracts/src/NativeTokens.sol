@@ -76,6 +76,7 @@ contract NativeTokens is AccessControl {
         uint256 _createTokenFee
     ) {
         _grantRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(SENDER_ROLE, ADMIN_ROLE);
         vault = _vault;
         outboundQueue = _outboundQueue;
