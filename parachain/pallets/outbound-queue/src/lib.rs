@@ -32,7 +32,7 @@ pub use weights::WeightInfo;
 #[scale_info(skip_type_params(M))]
 pub struct Message<M: Get<u32>> {
 	/// ID of source parachain
-	parachain_id: ParaId,
+	origin: ParaId,
 	/// Unique nonce to prevent replaying messages
 	#[codec(compact)]
 	nonce: u64,
@@ -44,7 +44,7 @@ pub struct Message<M: Get<u32>> {
 impl<M: Get<u32>> Into<Token> for Message<M> {
 	fn into(self) -> Token {
 		Token::Tuple(vec![
-			Token::Bytes(self.parachain_id.encode()),
+			Token::Bytes(self.origin.encode()),
 			Token::Uint(self.nonce.into()),
 			Token::Bytes(self.payload.to_vec()),
 		])
@@ -161,7 +161,7 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		/// Submit message on the outbound channel
-		pub fn submit(parachain_id: &ParaId, payload: &[u8]) -> DispatchResult {
+		pub fn submit(origin: &ParaId, payload: &[u8]) -> DispatchResult {
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerCommit::get() as usize,
@@ -170,18 +170,18 @@ pub mod pallet {
 
 			let message_payload =
 				payload.to_vec().try_into().map_err(|_| Error::<T>::PayloadTooLarge)?;
-			let nonce = <Nonce<T>>::get(parachain_id);
+			let nonce = <Nonce<T>>::get(origin);
 			let next_nonce = nonce.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
 			<MessageQueue<T>>::try_append(Message {
-				parachain_id: parachain_id.clone(),
+				origin: origin.clone(),
 				nonce,
 				payload: message_payload,
 			})
 			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
 			Self::deposit_event(Event::MessageAccepted(nonce));
 
-			<Nonce<T>>::set(parachain_id, next_nonce);
+			<Nonce<T>>::set(origin, next_nonce);
 
 			Ok(())
 		}
