@@ -45,7 +45,7 @@ pub struct Message<M: Get<u32>> {
 impl<M: Get<u32>> Into<Token> for Message<M> {
 	fn into(self) -> Token {
 		Token::Tuple(vec![
-			Token::Bytes(self.origin.encode()),
+			Token::Uint(u32::from(self.origin).into()),
 			Token::Uint(self.nonce.into()),
 			Token::Uint(self.handler.into()),
 			Token::Bytes(self.payload.to_vec()),
