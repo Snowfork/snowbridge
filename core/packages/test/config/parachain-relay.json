@@ -14,7 +14,7 @@
       "BasicInboundChannel": null
     },
     "beefy-activation-block": 0,
-    "sourceID": null
+    "lane-id": 1000
   },
   "sink": {
     "ethereum": {
