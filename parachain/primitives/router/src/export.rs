@@ -14,24 +14,12 @@ pub enum NativeTokensOutboundPayload {
 	Unlock { address: H160, recipient: H160, amount: u128 },
 }
 
-// pub trait ConvertOutboundMessage {
-// 	/// Convert outbound Xcm message to lowered form.
-// 	fn convert_outbound(origin: MultiLocation, xcm: Xcm<()>) -> Result<OutboundPayload, ()>;
-// }
-
-// pub struct OutboundMessageConverter;
-// impl ConvertOutboundMessage for OutboundMessageConverter {
-// 	fn convert_outbound(_origin: MultiLocation, _xcm: Xcm<()>) -> Result<OutboundPayload, ()> {
-// 		todo!();
-// 	}
-// }
-
-pub struct ToBridgeEthereumHaulBlopExporter<Submitter, SourceId>(
+pub struct ToBridgeEthereumBlobExporter<Submitter, SourceId>(
 	PhantomData<Submitter>,
 	PhantomData<SourceId>,
 );
 impl<Submitter: SubmitMessage<SourceId>, SourceId> ExportXcm
-	for ToBridgeEthereumHaulBlopExporter<Submitter, SourceId>
+	for ToBridgeEthereumBlobExporter<Submitter, SourceId>
 {
 	type Ticket = (Vec<u8>, XcmHash);
 
