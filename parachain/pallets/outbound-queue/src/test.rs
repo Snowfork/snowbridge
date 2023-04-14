@@ -162,7 +162,7 @@ fn test_commit_single_user() {
 fn test_commit_multi_user() {
 	new_tester().execute_with(|| {
 		let alice: &ParaId = &ParaId::new(1000);
-		let bob: &ParaId = &ParaId::new(1000);
+		let bob: &ParaId = &ParaId::new(1001);
 
 		assert_ok!(BasicOutboundChannel::submit(alice, 0, &vec![0, 1, 2]));
 		assert_ok!(BasicOutboundChannel::submit(bob, 0, &vec![0, 1, 2]));
