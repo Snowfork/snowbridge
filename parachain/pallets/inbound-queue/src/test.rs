@@ -4,14 +4,14 @@ use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::DispatchError,
 	parameter_types,
-	traits::{tokens::WithdrawConsequence, ConstU64, Everything, GenesisBuild},
+	traits::{ConstU64, Everything, GenesisBuild},
 };
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	ArithmeticError, MultiSignature, TokenError,
+	ArithmeticError, MultiSignature,
 };
 use sp_std::convert::From;
 
