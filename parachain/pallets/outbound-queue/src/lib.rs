@@ -11,9 +11,10 @@ mod test;
 use codec::{Decode, Encode, MaxEncodedLen};
 use ethabi::{self, Token};
 use frame_support::{
-	dispatch::DispatchResult, ensure, pallet_prelude::Member, traits::Get, weights::Weight,
-	BoundedVec, CloneNoBound, Parameter, PartialEqNoBound, RuntimeDebugNoBound,
+	dispatch::DispatchResult, ensure, traits::Get, weights::Weight, BoundedVec, CloneNoBound,
+	PartialEqNoBound, RuntimeDebugNoBound,
 };
+use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::offchain_index::set;
@@ -29,27 +30,21 @@ pub use weights::WeightInfo;
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
 )]
 #[scale_info(skip_type_params(M))]
-#[codec(mel_bound(SourceId: MaxEncodedLen))]
-pub struct Message<SourceId, M: Get<u32>>
-where
-	SourceId: Parameter + Member + MaxEncodedLen,
-{
+pub struct Message<M: Get<u32>> {
 	/// ID of source parachain
-	source_id: SourceId,
+	parachain_id: ParaId,
 	/// Unique nonce to prevent replaying messages
 	#[codec(compact)]
 	nonce: u64,
+	// TODO: add handler: u16?
 	/// Payload for target application.
 	payload: BoundedVec<u8, M>,
 }
 
-impl<SourceId, M: Get<u32>> Into<Token> for Message<SourceId, M>
-where
-	SourceId: Decode + Parameter + Member + MaxEncodedLen, //+ TypeInfo,
-{
+impl<M: Get<u32>> Into<Token> for Message<M> {
 	fn into(self) -> Token {
 		Token::Tuple(vec![
-			Token::Bytes(self.source_id.encode()),
+			Token::Bytes(self.parachain_id.encode()),
 			Token::Uint(self.nonce.into()),
 			Token::Bytes(self.payload.to_vec()),
 		])
@@ -80,9 +75,6 @@ pub mod pallet {
 
 		type Hashing: Hash<Output = H256>;
 
-		/// ID of message source
-		type SourceId: Parameter + Member + PartialEq + MaxEncodedLen;
-
 		/// Max bytes in a message payload
 		#[pallet::constant]
 		type MaxMessagePayloadSize: Get<u32>;
@@ -99,7 +91,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		MessageAccepted(u64),
-		Committed { hash: H256, data: Vec<Message<T::SourceId, T::MaxMessagePayloadSize>> },
+		Committed { hash: H256, data: Vec<Message<T::MaxMessagePayloadSize>> },
 	}
 
 	#[pallet::error]
@@ -121,12 +113,12 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type MessageQueue<T: Config> = StorageValue<
 		_,
-		BoundedVec<Message<T::SourceId, T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>,
+		BoundedVec<Message<T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>,
 		ValueQuery,
 	>;
 
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, T::SourceId, u64, ValueQuery>;
+	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -169,7 +161,7 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		/// Submit message on the outbound channel
-		pub fn submit(source_id: &T::SourceId, payload: &[u8]) -> DispatchResult {
+		pub fn submit(parachain_id: &ParaId, payload: &[u8]) -> DispatchResult {
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerCommit::get() as usize,
@@ -178,18 +170,18 @@ pub mod pallet {
 
 			let message_payload =
 				payload.to_vec().try_into().map_err(|_| Error::<T>::PayloadTooLarge)?;
-			let nonce = <Nonce<T>>::get(source_id);
+			let nonce = <Nonce<T>>::get(parachain_id);
 			let next_nonce = nonce.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
 			<MessageQueue<T>>::try_append(Message {
-				source_id: source_id.clone(),
+				parachain_id: parachain_id.clone(),
 				nonce,
 				payload: message_payload,
 			})
 			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
 			Self::deposit_event(Event::MessageAccepted(nonce));
 
-			<Nonce<T>>::set(source_id, next_nonce);
+			<Nonce<T>>::set(parachain_id, next_nonce);
 
 			Ok(())
 		}
@@ -210,7 +202,7 @@ pub mod pallet {
 				return T::WeightInfo::on_commit_no_messages()
 			}
 
-			// Store these for the on_commit call at the end
+			// Store these to return the on_commit weight
 			let message_count = message_queue.len() as u32;
 			let average_payload_size = Self::average_payload_size(&message_queue);
 
@@ -236,9 +228,7 @@ pub mod pallet {
 			return T::WeightInfo::on_commit(message_count, average_payload_size)
 		}
 
-		fn average_payload_size(
-			messages: &[Message<T::SourceId, T::MaxMessagePayloadSize>],
-		) -> u32 {
+		fn average_payload_size(messages: &[Message<T::MaxMessagePayloadSize>]) -> u32 {
 			let sum: usize = messages.iter().fold(0, |acc, x| acc + (*x).payload.len());
 			// We overestimate message payload size rather than underestimate.
 			// So add 1 here to account for integer division truncation.

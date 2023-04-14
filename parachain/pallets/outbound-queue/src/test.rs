@@ -4,8 +4,8 @@ use frame_support::{
 	assert_noop, assert_ok, parameter_types,
 	traits::{Everything, GenesisBuild, OnInitialize},
 };
+use polkadot_parachain::primitives::Id as ParaId;
 use sp_core::H256;
-use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
@@ -69,7 +69,6 @@ parameter_types! {
 }
 
 impl outbound_channel::Config for Test {
-	type SourceId = AccountId;
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
@@ -101,11 +100,11 @@ fn run_to_block(n: u64) {
 #[test]
 fn test_submit() {
 	new_tester().execute_with(|| {
-		let source_id: &AccountId = &Keyring::Bob.into();
+		let parachain_id: &ParaId = &ParaId::new(1000);
 
-		assert_ok!(BasicOutboundChannel::submit(source_id, &vec![0, 1, 2]));
+		assert_ok!(BasicOutboundChannel::submit(parachain_id, &vec![0, 1, 2]));
 
-		assert_eq!(<Nonce<Test>>::get(source_id), 1);
+		assert_eq!(<Nonce<Test>>::get(parachain_id), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 1);
 	});
 }
@@ -113,14 +112,14 @@ fn test_submit() {
 #[test]
 fn test_submit_exceeds_queue_limit() {
 	new_tester().execute_with(|| {
-		let source_id: &AccountId = &Keyring::Bob.into();
+		let parachain_id: &ParaId = &ParaId::new(1000);
 
 		let max_messages = MaxMessagesPerCommit::get();
 		(0..max_messages)
-			.for_each(|_| BasicOutboundChannel::submit(source_id, &vec![0, 1, 2]).unwrap());
+			.for_each(|_| BasicOutboundChannel::submit(parachain_id, &vec![0, 1, 2]).unwrap());
 
 		assert_noop!(
-			BasicOutboundChannel::submit(source_id, &vec![0, 1, 2]),
+			BasicOutboundChannel::submit(parachain_id, &vec![0, 1, 2]),
 			Error::<Test>::QueueSizeLimitReached,
 		);
 	})
@@ -129,7 +128,7 @@ fn test_submit_exceeds_queue_limit() {
 #[test]
 fn test_submit_exceeds_payload_limit() {
 	new_tester().execute_with(|| {
-		let source_id: &AccountId = &Keyring::Bob.into();
+		let parachain_id: &ParaId = &ParaId::new(1000);
 
 		let max_payload_bytes = MaxMessagePayloadSize::get() - 1;
 
@@ -139,7 +138,7 @@ fn test_submit_exceeds_payload_limit() {
 		payload.push(10);
 
 		assert_noop!(
-			BasicOutboundChannel::submit(source_id, payload.as_slice()),
+			BasicOutboundChannel::submit(parachain_id, payload.as_slice()),
 			Error::<Test>::PayloadTooLarge,
 		);
 	})
@@ -148,13 +147,13 @@ fn test_submit_exceeds_payload_limit() {
 #[test]
 fn test_commit_single_user() {
 	new_tester().execute_with(|| {
-		let source_id: &AccountId = &Keyring::Bob.into();
+		let parachain_id: &ParaId = &ParaId::new(1000);
 
-		assert_ok!(BasicOutboundChannel::submit(source_id, &vec![0, 1, 2]));
+		assert_ok!(BasicOutboundChannel::submit(parachain_id, &vec![0, 1, 2]));
 		run_to_block(2);
 		BasicOutboundChannel::commit(Weight::MAX);
 
-		assert_eq!(<Nonce<Test>>::get(source_id), 1);
+		assert_eq!(<Nonce<Test>>::get(parachain_id), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
 	})
 }
@@ -162,8 +161,8 @@ fn test_commit_single_user() {
 #[test]
 fn test_commit_multi_user() {
 	new_tester().execute_with(|| {
-		let alice: &AccountId = &Keyring::Alice.into();
-		let bob: &AccountId = &Keyring::Bob.into();
+		let alice: &ParaId = &ParaId::new(1000);
+		let bob: &ParaId = &ParaId::new(1000);
 
 		assert_ok!(BasicOutboundChannel::submit(alice, &vec![0, 1, 2]));
 		assert_ok!(BasicOutboundChannel::submit(bob, &vec![0, 1, 2]));
