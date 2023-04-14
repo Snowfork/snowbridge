@@ -36,7 +36,8 @@ pub struct Message<M: Get<u32>> {
 	/// Unique nonce to prevent replaying messages
 	#[codec(compact)]
 	nonce: u64,
-	// TODO: add handler: u16?
+	/// Handler to dispatch the message to
+	handler: u16,
 	/// Payload for target application.
 	payload: BoundedVec<u8, M>,
 }
@@ -46,6 +47,7 @@ impl<M: Get<u32>> Into<Token> for Message<M> {
 		Token::Tuple(vec![
 			Token::Bytes(self.origin.encode()),
 			Token::Uint(self.nonce.into()),
+			Token::Uint(self.handler.into()),
 			Token::Bytes(self.payload.to_vec()),
 		])
 	}
@@ -161,7 +163,7 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		/// Submit message on the outbound channel
-		pub fn submit(origin: &ParaId, payload: &[u8]) -> DispatchResult {
+		pub fn submit(origin: &ParaId, handler: u16, payload: &[u8]) -> DispatchResult {
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerCommit::get() as usize,
@@ -176,6 +178,7 @@ pub mod pallet {
 			<MessageQueue<T>>::try_append(Message {
 				origin: origin.clone(),
 				nonce,
+				handler,
 				payload: message_payload,
 			})
 			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
