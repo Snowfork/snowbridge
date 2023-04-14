@@ -1,7 +1,7 @@
 //! BasicOutboundChannel pallet benchmarking
 use super::*;
 
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
 use frame_support::traits::OnInitialize;
 
 #[allow(unused_imports)]
@@ -21,8 +21,9 @@ benchmarks! {
 		for _ in 0 .. m {
 			let payload: Vec<u8> = (0..).take(p as usize).collect();
 			<MessageQueue<T>>::try_append(Message {
-				source_id: account("", 0, 0),
+				origin: 1000.into(),
 				nonce: 0u64,
+				handler: 0,
 				payload: payload.try_into().unwrap(),
 			}).unwrap();
 		}
