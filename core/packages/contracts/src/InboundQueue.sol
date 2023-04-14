@@ -13,7 +13,7 @@ contract InboundQueue is AccessControl {
     mapping(ParaID origin => uint64) public nonce;
 
     // Registered message handlers
-    mapping(uint16 handlerID => Handler) public handlers;
+    mapping(uint16 handlerID => IRecipient) public handlers;
 
     // Light client message verifier
     IParachainClient public parachainClient;
@@ -27,7 +27,8 @@ contract InboundQueue is AccessControl {
     // The governance contract which is a proxy for Polkadot governance, administers via this role
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    // Relayers must provide enough gas to cover message dispatch plus this buffer
+    // Relayers must provide enough gas to cover message dispatch plus a buffer
+    uint256 public gasToForward = 500000;
     uint256 public constant GAS_BUFFER = 24000;
 
     // Inbound message from BridgeHub parachain
@@ -38,32 +39,18 @@ contract InboundQueue is AccessControl {
         bytes payload;
     }
 
-    // Message handler entry
-    struct Handler {
-        // Address of message handler which implements IRecipient
-        address recipient;
-        // Amount of gas to forward to message handler
-        uint32 gasToForward;
-    }
-
-    // The result of message dispatch
-    struct DispatchResult {
-        DispatchStatus status;
-        bytes reason;
-    }
-
-    enum DispatchStatus {
+    enum DispatchResult {
         Success,
-        Error,
-        Panic,
-        Other
+        Failure
     }
 
     event MessageDispatched(ParaID indexed origin, uint64 indexed nonce, DispatchResult result);
-    event HandlerUpdated(uint16 id, Handler handler);
+    event HandlerUpdated(uint16 id, IRecipient handler);
     event ParachainClientUpdated(address parachainClient);
     event VaultUpdated(address vault);
     event RewardUpdated(uint256 reward);
+    event GasToForwardUpdated(uint256 gasToForward);
+
 
     error InvalidProof();
     error InvalidNonce();
@@ -72,6 +59,7 @@ contract InboundQueue is AccessControl {
 
     constructor(IParachainClient _parachainClient, IVault _vault, uint256 _reward) {
         _grantRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         parachainClient = _parachainClient;
         vault = _vault;
         reward = _reward;
@@ -101,39 +89,29 @@ contract InboundQueue is AccessControl {
         // should top up the funds and have a relayer resend the message.
         vault.withdraw(message.origin, payable(msg.sender), reward);
 
-        Handler memory handler = handlers[message.handler];
-        if (address(handler.recipient) == address(0)) {
+        IRecipient handler = handlers[message.handler];
+        if (address(handler) == address(0)) {
             revert InvalidHandler();
         }
 
-        IRecipient recipient = IRecipient(handler.recipient);
-        uint256 gasToForward = uint256(handler.gasToForward);
-
-        // Ensure relayers pass enough gas for message to execute
+        // Ensure relayers pass enough gas for message to execute.
+        // Otherwise malicious relayers can break the bridge by allowing handlers to run out gas.
+        // Resubmission of the message by honest relayers will fail as the tracked nonce
+        // has already been updated.
         if (gasleft() < gasToForward + GAS_BUFFER) {
             revert NotEnoughGas();
         }
 
-        DispatchResult memory result = DispatchResult(DispatchStatus.Success, hex"");
-
-        // Forward message to handler for execution
-        // Errors from the handler are ignored so as not to block the channel at the current nonce
-        try recipient.handle{gas: gasToForward}(message.origin, message.payload) {}
-        catch Error(string memory reason) {
-            result.status = DispatchStatus.Error;
-            result.reason = bytes(reason);
-        } catch Panic(uint256 errorCode) {
-            result.status = DispatchStatus.Panic;
-            result.reason = abi.encode(errorCode);
-        } catch (bytes memory returnData) {
-            result.status = DispatchStatus.Other;
-            result.reason = returnData;
+        DispatchResult result = DispatchResult.Success;
+        try handler.handle{gas: gasToForward}(message.origin, message.payload) {}
+        catch {
+            result = DispatchResult.Failure;
         }
 
         emit MessageDispatched(message.origin, message.nonce, result);
     }
 
-    function updateHandler(uint16 id, Handler memory handler) external onlyRole(ADMIN_ROLE) {
+    function updateHandler(uint16 id, IRecipient handler) external onlyRole(ADMIN_ROLE) {
         handlers[id] = handler;
         emit HandlerUpdated(id, handler);
     }
@@ -151,5 +129,10 @@ contract InboundQueue is AccessControl {
     function updateReward(uint256 _reward) external onlyRole(ADMIN_ROLE) {
         reward = _reward;
         emit RewardUpdated(_reward);
+    }
+
+    function updateGasToForward(uint256 _gasToForward) external onlyRole(ADMIN_ROLE) {
+        gasToForward = _gasToForward;
+        emit GasToForwardUpdated(_gasToForward);
     }
 }

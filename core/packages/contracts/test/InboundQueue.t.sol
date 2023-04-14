@@ -8,7 +8,7 @@ import {Vault} from "../src/Vault.sol";
 import {IParachainClient} from "../src/IParachainClient.sol";
 import {ParaID} from "../src/Types.sol";
 import {ParachainClientMock} from "./mocks/ParachainClientMock.sol";
-import {RecipientMock} from "./mocks/RecipientMock.sol";
+import {IRecipient, RecipientMock} from "./mocks/RecipientMock.sol";
 
 contract InboundQueueTest is Test {
     InboundQueue public channel;
@@ -32,7 +32,7 @@ contract InboundQueueTest is Test {
         deal(address(this), 100 ether);
 
         channel = new InboundQueue(parachainClient, vault, 1 ether);
-        channel.updateHandler(1, InboundQueue.Handler(address(recipient), 60000));
+        channel.updateHandler(1, IRecipient(recipient));
         vault.grantRole(vault.WITHDRAW_ROLE(), address(channel));
     }
 
@@ -85,24 +85,8 @@ contract InboundQueueTest is Test {
         recipient.setShouldFail();
         vm.expectEmit(true, true, false, true);
         emit MessageDispatched(
-            ORIGIN, 1, InboundQueue.DispatchResult(InboundQueue.DispatchStatus.Error, bytes("failed"))
+            ORIGIN, 1, InboundQueue.DispatchResult.Failure
         );
-
-        address relayer = makeAddr("alice");
-        hoax(relayer, 1 ether);
-
-        channel.submit(InboundQueue.Message(ORIGIN, 1, 1, message), proof, parachainHeaderProof);
-
-        assertEq(vault.balances(ORIGIN), 49 ether);
-        assertEq(relayer.balance, 2 ether);
-    }
-
-    function testSubmitShouldNotFailOnHandlerPanic() public {
-        vault.deposit{value: 50 ether}(ORIGIN);
-
-        recipient.setShouldPanic();
-        vm.expectEmit(true, true, false, true);
-        emit MessageDispatched(ORIGIN, 1, InboundQueue.DispatchResult(InboundQueue.DispatchStatus.Panic, abi.encode(1)));
 
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);
@@ -118,7 +102,7 @@ contract InboundQueueTest is Test {
 
         recipient.setShouldConsumeAllGas();
         vm.expectEmit(true, true, false, true);
-        emit MessageDispatched(ORIGIN, 1, InboundQueue.DispatchResult(InboundQueue.DispatchStatus.Other, hex""));
+        emit MessageDispatched(ORIGIN, 1, InboundQueue.DispatchResult.Failure);
 
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);

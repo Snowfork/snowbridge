@@ -21,6 +21,7 @@ contract OutboundQueue is IOutboundQueue, AccessControl {
 
     constructor(IVault _vault, uint256 _fee) {
         _grantRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(SUBMIT_ROLE, ADMIN_ROLE);
         vault = _vault;
         fee = _fee;
