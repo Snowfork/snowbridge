@@ -4,36 +4,17 @@ use crate::Pallet as EthereumBeaconClient;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
 
-#[cfg(feature = "minimal")]
-mod data_minimal;
-#[cfg(feature = "minimal")]
-use data_minimal::*;
-
-#[cfg(not(feature = "minimal"))]
+// For benchmark focus on main spec only
 mod data_mainnet;
-#[cfg(not(feature = "minimal"))]
 use data_mainnet::*;
+mod util;
+use util::*;
 
 benchmarks! {
 	sync_committee_period_update {
 		let caller: T::AccountId = whitelisted_caller();
 
-		let initial_sync_data = initial_sync();
-
-		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
-
-		let sync_committee_update = sync_committee_update();
-
-		//initialize SyncCommittees with period in sync_committee_update
-		LatestSyncCommitteePeriod::<T>::set(EthereumBeaconClient::<T>::compute_current_sync_period(
-				sync_committee_update.attested_header.slot,
-			));
-		SyncCommittees::<T>::insert(
-			EthereumBeaconClient::<T>::compute_current_sync_period(
-				sync_committee_update.attested_header.slot,
-			),
-			initial_sync_data.current_sync_committee,
-		);
+		let sync_committee_update = initialize_sync_committee::<T>()?;
 
 	}: sync_committee_period_update(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
 	verify {
@@ -107,16 +88,42 @@ benchmarks! {
 		let header: ExecutionHeader = header_update.execution_header.try_into().unwrap();
 		<ExecutionHeaders<T>>::get(header.block_hash).unwrap();
 	}
+
+	unblock_bridge {
+	}: _(RawOrigin::Root)
+	verify {
+		assert_eq!(<Blocked<T>>::get(),false);
+	}
+
+	bls_fast_aggregate_verify {
+		let update = initialize_sync_committee::<T>()?;
+		let participant_pubkeys = get_participant_pubkeys::<T>(&update)?;
+		let signing_root = get_signing_message::<T>(&update)?;
+	}:{
+		EthereumBeaconClient::<T>::bls_fast_aggregate_verify(participant_pubkeys,signing_root,update.sync_aggregate.sync_committee_signature)?;
+	}
+
+	bls_aggregate_pubkey {
+		let update = initialize_sync_committee::<T>()?;
+		let participant_pubkeys = get_participant_pubkeys::<T>(&update)?;
+	}:{
+		participant_pubkeys
+				.iter()
+				.map(|bytes| milagro_bls::PublicKey::from_bytes_unchecked(&bytes.0))
+				.collect::<Result<Vec<milagro_bls::PublicKey>, _>>().unwrap()
+	}
+
+	bls_verify_message {
+		let update = initialize_sync_committee::<T>()?;
+		let participant_pubkeys = get_participant_pubkeys::<T>(&update)?;
+		let signing_root = get_signing_message::<T>(&update)?;
+		let agg_sig = get_aggregate_signature::<T>(update.sync_aggregate.sync_committee_signature).unwrap();
+		let agg_pub_key = get_aggregate_pubkey::<T>(participant_pubkeys).unwrap();
+	}:{
+		agg_sig.fast_aggregate_verify_pre_aggregated(&signing_root.as_bytes(), &agg_pub_key)
+	}
 }
 
-#[cfg(feature = "minimal")]
-impl_benchmark_test_suite!(
-	EthereumBeaconClient,
-	crate::mock::new_tester::<crate::mock::mock_minimal::Test>(),
-	crate::mock::mock_minimal::Test,
-);
-
-#[cfg(not(feature = "minimal"))]
 impl_benchmark_test_suite!(
 	EthereumBeaconClient,
 	crate::mock::new_tester::<crate::mock::mock_mainnet::Test>(),
