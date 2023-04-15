@@ -2,27 +2,23 @@
 pragma solidity ^0.8.19;
 
 import {ParaID} from "./Types.sol";
+import {IInboundQueueDelegate} from "./IInboundQueueDelegate.sol";
+import {AccessControl} from "openzeppelin/access/AccessControl.sol";
 
-contract InboundQueue {
+contract InboundQueue is AccessControl {
 
-    address public delegate;
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    // Inbound message from BridgeHub parachain
-    struct Message {
-        ParaID origin;
-        uint64 nonce;
-        uint16 handler;
-        bytes payload;
-    }
+    IInboundQueueDelegate public delegate;
 
-    enum DispatchResult {
-        Success,
-        Failure
-    }
-
-    event MessageDispatched(ParaID indexed origin, uint64 indexed nonce, DispatchResult result);
+    event DelegateUpdated(IInboundQueueDelegate delegate);
 
     function submit(bytes calldata message) external {
+        delegate.submit(message);
+    }
 
+    function updateDelegate(IInboundQueueDelegate _delegate) external onlyRole(ADMIN_ROLE) {
+        delegate = _delegate;
+        emit DelegateUpdated(_delegate);
     }
 }
