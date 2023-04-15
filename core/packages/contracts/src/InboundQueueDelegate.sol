@@ -8,7 +8,7 @@ import {IRecipient} from "./IRecipient.sol";
 import {IVault} from "./IVault.sol";
 import {ParaID} from "./Types.sol";
 
-contract InboundQueue is AccessControl {
+contract InboundQueueDelegate is AccessControl {
     // Nonce for each origin
     mapping(ParaID origin => uint64) public nonce;
 
