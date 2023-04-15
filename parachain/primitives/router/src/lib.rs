@@ -3,6 +3,7 @@
 use core::marker::PhantomData;
 
 use codec::{Decode, Encode};
+use frame_support::{traits::TrackedStorageKey, weights::Weight};
 use sp_core::{RuntimeDebug, H160};
 use sp_std::prelude::*;
 use xcm::v3::prelude::*;
@@ -35,6 +36,20 @@ pub trait ConvertMessage {
 	fn convert(origin: H160, dest: u32, payload: Payload) -> (MultiLocation, Xcm<()>);
 }
 
+#[derive(Clone, Eq, PartialEq, Encode)]
+pub enum StatemineCall {
+	#[codec(index = 53u8)]
+	Assets(AssetsCall),
+}
+
+#[derive(Clone, Eq, PartialEq, Encode)]
+pub enum AssetsCall {
+	#[codec(index = 1u8)]
+	ForceCreate { asset_id: MultiLocation, owner: [u8; 32], is_sufficient: bool, min_balance: u128 },
+	#[codec(index = 17u8)]
+	SetMetadata { asset_id: MultiLocation, name: Vec<u8>, symbol: Vec<u8>, decimals: u8 },
+}
+
 pub struct InboundMessageConverter<EthereumNetworkId>(PhantomData<EthereumNetworkId>);
 
 impl<EthereumNetworkId> ConvertMessage for InboundMessageConverter<EthereumNetworkId>
@@ -60,7 +75,28 @@ where
 		let network = EthereumNetworkId::get();
 
 		match payload {
-			NativeTokensPayload::Create { .. } => Vec::new().into(),
+			NativeTokensPayload::Create { token, name, symbols, decimals } => {
+				let asset_id = Self::convert_token_address(token);
+
+				let mut instructions: Vec<Instruction<()>> = vec![
+					UniversalOrigin(GlobalConsensus(network)),
+					DescendOrigin(X1(Junction::AccountKey20 { network: None, key: origin.into() })),
+					Transact {
+						origin_kind: OriginKind::Native,
+						require_weight_at_most: Weight::from_parts(500_000_000, 10000),
+						call: StatemineCall::Assets(AssetsCall::ForceCreate {
+							asset_id: asset_id.clone(),
+							owner: H256::zero().into(),
+							is_sufficient: true,
+							min_balance: 1,
+						})
+						.encode()
+						.into(),
+					},
+				];
+
+				instructions.into()
+			},
 			NativeTokensPayload::Mint { token, dest, recipient, amount } => {
 				let asset = MultiAsset::from((Self::convert_token_address(token), amount));
 
