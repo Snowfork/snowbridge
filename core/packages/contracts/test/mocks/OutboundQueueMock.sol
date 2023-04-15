@@ -7,7 +7,7 @@ import {ParaID} from "../../src/Types.sol";
 contract OutboundQueueMock is IOutboundQueue {
     uint64 public nonce;
 
-    function submit(ParaID dest, bytes calldata payload) external payable {
-        emit Message(dest, ++nonce, payload);
+    function submit(ParaID dest, bytes calldata params, bytes calldata payload) external payable {
+        emit MessageAccepted(dest, ++nonce, payload);
     }
 }

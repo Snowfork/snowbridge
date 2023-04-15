@@ -102,7 +102,7 @@ contract NativeTokens is AccessControl {
         vault.deposit(msg.sender, token, amount);
 
         bytes memory payload = NativeTokensTypes.Mint(token, dest, recipient, amount);
-        outboundQueue.submit{ value: msg.value }(assetHubParaID, payload);
+        outboundQueue.submit{ value: msg.value }(assetHubParaID, hex"", payload);
 
         emit Locked(recipient, token, amount);
     }
@@ -127,7 +127,7 @@ contract NativeTokens is AccessControl {
         uint8 decimals = metadata.decimals();
 
         bytes memory payload = NativeTokensTypes.Create(token, name, symbol, decimals);
-        outboundQueue.submit{ value: msg.value }(assetHubParaID, payload);
+        outboundQueue.submit{ value: msg.value }(assetHubParaID, hex"", payload);
 
         emit Created(token);
     }

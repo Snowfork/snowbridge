@@ -5,4 +5,5 @@ import {ParaID} from "./Types.sol";
 
 interface IInboundQueueDelegate {
     function submit(address payable relayer, bytes calldata opaqueMessage) external;
+    function submitBatch(address payable relayer, bytes calldata opaqueMessage) external;
 }

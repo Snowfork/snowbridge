@@ -9,11 +9,13 @@ import {IRecipient} from "./IRecipient.sol";
 import {IVault} from "./IVault.sol";
 import {ParaID} from "./Types.sol";
 
+/// InboundQueueDelegate receives messages via InboundQueue from the BridgeHub parachain
+///on Polkadot, and then verifies and dispatches them.
 contract InboundQueueDelegate is IInboundQueueDelegate, AccessControl {
     // Nonce for each origin
     mapping(ParaID origin => uint64) public nonce;
 
-    // Registered message handlers
+    // Registered message handlers which can process incoming messages
     mapping(uint16 handlerID => IRecipient) public handlers;
 
     // Light client message verifier
@@ -27,19 +29,31 @@ contract InboundQueueDelegate is IInboundQueueDelegate, AccessControl {
 
     // The governance contract which is a proxy for Polkadot governance, administers via this role
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant PROXT_ROLE = keccak256("PROXY_ROLE");
+    bytes32 public constant PROXY_ROLE = keccak256("PROXY_ROLE");
 
-    // Relayers must provide enough gas to cover message dispatch plus a buffer
-    uint256 public gasToForward = 500000;
+    // Relayers must provide enough gas to cover message dispatch
+    uint256 public gasToForward = 600000;
     uint256 public constant GAS_BUFFER = 24000;
 
-    address immutable facade;
+    // The InboundQueue proxy
+    address immutable proxy;
+
+    modifier onlyProxy {
+        if (msg.sender != proxy) {
+            revert InvalidProxy();
+        }
+        _;
+    }
 
     // Inbound message from BridgeHub parachain
     struct Message {
+        // The parachain from which the message originated
         ParaID origin;
+        // Nonce for replay protection and identification
         uint64 nonce;
+        // ID of the handler contract
         uint16 handler;
+        // Application-specific payload
         bytes payload;
     }
 
@@ -50,27 +64,23 @@ contract InboundQueueDelegate is IInboundQueueDelegate, AccessControl {
     event RewardUpdated(uint256 reward);
     event GasToForwardUpdated(uint256 gasToForward);
 
-    error InvalidSender();
+    error InvalidProxy();
     error InvalidProof();
     error InvalidNonce();
     error InvalidHandler();
     error NotEnoughGas();
+    error NotYetImplemented();
 
-    constructor(address _facade, IParachainClient _parachainClient, IVault _vault, uint256 _reward) {
+    constructor(address _proxy, IParachainClient _parachainClient, IVault _vault, uint256 _reward) {
         _grantRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
-        facade = _facade;
+        proxy = _proxy;
         parachainClient = _parachainClient;
         vault = _vault;
         reward = _reward;
     }
 
-    function submit(address payable relayer, bytes calldata opaqueMessage) external {
-        // Check that the sender is the facade (proxy)
-        if (msg.sender != facade) {
-            revert InvalidSender();
-        }
-
+    function submit(address payable relayer, bytes calldata opaqueMessage) external onlyProxy {
         // Decode opaque message
         (
             Message memory message,
@@ -120,6 +130,10 @@ contract InboundQueueDelegate is IInboundQueueDelegate, AccessControl {
         }
 
         emit MessageReceived(message.origin, message.nonce, success);
+    }
+
+    function submitBatch(address payable, bytes calldata) view external onlyProxy {
+        revert NotYetImplemented();
     }
 
     function updateHandler(uint16 id, IRecipient handler) external onlyRole(ADMIN_ROLE) {

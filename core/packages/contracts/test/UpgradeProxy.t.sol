@@ -10,13 +10,14 @@ import {IUpgradeTask} from "../src/IUpgradeTask.sol";
 
 import {IVault, Vault} from "../src/Vault.sol";
 import {OutboundQueue} from "../src/OutboundQueue.sol";
+import {OutboundQueueDelegate} from "../src/OutboundQueueDelegate.sol";
 
 import {ParaID} from "../src/Types.sol";
 
 contract UpgradeTask is IUpgradeTask, AccessControl {
-    OutboundQueue public immutable outboundQueue;
+    OutboundQueueDelegate public immutable outboundQueue;
 
-    constructor(OutboundQueue _outboundQueue) {
+    constructor(OutboundQueueDelegate _outboundQueue) {
         outboundQueue = _outboundQueue;
     }
 
@@ -37,13 +38,17 @@ contract UpgradeProxyTest is Test {
     IUpgradeTask public upgradeTask;
     IUpgradeTask public failedUpgradeTask;
 
-    OutboundQueue public outboundQueue;
+    OutboundQueue public proxy;
+    OutboundQueueDelegate public outboundQueue;
 
     ParaID origin = ParaID.wrap(1001);
 
     function setUp() public {
         upgradeProxy = new UpgradeProxy(origin);
-        outboundQueue = new OutboundQueue(new Vault(), 1 ether);
+
+        proxy = new OutboundQueue();
+        outboundQueue = new OutboundQueueDelegate(address(proxy), new Vault(), 1 ether);
+        proxy.updateDelegate(outboundQueue);
 
         outboundQueue.grantRole(outboundQueue.ADMIN_ROLE(), address(upgradeProxy));
         outboundQueue.revokeRole(outboundQueue.ADMIN_ROLE(), address(this));
