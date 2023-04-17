@@ -339,7 +339,7 @@ func (s *Scanner) findInclusionBlockNumber(
 func scanForOutboundQueueProofs(
 	api *gsrpc.SubstrateAPI,
 	digestItemHash types.H256,
-	nonce uint64,
+	startingNonce uint64,
 	sourceID uint32,
 	messages []OutboundQueueMessage,
 ) (*struct {
@@ -347,10 +347,7 @@ func scanForOutboundQueueProofs(
 	scanDone bool
 }, error) {
 	var scanDone bool
-	proofs := make([]MessageProof, 0)
-
-	// If messages are in increasing order of nonce and all but the last block of messages have been relayed,
-	// this will relay that last block's messages one at a time.
+	proofs := []MessageProof{}
 
 	for messageIndex, message := range messages {
 		if message.Origin != sourceID {
@@ -362,7 +359,7 @@ func scanForOutboundQueueProofs(
 
 		// TODO: Won't this also happen if a block's messages have been partially relayed?
 		// This case will be hit when there are no new messages to relay.
-		if messageNonce < nonce {
+		if messageNonce < startingNonce {
 			log.Debugf(
 				"Halting scan for sourceID '%v'. Messages not committed yet on outbound channel",
 				message.Origin,
@@ -385,11 +382,10 @@ func scanForOutboundQueueProofs(
 			break
 		}
 
-		if messageNonce >= nonce {
-			// Collect these commitments
-			proofs = append(proofs, messageProof)
-		}
-		if messageNonce == nonce {
+		// Collect these commitments
+		proofs = append(proofs, messageProof)
+
+		if messageNonce == startingNonce {
 			// Terminate scan
 			scanDone = true
 		}
