@@ -97,7 +97,6 @@ func (s *Scanner) findTasks(
 
 	// Fetch latest nonce in parachain outbound queue
 	sourceIDBytes := make([]byte, 4)
-	// TODO: double-check endianness
 	binary.LittleEndian.PutUint32(sourceIDBytes, s.config.LaneID)
 	paraNonceKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "OutboundQueue", "Nonce", sourceIDBytes, nil)
 	if err != nil {
