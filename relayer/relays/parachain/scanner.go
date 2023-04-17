@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
-	"sort"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -244,12 +243,10 @@ func (s *Scanner) findTasksImpl(
 		currentBlockNumber--
 	}
 
-	// sort tasks by ascending block number
-	// TODO: Why not reverse here?
-	// Tasks are appended in descending block number, so reverse should leave them sorted.
-	sort.SliceStable(tasks, func(i, j int) bool {
-		return tasks[i].Header.Number < tasks[j].Header.Number
-	})
+	// Reverse tasks, effectively sorting by ascending block number
+	for i, j := 0, len(tasks)-1; i < j; i, j = i+1, j-1 {
+		tasks[i], tasks[j] = tasks[j], tasks[i]
+	}
 
 	return tasks, nil
 }
