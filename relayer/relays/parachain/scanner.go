@@ -349,7 +349,25 @@ func scanForOutboundQueueProofs(
 	var scanDone bool
 	proofs := []MessageProof{}
 
-	for messageIndex, message := range messages {
+	// There are 4 cases here:
+	// 1. There are no messages to relay, continue
+	// 2. All messages have been relayed, halt
+	// 3. There are messages to relay and *none* have been sent, continue
+	// 4. There are messages to relay and *some* have been sent, continue
+
+	// Messages are sorted by nonce ascending. Traverse them backwards to get nonce descending.
+	// This allows us to distinguish between cases 2 & 4 above:
+	// - When nonce is ascending, we find a message where messageNonce < startingNonce but later messages may have a
+	// higher nonce.
+	// - When nonce is descending, we either find the first message has messageNonce < startingNonce (all messages have
+	// been relayed) or we reach messageNonce == startingNonce, potentially in an earlier block.
+	//
+	// eg. m1 has nonce 1 and has been relayed. We're looking for messages from nonce 2 upwards in [m1, m2, m3] (m2 and
+	// m3). With nonce ascending, m1.nonce < 2 but we can't assume case 2 yet (where all messages have been relayed).
+	// With nonce descending, we find m3, then m2 where m2.nonce == 2.
+	for i := len(messages) - 1; i > 0; i-- {
+		message := messages[i]
+
 		if message.Origin != sourceID {
 			continue
 		}
@@ -357,7 +375,6 @@ func scanForOutboundQueueProofs(
 		messageNonceBigInt := big.Int(message.Nonce)
 		messageNonce := messageNonceBigInt.Uint64()
 
-		// TODO: Won't this also happen if a block's messages have been partially relayed?
 		// This case will be hit when there are no new messages to relay.
 		if messageNonce < startingNonce {
 			log.Debugf(
@@ -368,7 +385,7 @@ func scanForOutboundQueueProofs(
 			break
 		}
 
-		messageProof, err := fetchMessageProof(api, digestItemHash, messageIndex, message)
+		messageProof, err := fetchMessageProof(api, digestItemHash, i, message)
 		if err != nil {
 			return nil, err
 		}
@@ -389,6 +406,11 @@ func scanForOutboundQueueProofs(
 			// Terminate scan
 			scanDone = true
 		}
+	}
+
+	// Reverse proofs, effectively sorting by nonce ascending
+	for i, j := 0, len(proofs)-1; i < j; i, j = i+1, j-1 {
+		proofs[i], proofs[j] = proofs[j], proofs[i]
 	}
 
 	return &struct {
