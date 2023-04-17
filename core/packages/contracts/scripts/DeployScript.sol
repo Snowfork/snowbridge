@@ -62,7 +62,7 @@ contract DeployScript is Script {
         // Allow inbound queue to send messages to handlers
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(inboundQueue));
         treasury.grantRole(treasury.SENDER_ROLE(), address(inboundQueue));
-        upgradeProxy.grantRole(treasury.SENDER_ROLE(), address(inboundQueue));
+        upgradeProxy.grantRole(upgradeProxy.SENDER_ROLE(), address(inboundQueue));
 
         // Allow handlers to send messages to outbound queue
         outboundQueue.grantRole(outboundQueue.SUBMIT_ROLE(), address(nativeTokens));
