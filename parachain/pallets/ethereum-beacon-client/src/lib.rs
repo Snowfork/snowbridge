@@ -362,9 +362,9 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::block_bridge())]
+		#[pallet::weight(T::WeightInfo::deactivate())]
 		#[transactional]
-		pub fn block_bridge(origin: OriginFor<T>) -> DispatchResult {
+		pub fn deactivate(origin: OriginFor<T>) -> DispatchResult {
 			let _sender = ensure_root(origin)?;
 
 			<Blocked<T>>::set(true);
@@ -410,9 +410,9 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(6)]
-		#[pallet::weight(T::WeightInfo::unblock_bridge())]
+		#[pallet::weight(T::WeightInfo::activate())]
 		#[transactional]
-		pub fn unblock_bridge(origin: OriginFor<T>) -> DispatchResult {
+		pub fn activate(origin: OriginFor<T>) -> DispatchResult {
 			ensure_root(origin)?;
 			<Blocked<T>>::set(false);
 			Self::deposit_event(Event::Activated);
@@ -701,7 +701,7 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			Self::store_execution_header(execution_header, beacon_slot, beacon_block_root)?;
+			Self::store_execution_header(execution_header, beacon_slot, beacon_block_root);
 
 			Ok(())
 		}
@@ -751,11 +751,6 @@ pub mod pallet {
 			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get();
 			let index_in_array = block_slot % max_slots_per_historical_root;
 			let leaf_index = max_slots_per_historical_root + index_in_array;
-
-			log::debug!(
-				target: "ethereum-beacon-client",
-				"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH, leaf_index
-			);
 
 			ensure!(
 				Self::is_valid_merkle_branch(
@@ -987,7 +982,7 @@ pub mod pallet {
 			header: ExecutionHeader,
 			beacon_slot: u64,
 			beacon_block_root: H256,
-		) -> DispatchResult {
+		) {
 			let block_number = header.block_number;
 			let block_hash = header.block_hash;
 
@@ -1007,8 +1002,6 @@ pub mod pallet {
 			});
 
 			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
-
-			Ok(())
 		}
 
 		/// Sums the bit vector of sync committee particpation.

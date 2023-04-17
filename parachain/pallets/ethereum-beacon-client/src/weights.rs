@@ -36,10 +36,10 @@ pub trait WeightInfo {
 	fn sync_committee_period_update() -> Weight;
 	fn import_finalized_header() -> Weight;
 	fn import_execution_header() -> Weight;
-	fn block_bridge() -> Weight;
+	fn deactivate() -> Weight;
 	fn begin_recovery() -> Weight;
 	fn sync_recovery() -> Weight;
-	fn unblock_bridge() -> Weight;
+	fn activate() -> Weight;
 	fn init_sync() -> Weight;
 }
 
@@ -62,7 +62,7 @@ impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	// These weight are just by estimation and need benchmark later
-	fn block_bridge() -> Weight {
+	fn deactivate() -> Weight {
 		Weight::from_parts(1_000_000_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -76,7 +76,7 @@ impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
-	fn unblock_bridge() -> Weight {
+	fn activate() -> Weight {
 		Weight::from_parts(1_000_000_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -104,7 +104,7 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(3))
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
-	fn block_bridge() -> Weight {
+	fn deactivate() -> Weight {
 		Weight::from_parts(1_000_000_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
@@ -118,7 +118,7 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(4))
 			.saturating_add(RocksDbWeight::get().writes(2))
 	}
-	fn unblock_bridge() -> Weight {
+	fn activate() -> Weight {
 		Weight::from_parts(1_000_000_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
