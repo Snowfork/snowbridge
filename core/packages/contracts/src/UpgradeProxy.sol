@@ -33,6 +33,7 @@ contract UpgradeProxy is AccessControl {
     constructor(ParaID _bridgeHubParaID) {
         _grantRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(SENDER_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         bridgeHubParaID = _bridgeHubParaID;
     }
 
