@@ -151,20 +151,16 @@ func (s *Scanner) findTasksImpl(
 		"sourceID":          sourceID,
 		"nonce":             startingNonce,
 		"latestBlockNumber": lastParaBlockNumber,
-	}).Debug("Searching backwards from latest block on parachain to find block with nonces")
+	}).Debug("Searching backwards from latest block on parachain to find block with nonce")
 
-	currentBlockNumber := lastParaBlockNumber
-
-	// 	basicChannelScanSources := make(map[types.AccountID]bool, len(basicChannelSourceNonces))
-	// 	for sourceID := range basicChannelSourceNonces {
-	// 		basicChannelScanSources[sourceID] = true
-	// 	}
-	// 	scanOutboundQueueDone := len(basicChannelScanSources) == 0
 	scanOutboundQueueDone := false
-
 	var tasks []*Task
 
-	for !scanOutboundQueueDone && currentBlockNumber > 0 {
+	for currentBlockNumber := lastParaBlockNumber; currentBlockNumber > 0; currentBlockNumber-- {
+		if scanOutboundQueueDone {
+			break
+		}
+
 		log.WithFields(log.Fields{
 			"blockNumber": currentBlockNumber,
 		}).Debug("Checking header")
@@ -183,64 +179,59 @@ func (s *Scanner) findTasksImpl(
 		if err != nil {
 			return nil, err
 		}
-
 		if len(digestItems) == 0 {
 			currentBlockNumber--
 			continue
 		}
 
-		var outboundQueueProofs []MessageProof
-
-		events, err := s.eventQueryClient.QueryEvent(ctx, s.config.Parachain.Endpoint, blockHash)
-		if err != nil {
-			return nil, fmt.Errorf("query events: %w", err)
-		}
-
+		var digestItemCommitment *AuxiliaryDigestItemCommitment
 		for _, digestItem := range digestItems {
-			if !digestItem.IsCommitment {
-				continue
-			}
-			if scanOutboundQueueDone {
+			if digestItem.IsCommitment {
+				digestItemCommitment = &digestItem.AsCommitment
 				break
 			}
-
-			if events == nil {
-				return nil, fmt.Errorf("event outboundQueue.Committed not found in block with commitment digest item")
-			}
-
-			digestItemHash := digestItem.AsCommitment.Hash
-			if events.Hash != digestItemHash {
-				return nil, fmt.Errorf("outbound queue commitment hash in digest item does not match the one in the Committed event")
-			}
-
-			// For the outbound channel, the commitment hash is the merkle root of the messages
-			// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/basic-channel/src/outbound/mod.rs#L275-L277
-			// To verify it we fetch the message proof from the parachain
-			result, err := scanForOutboundQueueProofs(
-				s.paraConn.API(),
-				digestItemHash,
-				startingNonce,
-				sourceID,
-				events.Messages,
-			)
-			if err != nil {
-				return nil, err
-			}
-			outboundQueueProofs = result.proofs
-			scanOutboundQueueDone = result.scanDone
+		}
+		if digestItemCommitment == nil {
+			continue
 		}
 
-		if len(outboundQueueProofs) > 0 {
+		event, err := s.eventQueryClient.QueryEvent(ctx, s.config.Parachain.Endpoint, blockHash)
+		if err != nil {
+			return nil, fmt.Errorf("query event: %w", err)
+		}
+		if event == nil {
+			return nil, fmt.Errorf("event outboundQueue.Committed not found in block with commitment digest item")
+		}
+
+		if digestItemCommitment.Hash != event.Hash {
+			return nil, fmt.Errorf("outbound queue commitment hash in digest item does not match the one in the Committed event")
+		}
+
+		// For the outbound channel, the commitment hash is the merkle root of the messages
+		// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/basic-channel/src/outbound/mod.rs#L275-L277
+		// To verify it we fetch the message proof from the parachain
+		result, err := scanForOutboundQueueProofs(
+			s.paraConn.API(),
+			digestItemCommitment.Hash,
+			startingNonce,
+			sourceID,
+			event.Messages,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		scanOutboundQueueDone = result.scanDone
+
+		if len(result.proofs) > 0 {
 			task := Task{
 				Header:             header,
-				BasicChannelProofs: &outboundQueueProofs,
+				BasicChannelProofs: &result.proofs,
 				ProofInput:         nil,
 				ProofOutput:        nil,
 			}
 			tasks = append(tasks, &task)
 		}
-
-		currentBlockNumber--
 	}
 
 	// Reverse tasks, effectively sorting by ascending block number
