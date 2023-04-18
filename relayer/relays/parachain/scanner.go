@@ -183,15 +183,12 @@ func (s *Scanner) findTasksImpl(
 			continue
 		}
 
-		var digestItemCommitment *AuxiliaryDigestItemCommitment
+		var digestItemHash types.H256
 		for _, digestItem := range digestItems {
 			if digestItem.IsCommitment {
-				digestItemCommitment = &digestItem.AsCommitment
+				digestItemHash = digestItem.AsCommitment.Hash
 				break
 			}
-		}
-		if digestItemCommitment == nil {
-			continue
 		}
 
 		event, err := s.eventQueryClient.QueryEvent(ctx, s.config.Parachain.Endpoint, blockHash)
@@ -202,7 +199,7 @@ func (s *Scanner) findTasksImpl(
 			return nil, fmt.Errorf("event outboundQueue.Committed not found in block with commitment digest item")
 		}
 
-		if digestItemCommitment.Hash != event.Hash {
+		if digestItemHash != event.Hash {
 			return nil, fmt.Errorf("outbound queue commitment hash in digest item does not match the one in the Committed event")
 		}
 
@@ -211,7 +208,7 @@ func (s *Scanner) findTasksImpl(
 		// To verify it we fetch the message proof from the parachain
 		result, err := scanForOutboundQueueProofs(
 			s.paraConn.API(),
-			digestItemCommitment.Hash,
+			digestItemHash,
 			startingNonce,
 			sourceID,
 			event.Messages,
