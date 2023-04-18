@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = "1.0.159"
-serde_json = "1.0.81"
+serde = "1.0.160"
+serde_json = "1.0.96"
 serde-hex = "0.1.0"
 clap = { version = "4.1.11", features = [ "derive" ] }
 subxt = { git = "https://github.com/paritytech/subxt.git", rev = "0b2c31e3038ed061e22d06e0dbb6105e508aecff" }
@@ -13,7 +13,7 @@ codec = { version = "3.1.5", package = "parity-scale-codec", features = [ "deriv
 tokio = { version = "1.8", features = ["rt-multi-thread", "macros", "time"] }
 futures = "0.3.13"
 hex = "0.4.3"
-hex-literal = "0.4.0"
+hex-literal = "0.4.1"
 
 [features]
 default = ["parachain-snowbase"]
