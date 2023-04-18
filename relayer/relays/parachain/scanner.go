@@ -180,7 +180,6 @@ func (s *Scanner) findTasksImpl(
 			return nil, err
 		}
 		if len(digestItems) == 0 {
-			currentBlockNumber--
 			continue
 		}
 
