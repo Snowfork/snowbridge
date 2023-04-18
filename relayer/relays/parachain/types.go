@@ -50,7 +50,6 @@ type RawMerkleProof struct {
 type MerkleProof struct {
 	Root        types.H256
 	InnerHashes [][32]byte
-	HashSides   []bool
 }
 
 func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
