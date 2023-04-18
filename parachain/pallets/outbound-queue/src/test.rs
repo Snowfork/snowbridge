@@ -164,8 +164,8 @@ fn test_commit_multi_user() {
 		let parachain0: &ParaId = &ParaId::new(1000);
 		let parachain1: &ParaId = &ParaId::new(1001);
 
-		assert_ok!(BasicOutboundChannel::submit(alice, 0, &vec![0, 1, 2]));
-		assert_ok!(BasicOutboundChannel::submit(bob, 0, &vec![0, 1, 2]));
+		assert_ok!(BasicOutboundChannel::submit(parachain0, 0, &vec![0, 1, 2]));
+		assert_ok!(BasicOutboundChannel::submit(parachain1, 0, &vec![0, 1, 2]));
 		run_to_block(2);
 		BasicOutboundChannel::commit(Weight::MAX);
 
