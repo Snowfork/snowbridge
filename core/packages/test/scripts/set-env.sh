@@ -24,6 +24,9 @@ export output_bin_dir="$output_dir/bin"
 ethereum_data_dir="$output_dir/geth"
 export PATH="$output_bin_dir:$PATH"
 
+# Because we can run a local node for public network like goerli or mainnet, add active_spec as a separate config here
+# to decouple with eth_network, explicit set ACTIVE_SPEC to mainnet when test with public network
+active_spec="${ACTIVE_SPEC:-minimal}"
 eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
 eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
@@ -114,4 +117,3 @@ check_tool() {
         exit
     fi
 }
-

@@ -36,26 +36,10 @@ pub trait WeightInfo {
 	fn sync_committee_period_update() -> Weight;
 	fn import_finalized_header() -> Weight;
 	fn import_execution_header() -> Weight;
-}
-
-/// Weights for ethereum_beacon_client using the Snowbridge node and recommended hardware.
-pub struct SnowbridgeWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
-	fn sync_committee_period_update() -> Weight {
-		Weight::from_parts(175_039_777_000 as u64, 0)
-			.saturating_add(T::DbWeight::get().reads(4))
-			.saturating_add(T::DbWeight::get().writes(2))
-	}
-	fn import_finalized_header() -> Weight {
-		Weight::from_parts(171_871_518_000 as u64, 0)
-			.saturating_add(T::DbWeight::get().reads(3))
-			.saturating_add(T::DbWeight::get().writes(1))
-	}
-	fn import_execution_header() -> Weight {
-		Weight::from_parts(166_011_885_000 as u64, 0)
-			.saturating_add(T::DbWeight::get().reads(3))
-			.saturating_add(T::DbWeight::get().writes(1))
-	}
+	fn unblock_bridge() -> Weight;
+	fn bls_fast_aggregate_verify() -> Weight;
+	fn bls_aggregate_pubkey() -> Weight;
+	fn bls_verify_message() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -74,5 +58,21 @@ impl WeightInfo for () {
 		Weight::from_parts(166_011_885_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(3))
 			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn unblock_bridge() -> Weight {
+		Weight::from_parts(13_941_000, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn bls_fast_aggregate_verify() -> Weight {
+		Weight::from_parts(123_459_134_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+	}
+	fn bls_aggregate_pubkey() -> Weight {
+		Weight::from_parts(94_487_034_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+	}
+	fn bls_verify_message() -> Weight {
+		Weight::from_parts(28_368_043_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
 	}
 }

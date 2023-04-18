@@ -35,11 +35,6 @@ config_relayer(){
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
-    active_spec="mainnet"
-    if [ "$eth_network" == "localhost" ]; then
-        active_spec="minimal"
-    fi
-
     # Configure beacon relay
     jq \
         --arg beacon_endpoint_http $beacon_endpoint_http \
@@ -141,4 +136,3 @@ if [ -z "${from_start_services:-}" ]; then
     check_tool && build_relayer && rm -rf *relay.log && start_relayer
     wait
 fi
-
