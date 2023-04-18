@@ -433,7 +433,7 @@ func fetchMessageProof(
 		return messageProof, fmt.Errorf("encode commitmentHash(%v): %w", commitmentHash, err)
 	}
 
-	err = api.Client.Call(&proofHex, "basicOutboundQueue_getMerkleProof", commitmentHashHex, messageIndex)
+	err = api.Client.Call(&proofHex, "outboundQueue_getMerkleProof", commitmentHashHex, messageIndex)
 	if err != nil {
 		return messageProof, fmt.Errorf("call rpc basicOutboundQueue_getMerkleProof(%v, %v): %w", commitmentHash, messageIndex, err)
 	}
