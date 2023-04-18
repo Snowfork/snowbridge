@@ -4,7 +4,7 @@ use frame_support::{
 	assert_noop, assert_ok, parameter_types,
 	traits::{Everything, GenesisBuild, OnInitialize},
 };
-use polkadot_parachain::primitives::Id as ParaId;
+use snowbridge_core::ParaId;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,

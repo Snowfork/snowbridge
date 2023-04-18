@@ -3545,6 +3545,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
+ "polkadot-parachain",
  "rustc-hex",
  "scale-info",
  "serde",
@@ -3620,7 +3621,6 @@ dependencies = [
  "hex-literal",
  "pallet-balances",
  "parity-scale-codec",
- "polkadot-parachain",
  "rlp",
  "scale-info",
  "serde",
@@ -3645,7 +3645,6 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "parity-scale-codec",
- "polkadot-parachain",
  "rlp",
  "scale-info",
  "serde",
@@ -5790,7 +5789,7 @@ dependencies = [
 [[package]]
 name = "xcm-executor"
 version = "0.9.39"
-source = "git+https://github.com/paritytech/polkadot.git?branch=master#e164da65873f11bf8c583e81f6d82c21b005cfe4"
+source = "git+https://github.com/paritytech/polkadot?branch=master#e164da65873f11bf8c583e81f6d82c21b005cfe4"
 dependencies = [
  "environmental",
  "frame-support",

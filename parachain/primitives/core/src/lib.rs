@@ -15,6 +15,7 @@ pub mod ringbuffer;
 pub mod types;
 
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
+pub use polkadot_parachain::primitives::Id as ParaId;
 pub use types::{Message, MessageId, MessageNonce, Proof};
 
 /// A trait for verifying messages.
@@ -30,6 +31,6 @@ pub trait Verifier {
 	) -> Result<(), &'static str>;
 }
 
-pub trait SubmitMessage<SourceId> {
-	fn submit(source_id: &SourceId, payload: &[u8]) -> DispatchResult;
+pub trait SubmitMessage {
+	fn submit(source_id: &ParaId, handler: u16, payload: &[u8]) -> DispatchResult;
 }

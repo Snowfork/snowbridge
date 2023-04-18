@@ -14,8 +14,8 @@ use frame_support::{
 	dispatch::DispatchResult, ensure, traits::Get, weights::Weight, BoundedVec, CloneNoBound,
 	PartialEqNoBound, RuntimeDebugNoBound,
 };
-use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
+use snowbridge_core::ParaId;
 use sp_core::H256;
 use sp_io::offchain_index::set;
 use sp_runtime::traits::Hash;
@@ -161,9 +161,9 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> SubmitMessage<T::SourceId> for Pallet<T> {
+	impl<T: Config> SubmitMessage for Pallet<T> {
 		/// Submit message on the outbound channel
-		pub fn submit(origin: &ParaId, handler: u16, payload: &[u8]) -> DispatchResult {
+		fn submit(origin: &ParaId, handler: u16, payload: &[u8]) -> DispatchResult {
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerCommit::get() as usize,

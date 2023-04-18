@@ -16,7 +16,7 @@ use frame_support::{
 	traits::fungible::{Inspect, Mutate},
 };
 use frame_system::ensure_signed;
-use polkadot_parachain::primitives::Id as ParaId;
+use snowbridge_core::ParaId;
 use sp_core::{ConstU32, H160};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;

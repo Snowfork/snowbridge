@@ -14,13 +14,8 @@ pub enum NativeTokensOutboundPayload {
 	Unlock { address: H160, recipient: H160, amount: u128 },
 }
 
-pub struct ToBridgeEthereumBlobExporter<Submitter, SourceId>(
-	PhantomData<Submitter>,
-	PhantomData<SourceId>,
-);
-impl<Submitter: SubmitMessage<SourceId>, SourceId> ExportXcm
-	for ToBridgeEthereumBlobExporter<Submitter, SourceId>
-{
+pub struct ToBridgeEthereumBlobExporter<Submitter>(PhantomData<Submitter>);
+impl<Submitter: SubmitMessage> ExportXcm for ToBridgeEthereumBlobExporter<Submitter> {
 	type Ticket = (Vec<u8>, XcmHash);
 
 	fn validate(
