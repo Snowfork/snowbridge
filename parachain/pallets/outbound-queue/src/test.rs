@@ -161,16 +161,16 @@ fn test_commit_single_user() {
 #[test]
 fn test_commit_multi_user() {
 	new_tester().execute_with(|| {
-		let alice: &ParaId = &ParaId::new(1000);
-		let bob: &ParaId = &ParaId::new(1001);
+		let parachain0: &ParaId = &ParaId::new(1000);
+		let parachain1: &ParaId = &ParaId::new(1001);
 
 		assert_ok!(BasicOutboundChannel::submit(alice, 0, &vec![0, 1, 2]));
 		assert_ok!(BasicOutboundChannel::submit(bob, 0, &vec![0, 1, 2]));
 		run_to_block(2);
 		BasicOutboundChannel::commit(Weight::MAX);
 
-		assert_eq!(<Nonce<Test>>::get(alice), 1);
-		assert_eq!(<Nonce<Test>>::get(bob), 1);
+		assert_eq!(<Nonce<Test>>::get(parachain0), 1);
+		assert_eq!(<Nonce<Test>>::get(parachain1), 1);
 		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
 	})
 }
