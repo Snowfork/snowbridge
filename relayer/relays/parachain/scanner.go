@@ -388,14 +388,14 @@ func scanForOutboundQueueProofs(
 		if err != nil {
 			return nil, err
 		}
-		// check merkle root calculated from message proof is same as the digest hash from header
+		// Check that the merkle root in the proof is the same as the digest hash from the header
 		if messageProof.Proof.Root != digestItemHash {
-			log.Warnf(
-				"Halting scan for sourceID '%v'. Outbound queue proof root doesn't match digest item's commitment hash",
+			return nil, fmt.Errorf(
+				"Halting scan for sourceID '%v'. Outbound queue proof root '%v' doesn't match digest item's commitment hash '%v'",
 				message.Origin,
+				messageProof.Proof.Root,
+				digestItemHash,
 			)
-			scanDone = true
-			break
 		}
 
 		// Collect these commitments
