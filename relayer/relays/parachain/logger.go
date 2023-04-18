@@ -13,7 +13,6 @@ func Hex(b []byte) string {
 func (wr *EthereumWriter) logFieldsForBasicSubmission(
 	message contracts.InboundQueueMessage,
 	leafProof [][32]byte,
-	hashSides []bool,
 	proof []byte,
 ) log.Fields {
 	leafProofHexes := make([]string, len(leafProof))
@@ -28,7 +27,6 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 			"payload": message.Payload,
 		},
 		"leafProof": leafProofHexes,
-		"hashSides": hashSides,
 		"proof":     Hex(proof),
 	}
 
