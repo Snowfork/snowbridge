@@ -26,13 +26,17 @@ rebuild_cumulus(){
         --git https://github.com/Snowfork/cumulus \
         --branch "$cumulus_version" polkadot-parachain-bin \
         --locked \
-        --root $cumulus_dir #add version path to root to avoid recompiling when switch between versions 
+        --root $cumulus_dir #add version path to root to avoid recompiling when switch between versions
     popd
 }
 
 build_cumulus_from_source(){
     pushd $root_dir/cumulus
-    cargo build --release --bin polkadot-parachain
+    if [[ "$active_spec" == "minimal" ]]; then
+      cargo build --features "minimal" --release --bin polkadot-parachain
+    else
+      cargo build --release --bin polkadot-parachain
+    fi
     cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
     popd
 }
@@ -44,7 +48,7 @@ rebuild_relaychain(){
         --git https://github.com/paritytech/polkadot \
         --tag "$relaychain_version" polkadot \
         --locked \
-        --root $relaychain_dir #add version path to root to avoid recompiling when switch between versions 
+        --root $relaychain_dir #add version path to root to avoid recompiling when switch between versions
     popd
 }
 

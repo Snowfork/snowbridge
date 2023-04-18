@@ -19,6 +19,7 @@ source_up_if_exists
 # export ETH_WS_ENDPOINT=wss://goerli.infura.io/ws/v3
 # export BEACON_HTTP_ENDPOINT=https://lodestar-goerli.chainsafe.io
 # export ETH_GAS_LIMIT=0  # For real network just uncomment and set as 0 here
+# export ACTIVE_SPEC=mainnet # For real network just uncomment and set as mainnet here
 
 # export DEPLOYER_ETH_KEY=           # Your private key to deploy contracts
 # export BEEFY_RELAY_ETH_KEY=         # Your Beefy relayer account private key
@@ -26,4 +27,3 @@ source_up_if_exists
 # export E2E_TEST_ETH_KEY=            # Your E2E test account private key
 
 # export CUMULUS_VER=snowbridge       # For dev setup change to some feature branch
-
