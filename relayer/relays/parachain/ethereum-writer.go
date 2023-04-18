@@ -224,7 +224,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("params", wr.logFieldsForBasicSubmission(message, commitmentProof.Proof.InnerHashes, commitmentProof.Proof.HashSides, opaqueProof)).
+		WithField("params", wr.logFieldsForBasicSubmission(message, commitmentProof.Proof.InnerHashes, opaqueProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),
