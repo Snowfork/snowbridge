@@ -31,7 +31,7 @@ config_relayer(){
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
-    | .source.lane-id = $laneID
+    | .source."lane-id" = $laneID
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
