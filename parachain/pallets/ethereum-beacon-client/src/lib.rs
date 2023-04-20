@@ -97,6 +97,9 @@ pub mod pallet {
 		type MaxSlotsPerHistoricalRoot: Get<u64>;
 		#[pallet::constant]
 		type MaxFinalizedHeaderSlotArray: Get<u32>;
+		/// Maximum execution headers to be stored
+		#[pallet::constant]
+		type ExecutionHeadersPruneThreshold: Get<u64>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
@@ -171,9 +174,20 @@ pub mod pallet {
 	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
 		StorageMap<_, Identity, H256, H256, ValueQuery>;
 
+	/// Header mapping bounds. Used by pruning algorithm to prune oldest value and add
+	/// latest value.
+	#[pallet::storage]
+	pub(super) type ExecutionHeadersOldestMapping<T: Config> =
+	StorageValue<_, (u64, u64), OptionQuery>;
+
+	/// Mapping of count -> Execution header hash. Used to prune older headers
+	#[pallet::storage]
+	pub(super) type ExecutionHeadersMapping<T: Config> =
+	StorageMap<_, Identity, u64, H256, ValueQuery>;
+
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
-		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
+		CountedStorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
@@ -914,7 +928,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_execution_header(
+		pub(super) fn store_execution_header(
 			block_hash: H256,
 			header: ExecutionHeader,
 			beacon_slot: u64,
@@ -922,7 +936,14 @@ pub mod pallet {
 		) {
 			let block_number = header.block_number;
 
+			let (_, latest_mapping_to_insert) = Self::get_mapping_bound();
+			<ExecutionHeadersMapping<T>>::insert(
+				latest_mapping_to_insert,
+				block_hash,
+			);
+			Self::update_mapping_bound(None, Some(latest_mapping_to_insert + 1));
 			<ExecutionHeaders<T>>::insert(block_hash, header);
+			Self::prune_older_execution_headers();
 
 			log::trace!(
 				target: "ethereum-beacon-client",
@@ -939,6 +960,35 @@ pub mod pallet {
 			});
 
 			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
+		}
+
+		fn get_mapping_bound() -> (u64, u64) {
+			<ExecutionHeadersOldestMapping<T>>::get().unwrap_or((1, 1))
+		}
+
+		fn update_mapping_bound(oldest: Option<u64>, latest: Option<u64>) {
+			let (previous_oldest, previous_latest) = <ExecutionHeadersOldestMapping<T>>::get().unwrap_or((1, 1));
+			let new_oldest = oldest.unwrap_or(previous_oldest);
+			let new_latest = latest.unwrap_or(previous_latest);
+			<ExecutionHeadersOldestMapping<T>>::put((new_oldest, new_latest));
+		}
+
+		fn prune_older_execution_headers() {
+			let threshold = T::ExecutionHeadersPruneThreshold::get();
+			let stored_execution_headers = <ExecutionHeaders<T>>::count() as u64;
+
+			if stored_execution_headers > threshold {
+				let (mut oldest_mapping_to_delete, _) = Self::get_mapping_bound();
+				let execution_headers_to_delete = stored_execution_headers.saturating_sub(threshold);
+				for _i in 0..execution_headers_to_delete {
+					let execution_header_hash =
+						<ExecutionHeadersMapping<T>>::get(oldest_mapping_to_delete);
+					<ExecutionHeadersMapping<T>>::remove(oldest_mapping_to_delete);
+					<ExecutionHeaders<T>>::remove(execution_header_hash);
+					oldest_mapping_to_delete += 1;
+				}
+				Self::update_mapping_bound(Some(oldest_mapping_to_delete), None);
+			}
 		}
 
 		fn store_validators_root(validators_root: H256) {
