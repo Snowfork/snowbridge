@@ -1,10 +1,9 @@
 use codec::{Decode, Encode};
 use frame_support::{ensure, traits::Get};
-use snowbridge_core::{SubmitMessage, ParaId};
+use snowbridge_core::{ParaId, SubmitMessage};
 use sp_core::{RuntimeDebug, H160};
 use sp_std::{marker::PhantomData, prelude::*};
-use xcm::v3::prelude::*;
-use xcm::VersionedInteriorMultiLocation;
+use xcm::{v3::prelude::*, VersionedInteriorMultiLocation};
 use xcm_executor::traits::ExportXcm;
 
 pub enum OutboundPayload {
@@ -38,13 +37,14 @@ impl<BridgedNetwork: Get<NetworkId>, Submitter: SubmitMessage> ExportXcm
 		ensure!(&network == &bridged_network, SendError::NotApplicable);
 
 		let dest = destination.take().ok_or(SendError::MissingArgument)?;
-		let universal_dest:VersionedInteriorMultiLocation = match dest.pushed_front_with(GlobalConsensus(bridged_network)) {
-			Ok(d) => d.into(),
-			Err((dest, _)) => {
-				*destination = Some(dest);
-				return Err(SendError::NotApplicable)
-			},
-		};
+		let universal_dest: VersionedInteriorMultiLocation =
+			match dest.pushed_front_with(GlobalConsensus(bridged_network)) {
+				Ok(d) => d.into(),
+				Err((dest, _)) => {
+					*destination = Some(dest);
+					return Err(SendError::NotApplicable)
+				},
+			};
 
 		let (local_net, local_sub) = universal_source
 			.take()
@@ -54,7 +54,7 @@ impl<BridgedNetwork: Get<NetworkId>, Submitter: SubmitMessage> ExportXcm
 
 		ensure!(local_sub == Here, SendError::NotApplicable);
 		ensure!(local_net == NetworkId::Polkadot, SendError::NotApplicable);
-		// Assert Global is Universal 
+		// Assert Global is Universal
 		// Get ParaId
 
 		let message = BridgeMessage(0.into(), 0, vec![]);
@@ -71,11 +71,10 @@ impl<BridgedNetwork: Get<NetworkId>, Submitter: SubmitMessage> ExportXcm
 				// TODO: Log original error
 				SendError::NotApplicable
 			})?;
-		Submitter::submit(&source_id, handler, payload.as_ref())
-			.map_err(|_| {
-				// TODO: Log original error
-				SendError::Unroutable
-			})?;
+		Submitter::submit(&source_id, handler, payload.as_ref()).map_err(|_| {
+			// TODO: Log original error
+			SendError::Unroutable
+		})?;
 		Ok(hash)
 	}
 }
@@ -137,13 +136,14 @@ mod tests {
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
-
 	#[test]
 	fn exporter_with_x8_destination_yields_not_applicable() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> = None;
-		let mut destination: Option<InteriorMultiLocation> = Some(X8(OnlyChild, OnlyChild, OnlyChild, OnlyChild,OnlyChild, OnlyChild,OnlyChild, OnlyChild));
+		let mut destination: Option<InteriorMultiLocation> = Some(X8(
+			OnlyChild, OnlyChild, OnlyChild, OnlyChild, OnlyChild, OnlyChild, OnlyChild, OnlyChild,
+		));
 		let mut message: Option<Xcm<()>> = None;
 
 		let expected_destination = destination.clone();
@@ -200,7 +200,8 @@ mod tests {
 	fn exporter_test() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
-		let mut universal_source: Option<InteriorMultiLocation> = Some(X2(GlobalConsensus(Polkadot), Parachain(1000)));
+		let mut universal_source: Option<InteriorMultiLocation> =
+			Some(X2(GlobalConsensus(Polkadot), Parachain(1000)));
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
 		let mut message: Option<Xcm<()>> = None;
 
