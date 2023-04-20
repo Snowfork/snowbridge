@@ -181,12 +181,12 @@ pub mod pallet {
 	/// latest value.
 	#[pallet::storage]
 	pub(super) type ExecutionHeadersOldestMapping<T: Config> =
-	StorageValue<_, (u64, u64), OptionQuery>;
+		StorageValue<_, (u64, u64), OptionQuery>;
 
 	/// Mapping of count -> Execution header hash. Used to prune older headers
 	#[pallet::storage]
 	pub(super) type ExecutionHeadersMapping<T: Config> =
-	StorageMap<_, Identity, u64, H256, ValueQuery>;
+		StorageMap<_, Identity, u64, H256, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
@@ -905,13 +905,15 @@ pub mod pallet {
 				let highest_period_to_remove = latest_sync_committee_period - threshold;
 
 				let mut current_sync_committee_to_remove = highest_period_to_remove;
-				let mut number_of_sync_committees_to_remove = stored_sync_committees as u64 - threshold;
+				let mut number_of_sync_committees_to_remove =
+					stored_sync_committees as u64 - threshold;
 
-				while number_of_sync_committees_to_remove > 0
-				{
+				while number_of_sync_committees_to_remove > 0 {
 					<SyncCommittees<T>>::remove(current_sync_committee_to_remove);
-                    number_of_sync_committees_to_remove = number_of_sync_committees_to_remove.saturating_sub(1);
-					current_sync_committee_to_remove = current_sync_committee_to_remove.saturating_sub(1);
+					number_of_sync_committees_to_remove =
+						number_of_sync_committees_to_remove.saturating_sub(1);
+					current_sync_committee_to_remove =
+						current_sync_committee_to_remove.saturating_sub(1);
 				}
 			}
 		}
@@ -940,10 +942,13 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub(super) fn add_finalized_header_slot(slot: u64, finalized_header_hash: H256) -> DispatchResult {
+		pub(super) fn add_finalized_header_slot(
+			slot: u64,
+			finalized_header_hash: H256,
+		) -> DispatchResult {
 			<FinalizedBeaconHeaderSlots<T>>::try_mutate(|b_vec| {
 				if b_vec.len() as u32 == T::MaxFinalizedHeaderSlotArray::get() {
-					let (_slot, finalized_header_hash) =  b_vec.remove(0);
+					let (_slot, finalized_header_hash) = b_vec.remove(0);
 					// Removing corresponding finalized header data of popped slot
 					// as that data will not be used by relayer anyway.
 					<FinalizedBeaconHeadersBlockRoot<T>>::remove(finalized_header_hash);
@@ -966,10 +971,7 @@ pub mod pallet {
 			let block_number = header.block_number;
 
 			let (_, latest_mapping_to_insert) = Self::get_mapping_bound();
-			<ExecutionHeadersMapping<T>>::insert(
-				latest_mapping_to_insert,
-				block_hash,
-			);
+			<ExecutionHeadersMapping<T>>::insert(latest_mapping_to_insert, block_hash);
 			Self::update_mapping_bound(None, Some(latest_mapping_to_insert + 1));
 			<ExecutionHeaders<T>>::insert(block_hash, header);
 			Self::prune_older_execution_headers();
@@ -996,7 +998,8 @@ pub mod pallet {
 		}
 
 		fn update_mapping_bound(oldest: Option<u64>, latest: Option<u64>) {
-			let (previous_oldest, previous_latest) = <ExecutionHeadersOldestMapping<T>>::get().unwrap_or((1, 1));
+			let (previous_oldest, previous_latest) =
+				<ExecutionHeadersOldestMapping<T>>::get().unwrap_or((1, 1));
 			let new_oldest = oldest.unwrap_or(previous_oldest);
 			let new_latest = latest.unwrap_or(previous_latest);
 			<ExecutionHeadersOldestMapping<T>>::put((new_oldest, new_latest));
@@ -1008,7 +1011,8 @@ pub mod pallet {
 
 			if stored_execution_headers > threshold {
 				let (mut oldest_mapping_to_delete, _) = Self::get_mapping_bound();
-				let execution_headers_to_delete = stored_execution_headers.saturating_sub(threshold);
+				let execution_headers_to_delete =
+					stored_execution_headers.saturating_sub(threshold);
 				for _i in 0..execution_headers_to_delete {
 					let execution_header_hash =
 						<ExecutionHeadersMapping<T>>::get(oldest_mapping_to_delete);

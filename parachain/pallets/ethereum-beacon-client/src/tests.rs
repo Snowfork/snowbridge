@@ -5,14 +5,14 @@ mod beacon_tests {
 		merkleization::MerkleizationError,
 		mock::*,
 		ssz::{SSZExecutionPayloadHeader, SSZSyncAggregate},
-		BeaconHeader, Error, PublicKey, ExecutionHeader, SyncCommittee
+		BeaconHeader, Error, ExecutionHeader, PublicKey, SyncCommittee,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
+	use rand::{thread_rng, Rng};
 	use snowbridge_beacon_primitives::{ExecutionPayloadHeader, SyncAggregate};
 	use sp_core::{H256, U256};
 	use ssz_rs::prelude::Vector;
-	use rand::{thread_rng, Rng};
 
 	#[test]
 	pub fn test_get_sync_committee_sum() {
