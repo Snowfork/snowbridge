@@ -231,7 +231,7 @@ func (wr *ParachainWriter) GetFinalizedSlots() ([]uint64, error) {
 		return nil, fmt.Errorf("create storage key for basic channel nonces: %w", err)
 	}
 
-	var slots []types.U64
+	var slots []state.FinalizedHeaderSlots
 	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &slots)
 	if err != nil {
 		return nil, fmt.Errorf("get storage for latest basic channel nonces (err): %w", err)
@@ -239,7 +239,7 @@ func (wr *ParachainWriter) GetFinalizedSlots() ([]uint64, error) {
 
 	result := []uint64{}
 	for _, slot := range slots {
-		result = append(result, uint64(slot))
+		result = append(result, slot.Slot)
 	}
 
 	return result, nil

@@ -16,3 +16,8 @@ type FinalizedHeader struct {
 	BeaconSlot      uint64
 	ImportTime      uint64
 }
+
+type FinalizedHeaderSlots struct {
+	Slot uint64
+	FinalizedHeaderHash common.Hash
+}
