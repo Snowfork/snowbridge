@@ -102,6 +102,9 @@ pub mod pallet {
 		type ExecutionHeadersPruneThreshold: Get<u64>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
+		/// Maximum sync committees to be stored
+		#[pallet::constant]
+		type SyncCommitteePruneThreshold: Get<u64>;
 		type WeightInfo: WeightInfo;
 		type WeakSubjectivityPeriodSeconds: Get<u64>;
 	}
@@ -190,10 +193,9 @@ pub mod pallet {
 		CountedStorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
-	/// TODO  prune older sync committees than xxx
 	#[pallet::storage]
 	pub(super) type SyncCommittees<T: Config> =
-		StorageMap<_, Identity, u64, SyncCommitteeOf<T>, ValueQuery>;
+		CountedStorageMap<_, Identity, u64, SyncCommitteeOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
@@ -878,7 +880,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_sync_committee(period: u64, sync_committee: SyncCommitteeOf<T>) {
+		pub(crate) fn store_sync_committee(period: u64, sync_committee: SyncCommitteeOf<T>) {
 			<SyncCommittees<T>>::insert(period, sync_committee);
 
 			log::trace!(
@@ -888,8 +890,30 @@ pub mod pallet {
 			);
 
 			<LatestSyncCommitteePeriod<T>>::set(period);
+			Self::prune_older_sync_committees();
 
 			Self::deposit_event(Event::SyncCommitteeUpdated { period });
+		}
+
+		// Contract: It is assumed that the light client do not skip sync committee.
+		fn prune_older_sync_committees() {
+			let threshold = T::SyncCommitteePruneThreshold::get();
+			let stored_sync_committees = <SyncCommittees<T>>::count();
+
+			if stored_sync_committees as u64 > threshold {
+				let latest_sync_committee_period = <LatestSyncCommitteePeriod<T>>::get();
+				let highest_period_to_remove = latest_sync_committee_period - threshold;
+
+				let mut current_sync_committee_to_remove = highest_period_to_remove;
+				let mut number_of_sync_committees_to_remove = stored_sync_committees as u64 - threshold;
+
+				while number_of_sync_committees_to_remove > 0
+				{
+					<SyncCommittees<T>>::remove(current_sync_committee_to_remove);
+                    number_of_sync_committees_to_remove = number_of_sync_committees_to_remove.saturating_sub(1);
+					current_sync_committee_to_remove = current_sync_committee_to_remove.saturating_sub(1);
+				}
+			}
 		}
 
 		fn store_finalized_header(block_root: Root, header: BeaconHeader) -> DispatchResult {
