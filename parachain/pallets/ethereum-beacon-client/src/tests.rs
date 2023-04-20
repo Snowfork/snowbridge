@@ -5,13 +5,14 @@ mod beacon_tests {
 		merkleization::MerkleizationError,
 		mock::*,
 		ssz::{SSZExecutionPayloadHeader, SSZSyncAggregate},
-		BeaconHeader, Error, PublicKey,
+		BeaconHeader, Error, PublicKey, ExecutionHeader, SyncCommittee
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
 	use snowbridge_beacon_primitives::{ExecutionPayloadHeader, SyncAggregate};
 	use sp_core::{H256, U256};
 	use ssz_rs::prelude::Vector;
+	use rand::{thread_rng, Rng};
 
 	#[test]
 	pub fn test_get_sync_committee_sum() {
@@ -545,5 +546,157 @@ mod beacon_tests {
 
 		let hash_root = merkleization::hash_tree_root(payload.unwrap());
 		assert_ok!(&hash_root);
+	}
+
+	#[test]
+	pub fn test_prune_finalized_header() {
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			let max_finalized_slots = <mock_minimal::Test as ethereum_beacon_client::Config>::MaxFinalizedHeaderSlotArray::get().try_into().unwrap();
+
+			// Keeping track of to be deleted data
+			let amount_of_data_to_be_deleted = max_finalized_slots / 2;
+			let mut to_be_deleted_hash_list = vec![];
+			let mut to_be_preserved_hash_list = vec![];
+			for i in 0..max_finalized_slots {
+				let mut hash = H256::default();
+				thread_rng().try_fill(&mut hash.0[..]).unwrap();
+
+				if i < amount_of_data_to_be_deleted {
+					to_be_deleted_hash_list.push(hash);
+				} else {
+					to_be_preserved_hash_list.push(hash);
+				}
+
+				ethereum_beacon_client::FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(hash, hash);
+				ethereum_beacon_client::FinalizedBeaconHeaders::<mock_minimal::Test>::insert(hash, BeaconHeader::default());
+				assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_slot(i, hash));
+
+			}
+
+			// We first verify if the data corresponding to that hash is still there.
+			let slot_vec = ethereum_beacon_client::FinalizedBeaconHeaderSlots::<mock_minimal::Test>::get();
+			assert_eq!(slot_vec.len(), max_finalized_slots as usize);
+			for i in 0..(amount_of_data_to_be_deleted as usize) {
+				assert_eq!(slot_vec[i].0, i as u64);
+				assert_eq!(slot_vec[i].1, to_be_deleted_hash_list[i]);
+
+				assert!(ethereum_beacon_client::FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(to_be_deleted_hash_list[i]));
+				assert!(ethereum_beacon_client::FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(to_be_deleted_hash_list[i]));
+			}
+
+			// We insert `amount_of_hash_to_be_deleted` number of new finalized headers
+			for i in max_finalized_slots..(max_finalized_slots+ amount_of_data_to_be_deleted) {
+				let mut hash = H256::default();
+				thread_rng().try_fill(&mut hash.0[..]).unwrap();
+				ethereum_beacon_client::FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(hash, hash);
+				ethereum_beacon_client::FinalizedBeaconHeaders::<mock_minimal::Test>::insert(hash, BeaconHeader::default());
+				assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_slot(i, hash));
+			}
+
+			// Now, previous hashes should be pruned and in array those elements are replaced by later elements
+			let slot_vec = ethereum_beacon_client::FinalizedBeaconHeaderSlots::<mock_minimal::Test>::get();
+			assert_eq!(slot_vec.len(), max_finalized_slots as usize);
+			for i in 0..(amount_of_data_to_be_deleted as usize) {
+				assert_eq!(slot_vec[i].0, (i as u64 + amount_of_data_to_be_deleted));
+				assert_eq!(slot_vec[i].1, to_be_preserved_hash_list[i]);
+
+				// Previous values should not exists
+				assert!(!ethereum_beacon_client::FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(to_be_deleted_hash_list[i]));
+				assert!(!ethereum_beacon_client::FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(to_be_deleted_hash_list[i]));
+
+				// data that was preserved should exists
+				assert!(ethereum_beacon_client::FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(to_be_preserved_hash_list[i]));
+				assert!(ethereum_beacon_client::FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(to_be_preserved_hash_list[i]));
+			}
+		});
+	}
+
+	#[test]
+	pub fn test_prune_execution_headers() {
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			let execution_header_prune_threshold = <mock_minimal::Test as ethereum_beacon_client::Config>::ExecutionHeadersPruneThreshold::get();
+			let to_be_deleted = execution_header_prune_threshold / 2;
+
+			let mut stored_hashes = vec![];
+
+			for i in 0..execution_header_prune_threshold {
+				let mut hash = H256::default();
+				thread_rng().try_fill(&mut hash.0[..]).unwrap();
+				mock_minimal::EthereumBeaconClient::store_execution_header(
+					hash,
+					ExecutionHeader::default(),
+					i,
+					hash
+				);
+				stored_hashes.push(hash);
+			}
+
+			// We should have stored everything until now
+			assert_eq!(ethereum_beacon_client::ExecutionHeaders::<mock_minimal::Test>::count() as usize, stored_hashes.len());
+
+			// Let's push extra entries so that some of the previous entries are deleted.
+			for i in 0..to_be_deleted {
+				let mut hash = H256::default();
+				thread_rng().try_fill(&mut hash.0[..]).unwrap();
+				mock_minimal::EthereumBeaconClient::store_execution_header(
+					hash,
+					ExecutionHeader::default(),
+					i+execution_header_prune_threshold,
+					hash
+				);
+
+				stored_hashes.push(hash);
+			}
+
+			// We should have only stored upto `execution_header_prune_threshold`
+			assert_eq!(ethereum_beacon_client::ExecutionHeaders::<mock_minimal::Test>::count() as u64, execution_header_prune_threshold);
+
+			// First `to_be_deleted` items must be deleted
+			for i in 0..to_be_deleted {
+				assert!(!ethereum_beacon_client::ExecutionHeaders::<mock_minimal::Test>::contains_key(stored_hashes[i as usize]));
+			}
+
+			// Other entries should be part of data
+			for i in to_be_deleted..(to_be_deleted+execution_header_prune_threshold) {
+				assert!(ethereum_beacon_client::ExecutionHeaders::<mock_minimal::Test>::contains_key(stored_hashes[i as usize]));
+			}
+		});
+	}
+
+	#[test]
+	pub fn test_prune_sync_committee() {
+		new_tester::<mock_minimal::Test>().execute_with(|| {
+			let sync_committee_prune_threshold = <mock_minimal::Test as ethereum_beacon_client::Config>::SyncCommitteePruneThreshold::get();
+			let to_be_deleted = sync_committee_prune_threshold / 2;
+			let mut storing_periods = vec![];
+
+			for i in 0..sync_committee_prune_threshold {
+				mock_minimal::EthereumBeaconClient::store_sync_committee(i, SyncCommittee::default());
+				storing_periods.push(i);
+			}
+
+			// We should retain every sync committee till prune threshold
+			assert_eq!(ethereum_beacon_client::SyncCommittees::<mock_minimal::Test>::count() as u64, sync_committee_prune_threshold);
+
+			// Now, we try to insert more than threshold, this should make previous entries deleted
+			for i in 0..to_be_deleted {
+				mock_minimal::EthereumBeaconClient::store_sync_committee(i+sync_committee_prune_threshold, SyncCommittee::default());
+				storing_periods.push(i+sync_committee_prune_threshold);
+			}
+
+			// We should retain last prune threshold sync committee
+			assert_eq!(ethereum_beacon_client::SyncCommittees::<mock_minimal::Test>::count() as u64, sync_committee_prune_threshold);
+
+			// We verify that first periods of sync committees are not present now
+			for i in 0..to_be_deleted {
+				assert!(!ethereum_beacon_client::SyncCommittees::<mock_minimal::Test>::contains_key(i));
+			}
+
+			// Rest of the sync committee should still exists
+			for i in to_be_deleted..(sync_committee_prune_threshold+to_be_deleted) {
+				assert!(ethereum_beacon_client::SyncCommittees::<mock_minimal::Test>::contains_key(i));
+			}
+
+		});
 	}
 }

@@ -3561,6 +3561,7 @@ dependencies = [
  "milagro_bls",
  "pallet-timestamp",
  "parity-scale-codec",
+ "rand 0.8.5",
  "rlp",
  "scale-info",
  "serde",
