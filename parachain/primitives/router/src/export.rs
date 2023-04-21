@@ -18,11 +18,11 @@ pub enum NativeTokensOutboundPayload {
 #[derive(Encode, Decode)]
 struct BridgeMessage(ParaId, u16, Vec<u8>);
 
-pub struct ToBridgeEthereumBlobExporter<BridgedNetwork, Submitter>(
-	PhantomData<(BridgedNetwork, Submitter)>,
+pub struct ToBridgeEthereumBlobExporter<RelayNetwork, BridgedNetwork, Submitter>(
+	PhantomData<(RelayNetwork, BridgedNetwork, Submitter)>,
 );
-impl<BridgedNetwork: Get<NetworkId>, Submitter: SubmitMessage> ExportXcm
-	for ToBridgeEthereumBlobExporter<BridgedNetwork, Submitter>
+impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: SubmitMessage>
+	ExportXcm for ToBridgeEthereumBlobExporter<RelayNetwork, BridgedNetwork, Submitter>
 {
 	type Ticket = (Vec<u8>, XcmHash);
 
@@ -52,14 +52,18 @@ impl<BridgedNetwork: Get<NetworkId>, Submitter: SubmitMessage> ExportXcm
 			.split_global()
 			.map_err(|()| SendError::Unroutable)?;
 
-		ensure!(local_sub == Here, SendError::NotApplicable);
-		ensure!(local_net == NetworkId::Polkadot, SendError::NotApplicable);
-		// Assert Global is Universal
-		// Get ParaId
+		ensure!(local_net == RelayNetwork::get(), SendError::NotApplicable);
+		let para_id = match local_sub {
+			X1(Parachain(para_id)) => para_id,
+			_ => return Err(SendError::Unroutable),
+		};
 
-		let message = BridgeMessage(0.into(), 0, vec![]);
+		// TODO: Pattern Match XCM message and extract handler and payload.
+
+		let message = BridgeMessage(para_id.into(), 0, vec![]);
 		let blob = message.encode();
 		let hash: [u8; 32] = message.using_encoded(sp_io::hashing::blake2_256);
+		// TODO: Fees if any currently returning empty multi assets as cost
 		Ok(((blob, hash), MultiAssets::default()))
 	}
 
@@ -86,6 +90,7 @@ mod tests {
 	use super::*;
 
 	parameter_types! {
+		pub const RelayNetwork: NetworkId = Polkadot;
 		pub const BridgedNetwork: NetworkId =  Ethereum{ chain_id: 1 };
 	}
 
@@ -108,13 +113,14 @@ mod tests {
 		let mut destination: Option<InteriorMultiLocation> = None;
 		let mut message: Option<Xcm<()>> = None;
 
-		let result = ToBridgeEthereumBlobExporter::<BridgedNetwork, MockSubmitter>::validate(
-			network,
-			channel,
-			&mut universal_source,
-			&mut destination,
-			&mut message,
-		);
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
 
@@ -126,13 +132,14 @@ mod tests {
 		let mut destination: Option<InteriorMultiLocation> = None;
 		let mut message: Option<Xcm<()>> = None;
 
-		let result = ToBridgeEthereumBlobExporter::<BridgedNetwork, MockSubmitter>::validate(
-			network,
-			channel,
-			&mut universal_source,
-			&mut destination,
-			&mut message,
-		);
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -147,13 +154,14 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let expected_destination = destination.clone();
-		let result = ToBridgeEthereumBlobExporter::<BridgedNetwork, MockSubmitter>::validate(
-			network,
-			channel,
-			&mut universal_source,
-			&mut destination,
-			&mut message,
-		);
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
 		assert_eq!(result, Err(SendError::NotApplicable));
 		assert_eq!(destination, expected_destination);
 	}
@@ -166,13 +174,14 @@ mod tests {
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
 		let mut message: Option<Xcm<()>> = None;
 
-		let result = ToBridgeEthereumBlobExporter::<BridgedNetwork, MockSubmitter>::validate(
-			network,
-			channel,
-			&mut universal_source,
-			&mut destination,
-			&mut message,
-		);
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
 		assert_eq!(result, Err(SendError::MissingArgument));
 		assert_eq!(destination, None);
 	}
@@ -185,13 +194,77 @@ mod tests {
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
 		let mut message: Option<Xcm<()>> = None;
 
-		let result = ToBridgeEthereumBlobExporter::<BridgedNetwork, MockSubmitter>::validate(
-			network,
-			channel,
-			&mut universal_source,
-			&mut destination,
-			&mut message,
-		);
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
+		assert_eq!(result, Err(SendError::Unroutable));
+		assert_eq!(destination, None);
+	}
+
+	#[test]
+	fn exporter_with_remote_universal_source_yields_not_applicable() {
+		let network = Ethereum { chain_id: 1 };
+		let channel: u32 = 0;
+		let mut universal_source: Option<InteriorMultiLocation> =
+			Some(X2(GlobalConsensus(Kusama), Parachain(1000)));
+		let mut destination: Option<InteriorMultiLocation> = Here.into();
+		let mut message: Option<Xcm<()>> = None;
+
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
+		assert_eq!(result, Err(SendError::NotApplicable));
+		assert_eq!(destination, None);
+	}
+
+	#[test]
+	fn exporter_without_para_id_in_source_yields_unroutable() {
+		let network = Ethereum { chain_id: 1 };
+		let channel: u32 = 0;
+		let mut universal_source: Option<InteriorMultiLocation> =
+			Some(X1(GlobalConsensus(Polkadot)));
+		let mut destination: Option<InteriorMultiLocation> = Here.into();
+		let mut message: Option<Xcm<()>> = None;
+
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
+		assert_eq!(result, Err(SendError::Unroutable));
+		assert_eq!(destination, None);
+	}
+
+	#[test]
+	fn exporter_complex_para_id_in_source_yields_unroutable() {
+		let network = Ethereum { chain_id: 1 };
+		let channel: u32 = 0;
+		let mut universal_source: Option<InteriorMultiLocation> =
+			Some(X3(GlobalConsensus(Polkadot), Parachain(1000), PalletInstance(12)));
+		let mut destination: Option<InteriorMultiLocation> = Here.into();
+		let mut message: Option<Xcm<()>> = None;
+
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
 		assert_eq!(result, Err(SendError::Unroutable));
 		assert_eq!(destination, None);
 	}
@@ -205,13 +278,14 @@ mod tests {
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
 		let mut message: Option<Xcm<()>> = None;
 
-		let result = ToBridgeEthereumBlobExporter::<BridgedNetwork, MockSubmitter>::validate(
-			network,
-			channel,
-			&mut universal_source,
-			&mut destination,
-			&mut message,
-		);
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
 		assert_eq!(result, Err(SendError::ExceedsMaxMessageSize));
 		assert_eq!(destination, None);
 	}
