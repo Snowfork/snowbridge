@@ -31,7 +31,7 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 		_channel: u32,
 		universal_source: &mut Option<InteriorMultiLocation>,
 		destination: &mut Option<InteriorMultiLocation>,
-		_message: &mut Option<Xcm<()>>,
+		message: &mut Option<Xcm<()>>,
 	) -> SendResult<Self::Ticket> {
 		let bridged_network = BridgedNetwork::get();
 		ensure!(&network == &bridged_network, SendError::NotApplicable);
@@ -55,14 +55,15 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 		ensure!(local_net == RelayNetwork::get(), SendError::NotApplicable);
 		let para_id = match local_sub {
 			X1(Parachain(para_id)) => para_id,
-			_ => return Err(SendError::Unroutable),
+			_ => return Err(SendError::MissingArgument),
 		};
 
+		let message = message.take().ok_or(SendError::MissingArgument)?;
 		// TODO: Pattern Match XCM message and extract handler and payload.
 
-		let message = BridgeMessage(para_id.into(), 0, vec![]);
-		let blob = message.encode();
-		let hash: [u8; 32] = message.using_encoded(sp_io::hashing::blake2_256);
+		let blob = BridgeMessage(para_id.into(), 0, vec![]).encode();
+		let hash: [u8; 32] = sp_io::hashing::blake2_256(blob.as_slice());
+
 		// TODO: Fees if any currently returning empty multi assets as cost
 		Ok(((blob, hash), MultiAssets::default()))
 	}
@@ -101,7 +102,7 @@ mod tests {
 			_handler: u16,
 			_payload: &[u8],
 		) -> sp_runtime::DispatchResult {
-			return Ok(())
+			Ok(())
 		}
 	}
 
@@ -228,7 +229,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_without_para_id_in_source_yields_unroutable() {
+	fn exporter_without_para_id_in_source_yields_missing_argument() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> =
@@ -244,12 +245,12 @@ mod tests {
 				&mut destination,
 				&mut message,
 			);
-		assert_eq!(result, Err(SendError::Unroutable));
+		assert_eq!(result, Err(SendError::MissingArgument));
 		assert_eq!(destination, None);
 	}
 
 	#[test]
-	fn exporter_complex_para_id_in_source_yields_unroutable() {
+	fn exporter_complex_para_id_in_source_yields_missing_argument() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> =
@@ -265,17 +266,40 @@ mod tests {
 				&mut destination,
 				&mut message,
 			);
-		assert_eq!(result, Err(SendError::Unroutable));
+		assert_eq!(result, Err(SendError::MissingArgument));
+		assert_eq!(destination, None);
+	}
+
+	#[test]
+	fn exporter_without_xcm_message_yields_missing_argument() {
+		let network = Ethereum { chain_id: 1 };
+		let channel: u32 = 0;
+		let mut universal_source: Option<InteriorMultiLocation> =
+			Some(X2(GlobalConsensus(Polkadot), Parachain(1000)));
+		let mut destination: Option<InteriorMultiLocation> = Here.into();
+		let mut message: Option<Xcm<()>> = None;
+
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
+		assert_eq!(result, Err(SendError::MissingArgument));
 		assert_eq!(destination, None);
 	}
 
 	#[test]
 	fn exporter_test() {
 		let network = Ethereum { chain_id: 1 };
-		let channel: u32 = 0;
+		let mut destination: Option<InteriorMultiLocation> = Here.into();
+
 		let mut universal_source: Option<InteriorMultiLocation> =
 			Some(X2(GlobalConsensus(Polkadot), Parachain(1000)));
-		let mut destination: Option<InteriorMultiLocation> = Here.into();
+
+		let channel: u32 = 0;
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
