@@ -77,7 +77,9 @@ pub mod mock_minimal {
 		pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
 		pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
 		pub const MaxSlotsPerHistoricalRoot: u64 = 64;
-		pub const MaxFinalizedHeaderSlotArray: u32 = 1000;
+		pub const MaxFinalizedHeaderSlotArray: u32 = 12;
+		pub const SyncCommitteePruneThreshold: u64 = 4;
+		pub const ExecutionHeadersPruneThreshold: u64 = 10;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
@@ -112,6 +114,8 @@ pub mod mock_minimal {
 		type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
 		type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 		type ForkVersions = ChainForkVersions;
+		type SyncCommitteePruneThreshold = SyncCommitteePruneThreshold;
+		type ExecutionHeadersPruneThreshold = ExecutionHeadersPruneThreshold;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
 	}
@@ -203,6 +207,8 @@ pub mod mock_mainnet {
 				epoch: 162304,
 			},
 		};
+		pub const SyncCommitteePruneThreshold: u64 = 4;
+		pub const ExecutionHeadersPruneThreshold: u64 = 10;
 	}
 
 	impl ethereum_beacon_client::Config for Test {
@@ -218,6 +224,8 @@ pub mod mock_mainnet {
 		type MaxSlotsPerHistoricalRoot = MaxSlotsPerHistoricalRoot;
 		type MaxFinalizedHeaderSlotArray = MaxFinalizedHeaderSlotArray;
 		type ForkVersions = ChainForkVersions;
+		type SyncCommitteePruneThreshold = SyncCommitteePruneThreshold;
+		type ExecutionHeadersPruneThreshold = ExecutionHeadersPruneThreshold;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type WeightInfo = ();
 	}
