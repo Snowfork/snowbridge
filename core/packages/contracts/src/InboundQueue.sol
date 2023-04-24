@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
+import {MerkleProofLib} from "solmate/utils/MerkleProofLib.sol";
 import {AccessControl} from "openzeppelin/access/AccessControl.sol";
 import {IParachainClient} from "./ParachainClient.sol";
 import {IRecipient} from "./IRecipient.sol";
@@ -67,7 +67,7 @@ contract InboundQueue is AccessControl {
 
     function submit(Message calldata message, bytes32[] calldata leafProof, bytes calldata headerProof) external {
         bytes32 leafHash = keccak256(abi.encode(message));
-        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
+        bytes32 commitment = MerkleProofLib.calculateRoot(leafProof, leafHash);
         if (!parachainClient.verifyCommitment(commitment, headerProof)) {
             revert InvalidProof();
         }
