@@ -1,24 +1,16 @@
 use codec::{Decode, Encode};
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::{ParaId, SubmitMessage};
-use sp_core::{RuntimeDebug, H160};
+use ethabi::{self, Token};
+use sp_core::RuntimeDebug;
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
 use xcm_executor::traits::ExportXcm;
 
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum OutboundPayload {
-	NativeTokensOutbound(NativeTokensOutboundPayload),
-}
-
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum NativeTokensOutboundPayload {
-	Unlock { address: H160, recipient: H160, amount: u128 },
-}
 
 #[derive(RuntimeDebug)]
 enum ParseError {
-	XcmMessageTooShort,
+	UnexpectedEndOfXcm,
 	TargetFeeExpected,
 	BuyExecutionExpected,
 	EndOfXcmMessageExpected,
@@ -28,17 +20,23 @@ enum ParseError {
 }
 
 #[derive(RuntimeDebug)]
-struct ParseInfo {
-	assets: MultiAssets,
-	beneficiary: MultiLocation,
-	max_target_fee: Option<MultiAsset>,
+enum XcmMessageType {
+	AssetTransfer {
+		assets: MultiAssets,
+		beneficiary: MultiLocation,
+		max_target_fee: Option<MultiAsset>,
+	}
 }
 
-fn parse_xcm(message: &Xcm<()>) -> Result<ParseInfo, ParseError> {
+fn parse_xcm(message: &Xcm<()>) -> Result<XcmMessageType, ParseError> {
 	use ParseError::*;
 
-	let mut it = message.iter();
-	let mut next_token = || it.next().ok_or(XcmMessageTooShort);
+	let mut next_token = {
+		let mut it = message.iter();
+		move || {
+			it.next().ok_or(UnexpectedEndOfXcm)
+		}
+	};
 
 	// Get target fees if specified.
 	let max_target_fee = match next_token()? {
@@ -73,7 +71,7 @@ fn parse_xcm(message: &Xcm<()>) -> Result<ParseInfo, ParseError> {
 	if next_token().is_ok() {
 		Err(EndOfXcmMessageExpected)
 	} else {
-		Ok(ParseInfo {
+		Ok(XcmMessageType::AssetTransfer {
 			assets: assets.clone(),
 			beneficiary: beneficiary.clone(),
 			max_target_fee: max_target_fee.map(|fee| fee.clone()),
@@ -81,13 +79,35 @@ fn parse_xcm(message: &Xcm<()>) -> Result<ParseInfo, ParseError> {
 	}
 }
 
-fn validate_and_encode(parse_info: &ParseInfo) -> Result<Vec<u8>, ()> {
-	// We do not support target fees yet
-	parse_info.max_target_fee.is_none();
-	// We only support a single asset at a time.
-	parse_info.assets.len() == 1;
-	// We only support ethereum native assets.
-	Ok(vec![])
+#[derive(RuntimeDebug)]
+enum ValidationError {
+
+}
+
+fn validate_and_encode(message_type: &XcmMessageType) -> Result<(Vec<u8>, u16), ()> {
+	match message_type {
+		XcmMessageType::AssetTransfer { assets, beneficiary, max_target_fee} => {
+			// We do not support target fees yet
+			max_target_fee.is_none();
+			// We only support a single asset at a time.
+			assets.len() == 1;
+			// We only support ethereum native assets.
+
+			let inner = Token::Tuple(vec![
+				//Token::Address(),
+				//Token::Address(),
+				//Token::Uint(),
+			]).to_bytes().ok_or(())?;
+
+			const UNLOCK_ACTION: u32 = 0;
+			let message = Token::Tuple(vec![
+				Token::Uint(UNLOCK_ACTION.into()),
+				Token::Bytes(inner),
+			]);
+
+			Ok((message.to_bytes().ok_or(())?, 1))
+		},
+	}
 }
 
 #[derive(Encode, Decode)]
@@ -136,13 +156,13 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 			SendError::Unroutable
 		})?;
 
-		let encoded_payload = validate_and_encode(&parse_info).map_err(|_| {
+		let (encoded_payload, handler) = validate_and_encode(&parse_info).map_err(|_| {
 			//TODO: Log
 			SendError::Unroutable
 		})?;
 
 		//TODO: Log info and trace
-		let blob = BridgeMessage(para_id.into(), 0, encoded_payload).encode();
+		let blob = BridgeMessage(para_id.into(), handler, encoded_payload).encode();
 		let hash: [u8; 32] = sp_io::hashing::blake2_256(blob.as_slice());
 
 		// TODO: Fees if any currently returning empty multi assets as cost

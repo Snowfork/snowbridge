@@ -5,6 +5,7 @@ import { Ownable } from "openzeppelin/access/Ownable.sol";
 import { AccessControl } from "openzeppelin/access/AccessControl.sol";
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
+import { IRecipient } from "./IRecipient.sol";
 import { TokenVault } from "./TokenVault.sol";
 import { SubstrateTypes } from "./SubstrateTypes.sol";
 import { NativeTokensTypes } from "./NativeTokensTypes.sol";
@@ -14,7 +15,7 @@ import { ParaID } from "./Types.sol";
 /// @title Native Tokens
 /// @dev Manages locking, unlocking ERC20 tokens in the vault. Initializes ethereum native
 /// tokens on the substrate side via create.
-contract NativeTokens is AccessControl {
+contract NativeTokens is AccessControl, IRecipient {
     /// @dev Describes the type of message.
     enum Action {
         Unlock

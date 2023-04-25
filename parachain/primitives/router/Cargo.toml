@@ -20,6 +20,7 @@ xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", d
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
+ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
@@ -38,6 +39,7 @@ std = [
     "xcm/std",
     "xcm-executor/std",
     "snowbridge-core/std",
+	"ethabi/std",
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",
