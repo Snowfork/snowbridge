@@ -1,5 +1,7 @@
 # Ether
 
+_Note: "apps" are obsoleted in favour of a design more closely following XCMv3. Docs will follow._&#x20;
+
 Our _Ether_ app allows Etherem users to mint wrapped Ether on our common-good parachain. To do this, they must lock up Ether as collateral.
 
 ## Design

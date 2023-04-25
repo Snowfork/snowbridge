@@ -1,5 +1,7 @@
 # Apps
 
+_Note: "apps" are obsoleted in favour of a design more closely following XCMv3. Docs will follow._&#x20;
+
 Apps are on-chain programs responsible for implementing high-level cross-chain features. For example, bridging ERC20 tokens to Polkadot; or in the opposite direction, bridging DOT to Ethereum.
 
 An app usually consist of two sub-components who act as peers. For example, a smart contract on the Ethereum side, and a FRAME pallet on the Parachain side. The peers communicate using [channels](../channels/).

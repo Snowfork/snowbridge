@@ -1,5 +1,7 @@
 # Incentivized Channel
 
+_Note: This component is obsolete, and has been replaced with a new design. Docs will follow._&#x20;
+
 The incentivized channel enforces delivery of messages in the order that they are sent. It also adds incentives which provide guaranteed delivery with strong properties based on simple economic assumptions without the need for any kind of Oracle-based solution.
 
 A common problem with bridges is in handling fluctuating gas prices and exchange rates across chains and assets. Often oracle-based solutions are used to deal with this.&#x20;

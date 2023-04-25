@@ -1,5 +1,7 @@
 # ERC20
 
+_Note: "apps" are obsoleted in favour of a design more closely following XCMv3. Docs will follow._&#x20;
+
 Our _ERC20_ app allows Etherem users to mint wrapped ERC20 tokens on our common-good parachain. To do this, they must lock up their tokens as collateral.
 
 ## Design
@@ -28,4 +30,3 @@ The app consists of two peer components which communicate via [channels](../chan
 On the parachain, the wrapped tokens are stored in a FRAME [assets](https://github.com/paritytech/substrate/tree/master/frame/assets) pallet using numeric identifiers allocated by our [asset-registry](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/asset-registry) pallet.
 
 The ERC20App pallet maintains a mapping of ERC20 token address to pallet-asset asset id. This can be queried by users.
-

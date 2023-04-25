@@ -1,5 +1,7 @@
 # DOT
 
+_Note: "apps" are obsoleted in favour of a design more closely following XCMv3. Docs will follow._&#x20;
+
 Our _DOT_ app allows Polkadot users to mint wrapped DOT on Ethereum. To do this, they must lock up their native DOT as collateral.
 
 ## Design
