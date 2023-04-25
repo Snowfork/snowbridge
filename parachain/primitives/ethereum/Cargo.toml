@@ -22,7 +22,7 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
-ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", package = "ethabi-decode", rev="6f63405bb33ef4365a1c62b72d499fa0f448118e", default-features = false }
+ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", package = "ethabi-decode", branch="master", default-features = false }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.19"
