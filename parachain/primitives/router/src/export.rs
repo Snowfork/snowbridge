@@ -1,12 +1,11 @@
 use codec::{Decode, Encode};
+use ethabi::{self, Token};
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::{ParaId, SubmitMessage};
-use ethabi::{self, Token};
 use sp_core::RuntimeDebug;
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
 use xcm_executor::traits::ExportXcm;
-
 
 #[derive(RuntimeDebug)]
 enum ParseError {
@@ -25,7 +24,7 @@ enum XcmMessageType {
 		assets: MultiAssets,
 		beneficiary: MultiLocation,
 		max_target_fee: Option<MultiAsset>,
-	}
+	},
 }
 
 fn parse_xcm(message: &Xcm<()>) -> Result<XcmMessageType, ParseError> {
@@ -33,9 +32,7 @@ fn parse_xcm(message: &Xcm<()>) -> Result<XcmMessageType, ParseError> {
 
 	let mut next_token = {
 		let mut it = message.iter();
-		move || {
-			it.next().ok_or(UnexpectedEndOfXcm)
-		}
+		move || it.next().ok_or(UnexpectedEndOfXcm)
 	};
 
 	// Get target fees if specified.
@@ -80,13 +77,11 @@ fn parse_xcm(message: &Xcm<()>) -> Result<XcmMessageType, ParseError> {
 }
 
 #[derive(RuntimeDebug)]
-enum ValidationError {
-
-}
+enum ValidationError {}
 
 fn validate_and_encode(message_type: &XcmMessageType) -> Result<(Vec<u8>, u16), ()> {
 	match message_type {
-		XcmMessageType::AssetTransfer { assets, beneficiary, max_target_fee} => {
+		XcmMessageType::AssetTransfer { assets, beneficiary, max_target_fee } => {
 			// We do not support target fees yet
 			max_target_fee.is_none();
 			// We only support a single asset at a time.
@@ -97,13 +92,13 @@ fn validate_and_encode(message_type: &XcmMessageType) -> Result<(Vec<u8>, u16), 
 				//Token::Address(),
 				//Token::Address(),
 				//Token::Uint(),
-			]).to_bytes().ok_or(())?;
+			])
+			.to_bytes()
+			.ok_or(())?;
 
 			const UNLOCK_ACTION: u32 = 0;
-			let message = Token::Tuple(vec![
-				Token::Uint(UNLOCK_ACTION.into()),
-				Token::Bytes(inner),
-			]);
+			let message =
+				Token::Tuple(vec![Token::Uint(UNLOCK_ACTION.into()), Token::Bytes(inner)]);
 
 			Ok((message.to_bytes().ok_or(())?, 1))
 		},
