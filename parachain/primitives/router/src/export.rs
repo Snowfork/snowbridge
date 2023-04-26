@@ -1,6 +1,6 @@
 use codec::{Decode, Encode};
 use ethabi::{self, Token};
-use frame_support::{ensure, traits::Get};
+use frame_support::{ensure, log, traits::Get};
 use snowbridge_core::{ParaId, SubmitMessage};
 use sp_core::{RuntimeDebug, H160};
 use sp_std::{marker::PhantomData, prelude::*};
@@ -26,11 +26,15 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 		message: &mut Option<Xcm<()>>,
 	) -> SendResult<Self::Ticket> {
 		let bridged_network = BridgedNetwork::get();
-		ensure!(&network == &bridged_network, SendError::NotApplicable);
+		if network == bridged_network {
+			log::trace!(target: "ethereum-blob-exporter", "skipped due to unmatched network {network:?}.");
+			return Err(SendError::NotApplicable);
+		}
 
 		let dest = destination.take().ok_or(SendError::MissingArgument)?;
 		if let Err((dest, _)) = dest.pushed_front_with(GlobalConsensus(bridged_network)) {
 			*destination = Some(dest);
+			log::trace!(target: "ethereum-blob-exporter", "skipped due to invalid destination '{dest:?}'.");
 			return Err(SendError::NotApplicable)
 		};
 
@@ -38,30 +42,37 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 			.take()
 			.ok_or(SendError::MissingArgument)?
 			.split_global()
-			.map_err(|()| SendError::Unroutable)?;
+			.map_err(|()| {
+				log::error!(target: "ethereum-blob-exporter", "could not get global consensus from universal source '{universal_source:?}'.");
+				SendError::Unroutable
+			})?;
 
 		ensure!(local_net == RelayNetwork::get(), SendError::NotApplicable);
 		let para_id = match local_sub {
 			X1(Parachain(para_id)) => para_id,
-			_ => return Err(SendError::MissingArgument),
+			_ => {
+				log::error!(target: "ethereum-blob-exporter", "could not get parachain id from universal source '{local_sub:?}'.");
+				return Err(SendError::MissingArgument)
+			}
 		};
 
 		let message = message.take().ok_or(SendError::MissingArgument)?;
 
-		let parse_info = match_xcm_pattern(&message).map_err(|_| {
-			//TODO: Log
+		let parse_info = match_xcm_pattern(&message).map_err(|err| {
+			log::error!(target: "ethereum-blob-exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
 
 		let (encoded_payload, handler) =
-			validate_and_encode(&local_net, &bridged_network, &parse_info).map_err(|_| {
-				//TODO: Log
+			validate_and_encode(&local_net, &bridged_network, &parse_info).map_err(|err| {
+				log::error!(target: "ethereum-blob-exporter", "unroutable due to validation error '{err:?}'.");
 				SendError::Unroutable
 			})?;
 
-		//TODO: Log info and trace
 		let blob = BridgeMessage(para_id.into(), handler, encoded_payload).encode();
 		let hash: [u8; 32] = sp_io::hashing::blake2_256(blob.as_slice());
+
+		log::info!(target: "ethereum-blob-exporter", "message validated {hash:#?}.");
 
 		// TODO: Fees if any currently returning empty multi assets as cost
 		Ok(((blob, hash), MultiAssets::default()))
@@ -71,14 +82,15 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 		let mut blob = blob.clone();
 		let mut input: &[u8] = blob.as_mut();
 		let BridgeMessage(source_id, handler, payload) = BridgeMessage::decode(&mut input)
-			.map_err(|_| {
-				// TODO: Log original error
+			.map_err(|err| {
+				log::error!(target: "ethereum-blob-exporter", "undeliverable due to decoding error '{err:?}'.");
 				SendError::NotApplicable
 			})?;
-		Submitter::submit(&source_id, handler, payload.as_ref()).map_err(|_| {
-			// TODO: Log original error
+		Submitter::submit(&source_id, handler, payload.as_ref()).map_err(|err| {
+			log::error!(target: "ethereum-blob-exporter", "undeliverable due to submitter error '{err:?}'.");
 			SendError::Unroutable
 		})?;
+		log::info!(target: "ethereum-blob-exporter", "message delivered {hash:#?}.");
 		Ok(hash)
 	}
 }
@@ -111,14 +123,14 @@ enum XcmPatternMatchError {
 fn match_xcm_pattern(message: &Xcm<()>) -> Result<XcmMessagePattern, XcmPatternMatchError> {
 	use XcmPatternMatchError::*;
 
-	let mut next_token = {
+	let mut next_instruction = {
 		let mut it = message.iter();
 		move || it.next().ok_or(UnexpectedEndOfXcm)
 	};
 
 	// Get target fees if specified.
-	let max_target_fee = match next_token()? {
-		WithdrawAsset(fee_asset) => match next_token()? {
+	let max_target_fee = match next_instruction()? {
+		WithdrawAsset(fee_asset) => match next_instruction()? {
 			BuyExecution { fees: execution_fee, weight_limit: Unlimited }
 				if fee_asset.len() == 1 && fee_asset.contains(execution_fee) =>
 				Some(execution_fee),
@@ -129,11 +141,11 @@ fn match_xcm_pattern(message: &Xcm<()>) -> Result<XcmMessagePattern, XcmPatternM
 	};
 
 	// Get deposit reserved asset
-	let (assets, beneficiary) = if let ReserveAssetDeposited(reserved_assets) = next_token()? {
+	let (assets, beneficiary) = if let ReserveAssetDeposited(reserved_assets) = next_instruction()? {
 		if reserved_assets.len() == 0 {
 			return Err(NoReserveAssets)
 		}
-		if let (ClearOrigin, DepositAsset { assets, beneficiary }) = (next_token()?, next_token()?)
+		if let (ClearOrigin, DepositAsset { assets, beneficiary }) = (next_instruction()?, next_instruction()?)
 		{
 			if reserved_assets.inner().iter().any(|asset| !assets.matches(asset)) {
 				return Err(FilterDoesNotConsumeAllReservedAssets)
@@ -146,8 +158,8 @@ fn match_xcm_pattern(message: &Xcm<()>) -> Result<XcmMessagePattern, XcmPatternM
 		return Err(ReserveAssetDepositedExpected)
 	};
 
-	// All xcm instructions must be consumed.
-	if next_token().is_ok() {
+	// All xcm instructions must be consumed before exit.
+	if next_instruction().is_ok() {
 		Err(EndOfXcmMessageExpected)
 	} else {
 		Ok(XcmMessagePattern::AssetTransfer {
