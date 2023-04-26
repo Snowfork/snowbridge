@@ -52,7 +52,7 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 
 		if local_net != RelayNetwork::get() {
 			log::trace!(target: "ethereum_blob_exporter", "skipped due to unmatched relay network {local_net:?}.");
-			return Err(SendError::NotApplicable);
+			return Err(SendError::NotApplicable)
 		}
 
 		let para_id = match local_sub {
