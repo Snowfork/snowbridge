@@ -73,8 +73,8 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 			SendError::Unroutable
 		})?;
 
-		let (encoded_payload, handler) =
-			validate_and_encode(&local_net, &bridged_network, &parse_info).map_err(|err| {
+		let (encoded_payload, handler) = validate_and_encode(&bridged_network, &parse_info)
+			.map_err(|err| {
 				log::error!(target: "ethereum_blob_exporter", "unroutable due to validation error '{err:?}'.");
 				SendError::Unroutable
 			})?;
@@ -190,7 +190,6 @@ enum ValidationError {
 	AssetsNotFound,
 	AssetNotConcreteFungible,
 	ZeroAssetTransfer,
-	EthABIEncodeError,
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
 }
@@ -203,7 +202,6 @@ enum ValidationError {
 /// e.g. The XcmMessagePattern::AssetTransfer with substrate native asset would
 /// need route to the handler for substrate tokens and create a Mint message.
 fn validate_and_encode(
-	universal_location: &NetworkId,
 	bridged_location: &NetworkId,
 	message_type: &XcmMessagePattern,
 ) -> Result<(Vec<u8>, u16), ValidationError> {
@@ -230,85 +228,56 @@ fn validate_and_encode(
 
 				ensure!(*amount > 0, ZeroAssetTransfer);
 
-				let (network, location) = ensure_is_remote(*universal_location, *asset_location)
-					.ok()
-					.ok_or(AssetResolutionFailed)?;
-				ensure!(&network == bridged_location, AssetResolutionFailed);
-				(
-					location_to_eth_address(*bridged_location, location)
-						.ok_or(AssetResolutionFailed)?,
-					amount,
-				)
+				// extract ERC20 contract address
+				if let MultiLocation {
+					parents: 0,
+					interior: X1(AccountKey20 { network: Some(network), key }),
+				} = asset_location
+				{
+					if network != bridged_location {
+						return Err(AssetResolutionFailed)
+					}
+					(H160(*key), amount)
+				} else {
+					return Err(AssetResolutionFailed)
+				}
 			};
 
 			// Ensure benificiary is Ethereum address.
 			let destination_address = {
-				let (network, location) = ensure_is_remote(*universal_location, *beneficiary)
-					.ok()
-					.ok_or(BeneficiaryResolutionFailed)?;
-				ensure!(&network == bridged_location, BeneficiaryResolutionFailed);
-				location_to_eth_address(*bridged_location, location)
-					.ok_or(BeneficiaryResolutionFailed)?
+				if let MultiLocation {
+					parents: 0,
+					interior: X1(AccountKey20 { network: Some(network), key }),
+				} = beneficiary
+				{
+					if network != bridged_location {
+						return Err(BeneficiaryResolutionFailed)
+					}
+					H160(*key)
+				} else {
+					return Err(BeneficiaryResolutionFailed)
+				}
 			};
 
-			let inner = Token::Tuple(vec![
+			let inner = ethabi::encode(&[Token::Tuple(vec![
 				Token::Address(asset_address),
 				Token::Address(destination_address),
 				Token::Uint((*amount).into()),
-			])
-			.to_bytes()
-			.ok_or(EthABIEncodeError)?;
+			])]);
+			let message = ethabi::encode(&[Token::Tuple(vec![
+				Token::Uint(UNLOCK_ACTION.into()),
+				Token::Bytes(inner),
+			])]);
 
-			let message =
-				Token::Tuple(vec![Token::Uint(UNLOCK_ACTION.into()), Token::Bytes(inner)]);
-
-			Ok((message.to_bytes().ok_or(EthABIEncodeError)?, NATIVE_TOKENS_HANDLER))
+			Ok((message, NATIVE_TOKENS_HANDLER))
 		},
-	}
-}
-
-// copied from ~/polkadot/xcm/xcm-builder/src/universal_exports.rs
-// TODO: Merge latest from upstream where this function is exported as public.
-fn ensure_is_remote(
-	universal_local: impl Into<InteriorMultiLocation>,
-	dest: impl Into<MultiLocation>,
-) -> Result<(NetworkId, InteriorMultiLocation), MultiLocation> {
-	let dest = dest.into();
-	let universal_local = universal_local.into();
-	let local_net = match universal_local.global_consensus() {
-		Ok(x) => x,
-		Err(_) => return Err(dest),
-	};
-	let universal_destination: InteriorMultiLocation = universal_local
-		.into_location()
-		.appended_with(dest)
-		.map_err(|x| x.1)?
-		.try_into()?;
-	let (remote_dest, remote_net) = match universal_destination.split_first() {
-		(d, Some(GlobalConsensus(n))) if n != local_net => (d, n),
-		_ => return Err(dest),
-	};
-	Ok((remote_net, remote_dest))
-}
-
-fn location_to_eth_address(
-	eth_network: NetworkId,
-	location: InteriorMultiLocation,
-) -> Option<H160> {
-	if let X1(AccountKey20 { network, key }) = location {
-		if network == None || network == Some(eth_network) {
-			Some(H160(key))
-		} else {
-			None
-		}
-	} else {
-		None
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use frame_support::parameter_types;
+	use hex_literal::hex;
 
 	use super::*;
 
@@ -514,15 +483,44 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_test() {
+	fn exporter_exports_valid_xcm() {
+		let expected_payload = hex!("e80300000100810300000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000600000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003e8");
+		let expected_payload_hash =
+			hex!("1454532f17679d9bfd775fef52de6c0598e34def65ef19ac06c11af013d6ca0f");
+
 		let network = Ethereum { chain_id: 1 };
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
 
 		let mut universal_source: Option<InteriorMultiLocation> =
 			Some(X2(GlobalConsensus(Polkadot), Parachain(1000)));
 
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
 		let channel: u32 = 0;
-		let mut message: Option<Xcm<()>> = None;
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			fun: Fungible(1000),
+		}]
+		.into();
+		let filter: MultiAssetFilter = assets.clone().into();
+
+		let mut message: Option<Xcm<()>> = Some(
+			vec![
+				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+				ReserveAssetDeposited(assets),
+				ClearOrigin,
+				DepositAsset {
+					assets: filter,
+					beneficiary: X1(AccountKey20 {
+						network: Some(network),
+						key: beneficiary_address,
+					})
+					.into(),
+				},
+			]
+			.into(),
+		);
 
 		let result =
 			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
@@ -532,7 +530,11 @@ mod tests {
 				&mut destination,
 				&mut message,
 			);
-		assert_eq!(result, Err(SendError::ExceedsMaxMessageSize));
+
+		assert_eq!(
+			result,
+			Ok(((expected_payload.into(), expected_payload_hash.into()), vec![].into()))
+		);
 		assert_eq!(destination, None);
 	}
 }

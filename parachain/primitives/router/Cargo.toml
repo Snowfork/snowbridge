@@ -24,6 +24,7 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 
 [dev-dependencies]
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+hex-literal = { version = "0.4.1", default-features = false }
 
 [features]
 default = [ "std" ]

@@ -3699,6 +3699,7 @@ dependencies = [
  "ethabi-decode",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "parity-scale-codec",
  "rustc-hex",
  "scale-info",
