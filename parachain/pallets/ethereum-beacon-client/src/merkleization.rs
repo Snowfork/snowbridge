@@ -2,15 +2,20 @@ use core::array::TryFromSliceError;
 
 use crate::{config, ssz::*};
 use byte_slice_cast::AsByteSlice;
-use frame_support::{traits::Get, BoundedVec};
 use snowbridge_beacon_primitives::{
-	BeaconHeader, ExecutionPayloadHeader, ForkData, SigningData, SyncAggregate, SyncCommittee,
+	BeaconHeader, ExecutionPayloadHeader, ForkData, SigningData, SyncAggregate,
 };
 use sp_std::{convert::TryInto, iter::FromIterator, prelude::*};
 use ssz_rs::{
 	prelude::{List, Vector},
 	Bitvector, Deserialize, DeserializeError, SimpleSerialize as SimpleSerializeTrait, U256,
 };
+
+use sp_core::H256;
+
+use super::SyncCommittee;
+
+use config::SYNC_COMMITTEE_SIZE;
 
 #[derive(Debug, PartialEq)]
 pub enum MerkleizationError {
@@ -36,18 +41,15 @@ impl From<DeserializeError> for MerkleizationError {
 	}
 }
 
-impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
-	TryFrom<ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
-	for SSZExecutionPayloadHeader
-{
+impl TryFrom<ExecutionPayloadHeader> for SSZExecutionPayloadHeader {
 	type Error = MerkleizationError;
 
-	fn try_from(
-		execution_payload: ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
-	) -> Result<Self, Self::Error> {
+	fn try_from(execution_payload: ExecutionPayloadHeader) -> Result<Self, Self::Error> {
 		Ok(SSZExecutionPayloadHeader {
 			parent_hash: execution_payload.parent_hash.as_bytes().try_into()?,
-			fee_recipient: Vector::<u8, 20>::from_iter(execution_payload.fee_recipient),
+			fee_recipient: Vector::<u8, 20>::from_iter(
+				execution_payload.fee_recipient.to_fixed_bytes(),
+			),
 			state_root: execution_payload.state_root.as_bytes().try_into()?,
 			receipts_root: execution_payload.receipts_root.as_bytes().try_into()?,
 			logs_bloom: Vector::<u8, 256>::from_iter(execution_payload.logs_bloom),
@@ -57,7 +59,7 @@ impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32
 			gas_used: execution_payload.gas_used,
 			timestamp: execution_payload.timestamp,
 			extra_data: List::<u8, { config::MAX_EXTRA_DATA_BYTES }>::try_from(
-				execution_payload.extra_data.into_inner(),
+				execution_payload.extra_data,
 			)
 			.map_err(|_| MerkleizationError::ListError)?,
 			base_fee_per_gas: U256::try_from_bytes_le(
@@ -84,20 +86,16 @@ impl TryFrom<BeaconHeader> for SSZBeaconBlockHeader {
 	}
 }
 
-impl<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>>
-	TryFrom<SyncAggregate<SyncCommitteeBitsSize, SignatureSize>> for SSZSyncAggregate
-{
+impl TryFrom<SyncAggregate<SYNC_COMMITTEE_SIZE>> for SSZSyncAggregate {
 	type Error = MerkleizationError;
 
-	fn try_from(
-		sync_aggregate: SyncAggregate<SyncCommitteeBitsSize, SignatureSize>,
-	) -> Result<Self, Self::Error> {
+	fn try_from(sync_aggregate: SyncAggregate<SYNC_COMMITTEE_SIZE>) -> Result<Self, Self::Error> {
 		Ok(SSZSyncAggregate {
-			sync_committee_bits: Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(
+			sync_committee_bits: Bitvector::<SYNC_COMMITTEE_SIZE>::deserialize(
 				&sync_aggregate.sync_committee_bits,
 			)?,
 			sync_committee_signature: Vector::<u8, 96>::from_iter(
-				sync_aggregate.sync_committee_signature,
+				sync_aggregate.sync_committee_signature.0,
 			),
 		})
 	}
@@ -105,26 +103,22 @@ impl<SyncCommitteeBitsSize: Get<u32>, SignatureSize: Get<u32>>
 
 pub fn hash_tree_root_beacon_header(
 	beacon_header: BeaconHeader,
-) -> Result<[u8; 32], MerkleizationError> {
+) -> Result<H256, MerkleizationError> {
 	let ssz_beacon_header: SSZBeaconBlockHeader = beacon_header.try_into()?;
 
 	hash_tree_root(ssz_beacon_header)
 }
 
-pub fn hash_tree_root_execution_header<
-	FeeRecipientSize: Get<u32>,
-	LogsBloomSize: Get<u32>,
-	ExtraDataSize: Get<u32>,
->(
-	execution_header: ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
-) -> Result<[u8; 32], MerkleizationError> {
+pub fn hash_tree_root_execution_header(
+	execution_header: ExecutionPayloadHeader,
+) -> Result<H256, MerkleizationError> {
 	let ssz_execution_payload: SSZExecutionPayloadHeader = execution_header.try_into()?;
 	hash_tree_root(ssz_execution_payload)
 }
 
-pub fn hash_tree_root_sync_committee<S: Get<u32>>(
-	sync_committee: SyncCommittee<S>,
-) -> Result<[u8; 32], MerkleizationError> {
+pub fn hash_tree_root_sync_committee(
+	sync_committee: SyncCommittee,
+) -> Result<H256, MerkleizationError> {
 	let mut pubkeys_vec = Vec::new();
 
 	for pubkey in sync_committee.pubkeys.iter() {
@@ -133,46 +127,44 @@ pub fn hash_tree_root_sync_committee<S: Get<u32>>(
 		pubkeys_vec.push(conv_pubkey);
 	}
 
-	let pubkeys =
-		Vector::<Vector<u8, 48>, { config::SYNC_COMMITTEE_SIZE }>::from_iter(pubkeys_vec.clone());
+	let pubkeys = Vector::<Vector<u8, 48>, { SYNC_COMMITTEE_SIZE }>::from_iter(pubkeys_vec.clone());
 
 	let agg = Vector::<u8, 48>::from_iter(sync_committee.aggregate_pubkey.0);
 
 	hash_tree_root(SSZSyncCommittee { pubkeys, aggregate_pubkey: agg })
 }
 
-pub fn hash_tree_root_fork_data(fork_data: ForkData) -> Result<[u8; 32], MerkleizationError> {
+pub fn hash_tree_root_fork_data(fork_data: ForkData) -> Result<H256, MerkleizationError> {
 	hash_tree_root(SSZForkData {
 		current_version: fork_data.current_version,
 		genesis_validators_root: fork_data.genesis_validators_root,
 	})
 }
 
-pub fn hash_tree_root_signing_data(
-	signing_data: SigningData,
-) -> Result<[u8; 32], MerkleizationError> {
+pub fn hash_tree_root_signing_data(signing_data: SigningData) -> Result<H256, MerkleizationError> {
 	hash_tree_root(SSZSigningData {
 		object_root: signing_data.object_root.into(),
 		domain: signing_data.domain.into(),
 	})
 }
 
-pub fn hash_tree_root<T: SimpleSerializeTrait>(
-	mut object: T,
-) -> Result<[u8; 32], MerkleizationError> {
+pub fn hash_tree_root<T: SimpleSerializeTrait>(mut object: T) -> Result<H256, MerkleizationError> {
 	match object.hash_tree_root() {
-		Ok(node) => node
-			.as_bytes()
-			.try_into()
-			.map_err(|_| MerkleizationError::HashTreeRootInvalidBytes),
+		Ok(node) => {
+			let fixed_bytes: [u8; 32] = node
+				.as_bytes()
+				.try_into()
+				.map_err(|_| MerkleizationError::HashTreeRootInvalidBytes)?;
+			Ok(fixed_bytes.into())
+		},
 		Err(_e) => Err(MerkleizationError::HashTreeRootError),
 	}
 }
 
-pub fn get_sync_committee_bits<SyncCommitteeBitsSize: Get<u32>>(
-	bits_hex: BoundedVec<u8, SyncCommitteeBitsSize>,
-) -> Result<Vec<u8>, MerkleizationError> {
-	let bitv = Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(&bits_hex).map_err(
+pub fn get_sync_committee_bits(
+	input: &[u8],
+) -> Result<[u8; SYNC_COMMITTEE_SIZE], MerkleizationError> {
+	let bitv = Bitvector::<{ SYNC_COMMITTEE_SIZE }>::deserialize(input).map_err(
 		//|_| MerkleizationError::InvalidInput
 		|e| -> MerkleizationError {
 			match e {
@@ -191,7 +183,7 @@ pub fn get_sync_committee_bits<SyncCommitteeBitsSize: Get<u32>>(
 		},
 	)?;
 
-	let result = bitv.iter().map(|bit| if bit == true { 1 } else { 0 }).collect::<Vec<_>>();
+	let cleaned = bitv.iter().map(|bit| if bit == true { 1u8 } else { 0u8 }).collect::<Vec<u8>>();
 
-	Ok(result)
+	cleaned.try_into().map_err(|_| MerkleizationError::InvalidInput)
 }

@@ -24,9 +24,8 @@ use crate::merkleization::get_sync_committee_bits;
 use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
 use frame_system::ensure_signed;
 use snowbridge_beacon_primitives::{
-	BeaconHeader, Domain, ExecutionHeader, ExecutionHeaderState, FinalizedHeaderState,
-	FinalizedHeaderUpdate, ForkData, ForkVersion, HeaderUpdate, InitialSync, PublicKey, Root,
-	SigningData, SyncCommittee, SyncCommitteePeriodUpdate,
+	self as primitives, BeaconHeader, Domain, ExecutionHeader, ExecutionHeaderState,
+	FinalizedHeaderState, ForkData, ForkVersion, PublicKey, Root, Signature, SigningData,
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
@@ -37,27 +36,13 @@ use frame_support::{traits::Get, BoundedVec};
 
 pub use pallet::*;
 
-pub type HeaderUpdateOf<T> = HeaderUpdate<
-	<T as Config>::MaxFeeRecipientSize,
-	<T as Config>::MaxLogsBloomSize,
-	<T as Config>::MaxExtraDataSize,
-	<T as Config>::MaxSignatureSize,
-	<T as Config>::MaxProofBranchSize,
-	<T as Config>::MaxSyncCommitteeSize,
->;
-pub type InitialSyncOf<T> =
-	InitialSync<<T as Config>::MaxSyncCommitteeSize, <T as Config>::MaxProofBranchSize>;
-pub type SyncCommitteePeriodUpdateOf<T> = SyncCommitteePeriodUpdate<
-	<T as Config>::MaxSignatureSize,
-	<T as Config>::MaxProofBranchSize,
-	<T as Config>::MaxSyncCommitteeSize,
->;
-pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<
-	<T as Config>::MaxSignatureSize,
-	<T as Config>::MaxProofBranchSize,
-	<T as Config>::MaxSyncCommitteeSize,
->;
-pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
+use config::{MAX_FINALIZED_HEADER_SLOT_ARRAY, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SIZE};
+
+pub type HeaderUpdate = primitives::HeaderUpdate<SYNC_COMMITTEE_SIZE>;
+pub type InitialSync = primitives::InitialSync<SYNC_COMMITTEE_SIZE>;
+pub type SyncCommitteePeriodUpdate = primitives::SyncCommitteePeriodUpdate<SYNC_COMMITTEE_SIZE>;
+pub type FinalizedHeaderUpdate = primitives::FinalizedHeaderUpdate<SYNC_COMMITTEE_SIZE>;
+pub type SyncCommittee = primitives::SyncCommittee<SYNC_COMMITTEE_SIZE>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -66,7 +51,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
-	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
+	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError};
 	use snowbridge_beacon_primitives::ForkVersions;
 	use snowbridge_core::Proof;
 	use snowbridge_ethereum::{Header as EthereumHeader, Log, Receipt};
@@ -79,24 +64,6 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type TimeProvider: UnixTime;
-		#[pallet::constant]
-		type MaxSyncCommitteeSize: Get<u32>;
-		#[pallet::constant]
-		type MaxProofBranchSize: Get<u32>;
-		#[pallet::constant]
-		type MaxExtraDataSize: Get<u32>;
-		#[pallet::constant]
-		type MaxLogsBloomSize: Get<u32>;
-		#[pallet::constant]
-		type MaxFeeRecipientSize: Get<u32>;
-		#[pallet::constant]
-		type MaxPublicKeySize: Get<u32>;
-		#[pallet::constant]
-		type MaxSignatureSize: Get<u32>;
-		#[pallet::constant]
-		type MaxSlotsPerHistoricalRoot: Get<u64>;
-		#[pallet::constant]
-		type MaxFinalizedHeaderSlotArray: Get<u32>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
@@ -165,7 +132,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeaderSlots<T: Config> =
-		StorageValue<_, BoundedVec<u64, T::MaxFinalizedHeaderSlotArray>, ValueQuery>;
+		StorageValue<_, BoundedVec<u64, ConstU32<MAX_FINALIZED_HEADER_SLOT_ARRAY>>, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
@@ -179,7 +146,7 @@ pub mod pallet {
 	/// TODO  prune older sync committees than xxx
 	#[pallet::storage]
 	pub(super) type SyncCommittees<T: Config> =
-		StorageMap<_, Identity, u64, SyncCommitteeOf<T>, ValueQuery>;
+		StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
@@ -199,24 +166,24 @@ pub mod pallet {
 	pub(super) type Blocked<T: Config> = StorageValue<_, bool, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
-		pub initial_sync: Option<InitialSyncOf<T>>,
+	pub struct GenesisConfig {
+		pub initial_sync: Option<InitialSync>,
 	}
 
 	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
+	impl Default for GenesisConfig {
 		fn default() -> Self {
 			GenesisConfig { initial_sync: None }
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Sync committee size is: {}",
-				config::SYNC_COMMITTEE_SIZE
+				SYNC_COMMITTEE_SIZE
 			);
 
 			if let Some(initial_sync) = self.initial_sync.clone() {
@@ -232,7 +199,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn sync_committee_period_update(
 			origin: OriginFor<T>,
-			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
+			sync_committee_period_update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -270,7 +237,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_finalized_header(
 			origin: OriginFor<T>,
-			finalized_header_update: FinalizedHeaderUpdateOf<T>,
+			finalized_header_update: FinalizedHeaderUpdate,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -307,7 +274,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
-			update: HeaderUpdateOf<T>,
+			update: HeaderUpdate,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -356,7 +323,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn process_initial_sync(initial_sync: InitialSyncOf<T>) -> DispatchResult {
+		fn process_initial_sync(initial_sync: InitialSync) -> DispatchResult {
 			Self::verify_sync_committee(
 				initial_sync.current_sync_committee.clone(),
 				initial_sync.current_sync_committee_branch,
@@ -391,7 +358,7 @@ pub mod pallet {
 		}
 
 		fn process_sync_committee_period_update(
-			update: SyncCommitteePeriodUpdateOf<T>,
+			update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
 			ensure!(
 				update.signature_slot > update.attested_header.slot &&
@@ -399,9 +366,9 @@ pub mod pallet {
 				Error::<T>::InvalidSyncCommitteeHeaderUpdate
 			);
 			let sync_committee_bits =
-				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+				get_sync_committee_bits(&update.sync_aggregate.sync_committee_bits)
 					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
-			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
+			Self::sync_committee_participation_is_supermajority(&sync_committee_bits)?;
 			Self::verify_sync_committee(
 				update.next_sync_committee.clone(),
 				update.next_sync_committee_branch,
@@ -450,9 +417,9 @@ pub mod pallet {
 			let validators_root = <ValidatorsRoot<T>>::get();
 
 			Self::verify_signed_header(
-				sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
-				current_sync_committee.pubkeys,
+				&sync_committee_bits,
+				&update.sync_aggregate.sync_committee_signature,
+				&current_sync_committee.pubkeys,
 				update.attested_header,
 				validators_root,
 				update.signature_slot,
@@ -476,7 +443,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
+		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			ensure!(
 				update.signature_slot > update.attested_header.slot,
@@ -510,9 +477,9 @@ pub mod pallet {
 			}
 
 			let sync_committee_bits =
-				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+				get_sync_committee_bits(&update.sync_aggregate.sync_committee_bits)
 					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
-			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
+			Self::sync_committee_participation_is_supermajority(&sync_committee_bits)?;
 
 			let block_root: H256 =
 				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
@@ -538,9 +505,9 @@ pub mod pallet {
 
 			let validators_root = <ValidatorsRoot<T>>::get();
 			Self::verify_signed_header(
-				sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
-				sync_committee.pubkeys,
+				&sync_committee_bits,
+				&update.sync_aggregate.sync_committee_signature,
+				&sync_committee.pubkeys,
 				update.attested_header,
 				validators_root,
 				update.signature_slot,
@@ -571,7 +538,7 @@ pub mod pallet {
 			);
 		}
 
-		fn process_header(update: HeaderUpdateOf<T>) -> DispatchResult {
+		fn process_header(update: HeaderUpdate) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
 			let block_slot = update.beacon_header.slot;
@@ -622,13 +589,13 @@ pub mod pallet {
 
 			let validators_root = <ValidatorsRoot<T>>::get();
 			let sync_committee_bits =
-				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+				get_sync_committee_bits(&update.sync_aggregate.sync_committee_bits)
 					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
 
 			Self::verify_signed_header(
-				sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
-				sync_committee.pubkeys,
+				&sync_committee_bits,
+				&update.sync_aggregate.sync_committee_signature,
+				&sync_committee.pubkeys,
 				update.beacon_header,
 				validators_root,
 				update.signature_slot,
@@ -647,7 +614,7 @@ pub mod pallet {
 		}
 
 		fn ancestry_proof(
-			block_root_proof: BoundedVec<H256, T::MaxProofBranchSize>,
+			block_root_proof: Vec<H256>,
 			block_slot: u64,
 			beacon_block_root: H256,
 			finalized_header_root: H256,
@@ -688,9 +655,8 @@ pub mod pallet {
 				return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
 			}
 
-			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get();
-			let index_in_array = block_slot % max_slots_per_historical_root;
-			let leaf_index = max_slots_per_historical_root + index_in_array;
+			let index_in_array = block_slot % (SLOTS_PER_HISTORICAL_ROOT as u64);
+			let leaf_index = (SLOTS_PER_HISTORICAL_ROOT as u64) + index_in_array;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -720,9 +686,9 @@ pub mod pallet {
 		}
 
 		pub(super) fn verify_signed_header(
-			sync_committee_bits: Vec<u8>,
-			sync_committee_signature: BoundedVec<u8, T::MaxSignatureSize>,
-			sync_committee_pubkeys: BoundedVec<PublicKey, T::MaxSyncCommitteeSize>,
+			sync_committee_bits: &[u8],
+			sync_committee_signature: &Signature,
+			sync_committee_pubkeys: &[PublicKey],
 			header: BeaconHeader,
 			validators_root: H256,
 			signature_slot: u64,
@@ -764,9 +730,9 @@ pub mod pallet {
 		pub(super) fn bls_fast_aggregate_verify(
 			pubkeys: Vec<PublicKey>,
 			message: H256,
-			signature: BoundedVec<u8, T::MaxSignatureSize>,
+			signature: &Signature,
 		) -> DispatchResult {
-			let sig = Signature::from_bytes(&signature[..]);
+			let sig = milagro_bls::Signature::from_bytes(&signature.0[..]);
 			if let Err(_e) = sig {
 				return Err(Error::<T>::InvalidSignature.into())
 			}
@@ -820,8 +786,8 @@ pub mod pallet {
 		}
 
 		fn verify_sync_committee(
-			sync_committee: SyncCommitteeOf<T>,
-			sync_committee_branch: BoundedVec<H256, T::MaxProofBranchSize>,
+			sync_committee: SyncCommittee,
+			sync_committee_branch: Vec<H256>,
 			header_state_root: H256,
 			depth: u64,
 			index: u64,
@@ -845,7 +811,7 @@ pub mod pallet {
 
 		fn verify_header(
 			block_root: H256,
-			proof_branch: BoundedVec<H256, T::MaxProofBranchSize>,
+			proof_branch: Vec<H256>,
 			attested_header_state_root: H256,
 			depth: u64,
 			index: u64,
@@ -864,7 +830,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_sync_committee(period: u64, sync_committee: SyncCommitteeOf<T>) {
+		fn store_sync_committee(period: u64, sync_committee: SyncCommittee) {
 			<SyncCommittees<T>>::insert(period, sync_committee);
 
 			log::trace!(
@@ -904,7 +870,7 @@ pub mod pallet {
 
 		fn add_finalized_header_slot(slot: u64) -> DispatchResult {
 			<FinalizedBeaconHeaderSlots<T>>::try_mutate(|b_vec| {
-				if b_vec.len() as u32 == T::MaxFinalizedHeaderSlotArray::get() {
+				if b_vec.len() as u32 == MAX_FINALIZED_HEADER_SLOT_ARRAY {
 					b_vec.remove(0);
 				}
 				b_vec.try_push(slot)
@@ -951,7 +917,7 @@ pub mod pallet {
 		///
 		/// let sync_committee_bits = vec![0, 1, 0, 1, 1, 1];
 		/// ensure!(get_sync_committee_sum(sync_committee_bits), 4);
-		pub(super) fn get_sync_committee_sum(sync_committee_bits: Vec<u8>) -> u64 {
+		pub(super) fn get_sync_committee_sum(sync_committee_bits: &[u8]) -> u64 {
 			sync_committee_bits.iter().fold(0, |acc: u64, x| acc + *x as u64)
 		}
 
@@ -990,7 +956,7 @@ pub mod pallet {
 
 		pub(super) fn is_valid_merkle_branch(
 			leaf: H256,
-			branch: BoundedVec<H256, T::MaxProofBranchSize>,
+			branch: Vec<H256>,
 			depth: u64,
 			index: u64,
 			root: Root,
@@ -1030,9 +996,9 @@ pub mod pallet {
 		}
 
 		pub(super) fn sync_committee_participation_is_supermajority(
-			sync_committee_bits: Vec<u8>,
+			sync_committee_bits: &[u8],
 		) -> DispatchResult {
-			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits.clone());
+			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits);
 			ensure!(
 				(sync_committee_sum * 3 >= sync_committee_bits.clone().len() as u64 * 2),
 				Error::<T>::SyncCommitteeParticipantsNotSupermajority
@@ -1043,7 +1009,7 @@ pub mod pallet {
 
 		pub(super) fn get_sync_committee_for_period(
 			period: u64,
-		) -> Result<SyncCommitteeOf<T>, DispatchError> {
+		) -> Result<SyncCommittee, DispatchError> {
 			let sync_committee = <SyncCommittees<T>>::get(period);
 
 			if sync_committee.pubkeys.len() == 0 {
@@ -1070,7 +1036,7 @@ pub mod pallet {
 			return fork_versions.genesis.version
 		}
 
-		pub(super) fn initial_sync(initial_sync: InitialSyncOf<T>) -> Result<(), &'static str> {
+		pub(super) fn initial_sync(initial_sync: InitialSync) -> Result<(), &'static str> {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received initial sync, starting processing.",

@@ -1,7 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod config;
+
+#[cfg(feature = "std")]
+mod serde_utils;
+
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
+use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use snowbridge_ethereum::mpt;
 use sp_core::{H160, H256, U256};
@@ -12,9 +17,11 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use core::fmt::Formatter;
 #[cfg(feature = "std")]
-use serde::{de::Error, de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 #[cfg(feature = "std")]
 use sp_std::fmt::Result as StdResult;
+
+use config::{PUBKEY_SIZE, SIGNATURE_SIZE};
 
 pub type Root = H256;
 pub type Domain = H256;
@@ -35,48 +42,30 @@ pub struct Fork {
 	pub epoch: u64,
 }
 
-#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct PublicKey(pub [u8; 48]);
-
-impl<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> Default
-	for InitialSync<SyncCommitteeSize, ProofSize>
-{
-	fn default() -> Self {
-		InitialSync {
-			header: Default::default(),
-			current_sync_committee: Default::default(),
-			current_sync_committee_branch: Default::default(),
-			validators_root: Default::default(),
-			import_time: Default::default(),
-		}
-	}
-}
-
-impl<SyncCommitteeSize: Get<u32>> Default for SyncCommittee<SyncCommitteeSize> {
-	fn default() -> Self {
-		SyncCommittee { pubkeys: Default::default(), aggregate_pubkey: Default::default() }
-	}
-}
+#[derive(Copy, Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct PublicKey(pub [u8; PUBKEY_SIZE]);
 
 impl Default for PublicKey {
 	fn default() -> Self {
-		PublicKey([0u8; 48])
+		PublicKey([0u8; PUBKEY_SIZE])
+	}
+}
+
+impl From<[u8; PUBKEY_SIZE]> for PublicKey {
+	fn from(v: [u8; PUBKEY_SIZE]) -> Self {
+		Self(v)
+	}
+}
+
+impl From<&[u8; PUBKEY_SIZE]> for PublicKey {
+	fn from(v: &[u8; PUBKEY_SIZE]) -> Self {
+		Self(*v)
 	}
 }
 
 impl MaxEncodedLen for PublicKey {
 	fn max_encoded_len() -> usize {
-		48
-	}
-}
-
-#[cfg(feature = "std")]
-impl Serialize for PublicKey {
-	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-	where
-		S: Serializer,
-	{
-		serializer.serialize_bytes(&self.0)
+		PUBKEY_SIZE
 	}
 }
 
@@ -92,7 +81,7 @@ impl<'de> Visitor<'de> for PublicKeyVisitor {
 
 	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
 	where
-		E: Error,
+		E: serde::de::Error,
 	{
 		let str_without_0x = match v.strip_prefix("0x") {
 			Some(val) => val,
@@ -101,14 +90,14 @@ impl<'de> Visitor<'de> for PublicKeyVisitor {
 
 		let hex_bytes = match hex::decode(str_without_0x) {
 			Ok(bytes) => bytes,
-			Err(e) => return Err(Error::custom(e.to_string())),
+			Err(e) => return Err(serde::de::Error::custom(e.to_string())),
 		};
-		if hex_bytes.len() != 48 {
-			return Err(Error::custom("publickey expected to be 48 characters"))
+		if hex_bytes.len() != PUBKEY_SIZE {
+			return Err(serde::de::Error::custom("publickey expected to be 48 characters"))
 		}
 
-		let mut data = [0u8; 48];
-		data[0..48].copy_from_slice(&hex_bytes);
+		let mut data = [0u8; PUBKEY_SIZE];
+		data[0..PUBKEY_SIZE].copy_from_slice(&hex_bytes);
 		Ok(PublicKey(data))
 	}
 }
@@ -120,6 +109,80 @@ impl<'de> Deserialize<'de> for PublicKey {
 		D: Deserializer<'de>,
 	{
 		deserializer.deserialize_str(PublicKeyVisitor)
+	}
+}
+
+#[cfg(feature = "std")]
+impl Serialize for PublicKey {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		serializer.serialize_bytes(&self.0)
+	}
+}
+
+#[derive(Copy, Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct Signature(pub [u8; SIGNATURE_SIZE]);
+
+impl Default for Signature {
+	fn default() -> Self {
+		Signature([0u8; SIGNATURE_SIZE])
+	}
+}
+
+impl From<[u8; SIGNATURE_SIZE]> for Signature {
+	fn from(v: [u8; SIGNATURE_SIZE]) -> Self {
+		Self(v)
+	}
+}
+
+impl From<&[u8; SIGNATURE_SIZE]> for Signature {
+	fn from(v: &[u8; SIGNATURE_SIZE]) -> Self {
+		Self(*v)
+	}
+}
+
+struct SignatureVisitor;
+
+#[cfg(feature = "std")]
+impl<'de> Visitor<'de> for SignatureVisitor {
+	type Value = Signature;
+
+	fn expecting(&self, formatter: &mut Formatter) -> StdResult {
+		formatter.write_str("a hex string")
+	}
+
+	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+	where
+		E: serde::de::Error,
+	{
+		let str_without_0x = match v.strip_prefix("0x") {
+			Some(val) => val,
+			None => v,
+		};
+
+		let hex_bytes = match hex::decode(str_without_0x) {
+			Ok(bytes) => bytes,
+			Err(e) => return Err(serde::de::Error::custom(e.to_string())),
+		};
+		if hex_bytes.len() != SIGNATURE_SIZE {
+			return Err(serde::de::Error::custom("publickey expected to be 48 characters"))
+		}
+
+		let mut data = [0u8; SIGNATURE_SIZE];
+		data[0..SIGNATURE_SIZE].copy_from_slice(&hex_bytes);
+		Ok(Signature(data))
+	}
+}
+
+#[cfg(feature = "std")]
+impl<'de> Deserialize<'de> for Signature {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: Deserializer<'de>,
+	{
+		deserializer.deserialize_str(SignatureVisitor)
 	}
 }
 
@@ -138,138 +201,103 @@ pub struct FinalizedHeaderState {
 	pub import_time: u64,
 }
 
-#[derive(
-	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(
 	feature = "std",
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SyncCommitteeSize, ProofSize))]
+#[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct InitialSync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>> {
+pub struct InitialSync<const SYNC_COMMITTEE_SIZE: usize> {
 	pub header: BeaconHeader,
-	pub current_sync_committee: SyncCommittee<SyncCommitteeSize>,
-	pub current_sync_committee_branch: BoundedVec<H256, ProofSize>,
+	pub current_sync_committee: SyncCommittee<SYNC_COMMITTEE_SIZE>,
+	pub current_sync_committee_branch: Vec<H256>,
 	pub validators_root: Root,
 	pub import_time: u64,
 }
 
+impl<const SYNC_COMMITTEE_SIZE: usize> Default for InitialSync<SYNC_COMMITTEE_SIZE> {
+	fn default() -> Self {
+		InitialSync {
+			header: Default::default(),
+			current_sync_committee: Default::default(),
+			current_sync_committee_branch: Default::default(),
+			validators_root: Default::default(),
+			import_time: Default::default(),
+		}
+	}
+}
+
 #[derive(
-	Default,
-	Encode,
-	Decode,
-	CloneNoBound,
-	PartialEqNoBound,
-	RuntimeDebugNoBound,
-	TypeInfo,
-	MaxEncodedLen,
+	Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
 )]
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "std", derive(serde::Deserialize))]
 #[cfg_attr(
 	feature = "std",
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SignatureSize, ProofSize, SyncCommitteeSize, SyncCommitteeSize))]
+#[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct SyncCommitteePeriodUpdate<
-	SignatureSize: Get<u32>,
-	ProofSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>,
-> {
+pub struct SyncCommitteePeriodUpdate<const SYNC_COMMITTEE_SIZE: usize> {
 	pub attested_header: BeaconHeader,
-	pub next_sync_committee: SyncCommittee<SyncCommitteeSize>,
-	pub next_sync_committee_branch: BoundedVec<H256, ProofSize>,
+	pub next_sync_committee: SyncCommittee<SYNC_COMMITTEE_SIZE>,
+	pub next_sync_committee_branch: Vec<H256>,
 	pub finalized_header: BeaconHeader,
-	pub finality_branch: BoundedVec<H256, ProofSize>,
-	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
+	pub finality_branch: Vec<H256>,
+	pub sync_aggregate: SyncAggregate<SYNC_COMMITTEE_SIZE>,
 	pub sync_committee_period: u64,
 	pub signature_slot: u64,
 	pub block_roots_root: H256,
-	pub block_roots_branch: BoundedVec<H256, ProofSize>,
+	pub block_roots_branch: Vec<H256>,
 }
 
 #[derive(
-	Default,
-	Encode,
-	Decode,
-	CloneNoBound,
-	PartialEqNoBound,
-	RuntimeDebugNoBound,
-	TypeInfo,
-	MaxEncodedLen,
+	Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
 )]
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "std", derive(serde::Deserialize))]
 #[cfg_attr(
 	feature = "std",
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SignatureSize, ProofSize, SyncCommitteeSize,))]
+#[scale_info(skip_type_params(SyncCommitteeSize,))]
 #[codec(mel_bound())]
-pub struct FinalizedHeaderUpdate<
-	SignatureSize: Get<u32>,
-	ProofSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>,
-> {
+pub struct FinalizedHeaderUpdate<const SYNC_COMMITTEE_SIZE: usize> {
 	pub attested_header: BeaconHeader,
 	pub finalized_header: BeaconHeader,
-	pub finality_branch: BoundedVec<H256, ProofSize>,
-	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
+	pub finality_branch: Vec<H256>,
+	pub sync_aggregate: SyncAggregate<SYNC_COMMITTEE_SIZE>,
 	pub signature_slot: u64,
 	pub block_roots_root: H256,
-	pub block_roots_branch: BoundedVec<H256, ProofSize>,
+	pub block_roots_branch: Vec<H256>,
 }
 
-#[derive(
-	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Deserialize))]
 #[cfg_attr(
 	feature = "std",
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(
-	FeeRecipientSize,
-	LogsBloomSize,
-	ExtraDataSize,
-	DepositDataSize,
-	PublicKeySize,
-	SignatureSize,
-	ProofSize,
-	ProposerSlashingSize,
-	AttesterSlashingSize,
-	VoluntaryExitSize,
-	AttestationSize,
-	ValidatorCommitteeSize,
-	SyncCommitteeSize
-))]
+#[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct HeaderUpdate<
-	FeeRecipientSize: Get<u32>,
-	LogsBloomSize: Get<u32>,
-	ExtraDataSize: Get<u32>,
-	SignatureSize: Get<u32>,
-	ProofSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>,
-> {
+pub struct HeaderUpdate<const SYNC_COMMITTEE_SIZE: usize> {
 	pub beacon_header: BeaconHeader,
-	pub execution_header: ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
-	pub execution_branch: BoundedVec<H256, ProofSize>,
-	pub sync_aggregate: SyncAggregate<SyncCommitteeSize, SignatureSize>,
+	pub execution_header: ExecutionPayloadHeader,
+	pub execution_branch: Vec<H256>,
+	pub sync_aggregate: SyncAggregate<SYNC_COMMITTEE_SIZE>,
 	pub signature_slot: u64,
-	pub block_root_branch: BoundedVec<H256, ProofSize>,
+	pub block_root_branch: Vec<H256>,
 	pub block_root_branch_header_root: H256,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug)]
 pub struct ForkData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
 	pub current_version: [u8; 4],
 	pub genesis_validators_root: [u8; 32],
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug)]
 pub struct SigningData {
 	pub object_root: Root,
 	pub domain: Domain,
@@ -299,27 +327,15 @@ pub enum ConvertError {
 	FromExecutionPayloadToHeaderError,
 }
 
-impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32>>
-	TryFrom<ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>>
-	for ExecutionHeader
-{
+impl TryFrom<ExecutionPayloadHeader> for ExecutionHeader {
 	type Error = ConvertError;
 
-	fn try_from(
-		execution_payload: ExecutionPayloadHeader<FeeRecipientSize, LogsBloomSize, ExtraDataSize>,
-	) -> Result<Self, Self::Error> {
-		let mut fee_recipient = [0u8; 20];
-		let fee_slice = execution_payload.fee_recipient.as_slice();
-		if fee_slice.len() == 20 {
-			fee_recipient[0..20].copy_from_slice(&(fee_slice));
-		} else {
-			return Err(ConvertError::FromExecutionPayloadToHeaderError)
-		}
+	fn try_from(execution_payload: ExecutionPayloadHeader) -> Result<Self, Self::Error> {
 		Ok(ExecutionHeader {
 			parent_hash: execution_payload.parent_hash,
 			block_hash: execution_payload.block_hash,
 			block_number: execution_payload.block_number,
-			fee_recipient: H160::from(fee_recipient),
+			fee_recipient: H160::from(execution_payload.fee_recipient),
 			state_root: execution_payload.state_root,
 			receipts_root: execution_payload.receipts_root,
 		})
@@ -337,9 +353,19 @@ impl<FeeRecipientSize: Get<u32>, LogsBloomSize: Get<u32>, ExtraDataSize: Get<u32
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct SyncCommittee<SyncCommitteeSize: Get<u32>> {
-	pub pubkeys: BoundedVec<PublicKey, SyncCommitteeSize>,
+pub struct SyncCommittee<const SYNC_COMMITTEE_SIZE: usize> {
+	#[cfg_attr(feature = "std", serde(with = "serde_utils::arrays"))]
+	pub pubkeys: [PublicKey; SYNC_COMMITTEE_SIZE],
 	pub aggregate_pubkey: PublicKey,
+}
+
+impl<const SYNC_COMMITTEE_SIZE: usize> Default for SyncCommittee<SYNC_COMMITTEE_SIZE> {
+	fn default() -> Self {
+		SyncCommittee {
+			pubkeys: [Default::default(); SYNC_COMMITTEE_SIZE],
+			aggregate_pubkey: Default::default(),
+		}
+	}
 }
 
 /// Beacon block header as it is stored in the runtime storage. The block root is the
@@ -360,67 +386,53 @@ pub struct BeaconHeader {
 	pub body_root: Root,
 }
 
-#[derive(
-	Default,
-	Encode,
-	Decode,
-	CloneNoBound,
-	PartialEqNoBound,
-	RuntimeDebugNoBound,
-	TypeInfo,
-	MaxEncodedLen,
-)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Deserialize))]
 #[cfg_attr(
 	feature = "std",
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize, SignatureSize))]
 #[codec(mel_bound())]
-pub struct SyncAggregate<SyncCommitteeSize: Get<u32>, SignatureSize: Get<u32>> {
-	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub sync_committee_bits: BoundedVec<u8, SyncCommitteeSize>,
-	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub sync_committee_signature: BoundedVec<u8, SignatureSize>,
+pub struct SyncAggregate<const SYNC_COMMITTEE_SIZE: usize> {
+	#[serde(with = "serde_utils::arrays")]
+	pub sync_committee_bits: [u8; SYNC_COMMITTEE_SIZE],
+	pub sync_committee_signature: Signature,
+}
+
+impl<const SYNC_COMMITTEE_SIZE: usize> Default for SyncAggregate<SYNC_COMMITTEE_SIZE> {
+	fn default() -> Self {
+		SyncAggregate {
+			sync_committee_bits: [0; SYNC_COMMITTEE_SIZE],
+			sync_committee_signature: Default::default(),
+		}
+	}
 }
 
 #[derive(
-	Default,
-	Encode,
-	Decode,
-	CloneNoBound,
-	PartialEqNoBound,
-	RuntimeDebugNoBound,
-	TypeInfo,
-	MaxEncodedLen,
+	Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
 )]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", derive(Deserialize))]
 #[cfg_attr(
 	feature = "std",
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(FeeRecipientSize, LogsBloomSize, ExtraDataSize))]
 #[codec(mel_bound())]
-pub struct ExecutionPayloadHeader<
-	FeeRecipientSize: Get<u32>,
-	LogsBloomSize: Get<u32>,
-	ExtraDataSize: Get<u32>,
-> {
+pub struct ExecutionPayloadHeader {
 	pub parent_hash: H256,
-	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub fee_recipient: BoundedVec<u8, FeeRecipientSize>,
+	pub fee_recipient: H160,
 	pub state_root: H256,
 	pub receipts_root: H256,
-	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub logs_bloom: BoundedVec<u8, LogsBloomSize>,
+	#[cfg_attr(feature = "std", serde(deserialize_with = "serde_utils::from_hex_to_bytes"))]
+	pub logs_bloom: Vec<u8>,
 	pub prev_randao: H256,
 	pub block_number: u64,
 	pub gas_limit: u64,
 	pub gas_used: u64,
 	pub timestamp: u64,
-	#[cfg_attr(feature = "std", serde(deserialize_with = "from_hex_to_bytes"))]
-	pub extra_data: BoundedVec<u8, ExtraDataSize>,
-	#[cfg_attr(feature = "std", serde(deserialize_with = "from_int_to_u256"))]
+	#[cfg_attr(feature = "std", serde(deserialize_with = "serde_utils::from_hex_to_bytes"))]
+	pub extra_data: Vec<u8>,
+	#[cfg_attr(feature = "std", serde(deserialize_with = "serde_utils::from_int_to_u256"))]
 	pub base_fee_per_gas: U256,
 	pub block_hash: H256,
 	pub transactions_root: H256,
@@ -461,38 +473,4 @@ impl ExecutionHeader {
 
 		final_hash.map(|hash| (hash.into(), item_to_prove.value))
 	}
-}
-
-#[cfg(feature = "std")]
-fn from_hex_to_bytes<'de, D, S>(deserializer: D) -> Result<BoundedVec<u8, S>, D::Error>
-where
-	D: Deserializer<'de>,
-	S: Get<u32>,
-{
-	let s = String::deserialize(deserializer)?;
-
-	let str_without_0x = match s.strip_prefix("0x") {
-		Some(val) => val,
-		None => &s,
-	};
-
-	let hex_bytes = match hex::decode(str_without_0x) {
-		Ok(bytes) => bytes,
-		Err(e) => return Err(Error::custom(e.to_string())),
-	};
-
-	match BoundedVec::try_from(hex_bytes) {
-		Ok(bounded) => return Ok(bounded),
-		Err(_) => return Err(Error::custom("unable to create bounded vec")),
-	};
-}
-
-#[cfg(feature = "std")]
-fn from_int_to_u256<'de, D>(deserializer: D) -> Result<U256, D::Error>
-where
-	D: Deserializer<'de>,
-{
-	let number = u128::deserialize(deserializer)?;
-
-	Ok(U256::from(number))
 }
