@@ -28,7 +28,7 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 		let bridged_network = BridgedNetwork::get();
 		if network == bridged_network {
 			log::trace!(target: "ethereum-blob-exporter", "skipped due to unmatched network {network:?}.");
-			return Err(SendError::NotApplicable);
+			return Err(SendError::NotApplicable)
 		}
 
 		let dest = destination.take().ok_or(SendError::MissingArgument)?;
@@ -53,7 +53,7 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 			_ => {
 				log::error!(target: "ethereum-blob-exporter", "could not get parachain id from universal source '{local_sub:?}'.");
 				return Err(SendError::MissingArgument)
-			}
+			},
 		};
 
 		let message = message.take().ok_or(SendError::MissingArgument)?;
@@ -141,11 +141,13 @@ fn match_xcm_pattern(message: &Xcm<()>) -> Result<XcmMessagePattern, XcmPatternM
 	};
 
 	// Get deposit reserved asset
-	let (assets, beneficiary) = if let ReserveAssetDeposited(reserved_assets) = next_instruction()? {
+	let (assets, beneficiary) = if let ReserveAssetDeposited(reserved_assets) = next_instruction()?
+	{
 		if reserved_assets.len() == 0 {
 			return Err(NoReserveAssets)
 		}
-		if let (ClearOrigin, DepositAsset { assets, beneficiary }) = (next_instruction()?, next_instruction()?)
+		if let (ClearOrigin, DepositAsset { assets, beneficiary }) =
+			(next_instruction()?, next_instruction()?)
 		{
 			if reserved_assets.inner().iter().any(|asset| !assets.matches(asset)) {
 				return Err(FilterDoesNotConsumeAllReservedAssets)
