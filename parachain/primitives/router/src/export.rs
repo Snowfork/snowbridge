@@ -2,108 +2,10 @@ use codec::{Decode, Encode};
 use ethabi::{self, Token};
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::{ParaId, SubmitMessage};
-use sp_core::RuntimeDebug;
+use sp_core::{RuntimeDebug, H160};
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
 use xcm_executor::traits::ExportXcm;
-
-#[derive(RuntimeDebug)]
-enum ParseError {
-	UnexpectedEndOfXcm,
-	TargetFeeExpected,
-	BuyExecutionExpected,
-	EndOfXcmMessageExpected,
-	ReserveAssetDepositedExpected,
-	NoReserveAssets,
-	FilterDoesNotConsumeAllReservedAssets,
-}
-
-#[derive(RuntimeDebug)]
-enum XcmMessageType {
-	AssetTransfer {
-		assets: MultiAssets,
-		beneficiary: MultiLocation,
-		max_target_fee: Option<MultiAsset>,
-	},
-}
-
-fn parse_xcm(message: &Xcm<()>) -> Result<XcmMessageType, ParseError> {
-	use ParseError::*;
-
-	let mut next_token = {
-		let mut it = message.iter();
-		move || it.next().ok_or(UnexpectedEndOfXcm)
-	};
-
-	// Get target fees if specified.
-	let max_target_fee = match next_token()? {
-		WithdrawAsset(fee_asset) => match next_token()? {
-			BuyExecution { fees: execution_fee, weight_limit: Unlimited }
-				if fee_asset.len() == 1 && fee_asset.contains(execution_fee) =>
-				Some(execution_fee),
-			_ => return Err(BuyExecutionExpected),
-		},
-		UnpaidExecution { check_origin: None, weight_limit: Unlimited } => None,
-		_ => return Err(TargetFeeExpected),
-	};
-
-	// Get deposit reserved asset
-	let (assets, beneficiary) = if let ReserveAssetDeposited(reserved_assets) = next_token()? {
-		if reserved_assets.len() == 0 {
-			return Err(NoReserveAssets)
-		}
-		if let (ClearOrigin, DepositAsset { assets, beneficiary }) = (next_token()?, next_token()?)
-		{
-			if reserved_assets.inner().iter().any(|asset| !assets.matches(asset)) {
-				return Err(FilterDoesNotConsumeAllReservedAssets)
-			}
-			(reserved_assets, beneficiary)
-		} else {
-			return Err(ReserveAssetDepositedExpected)
-		}
-	} else {
-		return Err(ReserveAssetDepositedExpected)
-	};
-
-	if next_token().is_ok() {
-		Err(EndOfXcmMessageExpected)
-	} else {
-		Ok(XcmMessageType::AssetTransfer {
-			assets: assets.clone(),
-			beneficiary: beneficiary.clone(),
-			max_target_fee: max_target_fee.map(|fee| fee.clone()),
-		})
-	}
-}
-
-#[derive(RuntimeDebug)]
-enum ValidationError {}
-
-fn validate_and_encode(message_type: &XcmMessageType) -> Result<(Vec<u8>, u16), ()> {
-	match message_type {
-		XcmMessageType::AssetTransfer { assets, beneficiary, max_target_fee } => {
-			// We do not support target fees yet
-			max_target_fee.is_none();
-			// We only support a single asset at a time.
-			assets.len() == 1;
-			// We only support ethereum native assets.
-
-			let inner = Token::Tuple(vec![
-				//Token::Address(),
-				//Token::Address(),
-				//Token::Uint(),
-			])
-			.to_bytes()
-			.ok_or(())?;
-
-			const UNLOCK_ACTION: u32 = 0;
-			let message =
-				Token::Tuple(vec![Token::Uint(UNLOCK_ACTION.into()), Token::Bytes(inner)]);
-
-			Ok((message.to_bytes().ok_or(())?, 1))
-		},
-	}
-}
 
 #[derive(Encode, Decode)]
 struct BridgeMessage(ParaId, u16, Vec<u8>);
@@ -146,15 +48,16 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 
 		let message = message.take().ok_or(SendError::MissingArgument)?;
 
-		let parse_info = parse_xcm(&message).map_err(|_| {
+		let parse_info = match_xcm_pattern(&message).map_err(|_| {
 			//TODO: Log
 			SendError::Unroutable
 		})?;
 
-		let (encoded_payload, handler) = validate_and_encode(&parse_info).map_err(|_| {
-			//TODO: Log
-			SendError::Unroutable
-		})?;
+		let (encoded_payload, handler) =
+			validate_and_encode(&local_net, &bridged_network, &parse_info).map_err(|_| {
+				//TODO: Log
+				SendError::Unroutable
+			})?;
 
 		//TODO: Log info and trace
 		let blob = BridgeMessage(para_id.into(), handler, encoded_payload).encode();
@@ -177,6 +80,205 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 			SendError::Unroutable
 		})?;
 		Ok(hash)
+	}
+}
+
+/// Represents a type of XCM message that was pattern matched. e.g. Asset transfers, Asset create,
+/// Transact. At this level of abstraction we have picked out the pieces of the xcm we care about.
+#[derive(RuntimeDebug)]
+enum XcmMessagePattern {
+	AssetTransfer {
+		assets: MultiAssets,
+		beneficiary: MultiLocation,
+		max_target_fee: Option<MultiAsset>,
+	},
+}
+
+/// Errors that can be thrown to the pattern matching step.
+#[derive(RuntimeDebug)]
+enum XcmPatternMatchError {
+	UnexpectedEndOfXcm,
+	TargetFeeExpected,
+	BuyExecutionExpected,
+	EndOfXcmMessageExpected,
+	ReserveAssetDepositedExpected,
+	NoReserveAssets,
+	FilterDoesNotConsumeAllReservedAssets,
+}
+
+/// Figures out what this xcm message looks like. Does basic validation to make sure the
+/// xcm message is sound.
+fn match_xcm_pattern(message: &Xcm<()>) -> Result<XcmMessagePattern, XcmPatternMatchError> {
+	use XcmPatternMatchError::*;
+
+	let mut next_token = {
+		let mut it = message.iter();
+		move || it.next().ok_or(UnexpectedEndOfXcm)
+	};
+
+	// Get target fees if specified.
+	let max_target_fee = match next_token()? {
+		WithdrawAsset(fee_asset) => match next_token()? {
+			BuyExecution { fees: execution_fee, weight_limit: Unlimited }
+				if fee_asset.len() == 1 && fee_asset.contains(execution_fee) =>
+				Some(execution_fee),
+			_ => return Err(BuyExecutionExpected),
+		},
+		UnpaidExecution { check_origin: None, weight_limit: Unlimited } => None,
+		_ => return Err(TargetFeeExpected),
+	};
+
+	// Get deposit reserved asset
+	let (assets, beneficiary) = if let ReserveAssetDeposited(reserved_assets) = next_token()? {
+		if reserved_assets.len() == 0 {
+			return Err(NoReserveAssets)
+		}
+		if let (ClearOrigin, DepositAsset { assets, beneficiary }) = (next_token()?, next_token()?)
+		{
+			if reserved_assets.inner().iter().any(|asset| !assets.matches(asset)) {
+				return Err(FilterDoesNotConsumeAllReservedAssets)
+			}
+			(reserved_assets, beneficiary)
+		} else {
+			return Err(ReserveAssetDepositedExpected)
+		}
+	} else {
+		return Err(ReserveAssetDepositedExpected)
+	};
+
+	// All xcm instructions must be consumed.
+	if next_token().is_ok() {
+		Err(EndOfXcmMessageExpected)
+	} else {
+		Ok(XcmMessagePattern::AssetTransfer {
+			assets: assets.clone(),
+			beneficiary: beneficiary.clone(),
+			max_target_fee: max_target_fee.map(|fee| fee.clone()),
+		})
+	}
+}
+
+/// Errors that can occur during validation of the xcm pattern.
+#[derive(RuntimeDebug)]
+enum ValidationError {
+	TargetFeesNotSupported,
+	TooManyAssets,
+	AssetsNotFound,
+	AssetNotConcreteFungible,
+	ZeroAssetTransfer,
+	EthABIEncodeError,
+	BeneficiaryResolutionFailed,
+	AssetResolutionFailed,
+}
+
+/// Validates the Xcm pattern to ensure that all assets and locations are
+/// correct and then produces the EthABI encoded message equivalent and
+/// relevant handler id.
+/// e.g. The XcmMessagePattern::AssetTransfer pattern must be routed to
+/// NativeTokens handler id and create and Unlock message.
+/// e.g. The XcmMessagePattern::AssetTransfer with substrate native asset would
+/// need route to the handler for substrate tokens and create a Mint message.
+fn validate_and_encode(
+	universal_location: &NetworkId,
+	bridged_location: &NetworkId,
+	message_type: &XcmMessagePattern,
+) -> Result<(Vec<u8>, u16), ValidationError> {
+	use ValidationError::*;
+	const NATIVE_TOKENS_HANDLER: u16 = 1;
+	const UNLOCK_ACTION: u16 = 0;
+	match message_type {
+		XcmMessagePattern::AssetTransfer { assets, beneficiary, max_target_fee } => {
+			// We do not support target fees
+			ensure!(max_target_fee.is_none(), TargetFeesNotSupported);
+
+			let (asset_address, amount) = {
+				// We only support a single asset at a time.
+				ensure!(assets.len() == 1, TooManyAssets);
+
+				// Ensure asset is concrete and fungible.
+				let asset = assets.get(0).ok_or(AssetsNotFound)?;
+				let (asset_location, amount) =
+					if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = asset {
+						(location, amount)
+					} else {
+						return Err(AssetNotConcreteFungible)
+					};
+
+				ensure!(*amount > 0, ZeroAssetTransfer);
+
+				let (network, location) = ensure_is_remote(*universal_location, *asset_location)
+					.ok()
+					.ok_or(AssetResolutionFailed)?;
+				ensure!(&network == bridged_location, AssetResolutionFailed);
+				(
+					location_to_eth_address(*bridged_location, location)
+						.ok_or(AssetResolutionFailed)?,
+					amount,
+				)
+			};
+
+			// Ensure benificiary is Ethereum address.
+			let destination_address = {
+				let (network, location) = ensure_is_remote(*universal_location, *beneficiary)
+					.ok()
+					.ok_or(BeneficiaryResolutionFailed)?;
+				ensure!(&network == bridged_location, BeneficiaryResolutionFailed);
+				location_to_eth_address(*bridged_location, location)
+					.ok_or(BeneficiaryResolutionFailed)?
+			};
+
+			let inner = Token::Tuple(vec![
+				Token::Address(asset_address),
+				Token::Address(destination_address),
+				Token::Uint((*amount).into()),
+			])
+			.to_bytes()
+			.ok_or(EthABIEncodeError)?;
+
+			let message =
+				Token::Tuple(vec![Token::Uint(UNLOCK_ACTION.into()), Token::Bytes(inner)]);
+
+			Ok((message.to_bytes().ok_or(EthABIEncodeError)?, NATIVE_TOKENS_HANDLER))
+		},
+	}
+}
+
+// copied from ~/polkadot/xcm/xcm-builder/src/universal_exports.rs
+// TODO: Merge latest from upstream where this function is exported as public.
+fn ensure_is_remote(
+	universal_local: impl Into<InteriorMultiLocation>,
+	dest: impl Into<MultiLocation>,
+) -> Result<(NetworkId, InteriorMultiLocation), MultiLocation> {
+	let dest = dest.into();
+	let universal_local = universal_local.into();
+	let local_net = match universal_local.global_consensus() {
+		Ok(x) => x,
+		Err(_) => return Err(dest),
+	};
+	let universal_destination: InteriorMultiLocation = universal_local
+		.into_location()
+		.appended_with(dest)
+		.map_err(|x| x.1)?
+		.try_into()?;
+	let (remote_dest, remote_net) = match universal_destination.split_first() {
+		(d, Some(GlobalConsensus(n))) if n != local_net => (d, n),
+		_ => return Err(dest),
+	};
+	Ok((remote_net, remote_dest))
+}
+
+fn location_to_eth_address(
+	eth_network: NetworkId,
+	location: InteriorMultiLocation,
+) -> Option<H160> {
+	if let X1(AccountKey20 { network, key }) = location {
+		if network == None || network == Some(eth_network) {
+			Some(H160(key))
+		} else {
+			None
+		}
+	} else {
+		None
 	}
 }
 
