@@ -2,12 +2,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod config;
-mod merkleization;
 #[cfg(test)]
 mod mock;
 pub mod weights;
 
-mod ssz;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
