@@ -26,53 +26,63 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 		message: &mut Option<Xcm<()>>,
 	) -> SendResult<Self::Ticket> {
 		let bridged_network = BridgedNetwork::get();
-		if network == bridged_network {
-			log::trace!(target: "ethereum-blob-exporter", "skipped due to unmatched network {network:?}.");
+		if network != bridged_network {
+			log::trace!(target: "ethereum_blob_exporter", "skipped due to unmatched bridge network {network:?}.");
 			return Err(SendError::NotApplicable)
 		}
 
 		let dest = destination.take().ok_or(SendError::MissingArgument)?;
 		if let Err((dest, _)) = dest.pushed_front_with(GlobalConsensus(bridged_network)) {
 			*destination = Some(dest);
-			log::trace!(target: "ethereum-blob-exporter", "skipped due to invalid destination '{dest:?}'.");
+			log::trace!(target: "ethereum_blob_exporter", "skipped due to invalid destination '{dest:?}'.");
 			return Err(SendError::NotApplicable)
 		};
 
 		let (local_net, local_sub) = universal_source
 			.take()
-			.ok_or(SendError::MissingArgument)?
+			.ok_or_else(|| {
+				log::error!(target: "ethereum_blob_exporter", "universal source not provided.");
+				SendError::MissingArgument
+			})?
 			.split_global()
 			.map_err(|()| {
-				log::error!(target: "ethereum-blob-exporter", "could not get global consensus from universal source '{universal_source:?}'.");
+				log::error!(target: "ethereum_blob_exporter", "could not get global consensus from universal source '{universal_source:?}'.");
 				SendError::Unroutable
 			})?;
 
-		ensure!(local_net == RelayNetwork::get(), SendError::NotApplicable);
+		if local_net != RelayNetwork::get() {
+			log::trace!(target: "ethereum_blob_exporter", "skipped due to unmatched relay network {local_net:?}.");
+			return Err(SendError::NotApplicable);
+		}
+
 		let para_id = match local_sub {
 			X1(Parachain(para_id)) => para_id,
 			_ => {
-				log::error!(target: "ethereum-blob-exporter", "could not get parachain id from universal source '{local_sub:?}'.");
+				log::error!(target: "ethereum_blob_exporter", "could not get parachain id from universal source '{local_sub:?}'.");
 				return Err(SendError::MissingArgument)
 			},
 		};
 
-		let message = message.take().ok_or(SendError::MissingArgument)?;
+		let message = message.take().ok_or_else(|| {
+			log::error!(target: "ethereum_blob_exporter", "xcm message not provided.");
+			SendError::MissingArgument
+		})?;
 
 		let parse_info = match_xcm_pattern(&message).map_err(|err| {
-			log::error!(target: "ethereum-blob-exporter", "unroutable due to pattern matching error '{err:?}'.");
+			log::error!(target: "ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
 
 		let (encoded_payload, handler) =
 			validate_and_encode(&local_net, &bridged_network, &parse_info).map_err(|err| {
-				log::error!(target: "ethereum-blob-exporter", "unroutable due to validation error '{err:?}'.");
+				log::error!(target: "ethereum_blob_exporter", "unroutable due to validation error '{err:?}'.");
 				SendError::Unroutable
 			})?;
 
 		let blob = BridgeMessage(para_id.into(), handler, encoded_payload).encode();
 		let hash: [u8; 32] = sp_io::hashing::blake2_256(blob.as_slice());
 
-		log::info!(target: "ethereum-blob-exporter", "message validated {hash:#?}.");
+		log::info!(target: "ethereum_blob_exporter", "message validated {hash:#?}.");
 
 		// TODO: Fees if any currently returning empty multi assets as cost
 		Ok(((blob, hash), MultiAssets::default()))
@@ -83,14 +93,14 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 		let mut input: &[u8] = blob.as_mut();
 		let BridgeMessage(source_id, handler, payload) = BridgeMessage::decode(&mut input)
 			.map_err(|err| {
-				log::error!(target: "ethereum-blob-exporter", "undeliverable due to decoding error '{err:?}'.");
+				log::error!(target: "ethereum_blob_exporter", "undeliverable due to decoding error '{err:?}'.");
 				SendError::NotApplicable
 			})?;
 		Submitter::submit(&source_id, handler, payload.as_ref()).map_err(|err| {
-			log::error!(target: "ethereum-blob-exporter", "undeliverable due to submitter error '{err:?}'.");
+			log::error!(target: "ethereum_blob_exporter", "undeliverable due to submitter error '{err:?}'.");
 			SendError::Unroutable
 		})?;
-		log::info!(target: "ethereum-blob-exporter", "message delivered {hash:#?}.");
+		log::info!(target: "ethereum_blob_exporter", "message delivered {hash:#?}.");
 		Ok(hash)
 	}
 }
