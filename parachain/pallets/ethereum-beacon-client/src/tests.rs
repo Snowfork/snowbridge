@@ -158,7 +158,7 @@ pub fn test_is_valid_merkle_proof() {
 		assert_eq!(
 			mock_minimal::EthereumBeaconClient::is_valid_merkle_branch(
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-				vec![
+				&[
 					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 					hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
 					hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
@@ -181,7 +181,7 @@ pub fn test_merkle_proof_fails_if_depth_and_branch_dont_match() {
 		assert_eq!(
 			mock_minimal::EthereumBeaconClient::is_valid_merkle_branch(
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-				vec![
+				&[
 					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 					hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
 					hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
@@ -199,7 +199,7 @@ pub fn test_merkle_proof_fails_if_depth_and_branch_dont_match() {
 pub fn test_bls_fast_aggregate_verify_minimal() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_ok!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
-			vec![
+			&[
 				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
 				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
 				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
@@ -215,7 +215,7 @@ pub fn test_bls_fast_aggregate_verify_minimal() {
 pub fn test_bls_fast_aggregate_verify_invalid_point() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
-			vec![
+			&[
 				hex!("973eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
 				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
 				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
@@ -231,7 +231,7 @@ pub fn test_bls_fast_aggregate_verify_invalid_point() {
 pub fn test_bls_fast_aggregate_verify_invalid_message() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
-			vec![
+			&[
 				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
 				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
 				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
@@ -247,7 +247,7 @@ pub fn test_bls_fast_aggregate_verify_invalid_message() {
 pub fn test_bls_fast_aggregate_verify_invalid_signature() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
-			vec![
+			&[
 				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
 				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
 				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),

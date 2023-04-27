@@ -214,22 +214,20 @@ pub mod pallet {
 		#[transactional]
 		pub fn sync_committee_period_update(
 			origin: OriginFor<T>,
-			sync_committee_period_update: SyncCommitteeUpdate,
+			update: SyncCommitteeUpdate,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
 			Self::check_bridge_blocked_state()?;
 
-			let sync_committee_period = sync_committee_period_update.sync_committee_period;
+			let sync_committee_period = update.sync_committee_period;
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received sync committee update for period {}. Applying update",
 				sync_committee_period
 			);
 
-			if let Err(err) =
-				Self::process_sync_committee_period_update(sync_committee_period_update)
-			{
+			if let Err(err) = Self::process_sync_committee_period_update(&update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"💫 Sync committee period update failed with error {:?}",
@@ -338,42 +336,42 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn process_initial_sync(initial_sync: InitialUpdate) -> DispatchResult {
+		fn process_initial_sync(update: &InitialUpdate) -> DispatchResult {
 			Self::verify_sync_committee(
-				initial_sync.current_sync_committee.clone(),
-				initial_sync.current_sync_committee_branch,
-				initial_sync.header.state_root,
+				&update.current_sync_committee,
+				&update.current_sync_committee_branch,
+				update.header.state_root,
 				config::CURRENT_SYNC_COMMITTEE_DEPTH,
 				config::CURRENT_SYNC_COMMITTEE_INDEX,
 			)?;
 
-			let period = Self::compute_current_sync_period(initial_sync.header.slot);
+			let period = Self::compute_current_sync_period(update.header.slot);
 
-			let block_root: H256 = initial_sync
+			let block_root: H256 = update
 				.header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
 				.into();
 
-			Self::store_sync_committee(period, initial_sync.current_sync_committee);
-			Self::store_validators_root(initial_sync.validators_root);
+			Self::store_sync_committee(period, &update.current_sync_committee);
+			Self::store_validators_root(update.validators_root);
 
-			let slot = initial_sync.header.slot;
+			let slot = update.header.slot;
 
 			let last_finalized_header = FinalizedHeaderState {
 				beacon_block_root: block_root,
 				beacon_slot: slot,
-				import_time: initial_sync.import_time,
+				import_time: update.import_time,
 			};
 
-			<FinalizedBeaconHeaders<T>>::insert(block_root, initial_sync.header);
+			<FinalizedBeaconHeaders<T>>::insert(block_root, update.header.clone());
 			Self::add_finalized_header_slot(slot)?;
 			<LatestFinalizedHeaderState<T>>::set(last_finalized_header);
 
 			Ok(())
 		}
 
-		fn process_sync_committee_period_update(update: SyncCommitteeUpdate) -> DispatchResult {
+		fn process_sync_committee_period_update(update: &SyncCommitteeUpdate) -> DispatchResult {
 			ensure!(
 				update.signature_slot > update.attested_header.slot &&
 					update.attested_header.slot >= update.finalized_header.slot,
@@ -383,8 +381,8 @@ pub mod pallet {
 				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
 			Self::sync_committee_participation_is_supermajority(&participation)?;
 			Self::verify_sync_committee(
-				update.next_sync_committee.clone(),
-				update.next_sync_committee_branch,
+				&update.next_sync_committee,
+				&update.next_sync_committee_branch,
 				update.attested_header.state_root,
 				config::NEXT_SYNC_COMMITTEE_DEPTH,
 				config::NEXT_SYNC_COMMITTEE_INDEX,
@@ -398,7 +396,7 @@ pub mod pallet {
 
 			Self::verify_header(
 				block_root,
-				update.finality_branch,
+				&update.finality_branch,
 				update.attested_header.state_root,
 				config::FINALIZED_ROOT_DEPTH,
 				config::FINALIZED_ROOT_INDEX,
@@ -432,7 +430,7 @@ pub mod pallet {
 				&participation,
 				&update.sync_aggregate.sync_committee_signature,
 				&current_sync_committee.pubkeys,
-				update.attested_header,
+				update.attested_header.clone(),
 				validators_root,
 				update.signature_slot,
 			)?;
@@ -440,7 +438,7 @@ pub mod pallet {
 			ensure!(
 				Self::is_valid_merkle_branch(
 					update.block_roots_root,
-					update.block_roots_branch,
+					&update.block_roots_branch,
 					config::BLOCK_ROOTS_INDEX,
 					config::BLOCK_ROOTS_DEPTH,
 					update.finalized_header.state_root
@@ -449,8 +447,8 @@ pub mod pallet {
 			);
 
 			Self::store_block_root(update.block_roots_root, block_root);
-			Self::store_sync_committee(next_period, update.next_sync_committee);
-			Self::store_finalized_header(block_root, update.finalized_header)?;
+			Self::store_sync_committee(next_period, &update.next_sync_committee);
+			Self::store_finalized_header(block_root, update.finalized_header.clone())?;
 
 			Ok(())
 		}
@@ -500,7 +498,7 @@ pub mod pallet {
 
 			Self::verify_header(
 				block_root,
-				update.finality_branch,
+				&update.finality_branch,
 				update.attested_header.state_root,
 				config::FINALIZED_ROOT_DEPTH,
 				config::FINALIZED_ROOT_INDEX,
@@ -531,7 +529,7 @@ pub mod pallet {
 			ensure!(
 				Self::is_valid_merkle_branch(
 					update.block_roots_root,
-					update.block_roots_branch,
+					&update.block_roots_branch,
 					config::BLOCK_ROOTS_INDEX,
 					config::BLOCK_ROOTS_DEPTH,
 					update.finalized_header.state_root
@@ -573,7 +571,7 @@ pub mod pallet {
 			ensure!(
 				Self::is_valid_merkle_branch(
 					execution_root,
-					update.execution_branch,
+					&update.execution_branch,
 					config::EXECUTION_HEADER_DEPTH,
 					config::EXECUTION_HEADER_INDEX,
 					update.beacon_header.body_root
@@ -673,7 +671,7 @@ pub mod pallet {
 			ensure!(
 				Self::is_valid_merkle_branch(
 					beacon_block_root,
-					block_root_proof,
+					&block_root_proof,
 					config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH,
 					leaf_index,
 					finalized_block_root_hash
@@ -722,7 +720,7 @@ pub mod pallet {
 
 			// Verify sync committee aggregate signature.
 			Self::bls_fast_aggregate_verify(
-				participant_pubkeys,
+				&participant_pubkeys,
 				signing_root,
 				sync_committee_signature,
 			)?;
@@ -735,7 +733,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn bls_fast_aggregate_verify(
-			pubkeys: Vec<PublicKey>,
+			pubkeys: &[PublicKey],
 			message: H256,
 			signature: &Signature,
 		) -> DispatchResult {
@@ -792,8 +790,8 @@ pub mod pallet {
 		}
 
 		fn verify_sync_committee(
-			sync_committee: SyncCommittee,
-			sync_committee_branch: Vec<H256>,
+			sync_committee: &SyncCommittee,
+			sync_committee_branch: &[H256],
 			header_state_root: H256,
 			depth: u64,
 			index: u64,
@@ -818,7 +816,7 @@ pub mod pallet {
 
 		fn verify_header(
 			block_root: H256,
-			proof_branch: Vec<H256>,
+			proof_branch: &[H256],
 			attested_header_state_root: H256,
 			depth: u64,
 			index: u64,
@@ -837,7 +835,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_sync_committee(period: u64, sync_committee: SyncCommittee) {
+		fn store_sync_committee(period: u64, sync_committee: &SyncCommittee) {
 			<SyncCommittees<T>>::insert(period, sync_committee);
 
 			log::trace!(
@@ -965,7 +963,7 @@ pub mod pallet {
 
 		pub(super) fn is_valid_merkle_branch(
 			leaf: H256,
-			branch: Vec<H256>,
+			branch: &[H256],
 			depth: u64,
 			index: u64,
 			root: H256,
@@ -1032,13 +1030,13 @@ pub mod pallet {
 			return fork_versions.genesis.version
 		}
 
-		pub(super) fn initial_sync(initial_sync: InitialUpdate) -> Result<(), &'static str> {
+		pub(super) fn initial_sync(update: InitialUpdate) -> Result<(), &'static str> {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received initial sync, starting processing.",
 			);
 
-			if let Err(err) = Self::process_initial_sync(initial_sync) {
+			if let Err(err) = Self::process_initial_sync(&update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"Initial sync failed with error {:?}",

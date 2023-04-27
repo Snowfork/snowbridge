@@ -3,9 +3,9 @@ use crate::{
 	config::{SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE},
 	mock::*,
 	pallet::FinalizedBeaconHeadersBlockRoot,
-	CompactExecutionHeader, Error, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders,
-	FinalizedHeaderState, LatestExecutionHeaderState, LatestFinalizedHeaderState,
-	LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
+	Error, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
+	LatestExecutionHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
+	SyncCommittees, ValidatorsRoot,
 };
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;

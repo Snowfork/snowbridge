@@ -34,7 +34,7 @@ impl From<BeaconHeader> for SSZBeaconBlockHeader {
 	}
 }
 
-#[derive(Default, SimpleSerializeDerive)]
+#[derive(Default, SimpleSerializeDerive, Clone)]
 pub struct SSZSyncCommittee<const COMMITTEE_SIZE: usize> {
 	pub pubkeys: Vector<Vector<u8, PUBKEY_SIZE>, COMMITTEE_SIZE>,
 	pub aggregate_pubkey: Vector<u8, PUBKEY_SIZE>,
@@ -82,7 +82,7 @@ impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 	}
 }
 
-#[derive(Default, SimpleSerializeDerive)]
+#[derive(Default, SimpleSerializeDerive, Clone)]
 pub struct SSZForkData {
 	pub current_version: [u8; 4],
 	pub genesis_validators_root: [u8; 32],
@@ -97,7 +97,7 @@ impl From<ForkData> for SSZForkData {
 	}
 }
 
-#[derive(Default, SimpleSerializeDerive)]
+#[derive(Default, SimpleSerializeDerive, Clone)]
 pub struct SSZSigningData {
 	pub object_root: [u8; 32],
 	pub domain: [u8; 32],

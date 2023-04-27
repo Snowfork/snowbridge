@@ -95,7 +95,7 @@ benchmarks! {
 		let participant_pubkeys = get_participant_pubkeys::<T>(&update)?;
 		let signing_root = get_signing_message::<T>(&update)?;
 	}:{
-		EthereumBeaconClient::<T>::bls_fast_aggregate_verify(participant_pubkeys,signing_root,&update.sync_aggregate.sync_committee_signature)?;
+		EthereumBeaconClient::<T>::bls_fast_aggregate_verify(&participant_pubkeys,signing_root,&update.sync_aggregate.sync_committee_signature)?;
 	}
 
 	bls_aggregate_pubkey {

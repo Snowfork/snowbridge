@@ -100,10 +100,6 @@ jobs:
           args: >-
             --manifest-path parachain/Cargo.toml
             --verbose --workspace
-            --exclude snowbridge 
-            --exclude snowbridge-runtime 
-            --exclude snowblink-runtime 
-            --exclude snowbase-runtime
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}

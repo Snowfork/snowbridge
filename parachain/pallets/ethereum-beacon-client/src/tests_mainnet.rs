@@ -29,24 +29,25 @@ fn it_syncs_from_an_initial_checkpoint() {
 fn it_updates_a_committee_period_sync_update() {
 	let update =
 		get_committee_sync_period_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
-
-	let current_sync_committee = get_initial_sync::<SYNC_COMMITTEE_SIZE>().current_sync_committee;
-
+	let genesis = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
 		update.attested_header.slot,
 	);
 
 	new_tester::<mock_mainnet::Test>().execute_with(|| {
-		SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
+		SyncCommittees::<mock_mainnet::Test>::insert(
+			current_period,
+			genesis.current_sync_committee,
+		);
 		LatestSyncCommitteePeriod::<mock_mainnet::Test>::set(current_period);
-		ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
+		ValidatorsRoot::<mock_mainnet::Test>::set(genesis.validators_root);
+
+		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 
 		assert_ok!(mock_mainnet::EthereumBeaconClient::sync_committee_period_update(
 			mock_mainnet::RuntimeOrigin::signed(1),
-			update.clone(),
+			update,
 		));
-
-		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 
 		assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
 	});
@@ -55,9 +56,7 @@ fn it_updates_a_committee_period_sync_update() {
 #[test]
 fn it_processes_a_finalized_header_update() {
 	let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
-	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
-	let current_sync_committee = initial_sync.current_sync_committee;
-
+	let genesis = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
 		update.attested_header.slot,
 	);
@@ -68,13 +67,16 @@ fn it_processes_a_finalized_header_update() {
 
 	new_tester::<mock_mainnet::Test>().execute_with(|| {
 		mock_mainnet::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
-		SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
+		SyncCommittees::<mock_mainnet::Test>::insert(
+			current_period,
+			genesis.current_sync_committee,
+		);
 		LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
 			beacon_block_root: Default::default(),
 			import_time,
 			beacon_slot: slot - 1,
 		});
-		ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
+		ValidatorsRoot::<mock_mainnet::Test>::set(genesis.validators_root);
 
 		assert_ok!(mock_mainnet::EthereumBeaconClient::import_finalized_header(
 			mock_mainnet::RuntimeOrigin::signed(1),
@@ -90,8 +92,7 @@ fn it_processes_a_finalized_header_update() {
 #[test]
 fn it_errors_when_weak_subjectivity_period_exceeded_for_a_finalized_header_update() {
 	let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
-	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
-	let current_sync_committee = initial_sync.current_sync_committee;
+	let genesis = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 
 	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
 		update.attested_header.slot,
@@ -103,13 +104,16 @@ fn it_errors_when_weak_subjectivity_period_exceeded_for_a_finalized_header_updat
 
 	new_tester::<mock_mainnet::Test>().execute_with(|| {
 		mock_mainnet::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
-		SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
+		SyncCommittees::<mock_mainnet::Test>::insert(
+			current_period,
+			genesis.current_sync_committee,
+		);
 		LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
 			beacon_block_root: Default::default(),
 			import_time,
 			beacon_slot: slot - 1,
 		});
-		ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
+		ValidatorsRoot::<mock_mainnet::Test>::set(genesis.validators_root);
 
 		assert_err!(
 			mock_mainnet::EthereumBeaconClient::import_finalized_header(
@@ -124,9 +128,7 @@ fn it_errors_when_weak_subjectivity_period_exceeded_for_a_finalized_header_updat
 #[test]
 fn it_processes_a_header_update() {
 	let update = get_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
-
-	let current_sync_committee = get_initial_sync::<SYNC_COMMITTEE_SIZE>().current_sync_committee;
-
+	let genesis = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 	let current_period =
 		mock_mainnet::EthereumBeaconClient::compute_current_sync_period(update.beacon_header.slot);
 
@@ -136,8 +138,11 @@ fn it_processes_a_header_update() {
 	let finalized_block_root: H256 = finalized_update.finalized_header.hash_tree_root().unwrap();
 
 	new_tester::<mock_mainnet::Test>().execute_with(|| {
-		SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
-		ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
+		SyncCommittees::<mock_mainnet::Test>::insert(
+			current_period,
+			genesis.current_sync_committee,
+		);
+		ValidatorsRoot::<mock_mainnet::Test>::set(genesis.validators_root);
 		LatestFinalizedHeaderState::<mock_mainnet::Test>::set(FinalizedHeaderState {
 			beacon_block_root: finalized_block_root,
 			beacon_slot: finalized_slot,
