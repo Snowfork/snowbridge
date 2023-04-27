@@ -10,7 +10,9 @@ mod beacon_tests {
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
 	use rand::{thread_rng, Rng};
-	use snowbridge_beacon_primitives::{ExecutionPayloadHeader, SyncAggregate};
+	use snowbridge_beacon_primitives::{
+		ExecutionPayloadHeader, FinalizedHeaderState, SyncAggregate,
+	};
 	use sp_core::{H256, U256};
 	use ssz_rs::prelude::Vector;
 
@@ -566,19 +568,24 @@ mod beacon_tests {
 				} else {
 					to_be_preserved_hash_list.push(hash);
 				}
+				let finalized_state = FinalizedHeaderState{
+					beacon_block_root: hash,
+					beacon_slot: i,
+					import_time: u64::default(),
+				};
 
 				ethereum_beacon_client::FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(hash, hash);
 				ethereum_beacon_client::FinalizedBeaconHeaders::<mock_minimal::Test>::insert(hash, BeaconHeader::default());
-				assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_slot(i, hash));
+				assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_state(finalized_state));
 
 			}
 
 			// We first verify if the data corresponding to that hash is still there.
-			let slot_vec = ethereum_beacon_client::FinalizedBeaconHeaderSlots::<mock_minimal::Test>::get();
+			let slot_vec = ethereum_beacon_client::FinalizedBeaconHeaderStates::<mock_minimal::Test>::get();
 			assert_eq!(slot_vec.len(), max_finalized_slots as usize);
 			for i in 0..(amount_of_data_to_be_deleted as usize) {
-				assert_eq!(slot_vec[i].0, i as u64);
-				assert_eq!(slot_vec[i].1, to_be_deleted_hash_list[i]);
+				assert_eq!(slot_vec[i].beacon_slot, i as u64);
+				assert_eq!(slot_vec[i].beacon_block_root, to_be_deleted_hash_list[i]);
 
 				assert!(ethereum_beacon_client::FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(to_be_deleted_hash_list[i]));
 				assert!(ethereum_beacon_client::FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(to_be_deleted_hash_list[i]));
@@ -590,15 +597,20 @@ mod beacon_tests {
 				thread_rng().try_fill(&mut hash.0[..]).unwrap();
 				ethereum_beacon_client::FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(hash, hash);
 				ethereum_beacon_client::FinalizedBeaconHeaders::<mock_minimal::Test>::insert(hash, BeaconHeader::default());
-				assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_slot(i, hash));
+				let finalized_state = FinalizedHeaderState{
+					beacon_block_root: hash,
+					beacon_slot: i,
+					import_time: u64::default(),
+				};
+				assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_state(finalized_state));
 			}
 
 			// Now, previous hashes should be pruned and in array those elements are replaced by later elements
-			let slot_vec = ethereum_beacon_client::FinalizedBeaconHeaderSlots::<mock_minimal::Test>::get();
+			let slot_vec = ethereum_beacon_client::FinalizedBeaconHeaderStates::<mock_minimal::Test>::get();
 			assert_eq!(slot_vec.len(), max_finalized_slots as usize);
 			for i in 0..(amount_of_data_to_be_deleted as usize) {
-				assert_eq!(slot_vec[i].0, (i as u64 + amount_of_data_to_be_deleted));
-				assert_eq!(slot_vec[i].1, to_be_preserved_hash_list[i]);
+				assert_eq!(slot_vec[i].beacon_slot, (i as u64 + amount_of_data_to_be_deleted));
+				assert_eq!(slot_vec[i].beacon_block_root, to_be_preserved_hash_list[i]);
 
 				// Previous values should not exists
 				assert!(!ethereum_beacon_client::FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(to_be_deleted_hash_list[i]));

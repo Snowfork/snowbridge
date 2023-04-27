@@ -174,8 +174,11 @@ pub mod pallet {
 		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
 
 	#[pallet::storage]
-	pub(super) type FinalizedBeaconHeaderSlots<T: Config> =
-		StorageValue<_, BoundedVec<(u64, H256), T::MaxFinalizedHeaderSlotArray>, ValueQuery>;
+	pub(super) type FinalizedBeaconHeaderStates<T: Config> = StorageValue<
+		_,
+		BoundedVec<FinalizedHeaderState, T::MaxFinalizedHeaderSlotArray>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
@@ -435,7 +438,7 @@ pub mod pallet {
 			};
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, initial_sync.header);
-			Self::add_finalized_header_slot(slot, block_root)?;
+			Self::add_finalized_header_state(last_finalized_header)?;
 			<LatestFinalizedHeaderState<T>>::set(last_finalized_header);
 
 			Ok(())
@@ -932,8 +935,15 @@ pub mod pallet {
 		fn store_finalized_header(block_root: Root, header: BeaconHeader) -> DispatchResult {
 			let slot = header.slot;
 
+			let finalized_header = FinalizedHeaderState {
+				beacon_block_root: block_root,
+				beacon_slot: slot,
+				import_time: T::TimeProvider::now().as_secs(),
+			};
+
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
-			Self::add_finalized_header_slot(slot, block_root)?;
+			LatestFinalizedHeaderState::<T>::set(finalized_header);
+			Self::add_finalized_header_state(finalized_header)?;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -942,31 +952,23 @@ pub mod pallet {
 				slot
 			);
 
-			LatestFinalizedHeaderState::<T>::mutate(|s| {
-				s.import_time = T::TimeProvider::now().as_secs();
-				s.beacon_block_root = block_root;
-				s.beacon_slot = slot;
-			});
-
 			Self::deposit_event(Event::BeaconHeaderImported { block_hash: block_root, slot });
 
 			Ok(())
 		}
 
-		pub(super) fn add_finalized_header_slot(
-			slot: u64,
-			finalized_header_hash: H256,
+		pub(super) fn add_finalized_header_state(
+			finalized_header_state: FinalizedHeaderState,
 		) -> DispatchResult {
-			<FinalizedBeaconHeaderSlots<T>>::try_mutate(|b_vec| {
+			<FinalizedBeaconHeaderStates<T>>::try_mutate(|b_vec| {
 				if b_vec.len() as u32 == T::MaxFinalizedHeaderSlotArray::get() {
-					let (_slot, finalized_header_hash) = b_vec.remove(0);
+					let oldest = b_vec.remove(0);
 					// Removing corresponding finalized header data of popped slot
 					// as that data will not be used by relayer anyway.
-					<FinalizedBeaconHeadersBlockRoot<T>>::remove(finalized_header_hash);
-					<FinalizedBeaconHeaders<T>>::remove(finalized_header_hash);
-					<FinalizedBeaconHeadersBlockRoot<T>>::remove(finalized_header_hash);
+					<FinalizedBeaconHeadersBlockRoot<T>>::remove(oldest.beacon_block_root);
+					<FinalizedBeaconHeaders<T>>::remove(oldest.beacon_block_root);
 				}
-				b_vec.try_push((slot, finalized_header_hash))
+				b_vec.try_push(finalized_header_state)
 			})
 			.map_err(|_| <Error<T>>::FinalizedBeaconHeaderSlotsExceeded)?;
 
