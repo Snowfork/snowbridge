@@ -1,6 +1,6 @@
 use sp_core::U256;
 
-use core::{fmt::Formatter};
+use core::fmt::Formatter;
 use serde::{Deserialize, Deserializer};
 
 // helper to deserialize arbitrary arrays like [T; N]
