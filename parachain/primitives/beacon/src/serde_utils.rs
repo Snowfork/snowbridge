@@ -65,63 +65,6 @@ pub mod arrays {
 	}
 }
 
-pub(crate) fn from_hex_to_bytes20<'de, D>(deserializer: D) -> Result<[u8; 20], D::Error>
-where
-	D: Deserializer<'de>,
-{
-	let s = String::deserialize(deserializer)?;
-
-	let str_without_0x = match s.strip_prefix("0x") {
-		Some(val) => val,
-		None => &s,
-	};
-
-	let hex_bytes = match hex::decode(str_without_0x) {
-		Ok(bytes) => bytes,
-		Err(e) => return Err(serde::de::Error::custom(e.to_string())),
-	};
-
-	hex_bytes.try_into().map_err(|_| serde::de::Error::custom("expected 20 bytes"))
-}
-
-pub(crate) fn from_hex_to_bytes96<'de, D>(deserializer: D) -> Result<[u8; 96], D::Error>
-where
-	D: Deserializer<'de>,
-{
-	let s = String::deserialize(deserializer)?;
-
-	let str_without_0x = match s.strip_prefix("0x") {
-		Some(val) => val,
-		None => &s,
-	};
-
-	let hex_bytes = match hex::decode(str_without_0x) {
-		Ok(bytes) => bytes,
-		Err(e) => return Err(serde::de::Error::custom(e.to_string())),
-	};
-
-	hex_bytes.try_into().map_err(|_| serde::de::Error::custom("expected 96 bytes"))
-}
-
-pub(crate) fn from_hex_to_bytes512<'de, D>(deserializer: D) -> Result<[u8; 512], D::Error>
-where
-	D: Deserializer<'de>,
-{
-	let s = String::deserialize(deserializer)?;
-
-	let str_without_0x = match s.strip_prefix("0x") {
-		Some(val) => val,
-		None => &s,
-	};
-
-	let hex_bytes = match hex::decode(str_without_0x) {
-		Ok(bytes) => bytes,
-		Err(e) => return Err(serde::de::Error::custom(e.to_string())),
-	};
-
-	hex_bytes.try_into().map_err(|_| serde::de::Error::custom("expected 512 bytes"))
-}
-
 pub(crate) fn from_hex_to_bytes<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
 where
 	D: Deserializer<'de>,
