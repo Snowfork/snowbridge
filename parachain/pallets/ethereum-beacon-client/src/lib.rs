@@ -2,15 +2,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod config;
-#[cfg(test)]
-mod mock;
 pub mod weights;
 
 #[cfg(test)]
+mod mock;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
+#[cfg(not(feature = "minimal"))]
 mod tests_mainnet;
 #[cfg(test)]
+#[cfg(feature = "minimal")]
 mod tests_minimal;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -159,7 +161,7 @@ pub mod pallet {
 	/// TODO  prune older sync committees than xxx
 	#[pallet::storage]
 	pub(super) type SyncCommittees<T: Config> =
-		StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
+		StorageMap<_, Identity, u64, SyncCommittee, OptionQuery>;
 
 	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
@@ -412,10 +414,9 @@ pub mod pallet {
 				current_period,
 				signature_slot_period
 			);
-			ensure!(
-				<SyncCommittees<T>>::contains_key(current_period),
-				Error::<T>::SyncCommitteeMissing
-			);
+
+			let current_sync_committee =
+				<SyncCommittees<T>>::get(current_period).ok_or(Error::<T>::SyncCommitteeMissing)?;
 			let next_period = current_period + 1;
 			ensure!(
 				!<SyncCommittees<T>>::contains_key(next_period),
@@ -426,9 +427,7 @@ pub mod pallet {
 				Error::<T>::InvalidSyncCommitteeUpdateWithGap
 			);
 
-			let current_sync_committee = Self::get_sync_committee_for_period(current_period)?;
 			let validators_root = <ValidatorsRoot<T>>::get();
-
 			Self::verify_signed_header(
 				&participation,
 				&update.sync_aggregate.sync_committee_signature,
@@ -515,7 +514,9 @@ pub mod pallet {
 					current_period == last_finalized_period + 1),
 				Error::<T>::InvalidFinalizedPeriodUpdate
 			);
-			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
+
+			let sync_committee =
+				<SyncCommittees<T>>::get(current_period).ok_or(Error::<T>::SyncCommitteeMissing)?;
 
 			let validators_root = <ValidatorsRoot<T>>::get();
 			Self::verify_signed_header(
@@ -593,7 +594,8 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.beacon_header.slot);
-			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
+			let sync_committee =
+				<SyncCommittees<T>>::get(current_period).ok_or(Error::<T>::SyncCommitteeMissing)?;
 
 			let validators_root = <ValidatorsRoot<T>>::get();
 			let participation =
@@ -1012,19 +1014,6 @@ pub mod pallet {
 			);
 
 			Ok(())
-		}
-
-		pub(super) fn get_sync_committee_for_period(
-			period: u64,
-		) -> Result<SyncCommittee, DispatchError> {
-			let sync_committee = <SyncCommittees<T>>::get(period);
-
-			if sync_committee.pubkeys.len() == 0 {
-				log::error!(target: "ethereum-beacon-client", "💫 Sync committee for period {} missing", period);
-				return Err(Error::<T>::SyncCommitteeMissing.into())
-			}
-
-			Ok(sync_committee)
 		}
 
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {

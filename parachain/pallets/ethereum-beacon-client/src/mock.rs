@@ -160,15 +160,6 @@ pub mod mock_mainnet {
 	}
 
 	parameter_types! {
-		pub const MaxSyncCommitteeSize: u32 = config::SYNC_COMMITTEE_SIZE as u32;
-		pub const MaxProofBranchSize: u32 = 20;
-		pub const MaxExtraDataSize: u32 = config::MAX_EXTRA_DATA_BYTES as u32;
-		pub const MaxLogsBloomSize: u32 = config::MAX_LOGS_BLOOM_SIZE as u32;
-		pub const MaxFeeRecipientSize: u32 = config::MAX_FEE_RECIPIENT_SIZE as u32;
-		pub const MaxPublicKeySize: u32 = config::PUBKEY_SIZE as u32;
-		pub const MaxSignatureSize: u32 = config::SIGNATURE_SIZE as u32;
-		pub const MaxSlotsPerHistoricalRoot: u64 = 8192;
-		pub const MaxFinalizedHeaderSlotArray: u32 = 1000;
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {

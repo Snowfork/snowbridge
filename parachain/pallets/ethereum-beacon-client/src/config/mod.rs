@@ -1,8 +1,5 @@
-#[cfg(feature = "minimal")]
-mod minimal;
-
-#[cfg(not(feature = "minimal"))]
-mod mainnet;
+pub mod mainnet;
+pub mod minimal;
 
 #[cfg(feature = "minimal")]
 pub use minimal::*;
