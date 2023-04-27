@@ -1172,7 +1172,7 @@ pub fn header_update() -> HeaderUpdate {
             gas_limit: 30000000,
             gas_used: 11572733,
             timestamp: 1679123784,
-            extra_data: hex!("d883010b04846765746888676f312e32302e31856c696e7578").to_vec().try_into().expect("extra data too long"),
+            extra_data: hex!("d883010b04846765746888676f312e32302e31856c696e7578").into(),
             base_fee_per_gas: U256::from(6589888698 as u64),
             block_hash: hex!("6c4d734572bd098102736e6f61dc9346601180255d92e3a18e43e681dfbad188").into(),
             transactions_root: hex!("e40194988e1524402fee76090c24f6ff5bb91b4765c5fbf5caf954b8848d86ee").into(),
@@ -1203,7 +1203,7 @@ pub fn header_update() -> HeaderUpdate {
             hex!("744dffaab90eca8e92f66b165d4523d5899a33e25663d956b73022a2f4213a0e").into(),
             hex!("f3b04813e6897bb1642c1c42f1edfdaf8b00b2b1b57d567e512dc1c5d51660db").into(),
             hex!("8795c1259089af496aa6339978f58f2fe25f89225dc97dd82dd0c3739fe94d10").into(),
-        ].try_into().expect("too many branch proof items"),
+        ],
         block_root_branch_header_root: hex!("52c9f5ef64da062dee00a30ebe16710a3ffe59cf91eedf96a69ae5d198d7d982").into(),
     };
 }
