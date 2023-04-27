@@ -1,5 +1,6 @@
 use sp_core::U256;
 
+use core::{fmt::Formatter};
 use serde::{Deserialize, Deserializer};
 
 // helper to deserialize arbitrary arrays like [T; N]
@@ -147,4 +148,38 @@ where
 	let number = u128::deserialize(deserializer)?;
 
 	Ok(U256::from(number))
+}
+
+pub struct HexVisitor<const LENGTH: usize>();
+
+impl<'de, const LENGTH: usize> serde::de::Visitor<'de> for HexVisitor<LENGTH> {
+	type Value = [u8; LENGTH];
+
+	fn expecting(&self, formatter: &mut Formatter) -> sp_std::fmt::Result {
+		formatter.write_str("a hex string with an '0x' prefix")
+	}
+
+	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+	where
+		E: serde::de::Error,
+	{
+		let stripped = match v.strip_prefix("0x") {
+			Some(stripped) => stripped,
+			None => v,
+		};
+
+		let decoded = match hex::decode(stripped) {
+			Ok(decoded) => decoded,
+			Err(e) => return Err(serde::de::Error::custom(e.to_string())),
+		};
+		if decoded.len() != LENGTH {
+			return Err(serde::de::Error::custom("publickey expected to be 48 characters"))
+		}
+
+		let data: Self::Value = decoded
+			.try_into()
+			.map_err(|_e| serde::de::Error::custom("hex data has unexpected length"))?;
+
+		Ok(data)
+	}
 }

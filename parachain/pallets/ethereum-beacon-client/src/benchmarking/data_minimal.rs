@@ -3,17 +3,17 @@
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-	BeaconHeader, ExecutionPayloadHeader, FinalizedHeaderUpdate, HeaderUpdate, InitialSync,
+	BeaconHeader, ExecutionPayloadHeader, FinalizedHeaderUpdate, HeaderUpdate, InitialUpdate,
 	PublicKey, SyncAggregate, SyncCommittee, SyncCommitteeUpdate,
 };
 use sp_core::U256;
 use sp_std::vec;
 
 pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
-) -> InitialSync<SyncCommitteeSize, ProofSize> {
+) -> InitialUpdate<SyncCommitteeSize, ProofSize> {
 	let time_now = 1675679352; //2023.2.6
 
-	return InitialSync{
+	return InitialUpdate{
         header: BeaconHeader{
             slot: 152,
             proposer_index: 2,

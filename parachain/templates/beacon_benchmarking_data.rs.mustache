@@ -3,38 +3,38 @@
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-    BeaconHeader, ExecutionPayloadHeaderCapella, FinalizedHeaderUpdate, HeaderUpdate, InitialSync, PublicKey,
+    BeaconHeader, ExecutionPayloadHeaderCapella, FinalizedHeaderUpdate, HeaderUpdate, InitialUpdate, PublicKey,
     SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use sp_core::U256;
 use sp_std::vec;
 
 pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
-    ) -> InitialSync<SyncCommitteeSize, ProofSize> {
+    ) -> InitialUpdate<SyncCommitteeSize, ProofSize> {
     let time_now = 1675679352; //2023.2.6
 
-    return InitialSync{
+    return InitialUpdate{
         header: BeaconHeader{
-            slot: {{InitialSync.Header.Slot}},
-            proposer_index: {{InitialSync.Header.ProposerIndex}},
-            parent_root: hex!("{{InitialSync.Header.ParentRoot}}").into(),
-            state_root: hex!("{{InitialSync.Header.StateRoot}}").into(),
-            body_root: hex!("{{InitialSync.Header.BodyRoot}}").into(),
+            slot: {{InitialUpdate.Header.Slot}},
+            proposer_index: {{InitialUpdate.Header.ProposerIndex}},
+            parent_root: hex!("{{InitialUpdate.Header.ParentRoot}}").into(),
+            state_root: hex!("{{InitialUpdate.Header.StateRoot}}").into(),
+            body_root: hex!("{{InitialUpdate.Header.BodyRoot}}").into(),
         },
         current_sync_committee: SyncCommittee{
             pubkeys: vec![
-            {{#InitialSync.CurrentSyncCommittee.Pubkeys}}
+            {{#InitialUpdate.CurrentSyncCommittee.Pubkeys}}
                 PublicKey(hex!("{{.}}").into()),
-            {{/InitialSync.CurrentSyncCommittee.Pubkeys}}
+            {{/InitialUpdate.CurrentSyncCommittee.Pubkeys}}
             ].try_into().expect("too many pubkeys"),
-            aggregate_pubkey: PublicKey(hex!("{{InitialSync.CurrentSyncCommittee.AggregatePubkey}}").into())
+            aggregate_pubkey: PublicKey(hex!("{{InitialUpdate.CurrentSyncCommittee.AggregatePubkey}}").into())
         },
         current_sync_committee_branch: vec![
-            {{#InitialSync.CurrentSyncCommitteeBranch}}
+            {{#InitialUpdate.CurrentSyncCommitteeBranch}}
                 hex!("{{.}}").into(),
-            {{/InitialSync.CurrentSyncCommitteeBranch}}
+            {{/InitialUpdate.CurrentSyncCommitteeBranch}}
         ].try_into().expect("too many branch proof items"),
-        validators_root: hex!("{{InitialSync.ValidatorsRoot}}").into(),
+        validators_root: hex!("{{InitialUpdate.ValidatorsRoot}}").into(),
         import_time: time_now + 97200, // now + 27 hour sync committee period
     };
 }

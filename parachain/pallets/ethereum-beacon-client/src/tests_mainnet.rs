@@ -1,13 +1,16 @@
 #[cfg(not(feature = "minimal"))]
 mod beacon_mainnet_tests {
 	use crate::{
-		config, config::SYNC_COMMITTEE_SIZE, merkleization, mock::*, Error, ExecutionHeader,
-		ExecutionHeaders, FinalizedBeaconHeaders, FinalizedBeaconHeadersBlockRoot,
-		FinalizedHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
-		SyncCommittees, ValidatorsRoot,
+		config,
+		config::{SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE},
+		mock::*,
+		CompactExecutionHeader, Error, ExecutionHeaders, FinalizedBeaconHeaders,
+		FinalizedBeaconHeadersBlockRoot, FinalizedHeaderState, LatestFinalizedHeaderState,
+		LatestSyncCommitteePeriod, SyncCommittees, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
+	use primitives::decompress_sync_committee_bits;
 	use sp_core::H256;
 
 	#[test]
@@ -17,10 +20,7 @@ mod beacon_mainnet_tests {
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
 			assert_ok!(mock_mainnet::EthereumBeaconClient::initial_sync(initial_sync.clone()));
 
-			let block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
-					.unwrap()
-					.into();
+			let block_root: H256 = initial_sync.header.hash_tree_root().unwrap();
 
 			assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
 		});
@@ -28,7 +28,8 @@ mod beacon_mainnet_tests {
 
 	#[test]
 	fn it_updates_a_committee_period_sync_update() {
-		let update = get_committee_sync_period_update::<SYNC_COMMITTEE_SIZE>();
+		let update =
+			get_committee_sync_period_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 
 		let current_sync_committee =
 			get_initial_sync::<SYNC_COMMITTEE_SIZE>().current_sync_committee;
@@ -47,10 +48,7 @@ mod beacon_mainnet_tests {
 				update.clone(),
 			));
 
-			let block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-					.unwrap()
-					.into();
+			let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 
 			assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
 		});
@@ -58,7 +56,7 @@ mod beacon_mainnet_tests {
 
 	#[test]
 	fn it_processes_a_finalized_header_update() {
-		let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE>();
+		let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 		let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 		let current_sync_committee = initial_sync.current_sync_committee;
 
@@ -85,10 +83,7 @@ mod beacon_mainnet_tests {
 				update.clone()
 			));
 
-			let block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-					.unwrap()
-					.into();
+			let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 
 			assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
 		});
@@ -96,7 +91,7 @@ mod beacon_mainnet_tests {
 
 	#[test]
 	fn it_errors_when_weak_subjectivity_period_exceeded_for_a_finalized_header_update() {
-		let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE>();
+		let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 		let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 		let current_sync_committee = initial_sync.current_sync_committee;
 
@@ -130,7 +125,7 @@ mod beacon_mainnet_tests {
 
 	#[test]
 	fn it_processes_a_header_update() {
-		let update = get_header_update::<SYNC_COMMITTEE_SIZE>();
+		let update = get_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 
 		let current_sync_committee =
 			get_initial_sync::<SYNC_COMMITTEE_SIZE>().current_sync_committee;
@@ -139,12 +134,11 @@ mod beacon_mainnet_tests {
 			update.beacon_header.slot,
 		);
 
-		let finalized_update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE>();
+		let finalized_update =
+			get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 		let finalized_slot = finalized_update.finalized_header.slot;
 		let finalized_block_root: H256 =
-			merkleization::hash_tree_root_beacon_header(finalized_update.finalized_header)
-				.unwrap()
-				.into();
+			finalized_update.finalized_header.hash_tree_root().unwrap();
 
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
 			SyncCommittees::<mock_mainnet::Test>::insert(current_period, current_sync_committee);
@@ -164,10 +158,8 @@ mod beacon_mainnet_tests {
 				update.clone()
 			));
 
-			let execution_header: ExecutionHeader = update.execution_header.try_into().unwrap();
-
 			assert!(<ExecutionHeaders<mock_mainnet::Test>>::contains_key(
-				execution_header.block_hash
+				update.execution_header.block_hash
 			));
 		});
 	}
@@ -175,7 +167,7 @@ mod beacon_mainnet_tests {
 	#[test]
 	pub fn test_hash_tree_root_sync_committee() {
 		let sync_committee = get_committee_sync_ssz_test_data::<SYNC_COMMITTEE_SIZE>();
-		let hash_root_result = merkleization::hash_tree_root_sync_committee(sync_committee);
+		let hash_root_result = sync_committee.hash_tree_root();
 		assert_ok!(&hash_root_result);
 
 		let hash_root: H256 = hash_root_result.unwrap().into();
@@ -187,15 +179,16 @@ mod beacon_mainnet_tests {
 
 	#[test]
 	pub fn test_bls_fast_aggregate_verify() {
-		let test_data = get_bls_signature_verify_test_data::<SYNC_COMMITTEE_SIZE>();
+		let test_data =
+			get_bls_signature_verify_test_data::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 
-		let sync_committee_bits =
-			merkleization::get_sync_committee_bits(&test_data.sync_committee_bits);
-
-		assert_ok!(&sync_committee_bits);
+		let participation = decompress_sync_committee_bits::<
+			SYNC_COMMITTEE_SIZE,
+			SYNC_COMMITTEE_BITS_SIZE,
+		>(test_data.sync_committee_bits);
 
 		assert_ok!(mock_mainnet::EthereumBeaconClient::verify_signed_header(
-			&sync_committee_bits.unwrap(),
+			&participation,
 			&test_data.sync_committee_signature,
 			&test_data.pubkeys,
 			test_data.header,

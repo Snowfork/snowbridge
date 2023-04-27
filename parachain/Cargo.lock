@@ -3503,7 +3503,6 @@ dependencies = [
  "rlp",
  "scale-info",
  "serde",
- "serde-hex",
  "snowbridge-ethereum",
  "sp-core 7.0.0",
  "sp-io 7.0.0",

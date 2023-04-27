@@ -21,8 +21,8 @@ pub use weights::WeightInfo;
 use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
 use frame_system::ensure_signed;
 use primitives::{
-	BeaconHeader, ExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData,
-	ForkVersion, PublicKey, Signature, SigningData,
+	verify_receipt_proof, BeaconHeader, CompactExecutionHeader, ExecutionHeaderState,
+	FinalizedHeaderState, ForkData, ForkVersion, PublicKey, Signature, SigningData,
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
@@ -47,7 +47,7 @@ use config::{
 
 const_assert!(SYNC_COMMITTEE_BITS_SIZE == SYNC_COMMITTEE_SIZE / 8);
 
-pub type InitialSync = primitives::InitialSync<SYNC_COMMITTEE_SIZE>;
+pub type InitialUpdate = primitives::InitialUpdate<SYNC_COMMITTEE_SIZE>;
 pub type HeaderUpdate = primitives::HeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type SyncCommitteeUpdate =
 	primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
@@ -153,7 +153,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
-		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
+		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
@@ -180,7 +180,7 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
-		pub initial_sync: Option<InitialSync>,
+		pub initial_sync: Option<InitialUpdate>,
 	}
 
 	#[cfg(feature = "std")]
@@ -336,7 +336,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn process_initial_sync(initial_sync: InitialSync) -> DispatchResult {
+		fn process_initial_sync(initial_sync: InitialUpdate) -> DispatchResult {
 			Self::verify_sync_committee(
 				initial_sync.current_sync_committee.clone(),
 				initial_sync.current_sync_committee_branch,
@@ -887,29 +887,30 @@ pub mod pallet {
 
 		fn store_execution_header(
 			block_hash: H256,
-			header: ExecutionHeader,
+			header: CompactExecutionHeader,
 			beacon_slot: u64,
 			beacon_block_root: H256,
 		) {
-			let block_number = header.block_number;
-
-			<ExecutionHeaders<T>>::insert(block_hash, header);
+			<ExecutionHeaders<T>>::insert(block_hash, header.clone());
 
 			log::trace!(
 				target: "ethereum-beacon-client",
 				"💫 Updated latest execution block at {} to number {}.",
 				block_hash,
-				block_number
+				header.block_number
 			);
 
 			LatestExecutionHeaderState::<T>::mutate(|s| {
 				s.beacon_block_root = beacon_block_root;
 				s.beacon_slot = beacon_slot;
 				s.block_hash = block_hash;
-				s.block_number = block_number;
+				s.block_number = header.block_number;
 			});
 
-			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
+			Self::deposit_event(Event::ExecutionHeaderImported {
+				block_hash,
+				block_number: header.block_number,
+			});
 		}
 
 		fn store_validators_root(validators_root: H256) {
@@ -1042,7 +1043,7 @@ pub mod pallet {
 			return fork_versions.genesis.version
 		}
 
-		pub(super) fn initial_sync(initial_sync: InitialSync) -> Result<(), &'static str> {
+		pub(super) fn initial_sync(initial_sync: InitialUpdate) -> Result<(), &'static str> {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received initial sync, starting processing.",
@@ -1069,11 +1070,10 @@ pub mod pallet {
 		// in the block given by proof.block_hash. Inclusion is only
 		// recognized if the block has been finalized.
 		fn verify_receipt_inclusion(
-			stored_header: ExecutionHeader,
+			receipts_root: H256,
 			proof: &Proof,
 		) -> Result<Receipt, DispatchError> {
-			let result = stored_header
-				.check_receipt_proof(&proof.data.1)
+			let result = verify_receipt_proof(receipts_root, &proof.data.1)
 				.ok_or(Error::<T>::InvalidProof)?;
 
 			match result {
@@ -1100,10 +1100,11 @@ pub mod pallet {
 				message.proof.block_hash,
 			);
 
-			let stored_header = <ExecutionHeaders<T>>::get(message.proof.block_hash)
+			let header = <ExecutionHeaders<T>>::get(message.proof.block_hash)
 				.ok_or(Error::<T>::MissingHeader)?;
 
-			let receipt = match Self::verify_receipt_inclusion(stored_header, &message.proof) {
+			let receipt = match Self::verify_receipt_inclusion(header.receipts_root, &message.proof)
+			{
 				Ok(receipt) => receipt,
 				Err(err) => {
 					log::error!(

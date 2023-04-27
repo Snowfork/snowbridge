@@ -1,6 +1,8 @@
 use crate::{
 	config::{EXTRA_DATA_SIZE, FEE_RECIPIENT_SIZE, LOGS_BLOOM_SIZE, PUBKEY_SIZE, SIGNATURE_SIZE},
-	BeaconHeader, ExecutionPayloadHeader, ForkData, SigningData, SyncAggregate, SyncCommittee,
+	types::{
+		BeaconHeader, ExecutionPayloadHeader, ForkData, SigningData, SyncAggregate, SyncCommittee,
+	},
 };
 use byte_slice_cast::AsByteSlice;
 use sp_core::H256;
