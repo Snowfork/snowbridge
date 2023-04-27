@@ -110,16 +110,12 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 
 #[derive(RuntimeDebug)]
 enum NativeTokens {
-	Unlock {
-		asset: H160,
-		destination: H160,
-		amount: u128,
-	}
+	Unlock { asset: H160, destination: H160, amount: u128 },
 }
 
 #[derive(RuntimeDebug)]
 enum OutboundPayload {
-	NativeTokens(NativeTokens)
+	NativeTokens(NativeTokens),
 }
 
 impl OutboundPayload {
@@ -160,14 +156,18 @@ enum XcmConverterError {
 	AssetResolutionFailed,
 }
 
-struct XcmConverter<'a, Call>{ iter: Iter<'a, Instruction<Call>>, bridged_location: &'a NetworkId }
+struct XcmConverter<'a, Call> {
+	iter: Iter<'a, Instruction<Call>>,
+	bridged_location: &'a NetworkId,
+}
 impl<'a, Call> XcmConverter<'a, Call> {
-
 	pub fn new(message: &'a Xcm<Call>, bridged_location: &'a NetworkId) -> Self {
 		Self { iter: message.inner().iter(), bridged_location }
 	}
 
-	pub fn do_match(&mut self) -> Result<(OutboundPayload, Option<&'a MultiAsset>), XcmConverterError> {
+	pub fn do_match(
+		&mut self,
+	) -> Result<(OutboundPayload, Option<&'a MultiAsset>), XcmConverterError> {
 		use XcmConverterError::*;
 
 		// Get target fees if specified.
@@ -187,13 +187,12 @@ impl<'a, Call> XcmConverter<'a, Call> {
 	fn get_fee_info(&mut self) -> Result<Option<&'a MultiAsset>, XcmConverterError> {
 		use XcmConverterError::*;
 		let execution_fee = match self.next()? {
-			WithdrawAsset(fee_asset) => 
-				match self.next()? {
-					BuyExecution { fees: execution_fee, weight_limit: Unlimited }
-						if fee_asset.len() == 1 && fee_asset.contains(&execution_fee) =>
-						Some(execution_fee),
-					_ => return Err(BuyExecutionExpected),
-				},
+			WithdrawAsset(fee_asset) => match self.next()? {
+				BuyExecution { fees: execution_fee, weight_limit: Unlimited }
+					if fee_asset.len() == 1 && fee_asset.contains(&execution_fee) =>
+					Some(execution_fee),
+				_ => return Err(BuyExecutionExpected),
+			},
 			UnpaidExecution { check_origin: None, weight_limit: Unlimited } => None,
 			_ => return Err(TargetFeeExpected),
 		};
@@ -202,8 +201,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 	fn get_reserve_deposited_asset(&mut self) -> Result<OutboundPayload, XcmConverterError> {
 		use XcmConverterError::*;
-		let (assets, beneficiary) = if let ReserveAssetDeposited(reserved_assets) = self.next()?
-		{
+		let (assets, beneficiary) = if let ReserveAssetDeposited(reserved_assets) = self.next()? {
 			if reserved_assets.len() == 0 {
 				return Err(NoReserveAssets)
 			}
@@ -270,7 +268,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(OutboundPayload::NativeTokens(NativeTokens::Unlock { asset, destination, amount }))
 	}
 
-	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError>{
+	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {
 		self.iter.next().ok_or(XcmConverterError::UnexpectedEndOfXcm)
 	}
 }
