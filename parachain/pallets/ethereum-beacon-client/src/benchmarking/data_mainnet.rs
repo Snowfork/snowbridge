@@ -4,7 +4,7 @@ use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
 	BeaconHeader, ExecutionPayloadHeader, FinalizedHeaderUpdate, HeaderUpdate, InitialSync,
-	PublicKey, SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
+	PublicKey, SyncAggregate, SyncCommittee, SyncCommitteeUpdate,
 };
 use sp_core::U256;
 use sp_std::vec;
@@ -554,8 +554,8 @@ pub fn sync_committee_update<
 	SignatureSize: Get<u32>,
 	ProofSize: Get<u32>,
 	SyncCommitteeSize: Get<u32>,
->() -> SyncCommitteePeriodUpdate<SignatureSize, ProofSize, SyncCommitteeSize> {
-	return SyncCommitteePeriodUpdate {
+>() -> SyncCommitteeUpdate<SignatureSize, ProofSize, SyncCommitteeSize> {
+	return SyncCommitteeUpdate {
         attested_header: BeaconHeader {
             slot: 5217991,
             proposer_index: 447822,

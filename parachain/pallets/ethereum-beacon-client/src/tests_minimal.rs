@@ -107,7 +107,7 @@ mod beacon_minimal_tests {
 					mock_minimal::RuntimeOrigin::signed(1),
 					update.clone(),
 				),
-				Error::<mock_minimal::Test>::InvalidSyncCommitteePeriodUpdateWithGap
+				Error::<mock_minimal::Test>::InvalidSyncCommitteeUpdateWithGap
 			);
 		});
 	}
@@ -144,7 +144,7 @@ mod beacon_minimal_tests {
 					mock_minimal::RuntimeOrigin::signed(1),
 					update.clone(),
 				),
-				Error::<mock_minimal::Test>::InvalidSyncCommitteePeriodUpdateWithDuplication
+				Error::<mock_minimal::Test>::InvalidSyncCommitteeUpdateWithDuplication
 			);
 		});
 	}

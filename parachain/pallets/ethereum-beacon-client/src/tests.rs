@@ -1,15 +1,13 @@
 mod beacon_tests {
 	use crate as ethereum_beacon_client;
-	use crate::{
-		config, merkleization,
-		merkleization::MerkleizationError,
-		mock::*,
-		ssz::{SSZExecutionPayloadHeader, SSZSyncAggregate},
-		BeaconHeader, Error, PublicKey,
-	};
+	use crate::{config, mock::*, BeaconHeader, Error, PublicKey, Signature};
 	use frame_support::{assert_err, assert_ok};
 	use hex_literal::hex;
-	use snowbridge_beacon_primitives::{ExecutionPayloadHeader, SyncAggregate};
+	use primitives::{
+		ssz::{SSZExecutionPayloadHeader, SSZSyncAggregate},
+		ExecutionPayloadHeader, SyncAggregate,
+	};
+
 	use sp_core::{H256, U256};
 	use ssz_rs::prelude::Vector;
 
@@ -17,7 +15,7 @@ mod beacon_tests {
 	pub fn test_get_sync_committee_sum() {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 			assert_eq!(
-				mock_minimal::EthereumBeaconClient::get_sync_committee_sum(vec![
+				mock_minimal::EthereumBeaconClient::get_sync_committee_sum(&[
 					0, 1, 0, 1, 1, 0, 1, 0, 1
 				]),
 				5
@@ -232,13 +230,13 @@ mod beacon_tests {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_ok!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
 			vec![
-				PublicKey(hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into()),
-				PublicKey(hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into()),
-				PublicKey(hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into()),
-				PublicKey(hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into()),
+				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
 			],
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
+			&hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
 		));
 	});
 	}
@@ -248,13 +246,13 @@ mod beacon_tests {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
 			vec![
-				PublicKey(hex!("973eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into()),
-				PublicKey(hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into()),
-				PublicKey(hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into()),
-				PublicKey(hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into()),
+				hex!("973eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
 			],
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
+			&hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
 		), Error::<mock_minimal::Test>::InvalidSignaturePoint);
 	});
 	}
@@ -264,13 +262,13 @@ mod beacon_tests {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
 			vec![
-				PublicKey(hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into()),
-				PublicKey(hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into()),
-				PublicKey(hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into()),
-				PublicKey(hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into()),
+				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
 			],
 			hex!("99241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
+			&hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
 		), Error::<mock_minimal::Test>::SignatureVerificationFailed);
 	});
 	}
@@ -280,91 +278,32 @@ mod beacon_tests {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
 			vec![
-				PublicKey(hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into()),
-				PublicKey(hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into()),
-				PublicKey(hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into()),
-				PublicKey(hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into()),
+				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
 			],
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			hex!("c204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec().try_into().expect("signature is too long"),
+			&hex!("c204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
 		), Error::<mock_minimal::Test>::InvalidSignature);
 	});
 	}
 
 	#[test]
 	pub fn test_sync_committee_participation_is_supermajority() {
-		let bits = match config::IS_MINIMAL {
-			true => hex!("ffffffff").to_vec(),
-			false => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b").to_vec(),
-		};
-
-		let sync_committee_bits = merkleization::get_sync_committee_bits::<
-			mock_minimal::MaxSyncCommitteeSize,
-		>(bits.try_into().expect("too many sync committee bits"));
-
-		assert_ok!(&sync_committee_bits);
-
+		let bits = hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b");
+		let participation = primitives::decompress_sync_committee_bits::<512, 64>(bits);
 		assert_ok!(
 			mock_minimal::EthereumBeaconClient::sync_committee_participation_is_supermajority(
-				sync_committee_bits.unwrap()
+				&participation
 			)
-		);
-	}
-
-	#[test]
-	pub fn test_sync_committee_bits_too_short() {
-		let bits = match config::IS_MINIMAL {
-			true => hex!("ffff").to_vec(),
-			false => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bffff5f7fedfffdfb6ddff7bf7").to_vec(),
-		};
-		let provided = match config::IS_MINIMAL {
-			true => 2,
-			false => 47,
-		};
-		let expected = match config::IS_MINIMAL {
-			true => 4,
-			false => 64,
-		};
-
-		let sync_committee_bits = merkleization::get_sync_committee_bits::<
-			mock_minimal::MaxSyncCommitteeSize,
-		>(bits.try_into().expect("invalid sync committee bits"));
-
-		assert_err!(
-			sync_committee_bits,
-			MerkleizationError::ExpectedFurtherInput { provided, expected }
-		);
-	}
-
-	#[test]
-	pub fn test_sync_committee_bits_extra_input() {
-		let bits = match config::IS_MINIMAL {
-			true => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefff").to_vec(),
-			false => hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7bf7bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7bf7").to_vec(),
-		};
-		let provided = match config::IS_MINIMAL {
-			true => 24,
-			false => 130,
-		};
-		let expected = match config::IS_MINIMAL {
-			true => 4,
-			false => 64,
-		};
-
-		let sync_committee_bits = merkleization::get_sync_committee_bits::<
-			mock_minimal::MaxSyncCommitteeSize,
-		>(bits.try_into().expect("invalid sync committee bits"));
-
-		assert_err!(
-			sync_committee_bits,
-			MerkleizationError::AdditionalInput { provided, expected }
 		);
 	}
 
 	#[test]
 	pub fn test_sync_committee_participation_is_supermajority_errors_when_not_supermajority() {
 		new_tester::<mock_minimal::Test>().execute_with(|| {
-			let sync_committee_bits = vec![
+			let participation: [u8; 512] = [
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 				1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0,
@@ -388,162 +327,10 @@ mod beacon_tests {
 
 			assert_err!(
 				mock_minimal::EthereumBeaconClient::sync_committee_participation_is_supermajority(
-					sync_committee_bits
+					&participation
 				),
 				Error::<mock_minimal::Test>::SyncCommitteeParticipantsNotSupermajority
 			);
 		});
-	}
-
-	#[test]
-	pub fn test_hash_tree_root_beacon_header() {
-		let hash_root =
-			merkleization::hash_tree_root_beacon_header(ethereum_beacon_client::BeaconHeader {
-				slot: 3,
-				proposer_index: 2,
-				parent_root: hex!(
-					"796ea53efb534eab7777809cc5ee2d84e7f25024b9d0c4d7e5bcaab657e4bdbd"
-				)
-				.into(),
-				state_root: hex!(
-					"ba3ff080912be5c9c158b2e962c1b39a91bc0615762ba6fa2ecacafa94e9ae0a"
-				)
-				.into(),
-				body_root: hex!("a18d7fcefbb74a177c959160e0ee89c23546482154e6831237710414465dcae5")
-					.into(),
-			});
-
-		assert_ok!(&hash_root);
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("7d42595818709e805dd2fa710a2d2c1f62576ef1ab7273941ac9130fb94b91f7")
-		);
-	}
-
-	#[test]
-	pub fn test_hash_tree_root_beacon_header_more_test_values() {
-		let hash_root =
-			merkleization::hash_tree_root_beacon_header(ethereum_beacon_client::BeaconHeader {
-				slot: 3476424,
-				proposer_index: 314905,
-				parent_root: hex!(
-					"c069d7b49cffd2b815b0fb8007eb9ca91202ea548df6f3db60000f29b2489f28"
-				)
-				.into(),
-				state_root: hex!(
-					"444d293e4533501ee508ad608783a7d677c3c566f001313e8a02ce08adf590a3"
-				)
-				.into(),
-				body_root: hex!("6508a0241047f21ba88f05d05b15534156ab6a6f8e029a9a5423da429834e04a")
-					.into(),
-			});
-
-		assert_ok!(&hash_root);
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("0aa41166ff01e58e111ac8c42309a738ab453cf8d7285ed8477b1c484acb123e")
-		);
-	}
-
-	#[test]
-	pub fn test_hash_tree_root_fork_data() {
-		let hash_root = merkleization::hash_tree_root_fork_data(ethereum_beacon_client::ForkData {
-			current_version: hex!("83f38a34").into(),
-			genesis_validators_root: hex!(
-				"22370bbbb358800f5711a10ea9845284272d8493bed0348cab87b8ab1e127930"
-			)
-			.into(),
-		});
-
-		assert_ok!(&hash_root);
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("57c12c4246bc7152b174b51920506bf943eff9c7ffa50b9533708e9cc1f680fc")
-		);
-	}
-
-	#[test]
-	pub fn test_hash_tree_root_signing_data() {
-		let hash_root =
-			merkleization::hash_tree_root_signing_data(ethereum_beacon_client::SigningData {
-				object_root: hex!(
-					"63654cbe64fc07853f1198c165dd3d49c54fc53bc417989bbcc66da15f850c54"
-				)
-				.into(),
-				domain: hex!("037da907d1c3a03c0091b2254e1480d9b1783476e228ab29adaaa8f133e08f7a")
-					.into(),
-			});
-
-		assert_ok!(&hash_root);
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("b9eb2caf2d691b183c2d57f322afe505c078cd08101324f61c3641714789a54e")
-		);
-	}
-
-	#[test]
-	pub fn test_hash_sync_aggregate() {
-		let sync_aggregate: SyncAggregate<mock_minimal::MaxSyncCommitteeSize, mock_minimal::MaxSignatureSize> = match config::IS_MINIMAL {
-			true => SyncAggregate{
-				sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("sync committee bits are too long"),
-				sync_committee_signature: hex!("99b0a4c6b69f17a876c65364e164c74b9cdd75dfd3b7f9b60b850cfb9394091ed501e2c190b8349f1b903bca44dd556a0c20fd9cd34dec3906921f1424359a4870356557b70261eee14bf49d8f3c62dfcdb37206cb34991c379eee46510602bd").to_vec().try_into().expect("signature is too long"),
-			},
-			false => SyncAggregate{
-				sync_committee_bits: hex!("cefffffefffffff767fffbedffffeffffeeffdffffdebffffff7f7dbdf7fffdffffbffcfffdff79dfffbbfefff2ffffff7ddeff7ffffc98ff7fbfffffffffff7").to_vec().try_into().expect("sync committee bits are too long"),
-				sync_committee_signature: hex!("8af1a8577bba419fe054ee49b16ed28e081dda6d3ba41651634685e890992a0b675e20f8d9f2ec137fe9eb50e838aa6117f9f5410e2e1024c4b4f0e098e55144843ce90b7acde52fe7b94f2a1037342c951dc59f501c92acf7ed944cb6d2b5f7").to_vec().try_into().expect("signature is too long"),
-			},
-		};
-		let expected_hash_root: H256 = match config::IS_MINIMAL {
-			true => hex!("6b3a4d0172d3d2075a924b84538621af4a2c9148f26e90e2608a6aae4283e68d").into(),
-			false =>
-				hex!("e6dcad4f60ce9ff8a587b110facbaf94721f06cd810b6d8bf6cffa641272808d").into(),
-		};
-
-		let payload: Result<SSZSyncAggregate, MerkleizationError> = sync_aggregate.try_into();
-		assert_ok!(&payload);
-
-		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
-		assert_ok!(&hash_root_result);
-
-		let hash_root: H256 = hash_root_result.unwrap().into();
-		assert_eq!(hash_root, expected_hash_root);
-	}
-
-	#[test]
-	pub fn test_hash_sync_signature() {
-		let payload = Vector::<u8, 96>::from_iter(hex!("82c58d251044ab938b84747524e9b5ecbf6f71f6f1ac10a834806d033bbc49ecd2391072f9bbb4758a960342f8ee03930dc8195f15649c654a56767632230fe3d196f6499d94cd239ba964fe21d7e4715127a385ee018d405719428178172188").to_vec());
-
-		let hash_root = merkleization::hash_tree_root(payload);
-
-		assert_eq!(
-			hash_root.unwrap(),
-			hex!("2068ede33715fd1eee4a940cea6ebc7d353ea791c18ed0cdc65ab6f4bd367af1")
-		);
-	}
-
-	#[test]
-	pub fn test_hash_tree_root_execution_payload() {
-		let payload: Result<SSZExecutionPayloadHeader, MerkleizationError> =
-            ExecutionPayloadHeader::<mock_minimal::MaxFeeRecipientSize, mock_minimal::MaxLogsBloomSize, mock_minimal::MaxExtraDataSize>{
-                parent_hash: hex!("eadee5ab098dde64e9fd02ae5858064bad67064070679625b09f8d82dec183f7").into(),
-                fee_recipient: hex!("f97e180c050e5ab072211ad2c213eb5aee4df134").to_vec().try_into().expect("fee recipient bits are too long"),
-                state_root: hex!("564fa064c2a324c2b5978d7fdfc5d4224d4f421a45388af1ed405a399c845dff").into(),
-                receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
-                logs_bloom: hex!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").to_vec().try_into().expect("logs bloom is too long"),
-                prev_randao: hex!("6bf538bdfbdf1c96ff528726a40658a91d0bda0f1351448c4c4f3604db2a0ccf").into(),
-                block_number: 477434,
-                gas_limit: 8154925,
-                gas_used: 0,
-                timestamp: 1652816940,
-                extra_data: vec![].try_into().expect("extra data field is too long"),
-                base_fee_per_gas: U256::from(7 as i16),
-                block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
-                transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
-				withdrawals_root: hex!("28ba1834a3a7b657460ce79fa3a1d909ab8828fd557659d4d0554a9bdbc0ec30").into(),
-			}.try_into();
-		assert_ok!(&payload);
-
-		let hash_root = merkleization::hash_tree_root(payload.unwrap());
-		assert_ok!(&hash_root);
 	}
 }

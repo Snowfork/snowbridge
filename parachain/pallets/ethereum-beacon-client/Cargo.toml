@@ -31,7 +31,8 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ma
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
-snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
+primitives = { package = "snowbridge-beacon-primitives", path = "../../primitives/beacon", default-features = false }
+static_assertions = { version = "1.1.0" }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
@@ -55,7 +56,7 @@ std = [
     "sp-std/std",
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
-    "snowbridge-beacon-primitives/std",
+    "primitives/std",
     "milagro_bls/std",
     "ssz-rs/std",
     "byte-slice-cast/std",

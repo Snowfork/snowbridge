@@ -228,7 +228,7 @@ fn initial_sync_from_file<const SYNC_COMMITTEE_SIZE: usize>(
 
 fn sync_committee_update_from_file<const SYNC_COMMITTEE_SIZE: usize>(
 	name: &str,
-) -> primitives::SyncCommitteePeriodUpdate<SYNC_COMMITTEE_SIZE> {
+) -> primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -276,7 +276,7 @@ pub fn get_initial_sync<const SYNC_COMMITTEE_SIZE: usize>(
 }
 
 pub fn get_committee_sync_period_update<const SYNC_COMMITTEE_SIZE: usize>(
-) -> primitives::SyncCommitteePeriodUpdate<SYNC_COMMITTEE_SIZE> {
+) -> primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE> {
 	sync_committee_update_from_file::<SYNC_COMMITTEE_SIZE>(&add_file_prefix(
 		"sync_committee_update.json",
 	))

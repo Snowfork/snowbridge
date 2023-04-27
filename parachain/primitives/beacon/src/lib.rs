@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod bits;
 pub mod config;
-pub mod merkleization;
 pub mod ssz;
 
 #[cfg(feature = "std")]
@@ -18,6 +18,7 @@ use sp_std::prelude::*;
 
 #[cfg(feature = "std")]
 use core::fmt::Formatter;
+
 #[cfg(feature = "std")]
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 #[cfg(feature = "std")]
@@ -25,8 +26,14 @@ use sp_std::fmt::Result as StdResult;
 
 use config::{PUBKEY_SIZE, SIGNATURE_SIZE};
 
-pub type Root = H256;
-pub type Domain = H256;
+use ssz::{
+	hash_tree_root, SSZBeaconBlockHeader, SSZExecutionPayloadHeader, SSZForkData, SSZSigningData,
+	SSZSyncAggregate, SSZSyncCommittee,
+};
+use ssz_rs::MerkleizationError;
+
+pub use bits::decompress_sync_committee_bits;
+
 pub type ValidatorIndex = u64;
 pub type ForkVersion = [u8; 4];
 
@@ -45,7 +52,9 @@ pub struct Fork {
 }
 
 #[derive(Copy, Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct PublicKey(pub [u8; PUBKEY_SIZE]);
+pub struct PublicKey(
+	#[cfg_attr(feature = "std", serde(with = "SerHex::<StrictPfx>"))] pub [u8; PUBKEY_SIZE],
+);
 
 impl Default for PublicKey {
 	fn default() -> Self {
@@ -59,18 +68,13 @@ impl From<[u8; PUBKEY_SIZE]> for PublicKey {
 	}
 }
 
-impl From<&[u8; PUBKEY_SIZE]> for PublicKey {
-	fn from(v: &[u8; PUBKEY_SIZE]) -> Self {
-		Self(*v)
-	}
-}
-
 impl MaxEncodedLen for PublicKey {
 	fn max_encoded_len() -> usize {
 		PUBKEY_SIZE
 	}
 }
 
+#[cfg(feature = "std")]
 struct PublicKeyVisitor;
 
 #[cfg(feature = "std")]
@@ -136,12 +140,6 @@ impl Default for Signature {
 impl From<[u8; SIGNATURE_SIZE]> for Signature {
 	fn from(v: [u8; SIGNATURE_SIZE]) -> Self {
 		Self(v)
-	}
-}
-
-impl From<&[u8; SIGNATURE_SIZE]> for Signature {
-	fn from(v: &[u8; SIGNATURE_SIZE]) -> Self {
-		Self(*v)
 	}
 }
 
@@ -211,15 +209,15 @@ pub struct FinalizedHeaderState {
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct InitialSync<const SYNC_COMMITTEE_SIZE: usize> {
+pub struct InitialSync<const COMMITTEE_SIZE: usize> {
 	pub header: BeaconHeader,
-	pub current_sync_committee: SyncCommittee<SYNC_COMMITTEE_SIZE>,
+	pub current_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
 	pub current_sync_committee_branch: Vec<H256>,
-	pub validators_root: Root,
+	pub validators_root: H256,
 	pub import_time: u64,
 }
 
-impl<const SYNC_COMMITTEE_SIZE: usize> Default for InitialSync<SYNC_COMMITTEE_SIZE> {
+impl<const COMMITTEE_SIZE: usize> Default for InitialSync<COMMITTEE_SIZE> {
 	fn default() -> Self {
 		InitialSync {
 			header: Default::default(),
@@ -241,13 +239,13 @@ impl<const SYNC_COMMITTEE_SIZE: usize> Default for InitialSync<SYNC_COMMITTEE_SI
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct SyncCommitteePeriodUpdate<const SYNC_COMMITTEE_SIZE: usize> {
+pub struct SyncCommitteeUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
 	pub attested_header: BeaconHeader,
-	pub next_sync_committee: SyncCommittee<SYNC_COMMITTEE_SIZE>,
+	pub next_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
 	pub next_sync_committee_branch: Vec<H256>,
 	pub finalized_header: BeaconHeader,
 	pub finality_branch: Vec<H256>,
-	pub sync_aggregate: SyncAggregate<SYNC_COMMITTEE_SIZE>,
+	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
 	pub sync_committee_period: u64,
 	pub signature_slot: u64,
 	pub block_roots_root: H256,
@@ -264,11 +262,11 @@ pub struct SyncCommitteePeriodUpdate<const SYNC_COMMITTEE_SIZE: usize> {
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize,))]
 #[codec(mel_bound())]
-pub struct FinalizedHeaderUpdate<const SYNC_COMMITTEE_SIZE: usize> {
+pub struct FinalizedHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
 	pub attested_header: BeaconHeader,
 	pub finalized_header: BeaconHeader,
 	pub finality_branch: Vec<H256>,
-	pub sync_aggregate: SyncAggregate<SYNC_COMMITTEE_SIZE>,
+	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
 	pub signature_slot: u64,
 	pub block_roots_root: H256,
 	pub block_roots_branch: Vec<H256>,
@@ -282,11 +280,11 @@ pub struct FinalizedHeaderUpdate<const SYNC_COMMITTEE_SIZE: usize> {
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct HeaderUpdate<const SYNC_COMMITTEE_SIZE: usize> {
+pub struct HeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
 	pub beacon_header: BeaconHeader,
 	pub execution_header: ExecutionPayloadHeader,
 	pub execution_branch: Vec<H256>,
-	pub sync_aggregate: SyncAggregate<SYNC_COMMITTEE_SIZE>,
+	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
 	pub signature_slot: u64,
 	pub block_root_branch: Vec<H256>,
 	pub block_root_branch_header_root: H256,
@@ -299,48 +297,21 @@ pub struct ForkData {
 	pub genesis_validators_root: [u8; 32],
 }
 
+impl ForkData {
+	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+		hash_tree_root::<SSZForkData>(self.clone().into())
+	}
+}
+
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug)]
 pub struct SigningData {
-	pub object_root: Root,
-	pub domain: Domain,
+	pub object_root: H256,
+	pub domain: H256,
 }
 
-#[derive(
-	Default,
-	Encode,
-	Decode,
-	CloneNoBound,
-	PartialEqNoBound,
-	RuntimeDebugNoBound,
-	TypeInfo,
-	MaxEncodedLen,
-)]
-pub struct ExecutionHeader {
-	pub parent_hash: H256,
-	pub block_hash: H256,
-	pub block_number: u64,
-	pub fee_recipient: H160,
-	pub state_root: H256,
-	pub receipts_root: H256,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ConvertError {
-	FromExecutionPayloadToHeaderError,
-}
-
-impl TryFrom<ExecutionPayloadHeader> for ExecutionHeader {
-	type Error = ConvertError;
-
-	fn try_from(execution_payload: ExecutionPayloadHeader) -> Result<Self, Self::Error> {
-		Ok(ExecutionHeader {
-			parent_hash: execution_payload.parent_hash,
-			block_hash: execution_payload.block_hash,
-			block_number: execution_payload.block_number,
-			fee_recipient: H160::from(execution_payload.fee_recipient),
-			state_root: execution_payload.state_root,
-			receipts_root: execution_payload.receipts_root,
-		})
+impl SigningData {
+	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+		hash_tree_root::<SSZSigningData>(self.clone().into())
 	}
 }
 
@@ -355,18 +326,24 @@ impl TryFrom<ExecutionPayloadHeader> for ExecutionHeader {
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct SyncCommittee<const SYNC_COMMITTEE_SIZE: usize> {
+pub struct SyncCommittee<const COMMITTEE_SIZE: usize> {
 	#[cfg_attr(feature = "std", serde(with = "serde_utils::arrays"))]
-	pub pubkeys: [PublicKey; SYNC_COMMITTEE_SIZE],
+	pub pubkeys: [PublicKey; COMMITTEE_SIZE],
 	pub aggregate_pubkey: PublicKey,
 }
 
-impl<const SYNC_COMMITTEE_SIZE: usize> Default for SyncCommittee<SYNC_COMMITTEE_SIZE> {
+impl<const COMMITTEE_SIZE: usize> Default for SyncCommittee<COMMITTEE_SIZE> {
 	fn default() -> Self {
 		SyncCommittee {
-			pubkeys: [Default::default(); SYNC_COMMITTEE_SIZE],
+			pubkeys: [Default::default(); COMMITTEE_SIZE],
 			aggregate_pubkey: Default::default(),
 		}
+	}
+}
+
+impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
+	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+		hash_tree_root::<SSZSyncCommittee<COMMITTEE_SIZE>>(self.clone().into())
 	}
 }
 
@@ -376,16 +353,22 @@ impl<const SYNC_COMMITTEE_SIZE: usize> Default for SyncCommittee<SYNC_COMMITTEE_
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct BeaconHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined
-	// by parentRoot.
+	// by parent root.
 	pub slot: u64,
 	// The index of the validator that proposed the block.
 	pub proposer_index: ValidatorIndex,
 	// The block root of the parent block, forming a block chain.
-	pub parent_root: Root,
+	pub parent_root: H256,
 	// The hash root of the post state of running the state transition through this block.
-	pub state_root: Root,
+	pub state_root: H256,
 	// The hash root of the beacon block body
-	pub body_root: Root,
+	pub body_root: H256,
+}
+
+impl BeaconHeader {
+	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+		hash_tree_root::<SSZBeaconBlockHeader>(self.clone().into())
+	}
 }
 
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
@@ -394,20 +377,29 @@ pub struct BeaconHeader {
 	feature = "std",
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SyncCommitteeSize, SignatureSize))]
 #[codec(mel_bound())]
-pub struct SyncAggregate<const SYNC_COMMITTEE_SIZE: usize> {
-	#[serde(with = "serde_utils::arrays")]
-	pub sync_committee_bits: [u8; SYNC_COMMITTEE_SIZE],
+pub struct SyncAggregate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
+	#[cfg_attr(feature = "std", serde(with = "SerHex::<StrictPfx>"))]
+	pub sync_committee_bits: [u8; COMMITTEE_BITS_SIZE],
 	pub sync_committee_signature: Signature,
 }
 
-impl<const SYNC_COMMITTEE_SIZE: usize> Default for SyncAggregate<SYNC_COMMITTEE_SIZE> {
+impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> Default
+	for SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>
+{
 	fn default() -> Self {
 		SyncAggregate {
-			sync_committee_bits: [0; SYNC_COMMITTEE_SIZE],
+			sync_committee_bits: [0; COMMITTEE_BITS_SIZE],
 			sync_committee_signature: Default::default(),
 		}
+	}
+}
+
+impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
+	SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>
+{
+	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+		hash_tree_root::<SSZSyncAggregate<COMMITTEE_SIZE>>(self.clone().into())
 	}
 }
 
@@ -439,6 +431,44 @@ pub struct ExecutionPayloadHeader {
 	pub block_hash: H256,
 	pub transactions_root: H256,
 	pub withdrawals_root: H256,
+}
+
+impl ExecutionPayloadHeader {
+	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+		hash_tree_root::<SSZExecutionPayloadHeader>(self.clone().into())
+	}
+}
+
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+pub struct ExecutionHeader {
+	pub parent_hash: H256,
+	pub block_hash: H256,
+	pub block_number: u64,
+	pub fee_recipient: H160,
+	pub state_root: H256,
+	pub receipts_root: H256,
+}
+
+impl From<ExecutionPayloadHeader> for ExecutionHeader {
+	fn from(execution_payload: ExecutionPayloadHeader) -> Self {
+		ExecutionHeader {
+			parent_hash: execution_payload.parent_hash,
+			block_hash: execution_payload.block_hash,
+			block_number: execution_payload.block_number,
+			fee_recipient: H160::from(execution_payload.fee_recipient),
+			state_root: execution_payload.state_root,
+			receipts_root: execution_payload.receipts_root,
+		}
+	}
 }
 
 impl ExecutionHeader {
@@ -474,5 +504,124 @@ impl ExecutionHeader {
 			});
 
 		final_hash.map(|hash| (hash.into(), item_to_prove.value))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use hex_literal::hex;
+
+	#[test]
+	pub fn test_hash_beacon_header1() {
+		let hash_root = BeaconHeader {
+			slot: 3,
+			proposer_index: 2,
+			parent_root: hex!("796ea53efb534eab7777809cc5ee2d84e7f25024b9d0c4d7e5bcaab657e4bdbd")
+				.into(),
+			state_root: hex!("ba3ff080912be5c9c158b2e962c1b39a91bc0615762ba6fa2ecacafa94e9ae0a")
+				.into(),
+			body_root: hex!("a18d7fcefbb74a177c959160e0ee89c23546482154e6831237710414465dcae5")
+				.into(),
+		}
+		.hash_tree_root();
+
+		assert!(hash_root.is_ok());
+		assert_eq!(
+			hash_root.unwrap(),
+			hex!("7d42595818709e805dd2fa710a2d2c1f62576ef1ab7273941ac9130fb94b91f7").into()
+		);
+	}
+
+	#[test]
+	pub fn test_hash_beacon_header2() {
+		let hash_root = BeaconHeader {
+			slot: 3476424,
+			proposer_index: 314905,
+			parent_root: hex!("c069d7b49cffd2b815b0fb8007eb9ca91202ea548df6f3db60000f29b2489f28")
+				.into(),
+			state_root: hex!("444d293e4533501ee508ad608783a7d677c3c566f001313e8a02ce08adf590a3")
+				.into(),
+			body_root: hex!("6508a0241047f21ba88f05d05b15534156ab6a6f8e029a9a5423da429834e04a")
+				.into(),
+		}
+		.hash_tree_root();
+
+		assert!(hash_root.is_ok());
+		assert_eq!(
+			hash_root.unwrap(),
+			hex!("0aa41166ff01e58e111ac8c42309a738ab453cf8d7285ed8477b1c484acb123e").into()
+		);
+	}
+
+	#[test]
+	pub fn test_hash_fork_data() {
+		let hash_root = ForkData {
+			current_version: hex!("83f38a34").into(),
+			genesis_validators_root: hex!(
+				"22370bbbb358800f5711a10ea9845284272d8493bed0348cab87b8ab1e127930"
+			)
+			.into(),
+		}
+		.hash_tree_root();
+
+		assert!(hash_root.is_ok());
+		assert_eq!(
+			hash_root.unwrap(),
+			hex!("57c12c4246bc7152b174b51920506bf943eff9c7ffa50b9533708e9cc1f680fc").into()
+		);
+	}
+
+	#[test]
+	pub fn test_hash_signing_data() {
+		let hash_root = SigningData {
+			object_root: hex!("63654cbe64fc07853f1198c165dd3d49c54fc53bc417989bbcc66da15f850c54")
+				.into(),
+			domain: hex!("037da907d1c3a03c0091b2254e1480d9b1783476e228ab29adaaa8f133e08f7a").into(),
+		}
+		.hash_tree_root();
+
+		assert!(hash_root.is_ok());
+		assert_eq!(
+			hash_root.unwrap(),
+			hex!("b9eb2caf2d691b183c2d57f322afe505c078cd08101324f61c3641714789a54e").into()
+		);
+	}
+
+	#[test]
+	pub fn test_hash_sync_aggregate() {
+		let hash_root = SyncAggregate::<512, 64>{
+				sync_committee_bits: hex!("cefffffefffffff767fffbedffffeffffeeffdffffdebffffff7f7dbdf7fffdffffbffcfffdff79dfffbbfefff2ffffff7ddeff7ffffc98ff7fbfffffffffff7").into(),
+				sync_committee_signature: hex!("8af1a8577bba419fe054ee49b16ed28e081dda6d3ba41651634685e890992a0b675e20f8d9f2ec137fe9eb50e838aa6117f9f5410e2e1024c4b4f0e098e55144843ce90b7acde52fe7b94f2a1037342c951dc59f501c92acf7ed944cb6d2b5f7").into(),
+		}.hash_tree_root();
+
+		assert!(hash_root.is_ok());
+		assert_eq!(
+			hash_root.unwrap(),
+			hex!("e6dcad4f60ce9ff8a587b110facbaf94721f06cd810b6d8bf6cffa641272808d").into()
+		);
+	}
+
+	#[test]
+	pub fn test_hash_execution_payload() {
+		let hash_root =
+            ExecutionPayloadHeader{
+                parent_hash: hex!("eadee5ab098dde64e9fd02ae5858064bad67064070679625b09f8d82dec183f7").into(),
+                fee_recipient: hex!("f97e180c050e5ab072211ad2c213eb5aee4df134").into(),
+                state_root: hex!("564fa064c2a324c2b5978d7fdfc5d4224d4f421a45388af1ed405a399c845dff").into(),
+                receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
+                logs_bloom: hex!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").to_vec().try_into().expect("logs bloom is too long"),
+                prev_randao: hex!("6bf538bdfbdf1c96ff528726a40658a91d0bda0f1351448c4c4f3604db2a0ccf").into(),
+                block_number: 477434,
+                gas_limit: 8154925,
+                gas_used: 0,
+                timestamp: 1652816940,
+                extra_data: vec![].try_into().expect("extra data field is too long"),
+                base_fee_per_gas: U256::from(7 as i16),
+                block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
+                transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
+				withdrawals_root: hex!("28ba1834a3a7b657460ce79fa3a1d909ab8828fd557659d4d0554a9bdbc0ec30").into(),
+			}.hash_tree_root();
+		assert!(hash_root.is_ok());
 	}
 }

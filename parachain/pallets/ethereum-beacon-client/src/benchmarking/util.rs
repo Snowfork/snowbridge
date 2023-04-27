@@ -2,13 +2,12 @@ use super::*;
 use crate::Pallet as EthereumBeaconClient;
 use milagro_bls::{AggregatePublicKey, AggregateSignature, Signature};
 
-pub fn initialize_sync_committee<T: Config>() -> Result<SyncCommitteePeriodUpdateOf<T>, &'static str>
-{
+pub fn initialize_sync_committee<T: Config>() -> Result<SyncCommitteeUpdateOf<T>, &'static str> {
 	let initial_sync_data = initial_sync();
 
 	EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
 
-	let sync_committee_update: SyncCommitteePeriodUpdateOf<T> = sync_committee_update();
+	let sync_committee_update: SyncCommitteeUpdateOf<T> = sync_committee_update();
 
 	//initialize SyncCommittees with period in sync_committee_update
 	LatestSyncCommitteePeriod::<T>::set(EthereumBeaconClient::<T>::compute_current_sync_period(
@@ -24,7 +23,7 @@ pub fn initialize_sync_committee<T: Config>() -> Result<SyncCommitteePeriodUpdat
 }
 
 pub fn get_participant_pubkeys<T: Config>(
-	update: &SyncCommitteePeriodUpdateOf<T>,
+	update: &SyncCommitteeUpdateOf<T>,
 ) -> Result<Vec<PublicKey>, &'static str> {
 	let sync_committee_bits =
 		get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone()).unwrap();
@@ -44,7 +43,7 @@ pub fn get_participant_pubkeys<T: Config>(
 }
 
 pub fn get_signing_message<T: Config>(
-	update: &SyncCommitteePeriodUpdateOf<T>,
+	update: &SyncCommitteeUpdateOf<T>,
 ) -> Result<Root, &'static str> {
 	let validators_root = <ValidatorsRoot<T>>::get();
 	let fork_version = EthereumBeaconClient::<T>::compute_fork_version(

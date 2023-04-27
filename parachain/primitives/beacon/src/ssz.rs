@@ -3,14 +3,15 @@ use crate::{
 	BeaconHeader, ExecutionPayloadHeader, ForkData, SigningData, SyncAggregate, SyncCommittee,
 };
 use byte_slice_cast::AsByteSlice;
+use sp_core::H256;
 use sp_std::{vec, vec::Vec};
 use ssz_rs::{
 	prelude::{List, Vector},
-	Bitvector, Deserialize, DeserializeError, Sized, U256,
+	Bitvector, Deserialize, MerkleizationError, SimpleSerialize, Sized, U256,
 };
-use ssz_rs_derive::SimpleSerialize;
+use ssz_rs_derive::SimpleSerialize as SimpleSerializeDerive;
 
-#[derive(Default, SimpleSerialize, Clone, Debug)]
+#[derive(Default, SimpleSerializeDerive, Clone, Debug)]
 pub struct SSZBeaconBlockHeader {
 	pub slot: u64,
 	pub proposer_index: u64,
@@ -31,16 +32,16 @@ impl From<BeaconHeader> for SSZBeaconBlockHeader {
 	}
 }
 
-#[derive(Default, SimpleSerialize)]
-pub struct SSZSyncCommittee<const SYNC_COMMITTEE_SIZE: usize> {
-	pub pubkeys: Vector<Vector<u8, PUBKEY_SIZE>, SYNC_COMMITTEE_SIZE>,
+#[derive(Default, SimpleSerializeDerive)]
+pub struct SSZSyncCommittee<const COMMITTEE_SIZE: usize> {
+	pub pubkeys: Vector<Vector<u8, PUBKEY_SIZE>, COMMITTEE_SIZE>,
 	pub aggregate_pubkey: Vector<u8, PUBKEY_SIZE>,
 }
 
-impl<const SYNC_COMMITTEE_SIZE: usize> From<SyncCommittee<SYNC_COMMITTEE_SIZE>>
-	for SSZSyncCommittee<SYNC_COMMITTEE_SIZE>
+impl<const COMMITTEE_SIZE: usize> From<SyncCommittee<COMMITTEE_SIZE>>
+	for SSZSyncCommittee<COMMITTEE_SIZE>
 {
-	fn from(sync_committee: SyncCommittee<SYNC_COMMITTEE_SIZE>) -> Self {
+	fn from(sync_committee: SyncCommittee<COMMITTEE_SIZE>) -> Self {
 		let mut pubkeys_vec = Vec::new();
 
 		for pubkey in sync_committee.pubkeys.iter() {
@@ -49,8 +50,7 @@ impl<const SYNC_COMMITTEE_SIZE: usize> From<SyncCommittee<SYNC_COMMITTEE_SIZE>>
 			pubkeys_vec.push(conv_pubkey);
 		}
 
-		let pubkeys =
-			Vector::<Vector<u8, 48>, { SYNC_COMMITTEE_SIZE }>::from_iter(pubkeys_vec.clone());
+		let pubkeys = Vector::<Vector<u8, 48>, { COMMITTEE_SIZE }>::from_iter(pubkeys_vec.clone());
 
 		let aggregate_pubkey = Vector::<u8, 48>::from_iter(sync_committee.aggregate_pubkey.0);
 
@@ -58,30 +58,29 @@ impl<const SYNC_COMMITTEE_SIZE: usize> From<SyncCommittee<SYNC_COMMITTEE_SIZE>>
 	}
 }
 
-#[derive(Default, Debug, SimpleSerialize, Clone)]
-pub struct SSZSyncAggregate<const SYNC_COMMITTEE_SIZE: usize> {
-	pub sync_committee_bits: Bitvector<SYNC_COMMITTEE_SIZE>,
+#[derive(Default, Debug, SimpleSerializeDerive, Clone)]
+pub struct SSZSyncAggregate<const COMMITTEE_SIZE: usize> {
+	pub sync_committee_bits: Bitvector<COMMITTEE_SIZE>,
 	pub sync_committee_signature: Vector<u8, SIGNATURE_SIZE>,
 }
 
-impl<const SYNC_COMMITTEE_SIZE: usize> TryFrom<SyncAggregate<SYNC_COMMITTEE_SIZE>>
-	for SSZSyncAggregate<SYNC_COMMITTEE_SIZE>
+impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
+	From<SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>> for SSZSyncAggregate<COMMITTEE_SIZE>
 {
-	type Error = DeserializeError;
-
-	fn try_from(sync_aggregate: SyncAggregate<SYNC_COMMITTEE_SIZE>) -> Result<Self, Self::Error> {
-		Ok(SSZSyncAggregate {
-			sync_committee_bits: Bitvector::<SYNC_COMMITTEE_SIZE>::deserialize(
+	fn from(sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>) -> Self {
+		SSZSyncAggregate {
+			sync_committee_bits: Bitvector::<COMMITTEE_SIZE>::deserialize(
 				&sync_aggregate.sync_committee_bits,
-			)?,
+			)
+			.expect("checked statically; qed"),
 			sync_committee_signature: Vector::<u8, 96>::from_iter(
 				sync_aggregate.sync_committee_signature.0,
 			),
-		})
+		}
 	}
 }
 
-#[derive(Default, SimpleSerialize)]
+#[derive(Default, SimpleSerializeDerive)]
 pub struct SSZForkData {
 	pub current_version: [u8; 4],
 	pub genesis_validators_root: [u8; 32],
@@ -96,7 +95,7 @@ impl From<ForkData> for SSZForkData {
 	}
 }
 
-#[derive(Default, SimpleSerialize)]
+#[derive(Default, SimpleSerializeDerive)]
 pub struct SSZSigningData {
 	pub object_root: [u8; 32],
 	pub domain: [u8; 32],
@@ -111,7 +110,7 @@ impl From<SigningData> for SSZSigningData {
 	}
 }
 
-#[derive(Default, SimpleSerialize, Clone, Debug)]
+#[derive(Default, SimpleSerializeDerive, Clone, Debug)]
 pub struct SSZExecutionPayloadHeader {
 	pub parent_hash: [u8; 32],
 	pub fee_recipient: Vector<u8, FEE_RECIPIENT_SIZE>,
@@ -157,5 +156,16 @@ impl From<ExecutionPayloadHeader> for SSZExecutionPayloadHeader {
 			transactions_root: payload.transactions_root.to_fixed_bytes(),
 			withdrawals_root: payload.withdrawals_root.to_fixed_bytes(),
 		}
+	}
+}
+
+pub fn hash_tree_root<T: SimpleSerialize>(mut object: T) -> Result<H256, MerkleizationError> {
+	match object.hash_tree_root() {
+		Ok(node) => {
+			let fixed_bytes: [u8; 32] =
+				node.as_bytes().try_into().expect("Node is a newtype over [u8; 32]; qed");
+			Ok(fixed_bytes.into())
+		},
+		Err(err) => Err(err),
 	}
 }
