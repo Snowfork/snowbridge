@@ -32,11 +32,9 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 		}
 
 		let dest = destination.take().ok_or(SendError::MissingArgument)?;
-		if let Err((dest, _)) = dest.pushed_front_with(GlobalConsensus(bridged_network)) {
-			*destination = Some(dest);
-			log::trace!(target: "ethereum_blob_exporter", "skipped due to invalid destination '{dest:?}'.");
+		if dest != Here {
 			return Err(SendError::NotApplicable)
-		};
+		}
 
 		let (local_net, local_sub) = universal_source
 			.take()
@@ -345,7 +343,6 @@ mod tests {
 		));
 		let mut message: Option<Xcm<()>> = None;
 
-		let expected_destination = destination.clone();
 		let result =
 			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
 				network,
@@ -355,7 +352,6 @@ mod tests {
 				&mut message,
 			);
 		assert_eq!(result, Err(SendError::NotApplicable));
-		assert_eq!(destination, expected_destination);
 	}
 
 	#[test]
@@ -375,7 +371,6 @@ mod tests {
 				&mut message,
 			);
 		assert_eq!(result, Err(SendError::MissingArgument));
-		assert_eq!(destination, None);
 	}
 
 	#[test]
@@ -395,7 +390,6 @@ mod tests {
 				&mut message,
 			);
 		assert_eq!(result, Err(SendError::Unroutable));
-		assert_eq!(destination, None);
 	}
 
 	#[test]
@@ -416,7 +410,6 @@ mod tests {
 				&mut message,
 			);
 		assert_eq!(result, Err(SendError::NotApplicable));
-		assert_eq!(destination, None);
 	}
 
 	#[test]
@@ -437,7 +430,6 @@ mod tests {
 				&mut message,
 			);
 		assert_eq!(result, Err(SendError::MissingArgument));
-		assert_eq!(destination, None);
 	}
 
 	#[test]
@@ -458,7 +450,6 @@ mod tests {
 				&mut message,
 			);
 		assert_eq!(result, Err(SendError::MissingArgument));
-		assert_eq!(destination, None);
 	}
 
 	#[test]
@@ -479,7 +470,6 @@ mod tests {
 				&mut message,
 			);
 		assert_eq!(result, Err(SendError::MissingArgument));
-		assert_eq!(destination, None);
 	}
 
 	#[test]
@@ -535,6 +525,5 @@ mod tests {
 			result,
 			Ok(((expected_payload.into(), expected_payload_hash.into()), vec![].into()))
 		);
-		assert_eq!(destination, None);
 	}
 }
