@@ -23,12 +23,12 @@ pub use weights::WeightInfo;
 use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
 use frame_system::ensure_signed;
 use primitives::{
-	verify_receipt_proof, BeaconHeader, CompactExecutionHeader, ExecutionHeaderState,
-	FinalizedHeaderState, ForkData, ForkVersion, PublicKey, Signature, SigningData,
+	is_valid_merkle_branch, verify_receipt_proof, BeaconHeader, CompactExecutionHeader,
+	ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion, PublicKey, Signature,
+	SigningData,
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
-use sp_io::hashing::sha2_256;
 use sp_std::prelude::*;
 
 use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError};
@@ -38,7 +38,6 @@ use snowbridge_ethereum::{Header as EthereumHeader, Log, Receipt};
 use sp_core::U256;
 
 use frame_support::{traits::Get, BoundedVec};
-use static_assertions::const_assert;
 
 pub use pallet::*;
 
@@ -46,8 +45,6 @@ use config::{
 	MAX_FINALIZED_HEADER_SLOT_ARRAY, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE,
 	SYNC_COMMITTEE_SIZE,
 };
-
-const_assert!(SYNC_COMMITTEE_BITS_SIZE == SYNC_COMMITTEE_SIZE / 8);
 
 pub type InitialUpdate = primitives::InitialUpdate<SYNC_COMMITTEE_SIZE>;
 pub type HeaderUpdate = primitives::HeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
@@ -325,7 +322,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::unblock_bridge())]
 		#[transactional]
 		pub fn unblock_bridge(origin: OriginFor<T>) -> DispatchResult {
-			let _sender = ensure_root(origin)?;
+			ensure_root(origin)?;
 
 			<Blocked<T>>::set(false);
 
@@ -350,8 +347,7 @@ pub mod pallet {
 			let block_root: H256 = update
 				.header
 				.hash_tree_root()
-				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-				.into();
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			Self::store_sync_committee(period, &update.current_sync_committee);
 			Self::store_validators_root(update.validators_root);
@@ -391,8 +387,7 @@ pub mod pallet {
 			let block_root: H256 = update
 				.finalized_header
 				.hash_tree_root()
-				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-				.into();
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			Self::verify_header(
 				block_root,
@@ -436,7 +431,7 @@ pub mod pallet {
 			)?;
 
 			ensure!(
-				Self::is_valid_merkle_branch(
+				is_valid_merkle_branch(
 					update.block_roots_root,
 					&update.block_roots_branch,
 					config::BLOCK_ROOTS_INDEX,
@@ -470,7 +465,7 @@ pub mod pallet {
 
 			let import_time = last_finalized_header.import_time;
 			let weak_subjectivity_period_check =
-				import_time + T::WeakSubjectivityPeriodSeconds::get() as u64;
+				import_time + T::WeakSubjectivityPeriodSeconds::get();
 			let time: u64 = T::TimeProvider::now().as_secs();
 
 			log::info!(
@@ -493,8 +488,7 @@ pub mod pallet {
 			let block_root: H256 = update
 				.finalized_header
 				.hash_tree_root()
-				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-				.into();
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			Self::verify_header(
 				block_root,
@@ -527,7 +521,7 @@ pub mod pallet {
 			)?;
 
 			ensure!(
-				Self::is_valid_merkle_branch(
+				is_valid_merkle_branch(
 					update.block_roots_root,
 					&update.block_roots_branch,
 					config::BLOCK_ROOTS_INDEX,
@@ -569,7 +563,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 
 			ensure!(
-				Self::is_valid_merkle_branch(
+				is_valid_merkle_branch(
 					execution_root,
 					&update.execution_branch,
 					config::EXECUTION_HEADER_DEPTH,
@@ -627,7 +621,7 @@ pub mod pallet {
 			// If the block root proof is empty, we know that we expect this header to be a
 			// finalized header. We need to check that the header hash matches the finalized header
 			// root at the expected slot.
-			if block_root_proof.len() == 0 {
+			if block_root_proof.is_empty() {
 				let stored_finalized_header = <FinalizedBeaconHeaders<T>>::get(beacon_block_root);
 				if stored_finalized_header.is_none() {
 					log::error!(
@@ -669,7 +663,7 @@ pub mod pallet {
 			);
 
 			ensure!(
-				Self::is_valid_merkle_branch(
+				is_valid_merkle_branch(
 					beacon_block_root,
 					&block_root_proof,
 					config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH,
@@ -702,9 +696,8 @@ pub mod pallet {
 			// Gathers all the pubkeys of the sync committee members that participated in signing
 			// the header.
 			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
-				if *bit == 1 as u8 {
-					let pubk = pubkey.clone();
-					participant_pubkeys.push(pubk);
+				if *bit == 1_u8 {
+					participant_pubkeys.push(*pubkey);
 				}
 			}
 
@@ -729,7 +722,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn compute_epoch_at_slot(signature_slot: u64, slots_per_epoch: u64) -> u64 {
-			return signature_slot / slots_per_epoch
+			signature_slot / slots_per_epoch
 		}
 
 		pub(super) fn bls_fast_aggregate_verify(
@@ -763,7 +756,7 @@ pub mod pallet {
 
 			ensure!(
 				agg_sig.fast_aggregate_verify_pre_aggregated(
-					&message.as_bytes(),
+					message.as_bytes(),
 					&agg_pub_key_res.unwrap()
 				),
 				Error::<T>::SignatureVerificationFailed
@@ -780,13 +773,11 @@ pub mod pallet {
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
-			let header_hash_tree_root: H256 = beacon_header_root.into();
-
-			let hash_root = SigningData { object_root: header_hash_tree_root, domain }
+			let hash_root = SigningData { object_root: beacon_header_root, domain }
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::SigningRootHashTreeRootFailed)?;
 
-			Ok(hash_root.into())
+			Ok(hash_root)
 		}
 
 		fn verify_sync_committee(
@@ -801,8 +792,8 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
 			ensure!(
-				Self::is_valid_merkle_branch(
-					sync_committee_root.into(),
+				is_valid_merkle_branch(
+					sync_committee_root,
 					sync_committee_branch,
 					depth,
 					index,
@@ -822,7 +813,7 @@ pub mod pallet {
 			index: u64,
 		) -> DispatchResult {
 			ensure!(
-				Self::is_valid_merkle_branch(
+				is_valid_merkle_branch(
 					block_root,
 					proof_branch,
 					depth,
@@ -958,48 +949,7 @@ pub mod pallet {
 			.hash_tree_root()
 			.map_err(|_| Error::<T>::ForkDataHashTreeRootFailed)?;
 
-			Ok(hash_root.into())
-		}
-
-		pub(super) fn is_valid_merkle_branch(
-			leaf: H256,
-			branch: &[H256],
-			depth: u64,
-			index: u64,
-			root: H256,
-		) -> bool {
-			if branch.len() as u64 != depth {
-				log::error!(target: "ethereum-beacon-client", "Merkle proof branch length doesn't match depth.");
-
-				return false
-			}
-			let mut value = leaf;
-			if leaf.as_bytes().len() < 32 as usize {
-				log::error!(target: "ethereum-beacon-client", "Merkle proof leaf not 32 bytes.");
-
-				return false
-			}
-			for i in 0..depth {
-				if branch[i as usize].as_bytes().len() < 32 as usize {
-					log::error!(target: "ethereum-beacon-client", "Merkle proof branch not 32 bytes.");
-
-					return false
-				}
-				if (index / (2u32.pow(i as u32) as u64) % 2) == 0 {
-					// left node
-					let mut data = [0u8; 64];
-					data[0..32].copy_from_slice(&(value.0));
-					data[32..64].copy_from_slice(&(branch[i as usize].0));
-					value = sha2_256(&data).into();
-				} else {
-					let mut data = [0u8; 64]; // right node
-					data[0..32].copy_from_slice(&(branch[i as usize].0));
-					data[32..64].copy_from_slice(&(value.0));
-					value = sha2_256(&data).into();
-				}
-			}
-
-			return value == root
+			Ok(hash_root)
 		}
 
 		pub(super) fn sync_committee_participation_is_supermajority(
@@ -1007,7 +957,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits);
 			ensure!(
-				(sync_committee_sum * 3 >= sync_committee_bits.clone().len() as u64 * 2),
+				(sync_committee_sum * 3 >= sync_committee_bits.len() as u64 * 2),
 				Error::<T>::SyncCommitteeParticipantsNotSupermajority
 			);
 
@@ -1027,7 +977,7 @@ pub mod pallet {
 				return fork_versions.altair.version
 			}
 
-			return fork_versions.genesis.version
+			fork_versions.genesis.version
 		}
 
 		pub(super) fn initial_sync(update: InitialUpdate) -> Result<(), &'static str> {

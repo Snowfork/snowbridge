@@ -1,4 +1,4 @@
-use crate::{mock::*, BeaconHeader, Error};
+use crate::{is_valid_merkle_branch, mock::*, BeaconHeader, Error};
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
 
@@ -156,7 +156,7 @@ pub fn test_compute_domain_bls() {
 pub fn test_is_valid_merkle_proof() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_eq!(
-			mock_minimal::EthereumBeaconClient::is_valid_merkle_branch(
+			is_valid_merkle_branch(
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 				&[
 					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
@@ -179,7 +179,7 @@ pub fn test_is_valid_merkle_proof() {
 pub fn test_merkle_proof_fails_if_depth_and_branch_dont_match() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_eq!(
-			mock_minimal::EthereumBeaconClient::is_valid_merkle_branch(
+			is_valid_merkle_branch(
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 				&[
 					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),

@@ -1,6 +1,6 @@
 use crate::{
 	Config, LatestSyncCommitteePeriod, Pallet as EthereumBeaconClient, PublicKey, Signature,
-	SyncCommitteeUpdate, SyncCommittees, ValidatorsRoot,
+	SyncCommitteeUpdate, SyncCommittees, ValidatorsRoot, Vec,
 };
 use milagro_bls::{AggregatePublicKey, AggregateSignature, Signature as MilagroSignature};
 use sp_core::H256;

@@ -16,7 +16,7 @@ pub fn verify_receipt_proof(
 }
 
 fn apply_merkle_proof(proof: &[Vec<u8>]) -> Option<(H256, Vec<u8>)> {
-	let mut iter = proof.into_iter().rev();
+	let mut iter = proof.iter().rev();
 	let first_bytes = match iter.next() {
 		Some(b) => b,
 		None => return None,

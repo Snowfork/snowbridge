@@ -47,14 +47,16 @@ impl<const COMMITTEE_SIZE: usize> From<SyncCommittee<COMMITTEE_SIZE>>
 		let mut pubkeys_vec = Vec::new();
 
 		for pubkey in sync_committee.pubkeys.iter() {
-			let conv_pubkey = Vector::<u8, 48>::from_iter(pubkey.0);
+			let conv_pubkey = Vector::<u8, PUBKEY_SIZE>::from_iter(pubkey.0);
 
 			pubkeys_vec.push(conv_pubkey);
 		}
 
-		let pubkeys = Vector::<Vector<u8, 48>, { COMMITTEE_SIZE }>::from_iter(pubkeys_vec.clone());
+		let pubkeys =
+			Vector::<Vector<u8, PUBKEY_SIZE>, { COMMITTEE_SIZE }>::from_iter(pubkeys_vec.clone());
 
-		let aggregate_pubkey = Vector::<u8, 48>::from_iter(sync_committee.aggregate_pubkey.0);
+		let aggregate_pubkey =
+			Vector::<u8, PUBKEY_SIZE>::from_iter(sync_committee.aggregate_pubkey.0);
 
 		SSZSyncCommittee { pubkeys, aggregate_pubkey }
 	}
@@ -75,7 +77,7 @@ impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 				&sync_aggregate.sync_committee_bits,
 			)
 			.expect("checked statically; qed"),
-			sync_committee_signature: Vector::<u8, 96>::from_iter(
+			sync_committee_signature: Vector::<u8, SIGNATURE_SIZE>::from_iter(
 				sync_aggregate.sync_committee_signature.0,
 			),
 		}
