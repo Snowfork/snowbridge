@@ -313,7 +313,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_with_unknown_network_yields_not_applicable() {
+	fn exporter_validate_with_unknown_network_yields_not_applicable() {
 		let network = Ethereum { chain_id: 1337 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> = None;
@@ -332,7 +332,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_with_invalid_destination_yields_missing_argument() {
+	fn exporter_validate_with_invalid_destination_yields_missing_argument() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> = None;
@@ -351,7 +351,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_with_x8_destination_yields_not_applicable() {
+	fn exporter_validate_with_x8_destination_yields_not_applicable() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> = None;
@@ -372,7 +372,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_without_universal_source_yields_missing_argument() {
+	fn exporter_validate_without_universal_source_yields_missing_argument() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> = None;
@@ -391,7 +391,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_without_global_universal_location_yields_unroutable() {
+	fn exporter_validate_without_global_universal_location_yields_unroutable() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> = Here.into();
@@ -410,7 +410,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_with_remote_universal_source_yields_not_applicable() {
+	fn exporter_validate_with_remote_universal_source_yields_not_applicable() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> =
@@ -430,7 +430,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_without_para_id_in_source_yields_missing_argument() {
+	fn exporter_validate_without_para_id_in_source_yields_missing_argument() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> =
@@ -450,7 +450,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_complex_para_id_in_source_yields_missing_argument() {
+	fn exporter_validate_complex_para_id_in_source_yields_missing_argument() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> =
@@ -470,7 +470,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_without_xcm_message_yields_missing_argument() {
+	fn exporter_validate_without_xcm_message_yields_missing_argument() {
 		let network = Ethereum { chain_id: 1 };
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> =
@@ -490,7 +490,64 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_validates_xcm_success_case_1() {
+	fn exporter_validate_with_max_target_fee_yields_unroutable() {
+		let network = Ethereum { chain_id: 1 };
+		let mut destination: Option<InteriorMultiLocation> = Here.into();
+
+		let mut universal_source: Option<InteriorMultiLocation> =
+			Some(X2(GlobalConsensus(Polkadot), Parachain(1000)));
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let channel: u32 = 0;
+		let fee = MultiAsset{
+			id: Concrete(Here.into()),
+			fun: Fungible(1000),
+		};
+		let fees: MultiAssets = vec![fee.clone()].into();
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			fun: Fungible(1000),
+		}]
+		.into();
+		let filter: MultiAssetFilter = assets.clone().into();
+
+		let mut message: Option<Xcm<()>> = Some(
+			vec![
+				WithdrawAsset(fees),
+				BuyExecution{ fees: fee, weight_limit: Unlimited },
+				ReserveAssetDeposited(assets),
+				ClearOrigin,
+				DepositAsset {
+					assets: filter,
+					beneficiary: X1(AccountKey20 {
+						network: Some(network),
+						key: beneficiary_address,
+					})
+					.into(),
+				},
+			]
+			.into(),
+		);
+
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
+
+		assert_eq!(
+			result,
+			Err(SendError::Unroutable)
+		);
+	}
+
+	#[test]
+	fn exporter_validate_xcm_success_case_1() {
 		let network = Ethereum { chain_id: 1 };
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
 
@@ -541,7 +598,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_delivers_success_case_1() {
+	fn exporter_deliver_success_case_1() {
 		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
 		let result =
 			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(
@@ -551,7 +608,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_with_decode_failure_yields_not_applicable() {
+	fn exporter_deliver_with_decode_failure_yields_not_applicable() {
 		let corrupt_ticket = hex!("DEADBEEF").to_vec();
 		let hash = sp_io::hashing::blake2_256(corrupt_ticket.as_slice());
 		let ticket: Ticket = (corrupt_ticket, hash);
@@ -563,7 +620,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_with_submit_failure_yields_unroutable() {
+	fn exporter_deliver_with_submit_failure_yields_unroutable() {
 		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
 		let result =
 			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockErrSubmitter>::deliver(
@@ -571,4 +628,7 @@ mod tests {
 			);
 		assert_eq!(result, Err(SendError::Unroutable))
 	}
+
+	#[test]
+	fn xcm_converter_() {}
 }
