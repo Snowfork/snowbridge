@@ -96,7 +96,7 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 		let mut input: &[u8] = blob.as_mut();
 		let BridgeMessage(source_id, handler, payload) = BridgeMessage::decode(&mut input)
 			.map_err(|err| {
-				log::error!(target: "ethereum_blob_exporter", "undeliverable due to decoding error '{err:?}'.");
+				log::trace!(target: "ethereum_blob_exporter", "undeliverable due to decoding error '{err:?}'.");
 				SendError::NotApplicable
 			})?;
 		Submitter::submit(&source_id, handler, payload.as_ref()).map_err(|err| {
@@ -273,8 +273,10 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 #[cfg(test)]
 mod tests {
+
 	use frame_support::parameter_types;
 	use hex_literal::hex;
+	use sp_runtime::{DispatchError, DispatchResult};
 
 	use super::*;
 
@@ -283,14 +285,30 @@ mod tests {
 		const BridgedNetwork: NetworkId =  Ethereum{ chain_id: 1 };
 	}
 
-	struct MockSubmitter;
-	impl SubmitMessage for MockSubmitter {
+	type Ticket = (Vec<u8>, XcmHash);
+
+	const SUCCESS_CASE_1_TICKET: [u8; 232] = hex!("e80300000100810300000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000600000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003e8");
+	const SUCCESS_CASE_1_TICKET_HASH: [u8; 32] =
+		hex!("1454532f17679d9bfd775fef52de6c0598e34def65ef19ac06c11af013d6ca0f");
+
+	struct MockOkSubmitter;
+	impl SubmitMessage for MockOkSubmitter {
 		fn submit(
 			_source_id: &snowbridge_core::ParaId,
 			_handler: u16,
 			_payload: &[u8],
-		) -> sp_runtime::DispatchResult {
+		) -> DispatchResult {
 			Ok(())
+		}
+	}
+	struct MockErrSubmitter;
+	impl SubmitMessage for MockErrSubmitter {
+		fn submit(
+			_source_id: &snowbridge_core::ParaId,
+			_handler: u16,
+			_payload: &[u8],
+		) -> DispatchResult {
+			Err(DispatchError::Other("Error"))
 		}
 	}
 
@@ -303,7 +321,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -322,7 +340,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -343,7 +361,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -362,7 +380,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -381,7 +399,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -401,7 +419,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -421,7 +439,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -441,7 +459,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -461,7 +479,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -472,10 +490,7 @@ mod tests {
 	}
 
 	#[test]
-	fn exporter_exports_valid_xcm() {
-		let expected_ticket = hex!("e80300000100810300000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000600000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003e8");
-		let expected_ticket_hash =
-			hex!("1454532f17679d9bfd775fef52de6c0598e34def65ef19ac06c11af013d6ca0f");
+	fn exporter_validates_xcm_success_case_1() {
 
 		let network = Ethereum { chain_id: 1 };
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
@@ -512,7 +527,7 @@ mod tests {
 		);
 
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockSubmitter>::validate(
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -522,7 +537,33 @@ mod tests {
 
 		assert_eq!(
 			result,
-			Ok(((expected_ticket.into(), expected_ticket_hash.into()), vec![].into()))
+			Ok(((SUCCESS_CASE_1_TICKET.into(), SUCCESS_CASE_1_TICKET_HASH.into()), vec![].into()))
 		);
+	}
+
+	#[test]
+	fn exporter_delivers_success_case_1() {
+		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(ticket);
+		assert_eq!(result, Ok(SUCCESS_CASE_1_TICKET_HASH))
+	}
+
+	#[test]
+	fn exporter_with_decode_failure_yields_not_applicable() {
+		let corrupt_ticket = hex!("DEADBEEF").to_vec();
+		let hash = sp_io::hashing::blake2_256(corrupt_ticket.as_slice());
+		let ticket: Ticket = (corrupt_ticket, hash);
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(ticket);
+		assert_eq!(result, Err(SendError::NotApplicable))
+	}
+
+	#[test]
+	fn exporter_with_submit_failure_yields_unroutable() {
+		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
+		let result =
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockErrSubmitter>::deliver(ticket);
+		assert_eq!(result, Err(SendError::Unroutable))
 	}
 }
