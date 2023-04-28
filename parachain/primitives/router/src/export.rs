@@ -822,7 +822,6 @@ mod tests {
 					.into(),
 			},
 			ClearOrigin,
-
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -832,7 +831,7 @@ mod tests {
 	}
 
 	#[test]
-	fn xcm_converter_convert_without_reserve_asset_deposited_yields_reserve_asset_deposited_expected() {
+	fn xcm_converter_convert_without_asset_deposited_yields_reserve_asset_deposited_expected() {
 		let network = BridgedNetwork::get();
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
@@ -857,7 +856,6 @@ mod tests {
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
-
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -875,7 +873,7 @@ mod tests {
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
 		let fees: MultiAssets = vec![fee.clone()].into();
 
-		let assets: MultiAssets = vec![] .into();
+		let assets: MultiAssets = vec![].into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
@@ -888,7 +886,6 @@ mod tests {
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
-
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -908,14 +905,21 @@ mod tests {
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
 		let fees: MultiAssets = vec![fee.clone()].into();
 
-		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address_1 }).into()),
-			fun: Fungible(1000),
-		},
-		MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address_2}).into()),
-			fun: Fungible(500),
-		}].into();
+		let assets: MultiAssets = vec![
+			MultiAsset {
+				id: Concrete(
+					X1(AccountKey20 { network: Some(network), key: token_address_1 }).into(),
+				),
+				fun: Fungible(1000),
+			},
+			MultiAsset {
+				id: Concrete(
+					X1(AccountKey20 { network: Some(network), key: token_address_2 }).into(),
+				),
+				fun: Fungible(500),
+			},
+		]
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
@@ -928,7 +932,6 @@ mod tests {
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
-
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -950,7 +953,8 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
 			fun: Fungible(1000),
-		}].into();
+		}]
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(0));
 
 		let message: Xcm<()> = vec![
@@ -963,7 +967,6 @@ mod tests {
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
-
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -985,7 +988,8 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
 			fun: NonFungible(AssetInstance::Index(0)),
-		}].into();
+		}]
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -998,7 +1002,6 @@ mod tests {
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
-
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1020,7 +1023,8 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
 			fun: Fungible(0),
-		}].into();
+		}]
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1033,7 +1037,6 @@ mod tests {
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
-
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1041,7 +1044,6 @@ mod tests {
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::ZeroAssetTransfer));
 	}
-
 
 	#[test]
 	fn xcm_converter_convert_non_ethereum_asset_yields_asset_resolution_failed() {
@@ -1055,7 +1057,8 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X3(GlobalConsensus(Polkadot), Parachain(1000), GeneralIndex(0)).into()),
 			fun: Fungible(1000),
-		}].into();
+		}]
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1068,7 +1071,6 @@ mod tests {
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
-
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1082,7 +1084,8 @@ mod tests {
 		let network = BridgedNetwork::get();
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
-		let beneficiary_address: [u8; 32] = hex!("2000000000000000000000000000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 32] =
+			hex!("2000000000000000000000000000000000000000000000000000000000000000");
 
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
 		let fees: MultiAssets = vec![fee.clone()].into();
@@ -1090,7 +1093,8 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
 			fun: Fungible(1000),
-		}].into();
+		}]
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1100,10 +1104,13 @@ mod tests {
 			ClearOrigin,
 			DepositAsset {
 				assets: filter,
-				beneficiary: X3(GlobalConsensus(Polkadot), Parachain(1000), AccountId32{ network: Some(Polkadot), id: beneficiary_address})
-					.into(),
+				beneficiary: X3(
+					GlobalConsensus(Polkadot),
+					Parachain(1000),
+					AccountId32 { network: Some(Polkadot), id: beneficiary_address },
+				)
+				.into(),
 			},
-
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
