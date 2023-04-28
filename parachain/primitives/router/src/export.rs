@@ -165,9 +165,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Self { iter: message.inner().iter(), bridged_location }
 	}
 
-	fn do_match(
-		&mut self,
-	) -> Result<(OutboundPayload, Option<&'a MultiAsset>), XcmConverterError> {
+	fn do_match(&mut self) -> Result<(OutboundPayload, Option<&'a MultiAsset>), XcmConverterError> {
 		use XcmConverterError::*;
 
 		// Get target fees if specified.
