@@ -501,10 +501,7 @@ mod tests {
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let channel: u32 = 0;
-		let fee = MultiAsset{
-			id: Concrete(Here.into()),
-			fun: Fungible(1000),
-		};
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
 		let fees: MultiAssets = vec![fee.clone()].into();
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
@@ -516,7 +513,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = Some(
 			vec![
 				WithdrawAsset(fees),
-				BuyExecution{ fees: fee, weight_limit: Unlimited },
+				BuyExecution { fees: fee, weight_limit: Unlimited },
 				ReserveAssetDeposited(assets),
 				ClearOrigin,
 				DepositAsset {
@@ -540,10 +537,7 @@ mod tests {
 				&mut message,
 			);
 
-		assert_eq!(
-			result,
-			Err(SendError::Unroutable)
-		);
+		assert_eq!(result, Err(SendError::Unroutable));
 	}
 
 	#[test]
