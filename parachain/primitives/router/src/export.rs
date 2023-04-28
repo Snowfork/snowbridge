@@ -636,31 +636,31 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
 			fun: Fungible(1000),
-		}].into();
+		}]
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
-				WithdrawAsset(fees),
-				BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-				ReserveAssetDeposited(assets),
-				ClearOrigin,
-				DepositAsset {
-					assets: filter,
-					beneficiary: X1(AccountKey20 {
-						network: Some(network),
-						key: beneficiary_address,
-					})
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			ReserveAssetDeposited(assets),
+			ClearOrigin,
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
-				},
-			]
-			.into();
+			},
+		]
+		.into();
 		let mut converter = XcmConverter::new(&message, &network);
-		let expected_payload = OutboundPayload::NativeTokens(NativeTokens::Unlock { 
-			asset: H160(token_address), destination: H160(beneficiary_address), amount: 1000,
+		let expected_payload = OutboundPayload::NativeTokens(NativeTokens::Unlock {
+			asset: H160(token_address),
+			destination: H160(beneficiary_address),
+			amount: 1000,
 		});
 		let result = converter.convert();
 		assert_eq!(result, Ok((expected_payload, Some(&fee))));
-	}	
+	}
 
 	#[test]
 	fn xcm_converter_convert_success_without_max_target_fee() {
@@ -672,28 +672,28 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
 			fun: Fungible(1000),
-		}].into();
+		}]
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
-				UnpaidExecution{ weight_limit: Unlimited, check_origin: None },
-				ReserveAssetDeposited(assets),
-				ClearOrigin,
-				DepositAsset {
-					assets: filter,
-					beneficiary: X1(AccountKey20 {
-						network: Some(network),
-						key: beneficiary_address,
-					})
+			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+			ReserveAssetDeposited(assets),
+			ClearOrigin,
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
-				},
-			]
-			.into();
+			},
+		]
+		.into();
 		let mut converter = XcmConverter::new(&message, &network);
-		let expected_payload = OutboundPayload::NativeTokens(NativeTokens::Unlock { 
-			asset: H160(token_address), destination: H160(beneficiary_address), amount: 1000,
+		let expected_payload = OutboundPayload::NativeTokens(NativeTokens::Unlock {
+			asset: H160(token_address),
+			destination: H160(beneficiary_address),
+			amount: 1000,
 		});
 		let result = converter.convert();
 		assert_eq!(result, Ok((expected_payload, None)));
-	}	
+	}
 }
