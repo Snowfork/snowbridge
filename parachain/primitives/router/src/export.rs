@@ -491,7 +491,6 @@ mod tests {
 
 	#[test]
 	fn exporter_validates_xcm_success_case_1() {
-
 		let network = Ethereum { chain_id: 1 };
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
 
@@ -545,7 +544,9 @@ mod tests {
 	fn exporter_delivers_success_case_1() {
 		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(ticket);
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(
+				ticket,
+			);
 		assert_eq!(result, Ok(SUCCESS_CASE_1_TICKET_HASH))
 	}
 
@@ -555,7 +556,9 @@ mod tests {
 		let hash = sp_io::hashing::blake2_256(corrupt_ticket.as_slice());
 		let ticket: Ticket = (corrupt_ticket, hash);
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(ticket);
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(
+				ticket,
+			);
 		assert_eq!(result, Err(SendError::NotApplicable))
 	}
 
@@ -563,7 +566,9 @@ mod tests {
 	fn exporter_with_submit_failure_yields_unroutable() {
 		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
 		let result =
-			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockErrSubmitter>::deliver(ticket);
+			ToBridgeEthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockErrSubmitter>::deliver(
+				ticket,
+			);
 		assert_eq!(result, Err(SendError::Unroutable))
 	}
 }
