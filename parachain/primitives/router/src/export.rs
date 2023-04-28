@@ -119,7 +119,7 @@ enum OutboundPayload {
 }
 
 impl OutboundPayload {
-	pub fn abi_encode(&self) -> (Vec<u8>, u16) {
+	fn abi_encode(&self) -> (Vec<u8>, u16) {
 		match self {
 			Self::NativeTokens(NativeTokens::Unlock { asset, destination, amount }) => {
 				let inner = ethabi::encode(&[Token::Tuple(vec![
@@ -128,11 +128,11 @@ impl OutboundPayload {
 					Token::Uint((*amount).into()),
 				])]);
 				let message = ethabi::encode(&[Token::Tuple(vec![
-					Token::Uint(0.into()), // Unlock action
+					Token::Uint(0.into()), // Unlock action = 0
 					Token::Bytes(inner),
 				])]);
 
-				(message, 1)
+				(message, 1) // NativeTokens handler = 1
 			},
 		}
 	}
@@ -161,11 +161,11 @@ struct XcmConverter<'a, Call> {
 	bridged_location: &'a NetworkId,
 }
 impl<'a, Call> XcmConverter<'a, Call> {
-	pub fn new(message: &'a Xcm<Call>, bridged_location: &'a NetworkId) -> Self {
+	fn new(message: &'a Xcm<Call>, bridged_location: &'a NetworkId) -> Self {
 		Self { iter: message.inner().iter(), bridged_location }
 	}
 
-	pub fn do_match(
+	fn do_match(
 		&mut self,
 	) -> Result<(OutboundPayload, Option<&'a MultiAsset>), XcmConverterError> {
 		use XcmConverterError::*;
@@ -281,8 +281,8 @@ mod tests {
 	use super::*;
 
 	parameter_types! {
-		pub const RelayNetwork: NetworkId = Polkadot;
-		pub const BridgedNetwork: NetworkId =  Ethereum{ chain_id: 1 };
+		const RelayNetwork: NetworkId = Polkadot;
+		const BridgedNetwork: NetworkId =  Ethereum{ chain_id: 1 };
 	}
 
 	struct MockSubmitter;
