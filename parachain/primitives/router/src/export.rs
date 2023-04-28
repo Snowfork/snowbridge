@@ -69,8 +69,8 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 			SendError::MissingArgument
 		})?;
 
-		let mut matcher = XcmConverter::new(&message, &bridged_network);
-		let (payload, max_target_fee) = matcher.do_match().map_err(|err|{
+		let mut converter = XcmConverter::new(&message, &bridged_network);
+		let (payload, max_target_fee) = converter.convert().map_err(|err|{
 			log::error!(target: "ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
@@ -108,12 +108,12 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 	}
 }
 
-#[derive(RuntimeDebug)]
+#[derive(PartialEq, RuntimeDebug)]
 enum NativeTokens {
 	Unlock { asset: H160, destination: H160, amount: u128 },
 }
 
-#[derive(RuntimeDebug)]
+#[derive(PartialEq, RuntimeDebug)]
 enum OutboundPayload {
 	NativeTokens(NativeTokens),
 }
@@ -139,7 +139,7 @@ impl OutboundPayload {
 }
 
 /// Errors that can be thrown to the pattern matching step.
-#[derive(RuntimeDebug)]
+#[derive(PartialEq, RuntimeDebug)]
 enum XcmConverterError {
 	UnexpectedEndOfXcm,
 	TargetFeeExpected,
@@ -165,7 +165,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Self { iter: message.inner().iter(), bridged_location }
 	}
 
-	fn do_match(&mut self) -> Result<(OutboundPayload, Option<&'a MultiAsset>), XcmConverterError> {
+	fn convert(&mut self) -> Result<(OutboundPayload, Option<&'a MultiAsset>), XcmConverterError> {
 		use XcmConverterError::*;
 
 		// Get target fees if specified.
@@ -333,7 +333,7 @@ mod tests {
 
 	#[test]
 	fn exporter_validate_with_invalid_destination_yields_missing_argument() {
-		let network = Ethereum { chain_id: 1 };
+		let network = BridgedNetwork::get();
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> = None;
 		let mut destination: Option<InteriorMultiLocation> = None;
@@ -352,7 +352,7 @@ mod tests {
 
 	#[test]
 	fn exporter_validate_with_x8_destination_yields_not_applicable() {
-		let network = Ethereum { chain_id: 1 };
+		let network = BridgedNetwork::get();
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> = None;
 		let mut destination: Option<InteriorMultiLocation> = Some(X8(
@@ -373,7 +373,7 @@ mod tests {
 
 	#[test]
 	fn exporter_validate_without_universal_source_yields_missing_argument() {
-		let network = Ethereum { chain_id: 1 };
+		let network = BridgedNetwork::get();
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> = None;
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
@@ -392,7 +392,7 @@ mod tests {
 
 	#[test]
 	fn exporter_validate_without_global_universal_location_yields_unroutable() {
-		let network = Ethereum { chain_id: 1 };
+		let network = BridgedNetwork::get();
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> = Here.into();
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
@@ -411,7 +411,7 @@ mod tests {
 
 	#[test]
 	fn exporter_validate_with_remote_universal_source_yields_not_applicable() {
-		let network = Ethereum { chain_id: 1 };
+		let network = BridgedNetwork::get();
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> =
 			Some(X2(GlobalConsensus(Kusama), Parachain(1000)));
@@ -431,7 +431,7 @@ mod tests {
 
 	#[test]
 	fn exporter_validate_without_para_id_in_source_yields_missing_argument() {
-		let network = Ethereum { chain_id: 1 };
+		let network = BridgedNetwork::get();
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> =
 			Some(X1(GlobalConsensus(Polkadot)));
@@ -451,7 +451,7 @@ mod tests {
 
 	#[test]
 	fn exporter_validate_complex_para_id_in_source_yields_missing_argument() {
-		let network = Ethereum { chain_id: 1 };
+		let network = BridgedNetwork::get();
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> =
 			Some(X3(GlobalConsensus(Polkadot), Parachain(1000), PalletInstance(12)));
@@ -471,7 +471,7 @@ mod tests {
 
 	#[test]
 	fn exporter_validate_without_xcm_message_yields_missing_argument() {
-		let network = Ethereum { chain_id: 1 };
+		let network = BridgedNetwork::get();
 		let channel: u32 = 0;
 		let mut universal_source: Option<InteriorMultiLocation> =
 			Some(X2(GlobalConsensus(Polkadot), Parachain(1000)));
@@ -491,7 +491,7 @@ mod tests {
 
 	#[test]
 	fn exporter_validate_with_max_target_fee_yields_unroutable() {
-		let network = Ethereum { chain_id: 1 };
+		let network = BridgedNetwork::get();
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
 
 		let mut universal_source: Option<InteriorMultiLocation> =
@@ -542,7 +542,7 @@ mod tests {
 
 	#[test]
 	fn exporter_validate_xcm_success_case_1() {
-		let network = Ethereum { chain_id: 1 };
+		let network = BridgedNetwork::get();
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
 
 		let mut universal_source: Option<InteriorMultiLocation> =
@@ -624,5 +624,76 @@ mod tests {
 	}
 
 	#[test]
-	fn xcm_converter_() {}
+	fn xcm_converter_convert_success_with_max_target_fee() {
+		let network = BridgedNetwork::get();
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			fun: Fungible(1000),
+		}].into();
+		let filter: MultiAssetFilter = assets.clone().into();
+
+		let message: Xcm<()> = vec![
+				WithdrawAsset(fees),
+				BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+				ReserveAssetDeposited(assets),
+				ClearOrigin,
+				DepositAsset {
+					assets: filter,
+					beneficiary: X1(AccountKey20 {
+						network: Some(network),
+						key: beneficiary_address,
+					})
+					.into(),
+				},
+			]
+			.into();
+		let mut converter = XcmConverter::new(&message, &network);
+		let expected_payload = OutboundPayload::NativeTokens(NativeTokens::Unlock { 
+			asset: H160(token_address), destination: H160(beneficiary_address), amount: 1000,
+		});
+		let result = converter.convert();
+		assert_eq!(result, Ok((expected_payload, Some(&fee))));
+	}	
+
+	#[test]
+	fn xcm_converter_convert_success_without_max_target_fee() {
+		let network = BridgedNetwork::get();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			fun: Fungible(1000),
+		}].into();
+		let filter: MultiAssetFilter = assets.clone().into();
+
+		let message: Xcm<()> = vec![
+				UnpaidExecution{ weight_limit: Unlimited, check_origin: None },
+				ReserveAssetDeposited(assets),
+				ClearOrigin,
+				DepositAsset {
+					assets: filter,
+					beneficiary: X1(AccountKey20 {
+						network: Some(network),
+						key: beneficiary_address,
+					})
+					.into(),
+				},
+			]
+			.into();
+		let mut converter = XcmConverter::new(&message, &network);
+		let expected_payload = OutboundPayload::NativeTokens(NativeTokens::Unlock { 
+			asset: H160(token_address), destination: H160(beneficiary_address), amount: 1000,
+		});
+		let result = converter.convert();
+		assert_eq!(result, Ok((expected_payload, None)));
+	}	
 }
