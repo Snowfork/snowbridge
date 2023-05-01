@@ -2,7 +2,7 @@
 
 pub mod bits;
 pub mod config;
-pub mod merkleization;
+pub mod merkle_proof;
 pub mod receipt;
 pub mod ssz;
 pub mod types;
@@ -19,5 +19,5 @@ pub use types::{
 pub use updates::{FinalizedHeaderUpdate, HeaderUpdate, InitialUpdate, SyncCommitteeUpdate};
 
 pub use bits::decompress_sync_committee_bits;
-pub use merkleization::is_valid_merkle_branch;
+pub use merkle_proof::verify_merkle_proof;
 pub use receipt::verify_receipt_proof;

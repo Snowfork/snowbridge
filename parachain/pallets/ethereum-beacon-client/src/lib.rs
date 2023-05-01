@@ -23,7 +23,7 @@ pub use weights::WeightInfo;
 use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
 use frame_system::ensure_signed;
 use primitives::{
-	is_valid_merkle_branch, verify_receipt_proof, BeaconHeader, CompactExecutionHeader,
+	verify_merkle_proof, verify_receipt_proof, BeaconHeader, CompactExecutionHeader,
 	ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion, PublicKey, Signature,
 	SigningData,
 };
@@ -338,7 +338,6 @@ pub mod pallet {
 				&update.current_sync_committee,
 				&update.current_sync_committee_branch,
 				update.header.state_root,
-				config::CURRENT_SYNC_COMMITTEE_DEPTH,
 				config::CURRENT_SYNC_COMMITTEE_INDEX,
 			)?;
 
@@ -380,7 +379,6 @@ pub mod pallet {
 				&update.next_sync_committee,
 				&update.next_sync_committee_branch,
 				update.attested_header.state_root,
-				config::NEXT_SYNC_COMMITTEE_DEPTH,
 				config::NEXT_SYNC_COMMITTEE_INDEX,
 			)?;
 
@@ -393,7 +391,6 @@ pub mod pallet {
 				block_root,
 				&update.finality_branch,
 				update.attested_header.state_root,
-				config::FINALIZED_ROOT_DEPTH,
 				config::FINALIZED_ROOT_INDEX,
 			)?;
 
@@ -429,15 +426,14 @@ pub mod pallet {
 				validators_root,
 				update.signature_slot,
 			)?;
-
 			ensure!(
-				is_valid_merkle_branch(
-					update.block_roots_root,
-					&update.block_roots_branch,
-					config::BLOCK_ROOTS_INDEX,
-					config::BLOCK_ROOTS_DEPTH,
-					update.finalized_header.state_root
-				),
+				update.block_roots_branch.len() as u64 == config::BLOCK_ROOTS_DEPTH &&
+					verify_merkle_proof(
+						update.block_roots_root,
+						&update.block_roots_branch,
+						config::BLOCK_ROOTS_INDEX,
+						update.finalized_header.state_root
+					),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
@@ -494,7 +490,6 @@ pub mod pallet {
 				block_root,
 				&update.finality_branch,
 				update.attested_header.state_root,
-				config::FINALIZED_ROOT_DEPTH,
 				config::FINALIZED_ROOT_INDEX,
 			)?;
 
@@ -521,13 +516,13 @@ pub mod pallet {
 			)?;
 
 			ensure!(
-				is_valid_merkle_branch(
-					update.block_roots_root,
-					&update.block_roots_branch,
-					config::BLOCK_ROOTS_INDEX,
-					config::BLOCK_ROOTS_DEPTH,
-					update.finalized_header.state_root
-				),
+				update.block_roots_branch.len() as u64 == config::BLOCK_ROOTS_DEPTH &&
+					verify_merkle_proof(
+						update.block_roots_root,
+						&update.block_roots_branch,
+						config::BLOCK_ROOTS_INDEX,
+						update.finalized_header.state_root
+					),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
@@ -563,13 +558,13 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 
 			ensure!(
-				is_valid_merkle_branch(
-					execution_root,
-					&update.execution_branch,
-					config::EXECUTION_HEADER_DEPTH,
-					config::EXECUTION_HEADER_INDEX,
-					update.beacon_header.body_root
-				),
+				update.execution_branch.len() as u64 == config::EXECUTION_HEADER_DEPTH &&
+					verify_merkle_proof(
+						execution_root,
+						&update.execution_branch,
+						config::EXECUTION_HEADER_INDEX,
+						update.beacon_header.body_root
+					),
 				Error::<T>::InvalidExecutionHeaderProof
 			);
 
@@ -663,13 +658,13 @@ pub mod pallet {
 			);
 
 			ensure!(
-				is_valid_merkle_branch(
-					beacon_block_root,
-					&block_root_proof,
-					config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH,
-					leaf_index,
-					finalized_block_root_hash
-				),
+				block_root_proof.len() as u64 == config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH &&
+					verify_merkle_proof(
+						beacon_block_root,
+						&block_root_proof,
+						leaf_index,
+						finalized_block_root_hash
+					),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
@@ -784,7 +779,6 @@ pub mod pallet {
 			sync_committee: &SyncCommittee,
 			sync_committee_branch: &[H256],
 			header_state_root: H256,
-			depth: u64,
 			index: u64,
 		) -> DispatchResult {
 			let sync_committee_root = sync_committee
@@ -792,13 +786,13 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
 			ensure!(
-				is_valid_merkle_branch(
-					sync_committee_root,
-					sync_committee_branch,
-					depth,
-					index,
-					header_state_root
-				),
+				sync_committee_branch.len() as u64 == config::SYNC_COMMITTEE_DEPTH &&
+					verify_merkle_proof(
+						sync_committee_root,
+						sync_committee_branch,
+						index,
+						header_state_root
+					),
 				Error::<T>::InvalidSyncCommitteeMerkleProof
 			);
 
@@ -809,20 +803,18 @@ pub mod pallet {
 			block_root: H256,
 			proof_branch: &[H256],
 			attested_header_state_root: H256,
-			depth: u64,
 			index: u64,
 		) -> DispatchResult {
 			ensure!(
-				is_valid_merkle_branch(
-					block_root,
-					proof_branch,
-					depth,
-					index,
-					attested_header_state_root
-				),
+				proof_branch.len() as u64 == config::FINALIZED_ROOT_DEPTH &&
+					verify_merkle_proof(
+						block_root,
+						proof_branch,
+						index,
+						attested_header_state_root
+					),
 				Error::<T>::InvalidHeaderMerkleProof
 			);
-
 			Ok(())
 		}
 

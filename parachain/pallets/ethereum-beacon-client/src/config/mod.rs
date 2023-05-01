@@ -8,10 +8,8 @@ pub use minimal::*;
 pub use mainnet::*;
 
 pub const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
-pub const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;
-
-pub const NEXT_SYNC_COMMITTEE_DEPTH: u64 = 5;
 pub const NEXT_SYNC_COMMITTEE_INDEX: u64 = 23;
+pub const SYNC_COMMITTEE_DEPTH: u64 = 5;
 
 pub const FINALIZED_ROOT_DEPTH: u64 = 6;
 pub const FINALIZED_ROOT_INDEX: u64 = 41;

@@ -1,4 +1,4 @@
-use crate::{is_valid_merkle_branch, mock::*, BeaconHeader, Error};
+use crate::{mock::*, verify_merkle_proof, BeaconHeader, Error};
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
 
@@ -156,7 +156,7 @@ pub fn test_compute_domain_bls() {
 pub fn test_is_valid_merkle_proof() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_eq!(
-			is_valid_merkle_branch(
+			verify_merkle_proof(
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 				&[
 					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
@@ -166,7 +166,6 @@ pub fn test_is_valid_merkle_proof() {
 					hex!("d2dc4ba9fd4edff6716984136831e70a6b2e74fca27b8097a820cbbaa5a6e3c3").into(),
 					hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584").into(),
 				],
-				6,
 				41,
 				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
 			),
@@ -179,14 +178,13 @@ pub fn test_is_valid_merkle_proof() {
 pub fn test_merkle_proof_fails_if_depth_and_branch_dont_match() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_eq!(
-			is_valid_merkle_branch(
+			verify_merkle_proof(
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 				&[
 					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 					hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
 					hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
 				],
-				6,
 				41,
 				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
 			),
