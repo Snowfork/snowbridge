@@ -3494,9 +3494,11 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 name = "snowbridge-beacon-primitives"
 version = "0.0.1"
 dependencies = [
+ "byte-slice-cast",
  "frame-support",
  "frame-system",
  "hex",
+ "hex-literal",
  "parity-scale-codec",
  "rlp",
  "scale-info",
@@ -3506,6 +3508,9 @@ dependencies = [
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
+ "ssz-rs",
+ "ssz-rs-derive",
+ "static_assertions",
 ]
 
 [[package]]
@@ -3576,6 +3581,7 @@ dependencies = [
  "sp-std 5.0.0",
  "ssz-rs",
  "ssz-rs-derive",
+ "static_assertions",
 ]
 
 [[package]]

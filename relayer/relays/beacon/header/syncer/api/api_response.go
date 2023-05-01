@@ -443,9 +443,12 @@ func (s SyncAggregateResponse) ToScale() (scale.SyncAggregate, error) {
 		return scale.SyncAggregate{}, err
 	}
 
+	var syncCommitteeSignature [96]byte
+	copy(syncCommitteeSignature[:], aggregateSignature)
+
 	return scale.SyncAggregate{
 		SyncCommitteeBits:      bits,
-		SyncCommitteeSignature: aggregateSignature,
+		SyncCommitteeSignature: syncCommitteeSignature,
 	}, nil
 }
 
@@ -568,7 +571,7 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 		return scale.BeaconBlock{}, err
 	}
 
-	feeRecipient, err := util.HexStringToByteArray(executionPayload.FeeRecipient)
+	feeRecipient, err := util.HexStringTo20Bytes(executionPayload.FeeRecipient)
 	if err != nil {
 		return scale.BeaconBlock{}, err
 	}
@@ -1383,7 +1386,7 @@ func CapellaExecutionPayloadToScale(e *state.ExecutionPayloadCapella, activeSpec
 
 	return scale.ExecutionPayloadHeaderCapella{
 		ParentHash:       types.NewH256(e.ParentHash[:]),
-		FeeRecipient:     e.FeeRecipient[:],
+		FeeRecipient:     e.FeeRecipient,
 		StateRoot:        types.NewH256(e.StateRoot[:]),
 		ReceiptsRoot:     types.NewH256(e.ReceiptsRoot[:]),
 		LogsBloom:        e.LogsBloom[:],
@@ -1404,6 +1407,6 @@ func SyncAggregateToScale(s state.SyncAggregate) scale.SyncAggregate {
 	aggregateSignature := s.GetSyncAggregateSignature()
 	return scale.SyncAggregate{
 		SyncCommitteeBits:      s.GetSyncAggregateBits(),
-		SyncCommitteeSignature: aggregateSignature[:],
+		SyncCommitteeSignature: aggregateSignature,
 	}
 }

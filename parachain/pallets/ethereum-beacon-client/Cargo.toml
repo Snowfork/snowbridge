@@ -26,15 +26,16 @@ frame-support = { git = "https://github.com/paritytech/substrate.git", branch = 
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
-snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
+primitives = { package = "snowbridge-beacon-primitives", path = "../../primitives/beacon", default-features = false }
+static_assertions = { version = "1.1.0" }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 snowbridge-testutils = { path = "../../primitives/testutils" }
 serde_json = "1.0.96"
 hex-literal = { version = "0.4.1" }
@@ -50,12 +51,11 @@ std = [
     "frame-system/std",
     'frame-benchmarking/std',
     "sp-core/std",
-    "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
-    "snowbridge-beacon-primitives/std",
+    "primitives/std",
     "milagro_bls/std",
     "ssz-rs/std",
     "byte-slice-cast/std",

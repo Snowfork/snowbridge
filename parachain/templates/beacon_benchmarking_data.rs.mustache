@@ -3,38 +3,38 @@
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-    BeaconHeader, ExecutionPayloadHeaderCapella, FinalizedHeaderUpdate, HeaderUpdate, InitialSync, PublicKey,
+    BeaconHeader, ExecutionPayloadHeaderCapella, FinalizedHeaderUpdate, HeaderUpdate, InitialUpdate, PublicKey,
     SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use sp_core::U256;
 use sp_std::vec;
 
 pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
-    ) -> InitialSync<SyncCommitteeSize, ProofSize> {
+    ) -> InitialUpdate<SyncCommitteeSize, ProofSize> {
     let time_now = 1675679352; //2023.2.6
 
-    return InitialSync{
+    return InitialUpdate{
         header: BeaconHeader{
-            slot: {{InitialSync.Header.Slot}},
-            proposer_index: {{InitialSync.Header.ProposerIndex}},
-            parent_root: hex!("{{InitialSync.Header.ParentRoot}}").into(),
-            state_root: hex!("{{InitialSync.Header.StateRoot}}").into(),
-            body_root: hex!("{{InitialSync.Header.BodyRoot}}").into(),
+            slot: {{InitialUpdate.Header.Slot}},
+            proposer_index: {{InitialUpdate.Header.ProposerIndex}},
+            parent_root: hex!("{{InitialUpdate.Header.ParentRoot}}").into(),
+            state_root: hex!("{{InitialUpdate.Header.StateRoot}}").into(),
+            body_root: hex!("{{InitialUpdate.Header.BodyRoot}}").into(),
         },
         current_sync_committee: SyncCommittee{
-            pubkeys: vec![
-            {{#InitialSync.CurrentSyncCommittee.Pubkeys}}
-                PublicKey(hex!("{{.}}").into()),
-            {{/InitialSync.CurrentSyncCommittee.Pubkeys}}
-            ].try_into().expect("too many pubkeys"),
-            aggregate_pubkey: PublicKey(hex!("{{InitialSync.CurrentSyncCommittee.AggregatePubkey}}").into())
+            pubkeys: [
+            {{#InitialUpdate.CurrentSyncCommittee.Pubkeys}}
+                hex!("{{.}}").into(),
+            {{/InitialUpdate.CurrentSyncCommittee.Pubkeys}}
+            ],
+            aggregate_pubkey: hex!("{{InitialUpdate.CurrentSyncCommittee.AggregatePubkey}}").into(),
         },
         current_sync_committee_branch: vec![
-            {{#InitialSync.CurrentSyncCommitteeBranch}}
+            {{#InitialUpdate.CurrentSyncCommitteeBranch}}
                 hex!("{{.}}").into(),
-            {{/InitialSync.CurrentSyncCommitteeBranch}}
-        ].try_into().expect("too many branch proof items"),
-        validators_root: hex!("{{InitialSync.ValidatorsRoot}}").into(),
+            {{/InitialUpdate.CurrentSyncCommitteeBranch}}
+        ],
+        validators_root: hex!("{{InitialUpdate.ValidatorsRoot}}").into(),
         import_time: time_now + 97200, // now + 27 hour sync committee period
     };
 }
@@ -55,16 +55,16 @@ pub fn sync_committee_update<
         next_sync_committee: SyncCommittee {
             pubkeys: vec![
             {{#SyncCommitteeUpdate.NextSyncCommittee.Pubkeys}}
-                PublicKey(hex!("{{.}}").into()),
+                hex!("{{.}}").into(),
             {{/SyncCommitteeUpdate.NextSyncCommittee.Pubkeys}}
-            ].try_into().expect("too many pubkeys"),
-            aggregate_pubkey: PublicKey(hex!("{{SyncCommitteeUpdate.NextSyncCommittee.AggregatePubkey}}").into())
+            ],
+            aggregate_pubkey: hex!("{{SyncCommitteeUpdate.NextSyncCommittee.AggregatePubkey}}").into(),
         },
         next_sync_committee_branch: vec![
         {{#SyncCommitteeUpdate.NextSyncCommitteeBranch}}
             hex!("{{.}}").into(),
         {{/SyncCommitteeUpdate.NextSyncCommitteeBranch}}
-        ].try_into().expect("too many branch proof items"),
+        ],
         finalized_header: BeaconHeader{
             slot: {{SyncCommitteeUpdate.FinalizedHeader.Slot}},
             proposer_index: {{SyncCommitteeUpdate.FinalizedHeader.ProposerIndex}},
@@ -76,10 +76,10 @@ pub fn sync_committee_update<
         {{#SyncCommitteeUpdate.FinalityBranch}}
             hex!("{{.}}").into(),
         {{/SyncCommitteeUpdate.FinalityBranch}}
-        ].try_into().expect("too many branch proof items"),
+        ],
         sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("{{SyncCommitteeUpdate.SyncAggregate.SyncCommitteeBits}}").to_vec().try_into().expect("too many sync committee bits"),
-            sync_committee_signature: hex!("{{SyncCommitteeUpdate.SyncAggregate.SyncCommitteeSignature}}").to_vec().try_into().expect("signature too long"),
+            sync_committee_bits: hex!("{{SyncCommitteeUpdate.SyncAggregate.SyncCommitteeBits}}"),
+            sync_committee_signature: hex!("{{SyncCommitteeUpdate.SyncAggregate.SyncCommitteeSignature}}").into(),
         },
         sync_committee_period: {{SyncCommitteeUpdate.SyncCommitteePeriod}},
         signature_slot: {{SyncCommitteeUpdate.SignatureSlot}},
@@ -88,7 +88,7 @@ pub fn sync_committee_update<
         {{#SyncCommitteeUpdate.BlockRootBranch}}
             hex!("{{.}}").into(),
         {{/SyncCommitteeUpdate.BlockRootBranch}}
-        ].try_into().expect("too many branch proof items"),
+        ],
     };
 }
 
@@ -116,10 +116,10 @@ pub fn finalized_header_update<
         {{#FinalizedHeaderUpdate.FinalityBranch}}
             hex!("{{.}}").into(),
         {{/FinalizedHeaderUpdate.FinalityBranch}}
-        ].try_into().expect("too many branch proof items"),
+        ],
         sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeBits}}").to_vec().try_into().expect("too many sync committee bits"),
-            sync_committee_signature: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeSignature}}").to_vec().try_into().expect("signature too long"),
+            sync_committee_bits: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeBits}}"),
+            sync_committee_signature: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeSignature}}").into(),
         },
         signature_slot: {{FinalizedHeaderUpdate.SignatureSlot}},
         block_roots_root: hex!("{{FinalizedHeaderUpdate.BlockRootsRoot}}").into(),
@@ -127,7 +127,7 @@ pub fn finalized_header_update<
         {{#FinalizedHeaderUpdate.BlockRootBranch}}
             hex!("{{.}}").into(),
         {{/FinalizedHeaderUpdate.BlockRootBranch}}
-        ].try_into().expect("too many branch proof items")
+        ]
     };
 }
 
@@ -156,16 +156,16 @@ pub fn header_update<
         },
         execution_header: ExecutionPayloadHeaderCapella{
             parent_hash: hex!("{{HeaderUpdate.ExecutionHeader.ParentHash}}").into(),
-            fee_recipient: hex!("{{HeaderUpdate.ExecutionHeader.FeeRecipient}}").to_vec().try_into().expect("fee recipient too long"),
+            fee_recipient: hex!("{{HeaderUpdate.ExecutionHeader.FeeRecipient}}").into(),
             state_root: hex!("{{HeaderUpdate.ExecutionHeader.StateRoot}}").into(),
             receipts_root: hex!("{{HeaderUpdate.ExecutionHeader.ReceiptsRoot}}").into(),
-            logs_bloom: hex!("{{HeaderUpdate.ExecutionHeader.LogsBloom}}").to_vec().try_into().expect("logs bloom too long"),
+            logs_bloom: hex!("{{HeaderUpdate.ExecutionHeader.LogsBloom}}").into(),
             prev_randao: hex!("{{HeaderUpdate.ExecutionHeader.PrevRandao}}").into(),
             block_number: {{HeaderUpdate.ExecutionHeader.BlockNumber}},
             gas_limit: {{HeaderUpdate.ExecutionHeader.GasLimit}},
             gas_used: {{HeaderUpdate.ExecutionHeader.GasUsed}},
             timestamp: {{HeaderUpdate.ExecutionHeader.Timestamp}},
-            extra_data: hex!("{{HeaderUpdate.ExecutionHeader.ExtraData}}").to_vec().try_into().expect("extra data too long"),
+            extra_data: hex!("{{HeaderUpdate.ExecutionHeader.ExtraData}}").into(),
             base_fee_per_gas: U256::from({{HeaderUpdate.ExecutionHeader.BaseFeePerGas}} as u64),
             block_hash: hex!("{{HeaderUpdate.ExecutionHeader.BlockHash}}").into(),
             transactions_root: hex!("{{HeaderUpdate.ExecutionHeader.TransactionRoot}}").into(),
@@ -177,15 +177,15 @@ pub fn header_update<
         {{/HeaderUpdate.ExecutionBranch}}
         ].try_into().expect("too many branch proof items"),
         sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("{{HeaderUpdate.SyncAggregate.SyncCommitteeBits}}").to_vec().try_into().expect("too many sync committee bits"),
-            sync_committee_signature: hex!("{{HeaderUpdate.SyncAggregate.SyncCommitteeSignature}}").to_vec().try_into().expect("signature too long"),
+            sync_committee_bits: hex!("{{HeaderUpdate.SyncAggregate.SyncCommitteeBits}}"),
+            sync_committee_signature: hex!("{{HeaderUpdate.SyncAggregate.SyncCommitteeSignature}}").into(),
         },
         signature_slot: {{HeaderUpdate.SignatureSlot}},
         block_root_branch: vec![
         {{#HeaderUpdate.BlockRootBranch}}
             hex!("{{.}}").into(),
         {{/HeaderUpdate.BlockRootBranch}}
-        ].try_into().expect("too many branch proof items"),
+        ],
         block_root_branch_header_root: hex!("{{HeaderUpdate.BlockRootBranchHeaderRoot}}").into(),
     };
 }

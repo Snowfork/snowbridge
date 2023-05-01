@@ -18,7 +18,7 @@ benchmarks! {
 
 	}: sync_committee_period_update(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
 	verify {
-		assert!(<SyncCommittees<T>>::get(sync_committee_update.sync_committee_period+1).pubkeys.len() > 0);
+		assert!(<SyncCommittees<T>>::get(sync_committee_update.sync_committee_period+1).unwrap().pubkeys.len() > 0);
 	}
 
 	import_finalized_header {
@@ -46,9 +46,7 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(caller.clone()), finalized_header_update.clone())
 	verify {
-		let header_hash_bytes = merkleization::hash_tree_root_beacon_header(finalized_header_update.finalized_header).unwrap();
-
-		let header_hash: H256 = header_hash_bytes.into();
+		let header_hash: H256 = finalized_header_update.finalized_header.hash_tree_root().unwrap();
 
 		<FinalizedBeaconHeaders<T>>::get(header_hash).unwrap();
 	}
@@ -66,13 +64,11 @@ benchmarks! {
 				header_update.beacon_header.slot,
 			), initial_sync_data.current_sync_committee);
 
-		let finalized_update: FinalizedHeaderUpdate<T::MaxSignatureSize, T::MaxProofBranchSize, T::MaxSyncCommitteeSize> = finalized_header_update();
+		let finalized_update: FinalizedHeaderUpdate<> = finalized_header_update();
 
 		let finalized_slot = finalized_update.finalized_header.slot;
-		let finalized_block_root: H256 =
-			merkleization::hash_tree_root_beacon_header(finalized_update.finalized_header)
-				.unwrap()
-				.into();
+		let finalized_block_root = finalized_update.finalized_header.hash_tree_root()
+				.unwrap();
 
 		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState{
 			beacon_block_root: finalized_block_root,
@@ -85,8 +81,7 @@ benchmarks! {
 		);
 	}: _(RawOrigin::Signed(caller.clone()), header_update.clone())
 	verify {
-		let header: ExecutionHeader = header_update.execution_header.try_into().unwrap();
-		<ExecutionHeaders<T>>::get(header.block_hash).unwrap();
+		assert!(<ExecutionHeaders<T>>::contains_key(header_update.execution_header.block_hash))
 	}
 
 	unblock_bridge {
@@ -100,7 +95,7 @@ benchmarks! {
 		let participant_pubkeys = get_participant_pubkeys::<T>(&update)?;
 		let signing_root = get_signing_message::<T>(&update)?;
 	}:{
-		EthereumBeaconClient::<T>::bls_fast_aggregate_verify(participant_pubkeys,signing_root,update.sync_aggregate.sync_committee_signature)?;
+		EthereumBeaconClient::<T>::bls_fast_aggregate_verify(&participant_pubkeys,signing_root,&update.sync_aggregate.sync_committee_signature)?;
 	}
 
 	bls_aggregate_pubkey {

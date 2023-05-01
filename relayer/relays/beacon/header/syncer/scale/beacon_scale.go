@@ -1,8 +1,11 @@
 package scale
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 )
@@ -165,7 +168,7 @@ type SignedBLSToExecutionChange struct {
 
 type ExecutionPayloadHeaderCapella struct {
 	ParentHash       types.H256
-	FeeRecipient     []byte
+	FeeRecipient     types.H160
 	StateRoot        types.H256
 	ReceiptsRoot     types.H256
 	LogsBloom        []byte
@@ -229,9 +232,49 @@ type SyncCommittee struct {
 	AggregatePubkey [48]byte
 }
 
+// Use a custom SCALE encoder to encode SyncCommitteeBits as fixed array
+func (s SyncCommittee) Encode(encoder scale.Encoder) error {
+
+	switch len(s.Pubkeys) {
+	case 32:
+		var pubkeys [32][48]byte
+		copy(pubkeys[:], s.Pubkeys)
+		encoder.Encode(pubkeys)
+	case 512:
+		var pubkeys [512][48]byte
+		copy(pubkeys[:], s.Pubkeys)
+		encoder.Encode(pubkeys)
+	default:
+		return fmt.Errorf("invalid sync committee size")
+	}
+	encoder.Encode(s.AggregatePubkey)
+	return nil
+}
+
 type SyncAggregate struct {
 	SyncCommitteeBits      []byte
-	SyncCommitteeSignature []byte
+	SyncCommitteeSignature [96]byte
+}
+
+// Use a custom SCALE encoder to encode SyncCommitteeBits as fixed array
+func (s SyncAggregate) Encode(encoder scale.Encoder) error {
+
+	switch len(s.SyncCommitteeBits) {
+	case 4:
+		//	32 / 8 = 4
+		var syncCommitteeBits [4]byte
+		copy(syncCommitteeBits[:], s.SyncCommitteeBits)
+		encoder.Encode(syncCommitteeBits)
+	case 64:
+		//	512 / 8 = 64
+		var syncCommitteeBits [64]byte
+		copy(syncCommitteeBits[:], s.SyncCommitteeBits)
+		encoder.Encode(syncCommitteeBits)
+	default:
+		return fmt.Errorf("invalid sync committee size")
+	}
+	encoder.Encode(s.SyncCommitteeSignature)
+	return nil
 }
 
 func (b *BeaconHeader) ToSSZ() *state.BeaconBlockHeader {

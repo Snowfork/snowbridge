@@ -67,7 +67,7 @@ func (b *BeaconHeader) ToJSON() json.BeaconHeader {
 func (e *ExecutionPayloadHeaderCapella) ToJSON() json.ExecutionPayloadHeaderCapella {
 	return json.ExecutionPayloadHeaderCapella{
 		ParentHash:      e.ParentHash.Hex(),
-		FeeRecipient:    util.BytesToHexString(e.FeeRecipient),
+		FeeRecipient:    util.BytesToHexString(e.FeeRecipient[:]),
 		StateRoot:       e.StateRoot.Hex(),
 		ReceiptsRoot:    e.ReceiptsRoot.Hex(),
 		LogsBloom:       util.BytesToHexString(e.LogsBloom),
@@ -99,7 +99,7 @@ func (s *SyncCommittee) ToJSON() json.SyncCommittee {
 func (s *SyncAggregate) ToJSON() json.SyncAggregate {
 	return json.SyncAggregate{
 		SyncCommitteeBits:      util.BytesToHexString(s.SyncCommitteeBits),
-		SyncCommitteeSignature: util.BytesToHexString(s.SyncCommitteeSignature),
+		SyncCommitteeSignature: util.BytesToHexString(s.SyncCommitteeSignature[:]),
 	}
 }
 
