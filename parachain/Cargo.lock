@@ -3581,6 +3581,7 @@ dependencies = [
  "sp-std 5.0.0",
  "ssz-rs",
  "ssz-rs-derive",
+ "static_assertions",
 ]
 
 [[package]]

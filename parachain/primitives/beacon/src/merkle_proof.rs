@@ -1,4 +1,3 @@
-use frame_support::{log, traits::Len};
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 

@@ -1,3 +1,5 @@
+use static_assertions::const_assert;
+
 pub mod mainnet;
 pub mod minimal;
 
@@ -33,3 +35,5 @@ pub const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [7, 0, 0, 0];
 
 pub const PUBKEY_SIZE: usize = 48;
 pub const SIGNATURE_SIZE: usize = 96;
+
+const_assert!(SYNC_COMMITTEE_BITS_SIZE == SYNC_COMMITTEE_SIZE / 8);
