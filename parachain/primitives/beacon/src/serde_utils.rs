@@ -81,7 +81,7 @@ where
 		Err(e) => return Err(serde::de::Error::custom(e.to_string())),
 	};
 
-	Ok(Vec::from(hex_bytes))
+	Ok(hex_bytes)
 }
 
 pub(crate) fn from_int_to_u256<'de, D>(deserializer: D) -> Result<U256, D::Error>

@@ -10,7 +10,7 @@ pub fn decompress_sync_committee_bits<
 	Bitvector::<{ SYNC_COMMITTEE_SIZE }>::deserialize(&input)
 		.expect("checked statically; qed")
 		.iter()
-		.map(|bit| if bit == true { 1u8 } else { 0u8 })
+		.map(|bit| u8::from(bit == true))
 		.collect::<Vec<u8>>()
 		.try_into()
 		.expect("checked statically; qed")

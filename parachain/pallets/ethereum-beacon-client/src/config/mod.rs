@@ -1,3 +1,5 @@
+use static_assertions::const_assert;
+
 pub mod mainnet;
 pub mod minimal;
 
@@ -8,10 +10,8 @@ pub use minimal::*;
 pub use mainnet::*;
 
 pub const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
-pub const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;
-
-pub const NEXT_SYNC_COMMITTEE_DEPTH: u64 = 5;
 pub const NEXT_SYNC_COMMITTEE_INDEX: u64 = 23;
+pub const SYNC_COMMITTEE_DEPTH: u64 = 5;
 
 pub const FINALIZED_ROOT_DEPTH: u64 = 6;
 pub const FINALIZED_ROOT_INDEX: u64 = 41;
@@ -35,3 +35,5 @@ pub const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [7, 0, 0, 0];
 
 pub const PUBKEY_SIZE: usize = 48;
 pub const SIGNATURE_SIZE: usize = 96;
+
+const_assert!(SYNC_COMMITTEE_BITS_SIZE == SYNC_COMMITTEE_SIZE / 8);
