@@ -66,8 +66,11 @@ contract InboundQueue is AccessControl {
     }
 
     function submit(Message calldata message, bytes32[] calldata leafProof, bytes calldata headerProof) external {
+        // Hash the leaf so that we can combine it with the proof hashes to find the Merkle root.
         bytes32 leafHash = keccak256(abi.encode(message));
+        // Get the root hash that identifies the list of messages that the caller claims the parachain has committed.
         bytes32 commitment = MerkleProofLib.calculateRoot(leafProof, leafHash);
+        // Verify that the parachain has committed the list of messages.
         if (!parachainClient.verifyCommitment(commitment, headerProof)) {
             revert InvalidProof();
         }
