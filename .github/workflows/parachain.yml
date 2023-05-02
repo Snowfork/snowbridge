@@ -99,7 +99,9 @@ jobs:
           command: tarpaulin
           args: >-
             --manifest-path parachain/Cargo.toml
-            --verbose --workspace
+            --release
+            --verbose 
+            --workspace
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
