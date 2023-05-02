@@ -18,4 +18,4 @@
 	url = https://github.com/snowfork/canonical-weth
 [submodule "core/packages/contracts/lib/solmate"]
 	path = core/packages/contracts/lib/solmate
-	url = https://github.com/doubledup/solmate
+	url = https://github.com/Snowfork/solmate
