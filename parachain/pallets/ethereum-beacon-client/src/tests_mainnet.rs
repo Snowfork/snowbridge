@@ -65,7 +65,7 @@ fn it_processes_a_finalized_header_update() {
 	);
 
 	let slot = update.finalized_header.slot;
-	let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT); // Goerli genesis time + finalized header update time
+	let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT); // Goerli genesis time +
 	let mock_pallet_time = import_time + 3600; // plus one hour
 
 	new_tester::<mock_mainnet::Test>().execute_with(|| {
@@ -194,11 +194,8 @@ pub fn test_bls_fast_aggregate_verify() {
 		SYNC_COMMITTEE_BITS_SIZE,
 	>(test_data.sync_committee_bits);
 
-	let participant_pubkeys = mock_mainnet::EthereumBeaconClient::participant_pubkeys(
-		&participant_bits,
-		&milagro_pubkeys,
-	)
-	.unwrap();
+	let participant_pubkeys =
+		mock_mainnet::EthereumBeaconClient::find_pubkeys(&participant_bits, &milagro_pubkeys, true);
 
 	let signing_root = mock_mainnet::EthereumBeaconClient::signing_root(
 		test_data.header,

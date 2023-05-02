@@ -3,8 +3,7 @@ use crate::{
 	Pallet as EthereumBeaconClient, SyncCommitteeUpdate, SyncCommittees, ValidatorsRoot, Vec,
 	SYNC_COMMITTEE_SIZE,
 };
-use frame_support::traits::ConstU32;
-use primitives::{PreparedSyncCommittee, PublicKeyPrepared};
+use primitives::{PublicKeyPrepared, SyncCommitteePrepared};
 use sp_core::H256;
 
 use super::{initial_sync, sync_committee_update};
@@ -32,7 +31,7 @@ pub fn initialize_sync_committee<T: Config>() -> Result<SyncCommitteeUpdate, &'s
 
 pub fn sync_committee<T: Config>(
 	update: &SyncCommitteeUpdate,
-) -> Result<PreparedSyncCommittee<ConstU32<{ SYNC_COMMITTEE_SIZE as u32 }>>, &'static str> {
+) -> Result<SyncCommitteePrepared<SYNC_COMMITTEE_SIZE>, &'static str> {
 	let current_period =
 		EthereumBeaconClient::<T>::compute_current_sync_period(update.attested_header.slot);
 	let sync_committee = SyncCommittees::<T>::get(current_period).ok_or("no sync committee")?;
@@ -45,10 +44,11 @@ pub fn participant_pubkeys<T: Config>(
 	let sync_committee_bits =
 		decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone());
 	let current_sync_committee = sync_committee::<T>(update)?;
-	let pubkeys = EthereumBeaconClient::<T>::participant_pubkeys(
+	let pubkeys = EthereumBeaconClient::<T>::find_pubkeys(
 		&sync_committee_bits,
-		&current_sync_committee.pubkeys,
-	)?;
+		&current_sync_committee.pubkeys.to_vec(),
+		true,
+	);
 	Ok(pubkeys)
 }
 
@@ -58,10 +58,11 @@ pub fn absent_pubkeys<T: Config>(
 	let sync_committee_bits =
 		decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone());
 	let current_sync_committee = sync_committee::<T>(update)?;
-	let pubkeys = EthereumBeaconClient::<T>::absent_pubkeys(
+	let pubkeys = EthereumBeaconClient::<T>::find_pubkeys(
 		&sync_committee_bits,
-		&current_sync_committee.pubkeys,
-	)?;
+		&current_sync_committee.pubkeys.to_vec(),
+		false,
+	);
 	Ok(pubkeys)
 }
 

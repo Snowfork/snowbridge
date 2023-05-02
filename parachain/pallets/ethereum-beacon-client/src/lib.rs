@@ -30,7 +30,7 @@ use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_proof, verify_receipt_proof, BeaconHeader, BlsError,
 	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
-	ForkVersions, PreparedSyncCommittee, PublicKeyPrepared, Signature, SigningData,
+	ForkVersions, PublicKeyPrepared, Signature, SigningData,
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
@@ -54,7 +54,7 @@ pub type SyncCommitteeUpdate =
 pub type FinalizedHeaderUpdate =
 	primitives::FinalizedHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type SyncCommittee = primitives::SyncCommittee<SYNC_COMMITTEE_SIZE>;
-pub type PreparedSyncCommitteeOf = PreparedSyncCommittee<ConstU32<{ SYNC_COMMITTEE_SIZE as u32 }>>;
+pub type SyncCommitteePrepared = primitives::SyncCommitteePrepared<SYNC_COMMITTEE_SIZE>;
 
 fn decompress_sync_committee_bits(
 	input: [u8; SYNC_COMMITTEE_BITS_SIZE],
@@ -135,19 +135,7 @@ pub mod pallet {
 		FinalizedBeaconHeaderSlotsExceeded,
 		ExecutionHeaderMappingFailed,
 		BLSPreparePublicKeysFailed,
-		BLSVerificationFailed(#[codec(skip)] &'static str),
-	}
-
-	impl<T: Config> From<BlsError> for Error<T> {
-		fn from(e: BlsError) -> Self {
-			match e {
-				BlsError::InvalidPublicKey | BlsError::InvalidAggregatePublicKeys =>
-					Error::BLSVerificationFailed("InvalidPublicKey"),
-				BlsError::InvalidSignature => Error::BLSVerificationFailed("InvalidSignature"),
-				BlsError::SignatureVerificationFailed =>
-					Error::BLSVerificationFailed("SignatureVerificationFailed"),
-			}
-		}
+		BLSVerificationFailed(BlsError),
 	}
 
 	#[pallet::hooks]
@@ -188,7 +176,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type SyncCommittees<T: Config> =
-		StorageMap<_, Identity, u64, PreparedSyncCommitteeOf, OptionQuery>;
+		StorageMap<_, Identity, u64, SyncCommitteePrepared, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -691,14 +679,14 @@ pub mod pallet {
 		pub(super) fn verify_signed_header(
 			sync_committee_bits: &[u8],
 			sync_committee_signature: &Signature,
-			sync_committee: &PreparedSyncCommitteeOf,
+			sync_committee: &SyncCommitteePrepared,
 			header: BeaconHeader,
 			validators_root: H256,
 			signature_slot: u64,
 		) -> DispatchResult {
 			// Gathers milagro pubkeys absent to participate
 			let absent_pubkeys =
-				Self::absent_pubkeys(sync_committee_bits, &sync_committee.pubkeys)?;
+				Self::find_pubkeys(sync_committee_bits, &sync_committee.pubkeys, false);
 
 			// Get signing root for BeaconHeader
 			let signing_root = Self::signing_root(header, validators_root, signature_slot)?;
@@ -710,7 +698,7 @@ pub mod pallet {
 				signing_root,
 				sync_committee_signature,
 			)
-			.map_err(|e| Error::<T>::from(e))?;
+			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
 			Ok(())
 		}
@@ -778,7 +766,7 @@ pub mod pallet {
 		}
 
 		pub fn store_sync_committee(period: u64, sync_committee: &SyncCommittee) -> DispatchResult {
-			let prepare_sync_committee: PreparedSyncCommitteeOf =
+			let prepare_sync_committee: SyncCommitteePrepared =
 				sync_committee.try_into().map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
 			<SyncCommittees<T>>::insert(period, prepare_sync_committee);
 
@@ -920,7 +908,7 @@ pub mod pallet {
 
 		pub(super) fn sync_committee_for_period(
 			period: u64,
-		) -> Result<PreparedSyncCommitteeOf, Error<T>> {
+		) -> Result<SyncCommitteePrepared, Error<T>> {
 			let pub_keys =
 				<SyncCommittees<T>>::get(period).ok_or(Error::<T>::SyncCommitteeMissing)?;
 			Ok(pub_keys)
@@ -988,32 +976,18 @@ pub mod pallet {
 			}
 		}
 
-		pub fn participant_pubkeys(
+		pub fn find_pubkeys(
 			sync_committee_bits: &[u8],
-			sync_committee_pubkeys: &Vec<PublicKeyPrepared>,
-		) -> Result<Vec<PublicKeyPrepared>, Error<T>> {
+			sync_committee_pubkeys: &[PublicKeyPrepared],
+			participant: bool,
+		) -> Vec<PublicKeyPrepared> {
 			let mut pubkeys: Vec<PublicKeyPrepared> = Vec::new();
 			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
-				if *bit == 1 as u8 {
-					let pubk = pubkey.clone();
-					pubkeys.push(pubk);
+				if *bit == u8::from(participant) {
+					pubkeys.push(pubkey.clone());
 				}
 			}
-			Ok(pubkeys)
-		}
-
-		pub fn absent_pubkeys(
-			sync_committee_bits: &[u8],
-			sync_committee_pubkeys: &Vec<PublicKeyPrepared>,
-		) -> Result<Vec<PublicKeyPrepared>, Error<T>> {
-			let mut pubkeys: Vec<PublicKeyPrepared> = Vec::new();
-			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
-				if *bit == 0 as u8 {
-					let pubk = pubkey.clone();
-					pubkeys.push(pubk);
-				}
-			}
-			Ok(pubkeys)
+			pubkeys
 		}
 
 		// Calculate signing root for BeaconHeader

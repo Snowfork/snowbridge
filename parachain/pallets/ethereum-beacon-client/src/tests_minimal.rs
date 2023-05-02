@@ -381,11 +381,8 @@ pub fn test_bls_fast_aggregate_verify() {
 		SYNC_COMMITTEE_BITS_SIZE,
 	>(test_data.sync_committee_bits);
 
-	let participant_pubkeys = mock_minimal::EthereumBeaconClient::participant_pubkeys(
-		&participant_bits,
-		&milagro_pubkeys,
-	)
-	.unwrap();
+	let participant_pubkeys =
+		mock_minimal::EthereumBeaconClient::find_pubkeys(&participant_bits, &milagro_pubkeys, true);
 
 	let signing_root = mock_minimal::EthereumBeaconClient::signing_root(
 		test_data.header,

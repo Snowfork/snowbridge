@@ -1,6 +1,6 @@
 use crate::{PublicKey, Signature};
 use codec::{Decode, Encode};
-use frame_support::ensure;
+use frame_support::{ensure, PalletError};
 pub use milagro_bls::{
 	AggregatePublicKey, AggregateSignature, PublicKey as PublicKeyPrepared,
 	Signature as SignaturePrepared,
@@ -10,7 +10,7 @@ use sp_core::H256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
-#[derive(Copy, Clone, Encode, Decode, Eq, PartialEq, TypeInfo, RuntimeDebug)]
+#[derive(Copy, Clone, Encode, Decode, Eq, PartialEq, TypeInfo, RuntimeDebug, PalletError)]
 pub enum BlsError {
 	InvalidSignature,
 	InvalidPublicKey,
@@ -25,7 +25,7 @@ pub fn fast_aggregate_verify_legacy(
 	signature: &Signature,
 ) -> Result<(), BlsError> {
 	let agg_sig = prepare_aggregate_signature(signature)?;
-	let agg_key = prepare_aggregate_pubkey(&pubkeys)?;
+	let agg_key = prepare_aggregate_pubkey(pubkeys)?;
 	// major bottleneck which consumes more than 90% of weight in the entire call
 	fast_aggregate_verify_pre_aggregated(agg_sig, agg_key, message)
 }
@@ -38,7 +38,7 @@ pub fn fast_aggregate_verify(
 	signature: &Signature,
 ) -> Result<(), BlsError> {
 	let agg_sig = prepare_aggregate_signature(signature)?;
-	let agg_key = prepare_aggregate_pubkey_from_absent(aggregate_pubkey, &absent_pubkeys)?;
+	let agg_key = prepare_aggregate_pubkey_from_absent(aggregate_pubkey, absent_pubkeys)?;
 	fast_aggregate_verify_pre_aggregated(agg_sig, agg_key, message)
 }
 
@@ -48,17 +48,17 @@ pub fn prepare_milagro_pubkey(pubkey: &PublicKey) -> Result<PublicKeyPrepared, B
 }
 
 // Prepare for G1 public keys
-pub fn prepare_g1_pubkeys(pubkeys: &Vec<PublicKey>) -> Result<Vec<PublicKeyPrepared>, BlsError> {
+pub fn prepare_g1_pubkeys(pubkeys: &[PublicKey]) -> Result<Vec<PublicKeyPrepared>, BlsError> {
 	pubkeys
 		.iter()
 		// Deserialize one public key from compressed bytes
-		.map(|pubkey| prepare_milagro_pubkey(pubkey))
+		.map(prepare_milagro_pubkey)
 		.collect::<Result<Vec<PublicKeyPrepared>, BlsError>>()
 }
 
 // Prepare for G1 AggregatePublicKey
 pub fn prepare_aggregate_pubkey(
-	pubkeys: &Vec<PublicKeyPrepared>,
+	pubkeys: &[PublicKeyPrepared],
 ) -> Result<AggregatePublicKey, BlsError> {
 	let agg_pub_key =
 		AggregatePublicKey::into_aggregate(pubkeys).map_err(|_| BlsError::InvalidPublicKey)?;
