@@ -4,7 +4,6 @@ use crate::config;
 
 use crate as ethereum_beacon_client;
 use frame_support::parameter_types;
-use frame_system as system;
 use pallet_timestamp;
 use primitives::{BeaconHeader, Fork, ForkVersions, PublicKey, Signature};
 use sp_core::H256;
@@ -192,7 +191,14 @@ pub mod mock_mainnet {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_tester<T: crate::Config>() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<T>().unwrap().into()
+	#[cfg(not(feature = "minimal"))]
+	use crate::mock::mock_mainnet::Timestamp;
+	#[cfg(feature = "minimal")]
+	use crate::mock::mock_minimal::Timestamp;
+	let t = frame_system::GenesisConfig::default().build_storage::<T>().unwrap();
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| Timestamp::set_timestamp(30_000));
+	ext
 }
 
 pub struct BLSSignatureVerifyTest<

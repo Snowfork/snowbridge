@@ -71,7 +71,11 @@ dependencies = [
 [[package]]
 name = "amcl"
 version = "0.3.0"
-source = "git+https://github.com/Snowfork/milagro_bls#2c9e8b383981308a8b4cbbc19e0b897dcf14534b"
+source = "git+https://github.com/snowfork/milagro_bls?rev=b95ca5be05e3c6e5b865b7e1f4a768dfa97f27f8#b95ca5be05e3c6e5b865b7e1f4a768dfa97f27f8"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+]
 
 [[package]]
 name = "android_system_properties"
@@ -2238,12 +2242,14 @@ dependencies = [
 [[package]]
 name = "milagro_bls"
 version = "1.5.0"
-source = "git+https://github.com/Snowfork/milagro_bls#2c9e8b383981308a8b4cbbc19e0b897dcf14534b"
+source = "git+https://github.com/snowfork/milagro_bls?rev=b95ca5be05e3c6e5b865b7e1f4a768dfa97f27f8#b95ca5be05e3c6e5b865b7e1f4a768dfa97f27f8"
 dependencies = [
  "amcl",
  "hex",
  "lazy_static",
+ "parity-scale-codec",
  "rand 0.8.5",
+ "scale-info",
  "zeroize",
 ]
 
@@ -3499,6 +3505,7 @@ dependencies = [
  "frame-system",
  "hex",
  "hex-literal",
+ "milagro_bls",
  "parity-scale-codec",
  "rlp",
  "scale-info",
@@ -3563,7 +3570,6 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
- "milagro_bls",
  "pallet-timestamp",
  "parity-scale-codec",
  "rlp",

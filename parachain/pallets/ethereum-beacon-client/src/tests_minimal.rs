@@ -4,12 +4,13 @@ use crate::{
 	mock::*,
 	pallet::FinalizedBeaconHeadersBlockRoot,
 	Error, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
-	LatestExecutionHeaderState, LatestFinalizedHeaderState, LatestSyncCommitteePeriod,
-	SyncCommittees, ValidatorsRoot,
+	LatestExecutionHeaderState, LatestFinalizedHeaderState, ValidatorsRoot,
 };
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
-use primitives::decompress_sync_committee_bits;
+use primitives::{
+	decompress_sync_committee_bits, fast_aggregate_verify_legacy, prepare_g1_pubkeys,
+};
 use sp_core::H256;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -40,12 +41,10 @@ fn it_updates_a_committee_period_sync_update() {
 			update.attested_header.slot,
 		);
 
-		SyncCommittees::<mock_minimal::Test>::insert(
+		assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
 			current_period,
-			initial_sync.current_sync_committee,
-		);
-
-		LatestSyncCommitteePeriod::<mock_minimal::Test>::set(current_period);
+			&initial_sync.current_sync_committee,
+		));
 
 		assert_ok!(mock_minimal::EthereumBeaconClient::sync_committee_period_update(
 			mock_minimal::RuntimeOrigin::signed(1),
@@ -125,18 +124,16 @@ fn it_updates_a_invalid_committee_period_sync_update_with_duplicate_entry() {
 			update.attested_header.slot,
 		);
 
-		SyncCommittees::<mock_minimal::Test>::insert(
+		assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
 			current_period,
-			initial_sync.current_sync_committee.clone(),
-		);
+			&initial_sync.current_sync_committee,
+		));
 
 		// initialize with period of the next update
-		SyncCommittees::<mock_minimal::Test>::insert(
+		assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
 			current_period + 1,
-			initial_sync.current_sync_committee,
-		);
-
-		LatestSyncCommitteePeriod::<mock_minimal::Test>::set(current_period + 1);
+			&initial_sync.current_sync_committee,
+		));
 
 		assert_err!(
 			mock_minimal::EthereumBeaconClient::sync_committee_period_update(
@@ -152,7 +149,6 @@ fn it_updates_a_invalid_committee_period_sync_update_with_duplicate_entry() {
 fn it_processes_a_finalized_header_update() {
 	let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
-	let current_sync_committee = initial_sync.current_sync_committee;
 
 	let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
 		update.attested_header.slot,
@@ -176,8 +172,11 @@ fn it_processes_a_finalized_header_update() {
 			// been imported already.
 			beacon_slot: update.finalized_header.slot - 1,
 		});
-		SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
 		ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
+		assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
+			current_period,
+			&initial_sync.current_sync_committee,
+		));
 
 		assert_ok!(mock_minimal::EthereumBeaconClient::import_finalized_header(
 			mock_minimal::RuntimeOrigin::signed(1),
@@ -255,7 +254,6 @@ fn it_processes_a_header_update() {
 		mock_minimal::EthereumBeaconClient::compute_current_sync_period(update.beacon_header.slot);
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
-		SyncCommittees::<mock_minimal::Test>::insert(current_period, current_sync_committee);
 		ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
 		LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 			beacon_block_root: finalized_block_root,
@@ -266,6 +264,10 @@ fn it_processes_a_header_update() {
 			finalized_block_root,
 			finalized_update.block_roots_root,
 		);
+		assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
+			current_period,
+			&current_sync_committee,
+		));
 
 		assert_ok!(mock_minimal::EthereumBeaconClient::import_execution_header(
 			mock_minimal::RuntimeOrigin::signed(1),
@@ -372,17 +374,29 @@ pub fn test_bls_fast_aggregate_verify() {
 	let test_data =
 		get_bls_signature_verify_test_data::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 
-	let participation = decompress_sync_committee_bits::<
+	let milagro_pubkeys = prepare_g1_pubkeys(&test_data.pubkeys.to_vec()).unwrap();
+
+	let participant_bits = decompress_sync_committee_bits::<
 		SYNC_COMMITTEE_SIZE,
 		SYNC_COMMITTEE_BITS_SIZE,
 	>(test_data.sync_committee_bits);
 
-	assert_ok!(mock_minimal::EthereumBeaconClient::verify_signed_header(
-		&participation,
-		&test_data.sync_committee_signature,
-		&test_data.pubkeys,
+	let participant_pubkeys = mock_minimal::EthereumBeaconClient::participant_pubkeys(
+		&participant_bits,
+		&milagro_pubkeys,
+	)
+	.unwrap();
+
+	let signing_root = mock_minimal::EthereumBeaconClient::signing_root(
 		test_data.header,
 		test_data.validators_root,
 		test_data.signature_slot,
+	)
+	.unwrap();
+
+	assert_ok!(fast_aggregate_verify_legacy(
+		&participant_pubkeys,
+		signing_root,
+		&test_data.sync_committee_signature,
 	));
 }

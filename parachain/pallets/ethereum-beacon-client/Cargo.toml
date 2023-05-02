@@ -14,7 +14,6 @@ targets = ["x86_64-unknown-linux-gnu"]
 serde = { version = "1.0.160", optional = true }
 codec = { version = "3.1.5", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
 scale-info = { version = "2.5.0", default-features = false, features = [ "derive" ] }
-milagro_bls = { git = "https://github.com/Snowfork/milagro_bls", default-features = false }
 ssz-rs = { git = "https://github.com/ralexstokes/ssz-rs", default-features = false, rev="d18af912abacbf84219be37ab3b42a9abcf10d2a" }
 ssz-rs-derive = { git = "https://github.com/ralexstokes/ssz-rs", default-features = false, rev="d18af912abacbf84219be37ab3b42a9abcf10d2a" }
 byte-slice-cast = { version = "1.2.1", default-features = false }
@@ -39,7 +38,7 @@ sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master"
 snowbridge-testutils = { path = "../../primitives/testutils" }
 serde_json = "1.0.96"
 hex-literal = { version = "0.4.1" }
-pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 [features]
 default = ["std"]
@@ -56,10 +55,8 @@ std = [
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
     "primitives/std",
-    "milagro_bls/std",
     "ssz-rs/std",
     "byte-slice-cast/std",
-    "pallet-timestamp/std"
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
