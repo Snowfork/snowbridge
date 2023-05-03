@@ -99,8 +99,7 @@ jobs:
           command: tarpaulin
           args: >-
             --manifest-path parachain/Cargo.toml
-            --release
-            --verbose 
+            --verbose
             --workspace
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin

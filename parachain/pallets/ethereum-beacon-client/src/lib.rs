@@ -54,7 +54,8 @@ pub type SyncCommitteeUpdate =
 pub type FinalizedHeaderUpdate =
 	primitives::FinalizedHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type SyncCommittee = primitives::SyncCommittee<SYNC_COMMITTEE_SIZE>;
-pub type SyncCommitteePrepared = primitives::SyncCommitteePrepared<SYNC_COMMITTEE_SIZE>;
+pub type SyncCommitteePrepared =
+	primitives::SyncCommitteePrepared<ConstU32<{ SYNC_COMMITTEE_SIZE as u32 }>>;
 
 fn decompress_sync_committee_bits(
 	input: [u8; SYNC_COMMITTEE_BITS_SIZE],
