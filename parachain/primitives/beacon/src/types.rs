@@ -191,17 +191,12 @@ impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
 	type Error = BlsError;
 
 	fn try_from(sync_committee: &SyncCommittee<COMMITTEE_SIZE>) -> Result<Self, Self::Error> {
-		let g1_pubkeys = prepare_g1_pubkeys(&sync_committee.pubkeys.to_vec())?;
-		let pubkeys: [PublicKeyPrepared; COMMITTEE_SIZE] =
-			g1_pubkeys.try_into().unwrap_or_else(|v: Vec<PublicKeyPrepared>| {
-				panic!(
-					"Expected Vec length of pubkeys as {} but actually it was {}",
-					COMMITTEE_SIZE,
-					v.len()
-				)
-			});
-		let aggregate_pubkey = prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?;
-		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> { pubkeys, aggregate_pubkey })
+		let g1_pubkeys = prepare_g1_pubkeys(&sync_committee.pubkeys)?;
+
+		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
+			pubkeys: g1_pubkeys.try_into().unwrap_or_else(|_| panic!("checked statically; qed")),
+			aggregate_pubkey: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
+		})
 	}
 }
 
