@@ -8,7 +8,7 @@ edition = "2021"
 serde = { version = "1.0.160", optional = true }
 serde-big-array = { version = "0.3.2", optional = true, features = [ "const-generics" ] }
 codec = { package = "parity-scale-codec", version = "3.1.5", default-features = false, features = [ "derive" ] }
-scale-info = { version = "2.5.0", default-features = false, features = [ "derive" ] }
+scale-info = { version = "2.6.0", default-features = false, features = [ "derive" ] }
 ethbloom = { version = "0.13.0", default-features = false }
 ethereum-types = { version = "0.14.1", default-features = false, features = [ "codec", "rlp", "serialize" ] }
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
