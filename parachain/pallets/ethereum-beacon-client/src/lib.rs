@@ -711,7 +711,7 @@ pub mod pallet {
 		pub(super) fn compute_signing_root(
 			beacon_header: BeaconHeader,
 			domain: H256,
-		) -> Result<H256, Error<T>> {
+		) -> Result<H256, DispatchError> {
 			let beacon_header_root = beacon_header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
@@ -870,7 +870,7 @@ pub mod pallet {
 			domain_type: Vec<u8>,
 			fork_version: ForkVersion,
 			genesis_validators_root: H256,
-		) -> Result<H256, Error<T>> {
+		) -> Result<H256, DispatchError> {
 			let fork_data_root =
 				Self::compute_fork_data_root(fork_version, genesis_validators_root)?;
 
@@ -884,7 +884,7 @@ pub mod pallet {
 		fn compute_fork_data_root(
 			current_version: ForkVersion,
 			genesis_validators_root: H256,
-		) -> Result<H256, Error<T>> {
+		) -> Result<H256, DispatchError> {
 			let hash_root = ForkData {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
@@ -909,7 +909,7 @@ pub mod pallet {
 
 		pub(super) fn sync_committee_for_period(
 			period: u64,
-		) -> Result<SyncCommitteePrepared, Error<T>> {
+		) -> Result<SyncCommitteePrepared, DispatchError> {
 			let pub_keys =
 				<SyncCommittees<T>>::get(period).ok_or(Error::<T>::SyncCommitteeMissing)?;
 			Ok(pub_keys)
@@ -996,7 +996,7 @@ pub mod pallet {
 			header: BeaconHeader,
 			validators_root: H256,
 			signature_slot: u64,
-		) -> Result<H256, Error<T>> {
+		) -> Result<H256, DispatchError> {
 			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(
 				signature_slot,
 				config::SLOTS_PER_EPOCH,
