@@ -194,7 +194,7 @@ impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
 		let g1_pubkeys = prepare_g1_pubkeys(&sync_committee.pubkeys)?;
 
 		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
-			pubkeys: g1_pubkeys.try_into().unwrap_or_else(|_| panic!("checked statically; qed")),
+			pubkeys: g1_pubkeys.try_into().expect("checked statically; qed"),
 			aggregate_pubkey: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
 		})
 	}

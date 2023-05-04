@@ -16,7 +16,7 @@ mod tests_mainnet;
 #[cfg(feature = "minimal")]
 mod tests_minimal;
 
-//// [cfg(feature = "runtime-benchmarks")]
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
 pub use weights::WeightInfo;
