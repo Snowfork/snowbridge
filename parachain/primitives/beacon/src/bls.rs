@@ -8,7 +8,6 @@ pub use milagro_bls::{
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::RuntimeDebug;
-use sp_std::prelude::*;
 
 #[derive(Copy, Clone, Encode, Decode, Eq, PartialEq, TypeInfo, RuntimeDebug, PalletError)]
 pub enum BlsError {
@@ -60,9 +59,7 @@ pub fn prepare_g1_pubkeys(pubkeys: &[PublicKey]) -> Result<Vec<PublicKeyPrepared
 pub fn prepare_aggregate_pubkey(
 	pubkeys: &[PublicKeyPrepared],
 ) -> Result<AggregatePublicKey, BlsError> {
-	let agg_pub_key =
-		AggregatePublicKey::into_aggregate(pubkeys).map_err(|_| BlsError::InvalidPublicKey)?;
-	Ok(agg_pub_key)
+	AggregatePublicKey::into_aggregate(pubkeys).map_err(|_| BlsError::InvalidPublicKey)
 }
 
 // Prepare for G1 AggregatePublicKey
@@ -80,10 +77,9 @@ pub fn prepare_aggregate_pubkey_from_absent(
 
 // Prepare for G2 AggregateSignature, normally more expensive than G1 operation
 pub fn prepare_aggregate_signature(signature: &Signature) -> Result<AggregateSignature, BlsError> {
-	let sig =
-		SignaturePrepared::from_bytes(&signature.0).map_err(|_| BlsError::InvalidSignature)?;
-	let agg_sig = AggregateSignature::from_signature(&sig);
-	Ok(agg_sig)
+	Ok(AggregateSignature::from_signature(
+		&SignaturePrepared::from_bytes(&signature.0).map_err(|_| BlsError::InvalidSignature)?,
+	))
 }
 
 // fast_aggregate_verify_pre_aggregated which is the most expensive call in beacon light client
