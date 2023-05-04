@@ -11,7 +11,7 @@ use super::{initial_sync, sync_committee_update};
 pub fn initialize_sync_committee<T: Config>() -> Result<SyncCommitteeUpdate, &'static str> {
 	let initial_sync_data = initial_sync();
 
-	EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
+	EthereumBeaconClient::<T>::initial_sync(&initial_sync_data)?;
 
 	let sync_committee_update = sync_committee_update();
 

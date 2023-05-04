@@ -7,6 +7,7 @@ use frame_system::RawOrigin;
 // For benchmark focus on main spec only
 mod data_mainnet;
 use data_mainnet::*;
+
 mod util;
 use primitives::{
 	fast_aggregate_verify, fast_aggregate_verify_legacy, prepare_aggregate_pubkey,
@@ -30,7 +31,7 @@ benchmarks! {
 
 		let initial_sync_data = initial_sync();
 
-		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
+		EthereumBeaconClient::<T>::initial_sync(&initial_sync_data)?;
 
 		let finalized_header_update = finalized_header_update();
 
@@ -59,7 +60,7 @@ benchmarks! {
 
 		let initial_sync_data = initial_sync();
 
-		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
+		EthereumBeaconClient::<T>::initial_sync(&initial_sync_data)?;
 
 		let header_update = header_update();
 
