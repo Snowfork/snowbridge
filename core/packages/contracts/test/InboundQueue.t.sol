@@ -21,7 +21,14 @@ contract InboundQueueTest is Test {
     ParaID public constant ORIGIN = ParaID.wrap(1001);
     bytes32[] public proof = [bytes32(0x2f9ee6cfdf244060dc28aa46347c5219e303fc95062dd672b4e406ca5c29764b)];
     bytes public message = bytes("message");
-    bytes public parachainHeaderProof = bytes("validProof");
+    IParachainClient.Proof public parachainHeaderProof = IParachainClient.Proof(
+        new bytes(0),
+        new bytes(0),
+        IParachainClient.HeadProof(0, 0, new bytes32[](0)),
+        IParachainClient.MMRLeafPartial(0, 0, bytes32(0), 0, 0, bytes32(0)),
+        new bytes32[](0),
+        0
+    );
 
     function setUp() public {
         IParachainClient parachainClient = new ParachainClientMock();
@@ -55,7 +62,10 @@ contract InboundQueueTest is Test {
         hoax(relayer, 1 ether);
 
         vm.expectRevert(InboundQueue.InvalidProof.selector);
-        channel.submit(InboundQueue.Message(ORIGIN, 1, 1, message), proof, bytes("badProof"));
+
+        IParachainClient.Proof memory badProof = parachainHeaderProof;
+        badProof.headPrefix = new bytes(1);
+        channel.submit(InboundQueue.Message(ORIGIN, 1, 1, message), proof, badProof);
     }
 
     function testSubmitShouldFailInvalidNonce() public {
