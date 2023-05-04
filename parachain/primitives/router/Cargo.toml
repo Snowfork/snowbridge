@@ -40,7 +40,7 @@ std = [
     "xcm/std",
     "xcm-executor/std",
     "snowbridge-core/std",
-	"ethabi/std",
+    "ethabi/std",
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",
