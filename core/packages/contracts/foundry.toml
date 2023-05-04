@@ -12,6 +12,7 @@ remappings = [
     'solmate=lib/solmate/src/',
 ]
 ffi = true
+fuzz.runs = 1_000
 
 
 ignored_error_codes = [
