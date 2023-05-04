@@ -2692,7 +2692,7 @@ dependencies = [
 [[package]]
 name = "polkadot-core-primitives"
 version = "0.9.41"
-source = "git+https://github.com/paritytech/polkadot.git?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
+source = "git+https://github.com/paritytech/polkadot?branch=master#1d8ccbffd1235d4d1d3a0bf02132d8ea9105078f"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -2704,7 +2704,7 @@ dependencies = [
 [[package]]
 name = "polkadot-parachain"
 version = "0.9.41"
-source = "git+https://github.com/paritytech/polkadot.git?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
+source = "git+https://github.com/paritytech/polkadot?branch=master#1d8ccbffd1235d4d1d3a0bf02132d8ea9105078f"
 dependencies = [
  "bounded-collections",
  "derive_more",
@@ -5767,7 +5767,7 @@ dependencies = [
 [[package]]
 name = "xcm"
 version = "0.9.41"
-source = "git+https://github.com/paritytech/polkadot.git?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
+source = "git+https://github.com/paritytech/polkadot?branch=master#1d8ccbffd1235d4d1d3a0bf02132d8ea9105078f"
 dependencies = [
  "bounded-collections",
  "derivative",
@@ -5782,8 +5782,8 @@ dependencies = [
 
 [[package]]
 name = "xcm-executor"
-version = "0.9.39"
-source = "git+https://github.com/paritytech/polkadot?branch=master#e164da65873f11bf8c583e81f6d82c21b005cfe4"
+version = "0.9.41"
+source = "git+https://github.com/paritytech/polkadot?branch=master#1d8ccbffd1235d4d1d3a0bf02132d8ea9105078f"
 dependencies = [
  "environmental",
  "frame-support",
@@ -5802,7 +5802,7 @@ dependencies = [
 [[package]]
 name = "xcm-procedural"
 version = "0.9.41"
-source = "git+https://github.com/paritytech/polkadot.git?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
+source = "git+https://github.com/paritytech/polkadot?branch=master#1d8ccbffd1235d4d1d3a0bf02132d8ea9105078f"
 dependencies = [
  "Inflector",
  "proc-macro2",
