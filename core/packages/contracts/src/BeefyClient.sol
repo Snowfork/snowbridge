@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "openzeppelin/utils/cryptography/ECDSA.sol";
-import "openzeppelin/utils/cryptography/MerkleProof.sol";
+import "solmate/utils/MerkleProofLib.sol";
 import "openzeppelin/access/Ownable.sol";
 import "./utils/Bitfield.sol";
 import "./utils/MMRProof.sol";
@@ -511,7 +511,7 @@ contract BeefyClient is Ownable {
         bytes32[] calldata proof
     ) internal pure returns (bool) {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
-        return MerkleProof.verify(proof, vset.root, hashedLeaf);
+        return MerkleProofLib.verify(proof, vset.root, hashedLeaf);
     }
 
     /**
