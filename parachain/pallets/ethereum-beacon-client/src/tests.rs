@@ -1,6 +1,20 @@
 use crate::{mock::*, verify_merkle_proof, BeaconHeader, Error};
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
+use primitives::{
+	fast_aggregate_verify_legacy, prepare_g1_pubkeys, BlsError, PublicKey, PublicKeyPrepared,
+};
+
+pub fn prepare_milagro_pubkeys() -> Result<Vec<PublicKeyPrepared>, &'static str> {
+	let pubkeys: Vec<PublicKey> = vec![
+		hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+		hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+		hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+		hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
+	];
+	let milagro_pubkeys = prepare_g1_pubkeys(&pubkeys).unwrap();
+	Ok(milagro_pubkeys)
+}
 
 #[test]
 pub fn test_get_sync_committee_sum() {
@@ -196,13 +210,9 @@ pub fn test_merkle_proof_fails_if_depth_and_branch_dont_match() {
 #[test]
 pub fn test_bls_fast_aggregate_verify_minimal() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
-		assert_ok!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
-			&[
-				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
-				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
-				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
-				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
-			],
+		let milagro_pubkeys = prepare_milagro_pubkeys().unwrap();
+		assert_ok!(fast_aggregate_verify_legacy(
+			&milagro_pubkeys,
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
 			&hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
 		));
@@ -212,54 +222,45 @@ pub fn test_bls_fast_aggregate_verify_minimal() {
 #[test]
 pub fn test_bls_fast_aggregate_verify_invalid_point() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
-		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
-			&[
-				hex!("973eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
-				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
-				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
-				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
-			],
-			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			&hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
-		), Error::<mock_minimal::Test>::InvalidSignaturePoint);
+		let pubkeys: Vec<PublicKey> = vec![
+			hex!("973eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+			hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+			hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+			hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
+		];
+		assert_err!(prepare_g1_pubkeys(&pubkeys), BlsError::InvalidPublicKey);
 	});
 }
 
 #[test]
 pub fn test_bls_fast_aggregate_verify_invalid_message() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
-		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
-			&[
-				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
-				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
-				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
-				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
-			],
+		let milagro_pubkeys = prepare_milagro_pubkeys().unwrap();
+		assert_err!(fast_aggregate_verify_legacy(
+			&milagro_pubkeys,
 			hex!("99241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
 			&hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
-		), Error::<mock_minimal::Test>::SignatureVerificationFailed);
+		), BlsError::SignatureVerificationFailed);
 	});
 }
 
 #[test]
 pub fn test_bls_fast_aggregate_verify_invalid_signature() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
-		assert_err!(mock_minimal::EthereumBeaconClient::bls_fast_aggregate_verify(
-			&[
-				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
-				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
-				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
-				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
-			],
+		let milagro_pubkeys = prepare_milagro_pubkeys().unwrap();
+		assert_err!(fast_aggregate_verify_legacy(
+			&milagro_pubkeys,
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
 			&hex!("c204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
-		), Error::<mock_minimal::Test>::InvalidSignature);
+		), BlsError::InvalidSignature);
 	});
 }
 
 #[test]
 pub fn test_sync_committee_participation_is_supermajority() {
-	let bits = hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b");
+	let bits =
+hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b"
+);
 	let participation = primitives::decompress_sync_committee_bits::<512, 64>(bits);
 	assert_ok!(mock_minimal::EthereumBeaconClient::sync_committee_participation_is_supermajority(
 		&participation

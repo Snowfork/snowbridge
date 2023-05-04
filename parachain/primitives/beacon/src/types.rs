@@ -21,6 +21,9 @@ use ssz_rs::MerkleizationError;
 
 pub use crate::bits::decompress_sync_committee_bits;
 
+use crate::bls::{prepare_g1_pubkeys, prepare_milagro_pubkey, BlsError};
+use milagro_bls::PublicKey as PublicKeyPrepared;
+
 pub type ValidatorIndex = u64;
 pub type ForkVersion = [u8; 4];
 
@@ -153,7 +156,6 @@ impl SigningData {
 	derive(Serialize, Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
 pub struct SyncCommittee<const COMMITTEE_SIZE: usize> {
 	#[cfg_attr(feature = "std", serde(with = "crate::serde_utils::arrays"))]
@@ -173,6 +175,28 @@ impl<const COMMITTEE_SIZE: usize> Default for SyncCommittee<COMMITTEE_SIZE> {
 impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
 	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
 		hash_tree_root::<SSZSyncCommittee<COMMITTEE_SIZE>>(self.clone().into())
+	}
+}
+
+/// Prepared G1 public key of sync committee as it is stored in the runtime storage.
+#[derive(Clone, PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
+	pub pubkeys: [PublicKeyPrepared; COMMITTEE_SIZE],
+	pub aggregate_pubkey: PublicKeyPrepared,
+}
+
+impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
+	for SyncCommitteePrepared<COMMITTEE_SIZE>
+{
+	type Error = BlsError;
+
+	fn try_from(sync_committee: &SyncCommittee<COMMITTEE_SIZE>) -> Result<Self, Self::Error> {
+		let g1_pubkeys = prepare_g1_pubkeys(&sync_committee.pubkeys)?;
+
+		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
+			pubkeys: g1_pubkeys.try_into().expect("checked statically; qed"),
+			aggregate_pubkey: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
+		})
 	}
 }
 

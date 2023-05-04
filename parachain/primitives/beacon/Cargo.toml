@@ -26,6 +26,7 @@ byte-slice-cast = { version = "1.2.1", default-features = false }
 
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 static_assertions = { version = "1.1.0" }
+milagro_bls = { git = "https://github.com/snowfork/milagro_bls", default-features = false, rev="a6d66e4eb89015e352fb1c9f7b661ecdbb5b2176"}
 
 [dev-dependencies]
 hex-literal = { version = "0.4.1" }
@@ -46,4 +47,5 @@ std = [
     "snowbridge-ethereum/std",
     "ssz-rs/std",
     "byte-slice-cast/std",
+    "milagro_bls/std",
 ]

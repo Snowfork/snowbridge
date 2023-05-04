@@ -11,6 +11,7 @@ mod tests;
 #[cfg(test)]
 #[cfg(not(feature = "minimal"))]
 mod tests_mainnet;
+
 #[cfg(test)]
 #[cfg(feature = "minimal")]
 mod tests_minimal;
@@ -20,28 +21,29 @@ mod benchmarking;
 
 pub use weights::WeightInfo;
 
-use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
+use frame_support::{
+	dispatch::DispatchResult,
+	log,
+	traits::{ConstU32, Get, UnixTime},
+	transactional, BoundedVec,
+};
 use frame_system::ensure_signed;
 use primitives::{
-	verify_merkle_proof, verify_receipt_proof, BeaconHeader, CompactExecutionHeader,
-	ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion, PublicKey, Signature,
-	SigningData,
+	fast_aggregate_verify, verify_merkle_proof, verify_receipt_proof, BeaconHeader, BlsError,
+	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
+	ForkVersions, PublicKeyPrepared, Signature, SigningData,
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
 use sp_std::prelude::*;
 
-use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError};
-use primitives::ForkVersions;
 use snowbridge_core::Proof;
 use snowbridge_ethereum::{Header as EthereumHeader, Log, Receipt};
 use sp_core::U256;
 
-use frame_support::{traits::Get, BoundedVec};
-
 pub use pallet::*;
 
-use config::{
+pub use config::{
 	MAX_FINALIZED_HEADER_SLOT_ARRAY, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE,
 	SYNC_COMMITTEE_SIZE,
 };
@@ -53,6 +55,7 @@ pub type SyncCommitteeUpdate =
 pub type FinalizedHeaderUpdate =
 	primitives::FinalizedHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type SyncCommittee = primitives::SyncCommittee<SYNC_COMMITTEE_SIZE>;
+pub type SyncCommitteePrepared = primitives::SyncCommitteePrepared<SYNC_COMMITTEE_SIZE>;
 
 fn decompress_sync_committee_bits(
 	input: [u8; SYNC_COMMITTEE_BITS_SIZE],
@@ -78,8 +81,9 @@ pub mod pallet {
 		type TimeProvider: UnixTime;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
-		type WeightInfo: WeightInfo;
+		#[pallet::constant]
 		type WeakSubjectivityPeriodSeconds: Get<u64>;
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -91,6 +95,7 @@ pub mod pallet {
 	}
 
 	#[pallet::error]
+	#[cfg_attr(test, derive(PartialEq))]
 	pub enum Error<T> {
 		AncientHeader,
 		SkippedSyncCommitteePeriod,
@@ -101,9 +106,6 @@ pub mod pallet {
 		InvalidSyncCommitteeMerkleProof,
 		InvalidExecutionHeaderProof,
 		InvalidAncestryMerkleProof,
-		InvalidSignature,
-		InvalidSignaturePoint,
-		InvalidAggregatePublicKeys,
 		InvalidHash,
 		InvalidSyncCommitteeBits,
 		SignatureVerificationFailed,
@@ -133,6 +135,8 @@ pub mod pallet {
 		InvalidExecutionHeaderUpdate,
 		FinalizedBeaconHeaderSlotsExceeded,
 		ExecutionHeaderMappingFailed,
+		BLSPreparePublicKeysFailed,
+		BLSVerificationFailed(BlsError),
 	}
 
 	#[pallet::hooks]
@@ -154,12 +158,6 @@ pub mod pallet {
 	pub(super) type ExecutionHeaders<T: Config> =
 		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
 
-	/// Current sync committee corresponding to the active header.
-	/// TODO  prune older sync committees than xxx
-	#[pallet::storage]
-	pub(super) type SyncCommittees<T: Config> =
-		StorageMap<_, Identity, u64, SyncCommittee, OptionQuery>;
-
 	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
@@ -176,6 +174,10 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type Blocked<T: Config> = StorageValue<_, bool, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type SyncCommittees<T: Config> =
+		StorageMap<_, Identity, u64, SyncCommitteePrepared, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -199,7 +201,7 @@ pub mod pallet {
 			);
 
 			if let Some(initial_sync) = self.initial_sync.clone() {
-				Pallet::<T>::initial_sync(initial_sync).unwrap();
+				Pallet::<T>::initial_sync(&initial_sync).unwrap();
 			}
 		}
 	}
@@ -348,7 +350,7 @@ pub mod pallet {
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
-			Self::store_sync_committee(period, &update.current_sync_committee);
+			Self::store_sync_committee(period, &update.current_sync_committee)?;
 			Self::store_validators_root(update.validators_root);
 
 			let slot = update.header.slot;
@@ -405,8 +407,6 @@ pub mod pallet {
 				signature_slot_period
 			);
 
-			let current_sync_committee =
-				<SyncCommittees<T>>::get(current_period).ok_or(Error::<T>::SyncCommitteeMissing)?;
 			let next_period = current_period + 1;
 			ensure!(
 				!<SyncCommittees<T>>::contains_key(next_period),
@@ -418,10 +418,11 @@ pub mod pallet {
 			);
 
 			let validators_root = <ValidatorsRoot<T>>::get();
+			let sync_committee = Self::sync_committee_for_period(current_period)?;
 			Self::verify_signed_header(
 				&participation,
 				&update.sync_aggregate.sync_committee_signature,
-				&current_sync_committee.pubkeys,
+				&sync_committee,
 				update.attested_header.clone(),
 				validators_root,
 				update.signature_slot,
@@ -438,7 +439,7 @@ pub mod pallet {
 			);
 
 			Self::store_block_root(update.block_roots_root, block_root);
-			Self::store_sync_committee(next_period, &update.next_sync_committee);
+			Self::store_sync_committee(next_period, &update.next_sync_committee)?;
 			Self::store_finalized_header(block_root, update.finalized_header.clone())?;
 
 			Ok(())
@@ -502,14 +503,12 @@ pub mod pallet {
 				Error::<T>::InvalidFinalizedPeriodUpdate
 			);
 
-			let sync_committee =
-				<SyncCommittees<T>>::get(current_period).ok_or(Error::<T>::SyncCommitteeMissing)?;
-
 			let validators_root = <ValidatorsRoot<T>>::get();
+			let sync_committee = Self::sync_committee_for_period(current_period)?;
 			Self::verify_signed_header(
 				&participation,
 				&update.sync_aggregate.sync_committee_signature,
-				&sync_committee.pubkeys,
+				&sync_committee,
 				update.attested_header,
 				validators_root,
 				update.signature_slot,
@@ -581,8 +580,7 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.beacon_header.slot);
-			let sync_committee =
-				<SyncCommittees<T>>::get(current_period).ok_or(Error::<T>::SyncCommitteeMissing)?;
+			let sync_committee = Self::sync_committee_for_period(current_period)?;
 
 			let validators_root = <ValidatorsRoot<T>>::get();
 			let participation =
@@ -591,7 +589,7 @@ pub mod pallet {
 			Self::verify_signed_header(
 				&participation,
 				&update.sync_aggregate.sync_committee_signature,
-				&sync_committee.pubkeys,
+				&sync_committee,
 				update.beacon_header,
 				validators_root,
 				update.signature_slot,
@@ -682,82 +680,32 @@ pub mod pallet {
 		pub(super) fn verify_signed_header(
 			sync_committee_bits: &[u8],
 			sync_committee_signature: &Signature,
-			sync_committee_pubkeys: &[PublicKey],
+			sync_committee: &SyncCommitteePrepared,
 			header: BeaconHeader,
 			validators_root: H256,
 			signature_slot: u64,
 		) -> DispatchResult {
-			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
-			// Gathers all the pubkeys of the sync committee members that participated in signing
-			// the header.
-			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
-				if *bit == 1_u8 {
-					participant_pubkeys.push(*pubkey);
-				}
-			}
+			// Gathers milagro pubkeys absent to participate
+			let absent_pubkeys =
+				Self::find_pubkeys(sync_committee_bits, &sync_committee.pubkeys, false);
 
-			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(
-				signature_slot,
-				config::SLOTS_PER_EPOCH,
-			));
-			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
-			// Domains are used for for seeds, for signatures, and for selecting aggregators.
-			let domain = Self::compute_domain(domain_type, fork_version, validators_root)?;
-			// Hash tree root of SigningData - object root + domain
-			let signing_root = Self::compute_signing_root(header, domain)?;
+			// Get signing root for BeaconHeader
+			let signing_root = Self::signing_root(header, validators_root, signature_slot)?;
 
 			// Verify sync committee aggregate signature.
-			Self::bls_fast_aggregate_verify(
-				&participant_pubkeys,
+			fast_aggregate_verify(
+				&sync_committee.aggregate_pubkey,
+				&absent_pubkeys,
 				signing_root,
 				sync_committee_signature,
-			)?;
+			)
+			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
 			Ok(())
 		}
 
 		pub(super) fn compute_epoch_at_slot(signature_slot: u64, slots_per_epoch: u64) -> u64 {
 			signature_slot / slots_per_epoch
-		}
-
-		pub(super) fn bls_fast_aggregate_verify(
-			pubkeys: &[PublicKey],
-			message: H256,
-			signature: &Signature,
-		) -> DispatchResult {
-			let sig = milagro_bls::Signature::from_bytes(&signature.0[..]);
-			if let Err(_e) = sig {
-				return Err(Error::<T>::InvalidSignature.into())
-			}
-
-			let agg_sig = AggregateSignature::from_signature(&sig.unwrap());
-
-			let public_keys_res: Result<Vec<milagro_bls::PublicKey>, _> = pubkeys
-				.iter()
-				.map(|bytes| milagro_bls::PublicKey::from_bytes_unchecked(&bytes.0))
-				.collect();
-			if let Err(e) = public_keys_res {
-				match e {
-					AmclError::InvalidPoint => return Err(Error::<T>::InvalidSignaturePoint.into()),
-					_ => return Err(Error::<T>::InvalidSignature.into()),
-				};
-			}
-
-			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
-			if let Err(e) = agg_pub_key_res {
-				log::error!(target: "ethereum-beacon-client", "💫 invalid public keys: {:?}.", e);
-				return Err(Error::<T>::InvalidAggregatePublicKeys.into())
-			}
-
-			ensure!(
-				agg_sig.fast_aggregate_verify_pre_aggregated(
-					message.as_bytes(),
-					&agg_pub_key_res.unwrap()
-				),
-				Error::<T>::SignatureVerificationFailed
-			);
-
-			Ok(())
 		}
 
 		pub(super) fn compute_signing_root(
@@ -818,18 +766,21 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_sync_committee(period: u64, sync_committee: &SyncCommittee) {
-			<SyncCommittees<T>>::insert(period, sync_committee);
+		pub fn store_sync_committee(period: u64, sync_committee: &SyncCommittee) -> DispatchResult {
+			let prepare_sync_committee: SyncCommitteePrepared =
+				sync_committee.try_into().map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
+			<SyncCommittees<T>>::insert(period, prepare_sync_committee);
 
-			log::trace!(
+			<LatestSyncCommitteePeriod<T>>::set(period);
+
+			log::debug!(
 				target: "ethereum-beacon-client",
 				"💫 Updated latest sync committee period stored to {}.",
 				period
 			);
 
-			<LatestSyncCommitteePeriod<T>>::set(period);
-
 			Self::deposit_event(Event::SyncCommitteeUpdated { period });
+			Ok(())
 		}
 
 		fn store_finalized_header(block_root: H256, header: BeaconHeader) -> DispatchResult {
@@ -956,6 +907,12 @@ pub mod pallet {
 			Ok(())
 		}
 
+		pub(super) fn sync_committee_for_period(
+			period: u64,
+		) -> Result<SyncCommitteePrepared, DispatchError> {
+			<SyncCommittees<T>>::get(period).ok_or(Error::<T>::SyncCommitteeMissing.into())
+		}
+
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
 			let fork_versions = T::ForkVersions::get();
 
@@ -972,13 +929,13 @@ pub mod pallet {
 			fork_versions.genesis.version
 		}
 
-		pub(super) fn initial_sync(update: InitialUpdate) -> Result<(), &'static str> {
+		pub(super) fn initial_sync(update: &InitialUpdate) -> Result<(), &'static str> {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received initial sync, starting processing.",
 			);
 
-			if let Err(err) = Self::process_initial_sync(&update) {
+			if let Err(err) = Self::process_initial_sync(update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"Initial sync failed with error {:?}",
@@ -1016,6 +973,38 @@ pub mod pallet {
 					Err(Error::<T>::InvalidProof.into())
 				},
 			}
+		}
+
+		pub fn find_pubkeys(
+			sync_committee_bits: &[u8],
+			sync_committee_pubkeys: &[PublicKeyPrepared],
+			participant: bool,
+		) -> Vec<PublicKeyPrepared> {
+			let mut pubkeys: Vec<PublicKeyPrepared> = Vec::new();
+			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
+				if *bit == u8::from(participant) {
+					pubkeys.push(pubkey.clone());
+				}
+			}
+			pubkeys
+		}
+
+		// Calculate signing root for BeaconHeader
+		pub fn signing_root(
+			header: BeaconHeader,
+			validators_root: H256,
+			signature_slot: u64,
+		) -> Result<H256, DispatchError> {
+			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(
+				signature_slot,
+				config::SLOTS_PER_EPOCH,
+			));
+			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
+			// Domains are used for for seeds, for signatures, and for selecting aggregators.
+			let domain = Self::compute_domain(domain_type, fork_version, validators_root)?;
+			// Hash tree root of SigningData - object root + domain
+			let signing_root = Self::compute_signing_root(header, domain)?;
+			Ok(signing_root)
 		}
 	}
 

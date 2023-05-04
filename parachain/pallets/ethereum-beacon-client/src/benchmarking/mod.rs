@@ -7,7 +7,12 @@ use frame_system::RawOrigin;
 // For benchmark focus on main spec only
 mod data_mainnet;
 use data_mainnet::*;
+
 mod util;
+use primitives::{
+	fast_aggregate_verify, fast_aggregate_verify_legacy, prepare_aggregate_pubkey,
+	prepare_aggregate_signature,
+};
 use util::*;
 
 benchmarks! {
@@ -18,7 +23,7 @@ benchmarks! {
 
 	}: sync_committee_period_update(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
 	verify {
-		assert!(<SyncCommittees<T>>::get(sync_committee_update.sync_committee_period+1).unwrap().pubkeys.len() > 0);
+		EthereumBeaconClient::<T>::sync_committee_for_period(sync_committee_update.sync_committee_period+1).unwrap();
 	}
 
 	import_finalized_header {
@@ -26,16 +31,15 @@ benchmarks! {
 
 		let initial_sync_data = initial_sync();
 
-		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
+		EthereumBeaconClient::<T>::initial_sync(&initial_sync_data)?;
 
 		let finalized_header_update = finalized_header_update();
 
-		SyncCommittees::<T>::insert(
-			EthereumBeaconClient::<T>::compute_current_sync_period(
+		let current_period = EthereumBeaconClient::<T>::compute_current_sync_period(
 				finalized_header_update.attested_header.slot,
-			),
-			initial_sync_data.current_sync_committee,
-		);
+			);
+
+		EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;
 
 		//initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
 		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState {
@@ -56,13 +60,15 @@ benchmarks! {
 
 		let initial_sync_data = initial_sync();
 
-		EthereumBeaconClient::<T>::initial_sync(initial_sync_data.clone())?;
+		EthereumBeaconClient::<T>::initial_sync(&initial_sync_data)?;
 
 		let header_update = header_update();
 
-		SyncCommittees::<T>::insert(EthereumBeaconClient::<T>::compute_current_sync_period(
+		let current_period = EthereumBeaconClient::<T>::compute_current_sync_period(
 				header_update.beacon_header.slot,
-			), initial_sync_data.current_sync_committee);
+			);
+
+		EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;
 
 		let finalized_update: FinalizedHeaderUpdate<> = finalized_header_update();
 
@@ -90,32 +96,31 @@ benchmarks! {
 		assert_eq!(<Blocked<T>>::get(),false);
 	}
 
-	bls_fast_aggregate_verify {
+	bls_fast_aggregate_verify_pre_aggregated {
 		let update = initialize_sync_committee::<T>()?;
-		let participant_pubkeys = get_participant_pubkeys::<T>(&update)?;
-		let signing_root = get_signing_message::<T>(&update)?;
-	}:{
-		EthereumBeaconClient::<T>::bls_fast_aggregate_verify(&participant_pubkeys,signing_root,&update.sync_aggregate.sync_committee_signature)?;
-	}
-
-	bls_aggregate_pubkey {
-		let update = initialize_sync_committee::<T>()?;
-		let participant_pubkeys = get_participant_pubkeys::<T>(&update)?;
-	}:{
-		participant_pubkeys
-				.iter()
-				.map(|bytes| milagro_bls::PublicKey::from_bytes_unchecked(&bytes.0))
-				.collect::<Result<Vec<milagro_bls::PublicKey>, _>>().unwrap()
-	}
-
-	bls_verify_message {
-		let update = initialize_sync_committee::<T>()?;
-		let participant_pubkeys = get_participant_pubkeys::<T>(&update)?;
-		let signing_root = get_signing_message::<T>(&update)?;
-		let agg_sig = get_aggregate_signature::<T>(update.sync_aggregate.sync_committee_signature).unwrap();
-		let agg_pub_key = get_aggregate_pubkey::<T>(participant_pubkeys).unwrap();
+		let participant_pubkeys = participant_pubkeys::<T>(&update)?;
+		let signing_root = signing_root::<T>(&update)?;
+		let agg_sig = prepare_aggregate_signature(&update.sync_aggregate.sync_committee_signature).unwrap();
+		let agg_pub_key = prepare_aggregate_pubkey(&participant_pubkeys).unwrap();
 	}:{
 		agg_sig.fast_aggregate_verify_pre_aggregated(&signing_root.as_bytes(), &agg_pub_key)
+	}
+
+	bls_fast_aggregate_verify_legacy {
+		let update = initialize_sync_committee::<T>()?;
+		let participant_pubkeys = participant_pubkeys::<T>(&update)?;
+		let signing_root = signing_root::<T>(&update)?;
+	}:{
+		fast_aggregate_verify_legacy(&participant_pubkeys, signing_root, &update.sync_aggregate.sync_committee_signature).unwrap();
+	}
+
+	bls_fast_aggregate_verify {
+		let update = initialize_sync_committee::<T>()?;
+		let current_sync_committee = sync_committee::<T>(&update)?;
+		let absent_pubkeys = absent_pubkeys::<T>(&update)?;
+		let signing_root = signing_root::<T>(&update)?;
+	}:{
+		fast_aggregate_verify(&current_sync_committee.aggregate_pubkey, &absent_pubkeys, signing_root, &update.sync_aggregate.sync_committee_signature).unwrap();
 	}
 }
 

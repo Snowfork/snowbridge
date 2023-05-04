@@ -37,9 +37,9 @@ pub trait WeightInfo {
 	fn import_finalized_header() -> Weight;
 	fn import_execution_header() -> Weight;
 	fn unblock_bridge() -> Weight;
+	fn bls_fast_aggregate_verify_pre_aggregated() -> Weight;
 	fn bls_fast_aggregate_verify() -> Weight;
-	fn bls_aggregate_pubkey() -> Weight;
-	fn bls_verify_message() -> Weight;
+	fn bls_fast_aggregate_verify_legacy() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -63,16 +63,16 @@ impl WeightInfo for () {
 		Weight::from_parts(13_941_000, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
+	fn bls_fast_aggregate_verify_pre_aggregated() -> Weight {
+		Weight::from_parts(28_368_043_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+	}
 	fn bls_fast_aggregate_verify() -> Weight {
 		Weight::from_parts(123_459_134_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	fn bls_aggregate_pubkey() -> Weight {
-		Weight::from_parts(94_487_034_000, 0)
-			.saturating_add(Weight::from_parts(0, 0))
-	}
-	fn bls_verify_message() -> Weight {
-		Weight::from_parts(28_368_043_000, 0)
+	fn bls_fast_aggregate_verify_legacy() -> Weight {
+		Weight::from_parts(123_459_134_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
 }
