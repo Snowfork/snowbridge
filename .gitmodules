@@ -1,7 +1,7 @@
 [submodule "cumulus"]
 	path = cumulus
 	url = https://github.com/Snowfork/cumulus
-	branch = ron/cache-milagro-g1-pubkeys
+	branch = snowbridge
 [submodule "core/packages/contracts/lib/forge-std"]
 	path = core/packages/contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
