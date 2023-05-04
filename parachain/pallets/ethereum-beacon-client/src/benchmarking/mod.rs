@@ -7,6 +7,7 @@ use frame_system::RawOrigin;
 // For benchmark focus on main spec only
 mod data_mainnet;
 use data_mainnet::*;
+
 mod util;
 use primitives::{
 	fast_aggregate_verify, fast_aggregate_verify_legacy, prepare_aggregate_pubkey,

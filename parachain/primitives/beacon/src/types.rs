@@ -1,8 +1,8 @@
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{traits::Get, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
+use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_core::{H160, H256, U256};
-use sp_runtime::{BoundedVec, RuntimeDebug};
+use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
 use crate::config::{PUBKEY_SIZE, SIGNATURE_SIZE};
@@ -180,23 +180,23 @@ impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
 
 /// Prepared G1 public key of sync committee as it is stored in the runtime storage.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen)]
-#[scale_info(skip_type_params(MaxCommitteeSize))]
-pub struct SyncCommitteePrepared<MaxCommitteeSize: Get<u32>> {
-	pub pubkeys: BoundedVec<PublicKeyPrepared, MaxCommitteeSize>,
+pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
+	pub pubkeys: [PublicKeyPrepared; COMMITTEE_SIZE],
 	pub aggregate_pubkey: PublicKeyPrepared,
 }
 
-impl<const COMMITTEE_SIZE: usize, MaxCommitteeSize: Get<u32>>
-	TryFrom<&SyncCommittee<COMMITTEE_SIZE>> for SyncCommitteePrepared<MaxCommitteeSize>
+impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
+	for SyncCommitteePrepared<COMMITTEE_SIZE>
 {
 	type Error = BlsError;
 
 	fn try_from(sync_committee: &SyncCommittee<COMMITTEE_SIZE>) -> Result<Self, Self::Error> {
 		let g1_pubkeys = prepare_g1_pubkeys(&sync_committee.pubkeys)?;
-		let pubkeys = BoundedVec::<PublicKeyPrepared, MaxCommitteeSize>::try_from(g1_pubkeys)
-			.expect("checked statically; qed");
-		let aggregate_pubkey = prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?;
-		Ok(SyncCommitteePrepared::<MaxCommitteeSize> { pubkeys, aggregate_pubkey })
+
+		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
+			pubkeys: g1_pubkeys.try_into().expect("checked statically; qed"),
+			aggregate_pubkey: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
+		})
 	}
 }
 
