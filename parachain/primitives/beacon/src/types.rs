@@ -192,9 +192,9 @@ impl<const COMMITTEE_SIZE: usize, MaxCommitteeSize: Get<u32>>
 	type Error = BlsError;
 
 	fn try_from(sync_committee: &SyncCommittee<COMMITTEE_SIZE>) -> Result<Self, Self::Error> {
-		let g1_pubkeys = prepare_g1_pubkeys(&sync_committee.pubkeys.to_vec())?;
+		let g1_pubkeys = prepare_g1_pubkeys(&sync_committee.pubkeys)?;
 		let pubkeys = BoundedVec::<PublicKeyPrepared, MaxCommitteeSize>::try_from(g1_pubkeys)
-			.map_err(|_| BlsError::InvalidPublicKey)?;
+			.expect("checked statically; qed");
 		let aggregate_pubkey = prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?;
 		Ok(SyncCommitteePrepared::<MaxCommitteeSize> { pubkeys, aggregate_pubkey })
 	}

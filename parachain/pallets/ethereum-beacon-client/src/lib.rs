@@ -201,7 +201,7 @@ pub mod pallet {
 			);
 
 			if let Some(initial_sync) = self.initial_sync.clone() {
-				Pallet::<T>::initial_sync(initial_sync).unwrap();
+				Pallet::<T>::initial_sync(&initial_sync).unwrap();
 			}
 		}
 	}
@@ -910,9 +910,7 @@ pub mod pallet {
 		pub(super) fn sync_committee_for_period(
 			period: u64,
 		) -> Result<SyncCommitteePrepared, DispatchError> {
-			let pub_keys =
-				<SyncCommittees<T>>::get(period).ok_or(Error::<T>::SyncCommitteeMissing)?;
-			Ok(pub_keys)
+			<SyncCommittees<T>>::get(period).ok_or(Error::<T>::SyncCommitteeMissing.into())
 		}
 
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
@@ -931,13 +929,13 @@ pub mod pallet {
 			fork_versions.genesis.version
 		}
 
-		pub(super) fn initial_sync(update: InitialUpdate) -> Result<(), &'static str> {
+		pub(super) fn initial_sync(update: &InitialUpdate) -> Result<(), &'static str> {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received initial sync, starting processing.",
 			);
 
-			if let Err(err) = Self::process_initial_sync(&update) {
+			if let Err(err) = Self::process_initial_sync(update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"Initial sync failed with error {:?}",

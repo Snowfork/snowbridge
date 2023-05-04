@@ -19,7 +19,7 @@ fn it_syncs_from_an_initial_checkpoint() {
 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
-		assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(initial_sync.clone()));
+		assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(&initial_sync));
 
 		let block_root: H256 = initial_sync.header.hash_tree_root().unwrap();
 
@@ -35,7 +35,7 @@ fn it_updates_a_committee_period_sync_update() {
 		get_committee_sync_period_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
-		assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(initial_sync.clone()));
+		assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(&initial_sync));
 
 		let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
 			update.attested_header.slot,
@@ -65,7 +65,7 @@ fn it_updates_a_committee_period_sync_update_with_invalid_header() {
 		get_committee_sync_period_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
-		assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(initial_sync.clone()));
+		assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(&initial_sync));
 
 		// makes a invalid update with signature_slot should be more than attested_slot
 		update.signature_slot = update.attested_header.slot;
@@ -118,7 +118,7 @@ fn it_updates_a_invalid_committee_period_sync_update_with_duplicate_entry() {
 		get_committee_sync_period_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
-		assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(initial_sync.clone()));
+		assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(&initial_sync));
 
 		let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
 			update.attested_header.slot,
