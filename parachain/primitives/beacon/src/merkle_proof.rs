@@ -7,7 +7,7 @@ pub fn verify_merkle_proof(leaf: H256, branch: &[H256], index: usize, root: H256
 	let mut value: [u8; 32] = leaf.into();
 	for (i, node) in branch.iter().enumerate() {
 		let mut data = [0u8; 64];
-		if (index as u64 / (2u32.pow(i as u32) as u64) % 2) == 0 {
+		if (index / (2_u32.pow(i as u32) as usize) % 2) == 0 {
 			// left node
 			data[0..32].copy_from_slice(&value);
 			data[32..64].copy_from_slice(&node.0);
