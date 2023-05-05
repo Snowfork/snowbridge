@@ -19,12 +19,10 @@ mod tests_minimal;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-mod ringbuffer;
-
-use crate::ringbuffer::{RingBufferMap, RingBufferMapImpl};
 use frame_support::{
 	dispatch::DispatchResult,
 	log,
+	pallet_prelude::OptionQuery,
 	traits::{Get, UnixTime},
 	transactional, BoundedVec,
 };
@@ -34,7 +32,7 @@ use primitives::{
 	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
 	ForkVersions, PublicKeyPrepared, Signature, SigningData,
 };
-use snowbridge_core::{Message, Verifier};
+use snowbridge_core::{Message, RingBufferMap, RingBufferMapImpl, Verifier};
 use sp_core::H256;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
@@ -63,6 +61,26 @@ fn decompress_sync_committee_bits(
 		input,
 	)
 }
+
+/// ExecutionHeader ring buffer implementation
+pub(crate) type ExecutionHeaderBuffer<T> = RingBufferMapImpl<
+	u32,
+	<T as Config>::ExecutionHeadersPruneThreshold,
+	ExecutionHeaderIndex<T>,
+	ExecutionHeaderMapping<T>,
+	ExecutionHeaders<T>,
+	OptionQuery,
+>;
+
+/// Sync committee ring buffer implementation
+pub(crate) type SyncCommitteesBuffer<T> = RingBufferMapImpl<
+	u32,
+	<T as Config>::SyncCommitteePruneThreshold,
+	SyncCommitteesIndex<T>,
+	SyncCommitteesMapping<T>,
+	SyncCommittees<T>,
+	OptionQuery,
+>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -166,51 +184,6 @@ pub mod pallet {
 	pub(super) type ExecutionHeaders<T: Config> =
 		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
 
-	/// Execution headers ring buffer map implementation
-
-	/// Index storage for execution header ring buffer map
-	#[pallet::storage]
-	pub(crate) type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
-
-	/// Intermediate storage for execution header mapping
-	#[pallet::storage]
-	pub(crate) type ExecutionHeaderMapping<T: Config> =
-		StorageMap<_, Identity, u32, H256, ValueQuery>;
-
-	/// Ring buffer Map for Execution header
-	pub(crate) type ExecutionHeaderBuffer<T> = RingBufferMapImpl<
-		u32,
-		<T as Config>::ExecutionHeadersPruneThreshold,
-		ExecutionHeaderIndex<T>,
-		ExecutionHeaderMapping<T>,
-		ExecutionHeaders<T>,
-		OptionQuery,
-	>;
-
-	/// Sync committee ring buffer implementation
-	pub(crate) type SyncCommitteesBuffer<T> = RingBufferMapImpl<
-		u32,
-		<T as Config>::SyncCommitteePruneThreshold,
-		SyncCommitteesIndex<T>,
-		SyncCommitteesMapping<T>,
-		SyncCommittees<T>,
-		OptionQuery,
-	>;
-
-	/// Current sync committee corresponding to the active header.
-	#[pallet::storage]
-	pub(super) type SyncCommittees<T: Config> =
-		StorageMap<_, Identity, u64, SyncCommitteePrepared, OptionQuery>;
-
-	/// Index storage for sync committee ring buffer
-	#[pallet::storage]
-	pub(crate) type SyncCommitteesIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
-
-	/// Intermediate storage for sync committee mapping
-	#[pallet::storage]
-	pub(crate) type SyncCommitteesMapping<T: Config> =
-		StorageMap<_, Identity, u32, u64, ValueQuery>;
-
 	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
@@ -228,16 +201,32 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type Blocked<T: Config> = StorageValue<_, bool, ValueQuery>;
 
+	#[pallet::storage]
+	pub(super) type SyncCommittees<T: Config> =
+		StorageMap<_, Identity, u64, SyncCommitteePrepared, OptionQuery>;
+
+	/// Index storage for execution header
+	#[pallet::storage]
+	pub(crate) type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	/// Intermediate storage for execution header mapping
+	#[pallet::storage]
+	pub(crate) type ExecutionHeaderMapping<T: Config> =
+		StorageMap<_, Identity, u32, H256, ValueQuery>;
+
+	/// Index storage for sync committee ring buffer
+	#[pallet::storage]
+	pub(crate) type SyncCommitteesIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	/// Intermediate storage for sync committee mapping
+	#[pallet::storage]
+	pub(crate) type SyncCommitteesMapping<T: Config> =
+		StorageMap<_, Identity, u32, u64, ValueQuery>;
+
 	#[pallet::genesis_config]
+	#[derive(Default)]
 	pub struct GenesisConfig {
 		pub initial_sync: Option<InitialUpdate>,
-	}
-
-	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
-		fn default() -> Self {
-			GenesisConfig { initial_sync: None }
-		}
 	}
 
 	#[pallet::genesis_build]
@@ -459,7 +448,7 @@ pub mod pallet {
 				&participation,
 				&update.sync_aggregate.sync_committee_signature,
 				&sync_committee,
-				update.attested_header.clone(),
+				update.attested_header,
 				validators_root,
 				update.signature_slot,
 			)?;
@@ -1034,7 +1023,7 @@ pub mod pallet {
 			let mut pubkeys: Vec<PublicKeyPrepared> = Vec::new();
 			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
 				if *bit == u8::from(participant) {
-					pubkeys.push(pubkey.clone());
+					pubkeys.push(*pubkey);
 				}
 			}
 			pubkeys

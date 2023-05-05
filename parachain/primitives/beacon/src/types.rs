@@ -222,7 +222,7 @@ pub struct BeaconHeader {
 
 impl BeaconHeader {
 	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
-		hash_tree_root::<SSZBeaconBlockHeader>(self.clone().into())
+		hash_tree_root::<SSZBeaconBlockHeader>((*self).into())
 	}
 }
 
