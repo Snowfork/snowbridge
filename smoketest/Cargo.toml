@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 futures = "0.3.27"
-tokio = { version = "1.26", features = ["rt-multi-thread", "macros", "time"] }
+tokio = { version = "1.28.0", features = ["rt-multi-thread", "macros", "time"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "full", "bit-vec"] }
 hex = "0.4.3"
 hex-literal = "0.4.0"
