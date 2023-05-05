@@ -1,5 +1,7 @@
 # Interactive Update Protocol
 
+_Note: This is a historical document, which inspired our BEEFY light client. The current version of our client diverges quite significantly, especially after Ethereum's transition to PoS._
+
 To convince the chain that at least $$1/3$$ of validators voted for something, we will need to sample validators who are claimed to vote for this at random. We will use a block hash as the source of randomness, which means we need to deal with the issue that this is influenceable. We counter that by using a block hash that comes `n` blocks after the proposal. Since we are working with the assumption that at least $$2/3$$ of validators are honest and up to almost $$1/3$$ might be dishonest, we can only expect $$2/3$$ of validators to vote for something. If only exactly
 
 $$(n−1)/3+1$$ validators vote for something, then we cannot prove that at least$$(n−1)/3+1$$did by random sampling. Instead we will need a vote where all honest validators vote for something and it is enough to show that a single honest validator voted for it, for which it suffices to argue that over $$1/2$$ of these $$2/3$$ claimed votes are for it. This means that the validators must sign something after they know it is already final, which is an extra signature/vote beyond just that for Byzantine agreement.

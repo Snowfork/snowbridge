@@ -18,14 +18,16 @@ In collaboration with W3F, we have designed a protocol where the light client ne
 
 In the EVM there is no cryptographically-secure source of randomness. Instead we make our update protocol crypto-economically secure through an [Interactive Update Protocol](interactive-update-protocol.md). In this protocol, a candidate commitment is verified over 2 transactions. At a high-level it works like this:
 
-1. In the first transaction, the relayer submits the commitment, a single validator signature, and an initial bitfield claiming which validators have signed the commitment.
-2. After the first transaction has succeeded, and a certain minimum number of Ethereum blocks have been finalized, the relayer must request from the light client a bitfield with $$\lceil log_2{(3N)}\rceil$$randomly-chosen validators from the initial bitfield.​
-3. The relayer sends a second transaction with signatures for all the validators specified in the final bitfield
-4. The light client verifies all validator signatures in the second transaction to ensure:
+1. In the [first transaction](https://github.com/Snowfork/snowbridge/blob/65b9c005624096b7553346153ed91d0c93456c84/core/packages/contracts/src/BeefyClient.sol#L179), the relayer submits the commitment, a single validator signature, and an initial bitfield claiming which validators have signed the commitment.
+2. The relayer must then wait [MAX\_SEED\_LOOKAHEAD](https://eth2book.info/bellatrix/part3/config/preset/#max\_seed\_lookahead) blocks.
+3. The relayer submits a second transaction to [reveal and commit](https://github.com/Snowfork/snowbridge/blob/65b9c005624096b7553346153ed91d0c93456c84/core/packages/contracts/src/BeefyClient.sol#L237) to a random number.
+4. The relayer [requests](https://github.com/Snowfork/snowbridge/blob/65b9c005624096b7553346153ed91d0c93456c84/core/packages/contracts/src/BeefyClient.sol#L530) from the light client a bitfield with $$\lceil log_2{(3N)}\rceil$$randomly-chosen validators from the initial bitfield.​
+5. The relayer sends a [third transaction](https://github.com/Snowfork/snowbridge/blob/65b9c005624096b7553346153ed91d0c93456c84/core/packages/contracts/src/BeefyClient.sol#L263) with signatures for all the validators specified in the final bitfield
+6. The light client verifies all validator signatures in the second transaction to ensure:
    1. &#x20;The provided validators are in the current validator set
    2. The provided validators are in the final bitfield
    3. The provided validator have signed the beefy commitment
-5. If the second transaction succeeds then the payload inside the BEEFY commitment is applied
+7. If the third transaction succeeds then the payload inside the BEEFY commitment is applied
 
 **Note**: The constants and parameters in this protocol will need to be reviewed by us and W3F before launch.
 

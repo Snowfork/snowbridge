@@ -71,7 +71,11 @@ dependencies = [
 [[package]]
 name = "amcl"
 version = "0.3.0"
-source = "git+https://github.com/Snowfork/milagro_bls#2c9e8b383981308a8b4cbbc19e0b897dcf14534b"
+source = "git+https://github.com/snowfork/milagro_bls?rev=a6d66e4eb89015e352fb1c9f7b661ecdbb5b2176#a6d66e4eb89015e352fb1c9f7b661ecdbb5b2176"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+]
 
 [[package]]
 name = "android_system_properties"
@@ -2238,12 +2242,14 @@ dependencies = [
 [[package]]
 name = "milagro_bls"
 version = "1.5.0"
-source = "git+https://github.com/Snowfork/milagro_bls#2c9e8b383981308a8b4cbbc19e0b897dcf14534b"
+source = "git+https://github.com/snowfork/milagro_bls?rev=a6d66e4eb89015e352fb1c9f7b661ecdbb5b2176#a6d66e4eb89015e352fb1c9f7b661ecdbb5b2176"
 dependencies = [
  "amcl",
  "hex",
  "lazy_static",
+ "parity-scale-codec",
  "rand 0.8.5",
+ "scale-info",
  "zeroize",
 ]
 
@@ -3494,9 +3500,12 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 name = "snowbridge-beacon-primitives"
 version = "0.0.1"
 dependencies = [
+ "byte-slice-cast",
  "frame-support",
  "frame-system",
  "hex",
+ "hex-literal",
+ "milagro_bls",
  "parity-scale-codec",
  "rlp",
  "scale-info",
@@ -3506,6 +3515,9 @@ dependencies = [
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
+ "ssz-rs",
+ "ssz-rs-derive",
+ "static_assertions",
 ]
 
 [[package]]
@@ -3558,7 +3570,6 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
- "milagro_bls",
  "pallet-timestamp",
  "parity-scale-codec",
  "rand 0.8.5",
@@ -3577,6 +3588,7 @@ dependencies = [
  "sp-std 5.0.0",
  "ssz-rs",
  "ssz-rs-derive",
+ "static_assertions",
 ]
 
 [[package]]

@@ -2,17 +2,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod config;
-mod merkleization;
-#[cfg(test)]
-mod mock;
 pub mod weights;
 
-mod ssz;
+#[cfg(test)]
+mod mock;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+#[cfg(not(feature = "minimal"))]
 mod tests_mainnet;
+
 #[cfg(test)]
+#[cfg(feature = "minimal")]
 mod tests_minimal;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -20,48 +21,48 @@ mod benchmarking;
 
 mod ringbuffer;
 
-use crate::{
-	merkleization::get_sync_committee_bits,
-	ringbuffer::{RingBufferMap, RingBufferMapImpl},
+use crate::ringbuffer::{RingBufferMap, RingBufferMapImpl};
+use frame_support::{
+	dispatch::DispatchResult,
+	log,
+	traits::{Get, UnixTime},
+	transactional, BoundedVec,
 };
-use frame_support::{dispatch::DispatchResult, log, traits::UnixTime, transactional};
 use frame_system::ensure_signed;
-use snowbridge_beacon_primitives::{
-	BeaconHeader, Domain, ExecutionHeader, ExecutionHeaderState, FinalizedHeaderState,
-	FinalizedHeaderUpdate, ForkData, ForkVersion, HeaderUpdate, InitialSync, PublicKey, Root,
-	SigningData, SyncCommittee, SyncCommitteePeriodUpdate,
+use primitives::{
+	fast_aggregate_verify, verify_merkle_proof, verify_receipt_proof, BeaconHeader, BlsError,
+	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
+	ForkVersions, PublicKeyPrepared, Signature, SigningData,
 };
 use snowbridge_core::{Message, Verifier};
 use sp_core::H256;
-use sp_io::hashing::sha2_256;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
 
-use frame_support::{traits::Get, BoundedVec};
+use snowbridge_core::Proof;
+use snowbridge_ethereum::{Header as EthereumHeader, Log, Receipt};
+use sp_core::U256;
 
 pub use pallet::*;
 
-pub type HeaderUpdateOf<T> = HeaderUpdate<
-	<T as Config>::MaxFeeRecipientSize,
-	<T as Config>::MaxLogsBloomSize,
-	<T as Config>::MaxExtraDataSize,
-	<T as Config>::MaxSignatureSize,
-	<T as Config>::MaxProofBranchSize,
-	<T as Config>::MaxSyncCommitteeSize,
->;
-pub type InitialSyncOf<T> =
-	InitialSync<<T as Config>::MaxSyncCommitteeSize, <T as Config>::MaxProofBranchSize>;
-pub type SyncCommitteePeriodUpdateOf<T> = SyncCommitteePeriodUpdate<
-	<T as Config>::MaxSignatureSize,
-	<T as Config>::MaxProofBranchSize,
-	<T as Config>::MaxSyncCommitteeSize,
->;
-pub type FinalizedHeaderUpdateOf<T> = FinalizedHeaderUpdate<
-	<T as Config>::MaxSignatureSize,
-	<T as Config>::MaxProofBranchSize,
-	<T as Config>::MaxSyncCommitteeSize,
->;
-pub type SyncCommitteeOf<T> = SyncCommittee<<T as Config>::MaxSyncCommitteeSize>;
+pub use config::{SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE};
+
+pub type InitialUpdate = primitives::InitialUpdate<SYNC_COMMITTEE_SIZE>;
+pub type HeaderUpdate = primitives::HeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
+pub type SyncCommitteeUpdate =
+	primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
+pub type FinalizedHeaderUpdate =
+	primitives::FinalizedHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
+pub type SyncCommittee = primitives::SyncCommittee<SYNC_COMMITTEE_SIZE>;
+pub type SyncCommitteePrepared = primitives::SyncCommitteePrepared<SYNC_COMMITTEE_SIZE>;
+
+fn decompress_sync_committee_bits(
+	input: [u8; SYNC_COMMITTEE_BITS_SIZE],
+) -> [u8; SYNC_COMMITTEE_SIZE] {
+	primitives::decompress_sync_committee_bits::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(
+		input,
+	)
+}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -69,12 +70,6 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-
-	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
-	use snowbridge_beacon_primitives::ForkVersions;
-	use snowbridge_core::Proof;
-	use snowbridge_ethereum::{Header as EthereumHeader, Log, Receipt};
-	use sp_core::U256;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -84,33 +79,19 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type TimeProvider: UnixTime;
 		#[pallet::constant]
-		type MaxSyncCommitteeSize: Get<u32>;
-		#[pallet::constant]
-		type MaxProofBranchSize: Get<u32>;
-		#[pallet::constant]
-		type MaxExtraDataSize: Get<u32>;
-		#[pallet::constant]
-		type MaxLogsBloomSize: Get<u32>;
-		#[pallet::constant]
-		type MaxFeeRecipientSize: Get<u32>;
-		#[pallet::constant]
-		type MaxPublicKeySize: Get<u32>;
-		#[pallet::constant]
-		type MaxSignatureSize: Get<u32>;
-		#[pallet::constant]
-		type MaxSlotsPerHistoricalRoot: Get<u64>;
-		#[pallet::constant]
-		type MaxFinalizedHeaderSlotArray: Get<u32>;
-		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
-		/// Maximum execution headers are stored
 		#[pallet::constant]
-		type ExecutionHeadersPruneThreshold: Get<u64>;
-		/// Maximum sync committees to be stored
-		#[pallet::constant]
-		type SyncCommitteePruneThreshold: Get<u64>;
-		type WeightInfo: WeightInfo;
 		type WeakSubjectivityPeriodSeconds: Get<u64>;
+		/// Maximum finalized headers
+		#[pallet::constant]
+		type FinalizedHeaderPruneThreshold: Get<u32>;
+		/// Maximum execution headers
+		#[pallet::constant]
+		type ExecutionHeadersPruneThreshold: Get<u32>;
+		/// Maximum sync committees
+		#[pallet::constant]
+		type SyncCommitteePruneThreshold: Get<u32>;
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -122,6 +103,7 @@ pub mod pallet {
 	}
 
 	#[pallet::error]
+	#[cfg_attr(test, derive(PartialEq))]
 	pub enum Error<T> {
 		AncientHeader,
 		SkippedSyncCommitteePeriod,
@@ -132,9 +114,6 @@ pub mod pallet {
 		InvalidSyncCommitteeMerkleProof,
 		InvalidExecutionHeaderProof,
 		InvalidAncestryMerkleProof,
-		InvalidSignature,
-		InvalidSignaturePoint,
-		InvalidAggregatePublicKeys,
 		InvalidHash,
 		InvalidSyncCommitteeBits,
 		SignatureVerificationFailed,
@@ -155,8 +134,8 @@ pub mod pallet {
 		ExpectedFinalizedHeaderNotStored,
 		BridgeBlocked,
 		InvalidSyncCommitteeHeaderUpdate,
-		InvalidSyncCommitteePeriodUpdateWithGap,
-		InvalidSyncCommitteePeriodUpdateWithDuplication,
+		InvalidSyncCommitteeUpdateWithGap,
+		InvalidSyncCommitteeUpdateWithDuplication,
 		InvalidSignatureSlot,
 		InvalidAttestedHeaderSlot,
 		DuplicateFinalizedHeaderUpdate,
@@ -164,10 +143,9 @@ pub mod pallet {
 		InvalidExecutionHeaderUpdate,
 		FinalizedBeaconHeaderSlotsExceeded,
 		ExecutionHeaderMappingFailed,
+		BLSPreparePublicKeysFailed,
+		BLSVerificationFailed(BlsError),
 	}
-
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeaders<T: Config> =
@@ -176,7 +154,7 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeaderStates<T: Config> = StorageValue<
 		_,
-		BoundedVec<FinalizedHeaderState, T::MaxFinalizedHeaderSlotArray>,
+		BoundedVec<FinalizedHeaderState, T::FinalizedHeaderPruneThreshold>,
 		ValueQuery,
 	>;
 
@@ -186,54 +164,52 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
-		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
+		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
 
 	/// Execution headers ring buffer map implementation
 
 	/// Index storage for execution header ring buffer map
 	#[pallet::storage]
-	pub(crate) type ExecutionHeaderBufferIndex<T: Config> = StorageValue<_, u64, ValueQuery>;
+	pub(crate) type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Intermediate storage for execution header mapping
 	#[pallet::storage]
 	pub(crate) type ExecutionHeaderMapping<T: Config> =
-		StorageMap<_, Identity, u64, H256, ValueQuery>;
+		StorageMap<_, Identity, u32, H256, ValueQuery>;
 
 	/// Ring buffer Map for Execution header
-	pub(crate) type ExecutionHeaderRingBufferMap<T> = RingBufferMapImpl<
-		u64,
+	pub(crate) type ExecutionHeaderBuffer<T> = RingBufferMapImpl<
+		u32,
 		<T as Config>::ExecutionHeadersPruneThreshold,
-		ExecutionHeaderBufferIndex<T>,
+		ExecutionHeaderIndex<T>,
 		ExecutionHeaderMapping<T>,
 		ExecutionHeaders<T>,
+		OptionQuery,
+	>;
+
+	/// Sync committee ring buffer implementation
+	pub(crate) type SyncCommitteesBuffer<T> = RingBufferMapImpl<
+		u32,
+		<T as Config>::SyncCommitteePruneThreshold,
+		SyncCommitteesIndex<T>,
+		SyncCommitteesMapping<T>,
+		SyncCommittees<T>,
 		OptionQuery,
 	>;
 
 	/// Current sync committee corresponding to the active header.
 	#[pallet::storage]
 	pub(super) type SyncCommittees<T: Config> =
-		StorageMap<_, Identity, u64, SyncCommitteeOf<T>, ValueQuery>;
-
-	/// Sync committee ring buffer map implementation
+		StorageMap<_, Identity, u64, SyncCommitteePrepared, OptionQuery>;
 
 	/// Index storage for sync committee ring buffer
 	#[pallet::storage]
-	pub(crate) type SyncCommitteesBufferIndex<T: Config> = StorageValue<_, u64, ValueQuery>;
+	pub(crate) type SyncCommitteesIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Intermediate storage for sync committee mapping
 	#[pallet::storage]
 	pub(crate) type SyncCommitteesMapping<T: Config> =
-		StorageMap<_, Identity, u64, u64, ValueQuery>;
-
-	/// Ring buffer Map for Sync committee
-	pub(crate) type SyncCommitteesRingBufferMap<T> = RingBufferMapImpl<
-		u64,
-		<T as Config>::SyncCommitteePruneThreshold,
-		SyncCommitteesBufferIndex<T>,
-		SyncCommitteesMapping<T>,
-		SyncCommittees<T>,
-		ValueQuery,
-	>;
+		StorageMap<_, Identity, u32, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
@@ -253,28 +229,28 @@ pub mod pallet {
 	pub(super) type Blocked<T: Config> = StorageValue<_, bool, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
-		pub initial_sync: Option<InitialSyncOf<T>>,
+	pub struct GenesisConfig {
+		pub initial_sync: Option<InitialUpdate>,
 	}
 
 	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
+	impl Default for GenesisConfig {
 		fn default() -> Self {
 			GenesisConfig { initial_sync: None }
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Sync committee size is: {}",
-				config::SYNC_COMMITTEE_SIZE
+				SYNC_COMMITTEE_SIZE
 			);
 
 			if let Some(initial_sync) = self.initial_sync.clone() {
-				Pallet::<T>::initial_sync(initial_sync).unwrap();
+				Pallet::<T>::initial_sync(&initial_sync).unwrap();
 			}
 		}
 	}
@@ -286,22 +262,20 @@ pub mod pallet {
 		#[transactional]
 		pub fn sync_committee_period_update(
 			origin: OriginFor<T>,
-			sync_committee_period_update: SyncCommitteePeriodUpdateOf<T>,
+			update: SyncCommitteeUpdate,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
 			Self::check_bridge_blocked_state()?;
 
-			let sync_committee_period = sync_committee_period_update.sync_committee_period;
+			let sync_committee_period = update.sync_committee_period;
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received sync committee update for period {}. Applying update",
 				sync_committee_period
 			);
 
-			if let Err(err) =
-				Self::process_sync_committee_period_update(sync_committee_period_update)
-			{
+			if let Err(err) = Self::process_sync_committee_period_update(&update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"💫 Sync committee period update failed with error {:?}",
@@ -324,7 +298,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_finalized_header(
 			origin: OriginFor<T>,
-			finalized_header_update: FinalizedHeaderUpdateOf<T>,
+			finalized_header_update: FinalizedHeaderUpdate,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -361,7 +335,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
-			update: HeaderUpdateOf<T>,
+			update: HeaderUpdate,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -399,7 +373,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::unblock_bridge())]
 		#[transactional]
 		pub fn unblock_bridge(origin: OriginFor<T>) -> DispatchResult {
-			let _sender = ensure_root(origin)?;
+			ensure_root(origin)?;
 
 			<Blocked<T>>::set(false);
 
@@ -410,127 +384,104 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn process_initial_sync(initial_sync: InitialSyncOf<T>) -> DispatchResult {
+		fn process_initial_sync(update: &InitialUpdate) -> DispatchResult {
 			Self::verify_sync_committee(
-				initial_sync.current_sync_committee.clone(),
-				initial_sync.current_sync_committee_branch,
-				initial_sync.header.state_root,
-				config::CURRENT_SYNC_COMMITTEE_DEPTH,
+				&update.current_sync_committee,
+				&update.current_sync_committee_branch,
+				update.header.state_root,
 				config::CURRENT_SYNC_COMMITTEE_INDEX,
 			)?;
 
-			let period = Self::compute_current_sync_period(initial_sync.header.slot);
+			let period = Self::compute_current_sync_period(update.header.slot);
 
-			let block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
-					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-					.into();
+			let block_root: H256 = update
+				.header
+				.hash_tree_root()
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
-			Self::store_sync_committee(period, initial_sync.current_sync_committee);
-			Self::store_validators_root(initial_sync.validators_root);
-
-			let slot = initial_sync.header.slot;
-
-			let last_finalized_header = FinalizedHeaderState {
-				beacon_block_root: block_root,
-				beacon_slot: slot,
-				import_time: initial_sync.import_time,
-			};
-
-			<FinalizedBeaconHeaders<T>>::insert(block_root, initial_sync.header);
-			Self::add_finalized_header_state(last_finalized_header)?;
-			<LatestFinalizedHeaderState<T>>::set(last_finalized_header);
+			Self::store_sync_committee(period, &update.current_sync_committee)?;
+			Self::store_validators_root(update.validators_root);
+			Self::store_finalized_header(block_root, update.header, Some(update.import_time))?;
 
 			Ok(())
 		}
 
-		fn process_sync_committee_period_update(
-			update: SyncCommitteePeriodUpdateOf<T>,
-		) -> DispatchResult {
+		fn process_sync_committee_period_update(update: &SyncCommitteeUpdate) -> DispatchResult {
 			ensure!(
 				update.signature_slot > update.attested_header.slot &&
 					update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidSyncCommitteeHeaderUpdate
 			);
-			let sync_committee_bits =
-				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
-			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
+			let participation =
+				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
+			Self::sync_committee_participation_is_supermajority(&participation)?;
 			Self::verify_sync_committee(
-				update.next_sync_committee.clone(),
-				update.next_sync_committee_branch,
+				&update.next_sync_committee,
+				&update.next_sync_committee_branch,
 				update.attested_header.state_root,
-				config::NEXT_SYNC_COMMITTEE_DEPTH,
 				config::NEXT_SYNC_COMMITTEE_INDEX,
 			)?;
 
-			let block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-					.into();
+			let block_root: H256 = update
+				.finalized_header
+				.hash_tree_root()
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
+
 			Self::verify_header(
 				block_root,
-				update.finality_branch,
+				&update.finality_branch,
 				update.attested_header.state_root,
-				config::FINALIZED_ROOT_DEPTH,
 				config::FINALIZED_ROOT_INDEX,
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
-			let signature_slot_period = Self::compute_current_sync_period(update.signature_slot);
 			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"💫 latest committee period is: {}, attested_header period is: {}, signature_slot period is: {}",
+				"💫 latest committee period is: {}, attested_header period is: {}",
 				latest_committee_period,
 				current_period,
-				signature_slot_period
 			);
-			ensure!(
-				<SyncCommitteesRingBufferMap<T>>::contains_key(current_period),
-				Error::<T>::SyncCommitteeMissing
-			);
+
 			let next_period = current_period + 1;
 			ensure!(
-				!<SyncCommitteesRingBufferMap<T>>::contains_key(next_period),
-				Error::<T>::InvalidSyncCommitteePeriodUpdateWithDuplication
+				!<SyncCommitteesBuffer<T>>::contains_key(next_period),
+				Error::<T>::InvalidSyncCommitteeUpdateWithDuplication
 			);
 			ensure!(
 				(next_period == latest_committee_period + 1),
-				Error::<T>::InvalidSyncCommitteePeriodUpdateWithGap
+				Error::<T>::InvalidSyncCommitteeUpdateWithGap
 			);
 
-			let current_sync_committee = Self::get_sync_committee_for_period(current_period)?;
 			let validators_root = <ValidatorsRoot<T>>::get();
-
+			let sync_committee = Self::sync_committee_for_period(current_period)?;
 			Self::verify_signed_header(
-				sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
-				current_sync_committee.pubkeys,
-				update.attested_header,
+				&participation,
+				&update.sync_aggregate.sync_committee_signature,
+				&sync_committee,
+				update.attested_header.clone(),
 				validators_root,
 				update.signature_slot,
 			)?;
-
 			ensure!(
-				Self::is_valid_merkle_branch(
-					update.block_roots_root,
-					update.block_roots_branch,
-					config::BLOCK_ROOTS_INDEX,
-					config::BLOCK_ROOTS_DEPTH,
-					update.finalized_header.state_root
-				),
+				update.block_roots_branch.len() == config::BLOCK_ROOTS_DEPTH &&
+					verify_merkle_proof(
+						update.block_roots_root,
+						&update.block_roots_branch,
+						config::BLOCK_ROOTS_INDEX,
+						update.finalized_header.state_root
+					),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
 			Self::store_block_root(update.block_roots_root, block_root);
-			Self::store_sync_committee(next_period, update.next_sync_committee);
-			Self::store_finalized_header(block_root, update.finalized_header)?;
+			Self::store_sync_committee(next_period, &update.next_sync_committee)?;
+			Self::store_finalized_header(block_root, update.finalized_header, None)?;
 
 			Ok(())
 		}
 
-		fn process_finalized_header(update: FinalizedHeaderUpdateOf<T>) -> DispatchResult {
+		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			ensure!(
 				update.signature_slot > update.attested_header.slot,
@@ -547,7 +498,7 @@ pub mod pallet {
 
 			let import_time = last_finalized_header.import_time;
 			let weak_subjectivity_period_check =
-				import_time + T::WeakSubjectivityPeriodSeconds::get() as u64;
+				import_time + T::WeakSubjectivityPeriodSeconds::get();
 			let time: u64 = T::TimeProvider::now().as_secs();
 
 			log::info!(
@@ -563,20 +514,19 @@ pub mod pallet {
 				return Err(Error::<T>::BridgeBlocked.into())
 			}
 
-			let sync_committee_bits =
-				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
-			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
+			let participation =
+				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
+			Self::sync_committee_participation_is_supermajority(&participation)?;
 
-			let block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
-					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-					.into();
+			let block_root: H256 = update
+				.finalized_header
+				.hash_tree_root()
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
+
 			Self::verify_header(
 				block_root,
-				update.finality_branch,
+				&update.finality_branch,
 				update.attested_header.state_root,
-				config::FINALIZED_ROOT_DEPTH,
 				config::FINALIZED_ROOT_INDEX,
 			)?;
 
@@ -588,32 +538,32 @@ pub mod pallet {
 					current_period == last_finalized_period + 1),
 				Error::<T>::InvalidFinalizedPeriodUpdate
 			);
-			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
 
 			let validators_root = <ValidatorsRoot<T>>::get();
+			let sync_committee = Self::sync_committee_for_period(current_period)?;
 			Self::verify_signed_header(
-				sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
-				sync_committee.pubkeys,
+				&participation,
+				&update.sync_aggregate.sync_committee_signature,
+				&sync_committee,
 				update.attested_header,
 				validators_root,
 				update.signature_slot,
 			)?;
 
 			ensure!(
-				Self::is_valid_merkle_branch(
-					update.block_roots_root,
-					update.block_roots_branch,
-					config::BLOCK_ROOTS_INDEX,
-					config::BLOCK_ROOTS_DEPTH,
-					update.finalized_header.state_root
-				),
+				update.block_roots_branch.len() == config::BLOCK_ROOTS_DEPTH &&
+					verify_merkle_proof(
+						update.block_roots_root,
+						&update.block_roots_branch,
+						config::BLOCK_ROOTS_INDEX,
+						update.finalized_header.state_root
+					),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
 			Self::store_block_root(update.block_roots_root, block_root);
 
-			Self::store_finalized_header(block_root, update.finalized_header)?;
+			Self::store_finalized_header(block_root, update.finalized_header, None)?;
 
 			Ok(())
 		}
@@ -625,44 +575,38 @@ pub mod pallet {
 			);
 		}
 
-		fn process_header(update: HeaderUpdateOf<T>) -> DispatchResult {
+		fn process_header(update: HeaderUpdate) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
 			let block_slot = update.beacon_header.slot;
 			ensure!(block_slot <= latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
 
 			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
-
-			let execution_header: ExecutionHeader = update
-				.execution_header
-				.clone()
-				.try_into()
-				.map_err(|_| Error::<T>::ExecutionHeaderMappingFailed)?;
 			ensure!(
-				execution_header.block_number > execution_header_state.block_number,
+				update.execution_header.block_number > execution_header_state.block_number,
 				Error::<T>::InvalidExecutionHeaderUpdate
 			);
 
-			let execution_root =
-				merkleization::hash_tree_root_execution_header(update.execution_header.clone())
-					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
-			let execution_root_hash: H256 = execution_root.into();
+			let execution_root: H256 = update
+				.execution_header
+				.hash_tree_root()
+				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 
 			ensure!(
-				Self::is_valid_merkle_branch(
-					execution_root_hash,
-					update.execution_branch,
-					config::EXECUTION_HEADER_DEPTH,
-					config::EXECUTION_HEADER_INDEX,
-					update.beacon_header.body_root
-				),
+				update.execution_branch.len() == config::EXECUTION_HEADER_DEPTH &&
+					verify_merkle_proof(
+						execution_root,
+						&update.execution_branch,
+						config::EXECUTION_HEADER_INDEX,
+						update.beacon_header.body_root
+					),
 				Error::<T>::InvalidExecutionHeaderProof
 			);
 
-			let beacon_block_root: H256 =
-				merkleization::hash_tree_root_beacon_header(update.beacon_header.clone())
-					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?
-					.into();
+			let beacon_block_root: H256 = update
+				.beacon_header
+				.hash_tree_root()
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			Self::ancestry_proof(
 				update.block_root_branch,
@@ -672,27 +616,24 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.beacon_header.slot);
-			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
+			let sync_committee = Self::sync_committee_for_period(current_period)?;
 
 			let validators_root = <ValidatorsRoot<T>>::get();
-			let sync_committee_bits =
-				get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-					.map_err(|_| Error::<T>::InvalidSyncCommitteeBits)?;
+			let participation =
+				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
 
 			Self::verify_signed_header(
-				sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
-				sync_committee.pubkeys,
+				&participation,
+				&update.sync_aggregate.sync_committee_signature,
+				&sync_committee,
 				update.beacon_header,
 				validators_root,
 				update.signature_slot,
 			)?;
 
-			let block_hash = execution_header.block_hash;
-
 			Self::store_execution_header(
-				block_hash,
-				execution_header,
+				update.execution_header.block_hash,
+				update.execution_header.into(),
 				block_slot,
 				beacon_block_root,
 			);
@@ -701,7 +642,7 @@ pub mod pallet {
 		}
 
 		fn ancestry_proof(
-			block_root_proof: BoundedVec<H256, T::MaxProofBranchSize>,
+			block_root_proof: Vec<H256>,
 			block_slot: u64,
 			beacon_block_root: H256,
 			finalized_header_root: H256,
@@ -709,7 +650,7 @@ pub mod pallet {
 			// If the block root proof is empty, we know that we expect this header to be a
 			// finalized header. We need to check that the header hash matches the finalized header
 			// root at the expected slot.
-			if block_root_proof.len() == 0 {
+			if block_root_proof.is_empty() {
 				let stored_finalized_header = <FinalizedBeaconHeaders<T>>::get(beacon_block_root);
 				if stored_finalized_header.is_none() {
 					log::error!(
@@ -742,9 +683,8 @@ pub mod pallet {
 				return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
 			}
 
-			let max_slots_per_historical_root = T::MaxSlotsPerHistoricalRoot::get();
-			let index_in_array = block_slot % max_slots_per_historical_root;
-			let leaf_index = max_slots_per_historical_root + index_in_array;
+			let index_in_array = block_slot % (SLOTS_PER_HISTORICAL_ROOT as u64);
+			let leaf_index = (SLOTS_PER_HISTORICAL_ROOT) + index_in_array as usize;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -752,13 +692,13 @@ pub mod pallet {
 			);
 
 			ensure!(
-				Self::is_valid_merkle_branch(
-					beacon_block_root,
-					block_root_proof,
-					config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH,
-					leaf_index,
-					finalized_block_root_hash
-				),
+				block_root_proof.len() == config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH &&
+					verify_merkle_proof(
+						beacon_block_root,
+						&block_root_proof,
+						leaf_index,
+						finalized_block_root_hash
+					),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
@@ -774,123 +714,69 @@ pub mod pallet {
 		}
 
 		pub(super) fn verify_signed_header(
-			sync_committee_bits: Vec<u8>,
-			sync_committee_signature: BoundedVec<u8, T::MaxSignatureSize>,
-			sync_committee_pubkeys: BoundedVec<PublicKey, T::MaxSyncCommitteeSize>,
+			sync_committee_bits: &[u8],
+			sync_committee_signature: &Signature,
+			sync_committee: &SyncCommitteePrepared,
 			header: BeaconHeader,
 			validators_root: H256,
 			signature_slot: u64,
 		) -> DispatchResult {
-			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
-			// Gathers all the pubkeys of the sync committee members that participated in signing
-			// the header.
-			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
-				if *bit == 1 as u8 {
-					let pubk = pubkey.clone();
-					participant_pubkeys.push(pubk);
-				}
-			}
+			// Gathers milagro pubkeys absent to participate
+			let absent_pubkeys =
+				Self::find_pubkeys(sync_committee_bits, &sync_committee.pubkeys, false);
 
-			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(
-				signature_slot,
-				config::SLOTS_PER_EPOCH,
-			));
-			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
-			// Domains are used for for seeds, for signatures, and for selecting aggregators.
-			let domain = Self::compute_domain(domain_type, fork_version, validators_root)?;
-			// Hash tree root of SigningData - object root + domain
-			let signing_root = Self::compute_signing_root(header, domain)?;
+			// Get signing root for BeaconHeader
+			let signing_root = Self::signing_root(header, validators_root, signature_slot)?;
 
 			// Verify sync committee aggregate signature.
-			Self::bls_fast_aggregate_verify(
-				participant_pubkeys,
+			fast_aggregate_verify(
+				&sync_committee.aggregate_pubkey,
+				&absent_pubkeys,
 				signing_root,
 				sync_committee_signature,
-			)?;
+			)
+			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
 			Ok(())
 		}
 
 		pub(super) fn compute_epoch_at_slot(signature_slot: u64, slots_per_epoch: u64) -> u64 {
-			return signature_slot / slots_per_epoch
-		}
-
-		pub(super) fn bls_fast_aggregate_verify(
-			pubkeys: Vec<PublicKey>,
-			message: H256,
-			signature: BoundedVec<u8, T::MaxSignatureSize>,
-		) -> DispatchResult {
-			let sig = Signature::from_bytes(&signature[..]);
-			if let Err(_e) = sig {
-				return Err(Error::<T>::InvalidSignature.into())
-			}
-
-			let agg_sig = AggregateSignature::from_signature(&sig.unwrap());
-
-			let public_keys_res: Result<Vec<milagro_bls::PublicKey>, _> = pubkeys
-				.iter()
-				.map(|bytes| milagro_bls::PublicKey::from_bytes_unchecked(&bytes.0))
-				.collect();
-			if let Err(e) = public_keys_res {
-				match e {
-					AmclError::InvalidPoint => return Err(Error::<T>::InvalidSignaturePoint.into()),
-					_ => return Err(Error::<T>::InvalidSignature.into()),
-				};
-			}
-
-			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
-			if let Err(e) = agg_pub_key_res {
-				log::error!(target: "ethereum-beacon-client", "💫 invalid public keys: {:?}.", e);
-				return Err(Error::<T>::InvalidAggregatePublicKeys.into())
-			}
-
-			ensure!(
-				agg_sig.fast_aggregate_verify_pre_aggregated(
-					&message.as_bytes(),
-					&agg_pub_key_res.unwrap()
-				),
-				Error::<T>::SignatureVerificationFailed
-			);
-
-			Ok(())
+			signature_slot / slots_per_epoch
 		}
 
 		pub(super) fn compute_signing_root(
 			beacon_header: BeaconHeader,
-			domain: Domain,
-		) -> Result<Root, DispatchError> {
-			let beacon_header_root = merkleization::hash_tree_root_beacon_header(beacon_header)
+			domain: H256,
+		) -> Result<H256, DispatchError> {
+			let beacon_header_root = beacon_header
+				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
-			let header_hash_tree_root: H256 = beacon_header_root.into();
+			let hash_root = SigningData { object_root: beacon_header_root, domain }
+				.hash_tree_root()
+				.map_err(|_| Error::<T>::SigningRootHashTreeRootFailed)?;
 
-			let hash_root = merkleization::hash_tree_root_signing_data(SigningData {
-				object_root: header_hash_tree_root,
-				domain,
-			})
-			.map_err(|_| Error::<T>::SigningRootHashTreeRootFailed)?;
-
-			Ok(hash_root.into())
+			Ok(hash_root)
 		}
 
 		fn verify_sync_committee(
-			sync_committee: SyncCommitteeOf<T>,
-			sync_committee_branch: BoundedVec<H256, T::MaxProofBranchSize>,
+			sync_committee: &SyncCommittee,
+			sync_committee_branch: &[H256],
 			header_state_root: H256,
-			depth: u64,
-			index: u64,
+			index: usize,
 		) -> DispatchResult {
-			let sync_committee_root = merkleization::hash_tree_root_sync_committee(sync_committee)
+			let sync_committee_root = sync_committee
+				.hash_tree_root()
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
 			ensure!(
-				Self::is_valid_merkle_branch(
-					sync_committee_root.into(),
-					sync_committee_branch,
-					depth,
-					index,
-					header_state_root
-				),
+				sync_committee_branch.len() == config::SYNC_COMMITTEE_DEPTH &&
+					verify_merkle_proof(
+						sync_committee_root,
+						sync_committee_branch,
+						index,
+						header_state_root
+					),
 				Error::<T>::InvalidSyncCommitteeMerkleProof
 			);
 
@@ -899,46 +785,55 @@ pub mod pallet {
 
 		fn verify_header(
 			block_root: H256,
-			proof_branch: BoundedVec<H256, T::MaxProofBranchSize>,
+			proof_branch: &[H256],
 			attested_header_state_root: H256,
-			depth: u64,
-			index: u64,
+			index: usize,
 		) -> DispatchResult {
 			ensure!(
-				Self::is_valid_merkle_branch(
-					block_root,
-					proof_branch,
-					depth,
-					index,
-					attested_header_state_root
-				),
+				proof_branch.len() == config::FINALIZED_ROOT_DEPTH &&
+					verify_merkle_proof(
+						block_root,
+						proof_branch,
+						index,
+						attested_header_state_root
+					),
 				Error::<T>::InvalidHeaderMerkleProof
 			);
-
 			Ok(())
 		}
 
-		pub(crate) fn store_sync_committee(period: u64, sync_committee: SyncCommitteeOf<T>) {
-			<SyncCommitteesRingBufferMap<T>>::insert(period, sync_committee);
+		pub(crate) fn store_sync_committee(
+			period: u64,
+			sync_committee: &SyncCommittee,
+		) -> DispatchResult {
+			let prepare_sync_committee: SyncCommitteePrepared =
+				sync_committee.try_into().map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
+			<SyncCommitteesBuffer<T>>::insert(period, prepare_sync_committee);
 
-			log::trace!(
+			<LatestSyncCommitteePeriod<T>>::set(period);
+
+			log::debug!(
 				target: "ethereum-beacon-client",
 				"💫 Updated latest sync committee period stored to {}.",
 				period
 			);
 
-			<LatestSyncCommitteePeriod<T>>::set(period);
-
 			Self::deposit_event(Event::SyncCommitteeUpdated { period });
+			Ok(())
 		}
 
-		fn store_finalized_header(block_root: Root, header: BeaconHeader) -> DispatchResult {
+		fn store_finalized_header(
+			block_root: H256,
+			header: BeaconHeader,
+			last_import_time: Option<u64>,
+		) -> DispatchResult {
 			let slot = header.slot;
+			let import_time = last_import_time.unwrap_or_else(|| T::TimeProvider::now().as_secs());
 
 			let finalized_header = FinalizedHeaderState {
 				beacon_block_root: block_root,
 				beacon_slot: slot,
-				import_time: T::TimeProvider::now().as_secs(),
+				import_time,
 			};
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
@@ -961,7 +856,7 @@ pub mod pallet {
 			finalized_header_state: FinalizedHeaderState,
 		) -> DispatchResult {
 			<FinalizedBeaconHeaderStates<T>>::try_mutate(|b_vec| {
-				if b_vec.len() as u32 == T::MaxFinalizedHeaderSlotArray::get() {
+				if b_vec.len() as u32 == T::FinalizedHeaderPruneThreshold::get() {
 					let oldest = b_vec.remove(0);
 					// Removing corresponding finalized header data of popped slot
 					// as that data will not be used by relayer anyway.
@@ -977,13 +872,13 @@ pub mod pallet {
 
 		pub(crate) fn store_execution_header(
 			block_hash: H256,
-			header: ExecutionHeader,
+			header: CompactExecutionHeader,
 			beacon_slot: u64,
 			beacon_block_root: H256,
 		) {
 			let block_number = header.block_number;
 
-			<ExecutionHeaderRingBufferMap<T>>::insert(block_hash, header);
+			<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
 
 			log::trace!(
 				target: "ethereum-beacon-client",
@@ -1012,20 +907,21 @@ pub mod pallet {
 		///
 		/// let sync_committee_bits = vec![0, 1, 0, 1, 1, 1];
 		/// ensure!(get_sync_committee_sum(sync_committee_bits), 4);
-		pub(super) fn get_sync_committee_sum(sync_committee_bits: Vec<u8>) -> u64 {
-			sync_committee_bits.iter().fold(0, |acc: u64, x| acc + *x as u64)
+		pub(super) fn get_sync_committee_sum(sync_committee_bits: &[u8]) -> u32 {
+			sync_committee_bits.iter().fold(0, |acc: u32, x| acc + *x as u32)
 		}
 
 		pub(super) fn compute_current_sync_period(slot: u64) -> u64 {
-			slot / config::SLOTS_PER_EPOCH / config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+			(slot as usize / config::SLOTS_PER_EPOCH / config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+				as u64
 		}
 
 		/// Return the domain for the domain_type and fork_version.
 		pub(super) fn compute_domain(
 			domain_type: Vec<u8>,
 			fork_version: ForkVersion,
-			genesis_validators_root: Root,
-		) -> Result<Domain, DispatchError> {
+			genesis_validators_root: H256,
+		) -> Result<H256, DispatchError> {
 			let fork_data_root =
 				Self::compute_fork_data_root(fork_version, genesis_validators_root)?;
 
@@ -1038,81 +934,34 @@ pub mod pallet {
 
 		fn compute_fork_data_root(
 			current_version: ForkVersion,
-			genesis_validators_root: Root,
-		) -> Result<Root, DispatchError> {
-			let hash_root = merkleization::hash_tree_root_fork_data(ForkData {
+			genesis_validators_root: H256,
+		) -> Result<H256, DispatchError> {
+			let hash_root = ForkData {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
-			})
+			}
+			.hash_tree_root()
 			.map_err(|_| Error::<T>::ForkDataHashTreeRootFailed)?;
 
-			Ok(hash_root.into())
-		}
-
-		pub(super) fn is_valid_merkle_branch(
-			leaf: H256,
-			branch: BoundedVec<H256, T::MaxProofBranchSize>,
-			depth: u64,
-			index: u64,
-			root: Root,
-		) -> bool {
-			if branch.len() as u64 != depth {
-				log::error!(target: "ethereum-beacon-client", "Merkle proof branch length doesn't match depth.");
-
-				return false
-			}
-			let mut value = leaf;
-			if leaf.as_bytes().len() < 32 as usize {
-				log::error!(target: "ethereum-beacon-client", "Merkle proof leaf not 32 bytes.");
-
-				return false
-			}
-			for i in 0..depth {
-				if branch[i as usize].as_bytes().len() < 32 as usize {
-					log::error!(target: "ethereum-beacon-client", "Merkle proof branch not 32 bytes.");
-
-					return false
-				}
-				if (index / (2u32.pow(i as u32) as u64) % 2) == 0 {
-					// left node
-					let mut data = [0u8; 64];
-					data[0..32].copy_from_slice(&(value.0));
-					data[32..64].copy_from_slice(&(branch[i as usize].0));
-					value = sha2_256(&data).into();
-				} else {
-					let mut data = [0u8; 64]; // right node
-					data[0..32].copy_from_slice(&(branch[i as usize].0));
-					data[32..64].copy_from_slice(&(value.0));
-					value = sha2_256(&data).into();
-				}
-			}
-
-			return value == root
+			Ok(hash_root)
 		}
 
 		pub(super) fn sync_committee_participation_is_supermajority(
-			sync_committee_bits: Vec<u8>,
+			sync_committee_bits: &[u8],
 		) -> DispatchResult {
-			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits.clone());
+			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits);
 			ensure!(
-				(sync_committee_sum * 3 >= sync_committee_bits.clone().len() as u64 * 2),
+				((sync_committee_sum * 3) as usize) >= sync_committee_bits.len() * 2,
 				Error::<T>::SyncCommitteeParticipantsNotSupermajority
 			);
 
 			Ok(())
 		}
 
-		pub(super) fn get_sync_committee_for_period(
+		pub(super) fn sync_committee_for_period(
 			period: u64,
-		) -> Result<SyncCommitteeOf<T>, DispatchError> {
-			let sync_committee = <SyncCommitteesRingBufferMap<T>>::get(period);
-
-			if sync_committee.pubkeys.len() == 0 {
-				log::error!(target: "ethereum-beacon-client", "💫 Sync committee for period {} missing", period);
-				return Err(Error::<T>::SyncCommitteeMissing.into())
-			}
-
-			Ok(sync_committee)
+		) -> Result<SyncCommitteePrepared, DispatchError> {
+			<SyncCommitteesBuffer<T>>::get(period).ok_or(Error::<T>::SyncCommitteeMissing.into())
 		}
 
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
@@ -1128,16 +977,16 @@ pub mod pallet {
 				return fork_versions.altair.version
 			}
 
-			return fork_versions.genesis.version
+			fork_versions.genesis.version
 		}
 
-		pub(super) fn initial_sync(initial_sync: InitialSyncOf<T>) -> Result<(), &'static str> {
+		pub(super) fn initial_sync(update: &InitialUpdate) -> Result<(), &'static str> {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received initial sync, starting processing.",
 			);
 
-			if let Err(err) = Self::process_initial_sync(initial_sync) {
+			if let Err(err) = Self::process_initial_sync(update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"Initial sync failed with error {:?}",
@@ -1158,11 +1007,10 @@ pub mod pallet {
 		// in the block given by proof.block_hash. Inclusion is only
 		// recognized if the block has been finalized.
 		fn verify_receipt_inclusion(
-			stored_header: ExecutionHeader,
+			receipts_root: H256,
 			proof: &Proof,
 		) -> Result<Receipt, DispatchError> {
-			let result = stored_header
-				.check_receipt_proof(&proof.data.1)
+			let result = verify_receipt_proof(receipts_root, &proof.data.1)
 				.ok_or(Error::<T>::InvalidProof)?;
 
 			match result {
@@ -1177,6 +1025,38 @@ pub mod pallet {
 				},
 			}
 		}
+
+		pub fn find_pubkeys(
+			sync_committee_bits: &[u8],
+			sync_committee_pubkeys: &[PublicKeyPrepared],
+			participant: bool,
+		) -> Vec<PublicKeyPrepared> {
+			let mut pubkeys: Vec<PublicKeyPrepared> = Vec::new();
+			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
+				if *bit == u8::from(participant) {
+					pubkeys.push(pubkey.clone());
+				}
+			}
+			pubkeys
+		}
+
+		// Calculate signing root for BeaconHeader
+		pub fn signing_root(
+			header: BeaconHeader,
+			validators_root: H256,
+			signature_slot: u64,
+		) -> Result<H256, DispatchError> {
+			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(
+				signature_slot,
+				config::SLOTS_PER_EPOCH as u64,
+			));
+			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
+			// Domains are used for for seeds, for signatures, and for selecting aggregators.
+			let domain = Self::compute_domain(domain_type, fork_version, validators_root)?;
+			// Hash tree root of SigningData - object root + domain
+			let signing_root = Self::compute_signing_root(header, domain)?;
+			Ok(signing_root)
+		}
 	}
 
 	impl<T: Config> Verifier for Pallet<T> {
@@ -1189,10 +1069,11 @@ pub mod pallet {
 				message.proof.block_hash,
 			);
 
-			let stored_header = <ExecutionHeaderRingBufferMap<T>>::get(message.proof.block_hash)
+			let header = <ExecutionHeaderBuffer<T>>::get(message.proof.block_hash)
 				.ok_or(Error::<T>::MissingHeader)?;
 
-			let receipt = match Self::verify_receipt_inclusion(stored_header, &message.proof) {
+			let receipt = match Self::verify_receipt_inclusion(header.receipts_root, &message.proof)
+			{
 				Ok(receipt) => receipt,
 				Err(err) => {
 					log::error!(

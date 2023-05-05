@@ -1,5 +1,7 @@
 # Basic Channel
 
+_Note: This component is obsolete, and has been replaced with a new design. Docs will follow._&#x20;
+
 The basic channel offers guaranteed deliverability, but not guaranteed delivery. See [here](../overview.md#deliverability-and-delivery) for more explanation. Users or teams are responsible for relaying their messages at their own cost with the relaying software we provide. The channel enforces message ordering at the account level. For example, messages from user Alice will be delivered in the order they were sent.
 
 This channel is primarily used to bootstrap the incentivized channel. However we can foresee it being used by third-party teams who wish to bypass our incentivized channel and build their own relaying fabric.
