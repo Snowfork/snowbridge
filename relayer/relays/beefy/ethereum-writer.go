@@ -256,7 +256,6 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 			wr.makeTxOpts(ctx),
 			msg.CommitmentHash,
 			msg.Bitfield,
-			msg.Proof,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("initial submit with handover: %w", err)
@@ -266,7 +265,6 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 			wr.makeTxOpts(ctx),
 			msg.CommitmentHash,
 			msg.Bitfield,
-			msg.Proof,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("initial submit: %w", err)
