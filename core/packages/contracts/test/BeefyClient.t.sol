@@ -65,9 +65,8 @@ contract BeefyClientTest is Test {
         // To avoid another round of ffi in multiple tests
         // except for the initial merkle root and proof for validators
         // we also precalculate finalValidatorProofs and cached here
-        finalBitfield = Bitfield.randomNBitsWithPriorCheck(
-            difficulty, bitfield, beefyClient.minimumSignatureThreshold_public(setSize), setSize
-        );
+        finalBitfield =
+            Bitfield.subsample(difficulty, bitfield, beefyClient.minimumSignatureThreshold_public(setSize), setSize);
 
         inputs[2] = "GenerateProofs";
         inputs[3] = Strings.toString(finalBitfield.length);

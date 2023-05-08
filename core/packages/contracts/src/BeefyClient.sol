@@ -17,14 +17,14 @@ import {ScaleCodec} from "./ScaleCodec.sol";
  * the following methods sequentially:
  * 1. submitInitial
  * 2. commitPrevRandao
- * 3. createFinalBitfield (this is just a call, not a transaction)
+ * 3. createFinalBitfield (this is just a call, not a transaction, to generate the validator subsampling)
  * 4. submitFinal (with signature proofs specified by (3))
  *
  * If the a commitment is signed by the next validator set, relayers must call
  * the following methods sequentially:
  * 1. submitInitialWithHandover
  * 2. commitPrevRandao
- * 3. createFinalBitfield (this is just a call, not a transaction)
+ * 3. createFinalBitfield (this is just a call, not a transaction, to generate the validator subsampling)
  * 4. submitFinalWithHandover (with signature proofs specified by (3))
  *
  */
@@ -151,6 +151,8 @@ contract BeefyClient is Ownable {
     /**
      * @dev after randaoCommitDelay is reached, relayer must
      * call commitPrevRandao within this number of blocks.
+     * Without this expiration, relayers can roll the dice infinitely to get the subsampling
+     * they desire.
      */
     uint256 public immutable randaoCommitExpiration;
 
@@ -428,8 +430,7 @@ contract BeefyClient is Ownable {
         }
 
         // Generate final bitfield indicating which validators need to be included in the proofs.
-        uint256[] memory finalbitfield =
-            Bitfield.randomNBitsWithPriorCheck(ticket.prevRandao, bitfield, signatureCount, vset.length);
+        uint256[] memory finalbitfield = Bitfield.subsample(ticket.prevRandao, bitfield, signatureCount, vset.length);
 
         for (uint256 i = 0; i < proofs.length;) {
             ValidatorProof calldata proof = proofs[i];
@@ -485,11 +486,11 @@ contract BeefyClient is Ownable {
 
     /**
      * NOTE (SNO-427): This inclusion test is currently insecure because it
-     * not verify that the supplied leaf index (proof.index) corresponds to the
+     * not verify that the supplied merkle leaf index (proof.index) corresponds to the
      * leaf being verified.
      *
-     * This was a regression introduced when we introduced an optimized Merkle Proof verifier
-     * that did not rely on leaf index. This new verifier relisd on hash pairs being sorted, whereas
+     * This was a regression introduced when we merged in an optimized Merkle Proof verifier.
+     * This new verifier relies on hash pairs being sorted, whereas
      * the previous version did not require any sorting.
      *
      * @dev Checks if a validators address is a member of the merkle tree
@@ -526,7 +527,7 @@ contract BeefyClient is Ownable {
         returns (uint256[] memory)
     {
         Ticket storage ticket = tickets[createTicketID(msg.sender, commitmentHash)];
-        return Bitfield.randomNBitsWithPriorCheck(
+        return Bitfield.subsample(
             ticket.prevRandao, bitfield, minimumSignatureThreshold(ticket.validatorSetLen), ticket.validatorSetLen
         );
     }
