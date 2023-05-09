@@ -3,7 +3,7 @@ use core::slice::Iter;
 use codec::{Decode, Encode};
 use ethabi::{self, Token};
 use frame_support::{ensure, log, traits::Get};
-use snowbridge_core::{ParaId, SubmitMessage};
+use snowbridge_core::{OutboundQueue, ParaId};
 use sp_core::{RuntimeDebug, H160};
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
@@ -15,7 +15,7 @@ struct ValidatedMessage(ParaId, u16, Vec<u8>);
 pub struct EthereumBlobExporter<RelayNetwork, BridgedNetwork, Submitter>(
 	PhantomData<(RelayNetwork, BridgedNetwork, Submitter)>,
 );
-impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: SubmitMessage>
+impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: OutboundQueue>
 	ExportXcm for EthereumBlobExporter<RelayNetwork, BridgedNetwork, Submitter>
 {
 	type Ticket = (Vec<u8>, XcmHash);
@@ -290,7 +290,7 @@ mod tests {
 		hex!("1454532f17679d9bfd775fef52de6c0598e34def65ef19ac06c11af013d6ca0f");
 
 	struct MockOkSubmitter;
-	impl SubmitMessage for MockOkSubmitter {
+	impl OutboundQueue for MockOkSubmitter {
 		fn submit(
 			_source_id: snowbridge_core::ParaId,
 			_handler: u16,
@@ -300,7 +300,7 @@ mod tests {
 		}
 	}
 	struct MockErrSubmitter;
-	impl SubmitMessage for MockErrSubmitter {
+	impl OutboundQueue for MockErrSubmitter {
 		fn submit(
 			_source_id: snowbridge_core::ParaId,
 			_handler: u16,

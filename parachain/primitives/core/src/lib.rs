@@ -31,6 +31,6 @@ pub trait Verifier {
 	) -> Result<(), &'static str>;
 }
 
-pub trait SubmitMessage {
+pub trait OutboundQueue {
 	fn submit(source_id: ParaId, handler: u16, payload: &[u8]) -> DispatchResult;
 }
