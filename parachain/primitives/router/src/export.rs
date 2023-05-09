@@ -96,10 +96,8 @@ where
 	}
 
 	fn deliver((blob, hash): (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {
-		let mut blob = blob.clone();
-		let mut input: &[u8] = blob.as_mut();
-		let ValidatedMessage(source_id, handler, payload) = ValidatedMessage::decode(&mut input)
-			.map_err(|err| {
+		let ValidatedMessage(source_id, handler, payload) =
+			ValidatedMessage::decode(&mut blob.as_ref()).map_err(|err| {
 				log::trace!(target: "ethereum_blob_exporter", "undeliverable due to decoding error '{err:?}'.");
 				SendError::NotApplicable
 			})?;
