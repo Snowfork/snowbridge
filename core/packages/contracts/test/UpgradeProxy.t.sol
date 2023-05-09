@@ -55,7 +55,7 @@ contract UpgradeProxyTest is Test {
         failedUpgradeTask = new FailingUpgradeTask();
     }
 
-    function createUpgradeMessage(IUpgradeTask task) internal pure returns (bytes memory) {
+    function createUpgradeMessage(IUpgradeTask task) internal returns (bytes memory) {
         return abi.encode(
             UpgradeProxy.Message(
                 UpgradeProxy.Action.Upgrade,

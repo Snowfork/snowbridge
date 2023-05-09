@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "solmate/utils/MerkleProofLib.sol";
+import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {AccessControl} from "openzeppelin/access/AccessControl.sol";
 import {IParachainClient} from "./ParachainClient.sol";
 import {IRecipient} from "./IRecipient.sol";
@@ -65,12 +65,9 @@ contract InboundQueue is AccessControl {
         reward = _reward;
     }
 
-    function submit(Message calldata message, bytes32[] calldata leafProof, IParachainClient.Proof calldata headerProof) external {
-        // Hash the leaf so that we can combine it with the proof hashes to find the Merkle root.
+    function submit(Message calldata message, bytes32[] calldata leafProof, bytes calldata headerProof) external {
         bytes32 leafHash = keccak256(abi.encode(message));
-        // Get the root hash that identifies the list of messages that the caller claims the parachain has committed.
-        bytes32 commitment = MerkleProofLib.calculateRoot(leafProof, leafHash);
-        // Verify that the parachain has committed the list of messages.
+        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
         if (!parachainClient.verifyCommitment(commitment, headerProof)) {
             revert InvalidProof();
         }

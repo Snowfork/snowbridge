@@ -28,18 +28,6 @@ var (
 	_ = event.NewSubscription
 )
 
-// InboundQueueDispatchResult is an auto generated low-level Go binding around an user-defined struct.
-type InboundQueueDispatchResult struct {
-	Status uint8
-	Reason []byte
-}
-
-// InboundQueueHandler is an auto generated low-level Go binding around an user-defined struct.
-type InboundQueueHandler struct {
-	Recipient    common.Address
-	GasToForward uint32
-}
-
 // InboundQueueMessage is an auto generated low-level Go binding around an user-defined struct.
 type InboundQueueMessage struct {
 	Origin  uint32
@@ -50,7 +38,7 @@ type InboundQueueMessage struct {
 
 // InboundQueueMetaData contains all meta data concerning the InboundQueue contract.
 var InboundQueueMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"},{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidHandler\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotEnoughGas\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"gasToForward\",\"type\":\"uint32\"}],\"indexed\":false,\"internalType\":\"structInboundQueue.Handler\",\"name\":\"handler\",\"type\":\"tuple\"}],\"name\":\"HandlerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"enumInboundQueue.DispatchStatus\",\"name\":\"status\",\"type\":\"uint8\"},{\"internalType\":\"bytes\",\"name\":\"reason\",\"type\":\"bytes\"}],\"indexed\":false,\"internalType\":\"structInboundQueue.DispatchResult\",\"name\":\"result\",\"type\":\"tuple\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"parachainClient\",\"type\":\"address\"}],\"name\":\"ParachainClientUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"name\":\"RewardUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vault\",\"type\":\"address\"}],\"name\":\"VaultUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"handlerID\",\"type\":\"uint16\"}],\"name\":\"handlers\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"gasToForward\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reward\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"uint16\",\"name\":\"handler\",\"type\":\"uint16\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structInboundQueue.Message\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"headerProof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"gasToForward\",\"type\":\"uint32\"}],\"internalType\":\"structInboundQueue.Handler\",\"name\":\"handler\",\"type\":\"tuple\"}],\"name\":\"updateHandler\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"name\":\"updateParachainClient\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"name\":\"updateReward\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"}],\"name\":\"updateVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vault\",\"outputs\":[{\"internalType\":\"contractIVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"},{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidHandler\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotEnoughGas\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasToForward\",\"type\":\"uint256\"}],\"name\":\"GasToForwardUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"indexed\":false,\"internalType\":\"contractIRecipient\",\"name\":\"handler\",\"type\":\"address\"}],\"name\":\"HandlerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"enumInboundQueue.DispatchResult\",\"name\":\"result\",\"type\":\"uint8\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"parachainClient\",\"type\":\"address\"}],\"name\":\"ParachainClientUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"name\":\"RewardUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vault\",\"type\":\"address\"}],\"name\":\"VaultUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasToForward\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"handlerID\",\"type\":\"uint16\"}],\"name\":\"handlers\",\"outputs\":[{\"internalType\":\"contractIRecipient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reward\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"uint16\",\"name\":\"handler\",\"type\":\"uint16\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structInboundQueue.Message\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"headerProof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_gasToForward\",\"type\":\"uint256\"}],\"name\":\"updateGasToForward\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"internalType\":\"contractIRecipient\",\"name\":\"handler\",\"type\":\"address\"}],\"name\":\"updateHandler\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"name\":\"updateParachainClient\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"name\":\"updateReward\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"}],\"name\":\"updateVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vault\",\"outputs\":[{\"internalType\":\"contractIVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // InboundQueueABI is the input ABI used to generate the binding from.
@@ -292,6 +280,37 @@ func (_InboundQueue *InboundQueueCallerSession) GASBUFFER() (*big.Int, error) {
 	return _InboundQueue.Contract.GASBUFFER(&_InboundQueue.CallOpts)
 }
 
+// GasToForward is a free data retrieval call binding the contract method 0x3b834210.
+//
+// Solidity: function gasToForward() view returns(uint256)
+func (_InboundQueue *InboundQueueCaller) GasToForward(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _InboundQueue.contract.Call(opts, &out, "gasToForward")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GasToForward is a free data retrieval call binding the contract method 0x3b834210.
+//
+// Solidity: function gasToForward() view returns(uint256)
+func (_InboundQueue *InboundQueueSession) GasToForward() (*big.Int, error) {
+	return _InboundQueue.Contract.GasToForward(&_InboundQueue.CallOpts)
+}
+
+// GasToForward is a free data retrieval call binding the contract method 0x3b834210.
+//
+// Solidity: function gasToForward() view returns(uint256)
+func (_InboundQueue *InboundQueueCallerSession) GasToForward() (*big.Int, error) {
+	return _InboundQueue.Contract.GasToForward(&_InboundQueue.CallOpts)
+}
+
 // GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
 //
 // Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
@@ -325,46 +344,32 @@ func (_InboundQueue *InboundQueueCallerSession) GetRoleAdmin(role [32]byte) ([32
 
 // Handlers is a free data retrieval call binding the contract method 0x0d20fb87.
 //
-// Solidity: function handlers(uint16 handlerID) view returns(address recipient, uint32 gasToForward)
-func (_InboundQueue *InboundQueueCaller) Handlers(opts *bind.CallOpts, handlerID uint16) (struct {
-	Recipient    common.Address
-	GasToForward uint32
-}, error) {
+// Solidity: function handlers(uint16 handlerID) view returns(address)
+func (_InboundQueue *InboundQueueCaller) Handlers(opts *bind.CallOpts, handlerID uint16) (common.Address, error) {
 	var out []interface{}
 	err := _InboundQueue.contract.Call(opts, &out, "handlers", handlerID)
 
-	outstruct := new(struct {
-		Recipient    common.Address
-		GasToForward uint32
-	})
 	if err != nil {
-		return *outstruct, err
+		return *new(common.Address), err
 	}
 
-	outstruct.Recipient = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	outstruct.GasToForward = *abi.ConvertType(out[1], new(uint32)).(*uint32)
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
-	return *outstruct, err
+	return out0, err
 
 }
 
 // Handlers is a free data retrieval call binding the contract method 0x0d20fb87.
 //
-// Solidity: function handlers(uint16 handlerID) view returns(address recipient, uint32 gasToForward)
-func (_InboundQueue *InboundQueueSession) Handlers(handlerID uint16) (struct {
-	Recipient    common.Address
-	GasToForward uint32
-}, error) {
+// Solidity: function handlers(uint16 handlerID) view returns(address)
+func (_InboundQueue *InboundQueueSession) Handlers(handlerID uint16) (common.Address, error) {
 	return _InboundQueue.Contract.Handlers(&_InboundQueue.CallOpts, handlerID)
 }
 
 // Handlers is a free data retrieval call binding the contract method 0x0d20fb87.
 //
-// Solidity: function handlers(uint16 handlerID) view returns(address recipient, uint32 gasToForward)
-func (_InboundQueue *InboundQueueCallerSession) Handlers(handlerID uint16) (struct {
-	Recipient    common.Address
-	GasToForward uint32
-}, error) {
+// Solidity: function handlers(uint16 handlerID) view returns(address)
+func (_InboundQueue *InboundQueueCallerSession) Handlers(handlerID uint16) (common.Address, error) {
 	return _InboundQueue.Contract.Handlers(&_InboundQueue.CallOpts, handlerID)
 }
 
@@ -638,24 +643,45 @@ func (_InboundQueue *InboundQueueTransactorSession) Submit(message InboundQueueM
 	return _InboundQueue.Contract.Submit(&_InboundQueue.TransactOpts, message, leafProof, headerProof)
 }
 
-// UpdateHandler is a paid mutator transaction binding the contract method 0x094440f3.
+// UpdateGasToForward is a paid mutator transaction binding the contract method 0xf4d9d4c4.
 //
-// Solidity: function updateHandler(uint16 id, (address,uint32) handler) returns()
-func (_InboundQueue *InboundQueueTransactor) UpdateHandler(opts *bind.TransactOpts, id uint16, handler InboundQueueHandler) (*types.Transaction, error) {
+// Solidity: function updateGasToForward(uint256 _gasToForward) returns()
+func (_InboundQueue *InboundQueueTransactor) UpdateGasToForward(opts *bind.TransactOpts, _gasToForward *big.Int) (*types.Transaction, error) {
+	return _InboundQueue.contract.Transact(opts, "updateGasToForward", _gasToForward)
+}
+
+// UpdateGasToForward is a paid mutator transaction binding the contract method 0xf4d9d4c4.
+//
+// Solidity: function updateGasToForward(uint256 _gasToForward) returns()
+func (_InboundQueue *InboundQueueSession) UpdateGasToForward(_gasToForward *big.Int) (*types.Transaction, error) {
+	return _InboundQueue.Contract.UpdateGasToForward(&_InboundQueue.TransactOpts, _gasToForward)
+}
+
+// UpdateGasToForward is a paid mutator transaction binding the contract method 0xf4d9d4c4.
+//
+// Solidity: function updateGasToForward(uint256 _gasToForward) returns()
+func (_InboundQueue *InboundQueueTransactorSession) UpdateGasToForward(_gasToForward *big.Int) (*types.Transaction, error) {
+	return _InboundQueue.Contract.UpdateGasToForward(&_InboundQueue.TransactOpts, _gasToForward)
+}
+
+// UpdateHandler is a paid mutator transaction binding the contract method 0x419e19cf.
+//
+// Solidity: function updateHandler(uint16 id, address handler) returns()
+func (_InboundQueue *InboundQueueTransactor) UpdateHandler(opts *bind.TransactOpts, id uint16, handler common.Address) (*types.Transaction, error) {
 	return _InboundQueue.contract.Transact(opts, "updateHandler", id, handler)
 }
 
-// UpdateHandler is a paid mutator transaction binding the contract method 0x094440f3.
+// UpdateHandler is a paid mutator transaction binding the contract method 0x419e19cf.
 //
-// Solidity: function updateHandler(uint16 id, (address,uint32) handler) returns()
-func (_InboundQueue *InboundQueueSession) UpdateHandler(id uint16, handler InboundQueueHandler) (*types.Transaction, error) {
+// Solidity: function updateHandler(uint16 id, address handler) returns()
+func (_InboundQueue *InboundQueueSession) UpdateHandler(id uint16, handler common.Address) (*types.Transaction, error) {
 	return _InboundQueue.Contract.UpdateHandler(&_InboundQueue.TransactOpts, id, handler)
 }
 
-// UpdateHandler is a paid mutator transaction binding the contract method 0x094440f3.
+// UpdateHandler is a paid mutator transaction binding the contract method 0x419e19cf.
 //
-// Solidity: function updateHandler(uint16 id, (address,uint32) handler) returns()
-func (_InboundQueue *InboundQueueTransactorSession) UpdateHandler(id uint16, handler InboundQueueHandler) (*types.Transaction, error) {
+// Solidity: function updateHandler(uint16 id, address handler) returns()
+func (_InboundQueue *InboundQueueTransactorSession) UpdateHandler(id uint16, handler common.Address) (*types.Transaction, error) {
 	return _InboundQueue.Contract.UpdateHandler(&_InboundQueue.TransactOpts, id, handler)
 }
 
@@ -720,6 +746,140 @@ func (_InboundQueue *InboundQueueSession) UpdateVault(_vault common.Address) (*t
 // Solidity: function updateVault(address _vault) returns()
 func (_InboundQueue *InboundQueueTransactorSession) UpdateVault(_vault common.Address) (*types.Transaction, error) {
 	return _InboundQueue.Contract.UpdateVault(&_InboundQueue.TransactOpts, _vault)
+}
+
+// InboundQueueGasToForwardUpdatedIterator is returned from FilterGasToForwardUpdated and is used to iterate over the raw logs and unpacked data for GasToForwardUpdated events raised by the InboundQueue contract.
+type InboundQueueGasToForwardUpdatedIterator struct {
+	Event *InboundQueueGasToForwardUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *InboundQueueGasToForwardUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(InboundQueueGasToForwardUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(InboundQueueGasToForwardUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *InboundQueueGasToForwardUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *InboundQueueGasToForwardUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// InboundQueueGasToForwardUpdated represents a GasToForwardUpdated event raised by the InboundQueue contract.
+type InboundQueueGasToForwardUpdated struct {
+	GasToForward *big.Int
+	Raw          types.Log // Blockchain specific contextual infos
+}
+
+// FilterGasToForwardUpdated is a free log retrieval operation binding the contract event 0x100f863b8d0f17ca3e98e1ee23dc6feb2a31f24f0836e89e21bcb9f0bfc2d742.
+//
+// Solidity: event GasToForwardUpdated(uint256 gasToForward)
+func (_InboundQueue *InboundQueueFilterer) FilterGasToForwardUpdated(opts *bind.FilterOpts) (*InboundQueueGasToForwardUpdatedIterator, error) {
+
+	logs, sub, err := _InboundQueue.contract.FilterLogs(opts, "GasToForwardUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &InboundQueueGasToForwardUpdatedIterator{contract: _InboundQueue.contract, event: "GasToForwardUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchGasToForwardUpdated is a free log subscription operation binding the contract event 0x100f863b8d0f17ca3e98e1ee23dc6feb2a31f24f0836e89e21bcb9f0bfc2d742.
+//
+// Solidity: event GasToForwardUpdated(uint256 gasToForward)
+func (_InboundQueue *InboundQueueFilterer) WatchGasToForwardUpdated(opts *bind.WatchOpts, sink chan<- *InboundQueueGasToForwardUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _InboundQueue.contract.WatchLogs(opts, "GasToForwardUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(InboundQueueGasToForwardUpdated)
+				if err := _InboundQueue.contract.UnpackLog(event, "GasToForwardUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseGasToForwardUpdated is a log parse operation binding the contract event 0x100f863b8d0f17ca3e98e1ee23dc6feb2a31f24f0836e89e21bcb9f0bfc2d742.
+//
+// Solidity: event GasToForwardUpdated(uint256 gasToForward)
+func (_InboundQueue *InboundQueueFilterer) ParseGasToForwardUpdated(log types.Log) (*InboundQueueGasToForwardUpdated, error) {
+	event := new(InboundQueueGasToForwardUpdated)
+	if err := _InboundQueue.contract.UnpackLog(event, "GasToForwardUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 
 // InboundQueueHandlerUpdatedIterator is returned from FilterHandlerUpdated and is used to iterate over the raw logs and unpacked data for HandlerUpdated events raised by the InboundQueue contract.
@@ -792,13 +952,13 @@ func (it *InboundQueueHandlerUpdatedIterator) Close() error {
 // InboundQueueHandlerUpdated represents a HandlerUpdated event raised by the InboundQueue contract.
 type InboundQueueHandlerUpdated struct {
 	Id      uint16
-	Handler InboundQueueHandler
+	Handler common.Address
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterHandlerUpdated is a free log retrieval operation binding the contract event 0x6c2fc0cb577f29b9193278b7dacc4fb7e2e96a881a16c58e9fb8b4a60ad44c02.
+// FilterHandlerUpdated is a free log retrieval operation binding the contract event 0x3ed918ab4515fda74eadc324a45e89778c4e8bfc6391f78db7beac41b768df74.
 //
-// Solidity: event HandlerUpdated(uint16 id, (address,uint32) handler)
+// Solidity: event HandlerUpdated(uint16 id, address handler)
 func (_InboundQueue *InboundQueueFilterer) FilterHandlerUpdated(opts *bind.FilterOpts) (*InboundQueueHandlerUpdatedIterator, error) {
 
 	logs, sub, err := _InboundQueue.contract.FilterLogs(opts, "HandlerUpdated")
@@ -808,9 +968,9 @@ func (_InboundQueue *InboundQueueFilterer) FilterHandlerUpdated(opts *bind.Filte
 	return &InboundQueueHandlerUpdatedIterator{contract: _InboundQueue.contract, event: "HandlerUpdated", logs: logs, sub: sub}, nil
 }
 
-// WatchHandlerUpdated is a free log subscription operation binding the contract event 0x6c2fc0cb577f29b9193278b7dacc4fb7e2e96a881a16c58e9fb8b4a60ad44c02.
+// WatchHandlerUpdated is a free log subscription operation binding the contract event 0x3ed918ab4515fda74eadc324a45e89778c4e8bfc6391f78db7beac41b768df74.
 //
-// Solidity: event HandlerUpdated(uint16 id, (address,uint32) handler)
+// Solidity: event HandlerUpdated(uint16 id, address handler)
 func (_InboundQueue *InboundQueueFilterer) WatchHandlerUpdated(opts *bind.WatchOpts, sink chan<- *InboundQueueHandlerUpdated) (event.Subscription, error) {
 
 	logs, sub, err := _InboundQueue.contract.WatchLogs(opts, "HandlerUpdated")
@@ -845,9 +1005,9 @@ func (_InboundQueue *InboundQueueFilterer) WatchHandlerUpdated(opts *bind.WatchO
 	}), nil
 }
 
-// ParseHandlerUpdated is a log parse operation binding the contract event 0x6c2fc0cb577f29b9193278b7dacc4fb7e2e96a881a16c58e9fb8b4a60ad44c02.
+// ParseHandlerUpdated is a log parse operation binding the contract event 0x3ed918ab4515fda74eadc324a45e89778c4e8bfc6391f78db7beac41b768df74.
 //
-// Solidity: event HandlerUpdated(uint16 id, (address,uint32) handler)
+// Solidity: event HandlerUpdated(uint16 id, address handler)
 func (_InboundQueue *InboundQueueFilterer) ParseHandlerUpdated(log types.Log) (*InboundQueueHandlerUpdated, error) {
 	event := new(InboundQueueHandlerUpdated)
 	if err := _InboundQueue.contract.UnpackLog(event, "HandlerUpdated", log); err != nil {
@@ -928,13 +1088,13 @@ func (it *InboundQueueMessageDispatchedIterator) Close() error {
 type InboundQueueMessageDispatched struct {
 	Origin uint32
 	Nonce  uint64
-	Result InboundQueueDispatchResult
+	Result uint8
 	Raw    types.Log // Blockchain specific contextual infos
 }
 
-// FilterMessageDispatched is a free log retrieval operation binding the contract event 0xfe994320f30edf6213b4278a312807d89cd54c2af4cba2fd530fc0267668f967.
+// FilterMessageDispatched is a free log retrieval operation binding the contract event 0x3daaaf6b5c13966eb060b53daff310d82d35bdd2e539be4dc92dfe1310ee170d.
 //
-// Solidity: event MessageDispatched(uint32 indexed origin, uint64 indexed nonce, (uint8,bytes) result)
+// Solidity: event MessageDispatched(uint32 indexed origin, uint64 indexed nonce, uint8 result)
 func (_InboundQueue *InboundQueueFilterer) FilterMessageDispatched(opts *bind.FilterOpts, origin []uint32, nonce []uint64) (*InboundQueueMessageDispatchedIterator, error) {
 
 	var originRule []interface{}
@@ -953,9 +1113,9 @@ func (_InboundQueue *InboundQueueFilterer) FilterMessageDispatched(opts *bind.Fi
 	return &InboundQueueMessageDispatchedIterator{contract: _InboundQueue.contract, event: "MessageDispatched", logs: logs, sub: sub}, nil
 }
 
-// WatchMessageDispatched is a free log subscription operation binding the contract event 0xfe994320f30edf6213b4278a312807d89cd54c2af4cba2fd530fc0267668f967.
+// WatchMessageDispatched is a free log subscription operation binding the contract event 0x3daaaf6b5c13966eb060b53daff310d82d35bdd2e539be4dc92dfe1310ee170d.
 //
-// Solidity: event MessageDispatched(uint32 indexed origin, uint64 indexed nonce, (uint8,bytes) result)
+// Solidity: event MessageDispatched(uint32 indexed origin, uint64 indexed nonce, uint8 result)
 func (_InboundQueue *InboundQueueFilterer) WatchMessageDispatched(opts *bind.WatchOpts, sink chan<- *InboundQueueMessageDispatched, origin []uint32, nonce []uint64) (event.Subscription, error) {
 
 	var originRule []interface{}
@@ -999,9 +1159,9 @@ func (_InboundQueue *InboundQueueFilterer) WatchMessageDispatched(opts *bind.Wat
 	}), nil
 }
 
-// ParseMessageDispatched is a log parse operation binding the contract event 0xfe994320f30edf6213b4278a312807d89cd54c2af4cba2fd530fc0267668f967.
+// ParseMessageDispatched is a log parse operation binding the contract event 0x3daaaf6b5c13966eb060b53daff310d82d35bdd2e539be4dc92dfe1310ee170d.
 //
-// Solidity: event MessageDispatched(uint32 indexed origin, uint64 indexed nonce, (uint8,bytes) result)
+// Solidity: event MessageDispatched(uint32 indexed origin, uint64 indexed nonce, uint8 result)
 func (_InboundQueue *InboundQueueFilterer) ParseMessageDispatched(log types.Log) (*InboundQueueMessageDispatched, error) {
 	event := new(InboundQueueMessageDispatched)
 	if err := _InboundQueue.contract.UnpackLog(event, "MessageDispatched", log); err != nil {
