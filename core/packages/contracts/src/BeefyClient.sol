@@ -243,6 +243,7 @@ contract BeefyClient is Ownable {
             delete tickets[ticketID];
             revert TicketExpired();
         }
+
         console.log("prevRandao before commit:");
         console.log(ticket.prevRandao);
 

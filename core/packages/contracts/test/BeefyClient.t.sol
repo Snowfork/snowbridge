@@ -99,10 +99,10 @@ contract BeefyClientTest is Test {
         beefyClient.submitInitial(commitHash, bitfield);
 
         // mine random delay blocks
-        cheats.roll(block.number + randaoCommitDelay);
+        vm.roll(block.number + randaoCommitDelay);
 
         // set difficulty as PrevRandao
-        cheats.difficulty(difficulty);
+        vm.difficulty(difficulty);
 
         beefyClient.commitPrevRandao(commitHash);
 
