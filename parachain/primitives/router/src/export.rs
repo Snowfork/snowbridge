@@ -10,7 +10,7 @@ use xcm::v3::prelude::*;
 use xcm_executor::traits::ExportXcm;
 
 #[derive(Encode, Decode)]
-struct BridgeMessage(ParaId, u16, Vec<u8>);
+struct ValidatedMessage(ParaId, u16, Vec<u8>);
 
 pub struct ToBridgeEthereumBlobExporter<RelayNetwork, BridgedNetwork, Submitter>(
 	PhantomData<(RelayNetwork, BridgedNetwork, Submitter)>,
@@ -82,7 +82,7 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 
 		let (encoded, handler) = payload.abi_encode();
 
-		let blob = BridgeMessage(para_id.into(), handler, encoded).encode();
+		let blob = ValidatedMessage(para_id.into(), handler, encoded).encode();
 		let hash: [u8; 32] = sp_io::hashing::blake2_256(blob.as_slice());
 
 		log::info!(target: "ethereum_blob_exporter", "message validated {hash:#?}.");
@@ -94,7 +94,7 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 	fn deliver((blob, hash): (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {
 		let mut blob = blob.clone();
 		let mut input: &[u8] = blob.as_mut();
-		let BridgeMessage(source_id, handler, payload) = BridgeMessage::decode(&mut input)
+		let ValidatedMessage(source_id, handler, payload) = ValidatedMessage::decode(&mut input)
 			.map_err(|err| {
 				log::trace!(target: "ethereum_blob_exporter", "undeliverable due to decoding error '{err:?}'.");
 				SendError::NotApplicable
