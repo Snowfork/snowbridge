@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    runs-on: snowbridge-runner
+    runs-on: [snowbridge-runner,ubuntu-latest]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v1

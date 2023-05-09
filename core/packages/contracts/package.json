@@ -12,7 +12,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "pnpm build:sol && pnpm build:types",
-    "build:sol": "forge build",
+    "build:sol": "forge clean && forge build",
     "build:types": "typechain --target ethers-v5 'out/**/!(*.t|test).sol/!(*.abi).json' --out-dir types",
     "lint": "pnpm lint:solhint",
     "lint:solhint": "solhint 'src/**/*.sol'",
