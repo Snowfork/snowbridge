@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
+import "forge-std/console.sol";
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {Ownable} from "openzeppelin/access/Ownable.sol";
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
@@ -242,9 +243,14 @@ contract BeefyClient is Ownable {
             delete tickets[ticketID];
             revert TicketExpired();
         }
+        console.log("prevRandao before commit:");
+        console.log(ticket.prevRandao);
 
         // Post-merge, the difficulty opcode now returns PREVRANDAO
         ticket.prevRandao = block.prevrandao;
+
+        console.log("prevRandao after commit:");
+        console.log(ticket.prevRandao);
     }
 
     /**
