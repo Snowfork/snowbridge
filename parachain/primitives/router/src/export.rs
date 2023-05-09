@@ -292,7 +292,7 @@ mod tests {
 	struct MockOkSubmitter;
 	impl SubmitMessage for MockOkSubmitter {
 		fn submit(
-			_source_id: &snowbridge_core::ParaId,
+			_source_id: snowbridge_core::ParaId,
 			_handler: u16,
 			_payload: &[u8],
 		) -> DispatchResult {
@@ -302,7 +302,7 @@ mod tests {
 	struct MockErrSubmitter;
 	impl SubmitMessage for MockErrSubmitter {
 		fn submit(
-			_source_id: &snowbridge_core::ParaId,
+			_source_id: snowbridge_core::ParaId,
 			_handler: u16,
 			_payload: &[u8],
 		) -> DispatchResult {

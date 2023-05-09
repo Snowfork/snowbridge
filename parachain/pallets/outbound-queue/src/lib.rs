@@ -163,7 +163,7 @@ pub mod pallet {
 
 	impl<T: Config> SubmitMessage for Pallet<T> {
 		/// Submit message on the outbound channel
-		fn submit(origin: &ParaId, handler: u16, payload: &[u8]) -> DispatchResult {
+		fn submit(origin: ParaId, handler: u16, payload: &[u8]) -> DispatchResult {
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerCommit::get() as usize,

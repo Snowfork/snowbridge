@@ -32,5 +32,5 @@ pub trait Verifier {
 }
 
 pub trait SubmitMessage {
-	fn submit(source_id: &ParaId, handler: u16, payload: &[u8]) -> DispatchResult;
+	fn submit(source_id: ParaId, handler: u16, payload: &[u8]) -> DispatchResult;
 }
