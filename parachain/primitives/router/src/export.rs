@@ -99,7 +99,7 @@ impl<RelayNetwork: Get<NetworkId>, BridgedNetwork: Get<NetworkId>, Submitter: Su
 				log::trace!(target: "ethereum_blob_exporter", "undeliverable due to decoding error '{err:?}'.");
 				SendError::NotApplicable
 			})?;
-		Submitter::submit(&source_id, handler, payload.as_ref()).map_err(|err| {
+		Submitter::submit(source_id, handler, payload.as_ref()).map_err(|err| {
 			log::error!(target: "ethereum_blob_exporter", "undeliverable due to submitter error '{err:?}'.");
 			SendError::Unroutable
 		})?;
@@ -593,9 +593,7 @@ mod tests {
 	fn exporter_deliver_success_case_1() {
 		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
 		let result =
-			EthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(
-				ticket,
-			);
+			EthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(ticket);
 		assert_eq!(result, Ok(SUCCESS_CASE_1_TICKET_HASH))
 	}
 
@@ -605,9 +603,7 @@ mod tests {
 		let hash = sp_io::hashing::blake2_256(corrupt_ticket.as_slice());
 		let ticket: Ticket = (corrupt_ticket, hash);
 		let result =
-			EthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(
-				ticket,
-			);
+			EthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkSubmitter>::deliver(ticket);
 		assert_eq!(result, Err(SendError::NotApplicable))
 	}
 
@@ -615,9 +611,7 @@ mod tests {
 	fn exporter_deliver_with_submit_failure_yields_unroutable() {
 		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
 		let result =
-			EthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockErrSubmitter>::deliver(
-				ticket,
-			);
+			EthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockErrSubmitter>::deliver(ticket);
 		assert_eq!(result, Err(SendError::Unroutable))
 	}
 
