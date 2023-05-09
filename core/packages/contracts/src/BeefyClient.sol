@@ -240,6 +240,7 @@ contract BeefyClient is Ownable {
         // relayer can capture within `randaoCommitExpiration` blocks
         if (block.number > ticket.blockNumber + randaoCommitDelay + randaoCommitExpiration) {
             delete tickets[ticketID];
+            // TODO: Will the delete above be persisted after the revert below?
             revert TicketExpired();
         }
 
@@ -362,6 +363,7 @@ contract BeefyClient is Ownable {
     // Creates a unique ticket ID for a new interactive prover-verifier session
     function createTicketID(address account, bytes32 commitmentHash) internal pure returns (bytes32 value) {
         assembly {
+            // TODO: Should we zero the first slot here to prevent the last 12 bytes changing?
             mstore(0x00, account)
             mstore(0x20, commitmentHash)
             value := keccak256(0x0, 0x40)
