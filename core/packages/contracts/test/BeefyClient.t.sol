@@ -99,10 +99,10 @@ contract BeefyClientTest is Test {
         beefyClient.submitInitial(commitHash, bitfield);
 
         // mine random delay blocks
-        vm.roll(block.number + randaoCommitDelay);
+        cheats.roll(block.number + randaoCommitDelay);
 
         // set difficulty as PrevRandao
-        vm.difficulty(difficulty);
+        cheats.difficulty(difficulty);
 
         beefyClient.commitPrevRandao(commitHash);
 
@@ -112,88 +112,88 @@ contract BeefyClientTest is Test {
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
     }
 
-//    function testSubmitFailWithStaleCommitment() public {
-//        // first round of submit should be fine
-//        testSubmit();
-//
-//        beefyClient.submitInitial(commitHash, bitfield);
-//        cheats.roll(block.number + randaoCommitDelay);
-//        cheats.difficulty(difficulty);
-//        beefyClient.commitPrevRandao(commitHash);
-//        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
-//        //submit again will be reverted with StaleCommitment
-//        cheats.expectRevert(BeefyClient.StaleCommitment.selector);
-//        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
-//    }
-//
-//    function testSubmitFailWithInvalidBitfield() public {
-//        initialize(setId);
-//
-//        beefyClient.submitInitial(commitHash, bitfield);
-//
-//        cheats.roll(block.number + randaoCommitDelay);
-//
-//        cheats.difficulty(difficulty);
-//
-//        beefyClient.commitPrevRandao(commitHash);
-//
-//        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
-//        // invalid bitfield here
-//        bitfield[0] = 0;
-//        cheats.expectRevert(BeefyClient.InvalidBitfield.selector);
-//        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
-//    }
-//
-//    function testSubmitFailWithoutPrevRandao() public {
-//        initialize(setId);
-//        beefyClient.submitInitial(commitHash, bitfield);
-//        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
-//        // reverted without commit PrevRandao
-//        cheats.expectRevert(BeefyClient.PrevRandaoNotCaptured.selector);
-//        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
-//    }
-//
-//    function testSubmitFailForPrevRandaoTooEarlyOrTooLate() public {
-//        initialize(setId);
-//        beefyClient.submitInitial(commitHash, bitfield);
-//        // reverted for commit PrevRandao too early
-//        cheats.expectRevert(BeefyClient.WaitPeriodNotOver.selector);
-//        beefyClient.commitPrevRandao(commitHash);
-//
-//        // reverted for commit PrevRandao too late
-//        cheats.roll(block.number + randaoCommitDelay + randaoCommitExpiration + 1);
-//        cheats.expectRevert(BeefyClient.TicketExpired.selector);
-//        beefyClient.commitPrevRandao(commitHash);
-//    }
-//
-//    function testSubmitWithHandover() public {
-//        //initialize with previous set
-//        initialize(setId - 1);
-//
-//        beefyClient.submitInitialWithHandover(commitHash, bitfield);
-//
-//        cheats.roll(block.number + randaoCommitDelay);
-//
-//        cheats.difficulty(difficulty);
-//
-//        beefyClient.commitPrevRandao(commitHash);
-//
-//        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
-//        beefyClient.submitFinalWithHandover(
-//            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
-//        );
-//        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
-//    }
-//
-//    function testScaleEncodeCommit() public {
-//        BeefyClient.Payload memory _payload = BeefyClient.Payload(
-//            0x3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c, hex"0861620c0001026d6880", hex""
-//        );
-//        BeefyClient.Commitment memory _commitment = BeefyClient.Commitment(5, 7, _payload);
-//        bytes memory encoded = beefyClient.encodeCommitment_public(_commitment);
-//        assertEq(
-//            encoded,
-//            hex"0861620c0001026d68803ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c050000000700000000000000"
-//        );
-//    }
+    function testSubmitFailWithStaleCommitment() public {
+        // first round of submit should be fine
+        testSubmit();
+
+        beefyClient.submitInitial(commitHash, bitfield);
+        cheats.roll(block.number + randaoCommitDelay);
+        cheats.difficulty(difficulty);
+        beefyClient.commitPrevRandao(commitHash);
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
+        //submit again will be reverted with StaleCommitment
+        cheats.expectRevert(BeefyClient.StaleCommitment.selector);
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
+    }
+
+    function testSubmitFailWithInvalidBitfield() public {
+        initialize(setId);
+
+        beefyClient.submitInitial(commitHash, bitfield);
+
+        cheats.roll(block.number + randaoCommitDelay);
+
+        cheats.difficulty(difficulty);
+
+        beefyClient.commitPrevRandao(commitHash);
+
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
+        // invalid bitfield here
+        bitfield[0] = 0;
+        cheats.expectRevert(BeefyClient.InvalidBitfield.selector);
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
+    }
+
+    function testSubmitFailWithoutPrevRandao() public {
+        initialize(setId);
+        beefyClient.submitInitial(commitHash, bitfield);
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
+        // reverted without commit PrevRandao
+        cheats.expectRevert(BeefyClient.PrevRandaoNotCaptured.selector);
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
+    }
+
+    function testSubmitFailForPrevRandaoTooEarlyOrTooLate() public {
+        initialize(setId);
+        beefyClient.submitInitial(commitHash, bitfield);
+        // reverted for commit PrevRandao too early
+        cheats.expectRevert(BeefyClient.WaitPeriodNotOver.selector);
+        beefyClient.commitPrevRandao(commitHash);
+
+        // reverted for commit PrevRandao too late
+        cheats.roll(block.number + randaoCommitDelay + randaoCommitExpiration + 1);
+        cheats.expectRevert(BeefyClient.TicketExpired.selector);
+        beefyClient.commitPrevRandao(commitHash);
+    }
+
+    function testSubmitWithHandover() public {
+        //initialize with previous set
+        initialize(setId - 1);
+
+        beefyClient.submitInitialWithHandover(commitHash, bitfield);
+
+        cheats.roll(block.number + randaoCommitDelay);
+
+        cheats.difficulty(difficulty);
+
+        beefyClient.commitPrevRandao(commitHash);
+
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
+        beefyClient.submitFinalWithHandover(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+    }
+
+    function testScaleEncodeCommit() public {
+        BeefyClient.Payload memory _payload = BeefyClient.Payload(
+            0x3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c, hex"0861620c0001026d6880", hex""
+        );
+        BeefyClient.Commitment memory _commitment = BeefyClient.Commitment(5, 7, _payload);
+        bytes memory encoded = beefyClient.encodeCommitment_public(_commitment);
+        assertEq(
+            encoded,
+            hex"0861620c0001026d68803ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c050000000700000000000000"
+        );
+    }
 }
