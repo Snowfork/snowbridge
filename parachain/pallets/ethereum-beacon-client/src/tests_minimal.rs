@@ -159,7 +159,7 @@ fn it_processes_a_finalized_header_update() {
 		.expect("Time went backwards")
 		.as_secs();
 
-	let import_time = time_now + (update.finalized_header.slot * config::SECONDS_PER_SLOT); // Goerli genesis time + finalized header update time
+	let import_time = time_now + (update.finalized_header.slot * config::SECONDS_PER_SLOT as u64); // Goerli genesis time + finalized header update time
 	let mock_pallet_time = import_time + 3600; // plus one hour
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {

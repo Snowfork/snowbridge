@@ -65,7 +65,7 @@ fn it_processes_a_finalized_header_update() {
 	);
 
 	let slot = update.finalized_header.slot;
-	let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT); // Goerli genesis time +
+	let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT as u64); // Goerli genesis time +
 	let mock_pallet_time = import_time + 3600; // plus one hour
 
 	new_tester::<mock_mainnet::Test>().execute_with(|| {
@@ -102,7 +102,7 @@ fn it_errors_when_weak_subjectivity_period_exceeded_for_a_finalized_header_updat
 	);
 
 	let slot = update.finalized_header.slot;
-	let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT);
+	let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT as u64);
 	let mock_pallet_time = import_time + 100800; // plus 28 hours
 
 	new_tester::<mock_mainnet::Test>().execute_with(|| {

@@ -33,6 +33,7 @@ primitives = { package = "snowbridge-beacon-primitives", path = "../../primitive
 static_assertions = { version = "1.1.0" }
 
 [dev-dependencies]
+rand = "0.8.5"
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 snowbridge-testutils = { path = "../../primitives/testutils" }

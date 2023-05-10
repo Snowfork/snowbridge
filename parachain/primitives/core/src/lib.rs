@@ -10,8 +10,10 @@ use frame_support::dispatch::DispatchError;
 use snowbridge_ethereum::{Header, Log, U256};
 use sp_std::prelude::*;
 
+pub mod ringbuffer;
 pub mod types;
 
+pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 pub use types::{Message, MessageId, MessageNonce, Proof};
 
 /// A trait for verifying messages.

@@ -72,6 +72,9 @@ pub mod mock_minimal {
 
 	parameter_types! {
 		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
+		pub const FinalizedHeaderPruneThreshold: u32 = 10;
+		pub const SyncCommitteePruneThreshold: u32 = 4;
+		pub const ExecutionHeadersPruneThreshold: u32 = 10;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
 				version: [0, 0, 0, 1], // 0x00000001
@@ -97,6 +100,9 @@ pub mod mock_minimal {
 		type RuntimeEvent = RuntimeEvent;
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
+		type MaxSyncCommitteesToKeep = SyncCommitteePruneThreshold;
+		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
+		type MaxFinalizedHeadersToKeep = FinalizedHeaderPruneThreshold;
 		type WeightInfo = ();
 	}
 }
@@ -178,13 +184,19 @@ pub mod mock_mainnet {
 				epoch: 162304,
 			},
 		};
+		pub const SyncCommitteePruneThreshold: u32 = 4;
+		pub const ExecutionHeadersPruneThreshold: u32 = 10;
+		pub const FinalizedHeaderPruneThreshold: u32 = 10;
 	}
 
 	impl ethereum_beacon_client::Config for Test {
 		type RuntimeEvent = RuntimeEvent;
 		type TimeProvider = pallet_timestamp::Pallet<Test>;
 		type ForkVersions = ChainForkVersions;
+		type MaxSyncCommitteesToKeep = SyncCommitteePruneThreshold;
+		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
+		type MaxFinalizedHeadersToKeep = FinalizedHeaderPruneThreshold;
 		type WeightInfo = ();
 	}
 }

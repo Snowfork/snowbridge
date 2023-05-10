@@ -9,25 +9,24 @@ pub use minimal::*;
 #[cfg(not(feature = "minimal"))]
 pub use mainnet::*;
 
-pub const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
-pub const NEXT_SYNC_COMMITTEE_INDEX: u64 = 23;
-pub const SYNC_COMMITTEE_DEPTH: u64 = 5;
+pub const CURRENT_SYNC_COMMITTEE_INDEX: usize = 22;
+pub const NEXT_SYNC_COMMITTEE_INDEX: usize = 23;
+pub const SYNC_COMMITTEE_DEPTH: usize = 5;
 
-pub const FINALIZED_ROOT_DEPTH: u64 = 6;
-pub const FINALIZED_ROOT_INDEX: u64 = 41;
+pub const FINALIZED_ROOT_DEPTH: usize = 6;
+pub const FINALIZED_ROOT_INDEX: usize = 41;
 
-pub const BLOCK_ROOTS_DEPTH: u64 = 5;
-pub const BLOCK_ROOTS_INDEX: u64 = 5;
+pub const BLOCK_ROOTS_DEPTH: usize = 5;
+pub const BLOCK_ROOTS_INDEX: usize = 5;
 
-pub const EXECUTION_HEADER_DEPTH: u64 = 4;
-pub const EXECUTION_HEADER_INDEX: u64 = 9;
+pub const EXECUTION_HEADER_DEPTH: usize = 4;
+pub const EXECUTION_HEADER_INDEX: usize = 9;
 
 pub const MAX_EXTRA_DATA_BYTES: usize = 32;
 pub const MAX_LOGS_BLOOM_SIZE: usize = 256;
 pub const MAX_FEE_RECIPIENT_SIZE: usize = 20;
 
-pub const MAX_FINALIZED_HEADER_SLOT_ARRAY: u32 = 1000;
-pub const MAX_BRANCH_PROOF_SIZE: u32 = 20;
+pub const MAX_BRANCH_PROOF_SIZE: usize = 20;
 
 /// DomainType('0x07000000')
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
