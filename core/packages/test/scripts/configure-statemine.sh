@@ -95,12 +95,11 @@ add_exporter_config() {
         }
       '
     )
-    bridged_network='Wococo'
 
     # Generate data for Transact (add_exporter_config)
     local bridge_config=$(jq --null-input \
                              --arg bridge_hub_para_id "$bridge_hub_para_id" \
-                             --arg ethereum_chain_id "$ethereum_chain_id" \
+                             --arg bridged_network "$bridged_network" \
         '
             {
                 "bridgeLocation": {
@@ -112,25 +111,9 @@ add_exporter_config() {
                 "allowedTargetLocation": {
                     "parents": 2,
                     "interior": {
-                        "X2": [
-                            {
-                                "GlobalConsensus": "Wococo",
-                            },
-                            {
-                                "Parachain": 1000
-                            }
-                        ]
-                    }
-                },
-                "maxTargetLocationFee": {
-                    "id": {
-                        "Concrete": {
-                            "parents": 1,
-                            "interior": "Here"
+                        "X1": {
+                            "GlobalConsensus": $bridged_network | fromjson,
                         }
-                    },
-                    "fun": {
-                        "Fungible": 50000000000
                     }
                 }
             }

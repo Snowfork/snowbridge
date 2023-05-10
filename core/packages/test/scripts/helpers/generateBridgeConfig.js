@@ -38,7 +38,7 @@ function addExporterConfig(endpoint, outputFile, bridgedNetwork, bridgeConfig) {
 	console.log(`Generating addExporterConfig from RPC endpoint: ${endpoint} to outputFile: ${outputFile} based on bridgedNetwork: ${bridgedNetwork}, bridgeConfig: ${bridgeConfig}`);
 	connect(endpoint)
 		.then((api) => {
-			const call = api.tx.bridgeTransfer.addExporterConfig(bridgedNetwork, JSON.parse(bridgeConfig));
+			const call = api.tx.bridgeTransfer.addExporterConfig(JSON.parse(bridgedNetwork), JSON.parse(bridgeConfig));
 			writeHexEncodedBytesToOutput(call.method, outputFile);
 			exit(0);
 		})
