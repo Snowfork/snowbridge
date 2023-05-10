@@ -100,9 +100,9 @@ pub mod mock_minimal {
 		type RuntimeEvent = RuntimeEvent;
 		type ForkVersions = ChainForkVersions;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
-		type SyncCommitteePruneThreshold = SyncCommitteePruneThreshold;
-		type ExecutionHeadersPruneThreshold = ExecutionHeadersPruneThreshold;
-		type FinalizedHeaderPruneThreshold = FinalizedHeaderPruneThreshold;
+		type MaxSyncCommitteesToKeep = SyncCommitteePruneThreshold;
+		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
+		type MaxFinalizedHeadersToKeep = FinalizedHeaderPruneThreshold;
 		type WeightInfo = ();
 	}
 }
@@ -193,10 +193,10 @@ pub mod mock_mainnet {
 		type RuntimeEvent = RuntimeEvent;
 		type TimeProvider = pallet_timestamp::Pallet<Test>;
 		type ForkVersions = ChainForkVersions;
-		type SyncCommitteePruneThreshold = SyncCommitteePruneThreshold;
-		type ExecutionHeadersPruneThreshold = ExecutionHeadersPruneThreshold;
+		type MaxSyncCommitteesToKeep = SyncCommitteePruneThreshold;
+		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
-		type FinalizedHeaderPruneThreshold = FinalizedHeaderPruneThreshold;
+		type MaxFinalizedHeadersToKeep = FinalizedHeaderPruneThreshold;
 		type WeightInfo = ();
 	}
 }

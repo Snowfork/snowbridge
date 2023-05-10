@@ -65,7 +65,7 @@ fn decompress_sync_committee_bits(
 /// ExecutionHeader ring buffer implementation
 pub(crate) type ExecutionHeaderBuffer<T> = RingBufferMapImpl<
 	u32,
-	<T as Config>::ExecutionHeadersPruneThreshold,
+	<T as Config>::MaxExecutionHeadersToKeep,
 	ExecutionHeaderIndex<T>,
 	ExecutionHeaderMapping<T>,
 	ExecutionHeaders<T>,
@@ -75,7 +75,7 @@ pub(crate) type ExecutionHeaderBuffer<T> = RingBufferMapImpl<
 /// Sync committee ring buffer implementation
 pub(crate) type SyncCommitteesBuffer<T> = RingBufferMapImpl<
 	u32,
-	<T as Config>::SyncCommitteePruneThreshold,
+	<T as Config>::MaxSyncCommitteesToKeep,
 	SyncCommitteesIndex<T>,
 	SyncCommitteesMapping<T>,
 	SyncCommittees<T>,
@@ -102,13 +102,13 @@ pub mod pallet {
 		type WeakSubjectivityPeriodSeconds: Get<u64>;
 		/// Maximum finalized headers
 		#[pallet::constant]
-		type FinalizedHeaderPruneThreshold: Get<u32>;
+		type MaxFinalizedHeadersToKeep: Get<u32>;
 		/// Maximum execution headers
 		#[pallet::constant]
-		type ExecutionHeadersPruneThreshold: Get<u32>;
+		type MaxExecutionHeadersToKeep: Get<u32>;
 		/// Maximum sync committees
 		#[pallet::constant]
-		type SyncCommitteePruneThreshold: Get<u32>;
+		type MaxSyncCommitteesToKeep: Get<u32>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -170,11 +170,8 @@ pub mod pallet {
 		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
 
 	#[pallet::storage]
-	pub(super) type FinalizedBeaconHeaderStates<T: Config> = StorageValue<
-		_,
-		BoundedVec<FinalizedHeaderState, T::FinalizedHeaderPruneThreshold>,
-		ValueQuery,
-	>;
+	pub(super) type FinalizedBeaconHeaderStates<T: Config> =
+		StorageValue<_, BoundedVec<FinalizedHeaderState, T::MaxFinalizedHeadersToKeep>, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
@@ -845,7 +842,7 @@ pub mod pallet {
 			finalized_header_state: FinalizedHeaderState,
 		) -> DispatchResult {
 			<FinalizedBeaconHeaderStates<T>>::try_mutate(|b_vec| {
-				if b_vec.len() as u32 == T::FinalizedHeaderPruneThreshold::get() {
+				if b_vec.len() as u32 == T::MaxFinalizedHeadersToKeep::get() {
 					let oldest = b_vec.remove(0);
 					// Removing corresponding finalized header data of popped slot
 					// as that data will not be used by relayer anyway.
