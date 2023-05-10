@@ -93,7 +93,7 @@ benchmarks! {
 	unblock_bridge {
 	}: _(RawOrigin::Root)
 	verify {
-		assert_eq!(<Blocked<T>>::get(),false);
+		assert!(!<Blocked<T>>::get());
 	}
 
 	bls_fast_aggregate_verify_pre_aggregated {
@@ -103,7 +103,7 @@ benchmarks! {
 		let agg_sig = prepare_aggregate_signature(&update.sync_aggregate.sync_committee_signature).unwrap();
 		let agg_pub_key = prepare_aggregate_pubkey(&participant_pubkeys).unwrap();
 	}:{
-		agg_sig.fast_aggregate_verify_pre_aggregated(&signing_root.as_bytes(), &agg_pub_key)
+		agg_sig.fast_aggregate_verify_pre_aggregated(signing_root.as_bytes(), &agg_pub_key)
 	}
 
 	bls_fast_aggregate_verify_legacy {

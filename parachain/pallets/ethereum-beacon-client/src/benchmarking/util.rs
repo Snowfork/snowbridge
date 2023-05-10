@@ -42,11 +42,11 @@ pub fn participant_pubkeys<T: Config>(
 	update: &SyncCommitteeUpdate,
 ) -> Result<Vec<PublicKeyPrepared>, &'static str> {
 	let sync_committee_bits =
-		decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone());
+		decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
 	let current_sync_committee = sync_committee::<T>(update)?;
 	let pubkeys = EthereumBeaconClient::<T>::find_pubkeys(
 		&sync_committee_bits,
-		&current_sync_committee.pubkeys.to_vec(),
+		&current_sync_committee.pubkeys.as_ref(),
 		true,
 	);
 	Ok(pubkeys)
@@ -56,11 +56,11 @@ pub fn absent_pubkeys<T: Config>(
 	update: &SyncCommitteeUpdate,
 ) -> Result<Vec<PublicKeyPrepared>, &'static str> {
 	let sync_committee_bits =
-		decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone());
+		decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
 	let current_sync_committee = sync_committee::<T>(update)?;
 	let pubkeys = EthereumBeaconClient::<T>::find_pubkeys(
 		&sync_committee_bits,
-		&current_sync_committee.pubkeys.to_vec(),
+		&current_sync_committee.pubkeys.as_ref(),
 		false,
 	);
 	Ok(pubkeys)
@@ -69,7 +69,7 @@ pub fn absent_pubkeys<T: Config>(
 pub fn signing_root<T: Config>(update: &SyncCommitteeUpdate) -> Result<H256, &'static str> {
 	let validators_root = <ValidatorsRoot<T>>::get();
 	let signing_root = EthereumBeaconClient::<T>::signing_root(
-		update.attested_header.clone(),
+		update.attested_header,
 		validators_root,
 		update.signature_slot,
 	)?;

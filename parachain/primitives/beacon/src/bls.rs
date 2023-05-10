@@ -20,7 +20,7 @@ pub enum BlsError {
 
 // legacy fast_aggregate_verify from all participant keys
 pub fn fast_aggregate_verify_legacy(
-	pubkeys: &Vec<PublicKeyPrepared>,
+	pubkeys: &[PublicKeyPrepared],
 	message: H256,
 	signature: &Signature,
 ) -> Result<(), BlsError> {

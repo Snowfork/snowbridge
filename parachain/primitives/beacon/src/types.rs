@@ -107,7 +107,7 @@ impl<'de> Deserialize<'de> for Signature {
 	}
 }
 
-#[derive(Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Copy, Clone, Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct ExecutionHeaderState {
 	pub beacon_block_root: H256,
 	pub beacon_slot: u64,
@@ -115,7 +115,7 @@ pub struct ExecutionHeaderState {
 	pub block_number: u64,
 }
 
-#[derive(Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Copy, Clone, Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct FinalizedHeaderState {
 	pub beacon_block_root: H256,
 	pub beacon_slot: u64,
@@ -202,7 +202,9 @@ impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
 
 /// Beacon block header as it is stored in the runtime storage. The block root is the
 /// Merklization of a BeaconHeader.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Copy, Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct BeaconHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined
@@ -220,7 +222,7 @@ pub struct BeaconHeader {
 
 impl BeaconHeader {
 	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
-		hash_tree_root::<SSZBeaconBlockHeader>(self.clone().into())
+		hash_tree_root::<SSZBeaconBlockHeader>((*self).into())
 	}
 }
 

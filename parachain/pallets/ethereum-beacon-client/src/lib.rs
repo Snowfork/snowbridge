@@ -19,12 +19,11 @@ mod tests_minimal;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-pub use weights::WeightInfo;
-
 use frame_support::{
 	dispatch::DispatchResult,
 	log,
-	traits::{ConstU32, Get, UnixTime},
+	pallet_prelude::OptionQuery,
+	traits::{Get, UnixTime},
 	transactional, BoundedVec,
 };
 use frame_system::ensure_signed;
@@ -33,9 +32,10 @@ use primitives::{
 	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
 	ForkVersions, PublicKeyPrepared, Signature, SigningData,
 };
-use snowbridge_core::{Message, Verifier};
+use snowbridge_core::{Message, RingBufferMap, RingBufferMapImpl, Verifier};
 use sp_core::H256;
 use sp_std::prelude::*;
+pub use weights::WeightInfo;
 
 use snowbridge_core::Proof;
 use snowbridge_ethereum::{Header as EthereumHeader, Log, Receipt};
@@ -43,10 +43,7 @@ use sp_core::U256;
 
 pub use pallet::*;
 
-pub use config::{
-	MAX_FINALIZED_HEADER_SLOT_ARRAY, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE,
-	SYNC_COMMITTEE_SIZE,
-};
+pub use config::{SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE};
 
 pub type InitialUpdate = primitives::InitialUpdate<SYNC_COMMITTEE_SIZE>;
 pub type HeaderUpdate = primitives::HeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
@@ -64,6 +61,26 @@ fn decompress_sync_committee_bits(
 		input,
 	)
 }
+
+/// ExecutionHeader ring buffer implementation
+pub(crate) type ExecutionHeaderBuffer<T> = RingBufferMapImpl<
+	u32,
+	<T as Config>::MaxExecutionHeadersToKeep,
+	ExecutionHeaderIndex<T>,
+	ExecutionHeaderMapping<T>,
+	ExecutionHeaders<T>,
+	OptionQuery,
+>;
+
+/// Sync committee ring buffer implementation
+pub(crate) type SyncCommitteesBuffer<T> = RingBufferMapImpl<
+	u32,
+	<T as Config>::MaxSyncCommitteesToKeep,
+	SyncCommitteesIndex<T>,
+	SyncCommitteesMapping<T>,
+	SyncCommittees<T>,
+	OptionQuery,
+>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -83,6 +100,15 @@ pub mod pallet {
 		type ForkVersions: Get<ForkVersions>;
 		#[pallet::constant]
 		type WeakSubjectivityPeriodSeconds: Get<u64>;
+		/// Maximum finalized headers
+		#[pallet::constant]
+		type MaxFinalizedHeadersToKeep: Get<u32>;
+		/// Maximum execution headers
+		#[pallet::constant]
+		type MaxExecutionHeadersToKeep: Get<u32>;
+		/// Maximum sync committees
+		#[pallet::constant]
+		type MaxSyncCommitteesToKeep: Get<u32>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -139,16 +165,13 @@ pub mod pallet {
 		BLSVerificationFailed(BlsError),
 	}
 
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
-
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeaders<T: Config> =
 		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
 
 	#[pallet::storage]
-	pub(super) type FinalizedBeaconHeaderSlots<T: Config> =
-		StorageValue<_, BoundedVec<u64, ConstU32<MAX_FINALIZED_HEADER_SLOT_ARRAY>>, ValueQuery>;
+	pub(super) type FinalizedBeaconHeaderStates<T: Config> =
+		StorageValue<_, BoundedVec<FinalizedHeaderState, T::MaxFinalizedHeadersToKeep>, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
@@ -179,16 +202,28 @@ pub mod pallet {
 	pub(super) type SyncCommittees<T: Config> =
 		StorageMap<_, Identity, u64, SyncCommitteePrepared, OptionQuery>;
 
+	/// Index storage for execution header
+	#[pallet::storage]
+	pub(crate) type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	/// Intermediate storage for execution header mapping
+	#[pallet::storage]
+	pub(crate) type ExecutionHeaderMapping<T: Config> =
+		StorageMap<_, Identity, u32, H256, ValueQuery>;
+
+	/// Index storage for sync committee ring buffer
+	#[pallet::storage]
+	pub(crate) type SyncCommitteesIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	/// Intermediate storage for sync committee mapping
+	#[pallet::storage]
+	pub(crate) type SyncCommitteesMapping<T: Config> =
+		StorageMap<_, Identity, u32, u64, ValueQuery>;
+
 	#[pallet::genesis_config]
+	#[derive(Default)]
 	pub struct GenesisConfig {
 		pub initial_sync: Option<InitialUpdate>,
-	}
-
-	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
-		fn default() -> Self {
-			GenesisConfig { initial_sync: None }
-		}
 	}
 
 	#[pallet::genesis_build]
@@ -352,18 +387,7 @@ pub mod pallet {
 
 			Self::store_sync_committee(period, &update.current_sync_committee)?;
 			Self::store_validators_root(update.validators_root);
-
-			let slot = update.header.slot;
-
-			let last_finalized_header = FinalizedHeaderState {
-				beacon_block_root: block_root,
-				beacon_slot: slot,
-				import_time: update.import_time,
-			};
-
-			<FinalizedBeaconHeaders<T>>::insert(block_root, update.header.clone());
-			Self::add_finalized_header_slot(slot)?;
-			<LatestFinalizedHeaderState<T>>::set(last_finalized_header);
+			Self::store_finalized_header(block_root, update.header, Some(update.import_time))?;
 
 			Ok(())
 		}
@@ -397,19 +421,17 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
-			let signature_slot_period = Self::compute_current_sync_period(update.signature_slot);
 			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"💫 latest committee period is: {}, attested_header period is: {}, signature_slot period is: {}",
+				"💫 latest committee period is: {}, attested_header period is: {}",
 				latest_committee_period,
 				current_period,
-				signature_slot_period
 			);
 
 			let next_period = current_period + 1;
 			ensure!(
-				!<SyncCommittees<T>>::contains_key(next_period),
+				!<SyncCommitteesBuffer<T>>::contains_key(next_period),
 				Error::<T>::InvalidSyncCommitteeUpdateWithDuplication
 			);
 			ensure!(
@@ -423,12 +445,12 @@ pub mod pallet {
 				&participation,
 				&update.sync_aggregate.sync_committee_signature,
 				&sync_committee,
-				update.attested_header.clone(),
+				update.attested_header,
 				validators_root,
 				update.signature_slot,
 			)?;
 			ensure!(
-				update.block_roots_branch.len() as u64 == config::BLOCK_ROOTS_DEPTH &&
+				update.block_roots_branch.len() == config::BLOCK_ROOTS_DEPTH &&
 					verify_merkle_proof(
 						update.block_roots_root,
 						&update.block_roots_branch,
@@ -440,7 +462,7 @@ pub mod pallet {
 
 			Self::store_block_root(update.block_roots_root, block_root);
 			Self::store_sync_committee(next_period, &update.next_sync_committee)?;
-			Self::store_finalized_header(block_root, update.finalized_header.clone())?;
+			Self::store_finalized_header(block_root, update.finalized_header, None)?;
 
 			Ok(())
 		}
@@ -515,7 +537,7 @@ pub mod pallet {
 			)?;
 
 			ensure!(
-				update.block_roots_branch.len() as u64 == config::BLOCK_ROOTS_DEPTH &&
+				update.block_roots_branch.len() == config::BLOCK_ROOTS_DEPTH &&
 					verify_merkle_proof(
 						update.block_roots_root,
 						&update.block_roots_branch,
@@ -527,7 +549,7 @@ pub mod pallet {
 
 			Self::store_block_root(update.block_roots_root, block_root);
 
-			Self::store_finalized_header(block_root, update.finalized_header)?;
+			Self::store_finalized_header(block_root, update.finalized_header, None)?;
 
 			Ok(())
 		}
@@ -557,7 +579,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 
 			ensure!(
-				update.execution_branch.len() as u64 == config::EXECUTION_HEADER_DEPTH &&
+				update.execution_branch.len() == config::EXECUTION_HEADER_DEPTH &&
 					verify_merkle_proof(
 						execution_root,
 						&update.execution_branch,
@@ -648,7 +670,7 @@ pub mod pallet {
 			}
 
 			let index_in_array = block_slot % (SLOTS_PER_HISTORICAL_ROOT as u64);
-			let leaf_index = (SLOTS_PER_HISTORICAL_ROOT as u64) + index_in_array;
+			let leaf_index = (SLOTS_PER_HISTORICAL_ROOT) + index_in_array as usize;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -656,7 +678,7 @@ pub mod pallet {
 			);
 
 			ensure!(
-				block_root_proof.len() as u64 == config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH &&
+				block_root_proof.len() == config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH &&
 					verify_merkle_proof(
 						beacon_block_root,
 						&block_root_proof,
@@ -727,14 +749,14 @@ pub mod pallet {
 			sync_committee: &SyncCommittee,
 			sync_committee_branch: &[H256],
 			header_state_root: H256,
-			index: u64,
+			index: usize,
 		) -> DispatchResult {
 			let sync_committee_root = sync_committee
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
 			ensure!(
-				sync_committee_branch.len() as u64 == config::SYNC_COMMITTEE_DEPTH &&
+				sync_committee_branch.len() == config::SYNC_COMMITTEE_DEPTH &&
 					verify_merkle_proof(
 						sync_committee_root,
 						sync_committee_branch,
@@ -751,10 +773,10 @@ pub mod pallet {
 			block_root: H256,
 			proof_branch: &[H256],
 			attested_header_state_root: H256,
-			index: u64,
+			index: usize,
 		) -> DispatchResult {
 			ensure!(
-				proof_branch.len() as u64 == config::FINALIZED_ROOT_DEPTH &&
+				proof_branch.len() == config::FINALIZED_ROOT_DEPTH &&
 					verify_merkle_proof(
 						block_root,
 						proof_branch,
@@ -766,10 +788,13 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn store_sync_committee(period: u64, sync_committee: &SyncCommittee) -> DispatchResult {
+		pub(crate) fn store_sync_committee(
+			period: u64,
+			sync_committee: &SyncCommittee,
+		) -> DispatchResult {
 			let prepare_sync_committee: SyncCommitteePrepared =
 				sync_committee.try_into().map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
-			<SyncCommittees<T>>::insert(period, prepare_sync_committee);
+			<SyncCommitteesBuffer<T>>::insert(period, prepare_sync_committee);
 
 			<LatestSyncCommitteePeriod<T>>::set(period);
 
@@ -783,11 +808,23 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn store_finalized_header(block_root: H256, header: BeaconHeader) -> DispatchResult {
+		fn store_finalized_header(
+			block_root: H256,
+			header: BeaconHeader,
+			last_import_time: Option<u64>,
+		) -> DispatchResult {
 			let slot = header.slot;
+			let import_time = last_import_time.unwrap_or_else(|| T::TimeProvider::now().as_secs());
+
+			let finalized_header = FinalizedHeaderState {
+				beacon_block_root: block_root,
+				beacon_slot: slot,
+				import_time,
+			};
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
-			Self::add_finalized_header_slot(slot)?;
+			LatestFinalizedHeaderState::<T>::set(finalized_header);
+			Self::add_finalized_header_state(finalized_header)?;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -796,55 +833,54 @@ pub mod pallet {
 				slot
 			);
 
-			LatestFinalizedHeaderState::<T>::mutate(|s| {
-				s.import_time = T::TimeProvider::now().as_secs();
-				s.beacon_block_root = block_root;
-				s.beacon_slot = slot;
-			});
-
 			Self::deposit_event(Event::BeaconHeaderImported { block_hash: block_root, slot });
 
 			Ok(())
 		}
 
-		fn add_finalized_header_slot(slot: u64) -> DispatchResult {
-			<FinalizedBeaconHeaderSlots<T>>::try_mutate(|b_vec| {
-				if b_vec.len() as u32 == MAX_FINALIZED_HEADER_SLOT_ARRAY {
-					b_vec.remove(0);
+		pub(super) fn add_finalized_header_state(
+			finalized_header_state: FinalizedHeaderState,
+		) -> DispatchResult {
+			<FinalizedBeaconHeaderStates<T>>::try_mutate(|b_vec| {
+				if b_vec.len() as u32 == T::MaxFinalizedHeadersToKeep::get() {
+					let oldest = b_vec.remove(0);
+					// Removing corresponding finalized header data of popped slot
+					// as that data will not be used by relayer anyway.
+					<FinalizedBeaconHeadersBlockRoot<T>>::remove(oldest.beacon_block_root);
+					<FinalizedBeaconHeaders<T>>::remove(oldest.beacon_block_root);
 				}
-				b_vec.try_push(slot)
+				b_vec.try_push(finalized_header_state)
 			})
 			.map_err(|_| <Error<T>>::FinalizedBeaconHeaderSlotsExceeded)?;
 
 			Ok(())
 		}
 
-		fn store_execution_header(
+		pub(crate) fn store_execution_header(
 			block_hash: H256,
 			header: CompactExecutionHeader,
 			beacon_slot: u64,
 			beacon_block_root: H256,
 		) {
-			<ExecutionHeaders<T>>::insert(block_hash, header.clone());
+			let block_number = header.block_number;
+
+			<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
 
 			log::trace!(
 				target: "ethereum-beacon-client",
 				"💫 Updated latest execution block at {} to number {}.",
 				block_hash,
-				header.block_number
+				block_number
 			);
 
 			LatestExecutionHeaderState::<T>::mutate(|s| {
 				s.beacon_block_root = beacon_block_root;
 				s.beacon_slot = beacon_slot;
 				s.block_hash = block_hash;
-				s.block_number = header.block_number;
+				s.block_number = block_number;
 			});
 
-			Self::deposit_event(Event::ExecutionHeaderImported {
-				block_hash,
-				block_number: header.block_number,
-			});
+			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
 		}
 
 		fn store_validators_root(validators_root: H256) {
@@ -857,12 +893,13 @@ pub mod pallet {
 		///
 		/// let sync_committee_bits = vec![0, 1, 0, 1, 1, 1];
 		/// ensure!(get_sync_committee_sum(sync_committee_bits), 4);
-		pub(super) fn get_sync_committee_sum(sync_committee_bits: &[u8]) -> u64 {
-			sync_committee_bits.iter().fold(0, |acc: u64, x| acc + *x as u64)
+		pub(super) fn get_sync_committee_sum(sync_committee_bits: &[u8]) -> u32 {
+			sync_committee_bits.iter().fold(0, |acc: u32, x| acc + *x as u32)
 		}
 
 		pub(super) fn compute_current_sync_period(slot: u64) -> u64 {
-			slot / config::SLOTS_PER_EPOCH / config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+			(slot as usize / config::SLOTS_PER_EPOCH / config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+				as u64
 		}
 
 		/// Return the domain for the domain_type and fork_version.
@@ -900,7 +937,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits);
 			ensure!(
-				(sync_committee_sum * 3 >= sync_committee_bits.len() as u64 * 2),
+				((sync_committee_sum * 3) as usize) >= sync_committee_bits.len() * 2,
 				Error::<T>::SyncCommitteeParticipantsNotSupermajority
 			);
 
@@ -910,7 +947,7 @@ pub mod pallet {
 		pub(super) fn sync_committee_for_period(
 			period: u64,
 		) -> Result<SyncCommitteePrepared, DispatchError> {
-			<SyncCommittees<T>>::get(period).ok_or(Error::<T>::SyncCommitteeMissing.into())
+			<SyncCommitteesBuffer<T>>::get(period).ok_or(Error::<T>::SyncCommitteeMissing.into())
 		}
 
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
@@ -983,7 +1020,7 @@ pub mod pallet {
 			let mut pubkeys: Vec<PublicKeyPrepared> = Vec::new();
 			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
 				if *bit == u8::from(participant) {
-					pubkeys.push(pubkey.clone());
+					pubkeys.push(*pubkey);
 				}
 			}
 			pubkeys
@@ -997,7 +1034,7 @@ pub mod pallet {
 		) -> Result<H256, DispatchError> {
 			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(
 				signature_slot,
-				config::SLOTS_PER_EPOCH,
+				config::SLOTS_PER_EPOCH as u64,
 			));
 			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
 			// Domains are used for for seeds, for signatures, and for selecting aggregators.
@@ -1018,7 +1055,7 @@ pub mod pallet {
 				message.proof.block_hash,
 			);
 
-			let header = <ExecutionHeaders<T>>::get(message.proof.block_hash)
+			let header = <ExecutionHeaderBuffer<T>>::get(message.proof.block_hash)
 				.ok_or(Error::<T>::MissingHeader)?;
 
 			let receipt = match Self::verify_receipt_inclusion(header.receipts_root, &message.proof)
