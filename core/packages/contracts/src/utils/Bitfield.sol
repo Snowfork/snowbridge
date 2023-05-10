@@ -20,14 +20,14 @@ library Bitfield {
     uint256 internal constant ONE = uint256(1);
 
     /**
-     * @notice Draws a random number, derives an index in the bitfield, and sets the bit if it is in the `prior` and not
+     * @notice Core subsampling algorithm. Draws a random number, derives an index in the bitfield, and sets the bit if it is in the `prior` and not
      * yet set. Repeats that `n` times.
      * @param seed Source of randomness for selecting validator signatures.
      * @param prior Bitfield indicating which validators claim to have signed the commitment.
      * @param n Number of unique bits in prior that must be set in the result. Must be <= number of set bits in `prior`.
      * @param length Length of the bitfield prior to draw bits from. Must be <= prior.length * 256.
      */
-    function randomNBitsWithPriorCheck(uint256 seed, uint256[] memory prior, uint256 n, uint256 length)
+    function subsample(uint256 seed, uint256[] memory prior, uint256 n, uint256 length)
         internal
         pure
         returns (uint256[] memory bitfield)
@@ -38,17 +38,15 @@ library Bitfield {
         for (uint256 i = 0; found < n;) {
             uint256 index = makeIndex(seed, i, length);
 
-            (uint256 element, uint8 within) = toLocation(index);
-
             // require randomly selected bit to be set in prior and not yet set in bitfield
-            if (isNotSetInAOrIsSetInB(prior, bitfield, element, within)) {
+            if (!isSet(prior, index) || isSet(bitfield, index)) {
                 unchecked {
                     i++;
                 }
                 continue;
             }
 
-            set(bitfield, element, within);
+            set(bitfield, index);
 
             unchecked {
                 found++;
@@ -73,8 +71,7 @@ library Bitfield {
         bitfield = new uint256[](arrayLength);
 
         for (uint256 i = 0; i < bitsToSet.length; i++) {
-            (uint256 element, uint8 within) = toLocation(bitsToSet[i]);
-            set(bitfield, element, within);
+            set(bitfield, bitsToSet[i]);
         }
 
         return bitfield;
@@ -86,48 +83,39 @@ library Bitfield {
      * Further improvements are possible, see the article above.
      */
     function countSetBits(uint256[] memory self) public pure returns (uint256) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < self.length; i++) {
-            uint256 x = self[i];
-
-            x = (x & M1) + ((x >> 1) & M1); //put count of each  2 bits into those  2 bits
-            x = (x & M2) + ((x >> 2) & M2); //put count of each  4 bits into those  4 bits
-            x = (x & M4) + ((x >> 4) & M4); //put count of each  8 bits into those  8 bits
-            x = (x & M8) + ((x >> 8) & M8); //put count of each 16 bits into those 16 bits
-            x = (x & M16) + ((x >> 16) & M16); //put count of each 32 bits into those 32 bits
-            x = (x & M32) + ((x >> 32) & M32); //put count of each 64 bits into those 64 bits
-            x = (x & M64) + ((x >> 64) & M64); //put count of each 128 bits into those 128 bits
-            x = (x & M128) + ((x >> 128) & M128); //put count of each 256 bits into those 256 bits
-            count += x;
-        }
-        return count;
-    }
-
-    function toLocation(uint256 index) internal pure returns (uint256, uint8) {
         unchecked {
-            uint256 element = index / 256;
-            uint8 within = uint8(index % 256);
-            return (element, within);
+            uint256 count = 0;
+            for (uint256 i = 0; i < self.length; i++) {
+                uint256 x = self[i];
+                x = (x & M1) + ((x >> 1) & M1); //put count of each  2 bits into those  2 bits
+                x = (x & M2) + ((x >> 2) & M2); //put count of each  4 bits into those  4 bits
+                x = (x & M4) + ((x >> 4) & M4); //put count of each  8 bits into those  8 bits
+                x = (x & M8) + ((x >> 8) & M8); //put count of each 16 bits into those 16 bits
+                x = (x & M16) + ((x >> 16) & M16); //put count of each 32 bits into those 32 bits
+                x = (x & M32) + ((x >> 32) & M32); //put count of each 64 bits into those 64 bits
+                x = (x & M64) + ((x >> 64) & M64); //put count of each 128 bits into those 128 bits
+                x = (x & M128) + ((x >> 128) & M128); //put count of each 256 bits into those 256 bits
+                count += x;
+            }
+            return count;
         }
     }
 
-    function isSet(uint256[] memory self, uint256 element, uint8 within) internal pure returns (bool) {
+    function isSet(uint256[] memory self, uint256 index) internal pure returns (bool) {
+        uint256 element = index >> 8;
+        uint8 within = uint8(index & 0xFF);
         return Bits.bit(self[element], within) == 1;
     }
 
-    function isNotSetInAOrIsSetInB(uint256[] memory a, uint256[] memory b, uint256 element, uint8 within)
-        internal
-        pure
-        returns (bool)
-    {
-        return Bits.bit(a[element], within) == 0 || Bits.bit(b[element], within) == 1;
-    }
-
-    function set(uint256[] memory self, uint256 element, uint8 within) internal pure {
+    function set(uint256[] memory self, uint256 index) internal pure {
+        uint256 element = index >> 8;
+        uint8 within = uint8(index & 0xFF);
         self[element] = Bits.setBit(self[element], within);
     }
 
-    function clear(uint256[] memory self, uint256 element, uint8 within) internal pure {
+    function unset(uint256[] memory self, uint256 index) internal pure {
+        uint256 element = index >> 8;
+        uint8 within = uint8(index & 0xFF);
         self[element] = Bits.clearBit(self[element], within);
     }
 
