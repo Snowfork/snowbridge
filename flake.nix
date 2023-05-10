@@ -2,7 +2,7 @@
     description = "Snowbridge flake";
 
     inputs = {
-        nixpkgs.url = "nixpkgs/nixos-22.11";
+        nixpkgs.url = "nixpkgs/nixos-unstable";
         rust-overlay.url = "github:oxalica/rust-overlay";
         flake-utils.url  = "github:numtide/flake-utils";
         foundry.url = "github:shazow/foundry.nix/monthly";
@@ -40,6 +40,7 @@
 
                     # ethereum
                     foundry-bin
+                    go-ethereum
                     # gnupg for forge install
                     gnupg
 
