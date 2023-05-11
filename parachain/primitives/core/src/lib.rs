@@ -14,8 +14,8 @@ use sp_std::prelude::*;
 pub mod ringbuffer;
 pub mod types;
 
-pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 pub use polkadot_parachain::primitives::Id as ParaId;
+pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 pub use types::{Message, MessageId, MessageNonce, Proof};
 
 /// A trait for verifying messages.
