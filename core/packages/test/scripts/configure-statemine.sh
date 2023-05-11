@@ -120,7 +120,7 @@ add_exporter_config() {
         '
     )
     local tmp_output_file=$(mktemp)
-    node scripts/helpers/generateBridgeConfig.js \
+    node scripts/helpers/generateHexEncodedCallData.js \
       "add-exporter-config" \
       "$statemine_para_endpoint" \
       "$tmp_output_file" \
