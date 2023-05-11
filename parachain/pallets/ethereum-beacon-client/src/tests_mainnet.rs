@@ -18,7 +18,7 @@ fn it_syncs_from_an_initial_checkpoint() {
 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 
 	new_tester::<mock_mainnet::Test>().execute_with(|| {
-		assert_ok!(mock_mainnet::EthereumBeaconClient::initial_sync(&initial_sync));
+		assert_ok!(mock_mainnet::EthereumBeaconClient::process_checkpoint_update(&initial_sync));
 
 		let block_root: H256 = initial_sync.header.hash_tree_root().unwrap();
 

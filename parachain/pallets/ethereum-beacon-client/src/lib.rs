@@ -45,8 +45,9 @@ pub use pallet::*;
 
 pub use config::{SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE};
 
-pub type InitialUpdate = primitives::InitialUpdate<SYNC_COMMITTEE_SIZE>;
-pub type HeaderUpdate = primitives::HeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
+pub type CheckPointUpdate = primitives::CheckPointUpdate<SYNC_COMMITTEE_SIZE>;
+pub type ExecutionHeaderUpdate =
+	primitives::ExecutionHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type SyncCommitteeUpdate =
 	primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type FinalizedHeaderUpdate =
@@ -223,7 +224,7 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	#[derive(Default)]
 	pub struct GenesisConfig {
-		pub initial_sync: Option<InitialUpdate>,
+		pub initial_checkpoint: Option<CheckPointUpdate>,
 	}
 
 	#[pallet::genesis_build]
@@ -235,8 +236,8 @@ pub mod pallet {
 				SYNC_COMMITTEE_SIZE
 			);
 
-			if let Some(initial_sync) = self.initial_sync.clone() {
-				Pallet::<T>::initial_sync(&initial_sync).unwrap();
+			if let Some(checkpoint) = self.initial_checkpoint.clone() {
+				Pallet::<T>::checkpoint_sync(&checkpoint).unwrap();
 			}
 		}
 	}
@@ -321,7 +322,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
-			update: HeaderUpdate,
+			update: ExecutionHeaderUpdate,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -356,9 +357,9 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::unblock_bridge())]
+		#[pallet::weight(T::WeightInfo::activate_bridge())]
 		#[transactional]
-		pub fn unblock_bridge(origin: OriginFor<T>) -> DispatchResult {
+		pub fn activate_bridge(origin: OriginFor<T>) -> DispatchResult {
 			ensure_root(origin)?;
 
 			<Blocked<T>>::set(false);
@@ -367,10 +368,50 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::call_index(4)]
+		#[pallet::weight(T::WeightInfo::deactivate_bridge())]
+		#[transactional]
+		pub fn deactivate_bridge(origin: OriginFor<T>) -> DispatchResult {
+			ensure_root(origin)?;
+
+			<Blocked<T>>::set(true);
+
+			log::info!(target: "ethereum-beacon-client","💫 syncing bridge from governance provided checkpoint.");
+
+			Ok(())
+		}
+
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::check_point_update())]
+		#[transactional]
+		pub fn check_point_update(
+			origin: OriginFor<T>,
+			update: CheckPointUpdate,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			if let Err(err) = Self::process_checkpoint_update(&update) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"💫 Sync committee period update failed with error {:?}",
+					err
+				);
+				return Err(err)
+			}
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Sync committee period update for slot {} succeeded.",
+				update.header.slot
+			);
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn process_initial_sync(update: &InitialUpdate) -> DispatchResult {
+		pub fn process_checkpoint_update(update: &CheckPointUpdate) -> DispatchResult {
 			Self::verify_sync_committee(
 				&update.current_sync_committee,
 				&update.current_sync_committee_branch,
@@ -561,7 +602,7 @@ pub mod pallet {
 			);
 		}
 
-		fn process_header(update: HeaderUpdate) -> DispatchResult {
+		fn process_header(update: ExecutionHeaderUpdate) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
 			let block_slot = update.beacon_header.slot;
@@ -966,16 +1007,16 @@ pub mod pallet {
 			fork_versions.genesis.version
 		}
 
-		pub(super) fn initial_sync(update: &InitialUpdate) -> Result<(), &'static str> {
+		pub(super) fn checkpoint_sync(update: &CheckPointUpdate) -> Result<(), &'static str> {
 			log::info!(
 				target: "ethereum-beacon-client",
-				"💫 Received initial sync, starting processing.",
+				"💫 Received checkpoint sync, starting processing.",
 			);
 
-			if let Err(err) = Self::process_initial_sync(update) {
+			if let Err(err) = Self::process_checkpoint_update(update) {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"Initial sync failed with error {:?}",
+					"Checkpoint sync failed with error {:?}",
 					err
 				);
 				return Err(<&str>::from(err))
@@ -983,7 +1024,7 @@ pub mod pallet {
 
 			log::info!(
 				target: "ethereum-beacon-client",
-				"💫 Initial sync processing succeeded.",
+				"💫 Checkpoint sync processing succeeded.",
 			);
 
 			Ok(())

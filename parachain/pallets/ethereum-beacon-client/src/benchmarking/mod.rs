@@ -31,7 +31,7 @@ benchmarks! {
 
 		let initial_sync_data = initial_sync();
 
-		EthereumBeaconClient::<T>::initial_sync(&initial_sync_data)?;
+		EthereumBeaconClient::<T>::checkpoint_sync(&initial_sync_data)?;
 
 		let finalized_header_update = finalized_header_update();
 
@@ -60,7 +60,7 @@ benchmarks! {
 
 		let initial_sync_data = initial_sync();
 
-		EthereumBeaconClient::<T>::initial_sync(&initial_sync_data)?;
+		EthereumBeaconClient::<T>::checkpoint_sync(&initial_sync_data)?;
 
 		let header_update = header_update();
 
@@ -90,10 +90,16 @@ benchmarks! {
 		assert!(<ExecutionHeaders<T>>::contains_key(header_update.execution_header.block_hash))
 	}
 
-	unblock_bridge {
+	activate_bridge {
 	}: _(RawOrigin::Root)
 	verify {
 		assert!(!<Blocked<T>>::get());
+	}
+
+	deactivate_bridge {
+	}: _(RawOrigin::Root)
+	verify {
+		assert!(<Blocked<T>>::get());
 	}
 
 	bls_fast_aggregate_verify_pre_aggregated {

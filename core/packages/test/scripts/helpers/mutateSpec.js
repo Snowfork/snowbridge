@@ -23,8 +23,8 @@ function run() {
     let contracts = JSON.parse(fs.readFileSync(process.argv[2]));
     let initialSync = JSON.parse(fs.readFileSync(process.argv[3]));
 
-    data['genesis']['runtime']['ethereumBeaconClient']['initialSync'] = initialSync;
-    data['genesis']['runtime']['ethereumBeaconClient']['initialSync']['import_time'] = getTimestampInSeconds()
+    data['genesis']['runtime']['ethereumBeaconClient']['initialCheckpoint'] = initialSync;
+    data['genesis']['runtime']['ethereumBeaconClient']['initialCheckpoint']['import_time'] = getTimestampInSeconds()
 
     data['genesis']['runtime']['ethereumInboundQueue']['allowlist'] = [contracts['contracts']['OutboundQueue']['address']];
 

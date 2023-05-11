@@ -37,6 +37,28 @@ func generateBeaconDataCmd() *cobra.Command {
 	return cmd
 }
 
+func generateBeaconCheckPointCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "generate-beacon-checkpoint",
+		Short: "Generate beacon checkpoint.",
+		Args:  cobra.ExactArgs(0),
+		RunE:  generateBeaconCheckPoint,
+	}
+
+	cmd.Flags().String("spec", "", "Valid values are mainnet or minimal")
+	err := cmd.MarkFlagRequired("spec")
+	if err != nil {
+		return nil
+	}
+
+	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	if err != nil {
+		return nil
+	}
+
+	return cmd
+}
+
 type Data struct {
 	InitialSync           beaconjson.InitialSync
 	SyncCommitteeUpdate   beaconjson.SyncCommitteeUpdate
@@ -49,6 +71,56 @@ const (
 	pathToBenchmarkDataTemplate  = "parachain/templates/beacon_benchmarking_data.rs.mustache"
 	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
 )
+
+func generateBeaconCheckPoint(cmd *cobra.Command, _ []string) error {
+	err := func() error {
+		spec, err := cmd.Flags().GetString("spec")
+		if err != nil {
+			return fmt.Errorf("get active spec: %w", err)
+		}
+
+		activeSpec, err := config.ToSpec(spec)
+		if err != nil {
+			return fmt.Errorf("get spec: %w", err)
+		}
+
+		endpoint, err := cmd.Flags().GetString("url")
+
+		viper.SetConfigFile("core/packages/test/config/beacon-relay.json")
+		if err := viper.ReadInConfig(); err != nil {
+			return err
+		}
+
+		var conf config.Config
+		err = viper.Unmarshal(&conf)
+		if err != nil {
+			return err
+		}
+
+		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
+
+		log.WithFields(log.Fields{"spec": activeSpec, "endpoint": endpoint}).Info("connecting to beacon API")
+
+		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
+
+		initialSyncScale, err := s.GetInitialSync()
+		if err != nil {
+			return fmt.Errorf("get initial sync: %w", err)
+		}
+		initialSync := initialSyncScale.ToJSON()
+		err = writeJSONToFile(initialSync, activeSpec.ToString()+"_checkpoint")
+		if err != nil {
+			return fmt.Errorf("write initial sync to file: %w", err)
+		}
+		log.Info("created initial sync file")
+		return nil
+	}()
+	if err != nil {
+		log.WithError(err).Error("error generating beacon checkpoint")
+	}
+
+	return nil
+}
 
 func generateBeaconData(cmd *cobra.Command, _ []string) error {
 	err := func() error {

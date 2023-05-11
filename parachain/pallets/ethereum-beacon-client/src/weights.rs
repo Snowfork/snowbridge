@@ -36,7 +36,9 @@ pub trait WeightInfo {
 	fn sync_committee_period_update() -> Weight;
 	fn import_finalized_header() -> Weight;
 	fn import_execution_header() -> Weight;
-	fn unblock_bridge() -> Weight;
+	fn activate_bridge() -> Weight;
+	fn deactivate_bridge() -> Weight;
+	fn check_point_update() -> Weight;
 	fn bls_fast_aggregate_verify_pre_aggregated() -> Weight;
 	fn bls_fast_aggregate_verify() -> Weight;
 	fn bls_fast_aggregate_verify_legacy() -> Weight;
@@ -59,9 +61,18 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(3))
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
-	fn unblock_bridge() -> Weight {
+	fn activate_bridge() -> Weight {
 		Weight::from_parts(13_941_000, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn deactivate_bridge() -> Weight {
+		Weight::from_parts(13_941_000, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	fn check_point_update() -> Weight {
+		Weight::from_parts(175_039_777_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
 	}
 	fn bls_fast_aggregate_verify_pre_aggregated() -> Weight {
 		Weight::from_parts(28_368_043_000, 0)
