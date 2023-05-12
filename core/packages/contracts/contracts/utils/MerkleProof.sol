@@ -58,33 +58,40 @@ library MerkleProof {
 
         require(pos < width, "Merkle position is too high");
 
-        uint256 i = 0;
-        for (uint256 height = 0; width > 1; height++) {
-            bool computedHashLeft = pos % 2 == 0;
+        unchecked {
+            uint256 i = 0;
+            for (uint256 height = 0; width > 1; height++) {
+                bool computedHashLeft = pos & 1 == 0;
 
-            // check if at rightmost branch and whether the computedHash is left
-            if (pos + 1 == width && computedHashLeft) {
-                // there is no sibling and also no element in proofs, so we just go up one layer in the tree
-                pos /= 2;
-                width = ((width - 1) / 2) + 1;
-                continue;
+                // check if at rightmost branch and whether the computedHash is left
+                if (pos + 1 == width && computedHashLeft) {
+                    // there is no sibling and also no element in proofs, so we just go up one layer in the tree
+                    pos = pos >> 1;
+                    width = ((width - 1) >> 1) + 1;
+                    continue;
+                }
+
+                if (computedHashLeft) {
+                    computedHash = _efficientHash(computedHash, proof[i]);
+                } else {
+                    computedHash = _efficientHash(proof[i], computedHash);
+                }
+
+                pos = pos >> 1;
+                width = ((width - 1) >> 1) + 1;
+                i++;
             }
 
-            require(i < proof.length, "Merkle proof is too short");
-
-            bytes32 proofElement = proof[i];
-
-            if (computedHashLeft) {
-                computedHash = keccak256(abi.encodePacked(computedHash, proofElement));
-            } else {
-                computedHash = keccak256(abi.encodePacked(proofElement, computedHash));
-            }
-
-            pos /= 2;
-            width = ((width - 1) / 2) + 1;
-            i++;
+            return computedHash;
         }
+    }
 
-        return computedHash;
+    function _efficientHash(bytes32 a, bytes32 b) private pure returns (bytes32 value) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            mstore(0x00, a)
+            mstore(0x20, b)
+            value := keccak256(0x00, 0x40)
+        }
     }
 }

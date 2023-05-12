@@ -7,6 +7,7 @@ import "./utils/Bitfield.sol";
 import "./utils/MMRProof.sol";
 import "./ScaleCodec.sol";
 import "./utils/MerkleProof.sol";
+import "hardhat/console.sol";
 
 /**
  * @title BeefyClient
@@ -516,9 +517,10 @@ contract BeefyClient is Ownable {
         address addr,
         uint256 index,
         bytes32[] calldata proof
-    ) internal pure returns (bool) {
+    ) internal view returns (bool) {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
-        return
+        uint256 foo = gasleft();
+        bool res =
             MerkleProof.verifyMerkleLeafAtPosition(
                 vset.root,
                 hashedLeaf,
@@ -526,6 +528,9 @@ contract BeefyClient is Ownable {
                 vset.length,
                 proof
             );
+        uint256 bar = gasleft();
+        console.log("GAS %d", foo - bar);
+        return res;
     }
 
     /**
