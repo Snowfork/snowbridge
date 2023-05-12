@@ -11,7 +11,7 @@ function generate_hex_encoded_call_data() {
     shift
     echo "Input params: $@"
 
-    node ../../../cumulus/scripts/generate_hex_ "$type" "$endpoint" "$output" "$@"
+    node scripts/helpers/generateHexEncodedCallData.js "$type" "$endpoint" "$output" "$@"
     local retVal=$?
 
     if [ $type != "check" ]; then
