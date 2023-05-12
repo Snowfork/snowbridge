@@ -11,7 +11,7 @@ function generate_hex_encoded_call_data() {
     shift
     echo "Input params: $@"
 
-    node ./scripts/helpers/generateHexEncodedCallData.js "$type" "$endpoint" "$output" "$@"
+    node ../../../cumulus/scripts/generate_hex_ "$type" "$endpoint" "$output" "$@"
     local retVal=$?
 
     if [ $type != "check" ]; then
@@ -115,7 +115,6 @@ function add_exporter_config() {
         }
       '
     )
-    bridged_network='{ "Wococo": "Null" }'
     # Generate data for Transact (add_exporter_config)
     local bridge_config=$(jq --null-input \
                              --arg bridge_hub_para_id "$bridge_hub_para_id" \
