@@ -2,7 +2,27 @@
 
 set -eu
 
-send_governance_transact() {
+function generate_hex_encoded_call_data() {
+    local type=$1
+    local endpoint=$2
+    local output=$3
+    shift
+    shift
+    shift
+    echo "Input params: $@"
+
+    node ./scripts/helpers/generateHexEncodedCallData.js "$type" "$endpoint" "$output" "$@"
+    local retVal=$?
+
+    if [ $type != "check" ]; then
+        local hex_encoded_data=$(cat $output)
+        echo "Generated hex-encoded bytes to file '$output': $hex_encoded_data"
+    fi
+
+    return $retVal
+}
+
+function send_governance_transact() {
     local relay_url=$1
     local relay_chain_seed=$2
     local para_id=$3
@@ -68,7 +88,7 @@ send_governance_transact() {
             "${message}"
 }
 
-add_exporter_config() {
+function add_exporter_config() {
     local relay_url=$1
     local relay_chain_seed=$2
     local statemine_para_id=$3
@@ -95,7 +115,7 @@ add_exporter_config() {
         }
       '
     )
-
+    bridged_network='{ "Wococo": "Null" }'
     # Generate data for Transact (add_exporter_config)
     local bridge_config=$(jq --null-input \
                              --arg bridge_hub_para_id "$bridge_hub_para_id" \
@@ -120,7 +140,7 @@ add_exporter_config() {
         '
     )
     local tmp_output_file=$(mktemp)
-    node scripts/helpers/generateHexEncodedCallData.js \
+    generate_hex_encoded_call_data \
       "add-exporter-config" \
       "$statemine_para_endpoint" \
       "$tmp_output_file" \
