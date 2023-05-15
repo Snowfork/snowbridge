@@ -6,7 +6,7 @@ source scripts/set-env.sh
 config_beacon_checkpoint()
 {
     check_point_call=$($relay_bin generate-beacon-checkpoint --spec $active_spec --url $beacon_endpoint_http)
-    send_governance_transact $relay_url $sudo_seed $bridge_hub_para_id "$check_point_call" 180000000000 900000
+    send_governance_transact $relaychain_ws_url $relaychain_sudo_seed $bridgehub_para_id "$check_point_call" 180000000000 900000
 }
 
 config_beacon_relayer()

@@ -28,6 +28,7 @@ eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
 eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
 eth_gas_limit="${ETH_GAS_LIMIT:-5000000}"
+eth_chain_id=1
 
 beefy_state_file="${BEEFY_STATE_FILE:-$output_dir/beefy-state.json}"
 beefy_start_block="${BEEFY_START_BLOCK:-12}"
@@ -43,14 +44,15 @@ basic_parachain_account_ids="${BASIC_PARACHAIN_ACCOUNT_IDS:-0xd43593c715fdd31c61
 basic_eth_addresses="${BASIC_ETH_ADDRESSES:-0x89b4ab1ef20763630df9743acf155865600daff2}"
 beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 
-# Config for xcm tests
-sudo_seed="${SEED:-//Alice}"
-relay_url="${RELAY_WS_URL:-ws://127.0.0.1:9944}"
-bridge_hub_ws_url="${BRIDGE_HUB_WS_URL:-ws://127.0.0.1:11144}"
-bridge_hub_para_id="${BRIDGE_HUB_PARA_ID:-1013}"
+# Local substrate chain endpoints
+bridgehub_ws_url="${BRIDGEHUB_WS_URL:-ws://127.0.0.1:11144}"
+bridgehub_para_id="${BRIDGEHUB_PARA_ID:-1013}"
 
 statemine_ws_url="${STATEMINE_WS_URL:-ws://127.0.0.1:12144}"
 statemine_para_id="${STATEMINE_PARA_ID:-1000}"
+
+relaychain_ws_url="${RELAYCHAIN_WS_URL:-ws://127.0.0.1:9944}"
+relaychain_sudo_seed="${RELAYCHAIN_SUDO_SEED:-//Alice}"
 
 # Config for deploying contracts
 
@@ -62,7 +64,7 @@ export RANDAO_COMMIT_DELAY=3
 export RANDAO_COMMIT_EXP=8
 
 ## ParachainClient
-export BRIDGE_HUB_PARAID=1001
+export BRIDGE_HUB_PARAID=$bridgehub_para_id
 
 ## OutboundChannel
 export RELAYER_FEE=100
