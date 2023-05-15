@@ -32,7 +32,7 @@ configure_beefy
 source scripts/configure-beacon.sh
 configure_beacon
 
-# 4. start relayer
+# 5. start relayer
 echo "Starting relayers"
 source scripts/start-relayer.sh
 start_relayer

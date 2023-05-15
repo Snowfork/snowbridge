@@ -31,7 +31,7 @@ eth_gas_limit="${ETH_GAS_LIMIT:-5000000}"
 eth_chain_id=1
 
 beefy_state_file="${BEEFY_STATE_FILE:-$output_dir/beefy-state.json}"
-beefy_start_block="${BEEFY_START_BLOCK:-12}"
+beefy_start_block="${BEEFY_START_BLOCK:-10}"
 
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
@@ -47,9 +47,11 @@ beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 # Local substrate chain endpoints
 bridgehub_ws_url="${BRIDGEHUB_WS_URL:-ws://127.0.0.1:11144}"
 bridgehub_para_id="${BRIDGEHUB_PARA_ID:-1013}"
+bridgehub_seed="${BRIDGEHUB_SEED:-//Alice}"
 
 statemine_ws_url="${STATEMINE_WS_URL:-ws://127.0.0.1:12144}"
 statemine_para_id="${STATEMINE_PARA_ID:-1000}"
+statemine_seed="${STATEMINE_SEED:-//Alice}"
 
 relaychain_ws_url="${RELAYCHAIN_WS_URL:-ws://127.0.0.1:9944}"
 relaychain_sudo_seed="${RELAYCHAIN_SUDO_SEED:-//Alice}"
