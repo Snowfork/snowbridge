@@ -8,3 +8,8 @@ echo "Install husky hook"
 
 echo "Initialize foundry libraries"
 (cd packages/contracts && (forge install||true))
+
+echo "Hack lodestar for faster slot time"
+source packages/test/scripts/set-env.sh
+preset_minimal_config_file="./node_modules/.pnpm/@lodestar+config@$lodestar_version/node_modules/@lodestar/config/lib/chainConfig/presets/minimal.js"
+sed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
