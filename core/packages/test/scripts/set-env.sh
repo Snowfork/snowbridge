@@ -43,6 +43,15 @@ basic_parachain_account_ids="${BASIC_PARACHAIN_ACCOUNT_IDS:-0xd43593c715fdd31c61
 basic_eth_addresses="${BASIC_ETH_ADDRESSES:-0x89b4ab1ef20763630df9743acf155865600daff2}"
 beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 
+# Config for xcm tests
+sudo_seed="${SEED:-//Alice}"
+relay_url="${RELAY_WS_URL:-ws://127.0.0.1:9944}"
+bridge_hub_ws_url="${BRIDGE_HUB_WS_URL:-ws://127.0.0.1:11144}"
+bridge_hub_para_id="${BRIDGE_HUB_PARA_ID:-1013}"
+
+statemine_ws_url="${STATEMINE_WS_URL:-ws://127.0.0.1:12144}"
+statemine_para_id="${STATEMINE_PARA_ID:-1000}"
+
 # Config for deploying contracts
 
 ## Deployment key
