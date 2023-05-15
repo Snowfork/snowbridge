@@ -4,7 +4,7 @@ const NetworkId = process.env.ETH_NETWORK_ID || 15;
 const DeployInfoFile = `./broadcast/DeployScript.sol/${NetworkId}/run-latest.json`;
 const BuildInfoDir = "./out";
 const DestFile =
-  process.argv.length >= 3 ? process.argv[2] : "/tmp/snowbridge/contracts.json";
+  process.argv.length >= 3 ? process.argv[2] : (process.env["output_dir"] + "/contracts.json");
 
 const run = async () => {
   let contracts = {};

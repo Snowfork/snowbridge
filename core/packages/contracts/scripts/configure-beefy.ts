@@ -11,7 +11,7 @@ import fs from "fs"
 import path from "path"
 
 let endpoint = process.env.RELAYCHAIN_ENDPOINT || "ws://127.0.0.1:9944"
-const beefyStartBlock = process.env.BEEFY_START_BLOCK ? parseInt(process.env.BEEFY_START_BLOCK) : 15
+const beefyStartBlock = process.env.BEEFY_START_BLOCK ? parseInt(process.env.BEEFY_START_BLOCK) : 12
 const BeefyStateFile =
     process.env.BEEFY_STATE_FILE || path.join(process.env.output_dir!, "beefy-state.json")
 

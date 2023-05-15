@@ -83,38 +83,43 @@ func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSlot uint64) ([]
 	return syncPeriodsToFetch, nil
 }
 
-func (s *Syncer) GetInitialSync() (scale.InitialSync, error) {
+func (s *Syncer) GetCheckPoint() (scale.CheckPoint, error) {
 	checkpoint, err := s.Client.GetFinalizedCheckpoint()
 	if err != nil {
-		return scale.InitialSync{}, fmt.Errorf("get finalized checkpoint: %w", err)
+		return scale.CheckPoint{}, fmt.Errorf("get finalized checkpoint: %w", err)
 	}
 
 	bootstrap, err := s.Client.GetBootstrap(checkpoint.FinalizedBlockRoot)
 	if err != nil {
-		return scale.InitialSync{}, fmt.Errorf("get bootstrap: %w", err)
+		return scale.CheckPoint{}, fmt.Errorf("get bootstrap: %w", err)
 	}
 
 	genesis, err := s.Client.GetGenesis()
 	if err != nil {
-		return scale.InitialSync{}, fmt.Errorf("get genesis: %w", err)
+		return scale.CheckPoint{}, fmt.Errorf("get genesis: %w", err)
 	}
 
 	header, err := bootstrap.Data.Header.Beacon.ToScale()
 	if err != nil {
-		return scale.InitialSync{}, fmt.Errorf("convert header to scale: %w", err)
+		return scale.CheckPoint{}, fmt.Errorf("convert header to scale: %w", err)
 	}
 
 	syncCommittee, err := bootstrap.Data.CurrentSyncCommittee.ToScale()
 	if err != nil {
-		return scale.InitialSync{}, fmt.Errorf("convert sync committee to scale: %w", err)
+		return scale.CheckPoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
 	}
+	secondPerSlot := 6
+	if s.activeSpec.IsMainnet() {
+		secondPerSlot = 12
+	}
+	importTime := genesis.Time + uint64(header.Slot)*uint64(secondPerSlot)
 
-	return scale.InitialSync{
+	return scale.CheckPoint{
 		Header:                     header,
 		CurrentSyncCommittee:       syncCommittee,
 		CurrentSyncCommitteeBranch: util.ProofBranchToScale(bootstrap.Data.CurrentSyncCommitteeBranch),
 		ValidatorsRoot:             types.H256(genesis.ValidatorsRoot),
-		ImportTime:                 types.U64(genesis.Time),
+		ImportTime:                 types.U64(importTime),
 	}, nil
 }
 

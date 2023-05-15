@@ -25,8 +25,12 @@ source scripts/start-chains.sh
 start_chains
 
 # 3. config beefy client
-source scripts/configure-contracts.sh
-configure_contracts
+source scripts/configure-beefy.sh
+configure_beefy
+
+# 4. config beacon client
+source scripts/configure-beacon.sh
+configure_beacon
 
 # 4. start relayer
 echo "Starting relayers"

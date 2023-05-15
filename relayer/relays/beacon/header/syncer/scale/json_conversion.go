@@ -5,8 +5,8 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 )
 
-func (s InitialSync) ToJSON() json.InitialSync {
-	return json.InitialSync{
+func (s CheckPoint) ToJSON() json.CheckPoint {
+	return json.CheckPoint{
 		Header:                     s.Header.ToJSON(),
 		CurrentSyncCommittee:       s.CurrentSyncCommittee.ToJSON(),
 		CurrentSyncCommitteeBranch: util.ScaleBranchToString(s.CurrentSyncCommitteeBranch),

@@ -40,8 +40,7 @@ default_args = [
 ## Bridge Hub
 [[parachains]]
 id = 1013
-add_to_genesis = true
-chain_spec_path = "{{output_dir}}/spec.json"
+chain = "bridge-hub-rococo-local"
 cumulus_based = true
 
     # run alice as parachain collator
@@ -51,12 +50,7 @@ cumulus_based = true
     command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8081
     ws_port = 11144
-    args = ["--enable-offchain-indexing=true", "--pruning=archive", "--force-authoring"]
-
-        [[parachains.collators.env]]
-        name = "RUST_LOG"
-        value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace"
-
+    args = ["--enable-offchain-indexing=true", "--pruning=archive", "--force-authoring","-lparachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace,runtime=debug"]
 
 ## Statemine
 [[parachains]]
@@ -71,12 +65,7 @@ cumulus_based = true
     command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8082
     ws_port = 12144
-    args = ["--force-authoring"]
-
-        [[parachains.collators.env]]
-        name = "RUST_LOG"
-        value = "runtime=debug,parachain=trace,cumulus-collator=trace,aura=trace,xcm=trace"
-
+    args = ["--force-authoring","-lparachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace,runtime=debug"]
 
 # Statemine -> BridgeHub
 [[hrmp_channels]]

@@ -221,27 +221,6 @@ pub mod pallet {
 	pub(crate) type SyncCommitteesMapping<T: Config> =
 		StorageMap<_, Identity, u32, u64, ValueQuery>;
 
-	#[pallet::genesis_config]
-	#[derive(Default)]
-	pub struct GenesisConfig {
-		pub initial_checkpoint: Option<CheckPointUpdate>,
-	}
-
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Sync committee size is: {}",
-				SYNC_COMMITTEE_SIZE
-			);
-
-			if let Some(checkpoint) = self.initial_checkpoint.clone() {
-				Pallet::<T>::checkpoint_sync(&checkpoint).unwrap();
-			}
-		}
-	}
-
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
@@ -1005,29 +984,6 @@ pub mod pallet {
 			}
 
 			fork_versions.genesis.version
-		}
-
-		pub(super) fn checkpoint_sync(update: &CheckPointUpdate) -> Result<(), &'static str> {
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Received checkpoint sync, starting processing.",
-			);
-
-			if let Err(err) = Self::process_checkpoint_update(update) {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"Checkpoint sync failed with error {:?}",
-					err
-				);
-				return Err(<&str>::from(err))
-			}
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Checkpoint sync processing succeeded.",
-			);
-
-			Ok(())
 		}
 
 		// Verifies that the receipt encoded in proof.data is included

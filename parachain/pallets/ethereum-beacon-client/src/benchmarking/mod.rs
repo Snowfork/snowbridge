@@ -31,7 +31,7 @@ benchmarks! {
 
 		let initial_sync_data = initial_sync();
 
-		EthereumBeaconClient::<T>::checkpoint_sync(&initial_sync_data)?;
+		EthereumBeaconClient::<T>::process_checkpoint_update(&initial_sync_data)?;
 
 		let finalized_header_update = finalized_header_update();
 
@@ -60,7 +60,7 @@ benchmarks! {
 
 		let initial_sync_data = initial_sync();
 
-		EthereumBeaconClient::<T>::checkpoint_sync(&initial_sync_data)?;
+		EthereumBeaconClient::<T>::process_checkpoint_update(&initial_sync_data)?;
 
 		let header_update = header_update();
 

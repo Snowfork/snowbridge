@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"os"
 
 	"github.com/cbroglie/mustache"
@@ -60,7 +62,7 @@ func generateBeaconCheckPointCmd() *cobra.Command {
 }
 
 type Data struct {
-	InitialSync           beaconjson.InitialSync
+	InitialSync           beaconjson.CheckPoint
 	SyncCommitteeUpdate   beaconjson.SyncCommitteeUpdate
 	FinalizedHeaderUpdate beaconjson.FinalizedHeaderUpdate
 	HeaderUpdate          beaconjson.HeaderUpdate
@@ -86,7 +88,9 @@ func generateBeaconCheckPoint(cmd *cobra.Command, _ []string) error {
 
 		endpoint, err := cmd.Flags().GetString("url")
 
-		viper.SetConfigFile("core/packages/test/config/beacon-relay.json")
+		configFile := os.Getenv("output_dir") + "/beacon-relay.json"
+
+		viper.SetConfigFile(configFile)
 		if err := viper.ReadInConfig(); err != nil {
 			return err
 		}
@@ -99,20 +103,17 @@ func generateBeaconCheckPoint(cmd *cobra.Command, _ []string) error {
 
 		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
 
-		log.WithFields(log.Fields{"spec": activeSpec, "endpoint": endpoint}).Info("connecting to beacon API")
-
 		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
 
-		initialSyncScale, err := s.GetInitialSync()
+		checkPointScale, err := s.GetCheckPoint()
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
-		initialSync := initialSyncScale.ToJSON()
-		err = writeJSONToFile(initialSync, activeSpec.ToString()+"_checkpoint")
-		if err != nil {
-			return fmt.Errorf("write initial sync to file: %w", err)
-		}
-		log.Info("created initial sync file")
+		checkPointBytes, _ := types.EncodeToBytes(checkPointScale)
+		// Call index for EthereumBeaconClient.check_point_update
+		checkPointCallIndex := "0x3205"
+		checkPointUpdateCall := checkPointCallIndex + hex.EncodeToString(checkPointBytes)
+		fmt.Println(checkPointUpdateCall)
 		return nil
 	}()
 	if err != nil {
@@ -153,7 +154,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
 
-		initialSyncScale, err := s.GetInitialSync()
+		initialSyncScale, err := s.GetCheckPoint()
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}

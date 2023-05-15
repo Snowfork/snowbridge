@@ -15,6 +15,7 @@
   "devDependencies": {
     "@chainsafe/lodestar": "1.5.1",
     "@polkadot/api": "9.11.1",
+    "@polkadot/api-cli": "^0.54.3",
     "@polkadot/types": "9.11.1",
     "@polkadot/util": "10.2.3",
     "@polkadot/util-crypto": "10.2.3",

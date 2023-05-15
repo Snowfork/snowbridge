@@ -59,12 +59,21 @@ build_relayer()
     cp $relay_bin "$output_bin_dir"
 }
 
+install_npm_libs()
+{
+    pushd $core_dir
+    pnpm install
+    popd
+}
+
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
     build_cumulus_from_source
     build_relaychain
     build_relayer
+    #required for e2e test
+    install_npm_libs
 }
 
 if [ -z "${from_start_services:-}" ]; then

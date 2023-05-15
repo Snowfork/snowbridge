@@ -3,7 +3,7 @@ set -eu
 
 source scripts/set-env.sh
 
-configure_contracts()
+configure_beefy()
 {
     pushd "$contract_dir"
 
@@ -36,6 +36,6 @@ configure_contracts()
 
 if [ -z "${from_start_services:-}" ]; then
     echo "config contracts only!"
-    configure_contracts
+    configure_beefy
     wait
 fi

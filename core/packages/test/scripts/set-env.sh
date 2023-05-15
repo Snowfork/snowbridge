@@ -16,9 +16,6 @@ geth_dir="$root_dir/../go-ethereum/$geth_version"
 contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
-[ "$bridge_hub_runtime" = "bridge-hub-rococo-local" ] &&
-   seconds_per_slot=6 ||
-   seconds_per_slot=12
 export output_dir=/tmp/snowbridge
 export output_bin_dir="$output_dir/bin"
 ethereum_data_dir="$output_dir/geth"
@@ -33,7 +30,7 @@ eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
 eth_gas_limit="${ETH_GAS_LIMIT:-5000000}"
 
 beefy_state_file="${BEEFY_STATE_FILE:-$output_dir/beefy-state.json}"
-beefy_start_block="${BEEFY_START_BLOCK:-15}"
+beefy_start_block="${BEEFY_START_BLOCK:-12}"
 
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
