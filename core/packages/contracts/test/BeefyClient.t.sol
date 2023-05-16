@@ -9,7 +9,20 @@ import "./mocks/BeefyClientMock.sol";
 import "../src/ScaleCodec.sol";
 import "../src/utils/Bitfield.sol";
 
+interface CheatCodes {
+    function prank(address) external;
+
+    function roll(uint256) external;
+
+    function warp(uint256) external;
+
+    function expectRevert(bytes4 message) external;
+
+    function difficulty(uint256) external;
+}
+
 contract BeefyClientTest is Test {
+    CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
     BeefyClientMock beefyClient;
     uint8 randaoCommitDelay;
     uint8 randaoCommitExpiration;
@@ -86,10 +99,10 @@ contract BeefyClientTest is Test {
         beefyClient.submitInitial(commitHash, bitfield);
 
         // mine random delay blocks
-        vm.roll(block.number + randaoCommitDelay);
+        cheats.roll(block.number + randaoCommitDelay);
 
         // set difficulty as PrevRandao
-        vm.prevrandao(bytes32(uint256(difficulty)));
+        cheats.difficulty(difficulty);
 
         beefyClient.commitPrevRandao(commitHash);
 
@@ -104,12 +117,12 @@ contract BeefyClientTest is Test {
         testSubmit();
 
         beefyClient.submitInitial(commitHash, bitfield);
-        vm.roll(block.number + randaoCommitDelay);
-        vm.prevrandao(bytes32(uint256(difficulty)));
+        cheats.roll(block.number + randaoCommitDelay);
+        cheats.difficulty(difficulty);
         beefyClient.commitPrevRandao(commitHash);
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
         //submit again will be reverted with StaleCommitment
-        vm.expectRevert(BeefyClient.StaleCommitment.selector);
+        cheats.expectRevert(BeefyClient.StaleCommitment.selector);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
     }
 
@@ -118,16 +131,16 @@ contract BeefyClientTest is Test {
 
         beefyClient.submitInitial(commitHash, bitfield);
 
-        vm.roll(block.number + randaoCommitDelay);
+        cheats.roll(block.number + randaoCommitDelay);
 
-        vm.prevrandao(bytes32(uint256(difficulty)));
+        cheats.difficulty(difficulty);
 
         beefyClient.commitPrevRandao(commitHash);
 
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
         // invalid bitfield here
         bitfield[0] = 0;
-        vm.expectRevert(BeefyClient.InvalidBitfield.selector);
+        cheats.expectRevert(BeefyClient.InvalidBitfield.selector);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
     }
 
@@ -136,7 +149,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitInitial(commitHash, bitfield);
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
         // reverted without commit PrevRandao
-        vm.expectRevert(BeefyClient.PrevRandaoNotCaptured.selector);
+        cheats.expectRevert(BeefyClient.PrevRandaoNotCaptured.selector);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
     }
 
@@ -144,12 +157,12 @@ contract BeefyClientTest is Test {
         initialize(setId);
         beefyClient.submitInitial(commitHash, bitfield);
         // reverted for commit PrevRandao too early
-        vm.expectRevert(BeefyClient.WaitPeriodNotOver.selector);
+        cheats.expectRevert(BeefyClient.WaitPeriodNotOver.selector);
         beefyClient.commitPrevRandao(commitHash);
 
         // reverted for commit PrevRandao too late
-        vm.roll(block.number + randaoCommitDelay + randaoCommitExpiration + 1);
-        vm.expectRevert(BeefyClient.TicketExpired.selector);
+        cheats.roll(block.number + randaoCommitDelay + randaoCommitExpiration + 1);
+        cheats.expectRevert(BeefyClient.TicketExpired.selector);
         beefyClient.commitPrevRandao(commitHash);
     }
 
@@ -159,9 +172,9 @@ contract BeefyClientTest is Test {
 
         beefyClient.submitInitialWithHandover(commitHash, bitfield);
 
-        vm.roll(block.number + randaoCommitDelay);
+        cheats.roll(block.number + randaoCommitDelay);
 
-        vm.prevrandao(bytes32(uint256(difficulty)));
+        cheats.difficulty(difficulty);
 
         beefyClient.commitPrevRandao(commitHash);
 
