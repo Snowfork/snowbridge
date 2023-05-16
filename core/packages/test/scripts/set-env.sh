@@ -1,5 +1,3 @@
-#!/usr/bin/env sh
-
 # exports enable use in core/packages/test/config/launch-config.toml
 root_dir="$(realpath ../../..)"
 bridge_hub_runtime="${PARACHAIN_RUNTIME:-bridge-hub-rococo-local}"
@@ -16,7 +14,7 @@ geth_dir="$root_dir/../go-ethereum/$geth_version"
 contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
-export output_dir=/tmp/snowbridge
+export output_dir="${OUTPUT_DIR:-/tmp/snowbridge}"
 export output_bin_dir="$output_dir/bin"
 ethereum_data_dir="$output_dir/geth"
 export PATH="$output_bin_dir:$PATH"
