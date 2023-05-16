@@ -11,7 +11,7 @@ use data_mainnet::*;
 mod util;
 use primitives::{
 	fast_aggregate_verify, fast_aggregate_verify_legacy, prepare_aggregate_pubkey,
-	prepare_aggregate_signature,
+	prepare_aggregate_signature, Mode,
 };
 use util::*;
 
@@ -90,16 +90,10 @@ benchmarks! {
 		assert!(<ExecutionHeaders<T>>::contains_key(header_update.execution_header.block_hash))
 	}
 
-	activate_bridge {
-	}: _(RawOrigin::Root)
+	force_mode {
+	}: _(RawOrigin::Root, Mode::Active)
 	verify {
 		assert!(!<Blocked<T>>::get());
-	}
-
-	deactivate_bridge {
-	}: _(RawOrigin::Root)
-	verify {
-		assert!(<Blocked<T>>::get());
 	}
 
 	bls_fast_aggregate_verify_pre_aggregated {

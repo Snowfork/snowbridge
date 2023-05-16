@@ -17,7 +17,7 @@ use crate::types::{BeaconHeader, ExecutionPayloadHeader, SyncAggregate, SyncComm
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct CheckPointUpdate<const COMMITTEE_SIZE: usize> {
+pub struct CheckpointUpdate<const COMMITTEE_SIZE: usize> {
 	pub header: BeaconHeader,
 	pub current_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
 	pub current_sync_committee_branch: Vec<H256>,
@@ -25,9 +25,9 @@ pub struct CheckPointUpdate<const COMMITTEE_SIZE: usize> {
 	pub import_time: u64,
 }
 
-impl<const COMMITTEE_SIZE: usize> Default for CheckPointUpdate<COMMITTEE_SIZE> {
+impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
 	fn default() -> Self {
-		CheckPointUpdate {
+		CheckpointUpdate {
 			header: Default::default(),
 			current_sync_committee: Default::default(),
 			current_sync_committee_branch: Default::default(),

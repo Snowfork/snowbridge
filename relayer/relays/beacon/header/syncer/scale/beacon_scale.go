@@ -16,7 +16,7 @@ type BlockRootProof struct {
 	Tree  *ssz.Node
 }
 
-type CheckPoint struct {
+type BeaconCheckpoint struct {
 	Header                     BeaconHeader
 	CurrentSyncCommittee       SyncCommittee
 	CurrentSyncCommitteeBranch []types.H256

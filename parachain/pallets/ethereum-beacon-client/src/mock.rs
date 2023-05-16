@@ -231,7 +231,7 @@ fn fixture_path(name: &str) -> PathBuf {
 
 fn initial_sync_from_file<const SYNC_COMMITTEE_SIZE: usize>(
 	name: &str,
-) -> primitives::CheckPointUpdate<SYNC_COMMITTEE_SIZE> {
+) -> primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -290,7 +290,7 @@ fn add_file_prefix(name: &str) -> String {
 }
 
 pub fn get_initial_sync<const SYNC_COMMITTEE_SIZE: usize>(
-) -> primitives::CheckPointUpdate<SYNC_COMMITTEE_SIZE> {
+) -> primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE> {
 	initial_sync_from_file::<SYNC_COMMITTEE_SIZE>(&add_file_prefix("initial_sync.json"))
 }
 

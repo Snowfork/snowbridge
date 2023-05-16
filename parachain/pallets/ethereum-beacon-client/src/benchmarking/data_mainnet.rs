@@ -5,12 +5,12 @@ use primitives::{BeaconHeader, ExecutionPayloadHeader, SyncAggregate, SyncCommit
 use sp_core::U256;
 use sp_std::vec;
 
-use crate::{CheckPointUpdate, ExecutionHeaderUpdate, FinalizedHeaderUpdate, SyncCommitteeUpdate};
+use crate::{CheckpointUpdate, ExecutionHeaderUpdate, FinalizedHeaderUpdate, SyncCommitteeUpdate};
 
-pub fn initial_sync() -> CheckPointUpdate {
+pub fn initial_sync() -> CheckpointUpdate {
 	let time_now = 1675679352; //2023.2.6
 
-	return CheckPointUpdate {
+	return CheckpointUpdate {
         header: BeaconHeader{
             slot: 5218016,
             proposer_index: 126987,

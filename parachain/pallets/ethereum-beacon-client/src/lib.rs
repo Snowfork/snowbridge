@@ -30,7 +30,7 @@ use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_proof, verify_receipt_proof, BeaconHeader, BlsError,
 	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
-	ForkVersions, PublicKeyPrepared, Signature, SigningData,
+	ForkVersions, Mode, PublicKeyPrepared, Signature, SigningData,
 };
 use snowbridge_core::{Message, RingBufferMap, RingBufferMapImpl, Verifier};
 use sp_core::H256;
@@ -45,7 +45,7 @@ pub use pallet::*;
 
 pub use config::{SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE};
 
-pub type CheckPointUpdate = primitives::CheckPointUpdate<SYNC_COMMITTEE_SIZE>;
+pub type CheckpointUpdate = primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE>;
 pub type ExecutionHeaderUpdate =
 	primitives::ExecutionHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type SyncCommitteeUpdate =
@@ -336,25 +336,15 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::activate_bridge())]
+		#[pallet::weight(T::WeightInfo::force_mode())]
 		#[transactional]
-		pub fn activate_bridge(origin: OriginFor<T>) -> DispatchResult {
+		pub fn force_mode(origin: OriginFor<T>, mode: Mode) -> DispatchResult {
 			ensure_root(origin)?;
 
-			<Blocked<T>>::set(false);
-
-			log::info!(target: "ethereum-beacon-client","💫 syncing bridge from governance provided checkpoint.");
-
-			Ok(())
-		}
-
-		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::deactivate_bridge())]
-		#[transactional]
-		pub fn deactivate_bridge(origin: OriginFor<T>) -> DispatchResult {
-			ensure_root(origin)?;
-
-			<Blocked<T>>::set(true);
+			match mode {
+				Mode::Blocked => <Blocked<T>>::set(true),
+				Mode::Active => <Blocked<T>>::set(false),
+			}
 
 			log::info!(target: "ethereum-beacon-client","💫 syncing bridge from governance provided checkpoint.");
 
@@ -362,12 +352,9 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::check_point_update())]
+		#[pallet::weight(T::WeightInfo::force_checkpoint())]
 		#[transactional]
-		pub fn check_point_update(
-			origin: OriginFor<T>,
-			update: CheckPointUpdate,
-		) -> DispatchResult {
+		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
 			ensure_root(origin)?;
 
 			if let Err(err) = Self::process_checkpoint_update(&update) {
@@ -390,7 +377,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		pub fn process_checkpoint_update(update: &CheckPointUpdate) -> DispatchResult {
+		pub fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
 			Self::verify_sync_committee(
 				&update.current_sync_committee,
 				&update.current_sync_committee_branch,

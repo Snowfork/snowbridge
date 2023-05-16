@@ -14,11 +14,11 @@ mod serde_utils;
 
 pub use types::{
 	BeaconHeader, CompactExecutionHeader, ExecutionHeaderState, ExecutionPayloadHeader,
-	FinalizedHeaderState, Fork, ForkData, ForkVersion, ForkVersions, PublicKey, Signature,
+	FinalizedHeaderState, Fork, ForkData, ForkVersion, ForkVersions, Mode, PublicKey, Signature,
 	SigningData, SyncAggregate, SyncCommittee, SyncCommitteePrepared,
 };
 pub use updates::{
-	CheckPointUpdate, ExecutionHeaderUpdate, FinalizedHeaderUpdate, SyncCommitteeUpdate,
+	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedHeaderUpdate, SyncCommitteeUpdate,
 };
 
 pub use bits::decompress_sync_committee_bits;

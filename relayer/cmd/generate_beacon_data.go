@@ -39,12 +39,12 @@ func generateBeaconDataCmd() *cobra.Command {
 	return cmd
 }
 
-func generateBeaconCheckPointCmd() *cobra.Command {
+func generateBeaconCheckpointCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "generate-beacon-checkpoint",
 		Short: "Generate beacon checkpoint.",
 		Args:  cobra.ExactArgs(0),
-		RunE:  generateBeaconCheckPoint,
+		RunE:  generateBeaconCheckpoint,
 	}
 
 	cmd.Flags().String("spec", "", "Valid values are mainnet or minimal")
@@ -74,7 +74,7 @@ const (
 	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
 )
 
-func generateBeaconCheckPoint(cmd *cobra.Command, _ []string) error {
+func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		spec, err := cmd.Flags().GetString("spec")
 		if err != nil {
@@ -105,12 +105,12 @@ func generateBeaconCheckPoint(cmd *cobra.Command, _ []string) error {
 
 		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
 
-		checkPointScale, err := s.GetCheckPoint()
+		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
 		checkPointBytes, _ := types.EncodeToBytes(checkPointScale)
-		// Call index for EthereumBeaconClient.check_point_update
+		// Call index for EthereumBeaconClient.force_checkpoint
 		checkPointCallIndex := "0x3205"
 		checkPointUpdateCall := checkPointCallIndex + hex.EncodeToString(checkPointBytes)
 		fmt.Println(checkPointUpdateCall)
@@ -154,7 +154,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
 
-		initialSyncScale, err := s.GetCheckPoint()
+		initialSyncScale, err := s.GetCheckpoint()
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
