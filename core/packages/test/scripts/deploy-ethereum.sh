@@ -78,6 +78,17 @@ deploy_contracts()
     echo "Exported contract artifacts: $output_dir/contracts.json"
 }
 
+hack_beacon_client()
+{
+    echo "Hack lodestar for faster slot time"
+    preset_minimal_config_file="$core_dir/node_modules/.pnpm/@lodestar+config@$lodestar_version/node_modules/@lodestar/config/lib/chainConfig/presets/minimal.js"
+    if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
+        gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
+    else
+        sed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
+    fi
+}
+
 deploy_ethereum()
 {
     # 1. deploy execution client
@@ -85,6 +96,10 @@ deploy_ethereum()
     start_geth
     echo "Waiting for geth API to be ready"
     sleep 3
+
+    if [ "$eth_fast_mode" == "true" ]; then
+      hack_beacon_client
+    fi
 
     # 2. deploy consensus client
     echo "Starting beacon node"

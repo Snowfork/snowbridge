@@ -20,6 +20,7 @@ source_up_if_exists
 # export BEACON_HTTP_ENDPOINT=https://lodestar-goerli.chainsafe.io
 # export ETH_GAS_LIMIT=0  # For real network just uncomment and set as 0 here
 # export ACTIVE_SPEC=mainnet # For real network just uncomment and set as mainnet here
+# export ETH_FAST_MODE=false  # For local setup only, set as true will hack beacon client for fast slot time 
 
 # export DEPLOYER_ETH_KEY=           # Your private key to deploy contracts
 # export BEEFY_RELAY_ETH_KEY=         # Your Beefy relayer account private key
