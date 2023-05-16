@@ -29,7 +29,7 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use primitives::{
-	fast_aggregate_verify, verify_merkle_proof, verify_receipt_proof, BeaconHeader, BlsError,
+	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
 	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
 	ForkVersions, Mode, PublicKeyPrepared, SigningData,
 };
@@ -387,7 +387,8 @@ pub mod pallet {
 				&update.current_sync_committee,
 				&update.current_sync_committee_branch,
 				update.header.state_root,
-				config::CURRENT_SYNC_COMMITTEE_INDEX,
+				config::CURRENT_SYNC_COMMITTEE_SUBTREE_INDEX,
+				config::CURRENT_SYNC_COMMITTEE_DEPTH,
 			)?;
 
 			let period = Self::compute_current_sync_period(update.header.slot);
@@ -421,7 +422,8 @@ pub mod pallet {
 				&update.next_sync_committee,
 				&update.next_sync_committee_branch,
 				update.attested_header.state_root,
-				config::NEXT_SYNC_COMMITTEE_INDEX,
+				config::NEXT_SYNC_COMMITTEE_SUBTREE_INDEX,
+				config::NEXT_SYNC_COMMITTEE_DEPTH,
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
@@ -444,13 +446,14 @@ pub mod pallet {
 			);
 
 			ensure!(
-				update.block_roots_branch.len() == config::BLOCK_ROOTS_DEPTH &&
-					verify_merkle_proof(
-						update.block_roots_root,
-						&update.block_roots_branch,
-						config::BLOCK_ROOTS_INDEX,
-						update.finalized_header.state_root
-					),
+				verify_merkle_branch(
+					update.block_roots_root,
+					&update.block_roots_branch,
+					config::BLOCK_ROOTS_SUBTREE_INDEX,
+					config::BLOCK_ROOTS_DEPTH,
+					update.finalized_header.state_root
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
@@ -484,13 +487,14 @@ pub mod pallet {
 			);
 
 			ensure!(
-				update.block_roots_branch.len() == config::BLOCK_ROOTS_DEPTH &&
-					verify_merkle_proof(
-						update.block_roots_root,
-						&update.block_roots_branch,
-						config::BLOCK_ROOTS_INDEX,
-						update.finalized_header.state_root
-					),
+				verify_merkle_branch(
+					update.block_roots_root,
+					&update.block_roots_branch,
+					config::BLOCK_ROOTS_SUBTREE_INDEX,
+					config::BLOCK_ROOTS_DEPTH,
+					update.finalized_header.state_root
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
@@ -532,13 +536,14 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 
 			ensure!(
-				update.execution_branch.len() == config::EXECUTION_HEADER_DEPTH &&
-					verify_merkle_proof(
-						execution_root,
-						&update.execution_branch,
-						config::EXECUTION_HEADER_INDEX,
-						update.attested_header.body_root
-					),
+				verify_merkle_branch(
+					execution_root,
+					&update.execution_branch,
+					config::EXECUTION_HEADER_SUBTREE_INDEX,
+					config::EXECUTION_HEADER_DEPTH,
+					update.attested_header.body_root
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidExecutionHeaderProof
 			);
 
@@ -611,17 +616,18 @@ pub mod pallet {
 
 			log::info!(
 				target: "ethereum-beacon-client",
-				"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH, leaf_index
+				"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_DEPTH, leaf_index
 			);
 
 			ensure!(
-				block_root_proof.len() == config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH &&
-					verify_merkle_proof(
-						beacon_block_root,
-						&block_root_proof,
-						leaf_index,
-						finalized_block_root_hash
-					),
+				verify_merkle_branch(
+					beacon_block_root,
+					&block_root_proof,
+					leaf_index,
+					config::BLOCK_ROOT_AT_INDEX_DEPTH,
+					finalized_block_root_hash
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
@@ -708,13 +714,14 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			ensure!(
-				finality_branch.len() == config::FINALIZED_ROOT_DEPTH &&
-					verify_merkle_proof(
-						finalized_block_root,
-						finality_branch,
-						config::FINALIZED_ROOT_INDEX,
-						attested_header.state_root
-					),
+				verify_merkle_branch(
+					finalized_block_root,
+					finality_branch,
+					config::FINALIZED_ROOT_SUBTREE_INDEX,
+					config::FINALIZED_ROOT_DEPTH,
+					attested_header.state_root
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidHeaderMerkleProof
 			);
 
@@ -745,19 +752,21 @@ pub mod pallet {
 			sync_committee_branch: &[H256],
 			header_state_root: H256,
 			index: usize,
+			depth: usize,
 		) -> DispatchResult {
 			let sync_committee_root = sync_committee
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
 			ensure!(
-				sync_committee_branch.len() == config::SYNC_COMMITTEE_DEPTH &&
-					verify_merkle_proof(
-						sync_committee_root,
-						sync_committee_branch,
-						index,
-						header_state_root
-					),
+				verify_merkle_branch(
+					sync_committee_root,
+					sync_committee_branch,
+					index,
+					depth,
+					header_state_root
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidSyncCommitteeMerkleProof
 			);
 
