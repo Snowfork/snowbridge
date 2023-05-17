@@ -342,11 +342,11 @@ pub fn get_bls_signature_verify_test_data<
 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 
 	BLSSignatureVerifyTest {
-		sync_committee_bits: finalized_update.sync_aggregate.sync_committee_bits,
-		sync_committee_signature: finalized_update.sync_aggregate.sync_committee_signature,
+		sync_committee_bits: finalized_update.core.sync_aggregate.sync_committee_bits,
+		sync_committee_signature: finalized_update.core.sync_aggregate.sync_committee_signature,
 		pubkeys: initial_sync.current_sync_committee.pubkeys,
-		header: finalized_update.attested_header,
+		header: finalized_update.core.attested_header,
 		validators_root: initial_sync.validators_root,
-		signature_slot: finalized_update.signature_slot,
+		signature_slot: finalized_update.core.signature_slot,
 	}
 }

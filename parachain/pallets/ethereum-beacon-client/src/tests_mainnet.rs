@@ -33,7 +33,7 @@ fn it_updates_a_committee_period_sync_update() {
 	let current_sync_committee =
 		get_initial_sync::<{ SYNC_COMMITTEE_SIZE }>().current_sync_committee;
 	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
-		update.attested_header.slot,
+		update.core.attested_header.slot,
 	);
 
 	new_tester::<mock_mainnet::Test>().execute_with(|| {
@@ -61,7 +61,7 @@ fn it_processes_a_finalized_header_update() {
 	let current_sync_committee =
 		get_initial_sync::<{ SYNC_COMMITTEE_SIZE }>().current_sync_committee;
 	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
-		update.attested_header.slot,
+		update.core.attested_header.slot,
 	);
 
 	let slot = update.finalized_header.slot;
@@ -98,7 +98,7 @@ fn it_errors_when_weak_subjectivity_period_exceeded_for_a_finalized_header_updat
 	let current_sync_committee = get_initial_sync::<SYNC_COMMITTEE_SIZE>().current_sync_committee;
 
 	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
-		update.attested_header.slot,
+		update.core.attested_header.slot,
 	);
 
 	let slot = update.finalized_header.slot;
@@ -133,8 +133,9 @@ fn it_processes_a_header_update() {
 	let update = get_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 	let current_sync_committee =
 		get_initial_sync::<{ config::SYNC_COMMITTEE_SIZE }>().current_sync_committee;
-	let current_period =
-		mock_mainnet::EthereumBeaconClient::compute_current_sync_period(update.beacon_header.slot);
+	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
+		update.core.attested_header.slot,
+	);
 
 	let finalized_update =
 		get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
@@ -154,7 +155,7 @@ fn it_processes_a_header_update() {
 		});
 		FinalizedBeaconHeadersBlockRoot::<mock_mainnet::Test>::insert(
 			finalized_block_root,
-			finalized_update.block_roots_root,
+			finalized_update.core.block_roots_root,
 		);
 
 		assert_ok!(mock_mainnet::EthereumBeaconClient::import_execution_header(
@@ -198,7 +199,6 @@ pub fn test_bls_fast_aggregate_verify() {
 
 	let signing_root = mock_mainnet::EthereumBeaconClient::signing_root(
 		test_data.header,
-		test_data.validators_root,
 		test_data.signature_slot,
 	)
 	.unwrap();
