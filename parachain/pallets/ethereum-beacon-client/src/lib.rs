@@ -189,11 +189,12 @@ pub mod pallet {
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn last_finalized_header)]
+	#[pallet::getter(fn latest_finalized_header)]
 	pub(super) type LatestFinalizedHeaderState<T: Config> =
 		StorageValue<_, FinalizedHeaderState, ValueQuery>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn latest_execution_header)]
 	pub(super) type LatestExecutionHeaderState<T: Config> =
 		StorageValue<_, ExecutionHeaderState, ValueQuery>;
 
@@ -477,7 +478,7 @@ pub mod pallet {
 			)?;
 
 			let last_finalized_period =
-				Self::compute_current_sync_period(Self::last_finalized_header().beacon_slot);
+				Self::compute_current_sync_period(Self::latest_finalized_header().beacon_slot);
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
 			ensure!(
 				(current_period == last_finalized_period ||
@@ -518,25 +519,24 @@ pub mod pallet {
 				update.signature_slot,
 			)?;
 
-			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
-			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
-			let block_slot = update.attested_header.slot;
-			ensure!(block_slot <= latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
-
-			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
 			ensure!(
-				update.execution_header.block_number > execution_header_state.block_number,
+				update.attested_header.slot <= Self::latest_finalized_header().beacon_slot,
+				Error::<T>::HeaderNotFinalized
+			);
+
+			ensure!(
+				update.execution_header.block_number > Self::latest_execution_header().block_number,
 				Error::<T>::InvalidExecutionHeaderUpdate
 			);
 
-			let execution_root: H256 = update
+			let execution_header_root: H256 = update
 				.execution_header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 
 			ensure!(
 				verify_merkle_branch(
-					execution_root,
+					execution_header_root,
 					&update.execution_branch,
 					config::EXECUTION_HEADER_SUBTREE_INDEX,
 					config::EXECUTION_HEADER_DEPTH,
@@ -546,23 +546,23 @@ pub mod pallet {
 				Error::<T>::InvalidExecutionHeaderProof
 			);
 
-			let beacon_block_root: H256 = update
+			let attested_header_root: H256 = update
 				.attested_header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			Self::ancestry_proof(
 				&update.block_roots_branch,
-				block_slot,
-				beacon_block_root,
+				update.attested_header.slot,
+				attested_header_root,
 				update.block_roots_root,
 			)?;
 
 			Self::store_execution_header(
 				update.execution_header.block_hash,
 				update.execution_header.clone().into(),
-				block_slot,
-				beacon_block_root,
+				update.attested_header.slot,
+				attested_header_root,
 			);
 
 			Ok(())
@@ -643,8 +643,8 @@ pub mod pallet {
 
 		pub(super) fn verify_weak_subjectivity() -> DispatchResult {
 			// Weak subjectivity check
-			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
-			let import_time = last_finalized_header.import_time;
+
+			let import_time = Self::latest_finalized_header().import_time;
 			let weak_subjectivity_period_check =
 				import_time + T::WeakSubjectivityPeriodSeconds::get();
 			let time: u64 = T::TimeProvider::now().as_secs();
@@ -704,7 +704,7 @@ pub mod pallet {
 				Error::<T>::InvalidAttestedHeaderSlot
 			);
 			ensure!(
-				finalized_header.slot > Self::last_finalized_header().beacon_slot,
+				finalized_header.slot > Self::latest_finalized_header().beacon_slot,
 				Error::<T>::DuplicateFinalizedHeaderUpdate
 			);
 
