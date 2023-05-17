@@ -19,7 +19,15 @@ benchmarks! {
 	sync_committee_period_update {
 		let caller: T::AccountId = whitelisted_caller();
 
+		let initial_sync_data = initial_sync();
 		let sync_committee_update = initialize_sync_committee::<T>()?;
+
+		// initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
+		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState {
+			beacon_block_root: Default::default(),
+			import_time: initial_sync_data.import_time,
+			beacon_slot: sync_committee_update.finalized_header.slot - 1,
+		});
 
 	}: sync_committee_period_update(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
 	verify {
@@ -41,7 +49,7 @@ benchmarks! {
 
 		EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;
 
-		//initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
+		// initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
 		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState {
 			beacon_block_root: Default::default(),
 			import_time: initial_sync_data.import_time + 51200,
@@ -65,7 +73,7 @@ benchmarks! {
 		let header_update = header_update();
 
 		let current_period = EthereumBeaconClient::<T>::compute_current_sync_period(
-				header_update.beacon_header.slot,
+				header_update.attested_header.slot,
 			);
 
 		EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;

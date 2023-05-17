@@ -219,7 +219,7 @@ pub fn header_update<
 	SyncCommitteeSize,
 > {
 	return HeaderUpdate{
-        beacon_header: BeaconHeader{
+        attested_header: BeaconHeader{
             slot: 150,
             proposer_index: 5,
             parent_root: hex!("8bdd8b8f9e6887ff2b05b322339fea4ec78a7e6159ec4e54b591a44699662b5b").into(),

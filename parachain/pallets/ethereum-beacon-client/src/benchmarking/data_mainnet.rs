@@ -1154,7 +1154,7 @@ pub fn finalized_header_update() -> FinalizedHeaderUpdate {
 
 pub fn header_update() -> ExecutionHeaderUpdate {
 	return ExecutionHeaderUpdate {
-        beacon_header: BeaconHeader{
+        attested_header: BeaconHeader{
             slot: 5217982,
             proposer_index: 320636,
             parent_root: hex!("a4571a17210f45c48e1cf7732817d5a38c18f5d4c5642845978ed47ea7129ce9").into(),
@@ -1189,7 +1189,8 @@ pub fn header_update() -> ExecutionHeaderUpdate {
             sync_committee_signature: hex!("9642b8a94e17eff18c50b1e0603e062fd7637e121d34a4a91e5ad48a9b8076497909de6c9c8e61980a5b33fa6f412d9519bb6f710f0144dfddd01eb36b18e9109ff7cdabc40752d15da22371214189320bc7588090ce4bfafeaee84972f4c7cf").into(),
         },
         signature_slot: 5217983,
-        block_root_branch: vec![
+        block_roots_root: hex!("52c9f5ef64da062dee00a30ebe16710a3ffe59cf91eedf96a69ae5d198d7d982").into(),
+        block_roots_branch: vec![
             hex!("8406114752f4b0df307983b3d233e56b81822dcfcf37a04d31c03062582047a4").into(),
             hex!("7d1e19255fd12ccb31eff0832762c57cc6fcfe635191cb4afa9f1640b592e64f").into(),
             hex!("8de2db9fecd1827ab497b96968e1a880667aba9b55f73a76e5b16810fdbfd392").into(),
@@ -1204,6 +1205,5 @@ pub fn header_update() -> ExecutionHeaderUpdate {
             hex!("f3b04813e6897bb1642c1c42f1edfdaf8b00b2b1b57d567e512dc1c5d51660db").into(),
             hex!("8795c1259089af496aa6339978f58f2fe25f89225dc97dd82dd0c3739fe94d10").into(),
         ],
-        block_root_branch_header_root: hex!("52c9f5ef64da062dee00a30ebe16710a3ffe59cf91eedf96a69ae5d198d7d982").into(),
     };
 }
