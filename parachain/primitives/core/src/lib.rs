@@ -8,11 +8,13 @@
 
 use frame_support::dispatch::DispatchError;
 use snowbridge_ethereum::{Header, Log, U256};
+use sp_runtime::DispatchResult;
 use sp_std::prelude::*;
 
 pub mod ringbuffer;
 pub mod types;
 
+pub use polkadot_parachain::primitives::Id as ParaId;
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 pub use types::{Message, MessageId, MessageNonce, Proof};
 
@@ -27,4 +29,8 @@ pub trait Verifier {
 		initial_difficulty: U256,
 		descendants_until_final: u8,
 	) -> Result<(), &'static str>;
+}
+
+pub trait OutboundQueue {
+	fn submit(source_id: ParaId, handler: u16, payload: &[u8]) -> DispatchResult;
 }

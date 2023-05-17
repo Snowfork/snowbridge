@@ -11,14 +11,20 @@ scale-info = { version = "2.6.0", default-features = false, features = [ "derive
 
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
+
+snowbridge-core = { path = "../../primitives/core", default-features = false }
+ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+hex-literal = { version = "0.4.1", default-features = false }
 
 [features]
 default = [ "std" ]
@@ -27,9 +33,15 @@ std = [
     "codec/std",
     "scale-info/std",
     "frame-support/std",
-    "sp-std/std",
     "sp-core/std",
+    "sp-io/std",
     "sp-runtime/std",
+    "sp-std/std",
     "xcm/std",
+    "xcm-executor/std",
+    "snowbridge-core/std",
+    "ethabi/std",
 ]
-runtime-benchmarks = []
+runtime-benchmarks = [
+    "snowbridge-core/runtime-benchmarks",
+]
