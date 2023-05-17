@@ -41,6 +41,7 @@ pub trait WeightInfo {
 	fn bls_fast_aggregate_verify_pre_aggregated() -> Weight;
 	fn bls_fast_aggregate_verify() -> Weight;
 	fn bls_fast_aggregate_verify_legacy() -> Weight;
+	fn merkle_branch_verify() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -79,6 +80,11 @@ impl WeightInfo for () {
 	}
 	fn bls_fast_aggregate_verify_legacy() -> Weight {
 		Weight::from_parts(123_459_134_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+	}
+
+	fn merkle_branch_verify() -> Weight {
+		Weight::from_parts(12_368_043_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
 }

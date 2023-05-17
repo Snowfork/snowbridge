@@ -11,7 +11,7 @@ use data_mainnet::*;
 mod util;
 use primitives::{
 	fast_aggregate_verify, fast_aggregate_verify_legacy, prepare_aggregate_pubkey,
-	prepare_aggregate_signature, Mode,
+	prepare_aggregate_signature, verify_merkle_branch, Mode,
 };
 use util::*;
 
@@ -121,6 +121,14 @@ benchmarks! {
 		let signing_root = signing_root::<T>(&update)?;
 	}:{
 		fast_aggregate_verify(&current_sync_committee.aggregate_pubkey, &absent_pubkeys, signing_root, &update.sync_aggregate.sync_committee_signature).unwrap();
+	}
+
+	merkle_branch_verify {
+		let update = initialize_sync_committee::<T>()?;
+		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
+	}:{
+		verify_merkle_branch(block_root,&update.finality_branch,config::FINALIZED_ROOT_SUBTREE_INDEX,
+					config::FINALIZED_ROOT_DEPTH,update.attested_header.state_root);
 	}
 }
 
