@@ -1,23 +1,56 @@
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 
-// Reference https://github.com/ethereum/consensus-specs/blob/dev/ssz/merkle-proofs.md
-// p.s. index here is actually [subtree_index](https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#get_subtree_index)
-pub fn verify_merkle_proof(leaf: H256, branch: &[H256], index: usize, root: H256) -> bool {
+// Specified by https://github.com/ethereum/consensus-specs/blob/fe9c1a8cbf0c2da8a4f349efdcd77dd7ac8445c4/specs/phase0/beacon-chain.md?plain=1#L742
+// with improvements from https://github.com/ethereum/consensus-specs/blob/dev/ssz/merkle-proofs.md
+pub fn verify_merkle_branch(
+	leaf: H256,
+	branch: &[H256],
+	index: usize,
+	depth: usize,
+	root: H256,
+) -> Option<bool> {
+	// verify the proof length
+	if branch.len() != depth {
+		return None
+	}
+	// verify the computed merkle root
+	Some(root == compute_merkle_root(leaf, branch, index))
+}
+
+fn compute_merkle_root(leaf: H256, proof: &[H256], index: usize) -> H256 {
 	let mut value: [u8; 32] = leaf.into();
-	for (i, node) in branch.iter().enumerate() {
+	for (i, node) in proof.iter().enumerate() {
 		let mut data = [0u8; 64];
-		if (index / (2_u32.pow(i as u32) as usize) % 2) == 0 {
+		if generalized_index_bit(index, i) {
 			// left node
 			data[0..32].copy_from_slice(&value);
-			data[32..64].copy_from_slice(&node.0);
+			data[32..64].copy_from_slice(node.as_bytes());
 			value = sha2_256(&data);
 		} else {
 			// right node
-			data[0..32].copy_from_slice(&node.0);
+			data[0..32].copy_from_slice(node.as_bytes());
 			data[32..64].copy_from_slice(&value);
 			value = sha2_256(&data);
 		}
 	}
-	value == root.0
+	value.into()
+}
+
+// Spec: https://github.com/ethereum/consensus-specs/blob/fe9c1a8cbf0c2da8a4f349efdcd77dd7ac8445c4/ssz/merkle-proofs.md#get_generalized_index_bit
+fn generalized_index_bit(generalized_index: usize, position: usize) -> bool {
+	generalized_index & (1 << position) == 0
+}
+
+// Spec: https://github.com/ethereum/consensus-specs/blob/fe9c1a8cbf0c2da8a4f349efdcd77dd7ac8445c4/specs/altair/light-client/sync-protocol.md#get_subtree_index
+pub const fn subtree_index(generalized_index: usize) -> usize {
+	generalized_index % (1 << generalized_index_length(generalized_index))
+}
+
+// Spec: https://github.com/ethereum/consensus-specs/blob/fe9c1a8cbf0c2da8a4f349efdcd77dd7ac8445c4/ssz/merkle-proofs.md#get_generalized_index_length
+pub const fn generalized_index_length(generalized_index: usize) -> usize {
+	match generalized_index.checked_ilog2() {
+		Some(v) => v as usize,
+		None => panic!("checked statically; qed"),
+	}
 }
