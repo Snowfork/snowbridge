@@ -13,8 +13,7 @@
     "resolveJsonModule": true,
     "baseUrl": "."
   },
-  "include": ["src", "scripts/*.ts"],
-  "exclude": ["scripts/make-xcm-transfer.ts"],
+  "include": ["src"],
   "references": [
     {
       "path": "../contracts"
