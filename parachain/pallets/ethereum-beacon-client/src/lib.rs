@@ -614,6 +614,7 @@ pub mod pallet {
 			let validators_root = <ValidatorsRoot<T>>::get();
 			let participation =
 				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
+			Self::sync_committee_participation_is_supermajority(&participation)?;
 
 			Self::verify_signed_header(
 				&participation,
