@@ -58,7 +58,7 @@ fn it_updates_a_committee_period_sync_update() {
 }
 
 #[test]
-fn it_updates_a_committee_period_sync_update_with_invalid_header() {
+fn it_updates_a_committee_period_sync_update_with_invalid_signature_slot() {
 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 
 	let mut update =
@@ -75,7 +75,7 @@ fn it_updates_a_committee_period_sync_update_with_invalid_header() {
 				mock_minimal::RuntimeOrigin::signed(1),
 				update.clone(),
 			),
-			Error::<mock_minimal::Test>::InvalidSyncCommitteeHeaderUpdate
+			Error::<mock_minimal::Test>::InvalidSignatureSlot
 		);
 	});
 }
@@ -191,9 +191,12 @@ fn it_processes_a_finalized_header_update() {
 
 #[test]
 fn it_processes_a_invalid_finalized_header_update() {
+	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 	let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
+		assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(&initial_sync));
+
 		LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 			beacon_block_root: Default::default(),
 			import_time: 0,
@@ -250,8 +253,9 @@ fn it_processes_a_header_update() {
 	let finalized_slot = finalized_update.finalized_header.slot;
 	let finalized_block_root: H256 = finalized_update.finalized_header.hash_tree_root().unwrap();
 
-	let current_period =
-		mock_minimal::EthereumBeaconClient::compute_current_sync_period(update.beacon_header.slot);
+	let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
+		update.attested_header.slot,
+	);
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
@@ -282,13 +286,16 @@ fn it_processes_a_header_update() {
 
 #[test]
 fn it_processes_a_invalid_header_update_not_finalized() {
+	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 	let update = get_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
+		assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(&initial_sync));
+
 		LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 			beacon_block_root: H256::default(),
 			// initialize finalized state with parent slot of the next update
-			beacon_slot: update.beacon_header.slot - 1,
+			beacon_slot: update.attested_header.slot - 1,
 			import_time: 0,
 		});
 
@@ -304,12 +311,15 @@ fn it_processes_a_invalid_header_update_not_finalized() {
 
 #[test]
 fn it_processes_a_invalid_header_update_with_duplicate_entry() {
+	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 	let update = get_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
+		assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(&initial_sync));
+
 		LatestFinalizedHeaderState::<mock_minimal::Test>::set(FinalizedHeaderState {
 			beacon_block_root: H256::default(),
-			beacon_slot: update.beacon_header.slot,
+			beacon_slot: update.attested_header.slot,
 			import_time: 0,
 		});
 
@@ -385,7 +395,7 @@ pub fn test_bls_fast_aggregate_verify() {
 		mock_minimal::EthereumBeaconClient::find_pubkeys(&participant_bits, &milagro_pubkeys, true);
 
 	let signing_root = mock_minimal::EthereumBeaconClient::signing_root(
-		test_data.header,
+		&test_data.header,
 		test_data.validators_root,
 		test_data.signature_slot,
 	)

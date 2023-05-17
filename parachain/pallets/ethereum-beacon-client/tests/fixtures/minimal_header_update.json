@@ -1,5 +1,5 @@
 {
-  "beacon_header": {
+  "attested_header": {
     "slot": 150,
     "proposer_index": 5,
     "parent_root": "0x8bdd8b8f9e6887ff2b05b322339fea4ec78a7e6159ec4e54b591a44699662b5b",
@@ -34,7 +34,7 @@
     "sync_committee_signature": "0xb203cba9326023622caad739fe44a50392d85a8bc1cb3f0c64d89319a865dc1dc1d1ff318d939ac24e4866068d8ca442116d4e7badec88015fd2865f97d5d5ab321c6c9a6994a9afee31f03cd015131320324bffc5d18746d232578c321ea61b"
   },
   "signature_slot": 151,
-  "block_root_branch": [
+  "block_roots_branch": [
     "0xc6e5d2ad0e10309dc895c9f3a37b0dcadf95648f036b42d0ef5084252c69f1ed",
     "0x86d3344e6df5f9e3b930fe849e4ef99eca85cf455698db3acff0ab5449f0c383",
     "0x476a0e95a7b8cdef9aa2b8456ad44c46e7d828fd1821dec3dd3f456c21dbd679",
@@ -42,5 +42,5 @@
     "0x76dd343907582c21ec28320c1d6a10349d338ac8ae4bb6e890063ad7d4ce4a6a",
     "0x7eebb150fd62159c1adf5dbe3e677b9574ea304d752f06de0a9f03f8f0ed6597"
   ],
-  "block_root_branch_header_root": "0x105976df5861b95fa4184564978eac0bcbe872acdd77a0ead552a8b283dabc4f"
+  "block_roots_root": "0x105976df5861b95fa4184564978eac0bcbe872acdd77a0ead552a8b283dabc4f"
 }

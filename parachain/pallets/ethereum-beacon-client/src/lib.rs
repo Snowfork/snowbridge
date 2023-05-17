@@ -155,7 +155,6 @@ pub mod pallet {
 		UnexpectedHeaderSlotPosition,
 		ExpectedFinalizedHeaderNotStored,
 		BridgeBlocked,
-		InvalidSyncCommitteeHeaderUpdate,
 		InvalidSyncCommitteeUpdateWithGap,
 		InvalidSyncCommitteeUpdateWithDuplication,
 		InvalidSignatureSlot,
