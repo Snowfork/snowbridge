@@ -6,15 +6,12 @@ use std::{
 	io::{self, Write},
 	str::FromStr,
 };
-use subxt::{ext::sp_core::H256, OnlineClient, PolkadotConfig};
+use sp_core::H256;
+use subxt::{OnlineClient, PolkadotConfig};
 
 #[cfg_attr(
-	feature = "parachain-snowbase",
-	subxt::subxt(runtime_metadata_path = "metadata-snowbase.scale")
-)]
-#[cfg_attr(
-	feature = "parachain-snowblink",
-	subxt::subxt(runtime_metadata_path = "metadata-snowblink.scale")
+	feature = "bridgehub-rococo-local",
+	subxt::subxt(runtime_metadata_path = "metadata-bridgehub-rococo-local.scale")
 )]
 pub mod runtime {}
 
@@ -51,11 +48,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let args = Args::parse();
 	let block_hash = H256::from_str(args.block.trim_start_matches("0x"))?;
 	let api = OnlineClient::<PolkadotConfig>::from_url(args.api).await?;
-	let events = api.events().at(Some(block_hash.into())).await?;
+	let events = api.events().at(block_hash.into()).await?;
 	let mut items: Vec<Item> = Vec::new();
 
-	for ev in events.find::<runtime::basic_outbound_channel::events::Committed>() {
-		if let Ok(runtime::basic_outbound_channel::events::Committed { hash, data }) = ev {
+	for ev in events.find::<runtime::ethereum_outbound_queue::events::Committed>() {
+		if let Ok(runtime::ethereum_outbound_queue::events::Committed { hash, data }) = ev {
 			items.push(Item { hash: hash.encode(), data: data.encode() });
 		}
 	}
