@@ -2,11 +2,11 @@ use codec::Encode;
 use serde::Serialize;
 use serde_hex::{SerHexSeq, StrictPfx};
 use serde_json;
+use sp_core::H256;
 use std::{
 	io::{self, Write},
 	str::FromStr,
 };
-use sp_core::H256;
 use subxt::{OnlineClient, PolkadotConfig};
 
 #[cfg_attr(
