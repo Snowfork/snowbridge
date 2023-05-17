@@ -5,7 +5,7 @@
 [submodule "core/packages/contracts/lib/forge-std"]
 	path = core/packages/contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-	branch = v1.4.0
+	branch = master
 [submodule "core/packages/contracts/lib/ds-test"]
 	path = core/packages/contracts/lib/ds-test
 	url = https://github.com/dapphub/ds-test
