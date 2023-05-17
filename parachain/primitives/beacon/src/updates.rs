@@ -17,7 +17,7 @@ use crate::types::{BeaconHeader, ExecutionPayloadHeader, SyncAggregate, SyncComm
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct InitialUpdate<const COMMITTEE_SIZE: usize> {
+pub struct CheckpointUpdate<const COMMITTEE_SIZE: usize> {
 	pub header: BeaconHeader,
 	pub current_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
 	pub current_sync_committee_branch: Vec<H256>,
@@ -25,9 +25,9 @@ pub struct InitialUpdate<const COMMITTEE_SIZE: usize> {
 	pub import_time: u64,
 }
 
-impl<const COMMITTEE_SIZE: usize> Default for InitialUpdate<COMMITTEE_SIZE> {
+impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
 	fn default() -> Self {
-		InitialUpdate {
+		CheckpointUpdate {
 			header: Default::default(),
 			current_sync_committee: Default::default(),
 			current_sync_committee_branch: Default::default(),
@@ -88,7 +88,7 @@ pub struct FinalizedHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BI
 )]
 #[scale_info(skip_type_params(SyncCommitteeSize))]
 #[codec(mel_bound())]
-pub struct HeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
+pub struct ExecutionHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
 	pub beacon_header: BeaconHeader,
 	pub execution_header: ExecutionPayloadHeader,
 	pub execution_branch: Vec<H256>,

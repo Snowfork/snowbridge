@@ -11,7 +11,7 @@ use data_mainnet::*;
 mod util;
 use primitives::{
 	fast_aggregate_verify, fast_aggregate_verify_legacy, prepare_aggregate_pubkey,
-	prepare_aggregate_signature,
+	prepare_aggregate_signature, Mode,
 };
 use util::*;
 
@@ -31,7 +31,7 @@ benchmarks! {
 
 		let initial_sync_data = initial_sync();
 
-		EthereumBeaconClient::<T>::initial_sync(&initial_sync_data)?;
+		EthereumBeaconClient::<T>::process_checkpoint_update(&initial_sync_data)?;
 
 		let finalized_header_update = finalized_header_update();
 
@@ -60,7 +60,7 @@ benchmarks! {
 
 		let initial_sync_data = initial_sync();
 
-		EthereumBeaconClient::<T>::initial_sync(&initial_sync_data)?;
+		EthereumBeaconClient::<T>::process_checkpoint_update(&initial_sync_data)?;
 
 		let header_update = header_update();
 
@@ -90,8 +90,8 @@ benchmarks! {
 		assert!(<ExecutionHeaders<T>>::contains_key(header_update.execution_header.block_hash))
 	}
 
-	unblock_bridge {
-	}: _(RawOrigin::Root)
+	force_mode {
+	}: _(RawOrigin::Root, Mode::Active)
 	verify {
 		assert!(!<Blocked<T>>::get());
 	}

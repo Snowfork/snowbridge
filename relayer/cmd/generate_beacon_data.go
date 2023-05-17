@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"os"
 
 	"github.com/cbroglie/mustache"
@@ -37,8 +39,30 @@ func generateBeaconDataCmd() *cobra.Command {
 	return cmd
 }
 
+func generateBeaconCheckpointCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "generate-beacon-checkpoint",
+		Short: "Generate beacon checkpoint.",
+		Args:  cobra.ExactArgs(0),
+		RunE:  generateBeaconCheckpoint,
+	}
+
+	cmd.Flags().String("spec", "", "Valid values are mainnet or minimal")
+	err := cmd.MarkFlagRequired("spec")
+	if err != nil {
+		return nil
+	}
+
+	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	if err != nil {
+		return nil
+	}
+
+	return cmd
+}
+
 type Data struct {
-	InitialSync           beaconjson.InitialSync
+	InitialSync           beaconjson.CheckPoint
 	SyncCommitteeUpdate   beaconjson.SyncCommitteeUpdate
 	FinalizedHeaderUpdate beaconjson.FinalizedHeaderUpdate
 	HeaderUpdate          beaconjson.HeaderUpdate
@@ -49,6 +73,55 @@ const (
 	pathToBenchmarkDataTemplate  = "parachain/templates/beacon_benchmarking_data.rs.mustache"
 	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
 )
+
+func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
+	err := func() error {
+		spec, err := cmd.Flags().GetString("spec")
+		if err != nil {
+			return fmt.Errorf("get active spec: %w", err)
+		}
+
+		activeSpec, err := config.ToSpec(spec)
+		if err != nil {
+			return fmt.Errorf("get spec: %w", err)
+		}
+
+		endpoint, err := cmd.Flags().GetString("url")
+
+		configFile := os.Getenv("output_dir") + "/beacon-relay.json"
+
+		viper.SetConfigFile(configFile)
+		if err := viper.ReadInConfig(); err != nil {
+			return err
+		}
+
+		var conf config.Config
+		err = viper.Unmarshal(&conf)
+		if err != nil {
+			return err
+		}
+
+		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
+
+		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
+
+		checkPointScale, err := s.GetCheckpoint()
+		if err != nil {
+			return fmt.Errorf("get initial sync: %w", err)
+		}
+		checkPointBytes, _ := types.EncodeToBytes(checkPointScale)
+		// Call index for EthereumBeaconClient.force_checkpoint
+		checkPointCallIndex := "0x3205"
+		checkPointUpdateCall := checkPointCallIndex + hex.EncodeToString(checkPointBytes)
+		fmt.Println(checkPointUpdateCall)
+		return nil
+	}()
+	if err != nil {
+		log.WithError(err).Error("error generating beacon checkpoint")
+	}
+
+	return nil
+}
 
 func generateBeaconData(cmd *cobra.Command, _ []string) error {
 	err := func() error {
@@ -81,7 +154,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
 
-		initialSyncScale, err := s.GetInitialSync()
+		initialSyncScale, err := s.GetCheckpoint()
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}

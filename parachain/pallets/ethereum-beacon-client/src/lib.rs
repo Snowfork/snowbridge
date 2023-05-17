@@ -30,7 +30,7 @@ use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_proof, verify_receipt_proof, BeaconHeader, BlsError,
 	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
-	ForkVersions, PublicKeyPrepared, Signature, SigningData,
+	ForkVersions, Mode, PublicKeyPrepared, Signature, SigningData,
 };
 use snowbridge_core::{Message, RingBufferMap, RingBufferMapImpl, Verifier};
 use sp_core::H256;
@@ -45,8 +45,9 @@ pub use pallet::*;
 
 pub use config::{SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE};
 
-pub type InitialUpdate = primitives::InitialUpdate<SYNC_COMMITTEE_SIZE>;
-pub type HeaderUpdate = primitives::HeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
+pub type CheckpointUpdate = primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE>;
+pub type ExecutionHeaderUpdate =
+	primitives::ExecutionHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type SyncCommitteeUpdate =
 	primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type FinalizedHeaderUpdate =
@@ -220,27 +221,6 @@ pub mod pallet {
 	pub(crate) type SyncCommitteesMapping<T: Config> =
 		StorageMap<_, Identity, u32, u64, ValueQuery>;
 
-	#[pallet::genesis_config]
-	#[derive(Default)]
-	pub struct GenesisConfig {
-		pub initial_sync: Option<InitialUpdate>,
-	}
-
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Sync committee size is: {}",
-				SYNC_COMMITTEE_SIZE
-			);
-
-			if let Some(initial_sync) = self.initial_sync.clone() {
-				Pallet::<T>::initial_sync(&initial_sync).unwrap();
-			}
-		}
-	}
-
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
@@ -321,7 +301,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
-			update: HeaderUpdate,
+			update: ExecutionHeaderUpdate,
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
@@ -356,21 +336,48 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::unblock_bridge())]
+		#[pallet::weight(T::WeightInfo::force_mode())]
 		#[transactional]
-		pub fn unblock_bridge(origin: OriginFor<T>) -> DispatchResult {
+		pub fn force_mode(origin: OriginFor<T>, mode: Mode) -> DispatchResult {
 			ensure_root(origin)?;
 
-			<Blocked<T>>::set(false);
+			match mode {
+				Mode::Blocked => <Blocked<T>>::set(true),
+				Mode::Active => <Blocked<T>>::set(false),
+			}
 
 			log::info!(target: "ethereum-beacon-client","💫 syncing bridge from governance provided checkpoint.");
+
+			Ok(())
+		}
+
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::force_checkpoint())]
+		#[transactional]
+		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
+			ensure_root(origin)?;
+
+			if let Err(err) = Self::process_checkpoint_update(&update) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"💫 Sync committee period update failed with error {:?}",
+					err
+				);
+				return Err(err)
+			}
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Sync committee period update for slot {} succeeded.",
+				update.header.slot
+			);
 
 			Ok(())
 		}
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn process_initial_sync(update: &InitialUpdate) -> DispatchResult {
+		pub fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
 			Self::verify_sync_committee(
 				&update.current_sync_committee,
 				&update.current_sync_committee_branch,
@@ -561,7 +568,7 @@ pub mod pallet {
 			);
 		}
 
-		fn process_header(update: HeaderUpdate) -> DispatchResult {
+		fn process_header(update: ExecutionHeaderUpdate) -> DispatchResult {
 			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
 			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
 			let block_slot = update.beacon_header.slot;
@@ -964,29 +971,6 @@ pub mod pallet {
 			}
 
 			fork_versions.genesis.version
-		}
-
-		pub(super) fn initial_sync(update: &InitialUpdate) -> Result<(), &'static str> {
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Received initial sync, starting processing.",
-			);
-
-			if let Err(err) = Self::process_initial_sync(update) {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"Initial sync failed with error {:?}",
-					err
-				);
-				return Err(<&str>::from(err))
-			}
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Initial sync processing succeeded.",
-			);
-
-			Ok(())
 		}
 
 		// Verifies that the receipt encoded in proof.data is included

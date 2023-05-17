@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-type InitialSync struct {
+type CheckPoint struct {
 	Header                     BeaconHeader  `json:"header"`
 	CurrentSyncCommittee       SyncCommittee `json:"current_sync_committee"`
 	CurrentSyncCommitteeBranch []string      `json:"current_sync_committee_branch"`
@@ -267,7 +267,7 @@ func (e *ExecutionPayloadHeaderCapella) RemoveLeadingZeroHashes() {
 	e.WithdrawalsRoot = removeLeadingZeroHash(e.WithdrawalsRoot)
 }
 
-func (i *InitialSync) RemoveLeadingZeroHashes() {
+func (i *CheckPoint) RemoveLeadingZeroHashes() {
 	i.Header.RemoveLeadingZeroHashes()
 	i.CurrentSyncCommittee.RemoveLeadingZeroHashes()
 

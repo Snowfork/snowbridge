@@ -473,3 +473,10 @@ mod tests {
 		assert!(hash_root.is_ok());
 	}
 }
+
+/// Operating modes for beacon client
+#[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum Mode {
+	Active,
+	Blocked,
+}

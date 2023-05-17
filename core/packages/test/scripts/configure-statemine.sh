@@ -2,7 +2,7 @@
 
 set -eu
 
-function generate_hex_encoded_call_data() {
+generate_hex_encoded_call_data() {
     local type=$1
     local endpoint=$2
     local output=$3
@@ -22,7 +22,7 @@ function generate_hex_encoded_call_data() {
     return $retVal
 }
 
-function send_governance_transact() {
+send_governance_transact() {
     local relay_url=$1
     local relay_chain_seed=$2
     local para_id=$3
@@ -88,7 +88,7 @@ function send_governance_transact() {
             "${message}"
 }
 
-function add_exporter_config() {
+add_exporter_config() {
     local relay_url=$1
     local relay_chain_seed=$2
     local statemine_para_id=$3

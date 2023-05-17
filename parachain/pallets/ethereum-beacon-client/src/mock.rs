@@ -27,7 +27,7 @@ pub mod mock_minimal {
 		{
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
 			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config, Storage, Event<T>},
+			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
 		}
 	);
 
@@ -121,7 +121,7 @@ pub mod mock_mainnet {
 		{
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
 			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config, Storage, Event<T>},
+			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
 		}
 	);
 
@@ -231,7 +231,7 @@ fn fixture_path(name: &str) -> PathBuf {
 
 fn initial_sync_from_file<const SYNC_COMMITTEE_SIZE: usize>(
 	name: &str,
-) -> primitives::InitialUpdate<SYNC_COMMITTEE_SIZE> {
+) -> primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -268,7 +268,7 @@ fn header_update_from_file<
 	const SYNC_COMMITTEE_BITS_SIZE: usize,
 >(
 	name: &str,
-) -> primitives::HeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
+) -> primitives::ExecutionHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -290,7 +290,7 @@ fn add_file_prefix(name: &str) -> String {
 }
 
 pub fn get_initial_sync<const SYNC_COMMITTEE_SIZE: usize>(
-) -> primitives::InitialUpdate<SYNC_COMMITTEE_SIZE> {
+) -> primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE> {
 	initial_sync_from_file::<SYNC_COMMITTEE_SIZE>(&add_file_prefix("initial_sync.json"))
 }
 
@@ -314,7 +314,7 @@ pub fn get_committee_sync_ssz_test_data<const SYNC_COMMITTEE_SIZE: usize>(
 pub fn get_header_update<
 	const SYNC_COMMITTEE_SIZE: usize,
 	const SYNC_COMMITTEE_BITS_SIZE: usize,
->() -> primitives::HeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
+>() -> primitives::ExecutionHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
 	header_update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(&add_file_prefix(
 		"header_update.json",
 	))
