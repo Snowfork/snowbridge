@@ -75,7 +75,7 @@ pub fn test_compute_domain_kiln() {
 pub fn test_compute_signing_root_bls() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		let signing_root = mock_minimal::EthereumBeaconClient::compute_signing_root(
-			BeaconHeader {
+			&BeaconHeader {
 				slot: 3529537,
 				proposer_index: 192549,
 				parent_root: hex!(
@@ -104,7 +104,7 @@ pub fn test_compute_signing_root_bls() {
 pub fn test_compute_signing_root_kiln() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		let signing_root = mock_minimal::EthereumBeaconClient::compute_signing_root(
-			BeaconHeader {
+			&BeaconHeader {
 				slot: 221316,
 				proposer_index: 79088,
 				parent_root: hex!(
@@ -133,7 +133,7 @@ pub fn test_compute_signing_root_kiln() {
 pub fn test_compute_signing_root_kiln_head_update() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		let signing_root = mock_minimal::EthereumBeaconClient::compute_signing_root(
-			BeaconHeader {
+			&BeaconHeader {
 				slot: 222472,
 				proposer_index: 10726,
 				parent_root: hex!(

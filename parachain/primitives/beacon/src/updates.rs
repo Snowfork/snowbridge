@@ -2,7 +2,7 @@ use codec::{Decode, Encode};
 use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_std::{fmt::Debug, prelude::*};
+use sp_std::prelude::*;
 
 #[cfg(feature = "std")]
 use serde::Deserialize;
@@ -43,8 +43,12 @@ impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
 	derive(serde::Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-pub struct CoreUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
+pub struct SyncCommitteeUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
 	pub attested_header: BeaconHeader,
+	pub next_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
+	pub next_sync_committee_branch: Vec<H256>,
+	pub finalized_header: BeaconHeader,
+	pub finality_branch: Vec<H256>,
 	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
 	pub sync_committee_period: u64,
 	pub signature_slot: u64,
@@ -60,26 +64,14 @@ pub struct CoreUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: us
 	derive(serde::Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-pub struct SyncCommitteeUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
-	pub core: CoreUpdate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
-	pub finalized_header: BeaconHeader,
-	pub finality_branch: Vec<H256>,
-	pub next_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
-	pub next_sync_committee_branch: Vec<H256>,
-}
-
-#[derive(
-	Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
-)]
-#[cfg_attr(
-	feature = "std",
-	derive(serde::Deserialize),
-	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
-)]
 pub struct FinalizedHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
-	pub core: CoreUpdate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
+	pub attested_header: BeaconHeader,
 	pub finalized_header: BeaconHeader,
 	pub finality_branch: Vec<H256>,
+	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
+	pub signature_slot: u64,
+	pub block_roots_root: H256,
+	pub block_roots_branch: Vec<H256>,
 }
 
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
@@ -89,7 +81,11 @@ pub struct FinalizedHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BI
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 pub struct ExecutionHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
-	pub core: CoreUpdate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
+	pub attested_header: BeaconHeader,
+	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
+	pub signature_slot: u64,
+	pub block_roots_root: H256,
+	pub block_roots_branch: Vec<H256>,
 	pub execution_header: ExecutionPayloadHeader,
 	pub execution_branch: Vec<H256>,
 }
