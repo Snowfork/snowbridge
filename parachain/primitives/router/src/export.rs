@@ -33,54 +33,54 @@ where
 	) -> SendResult<Self::Ticket> {
 		let bridged_network = BridgedNetwork::get();
 		if network != bridged_network {
-			log::trace!(target: "ethereum_blob_exporter", "skipped due to unmatched bridge network {network:?}.");
+			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched bridge network {network:?}.");
 			return Err(SendError::NotApplicable)
 		}
 
 		let dest = destination.take().ok_or(SendError::MissingArgument)?;
 		if dest != Here {
-			log::trace!(target: "ethereum_blob_exporter", "skipped due to unmatched remote destination {dest:?}.");
+			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched remote destination {dest:?}.");
 			return Err(SendError::NotApplicable)
 		}
 
 		let (local_net, local_sub) = universal_source
 			.take()
 			.ok_or_else(|| {
-				log::error!(target: "ethereum_blob_exporter", "universal source not provided.");
+				log::error!(target: "xcm::ethereum_blob_exporter", "universal source not provided.");
 				SendError::MissingArgument
 			})?
 			.split_global()
 			.map_err(|()| {
-				log::error!(target: "ethereum_blob_exporter", "could not get global consensus from universal source '{universal_source:?}'.");
+				log::error!(target: "xcm::ethereum_blob_exporter", "could not get global consensus from universal source '{universal_source:?}'.");
 				SendError::Unroutable
 			})?;
 
 		if local_net != RelayNetwork::get() {
-			log::trace!(target: "ethereum_blob_exporter", "skipped due to unmatched relay network {local_net:?}.");
+			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched relay network {local_net:?}.");
 			return Err(SendError::NotApplicable)
 		}
 
 		let para_id = match local_sub {
 			X1(Parachain(para_id)) => para_id,
 			_ => {
-				log::error!(target: "ethereum_blob_exporter", "could not get parachain id from universal source '{local_sub:?}'.");
+				log::error!(target: "xcm::ethereum_blob_exporter", "could not get parachain id from universal source '{local_sub:?}'.");
 				return Err(SendError::MissingArgument)
 			},
 		};
 
 		let message = message.take().ok_or_else(|| {
-			log::error!(target: "ethereum_blob_exporter", "xcm message not provided.");
+			log::error!(target: "xcm::ethereum_blob_exporter", "xcm message not provided.");
 			SendError::MissingArgument
 		})?;
 
 		let mut converter = XcmConverter::new(&message, &bridged_network);
 		let (payload, max_target_fee) = converter.convert().map_err(|err|{
-			log::error!(target: "ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
+			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
 
 		if max_target_fee.is_some() {
-			log::error!(target: "ethereum_blob_exporter", "unroutable due not supporting max target fee.");
+			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due not supporting max target fee.");
 			return Err(SendError::Unroutable)
 		}
 
@@ -89,7 +89,7 @@ where
 		let blob = ValidatedMessage(para_id.into(), handler, encoded).encode();
 		let hash: [u8; 32] = sp_io::hashing::blake2_256(blob.as_slice());
 
-		log::info!(target: "ethereum_blob_exporter", "message validated {hash:#?}.");
+		log::info!(target: "xcm::ethereum_blob_exporter", "message validated {hash:#?}.");
 
 		// TODO: Fees if any currently returning empty multi assets as cost
 		Ok(((blob, hash), MultiAssets::default()))
@@ -98,14 +98,14 @@ where
 	fn deliver((blob, hash): (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {
 		let ValidatedMessage(source_id, handler, payload) =
 			ValidatedMessage::decode(&mut blob.as_ref()).map_err(|err| {
-				log::trace!(target: "ethereum_blob_exporter", "undeliverable due to decoding error '{err:?}'.");
+				log::trace!(target: "xcm::ethereum_blob_exporter", "undeliverable due to decoding error '{err:?}'.");
 				SendError::NotApplicable
 			})?;
 		Queue::submit(source_id, handler, payload.as_ref()).map_err(|err| {
-			log::error!(target: "ethereum_blob_exporter", "undeliverable due to OutboundQueue error '{err:?}'.");
+			log::error!(target: "xcm::ethereum_blob_exporter", "undeliverable due to OutboundQueue error '{err:?}'.");
 			SendError::Unroutable
 		})?;
-		log::info!(target: "ethereum_blob_exporter", "message delivered {hash:#?}.");
+		log::info!(target: "xcm::ethereum_blob_exporter", "message delivered {hash:#?}.");
 		Ok(hash)
 	}
 }
