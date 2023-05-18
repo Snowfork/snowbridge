@@ -2,12 +2,11 @@ use codec::Encode;
 use serde::Serialize;
 use serde_hex::{SerHexSeq, StrictPfx};
 use serde_json;
-use sp_core::H256;
 use std::{
 	io::{self, Write},
 	str::FromStr,
 };
-use subxt::{OnlineClient, PolkadotConfig};
+use subxt::{utils::H256, OnlineClient, PolkadotConfig};
 
 #[cfg_attr(
 	feature = "bridgehub-rococo-local",
