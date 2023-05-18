@@ -25,7 +25,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2023-04-22
+          toolchain: nightly-2023-05-12
           target: wasm32-unknown-unknown
       - name: build
         uses: actions-rs/cargo@v1
