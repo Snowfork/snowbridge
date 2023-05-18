@@ -263,12 +263,7 @@ fn finalized_header_update_from_file<
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn header_update_from_file<
-	const SYNC_COMMITTEE_SIZE: usize,
-	const SYNC_COMMITTEE_BITS_SIZE: usize,
->(
-	name: &str,
-) -> primitives::ExecutionHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
+fn header_update_from_file(name: &str) -> primitives::ExecutionHeaderUpdate {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -311,13 +306,8 @@ pub fn get_committee_sync_ssz_test_data<const SYNC_COMMITTEE_SIZE: usize>(
 	sync_committee_from_file::<SYNC_COMMITTEE_SIZE>(filename.as_str())
 }
 
-pub fn get_header_update<
-	const SYNC_COMMITTEE_SIZE: usize,
-	const SYNC_COMMITTEE_BITS_SIZE: usize,
->() -> primitives::ExecutionHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
-	header_update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(&add_file_prefix(
-		"header_update.json",
-	))
+pub fn get_header_update() -> primitives::ExecutionHeaderUpdate {
+	header_update_from_file(&add_file_prefix("header_update.json"))
 }
 
 pub fn get_finalized_header_update<

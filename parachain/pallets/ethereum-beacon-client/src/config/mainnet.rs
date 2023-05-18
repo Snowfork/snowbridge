@@ -5,4 +5,4 @@ pub const SYNC_COMMITTEE_SIZE: usize = 512;
 pub const SYNC_COMMITTEE_BITS_SIZE: usize = SYNC_COMMITTEE_SIZE / 8;
 pub const SLOTS_PER_HISTORICAL_ROOT: usize = 8192;
 pub const IS_MINIMAL: bool = false;
-pub const BLOCK_ROOT_AT_INDEX_PROOF_DEPTH: usize = 13;
+pub const BLOCK_ROOT_AT_INDEX_DEPTH: usize = 13;

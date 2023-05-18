@@ -4,9 +4,6 @@ use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_std::prelude::*;
 
-#[cfg(feature = "std")]
-use serde::Deserialize;
-
 use crate::types::{BeaconHeader, ExecutionPayloadHeader, SyncAggregate, SyncCommittee};
 
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
@@ -15,8 +12,6 @@ use crate::types::{BeaconHeader, ExecutionPayloadHeader, SyncAggregate, SyncComm
 	derive(serde::Serialize, serde::Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SyncCommitteeSize))]
-#[codec(mel_bound())]
 pub struct CheckpointUpdate<const COMMITTEE_SIZE: usize> {
 	pub header: BeaconHeader,
 	pub current_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
@@ -45,8 +40,6 @@ impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
 	derive(serde::Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SyncCommitteeSize))]
-#[codec(mel_bound())]
 pub struct SyncCommitteeUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
 	pub attested_header: BeaconHeader,
 	pub next_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
@@ -54,7 +47,6 @@ pub struct SyncCommitteeUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS
 	pub finalized_header: BeaconHeader,
 	pub finality_branch: Vec<H256>,
 	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
-	pub sync_committee_period: u64,
 	pub signature_slot: u64,
 	pub block_roots_root: H256,
 	pub block_roots_branch: Vec<H256>,
@@ -68,8 +60,6 @@ pub struct SyncCommitteeUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS
 	derive(serde::Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SyncCommitteeSize,))]
-#[codec(mel_bound())]
 pub struct FinalizedHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
 	pub attested_header: BeaconHeader,
 	pub finalized_header: BeaconHeader,
@@ -83,17 +73,13 @@ pub struct FinalizedHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BI
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 #[cfg_attr(
 	feature = "std",
-	derive(Deserialize),
+	derive(serde::Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-#[scale_info(skip_type_params(SyncCommitteeSize))]
-#[codec(mel_bound())]
-pub struct ExecutionHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
-	pub beacon_header: BeaconHeader,
+pub struct ExecutionHeaderUpdate {
+	pub header: BeaconHeader,
 	pub execution_header: ExecutionPayloadHeader,
 	pub execution_branch: Vec<H256>,
-	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
-	pub signature_slot: u64,
-	pub block_root_branch: Vec<H256>,
-	pub block_root_branch_header_root: H256,
+	pub block_roots_root: H256,
+	pub block_roots_branch: Vec<H256>,
 }

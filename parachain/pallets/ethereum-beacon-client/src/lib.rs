@@ -28,9 +28,9 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use primitives::{
-	fast_aggregate_verify, verify_merkle_proof, verify_receipt_proof, BeaconHeader, BlsError,
+	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
 	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
-	ForkVersions, Mode, PublicKeyPrepared, Signature, SigningData,
+	ForkVersions, Mode, PublicKeyPrepared, SigningData,
 };
 use snowbridge_core::{Message, RingBufferMap, RingBufferMapImpl, Verifier};
 use sp_core::H256;
@@ -46,14 +46,14 @@ pub use pallet::*;
 pub use config::{SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE};
 
 pub type CheckpointUpdate = primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE>;
-pub type ExecutionHeaderUpdate =
-	primitives::ExecutionHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
+pub type ExecutionHeaderUpdate = primitives::ExecutionHeaderUpdate;
 pub type SyncCommitteeUpdate =
 	primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type FinalizedHeaderUpdate =
 	primitives::FinalizedHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type SyncCommittee = primitives::SyncCommittee<SYNC_COMMITTEE_SIZE>;
 pub type SyncCommitteePrepared = primitives::SyncCommitteePrepared<SYNC_COMMITTEE_SIZE>;
+pub type SyncAggregate = primitives::SyncAggregate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 
 fn decompress_sync_committee_bits(
 	input: [u8; SYNC_COMMITTEE_BITS_SIZE],
@@ -139,6 +139,7 @@ pub mod pallet {
 		NoBranchExpected,
 		HeaderNotFinalized,
 		MissingHeader,
+		MissingFinalityHeader,
 		InvalidProof,
 		InvalidBlockRootAtSlot,
 		DecodeFailed,
@@ -152,7 +153,6 @@ pub mod pallet {
 		UnexpectedHeaderSlotPosition,
 		ExpectedFinalizedHeaderNotStored,
 		BridgeBlocked,
-		InvalidSyncCommitteeHeaderUpdate,
 		InvalidSyncCommitteeUpdateWithGap,
 		InvalidSyncCommitteeUpdateWithDuplication,
 		InvalidSignatureSlot,
@@ -183,14 +183,17 @@ pub mod pallet {
 		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn validators_root)]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestFinalizedHeaderState<T: Config> =
+	#[pallet::getter(fn latest_finalized_header)]
+	pub(super) type LatestFinalizedHeader<T: Config> =
 		StorageValue<_, FinalizedHeaderState, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestExecutionHeaderState<T: Config> =
+	#[pallet::getter(fn latest_execution_header)]
+	pub(super) type LatestExecutionHeader<T: Config> =
 		StorageValue<_, ExecutionHeaderState, ValueQuery>;
 
 	#[pallet::storage]
@@ -224,6 +227,46 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
+		#[pallet::weight(T::WeightInfo::force_mode())]
+		#[transactional]
+		pub fn force_mode(origin: OriginFor<T>, mode: Mode) -> DispatchResult {
+			ensure_root(origin)?;
+
+			match mode {
+				Mode::Blocked => <Blocked<T>>::set(true),
+				Mode::Active => <Blocked<T>>::set(false),
+			}
+
+			log::info!(target: "ethereum-beacon-client","💫 syncing bridge from governance provided checkpoint.");
+
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::force_checkpoint())]
+		#[transactional]
+		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
+			ensure_root(origin)?;
+
+			if let Err(err) = Self::process_checkpoint_update(&update) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"💫 Sync committee period update failed with error {:?}",
+					err
+				);
+				return Err(err)
+			}
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Sync committee period update for slot {} succeeded.",
+				update.header.slot
+			);
+
+			Ok(())
+		}
+
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::sync_committee_period_update())]
 		#[transactional]
 		pub fn sync_committee_period_update(
@@ -234,7 +277,8 @@ pub mod pallet {
 
 			Self::check_bridge_blocked_state()?;
 
-			let sync_committee_period = update.sync_committee_period;
+			let sync_committee_period =
+				Self::compute_current_sync_period(update.attested_header.slot);
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received sync committee update for period {}. Applying update",
@@ -259,7 +303,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(1)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::import_finalized_header())]
 		#[transactional]
 		pub fn import_finalized_header(
@@ -278,7 +322,7 @@ pub mod pallet {
 				slot
 			);
 
-			if let Err(err) = Self::process_finalized_header(finalized_header_update) {
+			if let Err(err) = Self::process_finalized_header_update(&finalized_header_update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"💫 Finalized header update failed with error {:?}",
@@ -296,7 +340,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(2)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::import_execution_header())]
 		#[transactional]
 		pub fn import_execution_header(
@@ -307,7 +351,7 @@ pub mod pallet {
 
 			Self::check_bridge_blocked_state()?;
 
-			let slot = update.beacon_header.slot;
+			let slot = update.header.slot;
 			let block_hash = update.execution_header.block_hash;
 
 			log::info!(
@@ -316,7 +360,7 @@ pub mod pallet {
 				slot
 			);
 
-			if let Err(err) = Self::process_header(update) {
+			if let Err(err) = Self::process_execution_header_update(&update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"💫 Header update failed with error {:?}",
@@ -334,46 +378,6 @@ pub mod pallet {
 
 			Ok(())
 		}
-
-		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::force_mode())]
-		#[transactional]
-		pub fn force_mode(origin: OriginFor<T>, mode: Mode) -> DispatchResult {
-			ensure_root(origin)?;
-
-			match mode {
-				Mode::Blocked => <Blocked<T>>::set(true),
-				Mode::Active => <Blocked<T>>::set(false),
-			}
-
-			log::info!(target: "ethereum-beacon-client","💫 syncing bridge from governance provided checkpoint.");
-
-			Ok(())
-		}
-
-		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::force_checkpoint())]
-		#[transactional]
-		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
-			ensure_root(origin)?;
-
-			if let Err(err) = Self::process_checkpoint_update(&update) {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"💫 Sync committee period update failed with error {:?}",
-					err
-				);
-				return Err(err)
-			}
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Sync committee period update for slot {} succeeded.",
-				update.header.slot
-			);
-
-			Ok(())
-		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -382,7 +386,8 @@ pub mod pallet {
 				&update.current_sync_committee,
 				&update.current_sync_committee_branch,
 				update.header.state_root,
-				config::CURRENT_SYNC_COMMITTEE_INDEX,
+				config::CURRENT_SYNC_COMMITTEE_SUBTREE_INDEX,
+				config::CURRENT_SYNC_COMMITTEE_DEPTH,
 			)?;
 
 			let period = Self::compute_current_sync_period(update.header.slot);
@@ -400,31 +405,24 @@ pub mod pallet {
 		}
 
 		fn process_sync_committee_period_update(update: &SyncCommitteeUpdate) -> DispatchResult {
-			ensure!(
-				update.signature_slot > update.attested_header.slot &&
-					update.attested_header.slot >= update.finalized_header.slot,
-				Error::<T>::InvalidSyncCommitteeHeaderUpdate
-			);
-			let participation =
-				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
-			Self::sync_committee_participation_is_supermajority(&participation)?;
+			Self::verify_weak_subjectivity()?;
+			Self::verify_attested_header(
+				&update.attested_header,
+				&update.sync_aggregate,
+				update.signature_slot,
+			)?;
+			let finalized_block_root = Self::verify_finalized_header(
+				&update.attested_header,
+				&update.finalized_header,
+				&update.finality_branch,
+			)?;
+
 			Self::verify_sync_committee(
 				&update.next_sync_committee,
 				&update.next_sync_committee_branch,
 				update.attested_header.state_root,
-				config::NEXT_SYNC_COMMITTEE_INDEX,
-			)?;
-
-			let block_root: H256 = update
-				.finalized_header
-				.hash_tree_root()
-				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
-
-			Self::verify_header(
-				block_root,
-				&update.finality_branch,
-				update.attested_header.state_root,
-				config::FINALIZED_ROOT_INDEX,
+				config::NEXT_SYNC_COMMITTEE_SUBTREE_INDEX,
+				config::NEXT_SYNC_COMMITTEE_DEPTH,
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
@@ -446,85 +444,44 @@ pub mod pallet {
 				Error::<T>::InvalidSyncCommitteeUpdateWithGap
 			);
 
-			let validators_root = <ValidatorsRoot<T>>::get();
-			let sync_committee = Self::sync_committee_for_period(current_period)?;
-			Self::verify_signed_header(
-				&participation,
-				&update.sync_aggregate.sync_committee_signature,
-				&sync_committee,
-				update.attested_header,
-				validators_root,
-				update.signature_slot,
-			)?;
 			ensure!(
-				update.block_roots_branch.len() == config::BLOCK_ROOTS_DEPTH &&
-					verify_merkle_proof(
-						update.block_roots_root,
-						&update.block_roots_branch,
-						config::BLOCK_ROOTS_INDEX,
-						update.finalized_header.state_root
-					),
+				verify_merkle_branch(
+					update.block_roots_root,
+					&update.block_roots_branch,
+					config::BLOCK_ROOTS_SUBTREE_INDEX,
+					config::BLOCK_ROOTS_DEPTH,
+					update.finalized_header.state_root
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
-			Self::store_block_root(update.block_roots_root, block_root);
+			Self::store_block_root(update.block_roots_root, finalized_block_root);
 			Self::store_sync_committee(next_period, &update.next_sync_committee)?;
-			Self::store_finalized_header(block_root, update.finalized_header, None)?;
+			Self::store_finalized_header(finalized_block_root, update.finalized_header, None)?;
 
 			Ok(())
 		}
 
-		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
-			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
+		fn process_finalized_header_update(update: &FinalizedHeaderUpdate) -> DispatchResult {
+			Self::verify_weak_subjectivity()?;
+			Self::verify_attested_header(
+				&update.attested_header,
+				&update.sync_aggregate,
+				update.signature_slot,
+			)?;
 			ensure!(
-				update.signature_slot > update.attested_header.slot,
-				Error::<T>::InvalidSignatureSlot
-			);
-			ensure!(
-				update.attested_header.slot >= update.finalized_header.slot,
-				Error::<T>::InvalidAttestedHeaderSlot
-			);
-			ensure!(
-				update.finalized_header.slot > last_finalized_header.beacon_slot,
+				update.finalized_header.slot > Self::latest_finalized_header().beacon_slot,
 				Error::<T>::DuplicateFinalizedHeaderUpdate
 			);
-
-			let import_time = last_finalized_header.import_time;
-			let weak_subjectivity_period_check =
-				import_time + T::WeakSubjectivityPeriodSeconds::get();
-			let time: u64 = T::TimeProvider::now().as_secs();
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Checking weak subjectivity period. Current time is :{:?} Weak subjectivity period check: {:?}.",
-				time,
-				weak_subjectivity_period_check
-			);
-
-			if time > weak_subjectivity_period_check {
-				log::info!(target: "ethereum-beacon-client","💫 Weak subjectivity period exceeded, blocking bridge.",);
-				<Blocked<T>>::set(true);
-				return Err(Error::<T>::BridgeBlocked.into())
-			}
-
-			let participation =
-				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
-			Self::sync_committee_participation_is_supermajority(&participation)?;
-
-			let block_root: H256 = update
-				.finalized_header
-				.hash_tree_root()
-				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
-
-			Self::verify_header(
-				block_root,
+			let finalized_block_root = Self::verify_finalized_header(
+				&update.attested_header,
+				&update.finalized_header,
 				&update.finality_branch,
-				update.attested_header.state_root,
-				config::FINALIZED_ROOT_INDEX,
 			)?;
 
 			let last_finalized_period =
-				Self::compute_current_sync_period(last_finalized_header.beacon_slot);
+				Self::compute_current_sync_period(Self::latest_finalized_header().beacon_slot);
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
 			ensure!(
 				(current_period == last_finalized_period ||
@@ -532,31 +489,20 @@ pub mod pallet {
 				Error::<T>::InvalidFinalizedPeriodUpdate
 			);
 
-			let validators_root = <ValidatorsRoot<T>>::get();
-			let sync_committee = Self::sync_committee_for_period(current_period)?;
-			Self::verify_signed_header(
-				&participation,
-				&update.sync_aggregate.sync_committee_signature,
-				&sync_committee,
-				update.attested_header,
-				validators_root,
-				update.signature_slot,
-			)?;
-
 			ensure!(
-				update.block_roots_branch.len() == config::BLOCK_ROOTS_DEPTH &&
-					verify_merkle_proof(
-						update.block_roots_root,
-						&update.block_roots_branch,
-						config::BLOCK_ROOTS_INDEX,
-						update.finalized_header.state_root
-					),
+				verify_merkle_branch(
+					update.block_roots_root,
+					&update.block_roots_branch,
+					config::BLOCK_ROOTS_SUBTREE_INDEX,
+					config::BLOCK_ROOTS_DEPTH,
+					update.finalized_header.state_root
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
-			Self::store_block_root(update.block_roots_root, block_root);
-
-			Self::store_finalized_header(block_root, update.finalized_header, None)?;
+			Self::store_block_root(update.block_roots_root, finalized_block_root);
+			Self::store_finalized_header(finalized_block_root, update.finalized_header, None)?;
 
 			Ok(())
 		}
@@ -568,74 +514,58 @@ pub mod pallet {
 			);
 		}
 
-		fn process_header(update: ExecutionHeaderUpdate) -> DispatchResult {
-			let last_finalized_header = <LatestFinalizedHeaderState<T>>::get();
-			let latest_finalized_header_slot = last_finalized_header.beacon_slot;
-			let block_slot = update.beacon_header.slot;
-			ensure!(block_slot <= latest_finalized_header_slot, Error::<T>::HeaderNotFinalized);
-
-			let execution_header_state = <LatestExecutionHeaderState<T>>::get();
+		fn process_execution_header_update(update: &ExecutionHeaderUpdate) -> DispatchResult {
 			ensure!(
-				update.execution_header.block_number > execution_header_state.block_number,
+				update.header.slot <= Self::latest_finalized_header().beacon_slot,
+				Error::<T>::HeaderNotFinalized
+			);
+
+			ensure!(
+				update.execution_header.block_number > Self::latest_execution_header().block_number,
 				Error::<T>::InvalidExecutionHeaderUpdate
 			);
 
-			let execution_root: H256 = update
+			let execution_header_root: H256 = update
 				.execution_header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 
 			ensure!(
-				update.execution_branch.len() == config::EXECUTION_HEADER_DEPTH &&
-					verify_merkle_proof(
-						execution_root,
-						&update.execution_branch,
-						config::EXECUTION_HEADER_INDEX,
-						update.beacon_header.body_root
-					),
+				verify_merkle_branch(
+					execution_header_root,
+					&update.execution_branch,
+					config::EXECUTION_HEADER_SUBTREE_INDEX,
+					config::EXECUTION_HEADER_DEPTH,
+					update.header.body_root
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidExecutionHeaderProof
 			);
 
-			let beacon_block_root: H256 = update
-				.beacon_header
+			let header_root: H256 = update
+				.header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			Self::ancestry_proof(
-				update.block_root_branch,
-				block_slot,
-				beacon_block_root,
-				update.block_root_branch_header_root,
-			)?;
-
-			let current_period = Self::compute_current_sync_period(update.beacon_header.slot);
-			let sync_committee = Self::sync_committee_for_period(current_period)?;
-
-			let validators_root = <ValidatorsRoot<T>>::get();
-			let participation =
-				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
-
-			Self::verify_signed_header(
-				&participation,
-				&update.sync_aggregate.sync_committee_signature,
-				&sync_committee,
-				update.beacon_header,
-				validators_root,
-				update.signature_slot,
+				&update.block_roots_branch,
+				update.header.slot,
+				header_root,
+				update.block_roots_root,
 			)?;
 
 			Self::store_execution_header(
 				update.execution_header.block_hash,
-				update.execution_header.into(),
-				block_slot,
-				beacon_block_root,
+				update.execution_header.clone().into(),
+				update.header.slot,
+				header_root,
 			);
 
 			Ok(())
 		}
 
 		fn ancestry_proof(
-			block_root_proof: Vec<H256>,
+			block_root_proof: &[H256],
 			block_slot: u64,
 			beacon_block_root: H256,
 			finalized_header_root: H256,
@@ -681,17 +611,18 @@ pub mod pallet {
 
 			log::info!(
 				target: "ethereum-beacon-client",
-				"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH, leaf_index
+				"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_DEPTH, leaf_index
 			);
 
 			ensure!(
-				block_root_proof.len() == config::BLOCK_ROOT_AT_INDEX_PROOF_DEPTH &&
-					verify_merkle_proof(
-						beacon_block_root,
-						&block_root_proof,
-						leaf_index,
-						finalized_block_root_hash
-					),
+				verify_merkle_branch(
+					beacon_block_root,
+					&block_root_proof,
+					leaf_index,
+					config::BLOCK_ROOT_AT_INDEX_DEPTH,
+					finalized_block_root_hash
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
@@ -706,31 +637,85 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub(super) fn verify_signed_header(
-			sync_committee_bits: &[u8],
-			sync_committee_signature: &Signature,
-			sync_committee: &SyncCommitteePrepared,
-			header: BeaconHeader,
-			validators_root: H256,
+		// Weak subjectivity check
+		pub(super) fn verify_weak_subjectivity() -> DispatchResult {
+			let import_time = Self::latest_finalized_header().import_time;
+			let weak_subjectivity_period_check =
+				import_time + T::WeakSubjectivityPeriodSeconds::get();
+			let time: u64 = T::TimeProvider::now().as_secs();
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Checking weak subjectivity period. Current time is :{:?} Weak subjectivity period check: {:?}.",
+				time,
+				weak_subjectivity_period_check
+			);
+			if time > weak_subjectivity_period_check {
+				log::info!(target: "ethereum-beacon-client","💫 Weak subjectivity period exceeded, blocking bridge.",);
+				<Blocked<T>>::set(true);
+				// FIXME: reverting the transaction will revert the state change!
+				return Err(Error::<T>::BridgeBlocked.into())
+			}
+
+			Ok(())
+		}
+
+		/// Verify that a supermajority of the sync committee signed the attested beacon header
+		pub(super) fn verify_attested_header(
+			attested_header: &BeaconHeader,
+			sync_aggregate: &SyncAggregate,
 			signature_slot: u64,
 		) -> DispatchResult {
-			// Gathers milagro pubkeys absent to participate
-			let absent_pubkeys =
-				Self::find_pubkeys(sync_committee_bits, &sync_committee.pubkeys, false);
+			// Verify sync committee has sufficient participants
+			let participation = decompress_sync_committee_bits(sync_aggregate.sync_committee_bits);
+			Self::sync_committee_participation_is_supermajority(&participation)?;
 
-			// Get signing root for BeaconHeader
-			let signing_root = Self::signing_root(header, validators_root, signature_slot)?;
+			// Verify update does not skip a sync committee period
+			ensure!(signature_slot > attested_header.slot, Error::<T>::InvalidSignatureSlot);
 
-			// Verify sync committee aggregate signature.
+			// Verify sync committee aggregate signature
+			let current_period = Self::compute_current_sync_period(attested_header.slot);
+			let sync_committee = Self::sync_committee_for_period(current_period)?;
+			let absent_pubkeys = Self::find_pubkeys(&participation, &sync_committee.pubkeys, false);
+			let signing_root =
+				Self::signing_root(attested_header, Self::validators_root(), signature_slot)?;
 			fast_aggregate_verify(
 				&sync_committee.aggregate_pubkey,
 				&absent_pubkeys,
 				signing_root,
-				sync_committee_signature,
+				&sync_aggregate.sync_committee_signature,
 			)
 			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
 			Ok(())
+		}
+
+		pub(super) fn verify_finalized_header(
+			attested_header: &BeaconHeader,
+			finalized_header: &BeaconHeader,
+			finality_branch: &[H256],
+		) -> Result<H256, DispatchError> {
+			ensure!(
+				attested_header.slot >= finalized_header.slot,
+				Error::<T>::InvalidAttestedHeaderSlot
+			);
+
+			let finalized_block_root: H256 = finalized_header
+				.hash_tree_root()
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
+
+			ensure!(
+				verify_merkle_branch(
+					finalized_block_root,
+					finality_branch,
+					config::FINALIZED_ROOT_SUBTREE_INDEX,
+					config::FINALIZED_ROOT_DEPTH,
+					attested_header.state_root
+				)
+				.is_some_and(|x| x),
+				Error::<T>::InvalidHeaderMerkleProof
+			);
+
+			Ok(finalized_block_root)
 		}
 
 		pub(super) fn compute_epoch_at_slot(signature_slot: u64, slots_per_epoch: u64) -> u64 {
@@ -738,7 +723,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn compute_signing_root(
-			beacon_header: BeaconHeader,
+			beacon_header: &BeaconHeader,
 			domain: H256,
 		) -> Result<H256, DispatchError> {
 			let beacon_header_root = beacon_header
@@ -757,41 +742,24 @@ pub mod pallet {
 			sync_committee_branch: &[H256],
 			header_state_root: H256,
 			index: usize,
+			depth: usize,
 		) -> DispatchResult {
 			let sync_committee_root = sync_committee
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
 			ensure!(
-				sync_committee_branch.len() == config::SYNC_COMMITTEE_DEPTH &&
-					verify_merkle_proof(
-						sync_committee_root,
-						sync_committee_branch,
-						index,
-						header_state_root
-					),
+				verify_merkle_branch(
+					sync_committee_root,
+					sync_committee_branch,
+					index,
+					depth,
+					header_state_root
+				)
+				.is_some_and(|x| x),
 				Error::<T>::InvalidSyncCommitteeMerkleProof
 			);
 
-			Ok(())
-		}
-
-		fn verify_header(
-			block_root: H256,
-			proof_branch: &[H256],
-			attested_header_state_root: H256,
-			index: usize,
-		) -> DispatchResult {
-			ensure!(
-				proof_branch.len() == config::FINALIZED_ROOT_DEPTH &&
-					verify_merkle_proof(
-						block_root,
-						proof_branch,
-						index,
-						attested_header_state_root
-					),
-				Error::<T>::InvalidHeaderMerkleProof
-			);
 			Ok(())
 		}
 
@@ -830,7 +798,7 @@ pub mod pallet {
 			};
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
-			LatestFinalizedHeaderState::<T>::set(finalized_header);
+			LatestFinalizedHeader::<T>::set(finalized_header);
 			Self::add_finalized_header_state(finalized_header)?;
 
 			log::info!(
@@ -880,7 +848,7 @@ pub mod pallet {
 				block_number
 			);
 
-			LatestExecutionHeaderState::<T>::mutate(|s| {
+			LatestExecutionHeader::<T>::mutate(|s| {
 				s.beacon_block_root = beacon_block_root;
 				s.beacon_slot = beacon_slot;
 				s.block_hash = block_hash;
@@ -1012,7 +980,7 @@ pub mod pallet {
 
 		// Calculate signing root for BeaconHeader
 		pub fn signing_root(
-			header: BeaconHeader,
+			header: &BeaconHeader,
 			validators_root: H256,
 			signature_slot: u64,
 		) -> Result<H256, DispatchError> {

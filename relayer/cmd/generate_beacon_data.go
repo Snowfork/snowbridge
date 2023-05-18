@@ -4,10 +4,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"os"
 
 	"github.com/cbroglie/mustache"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -88,9 +89,10 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 
 		endpoint, err := cmd.Flags().GetString("url")
 
-		configFile := os.Getenv("output_dir") + "/beacon-relay.json"
+		exportJson, err := cmd.Flags().GetBool("export_json")
 
-		viper.SetConfigFile(configFile)
+		viper.SetConfigFile("core/packages/test/config/beacon-relay.json")
+
 		if err := viper.ReadInConfig(); err != nil {
 			return err
 		}
@@ -109,9 +111,16 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
+		if exportJson {
+			initialSync := checkPointScale.ToJSON()
+			err = writeJSONToFile(initialSync, activeSpec.ToString()+"_initial_sync")
+			if err != nil {
+				return fmt.Errorf("write initial sync to file: %w", err)
+			}
+		}
 		checkPointBytes, _ := types.EncodeToBytes(checkPointScale)
 		// Call index for EthereumBeaconClient.force_checkpoint
-		checkPointCallIndex := "0x3205"
+		checkPointCallIndex := "0x3201"
 		checkPointUpdateCall := checkPointCallIndex + hex.EncodeToString(checkPointBytes)
 		fmt.Println(checkPointUpdateCall)
 		return nil
@@ -160,10 +169,6 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		}
 		initialSync := initialSyncScale.ToJSON()
 		initialSyncHeaderSlot := initialSync.Header.Slot
-		err = writeJSONToFile(initialSync, activeSpec.ToString()+"_initial_sync")
-		if err != nil {
-			return fmt.Errorf("write initial sync to file: %w", err)
-		}
 		log.Info("created initial sync file")
 
 		log.Info("downloading beacon state, this can take a few minutes...")
@@ -201,12 +206,9 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
-		nextHeaderUpdateScale, err := s.GetNextHeaderUpdateBySlot(blockUpdateSlot + 1)
 		if err != nil {
 			return fmt.Errorf("get next header update to get sync aggregate: %w", err)
 		}
-		headerUpdateScale.Payload.SyncAggregate = nextHeaderUpdateScale.NextSyncAggregate
-		headerUpdateScale.Payload.SignatureSlot = nextHeaderUpdateScale.Payload.BeaconHeader.Slot
 		headerUpdate := headerUpdateScale.ToJSON()
 		err = writeJSONToFile(headerUpdate, activeSpec.ToString()+"_header_update")
 		if err != nil {
@@ -215,37 +217,39 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		log.Info("created header update file")
 
-		log.Info("now updating benchmarking data files")
+		if activeSpec.IsMainnet() {
+			log.Info("now updating benchmarking data files")
 
-		// Rust file hexes require the 0x of hashes to be removed
-		initialSync.RemoveLeadingZeroHashes()
-		syncCommitteeUpdate.RemoveLeadingZeroHashes()
-		finalizedUpdate.RemoveLeadingZeroHashes()
-		headerUpdate.RemoveLeadingZeroHashes()
+			// Rust file hexes require the 0x of hashes to be removed
+			initialSync.RemoveLeadingZeroHashes()
+			syncCommitteeUpdate.RemoveLeadingZeroHashes()
+			finalizedUpdate.RemoveLeadingZeroHashes()
+			headerUpdate.RemoveLeadingZeroHashes()
 
-		data := Data{
-			InitialSync:           initialSync,
-			SyncCommitteeUpdate:   syncCommitteeUpdate,
-			FinalizedHeaderUpdate: finalizedUpdate,
-			HeaderUpdate:          headerUpdate,
-		}
+			data := Data{
+				InitialSync:           initialSync,
+				SyncCommitteeUpdate:   syncCommitteeUpdate,
+				FinalizedHeaderUpdate: finalizedUpdate,
+				HeaderUpdate:          headerUpdate,
+			}
 
-		log.WithFields(log.Fields{
-			"location": pathToBeaconTestFixtureFiles,
-			"spec":     activeSpec,
-		}).Info("rendering file using mustache")
+			log.WithFields(log.Fields{
+				"location": pathToBeaconTestFixtureFiles,
+				"spec":     activeSpec,
+			}).Info("rendering file using mustache")
 
-		rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
-		filename := fmt.Sprintf("data_%s.rs", activeSpec)
+			rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
+			filename := fmt.Sprintf("data_%s.rs", activeSpec)
 
-		log.WithFields(log.Fields{
-			"location": pathToBeaconBenchmarkData,
-			"filename": filename,
-		}).Info("writing result file")
+			log.WithFields(log.Fields{
+				"location": pathToBeaconBenchmarkData,
+				"filename": filename,
+			}).Info("writing result file")
 
-		err = writeBenchmarkDataFile(filename, rendered)
-		if err != nil {
-			return err
+			err = writeBenchmarkDataFile(filename, rendered)
+			if err != nil {
+				return err
+			}
 		}
 
 		log.WithField("spec", activeSpec).Info("done")

@@ -1,3 +1,4 @@
+use primitives::merkle_proof::{generalized_index_length, subtree_index};
 use static_assertions::const_assert;
 
 pub mod mainnet;
@@ -9,18 +10,33 @@ pub use minimal::*;
 #[cfg(not(feature = "minimal"))]
 pub use mainnet::*;
 
-pub const CURRENT_SYNC_COMMITTEE_INDEX: usize = 22;
-pub const NEXT_SYNC_COMMITTEE_INDEX: usize = 23;
-pub const SYNC_COMMITTEE_DEPTH: usize = 5;
+// Generalized Indices
 
-pub const FINALIZED_ROOT_DEPTH: usize = 6;
-pub const FINALIZED_ROOT_INDEX: usize = 41;
+// get_generalized_index(BeaconState, 'block_roots')
+pub const BLOCK_ROOTS_INDEX: usize = 37;
+pub const BLOCK_ROOTS_SUBTREE_INDEX: usize = subtree_index(BLOCK_ROOTS_INDEX);
+pub const BLOCK_ROOTS_DEPTH: usize = generalized_index_length(BLOCK_ROOTS_INDEX);
 
-pub const BLOCK_ROOTS_DEPTH: usize = 5;
-pub const BLOCK_ROOTS_INDEX: usize = 5;
+// get_generalized_index(BeaconState, 'finalized_checkpoint', 'root')
+pub const FINALIZED_ROOT_INDEX: usize = 105;
+pub const FINALIZED_ROOT_SUBTREE_INDEX: usize = subtree_index(FINALIZED_ROOT_INDEX);
+pub const FINALIZED_ROOT_DEPTH: usize = generalized_index_length(FINALIZED_ROOT_INDEX);
 
-pub const EXECUTION_HEADER_DEPTH: usize = 4;
-pub const EXECUTION_HEADER_INDEX: usize = 9;
+// get_generalized_index(BeaconState, 'current_sync_committee')
+pub const CURRENT_SYNC_COMMITTEE_INDEX: usize = 54;
+pub const CURRENT_SYNC_COMMITTEE_SUBTREE_INDEX: usize = subtree_index(CURRENT_SYNC_COMMITTEE_INDEX);
+pub const CURRENT_SYNC_COMMITTEE_DEPTH: usize =
+	generalized_index_length(CURRENT_SYNC_COMMITTEE_INDEX);
+
+// get_generalized_index(BeaconState, 'next_sync_committee')
+pub const NEXT_SYNC_COMMITTEE_INDEX: usize = 55;
+pub const NEXT_SYNC_COMMITTEE_SUBTREE_INDEX: usize = subtree_index(NEXT_SYNC_COMMITTEE_INDEX);
+pub const NEXT_SYNC_COMMITTEE_DEPTH: usize = generalized_index_length(NEXT_SYNC_COMMITTEE_INDEX);
+
+//  get_generalized_index(BeaconBlockBody, 'execution_payload')
+pub const EXECUTION_HEADER_INDEX: usize = 25;
+pub const EXECUTION_HEADER_SUBTREE_INDEX: usize = subtree_index(EXECUTION_HEADER_INDEX);
+pub const EXECUTION_HEADER_DEPTH: usize = generalized_index_length(EXECUTION_HEADER_INDEX);
 
 pub const MAX_EXTRA_DATA_BYTES: usize = 32;
 pub const MAX_LOGS_BLOOM_SIZE: usize = 256;

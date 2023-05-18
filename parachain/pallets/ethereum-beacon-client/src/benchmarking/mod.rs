@@ -11,7 +11,7 @@ use data_mainnet::*;
 mod util;
 use primitives::{
 	fast_aggregate_verify, fast_aggregate_verify_legacy, prepare_aggregate_pubkey,
-	prepare_aggregate_signature, Mode,
+	prepare_aggregate_signature, verify_merkle_branch, Mode,
 };
 use util::*;
 
@@ -19,11 +19,21 @@ benchmarks! {
 	sync_committee_period_update {
 		let caller: T::AccountId = whitelisted_caller();
 
+		let initial_sync_data = initial_sync();
 		let sync_committee_update = initialize_sync_committee::<T>()?;
+
+		let period = EthereumBeaconClient::<T>::compute_current_sync_period(sync_committee_update.attested_header.slot);
+
+		// initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
+		LatestFinalizedHeader::<T>::set(FinalizedHeaderState {
+			beacon_block_root: Default::default(),
+			import_time: initial_sync_data.import_time,
+			beacon_slot: sync_committee_update.finalized_header.slot - 1,
+		});
 
 	}: sync_committee_period_update(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
 	verify {
-		EthereumBeaconClient::<T>::sync_committee_for_period(sync_committee_update.sync_committee_period+1).unwrap();
+		EthereumBeaconClient::<T>::sync_committee_for_period(period+1).unwrap();
 	}
 
 	import_finalized_header {
@@ -41,8 +51,8 @@ benchmarks! {
 
 		EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;
 
-		//initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
-		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState {
+		// initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
+		LatestFinalizedHeader::<T>::set(FinalizedHeaderState {
 			beacon_block_root: Default::default(),
 			import_time: initial_sync_data.import_time + 51200,
 			beacon_slot: finalized_header_update.finalized_header.slot - 1,
@@ -65,7 +75,7 @@ benchmarks! {
 		let header_update = header_update();
 
 		let current_period = EthereumBeaconClient::<T>::compute_current_sync_period(
-				header_update.beacon_header.slot,
+				header_update.header.slot,
 			);
 
 		EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;
@@ -76,7 +86,7 @@ benchmarks! {
 		let finalized_block_root = finalized_update.finalized_header.hash_tree_root()
 				.unwrap();
 
-		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState{
+		LatestFinalizedHeader::<T>::set(FinalizedHeaderState{
 			beacon_block_root: finalized_block_root,
 			beacon_slot: finalized_slot,
 			import_time: 0,
@@ -121,6 +131,14 @@ benchmarks! {
 		let signing_root = signing_root::<T>(&update)?;
 	}:{
 		fast_aggregate_verify(&current_sync_committee.aggregate_pubkey, &absent_pubkeys, signing_root, &update.sync_aggregate.sync_committee_signature).unwrap();
+	}
+
+	merkle_branch_verify {
+		let update = initialize_sync_committee::<T>()?;
+		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
+	}:{
+		verify_merkle_branch(block_root,&update.finality_branch,config::FINALIZED_ROOT_SUBTREE_INDEX,
+					config::FINALIZED_ROOT_DEPTH,update.attested_header.state_root);
 	}
 }
 

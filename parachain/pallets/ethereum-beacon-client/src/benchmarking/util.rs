@@ -15,7 +15,7 @@ pub fn initialize_sync_committee<T: Config>() -> Result<SyncCommitteeUpdate, &'s
 
 	let sync_committee_update = sync_committee_update();
 
-	//initialize SyncCommittees with period in sync_committee_update
+	// initialize SyncCommittees with period in sync_committee_update
 	LatestSyncCommitteePeriod::<T>::set(EthereumBeaconClient::<T>::compute_current_sync_period(
 		sync_committee_update.attested_header.slot,
 	));
@@ -69,7 +69,7 @@ pub fn absent_pubkeys<T: Config>(
 pub fn signing_root<T: Config>(update: &SyncCommitteeUpdate) -> Result<H256, &'static str> {
 	let validators_root = <ValidatorsRoot<T>>::get();
 	let signing_root = EthereumBeaconClient::<T>::signing_root(
-		update.attested_header,
+		&update.attested_header,
 		validators_root,
 		update.signature_slot,
 	)?;
