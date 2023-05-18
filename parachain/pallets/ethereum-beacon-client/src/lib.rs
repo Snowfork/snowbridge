@@ -516,13 +516,6 @@ pub mod pallet {
 		}
 
 		fn process_execution_header_update(update: &ExecutionHeaderUpdate) -> DispatchResult {
-			Self::verify_weak_subjectivity()?;
-			Self::verify_attested_header(
-				&update.attested_header,
-				&update.sync_aggregate,
-				update.signature_slot,
-			)?;
-
 			ensure!(
 				update.attested_header.slot <= Self::latest_finalized_header().beacon_slot,
 				Error::<T>::HeaderNotFinalized
@@ -645,9 +638,8 @@ pub mod pallet {
 			Ok(())
 		}
 
+		// Weak subjectivity check
 		pub(super) fn verify_weak_subjectivity() -> DispatchResult {
-			// Weak subjectivity check
-
 			let import_time = Self::latest_finalized_header().import_time;
 			let weak_subjectivity_period_check =
 				import_time + T::WeakSubjectivityPeriodSeconds::get();
