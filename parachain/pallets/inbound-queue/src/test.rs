@@ -170,7 +170,7 @@ const OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
 	"
 );
 
-use polkadot_parachain::primitives::Id as ParaId;
+use snowbridge_core::ParaId;
 
 #[test]
 fn test_submit() {

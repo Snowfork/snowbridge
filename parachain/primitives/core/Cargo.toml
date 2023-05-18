@@ -10,6 +10,8 @@ codec = { package = "parity-scale-codec", version = "3.1.5", default-features = 
 scale-info = { version = "2.6.0", default-features = false, features = [ "derive" ] }
 snowbridge-ethereum = { path = "../ethereum", default-features = false }
 
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "master", default-features = false }
+
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
@@ -26,6 +28,7 @@ std = [
     "codec/std",
     "scale-info/std",
     "frame-support/std",
+    "polkadot-parachain/std",
     "sp-std/std",
     "sp-core/std",
     "sp-runtime/std",

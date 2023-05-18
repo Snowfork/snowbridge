@@ -4,7 +4,7 @@ use frame_support::{
 	assert_noop, assert_ok, parameter_types,
 	traits::{Everything, GenesisBuild, OnInitialize},
 };
-use polkadot_parachain::primitives::Id as ParaId;
+use snowbridge_core::ParaId;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -100,7 +100,7 @@ fn run_to_block(n: u64) {
 #[test]
 fn test_submit() {
 	new_tester().execute_with(|| {
-		let parachain_id: &ParaId = &ParaId::new(1000);
+		let parachain_id: ParaId = ParaId::new(1000);
 
 		assert_ok!(BasicOutboundChannel::submit(parachain_id, 0, &vec![0, 1, 2]));
 
@@ -112,7 +112,7 @@ fn test_submit() {
 #[test]
 fn test_submit_exceeds_queue_limit() {
 	new_tester().execute_with(|| {
-		let parachain_id: &ParaId = &ParaId::new(1000);
+		let parachain_id: ParaId = ParaId::new(1000);
 
 		let max_messages = MaxMessagesPerCommit::get();
 		(0..max_messages)
@@ -128,7 +128,7 @@ fn test_submit_exceeds_queue_limit() {
 #[test]
 fn test_submit_exceeds_payload_limit() {
 	new_tester().execute_with(|| {
-		let parachain_id: &ParaId = &ParaId::new(1000);
+		let parachain_id: ParaId = ParaId::new(1000);
 
 		let max_payload_bytes = MaxMessagePayloadSize::get() - 1;
 
@@ -147,7 +147,7 @@ fn test_submit_exceeds_payload_limit() {
 #[test]
 fn test_commit_single_user() {
 	new_tester().execute_with(|| {
-		let parachain_id: &ParaId = &ParaId::new(1000);
+		let parachain_id: ParaId = ParaId::new(1000);
 
 		assert_ok!(BasicOutboundChannel::submit(parachain_id, 0, &vec![0, 1, 2]));
 		run_to_block(2);
@@ -161,8 +161,8 @@ fn test_commit_single_user() {
 #[test]
 fn test_commit_multi_user() {
 	new_tester().execute_with(|| {
-		let parachain0: &ParaId = &ParaId::new(1000);
-		let parachain1: &ParaId = &ParaId::new(1001);
+		let parachain0: ParaId = ParaId::new(1000);
+		let parachain1: ParaId = ParaId::new(1001);
 
 		assert_ok!(BasicOutboundChannel::submit(parachain0, 0, &vec![0, 1, 2]));
 		assert_ok!(BasicOutboundChannel::submit(parachain1, 0, &vec![0, 1, 2]));

@@ -6,6 +6,7 @@ import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {ParachainClient} from "../src/ParachainClient.sol";
 import {InboundQueue} from "../src/InboundQueue.sol";
+import {IRecipient} from "../src/IRecipient.sol";
 import {OutboundQueue} from "../src/OutboundQueue.sol";
 import {NativeTokens} from "../src/NativeTokens.sol";
 import {TokenVault} from "../src/TokenVault.sol";
@@ -52,6 +53,7 @@ contract DeployScript is Script {
             ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID"))),
             vm.envUint("CREATE_TOKEN_FEE")
         );
+        inboundQueue.updateHandler(1, IRecipient(nativeTokens));
 
         // Deploy WETH for testing
         new WETH9();
