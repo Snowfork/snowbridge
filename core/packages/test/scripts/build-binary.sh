@@ -66,7 +66,7 @@ build_query_tool() {
         --manifest-path tools/query-events/Cargo.toml \
         --release --features bridgehub-rococo-local \
         --bin snowbridge-query-events
-    cp "$parachain_dir/target/release/snowbridge-query-events" "$output_bin_dir"
+    cp "target/release/snowbridge-query-events" "$output_bin_dir"
     popd
 }
 
