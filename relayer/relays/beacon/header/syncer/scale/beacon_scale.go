@@ -61,12 +61,12 @@ type FinalizedHeaderUpdate struct {
 
 type HeaderUpdatePayload struct {
 	AttestedHeader   BeaconHeader
-	ExecutionHeader  ExecutionPayloadHeaderCapella
-	ExecutionBranch  []types.H256
 	SyncAggregate    SyncAggregate
 	SignatureSlot    types.U64
-	BlockRootsBranch []types.H256
 	BlockRootsRoot   types.H256
+	BlockRootsBranch []types.H256
+	ExecutionHeader  ExecutionPayloadHeaderCapella
+	ExecutionBranch  []types.H256
 }
 
 type HeaderUpdate struct {
