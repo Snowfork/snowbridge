@@ -88,9 +88,8 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 
 		endpoint, err := cmd.Flags().GetString("url")
 
-		configFile := os.Getenv("output_dir") + "/beacon-relay.json"
+		viper.SetConfigFile("core/packages/test/config/beacon-relay.json")
 
-		viper.SetConfigFile(configFile)
 		if err := viper.ReadInConfig(); err != nil {
 			return err
 		}
@@ -108,6 +107,11 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
+		}
+		initialSync := checkPointScale.ToJSON()
+		err = writeJSONToFile(initialSync, activeSpec.ToString()+"_initial_sync")
+		if err != nil {
+			return fmt.Errorf("write initial sync to file: %w", err)
 		}
 		checkPointBytes, _ := types.EncodeToBytes(checkPointScale)
 		// Call index for EthereumBeaconClient.force_checkpoint
@@ -160,10 +164,6 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		}
 		initialSync := initialSyncScale.ToJSON()
 		initialSyncHeaderSlot := initialSync.Header.Slot
-		err = writeJSONToFile(initialSync, activeSpec.ToString()+"_initial_sync")
-		if err != nil {
-			return fmt.Errorf("write initial sync to file: %w", err)
-		}
 		log.Info("created initial sync file")
 
 		log.Info("downloading beacon state, this can take a few minutes...")

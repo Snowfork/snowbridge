@@ -3,26 +3,51 @@
 use frame_support::traits::Get;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-	BeaconHeader, ExecutionPayloadHeader, FinalizedHeaderUpdate, HeaderUpdate, InitialUpdate,
-	PublicKey, SyncAggregate, SyncCommittee, SyncCommitteeUpdate,
+    BeaconHeader, ExecutionPayloadHeaderCapella, FinalizedHeaderUpdate, HeaderUpdate, InitialUpdate, PublicKey,
+    SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
 };
 use sp_core::U256;
 use sp_std::vec;
 
 pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
-) -> InitialUpdate<SyncCommitteeSize, ProofSize> {
-	let time_now = 1675679352; //2023.2.6
+    ) -> InitialUpdate<SyncCommitteeSize, ProofSize> {
+    let time_now = 1675679352; //2023.2.6
 
-	return InitialUpdate{
+    return InitialUpdate{
         header: BeaconHeader{
-            slot: 152,
-            proposer_index: 2,
-            parent_root: hex!("c6e5d2ad0e10309dc895c9f3a37b0dcadf95648f036b42d0ef5084252c69f1ed").into(),
-            state_root: hex!("b0f73342ab9c265eae11cc98cee2f82e5974158a6cb6772f5e57991b2f2a3f3a").into(),
-            body_root: hex!("d0ae6720fd5cd20d994292f4efa540811f2011b4b8aa466fe1a3c6aa8b1418ad").into(),
+            slot: ,
+            proposer_index: ,
+            parent_root: hex!("").into(),
+            state_root: hex!("").into(),
+            body_root: hex!("").into(),
         },
         current_sync_committee: SyncCommittee{
             pubkeys: [
+            ],
+            aggregate_pubkey: hex!("").into(),
+        },
+        current_sync_committee_branch: vec![
+        ],
+        validators_root: hex!("").into(),
+        import_time: time_now + 97200, // now + 27 hour sync committee period
+    };
+}
+
+pub fn sync_committee_update<
+    SignatureSize: Get<u32>,
+    ProofSize: Get<u32>,
+    SyncCommitteeSize: Get<u32>,
+>() -> SyncCommitteePeriodUpdate<SignatureSize, ProofSize, SyncCommitteeSize> {
+    return SyncCommitteePeriodUpdate {
+        attested_header: BeaconHeader {
+            slot: 80,
+            proposer_index: 2,
+            parent_root: hex!("8c772b8cae6fcf05326d0baf2aa35f62721407764a4c40ebc6496f236f2996b6").into(),
+            state_root: hex!("b8e9fb79fa9e5bf6f16f799a8db2d44f9c174f2938c8cc34168f95e1e597c955").into(),
+            body_root: hex!("042581f5e4b50a56f5258e8f58358e4cb36819c76157fedde33fff7ab71e968a").into(),
+        },
+        next_sync_committee: SyncCommittee {
+            pubkeys: vec![
                 hex!("b89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b").into(),
                 hex!("88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e").into(),
                 hex!("81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e").into(),
@@ -58,210 +83,148 @@ pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
             ],
             aggregate_pubkey: hex!("8fe11476a05750c52618deb79918e2e674f56dfbf12dbce55ae4386d108e8a1e83c6326f5957e2ef19137582ce270dc6").into(),
         },
-        current_sync_committee_branch: vec![
-                hex!("ae55686c9aa0cfc3a6a3edf5fcc27f3eafbe2772444f4fae6f1f00e1cee7d0ac").into(),
-                hex!("e6d21c47c11698b8acf43778e6e7bdb804f14318bd37460b2274814f1f6cc554").into(),
-                hex!("24851e4e01f264323b3bf1373dc8c99c71afa12ec04329df98e6dc1c45555365").into(),
-                hex!("f5097ceea15bf7a5f7eabcaacba29af64ba0653e2077287e1d17f98d1a5778ad").into(),
-                hex!("ebd5dd152ab8fc8acd6ee0d7e43537c3caedc12a9e283e9079ac17a92f2eb931").into(),
-        ],
-        validators_root: hex!("270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69").into(),
-        import_time: time_now + 97200, // now + 27 hour sync committee period
-    };
-}
-
-pub fn sync_committee_update<
-	SignatureSize: Get<u32>,
-	ProofSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>,
->() -> SyncCommitteeUpdate<SignatureSize, ProofSize, SyncCommitteeSize> {
-	return SyncCommitteeUpdate {
-        attested_header: BeaconHeader {
-            slot: 144,
-            proposer_index: 2,
-            parent_root: hex!("d606dedd06b3e00b5c04a80d4d7f4c07c08c6bc1cd6ada47a141f0d7cc4a8032").into(),
-            state_root: hex!("1720054de28109ee155947a31ed88649c514e590440e959b071d981d70e57e76").into(),
-            body_root: hex!("8624a57d021cf59e367432769b53e4da63f9a613db778e2e89db701f0b068bea").into(),
-        },
-        next_sync_committee: SyncCommittee {
-            pubkeys: [
-                hex!("a99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c").into(),
-                hex!("a8d4c7c27795a725961317ef5953a7032ed6d83739db8b0e8a72353d1b8b4439427f7efa2c89caa03cc9f28f8cbab8ac").into(),
-                hex!("ab0bdda0f85f842f431beaccf1250bf1fd7ba51b4100fd64364b6401fda85bb0069b3e715b58819684e7fc0b10a72a34").into(),
-                hex!("88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e").into(),
-                hex!("a3a32b0f8b4ddb83f1a0a853d81dd725dfe577d4f4c3db8ece52ce2b026eca84815c1a7e8e92a4de3d755733bf7e4a9b").into(),
-                hex!("81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e").into(),
-                hex!("9977f1c8b731a8d5558146bfb86caea26434f3c5878b589bf280a42c9159e700e9df0e4086296c20b011d2e78c27d373").into(),
-                hex!("b89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b").into(),
-                hex!("a99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c").into(),
-                hex!("a8d4c7c27795a725961317ef5953a7032ed6d83739db8b0e8a72353d1b8b4439427f7efa2c89caa03cc9f28f8cbab8ac").into(),
-                hex!("ab0bdda0f85f842f431beaccf1250bf1fd7ba51b4100fd64364b6401fda85bb0069b3e715b58819684e7fc0b10a72a34").into(),
-                hex!("88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e").into(),
-                hex!("a3a32b0f8b4ddb83f1a0a853d81dd725dfe577d4f4c3db8ece52ce2b026eca84815c1a7e8e92a4de3d755733bf7e4a9b").into(),
-                hex!("81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e").into(),
-                hex!("9977f1c8b731a8d5558146bfb86caea26434f3c5878b589bf280a42c9159e700e9df0e4086296c20b011d2e78c27d373").into(),
-                hex!("b89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b").into(),
-                hex!("a99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c").into(),
-                hex!("a8d4c7c27795a725961317ef5953a7032ed6d83739db8b0e8a72353d1b8b4439427f7efa2c89caa03cc9f28f8cbab8ac").into(),
-                hex!("ab0bdda0f85f842f431beaccf1250bf1fd7ba51b4100fd64364b6401fda85bb0069b3e715b58819684e7fc0b10a72a34").into(),
-                hex!("88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e").into(),
-                hex!("a3a32b0f8b4ddb83f1a0a853d81dd725dfe577d4f4c3db8ece52ce2b026eca84815c1a7e8e92a4de3d755733bf7e4a9b").into(),
-                hex!("81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e").into(),
-                hex!("9977f1c8b731a8d5558146bfb86caea26434f3c5878b589bf280a42c9159e700e9df0e4086296c20b011d2e78c27d373").into(),
-                hex!("b89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b").into(),
-                hex!("a99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c").into(),
-                hex!("a8d4c7c27795a725961317ef5953a7032ed6d83739db8b0e8a72353d1b8b4439427f7efa2c89caa03cc9f28f8cbab8ac").into(),
-                hex!("ab0bdda0f85f842f431beaccf1250bf1fd7ba51b4100fd64364b6401fda85bb0069b3e715b58819684e7fc0b10a72a34").into(),
-                hex!("88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e").into(),
-                hex!("a3a32b0f8b4ddb83f1a0a853d81dd725dfe577d4f4c3db8ece52ce2b026eca84815c1a7e8e92a4de3d755733bf7e4a9b").into(),
-                hex!("81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e").into(),
-                hex!("9977f1c8b731a8d5558146bfb86caea26434f3c5878b589bf280a42c9159e700e9df0e4086296c20b011d2e78c27d373").into(),
-                hex!("b89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b").into(),
-            ],
-            aggregate_pubkey: hex!("8fe11476a05750c52618deb79918e2e674f56dfbf12dbce55ae4386d108e8a1e83c6326f5957e2ef19137582ce270dc6").into()
-        },
         next_sync_committee_branch: vec![
-            hex!("9aaac2741ce2878a681113933945f318219d798b6d487cc93e8754a2a5a3a965").into(),
-            hex!("c31424ccfc25a7c31fdf86b6f96e8fd9968e79fb11b39f8a05c28a91d468705f").into(),
-            hex!("f782ef12694554b3080ea1479ae045ffa944b6619ca49f2ab75fc20b43c8980c").into(),
-            hex!("360a6db1bac303ac552dc634c7539af9c781e3fc20a7b68ddd95635c6e4cdee5").into(),
-            hex!("1e4cad215834a2821fd8cddb69258c0f49506cbd32a2165b774a1860e7e346e1").into(),
-        ].try_into().expect("too many branch proof items"),
+            hex!("c83ff57424470a11c94cdd1ddd9acf552852c8f6f378bb58e9eb00b13f92f7ea").into(),
+            hex!("952f981c1b064e7f348f085ed0b9a7adb6dae3c91a83436c9c7bb3033d9ac5b9").into(),
+            hex!("6aecda95663b9e2e1e63dfca55fe0372ba982040541bd0f46f8188bb977a923d").into(),
+            hex!("b569d651a3035ccf987b096c0a709f3675c1d51b4887930cc17dbde7b5622ec1").into(),
+            hex!("fc1d7df4f17e5d20edae1433e8268b0974287df80a91d8431829b626ade1f89a").into(),
+        ],
         finalized_header: BeaconHeader{
-            slot: 128,
-            proposer_index: 3,
-            parent_root: hex!("85c48e098074d4e149c05065af9500cecc802f6ae860be69e33dbd52c5c11299").into(),
-            state_root: hex!("5229bec41f0b20ff789212c00466fa41d003ccec477948f1a2aa5acc875dff7a").into(),
-            body_root: hex!("abc39f53ae99d6a88afe978320365a6a08ab74167f752b1ca9ec1018e339c7bc").into(),
+            slot: 64,
+            proposer_index: 6,
+            parent_root: hex!("081a74140bfb2dfa9bfbfd9dfb4cf16273c7af830342a09a33a024e3ab61cfc2").into(),
+            state_root: hex!("12530419828feb4acb6792916be98dbb2511bf1db0d1dd53af4b92b88ecf2de0").into(),
+            body_root: hex!("fef2914c7b983f033f143ffe5a997b5c28f87f9737fee7a84554fdd7011ca643").into(),
         },
         finality_branch: vec![
-            hex!("1000000000000000000000000000000000000000000000000000000000000000").into(),
+            hex!("0800000000000000000000000000000000000000000000000000000000000000").into(),
             hex!("10c726fac935bf9657cc7476d3cfa7bedec5983dcfb59e8a7df6d0a619e108d7").into(),
-            hex!("24477da323967ef1397fb25cde5aa28ed5d7f5a5b437ba4343c9be88041bc119").into(),
-            hex!("f782ef12694554b3080ea1479ae045ffa944b6619ca49f2ab75fc20b43c8980c").into(),
-            hex!("360a6db1bac303ac552dc634c7539af9c781e3fc20a7b68ddd95635c6e4cdee5").into(),
-            hex!("1e4cad215834a2821fd8cddb69258c0f49506cbd32a2165b774a1860e7e346e1").into(),
-        ].try_into().expect("too many branch proof items"),
+            hex!("82948c086478d3cd9d4440c395e7c919fa33ce91abceeba81437478dc289acdf").into(),
+            hex!("6aecda95663b9e2e1e63dfca55fe0372ba982040541bd0f46f8188bb977a923d").into(),
+            hex!("b569d651a3035ccf987b096c0a709f3675c1d51b4887930cc17dbde7b5622ec1").into(),
+            hex!("fc1d7df4f17e5d20edae1433e8268b0974287df80a91d8431829b626ade1f89a").into(),
+        ],
         sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("ffffffff").to_vec().try_into().expect("too many sync committee bits"),
-            sync_committee_signature: hex!("a6e5309e0439042fe2d98342faf63452f3aed9a0d4f0086a42588e96a4c619d90964575aff9d7c5aa80e6846efcae3ec1825e2b750314fb715692e38c8a74f2fa86ebf2d3343294c87eb7933794e3c82398168cf3fbf9732c4df51bba3e44989").to_vec().try_into().expect("signature too long"),
+            sync_committee_bits: hex!("ffffffff"),
+            sync_committee_signature: hex!("a5a7e1f249b6de746e154cce33656ce1e02cec33e54c883a4fc80af657da26b2e2f79c817cf7d17b558a90012c984bcf03043988bbf086392eb24ed417f1d1f9c4dd09bfa61fec9419b292676cbffd124afd89a775f49c9716f5bb4586485554").into(),
         },
-        sync_committee_period: 2,
-        signature_slot: 145,
-        block_roots_root: hex!("0367a032243a6c3660e9fe6d1a66c8347767908bff0feef436440e89b35947f5").into(),
+        sync_committee_period: 1,
+        signature_slot: 81,
+        block_roots_root: hex!("fb8e30a463796805bf1d26d4343c1f44bf2ef40990c6899910adfb0620acb4b3").into(),
         block_roots_branch: vec![
-            hex!("bae2da1b2ef7c3d5d08f251a52f28efb26baa02e37c068b9c7c714055eec0985").into(),
-            hex!("c046d211fd6f111e77a764a02e4c87ffb2495e23cec971793d2c3b141c23ad19").into(),
-            hex!("fffc075fe465a906ba230573b6087e6d582d051c6aa5a6983fee1284818818e8").into(),
-            hex!("ce896755e5dd78b5f1d8cff2cfff79745f3a53f3be1cab1faa86c2e4c727af59").into(),
-            hex!("06b03718b08a83210a0c3a0ba687e246a701e60c7d5d02cca2fc76d054a78918").into(),
-        ].try_into().expect("too many branch proof items"),
+            hex!("4db88d411c4c4a74161590c0d74a90b1ef90c00c11357c6785fb370b48180c3a").into(),
+            hex!("aa68a5ab2d4b7b602b8248f672066adef102e3b1a30199fdbe49a1256aaa07d9").into(),
+            hex!("aa325bab0688c4876ff936d5ad9be143f5b221e317d67d6c20ff8c698043bb59").into(),
+            hex!("7eeee99ba2d0ee2979898849e0b71bec91c3e5652e20dc08fbe71f3256bd7fed").into(),
+            hex!("58eaba2309bd9ec1b77d9589b0e5caac686a9928434862feb1fa51d4dae3a0bc").into(),
+        ],
     };
 }
 
 pub fn finalized_header_update<
-	SignatureSize: Get<u32>,
-	ProofSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>,
+    SignatureSize: Get<u32>,
+    ProofSize: Get<u32>,
+    SyncCommitteeSize: Get<u32>,
 >() -> FinalizedHeaderUpdate<SignatureSize, ProofSize, SyncCommitteeSize> {
-	return FinalizedHeaderUpdate{
+    return FinalizedHeaderUpdate{
         attested_header: BeaconHeader {
-            slot: 168,
-            proposer_index: 5,
-            parent_root: hex!("d567978cf2992cc290f223df75d58369a9893d798c23ed3722ab7a0690bda687").into(),
-            state_root: hex!("3e30d9357c88dc78c3bc8ed19685e3f21e90072f809d0d30a4658634e4f5ab41").into(),
-            body_root: hex!("581383568a951904285564c960260d21a662919d0f18fb76e001515c7f1496f6").into(),
+            slot: 88,
+            proposer_index: 4,
+            parent_root: hex!("3c5d78ac911dffd15db68532fb2636e0bdbc3ae2949019c00b6393270518c241").into(),
+            state_root: hex!("2da21762825d7dda284dcf5abd4775a73f862b19ba5f242485ece9c13022d85d").into(),
+            body_root: hex!("c23de36f009769dc4a7286f4d4bf3cba9ecd81451bbff95f8eb41dd6184be1e7").into(),
         },
         finalized_header: BeaconHeader{
-            slot: 152,
+            slot: 72,
             proposer_index: 2,
-            parent_root: hex!("c6e5d2ad0e10309dc895c9f3a37b0dcadf95648f036b42d0ef5084252c69f1ed").into(),
-            state_root: hex!("b0f73342ab9c265eae11cc98cee2f82e5974158a6cb6772f5e57991b2f2a3f3a").into(),
-            body_root: hex!("d0ae6720fd5cd20d994292f4efa540811f2011b4b8aa466fe1a3c6aa8b1418ad").into(),
+            parent_root: hex!("5629f3117ab668ceaa7a73850a0963737a9ade6b4dc933f33f89cca29d4afe18").into(),
+            state_root: hex!("135ad596ce3d49f2e77f983e3974d57203dc73a072bd6b39df0f8597379538fb").into(),
+            body_root: hex!("3f5981bf6bda829a629d1b363a1eefdba35ffdfb11b52a86e4e3bfb7e587d402").into(),
         },
         finality_branch: vec![
-            hex!("1300000000000000000000000000000000000000000000000000000000000000").into(),
+            hex!("0900000000000000000000000000000000000000000000000000000000000000").into(),
             hex!("10c726fac935bf9657cc7476d3cfa7bedec5983dcfb59e8a7df6d0a619e108d7").into(),
-            hex!("24477da323967ef1397fb25cde5aa28ed5d7f5a5b437ba4343c9be88041bc119").into(),
-            hex!("dabc4d1850acd0551d8d30f9d35b3471f88477f56e617cbd48b52a38f0682fd9").into(),
-            hex!("58c6354b6ac69908c6306aa6a16ef3fd9d1fcfc9a1ba46732e65635b93d48788").into(),
-            hex!("e814c498f7b604b0ee9168053bb905fca91d004c1cb5cd5e8647ce7ceb4328c1").into(),
-        ].try_into().expect("too many branch proof items"),
+            hex!("82948c086478d3cd9d4440c395e7c919fa33ce91abceeba81437478dc289acdf").into(),
+            hex!("51f5d2fdf77f840922a620300a9331378f6ee2359b4b531594edd05940cf2ca3").into(),
+            hex!("dd9fdd6452906fe49bacc0289348af8378e4696059bc96f8101f51dc2978ccdc").into(),
+            hex!("12a5e4daa84e527a9d385a353b3ce39466b0c5fab3d64900bdba82b3a596b68b").into(),
+        ],
         sync_aggregate: SyncAggregate{
             sync_committee_bits: hex!("ffffffff"),
-            sync_committee_signature: hex!("b7a1aa69fd2b57308f871dc877215b3521ad336b5af88bc286c5b42f8ecf36cad076c67465fc5c02c72132ee000eeb300e60362fbd5548a6c27e5b0b8d0d3d6b32adfc08673605572b630b005ac07af5cb7617176100ae843fbb86cee4e7c683").into(),
+            sync_committee_signature: hex!("95a4470526294e5361ec25fa7d4614e9c7ab7d8fbbcc581f1e857559f53355013a4fb1c957c160735816d4cab737f39501b49c9c41641604175a2cc4fd39544da8ed6361fe3a2377cf072adfb91aeb3dd0d9063cd2f58dc9816089e59f569fad").into(),
         },
-        signature_slot: 169,
-        block_roots_root: hex!("0ca0cf2867bc9c8361f2c66a926218d0a5817301667e0a974983cd1d87dd6e55").into(),
+        signature_slot: 89,
+        block_roots_root: hex!("3c24cf1eab10af300fb99827ccdf210738e44200c20d8740416534a775218f97").into(),
         block_roots_branch: vec![
-            hex!("7265769c5443608ec0ca000bd6d92b98bd74a6ed1d91bdb9745b173bd4bd30b2").into(),
-            hex!("63da1a7293f7a8ba9e555312e91aac391847813390b76a51c6b6842a63509151").into(),
-            hex!("314eb3af46fb3cd5b6e78ad4e91467a4149c056d1e8d8e76dd2382177d2be464").into(),
-            hex!("bc5b324e321445e9ee98c670c563a5c7793b12ecdd79b25be0abee5288d9b410").into(),
-            hex!("c1e6c27607e2ec00b123b5e98426100fe38c14e35030505e9cd5c713f194c71d").into(),
+            hex!("b6c272185a6ac2b7312fe852e9ae9788ddfb3a6c2277ee4c6d523d0da4770b74").into(),
+            hex!("7be44999084960dddb5224beb5d170deecf56fd837cc467d1f19ab5e9db835f2").into(),
+            hex!("80f2585a32b329c05067ab6eea4f70549020188abfa926b5c6a4bcade3734a36").into(),
+            hex!("7117ac2c53d67ecd44dfe218c6c3e2f204a1584a83bb1d1f3750bd8ec635dbdc").into(),
+            hex!("a13f0e75fe185d630a7f3e6fd1ab0887da47e542bd274d3834e22f030b830819").into(),
         ]
     };
 }
 
 pub fn header_update<
-	FeeRecipientSize: Get<u32>,
-	LogsBloomSize: Get<u32>,
-	ExtraDataSize: Get<u32>,
-	SignatureSize: Get<u32>,
-	ProofSize: Get<u32>,
-	SyncCommitteeSize: Get<u32>,
+    FeeRecipientSize: Get<u32>,
+    LogsBloomSize: Get<u32>,
+    ExtraDataSize: Get<u32>,
+    SignatureSize: Get<u32>,
+    ProofSize: Get<u32>,
+    SyncCommitteeSize: Get<u32>,
 >() -> HeaderUpdate<
-	FeeRecipientSize,
-	LogsBloomSize,
-	ExtraDataSize,
-	SignatureSize,
-	ProofSize,
-	SyncCommitteeSize,
+    FeeRecipientSize,
+    LogsBloomSize,
+    ExtraDataSize,
+    SignatureSize,
+    ProofSize,
+    SyncCommitteeSize,
 > {
-	return HeaderUpdate{
-        attested_header: BeaconHeader{
-            slot: 150,
-            proposer_index: 5,
-            parent_root: hex!("8bdd8b8f9e6887ff2b05b322339fea4ec78a7e6159ec4e54b591a44699662b5b").into(),
-            state_root: hex!("0db33febe0d69ec00eeab7961cb3d3e9a16ccc59f1314a5b67d2887be37e624d").into(),
-            body_root: hex!("cbfb4d27fd2e98f38921914e5e79b357684769b3adfaa17861b423f7f63f37b1").into(),
+    return HeaderUpdate{
+        beacon_header: BeaconHeader{
+            slot: 70,
+            proposer_index: 0,
+            parent_root: hex!("8d5bd407701a7c2a7783060aa32523947e8dee84587596dc865bfaaea7b88cb4").into(),
+            state_root: hex!("76a774cdb872ae29238bea2b38283cfc9bf0724521042f48b47bad2ed7c13d1c").into(),
+            body_root: hex!("c4c24fe96afde6e2bbe39ffb82b1385a1eb0805424197bc049251b8c5af6abb6").into(),
         },
-        execution_header: ExecutionPayloadHeader {
-            parent_hash: hex!("3fe1542912d40d01821fbee41809db8e53a8cbae0d854cb0e5a9d94247fbc031").into(),
-            fee_recipient: hex!("0000000000000000000000000000000000000000").to_vec().try_into().expect("fee recipient too long"),
-            state_root: hex!("251f215b8f0bb2caceac8cf469f0bf4daf1d0a8e319b506a02ab4a0362e31083").into(),
+        execution_header: ExecutionPayloadHeaderCapella{
+            parent_hash: hex!("5d8301c97b80be6f94e4c3000124158c2cbe92ca8db38c6c6a09d81fb38f5715").into(),
+            fee_recipient: hex!("0000000000000000000000000000000000000000").into(),
+            state_root: hex!("04b361e1bb8763058a934ec9ef62224a63d8e5fef915926261026aa2ced4bf88").into(),
             receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
-            logs_bloom: hex!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").to_vec().try_into().expect("logs bloom too long"),
-            prev_randao: hex!("821b4a7000256c9927032630785533f5fa4f1a40b6ae95eedf86d5910e18549c").into(),
-            block_number: 150,
-            gas_limit: 69094400,
+            logs_bloom: hex!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").into(),
+            prev_randao: hex!("5c15907f0f9ba5c08bdda0ee009e8f6515400767bb79e85286262b3d532f26a1").into(),
+            block_number: 70,
+            gas_limit: 74711588,
             gas_used: 0,
-            timestamp: 1679133094,
+            timestamp: 1684385716,
             extra_data: hex!("d983010b02846765746888676f312e31392e358664617277696e").into(),
-            base_fee_per_gas: U256::from(7 as u64),
-            block_hash: hex!("d84d6e83a9b4783fe4a290edc0d57e218a42aeb4f4c97dc7c83dacf82a1ec5eb").into(),
+            base_fee_per_gas: U256::from(91685 as u64),
+            block_hash: hex!("cc3f686dcb2bdc8cafb810d936b0c7a68058430100baf0d8064d4446b4793b8d").into(),
             transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
             withdrawals_root: hex!("28ba1834a3a7b657460ce79fa3a1d909ab8828fd557659d4d0554a9bdbc0ec30").into(),
         },
         execution_branch: vec![
-            hex!("577ef1f2f9b33764e9a0d56225a4df5890f3b5ac3dc6fec05db54b65f20a8984").into(),
+            hex!("211255a4f25e60c027f834a7b5c1f330d5fe8ceae2e70c0de2708ea1021439d8").into(),
             hex!("336488033fe5f3ef4ccc12af07b9370b92e553e35ecb4a337a1b1c0e4afe1e0e").into(),
             hex!("db56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71").into(),
-            hex!("1b1451ad43516084cc488a22800d39d3368f0220cbc844957321fdf4dfe8154d").into(),
-        ],
+            hex!("9c9b69df6b8cbbf1b220de8fbb767d0ce8bdd0d95db0ddd48b0533fa1c448e00").into(),
+        ].try_into().expect("too many branch proof items"),
         sync_aggregate: SyncAggregate{
             sync_committee_bits: hex!("ffffffff"),
-            sync_committee_signature: hex!("b203cba9326023622caad739fe44a50392d85a8bc1cb3f0c64d89319a865dc1dc1d1ff318d939ac24e4866068d8ca442116d4e7badec88015fd2865f97d5d5ab321c6c9a6994a9afee31f03cd015131320324bffc5d18746d232578c321ea61b").into(),
+            sync_committee_signature: hex!("8ca20631749cf52fd3a5ee37761f6d877b98966f412f2dcc64815e4683e6c957e2297b9bbb0868a42973c910f1caf16e0d30570e02bfd409ec6f7f51d781bbeb1ae269654736b0ceae1d069c4ae883cd90e2b481ee6e4ef0d1095b29cca12205").into(),
         },
-        signature_slot: 151,
+        signature_slot: 71,
         block_root_branch: vec![
-            hex!("c6e5d2ad0e10309dc895c9f3a37b0dcadf95648f036b42d0ef5084252c69f1ed").into(),
-            hex!("86d3344e6df5f9e3b930fe849e4ef99eca85cf455698db3acff0ab5449f0c383").into(),
-            hex!("476a0e95a7b8cdef9aa2b8456ad44c46e7d828fd1821dec3dd3f456c21dbd679").into(),
-            hex!("0fff87fb108fae09e61eafef5bcf22f4a5267699d5624fab371f661cc5e0c938").into(),
-            hex!("76dd343907582c21ec28320c1d6a10349d338ac8ae4bb6e890063ad7d4ce4a6a").into(),
-            hex!("7eebb150fd62159c1adf5dbe3e677b9574ea304d752f06de0a9f03f8f0ed6597").into(),
+            hex!("5629f3117ab668ceaa7a73850a0963737a9ade6b4dc933f33f89cca29d4afe18").into(),
+            hex!("d0acaef3827b61abf9f7e84c6c00ef967da85acc535ba73e5fea4bf08e9b77ac").into(),
+            hex!("e63fa5d13b626269ea6d1712d92ae6366e0db878c8166f5b20c803e48b0bc262").into(),
+            hex!("aaddd43ec51ceae099faac448be992e2ec918f429d7f988b41c416d1ff95ecbd").into(),
+            hex!("bb8ecb6570c51c9c0e085cb49f091876ec25a5bd502e0d39e5f6d3e20256cb3f").into(),
+            hex!("fd0d41d7851435aed0bcf546897b846d0f87c9b430730ef00399a4d614092268").into(),
         ],
-        block_root_branch_header_root: hex!("105976df5861b95fa4184564978eac0bcbe872acdd77a0ead552a8b283dabc4f").into(),
+        block_root_branch_header_root: hex!("40f276b469988631d66dad68840582af223ef5311fed38b82e6877ff4ea3ef11").into(),
     };
 }

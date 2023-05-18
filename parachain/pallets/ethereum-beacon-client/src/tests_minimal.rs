@@ -210,7 +210,7 @@ fn it_processes_a_invalid_finalized_header_update() {
 				mock_minimal::RuntimeOrigin::signed(1),
 				update.clone()
 			),
-			Error::<mock_minimal::Test>::DuplicateFinalizedHeaderUpdate
+			Error::<mock_minimal::Test>::SyncCommitteeMissing
 		);
 	});
 }
@@ -288,6 +288,9 @@ fn it_processes_a_header_update() {
 fn it_processes_a_invalid_header_update_not_finalized() {
 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 	let update = get_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
+	let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
+		update.attested_header.slot,
+	);
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(&initial_sync));
@@ -298,6 +301,11 @@ fn it_processes_a_invalid_header_update_not_finalized() {
 			beacon_slot: update.attested_header.slot - 1,
 			import_time: 0,
 		});
+
+		assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
+			current_period,
+			&initial_sync.current_sync_committee,
+		));
 
 		assert_err!(
 			mock_minimal::EthereumBeaconClient::import_execution_header(
@@ -313,6 +321,9 @@ fn it_processes_a_invalid_header_update_not_finalized() {
 fn it_processes_a_invalid_header_update_with_duplicate_entry() {
 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 	let update = get_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
+	let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
+		update.attested_header.slot,
+	);
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(&initial_sync));
@@ -322,6 +333,11 @@ fn it_processes_a_invalid_header_update_with_duplicate_entry() {
 			beacon_slot: update.attested_header.slot,
 			import_time: 0,
 		});
+
+		assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
+			current_period,
+			&initial_sync.current_sync_committee,
+		));
 
 		LatestExecutionHeaderState::<mock_minimal::Test>::set(ExecutionHeaderState {
 			beacon_block_root: Default::default(),
