@@ -177,7 +177,6 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.SyncCommitteeP
 			SignatureSlot:           types.U64(signatureSlot),
 			BlockRootsHash:          blockRootsProof.Leaf,
 			BlockRootProof:          blockRootsProof.Proof,
-			SyncCommitteePeriod:     types.U64(from),
 		},
 		FinalizedHeaderBlockRoot: finalizedHeaderBlockRoot,
 		BlockRootsTree:           blockRootsProof.Tree,
@@ -474,7 +473,7 @@ func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, err
 
 	headerUpdate := scale.HeaderUpdate{
 		Payload: scale.HeaderUpdatePayload{
-			AttestedHeader:  beaconHeader,
+			Header:          beaconHeader,
 			ExecutionHeader: executionPayloadScale,
 			ExecutionBranch: executionHeaderBranch,
 		},
@@ -517,7 +516,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 	if block.GetBeaconSlot() == checkpoint.Slot {
 		return scale.HeaderUpdate{
 			Payload: scale.HeaderUpdatePayload{
-				AttestedHeader:   beaconHeader,
+				Header:           beaconHeader,
 				ExecutionHeader:  executionPayloadScale,
 				ExecutionBranch:  executionHeaderBranch,
 				BlockRootsBranch: []types.H256{},
@@ -538,7 +537,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 
 	headerUpdate := scale.HeaderUpdate{
 		Payload: scale.HeaderUpdatePayload{
-			AttestedHeader:   beaconHeader,
+			Header:           beaconHeader,
 			ExecutionHeader:  executionPayloadScale,
 			ExecutionBranch:  executionHeaderBranch,
 			BlockRootsBranch: proofScale,

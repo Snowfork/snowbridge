@@ -1,5 +1,5 @@
 {
- "attested_header": {
+ "header": {
   "slot": 70,
   "proposer_index": 0,
   "parent_root": "0x8d5bd407701a7c2a7783060aa32523947e8dee84587596dc865bfaaea7b88cb4",
@@ -29,11 +29,6 @@
   "0xdb56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71",
   "0x9c9b69df6b8cbbf1b220de8fbb767d0ce8bdd0d95db0ddd48b0533fa1c448e00"
  ],
- "sync_aggregate": {
-  "sync_committee_bits": "0xffffffff",
-  "sync_committee_signature": "0x8ca20631749cf52fd3a5ee37761f6d877b98966f412f2dcc64815e4683e6c957e2297b9bbb0868a42973c910f1caf16e0d30570e02bfd409ec6f7f51d781bbeb1ae269654736b0ceae1d069c4ae883cd90e2b481ee6e4ef0d1095b29cca12205"
- },
- "signature_slot": 71,
  "block_roots_branch": [
   "0x5629f3117ab668ceaa7a73850a0963737a9ade6b4dc933f33f89cca29d4afe18",
   "0xd0acaef3827b61abf9f7e84c6c00ef967da85acc535ba73e5fea4bf08e9b77ac",

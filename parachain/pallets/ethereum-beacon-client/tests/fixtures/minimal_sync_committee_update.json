@@ -69,7 +69,6 @@
   "sync_committee_bits": "0xffffffff",
   "sync_committee_signature": "0xa5a7e1f249b6de746e154cce33656ce1e02cec33e54c883a4fc80af657da26b2e2f79c817cf7d17b558a90012c984bcf03043988bbf086392eb24ed417f1d1f9c4dd09bfa61fec9419b292676cbffd124afd89a775f49c9716f5bb4586485554"
  },
- "sync_committee_period": 1,
  "signature_slot": 81,
  "block_roots_root": "0xfb8e30a463796805bf1d26d4343c1f44bf2ef40990c6899910adfb0620acb4b3",
  "block_roots_branch": [

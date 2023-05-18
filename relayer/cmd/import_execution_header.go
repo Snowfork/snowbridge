@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"io/ioutil"
 	"strings"
+
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
@@ -117,16 +118,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
-		log.WithField("slot", update.Payload.AttestedHeader.Slot).Info("found block at slot")
-
-		syncAggregate, signatureSlot, err := syncer.GetSyncAggregateForSlot(uint64(update.Payload.AttestedHeader.Slot) + 1)
-		if err != nil {
-			return fmt.Errorf("get sync aggregate: %w", err)
-		}
-		log.Info("found sync aggregate")
-
-		update.Payload.SyncAggregate = syncAggregate
-		update.Payload.SignatureSlot = signatureSlot
+		log.WithField("slot", update.Payload.Header.Slot).Info("found block at slot")
 
 		err = writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_execution_header", update.Payload)
 		if err != nil {

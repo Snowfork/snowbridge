@@ -4,9 +4,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
+
 	"github.com/cbroglie/mustache"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"os"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
@@ -205,12 +206,9 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
-		nextHeaderUpdateScale, err := s.GetNextHeaderUpdateBySlot(blockUpdateSlot + 1)
 		if err != nil {
 			return fmt.Errorf("get next header update to get sync aggregate: %w", err)
 		}
-		headerUpdateScale.Payload.SyncAggregate = nextHeaderUpdateScale.NextSyncAggregate
-		headerUpdateScale.Payload.SignatureSlot = nextHeaderUpdateScale.Payload.AttestedHeader.Slot
 		headerUpdate := headerUpdateScale.ToJSON()
 		err = writeJSONToFile(headerUpdate, activeSpec.ToString()+"_header_update")
 		if err != nil {

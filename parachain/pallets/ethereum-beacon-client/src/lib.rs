@@ -46,8 +46,7 @@ pub use pallet::*;
 pub use config::{SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE};
 
 pub type CheckpointUpdate = primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE>;
-pub type ExecutionHeaderUpdate =
-	primitives::ExecutionHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
+pub type ExecutionHeaderUpdate = primitives::ExecutionHeaderUpdate;
 pub type SyncCommitteeUpdate =
 	primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
 pub type FinalizedHeaderUpdate =
@@ -278,7 +277,8 @@ pub mod pallet {
 
 			Self::check_bridge_blocked_state()?;
 
-			let sync_committee_period = update.sync_committee_period;
+			let sync_committee_period =
+				Self::compute_current_sync_period(update.attested_header.slot);
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received sync committee update for period {}. Applying update",
@@ -351,7 +351,7 @@ pub mod pallet {
 
 			Self::check_bridge_blocked_state()?;
 
-			let slot = update.attested_header.slot;
+			let slot = update.header.slot;
 			let block_hash = update.execution_header.block_hash;
 
 			log::info!(
@@ -516,7 +516,7 @@ pub mod pallet {
 
 		fn process_execution_header_update(update: &ExecutionHeaderUpdate) -> DispatchResult {
 			ensure!(
-				update.attested_header.slot <= Self::latest_finalized_header().beacon_slot,
+				update.header.slot <= Self::latest_finalized_header().beacon_slot,
 				Error::<T>::HeaderNotFinalized
 			);
 
@@ -536,29 +536,29 @@ pub mod pallet {
 					&update.execution_branch,
 					config::EXECUTION_HEADER_SUBTREE_INDEX,
 					config::EXECUTION_HEADER_DEPTH,
-					update.attested_header.body_root
+					update.header.body_root
 				)
 				.is_some_and(|x| x),
 				Error::<T>::InvalidExecutionHeaderProof
 			);
 
-			let attested_header_root: H256 = update
-				.attested_header
+			let header_root: H256 = update
+				.header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			Self::ancestry_proof(
 				&update.block_roots_branch,
-				update.attested_header.slot,
-				attested_header_root,
+				update.header.slot,
+				header_root,
 				update.block_roots_root,
 			)?;
 
 			Self::store_execution_header(
 				update.execution_header.block_hash,
 				update.execution_header.clone().into(),
-				update.attested_header.slot,
-				attested_header_root,
+				update.header.slot,
+				header_root,
 			);
 
 			Ok(())

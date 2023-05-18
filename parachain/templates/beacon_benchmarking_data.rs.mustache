@@ -9,8 +9,7 @@ use snowbridge_beacon_primitives::{
 use sp_core::U256;
 use sp_std::vec;
 
-pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
-    ) -> InitialUpdate<SyncCommitteeSize, ProofSize> {
+pub fn initial_sync() -> InitialUpdate {
     let time_now = 1675679352; //2023.2.6
 
     return InitialUpdate{
@@ -39,11 +38,7 @@ pub fn initial_sync<SyncCommitteeSize: Get<u32>, ProofSize: Get<u32>>(
     };
 }
 
-pub fn sync_committee_update<
-    SignatureSize: Get<u32>,
-    ProofSize: Get<u32>,
-    SyncCommitteeSize: Get<u32>,
->() -> SyncCommitteePeriodUpdate<SignatureSize, ProofSize, SyncCommitteeSize> {
+pub fn sync_committee_update() -> SyncCommitteePeriodUpdate {
     return SyncCommitteePeriodUpdate {
         attested_header: BeaconHeader {
             slot: {{SyncCommitteeUpdate.AttestedHeader.Slot}},
@@ -81,7 +76,6 @@ pub fn sync_committee_update<
             sync_committee_bits: hex!("{{SyncCommitteeUpdate.SyncAggregate.SyncCommitteeBits}}"),
             sync_committee_signature: hex!("{{SyncCommitteeUpdate.SyncAggregate.SyncCommitteeSignature}}").into(),
         },
-        sync_committee_period: {{SyncCommitteeUpdate.SyncCommitteePeriod}},
         signature_slot: {{SyncCommitteeUpdate.SignatureSlot}},
         block_roots_root: hex!("{{SyncCommitteeUpdate.BlockRootsRoot}}").into(),
         block_roots_branch: vec![
@@ -92,11 +86,7 @@ pub fn sync_committee_update<
     };
 }
 
-pub fn finalized_header_update<
-    SignatureSize: Get<u32>,
-    ProofSize: Get<u32>,
-    SyncCommitteeSize: Get<u32>,
->() -> FinalizedHeaderUpdate<SignatureSize, ProofSize, SyncCommitteeSize> {
+pub fn finalized_header_update() -> FinalizedHeaderUpdate {
     return FinalizedHeaderUpdate{
         attested_header: BeaconHeader {
             slot: {{FinalizedHeaderUpdate.AttestedHeader.Slot}},
@@ -131,23 +121,9 @@ pub fn finalized_header_update<
     };
 }
 
-pub fn header_update<
-    FeeRecipientSize: Get<u32>,
-    LogsBloomSize: Get<u32>,
-    ExtraDataSize: Get<u32>,
-    SignatureSize: Get<u32>,
-    ProofSize: Get<u32>,
-    SyncCommitteeSize: Get<u32>,
->() -> HeaderUpdate<
-    FeeRecipientSize,
-    LogsBloomSize,
-    ExtraDataSize,
-    SignatureSize,
-    ProofSize,
-    SyncCommitteeSize,
-> {
+pub fn header_update() -> HeaderUpdate {
     return HeaderUpdate{
-        beacon_header: BeaconHeader{
+        header: BeaconHeader{
             slot: {{HeaderUpdate.BeaconHeader.Slot}},
             proposer_index: {{HeaderUpdate.BeaconHeader.ProposerIndex}},
             parent_root: hex!("{{HeaderUpdate.BeaconHeader.ParentRoot}}").into(),
@@ -175,17 +151,12 @@ pub fn header_update<
         {{#HeaderUpdate.ExecutionBranch}}
             hex!("{{.}}").into(),
         {{/HeaderUpdate.ExecutionBranch}}
-        ].try_into().expect("too many branch proof items"),
-        sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("{{HeaderUpdate.SyncAggregate.SyncCommitteeBits}}"),
-            sync_committee_signature: hex!("{{HeaderUpdate.SyncAggregate.SyncCommitteeSignature}}").into(),
-        },
-        signature_slot: {{HeaderUpdate.SignatureSlot}},
-        block_root_branch: vec![
-        {{#HeaderUpdate.BlockRootBranch}}
-            hex!("{{.}}").into(),
-        {{/HeaderUpdate.BlockRootBranch}}
         ],
-        block_root_branch_header_root: hex!("{{HeaderUpdate.BlockRootBranchHeaderRoot}}").into(),
+        block_roots_branch: vec![
+        {{#HeaderUpdate.BlockRootsBranch}}
+            hex!("{{.}}").into(),
+        {{/HeaderUpdate.BlockRootsBranch}}
+        ],
+        block_roots_root: hex!("{{HeaderUpdate.BlockRootsRoot}}").into(),
     };
 }

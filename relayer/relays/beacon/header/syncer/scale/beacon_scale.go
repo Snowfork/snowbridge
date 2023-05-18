@@ -37,7 +37,6 @@ type SyncCommitteePeriodPayload struct {
 	FinalizedHeader         BeaconHeader
 	FinalityBranch          []types.H256
 	SyncAggregate           SyncAggregate
-	SyncCommitteePeriod     types.U64
 	SignatureSlot           types.U64
 	BlockRootsHash          types.H256
 	BlockRootProof          []types.H256
@@ -60,13 +59,11 @@ type FinalizedHeaderUpdate struct {
 }
 
 type HeaderUpdatePayload struct {
-	AttestedHeader   BeaconHeader
-	SyncAggregate    SyncAggregate
-	SignatureSlot    types.U64
-	BlockRootsRoot   types.H256
-	BlockRootsBranch []types.H256
+	Header           BeaconHeader
 	ExecutionHeader  ExecutionPayloadHeaderCapella
 	ExecutionBranch  []types.H256
+	BlockRootsRoot   types.H256
+	BlockRootsBranch []types.H256
 }
 
 type HeaderUpdate struct {

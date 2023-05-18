@@ -1099,7 +1099,6 @@ pub fn sync_committee_update() -> SyncCommitteeUpdate {
             sync_committee_bits: hex!("ff7ffffdbffffff7edffd5f4fffffd79ffce7ff7dff6ffcdefb9fffdffff3bffdedbffbf7fff9fdfe7bf5dfebfbffeffffe7e1fffbfeefeb77bfdfa7ffddffbb"),
             sync_committee_signature: hex!("a58417f897521dc58fa339c9465b1346a7005251ad582fafae984918606005b23627eface374912c70e4ed28c4358eca03783419e3625ab1159b9562837581c6647fc960a6a7d54b0a811b1d5af853ee8274d9023a195f14530d46b8f6af07c2").into(),
         },
-        sync_committee_period: 636,
         signature_slot: 5217992,
         block_roots_root: hex!("f46cd66ac816b7b890d37832c0a2fa8b56984edd7266926be26dbecf6bd93f62").into(),
         block_roots_branch: vec![
@@ -1154,7 +1153,7 @@ pub fn finalized_header_update() -> FinalizedHeaderUpdate {
 
 pub fn header_update() -> ExecutionHeaderUpdate {
 	return ExecutionHeaderUpdate {
-        attested_header: BeaconHeader{
+        header: BeaconHeader{
             slot: 5217982,
             proposer_index: 320636,
             parent_root: hex!("a4571a17210f45c48e1cf7732817d5a38c18f5d4c5642845978ed47ea7129ce9").into(),
@@ -1184,11 +1183,6 @@ pub fn header_update() -> ExecutionHeaderUpdate {
             hex!("db56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71").into(),
             hex!("6fcc83169ef7b54eb9af29f63890644ac3fd1bffeb6edee8945bb13d9df802e9").into(),
         ].try_into().expect("too many branch proof items"),
-        sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("ff7ffefdbfffbff7edffd5b4fffffd39ff4c7f77dff6dfcdefa17ffdffff3bffded9fdbd7fff9ddfe7bf5dfeafb7feff7fe3e1fffbffefef77bfdfa7f7ddffb3"),
-            sync_committee_signature: hex!("9642b8a94e17eff18c50b1e0603e062fd7637e121d34a4a91e5ad48a9b8076497909de6c9c8e61980a5b33fa6f412d9519bb6f710f0144dfddd01eb36b18e9109ff7cdabc40752d15da22371214189320bc7588090ce4bfafeaee84972f4c7cf").into(),
-        },
-        signature_slot: 5217983,
         block_roots_root: hex!("52c9f5ef64da062dee00a30ebe16710a3ffe59cf91eedf96a69ae5d198d7d982").into(),
         block_roots_branch: vec![
             hex!("8406114752f4b0df307983b3d233e56b81822dcfcf37a04d31c03062582047a4").into(),

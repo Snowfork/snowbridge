@@ -130,12 +130,11 @@ fn it_errors_when_weak_subjectivity_period_exceeded_for_a_finalized_header_updat
 
 #[test]
 fn it_processes_a_header_update() {
-	let update = get_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
+	let update = get_header_update();
 	let current_sync_committee =
 		get_initial_sync::<{ config::SYNC_COMMITTEE_SIZE }>().current_sync_committee;
-	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
-		update.attested_header.slot,
-	);
+	let current_period =
+		mock_mainnet::EthereumBeaconClient::compute_current_sync_period(update.header.slot);
 
 	let finalized_update =
 		get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
