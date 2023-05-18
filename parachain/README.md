@@ -107,7 +107,7 @@ cargo install subxt-cli
 Update metadata by fetching it from parachain node (in this case a node in the E2E stack):
 
 ```bash
-subxt metadata --url http://127.0.0.1:8081 -f bytes > tools/query-events/metadata.scale
+subxt metadata --url ws://127.0.0.1:11144 -f bytes > tools/query-events/metadata-bridgehub-rococo-local.scale
 ```
 
 If you want to update the tool for an already running E2E stack:
