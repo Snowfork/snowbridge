@@ -102,6 +102,7 @@ jobs:
             --release
             --verbose 
             --workspace
+            --exclude snowbridge-query-events
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
