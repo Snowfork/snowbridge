@@ -471,6 +471,10 @@ pub mod pallet {
 				&update.sync_aggregate,
 				update.signature_slot,
 			)?;
+			ensure!(
+				update.finalized_header.slot > Self::latest_finalized_header().beacon_slot,
+				Error::<T>::DuplicateFinalizedHeaderUpdate
+			);
 			let finalized_block_root = Self::verify_finalized_header(
 				&update.attested_header,
 				&update.finalized_header,
@@ -702,10 +706,6 @@ pub mod pallet {
 			ensure!(
 				attested_header.slot >= finalized_header.slot,
 				Error::<T>::InvalidAttestedHeaderSlot
-			);
-			ensure!(
-				finalized_header.slot > Self::latest_finalized_header().beacon_slot,
-				Error::<T>::DuplicateFinalizedHeaderUpdate
 			);
 
 			let finalized_block_root: H256 = finalized_header
