@@ -1,6 +1,5 @@
 //! # Ethereum Beacon Client
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(is_some_and)]
 
 pub mod config;
 pub mod weights;
@@ -228,7 +227,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::call_index(3)]
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::force_mode())]
 		#[transactional]
 		pub fn force_mode(origin: OriginFor<T>, mode: Mode) -> DispatchResult {
@@ -244,7 +243,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(5)]
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::force_checkpoint())]
 		#[transactional]
 		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
@@ -268,7 +267,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(0)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::sync_committee_period_update())]
 		#[transactional]
 		pub fn sync_committee_period_update(
@@ -304,7 +303,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(1)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::import_finalized_header())]
 		#[transactional]
 		pub fn import_finalized_header(
@@ -341,7 +340,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(2)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::import_execution_header())]
 		#[transactional]
 		pub fn import_execution_header(
