@@ -60,12 +60,14 @@ build_relayer()
 }
 
 build_query_tool() {
+    pushd $root_dir/parachain
     echo "Building query tool"
     cargo build \
         --manifest-path tools/query-events/Cargo.toml \
         --release --features bridgehub-rococo-local \
         --bin snowbridge-query-events
     cp "$parachain_dir/target/release/snowbridge-query-events" "$output_bin_dir"
+    popd
 }
 
 install_binary() {
