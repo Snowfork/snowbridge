@@ -117,9 +117,9 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
-		log.WithField("slot", update.Payload.BeaconHeader.Slot).Info("found block at slot")
+		log.WithField("slot", update.Payload.AttestedHeader.Slot).Info("found block at slot")
 
-		syncAggregate, signatureSlot, err := syncer.GetSyncAggregateForSlot(uint64(update.Payload.BeaconHeader.Slot) + 1)
+		syncAggregate, signatureSlot, err := syncer.GetSyncAggregateForSlot(uint64(update.Payload.AttestedHeader.Slot) + 1)
 		if err != nil {
 			return fmt.Errorf("get sync aggregate: %w", err)
 		}

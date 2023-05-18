@@ -190,12 +190,12 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn latest_finalized_header)]
-	pub(super) type LatestFinalizedHeaderState<T: Config> =
+	pub(super) type LatestFinalizedHeader<T: Config> =
 		StorageValue<_, FinalizedHeaderState, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn latest_execution_header)]
-	pub(super) type LatestExecutionHeaderState<T: Config> =
+	pub(super) type LatestExecutionHeader<T: Config> =
 		StorageValue<_, ExecutionHeaderState, ValueQuery>;
 
 	#[pallet::storage]
@@ -807,7 +807,7 @@ pub mod pallet {
 			};
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
-			LatestFinalizedHeaderState::<T>::set(finalized_header);
+			LatestFinalizedHeader::<T>::set(finalized_header);
 			Self::add_finalized_header_state(finalized_header)?;
 
 			log::info!(
@@ -857,7 +857,7 @@ pub mod pallet {
 				block_number
 			);
 
-			LatestExecutionHeaderState::<T>::mutate(|s| {
+			LatestExecutionHeader::<T>::mutate(|s| {
 				s.beacon_block_root = beacon_block_root;
 				s.beacon_slot = beacon_slot;
 				s.block_hash = block_hash;

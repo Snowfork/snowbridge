@@ -44,13 +44,13 @@ func (p FinalizedHeaderPayload) ToJSON() json.FinalizedHeaderUpdate {
 
 func (h HeaderUpdate) ToJSON() json.HeaderUpdate {
 	return json.HeaderUpdate{
-		BeaconHeader:              h.Payload.BeaconHeader.ToJSON(),
-		ExecutionHeader:           h.Payload.ExecutionHeader.ToJSON(),
-		ExecutionBranch:           util.ScaleBranchToString(h.Payload.ExecutionBranch),
-		SyncAggregate:             h.Payload.SyncAggregate.ToJSON(),
-		SignatureSlot:             uint64(h.Payload.SignatureSlot),
-		BlockRootBranch:           util.ScaleBranchToString(h.Payload.BlockRootBranch),
-		BlockRootBranchHeaderRoot: h.Payload.BlockRootBranchHeaderRoot.Hex(),
+		AttestedHeader:   h.Payload.AttestedHeader.ToJSON(),
+		ExecutionHeader:  h.Payload.ExecutionHeader.ToJSON(),
+		ExecutionBranch:  util.ScaleBranchToString(h.Payload.ExecutionBranch),
+		SyncAggregate:    h.Payload.SyncAggregate.ToJSON(),
+		SignatureSlot:    uint64(h.Payload.SignatureSlot),
+		BlockRootsBranch: util.ScaleBranchToString(h.Payload.BlockRootsBranch),
+		BlockRootsRoot:   h.Payload.BlockRootsRoot.Hex(),
 	}
 }
 

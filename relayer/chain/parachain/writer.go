@@ -252,7 +252,7 @@ func (wr *ParachainWriter) GetFinalizedSlots() ([]uint64, error) {
 }
 
 func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestExecutionHeaderState", nil, nil)
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestExecutionHeader", nil, nil)
 	if err != nil {
 		return state.ExecutionHeader{}, fmt.Errorf("create storage key for LatestExecutionHeaderState: %w", err)
 	}
@@ -277,7 +277,7 @@ func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader,
 }
 
 func (wr *ParachainWriter) GetLastFinalizedHeaderState() (state.FinalizedHeader, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestFinalizedHeaderState", nil, nil)
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestFinalizedHeader", nil, nil)
 	if err != nil {
 		return state.FinalizedHeader{}, fmt.Errorf("create storage key for GetLastFinalizedHeaderState: %w", err)
 	}

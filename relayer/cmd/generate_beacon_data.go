@@ -4,10 +4,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/cbroglie/mustache"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"os"
 
-	"github.com/cbroglie/mustache"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -206,7 +206,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get next header update to get sync aggregate: %w", err)
 		}
 		headerUpdateScale.Payload.SyncAggregate = nextHeaderUpdateScale.NextSyncAggregate
-		headerUpdateScale.Payload.SignatureSlot = nextHeaderUpdateScale.Payload.BeaconHeader.Slot
+		headerUpdateScale.Payload.SignatureSlot = nextHeaderUpdateScale.Payload.AttestedHeader.Slot
 		headerUpdate := headerUpdateScale.ToJSON()
 		err = writeJSONToFile(headerUpdate, activeSpec.ToString()+"_header_update")
 		if err != nil {
@@ -215,37 +215,39 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		log.Info("created header update file")
 
-		log.Info("now updating benchmarking data files")
+		if activeSpec.IsMainnet() {
+			log.Info("now updating benchmarking data files")
 
-		// Rust file hexes require the 0x of hashes to be removed
-		initialSync.RemoveLeadingZeroHashes()
-		syncCommitteeUpdate.RemoveLeadingZeroHashes()
-		finalizedUpdate.RemoveLeadingZeroHashes()
-		headerUpdate.RemoveLeadingZeroHashes()
+			// Rust file hexes require the 0x of hashes to be removed
+			initialSync.RemoveLeadingZeroHashes()
+			syncCommitteeUpdate.RemoveLeadingZeroHashes()
+			finalizedUpdate.RemoveLeadingZeroHashes()
+			headerUpdate.RemoveLeadingZeroHashes()
 
-		data := Data{
-			InitialSync:           initialSync,
-			SyncCommitteeUpdate:   syncCommitteeUpdate,
-			FinalizedHeaderUpdate: finalizedUpdate,
-			HeaderUpdate:          headerUpdate,
-		}
+			data := Data{
+				InitialSync:           initialSync,
+				SyncCommitteeUpdate:   syncCommitteeUpdate,
+				FinalizedHeaderUpdate: finalizedUpdate,
+				HeaderUpdate:          headerUpdate,
+			}
 
-		log.WithFields(log.Fields{
-			"location": pathToBeaconTestFixtureFiles,
-			"spec":     activeSpec,
-		}).Info("rendering file using mustache")
+			log.WithFields(log.Fields{
+				"location": pathToBeaconTestFixtureFiles,
+				"spec":     activeSpec,
+			}).Info("rendering file using mustache")
 
-		rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
-		filename := fmt.Sprintf("data_%s.rs", activeSpec)
+			rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
+			filename := fmt.Sprintf("data_%s.rs", activeSpec)
 
-		log.WithFields(log.Fields{
-			"location": pathToBeaconBenchmarkData,
-			"filename": filename,
-		}).Info("writing result file")
+			log.WithFields(log.Fields{
+				"location": pathToBeaconBenchmarkData,
+				"filename": filename,
+			}).Info("writing result file")
 
-		err = writeBenchmarkDataFile(filename, rendered)
-		if err != nil {
-			return err
+			err = writeBenchmarkDataFile(filename, rendered)
+			if err != nil {
+				return err
+			}
 		}
 
 		log.WithField("spec", activeSpec).Info("done")

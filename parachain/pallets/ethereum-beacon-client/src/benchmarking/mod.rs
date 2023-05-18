@@ -23,7 +23,7 @@ benchmarks! {
 		let sync_committee_update = initialize_sync_committee::<T>()?;
 
 		// initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
-		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState {
+		LatestFinalizedHeader::<T>::set(FinalizedHeaderState {
 			beacon_block_root: Default::default(),
 			import_time: initial_sync_data.import_time,
 			beacon_slot: sync_committee_update.finalized_header.slot - 1,
@@ -50,7 +50,7 @@ benchmarks! {
 		EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;
 
 		// initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
-		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState {
+		LatestFinalizedHeader::<T>::set(FinalizedHeaderState {
 			beacon_block_root: Default::default(),
 			import_time: initial_sync_data.import_time + 51200,
 			beacon_slot: finalized_header_update.finalized_header.slot - 1,
@@ -84,7 +84,7 @@ benchmarks! {
 		let finalized_block_root = finalized_update.finalized_header.hash_tree_root()
 				.unwrap();
 
-		LatestFinalizedHeaderState::<T>::set(FinalizedHeaderState{
+		LatestFinalizedHeader::<T>::set(FinalizedHeaderState{
 			beacon_block_root: finalized_block_root,
 			beacon_slot: finalized_slot,
 			import_time: 0,
