@@ -1,7 +1,7 @@
 use crate::{
-	decompress_sync_committee_bits, Config, LatestSyncCommitteePeriod,
-	Pallet as EthereumBeaconClient, SyncCommitteeUpdate, SyncCommittees, ValidatorsRoot, Vec,
-	SYNC_COMMITTEE_SIZE,
+	compute_period, config::SYNC_COMMITTEE_SIZE, decompress_sync_committee_bits, Config,
+	LatestSyncCommitteePeriod, Pallet as EthereumBeaconClient, SyncCommitteeUpdate, SyncCommittees,
+	ValidatorsRoot, Vec,
 };
 use primitives::{PublicKeyPrepared, SyncCommitteePrepared};
 use sp_core::H256;
@@ -16,12 +16,8 @@ pub fn initialize_sync_committee<T: Config>() -> Result<SyncCommitteeUpdate, &'s
 	let sync_committee_update = sync_committee_update();
 
 	// initialize SyncCommittees with period in sync_committee_update
-	LatestSyncCommitteePeriod::<T>::set(EthereumBeaconClient::<T>::compute_current_sync_period(
-		sync_committee_update.attested_header.slot,
-	));
-	let current_period = EthereumBeaconClient::<T>::compute_current_sync_period(
-		sync_committee_update.attested_header.slot,
-	);
+	LatestSyncCommitteePeriod::<T>::set(compute_period(sync_committee_update.attested_header.slot));
+	let current_period = compute_period(sync_committee_update.attested_header.slot);
 	EthereumBeaconClient::<T>::store_sync_committee(
 		current_period,
 		&initial_sync_data.current_sync_committee,
@@ -32,8 +28,7 @@ pub fn initialize_sync_committee<T: Config>() -> Result<SyncCommitteeUpdate, &'s
 pub fn sync_committee<T: Config>(
 	update: &SyncCommitteeUpdate,
 ) -> Result<SyncCommitteePrepared<SYNC_COMMITTEE_SIZE>, &'static str> {
-	let current_period =
-		EthereumBeaconClient::<T>::compute_current_sync_period(update.attested_header.slot);
+	let current_period = compute_period(update.attested_header.slot);
 	let sync_committee = SyncCommittees::<T>::get(current_period).ok_or("no sync committee")?;
 	Ok(sync_committee)
 }

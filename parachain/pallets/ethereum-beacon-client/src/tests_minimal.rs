@@ -1,5 +1,5 @@
 use crate::{
-	config,
+	compute_period, config,
 	config::{SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE},
 	mock::*,
 	pallet::FinalizedBeaconHeadersBlockRoot,
@@ -37,9 +37,7 @@ fn it_updates_a_committee_period_sync_update() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(&initial_sync));
 
-		let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
-			update.attested_header.slot,
-		);
+		let current_period = compute_period(update.attested_header.slot);
 
 		assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
 			current_period,
@@ -90,7 +88,7 @@ fn it_updates_a_invalid_committee_period_sync_update_with_gap() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_ok!(mock_minimal::EthereumBeaconClient::initial_sync(initial_sync.clone()));
 
-		let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
+		let current_period = compute_period(
 			update.attested_header.slot,
 		);
 
@@ -120,9 +118,7 @@ fn it_updates_a_invalid_committee_period_sync_update_with_duplicate_entry() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(&initial_sync));
 
-		let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
-			update.attested_header.slot,
-		);
+		let current_period = compute_period(update.attested_header.slot);
 
 		assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
 			current_period,
@@ -150,9 +146,7 @@ fn it_processes_a_finalized_header_update() {
 	let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 
-	let current_period = mock_minimal::EthereumBeaconClient::compute_current_sync_period(
-		update.attested_header.slot,
-	);
+	let current_period = compute_period(update.attested_header.slot);
 
 	let time_now = SystemTime::now()
 		.duration_since(UNIX_EPOCH)
@@ -253,8 +247,7 @@ fn it_processes_a_header_update() {
 	let finalized_slot = finalized_update.finalized_header.slot;
 	let finalized_block_root: H256 = finalized_update.finalized_header.hash_tree_root().unwrap();
 
-	let current_period =
-		mock_minimal::EthereumBeaconClient::compute_current_sync_period(update.header.slot);
+	let current_period = compute_period(update.header.slot);
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
@@ -287,8 +280,7 @@ fn it_processes_a_header_update() {
 fn it_processes_a_invalid_header_update_not_finalized() {
 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 	let update = get_header_update();
-	let current_period =
-		mock_minimal::EthereumBeaconClient::compute_current_sync_period(update.header.slot);
+	let current_period = compute_period(update.header.slot);
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(&initial_sync));
@@ -319,8 +311,7 @@ fn it_processes_a_invalid_header_update_not_finalized() {
 fn it_processes_a_invalid_header_update_with_duplicate_entry() {
 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 	let update = get_header_update();
-	let current_period =
-		mock_minimal::EthereumBeaconClient::compute_current_sync_period(update.header.slot);
+	let current_period = compute_period(update.header.slot);
 
 	new_tester::<mock_minimal::Test>().execute_with(|| {
 		assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(&initial_sync));

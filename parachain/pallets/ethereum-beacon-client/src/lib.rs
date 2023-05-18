@@ -2,6 +2,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod config;
+pub mod functions;
+pub mod impls;
+pub mod types;
 pub mod weights;
 
 #[cfg(test)]
@@ -32,56 +35,24 @@ use primitives::{
 	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
 	ForkVersions, Mode, PublicKeyPrepared, SigningData,
 };
-use snowbridge_core::{Message, RingBufferMap, RingBufferMapImpl, Verifier};
+use snowbridge_core::{Message, RingBufferMap, Verifier};
 use sp_core::H256;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
 
 use snowbridge_core::Proof;
-use snowbridge_ethereum::{Header as EthereumHeader, Log, Receipt};
-use sp_core::U256;
+
+use functions::{
+	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
+};
+use types::{
+	CheckpointUpdate, ExecutionHeaderBuffer, ExecutionHeaderUpdate, FinalizedHeaderUpdate,
+	SyncAggregate, SyncCommittee, SyncCommitteePrepared, SyncCommitteeUpdate, SyncCommitteesBuffer,
+};
 
 pub use pallet::*;
 
-pub use config::{SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE};
-
-pub type CheckpointUpdate = primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE>;
-pub type ExecutionHeaderUpdate = primitives::ExecutionHeaderUpdate;
-pub type SyncCommitteeUpdate =
-	primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
-pub type FinalizedHeaderUpdate =
-	primitives::FinalizedHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
-pub type SyncCommittee = primitives::SyncCommittee<SYNC_COMMITTEE_SIZE>;
-pub type SyncCommitteePrepared = primitives::SyncCommitteePrepared<SYNC_COMMITTEE_SIZE>;
-pub type SyncAggregate = primitives::SyncAggregate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>;
-
-fn decompress_sync_committee_bits(
-	input: [u8; SYNC_COMMITTEE_BITS_SIZE],
-) -> [u8; SYNC_COMMITTEE_SIZE] {
-	primitives::decompress_sync_committee_bits::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(
-		input,
-	)
-}
-
-/// ExecutionHeader ring buffer implementation
-pub(crate) type ExecutionHeaderBuffer<T> = RingBufferMapImpl<
-	u32,
-	<T as Config>::MaxExecutionHeadersToKeep,
-	ExecutionHeaderIndex<T>,
-	ExecutionHeaderMapping<T>,
-	ExecutionHeaders<T>,
-	OptionQuery,
->;
-
-/// Sync committee ring buffer implementation
-pub(crate) type SyncCommitteesBuffer<T> = RingBufferMapImpl<
-	u32,
-	<T as Config>::MaxSyncCommitteesToKeep,
-	SyncCommitteesIndex<T>,
-	SyncCommitteesMapping<T>,
-	SyncCommittees<T>,
-	OptionQuery,
->;
+pub use config::SLOTS_PER_HISTORICAL_ROOT;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -277,8 +248,7 @@ pub mod pallet {
 
 			Self::check_bridge_blocked_state()?;
 
-			let sync_committee_period =
-				Self::compute_current_sync_period(update.attested_header.slot);
+			let sync_committee_period = compute_period(update.attested_header.slot);
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received sync committee update for period {}. Applying update",
@@ -390,7 +360,7 @@ pub mod pallet {
 				config::CURRENT_SYNC_COMMITTEE_DEPTH,
 			)?;
 
-			let period = Self::compute_current_sync_period(update.header.slot);
+			let period = compute_period(update.header.slot);
 
 			let block_root: H256 = update
 				.header
@@ -425,7 +395,7 @@ pub mod pallet {
 				config::NEXT_SYNC_COMMITTEE_DEPTH,
 			)?;
 
-			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+			let current_period = compute_period(update.attested_header.slot);
 			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
 			log::trace!(
 				target: "ethereum-beacon-client",
@@ -480,9 +450,8 @@ pub mod pallet {
 				&update.finality_branch,
 			)?;
 
-			let last_finalized_period =
-				Self::compute_current_sync_period(Self::latest_finalized_header().beacon_slot);
-			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+			let last_finalized_period = compute_period(Self::latest_finalized_header().beacon_slot);
+			let current_period = compute_period(update.attested_header.slot);
 			ensure!(
 				(current_period == last_finalized_period ||
 					current_period == last_finalized_period + 1),
@@ -673,7 +642,7 @@ pub mod pallet {
 			ensure!(signature_slot > attested_header.slot, Error::<T>::InvalidSignatureSlot);
 
 			// Verify sync committee aggregate signature
-			let current_period = Self::compute_current_sync_period(attested_header.slot);
+			let current_period = compute_period(attested_header.slot);
 			let sync_committee = Self::sync_committee_for_period(current_period)?;
 			let absent_pubkeys = Self::find_pubkeys(&participation, &sync_committee.pubkeys, false);
 			let signing_root =
@@ -716,10 +685,6 @@ pub mod pallet {
 			);
 
 			Ok(finalized_block_root)
-		}
-
-		pub(super) fn compute_epoch_at_slot(signature_slot: u64, slots_per_epoch: u64) -> u64 {
-			signature_slot / slots_per_epoch
 		}
 
 		pub(super) fn compute_signing_root(
@@ -862,21 +827,6 @@ pub mod pallet {
 			<ValidatorsRoot<T>>::set(validators_root);
 		}
 
-		/// Sums the bit vector of sync committee particpation.
-		///
-		/// # Examples
-		///
-		/// let sync_committee_bits = vec![0, 1, 0, 1, 1, 1];
-		/// ensure!(get_sync_committee_sum(sync_committee_bits), 4);
-		pub(super) fn get_sync_committee_sum(sync_committee_bits: &[u8]) -> u32 {
-			sync_committee_bits.iter().fold(0, |acc: u32, x| acc + *x as u32)
-		}
-
-		pub(super) fn compute_current_sync_period(slot: u64) -> u64 {
-			(slot as usize / config::SLOTS_PER_EPOCH / config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
-				as u64
-		}
-
 		/// Return the domain for the domain_type and fork_version.
 		pub(super) fn compute_domain(
 			domain_type: Vec<u8>,
@@ -910,7 +860,7 @@ pub mod pallet {
 		pub(super) fn sync_committee_participation_is_supermajority(
 			sync_committee_bits: &[u8],
 		) -> DispatchResult {
-			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits);
+			let sync_committee_sum = sync_committee_sum(sync_committee_bits);
 			ensure!(
 				((sync_committee_sum * 3) as usize) >= sync_committee_bits.len() * 2,
 				Error::<T>::SyncCommitteeParticipantsNotSupermajority
@@ -941,29 +891,6 @@ pub mod pallet {
 			fork_versions.genesis.version
 		}
 
-		// Verifies that the receipt encoded in proof.data is included
-		// in the block given by proof.block_hash. Inclusion is only
-		// recognized if the block has been finalized.
-		fn verify_receipt_inclusion(
-			receipts_root: H256,
-			proof: &Proof,
-		) -> Result<Receipt, DispatchError> {
-			let result = verify_receipt_proof(receipts_root, &proof.data.1)
-				.ok_or(Error::<T>::InvalidProof)?;
-
-			match result {
-				Ok(receipt) => Ok(receipt),
-				Err(err) => {
-					log::trace!(
-						target: "ethereum-beacon-client",
-						"💫 Failed to decode transaction receipt: {}",
-						err
-					);
-					Err(Error::<T>::InvalidProof.into())
-				},
-			}
-		}
-
 		pub fn find_pubkeys(
 			sync_committee_bits: &[u8],
 			sync_committee_pubkeys: &[PublicKeyPrepared],
@@ -984,7 +911,7 @@ pub mod pallet {
 			validators_root: H256,
 			signature_slot: u64,
 		) -> Result<H256, DispatchError> {
-			let fork_version = Self::compute_fork_version(Self::compute_epoch_at_slot(
+			let fork_version = Self::compute_fork_version(compute_epoch(
 				signature_slot,
 				config::SLOTS_PER_EPOCH as u64,
 			));
@@ -994,81 +921,6 @@ pub mod pallet {
 			// Hash tree root of SigningData - object root + domain
 			let signing_root = Self::compute_signing_root(header, domain)?;
 			Ok(signing_root)
-		}
-	}
-
-	impl<T: Config> Verifier for Pallet<T> {
-		/// Verify a message by verifying the existence of the corresponding
-		/// Ethereum log in a block. Returns the log if successful.
-		fn verify(message: &Message) -> Result<Log, DispatchError> {
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Verifying message with block hash {}",
-				message.proof.block_hash,
-			);
-
-			let header = <ExecutionHeaderBuffer<T>>::get(message.proof.block_hash)
-				.ok_or(Error::<T>::MissingHeader)?;
-
-			let receipt = match Self::verify_receipt_inclusion(header.receipts_root, &message.proof)
-			{
-				Ok(receipt) => receipt,
-				Err(err) => {
-					log::error!(
-						target: "ethereum-beacon-client",
-						"💫 Verify receipt inclusion failed for block {}: {:?}",
-						message.proof.block_hash,
-						err
-					);
-					return Err(err)
-				},
-			};
-
-			log::trace!(
-				target: "ethereum-beacon-client",
-				"💫 Verified receipt inclusion for transaction at index {} in block {}",
-				message.proof.tx_index, message.proof.block_hash,
-			);
-
-			let log = match rlp::decode(&message.data) {
-				Ok(log) => log,
-				Err(err) => {
-					log::error!(
-						target: "ethereum-beacon-client",
-						"💫 RLP log decoded failed {}: {:?}",
-						message.proof.block_hash,
-						err
-					);
-					return Err(Error::<T>::DecodeFailed.into())
-				},
-			};
-
-			if !receipt.contains_log(&log) {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"💫 Event log not found in receipt for transaction at index {} in block {}",
-					message.proof.tx_index, message.proof.block_hash,
-				);
-				return Err(Error::<T>::InvalidProof.into())
-			}
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Receipt verification successful for {}",
-				message.proof.block_hash,
-			);
-
-			Ok(log)
-		}
-
-		// Empty implementation, not necessary for the beacon client,
-		// but needs to be declared to implement Verifier interface.
-		fn initialize_storage(
-			_headers: Vec<EthereumHeader>,
-			_initial_difficulty: U256,
-			_descendants_until_final: u8,
-		) -> Result<(), &'static str> {
-			Ok(())
 		}
 	}
 }

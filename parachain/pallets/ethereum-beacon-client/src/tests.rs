@@ -1,10 +1,11 @@
 use crate::{
+	config::SYNC_COMMITTEE_SIZE,
 	mock::{get_initial_sync, mock_minimal, new_tester},
 	pallet::{
 		ExecutionHeaders, FinalizedBeaconHeaderStates, FinalizedBeaconHeaders,
 		FinalizedBeaconHeadersBlockRoot, SyncCommittees,
 	},
-	verify_merkle_branch, BeaconHeader, Error, H256, SYNC_COMMITTEE_SIZE,
+	sync_committee_sum, verify_merkle_branch, BeaconHeader, Error, H256,
 };
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
@@ -26,14 +27,9 @@ pub fn prepare_milagro_pubkeys() -> Result<Vec<PublicKeyPrepared>, &'static str>
 }
 
 #[test]
-pub fn test_get_sync_committee_sum() {
+pub fn test_sync_committee_sum() {
 	new_tester::<mock_minimal::Test>().execute_with(|| {
-		assert_eq!(
-			mock_minimal::EthereumBeaconClient::get_sync_committee_sum(&[
-				0, 1, 0, 1, 1, 0, 1, 0, 1
-			]),
-			5
-		);
+		assert_eq!(sync_committee_sum(&[0, 1, 0, 1, 1, 0, 1, 0, 1]), 5);
 	});
 }
 
