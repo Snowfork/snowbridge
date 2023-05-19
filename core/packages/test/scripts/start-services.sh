@@ -32,7 +32,11 @@ configure_beefy
 source scripts/configure-beacon.sh
 configure_beacon
 
-# 5. start relayer
+# 5. Configure bridgehub exporter on statemine
+source scripts/configure-statemine.sh 
+configure_statemine
+
+# 6. start relayer
 echo "Starting relayers"
 source scripts/start-relayer.sh
 start_relayer
