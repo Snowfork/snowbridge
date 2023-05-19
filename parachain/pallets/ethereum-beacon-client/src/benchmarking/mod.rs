@@ -22,7 +22,7 @@ benchmarks! {
 		let initial_sync_data = initial_sync();
 		let sync_committee_update = initialize_sync_committee::<T>()?;
 
-		let period = EthereumBeaconClient::<T>::compute_current_sync_period(sync_committee_update.attested_header.slot);
+		let period = compute_period(sync_committee_update.attested_header.slot);
 
 		// initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
 		LatestFinalizedHeader::<T>::set(FinalizedHeaderState {
@@ -45,7 +45,7 @@ benchmarks! {
 
 		let finalized_header_update = finalized_header_update();
 
-		let current_period = EthereumBeaconClient::<T>::compute_current_sync_period(
+		let current_period = compute_period(
 				finalized_header_update.attested_header.slot,
 			);
 
@@ -74,7 +74,7 @@ benchmarks! {
 
 		let header_update = header_update();
 
-		let current_period = EthereumBeaconClient::<T>::compute_current_sync_period(
+		let current_period = compute_period(
 				header_update.header.slot,
 			);
 

@@ -95,10 +95,6 @@ impl Verifier for MockVerifier {
 		let log: Log = rlp::decode(&message.data).unwrap();
 		Ok(log)
 	}
-
-	fn initialize_storage(_: Vec<EthereumHeader>, _: U256, _: u8) -> Result<(), &'static str> {
-		Ok(())
-	}
 }
 
 use snowbridge_router_primitives::InboundMessageConverter;

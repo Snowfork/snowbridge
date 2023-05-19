@@ -1,6 +1,6 @@
 #[cfg(not(feature = "minimal"))]
 use crate::{
-	config,
+	compute_period, config,
 	config::{SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE},
 	mock::*,
 	Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedBeaconHeadersBlockRoot,
@@ -32,9 +32,7 @@ fn it_updates_a_committee_period_sync_update() {
 		get_committee_sync_period_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 	let current_sync_committee =
 		get_initial_sync::<{ SYNC_COMMITTEE_SIZE }>().current_sync_committee;
-	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
-		update.attested_header.slot,
-	);
+	let current_period = compute_period(update.attested_header.slot);
 
 	new_tester::<mock_mainnet::Test>().execute_with(|| {
 		LatestSyncCommitteePeriod::<mock_mainnet::Test>::set(current_period);
@@ -60,9 +58,7 @@ fn it_processes_a_finalized_header_update() {
 	let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 	let current_sync_committee =
 		get_initial_sync::<{ SYNC_COMMITTEE_SIZE }>().current_sync_committee;
-	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
-		update.attested_header.slot,
-	);
+	let current_period = compute_period(update.attested_header.slot);
 
 	let slot = update.finalized_header.slot;
 	let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT as u64); // Goerli genesis time +
@@ -97,9 +93,7 @@ fn it_errors_when_weak_subjectivity_period_exceeded_for_a_finalized_header_updat
 	let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 	let current_sync_committee = get_initial_sync::<SYNC_COMMITTEE_SIZE>().current_sync_committee;
 
-	let current_period = mock_mainnet::EthereumBeaconClient::compute_current_sync_period(
-		update.attested_header.slot,
-	);
+	let current_period = compute_period(update.attested_header.slot);
 
 	let slot = update.finalized_header.slot;
 	let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT as u64);
@@ -133,8 +127,7 @@ fn it_processes_a_header_update() {
 	let update = get_header_update();
 	let current_sync_committee =
 		get_initial_sync::<{ config::SYNC_COMMITTEE_SIZE }>().current_sync_committee;
-	let current_period =
-		mock_mainnet::EthereumBeaconClient::compute_current_sync_period(update.header.slot);
+	let current_period = compute_period(update.header.slot);
 
 	let finalized_update =
 		get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
