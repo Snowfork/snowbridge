@@ -64,7 +64,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("fetch last finalized header state from beacon node: %w", err)
 	}
 
-	err = h.syncLaggingSyncCommitteePeriods(ctx, latestSyncedPeriod, uint64(currentFinalizedHeader.Payload.FinalizedHeader.Slot))
+	err = h.syncLaggingSyncCommitteePeriods(ctx, latestSyncedPeriod, uint64(currentFinalizedHeader.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot))
 	if err != nil {
 		return fmt.Errorf("sync lagging sync committee periods: %w", err)
 	}
@@ -148,10 +148,10 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		}
 	}
 
-	h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
+	h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot))
 
 	log.WithFields(log.Fields{
-		"finalized_header_slot": update.Payload.FinalizedHeader.Slot,
+		"finalized_header_slot": update.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot,
 		"period":                period,
 	}).Info("syncing sync committee for period")
 
@@ -175,15 +175,15 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 	return nil
 }
 
-func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeaderUpdate, error) {
+func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.Update, error) {
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
 	update, err := h.syncer.GetFinalizedUpdate()
 	if err != nil {
-		return scale.FinalizedHeaderUpdate{}, fmt.Errorf("fetch finalized header update: %w", err)
+		return scale.Update{}, fmt.Errorf("fetch finalized header update: %w", err)
 	}
 
 	log.WithFields(log.Fields{
-		"slot":      update.Payload.FinalizedHeader.Slot,
+		"slot":      update.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot,
 		"blockRoot": update.FinalizedHeaderBlockRoot,
 	}).Info("syncing finalized header at slot")
 
@@ -192,25 +192,25 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeader
 	if h.cache.LastSyncedSyncCommitteePeriod < currentSyncPeriod {
 		err = h.syncLaggingSyncCommitteePeriods(ctx, h.cache.LastSyncedSyncCommitteePeriod, uint64(update.Payload.AttestedHeader.Slot))
 		if err != nil {
-			return scale.FinalizedHeaderUpdate{}, fmt.Errorf("sync lagging sync committee periods: %w", err)
+			return scale.Update{}, fmt.Errorf("sync lagging sync committee periods: %w", err)
 		}
 	}
 
 	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_finalized_header", update.Payload)
 	if err != nil {
-		return scale.FinalizedHeaderUpdate{}, fmt.Errorf("write to parachain: %w", err)
+		return scale.Update{}, fmt.Errorf("write to parachain: %w", err)
 	}
 
 	// We need a distinction between finalized headers that we've tried to sync, so that we don't try syncing
 	// it over and over again with the same failure.
 	h.cache.Finalized.LastAttemptedSyncHash = update.FinalizedHeaderBlockRoot
-	h.cache.Finalized.LastAttemptedSyncSlot = uint64(update.Payload.FinalizedHeader.Slot)
+	h.cache.Finalized.LastAttemptedSyncSlot = uint64(update.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot)
 
-	h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
+	h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot))
 
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return scale.FinalizedHeaderUpdate{}, fmt.Errorf("fetch last finalized header state: %w", err)
+		return scale.Update{}, fmt.Errorf("fetch last finalized header state: %w", err)
 	}
 
 	lastStoredHeader := lastFinalizedHeaderState.BeaconBlockRoot
@@ -219,10 +219,10 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeader
 	// from which last finalized header needs to imported (i.e. start and end finalized blocks, to backfill execution
 	// headers in between).
 	h.cache.Finalized.LastSyncedHash = update.FinalizedHeaderBlockRoot
-	h.cache.Finalized.LastSyncedSlot = uint64(update.Payload.FinalizedHeader.Slot)
+	h.cache.Finalized.LastSyncedSlot = uint64(update.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot)
 
 	if lastStoredHeader != update.FinalizedHeaderBlockRoot {
-		return scale.FinalizedHeaderUpdate{}, ErrFinalizedHeaderNotImported
+		return scale.Update{}, ErrFinalizedHeaderNotImported
 	}
 
 	return update, err

@@ -11,35 +11,37 @@ func (p BeaconCheckpoint) ToJSON() json.CheckPoint {
 		CurrentSyncCommittee:       p.CurrentSyncCommittee.ToJSON(),
 		CurrentSyncCommitteeBranch: util.ScaleBranchToString(p.CurrentSyncCommitteeBranch),
 		ValidatorsRoot:             p.ValidatorsRoot.Hex(),
-		ImportTime:                 uint64(p.ImportTime),
 		BlockRootsRoot:             p.BlockRootsRoot.Hex(),
 		BlockRootsBranch:           util.ScaleBranchToString(p.BlockRootsBranch),
 	}
 }
 
-func (p SyncCommitteePeriodPayload) ToJSON() json.SyncCommitteeUpdate {
-	return json.SyncCommitteeUpdate{
+func (p UpdatePayload) ToJSON() json.Update {
+	var nextSyncCommitteeUpdate *json.NextSyncCommitteeUpdate
+	if p.NextSyncCommitteeUpdate.HasValue {
+		nextSyncCommitteeUpdate = &json.NextSyncCommitteeUpdate{
+			NextSyncCommittee:       p.NextSyncCommitteeUpdate.Value.NextSyncCommittee.ToJSON(),
+			NextSyncCommitteeBranch: util.ScaleBranchToString(p.NextSyncCommitteeUpdate.Value.NextSyncCommitteeBranch),
+		}
+	}
+
+	var finalizedHeaderUpdate *json.FinalizedHeaderUpdate
+	if p.FinalizedHeaderUpdate.HasValue {
+		update := p.FinalizedHeaderUpdate.Value
+		finalizedHeaderUpdate = &json.FinalizedHeaderUpdate{
+			FinalizedHeader:  update.FinalizedHeader.ToJSON(),
+			FinalityBranch:   util.ScaleBranchToString(update.FinalityBranch),
+			BlockRootsRoot:   update.BlockRootsRoot.Hex(),
+			BlockRootsBranch: util.ScaleBranchToString(update.BlockRootsBranch),
+		}
+	}
+
+	return json.Update{
 		AttestedHeader:          p.AttestedHeader.ToJSON(),
-		NextSyncCommittee:       p.NextSyncCommittee.ToJSON(),
-		NextSyncCommitteeBranch: util.ScaleBranchToString(p.NextSyncCommitteeBranch),
-		FinalizedHeader:         p.FinalizedHeader.ToJSON(),
-		FinalityBranch:          util.ScaleBranchToString(p.FinalityBranch),
 		SyncAggregate:           p.SyncAggregate.ToJSON(),
 		SignatureSlot:           uint64(p.SignatureSlot),
-		BlockRootsRoot:          p.BlockRootsRoot.Hex(),
-		BlockRootsBranch:        util.ScaleBranchToString(p.BlockRootsBranch),
-	}
-}
-
-func (p FinalizedHeaderPayload) ToJSON() json.FinalizedHeaderUpdate {
-	return json.FinalizedHeaderUpdate{
-		AttestedHeader:   p.AttestedHeader.ToJSON(),
-		FinalizedHeader:  p.FinalizedHeader.ToJSON(),
-		FinalityBranch:   util.ScaleBranchToString(p.FinalityBranch),
-		SyncAggregate:    p.SyncAggregate.ToJSON(),
-		SignatureSlot:    uint64(p.SignatureSlot),
-		BlockRootsRoot:   p.BlockRootsRoot.Hex(),
-		BlockRootsBranch: util.ScaleBranchToString(p.BlockRootsBranch),
+		NextSyncCommitteeUpdate: nextSyncCommitteeUpdate,
+		FinalizedHeaderUpdate:   finalizedHeaderUpdate,
 	}
 }
 

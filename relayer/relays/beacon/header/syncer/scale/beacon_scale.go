@@ -21,43 +21,60 @@ type BeaconCheckpoint struct {
 	CurrentSyncCommittee       SyncCommittee
 	CurrentSyncCommitteeBranch []types.H256
 	ValidatorsRoot             types.H256
-	ImportTime                 types.U64
 	BlockRootsRoot             types.H256
 	BlockRootsBranch           []types.H256
 }
 
-type SyncCommitteePeriodUpdate struct {
-	Payload                  SyncCommitteePeriodPayload
+type Update struct {
+	Payload                  UpdatePayload
 	FinalizedHeaderBlockRoot common.Hash
 	BlockRootsTree           *ssz.Node
 }
 
-type SyncCommitteePeriodPayload struct {
+type UpdatePayload struct {
 	AttestedHeader          BeaconHeader
-	NextSyncCommittee       SyncCommittee
-	NextSyncCommitteeBranch []types.H256
-	FinalizedHeader         BeaconHeader
-	FinalityBranch          []types.H256
 	SyncAggregate           SyncAggregate
 	SignatureSlot           types.U64
-	BlockRootsRoot          types.H256
-	BlockRootsBranch        []types.H256
+	NextSyncCommitteeUpdate OptionNextSyncCommitteeUpdatePayload
+	FinalizedHeaderUpdate   OptionFinalizedHeaderUpdatePayload
 }
 
-type FinalizedHeaderPayload struct {
-	AttestedHeader   BeaconHeader
+type OptionNextSyncCommitteeUpdatePayload struct {
+	HasValue bool
+	Value    NextSyncCommitteeUpdatePayload
+}
+
+type NextSyncCommitteeUpdatePayload struct {
+	NextSyncCommittee       SyncCommittee
+	NextSyncCommitteeBranch []types.H256
+}
+
+func (o OptionNextSyncCommitteeUpdatePayload) Encode(encoder scale.Encoder) error {
+	return encoder.EncodeOption(o.HasValue, o.Value)
+}
+
+func (o *OptionNextSyncCommitteeUpdatePayload) Decode(decoder scale.Decoder) error {
+	return decoder.DecodeOption(&o.HasValue, &o.Value)
+}
+
+type OptionFinalizedHeaderUpdatePayload struct {
+	HasValue bool
+	Value    FinalizedHeaderUpdatePayload
+}
+
+type FinalizedHeaderUpdatePayload struct {
 	FinalizedHeader  BeaconHeader
 	FinalityBranch   []types.H256
-	SyncAggregate    SyncAggregate
-	SignatureSlot    types.U64
 	BlockRootsRoot   types.H256
 	BlockRootsBranch []types.H256
 }
 
-type FinalizedHeaderUpdate struct {
-	Payload                  FinalizedHeaderPayload
-	FinalizedHeaderBlockRoot common.Hash
-	BlockRootsTree           *ssz.Node
+func (o OptionFinalizedHeaderUpdatePayload) Encode(encoder scale.Encoder) error {
+	return encoder.EncodeOption(o.HasValue, o.Value)
+}
+
+func (o *OptionFinalizedHeaderUpdatePayload) Decode(decoder scale.Decoder) error {
+	return decoder.DecodeOption(&o.HasValue, &o.Value)
 }
 
 type HeaderUpdatePayload struct {

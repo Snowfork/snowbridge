@@ -69,8 +69,8 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 
 type Data struct {
 	CheckpointUpdate      beaconjson.CheckPoint
-	SyncCommitteeUpdate   beaconjson.SyncCommitteeUpdate
-	FinalizedHeaderUpdate beaconjson.FinalizedHeaderUpdate
+	SyncCommitteeUpdate   beaconjson.Update
+	FinalizedHeaderUpdate beaconjson.Update
 	HeaderUpdate          beaconjson.HeaderUpdate
 }
 
@@ -173,7 +173,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
 		initialSync := initialSyncScale.ToJSON()
-		err = writeJSONToFile(initialSync, activeSpec.ToString()+"_initial_sync")
+		err = writeJSONToFile(initialSync, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
 		initialSyncHeaderSlot := initialSync.Header.Slot
 		log.Info("created initial sync file")
 
@@ -184,7 +184,8 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
 		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		err = writeJSONToFile(syncCommitteeUpdate, activeSpec.ToString()+"_sync_committee_update")
+
+		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("sync-committee-update.%s.json", activeSpec.ToString()))
 		if err != nil {
 			return fmt.Errorf("write sync committee update to file: %w", err)
 		}
@@ -196,17 +197,17 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get finalized header update: %w", err)
 		}
 		finalizedUpdate := finalizedUpdateScale.Payload.ToJSON()
-		err = writeJSONToFile(finalizedUpdate, activeSpec.ToString()+"_finalized_header_update")
+		err = writeJSONToFile(finalizedUpdate, fmt.Sprintf("finalized-header-update.%s.json", activeSpec.ToString()))
 		if err != nil {
 			return fmt.Errorf("write finalized header update to file: %w", err)
 		}
 		log.Info("created finalized header update file")
 
-		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot - 2)
+		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot - 2)
 		checkPoint := cache.Proof{
 			FinalizedBlockRoot: finalizedUpdateScale.FinalizedHeaderBlockRoot,
 			BlockRootsTree:     finalizedUpdateScale.BlockRootsTree,
-			Slot:               uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot),
+			Slot:               uint64(finalizedUpdateScale.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot),
 		}
 		headerUpdateScale, err := s.GetNextHeaderUpdateBySlotWithAncestryProof(blockUpdateSlot, checkPoint)
 		if err != nil {
@@ -216,7 +217,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get next header update to get sync aggregate: %w", err)
 		}
 		headerUpdate := headerUpdateScale.ToJSON()
-		err = writeJSONToFile(headerUpdate, activeSpec.ToString()+"_header_update")
+		err = writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
 		if err != nil {
 			return fmt.Errorf("write block update to file: %w", err)
 		}
@@ -270,9 +271,9 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 }
 
 func writeJSONToFile(data interface{}, filename string) error {
-	file, _ := json.MarshalIndent(data, "", " ")
+	file, _ := json.MarshalIndent(data, "", "  ")
 
-	f, err := os.OpenFile(fmt.Sprintf("%s/%s.json", pathToBeaconTestFixtureFiles, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	f, err := os.OpenFile(fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 
 	if err != nil {
 		return fmt.Errorf("create file: %w", err)
