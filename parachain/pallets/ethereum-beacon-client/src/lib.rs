@@ -1,4 +1,4 @@
-//! # Ethereum Beacon Client
+//! Ethereum Beacon Client
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod config;
@@ -11,13 +11,6 @@ pub mod weights;
 mod mock;
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-#[cfg(not(feature = "minimal"))]
-mod tests_mainnet;
-
-#[cfg(test)]
-#[cfg(feature = "minimal")]
-mod tests_minimal;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;

@@ -11,7 +11,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use std::{fs::File, path::PathBuf};
+use std::{format, fs::File, path::PathBuf};
 
 pub mod mock_minimal {
 	use super::*;
@@ -248,13 +248,6 @@ fn sync_committee_update_from_file<
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn sync_committee_from_file<const SYNC_COMMITTEE_SIZE: usize>(
-	name: &str,
-) -> primitives::SyncCommittee<SYNC_COMMITTEE_SIZE> {
-	let filepath = fixture_path(name);
-	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
-}
-
 fn finalized_header_update_from_file<
 	const SYNC_COMMITTEE_SIZE: usize,
 	const SYNC_COMMITTEE_BITS_SIZE: usize,
@@ -270,55 +263,43 @@ fn header_update_from_file(name: &str) -> primitives::ExecutionHeaderUpdate {
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn get_config_setting() -> String {
-	return match config::IS_MINIMAL {
+fn beacon_spec() -> String {
+	match config::IS_MINIMAL {
 		true => "minimal".to_owned(),
 		false => "mainnet".to_owned(),
 	}
 }
 
-fn add_file_prefix(name: &str) -> String {
-	let prefix = get_config_setting();
-
-	let mut result = prefix.to_owned();
-	result.push_str("_");
-	result.push_str(name);
-	result
-}
-
 pub fn get_initial_sync<const SYNC_COMMITTEE_SIZE: usize>(
 ) -> primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE> {
-	initial_sync_from_file::<SYNC_COMMITTEE_SIZE>(&add_file_prefix("initial_sync.json"))
+	initial_sync_from_file::<SYNC_COMMITTEE_SIZE>(&format!(
+		"initial-checkpoint.{}.json",
+		beacon_spec()
+	))
 }
 
 pub fn get_committee_sync_period_update<
 	const SYNC_COMMITTEE_SIZE: usize,
 	const SYNC_COMMITTEE_BITS_SIZE: usize,
 >() -> primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
-	sync_committee_update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(
-		&add_file_prefix("sync_committee_update.json"),
-	)
-}
-
-pub fn get_committee_sync_ssz_test_data<const SYNC_COMMITTEE_SIZE: usize>(
-) -> primitives::SyncCommittee<SYNC_COMMITTEE_SIZE> {
-	let mut filename: String = "ssz_test_".to_owned();
-	filename.push_str(&get_config_setting());
-	filename.push_str("_sync_committee.json");
-	sync_committee_from_file::<SYNC_COMMITTEE_SIZE>(filename.as_str())
+	sync_committee_update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(&format!(
+		"sync-committee-update.{}.json",
+		beacon_spec()
+	))
 }
 
 pub fn get_header_update() -> primitives::ExecutionHeaderUpdate {
-	header_update_from_file(&add_file_prefix("header_update.json"))
+	header_update_from_file(&format!("execution-header-update.{}.json", beacon_spec()))
 }
 
 pub fn get_finalized_header_update<
 	const SYNC_COMMITTEE_SIZE: usize,
 	const SYNC_COMMITTEE_BITS_SIZE: usize,
 >() -> primitives::FinalizedHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
-	finalized_header_update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(
-		&add_file_prefix("finalized_header_update.json"),
-	)
+	finalized_header_update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(&format!(
+		"finalized-header-update.{}.json",
+		beacon_spec()
+	))
 }
 
 pub fn get_validators_root<const SYNC_COMMITTEE_SIZE: usize>() -> H256 {
