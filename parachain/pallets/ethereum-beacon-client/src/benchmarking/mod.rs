@@ -4,12 +4,8 @@ use crate::Pallet as EthereumBeaconClient;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
 
-// For benchmark focus on main spec only
-mod data_mainnet;
-use data_mainnet::{
-	make_checkpoint, make_execution_header_update, make_finalized_header_update,
-	make_sync_committee_update,
-};
+mod fixtures;
+use fixtures::{make_checkpoint, make_execution_header_update, make_finalized_header_update};
 
 mod util;
 use primitives::{

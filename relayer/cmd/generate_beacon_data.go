@@ -245,7 +245,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			}).Info("rendering file using mustache")
 
 			rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
-			filename := fmt.Sprintf("data_%s.rs", activeSpec)
+			filename := "fixtures.rs"
 
 			log.WithFields(log.Fields{
 				"location": pathToBeaconBenchmarkData,

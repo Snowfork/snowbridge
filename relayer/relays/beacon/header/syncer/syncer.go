@@ -523,7 +523,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 	if block.GetBeaconSlot() == checkpoint.Slot {
 		return scale.HeaderUpdate{
 			Payload: scale.HeaderUpdatePayload{
-				Header:          beaconHeader,
+				Header: beaconHeader,
 				AncestryProof: scale.OptionAncestryProof{
 					HasValue: false,
 				},
@@ -546,7 +546,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 
 	headerUpdate := scale.HeaderUpdate{
 		Payload: scale.HeaderUpdatePayload{
-			Header:             beaconHeader,
+			Header: beaconHeader,
 			AncestryProof: scale.OptionAncestryProof{
 				HasValue: true,
 				Value: scale.AncestryProof{
@@ -554,8 +554,8 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 					FinalizedBlockRoot: types.NewH256(checkpoint.FinalizedBlockRoot.Bytes()),
 				},
 			},
-			ExecutionHeader:    executionPayloadScale,
-			ExecutionBranch:    executionHeaderBranch,
+			ExecutionHeader: executionPayloadScale,
+			ExecutionBranch: executionHeaderBranch,
 		},
 		NextSyncAggregate: nextSyncCommittee,
 	}

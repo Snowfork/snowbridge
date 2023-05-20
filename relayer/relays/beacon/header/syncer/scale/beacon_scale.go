@@ -61,10 +61,10 @@ type FinalizedHeaderUpdate struct {
 }
 
 type HeaderUpdatePayload struct {
-	Header             BeaconHeader
-	AncestryProof      OptionAncestryProof
-	ExecutionHeader    ExecutionPayloadHeaderCapella
-	ExecutionBranch    []types.H256
+	Header          BeaconHeader
+	AncestryProof   OptionAncestryProof
+	ExecutionHeader ExecutionPayloadHeaderCapella
+	ExecutionBranch []types.H256
 }
 
 type OptionAncestryProof struct {

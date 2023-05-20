@@ -6,7 +6,7 @@ use crate::{
 use primitives::{PublicKeyPrepared, SyncCommitteePrepared};
 use sp_core::H256;
 
-use super::data_mainnet::{make_checkpoint, make_sync_committee_update};
+use super::fixtures::{make_checkpoint, make_sync_committee_update};
 
 pub fn initialize_sync_committee<T: Config>() -> Result<SyncCommitteeUpdate, &'static str> {
 	let initial_sync_data = make_checkpoint();

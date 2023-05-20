@@ -46,16 +46,16 @@ func (p FinalizedHeaderPayload) ToJSON() json.FinalizedHeaderUpdate {
 func (h HeaderUpdate) ToJSON() json.HeaderUpdate {
 	var ancestryProof *json.AncestryProof
 	if h.Payload.AncestryProof.HasValue {
-		ancestryProof = &json.AncestryProof {
-			HeaderBranch: util.ScaleBranchToString(h.Payload.AncestryProof.Value.HeaderBranch),
-			FinalizedBlockRoot:   h.Payload.AncestryProof.Value.FinalizedBlockRoot.Hex(),
+		ancestryProof = &json.AncestryProof{
+			HeaderBranch:       util.ScaleBranchToString(h.Payload.AncestryProof.Value.HeaderBranch),
+			FinalizedBlockRoot: h.Payload.AncestryProof.Value.FinalizedBlockRoot.Hex(),
 		}
 	}
 	return json.HeaderUpdate{
-		Header:           h.Payload.Header.ToJSON(),
-		AncestryProof:    ancestryProof,
-		ExecutionHeader:  h.Payload.ExecutionHeader.ToJSON(),
-		ExecutionBranch:  util.ScaleBranchToString(h.Payload.ExecutionBranch),
+		Header:          h.Payload.Header.ToJSON(),
+		AncestryProof:   ancestryProof,
+		ExecutionHeader: h.Payload.ExecutionHeader.ToJSON(),
+		ExecutionBranch: util.ScaleBranchToString(h.Payload.ExecutionBranch),
 	}
 }
 
