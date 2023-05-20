@@ -22,6 +22,8 @@ type BeaconCheckpoint struct {
 	CurrentSyncCommitteeBranch []types.H256
 	ValidatorsRoot             types.H256
 	ImportTime                 types.U64
+	BlockRootsRoot             types.H256
+	BlockRootsBranch           []types.H256
 }
 
 type SyncCommitteePeriodUpdate struct {
@@ -38,18 +40,18 @@ type SyncCommitteePeriodPayload struct {
 	FinalityBranch          []types.H256
 	SyncAggregate           SyncAggregate
 	SignatureSlot           types.U64
-	BlockRootsHash          types.H256
-	BlockRootProof          []types.H256
+	BlockRootsRoot          types.H256
+	BlockRootsBranch        []types.H256
 }
 
 type FinalizedHeaderPayload struct {
-	AttestedHeader  BeaconHeader
-	FinalizedHeader BeaconHeader
-	FinalityBranch  []types.H256
-	SyncAggregate   SyncAggregate
-	SignatureSlot   types.U64
-	BlockRootsHash  types.H256
-	BlockRootProof  []types.H256
+	AttestedHeader   BeaconHeader
+	FinalizedHeader  BeaconHeader
+	FinalityBranch   []types.H256
+	SyncAggregate    SyncAggregate
+	SignatureSlot    types.U64
+	BlockRootsRoot   types.H256
+	BlockRootsBranch []types.H256
 }
 
 type FinalizedHeaderUpdate struct {
@@ -59,11 +61,28 @@ type FinalizedHeaderUpdate struct {
 }
 
 type HeaderUpdatePayload struct {
-	Header           BeaconHeader
-	ExecutionHeader  ExecutionPayloadHeaderCapella
-	ExecutionBranch  []types.H256
-	BlockRootsRoot   types.H256
-	BlockRootsBranch []types.H256
+	Header             BeaconHeader
+	AncestryProof      OptionAncestryProof
+	ExecutionHeader    ExecutionPayloadHeaderCapella
+	ExecutionBranch    []types.H256
+}
+
+type OptionAncestryProof struct {
+	HasValue bool
+	Value    AncestryProof
+}
+
+type AncestryProof struct {
+	HeaderBranch       []types.H256
+	FinalizedBlockRoot types.H256
+}
+
+func (o OptionAncestryProof) Encode(encoder scale.Encoder) error {
+	return encoder.EncodeOption(o.HasValue, o.Value)
+}
+
+func (o *OptionAncestryProof) Decode(decoder scale.Decoder) error {
+	return decoder.DecodeOption(&o.HasValue, &o.Value)
 }
 
 type HeaderUpdate struct {

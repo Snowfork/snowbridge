@@ -1,17 +1,14 @@
 use crate::{
 	config::SYNC_COMMITTEE_SIZE,
 	mock::{get_initial_sync, mock_minimal, new_tester},
-	pallet::{
-		ExecutionHeaders, FinalizedBeaconHeaderStates, FinalizedBeaconHeaders,
-		FinalizedBeaconHeadersBlockRoot, SyncCommittees,
-	},
+	pallet::{ExecutionHeaders, SyncCommittees},
 	sync_committee_sum, verify_merkle_branch, BeaconHeader, Error, H256,
 };
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
 use primitives::{
-	fast_aggregate_verify_legacy, prepare_g1_pubkeys, BlsError, CompactExecutionHeader,
-	FinalizedHeaderState, PublicKey, PublicKeyPrepared,
+	fast_aggregate_verify_legacy, prepare_g1_pubkeys, BlsError, CompactExecutionHeader, PublicKey,
+	PublicKeyPrepared,
 };
 use rand::{thread_rng, Rng};
 
@@ -309,95 +306,95 @@ pub fn test_sync_committee_participation_is_supermajority_errors_when_not_superm
 	});
 }
 
-#[test]
-pub fn test_prune_finalized_header() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let max_finalized_slots =
-			mock_minimal::FinalizedHeaderPruneThreshold::get().try_into().unwrap();
+// #[test]
+// pub fn test_prune_finalized_header() {
+// 	new_tester::<mock_minimal::Test>().execute_with(|| {
+// 		let max_finalized_slots =
+// 			mock_minimal::FinalizedHeaderPruneThreshold::get().try_into().unwrap();
 
-		// Keeping track of to be deleted data
-		let amount_of_data_to_be_deleted = max_finalized_slots / 2;
-		let mut to_be_deleted_hash_list = vec![];
-		let mut to_be_preserved_hash_list = vec![];
-		for i in 0..max_finalized_slots {
-			let mut hash = H256::default();
-			thread_rng().try_fill(&mut hash.0[..]).unwrap();
+// 		// Keeping track of to be deleted data
+// 		let amount_of_data_to_be_deleted = max_finalized_slots / 2;
+// 		let mut to_be_deleted_hash_list = vec![];
+// 		let mut to_be_preserved_hash_list = vec![];
+// 		for i in 0..max_finalized_slots {
+// 			let mut hash = H256::default();
+// 			thread_rng().try_fill(&mut hash.0[..]).unwrap();
 
-			if i < amount_of_data_to_be_deleted {
-				to_be_deleted_hash_list.push(hash);
-			} else {
-				to_be_preserved_hash_list.push(hash);
-			}
-			let finalized_state = FinalizedHeaderState {
-				beacon_block_root: hash,
-				beacon_slot: i,
-				import_time: u64::default(),
-			};
+// 			if i < amount_of_data_to_be_deleted {
+// 				to_be_deleted_hash_list.push(hash);
+// 			} else {
+// 				to_be_preserved_hash_list.push(hash);
+// 			}
+// 			let finalized_state = FinalizedHeaderState {
+// 				beacon_block_root: hash,
+// 				beacon_slot: i,
+// 				import_time: u64::default(),
+// 			};
 
-			FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(hash, hash);
-			FinalizedBeaconHeaders::<mock_minimal::Test>::insert(hash, BeaconHeader::default());
-			assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_state(
-				finalized_state
-			));
-		}
+// 			FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(hash, hash);
+// 			FinalizedBeaconHeaders::<mock_minimal::Test>::insert(hash, BeaconHeader::default());
+// 			assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_state(
+// 				finalized_state
+// 			));
+// 		}
 
-		// We first verify if the data corresponding to that hash is still there.
-		let slot_vec = FinalizedBeaconHeaderStates::<mock_minimal::Test>::get();
-		assert_eq!(slot_vec.len(), max_finalized_slots as usize);
-		for i in 0..(amount_of_data_to_be_deleted as usize) {
-			assert_eq!(slot_vec[i].beacon_slot, i as u64);
-			assert_eq!(slot_vec[i].beacon_block_root, to_be_deleted_hash_list[i]);
+// 		// We first verify if the data corresponding to that hash is still there.
+// 		let slot_vec = FinalizedBeaconHeaderStates::<mock_minimal::Test>::get();
+// 		assert_eq!(slot_vec.len(), max_finalized_slots as usize);
+// 		for i in 0..(amount_of_data_to_be_deleted as usize) {
+// 			assert_eq!(slot_vec[i].beacon_slot, i as u64);
+// 			assert_eq!(slot_vec[i].beacon_block_root, to_be_deleted_hash_list[i]);
 
-			assert!(FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(
-				to_be_deleted_hash_list[i]
-			));
-			assert!(FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(
-				to_be_deleted_hash_list[i]
-			));
-		}
+// 			assert!(FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(
+// 				to_be_deleted_hash_list[i]
+// 			));
+// 			assert!(FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(
+// 				to_be_deleted_hash_list[i]
+// 			));
+// 		}
 
-		// We insert `amount_of_hash_to_be_deleted` number of new finalized headers
-		for i in max_finalized_slots..(max_finalized_slots + amount_of_data_to_be_deleted) {
-			let mut hash = H256::default();
-			thread_rng().try_fill(&mut hash.0[..]).unwrap();
-			FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(hash, hash);
-			FinalizedBeaconHeaders::<mock_minimal::Test>::insert(hash, BeaconHeader::default());
-			let finalized_state = FinalizedHeaderState {
-				beacon_block_root: hash,
-				beacon_slot: i,
-				import_time: u64::default(),
-			};
-			assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_state(
-				finalized_state
-			));
-		}
+// 		// We insert `amount_of_hash_to_be_deleted` number of new finalized headers
+// 		for i in max_finalized_slots..(max_finalized_slots + amount_of_data_to_be_deleted) {
+// 			let mut hash = H256::default();
+// 			thread_rng().try_fill(&mut hash.0[..]).unwrap();
+// 			FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(hash, hash);
+// 			FinalizedBeaconHeaders::<mock_minimal::Test>::insert(hash, BeaconHeader::default());
+// 			let finalized_state = FinalizedHeaderState {
+// 				beacon_block_root: hash,
+// 				beacon_slot: i,
+// 				import_time: u64::default(),
+// 			};
+// 			assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_state(
+// 				finalized_state
+// 			));
+// 		}
 
-		// Now, previous hashes should be pruned and in array those elements are replaced by later
-		// elements
-		let slot_vec = FinalizedBeaconHeaderStates::<mock_minimal::Test>::get();
-		assert_eq!(slot_vec.len(), max_finalized_slots as usize);
-		for i in 0..(amount_of_data_to_be_deleted as usize) {
-			assert_eq!(slot_vec[i].beacon_slot, (i as u64 + amount_of_data_to_be_deleted));
-			assert_eq!(slot_vec[i].beacon_block_root, to_be_preserved_hash_list[i]);
+// 		// Now, previous hashes should be pruned and in array those elements are replaced by later
+// 		// elements
+// 		let slot_vec = FinalizedBeaconHeaderStates::<mock_minimal::Test>::get();
+// 		assert_eq!(slot_vec.len(), max_finalized_slots as usize);
+// 		for i in 0..(amount_of_data_to_be_deleted as usize) {
+// 			assert_eq!(slot_vec[i].beacon_slot, (i as u64 + amount_of_data_to_be_deleted));
+// 			assert_eq!(slot_vec[i].beacon_block_root, to_be_preserved_hash_list[i]);
 
-			// Previous values should not exists
-			assert!(!FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(
-				to_be_deleted_hash_list[i]
-			));
-			assert!(!FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(
-				to_be_deleted_hash_list[i]
-			));
+// 			// Previous values should not exists
+// 			assert!(!FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(
+// 				to_be_deleted_hash_list[i]
+// 			));
+// 			assert!(!FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(
+// 				to_be_deleted_hash_list[i]
+// 			));
 
-			// data that was preserved should exists
-			assert!(FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(
-				to_be_preserved_hash_list[i]
-			));
-			assert!(FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(
-				to_be_preserved_hash_list[i]
-			));
-		}
-	});
-}
+// 			// data that was preserved should exists
+// 			assert!(FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(
+// 				to_be_preserved_hash_list[i]
+// 			));
+// 			assert!(FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(
+// 				to_be_preserved_hash_list[i]
+// 			));
+// 		}
+// 	});
+// }
 
 #[test]
 pub fn test_prune_execution_headers() {

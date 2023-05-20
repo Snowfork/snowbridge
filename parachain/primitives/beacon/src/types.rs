@@ -355,6 +355,23 @@ impl From<ExecutionPayloadHeader> for CompactExecutionHeader {
 	}
 }
 
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	Copy,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+pub struct CompactBeaconState {
+	#[codec(compact)]
+	pub slot: u64,
+	pub block_roots_root: H256,
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

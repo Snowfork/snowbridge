@@ -99,6 +99,7 @@ pub mod mock_minimal {
 		type TimeProvider = pallet_timestamp::Pallet<Test>;
 		type RuntimeEvent = RuntimeEvent;
 		type ForkVersions = ChainForkVersions;
+		type MaxFinalizedHeaderSlotsCacheSize = FinalizedHeaderPruneThreshold;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type MaxSyncCommitteesToKeep = SyncCommitteePruneThreshold;
 		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
@@ -193,6 +194,7 @@ pub mod mock_mainnet {
 		type RuntimeEvent = RuntimeEvent;
 		type TimeProvider = pallet_timestamp::Pallet<Test>;
 		type ForkVersions = ChainForkVersions;
+		type MaxFinalizedHeaderSlotsCacheSize = FinalizedHeaderPruneThreshold;
 		type MaxSyncCommitteesToKeep = SyncCommitteePruneThreshold;
 		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
 		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;

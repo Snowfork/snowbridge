@@ -104,6 +104,11 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("convert header to scale: %w", err)
 	}
 
+	blockRootsProof, err := s.GetBlockRoots(uint64(header.Slot))
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("fetch block roots: %w", err)
+	}
+
 	syncCommittee, err := bootstrap.Data.CurrentSyncCommittee.ToScale()
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
@@ -120,6 +125,8 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		CurrentSyncCommitteeBranch: util.ProofBranchToScale(bootstrap.Data.CurrentSyncCommitteeBranch),
 		ValidatorsRoot:             types.H256(genesis.ValidatorsRoot),
 		ImportTime:                 types.U64(importTime),
+		BlockRootsRoot:             blockRootsProof.Leaf,
+		BlockRootsBranch:           blockRootsProof.Proof,
 	}, nil
 }
 
@@ -175,8 +182,8 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.SyncCommitteeP
 			FinalityBranch:          util.ProofBranchToScale(committeeUpdate.FinalityBranch),
 			SyncAggregate:           syncAggregate,
 			SignatureSlot:           types.U64(signatureSlot),
-			BlockRootsHash:          blockRootsProof.Leaf,
-			BlockRootProof:          blockRootsProof.Proof,
+			BlockRootsRoot:          blockRootsProof.Leaf,
+			BlockRootsBranch:        blockRootsProof.Proof,
 		},
 		FinalizedHeaderBlockRoot: finalizedHeaderBlockRoot,
 		BlockRootsTree:           blockRootsProof.Tree,
@@ -293,13 +300,13 @@ func (s *Syncer) GetFinalizedUpdate() (scale.FinalizedHeaderUpdate, error) {
 	}
 
 	finalizedHeaderUpdate := scale.FinalizedHeaderPayload{
-		AttestedHeader:  attestedHeader,
-		FinalizedHeader: finalizedHeader,
-		FinalityBranch:  util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
-		SyncAggregate:   syncAggregate,
-		SignatureSlot:   types.U64(signatureSlot),
-		BlockRootsHash:  blockRootsProof.Leaf,
-		BlockRootProof:  blockRootsProof.Proof,
+		AttestedHeader:   attestedHeader,
+		FinalizedHeader:  finalizedHeader,
+		FinalityBranch:   util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
+		SyncAggregate:    syncAggregate,
+		SignatureSlot:    types.U64(signatureSlot),
+		BlockRootsRoot:   blockRootsProof.Leaf,
+		BlockRootsBranch: blockRootsProof.Proof,
 	}
 
 	return scale.FinalizedHeaderUpdate{
@@ -516,10 +523,12 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 	if block.GetBeaconSlot() == checkpoint.Slot {
 		return scale.HeaderUpdate{
 			Payload: scale.HeaderUpdatePayload{
-				Header:           beaconHeader,
-				ExecutionHeader:  executionPayloadScale,
-				ExecutionBranch:  executionHeaderBranch,
-				BlockRootsBranch: []types.H256{},
+				Header:          beaconHeader,
+				AncestryProof: scale.OptionAncestryProof{
+					HasValue: false,
+				},
+				ExecutionHeader: executionPayloadScale,
+				ExecutionBranch: executionHeaderBranch,
 			},
 			NextSyncAggregate: nextSyncCommittee,
 		}, nil
@@ -537,11 +546,16 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 
 	headerUpdate := scale.HeaderUpdate{
 		Payload: scale.HeaderUpdatePayload{
-			Header:           beaconHeader,
-			ExecutionHeader:  executionPayloadScale,
-			ExecutionBranch:  executionHeaderBranch,
-			BlockRootsBranch: proofScale,
-			BlockRootsRoot:   types.NewH256(checkpoint.FinalizedBlockRoot.Bytes()),
+			Header:             beaconHeader,
+			AncestryProof: scale.OptionAncestryProof{
+				HasValue: true,
+				Value: scale.AncestryProof{
+					HeaderBranch:       proofScale,
+					FinalizedBlockRoot: types.NewH256(checkpoint.FinalizedBlockRoot.Bytes()),
+				},
+			},
+			ExecutionHeader:    executionPayloadScale,
+			ExecutionBranch:    executionHeaderBranch,
 		},
 		NextSyncAggregate: nextSyncCommittee,
 	}

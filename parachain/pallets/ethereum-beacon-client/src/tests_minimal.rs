@@ -2,9 +2,8 @@ use crate::{
 	compute_period, config,
 	config::{SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE},
 	mock::*,
-	pallet::FinalizedBeaconHeadersBlockRoot,
-	Error, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedHeaderState,
-	LatestExecutionHeader, LatestFinalizedHeader, ValidatorsRoot,
+	CompactBeaconState, Error, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconState,
+	FinalizedHeaderState, LatestExecutionHeader, LatestFinalizedHeader, ValidatorsRoot,
 };
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
@@ -23,7 +22,7 @@ fn it_syncs_from_an_initial_checkpoint() {
 
 		let block_root: H256 = initial_sync.header.hash_tree_root().unwrap();
 
-		assert!(<FinalizedBeaconHeaders<mock_minimal::Test>>::contains_key(block_root));
+		assert!(<FinalizedBeaconState<mock_minimal::Test>>::contains_key(block_root));
 	});
 }
 
@@ -51,7 +50,7 @@ fn it_updates_a_committee_period_sync_update() {
 
 		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 
-		assert!(<FinalizedBeaconHeaders<mock_minimal::Test>>::contains_key(block_root));
+		assert!(<FinalizedBeaconState<mock_minimal::Test>>::contains_key(block_root));
 	});
 }
 
@@ -179,7 +178,7 @@ fn it_processes_a_finalized_header_update() {
 
 		let block_root: H256 = update.finalized_header.clone().hash_tree_root().unwrap();
 
-		assert!(<FinalizedBeaconHeaders<mock_minimal::Test>>::contains_key(block_root));
+		assert!(<FinalizedBeaconState<mock_minimal::Test>>::contains_key(block_root));
 	});
 }
 
@@ -204,7 +203,7 @@ fn it_processes_a_invalid_finalized_header_update() {
 				mock_minimal::RuntimeOrigin::signed(1),
 				update.clone()
 			),
-			Error::<mock_minimal::Test>::SyncCommitteeMissing
+			Error::<mock_minimal::Test>::DuplicateFinalizedHeaderUpdate
 		);
 	});
 }
@@ -256,9 +255,12 @@ fn it_processes_a_header_update() {
 			beacon_slot: finalized_slot,
 			import_time: 0,
 		});
-		FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(
+		FinalizedBeaconState::<mock_minimal::Test>::insert(
 			finalized_block_root,
-			finalized_update.block_roots_root,
+			CompactBeaconState {
+				slot: finalized_update.finalized_header.slot,
+				block_roots_root: finalized_update.block_roots_root,
+			},
 		);
 		assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
 			current_period,

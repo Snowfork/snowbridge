@@ -32,8 +32,8 @@ use frame_support::{
 use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
-	CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState, ForkData, ForkVersion,
-	ForkVersions, Mode, PublicKeyPrepared, SigningData,
+	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState,
+	ForkData, ForkVersion, ForkVersions, Mode, PublicKeyPrepared, SigningData,
 };
 use snowbridge_core::{Message, RingBufferMap, Verifier};
 use sp_core::H256;
@@ -72,6 +72,9 @@ pub mod pallet {
 		type ForkVersions: Get<ForkVersions>;
 		#[pallet::constant]
 		type WeakSubjectivityPeriodSeconds: Get<u64>;
+		/// Maximum size of finalized header slot cache
+		#[pallet::constant]
+		type MaxFinalizedHeaderSlotsCacheSize: Get<u32>;
 		/// Maximum finalized headers
 		#[pallet::constant]
 		type MaxFinalizedHeadersToKeep: Get<u32>;
@@ -104,6 +107,7 @@ pub mod pallet {
 		InvalidSyncCommitteeMerkleProof,
 		InvalidExecutionHeaderProof,
 		InvalidAncestryMerkleProof,
+		InvalidBlockRootsRootMerkleProof,
 		InvalidHash,
 		InvalidSyncCommitteeBits,
 		SignatureVerificationFailed,
@@ -137,17 +141,16 @@ pub mod pallet {
 		BLSVerificationFailed(BlsError),
 	}
 
+	/// A map of finalized headers to beacon state
 	#[pallet::storage]
-	pub(super) type FinalizedBeaconHeaders<T: Config> =
-		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
+	pub(super) type FinalizedBeaconState<T: Config> =
+		StorageMap<_, Identity, H256, CompactBeaconState, OptionQuery>;
 
+	/// A cache of slot numbers for finalized headers that have been recently imported.
+	/// Is used by the offchain relayer to produce ancestry proofs for execution headers.
 	#[pallet::storage]
-	pub(super) type FinalizedBeaconHeaderStates<T: Config> =
-		StorageValue<_, BoundedVec<FinalizedHeaderState, T::MaxFinalizedHeadersToKeep>, ValueQuery>;
-
-	#[pallet::storage]
-	pub(super) type FinalizedBeaconHeadersBlockRoot<T: Config> =
-		StorageMap<_, Identity, H256, H256, ValueQuery>;
+	pub(super) type FinalizedHeaderSlotsCache<T: Config> =
+		StorageValue<_, BoundedVec<u64, T::MaxFinalizedHeadersToKeep>, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
@@ -359,17 +362,34 @@ pub mod pallet {
 				config::CURRENT_SYNC_COMMITTEE_SUBTREE_INDEX,
 				config::CURRENT_SYNC_COMMITTEE_DEPTH,
 			)?;
-
 			let period = compute_period(update.header.slot);
 
-			let block_root: H256 = update
+			let header_root: H256 = update
 				.header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
+			// Verify update.block_roots_root
+			ensure!(
+				verify_merkle_branch(
+					update.block_roots_root,
+					&update.block_roots_branch,
+					config::BLOCK_ROOTS_SUBTREE_INDEX,
+					config::BLOCK_ROOTS_DEPTH,
+					update.header.state_root
+				)
+				.is_some_and(|x| x),
+				Error::<T>::InvalidBlockRootsRootMerkleProof
+			);
+
 			Self::store_sync_committee(period, &update.current_sync_committee)?;
 			Self::store_validators_root(update.validators_root);
-			Self::store_finalized_header(block_root, update.header, Some(update.import_time))?;
+			Self::store_finalized_header(
+				header_root,
+				update.header,
+				update.block_roots_root,
+				Some(update.import_time),
+			)?;
 
 			Ok(())
 		}
@@ -381,7 +401,7 @@ pub mod pallet {
 				&update.sync_aggregate,
 				update.signature_slot,
 			)?;
-			let finalized_block_root = Self::verify_finalized_header(
+			let finalized_header_root = Self::verify_finalized_header(
 				&update.attested_header,
 				&update.finalized_header,
 				&update.finality_branch,
@@ -414,6 +434,7 @@ pub mod pallet {
 				Error::<T>::InvalidSyncCommitteeUpdateWithGap
 			);
 
+			// Verify update.block_roots_root
 			ensure!(
 				verify_merkle_branch(
 					update.block_roots_root,
@@ -423,12 +444,16 @@ pub mod pallet {
 					update.finalized_header.state_root
 				)
 				.is_some_and(|x| x),
-				Error::<T>::InvalidAncestryMerkleProof
+				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
 
-			Self::store_block_root(update.block_roots_root, finalized_block_root);
 			Self::store_sync_committee(next_period, &update.next_sync_committee)?;
-			Self::store_finalized_header(finalized_block_root, update.finalized_header, None)?;
+			Self::store_finalized_header(
+				finalized_header_root,
+				update.finalized_header,
+				update.block_roots_root,
+				None,
+			)?;
 
 			Ok(())
 		}
@@ -444,7 +469,7 @@ pub mod pallet {
 				update.finalized_header.slot > Self::latest_finalized_header().beacon_slot,
 				Error::<T>::DuplicateFinalizedHeaderUpdate
 			);
-			let finalized_block_root = Self::verify_finalized_header(
+			let finalized_header_root = Self::verify_finalized_header(
 				&update.attested_header,
 				&update.finalized_header,
 				&update.finality_branch,
@@ -458,6 +483,7 @@ pub mod pallet {
 				Error::<T>::InvalidFinalizedPeriodUpdate
 			);
 
+			// Verify update.block_roots_root
 			ensure!(
 				verify_merkle_branch(
 					update.block_roots_root,
@@ -467,20 +493,17 @@ pub mod pallet {
 					update.finalized_header.state_root
 				)
 				.is_some_and(|x| x),
-				Error::<T>::InvalidAncestryMerkleProof
+				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
 
-			Self::store_block_root(update.block_roots_root, finalized_block_root);
-			Self::store_finalized_header(finalized_block_root, update.finalized_header, None)?;
+			Self::store_finalized_header(
+				finalized_header_root,
+				update.finalized_header,
+				update.block_roots_root,
+				None,
+			)?;
 
 			Ok(())
-		}
-
-		fn store_block_root(block_roots_hash: H256, finalized_header_block_root: H256) {
-			<FinalizedBeaconHeadersBlockRoot<T>>::insert(
-				finalized_header_block_root,
-				block_roots_hash,
-			);
 		}
 
 		fn process_execution_header_update(update: &ExecutionHeaderUpdate) -> DispatchResult {
@@ -511,72 +534,54 @@ pub mod pallet {
 				Error::<T>::InvalidExecutionHeaderProof
 			);
 
-			let header_root: H256 = update
+			let block_root: H256 = update
 				.header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
-			Self::ancestry_proof(
-				&update.block_roots_branch,
-				update.header.slot,
-				header_root,
-				update.block_roots_root,
-			)?;
+			match &update.ancestry_proof {
+				Some(proof) => {
+					Self::verify_ancestry_proof(
+						block_root,
+						update.header.slot,
+						&proof.header_branch,
+						proof.finalized_block_root,
+					)?;
+				},
+				None => {
+					// If the ancestry proof is not provided, we expect this header to be a
+					// finalized header. We need to check that the header hash matches the finalized
+					// header root at the expected slot.
+					let state = <FinalizedBeaconState<T>>::get(block_root)
+						.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
+					if update.header.slot != state.slot {
+						return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
+					}
+				},
+			}
 
 			Self::store_execution_header(
 				update.execution_header.block_hash,
 				update.execution_header.clone().into(),
 				update.header.slot,
-				header_root,
+				block_root,
 			);
 
 			Ok(())
 		}
 
-		fn ancestry_proof(
-			block_root_proof: &[H256],
+		// Verify that `block_root` is an ancestor of `finalized_block_root`
+		fn verify_ancestry_proof(
+			block_root: H256,
 			block_slot: u64,
-			beacon_block_root: H256,
-			finalized_header_root: H256,
+			block_root_proof: &[H256],
+			finalized_block_root: H256,
 		) -> DispatchResult {
-			// If the block root proof is empty, we know that we expect this header to be a
-			// finalized header. We need to check that the header hash matches the finalized header
-			// root at the expected slot.
-			if block_root_proof.is_empty() {
-				let stored_finalized_header = <FinalizedBeaconHeaders<T>>::get(beacon_block_root);
-				if stored_finalized_header.is_none() {
-					log::error!(
-						target: "ethereum-beacon-client",
-						"💫 Finalized block root {} slot {} for ancestry proof (for a finalized header) not found.", beacon_block_root, block_slot
-					);
-					return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
-				}
-
-				let header = stored_finalized_header.unwrap();
-				if header.slot != block_slot {
-					log::error!(
-						target: "ethereum-beacon-client",
-						"💫 Finalized block root {} slot {} does not match expected slot {}.", beacon_block_root, block_slot, header.slot
-					);
-					return Err(Error::<T>::UnexpectedHeaderSlotPosition.into())
-				}
-
-				return Ok(())
-			}
-
-			let finalized_block_root_hash =
-				<FinalizedBeaconHeadersBlockRoot<T>>::get(finalized_header_root);
-
-			if finalized_block_root_hash.is_zero() {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"💫 Finalized block root {} slot {} for ancestry proof not found.", beacon_block_root, block_slot
-				);
-				return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
-			}
+			let state = <FinalizedBeaconState<T>>::get(finalized_block_root)
+				.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
 
 			let index_in_array = block_slot % (SLOTS_PER_HISTORICAL_ROOT as u64);
-			let leaf_index = (SLOTS_PER_HISTORICAL_ROOT) + index_in_array as usize;
+			let leaf_index = (SLOTS_PER_HISTORICAL_ROOT as u64) + index_in_array;
 
 			log::info!(
 				target: "ethereum-beacon-client",
@@ -585,11 +590,11 @@ pub mod pallet {
 
 			ensure!(
 				verify_merkle_branch(
-					beacon_block_root,
+					block_root,
 					&block_root_proof,
-					leaf_index,
+					leaf_index as usize,
 					config::BLOCK_ROOT_AT_INDEX_DEPTH,
-					finalized_block_root_hash
+					state.block_roots_root
 				)
 				.is_some_and(|x| x),
 				Error::<T>::InvalidAncestryMerkleProof
@@ -602,7 +607,6 @@ pub mod pallet {
 			if <Blocked<T>>::get() {
 				return Err(Error::<T>::BridgeBlocked.into())
 			}
-
 			Ok(())
 		}
 
@@ -749,49 +753,41 @@ pub mod pallet {
 		}
 
 		fn store_finalized_header(
-			block_root: H256,
+			header_root: H256,
 			header: BeaconHeader,
+			block_roots_root: H256,
 			last_import_time: Option<u64>,
 		) -> DispatchResult {
 			let slot = header.slot;
 			let import_time = last_import_time.unwrap_or_else(|| T::TimeProvider::now().as_secs());
 
-			let finalized_header = FinalizedHeaderState {
-				beacon_block_root: block_root,
+			<FinalizedBeaconState<T>>::insert(
+				header_root,
+				CompactBeaconState { slot: header.slot, block_roots_root },
+			);
+
+			<LatestFinalizedHeader<T>>::set(FinalizedHeaderState {
+				beacon_block_root: header_root,
 				beacon_slot: slot,
 				import_time,
-			};
+			});
 
-			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
-			LatestFinalizedHeader::<T>::set(finalized_header);
-			Self::add_finalized_header_state(finalized_header)?;
+			// Add the slot of the most recently finalized header to the slot cache
+			<FinalizedHeaderSlotsCache<T>>::mutate(|slots| {
+				if slots.len() as u32 == T::MaxFinalizedHeaderSlotsCacheSize::get() {
+					slots.remove(0);
+				}
+				slots.try_push(header.slot).expect("checked above; qed");
+			});
 
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Updated latest finalized block root {} at slot {}.",
-				block_root,
+				header_root,
 				slot
 			);
 
-			Self::deposit_event(Event::BeaconHeaderImported { block_hash: block_root, slot });
-
-			Ok(())
-		}
-
-		pub(super) fn add_finalized_header_state(
-			finalized_header_state: FinalizedHeaderState,
-		) -> DispatchResult {
-			<FinalizedBeaconHeaderStates<T>>::try_mutate(|b_vec| {
-				if b_vec.len() as u32 == T::MaxFinalizedHeadersToKeep::get() {
-					let oldest = b_vec.remove(0);
-					// Removing corresponding finalized header data of popped slot
-					// as that data will not be used by relayer anyway.
-					<FinalizedBeaconHeadersBlockRoot<T>>::remove(oldest.beacon_block_root);
-					<FinalizedBeaconHeaders<T>>::remove(oldest.beacon_block_root);
-				}
-				b_vec.try_push(finalized_header_state)
-			})
-			.map_err(|_| <Error<T>>::FinalizedBeaconHeaderSlotsExceeded)?;
+			Self::deposit_event(Event::BeaconHeaderImported { block_hash: header_root, slot });
 
 			Ok(())
 		}

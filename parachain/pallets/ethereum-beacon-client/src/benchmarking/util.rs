@@ -6,14 +6,14 @@ use crate::{
 use primitives::{PublicKeyPrepared, SyncCommitteePrepared};
 use sp_core::H256;
 
-use super::{initial_sync, sync_committee_update};
+use super::data_mainnet::{make_checkpoint, make_sync_committee_update};
 
 pub fn initialize_sync_committee<T: Config>() -> Result<SyncCommitteeUpdate, &'static str> {
-	let initial_sync_data = initial_sync();
+	let initial_sync_data = make_checkpoint();
 
 	EthereumBeaconClient::<T>::process_checkpoint_update(&initial_sync_data)?;
 
-	let sync_committee_update = sync_committee_update();
+	let sync_committee_update = make_sync_committee_update();
 
 	// initialize SyncCommittees with period in sync_committee_update
 	LatestSyncCommitteePeriod::<T>::set(compute_period(sync_committee_update.attested_header.slot));

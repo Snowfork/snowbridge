@@ -13,9 +13,9 @@ pub mod updates;
 mod serde_utils;
 
 pub use types::{
-	BeaconHeader, CompactExecutionHeader, ExecutionHeaderState, ExecutionPayloadHeader,
-	FinalizedHeaderState, Fork, ForkData, ForkVersion, ForkVersions, Mode, PublicKey, Signature,
-	SigningData, SyncAggregate, SyncCommittee, SyncCommitteePrepared,
+	BeaconHeader, CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState,
+	ExecutionPayloadHeader, FinalizedHeaderState, Fork, ForkData, ForkVersion, ForkVersions, Mode,
+	PublicKey, Signature, SigningData, SyncAggregate, SyncCommittee, SyncCommitteePrepared,
 };
 pub use updates::{
 	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedHeaderUpdate, SyncCommitteeUpdate,

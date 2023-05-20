@@ -18,6 +18,8 @@ pub struct CheckpointUpdate<const COMMITTEE_SIZE: usize> {
 	pub current_sync_committee_branch: Vec<H256>,
 	pub validators_root: H256,
 	pub import_time: u64,
+	pub block_roots_root: H256,
+	pub block_roots_branch: Vec<H256>,
 }
 
 impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
@@ -28,6 +30,8 @@ impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
 			current_sync_committee_branch: Default::default(),
 			validators_root: Default::default(),
 			import_time: Default::default(),
+			block_roots_root: Default::default(),
+			block_roots_branch: Default::default(),
 		}
 	}
 }
@@ -77,9 +81,25 @@ pub struct FinalizedHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BI
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 pub struct ExecutionHeaderUpdate {
+	/// Header for the beacon block containing the execution payload
 	pub header: BeaconHeader,
+	/// Proof that `header` is an ancestor of a finalized header
+	pub ancestry_proof: Option<AncestryProof>,
+	/// Execution header to be imported
 	pub execution_header: ExecutionPayloadHeader,
+	/// Merkle proof that execution payload is contained within `header`
 	pub execution_branch: Vec<H256>,
-	pub block_roots_root: H256,
-	pub block_roots_branch: Vec<H256>,
+}
+
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+#[cfg_attr(
+	feature = "std",
+	derive(serde::Deserialize),
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+)]
+pub struct AncestryProof {
+	/// Merkle proof that `header` is an ancestor of `finalized_header`
+	pub header_branch: Vec<H256>,
+	/// Root of a finalized block that has already been imported into the light client
+	pub finalized_block_root: H256,
 }

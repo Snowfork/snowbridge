@@ -1,45 +1,49 @@
 // Generated, do not edit!
 // See README.md for instructions to generate
-use frame_support::traits::Get;
-use hex_literal::hex;
-use snowbridge_beacon_primitives::{
-    BeaconHeader, ExecutionPayloadHeaderCapella, FinalizedHeaderUpdate, HeaderUpdate, InitialUpdate, PublicKey,
-    SyncAggregate, SyncCommittee, SyncCommitteePeriodUpdate,
+use crate::{
+	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedHeaderUpdate, SyncCommittee,
+	SyncCommitteeUpdate,
 };
+use hex_literal::hex;
+use primitives::{updates::AncestryProof, BeaconHeader, ExecutionPayloadHeader, SyncAggregate};
 use sp_core::U256;
 use sp_std::vec;
 
-pub fn initial_sync() -> InitialUpdate {
-    let time_now = 1675679352; //2023.2.6
-
-    return InitialUpdate{
+pub fn make_checkpoint() -> CheckpointUpdate {
+    CheckpointUpdate{
         header: BeaconHeader{
-            slot: {{InitialUpdate.Header.Slot}},
-            proposer_index: {{InitialUpdate.Header.ProposerIndex}},
-            parent_root: hex!("{{InitialUpdate.Header.ParentRoot}}").into(),
-            state_root: hex!("{{InitialUpdate.Header.StateRoot}}").into(),
-            body_root: hex!("{{InitialUpdate.Header.BodyRoot}}").into(),
+            slot: {{CheckpointUpdate.Header.Slot}},
+            proposer_index: {{CheckpointUpdate.Header.ProposerIndex}},
+            parent_root: hex!("{{CheckpointUpdate.Header.ParentRoot}}").into(),
+            state_root: hex!("{{CheckpointUpdate.Header.StateRoot}}").into(),
+            body_root: hex!("{{CheckpointUpdate.Header.BodyRoot}}").into(),
         },
-        current_sync_committee: SyncCommittee{
+        current_sync_committee: SyncCommittee {
             pubkeys: [
-            {{#InitialUpdate.CurrentSyncCommittee.Pubkeys}}
+            {{#CheckpointUpdate.CurrentSyncCommittee.Pubkeys}}
                 hex!("{{.}}").into(),
-            {{/InitialUpdate.CurrentSyncCommittee.Pubkeys}}
+            {{/CheckpointUpdate.CurrentSyncCommittee.Pubkeys}}
             ],
-            aggregate_pubkey: hex!("{{InitialUpdate.CurrentSyncCommittee.AggregatePubkey}}").into(),
+            aggregate_pubkey: hex!("{{CheckpointUpdate.CurrentSyncCommittee.AggregatePubkey}}").into(),
         },
         current_sync_committee_branch: vec![
-            {{#InitialUpdate.CurrentSyncCommitteeBranch}}
+            {{#CheckpointUpdate.CurrentSyncCommitteeBranch}}
                 hex!("{{.}}").into(),
-            {{/InitialUpdate.CurrentSyncCommitteeBranch}}
+            {{/CheckpointUpdate.CurrentSyncCommitteeBranch}}
         ],
-        validators_root: hex!("{{InitialUpdate.ValidatorsRoot}}").into(),
-        import_time: time_now + 97200, // now + 27 hour sync committee period
-    };
+        validators_root: hex!("{{CheckpointUpdate.ValidatorsRoot}}").into(),
+        import_time: 1675679352 + 97200, // now + 27 hour sync committee period,
+        block_roots_root: hex!("{{CheckpointUpdate.BlockRootsRoot}}").into(),
+        block_roots_branch: vec![
+        {{#CheckpointUpdate.BlockRootsBranch}}
+            hex!("{{.}}").into(),
+        {{/CheckpointUpdate.BlockRootsBranch}}
+        ],
+    }
 }
 
-pub fn sync_committee_update() -> SyncCommitteePeriodUpdate {
-    return SyncCommitteePeriodUpdate {
+pub fn make_sync_committee_update() -> SyncCommitteeUpdate {
+    SyncCommitteeUpdate {
         attested_header: BeaconHeader {
             slot: {{SyncCommitteeUpdate.AttestedHeader.Slot}},
             proposer_index: {{SyncCommitteeUpdate.AttestedHeader.ProposerIndex}},
@@ -48,7 +52,7 @@ pub fn sync_committee_update() -> SyncCommitteePeriodUpdate {
             body_root: hex!("{{SyncCommitteeUpdate.AttestedHeader.BodyRoot}}").into(),
         },
         next_sync_committee: SyncCommittee {
-            pubkeys: vec![
+            pubkeys: [
             {{#SyncCommitteeUpdate.NextSyncCommittee.Pubkeys}}
                 hex!("{{.}}").into(),
             {{/SyncCommitteeUpdate.NextSyncCommittee.Pubkeys}}
@@ -79,15 +83,15 @@ pub fn sync_committee_update() -> SyncCommitteePeriodUpdate {
         signature_slot: {{SyncCommitteeUpdate.SignatureSlot}},
         block_roots_root: hex!("{{SyncCommitteeUpdate.BlockRootsRoot}}").into(),
         block_roots_branch: vec![
-        {{#SyncCommitteeUpdate.BlockRootBranch}}
+        {{#SyncCommitteeUpdate.BlockRootsBranch}}
             hex!("{{.}}").into(),
-        {{/SyncCommitteeUpdate.BlockRootBranch}}
+        {{/SyncCommitteeUpdate.BlockRootsBranch}}
         ],
-    };
+    }
 }
 
-pub fn finalized_header_update() -> FinalizedHeaderUpdate {
-    return FinalizedHeaderUpdate{
+pub fn make_finalized_header_update() -> FinalizedHeaderUpdate {
+    FinalizedHeaderUpdate{
         attested_header: BeaconHeader {
             slot: {{FinalizedHeaderUpdate.AttestedHeader.Slot}},
             proposer_index: {{FinalizedHeaderUpdate.AttestedHeader.ProposerIndex}},
@@ -95,7 +99,7 @@ pub fn finalized_header_update() -> FinalizedHeaderUpdate {
             state_root: hex!("{{FinalizedHeaderUpdate.AttestedHeader.StateRoot}}").into(),
             body_root: hex!("{{FinalizedHeaderUpdate.AttestedHeader.BodyRoot}}").into(),
         },
-        finalized_header: BeaconHeader{
+        finalized_header: BeaconHeader {
             slot: {{FinalizedHeaderUpdate.FinalizedHeader.Slot}},
             proposer_index: {{FinalizedHeaderUpdate.FinalizedHeader.ProposerIndex}},
             parent_root: hex!("{{FinalizedHeaderUpdate.FinalizedHeader.ParentRoot}}").into(),
@@ -108,29 +112,42 @@ pub fn finalized_header_update() -> FinalizedHeaderUpdate {
         {{/FinalizedHeaderUpdate.FinalityBranch}}
         ],
         sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeBits}}"),
+            sync_committee_bits: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeBits}}").into(),
             sync_committee_signature: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeSignature}}").into(),
         },
         signature_slot: {{FinalizedHeaderUpdate.SignatureSlot}},
         block_roots_root: hex!("{{FinalizedHeaderUpdate.BlockRootsRoot}}").into(),
         block_roots_branch: vec![
-        {{#FinalizedHeaderUpdate.BlockRootBranch}}
+        {{#FinalizedHeaderUpdate.BlockRootsBranch}}
             hex!("{{.}}").into(),
-        {{/FinalizedHeaderUpdate.BlockRootBranch}}
+        {{/FinalizedHeaderUpdate.BlockRootsBranch}}
         ]
-    };
+    }
 }
 
-pub fn header_update() -> HeaderUpdate {
-    return HeaderUpdate{
+pub fn make_execution_header_update() -> ExecutionHeaderUpdate {
+    ExecutionHeaderUpdate{
         header: BeaconHeader{
-            slot: {{HeaderUpdate.BeaconHeader.Slot}},
-            proposer_index: {{HeaderUpdate.BeaconHeader.ProposerIndex}},
-            parent_root: hex!("{{HeaderUpdate.BeaconHeader.ParentRoot}}").into(),
-            state_root: hex!("{{HeaderUpdate.BeaconHeader.StateRoot}}").into(),
-            body_root: hex!("{{HeaderUpdate.BeaconHeader.BodyRoot}}").into(),
+            slot: {{HeaderUpdate.Header.Slot}},
+            proposer_index: {{HeaderUpdate.Header.ProposerIndex}},
+            parent_root: hex!("{{HeaderUpdate.Header.ParentRoot}}").into(),
+            state_root: hex!("{{HeaderUpdate.Header.StateRoot}}").into(),
+            body_root: hex!("{{HeaderUpdate.Header.BodyRoot}}").into(),
         },
-        execution_header: ExecutionPayloadHeaderCapella{
+        {{#HeaderUpdate.AncestryProof}}
+        ancestry_proof: Some(AncestryProof {
+            header_branch: vec![
+            {{#HeaderUpdate.AncestryProof.HeaderBranch}}
+                hex!("{{.}}").into(),
+            {{/HeaderUpdate.AncestryProof.HeaderBranch}}
+            ],
+            finalized_block_root: hex!("{{HeaderUpdate.AncestryProof.FinalizedBlockRoot}}").into(),
+        }),
+        {{/HeaderUpdate.AncestryProof}}
+        {{^HeaderUpdate.AncestryProof}}
+        ancestry_proof: None,
+        {{/HeaderUpdate.AncestryProof}}
+        execution_header: ExecutionPayloadHeader {
             parent_hash: hex!("{{HeaderUpdate.ExecutionHeader.ParentHash}}").into(),
             fee_recipient: hex!("{{HeaderUpdate.ExecutionHeader.FeeRecipient}}").into(),
             state_root: hex!("{{HeaderUpdate.ExecutionHeader.StateRoot}}").into(),
@@ -152,11 +169,5 @@ pub fn header_update() -> HeaderUpdate {
             hex!("{{.}}").into(),
         {{/HeaderUpdate.ExecutionBranch}}
         ],
-        block_roots_branch: vec![
-        {{#HeaderUpdate.BlockRootsBranch}}
-            hex!("{{.}}").into(),
-        {{/HeaderUpdate.BlockRootsBranch}}
-        ],
-        block_roots_root: hex!("{{HeaderUpdate.BlockRootsRoot}}").into(),
-    };
+    }
 }

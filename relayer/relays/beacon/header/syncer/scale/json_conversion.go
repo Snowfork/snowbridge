@@ -5,13 +5,15 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 )
 
-func (s BeaconCheckpoint) ToJSON() json.CheckPoint {
+func (p BeaconCheckpoint) ToJSON() json.CheckPoint {
 	return json.CheckPoint{
-		Header:                     s.Header.ToJSON(),
-		CurrentSyncCommittee:       s.CurrentSyncCommittee.ToJSON(),
-		CurrentSyncCommitteeBranch: util.ScaleBranchToString(s.CurrentSyncCommitteeBranch),
-		ValidatorsRoot:             s.ValidatorsRoot.Hex(),
-		ImportTime:                 uint64(s.ImportTime),
+		Header:                     p.Header.ToJSON(),
+		CurrentSyncCommittee:       p.CurrentSyncCommittee.ToJSON(),
+		CurrentSyncCommitteeBranch: util.ScaleBranchToString(p.CurrentSyncCommitteeBranch),
+		ValidatorsRoot:             p.ValidatorsRoot.Hex(),
+		ImportTime:                 uint64(p.ImportTime),
+		BlockRootsRoot:             p.BlockRootsRoot.Hex(),
+		BlockRootsBranch:           util.ScaleBranchToString(p.BlockRootsBranch),
 	}
 }
 
@@ -24,30 +26,36 @@ func (p SyncCommitteePeriodPayload) ToJSON() json.SyncCommitteeUpdate {
 		FinalityBranch:          util.ScaleBranchToString(p.FinalityBranch),
 		SyncAggregate:           p.SyncAggregate.ToJSON(),
 		SignatureSlot:           uint64(p.SignatureSlot),
-		BlockRootsRoot:          p.BlockRootsHash.Hex(),
-		BlockRootBranch:         util.ScaleBranchToString(p.BlockRootProof),
+		BlockRootsRoot:          p.BlockRootsRoot.Hex(),
+		BlockRootsBranch:        util.ScaleBranchToString(p.BlockRootsBranch),
 	}
 }
 
 func (p FinalizedHeaderPayload) ToJSON() json.FinalizedHeaderUpdate {
 	return json.FinalizedHeaderUpdate{
-		AttestedHeader:  p.AttestedHeader.ToJSON(),
-		FinalizedHeader: p.FinalizedHeader.ToJSON(),
-		FinalityBranch:  util.ScaleBranchToString(p.FinalityBranch),
-		SyncAggregate:   p.SyncAggregate.ToJSON(),
-		SignatureSlot:   uint64(p.SignatureSlot),
-		BlockRootsRoot:  p.BlockRootsHash.Hex(),
-		BlockRootBranch: util.ScaleBranchToString(p.BlockRootProof),
+		AttestedHeader:   p.AttestedHeader.ToJSON(),
+		FinalizedHeader:  p.FinalizedHeader.ToJSON(),
+		FinalityBranch:   util.ScaleBranchToString(p.FinalityBranch),
+		SyncAggregate:    p.SyncAggregate.ToJSON(),
+		SignatureSlot:    uint64(p.SignatureSlot),
+		BlockRootsRoot:   p.BlockRootsRoot.Hex(),
+		BlockRootsBranch: util.ScaleBranchToString(p.BlockRootsBranch),
 	}
 }
 
 func (h HeaderUpdate) ToJSON() json.HeaderUpdate {
+	var ancestryProof *json.AncestryProof
+	if h.Payload.AncestryProof.HasValue {
+		ancestryProof = &json.AncestryProof {
+			HeaderBranch: util.ScaleBranchToString(h.Payload.AncestryProof.Value.HeaderBranch),
+			FinalizedBlockRoot:   h.Payload.AncestryProof.Value.FinalizedBlockRoot.Hex(),
+		}
+	}
 	return json.HeaderUpdate{
 		Header:           h.Payload.Header.ToJSON(),
+		AncestryProof:    ancestryProof,
 		ExecutionHeader:  h.Payload.ExecutionHeader.ToJSON(),
 		ExecutionBranch:  util.ScaleBranchToString(h.Payload.ExecutionBranch),
-		BlockRootsBranch: util.ScaleBranchToString(h.Payload.BlockRootsBranch),
-		BlockRootsRoot:   h.Payload.BlockRootsRoot.Hex(),
 	}
 }
 

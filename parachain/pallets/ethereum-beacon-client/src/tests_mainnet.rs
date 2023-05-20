@@ -3,8 +3,8 @@ use crate::{
 	compute_period, config,
 	config::{SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE},
 	mock::*,
-	Error, ExecutionHeaders, FinalizedBeaconHeaders, FinalizedBeaconHeadersBlockRoot,
-	FinalizedHeaderState, LatestFinalizedHeader, LatestSyncCommitteePeriod, ValidatorsRoot,
+	CompactBeaconState, Error, ExecutionHeaders, FinalizedBeaconState, FinalizedHeaderState,
+	LatestFinalizedHeader, LatestSyncCommitteePeriod, ValidatorsRoot,
 };
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
@@ -22,7 +22,7 @@ fn it_syncs_from_an_initial_checkpoint() {
 
 		let block_root: H256 = initial_sync.header.hash_tree_root().unwrap();
 
-		assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
+		assert!(<FinalizedBeaconState<mock_mainnet::Test>>::contains_key(block_root));
 	});
 }
 
@@ -49,7 +49,7 @@ fn it_updates_a_committee_period_sync_update() {
 			update,
 		));
 
-		assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
+		assert!(<FinalizedBeaconState<mock_mainnet::Test>>::contains_key(block_root));
 	});
 }
 
@@ -84,7 +84,7 @@ fn it_processes_a_finalized_header_update() {
 
 		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 
-		assert!(<FinalizedBeaconHeaders<mock_mainnet::Test>>::contains_key(block_root));
+		assert!(<FinalizedBeaconState<mock_mainnet::Test>>::contains_key(block_root));
 	});
 }
 
@@ -145,9 +145,12 @@ fn it_processes_a_header_update() {
 			beacon_slot: finalized_slot,
 			import_time: 0,
 		});
-		FinalizedBeaconHeadersBlockRoot::<mock_mainnet::Test>::insert(
+		FinalizedBeaconState::<mock_mainnet::Test>::insert(
 			finalized_block_root,
-			finalized_update.block_roots_root,
+			CompactBeaconState {
+				slot: finalized_update.finalized_header.slot,
+				block_roots_root: finalized_update.block_roots_root,
+			},
 		);
 
 		assert_ok!(mock_mainnet::EthereumBeaconClient::import_execution_header(

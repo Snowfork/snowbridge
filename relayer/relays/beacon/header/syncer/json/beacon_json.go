@@ -10,6 +10,8 @@ type CheckPoint struct {
 	CurrentSyncCommitteeBranch []string      `json:"current_sync_committee_branch"`
 	ValidatorsRoot             string        `json:"validators_root"`
 	ImportTime                 uint64        `json:"import_time"`
+	BlockRootsRoot             string        `json:"block_roots_root"`
+	BlockRootsBranch           []string      `json:"block_roots_branch"`
 }
 
 type BeaconHeader struct {
@@ -37,20 +39,19 @@ type SyncCommitteeUpdate struct {
 	FinalizedHeader         BeaconHeader  `json:"finalized_header"`
 	FinalityBranch          []string      `json:"finality_branch"`
 	SyncAggregate           SyncAggregate `json:"sync_aggregate"`
-	SyncCommitteePeriod     uint64        `json:"sync_committee_period"`
 	SignatureSlot           uint64        `json:"signature_slot"`
 	BlockRootsRoot          string        `json:"block_roots_root"`
-	BlockRootBranch         []string      `json:"block_roots_branch"`
+	BlockRootsBranch        []string      `json:"block_roots_branch"`
 }
 
 type FinalizedHeaderUpdate struct {
-	AttestedHeader  BeaconHeader  `json:"attested_header"`
-	FinalizedHeader BeaconHeader  `json:"finalized_header"`
-	FinalityBranch  []string      `json:"finality_branch"`
-	SyncAggregate   SyncAggregate `json:"sync_aggregate"`
-	SignatureSlot   uint64        `json:"signature_slot"`
-	BlockRootsRoot  string        `json:"block_roots_root"`
-	BlockRootBranch []string      `json:"block_roots_branch"`
+	AttestedHeader   BeaconHeader  `json:"attested_header"`
+	FinalizedHeader  BeaconHeader  `json:"finalized_header"`
+	FinalityBranch   []string      `json:"finality_branch"`
+	SyncAggregate    SyncAggregate `json:"sync_aggregate"`
+	SignatureSlot    uint64        `json:"signature_slot"`
+	BlockRootsRoot   string        `json:"block_roots_root"`
+	BlockRootsBranch []string      `json:"block_roots_branch"`
 }
 
 type ProposerSlashing struct {
@@ -133,11 +134,15 @@ type BlockBody struct {
 }
 
 type HeaderUpdate struct {
-	Header           BeaconHeader                  `json:"header"`
-	ExecutionHeader  ExecutionPayloadHeaderCapella `json:"execution_header"`
-	ExecutionBranch  []string                      `json:"execution_branch"`
-	BlockRootsRoot   string                        `json:"block_roots_root"`
-	BlockRootsBranch []string                      `json:"block_roots_branch"`
+	Header          BeaconHeader                  `json:"header"`
+	AncestryProof   *AncestryProof                `json:"ancestry_proof"`
+	ExecutionHeader ExecutionPayloadHeaderCapella `json:"execution_header"`
+	ExecutionBranch []string                      `json:"execution_branch"`
+}
+
+type AncestryProof struct {
+	HeaderBranch       []string `json:"header_branch"`
+	FinalizedBlockRoot string   `json:"finalized_block_root"`
 }
 
 type Attestation struct {
@@ -274,6 +279,8 @@ func (i *CheckPoint) RemoveLeadingZeroHashes() {
 	}
 
 	i.ValidatorsRoot = removeLeadingZeroHash(i.ValidatorsRoot)
+	i.BlockRootsRoot = removeLeadingZeroHash(i.BlockRootsRoot)
+	i.BlockRootsBranch = removeLeadingZeroHashForSlice(i.BlockRootsBranch)
 }
 
 func (s *SyncCommitteeUpdate) RemoveLeadingZeroHashes() {
@@ -284,7 +291,7 @@ func (s *SyncCommitteeUpdate) RemoveLeadingZeroHashes() {
 	s.FinalityBranch = removeLeadingZeroHashForSlice(s.FinalityBranch)
 	s.SyncAggregate.RemoveLeadingZeroHashes()
 	s.BlockRootsRoot = removeLeadingZeroHash(s.BlockRootsRoot)
-	s.BlockRootBranch = removeLeadingZeroHashForSlice(s.BlockRootBranch)
+	s.BlockRootsBranch = removeLeadingZeroHashForSlice(s.BlockRootsBranch)
 }
 
 func (f *FinalizedHeaderUpdate) RemoveLeadingZeroHashes() {
@@ -293,15 +300,17 @@ func (f *FinalizedHeaderUpdate) RemoveLeadingZeroHashes() {
 	f.FinalityBranch = removeLeadingZeroHashForSlice(f.FinalityBranch)
 	f.SyncAggregate.RemoveLeadingZeroHashes()
 	f.BlockRootsRoot = removeLeadingZeroHash(f.BlockRootsRoot)
-	f.BlockRootBranch = removeLeadingZeroHashForSlice(f.BlockRootBranch)
+	f.BlockRootsBranch = removeLeadingZeroHashForSlice(f.BlockRootsBranch)
 }
 
 func (h *HeaderUpdate) RemoveLeadingZeroHashes() {
 	h.Header.RemoveLeadingZeroHashes()
+	if h.AncestryProof != nil {
+		h.AncestryProof.HeaderBranch = removeLeadingZeroHashForSlice(h.AncestryProof.HeaderBranch)
+		h.AncestryProof.FinalizedBlockRoot = removeLeadingZeroHash(h.AncestryProof.FinalizedBlockRoot)
+	}
 	h.ExecutionHeader.RemoveLeadingZeroHashes()
 	h.ExecutionBranch = removeLeadingZeroHashForSlice(h.ExecutionBranch)
-	h.BlockRootsBranch = removeLeadingZeroHashForSlice(h.BlockRootsBranch)
-	h.BlockRootsRoot = removeLeadingZeroHash(h.BlockRootsRoot)
 }
 
 func removeLeadingZeroHashForSlice(s []string) []string {

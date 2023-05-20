@@ -59,11 +59,16 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().Bool("export-json", true, "Export Json")
+	if err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
 type Data struct {
-	InitialSync           beaconjson.CheckPoint
+	CheckpointUpdate      beaconjson.CheckPoint
 	SyncCommitteeUpdate   beaconjson.SyncCommitteeUpdate
 	FinalizedHeaderUpdate beaconjson.FinalizedHeaderUpdate
 	HeaderUpdate          beaconjson.HeaderUpdate
@@ -168,6 +173,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
 		initialSync := initialSyncScale.ToJSON()
+		err = writeJSONToFile(initialSync, activeSpec.ToString()+"_initial_sync")
 		initialSyncHeaderSlot := initialSync.Header.Slot
 		log.Info("created initial sync file")
 
@@ -227,7 +233,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			headerUpdate.RemoveLeadingZeroHashes()
 
 			data := Data{
-				InitialSync:           initialSync,
+				CheckpointUpdate:      initialSync,
 				SyncCommitteeUpdate:   syncCommitteeUpdate,
 				FinalizedHeaderUpdate: finalizedUpdate,
 				HeaderUpdate:          headerUpdate,
