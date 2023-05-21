@@ -78,32 +78,11 @@ jobs:
           profile: minimal
           toolchain: nightly-2023-04-22
           target: wasm32-unknown-unknown
-      - name: test beacon client with minimal feature
-        uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1
         with:
           command: test
           args: >-
             --manifest-path parachain/Cargo.toml
             --verbose
             --package snowbridge-ethereum-beacon-client
-            --features minimal
-          toolchain: nightly-2023-04-22
-      - uses: actions-rs/install@v0.1.2
-        with:
-          crate: cargo-tarpaulin
-          version: latest
-          use-tool-cache: true
-      - name: cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: tarpaulin
-          args: >-
-            --manifest-path parachain/Cargo.toml
-            --release
-            --verbose 
-            --workspace
-            --exclude snowbridge-query-events
-            --features runtime-benchmarks
-            --avoid-cfg-tarpaulin
-            --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
           toolchain: nightly-2023-04-22

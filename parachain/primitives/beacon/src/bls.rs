@@ -18,18 +18,6 @@ pub enum BlsError {
 	SignatureVerificationFailed,
 }
 
-// legacy fast_aggregate_verify from all participant keys
-pub fn fast_aggregate_verify_legacy(
-	pubkeys: &[PublicKeyPrepared],
-	message: H256,
-	signature: &Signature,
-) -> Result<(), BlsError> {
-	let agg_sig = prepare_aggregate_signature(signature)?;
-	let agg_key = prepare_aggregate_pubkey(pubkeys)?;
-	// major bottleneck which consumes more than 90% of weight in the entire call
-	fast_aggregate_verify_pre_aggregated(agg_sig, agg_key, message)
-}
-
 // fast_aggregate_verify optimized with aggregate key subtracting absent ones
 pub fn fast_aggregate_verify(
 	aggregate_pubkey: &PublicKeyPrepared,

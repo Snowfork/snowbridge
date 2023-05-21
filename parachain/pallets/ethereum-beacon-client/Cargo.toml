@@ -60,10 +60,10 @@ std = [
     "byte-slice-cast/std",
 ]
 runtime-benchmarks = [
+    "beacon-spec-mainnet",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "hex-literal"
 ]
-
-minimal = []
+beacon-spec-mainnet = []

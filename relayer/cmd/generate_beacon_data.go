@@ -76,7 +76,7 @@ type Data struct {
 
 const (
 	pathToBeaconBenchmarkData    = "parachain/pallets/ethereum-beacon-client/src/benchmarking"
-	pathToBenchmarkDataTemplate  = "parachain/templates/beacon_benchmarking_data.rs.mustache"
+	pathToBenchmarkDataTemplate  = "parachain/templates/benchmark-fixtures.mustache"
 	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
 )
 

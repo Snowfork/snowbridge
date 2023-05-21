@@ -9,18 +9,15 @@ pub mod weights;
 
 #[cfg(test)]
 mod mock;
-#[cfg(test)]
+#[cfg(all(test, not(feature = "beacon-spec-mainnet")))]
 mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
 use frame_support::{
-	dispatch::DispatchResult,
-	log,
-	pallet_prelude::OptionQuery,
-	traits::{Get, UnixTime},
-	transactional, BoundedVec,
+	dispatch::DispatchResult, log, pallet_prelude::OptionQuery, traits::Get, transactional,
+	BoundedVec,
 };
 use frame_system::ensure_signed;
 use primitives::{
@@ -60,21 +57,11 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-		type TimeProvider: UnixTime;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
-		/// Maximum size of finalized header slot cache
-		#[pallet::constant]
-		type MaxFinalizedHeaderSlotsCacheSize: Get<u32>;
-		/// Maximum finalized headers
-		#[pallet::constant]
-		type MaxFinalizedHeadersToKeep: Get<u32>;
-		/// Maximum execution headers
+		/// Maximum number of execution headers to keep
 		#[pallet::constant]
 		type MaxExecutionHeadersToKeep: Get<u32>;
-		/// Maximum sync committees
-		#[pallet::constant]
-		type MaxSyncCommitteesToKeep: Get<u32>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -133,35 +120,33 @@ pub mod pallet {
 		BLSVerificationFailed(BlsError),
 	}
 
-	/// A map of finalized headers to beacon state
+	/// Beacon state by finalized block root
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconState<T: Config> =
 		StorageMap<_, Identity, H256, CompactBeaconState, OptionQuery>;
-
-	/// A cache of slot numbers for finalized headers that have been recently imported.
-	/// Is used by the offchain relayer to produce ancestry proofs for execution headers.
-	#[pallet::storage]
-	pub(super) type FinalizedHeaderSlotsCache<T: Config> =
-		StorageValue<_, BoundedVec<u64, T::MaxFinalizedHeadersToKeep>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn validators_root)]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
+	/// Latest imported finalized beacon header
 	#[pallet::storage]
 	#[pallet::getter(fn latest_finalized_header)]
 	pub(super) type LatestFinalizedHeader<T: Config> =
 		StorageValue<_, FinalizedHeaderState, ValueQuery>;
 
+	/// Latest imported execution header
 	#[pallet::storage]
 	#[pallet::getter(fn latest_execution_header)]
 	pub(super) type LatestExecutionHeader<T: Config> =
 		StorageValue<_, ExecutionHeaderState, ValueQuery>;
 
+	/// Sync committee for current period
 	#[pallet::storage]
 	pub(super) type CurrentSyncCommittee<T: Config> =
 		StorageValue<_, SyncCommitteePrepared, ValueQuery>;
 
+	/// Sync committee for next period
 	#[pallet::storage]
 	pub(super) type NextSyncCommittee<T: Config> =
 		StorageValue<_, SyncCommitteePrepared, ValueQuery>;
@@ -171,14 +156,21 @@ pub mod pallet {
 	pub(super) type ExecutionHeaders<T: Config> =
 		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
 
-	/// Ring buffer cursor
+	/// Execution Headers: Current position in ring buffer
 	#[pallet::storage]
 	pub(crate) type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
 
-	/// Every position in the ring buffer maps to a header to prune.
+	/// Execution Headers: Mapping of ring buffer index to a pruning candidate
 	#[pallet::storage]
 	pub(crate) type ExecutionHeaderMapping<T: Config> =
 		StorageMap<_, Identity, u32, H256, ValueQuery>;
+
+	/// FIXME: Remove before using in production
+	/// A cache of slot numbers for finalized headers that have been recently imported.
+	/// Is used by the offchain relayer to produce ancestry proofs for execution headers.
+	#[pallet::storage]
+	pub(super) type FinalizedHeaderSlotsCache<T: Config> =
+		StorageValue<_, BoundedVec<u64, ConstU32<{ config::SLOT_CACHE_SIZE }>>, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -194,8 +186,8 @@ pub mod pallet {
 		#[pallet::call_index(1)]
 		#[pallet::weight({
 			match update.next_sync_committee_update {
-				Some(_) => T::WeightInfo::sync_committee_period_update(),
-				None => T::WeightInfo::import_finalized_header(),
+				None => T::WeightInfo::submit(),
+				Some(_) => T::WeightInfo::submit_with_sync_committee(),
 			}
 		})]
 		#[transactional]
@@ -206,7 +198,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::import_execution_header())]
+		#[pallet::weight(T::WeightInfo::submit_execution_header())]
 		#[transactional]
 		pub fn submit_execution_header(
 			origin: OriginFor<T>,
@@ -563,7 +555,7 @@ pub mod pallet {
 
 			// Add the slot of the most recently finalized header to the slot cache
 			<FinalizedHeaderSlotsCache<T>>::mutate(|slots| {
-				if slots.len() as u32 == T::MaxFinalizedHeaderSlotsCacheSize::get() {
+				if slots.len() as u32 == config::SLOT_CACHE_SIZE {
 					slots.remove(0);
 				}
 				slots.try_push(header.slot).expect("checked above; qed");

@@ -1,41 +1,22 @@
 use super::*;
 
+mod fixtures;
+mod util;
+
 use crate::Pallet as EthereumBeaconClient;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
 
-mod fixtures;
 use fixtures::{make_checkpoint, make_execution_header_update, make_finalized_header_update};
 
-mod util;
 use primitives::{
-	fast_aggregate_verify, fast_aggregate_verify_legacy, prepare_aggregate_pubkey,
-	prepare_aggregate_signature, verify_merkle_branch, CompactBeaconState, Mode,
+	fast_aggregate_verify, prepare_aggregate_pubkey, prepare_aggregate_signature,
+	verify_merkle_branch, CompactBeaconState,
 };
 use util::*;
 
 benchmarks! {
-	sync_committee_period_update {
-		let caller: T::AccountId = whitelisted_caller();
-
-		let initial_sync_data = make_checkpoint();
-		let sync_committee_update = initialize_sync_committee::<T>()?;
-
-		let period = compute_period(sync_committee_update.attested_header.slot);
-
-		// initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
-		LatestFinalizedHeader::<T>::set(FinalizedHeaderState {
-			beacon_block_root: Default::default(),
-			import_time: initial_sync_data.import_time,
-			beacon_slot: sync_committee_update.finalized_header.slot - 1,
-		});
-
-	}: sync_committee_period_update(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
-	verify {
-		EthereumBeaconClient::<T>::sync_committee_for_period(period+1).unwrap();
-	}
-
-	import_finalized_header {
+	submit {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let initial_sync_data = make_checkpoint();
@@ -48,23 +29,41 @@ benchmarks! {
 				finalized_header_update.attested_header.slot,
 			);
 
-		EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;
+		//EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;
 
 		// initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
 		LatestFinalizedHeader::<T>::set(FinalizedHeaderState {
 			beacon_block_root: Default::default(),
-			import_time: initial_sync_data.import_time + 51200,
 			beacon_slot: finalized_header_update.finalized_header.slot - 1,
 		});
 
-	}: _(RawOrigin::Signed(caller.clone()), finalized_header_update.clone())
+	}: submit(RawOrigin::Signed(caller.clone()), finalized_header_update.clone())
 	verify {
 		let header_hash: H256 = finalized_header_update.finalized_header.hash_tree_root().unwrap();
 
 		<FinalizedBeaconState<T>>::get(header_hash).unwrap();
 	}
 
-	import_execution_header {
+	submit_with_sync_committee {
+		let caller: T::AccountId = whitelisted_caller();
+
+		let initial_sync_data = make_checkpoint();
+		let sync_committee_update = initialize_sync_committee::<T>()?;
+
+		let period = compute_period(sync_committee_update.attested_header.slot);
+
+		// initialize LatestFinalizedHeaderState with parent slot of finalized_header_update
+		LatestFinalizedHeader::<T>::set(FinalizedHeaderState {
+			beacon_block_root: Default::default(),
+			beacon_slot: sync_committee_update.finalized_header.slot - 1,
+		});
+
+	}: submit(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
+	verify {
+		assert!(<NextSyncCommittee<T>>::exists())
+	}
+
+	submit_execution_header {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let initial_sync_data = make_checkpoint();
@@ -77,9 +76,9 @@ benchmarks! {
 				header_update.header.slot,
 			);
 
-		EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;
+		//EthereumBeaconClient::<T>::store_sync_committee(current_period, &initial_sync_data.current_sync_committee)?;
 
-		let finalized_update: FinalizedHeaderUpdate<> = make_finalized_header_update();
+		let finalized_update = make_finalized_header_update();
 
 		let finalized_slot = finalized_update.finalized_header.slot;
 		let finalized_block_root = finalized_update.finalized_header.hash_tree_root()
@@ -88,7 +87,6 @@ benchmarks! {
 		LatestFinalizedHeader::<T>::set(FinalizedHeaderState{
 			beacon_block_root: finalized_block_root,
 			beacon_slot: finalized_slot,
-			import_time: 0,
 		});
 		FinalizedBeaconState::<T>::insert(
 			finalized_block_root,
@@ -102,12 +100,6 @@ benchmarks! {
 		assert!(<ExecutionHeaders<T>>::contains_key(header_update.execution_header.block_hash))
 	}
 
-	force_mode {
-	}: _(RawOrigin::Root, Mode::Active)
-	verify {
-		assert!(!<Blocked<T>>::get());
-	}
-
 	bls_fast_aggregate_verify_pre_aggregated {
 		let update = initialize_sync_committee::<T>()?;
 		let participant_pubkeys = participant_pubkeys::<T>(&update)?;
@@ -118,17 +110,9 @@ benchmarks! {
 		agg_sig.fast_aggregate_verify_pre_aggregated(signing_root.as_bytes(), &agg_pub_key)
 	}
 
-	bls_fast_aggregate_verify_legacy {
-		let update = initialize_sync_committee::<T>()?;
-		let participant_pubkeys = participant_pubkeys::<T>(&update)?;
-		let signing_root = signing_root::<T>(&update)?;
-	}:{
-		fast_aggregate_verify_legacy(&participant_pubkeys, signing_root, &update.sync_aggregate.sync_committee_signature).unwrap();
-	}
-
 	bls_fast_aggregate_verify {
 		let update = initialize_sync_committee::<T>()?;
-		let current_sync_committee = sync_committee::<T>(&update)?;
+		let current_sync_committee = <CurrentSyncCommittee<T>>::get();
 		let absent_pubkeys = absent_pubkeys::<T>(&update)?;
 		let signing_root = signing_root::<T>(&update)?;
 	}:{
@@ -146,6 +130,6 @@ benchmarks! {
 
 impl_benchmark_test_suite!(
 	EthereumBeaconClient,
-	crate::mock::new_tester::<crate::mock::mock_mainnet::Test>(),
-	crate::mock::mock_mainnet::Test,
+	crate::mock::mainnet::new_tester(),
+	crate::mock::mainnet::Test
 );

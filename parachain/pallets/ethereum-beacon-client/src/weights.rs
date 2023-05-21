@@ -33,36 +33,30 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for ethereum_beacon_client.
 pub trait WeightInfo {
-	fn sync_committee_period_update() -> Weight;
-	fn import_finalized_header() -> Weight;
-	fn import_execution_header() -> Weight;
-	fn force_mode() -> Weight;
+	fn submit() -> Weight;
+	fn submit_with_sync_committee() -> Weight;
+	fn submit_execution_header() -> Weight;
 	fn force_checkpoint() -> Weight;
 	fn bls_fast_aggregate_verify_pre_aggregated() -> Weight;
 	fn bls_fast_aggregate_verify() -> Weight;
-	fn bls_fast_aggregate_verify_legacy() -> Weight;
 	fn merkle_branch_verify() -> Weight;
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn sync_committee_period_update() -> Weight {
+	fn submit_with_sync_committee() -> Weight {
 		Weight::from_parts(175_039_777_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(4))
 			.saturating_add(RocksDbWeight::get().writes(2))
 	}
-	fn import_finalized_header() -> Weight {
+	fn submit() -> Weight {
 		Weight::from_parts(171_871_518_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(3))
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
-	fn import_execution_header() -> Weight {
+	fn submit_execution_header() -> Weight {
 		Weight::from_parts(166_011_885_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(3))
-			.saturating_add(RocksDbWeight::get().writes(1))
-	}
-	fn force_mode() -> Weight {
-		Weight::from_parts(13_941_000, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 	fn force_checkpoint() -> Weight {
@@ -78,11 +72,6 @@ impl WeightInfo for () {
 		Weight::from_parts(123_459_134_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	fn bls_fast_aggregate_verify_legacy() -> Weight {
-		Weight::from_parts(123_459_134_000, 0)
-			.saturating_add(Weight::from_parts(0, 0))
-	}
-
 	fn merkle_branch_verify() -> Weight {
 		Weight::from_parts(12_368_043_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
