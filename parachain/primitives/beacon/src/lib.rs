@@ -17,9 +17,7 @@ pub use types::{
 	ExecutionPayloadHeader, FinalizedHeaderState, Fork, ForkData, ForkVersion, ForkVersions, Mode,
 	PublicKey, Signature, SigningData, SyncAggregate, SyncCommittee, SyncCommitteePrepared,
 };
-pub use updates::{
-	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedHeaderUpdate, SyncCommitteeUpdate,
-};
+pub use updates::{CheckpointUpdate, ExecutionHeaderUpdate, NextSyncCommitteeUpdate, Update};
 
 pub use bits::decompress_sync_committee_bits;
 pub use bls::{

@@ -94,8 +94,6 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 
 		endpoint, err := cmd.Flags().GetString("url")
 
-		exportJson, err := cmd.Flags().GetBool("export_json")
-
 		viper.SetConfigFile("core/packages/test/config/beacon-relay.json")
 
 		if err := viper.ReadInConfig(); err != nil {
@@ -116,16 +114,16 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
-		if exportJson {
+		if true {
 			initialSync := checkPointScale.ToJSON()
-			err = writeJSONToFile(initialSync, activeSpec.ToString()+"_initial_sync")
+			err = writeJSONToFile(initialSync, "dump-initial-checkpoint.json")
 			if err != nil {
 				return fmt.Errorf("write initial sync to file: %w", err)
 			}
 		}
 		checkPointBytes, _ := types.EncodeToBytes(checkPointScale)
 		// Call index for EthereumBeaconClient.force_checkpoint
-		checkPointCallIndex := "0x3201"
+		checkPointCallIndex := "0x3200"
 		checkPointUpdateCall := checkPointCallIndex + hex.EncodeToString(checkPointBytes)
 		fmt.Println(checkPointUpdateCall)
 		return nil
@@ -203,11 +201,11 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		}
 		log.Info("created finalized header update file")
 
-		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot - 2)
+		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot - 2)
 		checkPoint := cache.Proof{
 			FinalizedBlockRoot: finalizedUpdateScale.FinalizedHeaderBlockRoot,
 			BlockRootsTree:     finalizedUpdateScale.BlockRootsTree,
-			Slot:               uint64(finalizedUpdateScale.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot),
+			Slot:               uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot),
 		}
 		headerUpdateScale, err := s.GetNextHeaderUpdateBySlotWithAncestryProof(blockUpdateSlot, checkPoint)
 		if err != nil {

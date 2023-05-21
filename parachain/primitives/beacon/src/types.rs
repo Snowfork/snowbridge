@@ -119,7 +119,6 @@ pub struct ExecutionHeaderState {
 pub struct FinalizedHeaderState {
 	pub beacon_block_root: H256,
 	pub beacon_slot: u64,
-	pub import_time: u64,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug)]
@@ -183,6 +182,15 @@ impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
 pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
 	pub pubkeys: [PublicKeyPrepared; COMMITTEE_SIZE],
 	pub aggregate_pubkey: PublicKeyPrepared,
+}
+
+impl<const COMMITTEE_SIZE: usize> Default for SyncCommitteePrepared<COMMITTEE_SIZE> {
+	fn default() -> Self {
+		SyncCommitteePrepared {
+			pubkeys: [Default::default(); COMMITTEE_SIZE],
+			aggregate_pubkey: Default::default(),
+		}
+	}
 }
 
 impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>

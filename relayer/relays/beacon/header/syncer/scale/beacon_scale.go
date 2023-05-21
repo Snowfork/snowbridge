@@ -36,7 +36,10 @@ type UpdatePayload struct {
 	SyncAggregate           SyncAggregate
 	SignatureSlot           types.U64
 	NextSyncCommitteeUpdate OptionNextSyncCommitteeUpdatePayload
-	FinalizedHeaderUpdate   OptionFinalizedHeaderUpdatePayload
+	FinalizedHeader         BeaconHeader
+	FinalityBranch          []types.H256
+	BlockRootsRoot          types.H256
+	BlockRootsBranch        []types.H256
 }
 
 type OptionNextSyncCommitteeUpdatePayload struct {
@@ -54,26 +57,6 @@ func (o OptionNextSyncCommitteeUpdatePayload) Encode(encoder scale.Encoder) erro
 }
 
 func (o *OptionNextSyncCommitteeUpdatePayload) Decode(decoder scale.Decoder) error {
-	return decoder.DecodeOption(&o.HasValue, &o.Value)
-}
-
-type OptionFinalizedHeaderUpdatePayload struct {
-	HasValue bool
-	Value    FinalizedHeaderUpdatePayload
-}
-
-type FinalizedHeaderUpdatePayload struct {
-	FinalizedHeader  BeaconHeader
-	FinalityBranch   []types.H256
-	BlockRootsRoot   types.H256
-	BlockRootsBranch []types.H256
-}
-
-func (o OptionFinalizedHeaderUpdatePayload) Encode(encoder scale.Encoder) error {
-	return encoder.EncodeOption(o.HasValue, o.Value)
-}
-
-func (o *OptionFinalizedHeaderUpdatePayload) Decode(decoder scale.Decoder) error {
 	return decoder.DecodeOption(&o.HasValue, &o.Value)
 }
 

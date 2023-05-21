@@ -169,9 +169,9 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 
 	syncCommitteePeriodUpdate := scale.Update{
 		Payload: scale.UpdatePayload{
-			AttestedHeader:   attestedHeader,
-			SyncAggregate:    syncAggregate,
-			SignatureSlot:    types.U64(signatureSlot),
+			AttestedHeader: attestedHeader,
+			SyncAggregate:  syncAggregate,
+			SignatureSlot:  types.U64(signatureSlot),
 			NextSyncCommitteeUpdate: scale.OptionNextSyncCommitteeUpdatePayload{
 				HasValue: true,
 				Value: scale.NextSyncCommitteeUpdatePayload{
@@ -179,16 +179,10 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 					NextSyncCommitteeBranch: util.ProofBranchToScale(committeeUpdate.NextSyncCommitteeBranch),
 				},
 			},
-			FinalizedHeaderUpdate: scale.OptionFinalizedHeaderUpdatePayload{
-				HasValue: true,
-				Value: scale.FinalizedHeaderUpdatePayload{
-					FinalizedHeader: finalizedHeader,
-					FinalityBranch: util.ProofBranchToScale(committeeUpdate.FinalityBranch),
-					BlockRootsRoot: blockRootsProof.Leaf,
-					BlockRootsBranch: blockRootsProof.Proof,
-				},
-
-			},
+			FinalizedHeader:  finalizedHeader,
+			FinalityBranch:   util.ProofBranchToScale(committeeUpdate.FinalityBranch),
+			BlockRootsRoot:   blockRootsProof.Leaf,
+			BlockRootsBranch: blockRootsProof.Proof,
 		},
 		FinalizedHeaderBlockRoot: finalizedHeaderBlockRoot,
 		BlockRootsTree:           blockRootsProof.Tree,
@@ -305,21 +299,16 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 	}
 
 	updatePayload := scale.UpdatePayload{
-		AttestedHeader:   attestedHeader,
-		SyncAggregate:    syncAggregate,
-		SignatureSlot:    types.U64(signatureSlot),
+		AttestedHeader: attestedHeader,
+		SyncAggregate:  syncAggregate,
+		SignatureSlot:  types.U64(signatureSlot),
 		NextSyncCommitteeUpdate: scale.OptionNextSyncCommitteeUpdatePayload{
 			HasValue: false,
 		},
-		FinalizedHeaderUpdate: scale.OptionFinalizedHeaderUpdatePayload{
-			HasValue: true,
-			Value: scale.FinalizedHeaderUpdatePayload{
-				FinalizedHeader: finalizedHeader,
-				FinalityBranch: util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
-				BlockRootsRoot: blockRootsProof.Leaf,
-				BlockRootsBranch: blockRootsProof.Proof,
-			},
-		},
+		FinalizedHeader:  finalizedHeader,
+		FinalityBranch:   util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
+		BlockRootsRoot:   blockRootsProof.Leaf,
+		BlockRootsBranch: blockRootsProof.Proof,
 	}
 
 	return scale.Update{
@@ -395,21 +384,16 @@ func (s *Syncer) GetLatestFinalizedHeader() (scale.Update, error) {
 	}
 
 	updatePayload := scale.UpdatePayload{
-		AttestedHeader:   attestedHeader,
-		SyncAggregate:    syncAggregate,
-		SignatureSlot:    types.U64(signatureSlot),
+		AttestedHeader: attestedHeader,
+		SyncAggregate:  syncAggregate,
+		SignatureSlot:  types.U64(signatureSlot),
 		NextSyncCommitteeUpdate: scale.OptionNextSyncCommitteeUpdatePayload{
 			HasValue: false,
 		},
-		FinalizedHeaderUpdate: scale.OptionFinalizedHeaderUpdatePayload{
-			HasValue: true,
-			Value: scale.FinalizedHeaderUpdatePayload{
-				FinalizedHeader: finalizedHeader,
-				FinalityBranch: util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
-				BlockRootsRoot: blockRootsProof.Leaf,
-				BlockRootsBranch: blockRootsProof.Proof,
-			},
-		},
+		FinalizedHeader:  finalizedHeader,
+		FinalityBranch:   util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
+		BlockRootsRoot:   blockRootsProof.Leaf,
+		BlockRootsBranch: blockRootsProof.Proof,
 	}
 
 	return scale.Update{

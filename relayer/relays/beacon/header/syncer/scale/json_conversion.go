@@ -25,23 +25,15 @@ func (p UpdatePayload) ToJSON() json.Update {
 		}
 	}
 
-	var finalizedHeaderUpdate *json.FinalizedHeaderUpdate
-	if p.FinalizedHeaderUpdate.HasValue {
-		update := p.FinalizedHeaderUpdate.Value
-		finalizedHeaderUpdate = &json.FinalizedHeaderUpdate{
-			FinalizedHeader:  update.FinalizedHeader.ToJSON(),
-			FinalityBranch:   util.ScaleBranchToString(update.FinalityBranch),
-			BlockRootsRoot:   update.BlockRootsRoot.Hex(),
-			BlockRootsBranch: util.ScaleBranchToString(update.BlockRootsBranch),
-		}
-	}
-
 	return json.Update{
 		AttestedHeader:          p.AttestedHeader.ToJSON(),
 		SyncAggregate:           p.SyncAggregate.ToJSON(),
 		SignatureSlot:           uint64(p.SignatureSlot),
 		NextSyncCommitteeUpdate: nextSyncCommitteeUpdate,
-		FinalizedHeaderUpdate:   finalizedHeaderUpdate,
+		FinalizedHeader:         p.FinalizedHeader.ToJSON(),
+		FinalityBranch:          util.ScaleBranchToString(p.FinalityBranch),
+		BlockRootsRoot:          p.BlockRootsRoot.Hex(),
+		BlockRootsBranch:        util.ScaleBranchToString(p.BlockRootsBranch),
 	}
 }
 

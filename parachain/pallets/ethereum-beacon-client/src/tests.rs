@@ -1,7 +1,6 @@
 use crate::{
-	config::SYNC_COMMITTEE_SIZE,
-	mock::{get_initial_sync, mock_minimal, new_tester},
-	pallet::{ExecutionHeaders, SyncCommittees},
+	mock::{mock_minimal, new_tester},
+	pallet::ExecutionHeaders,
 	sync_committee_sum, verify_merkle_branch, BeaconHeader, Error, H256,
 };
 use frame_support::{assert_err, assert_ok};
@@ -458,74 +457,20 @@ pub fn test_prune_execution_headers() {
 	});
 }
 
-#[test]
-pub fn test_prune_sync_committee() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let sync_committee_prune_threshold = mock_minimal::SyncCommitteePruneThreshold::get();
-		let to_be_deleted = sync_committee_prune_threshold / 2;
-		let mut storing_periods = vec![];
-
-		let initial_sync = get_initial_sync::<{ SYNC_COMMITTEE_SIZE }>();
-
-		for i in 0..sync_committee_prune_threshold {
-			mock_minimal::EthereumBeaconClient::store_sync_committee(
-				i as u64,
-				&initial_sync.current_sync_committee,
-			)
-			.unwrap();
-			storing_periods.push(i);
-		}
-
-		// We should retain every sync committee till prune threshold
-		assert_eq!(
-			SyncCommittees::<mock_minimal::Test>::iter().count() as u32,
-			sync_committee_prune_threshold
-		);
-
-		// Now, we try to insert more than threshold, this should make previous entries deleted
-		for i in 0..to_be_deleted {
-			mock_minimal::EthereumBeaconClient::store_sync_committee(
-				(i + sync_committee_prune_threshold).into(),
-				&initial_sync.current_sync_committee,
-			)
-			.unwrap();
-			storing_periods.push(i + sync_committee_prune_threshold);
-		}
-
-		// We should retain last prune threshold sync committee
-		assert_eq!(
-			SyncCommittees::<mock_minimal::Test>::iter().count() as u32,
-			sync_committee_prune_threshold
-		);
-
-		// We verify that first periods of sync committees are not present now
-		for i in 0..to_be_deleted {
-			assert!(!SyncCommittees::<mock_minimal::Test>::contains_key(i as u64));
-		}
-
-		// Rest of the sync committee should still exists
-		for i in to_be_deleted..(sync_committee_prune_threshold + to_be_deleted) {
-			assert!(SyncCommittees::<mock_minimal::Test>::contains_key(i as u64));
-		}
-	});
-}
-
-#[cfg(feature = "minimal")]
+//#[cfg(feature = "minimal")]
 mod minimal_spec {
 	use crate::{
-		compute_period, config,
 		config::{SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE},
 		mock::*,
-		CompactBeaconState, Error, ExecutionHeaderState, ExecutionHeaders, FinalizedBeaconState,
-		FinalizedHeaderState, LatestExecutionHeader, LatestFinalizedHeader, ValidatorsRoot,
+		CompactBeaconState, CurrentSyncCommittee, Error, ExecutionHeaderState, ExecutionHeaders,
+		FinalizedBeaconState, FinalizedHeaderState, LatestExecutionHeader, LatestFinalizedHeader,
+		NextSyncCommittee, SyncCommitteePrepared, ValidatorsRoot,
 	};
 	use frame_support::{assert_err, assert_ok};
-	use hex_literal::hex;
 	use primitives::{
 		decompress_sync_committee_bits, fast_aggregate_verify_legacy, prepare_g1_pubkeys,
 	};
 	use sp_core::H256;
-	use std::time::{SystemTime, UNIX_EPOCH};
 
 	#[test]
 	fn it_syncs_from_an_initial_checkpoint() {
@@ -543,7 +488,7 @@ mod minimal_spec {
 	}
 
 	#[test]
-	fn it_updates_a_committee_period_sync_update() {
+	fn it_updates_sync_committee() {
 		let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 
 		let update =
@@ -554,21 +499,18 @@ mod minimal_spec {
 				&initial_sync
 			));
 
-			let current_period = compute_period(update.attested_header.slot);
+			let sync_committee_prepared: SyncCommitteePrepared =
+				(&initial_sync.current_sync_committee).try_into().unwrap();
+			<CurrentSyncCommittee<mock_mainnet::Test>>::set(sync_committee_prepared);
 
-			assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
-				current_period,
-				&initial_sync.current_sync_committee,
-			));
+			assert!(!<NextSyncCommittee<mock_minimal::Test>>::exists());
 
-			assert_ok!(mock_minimal::EthereumBeaconClient::sync_committee_period_update(
+			assert_ok!(mock_minimal::EthereumBeaconClient::submit(
 				mock_minimal::RuntimeOrigin::signed(1),
 				update.clone(),
 			));
 
-			let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
-
-			assert!(<FinalizedBeaconState<mock_minimal::Test>>::contains_key(block_root));
+			assert!(<NextSyncCommittee<mock_minimal::Test>>::exists());
 		});
 	}
 
@@ -588,7 +530,7 @@ mod minimal_spec {
 			update.signature_slot = update.attested_header.slot;
 
 			assert_err!(
-				mock_minimal::EthereumBeaconClient::sync_committee_period_update(
+				mock_minimal::EthereumBeaconClient::submit(
 					mock_minimal::RuntimeOrigin::signed(1),
 					update.clone(),
 				),
@@ -639,25 +581,16 @@ mod minimal_spec {
 				&initial_sync
 			));
 
-			let current_period = compute_period(update.attested_header.slot);
-
-			assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
-				current_period,
-				&initial_sync.current_sync_committee,
-			));
-
-			// initialize with period of the next update
-			assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
-				current_period + 1,
-				&initial_sync.current_sync_committee,
-			));
+			let sync_committee_prepared: SyncCommitteePrepared =
+				(&initial_sync.current_sync_committee).try_into().unwrap();
+			<NextSyncCommittee<mock_mainnet::Test>>::set(sync_committee_prepared);
 
 			assert_err!(
-				mock_minimal::EthereumBeaconClient::sync_committee_period_update(
+				mock_minimal::EthereumBeaconClient::submit(
 					mock_minimal::RuntimeOrigin::signed(1),
 					update.clone(),
 				),
-				Error::<mock_minimal::Test>::InvalidSyncCommitteeUpdateWithDuplication
+				Error::<mock_minimal::Test>::NotRelevant
 			);
 		});
 	}
@@ -667,34 +600,20 @@ mod minimal_spec {
 		let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
 		let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 
-		let current_period = compute_period(update.attested_header.slot);
-
-		let time_now = SystemTime::now()
-			.duration_since(UNIX_EPOCH)
-			.expect("Time went backwards")
-			.as_secs();
-
-		let import_time =
-			time_now + (update.finalized_header.slot * config::SECONDS_PER_SLOT as u64); // Goerli genesis time + finalized header update time
-		let mock_pallet_time = import_time + 3600; // plus one hour
-
 		new_tester::<mock_minimal::Test>().execute_with(|| {
-			mock_minimal::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
 			LatestFinalizedHeader::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: Default::default(),
-				import_time,
 				// set the last imported finalized header to an older finalized header. Necessary
 				// for long range attack check and finalized header to be imported must not have
 				// been imported already.
 				beacon_slot: update.finalized_header.slot - 1,
 			});
 			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
-			assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
-				current_period,
-				&initial_sync.current_sync_committee,
-			));
+			let sync_committee_prepared: SyncCommitteePrepared =
+				(&initial_sync.current_sync_committee).try_into().unwrap();
+			<CurrentSyncCommittee<mock_mainnet::Test>>::set(sync_committee_prepared);
 
-			assert_ok!(mock_minimal::EthereumBeaconClient::import_finalized_header(
+			assert_ok!(mock_minimal::EthereumBeaconClient::submit(
 				mock_minimal::RuntimeOrigin::signed(1),
 				update.clone()
 			));
@@ -702,34 +621,6 @@ mod minimal_spec {
 			let block_root: H256 = update.finalized_header.clone().hash_tree_root().unwrap();
 
 			assert!(<FinalizedBeaconState<mock_minimal::Test>>::contains_key(block_root));
-		});
-	}
-
-	#[test]
-	fn it_processes_a_invalid_finalized_header_update() {
-		let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
-		let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
-
-		new_tester::<mock_minimal::Test>().execute_with(|| {
-			assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(
-				&initial_sync
-			));
-
-			LatestFinalizedHeader::<mock_minimal::Test>::set(FinalizedHeaderState {
-				beacon_block_root: Default::default(),
-				import_time: 0,
-				// initialize with the same slot as the next updating
-				beacon_slot: update.finalized_header.slot,
-			});
-
-			// update with same slot as last finalized will fail
-			assert_err!(
-				mock_minimal::EthereumBeaconClient::import_finalized_header(
-					mock_minimal::RuntimeOrigin::signed(1),
-					update.clone()
-				),
-				Error::<mock_minimal::Test>::DuplicateFinalizedHeaderUpdate
-			);
 		});
 	}
 
@@ -773,14 +664,11 @@ mod minimal_spec {
 		let finalized_block_root: H256 =
 			finalized_update.finalized_header.hash_tree_root().unwrap();
 
-		let current_period = compute_period(update.header.slot);
-
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 			ValidatorsRoot::<mock_minimal::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
 			LatestFinalizedHeader::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: finalized_block_root,
 				beacon_slot: finalized_slot,
-				import_time: 0,
 			});
 			FinalizedBeaconState::<mock_minimal::Test>::insert(
 				finalized_block_root,
@@ -789,12 +677,11 @@ mod minimal_spec {
 					block_roots_root: finalized_update.block_roots_root,
 				},
 			);
-			assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
-				current_period,
-				&current_sync_committee,
-			));
+			let sync_committee_prepared: SyncCommitteePrepared =
+				(&current_sync_committee).try_into().unwrap();
+			<CurrentSyncCommittee<mock_mainnet::Test>>::set(sync_committee_prepared);
 
-			assert_ok!(mock_minimal::EthereumBeaconClient::import_execution_header(
+			assert_ok!(mock_minimal::EthereumBeaconClient::submit_execution_header(
 				mock_minimal::RuntimeOrigin::signed(1),
 				update.clone()
 			));
@@ -809,7 +696,6 @@ mod minimal_spec {
 	fn it_processes_a_invalid_header_update_not_finalized() {
 		let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 		let update = get_header_update();
-		let current_period = compute_period(update.header.slot);
 
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 			assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(
@@ -820,16 +706,14 @@ mod minimal_spec {
 				beacon_block_root: H256::default(),
 				// initialize finalized state with parent slot of the next update
 				beacon_slot: update.header.slot - 1,
-				import_time: 0,
 			});
 
-			assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
-				current_period,
-				&initial_sync.current_sync_committee,
-			));
+			let sync_committee_prepared: SyncCommitteePrepared =
+				(&initial_sync.current_sync_committee).try_into().unwrap();
+			<CurrentSyncCommittee<mock_mainnet::Test>>::set(sync_committee_prepared);
 
 			assert_err!(
-				mock_minimal::EthereumBeaconClient::import_execution_header(
+				mock_minimal::EthereumBeaconClient::submit_execution_header(
 					mock_minimal::RuntimeOrigin::signed(1),
 					update.clone()
 				),
@@ -842,7 +726,6 @@ mod minimal_spec {
 	fn it_processes_a_invalid_header_update_with_duplicate_entry() {
 		let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
 		let update = get_header_update();
-		let current_period = compute_period(update.header.slot);
 
 		new_tester::<mock_minimal::Test>().execute_with(|| {
 			assert_ok!(mock_minimal::EthereumBeaconClient::process_checkpoint_update(
@@ -852,13 +735,11 @@ mod minimal_spec {
 			LatestFinalizedHeader::<mock_minimal::Test>::set(FinalizedHeaderState {
 				beacon_block_root: H256::default(),
 				beacon_slot: update.header.slot,
-				import_time: 0,
 			});
 
-			assert_ok!(mock_minimal::EthereumBeaconClient::store_sync_committee(
-				current_period,
-				&initial_sync.current_sync_committee,
-			));
+			let sync_committee_prepared: SyncCommitteePrepared =
+				(&initial_sync.current_sync_committee).try_into().unwrap();
+			<CurrentSyncCommittee<mock_mainnet::Test>>::set(sync_committee_prepared);
 
 			LatestExecutionHeader::<mock_minimal::Test>::set(ExecutionHeaderState {
 				beacon_block_root: Default::default(),
@@ -869,36 +750,11 @@ mod minimal_spec {
 			});
 
 			assert_err!(
-				mock_minimal::EthereumBeaconClient::import_execution_header(
+				mock_minimal::EthereumBeaconClient::submit_execution_header(
 					mock_minimal::RuntimeOrigin::signed(1),
 					update
 				),
 				Error::<mock_minimal::Test>::InvalidExecutionHeaderUpdate
-			);
-		});
-	}
-
-	#[test]
-	fn it_errors_when_importing_a_header_with_no_sync_committee_for_period() {
-		let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
-
-		new_tester::<mock_minimal::Test>().execute_with(|| {
-			ValidatorsRoot::<mock_minimal::Test>::set(
-				hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-			);
-
-			LatestFinalizedHeader::<mock_minimal::Test>::set(FinalizedHeaderState {
-				beacon_block_root: H256::default(),
-				beacon_slot: update.finalized_header.slot - 1,
-				import_time: 0,
-			});
-
-			assert_err!(
-				mock_minimal::EthereumBeaconClient::import_finalized_header(
-					mock_minimal::RuntimeOrigin::signed(1),
-					update
-				),
-				Error::<mock_minimal::Test>::SyncCommitteeMissing
 			);
 		});
 	}
@@ -943,10 +799,10 @@ mod mainnet_spec {
 		compute_period, config,
 		config::{SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE},
 		mock::*,
-		CompactBeaconState, Error, ExecutionHeaders, FinalizedBeaconState, FinalizedHeaderState,
-		LatestFinalizedHeader, LatestSyncCommitteePeriod, ValidatorsRoot,
+		CompactBeaconState, CurrentSyncCommittee, ExecutionHeaders, FinalizedBeaconState,
+		FinalizedHeaderState, LatestFinalizedHeader, SyncCommitteePrepared, ValidatorsRoot,
 	};
-	use frame_support::{assert_err, assert_ok};
+	use frame_support::assert_ok;
 	use primitives::{
 		decompress_sync_committee_bits, fast_aggregate_verify_legacy, prepare_g1_pubkeys,
 	};
@@ -976,18 +832,17 @@ mod mainnet_spec {
 		let current_period = compute_period(update.attested_header.slot);
 
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
-			LatestSyncCommitteePeriod::<mock_mainnet::Test>::set(current_period);
 			ValidatorsRoot::<mock_mainnet::Test>::set(
 				get_validators_root::<{ SYNC_COMMITTEE_SIZE }>(),
 			);
-			assert_ok!(mock_mainnet::EthereumBeaconClient::store_sync_committee(
-				current_period,
-				&current_sync_committee,
-			));
+
+			let sync_committee_prepared: SyncCommitteePrepared =
+				(&current_sync_committee).try_into().unwrap();
+			<CurrentSyncCommittee<mock_mainnet::Test>>::set(sync_committee_prepared);
 
 			let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 
-			assert_ok!(mock_mainnet::EthereumBeaconClient::sync_committee_period_update(
+			assert_ok!(mock_mainnet::EthereumBeaconClient::submit(
 				mock_mainnet::RuntimeOrigin::signed(1),
 				update,
 			));
@@ -1004,25 +859,21 @@ mod mainnet_spec {
 		let current_period = compute_period(update.attested_header.slot);
 
 		let slot = update.finalized_header.slot;
-		let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT as u64); // Goerli genesis time +
-		let mock_pallet_time = import_time + 3600; // plus one hour
 
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
-			mock_mainnet::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
-			assert_ok!(mock_mainnet::EthereumBeaconClient::store_sync_committee(
-				current_period,
-				&current_sync_committee,
-			));
+			let sync_committee_prepared: SyncCommitteePrepared =
+				(&current_sync_committee).try_into().unwrap();
+			<CurrentSyncCommittee<mock_mainnet::Test>>::set(sync_committee_prepared);
+
 			LatestFinalizedHeader::<mock_mainnet::Test>::set(FinalizedHeaderState {
 				beacon_block_root: Default::default(),
-				import_time,
 				beacon_slot: slot - 1,
 			});
 			ValidatorsRoot::<mock_mainnet::Test>::set(
 				get_validators_root::<{ SYNC_COMMITTEE_SIZE }>(),
 			);
 
-			assert_ok!(mock_mainnet::EthereumBeaconClient::import_finalized_header(
+			assert_ok!(mock_mainnet::EthereumBeaconClient::submit(
 				mock_mainnet::RuntimeOrigin::signed(1),
 				update.clone()
 			));
@@ -1030,41 +881,6 @@ mod mainnet_spec {
 			let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 
 			assert!(<FinalizedBeaconState<mock_mainnet::Test>>::contains_key(block_root));
-		});
-	}
-
-	#[test]
-	fn it_errors_when_weak_subjectivity_period_exceeded_for_a_finalized_header_update() {
-		let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
-		let current_sync_committee =
-			get_initial_sync::<SYNC_COMMITTEE_SIZE>().current_sync_committee;
-
-		let current_period = compute_period(update.attested_header.slot);
-
-		let slot = update.finalized_header.slot;
-		let import_time = 1616508000u64 + (slot * config::SECONDS_PER_SLOT as u64);
-		let mock_pallet_time = import_time + 100800; // plus 28 hours
-
-		new_tester::<mock_mainnet::Test>().execute_with(|| {
-			mock_mainnet::Timestamp::set_timestamp(mock_pallet_time * 1000); // needs to be in milliseconds
-			assert_ok!(mock_mainnet::EthereumBeaconClient::store_sync_committee(
-				current_period,
-				&current_sync_committee,
-			));
-			LatestFinalizedHeader::<mock_mainnet::Test>::set(FinalizedHeaderState {
-				beacon_block_root: Default::default(),
-				import_time,
-				beacon_slot: slot - 1,
-			});
-			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
-
-			assert_err!(
-				mock_mainnet::EthereumBeaconClient::import_finalized_header(
-					mock_mainnet::RuntimeOrigin::signed(1),
-					update.clone()
-				),
-				Error::<mock_mainnet::Test>::BridgeBlocked
-			);
 		});
 	}
 
@@ -1082,15 +898,13 @@ mod mainnet_spec {
 			finalized_update.finalized_header.hash_tree_root().unwrap();
 
 		new_tester::<mock_mainnet::Test>().execute_with(|| {
-			assert_ok!(mock_mainnet::EthereumBeaconClient::store_sync_committee(
-				current_period,
-				&current_sync_committee,
-			));
+			let sync_committee_prepared: SyncCommitteePrepared =
+				(&current_sync_committee).try_into().unwrap();
+			<CurrentSyncCommittee<mock_mainnet::Test>>::set(sync_committee_prepared);
 			ValidatorsRoot::<mock_mainnet::Test>::set(get_validators_root::<SYNC_COMMITTEE_SIZE>());
 			LatestFinalizedHeader::<mock_mainnet::Test>::set(FinalizedHeaderState {
 				beacon_block_root: finalized_block_root,
 				beacon_slot: finalized_slot,
-				import_time: 0,
 			});
 			FinalizedBeaconState::<mock_mainnet::Test>::insert(
 				finalized_block_root,
@@ -1100,7 +914,7 @@ mod mainnet_spec {
 				},
 			);
 
-			assert_ok!(mock_mainnet::EthereumBeaconClient::import_execution_header(
+			assert_ok!(mock_mainnet::EthereumBeaconClient::submit_execution_header(
 				mock_mainnet::RuntimeOrigin::signed(1),
 				update.clone()
 			));

@@ -187,10 +187,6 @@ func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName str
 	return &extI, nil
 }
 
-func (wr *ParachainWriter) GetLastSyncedSyncCommitteePeriod() (uint64, error) {
-	return wr.getNumberFromParachain("EthereumBeaconClient", "LatestSyncCommitteePeriod")
-}
-
 func (wr *ParachainWriter) GetLastBasicChannelBlockNumber() (uint64, error) {
 	return wr.getNumberFromParachain("BasicInboundQueue", "LatestVerifiedBlockNumber")
 }
@@ -226,29 +222,18 @@ func (wr *ParachainWriter) GetLastBasicChannelNonceByAddress(address common.Addr
 }
 
 func (wr *ParachainWriter) GetFinalizedSlots() ([]uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedBeaconHeaderStates", nil, nil)
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedHeaderSlotsCache", nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create storage key for basic channel nonces: %w", err)
 	}
 
-	type StorageState struct {
-		BeaconBlockRoot types.H256
-		BeaconSlot      types.U64
-		ImportTime      types.U64
-	}
-
-	var states []StorageState
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &states)
+	var slots []uint64
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &slots)
 	if err != nil {
 		return nil, fmt.Errorf("get storage for latest basic channel nonces (err): %w", err)
 	}
 
-	result := []uint64{}
-	for _, state := range states {
-		result = append(result, uint64(state.BeaconSlot))
-	}
-
-	return result, nil
+	return slots, nil
 }
 
 func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
@@ -285,7 +270,6 @@ func (wr *ParachainWriter) GetLastFinalizedHeaderState() (state.FinalizedHeader,
 	var storageState struct {
 		BeaconBlockRoot types.H256
 		BeaconSlot      types.U64
-		ImportTime      types.U64
 	}
 	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &storageState)
 	if err != nil {
@@ -295,7 +279,6 @@ func (wr *ParachainWriter) GetLastFinalizedHeaderState() (state.FinalizedHeader,
 	return state.FinalizedHeader{
 		BeaconBlockRoot: common.Hash(storageState.BeaconBlockRoot),
 		BeaconSlot:      uint64(storageState.BeaconSlot),
-		ImportTime:      uint64(storageState.ImportTime),
 	}, nil
 }
 

@@ -14,5 +14,4 @@ type ExecutionHeader struct {
 type FinalizedHeader struct {
 	BeaconBlockRoot common.Hash
 	BeaconSlot      uint64
-	ImportTime      uint64
 }

@@ -111,7 +111,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		checkpoint := cache.Proof{
 			FinalizedBlockRoot: finalizedUpdate.FinalizedHeaderBlockRoot,
 			BlockRootsTree:     finalizedUpdate.BlockRootsTree,
-			Slot:               uint64(finalizedUpdate.Payload.FinalizedHeaderUpdate.Value.FinalizedHeader.Slot),
+			Slot:               uint64(finalizedUpdate.Payload.FinalizedHeader.Slot),
 		}
 
 		update, err := syncer.GetHeaderUpdateWithAncestryProof(beaconHeaderHash, checkpoint)

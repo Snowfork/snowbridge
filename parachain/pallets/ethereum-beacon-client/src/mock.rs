@@ -100,7 +100,6 @@ pub mod mock_minimal {
 		type RuntimeEvent = RuntimeEvent;
 		type ForkVersions = ChainForkVersions;
 		type MaxFinalizedHeaderSlotsCacheSize = FinalizedHeaderPruneThreshold;
-		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type MaxSyncCommitteesToKeep = SyncCommitteePruneThreshold;
 		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
 		type MaxFinalizedHeadersToKeep = FinalizedHeaderPruneThreshold;
@@ -197,7 +196,6 @@ pub mod mock_mainnet {
 		type MaxFinalizedHeaderSlotsCacheSize = FinalizedHeaderPruneThreshold;
 		type MaxSyncCommitteesToKeep = SyncCommitteePruneThreshold;
 		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
-		type WeakSubjectivityPeriodSeconds = WeakSubjectivityPeriodSeconds;
 		type MaxFinalizedHeadersToKeep = FinalizedHeaderPruneThreshold;
 		type WeightInfo = ();
 	}
@@ -238,22 +236,9 @@ fn initial_sync_from_file<const SYNC_COMMITTEE_SIZE: usize>(
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-fn sync_committee_update_from_file<
-	const SYNC_COMMITTEE_SIZE: usize,
-	const SYNC_COMMITTEE_BITS_SIZE: usize,
->(
+fn update_from_file<const SYNC_COMMITTEE_SIZE: usize, const SYNC_COMMITTEE_BITS_SIZE: usize>(
 	name: &str,
-) -> primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
-	let filepath = fixture_path(name);
-	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
-}
-
-fn finalized_header_update_from_file<
-	const SYNC_COMMITTEE_SIZE: usize,
-	const SYNC_COMMITTEE_BITS_SIZE: usize,
->(
-	name: &str,
-) -> primitives::FinalizedHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
+) -> primitives::Update<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
 	let filepath = fixture_path(name);
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
@@ -281,8 +266,8 @@ pub fn get_initial_sync<const SYNC_COMMITTEE_SIZE: usize>(
 pub fn get_committee_sync_period_update<
 	const SYNC_COMMITTEE_SIZE: usize,
 	const SYNC_COMMITTEE_BITS_SIZE: usize,
->() -> primitives::SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
-	sync_committee_update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(&format!(
+>() -> primitives::Update<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
+	update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(&format!(
 		"sync-committee-update.{}.json",
 		beacon_spec()
 	))
@@ -295,8 +280,8 @@ pub fn get_header_update() -> primitives::ExecutionHeaderUpdate {
 pub fn get_finalized_header_update<
 	const SYNC_COMMITTEE_SIZE: usize,
 	const SYNC_COMMITTEE_BITS_SIZE: usize,
->() -> primitives::FinalizedHeaderUpdate<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
-	finalized_header_update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(&format!(
+>() -> primitives::Update<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
+	update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(&format!(
 		"finalized-header-update.{}.json",
 		beacon_spec()
 	))
