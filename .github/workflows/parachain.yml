@@ -84,5 +84,6 @@ jobs:
           args: >-
             --manifest-path parachain/Cargo.toml
             --verbose
+            --features runtime-benchmarks
             --package snowbridge-ethereum-beacon-client
           toolchain: nightly-2023-04-22
