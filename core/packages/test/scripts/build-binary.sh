@@ -35,7 +35,7 @@ build_cumulus_from_source(){
     if [[ "$active_spec" == "minimal" ]]; then
       cargo build --release --bin polkadot-parachain
     else
-      cargo build --features runtime-benchmarks --release --bin polkadot-parachain
+      cargo build --features beacon-spec-mainnet --release --bin polkadot-parachain
     fi
     cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
     popd

@@ -81,6 +81,7 @@ pub mod pallet {
 		SyncCommitteeMissing,
 		NotRelevant,
 		Unknown,
+		NotBootstrapped,
 		SyncCommitteeParticipantsNotSupermajority,
 		InvalidHeaderMerkleProof,
 		InvalidSyncCommitteeMerkleProof,
@@ -113,33 +114,27 @@ pub mod pallet {
 		InvalidAttestedHeaderSlot,
 		DuplicateFinalizedHeaderUpdate,
 		InvalidFinalizedPeriodUpdate,
-		InvalidExecutionHeaderUpdate,
+		ExecutionHeaderAlreadyImported,
 		FinalizedBeaconHeaderSlotsExceeded,
 		ExecutionHeaderMappingFailed,
 		BLSPreparePublicKeysFailed,
 		BLSVerificationFailed(BlsError),
 	}
 
+	/// Latest imported finalized block root
+	#[pallet::storage]
+	#[pallet::getter(fn latest_finalized_block_root)]
+	pub(super) type LatestFinalizedBlockRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
+
 	/// Beacon state by finalized block root
 	#[pallet::storage]
+	#[pallet::getter(fn finalized_beacon_state)]
 	pub(super) type FinalizedBeaconState<T: Config> =
 		StorageMap<_, Identity, H256, CompactBeaconState, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn validators_root)]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
-
-	/// Latest imported finalized beacon header
-	#[pallet::storage]
-	#[pallet::getter(fn latest_finalized_header)]
-	pub(super) type LatestFinalizedHeader<T: Config> =
-		StorageValue<_, FinalizedHeaderState, ValueQuery>;
-
-	/// Latest imported execution header
-	#[pallet::storage]
-	#[pallet::getter(fn latest_execution_header)]
-	pub(super) type LatestExecutionHeader<T: Config> =
-		StorageValue<_, ExecutionHeaderState, ValueQuery>;
 
 	/// Sync committee for current period
 	#[pallet::storage]
@@ -150,6 +145,12 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type NextSyncCommittee<T: Config> =
 		StorageValue<_, SyncCommitteePrepared, ValueQuery>;
+
+	/// Latest imported execution header
+	#[pallet::storage]
+	#[pallet::getter(fn latest_execution_header)]
+	pub(super) type LatestExecutionHeader<T: Config> =
+		StorageValue<_, ExecutionHeaderState, ValueQuery>;
 
 	/// Execution Headers
 	#[pallet::storage]
@@ -264,7 +265,15 @@ pub mod pallet {
 				update.signature_slot > update.attested_header.slot,
 				Error::<T>::InvalidSignatureSlot
 			);
-			let store_period = compute_period(Self::latest_finalized_header().beacon_slot);
+
+			// Retrieve latest finalized state
+			let latest_finalized_state =
+				match Self::finalized_beacon_state(Self::latest_finalized_block_root()) {
+					Some(finalized_beacon_state) => finalized_beacon_state,
+					None => return Err(Error::<T>::NotBootstrapped.into()),
+				};
+
+			let store_period = compute_period(latest_finalized_state.slot);
 			let signature_period = compute_period(update.signature_slot);
 			if <NextSyncCommittee<T>>::exists() {
 				ensure!(
@@ -281,8 +290,7 @@ pub mod pallet {
 				(update.next_sync_committee_update.is_some() &&
 					update_attested_period == store_period);
 			ensure!(
-				update.attested_header.slot > Self::latest_finalized_header().beacon_slot ||
-					update_has_next_sync_committee,
+				update.attested_header.slot > store_period || update_has_next_sync_committee,
 				Error::<T>::NotRelevant
 			);
 
@@ -312,7 +320,7 @@ pub mod pallet {
 			)
 			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
-			Self::process_finalized_header_update(update)?;
+			Self::process_finalized_header_update(update, store_period)?;
 
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
 				Self::process_next_sync_committee_update(
@@ -327,7 +335,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_finalized_header_update(update: &Update) -> DispatchResult {
+		fn process_finalized_header_update(update: &Update, store_period: u64) -> DispatchResult {
 			ensure!(
 				update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidAttestedHeaderSlot
@@ -351,11 +359,9 @@ pub mod pallet {
 				Error::<T>::InvalidHeaderMerkleProof
 			);
 
-			let latest_finalized_period =
-				compute_period(Self::latest_finalized_header().beacon_slot);
-			let period = compute_period(update.attested_header.slot);
+			let attested_period = compute_period(update.attested_header.slot);
 			ensure!(
-				(period == latest_finalized_period || period == latest_finalized_period + 1),
+				(store_period..=store_period + 1).contains(&attested_period),
 				Error::<T>::InvalidFinalizedPeriodUpdate
 			);
 
@@ -372,7 +378,7 @@ pub mod pallet {
 				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
 
-			if update.finalized_header.slot > Self::latest_finalized_header().beacon_slot {
+			if update.finalized_header.slot > store_period {
 				Self::store_finalized_header(
 					finalized_block_root,
 					update.finalized_header,
@@ -426,13 +432,8 @@ pub mod pallet {
 
 		fn process_execution_header_update(update: &ExecutionHeaderUpdate) -> DispatchResult {
 			ensure!(
-				update.header.slot <= Self::latest_finalized_header().beacon_slot,
-				Error::<T>::HeaderNotFinalized
-			);
-
-			ensure!(
 				update.execution_header.block_number > Self::latest_execution_header().block_number,
-				Error::<T>::InvalidExecutionHeaderUpdate
+				Error::<T>::ExecutionHeaderAlreadyImported
 			);
 
 			let execution_header_root: H256 = update
@@ -498,6 +499,8 @@ pub mod pallet {
 			let state = <FinalizedBeaconState<T>>::get(finalized_block_root)
 				.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
 
+			ensure!(block_slot < state.slot, Error::<T>::HeaderNotFinalized);
+
 			let index_in_array = block_slot % (SLOTS_PER_HISTORICAL_ROOT as u64);
 			let leaf_index = (SLOTS_PER_HISTORICAL_ROOT as u64) + index_in_array;
 
@@ -547,11 +550,7 @@ pub mod pallet {
 				header_root,
 				CompactBeaconState { slot: header.slot, block_roots_root },
 			);
-
-			<LatestFinalizedHeader<T>>::set(FinalizedHeaderState {
-				beacon_block_root: header_root,
-				beacon_slot: slot,
-			});
+			<LatestFinalizedBlockRoot<T>>::set(header_root);
 
 			// Add the slot of the most recently finalized header to the slot cache
 			<FinalizedHeaderSlotsCache<T>>::mutate(|slots| {
