@@ -5,18 +5,6 @@ use crate::{
 use primitives::PublicKeyPrepared;
 use sp_core::H256;
 
-use super::fixtures::{make_checkpoint, make_sync_committee_update};
-
-pub fn initialize_sync_committee<T: Config>() -> Result<Update, &'static str> {
-	let initial_sync_data = make_checkpoint();
-
-	EthereumBeaconClient::<T>::process_checkpoint_update(&initial_sync_data)?;
-
-	let sync_committee_update = make_sync_committee_update();
-
-	Ok(sync_committee_update)
-}
-
 pub fn participant_pubkeys<T: Config>(
 	update: &Update,
 ) -> Result<Vec<PublicKeyPrepared>, &'static str> {

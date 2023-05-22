@@ -1,15 +1,16 @@
 // Generated, do not edit!
 // See README.md for instructions to generate
-use crate::{
-	CheckpointUpdate, ExecutionHeaderUpdate, Update, SyncCommittee,
-};
+use crate::{CheckpointUpdate, ExecutionHeaderUpdate, SyncCommittee, Update};
 use hex_literal::hex;
-use primitives::{updates::AncestryProof, BeaconHeader, ExecutionPayloadHeader, SyncAggregate, NextSyncCommitteeUpdate};
+use primitives::{
+	updates::AncestryProof, BeaconHeader, ExecutionPayloadHeader, NextSyncCommitteeUpdate,
+	SyncAggregate,
+};
 use sp_core::U256;
-use sp_std::vec;
+use sp_std::{boxed::Box, vec};
 
-pub fn make_checkpoint() -> CheckpointUpdate {
-    CheckpointUpdate{
+pub fn make_checkpoint() -> Box<CheckpointUpdate> {
+	Box::new(CheckpointUpdate{
         header: BeaconHeader{
             slot: 5681631,
             proposer_index: 5402,
@@ -550,11 +551,11 @@ pub fn make_checkpoint() -> CheckpointUpdate {
             hex!("aaa336d8dadb6bed0dde8acd21009c87070855e052b20af29f289546c3dca8de").into(),
             hex!("65cda39a94c329d0a8191fcb19e1f41b9e8053a30049938014e3b0be771228ca").into(),
         ],
-    }
+    })
 }
 
-pub fn make_sync_committee_update() -> Update {
-    Update {
+pub fn make_sync_committee_update() -> Box<Update> {
+	Box::new(Update {
         attested_header: BeaconHeader {
             slot: 5681698,
             proposer_index: 414341,
@@ -1116,11 +1117,11 @@ pub fn make_sync_committee_update() -> Update {
             hex!("aaa336d8dadb6bed0dde8acd21009c87070855e052b20af29f289546c3dca8de").into(),
             hex!("65cda39a94c329d0a8191fcb19e1f41b9e8053a30049938014e3b0be771228ca").into(),
         ],
-    }
+    })
 }
 
-pub fn make_finalized_header_update() -> Update {
-    Update{
+pub fn make_finalized_header_update() -> Box<Update> {
+	Box::new(Update{
         attested_header: BeaconHeader {
             slot: 5681698,
             proposer_index: 414341,
@@ -1157,11 +1158,11 @@ pub fn make_finalized_header_update() -> Update {
             hex!("aaa336d8dadb6bed0dde8acd21009c87070855e052b20af29f289546c3dca8de").into(),
             hex!("65cda39a94c329d0a8191fcb19e1f41b9e8053a30049938014e3b0be771228ca").into(),
         ]
-    }
+    })
 }
 
-pub fn make_execution_header_update() -> ExecutionHeaderUpdate {
-    ExecutionHeaderUpdate{
+pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
+	Box::new(ExecutionHeaderUpdate{
         header: BeaconHeader{
             slot: 5681629,
             proposer_index: 229899,
@@ -1210,5 +1211,5 @@ pub fn make_execution_header_update() -> ExecutionHeaderUpdate {
             hex!("db56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71").into(),
             hex!("32c98b4a8e477162a04c003bc23eab1ba7281fae01f9d7b6e5b7afa784a0e9f8").into(),
         ],
-    }
+    })
 }
