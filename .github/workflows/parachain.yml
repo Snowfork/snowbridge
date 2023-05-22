@@ -89,9 +89,10 @@ jobs:
             --workspace
             --release
             --features runtime-benchmarks
+            --exclude snowbridge-query-events
             --exclude snowbridge-ethereum-beacon-client
           toolchain: nightly-2023-04-22
-      # Run tests beacon light client, excluding benchmark tests
+      # Run tests for beacon light client, excluding benchmark tests
       - uses: actions-rs/cargo@v1
         with:
           command: test
