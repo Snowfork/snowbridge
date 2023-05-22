@@ -79,7 +79,7 @@ jobs:
           toolchain: nightly-2023-04-22
           target: wasm32-unknown-unknown
       - run: |
-          sudo prlimit --pid $$ --stack 65536
+          sudo prlimit --pid $$ --stack=65536
           ulimit -s
       - uses: actions-rs/cargo@v1
         with:
