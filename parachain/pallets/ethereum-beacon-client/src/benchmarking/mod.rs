@@ -4,7 +4,7 @@ mod fixtures;
 mod util;
 
 use crate::Pallet as EthereumBeaconClient;
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 
 use fixtures::{
@@ -18,91 +18,136 @@ use primitives::{
 };
 use util::*;
 
-benchmarks! {
-	force_checkpoint {
-		let caller: T::AccountId = whitelisted_caller();
+#[benchmarks]
+mod benchmarks {
+	use super::*;
+
+	#[benchmark]
+	fn force_checkpoint() -> Result<(), BenchmarkError> {
 		let checkpoint_update = make_checkpoint();
 
-	}: _(RawOrigin::Root, checkpoint_update.clone())
-	verify {
+		#[extrinsic_call]
+		_(RawOrigin::Root, checkpoint_update.clone());
+
 		let block_root: H256 = checkpoint_update.header.hash_tree_root().unwrap();
 		assert!(<LatestFinalizedBlockRoot<T>>::get() == block_root);
 		assert!(<FinalizedBeaconState<T>>::get(block_root).is_some());
+
+		Ok(())
 	}
 
-	submit {
+	#[benchmark]
+	fn submit() -> Result<(), BenchmarkError> {
 		let caller: T::AccountId = whitelisted_caller();
 		let checkpoint_update = make_checkpoint();
 		let finalized_header_update = make_finalized_header_update();
 		EthereumBeaconClient::<T>::process_checkpoint_update(&checkpoint_update)?;
 
-	}: submit(RawOrigin::Signed(caller.clone()), finalized_header_update.clone())
-	verify {
+		#[extrinsic_call]
+		submit(RawOrigin::Signed(caller.clone()), finalized_header_update.clone());
+
 		let block_root: H256 = finalized_header_update.finalized_header.hash_tree_root().unwrap();
 		assert!(<LatestFinalizedBlockRoot<T>>::get() == block_root);
 		assert!(<FinalizedBeaconState<T>>::get(block_root).is_some());
+
+		Ok(())
 	}
 
-	submit_with_sync_committee {
+	#[benchmark]
+	fn submit_with_sync_committee() -> Result<(), BenchmarkError> {
 		let caller: T::AccountId = whitelisted_caller();
 		let checkpoint_update = make_checkpoint();
 		let sync_committee_update = make_sync_committee_update();
 		EthereumBeaconClient::<T>::process_checkpoint_update(&checkpoint_update)?;
 
-	}: submit(RawOrigin::Signed(caller.clone()), sync_committee_update.clone())
-	verify {
-		assert!(<NextSyncCommittee<T>>::exists())
+		#[extrinsic_call]
+		submit(RawOrigin::Signed(caller.clone()), sync_committee_update.clone());
+
+		assert!(<NextSyncCommittee<T>>::exists());
+
+		Ok(())
 	}
 
-	submit_execution_header {
+	#[benchmark]
+	fn submit_execution_header() -> Result<(), BenchmarkError> {
 		let caller: T::AccountId = whitelisted_caller();
 		let checkpoint_update = make_checkpoint();
 		let finalized_header_update = make_finalized_header_update();
 		let execution_header_update = make_execution_header_update();
 		EthereumBeaconClient::<T>::process_checkpoint_update(&checkpoint_update)?;
 		EthereumBeaconClient::<T>::process_update(&finalized_header_update)?;
-	}: _(RawOrigin::Signed(caller.clone()), execution_header_update.clone())
-	verify {
-		assert!(<ExecutionHeaders<T>>::contains_key(execution_header_update.execution_header.block_hash))
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller.clone()), execution_header_update.clone());
+
+		assert!(<ExecutionHeaders<T>>::contains_key(
+			execution_header_update.execution_header.block_hash
+		));
+
+		Ok(())
 	}
 
-	#[extra]
-	bls_fast_aggregate_verify_pre_aggregated {
+	#[benchmark(extra)]
+	fn bls_fast_aggregate_verify_pre_aggregated() -> Result<(), BenchmarkError> {
 		let update = initialize_sync_committee::<T>()?;
 		let participant_pubkeys = participant_pubkeys::<T>(&update)?;
 		let signing_root = signing_root::<T>(&update)?;
-		let agg_sig = prepare_aggregate_signature(&update.sync_aggregate.sync_committee_signature).unwrap();
+		let agg_sig =
+			prepare_aggregate_signature(&update.sync_aggregate.sync_committee_signature).unwrap();
 		let agg_pub_key = prepare_aggregate_pubkey(&participant_pubkeys).unwrap();
-	}:{
-		agg_sig.fast_aggregate_verify_pre_aggregated(signing_root.as_bytes(), &agg_pub_key)
+
+		#[block]
+		{
+			agg_sig.fast_aggregate_verify_pre_aggregated(signing_root.as_bytes(), &agg_pub_key);
+		}
+
+		Ok(())
 	}
 
-	#[extra]
-	bls_fast_aggregate_verify {
+	#[benchmark(extra)]
+	fn bls_fast_aggregate_verify() -> Result<(), BenchmarkError> {
 		let update = initialize_sync_committee::<T>()?;
 		let current_sync_committee = <CurrentSyncCommittee<T>>::get();
 		let absent_pubkeys = absent_pubkeys::<T>(&update)?;
 		let signing_root = signing_root::<T>(&update)?;
-	}:{
-		fast_aggregate_verify(&current_sync_committee.aggregate_pubkey, &absent_pubkeys, signing_root, &update.sync_aggregate.sync_committee_signature).unwrap();
+
+		#[block]
+		{
+			fast_aggregate_verify(
+				&current_sync_committee.aggregate_pubkey,
+				&absent_pubkeys,
+				signing_root,
+				&update.sync_aggregate.sync_committee_signature,
+			)
+			.unwrap();
+		}
+
+		Ok(())
 	}
 
-	#[extra]
-	merkle_branch_verify {
+	#[benchmark(extra)]
+	fn verify_merkle_proof() -> Result<(), BenchmarkError> {
 		let update = initialize_sync_committee::<T>()?;
 		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
-	}:{
-		verify_merkle_branch(
-			block_root,
-			&update.finality_branch,
-			config::FINALIZED_ROOT_SUBTREE_INDEX,
-			config::FINALIZED_ROOT_DEPTH,update.attested_header.state_root
-		);
-	}
-}
 
-impl_benchmark_test_suite!(
-	EthereumBeaconClient,
-	crate::mock::mainnet::new_tester(),
-	crate::mock::mainnet::Test
-);
+		#[block]
+		{
+			verify_merkle_branch(
+				block_root,
+				&update.finality_branch,
+				config::FINALIZED_ROOT_SUBTREE_INDEX,
+				config::FINALIZED_ROOT_DEPTH,
+				update.attested_header.state_root,
+			)
+			.unwrap();
+		}
+
+		Ok(())
+	}
+
+	impl_benchmark_test_suite!(
+		EthereumBeaconClient,
+		crate::mock::mainnet::new_tester(),
+		crate::mock::mainnet::Test
+	);
+}
