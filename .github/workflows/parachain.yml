@@ -78,9 +78,29 @@ jobs:
           profile: minimal
           toolchain: nightly-2023-04-22
           target: wasm32-unknown-unknown
-      - run: |
-          sudo prlimit --pid $$ --stack=65536
-          ulimit -s
+      # Increase stack limit for beacon light client tests
+      - run: sudo prlimit --pid $$ --stack=32768
+      # Run tests for everything except the beacon light client
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: >-
+            --manifest-path parachain/Cargo.toml
+            --workspace
+            --release
+            --features runtime-benchmarks
+            --exclude snowbridge-ethereum-beacon-client
+          toolchain: nightly-2023-04-22
+      # Run tests beacon light client, excluding benchmark tests
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: >-
+            --manifest-path parachain/Cargo.toml
+            --release
+            --package snowbridge-ethereum-beacon-client
+          toolchain: nightly-2023-04-22
+      # Run benchmark tests for beacon light client
       - uses: actions-rs/cargo@v1
         with:
           command: test
