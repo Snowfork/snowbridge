@@ -104,6 +104,7 @@ add_universal_alias() {
     local tmp_output_file=$(mktemp)
     generate_hex_encoded_call_data "add-universal-alias" "${statemine_ws_url}" "${tmp_output_file}" "$location" "$junction"
     local hex_encoded_data=$(cat $tmp_output_file)
+    rm $tmp_output_file
 
     send_governance_transact_from_relaychain "${statemine_para_id}" "${hex_encoded_data}" 200000000 12000
 }
@@ -124,7 +125,7 @@ add_reserve_location() {
                                         "GlobalConsensus": { "Ethereum": { "chainId": $eth_chain_id } },
                                     },
                                     {
-                                        "AccountId20": $nativeTokens
+                                        "AccountKey20": { "network": { "Ethereum": { "chainId": $eth_chain_id } }, "key": $nativeTokens }
                                     }
                                 ]
                             }
@@ -139,6 +140,7 @@ add_reserve_location() {
     local tmp_output_file=$(mktemp)
     generate_hex_encoded_call_data "add-reserve-location" "${statemine_ws_url}" "${tmp_output_file}" "$reserve_location"
     local hex_encoded_data=$(cat $tmp_output_file)
+    rm $tmp_output_file
 
     send_governance_transact_from_relaychain "${statemine_para_id}" "${hex_encoded_data}" 200000000 12000
 }
