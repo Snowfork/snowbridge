@@ -17,6 +17,5 @@
 .local
 
 src/parachains/bridgehub.rs
-src/parachains/statemine.rs
 src/contracts
 
