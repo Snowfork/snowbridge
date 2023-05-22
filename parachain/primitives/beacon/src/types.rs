@@ -182,13 +182,15 @@ impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
 pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
 	pub pubkeys: [PublicKeyPrepared; COMMITTEE_SIZE],
 	pub aggregate_pubkey: PublicKeyPrepared,
+	pub sync_committee_root: H256,
 }
 
 impl<const COMMITTEE_SIZE: usize> Default for SyncCommitteePrepared<COMMITTEE_SIZE> {
 	fn default() -> Self {
 		SyncCommitteePrepared {
-			pubkeys: [Default::default(); COMMITTEE_SIZE],
-			aggregate_pubkey: Default::default(),
+			pubkeys: [PublicKeyPrepared::default(); COMMITTEE_SIZE],
+			aggregate_pubkey: PublicKeyPrepared::default(),
+			sync_committee_root: H256::default(),
 		}
 	}
 }
@@ -200,10 +202,12 @@ impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
 
 	fn try_from(sync_committee: &SyncCommittee<COMMITTEE_SIZE>) -> Result<Self, Self::Error> {
 		let g1_pubkeys = prepare_g1_pubkeys(&sync_committee.pubkeys)?;
+		let sync_committee_root = sync_committee.hash_tree_root().expect("checked statically; qed");
 
 		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
 			pubkeys: g1_pubkeys.try_into().expect("checked statically; qed"),
 			aggregate_pubkey: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
+			sync_committee_root,
 		})
 	}
 }

@@ -9,13 +9,13 @@ pub fn verify_merkle_branch(
 	index: usize,
 	depth: usize,
 	root: H256,
-) -> Option<bool> {
+) -> bool {
 	// verify the proof length
 	if branch.len() != depth {
-		return None
+		return false
 	}
 	// verify the computed merkle root
-	Some(root == compute_merkle_root(leaf, branch, index))
+	root == compute_merkle_root(leaf, branch, index)
 }
 
 fn compute_merkle_root(leaf: H256, proof: &[H256], index: usize) -> H256 {

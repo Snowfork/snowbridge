@@ -118,6 +118,8 @@ pub mod pallet {
 		ExecutionHeaderMappingFailed,
 		BLSPreparePublicKeysFailed,
 		BLSVerificationFailed(BlsError),
+		InvalidUpdateSlot,
+		InvalidSyncCommitteeUpdate,
 	}
 
 	/// Beacon state by finalized block root
@@ -193,7 +195,8 @@ pub mod pallet {
 		#[transactional]
 		pub fn submit(origin: OriginFor<T>, update: Update) -> DispatchResult {
 			ensure_signed(origin)?;
-			Self::process_update(&update)?;
+			Self::validate_light_client_update(&update)?;
+			Self::apply_light_client_update(&update)?;
 			Ok(())
 		}
 
@@ -212,22 +215,13 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		pub fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
-			let sync_committee_root = update
-				.current_sync_committee
-				.hash_tree_root()
-				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
-
-			ensure!(
-				verify_merkle_branch(
-					sync_committee_root,
-					&update.current_sync_committee_branch,
-					config::CURRENT_SYNC_COMMITTEE_SUBTREE_INDEX,
-					config::CURRENT_SYNC_COMMITTEE_DEPTH,
-					update.header.state_root
-				)
-				.is_some_and(|x| x),
-				Error::<T>::InvalidSyncCommitteeMerkleProof
-			);
+			Self::verify_sync_committee(
+				&update.current_sync_committee,
+				&update.current_sync_committee_branch,
+				update.header.state_root,
+				config::CURRENT_SYNC_COMMITTEE_SUBTREE_INDEX,
+				config::CURRENT_SYNC_COMMITTEE_DEPTH,
+			)?;
 
 			let header_root: H256 = update
 				.header
@@ -242,8 +236,7 @@ pub mod pallet {
 					config::BLOCK_ROOTS_SUBTREE_INDEX,
 					config::BLOCK_ROOTS_DEPTH,
 					update.header.state_root
-				)
-				.is_some_and(|x| x),
+				),
 				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
 
@@ -251,6 +244,7 @@ pub mod pallet {
 				.try_into()
 				.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
 			<CurrentSyncCommittee<T>>::set(sync_committee_prepared);
+			<NextSyncCommittee<T>>::kill();
 
 			Self::store_validators_root(update.validators_root);
 			Self::store_finalized_header(header_root, update.header, update.block_roots_root)?;
@@ -258,13 +252,21 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_update(update: &Update) -> DispatchResult {
+		// reference and strict follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#validate_light_client_update
+		fn validate_light_client_update(update: &Update) -> DispatchResult {
+			// Verify sync committee has sufficient participants
+			let participation =
+				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
+			Self::sync_committee_participation_is_supermajority(&participation)?;
+
 			// Verify update does not skip a sync committee period
 			ensure!(
-				update.signature_slot > update.attested_header.slot,
-				Error::<T>::InvalidSignatureSlot
+				update.signature_slot > update.attested_header.slot &&
+					update.attested_header.slot >= update.finalized_header.slot,
+				Error::<T>::InvalidUpdateSlot
 			);
-			let store_period = compute_period(Self::latest_finalized_header().beacon_slot);
+			let latest_state = Self::latest_finalized_header();
+			let store_period = compute_period(latest_state.beacon_slot);
 			let signature_period = compute_period(update.signature_slot);
 			if <NextSyncCommittee<T>>::exists() {
 				ensure!(
@@ -281,15 +283,59 @@ pub mod pallet {
 				(update.next_sync_committee_update.is_some() &&
 					update_attested_period == store_period);
 			ensure!(
-				update.attested_header.slot > Self::latest_finalized_header().beacon_slot ||
+				update.attested_header.slot > latest_state.beacon_slot ||
 					update_has_next_sync_committee,
 				Error::<T>::NotRelevant
 			);
 
-			// Verify sync committee has sufficient participants
-			let participation =
-				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
-			Self::sync_committee_participation_is_supermajority(&participation)?;
+			// Verify that the `finality_branch`, if present, confirms `finalized_header` to match
+			// the finalized checkpoint root saved in the state of `attested_header`.
+			let finalized_block_root: H256 = update
+				.finalized_header
+				.hash_tree_root()
+				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
+			ensure!(
+				verify_merkle_branch(
+					finalized_block_root,
+					&update.finality_branch,
+					config::FINALIZED_ROOT_SUBTREE_INDEX,
+					config::FINALIZED_ROOT_DEPTH,
+					update.attested_header.state_root
+				),
+				Error::<T>::InvalidHeaderMerkleProof
+			);
+
+			// Verify block_roots_root to match the finalized checkpoint root saved in the state of
+			// `finalized_header` so to cache it for later use in `verify_ancestry_proof`
+			ensure!(
+				verify_merkle_branch(
+					update.block_roots_root,
+					&update.block_roots_branch,
+					config::BLOCK_ROOTS_SUBTREE_INDEX,
+					config::BLOCK_ROOTS_DEPTH,
+					update.finalized_header.state_root
+				),
+				Error::<T>::InvalidBlockRootsRootMerkleProof
+			);
+
+			// Verify that the `next_sync_committee`, if present, actually is the next sync
+			// committee saved in the state of the `attested_header`
+			if update.next_sync_committee_update.is_some() {
+				let sync_committee_root = Self::verify_sync_committee(
+					&update.next_sync_committee_update.as_ref().unwrap().next_sync_committee,
+					&update.next_sync_committee_update.as_ref().unwrap().next_sync_committee_branch,
+					update.attested_header.state_root,
+					config::NEXT_SYNC_COMMITTEE_SUBTREE_INDEX,
+					config::NEXT_SYNC_COMMITTEE_DEPTH,
+				)?;
+				if update_attested_period == store_period && <NextSyncCommittee<T>>::exists() {
+					let next_committee_root = <NextSyncCommittee<T>>::get().sync_committee_root;
+					ensure!(
+						sync_committee_root == next_committee_root,
+						Error::<T>::InvalidSyncCommitteeUpdate
+					);
+				}
+			}
 
 			// Verify sync committee aggregate signature
 			let sync_committee = if signature_period == store_period {
@@ -312,67 +358,40 @@ pub mod pallet {
 			)
 			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
-			Self::process_finalized_header_update(update)?;
-
-			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
-				Self::process_next_sync_committee_update(
-					update,
-					signature_period,
-					store_period,
-					&next_sync_committee_update.next_sync_committee,
-					&next_sync_committee_update.next_sync_committee_branch,
-				)?;
-			}
-
 			Ok(())
 		}
 
-		fn process_finalized_header_update(update: &Update) -> DispatchResult {
-			ensure!(
-				update.attested_header.slot >= update.finalized_header.slot,
-				Error::<T>::InvalidAttestedHeaderSlot
-			);
+		// reference and strict follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#apply_light_client_update
+		fn apply_light_client_update(update: &Update) -> DispatchResult {
+			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
+				let store_period = compute_period(Self::latest_finalized_header().beacon_slot);
+				let update_finalized_period = compute_period(update.finalized_header.slot);
 
-			let finalized_block_root: H256 = update
-				.finalized_header
-				.hash_tree_root()
-				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
+				let sync_committee_prepared: SyncCommitteePrepared = (&next_sync_committee_update
+					.next_sync_committee)
+					.try_into()
+					.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
 
-			// Verify that the header is a finalized checkpoint
-			ensure!(
-				verify_merkle_branch(
-					finalized_block_root,
-					&update.finality_branch,
-					config::FINALIZED_ROOT_SUBTREE_INDEX,
-					config::FINALIZED_ROOT_DEPTH,
-					update.attested_header.state_root
-				)
-				.is_some_and(|x| x),
-				Error::<T>::InvalidHeaderMerkleProof
-			);
-
-			let latest_finalized_period =
-				compute_period(Self::latest_finalized_header().beacon_slot);
-			let period = compute_period(update.attested_header.slot);
-			ensure!(
-				(period == latest_finalized_period || period == latest_finalized_period + 1),
-				Error::<T>::InvalidFinalizedPeriodUpdate
-			);
-
-			// Verify update.block_roots_root
-			ensure!(
-				verify_merkle_branch(
-					update.block_roots_root,
-					&update.block_roots_branch,
-					config::BLOCK_ROOTS_SUBTREE_INDEX,
-					config::BLOCK_ROOTS_DEPTH,
-					update.finalized_header.state_root
-				)
-				.is_some_and(|x| x),
-				Error::<T>::InvalidBlockRootsRootMerkleProof
-			);
+				if !<NextSyncCommittee<T>>::exists() {
+					ensure!(
+						update_finalized_period == store_period,
+						<Error<T>>::InvalidSyncCommitteeUpdate
+					);
+					<NextSyncCommittee<T>>::set(sync_committee_prepared);
+				} else if update_finalized_period == store_period + 1 {
+					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
+					<NextSyncCommittee<T>>::set(sync_committee_prepared);
+				}
+				Self::deposit_event(Event::SyncCommitteeUpdated {
+					period: update_finalized_period,
+				});
+			};
 
 			if update.finalized_header.slot > Self::latest_finalized_header().beacon_slot {
+				let finalized_block_root: H256 = update
+					.finalized_header
+					.hash_tree_root()
+					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 				Self::store_finalized_header(
 					finalized_block_root,
 					update.finalized_header,
@@ -383,45 +402,29 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_next_sync_committee_update(
-			update: &Update,
-			signature_period: u64,
-			store_period: u64,
-			next_sync_committee: &SyncCommittee,
-			next_sync_committee_branch: &[H256],
-		) -> DispatchResult {
-			let update_finalized_period = compute_period(update.finalized_header.slot);
-
-			let next_sync_committee_root = next_sync_committee
+		fn verify_sync_committee(
+			sync_committee: &SyncCommittee,
+			sync_committee_branch: &[H256],
+			header_state_root: H256,
+			index: usize,
+			depth: usize,
+		) -> Result<H256, DispatchError> {
+			let sync_committee_root = sync_committee
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
 			ensure!(
 				verify_merkle_branch(
-					next_sync_committee_root,
-					&next_sync_committee_branch,
-					config::NEXT_SYNC_COMMITTEE_SUBTREE_INDEX,
-					config::NEXT_SYNC_COMMITTEE_DEPTH,
-					update.attested_header.state_root
-				)
-				.is_some_and(|x| x),
+					sync_committee_root,
+					sync_committee_branch,
+					index,
+					depth,
+					header_state_root
+				),
 				Error::<T>::InvalidSyncCommitteeMerkleProof
 			);
 
-			let sync_committee_prepared: SyncCommitteePrepared = next_sync_committee
-				.try_into()
-				.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
-
-			if !<NextSyncCommittee<T>>::exists() {
-				<NextSyncCommittee<T>>::set(sync_committee_prepared);
-				Self::deposit_event(Event::SyncCommitteeUpdated { period: signature_period });
-			} else if update_finalized_period == store_period + 1 {
-				<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
-				<NextSyncCommittee<T>>::set(sync_committee_prepared);
-				Self::deposit_event(Event::SyncCommitteeUpdated { period: signature_period });
-			}
-
-			Ok(())
+			Ok(sync_committee_root)
 		}
 
 		fn process_execution_header_update(update: &ExecutionHeaderUpdate) -> DispatchResult {
@@ -447,8 +450,7 @@ pub mod pallet {
 					config::EXECUTION_HEADER_SUBTREE_INDEX,
 					config::EXECUTION_HEADER_DEPTH,
 					update.header.body_root
-				)
-				.is_some_and(|x| x),
+				),
 				Error::<T>::InvalidExecutionHeaderProof
 			);
 
@@ -501,11 +503,6 @@ pub mod pallet {
 			let index_in_array = block_slot % (SLOTS_PER_HISTORICAL_ROOT as u64);
 			let leaf_index = (SLOTS_PER_HISTORICAL_ROOT as u64) + index_in_array;
 
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Depth: {} leaf_index: {}", config::BLOCK_ROOT_AT_INDEX_DEPTH, leaf_index
-			);
-
 			ensure!(
 				verify_merkle_branch(
 					block_root,
@@ -513,8 +510,7 @@ pub mod pallet {
 					leaf_index as usize,
 					config::BLOCK_ROOT_AT_INDEX_DEPTH,
 					state.block_roots_root
-				)
-				.is_some_and(|x| x),
+				),
 				Error::<T>::InvalidAncestryMerkleProof
 			);
 
