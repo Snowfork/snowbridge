@@ -194,7 +194,6 @@ pub mod mainnet {
 	}
 
 	parameter_types! {
-		pub const WeakSubjectivityPeriodSeconds: u32 = 97200;
 		pub const ChainForkVersions: ForkVersions = ForkVersions{
 			genesis: Fork {
 				version: [0, 0, 16, 32], // 0x00001020
