@@ -14,10 +14,7 @@ futures = "0.3.13"
 hex = "0.4.3"
 hex-literal = "0.4.1"
 subxt = { git = "https://github.com/paritytech/subxt.git", tag = "v0.27.1" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 
 [features]
 default = ["bridgehub-rococo-local"]
-bridgehub-rococo-local = [
-    "sp-core/std"
-]
+bridgehub-rococo-local = []
