@@ -22,8 +22,8 @@ use frame_support::{
 use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
-	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, FinalizedHeaderState,
-	ForkData, ForkVersion, ForkVersions, PublicKeyPrepared, SigningData,
+	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, ForkData, ForkVersion,
+	ForkVersions, PublicKeyPrepared, SigningData,
 };
 use snowbridge_core::{Message, RingBufferMap, Verifier};
 use sp_core::H256;
@@ -212,7 +212,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		pub fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
+		pub(crate) fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
 			let sync_committee_root = update
 				.current_sync_committee
 				.hash_tree_root()
@@ -259,7 +259,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_update(update: &Update) -> DispatchResult {
+		pub(crate) fn process_update(update: &Update) -> DispatchResult {
 			// Verify update does not skip a sync committee period
 			ensure!(
 				update.signature_slot > update.attested_header.slot,
@@ -335,7 +335,10 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_finalized_header_update(update: &Update, store_period: u64) -> DispatchResult {
+		pub(crate) fn process_finalized_header_update(
+			update: &Update,
+			store_period: u64,
+		) -> DispatchResult {
 			ensure!(
 				update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidAttestedHeaderSlot
@@ -389,7 +392,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_next_sync_committee_update(
+		pub(crate) fn process_next_sync_committee_update(
 			update: &Update,
 			signature_period: u64,
 			store_period: u64,
@@ -430,7 +433,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_execution_header_update(update: &ExecutionHeaderUpdate) -> DispatchResult {
+		pub(crate) fn process_execution_header_update(
+			update: &ExecutionHeaderUpdate,
+		) -> DispatchResult {
 			ensure!(
 				update.execution_header.block_number > Self::latest_execution_header().block_number,
 				Error::<T>::ExecutionHeaderAlreadyImported

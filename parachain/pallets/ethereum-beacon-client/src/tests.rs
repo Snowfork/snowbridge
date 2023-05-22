@@ -1,13 +1,10 @@
 use crate::{
-	config::{SYNC_COMMITTEE_BITS_SIZE, SYNC_COMMITTEE_SIZE},
 	mock::minimal::*,
 	pallet::ExecutionHeaders,
-	sync_committee_sum, verify_merkle_branch, BeaconHeader, CompactBeaconState,
-	CurrentSyncCommittee, Error, ExecutionHeaderState, FinalizedBeaconState, FinalizedHeaderState,
-	LatestExecutionHeader, LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared,
-	ValidatorsRoot,
+	sync_committee_sum, verify_merkle_branch, BeaconHeader, CompactBeaconState, Error,
+	FinalizedBeaconState, LatestFinalizedBlockRoot, NextSyncCommittee,
 };
-use codec::Compact;
+
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
 use primitives::CompactExecutionHeader;
@@ -301,21 +298,19 @@ pub fn execution_header_pruning() {
 
 #[test]
 fn process_initial_checkpoint() {
-	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
+	let checkpoint = load_checkpoint_update_fixture();
 
 	new_tester().execute_with(|| {
-		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&initial_sync));
-
-		let block_root: H256 = initial_sync.header.hash_tree_root().unwrap();
-
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		let block_root: H256 = checkpoint.header.hash_tree_root().unwrap();
 		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
 	});
 }
 
 #[test]
 fn submit_update() {
-	let checkpoint = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
-	let update = get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
+	let checkpoint = load_checkpoint_update_fixture();
+	let update = load_finalized_header_update_fixture();
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
@@ -327,9 +322,8 @@ fn submit_update() {
 
 #[test]
 fn submit_update_with_sync_committee() {
-	let checkpoint = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
-	let update =
-		get_committee_sync_period_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
+	let checkpoint = load_checkpoint_update_fixture();
+	let update = load_sync_committee_update_fixture();
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
@@ -341,13 +335,11 @@ fn submit_update_with_sync_committee() {
 
 #[test]
 fn submit_update_with_sync_committee_invalid_signature_slot() {
-	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
-
-	let mut update =
-		get_committee_sync_period_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
+	let checkpoint = load_checkpoint_update_fixture();
+	let mut update = load_sync_committee_update_fixture();
 
 	new_tester().execute_with(|| {
-		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&initial_sync));
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 
 		// makes a invalid update with signature_slot should be more than attested_slot
 		update.signature_slot = update.attested_header.slot;
@@ -361,10 +353,9 @@ fn submit_update_with_sync_committee_invalid_signature_slot() {
 
 #[test]
 fn submit_execution_header_update() {
-	let checkpoint = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
-	let finalized_header_update =
-		get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
-	let execution_header_update = get_header_update();
+	let checkpoint = load_checkpoint_update_fixture();
+	let finalized_header_update = load_finalized_header_update_fixture();
+	let execution_header_update = load_execution_header_update_fixture();
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
@@ -381,10 +372,9 @@ fn submit_execution_header_update() {
 
 #[test]
 fn submit_execution_header_not_finalized() {
-	let checkpoint = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
-	let finalized_header_update =
-		get_finalized_header_update::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>();
-	let update = get_header_update();
+	let checkpoint = load_checkpoint_update_fixture();
+	let finalized_header_update = load_finalized_header_update_fixture();
+	let update = load_execution_header_update_fixture();
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));

@@ -13,7 +13,7 @@ pub mod minimal {
 	use super::*;
 
 	use crate::config;
-	use std::{format, fs::File, path::PathBuf};
+	use std::{fs::File, path::PathBuf};
 
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
@@ -106,70 +106,32 @@ pub mod minimal {
 		ext
 	}
 
-	fn fixture_path(name: &str) -> PathBuf {
-		[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", name].iter().collect()
+	fn load_fixture<T>(basename: &str) -> Result<T, serde_json::Error>
+	where
+		T: for<'de> serde::Deserialize<'de>,
+	{
+		let filepath: PathBuf =
+			[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", basename].iter().collect();
+		serde_json::from_reader(File::open(&filepath).unwrap())
 	}
 
-	fn initial_sync_from_file<const SYNC_COMMITTEE_SIZE: usize>(
-		name: &str,
-	) -> primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE> {
-		let filepath = fixture_path(name);
-		serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
+	pub fn load_execution_header_update_fixture() -> primitives::ExecutionHeaderUpdate {
+		load_fixture("execution-header-update.minimal.json").unwrap()
 	}
 
-	fn update_from_file<const SYNC_COMMITTEE_SIZE: usize, const SYNC_COMMITTEE_BITS_SIZE: usize>(
-		name: &str,
-	) -> primitives::Update<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
-		let filepath = fixture_path(name);
-		serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
+	pub fn load_checkpoint_update_fixture(
+	) -> primitives::CheckpointUpdate<{ config::SYNC_COMMITTEE_SIZE }> {
+		load_fixture("initial-checkpoint.minimal.json").unwrap()
 	}
 
-	fn header_update_from_file(name: &str) -> primitives::ExecutionHeaderUpdate {
-		let filepath = fixture_path(name);
-		serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
+	pub fn load_sync_committee_update_fixture(
+	) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
+		load_fixture("sync-committee-update.minimal.json").unwrap()
 	}
 
-	fn beacon_spec() -> String {
-		match config::IS_MINIMAL {
-			true => "minimal".to_owned(),
-			false => "mainnet".to_owned(),
-		}
-	}
-
-	pub fn get_initial_sync<const SYNC_COMMITTEE_SIZE: usize>(
-	) -> primitives::CheckpointUpdate<SYNC_COMMITTEE_SIZE> {
-		initial_sync_from_file::<SYNC_COMMITTEE_SIZE>(&format!(
-			"initial-checkpoint.{}.json",
-			beacon_spec()
-		))
-	}
-
-	pub fn get_committee_sync_period_update<
-		const SYNC_COMMITTEE_SIZE: usize,
-		const SYNC_COMMITTEE_BITS_SIZE: usize,
-	>() -> primitives::Update<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
-		update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(&format!(
-			"sync-committee-update.{}.json",
-			beacon_spec()
-		))
-	}
-
-	pub fn get_header_update() -> primitives::ExecutionHeaderUpdate {
-		header_update_from_file(&format!("execution-header-update.{}.json", beacon_spec()))
-	}
-
-	pub fn get_finalized_header_update<
-		const SYNC_COMMITTEE_SIZE: usize,
-		const SYNC_COMMITTEE_BITS_SIZE: usize,
-	>() -> primitives::Update<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE> {
-		update_from_file::<SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_BITS_SIZE>(&format!(
-			"finalized-header-update.{}.json",
-			beacon_spec()
-		))
-	}
-
-	pub fn get_validators_root<const SYNC_COMMITTEE_SIZE: usize>() -> H256 {
-		get_initial_sync::<SYNC_COMMITTEE_SIZE>().validators_root
+	pub fn load_finalized_header_update_fixture(
+	) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
+		load_fixture("finalized-header-update.minimal.json").unwrap()
 	}
 }
 

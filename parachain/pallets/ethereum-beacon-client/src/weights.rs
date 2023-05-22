@@ -33,13 +33,10 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for ethereum_beacon_client.
 pub trait WeightInfo {
+	fn force_checkpoint() -> Weight;
 	fn submit() -> Weight;
 	fn submit_with_sync_committee() -> Weight;
 	fn submit_execution_header() -> Weight;
-	fn force_checkpoint() -> Weight;
-	fn bls_fast_aggregate_verify_pre_aggregated() -> Weight;
-	fn bls_fast_aggregate_verify() -> Weight;
-	fn merkle_branch_verify() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -63,17 +60,5 @@ impl WeightInfo for () {
 		Weight::from_parts(175_039_777_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(4))
 			.saturating_add(RocksDbWeight::get().writes(2))
-	}
-	fn bls_fast_aggregate_verify_pre_aggregated() -> Weight {
-		Weight::from_parts(28_368_043_000, 0)
-			.saturating_add(Weight::from_parts(0, 0))
-	}
-	fn bls_fast_aggregate_verify() -> Weight {
-		Weight::from_parts(123_459_134_000, 0)
-			.saturating_add(Weight::from_parts(0, 0))
-	}
-	fn merkle_branch_verify() -> Weight {
-		Weight::from_parts(12_368_043_000, 0)
-			.saturating_add(Weight::from_parts(0, 0))
 	}
 }
