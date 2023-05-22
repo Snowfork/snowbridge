@@ -83,7 +83,14 @@ jobs:
           command: test
           args: >-
             --manifest-path parachain/Cargo.toml
-            --verbose
+            --workspace
             --features runtime-benchmarks
+            --exclude snowbridge-query-events
+          toolchain: nightly-2023-04-22
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: >-
+            --manifest-path parachain/Cargo.toml
             --package snowbridge-ethereum-beacon-client
           toolchain: nightly-2023-04-22

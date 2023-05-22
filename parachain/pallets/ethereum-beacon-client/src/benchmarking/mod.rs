@@ -25,11 +25,11 @@ mod benchmarks {
 	#[benchmark]
 	fn force_checkpoint() -> Result<(), BenchmarkError> {
 		let checkpoint_update = make_checkpoint();
+		let block_root: H256 = checkpoint_update.header.hash_tree_root().unwrap();
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, checkpoint_update.clone());
+		_(RawOrigin::Root, checkpoint_update);
 
-		let block_root: H256 = checkpoint_update.header.hash_tree_root().unwrap();
 		assert!(<LatestFinalizedBlockRoot<T>>::get() == block_root);
 		assert!(<FinalizedBeaconState<T>>::get(block_root).is_some());
 
@@ -41,12 +41,12 @@ mod benchmarks {
 		let caller: T::AccountId = whitelisted_caller();
 		let checkpoint_update = make_checkpoint();
 		let finalized_header_update = make_finalized_header_update();
+		let block_root: H256 = finalized_header_update.finalized_header.hash_tree_root().unwrap();
 		EthereumBeaconClient::<T>::process_checkpoint_update(&checkpoint_update)?;
 
 		#[extrinsic_call]
-		submit(RawOrigin::Signed(caller.clone()), finalized_header_update.clone());
+		submit(RawOrigin::Signed(caller.clone()), finalized_header_update);
 
-		let block_root: H256 = finalized_header_update.finalized_header.hash_tree_root().unwrap();
 		assert!(<LatestFinalizedBlockRoot<T>>::get() == block_root);
 		assert!(<FinalizedBeaconState<T>>::get(block_root).is_some());
 
@@ -61,7 +61,7 @@ mod benchmarks {
 		EthereumBeaconClient::<T>::process_checkpoint_update(&checkpoint_update)?;
 
 		#[extrinsic_call]
-		submit(RawOrigin::Signed(caller.clone()), sync_committee_update.clone());
+		submit(RawOrigin::Signed(caller.clone()), sync_committee_update);
 
 		assert!(<NextSyncCommittee<T>>::exists());
 
@@ -74,15 +74,14 @@ mod benchmarks {
 		let checkpoint_update = make_checkpoint();
 		let finalized_header_update = make_finalized_header_update();
 		let execution_header_update = make_execution_header_update();
+		let execution_header_hash = execution_header_update.execution_header.block_hash;
 		EthereumBeaconClient::<T>::process_checkpoint_update(&checkpoint_update)?;
 		EthereumBeaconClient::<T>::process_update(&finalized_header_update)?;
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller.clone()), execution_header_update.clone());
+		_(RawOrigin::Signed(caller.clone()), execution_header_update);
 
-		assert!(<ExecutionHeaders<T>>::contains_key(
-			execution_header_update.execution_header.block_hash
-		));
+		assert!(<ExecutionHeaders<T>>::contains_key(execution_header_hash));
 
 		Ok(())
 	}
