@@ -211,8 +211,11 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		log.Info("created finalized header update file")
 
 		finalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(finalizedUpdate.SignatureSlot)
-		if initialSyncPeriod != syncCommitteePeriod {
-			return fmt.Errorf("syncCommitteePeriod %d should be consistent with finalizedUpdatePeriod %d", syncCommitteePeriod, finalizedUpdatePeriod)
+		if initialSyncPeriod != finalizedUpdatePeriod {
+			return fmt.Errorf("initialSyncPeriod %d should be consistent with finalizedUpdatePeriod %d", initialSyncPeriod, finalizedUpdatePeriod)
+		}
+		if finalizedUpdate.AttestedHeader.Slot <= initialSyncHeaderSlot {
+			return fmt.Errorf("AttestedHeader slot %d should be greater than initialSyncHeaderSlot %d", finalizedUpdate.AttestedHeader.Slot, initialSyncHeaderSlot)
 		}
 
 		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot - 2)
