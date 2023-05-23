@@ -6,11 +6,11 @@ use crate::{
 use hex_literal::hex;
 use primitives::{updates::AncestryProof, BeaconHeader, ExecutionPayloadHeader, SyncAggregate, NextSyncCommitteeUpdate};
 use sp_core::U256;
-use sp_std::vec;
+use sp_std::{boxed::Box, vec};
 
-pub fn make_checkpoint() -> CheckpointUpdate {
-    CheckpointUpdate{
-        header: BeaconHeader{
+pub fn make_checkpoint() -> Box<CheckpointUpdate> {
+    Box::new(CheckpointUpdate {
+        header: BeaconHeader {
             slot: {{CheckpointUpdate.Header.Slot}},
             proposer_index: {{CheckpointUpdate.Header.ProposerIndex}},
             parent_root: hex!("{{CheckpointUpdate.Header.ParentRoot}}").into(),
@@ -37,11 +37,11 @@ pub fn make_checkpoint() -> CheckpointUpdate {
             hex!("{{.}}").into(),
         {{/CheckpointUpdate.BlockRootsBranch}}
         ],
-    }
+    })
 }
 
-pub fn make_sync_committee_update() -> Update {
-    Update {
+pub fn make_sync_committee_update() -> Box<Update> {
+    Box::new(Update {
         attested_header: BeaconHeader {
             slot: {{SyncCommitteeUpdate.AttestedHeader.Slot}},
             proposer_index: {{SyncCommitteeUpdate.AttestedHeader.ProposerIndex}},
@@ -87,11 +87,11 @@ pub fn make_sync_committee_update() -> Update {
             hex!("{{.}}").into(),
         {{/SyncCommitteeUpdate.BlockRootsBranch}}
         ],
-    }
+    })
 }
 
-pub fn make_finalized_header_update() -> Update {
-    Update{
+pub fn make_finalized_header_update() -> Box<Update> {
+    Box::new(Update {
         attested_header: BeaconHeader {
             slot: {{FinalizedHeaderUpdate.AttestedHeader.Slot}},
             proposer_index: {{FinalizedHeaderUpdate.AttestedHeader.ProposerIndex}},
@@ -123,12 +123,12 @@ pub fn make_finalized_header_update() -> Update {
             hex!("{{.}}").into(),
         {{/FinalizedHeaderUpdate.BlockRootsBranch}}
         ]
-    }
+    })
 }
 
-pub fn make_execution_header_update() -> ExecutionHeaderUpdate {
-    ExecutionHeaderUpdate{
-        header: BeaconHeader{
+pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
+    Box::new(ExecutionHeaderUpdate {
+        header: BeaconHeader {
             slot: {{HeaderUpdate.Header.Slot}},
             proposer_index: {{HeaderUpdate.Header.ProposerIndex}},
             parent_root: hex!("{{HeaderUpdate.Header.ParentRoot}}").into(),
@@ -170,5 +170,5 @@ pub fn make_execution_header_update() -> ExecutionHeaderUpdate {
             hex!("{{.}}").into(),
         {{/HeaderUpdate.ExecutionBranch}}
         ],
-    }
+    })
 }
