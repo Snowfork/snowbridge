@@ -302,3 +302,8 @@ func (b *BeaconHeader) ToSSZ() *state.BeaconBlockHeader {
 		BodyRoot:      common.FromHex(b.BodyRoot.Hex()),
 	}
 }
+
+type CompactBeaconState struct {
+	Slot           types.UCompact
+	BlockRootsRoot types.H256
+}
