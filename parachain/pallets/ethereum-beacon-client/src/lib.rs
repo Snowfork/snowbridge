@@ -195,8 +195,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn submit(origin: OriginFor<T>, update: Update) -> DispatchResult {
 			ensure_signed(origin)?;
-			Self::validate_light_client_update(&update)?;
-			Self::apply_light_client_update(&update)?;
+			Self::process_update(&update)?;
 			Ok(())
 		}
 
@@ -260,8 +259,14 @@ pub mod pallet {
 			Ok(())
 		}
 
+		pub(crate) fn process_update(update: &Update) -> DispatchResult {
+			Self::verify_update(update)?;
+			Self::apply_update(update)?;
+			Ok(())
+		}
+
 		// reference and strict follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#validate_light_client_update
-		fn validate_light_client_update(update: &Update) -> DispatchResult {
+		fn verify_update(update: &Update) -> DispatchResult {
 			// Verify sync committee has sufficient participants
 			let participation =
 				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
@@ -384,7 +389,7 @@ pub mod pallet {
 		}
 
 		// reference and strict follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#apply_light_client_update
-		fn apply_light_client_update(update: &Update) -> DispatchResult {
+		fn apply_update(update: &Update) -> DispatchResult {
 			let latest_finalized_state: CompactBeaconState =
 				match Self::finalized_beacon_state(Self::latest_finalized_block_root()) {
 					Some(finalized_beacon_state) => finalized_beacon_state,

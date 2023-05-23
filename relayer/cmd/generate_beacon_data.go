@@ -114,9 +114,10 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
-		if true {
+		exportJson, err := cmd.Flags().GetBool("export_json")
+		if exportJson {
 			initialSync := checkPointScale.ToJSON()
-			err = writeJSONToFile(initialSync, "dump-initial-checkpoint.json")
+			err = writeJSONToFile(initialSync, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
 			if err != nil {
 				return fmt.Errorf("write initial sync to file: %w", err)
 			}
@@ -171,7 +172,6 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
 		initialSync := initialSyncScale.ToJSON()
-		err = writeJSONToFile(initialSync, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
 		initialSyncHeaderSlot := initialSync.Header.Slot
 		log.Info("created initial sync file")
 
