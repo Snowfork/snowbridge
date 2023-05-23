@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/cbroglie/mustache"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -117,7 +118,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		exportJson, err := cmd.Flags().GetBool("export_json")
 		if exportJson {
 			initialSync := checkPointScale.ToJSON()
-			err = writeJSONToFile(initialSync, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
+			err = writeJSONToFile(initialSync, "dump-initial-checkpoint.json")
 			if err != nil {
 				return fmt.Errorf("write initial sync to file: %w", err)
 			}
@@ -172,11 +173,19 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
 		initialSync := initialSyncScale.ToJSON()
+		err = writeJSONToFile(initialSync, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
 		initialSyncHeaderSlot := initialSync.Header.Slot
+		initialSyncPeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
 		log.Info("created initial sync file")
 
 		log.Info("downloading beacon state, this can take a few minutes...")
-		syncCommitteePeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
+		// wait for 5 blocks
+		time.Sleep(6 * time.Second * 5)
+		syncCommitteePeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot + 5)
+		if initialSyncPeriod != syncCommitteePeriod {
+			return fmt.Errorf("initialSyncPeriod %d should be consistent with syncCommitteePeriod %d", initialSyncPeriod, syncCommitteePeriod)
+		}
+
 		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(syncCommitteePeriod)
 		if err != nil {
 			return fmt.Errorf("get sync committee update: %w", err)
@@ -200,6 +209,11 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("write finalized header update to file: %w", err)
 		}
 		log.Info("created finalized header update file")
+
+		finalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(finalizedUpdate.SignatureSlot)
+		if initialSyncPeriod != syncCommitteePeriod {
+			return fmt.Errorf("syncCommitteePeriod %d should be consistent with finalizedUpdatePeriod %d", syncCommitteePeriod, finalizedUpdatePeriod)
+		}
 
 		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot - 2)
 		checkPoint := cache.Proof{
