@@ -346,7 +346,7 @@ pub mod pallet {
 					.hash_tree_root()
 					.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 				if update_attested_period == store_period && <NextSyncCommittee<T>>::exists() {
-					let next_committee_root = <NextSyncCommittee<T>>::get().sync_committee_root;
+					let next_committee_root = <NextSyncCommittee<T>>::get().root;
 					ensure!(
 						sync_committee_root == next_committee_root,
 						Error::<T>::InvalidSyncCommitteeUpdate

@@ -180,17 +180,17 @@ impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
 /// Prepared G1 public key of sync committee as it is stored in the runtime storage.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
+	pub root: H256,
 	pub pubkeys: [PublicKeyPrepared; COMMITTEE_SIZE],
 	pub aggregate_pubkey: PublicKeyPrepared,
-	pub sync_committee_root: H256,
 }
 
 impl<const COMMITTEE_SIZE: usize> Default for SyncCommitteePrepared<COMMITTEE_SIZE> {
 	fn default() -> Self {
 		SyncCommitteePrepared {
+			root: H256::default(),
 			pubkeys: [PublicKeyPrepared::default(); COMMITTEE_SIZE],
 			aggregate_pubkey: PublicKeyPrepared::default(),
-			sync_committee_root: H256::default(),
 		}
 	}
 }
@@ -207,7 +207,7 @@ impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
 		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
 			pubkeys: g1_pubkeys.try_into().expect("checked statically; qed"),
 			aggregate_pubkey: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
-			sync_committee_root,
+			root: sync_committee_root,
 		})
 	}
 }
