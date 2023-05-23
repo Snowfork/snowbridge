@@ -140,8 +140,7 @@ mod benchmarks {
 				config::FINALIZED_ROOT_SUBTREE_INDEX,
 				config::FINALIZED_ROOT_DEPTH,
 				update.attested_header.state_root,
-			)
-			.unwrap();
+			);
 		}
 
 		Ok(())

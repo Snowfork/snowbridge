@@ -1,8 +1,7 @@
 use crate::{
-	mock::minimal::*,
-	pallet::ExecutionHeaders,
-	sync_committee_sum, verify_merkle_branch, BeaconHeader, CompactBeaconState, Error,
-	FinalizedBeaconState, LatestFinalizedBlockRoot, NextSyncCommittee,
+	mock::minimal::*, pallet::ExecutionHeaders, sync_committee_sum, verify_merkle_branch,
+	BeaconHeader, CompactBeaconState, Error, FinalizedBeaconState, LatestFinalizedBlockRoot,
+	NextSyncCommittee,
 };
 
 use frame_support::{assert_err, assert_ok};
@@ -173,8 +172,7 @@ pub fn verify_merkle_branch_for_finalized_root() {
 				crate::config::FINALIZED_ROOT_INDEX,
 				crate::config::FINALIZED_ROOT_DEPTH,
 				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
-			)
-			.is_some_and(|x| x),
+			),
 			true
 		);
 	});
@@ -194,8 +192,7 @@ pub fn verify_merkle_branch_fails_if_depth_and_branch_dont_match() {
 				crate::config::FINALIZED_ROOT_INDEX,
 				crate::config::FINALIZED_ROOT_DEPTH,
 				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
-			)
-			.is_some_and(|x| x),
+			),
 			false
 		);
 	});
@@ -346,7 +343,7 @@ fn submit_update_with_sync_committee_invalid_signature_slot() {
 
 		assert_err!(
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone(),),
-			Error::<Test>::InvalidSignatureSlot
+			Error::<Test>::InvalidUpdateSlot
 		);
 	});
 }

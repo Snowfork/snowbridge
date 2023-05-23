@@ -136,7 +136,7 @@ func (b *BeaconCache) addSlot(slot uint64) {
 }
 
 func (b *BeaconCache) calculateClosestCheckpointSlot(slot uint64) (uint64, error) {
-	blockRootThreshold := int(b.slotsInEpoch * b.epochsPerSyncCommitteePeriod)
+	blockRootThreshold := b.slotsInEpoch * b.epochsPerSyncCommitteePeriod
 	for _, i := range b.Finalized.Checkpoints.Slots {
 		if i < slot {
 			continue
@@ -146,8 +146,7 @@ func (b *BeaconCache) calculateClosestCheckpointSlot(slot uint64) (uint64, error
 			return i, nil
 		}
 
-		checkpointSlot := int(i) // convert to int since it can be negative
-		if checkpointSlot-blockRootThreshold < int(slot) {
+		if i < slot+blockRootThreshold {
 			return i, nil
 		}
 	}
