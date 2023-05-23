@@ -21,49 +21,68 @@ type BeaconCheckpoint struct {
 	CurrentSyncCommittee       SyncCommittee
 	CurrentSyncCommitteeBranch []types.H256
 	ValidatorsRoot             types.H256
-	ImportTime                 types.U64
+	BlockRootsRoot             types.H256
+	BlockRootsBranch           []types.H256
 }
 
-type SyncCommitteePeriodUpdate struct {
-	Payload                  SyncCommitteePeriodPayload
+type Update struct {
+	Payload                  UpdatePayload
 	FinalizedHeaderBlockRoot common.Hash
 	BlockRootsTree           *ssz.Node
 }
 
-type SyncCommitteePeriodPayload struct {
+type UpdatePayload struct {
 	AttestedHeader          BeaconHeader
-	NextSyncCommittee       SyncCommittee
-	NextSyncCommitteeBranch []types.H256
-	FinalizedHeader         BeaconHeader
-	FinalityBranch          []types.H256
 	SyncAggregate           SyncAggregate
 	SignatureSlot           types.U64
-	BlockRootsHash          types.H256
-	BlockRootProof          []types.H256
+	NextSyncCommitteeUpdate OptionNextSyncCommitteeUpdatePayload
+	FinalizedHeader         BeaconHeader
+	FinalityBranch          []types.H256
+	BlockRootsRoot          types.H256
+	BlockRootsBranch        []types.H256
 }
 
-type FinalizedHeaderPayload struct {
-	AttestedHeader  BeaconHeader
-	FinalizedHeader BeaconHeader
-	FinalityBranch  []types.H256
-	SyncAggregate   SyncAggregate
-	SignatureSlot   types.U64
-	BlockRootsHash  types.H256
-	BlockRootProof  []types.H256
+type OptionNextSyncCommitteeUpdatePayload struct {
+	HasValue bool
+	Value    NextSyncCommitteeUpdatePayload
 }
 
-type FinalizedHeaderUpdate struct {
-	Payload                  FinalizedHeaderPayload
-	FinalizedHeaderBlockRoot common.Hash
-	BlockRootsTree           *ssz.Node
+type NextSyncCommitteeUpdatePayload struct {
+	NextSyncCommittee       SyncCommittee
+	NextSyncCommitteeBranch []types.H256
+}
+
+func (o OptionNextSyncCommitteeUpdatePayload) Encode(encoder scale.Encoder) error {
+	return encoder.EncodeOption(o.HasValue, o.Value)
+}
+
+func (o *OptionNextSyncCommitteeUpdatePayload) Decode(decoder scale.Decoder) error {
+	return decoder.DecodeOption(&o.HasValue, &o.Value)
 }
 
 type HeaderUpdatePayload struct {
-	Header           BeaconHeader
-	ExecutionHeader  ExecutionPayloadHeaderCapella
-	ExecutionBranch  []types.H256
-	BlockRootsRoot   types.H256
-	BlockRootsBranch []types.H256
+	Header          BeaconHeader
+	AncestryProof   OptionAncestryProof
+	ExecutionHeader ExecutionPayloadHeaderCapella
+	ExecutionBranch []types.H256
+}
+
+type OptionAncestryProof struct {
+	HasValue bool
+	Value    AncestryProof
+}
+
+type AncestryProof struct {
+	HeaderBranch       []types.H256
+	FinalizedBlockRoot types.H256
+}
+
+func (o OptionAncestryProof) Encode(encoder scale.Encoder) error {
+	return encoder.EncodeOption(o.HasValue, o.Value)
+}
+
+func (o *OptionAncestryProof) Decode(decoder scale.Decoder) error {
+	return decoder.DecodeOption(&o.HasValue, &o.Value)
 }
 
 type HeaderUpdate struct {
@@ -282,4 +301,9 @@ func (b *BeaconHeader) ToSSZ() *state.BeaconBlockHeader {
 		StateRoot:     common.FromHex(b.StateRoot.Hex()),
 		BodyRoot:      common.FromHex(b.BodyRoot.Hex()),
 	}
+}
+
+type CompactBeaconState struct {
+	Slot           types.UCompact
+	BlockRootsRoot types.H256
 }

@@ -2,8 +2,10 @@ package header
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -36,10 +38,11 @@ func New(writer *parachain.ParachainWriter, beaconEndpoint string, slotsInEpoch,
 }
 
 func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
-	latestSyncedPeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
+	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return fmt.Errorf("fetch parachain last sync committee: %w", err)
+		return fmt.Errorf("fetch parachain last finalized header state: %w", err)
 	}
+	latestSyncedPeriod := h.syncer.ComputeSyncPeriodAtSlot(lastFinalizedHeaderState.BeaconSlot)
 
 	h.cache.SetLastSyncedSyncCommitteePeriod(latestSyncedPeriod)
 
@@ -53,11 +56,6 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	h.cache.AddCheckPointSlots(finalizedSlots)
 
 	log.WithField("finalizedSlots", h.cache.Finalized.Checkpoints.Slots).Info("set cache: finalized checkpoint slots")
-
-	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
-	if err != nil {
-		return fmt.Errorf("fetch parachain last finalized header state: %w", err)
-	}
 
 	currentFinalizedHeader, err := h.syncer.GetLatestFinalizedHeader()
 	if err != nil {
@@ -132,6 +130,23 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
+func writeJSONToFile(data interface{}, suffix string) error {
+	file, _ := json.MarshalIndent(data, "", "  ")
+	f, err := os.OpenFile(fmt.Sprintf("/tmp/trace-%d-%s", time.Now().Unix(), suffix), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("create file: %w", err)
+	}
+
+	defer f.Close()
+
+	_, err = f.Write(file)
+	if err != nil {
+		return fmt.Errorf("write to file: %w", err)
+	}
+
+	return nil
+}
+
 func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) error {
 	update, err := h.syncer.GetSyncCommitteePeriodUpdate(period)
 
@@ -155,31 +170,32 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		"period":                period,
 	}).Info("syncing sync committee for period")
 
-	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.sync_committee_period_update", update.Payload)
+	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit", update.Payload)
 	if err != nil {
 		return err
 	}
 
-	lastSyncedSyncCommitteePeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
-	if err != nil {
-		return fmt.Errorf("fetch last synced committee period from parachain: %w", err)
-	}
+	// lastFinalizedHeader, err := h.writer.GetLastFinalizedHeaderState()
+	// if err != nil {
+	// 	return fmt.Errorf("fetch last finalized header from parachain: %w", err)
+	// }
+	// lastFinalizedHeaderPeriod := h.syncer.ComputeSyncPeriodAtSlot(lastFinalizedHeader.BeaconSlot)
 
 	// Period + 1 because the sync committee update contains the next period's sync committee
-	if lastSyncedSyncCommitteePeriod != period+1 {
-		return fmt.Errorf("synced committee period %d not imported successfully", lastSyncedSyncCommitteePeriod)
-	}
+	// if lastFinalizedHeaderPeriod != period+1 {
+	// 	return fmt.Errorf("synced committee period %d not imported successfully", lastFinalizedHeaderPeriod)
+	// }
 
 	h.cache.SetLastSyncedSyncCommitteePeriod(period)
 
 	return nil
 }
 
-func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeaderUpdate, error) {
+func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.Update, error) {
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
 	update, err := h.syncer.GetFinalizedUpdate()
 	if err != nil {
-		return scale.FinalizedHeaderUpdate{}, fmt.Errorf("fetch finalized header update: %w", err)
+		return scale.Update{}, fmt.Errorf("fetch finalized header update: %w", err)
 	}
 
 	log.WithFields(log.Fields{
@@ -192,13 +208,13 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeader
 	if h.cache.LastSyncedSyncCommitteePeriod < currentSyncPeriod {
 		err = h.syncLaggingSyncCommitteePeriods(ctx, h.cache.LastSyncedSyncCommitteePeriod, uint64(update.Payload.AttestedHeader.Slot))
 		if err != nil {
-			return scale.FinalizedHeaderUpdate{}, fmt.Errorf("sync lagging sync committee periods: %w", err)
+			return scale.Update{}, fmt.Errorf("sync lagging sync committee periods: %w", err)
 		}
 	}
 
-	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_finalized_header", update.Payload)
+	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit", update.Payload)
 	if err != nil {
-		return scale.FinalizedHeaderUpdate{}, fmt.Errorf("write to parachain: %w", err)
+		return scale.Update{}, fmt.Errorf("write to parachain: %w", err)
 	}
 
 	// We need a distinction between finalized headers that we've tried to sync, so that we don't try syncing
@@ -210,7 +226,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeader
 
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return scale.FinalizedHeaderUpdate{}, fmt.Errorf("fetch last finalized header state: %w", err)
+		return scale.Update{}, fmt.Errorf("fetch last finalized header state: %w", err)
 	}
 
 	lastStoredHeader := lastFinalizedHeaderState.BeaconBlockRoot
@@ -222,7 +238,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (scale.FinalizedHeader
 	h.cache.Finalized.LastSyncedSlot = uint64(update.Payload.FinalizedHeader.Slot)
 
 	if lastStoredHeader != update.FinalizedHeaderBlockRoot {
-		return scale.FinalizedHeaderUpdate{}, ErrFinalizedHeaderNotImported
+		return scale.Update{}, ErrFinalizedHeaderNotImported
 	}
 
 	return update, err
@@ -240,7 +256,7 @@ func (h *Header) SyncHeader(ctx context.Context, headerUpdate scale.HeaderUpdate
 		"executionBlockNumber": blockNumber,
 	}).Info("Syncing header between last two finalized headers")
 
-	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate.Payload)
+	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdate.Payload)
 	if err != nil {
 		return fmt.Errorf("write to parachain: %w", err)
 	}

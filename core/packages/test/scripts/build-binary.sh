@@ -33,9 +33,9 @@ rebuild_cumulus(){
 build_cumulus_from_source(){
     pushd $root_dir/cumulus
     if [[ "$active_spec" == "minimal" ]]; then
-      cargo build --features "minimal" --release --bin polkadot-parachain
-    else
       cargo build --release --bin polkadot-parachain
+    else
+      cargo build --features beacon-spec-mainnet --release --bin polkadot-parachain
     fi
     cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
     popd

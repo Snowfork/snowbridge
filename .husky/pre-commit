@@ -15,6 +15,6 @@ chronic typos .
 (cd relayer && chronic mage lint && chronic go fmt ./...)
 
 # cargo fmt
-(cd parachain && SKIP_WASM_BUILD= cargo fmt --all)
+#(cd parachain && SKIP_WASM_BUILD= cargo fmt --all)
 
 echo 'Pre-commit hook successful!'

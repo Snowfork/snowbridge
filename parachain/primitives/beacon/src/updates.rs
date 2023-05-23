@@ -17,7 +17,8 @@ pub struct CheckpointUpdate<const COMMITTEE_SIZE: usize> {
 	pub current_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
 	pub current_sync_committee_branch: Vec<H256>,
 	pub validators_root: H256,
-	pub import_time: u64,
+	pub block_roots_root: H256,
+	pub block_roots_branch: Vec<H256>,
 }
 
 impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
@@ -27,7 +28,8 @@ impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
 			current_sync_committee: Default::default(),
 			current_sync_committee_branch: Default::default(),
 			validators_root: Default::default(),
-			import_time: Default::default(),
+			block_roots_root: Default::default(),
+			block_roots_branch: Default::default(),
 		}
 	}
 }
@@ -40,14 +42,13 @@ impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
 	derive(serde::Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-pub struct SyncCommitteeUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
+pub struct Update<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
 	pub attested_header: BeaconHeader,
-	pub next_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
-	pub next_sync_committee_branch: Vec<H256>,
-	pub finalized_header: BeaconHeader,
-	pub finality_branch: Vec<H256>,
 	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
 	pub signature_slot: u64,
+	pub next_sync_committee_update: Option<NextSyncCommitteeUpdate<COMMITTEE_SIZE>>,
+	pub finalized_header: BeaconHeader,
+	pub finality_branch: Vec<H256>,
 	pub block_roots_root: H256,
 	pub block_roots_branch: Vec<H256>,
 }
@@ -60,14 +61,9 @@ pub struct SyncCommitteeUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS
 	derive(serde::Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
-pub struct FinalizedHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
-	pub attested_header: BeaconHeader,
-	pub finalized_header: BeaconHeader,
-	pub finality_branch: Vec<H256>,
-	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
-	pub signature_slot: u64,
-	pub block_roots_root: H256,
-	pub block_roots_branch: Vec<H256>,
+pub struct NextSyncCommitteeUpdate<const COMMITTEE_SIZE: usize> {
+	pub next_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
+	pub next_sync_committee_branch: Vec<H256>,
 }
 
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
@@ -77,9 +73,25 @@ pub struct FinalizedHeaderUpdate<const COMMITTEE_SIZE: usize, const COMMITTEE_BI
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 pub struct ExecutionHeaderUpdate {
+	/// Header for the beacon block containing the execution payload
 	pub header: BeaconHeader,
+	/// Proof that `header` is an ancestor of a finalized header
+	pub ancestry_proof: Option<AncestryProof>,
+	/// Execution header to be imported
 	pub execution_header: ExecutionPayloadHeader,
+	/// Merkle proof that execution payload is contained within `header`
 	pub execution_branch: Vec<H256>,
-	pub block_roots_root: H256,
-	pub block_roots_branch: Vec<H256>,
+}
+
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+#[cfg_attr(
+	feature = "std",
+	derive(serde::Deserialize),
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+)]
+pub struct AncestryProof {
+	/// Merkle proof that `header` is an ancestor of `finalized_header`
+	pub header_branch: Vec<H256>,
+	/// Root of a finalized block that has already been imported into the light client
+	pub finalized_block_root: H256,
 }

@@ -173,8 +173,9 @@ mage -d relayer build && relayer/build/snowbridge-relay generate-beacon-data --s
 
 ### Mainnet Spec
 
-To generate `mainnet` test data and benchmarking data, we can connect to the Lodestar Goerli public node. The script already connects to the Lodestar node, so no need to start up additional services.
-In the event of the Lodestar node not being available, you can start up your own stack with these commands:
+We only use the mainnet spec for generating fixtures for pallet weight benchmarks.
+
+To generate the data we can connect to the Lodestar Goerli public node. The script already connects to the Lodestar node, so no need to start up additional services. In the event of the Lodestar node not being available, you can start up your own stack with these commands:
 
 ```bash
 cd core/packages/test
@@ -187,12 +188,11 @@ From the `snowbridge` directory, run:
 mage -d relayer build && relayer/build/snowbridge-relay generate-beacon-data --spec "mainnet" && cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
 ```
 
-### Testing
+###  Benchmarking tests
 
-To test the data after regenerating, run:
+To run the benchmark tests
 
 ```bash
 cd parachain/pallets/ethereum-beacon-client
-cargo test
-cargo test --features "minimal"
+cargo test --release --features runtime-benchmarks
 ```

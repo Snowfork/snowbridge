@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"golang.org/x/sync/errgroup"
 )
@@ -187,10 +188,6 @@ func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName str
 	return &extI, nil
 }
 
-func (wr *ParachainWriter) GetLastSyncedSyncCommitteePeriod() (uint64, error) {
-	return wr.getNumberFromParachain("EthereumBeaconClient", "LatestSyncCommitteePeriod")
-}
-
 func (wr *ParachainWriter) GetLastBasicChannelBlockNumber() (uint64, error) {
 	return wr.getNumberFromParachain("BasicInboundQueue", "LatestVerifiedBlockNumber")
 }
@@ -226,29 +223,18 @@ func (wr *ParachainWriter) GetLastBasicChannelNonceByAddress(address common.Addr
 }
 
 func (wr *ParachainWriter) GetFinalizedSlots() ([]uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedBeaconHeaderStates", nil, nil)
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedHeaderSlotsCache", nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create storage key for basic channel nonces: %w", err)
 	}
 
-	type StorageState struct {
-		BeaconBlockRoot types.H256
-		BeaconSlot      types.U64
-		ImportTime      types.U64
-	}
-
-	var states []StorageState
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &states)
+	var slots []uint64
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &slots)
 	if err != nil {
 		return nil, fmt.Errorf("get storage for latest basic channel nonces (err): %w", err)
 	}
 
-	result := []uint64{}
-	for _, state := range states {
-		result = append(result, uint64(state.BeaconSlot))
-	}
-
-	return result, nil
+	return slots, nil
 }
 
 func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
@@ -277,25 +263,30 @@ func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader,
 }
 
 func (wr *ParachainWriter) GetLastFinalizedHeaderState() (state.FinalizedHeader, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestFinalizedHeader", nil, nil)
+	latestFinalizedBlockRootKey, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestFinalizedBlockRoot", nil, nil)
 	if err != nil {
-		return state.FinalizedHeader{}, fmt.Errorf("create storage key for GetLastFinalizedHeaderState: %w", err)
+		return state.FinalizedHeader{}, fmt.Errorf("create storage key for LatestFinalizedBlockRoot: %w", err)
 	}
 
-	var storageState struct {
-		BeaconBlockRoot types.H256
-		BeaconSlot      types.U64
-		ImportTime      types.U64
-	}
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &storageState)
+	var latestFinalizedBlockRoot types.H256
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(latestFinalizedBlockRootKey, &latestFinalizedBlockRoot)
 	if err != nil {
-		return state.FinalizedHeader{}, fmt.Errorf("get storage for GetLastFinalizedHeaderState (err): %w", err)
+		return state.FinalizedHeader{}, fmt.Errorf("fetch LatestFinalizedBlockRoot: %w", err)
+	}
+
+	finalizedBeaconStateKey, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedBeaconState", latestFinalizedBlockRoot[:], nil)
+	if err != nil {
+		return state.FinalizedHeader{}, fmt.Errorf("create storage key for FinalizedBeaconState: %w", err)
+	}
+	var compactBeaconState scale.CompactBeaconState
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(finalizedBeaconStateKey, &compactBeaconState)
+	if err != nil {
+		return state.FinalizedHeader{}, fmt.Errorf("fetch FinalizedBeaconState: %w", err)
 	}
 
 	return state.FinalizedHeader{
-		BeaconBlockRoot: common.Hash(storageState.BeaconBlockRoot),
-		BeaconSlot:      uint64(storageState.BeaconSlot),
-		ImportTime:      uint64(storageState.ImportTime),
+		BeaconSlot:      uint64(compactBeaconState.Slot.Int64()),
+		BeaconBlockRoot: common.Hash(latestFinalizedBlockRoot),
 	}, nil
 }
 

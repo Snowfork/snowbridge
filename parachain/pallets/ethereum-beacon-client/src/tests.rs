@@ -1,42 +1,26 @@
 use crate::{
-	config::SYNC_COMMITTEE_SIZE,
-	mock::{get_initial_sync, mock_minimal, new_tester},
-	pallet::{
-		ExecutionHeaders, FinalizedBeaconHeaderStates, FinalizedBeaconHeaders,
-		FinalizedBeaconHeadersBlockRoot, SyncCommittees,
-	},
-	sync_committee_sum, verify_merkle_branch, BeaconHeader, Error, H256,
+	mock::minimal::*, pallet::ExecutionHeaders, sync_committee_sum, verify_merkle_branch,
+	BeaconHeader, CompactBeaconState, Error, FinalizedBeaconState, LatestFinalizedBlockRoot,
+	NextSyncCommittee,
 };
+
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
-use primitives::{
-	fast_aggregate_verify_legacy, prepare_g1_pubkeys, BlsError, CompactExecutionHeader,
-	FinalizedHeaderState, PublicKey, PublicKeyPrepared,
-};
+use primitives::CompactExecutionHeader;
 use rand::{thread_rng, Rng};
-
-pub fn prepare_milagro_pubkeys() -> Result<Vec<PublicKeyPrepared>, &'static str> {
-	let pubkeys: Vec<PublicKey> = vec![
-		hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
-		hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
-		hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
-		hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
-	];
-	let milagro_pubkeys = prepare_g1_pubkeys(&pubkeys).unwrap();
-	Ok(milagro_pubkeys)
-}
+use sp_core::H256;
 
 #[test]
-pub fn test_sync_committee_sum() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
+pub fn sum_sync_committee_participation() {
+	new_tester().execute_with(|| {
 		assert_eq!(sync_committee_sum(&[0, 1, 0, 1, 1, 0, 1, 0, 1]), 5);
 	});
 }
 
 #[test]
-pub fn test_compute_domain() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let domain = mock_minimal::EthereumBeaconClient::compute_domain(
+pub fn compute_domain() {
+	new_tester().execute_with(|| {
+		let domain = EthereumBeaconClient::compute_domain(
 			hex!("07000000").into(),
 			hex!("00000001").into(),
 			hex!("5dec7ae03261fde20d5b024dfabce8bac3276c9a4908e23d50ba8c9b50b0adff").into(),
@@ -51,9 +35,9 @@ pub fn test_compute_domain() {
 }
 
 #[test]
-pub fn test_compute_domain_kiln() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let domain = mock_minimal::EthereumBeaconClient::compute_domain(
+pub fn compute_domain_kiln() {
+	new_tester().execute_with(|| {
+		let domain = EthereumBeaconClient::compute_domain(
 			hex!("07000000").into(),
 			hex!("70000071").into(),
 			hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
@@ -68,9 +52,9 @@ pub fn test_compute_domain_kiln() {
 }
 
 #[test]
-pub fn test_compute_signing_root_bls() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let signing_root = mock_minimal::EthereumBeaconClient::compute_signing_root(
+pub fn compute_signing_root_bls() {
+	new_tester().execute_with(|| {
+		let signing_root = EthereumBeaconClient::compute_signing_root(
 			&BeaconHeader {
 				slot: 3529537,
 				proposer_index: 192549,
@@ -97,9 +81,9 @@ pub fn test_compute_signing_root_bls() {
 }
 
 #[test]
-pub fn test_compute_signing_root_kiln() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let signing_root = mock_minimal::EthereumBeaconClient::compute_signing_root(
+pub fn compute_signing_root_kiln() {
+	new_tester().execute_with(|| {
+		let signing_root = EthereumBeaconClient::compute_signing_root(
 			&BeaconHeader {
 				slot: 221316,
 				proposer_index: 79088,
@@ -126,9 +110,9 @@ pub fn test_compute_signing_root_kiln() {
 }
 
 #[test]
-pub fn test_compute_signing_root_kiln_head_update() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let signing_root = mock_minimal::EthereumBeaconClient::compute_signing_root(
+pub fn compute_signing_root_kiln_head_update() {
+	new_tester().execute_with(|| {
+		let signing_root = EthereumBeaconClient::compute_signing_root(
 			&BeaconHeader {
 				slot: 222472,
 				proposer_index: 10726,
@@ -155,9 +139,9 @@ pub fn test_compute_signing_root_kiln_head_update() {
 }
 
 #[test]
-pub fn test_compute_domain_bls() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let domain = mock_minimal::EthereumBeaconClient::compute_domain(
+pub fn compute_domain_bls() {
+	new_tester().execute_with(|| {
+		let domain = EthereumBeaconClient::compute_domain(
 			hex!("07000000").into(),
 			hex!("01000000").into(),
 			hex!("4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95").into(),
@@ -172,8 +156,8 @@ pub fn test_compute_domain_bls() {
 }
 
 #[test]
-pub fn test_is_valid_merkle_proof() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
+pub fn verify_merkle_branch_for_finalized_root() {
+	new_tester().execute_with(|| {
 		assert_eq!(
 			verify_merkle_branch(
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
@@ -188,16 +172,15 @@ pub fn test_is_valid_merkle_proof() {
 				crate::config::FINALIZED_ROOT_INDEX,
 				crate::config::FINALIZED_ROOT_DEPTH,
 				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
-			)
-			.is_some_and(|x| x),
+			),
 			true
 		);
 	});
 }
 
 #[test]
-pub fn test_merkle_proof_fails_if_depth_and_branch_dont_match() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
+pub fn verify_merkle_branch_fails_if_depth_and_branch_dont_match() {
+	new_tester().execute_with(|| {
 		assert_eq!(
 			verify_merkle_branch(
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
@@ -209,76 +192,24 @@ pub fn test_merkle_proof_fails_if_depth_and_branch_dont_match() {
 				crate::config::FINALIZED_ROOT_INDEX,
 				crate::config::FINALIZED_ROOT_DEPTH,
 				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
-			)
-			.is_some_and(|x| x),
+			),
 			false
 		);
 	});
 }
 
 #[test]
-pub fn test_bls_fast_aggregate_verify_minimal() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let milagro_pubkeys = prepare_milagro_pubkeys().unwrap();
-		assert_ok!(fast_aggregate_verify_legacy(
-			&milagro_pubkeys,
-			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			&hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
-		));
-	});
-}
-
-#[test]
-pub fn test_bls_fast_aggregate_verify_invalid_point() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let pubkeys: Vec<PublicKey> = vec![
-			hex!("973eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
-			hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
-			hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
-			hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
-		];
-		assert_err!(prepare_g1_pubkeys(&pubkeys), BlsError::InvalidPublicKey);
-	});
-}
-
-#[test]
-pub fn test_bls_fast_aggregate_verify_invalid_message() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let milagro_pubkeys = prepare_milagro_pubkeys().unwrap();
-		assert_err!(fast_aggregate_verify_legacy(
-			&milagro_pubkeys,
-			hex!("99241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			&hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
-		), BlsError::SignatureVerificationFailed);
-	});
-}
-
-#[test]
-pub fn test_bls_fast_aggregate_verify_invalid_signature() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let milagro_pubkeys = prepare_milagro_pubkeys().unwrap();
-		assert_err!(fast_aggregate_verify_legacy(
-			&milagro_pubkeys,
-			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
-			&hex!("c204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").into()
-		), BlsError::InvalidSignature);
-	});
-}
-
-#[test]
-pub fn test_sync_committee_participation_is_supermajority() {
+pub fn sync_committee_participation_is_supermajority() {
 	let bits =
-hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b"
-);
+	hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b"
+	);
 	let participation = primitives::decompress_sync_committee_bits::<512, 64>(bits);
-	assert_ok!(mock_minimal::EthereumBeaconClient::sync_committee_participation_is_supermajority(
-		&participation
-	));
+	assert_ok!(EthereumBeaconClient::sync_committee_participation_is_supermajority(&participation));
 }
 
 #[test]
-pub fn test_sync_committee_participation_is_supermajority_errors_when_not_supermajority() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
+pub fn sync_committee_participation_is_supermajority_errors_when_not_supermajority() {
+	new_tester().execute_with(|| {
 		let participation: [u8; 512] = [
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -301,108 +232,16 @@ pub fn test_sync_committee_participation_is_supermajority_errors_when_not_superm
 		];
 
 		assert_err!(
-			mock_minimal::EthereumBeaconClient::sync_committee_participation_is_supermajority(
-				&participation
-			),
-			Error::<mock_minimal::Test>::SyncCommitteeParticipantsNotSupermajority
+			EthereumBeaconClient::sync_committee_participation_is_supermajority(&participation),
+			Error::<Test>::SyncCommitteeParticipantsNotSupermajority
 		);
 	});
 }
 
 #[test]
-pub fn test_prune_finalized_header() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let max_finalized_slots =
-			mock_minimal::FinalizedHeaderPruneThreshold::get().try_into().unwrap();
-
-		// Keeping track of to be deleted data
-		let amount_of_data_to_be_deleted = max_finalized_slots / 2;
-		let mut to_be_deleted_hash_list = vec![];
-		let mut to_be_preserved_hash_list = vec![];
-		for i in 0..max_finalized_slots {
-			let mut hash = H256::default();
-			thread_rng().try_fill(&mut hash.0[..]).unwrap();
-
-			if i < amount_of_data_to_be_deleted {
-				to_be_deleted_hash_list.push(hash);
-			} else {
-				to_be_preserved_hash_list.push(hash);
-			}
-			let finalized_state = FinalizedHeaderState {
-				beacon_block_root: hash,
-				beacon_slot: i,
-				import_time: u64::default(),
-			};
-
-			FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(hash, hash);
-			FinalizedBeaconHeaders::<mock_minimal::Test>::insert(hash, BeaconHeader::default());
-			assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_state(
-				finalized_state
-			));
-		}
-
-		// We first verify if the data corresponding to that hash is still there.
-		let slot_vec = FinalizedBeaconHeaderStates::<mock_minimal::Test>::get();
-		assert_eq!(slot_vec.len(), max_finalized_slots as usize);
-		for i in 0..(amount_of_data_to_be_deleted as usize) {
-			assert_eq!(slot_vec[i].beacon_slot, i as u64);
-			assert_eq!(slot_vec[i].beacon_block_root, to_be_deleted_hash_list[i]);
-
-			assert!(FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(
-				to_be_deleted_hash_list[i]
-			));
-			assert!(FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(
-				to_be_deleted_hash_list[i]
-			));
-		}
-
-		// We insert `amount_of_hash_to_be_deleted` number of new finalized headers
-		for i in max_finalized_slots..(max_finalized_slots + amount_of_data_to_be_deleted) {
-			let mut hash = H256::default();
-			thread_rng().try_fill(&mut hash.0[..]).unwrap();
-			FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::insert(hash, hash);
-			FinalizedBeaconHeaders::<mock_minimal::Test>::insert(hash, BeaconHeader::default());
-			let finalized_state = FinalizedHeaderState {
-				beacon_block_root: hash,
-				beacon_slot: i,
-				import_time: u64::default(),
-			};
-			assert_ok!(mock_minimal::EthereumBeaconClient::add_finalized_header_state(
-				finalized_state
-			));
-		}
-
-		// Now, previous hashes should be pruned and in array those elements are replaced by later
-		// elements
-		let slot_vec = FinalizedBeaconHeaderStates::<mock_minimal::Test>::get();
-		assert_eq!(slot_vec.len(), max_finalized_slots as usize);
-		for i in 0..(amount_of_data_to_be_deleted as usize) {
-			assert_eq!(slot_vec[i].beacon_slot, (i as u64 + amount_of_data_to_be_deleted));
-			assert_eq!(slot_vec[i].beacon_block_root, to_be_preserved_hash_list[i]);
-
-			// Previous values should not exists
-			assert!(!FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(
-				to_be_deleted_hash_list[i]
-			));
-			assert!(!FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(
-				to_be_deleted_hash_list[i]
-			));
-
-			// data that was preserved should exists
-			assert!(FinalizedBeaconHeadersBlockRoot::<mock_minimal::Test>::contains_key(
-				to_be_preserved_hash_list[i]
-			));
-			assert!(FinalizedBeaconHeaders::<mock_minimal::Test>::contains_key(
-				to_be_preserved_hash_list[i]
-			));
-		}
-	});
-}
-
-#[test]
-pub fn test_prune_execution_headers() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let execution_header_prune_threshold = mock_minimal::ExecutionHeadersPruneThreshold::get();
+pub fn execution_header_pruning() {
+	new_tester().execute_with(|| {
+		let execution_header_prune_threshold = ExecutionHeadersPruneThreshold::get();
 		let to_be_deleted = execution_header_prune_threshold / 2;
 
 		let mut stored_hashes = vec![];
@@ -410,7 +249,7 @@ pub fn test_prune_execution_headers() {
 		for i in 0..execution_header_prune_threshold {
 			let mut hash = H256::default();
 			thread_rng().try_fill(&mut hash.0[..]).unwrap();
-			mock_minimal::EthereumBeaconClient::store_execution_header(
+			EthereumBeaconClient::store_execution_header(
 				hash,
 				CompactExecutionHeader::default(),
 				i as u64,
@@ -420,16 +259,13 @@ pub fn test_prune_execution_headers() {
 		}
 
 		// We should have stored everything until now
-		assert_eq!(
-			ExecutionHeaders::<mock_minimal::Test>::iter().count() as usize,
-			stored_hashes.len()
-		);
+		assert_eq!(ExecutionHeaders::<Test>::iter().count() as usize, stored_hashes.len());
 
 		// Let's push extra entries so that some of the previous entries are deleted.
 		for i in 0..to_be_deleted {
 			let mut hash = H256::default();
 			thread_rng().try_fill(&mut hash.0[..]).unwrap();
-			mock_minimal::EthereumBeaconClient::store_execution_header(
+			EthereumBeaconClient::store_execution_header(
 				hash,
 				CompactExecutionHeader::default(),
 				(i + execution_header_prune_threshold) as u64,
@@ -441,74 +277,146 @@ pub fn test_prune_execution_headers() {
 
 		// We should have only stored upto `execution_header_prune_threshold`
 		assert_eq!(
-			ExecutionHeaders::<mock_minimal::Test>::iter().count() as u32,
+			ExecutionHeaders::<Test>::iter().count() as u32,
 			execution_header_prune_threshold
 		);
 
 		// First `to_be_deleted` items must be deleted
 		for i in 0..to_be_deleted {
-			assert!(!ExecutionHeaders::<mock_minimal::Test>::contains_key(
-				stored_hashes[i as usize]
-			));
+			assert!(!ExecutionHeaders::<Test>::contains_key(stored_hashes[i as usize]));
 		}
 
 		// Other entries should be part of data
 		for i in to_be_deleted..(to_be_deleted + execution_header_prune_threshold) {
-			assert!(ExecutionHeaders::<mock_minimal::Test>::contains_key(
-				stored_hashes[i as usize]
-			));
+			assert!(ExecutionHeaders::<Test>::contains_key(stored_hashes[i as usize]));
 		}
 	});
 }
 
 #[test]
-pub fn test_prune_sync_committee() {
-	new_tester::<mock_minimal::Test>().execute_with(|| {
-		let sync_committee_prune_threshold = mock_minimal::SyncCommitteePruneThreshold::get();
-		let to_be_deleted = sync_committee_prune_threshold / 2;
-		let mut storing_periods = vec![];
+fn process_initial_checkpoint() {
+	let checkpoint = load_checkpoint_update_fixture();
 
-		let initial_sync = get_initial_sync::<{ SYNC_COMMITTEE_SIZE }>();
-
-		for i in 0..sync_committee_prune_threshold {
-			mock_minimal::EthereumBeaconClient::store_sync_committee(
-				i as u64,
-				&initial_sync.current_sync_committee,
-			)
-			.unwrap();
-			storing_periods.push(i);
-		}
-
-		// We should retain every sync committee till prune threshold
-		assert_eq!(
-			SyncCommittees::<mock_minimal::Test>::iter().count() as u32,
-			sync_committee_prune_threshold
-		);
-
-		// Now, we try to insert more than threshold, this should make previous entries deleted
-		for i in 0..to_be_deleted {
-			mock_minimal::EthereumBeaconClient::store_sync_committee(
-				(i + sync_committee_prune_threshold).into(),
-				&initial_sync.current_sync_committee,
-			)
-			.unwrap();
-			storing_periods.push(i + sync_committee_prune_threshold);
-		}
-
-		// We should retain last prune threshold sync committee
-		assert_eq!(
-			SyncCommittees::<mock_minimal::Test>::iter().count() as u32,
-			sync_committee_prune_threshold
-		);
-
-		// We verify that first periods of sync committees are not present now
-		for i in 0..to_be_deleted {
-			assert!(!SyncCommittees::<mock_minimal::Test>::contains_key(i as u64));
-		}
-
-		// Rest of the sync committee should still exists
-		for i in to_be_deleted..(sync_committee_prune_threshold + to_be_deleted) {
-			assert!(SyncCommittees::<mock_minimal::Test>::contains_key(i as u64));
-		}
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		let block_root: H256 = checkpoint.header.hash_tree_root().unwrap();
+		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
 	});
 }
+
+#[test]
+fn submit_update() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let update = load_finalized_header_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
+		let block_root: H256 = update.finalized_header.clone().hash_tree_root().unwrap();
+		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
+	});
+}
+
+#[test]
+fn submit_update_with_sync_committee() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let update = load_sync_committee_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert!(!<NextSyncCommittee<Test>>::exists());
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone(),));
+		assert!(<NextSyncCommittee<Test>>::exists());
+	});
+}
+
+#[test]
+fn submit_update_with_sync_committee_invalid_signature_slot() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let mut update = load_sync_committee_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+
+		// makes a invalid update with signature_slot should be more than attested_slot
+		update.signature_slot = update.attested_header.slot;
+
+		assert_err!(
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone(),),
+			Error::<Test>::InvalidUpdateSlot
+		);
+	});
+}
+
+#[test]
+fn submit_execution_header_update() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let finalized_header_update = load_finalized_header_update_fixture();
+	let execution_header_update = load_execution_header_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+		assert_ok!(EthereumBeaconClient::submit_execution_header(
+			RuntimeOrigin::signed(1),
+			execution_header_update.clone()
+		));
+		assert!(<ExecutionHeaders<Test>>::contains_key(
+			execution_header_update.execution_header.block_hash
+		));
+	});
+}
+
+#[test]
+fn submit_execution_header_not_finalized() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let finalized_header_update = load_finalized_header_update_fixture();
+	let update = load_execution_header_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+
+		<FinalizedBeaconState<Test>>::mutate(<LatestFinalizedBlockRoot<Test>>::get(), |x| {
+			let prev = x.unwrap();
+			*x = Some(CompactBeaconState { slot: update.header.slot - 1, ..prev });
+		});
+
+		assert_err!(
+			EthereumBeaconClient::submit_execution_header(RuntimeOrigin::signed(1), update.clone()),
+			Error::<Test>::HeaderNotFinalized
+		);
+	});
+}
+
+// #[test]
+// fn submit_execution_header_duplicate() {
+// 	let initial_sync = get_initial_sync::<SYNC_COMMITTEE_SIZE>();
+// 	let update = get_header_update();
+
+// 	new_tester().execute_with(|| {
+// 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&initial_sync));
+
+// 		LatestFinalizedHeader::<Test>::set(FinalizedHeaderState {
+// 			beacon_block_root: H256::default(),
+// 			beacon_slot: update.header.slot,
+// 		});
+
+// 		let sync_committee_prepared: SyncCommitteePrepared =
+// 			(&initial_sync.current_sync_committee).try_into().unwrap();
+// 		<CurrentSyncCommittee<Test>>::set(sync_committee_prepared);
+
+// 		LatestExecutionHeader::<Test>::set(ExecutionHeaderState {
+// 			beacon_block_root: Default::default(),
+// 			beacon_slot: 0,
+// 			block_hash: Default::default(),
+// 			// initialize with the same block_number in execution_payload of the next update
+// 			block_number: update.execution_header.block_number,
+// 		});
+
+// 		assert_err!(
+// 			EthereumBeaconClient::submit_execution_header(RuntimeOrigin::signed(1), update),
+// 			Error::<Test>::InvalidExecutionHeaderUpdate
+// 		);
+// 	});
+// }

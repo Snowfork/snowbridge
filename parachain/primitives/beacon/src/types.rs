@@ -119,7 +119,6 @@ pub struct ExecutionHeaderState {
 pub struct FinalizedHeaderState {
 	pub beacon_block_root: H256,
 	pub beacon_slot: u64,
-	pub import_time: u64,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug)]
@@ -181,8 +180,19 @@ impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
 /// Prepared G1 public key of sync committee as it is stored in the runtime storage.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
+	pub root: H256,
 	pub pubkeys: [PublicKeyPrepared; COMMITTEE_SIZE],
 	pub aggregate_pubkey: PublicKeyPrepared,
+}
+
+impl<const COMMITTEE_SIZE: usize> Default for SyncCommitteePrepared<COMMITTEE_SIZE> {
+	fn default() -> Self {
+		SyncCommitteePrepared {
+			root: H256::default(),
+			pubkeys: [PublicKeyPrepared::default(); COMMITTEE_SIZE],
+			aggregate_pubkey: PublicKeyPrepared::default(),
+		}
+	}
 }
 
 impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
@@ -192,10 +202,12 @@ impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
 
 	fn try_from(sync_committee: &SyncCommittee<COMMITTEE_SIZE>) -> Result<Self, Self::Error> {
 		let g1_pubkeys = prepare_g1_pubkeys(&sync_committee.pubkeys)?;
+		let sync_committee_root = sync_committee.hash_tree_root().expect("checked statically; qed");
 
 		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
 			pubkeys: g1_pubkeys.try_into().expect("checked statically; qed"),
 			aggregate_pubkey: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
+			root: sync_committee_root,
 		})
 	}
 }
@@ -353,6 +365,23 @@ impl From<ExecutionPayloadHeader> for CompactExecutionHeader {
 			receipts_root: execution_payload.receipts_root,
 		}
 	}
+}
+
+#[derive(
+	Default,
+	Encode,
+	Decode,
+	Copy,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+pub struct CompactBeaconState {
+	#[codec(compact)]
+	pub slot: u64,
+	pub block_roots_root: H256,
 }
 
 #[cfg(test)]

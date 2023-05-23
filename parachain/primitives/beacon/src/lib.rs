@@ -13,19 +13,17 @@ pub mod updates;
 mod serde_utils;
 
 pub use types::{
-	BeaconHeader, CompactExecutionHeader, ExecutionHeaderState, ExecutionPayloadHeader,
-	FinalizedHeaderState, Fork, ForkData, ForkVersion, ForkVersions, Mode, PublicKey, Signature,
-	SigningData, SyncAggregate, SyncCommittee, SyncCommitteePrepared,
+	BeaconHeader, CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState,
+	ExecutionPayloadHeader, FinalizedHeaderState, Fork, ForkData, ForkVersion, ForkVersions, Mode,
+	PublicKey, Signature, SigningData, SyncAggregate, SyncCommittee, SyncCommitteePrepared,
 };
-pub use updates::{
-	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedHeaderUpdate, SyncCommitteeUpdate,
-};
+pub use updates::{CheckpointUpdate, ExecutionHeaderUpdate, NextSyncCommitteeUpdate, Update};
 
 pub use bits::decompress_sync_committee_bits;
 pub use bls::{
-	fast_aggregate_verify, fast_aggregate_verify_legacy, prepare_aggregate_pubkey,
-	prepare_aggregate_pubkey_from_absent, prepare_aggregate_signature, prepare_g1_pubkeys,
-	AggregatePublicKey, AggregateSignature, BlsError, PublicKeyPrepared, SignaturePrepared,
+	fast_aggregate_verify, prepare_aggregate_pubkey, prepare_aggregate_pubkey_from_absent,
+	prepare_aggregate_signature, prepare_g1_pubkeys, AggregatePublicKey, AggregateSignature,
+	BlsError, PublicKeyPrepared, SignaturePrepared,
 };
 pub use merkle_proof::verify_merkle_branch;
 pub use receipt::verify_receipt_proof;
