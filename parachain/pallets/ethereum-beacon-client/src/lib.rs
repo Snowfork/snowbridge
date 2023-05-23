@@ -320,10 +320,10 @@ pub mod pallet {
 
 			// Verify that the `next_sync_committee`, if present, actually is the next sync
 			// committee saved in the state of the `attested_header`
-			if update.next_sync_committee_update.is_some() {
+			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
 				let sync_committee_root = Self::verify_sync_committee(
-					&update.next_sync_committee_update.as_ref().unwrap().next_sync_committee,
-					&update.next_sync_committee_update.as_ref().unwrap().next_sync_committee_branch,
+					&next_sync_committee_update.next_sync_committee,
+					&next_sync_committee_update.next_sync_committee_branch,
 					update.attested_header.state_root,
 					config::NEXT_SYNC_COMMITTEE_SUBTREE_INDEX,
 					config::NEXT_SYNC_COMMITTEE_DEPTH,
