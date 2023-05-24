@@ -51,7 +51,4 @@ pub const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [7, 0, 0, 0];
 pub const PUBKEY_SIZE: usize = 48;
 pub const SIGNATURE_SIZE: usize = 96;
 
-/// FIXME: Remove before production release
-pub const SLOT_CACHE_SIZE: u32 = 1000;
-
 const_assert!(SYNC_COMMITTEE_BITS_SIZE == SYNC_COMMITTEE_SIZE / 8);
