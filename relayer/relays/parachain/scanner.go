@@ -97,7 +97,7 @@ func (s *Scanner) findTasks(
 	// Fetch latest nonce in parachain outbound queue
 	sourceIDBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(sourceIDBytes, s.config.LaneID)
-	paraNonceKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "OutboundQueue", "Nonce", sourceIDBytes, nil)
+	paraNonceKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueue", "Nonce", sourceIDBytes, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create storage key for parachain outbound queue nonce with laneID '%v': %w", s.config.LaneID, err)
 	}

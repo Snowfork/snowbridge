@@ -19,15 +19,15 @@ config_relayer(){
 
     # Configure parachain relay
     jq \
-        --arg k1 "$(address_for BasicInboundChannel)" \
+        --arg k1 "$(address_for InboundQueue)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg laneID $ASSET_HUB_PARAID \
         --arg eth_gas_limit $eth_gas_limit \
     '
-      .source.contracts.BasicInboundChannel = $k1
+      .source.contracts.InboundQueue = $k1
     | .source.contracts.BeefyClient = $k2
-    | .sink.contracts.BasicInboundChannel = $k1
+    | .sink.contracts.InboundQueue = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
@@ -78,21 +78,19 @@ start_relayer()
         done
     ) &
 
-    # FIXME: Disabled until the relay is updated to the latest architecture
-    #
     # Launch parachain relay
-    # (
-    #     : > parachain-relay.log
-    #     while :
-    #     do
-    #       echo "Starting parachain relay at $(date)"
-    #         "${relay_bin}" run parachain \
-    #             --config "$output_dir/parachain-relay.json" \
-    #             --ethereum.private-key $parachain_relay_eth_key \
-    #             >>parachain-relay.log 2>&1 || true
-    #         sleep 20
-    #     done
-    # ) &
+    (
+        : > parachain-relay.log
+        while :
+        do
+          echo "Starting parachain relay at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay.json" \
+                --ethereum.private-key $parachain_relay_eth_key \
+                >>parachain-relay.log 2>&1 || true
+            sleep 20
+        done
+    ) &
 
     # Launch beacon relay
     (
