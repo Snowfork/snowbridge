@@ -222,21 +222,6 @@ func (wr *ParachainWriter) GetLastBasicChannelNonceByAddress(address common.Addr
 	return uint64(nonce), nil
 }
 
-func (wr *ParachainWriter) GetFinalizedSlots() ([]uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedHeaderSlotsCache", nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create storage key for basic channel nonces: %w", err)
-	}
-
-	var slots []uint64
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &slots)
-	if err != nil {
-		return nil, fmt.Errorf("get storage for latest basic channel nonces (err): %w", err)
-	}
-
-	return slots, nil
-}
-
 func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestExecutionHeader", nil, nil)
 	if err != nil {

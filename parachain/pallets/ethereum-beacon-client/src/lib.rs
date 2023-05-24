@@ -17,7 +17,6 @@ mod benchmarking;
 
 use frame_support::{
 	dispatch::DispatchResult, log, pallet_prelude::OptionQuery, traits::Get, transactional,
-	BoundedVec,
 };
 use frame_system::ensure_signed;
 use primitives::{
@@ -166,13 +165,6 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(crate) type ExecutionHeaderMapping<T: Config> =
 		StorageMap<_, Identity, u32, H256, ValueQuery>;
-
-	/// FIXME: Remove before using in production
-	/// A cache of slot numbers for finalized headers that have been recently imported.
-	/// Is used by the offchain relayer to produce ancestry proofs for execution headers.
-	#[pallet::storage]
-	pub(super) type FinalizedHeaderSlotsCache<T: Config> =
-		StorageValue<_, BoundedVec<u64, ConstU32<{ config::SLOT_CACHE_SIZE }>>, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -549,14 +541,6 @@ pub mod pallet {
 				CompactBeaconState { slot: header.slot, block_roots_root },
 			);
 			<LatestFinalizedBlockRoot<T>>::set(header_root);
-
-			// Add the slot of the most recently finalized header to the slot cache
-			<FinalizedHeaderSlotsCache<T>>::mutate(|slots| {
-				if slots.len() as u32 == config::SLOT_CACHE_SIZE {
-					slots.remove(0);
-				}
-				slots.try_push(header.slot).expect("checked above; qed");
-			});
 
 			log::info!(
 				target: "ethereum-beacon-client",
