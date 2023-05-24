@@ -1,4 +1,4 @@
-use snowbridge_smoketest::contracts::{native_tokens, weth9};
+use snowbridge_smoketest::{contracts::{native_tokens, weth9}, parachains::statemine};
 
 use std::{sync::Arc, time::Duration};
 
@@ -23,7 +23,42 @@ const TOKEN_VAULT_CONTRACT: &str = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305";
 const WETH_CONTRACT: &str = "0x3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d";
 
 #[tokio::test]
-async fn test_lock_tokens() {
+async fn test_1_create_tokens() {
+    let provider = Provider::<Http>::try_from(ETHEREUM_API)
+        .unwrap()
+        .interval(Duration::from_millis(10u64));
+
+    let wallet: LocalWallet = ETHEREUM_KEY
+        .parse::<LocalWallet>()
+        .unwrap()
+        .with_chain_id(15u64);
+
+    let client = SignerMiddleware::new(provider.clone(), wallet.clone());
+    let client = Arc::new(client);
+
+    let native_tokens_addr = NATIVE_TOKENS_CONTRACT.parse::<Address>().unwrap();
+    let native_tokens = native_tokens::NativeTokens::new(native_tokens_addr, client.clone());
+
+    let token_vault_addr = TOKEN_VAULT_CONTRACT.parse::<Address>().unwrap();
+
+    let weth_addr = WETH_CONTRACT.parse::<Address>().unwrap();
+    let weth = weth9::WETH9::new(weth_addr, client.clone());
+
+    let receipt = native_tokens
+        .create(weth.address())
+        .value(1000)
+        .send()
+        .await
+        .unwrap()
+        .await
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+}
+
+//#[tokio::test]
+async fn test_2_lock_tokens() {
     let provider = Provider::<Http>::try_from(ETHEREUM_API)
         .unwrap()
         .interval(Duration::from_millis(10u64));
