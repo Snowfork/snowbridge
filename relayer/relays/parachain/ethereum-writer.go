@@ -214,7 +214,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		options, message, commitmentProof.Proof.InnerHashes, opaqueProof,
 	)
 	if err != nil {
-		return fmt.Errorf("send transaction BasicInboundQueue.submit: %w", err)
+		return fmt.Errorf("send transaction InboundQueue.submit: %w", err)
 	}
 
 	hasher := &keccak.Keccak256{}
@@ -233,7 +233,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 			"parachainBlockNumber": proof.Header.Number,
 			"beefyBlock":           proof.MMRProof.Blockhash.Hex(),
 		}).
-		Info("Sent transaction BasicInboundQueue.submit")
+		Info("Sent transaction InboundQueue.submit")
 
 	return nil
 }

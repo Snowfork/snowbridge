@@ -74,8 +74,8 @@ export RELAYER_FEE=100
 export RELAYER_REWARD=100
 
 ## NativeTokens
-export ASSET_HUB_PARAID=1000
-export CREATE_TOKEN_FEE="1000000000000000000"
+export ASSET_HUB_PARAID=$statemine_para_id
+export CREATE_TOKEN_FEE=100
 
 address_for()
 {

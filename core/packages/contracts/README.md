@@ -52,5 +52,5 @@ To update `basic-commitment.json`:
 Message bundles are extracted from `../test/parachain-relay.log` and copied into `test/channels/data/basic-commitment.json`.
 
 To update `basic-commitment.json`:
-1. Search for `Sent transaction BasicInboundChannel.submit` in `parachain-relay.log`
+1. Search for `Sent transaction InboundQueue.submit` in `parachain-relay.log`
 2. Copy the necessary fields into `test/channels/data/basic-commitment.json`
