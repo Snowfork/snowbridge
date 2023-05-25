@@ -275,6 +275,26 @@ func (wr *ParachainWriter) GetLastFinalizedHeaderState() (state.FinalizedHeader,
 	}, nil
 }
 
+func (wr *ParachainWriter) GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error) {
+	finalizedBeaconStateKey, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedBeaconState", blockRoot[:], nil)
+	if err != nil {
+		return state.FinalizedHeader{}, fmt.Errorf("create storage key for FinalizedBeaconState: %w", err)
+	}
+	var compactBeaconState scale.CompactBeaconState
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(finalizedBeaconStateKey, &compactBeaconState)
+	if err != nil {
+		return state.FinalizedHeader{}, fmt.Errorf("fetch FinalizedBeaconState: %w", err)
+	}
+	if compactBeaconState.Slot.Int64() == 0 {
+		return state.FinalizedHeader{}, fmt.Errorf("FinalizedBeaconState not exist at %s", blockRoot.Hex())
+	}
+
+	return state.FinalizedHeader{
+		BeaconSlot:      uint64(compactBeaconState.Slot.Int64()),
+		BeaconBlockRoot: common.Hash(blockRoot),
+	}, nil
+}
+
 func (wr *ParachainWriter) getHashFromParachain(pallet, storage string) (common.Hash, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), pallet, storage, nil, nil)
 	if err != nil {
