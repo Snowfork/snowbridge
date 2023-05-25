@@ -189,7 +189,7 @@ func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName str
 }
 
 func (wr *ParachainWriter) GetLastBasicChannelBlockNumber() (uint64, error) {
-	return wr.getNumberFromParachain("InboundQueue", "LatestVerifiedBlockNumber")
+	return wr.getNumberFromParachain("EthereumInboundQueue", "LatestVerifiedBlockNumber")
 }
 
 func (wr *ParachainWriter) GetLastBasicChannelNonceByAddresses(addresses []common.Address) (map[common.Address]uint64, error) {
@@ -208,7 +208,7 @@ func (wr *ParachainWriter) GetLastBasicChannelNonceByAddresses(addresses []commo
 }
 
 func (wr *ParachainWriter) GetLastBasicChannelNonceByAddress(address common.Address) (uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "InboundQueue", "Nonce", address[:], nil)
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumInboundQueue", "Nonce", address[:], nil)
 	if err != nil {
 		return 0, fmt.Errorf("create storage key for basic channel nonces: %w", err)
 	}
