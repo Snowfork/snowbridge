@@ -35,7 +35,8 @@ use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
 use types::{
-	CheckpointUpdate, ExecutionHeaderBuffer, ExecutionHeaderUpdate, SyncCommitteePrepared, Update,
+	CheckpointUpdate, ExecutionHeaderBuffer, ExecutionHeaderUpdate, FinalizedHeaderBuffer,
+	SyncCommitteePrepared, Update,
 };
 
 pub use pallet::*;
@@ -48,6 +49,16 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+
+	#[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
+	#[codec(mel_bound(T: Config))]
+	#[scale_info(skip_type_params(T))]
+	pub struct MaxFinalizedHeadersToKeep<T: Config>(PhantomData<T>);
+	impl<T: Config> Get<u32> for MaxFinalizedHeadersToKeep<T> {
+		fn get() -> u32 {
+			config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD as u32 * 2
+		}
+	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -119,6 +130,8 @@ pub mod pallet {
 		BLSVerificationFailed(BlsError),
 		InvalidUpdateSlot,
 		InvalidSyncCommitteeUpdate,
+		ExecutionHeaderFallBehindTooMuch,
+		ExecutionHeaderSkippedSlot,
 	}
 
 	/// Latest imported finalized block root
@@ -131,6 +144,15 @@ pub mod pallet {
 	#[pallet::getter(fn finalized_beacon_state)]
 	pub(super) type FinalizedBeaconState<T: Config> =
 		StorageMap<_, Identity, H256, CompactBeaconState, OptionQuery>;
+
+	/// Finalized Headers: Current position in ring buffer
+	#[pallet::storage]
+	pub(crate) type FinalizedHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	/// Finalized Headers: Mapping of ring buffer index to a pruning candidate
+	#[pallet::storage]
+	pub(crate) type FinalizedHeaderMapping<T: Config> =
+		StorageMap<_, Identity, u32, H256, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn validators_root)]
@@ -252,8 +274,29 @@ pub mod pallet {
 		}
 
 		pub(crate) fn process_update(update: &Update) -> DispatchResult {
+			Self::cross_check_execution_state()?;
 			Self::verify_update(update)?;
 			Self::apply_update(update)?;
+			Ok(())
+		}
+
+		// Cross check to make sure ExecutionHeader not fall behind FinalizedHeader too much, if
+		// that happens just return error so to pause processing FinalizedHeader until
+		// ExecutionHeader catch up
+		fn cross_check_execution_state() -> DispatchResult {
+			let latest_finalized_state: CompactBeaconState =
+				match Self::finalized_beacon_state(Self::latest_finalized_block_root()) {
+					Some(finalized_beacon_state) => finalized_beacon_state,
+					None => return Err(Error::<T>::NotBootstrapped.into()),
+				};
+			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_header();
+			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
+			ensure!(
+				latest_execution_state.beacon_slot == 0 ||
+					latest_finalized_state.slot <
+						latest_execution_state.beacon_slot + max_latency as u64,
+				Error::<T>::ExecutionHeaderFallBehindTooMuch
+			);
 			Ok(())
 		}
 
@@ -428,9 +471,22 @@ pub mod pallet {
 		pub(crate) fn process_execution_header_update(
 			update: &ExecutionHeaderUpdate,
 		) -> DispatchResult {
+			let latest_finalized_state: CompactBeaconState =
+				match Self::finalized_beacon_state(Self::latest_finalized_block_root()) {
+					Some(finalized_beacon_state) => finalized_beacon_state,
+					None => return Err(Error::<T>::NotBootstrapped.into()),
+				};
 			ensure!(
-				update.execution_header.block_number > Self::latest_execution_header().block_number,
-				Error::<T>::ExecutionHeaderAlreadyImported
+				update.header.slot <= latest_finalized_state.slot,
+				Error::<T>::HeaderNotFinalized
+			);
+
+			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_header();
+			ensure!(
+				latest_execution_state.block_number == 0 ||
+					update.execution_header.block_number ==
+						latest_execution_state.block_number + 1,
+				Error::<T>::ExecutionHeaderSkippedSlot
 			);
 
 			let execution_header_root: H256 = update
@@ -536,7 +592,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let slot = header.slot;
 
-			<FinalizedBeaconState<T>>::insert(
+			<FinalizedHeaderBuffer<T>>::insert(
 				header_root,
 				CompactBeaconState { slot: header.slot, block_roots_root },
 			);
