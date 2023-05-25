@@ -87,7 +87,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 
 	log.Info("starting to sync finalized headers")
 
-	ticker := time.NewTicker(time.Second * 20)
+	ticker := time.NewTicker(time.Second * 10)
 
 	eg.Go(func() error {
 		for {
