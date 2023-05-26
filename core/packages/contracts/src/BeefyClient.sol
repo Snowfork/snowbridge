@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {Ownable} from "openzeppelin/access/Ownable.sol";
-import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
+import {MerkleProof} from "./utils/MerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./ScaleCodec.sol";
@@ -444,7 +444,7 @@ contract BeefyClient is Ownable {
             //
             // NOTE: This currently insecure due to a regression documented in SNO-427.
             // Basically `proof.index` (the merkle leaf index) is not being validated.
-            if (!isValidatorInSet(vset, proof.account, proof.proof)) {
+            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
                 revert InvalidValidatorProof();
             }
 
@@ -498,13 +498,13 @@ contract BeefyClient is Ownable {
      * @param proof Merkle proof required for validation of the address
      * @return true if the validator is in the set
      */
-    function isValidatorInSet(ValidatorSet memory vset, address addr, bytes32[] calldata proof)
+    function isValidatorInSet(ValidatorSet memory vset, address addr, uint256 index, bytes32[] calldata proof)
         internal
         pure
         returns (bool)
     {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
-        return MerkleProof.verify(proof, vset.root, hashedLeaf);
+        return MerkleProof.verifyMerkleLeafAtPosition(vset.root, hashedLeaf, index, vset.length, proof);
     }
 
     /**
