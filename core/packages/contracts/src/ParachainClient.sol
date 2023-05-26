@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "openzeppelin/utils/cryptography/MerkleProof.sol";
+import "./utils/MerkleProof.sol";
 import "./BeefyClient.sol";
 import "./IParachainClient.sol";
 import "./ScaleCodec.sol";
@@ -74,7 +74,12 @@ contract ParachainClient is IParachainClient {
         bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(proof.header);
 
         // Compute the merkle root hash of all parachain heads
-        bytes32 parachainHeadsRoot = MerkleProof.processProof(proof.headProof.proof, parachainHeadHash);
+        bytes32 parachainHeadsRoot = MerkleProof.computeRootFromProofAtPosition(
+            parachainHeadHash,
+            proof.headProof.pos,
+            proof.headProof.width,
+            proof.headProof.proof
+        );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
         return beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
