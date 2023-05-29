@@ -360,8 +360,9 @@ pub mod pallet {
 				Error::<T>::InvalidHeaderMerkleProof
 			);
 
-			// Verify block_roots_root to match the finalized checkpoint root saved in the state of
-			// `finalized_header` so to cache it for later use in `verify_ancestry_proof`
+			// Though following check does not belong to ALC spec we verify block_roots_root to
+			// match the finalized checkpoint root saved in the state of `finalized_header` so to
+			// cache it for later use in `verify_ancestry_proof`
 			ensure!(
 				verify_merkle_branch(
 					update.block_roots_root,
@@ -405,13 +406,15 @@ pub mod pallet {
 			} else {
 				<NextSyncCommittee<T>>::get()
 			};
-
 			let absent_pubkeys = Self::find_pubkeys(&participation, &sync_committee.pubkeys, false);
 			let signing_root = Self::signing_root(
 				&update.attested_header,
 				Self::validators_root(),
 				update.signature_slot,
 			)?;
+			// Improvement here per https://eth2book.info/capella/part2/building_blocks/signatures/#sync-aggregates
+			// suggested start from the full set aggregate_pubkey then subtracting the absolute
+			// minority that did not participate.
 			fast_aggregate_verify(
 				&sync_committee.aggregate_pubkey,
 				&absent_pubkeys,
@@ -448,6 +451,11 @@ pub mod pallet {
 					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
 				}
+				log::info!(
+					target: "ethereum-beacon-client",
+					"💫 SyncCommitteeUpdated at period {}.",
+					update_finalized_period
+				);
 				Self::deposit_event(Event::SyncCommitteeUpdated {
 					period: update_finalized_period,
 				});
