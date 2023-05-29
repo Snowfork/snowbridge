@@ -21,7 +21,7 @@ use sp_io::offchain_index::set;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use snowbridge_core::{types::AuxiliaryDigestItem, OutboundQueue};
+use snowbridge_core::OutboundQueue;
 use snowbridge_outbound_queue_merkle_proof::merkle_root;
 
 pub use weights::WeightInfo;

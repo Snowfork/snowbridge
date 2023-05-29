@@ -162,15 +162,14 @@ func (wr *EthereumWriter) WriteChannel(
 		merkleProofItems = append(merkleProofItems, proofItem)
 	}
 
-
 	convertedHeader, err := convertHeader(proof.Header)
 	if err != nil {
 		return fmt.Errorf("convert header: %w", err)
 	}
 
 	finalProof := contracts.ParachainClientProof{
-		Header: *convertedHeader,
-		HeadProof:  paraHeadProof,
+		Header:    *convertedHeader,
+		HeadProof: paraHeadProof,
 		LeafPartial: contracts.ParachainClientMMRLeafPartial{
 			Version:              uint8(proof.MMRProof.Leaf.Version),
 			ParentNumber:         uint32(proof.MMRProof.Leaf.ParentNumberAndHash.ParentNumber),
@@ -220,7 +219,6 @@ func (wr *EthereumWriter) WriteChannel(
 func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachainHeader, error) {
 	var digestItems []contracts.ParachainClientDigestItem
 
-
 	for _, di := range header.Digest {
 		switch {
 		case di.IsOther:
@@ -232,25 +230,25 @@ func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachai
 			consensusEngineID := make([]byte, 4)
 			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsPreRuntime.ConsensusEngineID))
 			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
-				Kind: big.NewInt(6),
+				Kind:              big.NewInt(6),
 				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
-				Data: di.AsPreRuntime.Bytes,
+				Data:              di.AsPreRuntime.Bytes,
 			})
 		case di.IsConsensus:
 			consensusEngineID := make([]byte, 4)
 			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsPreRuntime.ConsensusEngineID))
 			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
-				Kind: big.NewInt(4),
+				Kind:              big.NewInt(4),
 				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
-				Data: di.AsConsensus.Bytes,
+				Data:              di.AsConsensus.Bytes,
 			})
 		case di.IsSeal:
 			consensusEngineID := make([]byte, 4)
 			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsPreRuntime.ConsensusEngineID))
 			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
-				Kind: big.NewInt(5),
+				Kind:              big.NewInt(5),
 				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
-				Data: di.AsSeal.Bytes,
+				Data:              di.AsSeal.Bytes,
 			})
 		default:
 			return nil, fmt.Errorf("Unsupported digest item: %v", di)
@@ -258,10 +256,10 @@ func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachai
 	}
 
 	return &contracts.ParachainClientParachainHeader{
-		ParentHash: header.ParentHash,
-		Number: big.NewInt(int64(header.Number)),
-		StateRoot: header.StateRoot,
+		ParentHash:     header.ParentHash,
+		Number:         big.NewInt(int64(header.Number)),
+		StateRoot:      header.StateRoot,
 		ExtrinsicsRoot: header.ExtrinsicsRoot,
-		DigestItems: digestItems,
+		DigestItems:    digestItems,
 	}, nil
 }
