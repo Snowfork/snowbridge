@@ -22,12 +22,10 @@ type Finalized struct {
 	LastSyncedHash common.Hash
 	// Stores the last successfully synced slot
 	LastSyncedSlot uint64
-	// Stores the last attempted finalized header, whether the import succeeded or not.
-	LastAttemptedSyncHash common.Hash
-	// Stores the slot number of the above header
-	LastAttemptedSyncSlot uint64
 	// Stores finalized checkpoints
 	Checkpoints CheckPoints
+	// Stores the last successfully synced execution slot
+	LastSyncedExecutionSlot uint64
 }
 
 type Proof struct {
@@ -65,6 +63,23 @@ func (b *BeaconCache) SetLastSyncedSyncCommitteePeriod(period uint64) {
 	defer b.mu.Unlock()
 	if period > b.LastSyncedSyncCommitteePeriod {
 		b.LastSyncedSyncCommitteePeriod = period
+	}
+}
+
+func (b *BeaconCache) SetLastSyncedFinalizedState(finalizedHeaderRoot common.Hash, slot uint64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if slot > b.Finalized.LastSyncedSlot {
+		b.Finalized.LastSyncedHash = finalizedHeaderRoot
+		b.Finalized.LastSyncedSlot = slot
+	}
+}
+
+func (b *BeaconCache) SetLastSyncedExecutionSlot(slot uint64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if slot > b.Finalized.LastSyncedExecutionSlot {
+		b.Finalized.LastSyncedExecutionSlot = slot
 	}
 }
 
@@ -140,10 +155,6 @@ func (b *BeaconCache) calculateClosestCheckpointSlot(slot uint64) (uint64, error
 	for _, i := range b.Finalized.Checkpoints.Slots {
 		if i < slot {
 			continue
-		}
-
-		if i == slot { // if the slot is at a finalized checkpoint, we don't need to do the ancestry proof
-			return i, nil
 		}
 
 		if i < slot+blockRootThreshold {

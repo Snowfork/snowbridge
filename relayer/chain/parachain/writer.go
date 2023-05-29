@@ -91,7 +91,7 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 			if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
 				return fmt.Errorf("parachain write status was dropped, invalid, usurped or finality timed out")
 			}
-			if status.IsInBlock || status.IsFinalized {
+			if status.IsFinalized {
 				return nil
 			}
 		case err = <-sub.Err():

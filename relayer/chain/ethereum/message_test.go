@@ -55,14 +55,9 @@ func TestMessage_Proof(t *testing.T) {
 		panic("Receipt trie does not match block receipt hash")
 	}
 
-	msg, err := ethereum.MakeMessageFromEvent(event5_5, receiptTrie)
+	msgInner, err := ethereum.MakeMessageFromEvent(event5_5, receiptTrie)
 	assert.Nil(t, err)
-	assert.NotNil(t, msg)
-
-	msgInner, ok := msg.Args[0].(parachain.Message)
-	if !ok {
-		panic("unexpected type")
-	}
+	assert.NotNil(t, msgInner)
 
 	assert.Equal(t, block.Hash().Hex(), msgInner.Proof.BlockHash.Hex())
 	key, err := rlp.EncodeToBytes(uint(msgInner.Proof.TxIndex))
