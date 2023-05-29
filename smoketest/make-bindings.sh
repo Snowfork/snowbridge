@@ -14,5 +14,4 @@ command -v subxt || cargo install subxt-cli \
     --root $cargo_dir
 
 subxt codegen --url ws://localhost:11144 | rustfmt --edition 2021 --emit=stdout > src/parachains/bridgehub.rs
-subxt codegen --url ws://localhost:12144 | rustfmt --edition 2021 --emit=stdout > src/parachains/statemine.rs
 forge bind --module --overwrite --bindings-path src/contracts --root ../core/packages/contracts
