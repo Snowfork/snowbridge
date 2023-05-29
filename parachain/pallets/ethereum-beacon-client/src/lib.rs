@@ -35,7 +35,7 @@ use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
 use types::{
-	CheckpointUpdate, ExecutionHeaderBuffer, ExecutionHeaderUpdate, FinalizedHeaderBuffer,
+	CheckpointUpdate, ExecutionHeaderUpdate, ExecutionStateBuffer, FinalizedBeaconStateBuffer,
 	SyncCommitteePrepared, Update,
 };
 
@@ -134,6 +134,11 @@ pub mod pallet {
 		ExecutionHeaderSkippedSlot,
 	}
 
+	/// Latest imported checkpoint root
+	#[pallet::storage]
+	#[pallet::getter(fn initial_checkpoint_root)]
+	pub(super) type InitialCheckpointRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
+
 	/// Latest imported finalized block root
 	#[pallet::storage]
 	#[pallet::getter(fn latest_finalized_block_root)]
@@ -147,11 +152,11 @@ pub mod pallet {
 
 	/// Finalized Headers: Current position in ring buffer
 	#[pallet::storage]
-	pub(crate) type FinalizedHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+	pub(crate) type FinalizedBeaconStateIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Finalized Headers: Mapping of ring buffer index to a pruning candidate
 	#[pallet::storage]
-	pub(crate) type FinalizedHeaderMapping<T: Config> =
+	pub(crate) type FinalizedBeaconStateMapping<T: Config> =
 		StorageMap<_, Identity, u32, H256, ValueQuery>;
 
 	#[pallet::storage]
@@ -170,22 +175,22 @@ pub mod pallet {
 
 	/// Latest imported execution header
 	#[pallet::storage]
-	#[pallet::getter(fn latest_execution_header)]
-	pub(super) type LatestExecutionHeader<T: Config> =
+	#[pallet::getter(fn latest_execution_state)]
+	pub(super) type LatestExecutionState<T: Config> =
 		StorageValue<_, ExecutionHeaderState, ValueQuery>;
 
 	/// Execution Headers
 	#[pallet::storage]
-	pub(super) type ExecutionHeaders<T: Config> =
+	pub(super) type ExecutionState<T: Config> =
 		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
 
 	/// Execution Headers: Current position in ring buffer
 	#[pallet::storage]
-	pub(crate) type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+	pub(crate) type ExecutionStateIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Execution Headers: Mapping of ring buffer index to a pruning candidate
 	#[pallet::storage]
-	pub(crate) type ExecutionHeaderMapping<T: Config> =
+	pub(crate) type ExecutionStateMapping<T: Config> =
 		StorageMap<_, Identity, u32, H256, ValueQuery>;
 
 	#[pallet::call]
@@ -266,6 +271,8 @@ pub mod pallet {
 				.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
 			<CurrentSyncCommittee<T>>::set(sync_committee_prepared);
 			<NextSyncCommittee<T>>::kill();
+			InitialCheckpointRoot::<T>::set(header_root);
+			<LatestExecutionState<T>>::kill();
 
 			Self::store_validators_root(update.validators_root);
 			Self::store_finalized_header(header_root, update.header, update.block_roots_root)?;
@@ -289,7 +296,7 @@ pub mod pallet {
 					Some(finalized_beacon_state) => finalized_beacon_state,
 					None => return Err(Error::<T>::NotBootstrapped.into()),
 				};
-			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_header();
+			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
 			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
 			ensure!(
 				latest_execution_state.beacon_slot == 0 ||
@@ -489,7 +496,7 @@ pub mod pallet {
 				Error::<T>::HeaderNotFinalized
 			);
 
-			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_header();
+			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
 			ensure!(
 				latest_execution_state.block_number == 0 ||
 					update.execution_header.block_number ==
@@ -600,7 +607,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let slot = header.slot;
 
-			<FinalizedHeaderBuffer<T>>::insert(
+			<FinalizedBeaconStateBuffer<T>>::insert(
 				header_root,
 				CompactBeaconState { slot: header.slot, block_roots_root },
 			);
@@ -626,7 +633,7 @@ pub mod pallet {
 		) {
 			let block_number = header.block_number;
 
-			<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
+			<ExecutionStateBuffer<T>>::insert(block_hash, header);
 
 			log::trace!(
 				target: "ethereum-beacon-client",
@@ -635,7 +642,7 @@ pub mod pallet {
 				block_number
 			);
 
-			LatestExecutionHeader::<T>::mutate(|s| {
+			LatestExecutionState::<T>::mutate(|s| {
 				s.beacon_block_root = beacon_block_root;
 				s.beacon_slot = beacon_slot;
 				s.block_hash = block_hash;

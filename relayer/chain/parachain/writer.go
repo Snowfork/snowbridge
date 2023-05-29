@@ -223,7 +223,7 @@ func (wr *ParachainWriter) GetLastBasicChannelNonceByAddress(address common.Addr
 }
 
 func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestExecutionHeader", nil, nil)
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestExecutionState", nil, nil)
 	if err != nil {
 		return state.ExecutionHeader{}, fmt.Errorf("create storage key for LatestExecutionHeaderState: %w", err)
 	}
@@ -269,9 +269,32 @@ func (wr *ParachainWriter) GetLastFinalizedHeaderState() (state.FinalizedHeader,
 		return state.FinalizedHeader{}, fmt.Errorf("fetch FinalizedBeaconState: %w", err)
 	}
 
+	initialCheckpointRootKey, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "InitialCheckpointRoot", nil, nil)
+	if err != nil {
+		return state.FinalizedHeader{}, fmt.Errorf("create storage key for LatestFinalizedBlockRoot: %w", err)
+	}
+
+	var initialCheckpointRoot types.H256
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(initialCheckpointRootKey, &initialCheckpointRoot)
+	if err != nil {
+		return state.FinalizedHeader{}, fmt.Errorf("fetch LatestFinalizedBlockRoot: %w", err)
+	}
+
+	checkpointStateKey, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedBeaconState", initialCheckpointRoot[:], nil)
+	if err != nil {
+		return state.FinalizedHeader{}, fmt.Errorf("create storage key for FinalizedBeaconState: %w", err)
+	}
+	var initialCheckpointState scale.CompactBeaconState
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(checkpointStateKey, &initialCheckpointState)
+	if err != nil {
+		return state.FinalizedHeader{}, fmt.Errorf("fetch FinalizedBeaconState: %w", err)
+	}
+
 	return state.FinalizedHeader{
-		BeaconSlot:      uint64(compactBeaconState.Slot.Int64()),
-		BeaconBlockRoot: common.Hash(latestFinalizedBlockRoot),
+		BeaconSlot:            uint64(compactBeaconState.Slot.Int64()),
+		BeaconBlockRoot:       common.Hash(latestFinalizedBlockRoot),
+		InitialCheckpointSlot: uint64(initialCheckpointState.Slot.Int64()),
+		InitialCheckpointRoot: common.Hash(initialCheckpointRoot),
 	}, nil
 }
 

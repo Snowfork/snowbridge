@@ -24,8 +24,6 @@ type Finalized struct {
 	LastSyncedSlot uint64
 	// Stores finalized checkpoints
 	Checkpoints CheckPoints
-	// Stores the last successfully synced execution slot
-	LastSyncedExecutionSlot uint64
 }
 
 type Proof struct {
@@ -44,6 +42,8 @@ type BeaconCache struct {
 	Finalized                     Finalized
 	slotsInEpoch                  uint64
 	epochsPerSyncCommitteePeriod  uint64
+	LastSyncedExecutionSlot       uint64
+	InitialCheckpointSlot         uint64
 	mu                            sync.Mutex
 }
 
@@ -78,8 +78,16 @@ func (b *BeaconCache) SetLastSyncedFinalizedState(finalizedHeaderRoot common.Has
 func (b *BeaconCache) SetLastSyncedExecutionSlot(slot uint64) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if slot > b.Finalized.LastSyncedExecutionSlot {
-		b.Finalized.LastSyncedExecutionSlot = slot
+	if slot > b.LastSyncedExecutionSlot {
+		b.LastSyncedExecutionSlot = slot
+	}
+}
+
+func (b *BeaconCache) SetInitialCheckpointSlot(slot uint64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if slot > b.InitialCheckpointSlot {
+		b.InitialCheckpointSlot = slot
 	}
 }
 

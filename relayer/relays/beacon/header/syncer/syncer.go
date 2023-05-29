@@ -65,8 +65,7 @@ type SyncAggregate struct {
 	SyncCommitteeSignature []byte
 }
 
-func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSlot uint64) ([]uint64, error) {
-	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(currentSlot)
+func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSyncPeriod uint64) ([]uint64, error) {
 
 	if lastSyncedPeriod < currentSyncPeriod {
 		return []uint64{lastSyncedPeriod + 1}, nil

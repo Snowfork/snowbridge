@@ -50,6 +50,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	}).Info("set cache: last finalized state")
 	h.cache.SetLastSyncedSyncCommitteePeriod(latestSyncedPeriod)
 	h.cache.SetLastSyncedFinalizedState(lastFinalizedHeaderState.BeaconBlockRoot, lastFinalizedHeaderState.BeaconSlot)
+	h.cache.SetInitialCheckpointSlot(lastFinalizedHeaderState.InitialCheckpointSlot)
 	h.cache.AddCheckPointSlots([]uint64{lastFinalizedHeaderState.BeaconSlot})
 
 	// syncLaggingExecutionHeaders so to allow ExecutionHeader to catch up
@@ -158,7 +159,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 	currentSyncPeriod := h.syncer.ComputeSyncPeriodAtSlot(uint64(update.Payload.AttestedHeader.Slot))
 
 	if h.cache.LastSyncedSyncCommitteePeriod < currentSyncPeriod {
-		err = h.syncLaggingSyncCommitteePeriods(ctx, h.cache.LastSyncedSyncCommitteePeriod, uint64(update.Payload.AttestedHeader.Slot))
+		err = h.syncLaggingSyncCommitteePeriods(ctx, h.cache.LastSyncedSyncCommitteePeriod, currentSyncPeriod)
 		if err != nil {
 			return fmt.Errorf("sync lagging sync committee periods: %w", err)
 		}
@@ -215,14 +216,14 @@ func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 	if !hasChanged {
 		return ErrFinalizedHeaderUnchanged
 	}
-	fromSlot := h.cache.Finalized.LastSyncedExecutionSlot
-	if fromSlot == 0 {
-		fromSlot = h.cache.Finalized.LastSyncedSlot
-	}
 
 	err = h.SyncFinalizedHeader(ctx)
 	if err != nil {
 		return err
+	}
+	fromSlot := h.cache.LastSyncedExecutionSlot
+	if fromSlot <= h.cache.InitialCheckpointSlot {
+		fromSlot = h.cache.InitialCheckpointSlot
 	}
 
 	err = h.SyncHeaders(ctx, fromSlot, h.cache.Finalized.LastSyncedSlot)
@@ -297,20 +298,19 @@ func (h *Header) SyncHeaders(ctx context.Context, fromSlot, toSlot uint64) error
 // Syncs execution headers from the last synced execution header on the parachain to the current finalized header. Lagging execution headers can occur if the relayer
 // stopped while still processing a set of execution headers.
 func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedState state.FinalizedHeader, executionHeaderState state.ExecutionHeader) error {
-	if executionHeaderState.BlockNumber == 0 {
-		log.Info("start of syncing, no execution header lag found")
-
-		return nil
+	fromSlot := executionHeaderState.BeaconSlot
+	if fromSlot == 0 {
+		fromSlot = lastFinalizedState.InitialCheckpointSlot
 	}
 
 	lastFinalizedSlot := lastFinalizedState.BeaconSlot
-	lastFinalizedHeader := lastFinalizedState.BeaconBlockRoot
 
-	if executionHeaderState.BeaconSlot >= lastFinalizedSlot {
+	if fromSlot >= lastFinalizedSlot {
 		log.WithFields(log.Fields{
 			"slot":          executionHeaderState.BeaconSlot,
 			"blockNumber":   executionHeaderState.BlockNumber,
 			"executionHash": executionHeaderState.BlockHash,
+			"fromSlot":      fromSlot,
 		}).Info("execution headers sync up to date with last finalized header")
 
 		return nil
@@ -321,11 +321,12 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedS
 		"finalizedSlot": lastFinalizedSlot,
 		"blockNumber":   executionHeaderState.BlockNumber,
 		"executionHash": executionHeaderState.BlockHash,
-		"finalizedHash": lastFinalizedHeader,
-		"slotsBacklog":  lastFinalizedSlot - executionHeaderState.BeaconSlot,
+		"finalizedHash": lastFinalizedState.BeaconBlockRoot,
+		"fromSlot":      fromSlot,
+		"slotsBacklog":  lastFinalizedSlot - fromSlot,
 	}).Info("execution headers sync is not up to date with last finalized header, syncing lagging execution headers")
 
-	err := h.SyncHeaders(ctx, executionHeaderState.BeaconSlot, lastFinalizedState.BeaconSlot)
+	err := h.SyncHeaders(ctx, fromSlot, lastFinalizedState.BeaconSlot)
 	if err != nil {
 		return fmt.Errorf("sync headers: %w", err)
 	}
@@ -333,13 +334,15 @@ func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedS
 	return nil
 }
 
-func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, latestSlot uint64) error {
-	periodsToSync, err := h.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod, latestSlot)
+func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
+	periodsToSync, err := h.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod, currentSyncPeriod)
 	if err != nil {
 		return fmt.Errorf("check sync committee periods to be fetched: %w", err)
 	}
 	// initialized with latestSyncedPeriod to sync next sync committee
-	if h.cache.Finalized.LastSyncedExecutionSlot == 0 {
+	initialPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.InitialCheckpointSlot)
+	lastFinalizedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
+	if initialPeriod == lastFinalizedPeriod {
 		periodsToSync = append([]uint64{latestSyncedPeriod}, periodsToSync...)
 	}
 
@@ -354,7 +357,6 @@ func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSync
 		}
 	}
 
-	currentSyncPeriod := h.syncer.ComputeSyncPeriodAtSlot(latestSlot)
 	if h.cache.LastSyncedSyncCommitteePeriod < currentSyncPeriod {
 		return ErrSyncCommitteeLatency
 	}

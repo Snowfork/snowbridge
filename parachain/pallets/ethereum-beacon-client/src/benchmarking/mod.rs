@@ -81,7 +81,7 @@ mod benchmarks {
 		#[extrinsic_call]
 		_(RawOrigin::Signed(caller.clone()), *execution_header_update);
 
-		assert!(<ExecutionHeaders<T>>::contains_key(execution_header_hash));
+		assert!(<ExecutionState<T>>::contains_key(execution_header_hash));
 
 		Ok(())
 	}

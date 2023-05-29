@@ -12,6 +12,8 @@ type ExecutionHeader struct {
 }
 
 type FinalizedHeader struct {
-	BeaconBlockRoot common.Hash
-	BeaconSlot      uint64
+	BeaconBlockRoot       common.Hash
+	BeaconSlot            uint64
+	InitialCheckpointRoot common.Hash
+	InitialCheckpointSlot uint64
 }

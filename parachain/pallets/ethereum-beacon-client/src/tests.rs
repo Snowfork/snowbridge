@@ -1,5 +1,5 @@
 use crate::{
-	mock::minimal::*, pallet::ExecutionHeaders, sync_committee_sum, verify_merkle_branch,
+	mock::minimal::*, pallet::ExecutionState, sync_committee_sum, verify_merkle_branch,
 	BeaconHeader, CompactBeaconState, Error, FinalizedBeaconState, LatestFinalizedBlockRoot,
 	NextSyncCommittee,
 };
@@ -259,7 +259,7 @@ pub fn execution_header_pruning() {
 		}
 
 		// We should have stored everything until now
-		assert_eq!(ExecutionHeaders::<Test>::iter().count() as usize, stored_hashes.len());
+		assert_eq!(ExecutionState::<Test>::iter().count() as usize, stored_hashes.len());
 
 		// Let's push extra entries so that some of the previous entries are deleted.
 		for i in 0..to_be_deleted {
@@ -276,19 +276,16 @@ pub fn execution_header_pruning() {
 		}
 
 		// We should have only stored upto `execution_header_prune_threshold`
-		assert_eq!(
-			ExecutionHeaders::<Test>::iter().count() as u32,
-			execution_header_prune_threshold
-		);
+		assert_eq!(ExecutionState::<Test>::iter().count() as u32, execution_header_prune_threshold);
 
 		// First `to_be_deleted` items must be deleted
 		for i in 0..to_be_deleted {
-			assert!(!ExecutionHeaders::<Test>::contains_key(stored_hashes[i as usize]));
+			assert!(!ExecutionState::<Test>::contains_key(stored_hashes[i as usize]));
 		}
 
 		// Other entries should be part of data
 		for i in to_be_deleted..(to_be_deleted + execution_header_prune_threshold) {
-			assert!(ExecutionHeaders::<Test>::contains_key(stored_hashes[i as usize]));
+			assert!(ExecutionState::<Test>::contains_key(stored_hashes[i as usize]));
 		}
 	});
 }
@@ -361,7 +358,7 @@ fn submit_execution_header_update() {
 			RuntimeOrigin::signed(1),
 			execution_header_update.clone()
 		));
-		assert!(<ExecutionHeaders<Test>>::contains_key(
+		assert!(<ExecutionState<Test>>::contains_key(
 			execution_header_update.execution_header.block_hash
 		));
 	});
