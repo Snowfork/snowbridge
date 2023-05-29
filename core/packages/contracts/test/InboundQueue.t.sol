@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {Test} from "forge-std/Test.sol";
 
 import {InboundQueue} from "../src/InboundQueue.sol";
+import {BeefyClient} from "../src/BeefyClient.sol";
 import {Vault} from "../src/Vault.sol";
 import {IParachainClient} from "../src/IParachainClient.sol";
 import {ParaID} from "../src/Types.sol";
@@ -24,7 +25,7 @@ contract InboundQueueTest is Test {
     bytes public parachainHeaderProof = bytes("validProof");
 
     function setUp() public {
-        IParachainClient parachainClient = new ParachainClientMock();
+        IParachainClient parachainClient = new ParachainClientMock(BeefyClient(address(0)), 0);
         recipient = new RecipientMock();
 
         vault = new Vault();
@@ -84,9 +85,7 @@ contract InboundQueueTest is Test {
 
         recipient.setShouldFail();
         vm.expectEmit(true, true, false, true);
-        emit MessageDispatched(
-            ORIGIN, 1, InboundQueue.DispatchResult.Failure
-        );
+        emit MessageDispatched(ORIGIN, 1, InboundQueue.DispatchResult.Failure);
 
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);

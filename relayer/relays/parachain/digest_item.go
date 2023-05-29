@@ -37,17 +37,16 @@ func (a *AuxiliaryDigestItem) Decode(decoder scale.Decoder) error {
 	return nil
 }
 
-func ExtractAuxiliaryDigestItems(digest types.Digest) ([]AuxiliaryDigestItem, error) {
-	var auxDigestItems []AuxiliaryDigestItem
+func ExtractCommitmentFromDigest(digest types.Digest) (*types.H256, error) {
 	for _, digestItem := range digest {
 		if digestItem.IsOther {
-			var auxDigestItem AuxiliaryDigestItem
-			err := types.DecodeFromBytes(digestItem.AsOther, &auxDigestItem)
+			var commitment types.H256
+			err := types.DecodeFromBytes(digestItem.AsOther, &commitment)
 			if err != nil {
 				return nil, err
 			}
-			auxDigestItems = append(auxDigestItems, auxDigestItem)
+			return &commitment, nil
 		}
 	}
-	return auxDigestItems, nil
+	return nil, nil
 }

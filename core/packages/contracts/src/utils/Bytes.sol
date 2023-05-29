@@ -41,11 +41,7 @@ library Bytes {
     // Requires that:
     //  - 'startIndex + len <= self.length'
     // The length of the substring is: 'len'
-    function substr(
-        bytes memory self,
-        uint256 startIndex,
-        uint256 len
-    ) internal pure returns (bytes memory) {
+    function substr(bytes memory self, uint256 startIndex, uint256 len) internal pure returns (bytes memory) {
         require(startIndex + len <= self.length);
         if (len == 0) {
             return "";
@@ -67,7 +63,7 @@ library Bytes {
         uint256 src2Len;
         (src2, src2Len) = Memory.fromBytes(other);
         uint256 dest;
-        (dest, ) = Memory.fromBytes(ret);
+        (dest,) = Memory.fromBytes(ret);
         uint256 dest2 = dest + srcLen;
         Memory.copy(src, dest, srcLen);
         Memory.copy(src2, dest2, src2Len);
