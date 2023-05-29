@@ -3,29 +3,31 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
+import {WETH9} from "canonical-weth/WETH9.sol";
 import "openzeppelin/token/ERC20/IERC20.sol";
 
 import "../src/TokenVault.sol";
-import "./mocks/TestToken.sol";
 
 contract TokenVaultTest is Test {
     event Deposit(address sender, address token, uint256 amount);
     event Withdraw(address recipient, address token, uint256 amount);
 
     TokenVault vault;
-    TestToken token;
+    WETH9 token;
     address account;
 
     function setUp() public {
         vault = new TokenVault();
-        token = new TestToken("TestToken", "T");
+        token = new WETH9();
 
         account = makeAddr("statemint");
 
         vault.grantRole(vault.WITHDRAW_ROLE(), address(this));
         vault.grantRole(vault.DEPOSIT_ROLE(), address(this));
 
-        token.mint(address(account), 1000);
+        // create tokens for statemint account
+        hoax(account);
+        token.deposit{value: 1000}();
     }
 
     function testInsufficientBalance() public {
@@ -35,15 +37,15 @@ contract TokenVaultTest is Test {
 
     function testTokenTransferFailedInsufficientAllowance() public {
         hoax(account);
-        IERC20(token).approve(address(vault), 50);
+        token.approve(address(vault), 50);
 
-        vm.expectRevert("ERC20: insufficient allowance");
+        vm.expectRevert();
         vault.deposit(address(account), address(token), 100);
     }
 
     function testDepositSuccessful() public {
         hoax(account);
-        IERC20(token).approve(address(vault), 100);
+        token.approve(address(vault), 100);
 
         vm.expectEmit(false, false, false, true);
         emit Deposit(address(account), address(token), 50);

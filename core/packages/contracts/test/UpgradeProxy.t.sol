@@ -7,30 +7,11 @@ import {Test} from "forge-std/Test.sol";
 
 import {UpgradeProxy} from "../src/UpgradeProxy.sol";
 import {IUpgradeTask} from "../src/IUpgradeTask.sol";
-
 import {IVault, Vault} from "../src/Vault.sol";
 import {OutboundQueue} from "../src/OutboundQueue.sol";
-
 import {ParaID} from "../src/Types.sol";
 
-contract UpgradeTask is IUpgradeTask, AccessControl {
-    OutboundQueue public immutable outboundQueue;
-
-    constructor(OutboundQueue _outboundQueue) {
-        outboundQueue = _outboundQueue;
-    }
-
-    // In this simple upgrade we just update a fee parameter
-    function run() external {
-        outboundQueue.updateFee(2 ether);
-    }
-}
-
-contract FailingUpgradeTask is IUpgradeTask, AccessControl {
-    function run() pure external {
-        revert("failed");
-    }
-}
+import {UpgradeTaskMock, FailingUpgradeTaskMock} from "./mocks/UpgradeTaskMock.sol";
 
 contract UpgradeProxyTest is Test {
     UpgradeProxy public upgradeProxy;
@@ -51,15 +32,14 @@ contract UpgradeProxyTest is Test {
         upgradeProxy.grantRole(upgradeProxy.SENDER_ROLE(), address(this));
 
         // create upgrade tasks
-        upgradeTask = new UpgradeTask(outboundQueue);
-        failedUpgradeTask = new FailingUpgradeTask();
+        upgradeTask = new UpgradeTaskMock(outboundQueue);
+        failedUpgradeTask = new FailingUpgradeTaskMock();
     }
 
-    function createUpgradeMessage(IUpgradeTask task) internal returns (bytes memory) {
+    function createUpgradeMessage(IUpgradeTask task) internal pure returns (bytes memory) {
         return abi.encode(
-            UpgradeProxy.Message(
-                UpgradeProxy.Action.Upgrade,
-                abi.encode(UpgradeProxy.UpgradePayload(address(task)))));
+            UpgradeProxy.Message(UpgradeProxy.Action.Upgrade, abi.encode(UpgradeProxy.UpgradePayload(address(task))))
+        );
     }
 
     function testUpgrade() public {

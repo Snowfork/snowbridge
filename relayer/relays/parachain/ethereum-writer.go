@@ -2,7 +2,7 @@ package parachain
 
 import (
 	"context"
-	"encoding/hex"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
@@ -134,7 +134,7 @@ func (wr *EthereumWriter) WriteChannels(
 	task *Task,
 ) error {
 	for _, proof := range *task.BasicChannelProofs {
-		err := wr.WriteBasicChannel(options, &proof, task.ProofInput.ParaID, task.ProofOutput)
+		err := wr.WriteChannel(options, &proof, task.ProofOutput)
 		if err != nil {
 			return fmt.Errorf("write basic channel: %w", err)
 		}
@@ -144,10 +144,9 @@ func (wr *EthereumWriter) WriteChannels(
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *EthereumWriter) WriteBasicChannel(
+func (wr *EthereumWriter) WriteChannel(
 	options *bind.TransactOpts,
 	commitmentProof *MessageProof,
-	paraID uint32,
 	proof *ProofOutput,
 ) error {
 	message := commitmentProof.Message.IntoInboundMessage()
@@ -158,41 +157,19 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		Proof: proof.MerkleProofData.Proof,
 	}
 
-	// Split message commit hash from parachain header since added as digest log
-	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/incentivized-channel/src/outbound/mod.rs#L238-L242
-	ownParachainHeadBytes := proof.MerkleProofData.ProvenPreLeaf
-	ownParachainHeadBytesString := hex.EncodeToString(ownParachainHeadBytes)
-	commitmentHashString := hex.EncodeToString(commitmentProof.Proof.Root[:])
-	// Trick here is that in parachain header only commitmentHash is required to verify
-	// so just split to some unknown prefix and suffix in order to reconstruct later
-	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/ParachainClient.sol#L50-L54
-	prefixSuffix := strings.Split(ownParachainHeadBytesString, commitmentHashString)
-	if len(prefixSuffix) != 2 {
-		return errors.New("error splitting parachain header into prefix and suffix")
-	}
-	paraIDHex, err := gsrpcTypes.EncodeToHexString(paraID)
-	if err != nil {
-		return err
-	}
-	prefixWithoutParaID := strings.TrimPrefix(prefixSuffix[0], strings.TrimPrefix(paraIDHex, "0x"))
-	prefix, err := hex.DecodeString(prefixWithoutParaID)
-	if err != nil {
-		return err
-	}
-	suffix, err := hex.DecodeString(prefixSuffix[1])
-	if err != nil {
-		return err
-	}
-
 	var merkleProofItems [][32]byte
 	for _, proofItem := range proof.MMRProof.MerkleProofItems {
 		merkleProofItems = append(merkleProofItems, proofItem)
 	}
 
+	convertedHeader, err := convertHeader(proof.Header)
+	if err != nil {
+		return fmt.Errorf("convert header: %w", err)
+	}
+
 	finalProof := contracts.ParachainClientProof{
-		HeadPrefix: prefix,
-		HeadSuffix: suffix,
-		HeadProof:  paraHeadProof,
+		Header:    *convertedHeader,
+		HeadProof: paraHeadProof,
 		LeafPartial: contracts.ParachainClientMMRLeafPartial{
 			Version:              uint8(proof.MMRProof.Leaf.Version),
 			ParentNumber:         uint32(proof.MMRProof.Leaf.ParentNumberAndHash.ParentNumber),
@@ -224,16 +201,65 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("params", wr.logFieldsForBasicSubmission(message, commitmentProof.Proof.InnerHashes, opaqueProof)).
+		WithField("params", wr.logFieldsForSubmission(message, commitmentProof.Proof.InnerHashes, opaqueProof)).
 		WithFields(log.Fields{
-			"commitmentHash":       commitmentHashString,
+			"commitmentHash":       commitmentProof.Proof.Root.Hex(),
 			"MMRRoot":              proof.MMRRootHash.Hex(),
 			"MMRLeafHash":          Hex(hasher.Hash(mmrLeafEncoded)),
 			"merkleProofData":      proof.MerkleProofData,
 			"parachainBlockNumber": proof.Header.Number,
 			"beefyBlock":           proof.MMRProof.Blockhash.Hex(),
+			"header":               proof.Header,
 		}).
 		Info("Sent transaction InboundQueue.submit")
 
 	return nil
+}
+
+func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachainHeader, error) {
+	var digestItems []contracts.ParachainClientDigestItem
+
+	for _, di := range header.Digest {
+		switch {
+		case di.IsOther:
+			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
+				Kind: big.NewInt(0),
+				Data: di.AsOther,
+			})
+		case di.IsPreRuntime:
+			consensusEngineID := make([]byte, 4)
+			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsPreRuntime.ConsensusEngineID))
+			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
+				Kind:              big.NewInt(6),
+				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
+				Data:              di.AsPreRuntime.Bytes,
+			})
+		case di.IsConsensus:
+			consensusEngineID := make([]byte, 4)
+			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsPreRuntime.ConsensusEngineID))
+			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
+				Kind:              big.NewInt(4),
+				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
+				Data:              di.AsConsensus.Bytes,
+			})
+		case di.IsSeal:
+			consensusEngineID := make([]byte, 4)
+			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsPreRuntime.ConsensusEngineID))
+			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
+				Kind:              big.NewInt(5),
+				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
+				Data:              di.AsSeal.Bytes,
+			})
+		default:
+			return nil, fmt.Errorf("Unsupported digest item: %v", di)
+		}
+	}
+
+	return &contracts.ParachainClientParachainHeader{
+		ParentHash:     header.ParentHash,
+		Number:         big.NewInt(int64(header.Number)),
+		StateRoot:      header.StateRoot,
+		ExtrinsicsRoot: header.ExtrinsicsRoot,
+		DigestItems:    digestItems,
+	}, nil
 }

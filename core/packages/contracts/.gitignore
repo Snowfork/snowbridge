@@ -15,3 +15,4 @@ cache/
 broadcast/
 types/
 tsconfig.tsbuildinfo
+lcov.info
