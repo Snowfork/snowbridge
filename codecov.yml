@@ -1,0 +1,3 @@
+ignore:
+  - "core/packages/contracts/test/mocks"
+  - "core/packages/contracts/src/utils"
