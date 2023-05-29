@@ -1,7 +1,7 @@
 # exports enable use in core/packages/test/config/launch-config.toml
 root_dir="$(realpath ../../..)"
 bridge_hub_runtime="${PARACHAIN_RUNTIME:-bridge-hub-rococo-local}"
-relaychain_version="${POLKADOT_VER:-v0.9.38}"
+relaychain_version="${POLKADOT_VER:-v0.9.43}"
 relaychain_dir="$root_dir/parachain/.cargo/$relaychain_version"
 relaychain_bin="${POLKADOT_BIN:-$relaychain_dir/bin/polkadot}"
 cumulus_version="${CUMULUS_VER:-snowbridge}"
