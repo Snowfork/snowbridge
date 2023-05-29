@@ -19,4 +19,12 @@ contract ParachainClientMock is ParachainClient {
     function createParachainHeaderMerkleLeaf_public(ParachainHeader memory header) external view returns (bytes32) {
         return createParachainHeaderMerkleLeaf(header);
     }
+
+    function isCommitmentInHeaderDigest_public(bytes32 commitment, ParachainHeader memory header)
+        external
+        pure
+        returns (bool)
+    {
+        return isCommitmentInHeaderDigest(commitment, header);
+    }
 }
