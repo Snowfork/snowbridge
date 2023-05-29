@@ -59,7 +59,8 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	}
 	log.WithFields(log.Fields{
 		"hash": executionHeaderState.BeaconBlockRoot,
-		"slot": executionHeaderState.BeaconSlot,
+		"from": executionHeaderState.BeaconSlot,
+		"to":   lastFinalizedHeaderState.BeaconSlot,
 	}).Info("starting to sync from last execution state to last finalized state")
 	err = h.syncLaggingExecutionHeaders(ctx, lastFinalizedHeaderState, executionHeaderState)
 	if err != nil {
@@ -253,24 +254,6 @@ func (h *Header) SyncHeaders(ctx context.Context, fromSlot, toSlot uint64) error
 	}
 
 	for currentSlot <= toSlot {
-		epoch := h.syncer.ComputeEpochAtSlot(currentSlot)
-
-		// start of new epoch, sync headers of last epoch
-		if h.syncer.IsStartOfEpoch(currentSlot) {
-			log.WithFields(log.Fields{
-				"epoch": epoch - 1,
-			}).Debug("syncing header in epoch")
-			for _, header := range headersToSync {
-				err := h.SyncHeader(ctx, header)
-				if err != nil {
-					return fmt.Errorf("sync execution header: %w", err)
-				}
-			}
-
-			// new epoch, start with clean array
-			headersToSync = []scale.HeaderUpdate{}
-		}
-
 		log.WithFields(log.Fields{
 			"currentSlot": currentSlot,
 		}).Info("fetching next header at slot")
