@@ -1,4 +1,4 @@
-use snowbridge_smoketest::{contracts::{native_tokens, weth9}, parachains::statemine};
+use snowbridge_smoketest::{contracts::{native_tokens, weth9}};
 
 use std::{sync::Arc, time::Duration};
 
