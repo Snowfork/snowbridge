@@ -127,7 +127,6 @@ pub mod pallet {
 		pub interval: T::BlockNumber,
 	}
 
-	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self { interval: Default::default() }

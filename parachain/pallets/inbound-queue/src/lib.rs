@@ -20,6 +20,8 @@ use snowbridge_core::ParaId;
 use sp_core::{ConstU32, H160};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
+use sp_std::vec::Vec;
+use sp_std::collections::btree_set::BTreeSet;
 
 use envelope::Envelope;
 use snowbridge_core::{Message, Verifier};
@@ -29,8 +31,6 @@ use xcm::latest::{send_xcm, SendError};
 
 pub use weights::WeightInfo;
 
-#[cfg(feature = "std")]
-use sp_std::collections::btree_set::BTreeSet;
 
 use frame_support::{CloneNoBound, EqNoBound, PartialEqNoBound};
 
@@ -114,7 +114,6 @@ pub mod pallet {
 		pub allowlist: Vec<H160>,
 	}
 
-	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
 			Self { allowlist: Default::default() }
