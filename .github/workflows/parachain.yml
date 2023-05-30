@@ -51,7 +51,6 @@ jobs:
             --manifest-path parachain/Cargo.toml
             --workspace
             --features runtime-benchmarks
-
   test:
     needs: check
     runs-on: snowbridge-runner
@@ -111,3 +110,28 @@ jobs:
             --features runtime-benchmarks
             --package snowbridge-ethereum-beacon-client
           toolchain: nightly-2023-04-22
+  coverage:
+    needs: check
+    runs-on: snowbridge-runner
+    env:
+      CARGO_INCREMENTAL: 0
+      RUST_BACKTRACE: 1
+      RUSTFLAGS: -C debuginfo=1
+      SKIP_WASM_BUILD: 1
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: arduino/setup-protoc@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2023-04-22
+          target: wasm32-unknown-unknown
+      - run: cargo install cargo-tarpaulin
+      - run: cargo tarpaulin --manifest-path parachain/Cargo.toml --release --workspace --no-fail-fast --out Xml --exclude substrate-call-index --exclude snowbridge-query-events
+      - name: Upload coverage reports to Codecov with GitHub Action
+        uses: codecov/codecov-action@v3
+        with:
+          working-directory: parachain
+          files: cobertura.xml
