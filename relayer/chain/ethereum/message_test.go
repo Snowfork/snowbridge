@@ -59,17 +59,12 @@ func TestMessage_Proof(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, msg)
 
-	msgInner, ok := msg.Args[0].(parachain.Message)
-	if !ok {
-		panic("unexpected type")
-	}
-
-	assert.Equal(t, block.Hash().Hex(), msgInner.Proof.BlockHash.Hex())
-	key, err := rlp.EncodeToBytes(uint(msgInner.Proof.TxIndex))
+	assert.Equal(t, block.Hash().Hex(), msg.Proof.BlockHash.Hex())
+	key, err := rlp.EncodeToBytes(uint(msg.Proof.TxIndex))
 	if err != nil {
 		panic(err)
 	}
-	proofNodes := TestProof(*msgInner.Proof.Data)
+	proofNodes := TestProof(*msg.Proof.Data)
 	provenReceipt, err := gethTrie.VerifyProof(block.ReceiptHash(), key, &proofNodes)
 	assert.Nil(t, err)
 	assert.Equal(t, provenReceipt, receipt5Encoded)
