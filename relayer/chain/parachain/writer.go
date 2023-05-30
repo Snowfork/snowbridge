@@ -19,16 +19,19 @@ type ParachainWriter struct {
 	pool                 *ExtrinsicPool
 	genesisHash          types.Hash
 	maxWatchedExtrinsics int64
+	maxBatchCallSize     int64
 	mu                   sync.Mutex
 }
 
 func NewParachainWriter(
 	conn *Connection,
 	maxWatchedExtrinsics int64,
+	maxBatchCallSize int64,
 ) *ParachainWriter {
 	return &ParachainWriter{
 		conn:                 conn,
 		maxWatchedExtrinsics: maxWatchedExtrinsics,
+		maxBatchCallSize:     maxBatchCallSize,
 	}
 }
 
@@ -48,6 +51,31 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 
 	wr.pool = NewExtrinsicPool(eg, wr.conn, wr.maxWatchedExtrinsics)
 
+	return nil
+}
+
+func (wr *ParachainWriter) BatchCall(ctx context.Context, extrinsic string, calls []interface{}) error {
+	batchSize := int(wr.maxBatchCallSize)
+	var j int
+	for i := 0; i < len(calls); i += batchSize {
+		j += batchSize
+		if j > len(calls) {
+			j = len(calls)
+		}
+		slicedCalls := append([]interface{}{}, calls[i:j]...)
+		subHeaderUpdateCalls := make([]types.Call, len(slicedCalls))
+		for k := range slicedCalls {
+			call, err := wr.prepCall(extrinsic, slicedCalls[k])
+			if err != nil {
+				return err
+			}
+			subHeaderUpdateCalls[k] = *call
+		}
+		err := wr.WriteToParachainAndRateLimit(ctx, "Utility.batch_all", subHeaderUpdateCalls)
+		if err != nil {
+			return fmt.Errorf("batch call failed: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -186,6 +214,19 @@ func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName str
 	}
 
 	return &extI, nil
+}
+
+func (wr *ParachainWriter) prepCall(extrinsicName string, payload ...interface{}) (*types.Call, error) {
+	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := types.NewCall(meta, extrinsicName, payload...)
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
 }
 
 func (wr *ParachainWriter) GetLastBasicChannelBlockNumber() (uint64, error) {

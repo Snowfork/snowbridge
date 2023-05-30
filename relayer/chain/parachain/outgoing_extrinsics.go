@@ -59,7 +59,7 @@ func (ep *ExtrinsicPool) WaitForSubmitAndWatch(
 				return err
 			case status := <-sub.Chan():
 				// https://github.com/paritytech/substrate/blob/29aca981db5e8bf8b5538e6c7920ded917013ef3/primitives/transaction-pool/src/pool.rs#L56-L127
-				if status.IsDropped || status.IsInvalid || status.IsUsurped {
+				if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
 					sub.Unsubscribe()
 					log.WithFields(log.Fields{
 						"nonce":  nonce(ext),
@@ -68,16 +68,7 @@ func (ep *ExtrinsicPool) WaitForSubmitAndWatch(
 					return fmt.Errorf("extrinsic removed from the transaction pool")
 				} else if status.IsFinalized {
 					sub.Unsubscribe()
-					log.WithFields(log.Fields{
-						"nonce": nonce(ext),
-					}).Debug("Extrinsic included in finalized block")
 					return onFinalized(status.AsFinalized)
-				} else if status.IsFinalityTimeout {
-					sub.Unsubscribe()
-					log.WithFields(log.Fields{
-						"nonce": nonce(ext),
-					}).Error("Extrinsic finality timeout")
-					return fmt.Errorf("extrinsic removed from the transaction pool")
 				}
 			}
 		}
@@ -101,6 +92,8 @@ func reason(status *types.ExtrinsicStatus) string {
 		return "Invalid"
 	case status.IsUsurped:
 		return "Usurped"
+	case status.IsFinalityTimeout:
+		return "FinalityTimeout"
 	}
 	return ""
 }

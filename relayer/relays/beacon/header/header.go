@@ -63,6 +63,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 		"from": executionHeaderState.BeaconSlot,
 		"to":   lastFinalizedHeaderState.BeaconSlot,
 	}).Info("starting to sync from last execution state to last finalized state")
+	h.cache.SetLastSyncedExecutionSlot(executionHeaderState.BeaconSlot)
 	err = h.syncLaggingExecutionHeaders(ctx, lastFinalizedHeaderState, executionHeaderState)
 	if err != nil {
 		return fmt.Errorf("sync lagging execution headers: %w", err)
@@ -189,21 +190,15 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 	return nil
 }
 
-func (h *Header) SyncHeader(ctx context.Context, headerUpdate scale.HeaderUpdate) error {
-	blockHash := headerUpdate.Payload.ExecutionHeader.BlockHash.Hex()
-	blockNumber := uint64(headerUpdate.Payload.ExecutionHeader.BlockNumber)
-
-	log.WithFields(log.Fields{
-		"slot":                 headerUpdate.Payload.Header.Slot,
-		"executionBlockRoot":   blockHash,
-		"executionBlockNumber": blockNumber,
-	}).Info("Syncing header between last two finalized headers")
-
-	err := h.writer.WriteToParachainAndRateLimit(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdate.Payload)
-	if err != nil {
-		return fmt.Errorf("write to parachain: %w", err)
+func (h *Header) BatchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {
+	headerUpdatesInf := make([]interface{}, len(headerUpdates))
+	for i, v := range headerUpdates {
+		headerUpdatesInf[i] = v
 	}
-	h.cache.SetLastSyncedExecutionSlot(uint64(headerUpdate.Payload.Header.Slot))
+	err := h.writer.BatchCall(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdatesInf)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -245,7 +240,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromSlot, toSlot uint64) error
 		"totalSlots": toSlot - fromSlot,
 	}).Info("starting to back-fill headers")
 
-	var headersToSync []scale.HeaderUpdate
+	var headersToSync []scale.HeaderUpdatePayload
 
 	// start syncing at next block after last synced block
 	currentSlot := fromSlot
@@ -253,6 +248,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromSlot, toSlot uint64) error
 	if err != nil {
 		return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
 	}
+	currentSlot++
 
 	for currentSlot <= toSlot {
 		log.WithFields(log.Fields{
@@ -277,21 +273,19 @@ func (h *Header) SyncHeaders(ctx context.Context, fromSlot, toSlot uint64) error
 			}
 		}
 
-		headersToSync = append(headersToSync, headerUpdate)
+		headersToSync = append(headersToSync, headerUpdate.Payload)
 		headerUpdate = nextHeaderUpdate
 
 		// last slot to be synced, sync headers
 		if currentSlot >= toSlot {
-			for _, header := range headersToSync {
-				err := h.SyncHeader(ctx, header)
-				if err != nil {
-					return err
-				}
+			err = h.BatchSyncHeaders(ctx, headersToSync)
+			if err != nil {
+				return fmt.Errorf("batch sync headers failed: %w", err)
 			}
 		}
 		currentSlot = uint64(headerUpdate.Payload.Header.Slot)
 	}
-
+	h.cache.SetLastSyncedExecutionSlot(toSlot)
 	return nil
 }
 
@@ -299,7 +293,7 @@ func (h *Header) SyncHeaders(ctx context.Context, fromSlot, toSlot uint64) error
 // stopped while still processing a set of execution headers.
 func (h *Header) syncLaggingExecutionHeaders(ctx context.Context, lastFinalizedState state.FinalizedHeader, executionHeaderState state.ExecutionHeader) error {
 	fromSlot := executionHeaderState.BeaconSlot
-	if fromSlot == 0 {
+	if fromSlot <= lastFinalizedState.InitialCheckpointSlot {
 		fromSlot = lastFinalizedState.InitialCheckpointSlot
 	}
 

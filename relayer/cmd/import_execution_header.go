@@ -88,7 +88,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("connect to parachain: %w", err)
 		}
 
-		writer := parachain.NewParachainWriter(paraconn, 32)
+		writer := parachain.NewParachainWriter(paraconn, 8, 8)
 		err = writer.Start(ctx, eg)
 		if err != nil {
 			return fmt.Errorf("start parachain conn: %w", err)
