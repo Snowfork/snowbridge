@@ -56,7 +56,11 @@ pub mod pallet {
 	pub struct MaxFinalizedHeadersToKeep<T: Config>(PhantomData<T>);
 	impl<T: Config> Get<u32> for MaxFinalizedHeadersToKeep<T> {
 		fn get() -> u32 {
-			config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD as u32 * 2
+			// Consider max latency allowed between LatestFinalizedState and LatestExecutionState is
+			// the total slots in one sync_committee_period so 1 should be fine we keep 2 periods
+			// here for redundancy.
+			const MAX_REDUNDANCY: u32 = 2;
+			config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD as u32 * MAX_REDUNDANCY
 		}
 	}
 
@@ -130,7 +134,7 @@ pub mod pallet {
 		BLSVerificationFailed(BlsError),
 		InvalidUpdateSlot,
 		InvalidSyncCommitteeUpdate,
-		ExecutionHeaderFallBehindTooMuch,
+		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedSlot,
 	}
 
@@ -302,7 +306,7 @@ pub mod pallet {
 				latest_execution_state.beacon_slot == 0 ||
 					latest_finalized_state.slot <
 						latest_execution_state.beacon_slot + max_latency as u64,
-				Error::<T>::ExecutionHeaderFallBehindTooMuch
+				Error::<T>::ExecutionHeaderTooFarBehind
 			);
 			Ok(())
 		}

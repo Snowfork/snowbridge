@@ -19,7 +19,7 @@ import (
 
 var ErrFinalizedHeaderUnchanged = errors.New("finalized header unchanged")
 var ErrFinalizedHeaderNotImported = errors.New("finalized header not imported")
-var ErrSyncCommitteeNotImported = errors.New("sync committee header not imported")
+var ErrSyncCommitteeNotImported = errors.New("sync committee not imported")
 var ErrSyncCommitteeLatency = errors.New("sync committee latency found")
 
 type Header struct {
