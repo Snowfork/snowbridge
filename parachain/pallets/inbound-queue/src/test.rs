@@ -16,7 +16,7 @@ use sp_runtime::{
 use sp_std::convert::From;
 
 use snowbridge_core::{Message, Proof};
-use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
+use snowbridge_ethereum::Log;
 
 use hex_literal::hex;
 
@@ -83,7 +83,7 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = ();
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type MaxHolds = ();
 }
 
