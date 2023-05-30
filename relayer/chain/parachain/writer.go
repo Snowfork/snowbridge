@@ -63,15 +63,15 @@ func (wr *ParachainWriter) BatchCall(ctx context.Context, extrinsic string, call
 			j = len(calls)
 		}
 		slicedCalls := append([]interface{}{}, calls[i:j]...)
-		subHeaderUpdateCalls := make([]types.Call, len(slicedCalls))
+		encodedCalls := make([]types.Call, len(slicedCalls))
 		for k := range slicedCalls {
 			call, err := wr.prepCall(extrinsic, slicedCalls[k])
 			if err != nil {
 				return err
 			}
-			subHeaderUpdateCalls[k] = *call
+			encodedCalls[k] = *call
 		}
-		err := wr.WriteToParachainAndRateLimit(ctx, "Utility.batch_all", subHeaderUpdateCalls)
+		err := wr.WriteToParachainAndRateLimit(ctx, "Utility.batch_all", encodedCalls)
 		if err != nil {
 			return fmt.Errorf("batch call failed: %w", err)
 		}
