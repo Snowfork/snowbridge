@@ -15,9 +15,10 @@ async function connect(endpoint, types = {}) {
 }
 
 function writeHexEncodedBytesToOutput(method, outputFile) {
-  console.log("Payload (hex): ", method.toHex());
+  const hex = method.toHex();
+  console.log("Payload (hex): ", hex);
   console.log("Payload (bytes): ", Array.from(method.toU8a()));
-  fs.writeFileSync(outputFile, JSON.stringify(Array.from(method.toU8a())));
+  fs.writeFileSync(outputFile, hex);
 }
 
 function remarkWithEvent(endpoint, outputFile) {
