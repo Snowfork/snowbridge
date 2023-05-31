@@ -307,3 +307,8 @@ type CompactBeaconState struct {
 	Slot           types.UCompact
 	BlockRootsRoot types.H256
 }
+
+type BeaconState struct {
+	CompactBeaconState
+	BlockRoot types.H256
+}
