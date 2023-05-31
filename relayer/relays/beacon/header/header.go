@@ -124,17 +124,15 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		return err
 	}
 
+	// Only update cache when SyncCommitteeUpdate import succeeded and period updated as expected
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
 		return fmt.Errorf("fetch last finalized header state: %w", err)
 	}
-
 	lastUpdatedPeriod := h.syncer.ComputeSyncPeriodAtSlot(lastFinalizedHeaderState.BeaconSlot)
-
 	if period != lastUpdatedPeriod {
 		return ErrSyncCommitteeNotImported
 	}
-
 	h.cache.SetLastSyncedSyncCommitteePeriod(period)
 	h.cache.SetLastSyncedFinalizedState(update.FinalizedHeaderBlockRoot, uint64(update.Payload.FinalizedHeader.Slot))
 	h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
@@ -185,18 +183,6 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 	return nil
 }
 
-func (h *Header) BatchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {
-	headerUpdatesInf := make([]interface{}, len(headerUpdates))
-	for i, v := range headerUpdates {
-		headerUpdatesInf[i] = v
-	}
-	err := h.writer.BatchCall(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdatesInf)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 	hasChanged, err := h.syncer.HasFinalizedHeaderChanged(h.cache.Finalized.LastSyncedHash)
 	if err != nil {
@@ -211,13 +197,13 @@ func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	fromSlot := h.cache.LastSyncedExecutionSlot
+	// SyncExecutionHeaders at least from initial checkpoint
 	if fromSlot <= h.cache.InitialCheckpointSlot {
 		fromSlot = h.cache.InitialCheckpointSlot
 	}
-
 	err = h.SyncExecutionHeaders(ctx, fromSlot, h.cache.Finalized.LastSyncedSlot)
-
 	if err != nil {
 		return err
 	}
@@ -226,7 +212,6 @@ func (h *Header) SyncHeadersFromFinalized(ctx context.Context) error {
 }
 
 func (h *Header) SyncExecutionHeaders(ctx context.Context, fromSlot, toSlot uint64) error {
-
 	log.WithFields(log.Fields{
 		"fromSlot":   fromSlot,
 		"fromEpoch":  h.syncer.ComputeEpochAtSlot(fromSlot),
@@ -250,7 +235,7 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context, fromSlot, toSlot uint
 			"currentSlot": currentSlot,
 		}).Info("fetching next header at slot")
 
-		var nextHeaderUpdate scale.HeaderUpdate
+		var nextHeaderUpdate scale.HeaderUpdatePayload
 		// If this is the last slot we need to sync, don't fetch the ancestry proof for the next slot
 		// because its finalized header won't be synced yet. We still need to fetch the next block for the
 		// sync aggregate though.
@@ -268,7 +253,7 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context, fromSlot, toSlot uint
 			}
 		}
 
-		headersToSync = append(headersToSync, headerUpdate.Payload)
+		headersToSync = append(headersToSync, headerUpdate)
 		headerUpdate = nextHeaderUpdate
 
 		// last slot to be synced, sync headers
@@ -278,7 +263,7 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context, fromSlot, toSlot uint
 				return fmt.Errorf("batch sync headers failed: %w", err)
 			}
 		}
-		currentSlot = uint64(headerUpdate.Payload.Header.Slot)
+		currentSlot = uint64(headerUpdate.Header.Slot)
 	}
 	h.cache.SetLastSyncedExecutionSlot(toSlot)
 	return nil
@@ -426,16 +411,28 @@ func (h *Header) getClosestCheckpoint(slot uint64) (cache.Proof, error) {
 	return checkpoint, nil
 }
 
-func (h *Header) getNextHeaderUpdateBySlotWithAncestryProof(slot uint64) (scale.HeaderUpdate, error) {
+func (h *Header) getNextHeaderUpdateBySlotWithAncestryProof(slot uint64) (scale.HeaderUpdatePayload, error) {
 	slot = slot + 1
 	checkpoint, err := h.getClosestCheckpoint(slot)
 	if err != nil {
-		return scale.HeaderUpdate{}, fmt.Errorf("get closest checkpoint: %w", err)
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("get closest checkpoint: %w", err)
 	}
 	return h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(slot, &checkpoint)
 }
 
-func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdate, error) {
+func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
 	slot = slot + 1
 	return h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(slot, nil)
+}
+
+func (h *Header) BatchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {
+	headerUpdatesInf := make([]interface{}, len(headerUpdates))
+	for i, v := range headerUpdates {
+		headerUpdatesInf[i] = v
+	}
+	err := h.writer.BatchCall(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdatesInf)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -17,6 +17,7 @@ relay_bin="$relay_dir/build/snowbridge-relay"
 export output_dir="${OUTPUT_DIR:-/tmp/snowbridge}"
 export output_bin_dir="$output_dir/bin"
 ethereum_data_dir="$output_dir/geth"
+zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
 
 # Because we can run a local node for public network like goerli or mainnet, add active_spec as a separate config here
@@ -91,7 +92,6 @@ kill_all() {
 
 cleanup() {
     echo "Cleaning resource"
-    rm -rf *.log
     rm -rf "$output_dir"
     mkdir "$output_dir"
     mkdir "$output_bin_dir"

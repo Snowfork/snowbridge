@@ -63,56 +63,56 @@ start_relayer()
     echo "Starting relay services"
     # Launch beefy relay
     (
-        : > beefy-relay.log
+        : > "$output_dir"/beefy-relay.log
         while :
         do
             echo "Starting beefy relay at $(date)"
             "${relay_bin}" run beefy \
                 --config "$output_dir/beefy-relay.json" \
                 --ethereum.private-key $beefy_relay_eth_key \
-                >>beefy-relay.log 2>&1 || true
+                >> "$output_dir"/beefy-relay.log 2>&1 || true
             sleep 20
         done
     ) &
 
     # Launch parachain relay
     (
-        : > parachain-relay.log
+        : > "$output_dir"/parachain-relay.log
         while :
         do
           echo "Starting parachain relay at $(date)"
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay.json" \
                 --ethereum.private-key $parachain_relay_eth_key \
-                >>parachain-relay.log 2>&1 || true
+                >> "$output_dir"/parachain-relay.log 2>&1 || true
             sleep 20
         done
     ) &
 
     # Launch beacon relay
     (
-        : > beacon-relay.log
+        : > "$output_dir"/beacon-relay.log
         while :
         do
         echo "Starting beacon relay at $(date)"
             "${relay_bin}" run beacon \
                 --config $output_dir/beacon-relay.json \
                 --substrate.private-key "//BeaconRelay" \
-                >>beacon-relay.log 2>&1 || true
+                >> "$output_dir"/beacon-relay.log 2>&1 || true
             sleep 20
         done
     ) &
 
     # Launch execution relay
     (
-        : > execution-relay.log
+        : > $output_dir/execution-relay.log
         while :
         do
         echo "Starting execution relay at $(date)"
             "${relay_bin}" run execution \
                 --config $output_dir/execution-relay.json \
                 --substrate.private-key "//ExecutionRelay" \
-                >>execution-relay.log 2>&1 || true
+                >> "$output_dir"/execution-relay.log 2>&1 || true
             sleep 20
         done
     ) &

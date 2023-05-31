@@ -118,9 +118,9 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
-		log.WithField("slot", update.Payload.Header.Slot).Info("found block at slot")
+		log.WithField("slot", update.Header.Slot).Info("found block at slot")
 
-		err = writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_execution_header", update.Payload)
+		err = writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_execution_header", update)
 		if err != nil {
 			return fmt.Errorf("write to parachain: %w", err)
 		}
