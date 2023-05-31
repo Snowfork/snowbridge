@@ -1,0 +1,7 @@
+ignore:
+  - "core/packages/contracts/test/mocks"
+  - "core/packages/contracts/src/utils"
+  # Forge's coverage analysis isn't able handle functions with internal linkage in libraries
+  - "core/packages/contracts/src/ScaleCodec.sol"
+  - "core/packages/contracts/src/SubstrateTypes.sol"
+  - "parachain/tools"

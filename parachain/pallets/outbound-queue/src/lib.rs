@@ -21,7 +21,7 @@ use sp_io::offchain_index::set;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use snowbridge_core::{types::AuxiliaryDigestItem, OutboundQueue};
+use snowbridge_core::OutboundQueue;
 use snowbridge_outbound_queue_merkle_proof::merkle_root;
 
 pub use weights::WeightInfo;
@@ -220,8 +220,9 @@ pub mod pallet {
 			let commitment_hash =
 				merkle_root::<<T as Config>::Hashing, Vec<Vec<u8>>, Vec<u8>>(eth_messages.clone());
 
-			let digest_item = AuxiliaryDigestItem::Commitment(commitment_hash.clone()).into();
-			<frame_system::Pallet<T>>::deposit_log(digest_item);
+			<frame_system::Pallet<T>>::deposit_log(sp_runtime::DigestItem::Other(
+				commitment_hash.to_fixed_bytes().into(),
+			));
 
 			Self::deposit_event(Event::Committed {
 				hash: commitment_hash,

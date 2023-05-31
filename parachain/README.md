@@ -1,30 +1,4 @@
-# Snowbridge Parachain <!-- omit in toc -->
-![Check](https://github.com/Snowfork/snowbridge/workflows/Check/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/Snowfork/polkadot-ethereum/badge.svg)](https://coveralls.io/github/Snowfork/snowbridge)
-
-A Polkadot parachain for bridging arbitrary data from and to Ethereum.
-
-- [Development](#development)
-  - [Requirements](#requirements)
-  - [Build](#build)
-  - [Run](#run)
-- [Configuration](#configuration)
-
-## Development
-
-This command will build the [Wasm](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution) and
-[native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
-
-Several runtimes can be built:
-* snowbase: Local development
-* snowblink: Staging & Kusama parachain
-* snowbridge: Polkadot parachain
-
-To build with snowbase and snowblink runtimes (the default):
-
-```bash
-cargo build --release --features rococo-native
-```
+# Parachain modules
 
 ## Configuration
 

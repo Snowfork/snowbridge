@@ -97,7 +97,7 @@ func (s *Scanner) findTasks(
 	// Fetch latest nonce in parachain outbound queue
 	sourceIDBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(sourceIDBytes, s.config.LaneID)
-	paraNonceKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "OutboundQueue", "Nonce", sourceIDBytes, nil)
+	paraNonceKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueue", "Nonce", sourceIDBytes, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create storage key for parachain outbound queue nonce with laneID '%v': %w", s.config.LaneID, err)
 	}
@@ -175,20 +175,9 @@ func (s *Scanner) findTasksImpl(
 			return nil, fmt.Errorf("fetch header for block hash %v: %w", blockHash.Hex(), err)
 		}
 
-		digestItems, err := ExtractAuxiliaryDigestItems(header.Digest)
+		commitmentHash, err := ExtractCommitmentFromDigest(header.Digest)
 		if err != nil {
 			return nil, err
-		}
-		if len(digestItems) == 0 {
-			continue
-		}
-
-		var digestItemHash types.H256
-		for _, digestItem := range digestItems {
-			if digestItem.IsCommitment {
-				digestItemHash = digestItem.AsCommitment.Hash
-				break
-			}
 		}
 
 		event, err := s.eventQueryClient.QueryEvent(ctx, s.config.Parachain.Endpoint, blockHash)
@@ -199,7 +188,7 @@ func (s *Scanner) findTasksImpl(
 			return nil, fmt.Errorf("event outboundQueue.Committed not found in block with commitment digest item")
 		}
 
-		if digestItemHash != event.Hash {
+		if *commitmentHash != event.Hash {
 			return nil, fmt.Errorf("outbound queue commitment hash in digest item does not match the one in the Committed event")
 		}
 
@@ -208,7 +197,7 @@ func (s *Scanner) findTasksImpl(
 		// To verify it we fetch the message proof from the parachain
 		result, err := scanForOutboundQueueProofs(
 			s.paraConn.API(),
-			digestItemHash,
+			*commitmentHash,
 			startingNonce,
 			laneID,
 			event.Messages,

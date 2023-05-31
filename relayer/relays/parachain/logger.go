@@ -10,7 +10,7 @@ func Hex(b []byte) string {
 	return types.HexEncodeToString(b)
 }
 
-func (wr *EthereumWriter) logFieldsForBasicSubmission(
+func (wr *EthereumWriter) logFieldsForSubmission(
 	message contracts.InboundQueueMessage,
 	leafProof [][32]byte,
 	proof []byte,

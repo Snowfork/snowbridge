@@ -21,7 +21,7 @@ impl<T: Config> Verifier for Pallet<T> {
 			Err(err) => {
 				log::error!(
 					target: "ethereum-beacon-client",
-					"💫 Verify receipt inclusion failed for block {}: {:?}",
+					"💫 Verification of receipt inclusion failed for block {}: {:?}",
 					message.proof.block_hash,
 					err
 				);

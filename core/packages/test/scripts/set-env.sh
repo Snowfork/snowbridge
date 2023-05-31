@@ -26,7 +26,7 @@ eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
 eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
 eth_gas_limit="${ETH_GAS_LIMIT:-5000000}"
-eth_chain_id=1
+eth_chain_id=15
 eth_fast_mode="${ETH_FAST_MODE:-false}"
 
 beefy_state_file="${BEEFY_STATE_FILE:-$output_dir/beefy-state.json}"
@@ -74,8 +74,8 @@ export RELAYER_FEE=100
 export RELAYER_REWARD=100
 
 ## NativeTokens
-export ASSET_HUB_PARAID=1000
-export CREATE_TOKEN_FEE="1000000000000000000"
+export ASSET_HUB_PARAID=$statemine_para_id
+export CREATE_TOKEN_FEE=100
 
 address_for()
 {

@@ -16,3 +16,6 @@ rococo-local.json
 
 # The cache for chain data in container
 .local
+
+# coverage reports
+cobertura.xml
