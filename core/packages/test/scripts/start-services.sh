@@ -33,13 +33,19 @@ source scripts/configure-beacon.sh
 configure_beacon
 
 # 5. Configure bridgehub exporter on statemine
-source scripts/configure-statemine.sh 
+source scripts/configure-statemine.sh
 configure_statemine
 
-# 6. start relayer
-echo "Starting relayers"
+# 6. Configure relayers
 source scripts/start-relayer.sh
-start_relayer
+echo "Config relayers"
+config_relayer
+
+if [ "$skip_relayer" == "false" ]; then
+    # 7. start relayer
+    echo "Starting relayers"
+    start_relayer
+fi
 
 echo "Testnet has been initialized"
 

@@ -55,6 +55,8 @@ statemine_seed="${STATEMINE_SEED:-//Alice}"
 relaychain_ws_url="${RELAYCHAIN_WS_URL:-ws://127.0.0.1:9944}"
 relaychain_sudo_seed="${RELAYCHAIN_SUDO_SEED:-//Alice}"
 
+skip_relayer="${SKIP_RELAYER:-false}"
+
 # Config for deploying contracts
 
 ## Deployment key

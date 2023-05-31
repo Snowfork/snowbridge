@@ -60,9 +60,6 @@ config_relayer(){
 
 start_relayer()
 {
-    # Config relayer
-    echo "Config relay services"
-    config_relayer
     echo "Starting relay services"
     # Launch beefy relay
     (
