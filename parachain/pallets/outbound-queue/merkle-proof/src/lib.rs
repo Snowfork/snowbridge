@@ -47,14 +47,12 @@ use sp_runtime::traits::Hash;
 /// See crate-level docs for details about Merkle Tree construction.
 ///
 /// In case an empty list of leaves is passed the function returns a 0-filled hash.
-pub fn merkle_root<H, I, T>(leaves: I) -> H256
+pub fn merkle_root<H, I>(leaves: I) -> H256
 where
 	H: Hash<Output = H256>,
-	I: IntoIterator<Item = T>,
-	T: AsRef<[u8]>,
+	I: Iterator<Item = H256>,
 {
-	let iter = leaves.into_iter().map(|l| <H as Hash>::hash(l.as_ref()));
-	merkelize::<H, _, _>(iter, &mut ())
+	merkelize::<H, _, _>(leaves, &mut ())
 }
 
 fn merkelize<H, V, I>(leaves: I, visitor: &mut V) -> H256
@@ -359,10 +357,10 @@ mod tests {
 	fn should_generate_empty_root() {
 		// given
 		let _ = env_logger::try_init();
-		let data: Vec<[u8; 1]> = Default::default();
+		let data = vec![];
 
 		// when
-		let out = merkle_root::<Keccak256, _, _>(data);
+		let out = merkle_root::<Keccak256, _>(data.into_iter());
 
 		// then
 		assert_eq!(
@@ -375,10 +373,10 @@ mod tests {
 	fn should_generate_single_root() {
 		// given
 		let _ = env_logger::try_init();
-		let data = vec![hex!("E04CC55ebEE1cBCE552f250e85c57B70B2E2625b")];
+		let data = vec![Keccak256::hash(&hex!("E04CC55ebEE1cBCE552f250e85c57B70B2E2625b"))];
 
 		// when
-		let out = merkle_root::<Keccak256, _, _>(data);
+		let out = merkle_root::<Keccak256, _>(data.into_iter());
 
 		// then
 		assert_eq!(
@@ -392,12 +390,12 @@ mod tests {
 		// given
 		let _ = env_logger::try_init();
 		let data = vec![
-			hex!("E04CC55ebEE1cBCE552f250e85c57B70B2E2625b"),
-			hex!("25451A4de12dcCc2D166922fA938E900fCc4ED24"),
+			Keccak256::hash(&hex!("E04CC55ebEE1cBCE552f250e85c57B70B2E2625b")),
+			Keccak256::hash(&hex!("25451A4de12dcCc2D166922fA938E900fCc4ED24")),
 		];
 
 		// when
-		let out = merkle_root::<Keccak256, _, _>(data);
+		let out = merkle_root::<Keccak256, _>(data.into_iter());
 
 		// then
 		assert_eq!(
@@ -411,29 +409,33 @@ mod tests {
 		let _ = env_logger::try_init();
 		let test = |root, data| {
 			assert_eq!(
-				array_bytes::bytes2hex("", &merkle_root::<Keccak256, _, _>(data).as_ref()),
+				array_bytes::bytes2hex("", &merkle_root::<Keccak256, _>(data).as_ref()),
 				root
 			);
 		};
 
+		let foo = |i: &[u8; 1]| Keccak256::hash(i);
+
 		test(
 			"5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7",
-			vec!["a", "b", "c"],
+			vec![b"a", b"b", b"c"].into_iter().map(foo),
 		);
 
 		test(
 			"7b84bec68b13c39798c6c50e9e40a0b268e3c1634db8f4cb97314eb243d4c514",
-			vec!["a", "b", "a"],
+			vec![b"a", b"b", b"a"].into_iter().map(foo),
 		);
 
 		test(
 			"dc8e73fe6903148ff5079baecc043983625c23b39f31537e322cd0deee09fa9c",
-			vec!["a", "b", "a", "b"],
+			vec![b"a", b"b", b"a", b"b"].into_iter().map(foo),
 		);
 
 		test(
 			"cc50382cfd3c9a617741e9a85efee8752b8feb95a2cbecd6365fb21366ce0c8c",
-			vec!["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
+			vec![b"a", b"b", b"c", b"d", b"e", b"f", b"g", b"h", b"i", b"j"]
+				.into_iter()
+				.map(foo),
 		);
 	}
 

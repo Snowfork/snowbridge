@@ -28,6 +28,8 @@ snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-outbound-queue-merkle-proof = { path = "merkle-proof", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
+xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
+
 [dev-dependencies]
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
@@ -49,7 +51,8 @@ std = [
     "sp-io/std",
     "snowbridge-core/std",
     "snowbridge-outbound-queue-merkle-proof/std",
-    "ethabi/std"
+    "ethabi/std",
+    "xcm/std"
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",

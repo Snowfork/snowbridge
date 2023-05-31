@@ -8,7 +8,9 @@
 
 use frame_support::dispatch::DispatchError;
 use snowbridge_ethereum::Log;
-use sp_runtime::DispatchResult;
+use sp_core::{RuntimeDebug};
+
+use xcm::v3::XcmHash;
 
 pub mod ringbuffer;
 pub mod types;
@@ -25,6 +27,23 @@ pub trait Verifier {
 	fn verify(message: &Message) -> Result<Log, DispatchError>;
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+pub enum SubmitError {
+	MessageTooLarge,
+}
+
 pub trait OutboundQueue {
-	fn submit(source_id: ParaId, handler: u16, payload: &[u8]) -> DispatchResult;
+	fn validate(
+		xcm_hash: XcmHash,
+		origin: ParaId,
+		handler: u16,
+		payload: &[u8],
+	) -> Result<(), SubmitError>;
+
+	fn submit(
+		xcm_hash: XcmHash,
+		origin: ParaId,
+		handler: u16,
+		payload: &[u8],
+	) -> Result<(), SubmitError>;
 }

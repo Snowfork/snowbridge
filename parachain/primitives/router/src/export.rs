@@ -86,8 +86,13 @@ where
 
 		let (encoded, handler) = payload.abi_encode();
 
-		let blob = ValidatedMessage(para_id.into(), handler, encoded).encode();
+		let blob = ValidatedMessage(para_id.into(), handler, encoded.clone()).encode();
 		let hash: [u8; 32] = sp_io::hashing::blake2_256(blob.as_slice());
+
+		Queue::validate(hash, para_id.into(), handler, encoded.as_ref()).map_err(|err| {
+			log::error!(target: "xcm::ethereum_blob_exporter", "undeliverable due to OutboundQueue error '{err:?}'.");
+			SendError::ExceedsMaxMessageSize
+		})?;
 
 		log::info!(target: "xcm::ethereum_blob_exporter", "message validated {hash:#?}.");
 
@@ -101,7 +106,7 @@ where
 				log::trace!(target: "xcm::ethereum_blob_exporter", "undeliverable due to decoding error '{err:?}'.");
 				SendError::NotApplicable
 			})?;
-		Queue::submit(source_id, handler, payload.as_ref()).map_err(|err| {
+		Queue::submit(hash, source_id, handler, payload.as_ref()).map_err(|err| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "undeliverable due to OutboundQueue error '{err:?}'.");
 			SendError::Unroutable
 		})?;
@@ -276,7 +281,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use sp_runtime::{DispatchError, DispatchResult};
+	use snowbridge_core::SubmitError;
 
 	use super::*;
 
@@ -293,22 +298,42 @@ mod tests {
 
 	struct MockOkOutboundQueue;
 	impl OutboundQueue for MockOkOutboundQueue {
-		fn submit(
+		fn validate(
+			_hash: XcmHash,
 			_source_id: snowbridge_core::ParaId,
 			_handler: u16,
 			_payload: &[u8],
-		) -> DispatchResult {
+		) -> Result<(), SubmitError> {
+			Ok(())
+		}
+
+		fn submit(
+			_hash: XcmHash,
+			_source_id: snowbridge_core::ParaId,
+			_handler: u16,
+			_payload: &[u8],
+		) -> Result<(), SubmitError> {
 			Ok(())
 		}
 	}
 	struct MockErrOutboundQueue;
 	impl OutboundQueue for MockErrOutboundQueue {
-		fn submit(
+		fn validate(
+			_hash: XcmHash,
 			_source_id: snowbridge_core::ParaId,
 			_handler: u16,
 			_payload: &[u8],
-		) -> DispatchResult {
-			Err(DispatchError::Other("Error"))
+		) -> Result<(), SubmitError> {
+			Err(SubmitError::MessageTooLarge)
+		}
+
+		fn submit(
+			_hash: XcmHash,
+			_source_id: snowbridge_core::ParaId,
+			_handler: u16,
+			_payload: &[u8],
+		) -> Result<(), SubmitError> {
+			Err(SubmitError::MessageTooLarge)
 		}
 	}
 
