@@ -66,7 +66,7 @@ type SyncAggregate struct {
 }
 
 func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSyncPeriod uint64) ([]uint64, error) {
-
+	// sync at most 1 period at one time
 	if lastSyncedPeriod < currentSyncPeriod {
 		return []uint64{lastSyncedPeriod + 1}, nil
 	}
