@@ -19,9 +19,9 @@ pub use primitives::ExecutionHeaderUpdate;
 pub(crate) type ExecutionStateBuffer<T> = RingBufferMapImpl<
 	u32,
 	<T as crate::Config>::MaxExecutionHeadersToKeep,
-	crate::ExecutionStateIndex<T>,
-	crate::ExecutionStateMapping<T>,
-	crate::ExecutionState<T>,
+	crate::ExecutionHeaderIndex<T>,
+	crate::ExecutionHeaderMapping<T>,
+	crate::ExecutionHeaders<T>,
 	OptionQuery,
 >;
 

@@ -185,16 +185,16 @@ pub mod pallet {
 
 	/// Execution Headers
 	#[pallet::storage]
-	pub(super) type ExecutionState<T: Config> =
+	pub(super) type ExecutionHeaders<T: Config> =
 		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
 
 	/// Execution Headers: Current position in ring buffer
 	#[pallet::storage]
-	pub(crate) type ExecutionStateIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+	pub(crate) type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Execution Headers: Mapping of ring buffer index to a pruning candidate
 	#[pallet::storage]
-	pub(crate) type ExecutionStateMapping<T: Config> =
+	pub(crate) type ExecutionHeaderMapping<T: Config> =
 		StorageMap<_, Identity, u32, H256, ValueQuery>;
 
 	#[pallet::call]
