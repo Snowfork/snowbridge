@@ -16,7 +16,7 @@ pub type NextSyncCommitteeUpdate = primitives::NextSyncCommitteeUpdate<SC_SIZE>;
 pub use primitives::ExecutionHeaderUpdate;
 
 /// ExecutionHeader ring buffer implementation
-pub(crate) type ExecutionStateBuffer<T> = RingBufferMapImpl<
+pub(crate) type ExecutionHeaderBuffer<T> = RingBufferMapImpl<
 	u32,
 	<T as crate::Config>::MaxExecutionHeadersToKeep,
 	crate::ExecutionHeaderIndex<T>,
@@ -25,7 +25,7 @@ pub(crate) type ExecutionStateBuffer<T> = RingBufferMapImpl<
 	OptionQuery,
 >;
 
-/// FinalizedHeader ring buffer implementation
+/// FinalizedState ring buffer implementation
 pub(crate) type FinalizedBeaconStateBuffer<T> = RingBufferMapImpl<
 	u32,
 	crate::MaxFinalizedHeadersToKeep<T>,

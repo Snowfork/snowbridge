@@ -35,7 +35,7 @@ use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
 use types::{
-	CheckpointUpdate, ExecutionHeaderUpdate, ExecutionStateBuffer, FinalizedBeaconStateBuffer,
+	CheckpointUpdate, ExecutionHeaderBuffer, ExecutionHeaderUpdate, FinalizedBeaconStateBuffer,
 	SyncCommitteePrepared, Update,
 };
 
@@ -637,7 +637,7 @@ pub mod pallet {
 		) {
 			let block_number = header.block_number;
 
-			<ExecutionStateBuffer<T>>::insert(block_hash, header);
+			<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
 
 			log::trace!(
 				target: "ethereum-beacon-client",

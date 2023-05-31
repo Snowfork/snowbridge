@@ -13,7 +13,7 @@ impl<T: Config> Verifier for Pallet<T> {
 			message.proof.block_hash,
 		);
 
-		let header = <ExecutionStateBuffer<T>>::get(message.proof.block_hash)
+		let header = <ExecutionHeaderBuffer<T>>::get(message.proof.block_hash)
 			.ok_or(Error::<T>::MissingHeader)?;
 
 		let receipt = match Self::verify_receipt_inclusion(header.receipts_root, &message.proof) {
