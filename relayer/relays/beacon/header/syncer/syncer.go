@@ -29,21 +29,16 @@ var (
 )
 
 type Syncer struct {
-	Client                       api.BeaconClient
-	SlotsInEpoch                 uint64
-	EpochsPerSyncCommitteePeriod uint64
-	MaxSlotsPerHistoricalRoot    int
-	BlockRootIndexProofDepth     int
-	activeSpec                   config.ActiveSpec
+	Client     api.BeaconClient
+	setting    config.SpecSettings
+	activeSpec config.ActiveSpec
 }
 
-func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64, maxSlotsPerHistoricalRoot int, activeSpec config.ActiveSpec) *Syncer {
+func New(endpoint string, setting config.SpecSettings, activeSpec config.ActiveSpec) *Syncer {
 	return &Syncer{
-		Client:                       *api.NewBeaconClient(endpoint, activeSpec, slotsInEpoch),
-		SlotsInEpoch:                 slotsInEpoch,
-		EpochsPerSyncCommitteePeriod: epochsPerSyncCommitteePeriod,
-		MaxSlotsPerHistoricalRoot:    maxSlotsPerHistoricalRoot,
-		activeSpec:                   activeSpec,
+		Client:     *api.NewBeaconClient(endpoint, activeSpec, setting.SlotsInEpoch),
+		setting:    setting,
+		activeSpec: activeSpec,
 	}
 }
 
@@ -316,7 +311,7 @@ func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
 	err := api.ErrNotFound
 	var header api.BeaconHeader
 	tries := 0
-	maxSlotsMissed := int(s.SlotsInEpoch)
+	maxSlotsMissed := int(s.setting.SlotsInEpoch)
 	for errors.Is(err, api.ErrNotFound) && tries < maxSlotsMissed {
 		// Need to use GetHeaderBySlot instead of GetBeaconBlockRoot here because GetBeaconBlockRoot
 		// returns the previous slot's block root if there is no block at the given slot
@@ -431,8 +426,9 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 }
 
 func (s *Syncer) getBlockHeaderAncestryProof(slot int, blockRoot common.Hash, blockRootTree *ssz.Node) ([]types.H256, error) {
-	indexInArray := slot % s.MaxSlotsPerHistoricalRoot
-	leafIndex := s.MaxSlotsPerHistoricalRoot + indexInArray
+	maxSlotsPerHistoricalRoot := int(s.setting.SlotsInEpoch * s.setting.EpochsPerSyncCommitteePeriod)
+	indexInArray := slot % maxSlotsPerHistoricalRoot
+	leafIndex := maxSlotsPerHistoricalRoot + indexInArray
 
 	if blockRootTree == nil {
 		return nil, fmt.Errorf("block root tree is nil")

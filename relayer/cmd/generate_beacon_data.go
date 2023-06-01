@@ -109,7 +109,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 
 		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
 
-		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
+		s := syncer.New(endpoint, specSettings, activeSpec)
 
 		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -166,7 +166,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		log.WithFields(log.Fields{"spec": activeSpec, "endpoint": endpoint}).Info("connecting to beacon API")
 
-		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
+		s := syncer.New(endpoint, specSettings, activeSpec)
 
 		initialSyncScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -239,7 +239,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		log.Info("created header update file")
 
-		if activeSpec.IsMainnet() {
+		if !activeSpec.IsMinimal() {
 			log.Info("now updating benchmarking data files")
 
 			// Rust file hexes require the 0x of hashes to be removed

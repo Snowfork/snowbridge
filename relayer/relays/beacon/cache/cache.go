@@ -58,14 +58,6 @@ func New(slotsInEpoch, epochsPerSyncCommitteePeriod uint64) *BeaconCache {
 	}
 }
 
-func (b *BeaconCache) SetLastSyncedSyncCommitteePeriod(period uint64) {
-	b.mu.Lock() // mutex lock since both the finalized and latest headers write to this slice in separate Goroutines
-	defer b.mu.Unlock()
-	if period > b.LastSyncedSyncCommitteePeriod {
-		b.LastSyncedSyncCommitteePeriod = period
-	}
-}
-
 func (b *BeaconCache) SetLastSyncedFinalizedState(finalizedHeaderRoot common.Hash, slot uint64) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
