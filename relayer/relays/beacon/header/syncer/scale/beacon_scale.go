@@ -85,11 +85,6 @@ func (o *OptionAncestryProof) Decode(decoder scale.Decoder) error {
 	return decoder.DecodeOption(&o.HasValue, &o.Value)
 }
 
-type HeaderUpdate struct {
-	Payload           HeaderUpdatePayload
-	NextSyncAggregate SyncAggregate
-}
-
 type BeaconHeader struct {
 	Slot          types.U64
 	ProposerIndex types.U64
@@ -152,11 +147,6 @@ type DepositData struct {
 }
 
 type Deposit struct {
-	Proof []types.H256
-	Data  DepositData
-}
-
-type DepositVoluntaryExit struct {
 	Proof []types.H256
 	Data  DepositData
 }
@@ -235,14 +225,6 @@ type BeaconBlock struct {
 	Body          Body
 }
 
-type BeaconBlockCapella struct {
-	Slot          types.U64
-	ProposerIndex types.U64
-	ParentRoot    types.H256
-	StateRoot     types.H256
-	Body          BodyCapella
-}
-
 type SyncCommittee struct {
 	Pubkeys         [][48]byte
 	AggregatePubkey [48]byte
@@ -306,4 +288,9 @@ func (b *BeaconHeader) ToSSZ() *state.BeaconBlockHeader {
 type CompactBeaconState struct {
 	Slot           types.UCompact
 	BlockRootsRoot types.H256
+}
+
+type BeaconState struct {
+	CompactBeaconState
+	BlockRoot types.H256
 }

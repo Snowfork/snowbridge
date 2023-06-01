@@ -37,19 +37,19 @@ func (p UpdatePayload) ToJSON() json.Update {
 	}
 }
 
-func (h HeaderUpdate) ToJSON() json.HeaderUpdate {
+func (h HeaderUpdatePayload) ToJSON() json.HeaderUpdate {
 	var ancestryProof *json.AncestryProof
-	if h.Payload.AncestryProof.HasValue {
+	if h.AncestryProof.HasValue {
 		ancestryProof = &json.AncestryProof{
-			HeaderBranch:       util.ScaleBranchToString(h.Payload.AncestryProof.Value.HeaderBranch),
-			FinalizedBlockRoot: h.Payload.AncestryProof.Value.FinalizedBlockRoot.Hex(),
+			HeaderBranch:       util.ScaleBranchToString(h.AncestryProof.Value.HeaderBranch),
+			FinalizedBlockRoot: h.AncestryProof.Value.FinalizedBlockRoot.Hex(),
 		}
 	}
 	return json.HeaderUpdate{
-		Header:          h.Payload.Header.ToJSON(),
+		Header:          h.Header.ToJSON(),
 		AncestryProof:   ancestryProof,
-		ExecutionHeader: h.Payload.ExecutionHeader.ToJSON(),
-		ExecutionBranch: util.ScaleBranchToString(h.Payload.ExecutionBranch),
+		ExecutionHeader: h.ExecutionHeader.ToJSON(),
+		ExecutionBranch: util.ScaleBranchToString(h.ExecutionBranch),
 	}
 }
 
@@ -99,21 +99,5 @@ func (s *SyncAggregate) ToJSON() json.SyncAggregate {
 	return json.SyncAggregate{
 		SyncCommitteeBits:      util.BytesToHexString(s.SyncCommitteeBits),
 		SyncCommitteeSignature: util.BytesToHexString(s.SyncCommitteeSignature[:]),
-	}
-}
-
-func (a *AttestationData) ToJSON() json.AttestationData {
-	return json.AttestationData{
-		Slot:            uint64(a.Slot),
-		Index:           uint64(a.Index),
-		BeaconBlockRoot: a.BeaconBlockRoot.Hex(),
-		Source: json.Checkpoint{
-			Epoch: uint64(a.Source.Epoch),
-			Root:  a.Source.Root.Hex(),
-		},
-		Target: json.Checkpoint{
-			Epoch: uint64(a.Target.Epoch),
-			Root:  a.Target.Root.Hex(),
-		},
 	}
 }

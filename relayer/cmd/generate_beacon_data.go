@@ -109,7 +109,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 
 		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
 
-		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
+		s := syncer.New(endpoint, specSettings, activeSpec)
 
 		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -166,7 +166,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		log.WithFields(log.Fields{"spec": activeSpec, "endpoint": endpoint}).Info("connecting to beacon API")
 
-		s := syncer.New(endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod, specSettings.MaxSlotsPerHistoricalRoot, activeSpec)
+		s := syncer.New(endpoint, specSettings, activeSpec)
 
 		initialSyncScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -224,7 +224,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			BlockRootsTree:     finalizedUpdateScale.BlockRootsTree,
 			Slot:               uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot),
 		}
-		headerUpdateScale, err := s.GetNextHeaderUpdateBySlotWithAncestryProof(blockUpdateSlot, checkPoint)
+		headerUpdateScale, err := s.GetNextHeaderUpdateBySlotWithAncestryProof(blockUpdateSlot, &checkPoint)
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
@@ -239,7 +239,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		log.Info("created header update file")
 
-		if activeSpec.IsMainnet() {
+		if !activeSpec.IsMinimal() {
 			log.Info("now updating benchmarking data files")
 
 			// Rust file hexes require the 0x of hashes to be removed

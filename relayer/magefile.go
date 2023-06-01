@@ -13,6 +13,10 @@ func Build() {
 }
 
 func BuildMain() error {
+	err := sh.Run("sszgen", "--path", "relays/beacon/state/beacon.go", "--objs", "BeaconStateCapellaMinimal,BeaconStateCapellaMainnet,BlockRootsContainerMainnet,BlockRootsContainerMinimal,TransactionsRootContainer,BeaconBlockCapellaMinimal,BeaconBlockCapellaMainnet,WithdrawalsRootContainerMinimal,WithdrawalsRootContainerMainnet")
+	if err != nil {
+		return err
+	}
 	return sh.Run("go", "build", "-o", "build/snowbridge-relay", "main.go")
 }
 

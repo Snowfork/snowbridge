@@ -9,7 +9,7 @@ wait_start() {
 }
 
 zombienet_launch() {
-    npx zombienet spawn config/launch-config.toml --provider=native 2>&1 &
+    npx zombienet spawn config/launch-config.toml --provider=native --dir="$zombienet_data_dir" 2>&1 &
     wait_start
 }
 
