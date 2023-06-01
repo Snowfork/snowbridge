@@ -24,7 +24,6 @@ type Scanner struct {
 	paraConn         *parachain.Connection
 	paraID           uint32
 	tasks            chan<- *Task
-	eventQueryClient QueryClient
 }
 
 // Scans for all parachain message commitments for the configured parachain laneID that need to be relayed and can be
@@ -153,6 +152,11 @@ func (s *Scanner) findTasksImpl(
 		"latestBlockNumber": lastParaBlockNumber,
 	}).Debug("Searching backwards from latest block on parachain to find block with nonce")
 
+	messagesKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueue", "Messages", nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create storage key: %w", err)
+	}
+
 	scanOutboundQueueDone := false
 	var tasks []*Task
 
@@ -179,17 +183,17 @@ func (s *Scanner) findTasksImpl(
 		if err != nil {
 			return nil, err
 		}
+		if commitmentHash == nil {
+			continue
+		}
 
-		event, err := s.eventQueryClient.QueryEvent(ctx, s.config.Parachain.Endpoint, blockHash)
+		var messages []OutboundQueueMessage
+		ok, err := s.paraConn.API().RPC.State.GetStorage(messagesKey, &messages, blockHash)
 		if err != nil {
-			return nil, fmt.Errorf("query event: %w", err)
+			return nil, fmt.Errorf("fetch committed messages for block %v: %w", blockHash.Hex(), err)
 		}
-		if event == nil {
-			return nil, fmt.Errorf("event outboundQueue.Committed not found in block with commitment digest item")
-		}
-
-		if *commitmentHash != event.Hash {
-			return nil, fmt.Errorf("outbound queue commitment hash in digest item does not match the one in the Committed event")
+		if !ok {
+			return nil, fmt.Errorf("committed messages not found for block %v", blockHash.Hex())
 		}
 
 		// For the outbound channel, the commitment hash is the merkle root of the messages
@@ -200,7 +204,7 @@ func (s *Scanner) findTasksImpl(
 			*commitmentHash,
 			startingNonce,
 			laneID,
-			event.Messages,
+			messages,
 		)
 		if err != nil {
 			return nil, err

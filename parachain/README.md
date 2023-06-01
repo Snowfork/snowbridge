@@ -66,31 +66,6 @@ console.log(`decoded rawLog.data: ${JSON.stringify(decodedEventLog)}`);
 Place the `encodedLog` string in the `message.data` field in the test data. Use the `decoded rawLog.data` field to update the comments
 with the decoded log data.
 
-## Chain metadata
-
-There is an internal tool `snowbridge-query-events` which is used to read specific events from the parachain. It is a used by our offchain message relayers.
-
-This tool must be kept up to date with the latest chain metadata. This is the process for keeping that up to date:
-
-Install subxt client:
-
-```bash
-cargo install subxt-cli
-```
-
-Update metadata by fetching it from parachain node (in this case a node in the E2E stack):
-
-```bash
-subxt metadata --url ws://127.0.0.1:11144 -f bytes > tools/query-events/metadata-bridgehub-rococo-local.scale
-```
-
-If you want to update the tool for an already running E2E stack:
-
-```bash
-cargo build --release --manifest-path tools/query-events/Cargo.toml
-cp target/release/snowbridge-query-events /tmp/snowbridge/bin/
-```
-
 ## Generating pallet weights from benchmarks
 
 Build the parachain with the runtime benchmark flags for the chosen runtime:

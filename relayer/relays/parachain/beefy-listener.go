@@ -76,7 +76,6 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 		ethConn:          li.ethereumConn,
 		relayConn:        li.relaychainConn,
 		paraConn:         li.parachainConnection,
-		eventQueryClient: NewQueryClient(),
 		paraID:           paraID,
 	}
 
