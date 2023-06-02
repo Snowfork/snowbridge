@@ -202,6 +202,7 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::force_checkpoint())]
 		#[transactional]
+		// Used for pallet initialization and light client resetting.
 		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::process_checkpoint_update(&update)?;
@@ -216,6 +217,7 @@ pub mod pallet {
 			}
 		})]
 		#[transactional]
+		// Submits a new finalized beacon header update.
 		pub fn submit(origin: OriginFor<T>, update: Update) -> DispatchResult {
 			ensure_signed(origin)?;
 			Self::process_update(&update)?;
@@ -225,6 +227,7 @@ pub mod pallet {
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::submit_execution_header())]
 		#[transactional]
+		// Submits a new execution header update.
 		pub fn submit_execution_header(
 			origin: OriginFor<T>,
 			update: ExecutionHeaderUpdate,
@@ -242,6 +245,7 @@ pub mod pallet {
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
+			// Verifies the sync committee in the Beacon state.
 			ensure!(
 				verify_merkle_branch(
 					sync_committee_root,
@@ -258,7 +262,9 @@ pub mod pallet {
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
-			// Verify update.block_roots_root
+			// This is used for ancestry proofs in ExecutionHeader updates. This verifies the
+			// BeaconState: the beacon state root is the tree root; the `block_roots` hash is the
+			// tree leaf.
 			ensure!(
 				verify_merkle_branch(
 					update.block_roots_root,
@@ -291,9 +297,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Cross check to make sure ExecutionHeader not fall behind FinalizedHeader too much, if
-		// that happens just return error so to pause processing FinalizedHeader until
-		// ExecutionHeader catch up
+		// Cross check to make sure the ExecutionHeader does not fall too far behind FinalizedHeader updates.
+		// If that happens just return an error so to pause processing FinalizedHeader until
+		// ExecutionHeader processing has caught up
 		fn cross_check_execution_state() -> DispatchResult {
 			let latest_finalized_state: CompactBeaconState =
 				match Self::finalized_beacon_state(Self::latest_finalized_block_root()) {
@@ -301,6 +307,7 @@ pub mod pallet {
 					None => return Err(Error::<T>::NotBootstrapped.into()),
 				};
 			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
+			// The execution header import should be at least within the slot range of a sync committee period.
 			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
 			ensure!(
 				latest_execution_state.beacon_slot == 0 ||
@@ -656,11 +663,19 @@ pub mod pallet {
 			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
 		}
 
+		/// Stores the validators root in storage. Validators root is the hash tree root of all the
+		/// validators at genesis and is used to used to identify the chain that we are on
+		/// (used in conjunction with the fork version).
+		/// https://eth2book.info/capella/part3/containers/state/#genesis_validators_root
 		fn store_validators_root(validators_root: H256) {
 			<ValidatorsRoot<T>>::set(validators_root);
 		}
 
-		/// Return the domain for the domain_type and fork_version.
+		/// Returns the domain for the domain_type and fork_version. The domain is used to distinguish
+		/// between the different players in the chain (see DomainTypes
+		/// https://eth2book.info/capella/part3/config/constants/#domain-types) and to ensure we are
+		/// addressing the correct chain.
+		/// https://eth2book.info/capella/part3/helper/misc/#compute_domain
 		pub(super) fn compute_domain(
 			domain_type: Vec<u8>,
 			fork_version: ForkVersion,
@@ -676,6 +691,8 @@ pub mod pallet {
 			Ok(domain.into())
 		}
 
+		/// Computes the fork data root. The fork data root is a merkleization of the current
+		/// fork version and the genesis validators root.
 		fn compute_fork_data_root(
 			current_version: ForkVersion,
 			genesis_validators_root: H256,
@@ -690,6 +707,8 @@ pub mod pallet {
 			Ok(hash_root)
 		}
 
+		/// Checks that the sync committee bits (the votes of the sync committee members, represented
+		/// by bits 0 and 1) is more than a supermajority (2/3 of the votes are positive).
 		pub(super) fn sync_committee_participation_is_supermajority(
 			sync_committee_bits: &[u8],
 		) -> DispatchResult {
