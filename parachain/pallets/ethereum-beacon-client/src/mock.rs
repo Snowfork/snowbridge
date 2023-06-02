@@ -129,9 +129,19 @@ pub mod minimal {
 		load_fixture("sync-committee-update.minimal.json").unwrap()
 	}
 
+	pub fn load_next_sync_committee_update_fixture(
+	) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
+		load_fixture("next-sync-committee-update.minimal.json").unwrap()
+	}
+
 	pub fn load_finalized_header_update_fixture(
 	) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
 		load_fixture("finalized-header-update.minimal.json").unwrap()
+	}
+
+	pub fn load_next_finalized_header_update_fixture(
+	) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
+		load_fixture("next-finalized-header-update.minimal.json").unwrap()
 	}
 }
 
