@@ -5,7 +5,7 @@
         nixpkgs.url = "nixpkgs/nixos-unstable";
         rust-overlay.url = "github:oxalica/rust-overlay";
         flake-utils.url  = "github:numtide/flake-utils";
-        foundry.url = "github:shazow/foundry.nix/main";
+        foundry.url = "github:shazow/foundry.nix/monthly";
     };
 
     outputs = { self, nixpkgs, rust-overlay, flake-utils, foundry }:
