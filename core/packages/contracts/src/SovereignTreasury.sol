@@ -2,14 +2,17 @@
 pragma solidity ^0.8.19;
 
 import {AccessControl} from "openzeppelin/access/AccessControl.sol";
-import {IVault} from "./IVault.sol";
+import {Vault} from "./Vault.sol";
+import {Auth} from "./Auth.sol";
+import {Gateway} from "./Gateway.sol";
+import {Registry} from "./Registry.sol";
+
+import {IRecipient} from "./IRecipient.sol";
+
 import {ParaID} from "./Types.sol";
 
-contract SovereignTreasury is AccessControl {
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant SENDER_ROLE = keccak256("SENDER_ROLE");
-
-    IVault public vault;
+contract SovereignTreasury is Gateway {
+    Vault public immutable vault;
 
     struct Message {
         Action action;
@@ -26,15 +29,13 @@ contract SovereignTreasury is AccessControl {
         uint256 amount;
     }
 
-    constructor(IVault _vault) {
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
+    constructor(Registry registry, Vault _vault) Gateway(registry) {
         _setRoleAdmin(SENDER_ROLE, ADMIN_ROLE);
         vault = _vault;
     }
 
     // Handle a message from the bridge.
-    function handle(ParaID origin, bytes calldata message) external onlyRole(SENDER_ROLE) {
+    function handle(ParaID origin, bytes calldata message) external override onlyRole(SENDER_ROLE) {
         Message memory decoded = abi.decode(message, (Message));
         if (decoded.action == Action.Withdraw) {
             WithdrawPayload memory payload = abi.decode(decoded.payload, (WithdrawPayload));

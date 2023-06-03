@@ -807,7 +807,7 @@ dependencies = [
 [[package]]
 name = "ethabi-decode"
 version = "1.3.3"
-source = "git+https://github.com/snowfork/ethabi-decode.git?branch=master#6f63405bb33ef4365a1c62b72d499fa0f448118e"
+source = "git+https://github.com/Snowfork/ethabi-decode.git?branch=master#6f63405bb33ef4365a1c62b72d499fa0f448118e"
 dependencies = [
  "ethereum-types",
  "tiny-keccak 1.5.0",
@@ -2205,7 +2205,7 @@ dependencies = [
 [[package]]
 name = "polkadot-core-primitives"
 version = "0.9.41"
-source = "git+https://github.com/paritytech/polkadot?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -2217,7 +2217,7 @@ dependencies = [
 [[package]]
 name = "polkadot-parachain"
 version = "0.9.41"
-source = "git+https://github.com/paritytech/polkadot?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
 dependencies = [
  "bounded-collections",
  "derive_more",
@@ -2825,6 +2825,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowbridge-control"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "snowbridge-core",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "snowbridge-core"
 version = "0.1.1"
 dependencies = [
@@ -2985,6 +3002,7 @@ dependencies = [
  "rustc-hex",
  "scale-info",
  "serde",
+ "snowbridge-control",
  "snowbridge-core",
  "sp-core",
  "sp-io",
@@ -4540,7 +4558,7 @@ dependencies = [
 [[package]]
 name = "xcm"
 version = "0.9.41"
-source = "git+https://github.com/paritytech/polkadot?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
 dependencies = [
  "bounded-collections",
  "derivative",
@@ -4556,7 +4574,7 @@ dependencies = [
 [[package]]
 name = "xcm-executor"
 version = "0.9.41"
-source = "git+https://github.com/paritytech/polkadot?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
 dependencies = [
  "environmental",
  "frame-support",
@@ -4575,7 +4593,7 @@ dependencies = [
 [[package]]
 name = "xcm-procedural"
 version = "0.9.41"
-source = "git+https://github.com/paritytech/polkadot?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#81456c83ae4736f51ae0ad63f9d7e1fa321ba076"
 dependencies = [
  "Inflector",
  "proc-macro2",

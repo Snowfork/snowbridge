@@ -11,9 +11,10 @@ import {OutboundQueue} from "../src/OutboundQueue.sol";
 import {NativeTokens} from "../src/NativeTokens.sol";
 import {TokenVault} from "../src/TokenVault.sol";
 import {Vault} from "../src/Vault.sol";
-import {IVault} from "../src/IVault.sol";
 import {UpgradeProxy} from "../src/UpgradeProxy.sol";
 import {SovereignTreasury} from "../src/SovereignTreasury.sol";
+import {Registry} from "../src/Registry.sol";
+import {Remark} from "../src/Remark.sol";
 import {ParaID} from "../src/Types.sol";
 
 contract DeployScript is Script {
@@ -24,9 +25,12 @@ contract DeployScript is Script {
         address deployer = vm.rememberKey(privateKey);
         vm.startBroadcast(deployer);
 
+        // Registry
+        Registry registry = new Registry();
+
         // SovereignTreasury
         Vault vault = new Vault();
-        SovereignTreasury treasury = new SovereignTreasury(vault);
+        SovereignTreasury treasury = new SovereignTreasury(registry, vault);
 
         // BeefyClient
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
@@ -39,21 +43,23 @@ contract DeployScript is Script {
 
         // InboundQueue
         uint256 relayerReward = vm.envUint("RELAYER_REWARD");
-        InboundQueue inboundQueue = new InboundQueue(parachainClient, vault, relayerReward);
+        InboundQueue inboundQueue = new InboundQueue(registry, parachainClient, vault, relayerReward);
+        registry.registerContract(keccak256("InboundQueue"), address(inboundQueue));
 
         // OutboundQueue
         uint256 relayerFee = vm.envUint("RELAYER_FEE");
-        OutboundQueue outboundQueue = new OutboundQueue(vault, relayerFee);
+        OutboundQueue outboundQueue = new OutboundQueue(registry, vault, relayerFee);
+        registry.registerContract(keccak256("OutboundQueue"), address(outboundQueue));
 
         // NativeTokens
         TokenVault tokenVault = new TokenVault();
         NativeTokens nativeTokens = new NativeTokens(
+            registry,
             tokenVault,
-            outboundQueue,
             ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID"))),
             vm.envUint("CREATE_TOKEN_FEE")
         );
-        inboundQueue.updateHandler(1, IRecipient(nativeTokens));
+        registry.registerContract(keccak256("NativeTokens"), address(nativeTokens));
 
         // Deploy WETH for testing
         new WETH9();

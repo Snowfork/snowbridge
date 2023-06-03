@@ -6,6 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {OutboundQueue} from "../src/OutboundQueue.sol";
 import {Vault} from "../src/Vault.sol";
 import {ParaID} from "../src/Types.sol";
+import {Registry} from "../src/Registry.sol";
 
 contract OutboundQueueTest is Test {
     Vault public vault;
@@ -15,8 +16,11 @@ contract OutboundQueueTest is Test {
     bytes message = bytes("message");
 
     function setUp() public {
+        Registry registry = new Registry();
+        registry.grantRole(registry.REGISTER_ROLE(), address(this));
+
         vault = new Vault();
-        channel = new OutboundQueue(vault, 1 ether);
+        channel = new OutboundQueue(registry, vault, 1 ether);
         channel.grantRole(channel.SUBMIT_ROLE(), address(this));
     }
 

@@ -4,28 +4,26 @@ pragma solidity ^0.8.19;
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {AccessControl} from "openzeppelin/access/AccessControl.sol";
 import {IParachainClient} from "./ParachainClient.sol";
+import {Registry} from "./Registry.sol";
+import {RegistryLookup} from "./RegistryLookup.sol";
+import {Auth} from "./Auth.sol";
+import {Vault} from "./Vault.sol";
+
 import {IRecipient} from "./IRecipient.sol";
-import {IVault} from "./IVault.sol";
 import {ParaID} from "./Types.sol";
 
-contract InboundQueue is AccessControl {
+contract InboundQueue is Auth, RegistryLookup {
     // Nonce for each origin
     mapping(ParaID origin => uint64) public nonce;
-
-    // Registered message handlers
-    mapping(uint16 handlerID => IRecipient) public handlers;
 
     // Light client message verifier
     IParachainClient public parachainClient;
 
     // Relayers are rewarded from this vault
-    IVault public vault;
+    Vault public immutable vault;
 
     // The relayer reward for submitting a message
     uint256 public reward;
-
-    // The governance contract which is a proxy for Polkadot governance, administers via this role
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     // Relayers must provide enough gas to cover message dispatch plus a buffer
     uint256 public gasToForward = 500000;
@@ -35,7 +33,7 @@ contract InboundQueue is AccessControl {
     struct Message {
         ParaID origin;
         uint64 nonce;
-        uint16 handler;
+        bytes32 recipient;
         bytes payload;
     }
 
@@ -51,15 +49,14 @@ contract InboundQueue is AccessControl {
     event RewardUpdated(uint256 reward);
     event GasToForwardUpdated(uint256 gasToForward);
 
-
     error InvalidProof();
     error InvalidNonce();
-    error InvalidHandler();
+    error InvalidRecipient();
     error NotEnoughGas();
 
-    constructor(IParachainClient _parachainClient, IVault _vault, uint256 _reward) {
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
+    constructor(Registry registry, IParachainClient _parachainClient, Vault _vault, uint256 _reward)
+        RegistryLookup(registry)
+    {
         parachainClient = _parachainClient;
         vault = _vault;
         reward = _reward;
@@ -89,11 +86,6 @@ contract InboundQueue is AccessControl {
         // should top up the funds and have a relayer resend the message.
         vault.withdraw(message.origin, payable(msg.sender), reward);
 
-        IRecipient handler = handlers[message.handler];
-        if (address(handler) == address(0)) {
-            revert InvalidHandler();
-        }
-
         // Ensure relayers pass enough gas for message to execute.
         // Otherwise malicious relayers can break the bridge by allowing handlers to run out gas.
         // Resubmission of the message by honest relayers will fail as the tracked nonce
@@ -102,28 +94,14 @@ contract InboundQueue is AccessControl {
             revert NotEnoughGas();
         }
 
+        address recipient = resolve(message.recipient);
         DispatchResult result = DispatchResult.Success;
-        try handler.handle{gas: gasToForward}(message.origin, message.payload) {}
+        try IRecipient(recipient).handle{gas: gasToForward}(message.origin, message.payload) {}
         catch {
             result = DispatchResult.Failure;
         }
 
         emit MessageDispatched(message.origin, message.nonce, result);
-    }
-
-    function updateHandler(uint16 id, IRecipient handler) external onlyRole(ADMIN_ROLE) {
-        handlers[id] = handler;
-        emit HandlerUpdated(id, handler);
-    }
-
-    function updateParachainClient(IParachainClient _parachainClient) external onlyRole(ADMIN_ROLE) {
-        parachainClient = _parachainClient;
-        emit ParachainClientUpdated(address(_parachainClient));
-    }
-
-    function updateVault(IVault _vault) external onlyRole(ADMIN_ROLE) {
-        vault = _vault;
-        emit VaultUpdated(address(_vault));
     }
 
     function updateReward(uint256 _reward) external onlyRole(ADMIN_ROLE) {

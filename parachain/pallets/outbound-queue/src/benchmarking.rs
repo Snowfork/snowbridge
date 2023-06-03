@@ -21,9 +21,9 @@ mod benchmarks {
 		let payload = (0..x).map(|_| 1u8).collect::<Vec<u8>>();
 
 		let enqueued_message = EnqueuedMessage {
-			xcm_hash: H256::zero().into(),
+			id: H256::zero().into(),
 			origin: 1000.into(),
-			handler: 1,
+			gateway: [1u8; 32].into(),
 			payload: payload.try_into().unwrap(),
 		};
 		let encoded_enqueued_message = enqueued_message.encode();

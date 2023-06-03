@@ -22,9 +22,10 @@ use snowbridge_core::ParaId;
 use sp_core::{RuntimeDebug, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
-use xcm::v3::XcmHash;
 
-use snowbridge_core::{OutboundQueue as OutboundQueueTrait, SubmitError};
+use snowbridge_core::{
+	ContractId, OutboundMessage, OutboundQueue as OutboundQueueTrait, SubmitError,
+};
 use snowbridge_outbound_queue_merkle_proof::merkle_root;
 
 pub use weights::WeightInfo;
@@ -36,44 +37,45 @@ pub enum AggregateMessageOrigin {
 	Parachain(ParaId),
 }
 
-// Message which is awaiting processing
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+/// Message which is awaiting processing in the MessageQueue pallet
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct EnqueuedMessage {
-	/// XCM Hash
-	pub xcm_hash: XcmHash,
+	/// Message ID (usually hash of message)
+	pub id: H256,
 	/// ID of source parachain
 	pub origin: ParaId,
-	/// Handler to dispatch the message to
-	pub handler: u16,
+	/// The receiving gateway contract
+	pub gateway: ContractId,
 	/// Payload for target application.
 	pub payload: Vec<u8>,
 }
 
+/// Message which has been assigned a nonce and will be committed at the end of a block
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 pub struct Message {
 	/// ID of source parachain
 	origin: ParaId,
 	/// Unique nonce to prevent replaying messages
-	#[codec(compact)]
 	nonce: u64,
-	/// Handler to dispatch the message to
-	handler: u16,
+	/// The receiving gateway contract
+	gateway: ContractId,
 	/// Payload for target application.
 	payload: Vec<u8>,
 }
 
+/// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
 impl Into<Token> for Message {
 	fn into(self) -> Token {
 		Token::Tuple(vec![
 			Token::Uint(u32::from(self.origin).into()),
 			Token::Uint(self.nonce.into()),
-			Token::Uint(self.handler.into()),
+			Token::FixedBytes(self.gateway.to_fixed_bytes().into()),
 			Token::Bytes(self.payload.to_vec()),
 		])
 	}
 }
 
-/// The maximal length of a UMP message.
+/// The maximal length of an enqueued message, as determined by the MessageQueue pallet
 pub type MaxEnqueuedMessageSizeOf<T> =
 	<<T as Config>::MessageQueue as EnqueueMessage<AggregateMessageOrigin>>::MaxMessageLen;
 
@@ -111,16 +113,20 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// Message has been queued and will be processed in the future
 		MessageQueued {
-			/// ID of the XCM message
-			xcm_hash: XcmHash,
+			/// ID of the message. Usually the XCM message hash.
+			id: H256,
 		},
+		/// Message will be committed at the end of current block. From now on, to track the
+		/// progress the message, use the `nonce` of `id`.
 		MessageAccepted {
-			/// ID of the XCM message
-			xcm_hash: XcmHash,
+			/// ID of the message
+			id: H256,
 			/// The nonce assigned to this message
 			nonce: u64,
 		},
+		/// Some messages have been committed
 		MessagesCommitted {
 			/// Merkle root of the committed messages
 			root: H256,
@@ -135,20 +141,24 @@ pub mod pallet {
 		MessageTooLarge,
 	}
 
-	/// Messages to be committed every block. This storage value is killed at the start of every
-	/// block, so should never go into block PoV.
+	/// Messages to be committed in the current block. This storage value is killed in
+	/// `on_initialize`, so should never go into block PoV.
 	///
 	/// Is never read in the runtime, only by offchain code.
 	///
 	/// Inspired by the `frame_system::Pallet::Events` storage value
 	#[pallet::storage]
 	#[pallet::unbounded]
-	pub(super) type Messages<T: Config> = StorageValue<_, Vec<Box<Message>>, ValueQuery>;
+	pub(super) type Messages<T: Config> = StorageValue<_, Vec<Message>, ValueQuery>;
 
+	/// Hashes of the ABI-encoded messages in the [`Messages`] storage value. Used to generate a
+	/// merkle root during `on_finalize`. This storage value is killed in
+	/// `on_initialize`, so should never go into block PoV.
 	#[pallet::storage]
 	#[pallet::unbounded]
 	pub(super) type MessageLeaves<T: Config> = StorageValue<_, Vec<H256>, ValueQuery>;
 
+	/// The current nonce for each message origin
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
@@ -161,6 +171,7 @@ pub mod pallet {
 			// Remove storage from previous block
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
+			// Reserve some weight for the `on_finalize` handler
 			return T::WeightInfo::on_finalize()
 		}
 
@@ -170,6 +181,25 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// Generate a messages commitment and insert it into the header digest
+		pub(crate) fn commit_messages() {
+			let count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
+			if count == 0 {
+				return
+			}
+
+			// Create merkle root of messages
+			let root = merkle_root::<<T as Config>::Hashing, _>(MessageLeaves::<T>::stream_iter());
+
+			// Insert merkle root into the header digest
+			<frame_system::Pallet<T>>::deposit_log(sp_runtime::DigestItem::Other(
+				root.to_fixed_bytes().into(),
+			));
+
+			Self::deposit_event(Event::MessagesCommitted { root, count });
+		}
+
+		/// Process a message delivered by the MessageQueue pallet
 		pub(crate) fn do_process_message(mut message: &[u8]) -> Result<bool, ProcessMessageError> {
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
@@ -179,7 +209,7 @@ pub mod pallet {
 			let message: Message = Message {
 				origin: enqueued_message.origin,
 				nonce: next_nonce,
-				handler: enqueued_message.handler,
+				gateway: enqueued_message.gateway,
 				payload: enqueued_message.payload,
 			};
 
@@ -191,82 +221,51 @@ pub mod pallet {
 			Nonce::<T>::set(enqueued_message.origin, next_nonce);
 
 			Self::deposit_event(Event::MessageAccepted {
-				xcm_hash: enqueued_message.xcm_hash,
+				id: enqueued_message.id,
 				nonce: next_nonce,
 			});
 
 			Ok(true)
 		}
+	}
 
-		pub(crate) fn commit_messages() {
-			let messages_count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
-			if messages_count == 0 {
-				return
-			}
-
-			// Create merkle root of messages
-			let messages_root =
-				merkle_root::<<T as Config>::Hashing, _>(MessageLeaves::<T>::stream_iter());
-
-			// Insert merkle root into the block header
-			<frame_system::Pallet<T>>::deposit_log(sp_runtime::DigestItem::Other(
-				messages_root.to_fixed_bytes().into(),
-			));
-
-			Self::deposit_event(Event::MessagesCommitted {
-				root: messages_root,
-				count: messages_count,
-			});
-		}
-
-		fn prepare_enqueued_message(
-			xcm_hash: XcmHash,
-			origin: ParaId,
-			handler: u16,
-			payload: &[u8],
-		) -> Result<BoundedVec<u8, MaxEnqueuedMessageSizeOf<T>>, SubmitError> {
-			// The inner payload should not be too large
-			ensure!(
-				payload.len() < T::MaxMessagePayloadSize::get() as usize,
-				SubmitError::MessageTooLarge
-			);
-			let message: EnqueuedMessage = EnqueuedMessage {
-				xcm_hash,
-				origin: origin.clone(),
-				handler,
-				payload: payload.into(),
-			};
-			// The whole message should not be too large
-			let message = message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
-			Ok(message)
-		}
+	/// A message which can be accepted by the [`OutboundQueue`]
+	#[derive(CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
+	pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
+		id: H256,
+		origin: ParaId,
+		message: BoundedVec<u8, MaxMessageSize>,
 	}
 
 	impl<T: Config> OutboundQueueTrait for Pallet<T> {
-		/// Ensure that the message isn't too large
-		fn validate(
-			xcm_hash: XcmHash,
-			origin: ParaId,
-			handler: u16,
-			payload: &[u8],
-		) -> Result<(), SubmitError> {
-			Self::prepare_enqueued_message(xcm_hash, origin, handler, payload).map(|_| ())
+		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
+
+		fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError> {
+			// The inner payload should not be too large
+			ensure!(
+				message.payload.len() < T::MaxMessagePayloadSize::get() as usize,
+				SubmitError::MessageTooLarge
+			);
+			let message: EnqueuedMessage = EnqueuedMessage {
+				id: message.id,
+				origin: message.origin,
+				gateway: message.gateway,
+				payload: message.payload.clone().into(),
+			};
+			// The whole message should not be too large
+			let encoded = message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
+
+			let ticket =
+				OutboundQueueTicket { id: message.id, origin: message.origin, message: encoded };
+			Ok(ticket)
 		}
 
-		/// Submit message on the outbound channel
-		fn submit(
-			xcm_hash: XcmHash,
-			origin: ParaId,
-			handler: u16,
-			payload: &[u8],
-		) -> Result<(), SubmitError> {
-			let message = Self::prepare_enqueued_message(xcm_hash, origin, handler, payload)?;
+		fn submit(ticket: Self::Ticket) {
 			T::MessageQueue::enqueue_message(
-				message.as_bounded_slice(),
-				AggregateMessageOrigin::Parachain(origin),
+				ticket.message.as_bounded_slice(),
+				AggregateMessageOrigin::Parachain(ticket.origin),
 			);
-			Self::deposit_event(Event::MessageQueued { xcm_hash });
-			Ok(())
+			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 		}
 	}
 
@@ -277,6 +276,8 @@ pub mod pallet {
 			_: Self::Origin,
 			meter: &mut frame_support::weights::WeightMeter,
 		) -> Result<bool, ProcessMessageError> {
+			// Yield if we don't want to accept any more messages in the current block.
+			// There is hard limit to ensure the weight of `on_finalize` is bounded.
 			ensure!(
 				MessageLeaves::<T>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerBlock::get() as usize,

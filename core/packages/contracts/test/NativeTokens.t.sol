@@ -10,6 +10,8 @@ import {IOutboundQueue} from "../src/IOutboundQueue.sol";
 import {NativeTokens} from "../src/NativeTokens.sol";
 import {TokenVault} from "../src/TokenVault.sol";
 import {ParaID} from "../src/Types.sol";
+import {Registry} from "../src/Registry.sol";
+import {Gateway} from "../src/Gateway.sol";
 
 import {OutboundQueueMock} from "./mocks/OutboundQueueMock.sol";
 
@@ -18,6 +20,7 @@ contract NativeTokensTest is Test {
     event Unlocked(address recipient, address token, uint128 amount);
     event Created(address token);
 
+    Registry registry;
     TokenVault private vault;
     NativeTokens private nativeTokens;
     IOutboundQueue private outboundQueue;
@@ -29,11 +32,16 @@ contract NativeTokensTest is Test {
     bytes private constant recipient = "/Alice";
 
     function setUp() public {
+        registry = new Registry();
+        registry.grantRole(registry.REGISTER_ROLE(), address(this));
+
         token = new WETH9();
 
         outboundQueue = new OutboundQueueMock();
+        registry.registerContract(keccak256("OutboundQueue"), address(outboundQueue));
+
         vault = new TokenVault();
-        nativeTokens = new NativeTokens(vault, outboundQueue, ASSET_HUB, 1);
+        nativeTokens = new NativeTokens(registry, vault, ASSET_HUB, 1);
         vault.grantRole(vault.WITHDRAW_ROLE(), address(nativeTokens));
         vault.grantRole(vault.DEPOSIT_ROLE(), address(nativeTokens));
 
@@ -52,7 +60,7 @@ contract NativeTokensTest is Test {
 
     function testHandleRevertsUnknownOrigin() public {
         NativeTokens.Message memory message;
-        vm.expectRevert(NativeTokens.Unauthorized.selector);
+        vm.expectRevert(Gateway.Unauthorized.selector);
         nativeTokens.handle(ParaID.wrap(4056), abi.encode(message));
     }
 

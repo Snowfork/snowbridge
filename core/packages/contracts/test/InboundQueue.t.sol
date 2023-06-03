@@ -10,6 +10,7 @@ import {IParachainClient} from "../src/IParachainClient.sol";
 import {ParaID} from "../src/Types.sol";
 import {ParachainClientMock} from "./mocks/ParachainClientMock.sol";
 import {IRecipient, RecipientMock} from "./mocks/RecipientMock.sol";
+import {Registry} from "../src/Registry.sol";
 
 contract InboundQueueTest is Test {
     InboundQueue public channel;
@@ -24,16 +25,21 @@ contract InboundQueueTest is Test {
     bytes public message = bytes("message");
     bytes public parachainHeaderProof = bytes("validProof");
 
+    bytes32 constant RECIPIENT = keccak256("RecipientMock");
+
     function setUp() public {
+        Registry registry = new Registry();
+        registry.grantRole(registry.REGISTER_ROLE(), address(this));
+
         IParachainClient parachainClient = new ParachainClientMock(BeefyClient(address(0)), 0);
         recipient = new RecipientMock();
+        registry.registerContract(RECIPIENT, address(recipient));
 
         vault = new Vault();
 
         deal(address(this), 100 ether);
 
-        channel = new InboundQueue(parachainClient, vault, 1 ether);
-        channel.updateHandler(1, IRecipient(recipient));
+        channel = new InboundQueue(registry, parachainClient, vault, 1 ether);
         vault.grantRole(vault.WITHDRAW_ROLE(), address(channel));
     }
 
@@ -43,7 +49,7 @@ contract InboundQueueTest is Test {
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);
 
-        channel.submit(InboundQueue.Message(ORIGIN, 1, 1, message), proof, parachainHeaderProof);
+        channel.submit(InboundQueue.Message(ORIGIN, 1, RECIPIENT, message), proof, parachainHeaderProof);
 
         assertEq(vault.balances(ORIGIN), 49 ether);
         assertEq(relayer.balance, 2 ether);
@@ -56,7 +62,7 @@ contract InboundQueueTest is Test {
         hoax(relayer, 1 ether);
 
         vm.expectRevert(InboundQueue.InvalidProof.selector);
-        channel.submit(InboundQueue.Message(ORIGIN, 1, 1, message), proof, bytes("badProof"));
+        channel.submit(InboundQueue.Message(ORIGIN, 1, RECIPIENT, message), proof, bytes("badProof"));
     }
 
     function testSubmitShouldFailInvalidNonce() public {
@@ -66,7 +72,7 @@ contract InboundQueueTest is Test {
         hoax(relayer, 1 ether);
 
         vm.expectRevert(InboundQueue.InvalidNonce.selector);
-        channel.submit(InboundQueue.Message(ORIGIN, 2, 1, message), proof, parachainHeaderProof);
+        channel.submit(InboundQueue.Message(ORIGIN, 2, RECIPIENT, message), proof, parachainHeaderProof);
     }
 
     // Test that submission fails if origin does not have sufficient funds to pay relayer
@@ -77,7 +83,7 @@ contract InboundQueueTest is Test {
         hoax(relayer, 1 ether);
 
         vm.expectRevert(Vault.InsufficientBalance.selector);
-        channel.submit(InboundQueue.Message(ORIGIN, 1, 1, message), proof, parachainHeaderProof);
+        channel.submit(InboundQueue.Message(ORIGIN, 1, RECIPIENT, message), proof, parachainHeaderProof);
     }
 
     function testSubmitShouldNotFailOnHandlerFailure() public {
@@ -90,7 +96,7 @@ contract InboundQueueTest is Test {
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);
 
-        channel.submit(InboundQueue.Message(ORIGIN, 1, 1, message), proof, parachainHeaderProof);
+        channel.submit(InboundQueue.Message(ORIGIN, 1, RECIPIENT, message), proof, parachainHeaderProof);
 
         assertEq(vault.balances(ORIGIN), 49 ether);
         assertEq(relayer.balance, 2 ether);
@@ -106,7 +112,7 @@ contract InboundQueueTest is Test {
         address relayer = makeAddr("alice");
         hoax(relayer, 1 ether);
 
-        channel.submit(InboundQueue.Message(ORIGIN, 1, 1, message), proof, parachainHeaderProof);
+        channel.submit(InboundQueue.Message(ORIGIN, 1, RECIPIENT, message), proof, parachainHeaderProof);
 
         assertEq(vault.balances(ORIGIN), 49 ether);
         assertEq(relayer.balance, 2 ether);

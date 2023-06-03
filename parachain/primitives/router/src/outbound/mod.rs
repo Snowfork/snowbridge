@@ -1,26 +1,29 @@
+pub mod payload;
+
 use core::slice::Iter;
 
 use codec::{Decode, Encode};
-use ethabi::{self, Token};
+
 use frame_support::{ensure, log, traits::Get};
-use snowbridge_core::{OutboundQueue, ParaId};
-use sp_core::{RuntimeDebug, H160};
+use snowbridge_core::{OutboundMessage, OutboundQueue as OutboundQueueTrait};
+use sp_core::{RuntimeDebug, H160, H256};
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
 use xcm_executor::traits::ExportXcm;
 
-#[derive(Encode, Decode)]
-struct ValidatedMessage(ParaId, u16, Vec<u8>);
+use payload::{Message, NativeTokensMessage};
 
 pub struct EthereumBlobExporter<RelayNetwork, BridgedNetwork, OutboundQueue>(
 	PhantomData<(RelayNetwork, BridgedNetwork, OutboundQueue)>,
 );
-impl<RelayNetwork, BridgedNetwork, Queue> ExportXcm
-	for EthereumBlobExporter<RelayNetwork, BridgedNetwork, Queue>
+
+impl<RelayNetwork, BridgedNetwork, OutboundQueue> ExportXcm
+	for EthereumBlobExporter<RelayNetwork, BridgedNetwork, OutboundQueue>
 where
 	RelayNetwork: Get<NetworkId>,
 	BridgedNetwork: Get<NetworkId>,
-	Queue: OutboundQueue,
+	OutboundQueue: OutboundQueueTrait,
+	OutboundQueue::Ticket: Encode + Decode,
 {
 	type Ticket = (Vec<u8>, XcmHash);
 
@@ -74,7 +77,7 @@ where
 		})?;
 
 		let mut converter = XcmConverter::new(&message, &bridged_network);
-		let (payload, max_target_fee) = converter.convert().map_err(|err|{
+		let (converted_message, max_target_fee) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
@@ -84,64 +87,35 @@ where
 			return Err(SendError::Unroutable)
 		}
 
-		let (encoded, handler) = payload.abi_encode();
+		let (gateway, payload) = converted_message.encode();
 
-		let blob = ValidatedMessage(para_id.into(), handler, encoded.clone()).encode();
-		let hash: [u8; 32] = sp_io::hashing::blake2_256(blob.as_slice());
+		let hash_input = (para_id, gateway, payload.clone()).encode();
+		let message_id: H256 = sp_io::hashing::blake2_256(&hash_input).into();
 
-		Queue::validate(hash, para_id.into(), handler, encoded.as_ref()).map_err(|err| {
-			log::error!(target: "xcm::ethereum_blob_exporter", "undeliverable due to OutboundQueue error '{err:?}'.");
+		let outbound_message =
+			OutboundMessage { id: message_id, origin: para_id.into(), gateway, payload };
+
+		let ticket = OutboundQueue::validate(&outbound_message).map_err(|_| {
+			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed");
 			SendError::ExceedsMaxMessageSize
 		})?;
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "message validated {hash:#?}.");
+		log::info!(target: "xcm::ethereum_blob_exporter", "message validated {message_id:#?}.");
 
 		// TODO: Fees if any currently returning empty multi assets as cost
-		Ok(((blob, hash), MultiAssets::default()))
+		Ok(((ticket.encode(), message_id.into()), MultiAssets::default()))
 	}
 
 	fn deliver((blob, hash): (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {
-		let ValidatedMessage(source_id, handler, payload) =
-			ValidatedMessage::decode(&mut blob.as_ref()).map_err(|err| {
-				log::trace!(target: "xcm::ethereum_blob_exporter", "undeliverable due to decoding error '{err:?}'.");
+		let ticket: OutboundQueue::Ticket = OutboundQueue::Ticket::decode(&mut blob.as_ref())
+			.map_err(|_| {
+				log::trace!(target: "xcm::ethereum_blob_exporter", "undeliverable due to decoding error");
 				SendError::NotApplicable
 			})?;
-		Queue::submit(hash, source_id, handler, payload.as_ref()).map_err(|err| {
-			log::error!(target: "xcm::ethereum_blob_exporter", "undeliverable due to OutboundQueue error '{err:?}'.");
-			SendError::Unroutable
-		})?;
+
+		OutboundQueue::submit(ticket);
 		log::info!(target: "xcm::ethereum_blob_exporter", "message delivered {hash:#?}.");
 		Ok(hash)
-	}
-}
-
-#[derive(PartialEq, RuntimeDebug)]
-enum NativeTokens {
-	Unlock { asset: H160, destination: H160, amount: u128 },
-}
-
-#[derive(PartialEq, RuntimeDebug)]
-enum OutboundPayload {
-	NativeTokens(NativeTokens),
-}
-
-impl OutboundPayload {
-	fn abi_encode(&self) -> (Vec<u8>, u16) {
-		match self {
-			Self::NativeTokens(NativeTokens::Unlock { asset, destination, amount }) => {
-				let inner = ethabi::encode(&[Token::Tuple(vec![
-					Token::Address(*asset),
-					Token::Address(*destination),
-					Token::Uint((*amount).into()),
-				])]);
-				let message = ethabi::encode(&[Token::Tuple(vec![
-					Token::Uint(0.into()), // Unlock action = 0
-					Token::Bytes(inner),
-				])]);
-
-				(message, 1) // NativeTokens handler = 1
-			},
-		}
 	}
 }
 
@@ -171,14 +145,14 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Self { iter: message.inner().iter(), bridged_location }
 	}
 
-	fn convert(&mut self) -> Result<(OutboundPayload, Option<&'a MultiAsset>), XcmConverterError> {
+	fn convert(&mut self) -> Result<(Message, Option<&'a MultiAsset>), XcmConverterError> {
 		use XcmConverterError::*;
 
 		// Get target fees if specified.
-		let max_target_fee = self.get_fee_info()?;
+		let max_target_fee = self.fee_info()?;
 
 		// Get deposit reserved asset
-		let result = self.get_reserve_deposited_asset()?;
+		let result = self.reserve_deposited_asset()?;
 
 		// All xcm instructions must be consumed before exit.
 		if self.next().is_ok() {
@@ -188,7 +162,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		}
 	}
 
-	fn get_fee_info(&mut self) -> Result<Option<&'a MultiAsset>, XcmConverterError> {
+	fn fee_info(&mut self) -> Result<Option<&'a MultiAsset>, XcmConverterError> {
 		use XcmConverterError::*;
 		let execution_fee = match self.next()? {
 			WithdrawAsset(fee_asset) => match self.next()? {
@@ -203,7 +177,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(execution_fee)
 	}
 
-	fn get_reserve_deposited_asset(&mut self) -> Result<OutboundPayload, XcmConverterError> {
+	fn reserve_deposited_asset(&mut self) -> Result<Message, XcmConverterError> {
 		use XcmConverterError::*;
 		let (assets, beneficiary) = if let ReserveAssetDeposited(reserved_assets) = self.next()? {
 			if reserved_assets.len() == 0 {
@@ -269,7 +243,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			}
 		};
 
-		Ok(OutboundPayload::NativeTokens(NativeTokens::Unlock { asset, destination, amount }))
+		Ok(Message::NativeTokens(NativeTokensMessage::Unlock { asset, destination, amount }))
 	}
 
 	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {
@@ -282,6 +256,7 @@ mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
 	use snowbridge_core::SubmitError;
+	use sp_core::H256;
 
 	use super::*;
 
@@ -299,7 +274,7 @@ mod tests {
 	struct MockOkOutboundQueue;
 	impl OutboundQueue for MockOkOutboundQueue {
 		fn validate(
-			_hash: XcmHash,
+			_hash: H256,
 			_source_id: snowbridge_core::ParaId,
 			_handler: u16,
 			_payload: &[u8],
@@ -308,7 +283,7 @@ mod tests {
 		}
 
 		fn submit(
-			_hash: XcmHash,
+			_hash: H256,
 			_source_id: snowbridge_core::ParaId,
 			_handler: u16,
 			_payload: &[u8],
@@ -319,7 +294,7 @@ mod tests {
 	struct MockErrOutboundQueue;
 	impl OutboundQueue for MockErrOutboundQueue {
 		fn validate(
-			_hash: XcmHash,
+			_hash: H256,
 			_source_id: snowbridge_core::ParaId,
 			_handler: u16,
 			_payload: &[u8],
@@ -328,7 +303,7 @@ mod tests {
 		}
 
 		fn submit(
-			_hash: XcmHash,
+			_hash: H256,
 			_source_id: snowbridge_core::ParaId,
 			_handler: u16,
 			_payload: &[u8],

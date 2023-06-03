@@ -5,9 +5,11 @@ import "openzeppelin/access/AccessControl.sol";
 import "openzeppelin/token/ERC20/IERC20.sol";
 import "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
+import {Auth} from "./Auth.sol";
+
 /// @title ERC20 Vault
 /// @dev Holds ERC20 Tokens on behalf of ERC20App.
-contract TokenVault is AccessControl {
+contract TokenVault is Auth {
     using SafeERC20 for IERC20;
 
     /// @dev Emitted when funds are deposited.
@@ -19,7 +21,6 @@ contract TokenVault is AccessControl {
     /// @dev Not enough funds to transfer.
     error InsufficientBalance();
 
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
     bytes32 public constant DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
 
@@ -27,8 +28,6 @@ contract TokenVault is AccessControl {
     mapping(address token => uint128) public balance;
 
     constructor() {
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(WITHDRAW_ROLE, ADMIN_ROLE);
         _setRoleAdmin(DEPOSIT_ROLE, ADMIN_ROLE);
     }

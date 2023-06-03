@@ -1,7 +1,7 @@
 use super::*;
 
 use frame_support::{
-	assert_noop, assert_ok, parameter_types,
+	assert_err, assert_noop, parameter_types,
 	traits::{Everything, Footprint, Hooks, ProcessMessageError},
 	weights::WeightMeter,
 	BoundedSlice,
@@ -114,15 +114,20 @@ impl EnqueueMessage<crate::AggregateMessageOrigin> for FakeMessageQueue {
 #[test]
 fn submit_messages_from_multiple_origins_and_commit() {
 	new_tester().execute_with(|| {
-		let handler = 2;
-
 		for para_id in 1000..1004 {
-			let xcm_hash = H256::repeat_byte(1).into();
-			let para_id = para_id.into();
-			let payload = (0..100).map(|_| 1u8).collect::<Vec<u8>>();
+			let message = OutboundMessage {
+				id: H256::repeat_byte(1).into(),
+				origin: para_id.into(),
+				gateway: [1u8; 32].into(),
+				payload: (0..100).map(|_| 1u8).collect::<Vec<u8>>(),
+			};
 
-			assert_ok!(OutboundQueue::submit(xcm_hash, para_id, handler, &payload));
-			assert_eq!(<Nonce<Test>>::get(para_id), 1);
+			let result = OutboundQueue::validate(&message);
+			assert!(result.is_ok());
+			let ticket = result.unwrap();
+
+			OutboundQueue::submit(ticket);
+			assert_eq!(<Nonce<Test>>::get(message.origin), 1);
 		}
 
 		OutboundQueue::on_finalize(System::block_number());
@@ -136,16 +141,14 @@ fn submit_messages_from_multiple_origins_and_commit() {
 #[test]
 fn submit_message_fail_too_large() {
 	new_tester().execute_with(|| {
-		let handler = 2;
+		let message = OutboundMessage {
+			id: H256::repeat_byte(1).into(),
+			origin: 1000.into(),
+			gateway: [1u8; 32].into(),
+			payload: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
+		};
 
-		let xcm_hash = H256::repeat_byte(1).into();
-		let para_id = 1000.into();
-		let payload = (0..1000).map(|_| 1u8).collect::<Vec<u8>>();
-
-		assert_noop!(
-			OutboundQueue::submit(xcm_hash, para_id, handler, &payload),
-			SubmitError::MessageTooLarge
-		);
+		assert_err!(OutboundQueue::validate(&message), SubmitError::MessageTooLarge);
 	});
 }
 

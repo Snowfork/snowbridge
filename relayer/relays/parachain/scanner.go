@@ -18,12 +18,12 @@ import (
 )
 
 type Scanner struct {
-	config           *SourceConfig
-	ethConn          *ethereum.Connection
-	relayConn        *relaychain.Connection
-	paraConn         *parachain.Connection
-	paraID           uint32
-	tasks            chan<- *Task
+	config    *SourceConfig
+	ethConn   *ethereum.Connection
+	relayConn *relaychain.Connection
+	paraConn  *parachain.Connection
+	paraID    uint32
+	tasks     chan<- *Task
 }
 
 // Scans for all parachain message commitments for the configured parachain laneID that need to be relayed and can be

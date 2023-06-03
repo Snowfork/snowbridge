@@ -72,11 +72,11 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	li.paraID = paraID
 
 	li.scanner = &Scanner{
-		config:           li.config,
-		ethConn:          li.ethereumConn,
-		relayConn:        li.relaychainConn,
-		paraConn:         li.parachainConnection,
-		paraID:           paraID,
+		config:    li.config,
+		ethConn:   li.ethereumConn,
+		relayConn: li.relaychainConn,
+		paraConn:  li.parachainConnection,
+		paraID:    paraID,
 	}
 
 	eg.Go(func() error {

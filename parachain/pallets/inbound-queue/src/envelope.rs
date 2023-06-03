@@ -19,8 +19,8 @@ static EVENT_ABI: &Event = &Event {
 /// An inbound message that has had its outer envelope decoded.
 #[derive(Clone, RuntimeDebug)]
 pub struct Envelope {
-	/// The address of the outbound channel on Ethereum that forwarded this message.
-	pub channel: H160,
+	/// The address of the outbound queue on Ethereum that emitted this message as an event log
+	pub outbound_queue_address: H160,
 	/// The destination parachain.
 	pub dest: ParaId,
 	/// A nonce for enforcing replay protection and ordering.
@@ -55,6 +55,6 @@ impl TryFrom<Log> for Envelope {
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		Ok(Self { channel: log.address, dest, nonce, payload })
+		Ok(Self { outbound_queue_address: log.address, dest, nonce, payload })
 	}
 }

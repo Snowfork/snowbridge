@@ -23,7 +23,7 @@ use sp_std::convert::TryFrom;
 
 use envelope::Envelope;
 use snowbridge_core::{Message, Verifier};
-use snowbridge_router_primitives::{ConvertMessage, Payload};
+use snowbridge_router_primitives::inbound;
 
 use xcm::latest::{send_xcm, SendError};
 
@@ -59,7 +59,7 @@ pub mod pallet {
 
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
-	use xcm::v3::SendXcm;
+	use xcm::{v2::ExecuteXcm, v3::SendXcm};
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -72,8 +72,6 @@ pub mod pallet {
 		type Token: Mutate<Self::AccountId>;
 
 		type Reward: Get<BalanceOf<Self>>;
-
-		type MessageConversion: ConvertMessage;
 
 		type XcmSender: SendXcm;
 
@@ -147,7 +145,7 @@ pub mod pallet {
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
 			let allowlist = <AllowList<T>>::get();
-			if !allowlist.contains(&envelope.channel) {
+			if !allowlist.contains(&envelope.outbound_queue_address) {
 				return Err(Error::<T>::InvalidOutboundQueue.into())
 			}
 
@@ -166,30 +164,49 @@ pub mod pallet {
 			let sovereign_account = envelope.dest.into_account_truncating();
 			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
 
-			// Dispatch message. From this point, any errors are masked, i.e the extrinsic will
-			// succeed even if the message was not successfully dispatched.
+			// From this point, any errors are masked, i.e the extrinsic will
+			// succeed even if the message was not successfully decoded or dispatched.
 
-			if let Ok(payload) = Payload::decode_all(&mut envelope.payload.as_ref()) {
-				let (dest, xcm) =
-					T::MessageConversion::convert(envelope.channel, envelope.dest.into(), payload);
-				match send_xcm::<T::XcmSender>(dest, xcm) {
-					Ok(_) => Self::deposit_event(Event::MessageReceived {
+			// Attempt to decode message
+			let decoded_message =
+				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+					Ok(inbound::VersionedMessage::V1(decoded_message)) => decoded_message,
+					Err(_) => {
+						Self::deposit_event(Event::MessageReceived {
+							dest: envelope.dest,
+							nonce: envelope.nonce,
+							result: MessageDispatchResult::InvalidPayload,
+						});
+						return Ok(())
+					},
+				};
+
+			// Attempt to convert to XCM
+			let sibling_para = MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest)) };
+			let xcm = match decoded_message.try_into() {
+				Ok(xcm) => xcm,
+				Err(_) => {
+					Self::deposit_event(Event::MessageReceived {
 						dest: envelope.dest,
 						nonce: envelope.nonce,
-						result: MessageDispatchResult::Dispatched,
-					}),
-					Err(err) => Self::deposit_event(Event::MessageReceived {
-						dest: envelope.dest,
-						nonce: envelope.nonce,
-						result: MessageDispatchResult::NotDispatched(err),
-					}),
-				}
-			} else {
-				Self::deposit_event(Event::MessageReceived {
+						result: MessageDispatchResult::InvalidPayload,
+					});
+					return Ok(())
+				},
+			};
+
+			// Attempt to send XCM to a sibling parachain
+			match send_xcm::<T::XcmSender>(sibling_para, xcm) {
+				Ok(_) => Self::deposit_event(Event::MessageReceived {
 					dest: envelope.dest,
 					nonce: envelope.nonce,
-					result: MessageDispatchResult::InvalidPayload,
-				})
+					result: MessageDispatchResult::Dispatched,
+				}),
+				Err(err) => Self::deposit_event(Event::MessageReceived {
+					dest: envelope.dest,
+					nonce: envelope.nonce,
+					result: MessageDispatchResult::NotDispatched(err),
+				}),
 			}
 
 			Ok(())

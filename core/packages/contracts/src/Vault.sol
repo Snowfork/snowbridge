@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import {AccessControl} from "openzeppelin/access/AccessControl.sol";
-import {IVault} from "./IVault.sol";
+import {Auth} from "./Auth.sol";
 import {ParaID} from "./Types.sol";
 
-contract Vault is IVault, AccessControl {
+contract Vault is Auth {
     event Deposited(ParaID indexed sovereign, uint256 amount);
     event Withdrawn(ParaID indexed sovereign, address recipient, uint256 amount);
 
@@ -13,15 +12,12 @@ contract Vault is IVault, AccessControl {
     error ZeroAmount();
     error CannotSendFunds();
 
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
 
     // Mapping of sovereign to balance
     mapping(ParaID sovereign => uint256) public balances;
 
     constructor() {
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(WITHDRAW_ROLE, ADMIN_ROLE);
     }
 
