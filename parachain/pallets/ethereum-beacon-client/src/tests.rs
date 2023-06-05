@@ -6,7 +6,7 @@ use crate::{
 
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
-use primitives::CompactExecutionHeader;
+use primitives::{CompactExecutionHeader, NextSyncCommitteeUpdate};
 use rand::{thread_rng, Rng};
 use sp_core::H256;
 
@@ -340,9 +340,9 @@ fn submit_update_with_sync_committee_in_current_period() {
 fn submit_update_in_next_period() {
 	let checkpoint = load_checkpoint_update_fixture();
 	let sync_committee_update = load_sync_committee_update_fixture();
-	let finalized_update = load_next_finalized_header_update_fixture();
+	let update = load_next_finalized_header_update_fixture();
 	let sync_committee_period = compute_period(sync_committee_update.finalized_header.slot);
-	let next_sync_committee_period = compute_period(finalized_update.finalized_header.slot);
+	let next_sync_committee_period = compute_period(update.finalized_header.slot);
 	assert_eq!(sync_committee_period + 1, next_sync_committee_period);
 
 	new_tester().execute_with(|| {
@@ -351,11 +351,8 @@ fn submit_update_in_next_period() {
 			RuntimeOrigin::signed(1),
 			sync_committee_update.clone()
 		));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			finalized_update.clone()
-		));
-		let block_root: H256 = finalized_update.finalized_header.clone().hash_tree_root().unwrap();
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
+		let block_root: H256 = update.finalized_header.clone().hash_tree_root().unwrap();
 		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
 	});
 }
@@ -393,8 +390,85 @@ fn submit_update_with_sync_committee_invalid_signature_slot() {
 		update.signature_slot = update.attested_header.slot;
 
 		assert_err!(
-			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone(),),
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()),
 			Error::<Test>::InvalidUpdateSlot
+		);
+	});
+}
+
+#[test]
+fn submit_update_with_skipped_sync_committee_period() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let finalized_update = load_next_finalized_header_update_fixture();
+	let checkpoint_period = compute_period(checkpoint.header.slot);
+	let next_sync_committee_period = compute_period(finalized_update.finalized_header.slot);
+	assert_eq!(checkpoint_period + 1, next_sync_committee_period);
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_err!(
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_update.clone()),
+			Error::<Test>::SkippedSyncCommitteePeriod
+		);
+	});
+}
+
+#[test]
+fn submit_update_with_not_relevant() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let mut update = load_next_finalized_header_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+
+		// makes a invalid update with slot in attested_header should be more than checkpoint
+		update.finalized_header.slot = checkpoint.header.slot;
+		update.attested_header.slot = checkpoint.header.slot;
+		update.signature_slot = checkpoint.header.slot + 1;
+
+		assert_err!(
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()),
+			Error::<Test>::NotRelevant
+		);
+	});
+}
+
+#[test]
+fn submit_update_with_missing_bootstrap() {
+	let update = load_next_finalized_header_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_err!(
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()),
+			Error::<Test>::NotBootstrapped
+		);
+	});
+}
+
+#[test]
+fn submit_update_with_invalid_sync_committee_update() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let update = load_sync_committee_update_fixture();
+	let mut next_update = load_next_sync_committee_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
+
+		// makes update with invalid next_sync_committee
+		<FinalizedBeaconState<Test>>::mutate(<LatestFinalizedBlockRoot<Test>>::get(), |x| {
+			let prev = x.unwrap();
+			*x = Some(CompactBeaconState { slot: next_update.attested_header.slot, ..prev });
+		});
+		next_update.attested_header.slot = next_update.attested_header.slot + 1;
+		next_update.signature_slot = next_update.attested_header.slot + 1;
+		let next_sync_committee = NextSyncCommitteeUpdate::default();
+		next_update.next_sync_committee_update = Some(next_sync_committee);
+
+		assert_err!(
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), next_update.clone()),
+			Error::<Test>::InvalidSyncCommitteeUpdate
 		);
 	});
 }

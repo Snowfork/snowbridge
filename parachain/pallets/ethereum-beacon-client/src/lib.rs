@@ -92,7 +92,6 @@ pub mod pallet {
 		SkippedSyncCommitteePeriod,
 		NotRelevant,
 		NotBootstrapped,
-		MissingFinalizedState,
 		SyncCommitteeParticipantsNotSupermajority,
 		InvalidHeaderMerkleProof,
 		InvalidSyncCommitteeMerkleProof,
@@ -717,7 +716,7 @@ pub mod pallet {
 			let latest_finalized_state: CompactBeaconState =
 				match FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get()) {
 					Some(finalized_beacon_state) => finalized_beacon_state,
-					None => return Err(Error::<T>::MissingFinalizedState.into()),
+					None => return Err(Error::<T>::NotBootstrapped.into()),
 				};
 			Ok(latest_finalized_state)
 		}
