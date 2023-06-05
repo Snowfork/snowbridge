@@ -7,7 +7,7 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "postinstall": "./init.sh",
+    "postinstall": "/bin/bash ./init.sh",
     "build": "turbo run build --filter '!./packages/contracts/lib/*'",
     "test": "turbo run test --filter '!./packages/contracts/lib/*'",
     "lint": "turbo run lint --filter '!./packages/contracts/lib/*'",
