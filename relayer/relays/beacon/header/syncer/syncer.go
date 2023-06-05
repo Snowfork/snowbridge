@@ -42,15 +42,6 @@ func New(endpoint string, setting config.SpecSettings, activeSpec config.ActiveS
 	}
 }
 
-func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSyncPeriod uint64) ([]uint64, error) {
-	// sync at most 1 period at one time
-	if lastSyncedPeriod < currentSyncPeriod {
-		return []uint64{lastSyncedPeriod + 1}, nil
-	}
-
-	return []uint64{}, nil
-}
-
 func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 	checkpoint, err := s.Client.GetFinalizedCheckpoint()
 	if err != nil {

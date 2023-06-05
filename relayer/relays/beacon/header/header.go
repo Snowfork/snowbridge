@@ -262,7 +262,7 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 		headersToSync = append(headersToSync, headerUpdate)
 		// last slot to be synced, sync headers
 		if currentSlot >= toSlot {
-			err = h.BatchSyncHeaders(ctx, headersToSync)
+			err = h.batchSyncHeaders(ctx, headersToSync)
 			if err != nil {
 				return fmt.Errorf("batch sync headers failed: %w", err)
 			}
@@ -275,10 +275,8 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 }
 
 func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
-	periodsToSync, err := h.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod, currentSyncPeriod)
-	if err != nil {
-		return fmt.Errorf("check sync committee periods to be fetched: %w", err)
-	}
+	// sync for the next period
+	periodsToSync := []uint64{latestSyncedPeriod + 1}
 
 	// For initialPeriod special handling here to sync it again for nextSyncCommittee which is not included in InitCheckpoint
 	if h.isInitialSyncPeriod() {
@@ -389,7 +387,7 @@ func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePaylo
 	return h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(slot, nil)
 }
 
-func (h *Header) BatchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {
+func (h *Header) batchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {
 	headerUpdatesInf := make([]interface{}, len(headerUpdates))
 	for i, v := range headerUpdates {
 		headerUpdatesInf[i] = v
