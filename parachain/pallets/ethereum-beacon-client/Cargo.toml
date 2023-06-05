@@ -11,9 +11,9 @@ license = "PENDING/TBC"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-serde = { version = "1.0.160", optional = true }
+serde = { version = "1.0.163", optional = true }
 codec = { version = "3.1.5", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
-scale-info = { version = "2.6.0", default-features = false, features = [ "derive" ] }
+scale-info = { version = "2.7.0", default-features = false, features = [ "derive" ] }
 ssz-rs = { git = "https://github.com/ralexstokes/ssz-rs", default-features = false, rev="d18af912abacbf84219be37ab3b42a9abcf10d2a" }
 ssz-rs-derive = { git = "https://github.com/ralexstokes/ssz-rs", default-features = false, rev="d18af912abacbf84219be37ab3b42a9abcf10d2a" }
 byte-slice-cast = { version = "1.2.1", default-features = false }

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 futures = "0.3.27"
-tokio = { version = "1.28.0", features = ["rt-multi-thread", "macros", "time"] }
+tokio = { version = "1.28.1", features = ["rt-multi-thread", "macros", "time"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "full", "bit-vec"] }
 hex = "0.4.3"
 hex-literal = "0.4.0"
@@ -16,4 +16,4 @@ ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = fals
 
 
 [dev-dependencies]
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }

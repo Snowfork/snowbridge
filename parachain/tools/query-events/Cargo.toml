@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = "1.0.160"
+serde = "1.0.163"
 serde_json = "1.0.96"
 serde-hex = "0.1.0"
-clap = { version = "4.2.7", features = [ "derive" ] }
+clap = { version = "4.3.0", features = [ "derive" ] }
 codec = { version = "3.1.5", package = "parity-scale-codec", features = [ "derive" ], default-features = false }
-tokio = { version = "1.28.0", features = ["rt-multi-thread", "macros", "time"] }
+tokio = { version = "1.28.1", features = ["rt-multi-thread", "macros", "time"] }
 futures = "0.3.13"
 hex = "0.4.3"
 hex-literal = "0.4.1"
