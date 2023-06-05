@@ -39,7 +39,7 @@
                     nodejs-18_x
 
                     # ethereum
-                    # foundry-bin
+                    foundry-bin
                     go-ethereum
                     # gnupg for forge install
                     gnupg
