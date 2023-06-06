@@ -9,6 +9,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 
+	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
@@ -73,6 +74,8 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		parachainEndpoint, _ := cmd.Flags().GetString("parachain-endpoint")
 		privateKeyFile, _ := cmd.Flags().GetString("private-key-file")
 		lodestarEndpoint, _ := cmd.Flags().GetString("lodestar-endpoint")
+		beaconHeader, _ := cmd.Flags().GetString("beacon-header")
+		finalizedHeader, _ := cmd.Flags().GetString("finalized-header")
 		spec, _ := cmd.Flags().GetString("spec")
 
 		activeSpec, _ := config.ToSpec(spec)
@@ -105,7 +108,11 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("start parachain conn: %w", err)
 		}
 
+		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
+
 		syncer := syncer.New(lodestarEndpoint, specSettings, activeSpec)
+
+		beaconHeaderHash := common.HexToHash(finalizedHeader)
 
 		finalizedUpdate, err := syncer.GetFinalizedUpdate()
 
@@ -121,7 +128,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 			Slot:               uint64(finalizedUpdate.Payload.FinalizedHeader.Slot),
 		}
 
-		update, err := syncer.GetNextHeaderUpdateBySlotWithCheckpoint(checkpoint.Slot-2, &checkpoint)
+		update, err := syncer.GetHeaderUpdate(beaconHeaderHash, &checkpoint)
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
