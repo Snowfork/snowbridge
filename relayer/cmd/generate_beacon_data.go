@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"os"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"

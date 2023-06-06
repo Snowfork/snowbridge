@@ -414,14 +414,15 @@ fn submit_update_with_skipped_sync_committee_period() {
 }
 
 #[test]
-fn submit_update_with_not_relevant() {
+fn submit_irrelevant_update() {
 	let checkpoint = load_checkpoint_update_fixture();
 	let mut update = load_next_finalized_header_update_fixture();
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 
-		// makes a invalid update with slot in attested_header should be more than checkpoint
+		// makes an invalid update where the attested_header slot value should be greater than the
+		// checkpoint slot value
 		update.finalized_header.slot = checkpoint.header.slot;
 		update.attested_header.slot = checkpoint.header.slot;
 		update.signature_slot = checkpoint.header.slot + 1;

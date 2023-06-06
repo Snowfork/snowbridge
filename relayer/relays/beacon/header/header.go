@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 
@@ -253,7 +252,7 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 
 		var nextHeaderUpdate scale.HeaderUpdatePayload
 		if currentSlot >= toSlot {
-			// Just construct update manually so to break the loop
+			// Just construct update so to break the loop
 			nextHeaderUpdate = scale.HeaderUpdatePayload{Header: scale.BeaconHeader{Slot: types.U64(toSlot + 1)}}
 		} else {
 			// To get the sync witness for the current synced header. This header
@@ -276,22 +275,9 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 		currentSlot = uint64(headerUpdate.Header.Slot)
 	}
 	// waiting for all batch calls to be executed on chain
-	batchCallFinished := false
-	cnt := 0
-	for cnt <= 12 {
-		executionHeaderState, err := h.writer.GetLastExecutionHeaderState()
-		if err != nil {
-			return fmt.Errorf("fetch last execution hash: %w", err)
-		}
-		if executionHeaderState.BeaconSlot == toSlot {
-			batchCallFinished = true
-			break
-		}
-		time.Sleep(6 * time.Second)
-		cnt++
-	}
-	if !batchCallFinished {
-		return ErrExecutionHeaderNotImported
+	err = h.waitingForBatchCallFinished(toSlot)
+	if err != nil {
+		return err
 	}
 	h.cache.SetLastSyncedExecutionSlot(toSlot)
 	return nil
@@ -343,4 +329,25 @@ func (h *Header) isInitialSyncPeriod() bool {
 	initialPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.InitialCheckpointSlot)
 	lastFinalizedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
 	return initialPeriod == lastFinalizedPeriod
+}
+
+func (h *Header) waitingForBatchCallFinished(toSlot uint64) error {
+	batchCallFinished := false
+	cnt := 0
+	for cnt <= 12 {
+		executionHeaderState, err := h.writer.GetLastExecutionHeaderState()
+		if err != nil {
+			return fmt.Errorf("fetch last execution hash: %w", err)
+		}
+		if executionHeaderState.BeaconSlot == toSlot {
+			batchCallFinished = true
+			break
+		}
+		time.Sleep(6 * time.Second)
+		cnt++
+	}
+	if !batchCallFinished {
+		return ErrExecutionHeaderNotImported
+	}
+	return nil
 }

@@ -3,7 +3,6 @@ package syncer
 import (
 	"errors"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"os"
 	"strconv"
 
@@ -11,6 +10,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
@@ -316,7 +316,7 @@ func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
 		}
 
 		if errors.Is(err, api.ErrNotFound) {
-			log.WithField("slot", slot).Info("skip block not included")
+			log.WithField("slot", slot).Info("skipped block not included")
 			tries = tries + 1
 			slot = slot + 1
 		}
