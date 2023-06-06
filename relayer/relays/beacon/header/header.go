@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 
@@ -20,6 +22,7 @@ var ErrFinalizedHeaderUnchanged = errors.New("finalized header unchanged")
 var ErrFinalizedHeaderNotImported = errors.New("finalized header not imported")
 var ErrSyncCommitteeNotImported = errors.New("sync committee not imported")
 var ErrSyncCommitteeLatency = errors.New("sync committee latency found")
+var ErrExecutionHeaderNotImported = errors.New("execution header not imported")
 
 type Header struct {
 	cache  *cache.BeaconCache
@@ -28,11 +31,16 @@ type Header struct {
 }
 
 func New(writer *parachain.ParachainWriter, beaconEndpoint string, setting config.SpecSettings, activeSpec config.ActiveSpec) Header {
-	return Header{
-		cache:  cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
+	syncer := syncer.New(beaconEndpoint, setting, activeSpec)
+	cache := cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod)
+	header := Header{
+		cache:  cache,
 		writer: writer,
-		syncer: syncer.New(beaconEndpoint, setting, activeSpec),
+		syncer: syncer,
 	}
+	syncer.SetCache(cache)
+	syncer.SetWriter(writer)
+	return header
 }
 
 func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
@@ -78,6 +86,8 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 				log.WithFields(logFields).WithError(err).Warn("SyncCommittee not imported")
 			case errors.Is(err, ErrSyncCommitteeLatency):
 				log.WithFields(logFields).WithError(err).Warn("SyncCommittee latency found")
+			case errors.Is(err, ErrExecutionHeaderNotImported):
+				log.WithFields(logFields).WithError(err).Warn("ExecutionHeader not imported")
 			case errors.Is(err, syncer.ErrBeaconStateAvailableYet):
 				log.WithFields(logFields).WithError(err).Warn("beacon state not available for finalized state yet")
 			case err != nil:
@@ -184,7 +194,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 func (h *Header) SyncHeaders(ctx context.Context) error {
 	err := h.SyncExecutionHeaders(ctx)
 	if err != nil {
-		return fmt.Errorf("sync execution headers: %w", err)
+		return err
 	}
 
 	hasChanged, err := h.syncer.HasFinalizedHeaderChanged(h.cache.Finalized.LastSyncedHash)
@@ -230,11 +240,11 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 
 	// start syncing at next block after last synced block
 	currentSlot := fromSlot
-	headerUpdate, err := h.getNextHeaderUpdateBySlotWithAncestryProof(currentSlot)
+	headerUpdate, err := h.syncer.GetNextHeaderUpdateBySlot(currentSlot)
 	if err != nil {
 		return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
 	}
-	currentSlot++
+	currentSlot = uint64(headerUpdate.Header.Slot)
 
 	for currentSlot <= toSlot {
 		log.WithFields(log.Fields{
@@ -242,18 +252,13 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 		}).Info("fetching next header at slot")
 
 		var nextHeaderUpdate scale.HeaderUpdatePayload
-		// If this is the last slot we need to sync, don't fetch the ancestry proof for the next slot
-		// because its finalized header won't be synced yet. We still need to fetch the next block for the
-		// sync aggregate though.
 		if currentSlot >= toSlot {
-			nextHeaderUpdate, err = h.getNextHeaderUpdateBySlot(currentSlot)
-			if err != nil {
-				return fmt.Errorf("get next header update by slot: %w", err)
-			}
+			// Just construct update manually so to break the loop
+			nextHeaderUpdate = scale.HeaderUpdatePayload{Header: scale.BeaconHeader{Slot: types.U64(toSlot + 1)}}
 		} else {
 			// To get the sync witness for the current synced header. This header
 			// will be used as the next update.
-			nextHeaderUpdate, err = h.getNextHeaderUpdateBySlotWithAncestryProof(currentSlot)
+			nextHeaderUpdate, err = h.syncer.GetNextHeaderUpdateBySlot(currentSlot)
 			if err != nil {
 				return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
 			}
@@ -269,6 +274,24 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 		}
 		headerUpdate = nextHeaderUpdate
 		currentSlot = uint64(headerUpdate.Header.Slot)
+	}
+	// waiting for all batch calls to be executed on chain
+	batchCallFinished := false
+	cnt := 0
+	for cnt <= 12 {
+		executionHeaderState, err := h.writer.GetLastExecutionHeaderState()
+		if err != nil {
+			return fmt.Errorf("fetch last execution hash: %w", err)
+		}
+		if executionHeaderState.BeaconSlot == toSlot {
+			batchCallFinished = true
+			break
+		}
+		time.Sleep(6 * time.Second)
+		cnt++
+	}
+	if !batchCallFinished {
+		return ErrExecutionHeaderNotImported
 	}
 	h.cache.SetLastSyncedExecutionSlot(toSlot)
 	return nil
@@ -302,89 +325,6 @@ func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSync
 	}
 
 	return nil
-}
-
-func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
-	finalizedHeader, err := h.syncer.Client.GetHeaderBySlot(slot) // TODO if slot empty get previous slot
-	if err != nil {
-		return fmt.Errorf("get header by slot: %w", err)
-	}
-
-	scaleHeader, err := finalizedHeader.ToScale()
-	if err != nil {
-		return fmt.Errorf("header to scale: %w", err)
-	}
-
-	blockRoot, err := scaleHeader.ToSSZ().HashTreeRoot()
-	if err != nil {
-		return fmt.Errorf("header hash root: %w", err)
-	}
-
-	// Always check slot finalized on chain before populating checkpoint
-	onChainFinalizedHeader, err := h.writer.GetFinalizedHeaderStateByBlockRoot(blockRoot)
-	if err != nil {
-		return err
-	}
-	if onChainFinalizedHeader.BeaconSlot != slot {
-		return fmt.Errorf("on chain finalized header inconsistent at slot %d", slot)
-	}
-
-	blockRootsProof, err := h.syncer.GetBlockRoots(slot)
-	if err != nil && !errors.Is(err, syncer.ErrBeaconStateAvailableYet) {
-		return fmt.Errorf("fetch block roots: %w", err)
-	}
-
-	log.Info("populating checkpoint")
-
-	h.cache.AddCheckPoint(blockRoot, blockRootsProof.Tree, slot)
-
-	return nil
-}
-
-func (h *Header) getClosestCheckpoint(slot uint64) (cache.Proof, error) {
-	checkpoint, err := h.cache.GetClosestCheckpoint(slot)
-
-	switch {
-	case errors.Is(cache.FinalizedCheckPointNotAvailable, err) || errors.Is(cache.FinalizedCheckPointNotPopulated, err):
-		checkpointSlot := checkpoint.Slot
-		if checkpointSlot == 0 {
-			checkpointSlot = h.syncer.CalculateNextCheckpointSlot(slot)
-			log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot}).Info("checkpoint slot not available")
-		}
-		err := h.populateFinalizedCheckpoint(checkpointSlot)
-		if err != nil {
-			return cache.Proof{}, fmt.Errorf("populate closest checkpoint: %w", err)
-		}
-
-		log.Info("populated finalized checkpoint")
-
-		checkpoint, err = h.cache.GetClosestCheckpoint(slot)
-		if err != nil {
-			return cache.Proof{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
-		}
-
-		log.WithFields(log.Fields{"slot": slot, "checkpoint": checkpoint}).Info("checkpoint after populating finalized header")
-
-		return checkpoint, nil
-	case err != nil:
-		return cache.Proof{}, fmt.Errorf("get closest checkpoint: %w", err)
-	}
-
-	return checkpoint, nil
-}
-
-func (h *Header) getNextHeaderUpdateBySlotWithAncestryProof(slot uint64) (scale.HeaderUpdatePayload, error) {
-	slot = slot + 1
-	checkpoint, err := h.getClosestCheckpoint(slot)
-	if err != nil {
-		return scale.HeaderUpdatePayload{}, fmt.Errorf("get closest checkpoint: %w", err)
-	}
-	return h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(slot, &checkpoint)
-}
-
-func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
-	slot = slot + 1
-	return h.syncer.GetNextHeaderUpdateBySlotWithAncestryProof(slot, nil)
 }
 
 func (h *Header) batchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {

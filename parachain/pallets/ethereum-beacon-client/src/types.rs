@@ -2,12 +2,12 @@ pub use crate::config::{
 	SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE as SC_BITS_SIZE,
 	SYNC_COMMITTEE_SIZE as SC_SIZE,
 };
-use frame_support::storage::types::OptionQuery;
+use frame_support::{storage::types::OptionQuery, traits::ConstU32};
 use snowbridge_core::RingBufferMapImpl;
 
 // Specialize types based on configured sync committee size
 pub type SyncCommittee = primitives::SyncCommittee<SC_SIZE>;
-pub type SyncCommitteePrepared = primitives::SyncCommitteePrepared<SC_SIZE>;
+pub type SyncCommitteePrepared = primitives::SyncCommitteePrepared<ConstU32<{ SC_SIZE as u32 }>>;
 pub type SyncAggregate = primitives::SyncAggregate<SC_SIZE, SC_BITS_SIZE>;
 pub type CheckpointUpdate = primitives::CheckpointUpdate<SC_SIZE>;
 pub type Update = primitives::Update<SC_SIZE, SC_BITS_SIZE>;

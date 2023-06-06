@@ -224,7 +224,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			BlockRootsTree:     finalizedUpdateScale.BlockRootsTree,
 			Slot:               uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot),
 		}
-		headerUpdateScale, err := s.GetNextHeaderUpdateBySlotWithAncestryProof(blockUpdateSlot, &checkPoint)
+		headerUpdateScale, err := s.GetNextHeaderUpdateBySlotWithCheckpoint(blockUpdateSlot, &checkPoint)
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}

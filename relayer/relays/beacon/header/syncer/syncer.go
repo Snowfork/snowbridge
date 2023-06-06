@@ -3,6 +3,7 @@ package syncer
 import (
 	"errors"
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"os"
 	"strconv"
 
@@ -32,6 +33,8 @@ type Syncer struct {
 	Client     api.BeaconClient
 	setting    config.SpecSettings
 	activeSpec config.ActiveSpec
+	cache      *cache.BeaconCache
+	writer     *parachain.ParachainWriter
 }
 
 func New(endpoint string, setting config.SpecSettings, activeSpec config.ActiveSpec) *Syncer {
@@ -303,6 +306,7 @@ func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
 	var header api.BeaconHeader
 	tries := 0
 	maxSlotsMissed := int(s.setting.SlotsInEpoch)
+	slot = slot + 1
 	for errors.Is(err, api.ErrNotFound) && tries < maxSlotsMissed {
 		// Need to use GetHeaderBySlot instead of GetBeaconBlockRoot here because GetBeaconBlockRoot
 		// returns the previous slot's block root if there is no block at the given slot
@@ -312,7 +316,7 @@ func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
 		}
 
 		if errors.Is(err, api.ErrNotFound) {
-			log.WithField("slot", slot).Info("no block at slot")
+			log.WithField("slot", slot).Info("skip block not included")
 			tries = tries + 1
 			slot = slot + 1
 		}
@@ -344,16 +348,23 @@ func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
 	return blockRoot, nil
 }
 
-func (s *Syncer) GetNextHeaderUpdateBySlotWithAncestryProof(slot uint64, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
+func (s *Syncer) GetNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
 	blockRoot, err := s.getNextBlockRootBySlot(slot)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next block root by slot: %w", err)
 	}
-
-	return s.GetHeaderUpdateWithAncestryProof(blockRoot, checkpoint)
+	return s.GetHeaderUpdate(blockRoot, nil)
 }
 
-func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
+func (s *Syncer) GetNextHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
+	blockRoot, err := s.getNextBlockRootBySlot(slot)
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next block root by slot: %w", err)
+	}
+	return s.GetHeaderUpdate(blockRoot, checkpoint)
+}
+
+func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("fetch block: %w", err)
@@ -369,6 +380,13 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("beacon header to scale: %w", err)
 	}
 
+	if checkpoint == nil {
+		checkpoint, err = s.populateClosestCheckpoint(block.GetBeaconSlot())
+		if err != nil {
+			return scale.HeaderUpdatePayload{}, fmt.Errorf("populate closest checkpoint: %w", err)
+		}
+	}
+
 	executionPayloadScale, err := api.CapellaExecutionPayloadToScale(block.GetExecutionPayload(), s.activeSpec)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, err
@@ -379,9 +397,8 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		return scale.HeaderUpdatePayload{}, err
 	}
 
-	// If checkpoint not provided or slot == finalizedSlot,
-	// there won't be an ancestry proof because the header state in question is also the finalized header
-	if checkpoint == nil || block.GetBeaconSlot() == checkpoint.Slot {
+	// If slot == finalizedSlot there won't be an ancestry proof because the header state in question is also the finalized header
+	if block.GetBeaconSlot() == checkpoint.Slot {
 		return scale.HeaderUpdatePayload{
 			Header: beaconHeader,
 			AncestryProof: scale.OptionAncestryProof{
@@ -448,4 +465,80 @@ func (s *Syncer) getExecutionHeaderBranch(block state.BeaconBlock) ([]types.H256
 	proof, err := tree.Prove(ExecutionPayloadGeneralizedIndex)
 
 	return util.BytesBranchToScale(proof.Hashes), nil
+}
+
+func (s *Syncer) SetCache(cache *cache.BeaconCache) {
+	s.cache = cache
+}
+
+func (s *Syncer) SetWriter(writer *parachain.ParachainWriter) {
+	s.writer = writer
+}
+
+func (s *Syncer) populateFinalizedCheckpoint(slot uint64) error {
+	finalizedHeader, err := s.Client.GetHeaderBySlot(slot)
+	if err != nil {
+		return fmt.Errorf("get header by slot: %w", err)
+	}
+
+	scaleHeader, err := finalizedHeader.ToScale()
+	if err != nil {
+		return fmt.Errorf("header to scale: %w", err)
+	}
+
+	blockRoot, err := scaleHeader.ToSSZ().HashTreeRoot()
+	if err != nil {
+		return fmt.Errorf("header hash root: %w", err)
+	}
+
+	// Always check slot finalized on chain before populating checkpoint
+	onChainFinalizedHeader, err := s.writer.GetFinalizedHeaderStateByBlockRoot(blockRoot)
+	if err != nil {
+		return err
+	}
+	if onChainFinalizedHeader.BeaconSlot != slot {
+		return fmt.Errorf("on chain finalized header inconsistent at slot %d", slot)
+	}
+
+	blockRootsProof, err := s.GetBlockRoots(slot)
+	if err != nil && !errors.Is(err, ErrBeaconStateAvailableYet) {
+		return fmt.Errorf("fetch block roots: %w", err)
+	}
+
+	log.Info("populating checkpoint")
+
+	s.cache.AddCheckPoint(blockRoot, blockRootsProof.Tree, slot)
+
+	return nil
+}
+func (s *Syncer) populateClosestCheckpoint(slot uint64) (*cache.Proof, error) {
+	checkpoint, err := s.cache.GetClosestCheckpoint(slot)
+
+	switch {
+	case errors.Is(cache.FinalizedCheckPointNotAvailable, err) || errors.Is(cache.FinalizedCheckPointNotPopulated, err):
+		checkpointSlot := checkpoint.Slot
+		if checkpointSlot == 0 {
+			checkpointSlot = s.CalculateNextCheckpointSlot(slot)
+			log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot}).Info("checkpoint slot not available")
+		}
+		err := s.populateFinalizedCheckpoint(checkpointSlot)
+		if err != nil {
+			return &cache.Proof{}, fmt.Errorf("populate closest checkpoint: %w", err)
+		}
+
+		log.Info("populated finalized checkpoint")
+
+		checkpoint, err = s.cache.GetClosestCheckpoint(slot)
+		if err != nil {
+			return &cache.Proof{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
+		}
+
+		log.WithFields(log.Fields{"slot": slot, "checkpoint": checkpoint}).Info("checkpoint after populating finalized header")
+
+		return &checkpoint, nil
+	case err != nil:
+		return &cache.Proof{}, fmt.Errorf("get closest checkpoint: %w", err)
+	}
+
+	return &checkpoint, nil
 }
