@@ -567,6 +567,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Combines
 		pub(super) fn compute_signing_root(
 			beacon_header: &BeaconHeader,
 			domain: H256,
@@ -692,6 +693,8 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Returns the fork version based on the current epoch. The hard fork versions
+		/// are defined in pallet config.
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
 			let fork_versions = T::ForkVersions::get();
 
@@ -708,6 +711,7 @@ pub mod pallet {
 			fork_versions.genesis.version
 		}
 
+		/// Returns a vector of public keys that par
 		pub fn find_pubkeys(
 			sync_committee_bits: &[u8],
 			sync_committee_pubkeys: &[PublicKeyPrepared],
@@ -722,7 +726,7 @@ pub mod pallet {
 			pubkeys
 		}
 
-		// Calculate signing root for BeaconHeader
+		/// Calculate signing root for BeaconHeader
 		pub fn signing_root(
 			header: &BeaconHeader,
 			validators_root: H256,
