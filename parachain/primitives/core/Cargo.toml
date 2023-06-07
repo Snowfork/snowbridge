@@ -29,6 +29,7 @@ std = [
     "codec/std",
     "scale-info/std",
     "frame-support/std",
+    "frame-system/std",
     "polkadot-parachain/std",
     "sp-std/std",
     "sp-core/std",
