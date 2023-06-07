@@ -387,7 +387,8 @@ pub mod pallet {
 			} else {
 				<NextSyncCommittee<T>>::get()
 			};
-			let absent_pubkeys = Self::find_pubkeys(&participation, &sync_committee.pubkeys, false);
+			let absent_pubkeys =
+				Self::find_pubkeys(&participation, (*sync_committee.pubkeys).as_ref(), false);
 			let signing_root = Self::signing_root(
 				&update.attested_header,
 				Self::validators_root(),
