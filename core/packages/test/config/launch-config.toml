@@ -65,7 +65,7 @@ cumulus_based = true
     command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8082
     ws_port = 12144
-    args = ["--force-authoring", "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace"]
+    args = ["--force-authoring", "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace,runtime::assets=trace"]
 
 
 # Statemine -> BridgeHub
