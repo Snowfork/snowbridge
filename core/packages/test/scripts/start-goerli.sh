@@ -12,7 +12,6 @@ start_chains()
     echo "Starting beacon node"
 #    npx lodestar beacon --dataDir="$ethereum_data_dir" --network="goerli" --rest.namespace="*" --jwt-secret="./config/jwtsecret" --checkpointSyncUrl="https://sync-goerli.beaconcha.in" > "$output_dir/lodestar.log" 2>&1 &
     node --max-old-space-size=4096 ./node_modules/.bin/../../../../node_modules/.pnpm/@chainsafe+lodestar@1.8.0_c-kzg@1.1.3_fastify@3.15.1/node_modules/@chainsafe/lodestar/lib/index.js beacon --dataDir="$ethereum_data_dir" --network=goerli --rest.namespace=* --jwt-secret=./config/jwtsecret --checkpointSyncUrl=https://sync-goerli.beaconcha.in > "$output_dir/lodestar.log" 2>&1 &
-    
 }
 
 if [ -z "${from_start_services:-}" ]; then
