@@ -30,12 +30,11 @@ type Header struct {
 }
 
 func New(writer *parachain.ParachainWriter, beaconEndpoint string, setting config.SpecSettings, activeSpec config.ActiveSpec) Header {
-	header := Header{
+	return Header{
 		cache:  cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
 		writer: writer,
 		syncer: syncer.New(beaconEndpoint, setting, activeSpec),
 	}
-	return header
 }
 
 func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
@@ -248,7 +247,7 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 
 		var nextHeaderUpdate scale.HeaderUpdatePayload
 		if currentSlot >= toSlot {
-			// Just construct update so to break the loop
+			// Just construct an empty update so to break the loop
 			nextHeaderUpdate = scale.HeaderUpdatePayload{Header: scale.BeaconHeader{Slot: types.U64(toSlot + 1)}}
 		} else {
 			// To get the sync witness for the current synced header. This header
@@ -309,45 +308,6 @@ func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSync
 	return nil
 }
 
-func (h *Header) batchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {
-	headerUpdatesInf := make([]interface{}, len(headerUpdates))
-	for i, v := range headerUpdates {
-		headerUpdatesInf[i] = v
-	}
-	err := h.writer.BatchCall(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdatesInf)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (h *Header) isInitialSyncPeriod() bool {
-	initialPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.InitialCheckpointSlot)
-	lastFinalizedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
-	return initialPeriod == lastFinalizedPeriod
-}
-
-func (h *Header) waitingForBatchCallFinished(toSlot uint64) error {
-	batchCallFinished := false
-	cnt := 0
-	for cnt <= 12 {
-		executionHeaderState, err := h.writer.GetLastExecutionHeaderState()
-		if err != nil {
-			return fmt.Errorf("fetch last execution hash: %w", err)
-		}
-		if executionHeaderState.BeaconSlot == toSlot {
-			batchCallFinished = true
-			break
-		}
-		time.Sleep(6 * time.Second)
-		cnt++
-	}
-	if !batchCallFinished {
-		return ErrExecutionHeaderNotImported
-	}
-	return nil
-}
-
 func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 	finalizedHeader, err := h.syncer.Client.GetHeaderBySlot(slot)
 	if err != nil {
@@ -385,7 +345,7 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 	return nil
 }
 
-func (h *Header) populateClosestCheckpoint(slot uint64) (*cache.Proof, error) {
+func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 	checkpoint, err := h.cache.GetClosestCheckpoint(slot)
 
 	switch {
@@ -397,24 +357,24 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (*cache.Proof, error) {
 		}
 		err := h.populateFinalizedCheckpoint(checkpointSlot)
 		if err != nil {
-			return &cache.Proof{}, fmt.Errorf("populate closest checkpoint: %w", err)
+			return cache.Proof{}, fmt.Errorf("populate closest checkpoint: %w", err)
 		}
 
 		log.Info("populated finalized checkpoint")
 
 		checkpoint, err = h.cache.GetClosestCheckpoint(slot)
 		if err != nil {
-			return &cache.Proof{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
+			return cache.Proof{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
 		}
 
 		log.WithFields(log.Fields{"slot": slot, "checkpoint": checkpoint}).Info("checkpoint after populating finalized header")
 
-		return &checkpoint, nil
+		return checkpoint, nil
 	case err != nil:
-		return &cache.Proof{}, fmt.Errorf("get closest checkpoint: %w", err)
+		return cache.Proof{}, fmt.Errorf("get closest checkpoint: %w", err)
 	}
 
-	return &checkpoint, nil
+	return checkpoint, nil
 }
 
 func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
@@ -427,9 +387,45 @@ func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePaylo
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("populate closest checkpoint: %w", err)
 	}
-	blockRoot, err := header.HashTreeRoot()
-	if err != nil {
-		return scale.HeaderUpdatePayload{}, fmt.Errorf("get block root by header: %w", err)
+	blockRoot, _ := header.HashTreeRoot()
+	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
+}
+
+func (h *Header) batchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {
+	headerUpdatesInf := make([]interface{}, len(headerUpdates))
+	for i, v := range headerUpdates {
+		headerUpdatesInf[i] = v
 	}
-	return h.syncer.GetHeaderUpdate(blockRoot, checkpoint)
+	err := h.writer.BatchCall(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdatesInf)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (h *Header) isInitialSyncPeriod() bool {
+	initialPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.InitialCheckpointSlot)
+	lastFinalizedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
+	return initialPeriod == lastFinalizedPeriod
+}
+
+func (h *Header) waitingForBatchCallFinished(toSlot uint64) error {
+	batchCallFinished := false
+	cnt := 0
+	for cnt <= 12 {
+		executionHeaderState, err := h.writer.GetLastExecutionHeaderState()
+		if err != nil {
+			return fmt.Errorf("fetch last execution hash: %w", err)
+		}
+		if executionHeaderState.BeaconSlot == toSlot {
+			batchCallFinished = true
+			break
+		}
+		time.Sleep(6 * time.Second)
+		cnt++
+	}
+	if !batchCallFinished {
+		return ErrExecutionHeaderNotImported
+	}
+	return nil
 }

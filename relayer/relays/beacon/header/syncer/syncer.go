@@ -361,10 +361,7 @@ func (s *Syncer) GetNextHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next beacon header with block included: %w", err)
 	}
-	blockRoot, err := header.HashTreeRoot()
-	if err != nil {
-		return scale.HeaderUpdatePayload{}, fmt.Errorf("get block root by header: %w", err)
-	}
+	blockRoot, _ := header.HashTreeRoot()
 	return s.GetHeaderUpdate(blockRoot, checkpoint)
 }
 
