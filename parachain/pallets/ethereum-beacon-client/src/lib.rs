@@ -280,15 +280,16 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Cross check to make sure the ExecutionHeader does not fall too far behind FinalizedHeader updates.
-		/// If that happens just return an error so to pause processing FinalizedHeader until
-		/// ExecutionHeader processing has caught up
+		/// Cross check to make sure the ExecutionHeader does not fall too far behind
+		/// FinalizedHeader updates. If that happens just return an error so to pause processing
+		/// FinalizedHeader until ExecutionHeader processing has caught up.
 		fn cross_check_execution_state() -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
 			let latest_execution_state = Self::latest_execution_state();
-			// The execution header import should be at least within the slot range of a sync committee period.
+			// The execution header import should be at least within the slot range of a sync
+			// committee period.
 			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
 			ensure!(
 				latest_execution_state.beacon_slot == 0 ||
@@ -300,23 +301,23 @@ pub mod pallet {
 		}
 
 		/// References and strictly follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#validate_light_client_update
-		/// Verifies that provided next sync committee is valid through a series of checks (including
-		/// checking that a sync committee period isn't skipped and that the header is signed by the
-		/// current sync committee.
+		/// Verifies that provided next sync committee is valid through a series of checks
+		/// (including checking that a sync committee period isn't skipped and that the header is
+		/// signed by the current sync committee.
 		fn verify_update(update: &Update) -> DispatchResult {
-			// Verify sync committee has sufficient participants
+			// Verify sync committee has sufficient participants.
 			let participation =
 				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
 			Self::sync_committee_participation_is_supermajority(&participation)?;
 
-			// Verify update does not skip a sync committee period
+			// Verify update does not skip a sync committee period.
 			ensure!(
 				update.signature_slot > update.attested_header.slot &&
 					update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidUpdateSlot
 			);
 
-			// Retrieve latest finalized state
+			// Retrieve latest finalized state.
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
@@ -332,7 +333,7 @@ pub mod pallet {
 				ensure!(signature_period == store_period, Error::<T>::SkippedSyncCommitteePeriod)
 			}
 
-			// Verify update is relevant
+			// Verify update is relevant.
 			let update_attested_period = compute_period(update.attested_header.slot);
 			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
 				(update.next_sync_committee_update.is_some() &&
@@ -362,7 +363,7 @@ pub mod pallet {
 
 			// Though following check does not belong to ALC spec we verify block_roots_root to
 			// match the finalized checkpoint root saved in the state of `finalized_header` so to
-			// cache it for later use in `verify_ancestry_proof`
+			// cache it for later use in `verify_ancestry_proof`.
 			ensure!(
 				verify_merkle_branch(
 					update.block_roots_root,
@@ -375,7 +376,7 @@ pub mod pallet {
 			);
 
 			// Verify that the `next_sync_committee`, if present, actually is the next sync
-			// committee saved in the state of the `attested_header`
+			// committee saved in the state of the `attested_header`.
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
 				let sync_committee_root = next_sync_committee_update
 					.next_sync_committee
@@ -400,7 +401,7 @@ pub mod pallet {
 				);
 			}
 
-			// Verify sync committee aggregate signature
+			// Verify sync committee aggregate signature.
 			let sync_committee = if signature_period == store_period {
 				<CurrentSyncCommittee<T>>::get()
 			} else {
@@ -428,9 +429,9 @@ pub mod pallet {
 		}
 
 		/// Reference and strictly follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#apply_light_client_update
-		/// Applies a finalized beacon header update to the beacon client. If a next sync committee is
-		/// present in the update, verify the sync committee by converting it to a SyncCommitteePrepared
-		/// type. Stores the provided finalized header.
+		/// Applies a finalized beacon header update to the beacon client. If a next sync committee
+		/// is present in the update, verify the sync committee by converting it to a
+		/// SyncCommitteePrepared type. Stores the provided finalized header.
 		fn apply_update(update: &Update) -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
@@ -487,13 +488,13 @@ pub mod pallet {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
-			// Checks that the header is an ancestor of a finalized header, using slot number
+			// Checks that the header is an ancestor of a finalized header, using slot number.
 			ensure!(
 				update.header.slot <= latest_finalized_state.slot,
 				Error::<T>::HeaderNotFinalized
 			);
 
-			// Checks that we don't skip execution headers, they need to be imported sequentially
+			// Checks that we don't skip execution headers, they need to be imported sequentially.
 			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
 			ensure!(
 				latest_execution_state.block_number == 0 ||
@@ -607,7 +608,8 @@ pub mod pallet {
 		}
 
 		/// Stores a compacted (slot and block roots root (hash of the `block_roots` beacon state
-		/// field, used for ancestry proof)) beacon state in a ring buffer map, with the header root as map key.
+		/// field, used for ancestry proof)) beacon state in a ring buffer map, with the header root
+		/// as map key.
 		fn store_finalized_header(
 			header_root: H256,
 			header: BeaconHeader,
@@ -671,8 +673,8 @@ pub mod pallet {
 			<ValidatorsRoot<T>>::set(validators_root);
 		}
 
-		/// Returns the domain for the domain_type and fork_version. The domain is used to distinguish
-		/// between the different players in the chain (see DomainTypes
+		/// Returns the domain for the domain_type and fork_version. The domain is used to
+		/// distinguish between the different players in the chain (see DomainTypes
 		/// https://eth2book.info/capella/part3/config/constants/#domain-types) and to ensure we are
 		/// addressing the correct chain.
 		/// https://eth2book.info/capella/part3/helper/misc/#compute_domain
@@ -707,8 +709,9 @@ pub mod pallet {
 			Ok(hash_root)
 		}
 
-		/// Checks that the sync committee bits (the votes of the sync committee members, represented
-		/// by bits 0 and 1) is more than a supermajority (2/3 of the votes are positive).
+		/// Checks that the sync committee bits (the votes of the sync committee members,
+		/// represented by bits 0 and 1) is more than a supermajority (2/3 of the votes are
+		/// positive).
 		pub(super) fn sync_committee_participation_is_supermajority(
 			sync_committee_bits: &[u8],
 		) -> DispatchResult {
@@ -742,9 +745,9 @@ pub mod pallet {
 		/// Returns a vector of public keys that participated in the sync committee block signage.
 		/// Sync committee bits is an array of 0s and 1s, 0 meaning the corresponding sync committee
 		/// member did not participate in the vote, 1 meaning they participated.
-		/// This method can find the absent or participating members, based on the participant parameter.
-		/// participant = false will return absent participants, participant = true will return
-		/// participating members.
+		/// This method can find the absent or participating members, based on the participant
+		/// parameter. participant = false will return absent participants, participant = true will
+		/// return participating members.
 		pub fn find_pubkeys(
 			sync_committee_bits: &[u8],
 			sync_committee_pubkeys: &[PublicKeyPrepared],
