@@ -273,7 +273,9 @@ pub mod pallet {
 		// that happens just return error so to pause processing FinalizedHeader until
 		// ExecutionHeader catch up
 		fn cross_check_execution_state() -> DispatchResult {
-			let latest_finalized_state = Self::latest_finalized_state()?;
+			let latest_finalized_state =
+				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
+					.ok_or(Error::<T>::NotBootstrapped)?;
 			let latest_execution_state = Self::latest_execution_state();
 			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
 			ensure!(
@@ -300,7 +302,9 @@ pub mod pallet {
 			);
 
 			// Retrieve latest finalized state
-			let latest_finalized_state = Self::latest_finalized_state()?;
+			let latest_finalized_state =
+				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
+					.ok_or(Error::<T>::NotBootstrapped)?;
 
 			let store_period = compute_period(latest_finalized_state.slot);
 			let signature_period = compute_period(update.signature_slot);
@@ -410,7 +414,9 @@ pub mod pallet {
 
 		// reference and strict follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#apply_light_client_update
 		fn apply_update(update: &Update) -> DispatchResult {
-			let latest_finalized_state = Self::latest_finalized_state()?;
+			let latest_finalized_state =
+				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
+					.ok_or(Error::<T>::NotBootstrapped)?;
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
 				let store_period = compute_period(latest_finalized_state.slot);
 				let update_finalized_period = compute_period(update.finalized_header.slot);
@@ -457,7 +463,9 @@ pub mod pallet {
 		pub(crate) fn process_execution_header_update(
 			update: &ExecutionHeaderUpdate,
 		) -> DispatchResult {
-			let latest_finalized_state = Self::latest_finalized_state()?;
+			let latest_finalized_state =
+				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
+					.ok_or(Error::<T>::NotBootstrapped)?;
 			ensure!(
 				update.header.slot <= latest_finalized_state.slot,
 				Error::<T>::HeaderNotFinalized
@@ -711,15 +719,6 @@ pub mod pallet {
 			// Hash tree root of SigningData - object root + domain
 			let signing_root = Self::compute_signing_root(header, domain)?;
 			Ok(signing_root)
-		}
-
-		pub fn latest_finalized_state() -> Result<CompactBeaconState, DispatchError> {
-			let latest_finalized_state =
-				match FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get()) {
-					Some(finalized_beacon_state) => finalized_beacon_state,
-					None => return Err(Error::<T>::NotBootstrapped.into()),
-				};
-			Ok(latest_finalized_state)
 		}
 	}
 }

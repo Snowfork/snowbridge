@@ -387,7 +387,10 @@ func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePaylo
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("populate closest checkpoint: %w", err)
 	}
-	blockRoot, _ := header.HashTreeRoot()
+	blockRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("header hash tree root: %w", err)
+	}
 	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 }
 

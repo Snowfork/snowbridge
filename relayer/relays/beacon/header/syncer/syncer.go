@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
@@ -303,6 +304,7 @@ func (s *Syncer) FindBeaconHeaderWithBlockIncluded(slot uint64) (state.BeaconBlo
 	var header api.BeaconHeader
 	tries := 0
 	maxSlotsMissed := int(s.setting.SlotsInEpoch)
+	startSlot := slot
 	for errors.Is(err, api.ErrNotFound) && tries < maxSlotsMissed {
 		// Need to use GetHeaderBySlot instead of GetBeaconBlockRoot here because GetBeaconBlockRoot
 		// returns the previous slot's block root if there is no block at the given slot
@@ -316,6 +318,14 @@ func (s *Syncer) FindBeaconHeaderWithBlockIncluded(slot uint64) (state.BeaconBlo
 			tries = tries + 1
 			slot = slot + 1
 		}
+	}
+
+	if err != nil || header.Slot == 0 {
+		log.WithFields(logrus.Fields{
+			"start": startSlot,
+			"end":   slot,
+		}).WithError(err).Error("matching block included not found")
+		return state.BeaconBlockHeader{}, api.ErrNotFound
 	}
 
 	beaconHeader := state.BeaconBlockHeader{
@@ -332,7 +342,7 @@ func (s *Syncer) FindBeaconHeaderWithBlockIncluded(slot uint64) (state.BeaconBlo
 	}
 
 	blockRoot, err := s.Client.GetBeaconBlockRoot(header.Slot)
-	if err != nil && !errors.Is(err, api.ErrNotFound) {
+	if err != nil {
 		return state.BeaconBlockHeader{}, fmt.Errorf("fetch block: %w", err)
 	}
 
@@ -361,7 +371,10 @@ func (s *Syncer) GetNextHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next beacon header with block included: %w", err)
 	}
-	blockRoot, _ := header.HashTreeRoot()
+	blockRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("header hash tree root: %w", err)
+	}
 	return s.GetHeaderUpdate(blockRoot, checkpoint)
 }
 

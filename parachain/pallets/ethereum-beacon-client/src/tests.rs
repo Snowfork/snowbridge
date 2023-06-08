@@ -372,7 +372,8 @@ fn submit_update_with_sync_committee_in_next_period() {
 		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
 		assert!(<NextSyncCommittee<Test>>::exists());
 		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), next_update.clone()));
-		let last_finalized_state = EthereumBeaconClient::latest_finalized_state().unwrap();
+		let last_finalized_state =
+			FinalizedBeaconState::<Test>::get(LatestFinalizedBlockRoot::<Test>::get()).unwrap();
 		let last_synced_period = compute_period(last_finalized_state.slot);
 		assert_eq!(last_synced_period, next_update_period);
 	});
