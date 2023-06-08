@@ -180,7 +180,7 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::force_checkpoint())]
 		#[transactional]
-		// Used for pallet initialization and light client resetting.
+		/// Used for pallet initialization and light client resetting.
 		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::process_checkpoint_update(&update)?;
@@ -195,7 +195,7 @@ pub mod pallet {
 			}
 		})]
 		#[transactional]
-		// Submits a new finalized beacon header update.
+		/// Submits a new finalized beacon header update.
 		pub fn submit(origin: OriginFor<T>, update: Update) -> DispatchResult {
 			ensure_signed(origin)?;
 			Self::process_update(&update)?;
@@ -205,7 +205,7 @@ pub mod pallet {
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::submit_execution_header())]
 		#[transactional]
-		// Submits a new execution header update.
+		/// Submits a new execution header update.
 		pub fn submit_execution_header(
 			origin: OriginFor<T>,
 			update: ExecutionHeaderUpdate,
@@ -217,6 +217,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		///
 		pub(crate) fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
 			let sync_committee_root = update
 				.current_sync_committee
@@ -275,9 +276,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Cross check to make sure the ExecutionHeader does not fall too far behind FinalizedHeader updates.
-		// If that happens just return an error so to pause processing FinalizedHeader until
-		// ExecutionHeader processing has caught up
+		/// Cross check to make sure the ExecutionHeader does not fall too far behind FinalizedHeader updates.
+		/// If that happens just return an error so to pause processing FinalizedHeader until
+		/// ExecutionHeader processing has caught up
 		fn cross_check_execution_state() -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
@@ -294,7 +295,10 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// reference and strict follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#validate_light_client_update
+		/// References and strictly follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#validate_light_client_update
+		/// Verifies that provided next sync committee is valid through a series of checks (including
+		/// checking that a sync committee period isn't skipped and that the header is signed by the
+		/// current sync committee.
 		fn verify_update(update: &Update) -> DispatchResult {
 			// Verify sync committee has sufficient participants
 			let participation =
@@ -419,7 +423,10 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// reference and strict follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#apply_light_client_update
+		/// Reference and strictly follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#apply_light_client_update
+		/// Applies a finalized beacon header update to the beacon client. If a next sync committee is
+		/// present in the update, verify the sync committee by converting it to a SyncCommitteePrepared
+		/// type. Stores the provided finalized header.
 		fn apply_update(update: &Update) -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
@@ -467,17 +474,22 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Validates an execution header for import. The beacon header containing the execution
+		/// header is sent, plus the execution header, along with a proof that the execution header
+		/// is rooted in the beacon header body.
 		pub(crate) fn process_execution_header_update(
 			update: &ExecutionHeaderUpdate,
 		) -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
+			// Checks that the header is an ancestor of a finalized header, using slot number
 			ensure!(
 				update.header.slot <= latest_finalized_state.slot,
 				Error::<T>::HeaderNotFinalized
 			);
 
+			// Checks that we don't skip execution headers, they need to be imported sequentially
 			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
 			ensure!(
 				latest_execution_state.block_number == 0 ||
@@ -486,6 +498,9 @@ pub mod pallet {
 				Error::<T>::ExecutionHeaderSkippedSlot
 			);
 
+			// Gets the hash tree root of the execution header, in preparation for the execution
+			// header proof (used to check that the execution header is rooted in the beacon
+			// header body.
 			let execution_header_root: H256 = update
 				.execution_header
 				.hash_tree_root()
@@ -538,7 +553,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Verify that `block_root` is an ancestor of `finalized_block_root`
+		/// Verify that `block_root` is an ancestor of `finalized_block_root` Used to prove that
+		/// an execution header is an ancestor of a finalized header (i.e. the blocks are
+		/// on the same chain).
 		fn verify_ancestry_proof(
 			block_root: H256,
 			block_slot: u64,
@@ -567,7 +584,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Combines
+		/// Computes the signing root for a given beacon header and domain. The hash tree root
+		/// of the beacon header is computed, and then the combination of the beacon header hash
+		/// and the domain makes up the signing root.
 		pub(super) fn compute_signing_root(
 			beacon_header: &BeaconHeader,
 			domain: H256,
@@ -583,6 +602,8 @@ pub mod pallet {
 			Ok(hash_root)
 		}
 
+		/// Stores a compacted (slot and block roots root (hash of the `block_roots` beacon state
+		/// field, used for ancestry proof)) beacon state in a ring buffer map, with the header root as map key.
 		fn store_finalized_header(
 			header_root: H256,
 			header: BeaconHeader,
@@ -608,6 +629,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Stores the provided execution header in pallet storage. The header is stored
+		/// in a ring buffer map, with the block hash as map key. The last imported execution
+		/// header is also kept in storage, for the relayer to check import progress.
 		pub(crate) fn store_execution_header(
 			block_hash: H256,
 			header: CompactExecutionHeader,
@@ -711,7 +735,12 @@ pub mod pallet {
 			fork_versions.genesis.version
 		}
 
-		/// Returns a vector of public keys that par
+		/// Returns a vector of public keys that participated in the sync committee block signage.
+		/// Sync committee bits is an array of 0s and 1s, 0 meaning the corresponding sync committee
+		/// member did not participate in the vote, 1 meaning they participated.
+		/// This method can find the absent or participating members, based on the participant parameter.
+		/// participant = false will return absent participants, participant = true will return
+		/// participating members.
 		pub fn find_pubkeys(
 			sync_committee_bits: &[u8],
 			sync_committee_pubkeys: &[PublicKeyPrepared],
@@ -726,7 +755,8 @@ pub mod pallet {
 			pubkeys
 		}
 
-		/// Calculate signing root for BeaconHeader
+		/// Calculates signing root for BeaconHeader. The signing root is used for the message
+		/// value in BLS signature verification.
 		pub fn signing_root(
 			header: &BeaconHeader,
 			validators_root: H256,
