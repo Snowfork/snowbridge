@@ -218,7 +218,8 @@ pub mod pallet {
 			}
 		})]
 		#[transactional]
-		/// Submits a new finalized beacon header update.
+		/// Submits a new finalized beacon header update. The update may contain the next
+		/// sync committee.
 		pub fn submit(origin: OriginFor<T>, update: Update) -> DispatchResult {
 			ensure_signed(origin)?;
 			Self::process_update(&update)?;
@@ -228,7 +229,8 @@ pub mod pallet {
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::submit_execution_header())]
 		#[transactional]
-		/// Submits a new execution header update.
+		/// Submits a new execution header update. The relevant related beacon header
+		/// is also included to prove the execution header, as well as ancestry proof data.
 		pub fn submit_execution_header(
 			origin: OriginFor<T>,
 			update: ExecutionHeaderUpdate,
