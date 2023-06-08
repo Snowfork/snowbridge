@@ -68,9 +68,8 @@ impl<T: Config> Verifier for Pallet<T> {
 }
 
 impl<T: Config> Pallet<T> {
-	// Verifies that the receipt encoded in proof.data is included
-	// in the block given by proof.block_hash. Inclusion is only
-	// recognized if the block has been finalized.
+	/// Verifies that the receipt encoded in proof.data is included in the block given by
+	/// proof.block_hash. Inclusion is only recognized if the block has been finalized.
 	pub fn verify_receipt_inclusion(
 		receipts_root: H256,
 		proof: &Proof,

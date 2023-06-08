@@ -18,7 +18,7 @@ pub enum BlsError {
 	SignatureVerificationFailed,
 }
 
-// fast_aggregate_verify optimized with aggregate key subtracting absent ones
+/// fast_aggregate_verify optimized with aggregate key subtracting absent ones.
 pub fn fast_aggregate_verify(
 	aggregate_pubkey: &PublicKeyPrepared,
 	absent_pubkeys: &Vec<PublicKeyPrepared>,
@@ -30,12 +30,12 @@ pub fn fast_aggregate_verify(
 	fast_aggregate_verify_pre_aggregated(agg_sig, agg_key, message)
 }
 
-// Decompress one public key into a point in G1
+/// Decompress one public key into a point in G1.
 pub fn prepare_milagro_pubkey(pubkey: &PublicKey) -> Result<PublicKeyPrepared, BlsError> {
 	PublicKeyPrepared::from_bytes_unchecked(&pubkey.0).map_err(|_| BlsError::InvalidPublicKey)
 }
 
-// Prepare for G1 public keys
+/// Prepare for G1 public keys.
 pub fn prepare_g1_pubkeys(pubkeys: &[PublicKey]) -> Result<Vec<PublicKeyPrepared>, BlsError> {
 	pubkeys
 		.iter()
@@ -44,14 +44,14 @@ pub fn prepare_g1_pubkeys(pubkeys: &[PublicKey]) -> Result<Vec<PublicKeyPrepared
 		.collect::<Result<Vec<PublicKeyPrepared>, BlsError>>()
 }
 
-// Prepare for G1 AggregatePublicKey
+/// Prepare for G1 AggregatePublicKey.
 pub fn prepare_aggregate_pubkey(
 	pubkeys: &[PublicKeyPrepared],
 ) -> Result<AggregatePublicKey, BlsError> {
 	AggregatePublicKey::into_aggregate(pubkeys).map_err(|_| BlsError::InvalidPublicKey)
 }
 
-// Prepare for G1 AggregatePublicKey
+/// Prepare for G1 AggregatePublicKey.
 pub fn prepare_aggregate_pubkey_from_absent(
 	aggregate_key: &PublicKeyPrepared,
 	absent_pubkeys: &Vec<PublicKeyPrepared>,
@@ -64,14 +64,14 @@ pub fn prepare_aggregate_pubkey_from_absent(
 	Ok(AggregatePublicKey { point: aggregate_pubkey.point })
 }
 
-// Prepare for G2 AggregateSignature, normally more expensive than G1 operation
+/// Prepare for G2 AggregateSignature, normally more expensive than G1 operation.
 pub fn prepare_aggregate_signature(signature: &Signature) -> Result<AggregateSignature, BlsError> {
 	Ok(AggregateSignature::from_signature(
 		&SignaturePrepared::from_bytes(&signature.0).map_err(|_| BlsError::InvalidSignature)?,
 	))
 }
 
-// fast_aggregate_verify_pre_aggregated which is the most expensive call in beacon light client
+/// fast_aggregate_verify_pre_aggregated which is the most expensive call in beacon light client.
 pub fn fast_aggregate_verify_pre_aggregated(
 	agg_sig: AggregateSignature,
 	aggregate_key: AggregatePublicKey,
