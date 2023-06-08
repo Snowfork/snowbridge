@@ -202,7 +202,8 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::force_checkpoint())]
 		#[transactional]
-		/// Used for pallet initialization and light client resetting.
+		/// Used for pallet initialization and light client resetting. Needs to be called by
+		/// the root origin.
 		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::process_checkpoint_update(&update)?;
@@ -239,7 +240,10 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		///
+		/// Forces a finalized beacon header checkpoint update. The current sync committee,
+		/// with a header attesting to the current sync committee, should be provided.
+		/// An `block_roots` proof should also be provided. This is used for ancestry proofs
+		/// for execution header updates.
 		pub(crate) fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
 			let sync_committee_root = update
 				.current_sync_committee
