@@ -86,7 +86,6 @@ jobs:
           args: >-
             --manifest-path parachain/Cargo.toml
             --workspace
-            --release
             --features runtime-benchmarks
             --exclude snowbridge-query-events
             --exclude snowbridge-ethereum-beacon-client
@@ -97,7 +96,6 @@ jobs:
           command: test
           args: >-
             --manifest-path parachain/Cargo.toml
-            --release
             --package snowbridge-ethereum-beacon-client
           toolchain: nightly-2023-04-22
       # Run benchmark tests for beacon light client
@@ -106,7 +104,6 @@ jobs:
           command: test
           args: >-
             --manifest-path parachain/Cargo.toml
-            --release
             --features runtime-benchmarks
             --package snowbridge-ethereum-beacon-client
           toolchain: nightly-2023-04-22
@@ -132,7 +129,6 @@ jobs:
       - run: >-
           cargo tarpaulin 
           --manifest-path parachain/Cargo.toml
-          --release
           --workspace
           --engine llvm
           --out Xml

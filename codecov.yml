@@ -5,3 +5,5 @@ ignore:
   - "core/packages/contracts/src/ScaleCodec.sol"
   - "core/packages/contracts/src/SubstrateTypes.sol"
   - "parachain/tools"
+  - "parachain/pallets/ethereum-beacon-client/src/benchmarking"
+  - "parachain/pallets/ethereum-beacon-client/src/weights.rs"
