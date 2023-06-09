@@ -14,6 +14,6 @@ start_chains()
 if [ -z "${from_start_services:-}" ]; then
     echo "start ethereum only!"
     trap kill_all SIGINT SIGTERM EXIT
-    check_tool && cleanup && start_chains
+    check_tool && rm -rf "$ethereum_data_dir" && start_chains
     wait
 fi

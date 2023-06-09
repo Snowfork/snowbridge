@@ -13,7 +13,7 @@ pub fn participant_pubkeys<T: Config>(
 	let current_sync_committee = <CurrentSyncCommittee<T>>::get();
 	let pubkeys = EthereumBeaconClient::<T>::find_pubkeys(
 		&sync_committee_bits,
-		&current_sync_committee.pubkeys.as_ref(),
+		(*current_sync_committee.pubkeys).as_ref(),
 		true,
 	);
 	Ok(pubkeys)
@@ -25,7 +25,7 @@ pub fn absent_pubkeys<T: Config>(update: &Update) -> Result<Vec<PublicKeyPrepare
 	let current_sync_committee = <CurrentSyncCommittee<T>>::get();
 	let pubkeys = EthereumBeaconClient::<T>::find_pubkeys(
 		&sync_committee_bits,
-		&current_sync_committee.pubkeys.as_ref(),
+		(*current_sync_committee.pubkeys).as_ref(),
 		false,
 	);
 	Ok(pubkeys)

@@ -1148,7 +1148,7 @@ func (d DepositResponse) ToFastSSZ() (*state.Deposit, error) {
 		return nil, err
 	}
 
-	withdrawalCredentials, err := util.HexStringTo32Bytes(d.Data.Signature)
+	withdrawalCredentials, err := util.HexStringTo32Bytes(d.Data.WithdrawalCredentials)
 	if err != nil {
 		return nil, err
 	}

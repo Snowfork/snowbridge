@@ -128,7 +128,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 			Slot:               uint64(finalizedUpdate.Payload.FinalizedHeader.Slot),
 		}
 
-		update, err := syncer.GetHeaderUpdateWithAncestryProof(beaconHeaderHash, &checkpoint)
+		update, err := syncer.GetHeaderUpdate(beaconHeaderHash, &checkpoint)
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}

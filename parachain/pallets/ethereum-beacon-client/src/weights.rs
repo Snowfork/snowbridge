@@ -41,24 +41,28 @@ pub trait WeightInfo {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn submit_with_sync_committee() -> Weight {
-		Weight::from_parts(175_039_777_000 as u64, 0)
-			.saturating_add(RocksDbWeight::get().reads(4))
-			.saturating_add(RocksDbWeight::get().writes(2))
+	fn force_checkpoint() -> Weight {
+		Weight::from_parts(97_263_571_000 as u64, 0)
+			.saturating_add(Weight::from_parts(0, 3501))
+			.saturating_add(RocksDbWeight::get().reads(2))
+			.saturating_add(RocksDbWeight::get().writes(9))
 	}
 	fn submit() -> Weight {
-		Weight::from_parts(171_871_518_000 as u64, 0)
-			.saturating_add(RocksDbWeight::get().reads(3))
+		Weight::from_parts(26_051_019_000 as u64, 0)
+			.saturating_add(Weight::from_parts(0, 93857))
+			.saturating_add(RocksDbWeight::get().reads(8))
+			.saturating_add(RocksDbWeight::get().writes(4))
+	}
+	fn submit_with_sync_committee() -> Weight {
+		Weight::from_parts(122_461_312_000 as u64, 0)
+			.saturating_add(Weight::from_parts(0, 93857))
+			.saturating_add(RocksDbWeight::get().reads(6))
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 	fn submit_execution_header() -> Weight {
-		Weight::from_parts(166_011_885_000 as u64, 0)
-			.saturating_add(RocksDbWeight::get().reads(3))
-			.saturating_add(RocksDbWeight::get().writes(1))
-	}
-	fn force_checkpoint() -> Weight {
-		Weight::from_parts(175_039_777_000 as u64, 0)
-			.saturating_add(RocksDbWeight::get().reads(4))
-			.saturating_add(RocksDbWeight::get().writes(2))
+		Weight::from_parts(113_158_000 as u64, 0)
+			.saturating_add(Weight::from_parts(0, 3537))
+			.saturating_add(RocksDbWeight::get().reads(5))
+			.saturating_add(RocksDbWeight::get().writes(4))
 	}
 }

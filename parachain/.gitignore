@@ -19,3 +19,5 @@ rococo-local.json
 
 # coverage reports
 cobertura.xml
+
+pallets/ethereum-beacon-client/tests/fixtures/*.mainnet.json

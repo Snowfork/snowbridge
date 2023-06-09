@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
@@ -40,15 +41,6 @@ func New(endpoint string, setting config.SpecSettings, activeSpec config.ActiveS
 		setting:    setting,
 		activeSpec: activeSpec,
 	}
-}
-
-func (s *Syncer) GetSyncPeriodsToFetch(lastSyncedPeriod, currentSyncPeriod uint64) ([]uint64, error) {
-	// sync at most 1 period at one time
-	if lastSyncedPeriod < currentSyncPeriod {
-		return []uint64{lastSyncedPeriod + 1}, nil
-	}
-
-	return []uint64{}, nil
 }
 
 func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
@@ -307,24 +299,33 @@ func (s *Syncer) HasFinalizedHeaderChanged(lastFinalizedBlockRoot common.Hash) (
 	return isTheSame, nil
 }
 
-func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
+func (s *Syncer) FindBeaconHeaderWithBlockIncluded(slot uint64) (state.BeaconBlockHeader, error) {
 	err := api.ErrNotFound
 	var header api.BeaconHeader
 	tries := 0
 	maxSlotsMissed := int(s.setting.SlotsInEpoch)
+	startSlot := slot
 	for errors.Is(err, api.ErrNotFound) && tries < maxSlotsMissed {
 		// Need to use GetHeaderBySlot instead of GetBeaconBlockRoot here because GetBeaconBlockRoot
 		// returns the previous slot's block root if there is no block at the given slot
 		header, err = s.Client.GetHeaderBySlot(slot)
 		if err != nil && !errors.Is(err, api.ErrNotFound) {
-			return common.Hash{}, fmt.Errorf("fetch block: %w", err)
+			return state.BeaconBlockHeader{}, fmt.Errorf("fetch block: %w", err)
 		}
 
 		if errors.Is(err, api.ErrNotFound) {
-			log.WithField("slot", slot).Info("no block at slot")
+			log.WithField("slot", slot).Info("skipped block not included")
 			tries = tries + 1
 			slot = slot + 1
 		}
+	}
+
+	if err != nil || header.Slot == 0 {
+		log.WithFields(logrus.Fields{
+			"start": startSlot,
+			"end":   slot,
+		}).WithError(err).Error("matching block included not found")
+		return state.BeaconBlockHeader{}, api.ErrNotFound
 	}
 
 	beaconHeader := state.BeaconBlockHeader{
@@ -337,32 +338,47 @@ func (s *Syncer) getNextBlockRootBySlot(slot uint64) (common.Hash, error) {
 
 	computedRoot, err := beaconHeader.HashTreeRoot()
 	if err != nil {
-		return [32]byte{}, err
+		return state.BeaconBlockHeader{}, err
 	}
 
 	blockRoot, err := s.Client.GetBeaconBlockRoot(header.Slot)
-	if err != nil && !errors.Is(err, api.ErrNotFound) {
-		return blockRoot, fmt.Errorf("fetch block: %w", err)
+	if err != nil {
+		return state.BeaconBlockHeader{}, fmt.Errorf("fetch block: %w", err)
+	}
+
+	computedRootHash := common.BytesToHash(computedRoot[:])
+
+	if blockRoot != computedRootHash {
+		log.WithFields(log.Fields{
+			"computedRoot": computedRootHash,
+			"blockRoot":    blockRoot,
+			"slot":         slot,
+		}).Error("block root calculated not match")
+		return state.BeaconBlockHeader{}, fmt.Errorf("block root calculated not match")
 	}
 
 	log.WithFields(log.Fields{
-		"computedRoot": common.BytesToHash(computedRoot[:]),
+		"computedRoot": computedRootHash,
 		"blockRoot":    blockRoot,
-	}).Info("block roots")
+		"slot":         slot,
+	}).Info("beacon header with block included found")
 
-	return blockRoot, nil
+	return beaconHeader, nil
 }
 
-func (s *Syncer) GetNextHeaderUpdateBySlotWithAncestryProof(slot uint64, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
-	blockRoot, err := s.getNextBlockRootBySlot(slot)
+func (s *Syncer) GetNextHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
+	header, err := s.FindBeaconHeaderWithBlockIncluded(slot)
 	if err != nil {
-		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next block root by slot: %w", err)
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next beacon header with block included: %w", err)
 	}
-
-	return s.GetHeaderUpdateWithAncestryProof(blockRoot, checkpoint)
+	blockRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("header hash tree root: %w", err)
+	}
+	return s.GetHeaderUpdate(blockRoot, checkpoint)
 }
 
-func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
+func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("fetch block: %w", err)
@@ -388,8 +404,7 @@ func (s *Syncer) GetHeaderUpdateWithAncestryProof(blockRoot common.Hash, checkpo
 		return scale.HeaderUpdatePayload{}, err
 	}
 
-	// If checkpoint not provided or slot == finalizedSlot,
-	// there won't be an ancestry proof because the header state in question is also the finalized header
+	// If checkpoint not provided or slot == finalizedSlot there won't be an ancestry proof because the header state in question is also the finalized header
 	if checkpoint == nil || block.GetBeaconSlot() == checkpoint.Slot {
 		return scale.HeaderUpdatePayload{
 			Header: beaconHeader,
