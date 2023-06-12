@@ -1,7 +1,6 @@
-# exports enable use in core/packages/test/config/launch-config.toml
 root_dir="$(realpath ../../..)"
 bridge_hub_runtime="${PARACHAIN_RUNTIME:-bridge-hub-rococo-local}"
-relaychain_version="${POLKADOT_VER:-v0.9.38}"
+relaychain_version="${POLKADOT_VER:-v0.9.42}"
 relaychain_dir="$root_dir/parachain/.cargo/$relaychain_version"
 relaychain_bin="${POLKADOT_BIN:-$relaychain_dir/bin/polkadot}"
 cumulus_version="${CUMULUS_VER:-snowbridge}"
@@ -9,7 +8,8 @@ cumulus_dir="$root_dir/parachain/.cargo/$cumulus_version"
 cumulus_bin="${CUMULUS_BIN:-$cumulus_dir/bin/polkadot-parachain}"
 core_dir="$root_dir/core"
 lodestar_version="${LODESTAR_VER:-1.8.0}"
-geth_version="${GETH_VER:-v1.11.2}"
+geth_version="${GETH_VER:-v1.12.0}"
+geth_dir="$root_dir/../go-ethereum/$geth_version"
 contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
@@ -19,15 +19,14 @@ ethereum_data_dir="$output_dir/ethereum"
 zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
 
-# Because we can run a local node for public network like goerli or mainnet, add active_spec as a separate config here
-# to decouple with eth_network, explicit set ACTIVE_SPEC to mainnet when test with public network
 active_spec="${ACTIVE_SPEC:-minimal}"
 eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
 eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
 eth_gas_limit="${ETH_GAS_LIMIT:-5000000}"
-eth_chain_id=15
+eth_chain_id="${ETH_NETWORK_ID:-15}"
 eth_fast_mode="${ETH_FAST_MODE:-false}"
+etherscan_api_key="${ETHERSCAN_API_KEY:-}"
 
 beefy_state_file="${BEEFY_STATE_FILE:-$output_dir/beefy-state.json}"
 beefy_start_block="${BEEFY_START_BLOCK:-1}"
@@ -126,4 +125,15 @@ check_tool() {
         echo 'Error: pnpm is not installed.'
         exit
     fi
+}
+
+wait_contract_deployed() {
+    ready=""
+    while [ -z "$ready" ]
+    do
+        if [ -f "$output_dir/contracts.json" ]; then
+            ready="true"
+        fi
+        sleep 2
+    done
 }

@@ -125,9 +125,14 @@ build_relayer()
     cp $relay_bin "$output_bin_dir"
 }
 
+deploy_relayer()
+{
+    check_tool && build_relayer && config_relayer && start_relayer
+}
+
 if [ -z "${from_start_services:-}" ]; then
     echo "start relayers only!"
     trap kill_all SIGINT SIGTERM EXIT
-    check_tool && build_relayer && config_relayer && start_relayer
+    deploy_relayer
     wait
 fi

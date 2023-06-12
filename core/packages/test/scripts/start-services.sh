@@ -19,28 +19,51 @@ check_tool
 echo "Installing binaries if required"
 install_binary
 
-# 2. start ethereum and polkadot chains
-echo "Starting ethereum and polkadot chains"
-source scripts/start-chains.sh
-start_chains
+# 2. start ethereum
+echo "Starting ethereum nodes"
+if [ "$eth_network" == "localhost" ]; then
+  source scripts/deploy-ethereum.sh
+  deploy_ethereum
+else
+  source scripts/start-goerli.sh
+  # deploy beacon node locally for fast response time or retrieving beacon state from remote could be very slow
+  deploy_goerli
+fi
 
-# 3. config beefy client
+# 3. deploy contracts
+echo "Deploying ethereum contracts"
+source scripts/deploy-contracts.sh
+deploy_contracts &
+
+# 4. start polkadot
+echo "Starting polkadot nodes"
+source scripts/deploy-polkadot.sh
+deploy_polkadot
+
+# wait for contract deployed
+echo "Waiting contract deployed"
+wait_contract_deployed
+
+# 5. config beefy client
+echo "Config beefy client"
 source scripts/configure-beefy.sh
 configure_beefy &
 
-# 4. Configure bridgehub exporter on statemine
-source scripts/configure-statemine.sh
-configure_statemine &
-
-# 5. config beacon client
+# 6. config beacon client
+echo "Config beacon client"
 source scripts/configure-beacon.sh
 configure_beacon
 
+# 7. Configure bridgehub exporter on statemine
+echo "Config bridgehub exporter on statemine"
+source scripts/configure-statemine.sh
+configure_statemine > "$output_dir/configure_statemine.log" 2>&1 &
+
 if [ "$skip_relayer" == "false" ]; then
-    # 6. start relayer
-    source scripts/start-relayer.sh
+    # 8. start relayer
     echo "Starting relayers"
-    config_relayer && start_relayer
+    source scripts/start-relayer.sh
+    deploy_relayer
 fi
 
 echo "Testnet has been initialized"

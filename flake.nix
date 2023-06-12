@@ -40,7 +40,7 @@
 
                     # ethereum
                     foundry-bin
-                    go-ethereum
+                    # go-ethereum
                     # gnupg for forge install
                     gnupg
 

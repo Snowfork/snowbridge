@@ -28,9 +28,10 @@ configure_beefy()
     	"initialize(uint64,(uint128,uint128,bytes32),(uint128,uint128,bytes32))" \
     	--rpc-url $eth_endpoint_http \
     	--private-key $PRIVATE_KEY \
+    	--gas-limit $eth_gas_limit \
       $beefy_start_block \
       \($current_id,$current_length,$current_root\) \
-      \($next_id,$next_length,$next_root\) || true # "|| true" can be removed once https://github.com/foundry-rs/foundry/pull/4010 has been released
+      \($next_id,$next_length,$next_root\)
     popd
 }
 

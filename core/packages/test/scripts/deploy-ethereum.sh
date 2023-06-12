@@ -12,7 +12,7 @@ start_geth() {
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key1.prv
         geth --vmdebug --datadir "$ethereum_data_dir" --networkid 15 \
             --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
-            --rpc.allow-unprotected-txs --mine --miner.threads=1 \
+            --rpc.allow-unprotected-txs --mine \
             --miner.etherbase=0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD \
             --authrpc.addr="127.0.0.1" \
             --http.addr="0.0.0.0" \
@@ -37,6 +37,7 @@ start_lodestar() {
             -X POST \
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
+        echo "genesisHash is: $genesisHash"
         # use gdate here for raw macos without nix
         if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
             timestamp=$(gdate -d'+10second' +%s)
@@ -65,35 +66,23 @@ start_lodestar() {
     fi
 }
 
-deploy_contracts()
-{
-    pushd "$contract_dir"
-    forge script \
-        --rpc-url $eth_endpoint_http \
-        --broadcast \
-        -vvv \
-        scripts/DeployScript.sol:DeployScript
-    node scripts/generateContractInfo.js "$output_dir/contracts.json"
-    popd
-    echo "Exported contract artifacts: $output_dir/contracts.json"
-}
-
 hack_beacon_client()
 {
     echo "Hack lodestar for faster slot time"
     preset_minimal_config_file="$core_dir/node_modules/.pnpm/@lodestar+config@$lodestar_version/node_modules/@lodestar/config/lib/chainConfig/presets/minimal.js"
     if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
-        gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
+        gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/g" $preset_minimal_config_file
     else
-        sed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
+        sed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/g" $preset_minimal_config_file
     fi
 }
 
-deploy_ethereum()
+deploy_local()
 {
     # 1. deploy execution client
     echo "Starting execution node"
     start_geth
+    
     echo "Waiting for geth API to be ready"
     sleep 3
 
@@ -104,8 +93,18 @@ deploy_ethereum()
     # 2. deploy consensus client
     echo "Starting beacon node"
     start_lodestar
-
-    # 3. deploy bridge contracts
-    echo "Deploying contracts"
-    deploy_contracts
 }
+
+deploy_ethereum()
+{
+    check_tool && rm -rf "$ethereum_data_dir" && deploy_local
+}
+
+if [ -z "${from_start_services:-}" ]; then
+    echo "start ethereum only!"
+    trap kill_all SIGINT SIGTERM EXIT
+    deploy_ethereum
+    echo "ethereum local nodes started!"
+    wait
+fi
+
