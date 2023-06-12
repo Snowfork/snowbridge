@@ -3,7 +3,7 @@ use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_core::{H160, H256, U256};
 use sp_runtime::RuntimeDebug;
-use sp_std::prelude::*;
+use sp_std::{boxed::Box, prelude::*};
 
 use crate::config::{PUBKEY_SIZE, SIGNATURE_SIZE};
 
@@ -181,7 +181,7 @@ impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
 #[derive(Clone, PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
 	pub root: H256,
-	pub pubkeys: [PublicKeyPrepared; COMMITTEE_SIZE],
+	pub pubkeys: Box<[PublicKeyPrepared; COMMITTEE_SIZE]>,
 	pub aggregate_pubkey: PublicKeyPrepared,
 }
 
@@ -189,7 +189,7 @@ impl<const COMMITTEE_SIZE: usize> Default for SyncCommitteePrepared<COMMITTEE_SI
 	fn default() -> Self {
 		SyncCommitteePrepared {
 			root: H256::default(),
-			pubkeys: [PublicKeyPrepared::default(); COMMITTEE_SIZE],
+			pubkeys: Box::new([PublicKeyPrepared::default(); COMMITTEE_SIZE]),
 			aggregate_pubkey: PublicKeyPrepared::default(),
 		}
 	}

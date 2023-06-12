@@ -51,7 +51,7 @@ start_lodestar() {
             --enr.ip6 "127.0.0.1" \
             --eth1.providerUrls "http://127.0.0.1:8545" \
             --execution.urls "http://127.0.0.1:8551" \
-            --dataDir "$output_dir/beacon-$timestamp" \
+            --dataDir "$ethereum_data_dir" \
             --reset \
             --terminal-total-difficulty-override 0 \
             --genesisEth1Hash $genesisHash \

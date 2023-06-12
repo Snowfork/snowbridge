@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"strings"
 
@@ -75,7 +76,20 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		lodestarEndpoint, _ := cmd.Flags().GetString("lodestar-endpoint")
 		beaconHeader, _ := cmd.Flags().GetString("beacon-header")
 		finalizedHeader, _ := cmd.Flags().GetString("finalized-header")
-		network, _ := cmd.Flags().GetString("network")
+		spec, _ := cmd.Flags().GetString("spec")
+
+		activeSpec, _ := config.ToSpec(spec)
+		viper.SetConfigFile("core/packages/test/config/beacon-relay.json")
+		if err := viper.ReadInConfig(); err != nil {
+			return err
+		}
+		var conf config.Config
+		err := viper.Unmarshal(&conf)
+		if err != nil {
+			return err
+		}
+
+		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
 
 		keypair, err := getKeyPair(privateKeyFile)
 		if err != nil {
@@ -88,7 +102,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("connect to parachain: %w", err)
 		}
 
-		writer := parachain.NewParachainWriter(paraconn, 32)
+		writer := parachain.NewParachainWriter(paraconn, 8, 8)
 		err = writer.Start(ctx, eg)
 		if err != nil {
 			return fmt.Errorf("start parachain conn: %w", err)
@@ -96,7 +110,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
 
-		syncer := syncer.New(lodestarEndpoint, 32, 256, 8192, config.ActiveSpec(network))
+		syncer := syncer.New(lodestarEndpoint, specSettings, activeSpec)
 
 		beaconHeaderHash := common.HexToHash(finalizedHeader)
 
@@ -114,13 +128,13 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 			Slot:               uint64(finalizedUpdate.Payload.FinalizedHeader.Slot),
 		}
 
-		update, err := syncer.GetHeaderUpdateWithAncestryProof(beaconHeaderHash, checkpoint)
+		update, err := syncer.GetHeaderUpdate(beaconHeaderHash, &checkpoint)
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
-		log.WithField("slot", update.Payload.Header.Slot).Info("found block at slot")
+		log.WithField("slot", update.Header.Slot).Info("found block at slot")
 
-		err = writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_execution_header", update.Payload)
+		err = writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.import_execution_header", update)
 		if err != nil {
 			return fmt.Errorf("write to parachain: %w", err)
 		}

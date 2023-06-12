@@ -10,13 +10,13 @@ cumulus_bin="${CUMULUS_BIN:-$cumulus_dir/bin/polkadot-parachain}"
 core_dir="$root_dir/core"
 lodestar_version="${LODESTAR_VER:-1.8.0}"
 geth_version="${GETH_VER:-v1.11.2}"
-geth_dir="$root_dir/../go-ethereum/$geth_version"
 contract_dir="$core_dir/packages/contracts"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
 export output_dir="${OUTPUT_DIR:-/tmp/snowbridge}"
 export output_bin_dir="$output_dir/bin"
-ethereum_data_dir="$output_dir/geth"
+ethereum_data_dir="$output_dir/ethereum"
+zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
 
 # Because we can run a local node for public network like goerli or mainnet, add active_spec as a separate config here
@@ -55,6 +55,8 @@ statemine_seed="${STATEMINE_SEED:-//Alice}"
 relaychain_ws_url="${RELAYCHAIN_WS_URL:-ws://127.0.0.1:9944}"
 relaychain_sudo_seed="${RELAYCHAIN_SUDO_SEED:-//Alice}"
 
+skip_relayer="${SKIP_RELAYER:-false}"
+
 # Config for deploying contracts
 
 ## Deployment key
@@ -89,7 +91,6 @@ kill_all() {
 
 cleanup() {
     echo "Cleaning resource"
-    rm -rf *.log
     rm -rf "$output_dir"
     mkdir "$output_dir"
     mkdir "$output_bin_dir"

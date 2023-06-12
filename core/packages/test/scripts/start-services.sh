@@ -26,20 +26,22 @@ start_chains
 
 # 3. config beefy client
 source scripts/configure-beefy.sh
-configure_beefy
+configure_beefy &
 
-# 4. config beacon client
+# 4. Configure bridgehub exporter on statemine
+source scripts/configure-statemine.sh
+configure_statemine &
+
+# 5. config beacon client
 source scripts/configure-beacon.sh
 configure_beacon
 
-# 5. Configure bridgehub exporter on statemine
-source scripts/configure-statemine.sh 
-configure_statemine
-
-# 6. start relayer
-echo "Starting relayers"
-source scripts/start-relayer.sh
-start_relayer
+if [ "$skip_relayer" == "false" ]; then
+    # 6. start relayer
+    source scripts/start-relayer.sh
+    echo "Starting relayers"
+    config_relayer && start_relayer
+fi
 
 echo "Testnet has been initialized"
 

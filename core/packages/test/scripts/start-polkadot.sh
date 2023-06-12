@@ -16,7 +16,7 @@ start_chains()
 if [ -z "${from_start_services:-}" ]; then
     echo "start polkadot only!"
     trap kill_all SIGINT SIGTERM EXIT
-    check_tool && build_relaychain && build_cumulus_from_source && start_chains
+    check_tool && build_relaychain && build_cumulus_from_source && rm -rf $zombienet_data_dir && start_chains
     wait
 fi
 

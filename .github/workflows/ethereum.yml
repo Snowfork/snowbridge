@@ -29,14 +29,11 @@ jobs:
           node-version: v18.16.0
           cache: "pnpm"
           cache-dependency-path: core/pnpm-lock.yaml
-      - name: Install dependencies
-        working-directory: core
-        run: pnpm install --frozen-lockfile
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
-      - name: Build
-        working-directory: core/packages/contracts
-        run: pnpm build
+      - name: Install dependencies and Build all
+        working-directory: core
+        run: pnpm install --frozen-lockfile && pnpm build
       - name: Test
         working-directory: core/packages/contracts
         run: forge test

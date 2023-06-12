@@ -10,9 +10,9 @@ repository = "https://github.com/Snowfork/snowbridge"
 targets = [ "x86_64-unknown-linux-gnu" ]
 
 [dependencies]
-serde = { version = "1.0.160", optional = true }
+serde = { version = "1.0.163", optional = true }
 codec = { version = "3.1.5", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
-scale-info = { version = "2.6.0", default-features = false, features = [ "derive" ] }
+scale-info = { version = "2.7.0", default-features = false, features = [ "derive" ] }
 hex-literal = { version = "0.4.1", optional = true }
 rlp = { version = "0.5", default-features = false, optional = true }
 

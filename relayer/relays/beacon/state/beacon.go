@@ -40,23 +40,10 @@ type Deposit struct {
 	Data  *DepositData
 }
 
-type DepositMessage struct {
-	Pubkey                []byte `json:"pubkey" ssz-size:"48"`
-	WithdrawalCredentials []byte `json:"withdrawal_credentials" ssz-size:"32"`
-	Amount                uint64 `json:"amount"`
-}
-
 type IndexedAttestation struct {
 	AttestationIndices []uint64         `json:"attesting_indices" ssz-max:"2048"`
 	Data               *AttestationData `json:"data"`
 	Signature          []byte           `json:"signature" ssz-size:"96"`
-}
-
-type PendingAttestation struct {
-	AggregationBits []byte           `json:"aggregation_bits" ssz:"bitlist" ssz-max:"2048"`
-	Data            *AttestationData `json:"data"`
-	InclusionDelay  uint64           `json:"inclusion_delay"`
-	ProposerIndex   uint64           `json:"proposer_index"`
 }
 
 type Fork struct {
@@ -86,26 +73,10 @@ type SignedVoluntaryExit struct {
 	Signature [96]byte       `json:"signature" ssz-size:"96"`
 }
 
-type Eth1Block struct {
-	Timestamp    uint64 `json:"timestamp"`
-	DepositRoot  []byte `json:"deposit_root" ssz-size:"32"`
-	DepositCount uint64 `json:"deposit_count" ssz-size:"32"`
-}
-
 type Eth1Data struct {
 	DepositRoot  []byte `json:"deposit_root" ssz-size:"32"`
 	DepositCount uint64 `json:"deposit_count"`
 	BlockHash    []byte `json:"block_hash" ssz-size:"32"`
-}
-
-type SigningRoot struct {
-	ObjectRoot []byte `json:"object_root" ssz-size:"32"`
-	Domain     []byte `json:"domain" ssz-size:"8"`
-}
-
-type HistoricalBatch struct {
-	BlockRoots [][32]byte `json:"block_roots" ssz-size:"8192,32"`
-	StateRoots [][32]byte `json:"state_roots" ssz-size:"8192,32"`
 }
 
 type ProposerSlashing struct {
@@ -141,10 +112,6 @@ type BeaconBlockHeader struct {
 	ParentRoot    []byte `json:"parent_root" ssz-size:"32"`
 	StateRoot     []byte `json:"state_root" ssz-size:"32"`
 	BodyRoot      []byte `json:"body_root" ssz-size:"32"`
-}
-
-type ErrorResponse struct {
-	Message []byte `ssz-max:"256"`
 }
 
 type SyncCommitteeMinimal struct {
@@ -230,10 +197,8 @@ type BeaconBlock interface {
 	UnmarshalSSZ(buf []byte) error
 	GetBeaconSlot() uint64
 	GetExecutionPayload() *ExecutionPayloadCapella
-	GetSyncAggregate() SyncAggregate
 	GetTree() (*ssz.Node, error)
 	GetBlockBodyTree() (*ssz.Node, error)
-	GetBodyRoot() ([32]byte, error)
 }
 
 func (b *BlockRootsContainerMainnet) SetBlockRoots(blockRoots [][]byte) {
@@ -405,16 +370,8 @@ func (b *BeaconBlockCapellaMinimal) GetExecutionPayload() *ExecutionPayloadCapel
 	return b.Body.ExecutionPayload
 }
 
-func (b *BeaconBlockCapellaMinimal) GetSyncAggregate() SyncAggregate {
-	return b.Body.SyncAggregate
-}
-
 func (b *BeaconBlockCapellaMinimal) GetBlockBodyTree() (*ssz.Node, error) {
 	return b.Body.GetTree()
-}
-
-func (b *BeaconBlockCapellaMinimal) GetBodyRoot() ([32]byte, error) {
-	return b.Body.HashTreeRoot()
 }
 
 func (b *BeaconBlockCapellaMainnet) GetBeaconSlot() uint64 {
@@ -425,16 +382,8 @@ func (b *BeaconBlockCapellaMainnet) GetExecutionPayload() *ExecutionPayloadCapel
 	return b.Body.ExecutionPayload
 }
 
-func (b *BeaconBlockCapellaMainnet) GetSyncAggregate() SyncAggregate {
-	return b.Body.SyncAggregate
-}
-
 func (b *BeaconBlockCapellaMainnet) GetBlockBodyTree() (*ssz.Node, error) {
 	return b.Body.GetTree()
-}
-
-func (b *BeaconBlockCapellaMainnet) GetBodyRoot() ([32]byte, error) {
-	return b.Body.HashTreeRoot()
 }
 
 func (b *BeaconStateCapellaMinimal) GetSlot() uint64 {

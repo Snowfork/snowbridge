@@ -24,3 +24,13 @@ pub(crate) type ExecutionHeaderBuffer<T> = RingBufferMapImpl<
 	crate::ExecutionHeaders<T>,
 	OptionQuery,
 >;
+
+/// FinalizedState ring buffer implementation
+pub(crate) type FinalizedBeaconStateBuffer<T> = RingBufferMapImpl<
+	u32,
+	crate::MaxFinalizedHeadersToKeep<T>,
+	crate::FinalizedBeaconStateIndex<T>,
+	crate::FinalizedBeaconStateMapping<T>,
+	crate::FinalizedBeaconState<T>,
+	OptionQuery,
+>;
