@@ -54,11 +54,9 @@ impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 
 impl WeightInfo for () {
 	fn do_process_message() -> Weight {
-		Weight::from_parts(100_000_000 as u64, 0)
-			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+		Weight::from_parts(100 as u64, 100)
 	}
 	fn on_finalize() -> Weight {
-		Weight::from_parts(100_000_000 as u64, 0)
-			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+		Weight::from_parts(100 as u64, 100)
 	}
 }

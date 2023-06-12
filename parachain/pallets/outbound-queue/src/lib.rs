@@ -230,7 +230,7 @@ pub mod pallet {
 	}
 
 	/// A message which can be accepted by the [`OutboundQueue`]
-	#[derive(CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
+	#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
 	pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
 		id: H256,
 		origin: ParaId,
@@ -260,12 +260,13 @@ pub mod pallet {
 			Ok(ticket)
 		}
 
-		fn submit(ticket: Self::Ticket) {
+		fn submit(ticket: Self::Ticket) -> Result<(), SubmitError> {
 			T::MessageQueue::enqueue_message(
 				ticket.message.as_bounded_slice(),
 				AggregateMessageOrigin::Parachain(ticket.origin),
 			);
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
+			Ok(())
 		}
 	}
 
@@ -275,6 +276,7 @@ pub mod pallet {
 			message: &[u8],
 			_: Self::Origin,
 			meter: &mut frame_support::weights::WeightMeter,
+			_: &mut [u8; 32],
 		) -> Result<bool, ProcessMessageError> {
 			// Yield if we don't want to accept any more messages in the current block.
 			// There is hard limit to ensure the weight of `on_finalize` is bounded.

@@ -79,5 +79,5 @@ pub trait OutboundQueue {
 	fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError>;
 
 	/// Submit the message for eventual delivery to Ethereum
-	fn submit(ticket: Self::Ticket);
+	fn submit(ticket: Self::Ticket) -> Result<(), SubmitError>;
 }

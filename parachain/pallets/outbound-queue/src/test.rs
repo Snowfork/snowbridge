@@ -1,10 +1,9 @@
 use super::*;
 
 use frame_support::{
-	assert_err, assert_noop, parameter_types,
-	traits::{Everything, Footprint, Hooks, ProcessMessageError},
+	assert_err, assert_noop, assert_ok, parameter_types,
+	traits::{Everything, Hooks, ProcessMessageError},
 	weights::WeightMeter,
-	BoundedSlice,
 };
 
 use sp_core::H256;
@@ -25,6 +24,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
 		OutboundQueue: crate::{Pallet, Storage, Event<T>},
 	}
 );
@@ -64,6 +64,23 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
+	pub const HeapSize: u32 = 32 * 1024;
+	pub const MaxStale: u32 = 32;
+	pub static ServiceWeight: Option<Weight> = Some(Weight::from_parts(100, 100));
+}
+
+impl pallet_message_queue::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type MessageProcessor = OutboundQueue;
+	type Size = u32;
+	type QueueChangeHandler = ();
+	type HeapSize = HeapSize;
+	type MaxStale = MaxStale;
+	type ServiceWeight = ServiceWeight;
+}
+
+parameter_types! {
 	pub const MaxMessagePayloadSize: u32 = 256;
 	pub const MaxMessagesPerBlock: u32 = 20;
 }
@@ -71,7 +88,7 @@ parameter_types! {
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
-	type MessageQueue = FakeMessageQueue;
+	type MessageQueue = MessageQueue;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
 	type WeightInfo = ();
@@ -84,36 +101,27 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	ext
 }
 
-parameter_types! {
-	pub const MaxMessageLen: u32 = 512;
-}
-
-pub struct FakeMessageQueue;
-
-impl EnqueueMessage<crate::AggregateMessageOrigin> for FakeMessageQueue {
-	type MaxMessageLen = MaxMessageLen;
-
-	fn enqueue_message(
-		message: BoundedSlice<u8, Self::MaxMessageLen>,
-		origin: crate::AggregateMessageOrigin,
-	) {
-		let mut meter = WeightMeter::max_limit();
-		let _ = OutboundQueue::process_message(&message, origin, &mut meter);
-	}
-	fn enqueue_messages<'a>(
-		_: impl Iterator<Item = BoundedSlice<'a, u8, Self::MaxMessageLen>>,
-		_: crate::AggregateMessageOrigin,
-	) {
-	}
-	fn sweep_queue(_: crate::AggregateMessageOrigin) {}
-	fn footprint(_: crate::AggregateMessageOrigin) -> Footprint {
-		Footprint::default()
-	}
+fn run_to_end_of_next_block() {
+	// finish current block
+	MessageQueue::on_finalize(System::block_number());
+	OutboundQueue::on_finalize(System::block_number());
+	System::on_finalize(System::block_number());
+	// start next block
+	System::set_block_number(System::block_number() + 1);
+	System::on_initialize(System::block_number());
+	OutboundQueue::on_initialize(System::block_number());
+	MessageQueue::on_initialize(System::block_number());
+	// finish next block
+	MessageQueue::on_finalize(System::block_number());
+	OutboundQueue::on_finalize(System::block_number());
+	System::on_finalize(System::block_number());
 }
 
 #[test]
 fn submit_messages_from_multiple_origins_and_commit() {
 	new_tester().execute_with(|| {
+		//next_block();
+
 		for para_id in 1000..1004 {
 			let message = OutboundMessage {
 				id: H256::repeat_byte(1).into(),
@@ -126,11 +134,16 @@ fn submit_messages_from_multiple_origins_and_commit() {
 			assert!(result.is_ok());
 			let ticket = result.unwrap();
 
-			OutboundQueue::submit(ticket);
-			assert_eq!(<Nonce<Test>>::get(message.origin), 1);
+			assert_ok!(OutboundQueue::submit(ticket));
 		}
 
-		OutboundQueue::on_finalize(System::block_number());
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+
+		for para_id in 1000..1004 {
+			let origin: ParaId = (para_id as u32).into();
+			assert_eq!(Nonce::<Test>::get(origin), 1);
+		}
 
 		let digest = System::digest();
 		let digest_items = digest.logs();
@@ -178,7 +191,12 @@ fn process_message_yields_on_max_messages_per_block() {
 		let mut meter = WeightMeter::max_limit();
 
 		assert_noop!(
-			OutboundQueue::process_message(&message.as_bounded_slice(), origin, &mut meter),
+			OutboundQueue::process_message(
+				&message.as_bounded_slice(),
+				origin,
+				&mut meter,
+				&mut [0u8; 32]
+			),
 			ProcessMessageError::Yield
 		);
 	})
@@ -194,7 +212,12 @@ fn process_message_fails_on_overweight_message() {
 		let mut meter = WeightMeter::from_limit(Weight::from_parts(1, 1));
 
 		assert_noop!(
-			OutboundQueue::process_message(&message.as_bounded_slice(), origin, &mut meter),
+			OutboundQueue::process_message(
+				&message.as_bounded_slice(),
+				origin,
+				&mut meter,
+				&mut [0u8; 32]
+			),
 			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
 		);
 	})
