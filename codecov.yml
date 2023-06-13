@@ -1,10 +1,10 @@
 ignore:
   - "core/packages/contracts/test/mocks"
   - "core/packages/contracts/src/utils"
-  # Forge's coverage analysis isn't able handle functions with internal linkage in libraries
+  # Forge's coverage analysis isn't able to handle functions with internal linkage in libraries
   - "core/packages/contracts/src/ScaleCodec.sol"
   - "core/packages/contracts/src/SubstrateTypes.sol"
   - "parachain/tools"
   - "parachain/pallets/ethereum-beacon-client/src/benchmarking"
   - "parachain/pallets/ethereum-beacon-client/src/weights.rs"
-  - "core/packages/contracts/src/DeployScript.sol"
+  - "core/packages/contracts/script/DeployScript.sol"
