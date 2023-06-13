@@ -24,11 +24,6 @@ deploy_contracts()
     node scripts/generateContractInfo.js "$output_dir/contracts.json"
     popd
     echo "Exported contract artifacts: $output_dir/contracts.json"
-    if [ "$eth_network" != "localhost" ]; then
-      timestamp=$(date +%s)
-      commit_id=$(git rev-parse --verify HEAD)
-      cp "$output_dir"/contracts.json deployment/"$eth_network"-"$commit_id"-"$timestamp".json
-    fi
 }
 
 if [ -z "${from_start_services:-}" ]; then
