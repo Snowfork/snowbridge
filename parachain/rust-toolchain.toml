@@ -6,7 +6,7 @@
 #   - update `channel = "nightly-OLD_DATE"` below
 #   - update nightly-OLD_DATE in .github/workflows/parachain.yml
 
-channel = "nightly-2023-03-04" # 1.69.0 nightly for unstable features and no sign-ext
+channel = "nightly-2022-12-08" # 1.69.0 nightly for unstable features and no sign-ext
 # for more on the sign-ext issue: https://github.com/paritytech/cargo-contract/issues/1139
 targets = [
     "wasm32-unknown-unknown",
