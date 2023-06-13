@@ -13,13 +13,13 @@ deploy_contracts()
             --verify \
             --etherscan-api-key $etherscan_api_key \
             -vvv \
-            script/DeployScript.sol:DeployScript
+            src/DeployScript.sol:DeployScript
     else
         forge script \
             --rpc-url $eth_endpoint_http \
             --broadcast \
             -vvv \
-            script/DeployScript.sol:DeployScript
+            src/DeployScript.sol:DeployScript
     fi
     node scripts/generateContractInfo.js "$output_dir/contracts.json"
     popd

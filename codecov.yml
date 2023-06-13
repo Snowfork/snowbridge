@@ -7,4 +7,4 @@ ignore:
   - "parachain/tools"
   - "parachain/pallets/ethereum-beacon-client/src/benchmarking"
   - "parachain/pallets/ethereum-beacon-client/src/weights.rs"
-  - "core/packages/contracts/script/DeployScript.sol"
+  - "core/packages/contracts/src/DeployScript.sol"
