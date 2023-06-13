@@ -213,7 +213,7 @@ impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
 }
 
 /// Beacon block header as it is stored in the runtime storage. The block root is the
-/// Merklization of a BeaconHeader.
+/// Merkleization of a BeaconHeader.
 #[derive(
 	Copy, Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen,
 )]
@@ -274,7 +274,7 @@ impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 	}
 }
 
-// Serde deserialization helper for SyncAggregate
+/// Serde deserialization helper for SyncAggregate
 #[cfg(feature = "std")]
 #[derive(Deserialize)]
 struct IntermediateSyncAggregate {
@@ -300,8 +300,8 @@ impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 	}
 }
 
-// ExecutionPayloadHeader
-// https://github.com/ethereum/annotated-spec/blob/master/capella/beacon-chain.md#executionpayloadheader
+/// ExecutionPayloadHeader
+/// https://github.com/ethereum/annotated-spec/blob/master/capella/beacon-chain.md#executionpayloadheader
 #[derive(
 	Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
 )]
