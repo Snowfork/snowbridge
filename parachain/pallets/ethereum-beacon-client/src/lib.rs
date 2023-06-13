@@ -304,9 +304,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Cross check to make sure the ExecutionHeader does not fall too far behind
-		/// FinalizedHeader updates. If that happens just return an error so to pause processing
-		/// FinalizedHeader until ExecutionHeader processing has caught up.
+		/// Cross check to make sure that execution header import does not fall too far behind
+		/// finalised beacon header import. If that happens just return an error and pause processing
+		/// until execution header processing has caught up.
 		fn cross_check_execution_state() -> DispatchResult {
 			let latest_finalized_state: CompactBeaconState =
 				match Self::finalized_beacon_state(Self::latest_finalized_block_root()) {
