@@ -9,17 +9,17 @@ configure_beefy()
 
     npx ts-node ./scripts/configure-beefy.ts
 
-    current_id=$(jq .validatorSets.current.id $beefy_state_file)
-    current_length=$(jq .validatorSets.current.length $beefy_state_file)
-    current_root=$(jq .validatorSets.current.root $beefy_state_file)
+    local current_id=$(jq .validatorSets.current.id $beefy_state_file)
+    local current_length=$(jq .validatorSets.current.length $beefy_state_file)
+    local current_root=$(jq .validatorSets.current.root $beefy_state_file)
 
-    next_id=$(jq .validatorSets.next.id $beefy_state_file)
-    next_length=$(jq .validatorSets.next.length $beefy_state_file)
-    next_root=$(jq .validatorSets.next.root $beefy_state_file)
+    local next_id=$(jq .validatorSets.next.id $beefy_state_file)
+    local next_length=$(jq .validatorSets.next.length $beefy_state_file)
+    local next_root=$(jq .validatorSets.next.root $beefy_state_file)
 
     # remove double quote before cast
-    current_root=$(sed -e 's/^"//' -e 's/"$//' <<< $current_root)
-    next_root=$(sed -e 's/^"//' -e 's/"$//' <<< $next_root)
+    local current_root=$(sed -e 's/^"//' -e 's/"$//' <<< $current_root)
+    local next_root=$(sed -e 's/^"//' -e 's/"$//' <<< $next_root)
 
     echo "Transact call to initialize BeefyClient"
     # sometimes sending transact with cast will fail on the goerli network

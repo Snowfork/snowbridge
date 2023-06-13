@@ -33,12 +33,13 @@ start_geth() {
 start_lodestar() {
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting lodestar local node"
-        genesisHash=$(curl $eth_endpoint_http \
+        local genesisHash=$(curl $eth_endpoint_http \
             -X POST \
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
         echo "genesisHash is: $genesisHash"
         # use gdate here for raw macos without nix
+        local timestamp=""
         if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
             timestamp=$(gdate -d'+10second' +%s)
         else
@@ -69,7 +70,7 @@ start_lodestar() {
 hack_beacon_client()
 {
     echo "Hack lodestar for faster slot time"
-    preset_minimal_config_file="$core_dir/node_modules/.pnpm/@lodestar+config@$lodestar_version/node_modules/@lodestar/config/lib/chainConfig/presets/minimal.js"
+    local preset_minimal_config_file="$core_dir/node_modules/.pnpm/@lodestar+config@$lodestar_version/node_modules/@lodestar/config/lib/chainConfig/presets/minimal.js"
     if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
         gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/g" $preset_minimal_config_file
     else
@@ -82,7 +83,7 @@ deploy_local()
     # 1. deploy execution client
     echo "Starting execution node"
     start_geth
-    
+
     echo "Waiting for geth API to be ready"
     sleep 3
 

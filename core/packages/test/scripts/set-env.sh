@@ -128,7 +128,7 @@ check_tool() {
 }
 
 wait_contract_deployed() {
-    ready=""
+    local ready=""
     while [ -z "$ready" ]
     do
         if [ -f "$output_dir/contracts.json" ]; then
