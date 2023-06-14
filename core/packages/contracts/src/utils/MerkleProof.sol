@@ -48,9 +48,9 @@ library MerkleProof {
                 }
 
                 if (computedHashLeft) {
-                    computedHash = _efficientHash(computedHash, proof[i]);
+                    computedHash = efficientHash(computedHash, proof[i]);
                 } else {
-                    computedHash = _efficientHash(proof[i], computedHash);
+                    computedHash = efficientHash(proof[i], computedHash);
                 }
 
                 pos = pos >> 1;
@@ -62,7 +62,7 @@ library MerkleProof {
         }
     }
 
-    function _efficientHash(bytes32 a, bytes32 b) private pure returns (bytes32 value) {
+    function efficientHash(bytes32 a, bytes32 b) private pure returns (bytes32 value) {
         /// @solidity memory-safe-assembly
         assembly {
             mstore(0x00, a)
