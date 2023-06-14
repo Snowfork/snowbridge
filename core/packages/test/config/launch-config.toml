@@ -55,7 +55,7 @@ cumulus_based = true
 ## Statemine
 [[parachains]]
 id = 1000
-chain = "statemine-local"
+chain = "asset-hub-kusama-local"
 cumulus_based = true
 
     # run alice as parachain collator
