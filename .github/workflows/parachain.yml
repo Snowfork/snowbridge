@@ -3,14 +3,14 @@ name: parachain
 on:
   push:
     paths:
-      - *
+      - "*"
       - "!parachain/README.md"
       - "!parachain/LICENSE"
     branches:
       - main
   pull_request:
     paths:
-      - *
+      - "*"
       - "!parachain/README.md"
       - "!parachain/LICENSE"
   workflow_dispatch:
