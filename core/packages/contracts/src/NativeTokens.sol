@@ -62,10 +62,10 @@ contract NativeTokens is Gateway {
     /* Constants */
 
     // Call index for ForeignAssets::create dispatchable on AssetHub parachain
-    bytes4 public immutable createCallId;
+    bytes2 public immutable createCallId;
 
     // Call index for ForeignAssets::set_metata dispatchable AssetHub parachain
-    bytes4 public immutable setMetadataCallId;
+    bytes2 public immutable setMetadataCallId;
 
     /* Errors */
 
@@ -77,8 +77,8 @@ contract NativeTokens is Gateway {
         TokenVault _vault,
         ParaID _assetHubParaID,
         uint256 _createTokenFee,
-        bytes4 _createCallId,
-        bytes4 _setMetadataCallId
+        bytes2 _createCallId,
+        bytes2 _setMetadataCallId
     ) Gateway(registry) {
         vault = _vault;
         assetHubParaID = _assetHubParaID;
@@ -124,7 +124,8 @@ contract NativeTokens is Gateway {
         }
         uint8 decimals = metadata.decimals();
 
-        bytes memory payload = NativeTokensTypes.Create(address(registry), token, name, symbol, decimals);
+        bytes memory payload =
+            NativeTokensTypes.Create(address(registry), token, name, symbol, decimals, createCallId, setMetadataCallId);
         outboundQueue().submit{value: msg.value}(assetHubParaID, payload);
 
         emit Created(token);

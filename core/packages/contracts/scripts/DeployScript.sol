@@ -14,7 +14,6 @@ import {Vault} from "../src/Vault.sol";
 import {UpgradeProxy} from "../src/UpgradeProxy.sol";
 import {SovereignTreasury} from "../src/SovereignTreasury.sol";
 import {Registry} from "../src/Registry.sol";
-import {Remark} from "../src/Remark.sol";
 import {ParaID} from "../src/Types.sol";
 
 contract DeployScript is Script {
@@ -27,6 +26,7 @@ contract DeployScript is Script {
 
         // Registry
         Registry registry = new Registry();
+        registry.grantRole(registry.REGISTER_ROLE(), deployer);
 
         // SovereignTreasury
         Vault vault = new Vault();
@@ -57,7 +57,9 @@ contract DeployScript is Script {
             registry,
             tokenVault,
             ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID"))),
-            vm.envUint("CREATE_TOKEN_FEE")
+            vm.envUint("CREATE_TOKEN_FEE"),
+            bytes2(vm.envBytes("CREATE_CALL_INDEX")),
+            bytes2(vm.envBytes("SET_METADATA_CALL_INDEX"))
         );
         registry.registerContract(keccak256("NativeTokens"), address(nativeTokens));
 
@@ -65,7 +67,7 @@ contract DeployScript is Script {
         new WETH9();
 
         // Upgrades
-        UpgradeProxy upgradeProxy = new UpgradeProxy(ParaID.wrap(paraId));
+        UpgradeProxy upgradeProxy = new UpgradeProxy(registry, ParaID.wrap(paraId));
 
         // Allow inbound queue to send messages to handlers
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(inboundQueue));
@@ -88,24 +90,27 @@ contract DeployScript is Script {
         // Move ownership of everything to Upgrades app
 
         treasury.grantRole(treasury.ADMIN_ROLE(), address(upgradeProxy));
-        treasury.revokeRole(treasury.ADMIN_ROLE(), address(this));
+        treasury.revokeRole(treasury.ADMIN_ROLE(), deployer);
 
         nativeTokens.grantRole(nativeTokens.ADMIN_ROLE(), address(upgradeProxy));
-        nativeTokens.revokeRole(nativeTokens.ADMIN_ROLE(), address(this));
+        nativeTokens.revokeRole(nativeTokens.ADMIN_ROLE(), deployer);
 
         vault.grantRole(vault.ADMIN_ROLE(), address(upgradeProxy));
-        vault.revokeRole(vault.ADMIN_ROLE(), address(this));
+        vault.revokeRole(vault.ADMIN_ROLE(), deployer);
 
         tokenVault.grantRole(tokenVault.ADMIN_ROLE(), address(upgradeProxy));
-        tokenVault.revokeRole(tokenVault.ADMIN_ROLE(), address(this));
+        tokenVault.revokeRole(tokenVault.ADMIN_ROLE(), deployer);
 
         inboundQueue.grantRole(inboundQueue.ADMIN_ROLE(), address(upgradeProxy));
-        inboundQueue.revokeRole(inboundQueue.ADMIN_ROLE(), address(this));
+        inboundQueue.revokeRole(inboundQueue.ADMIN_ROLE(), deployer);
 
         outboundQueue.grantRole(outboundQueue.ADMIN_ROLE(), address(upgradeProxy));
-        outboundQueue.revokeRole(outboundQueue.ADMIN_ROLE(), address(this));
+        outboundQueue.revokeRole(outboundQueue.ADMIN_ROLE(), deployer);
 
-        upgradeProxy.revokeRole(upgradeProxy.ADMIN_ROLE(), address(this));
+        registry.grantRole(outboundQueue.ADMIN_ROLE(), address(upgradeProxy));
+        registry.revokeRole(outboundQueue.ADMIN_ROLE(), deployer);
+
+        upgradeProxy.revokeRole(upgradeProxy.ADMIN_ROLE(), deployer);
 
         vm.stopBroadcast();
     }

@@ -18,9 +18,9 @@ use xcm::v3::MultiLocation;
 // contracts are deployed in DeployScript.sol.
 const ETHEREUM_API: &str = "http://localhost:8545";
 const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
-const NATIVE_TOKENS_CONTRACT: &str = "0x83428c7db9815f482a39a1715684dCF755021997";
-const TOKEN_VAULT_CONTRACT: &str = "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23";
-const WETH_CONTRACT: &str = "0xF8F7758FbcEfd546eAEff7dE24AFf666B6228e73";
+const NATIVE_TOKENS_CONTRACT: &str = "0xB8EA8cB425d85536b158d661da1ef0895Bb92F1D";
+const TOKEN_VAULT_CONTRACT: &str = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305";
+const WETH_CONTRACT: &str = "0x3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d";
 
 #[tokio::test]
 async fn test_lock_tokens() {

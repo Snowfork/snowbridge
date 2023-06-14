@@ -17,14 +17,14 @@ library NativeTokensTypes {
         bytes memory name,
         bytes memory symbol,
         uint8 decimals,
-        bytes4 createCallIndex,
-        bytes4 setMetadataCallIndex
-    ) internal pure returns (bytes memory) {
+        bytes2 createCallIndex,
+        bytes2 setMetadataCallIndex
+    ) internal view returns (bytes memory) {
         return bytes.concat(
-            0x00,
+            bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
-            0x01,
-            0x00,
+            bytes1(0x01),
+            bytes1(0x00),
             SubstrateTypes.H160(origin),
             SubstrateTypes.H160(token),
             SubstrateTypes.VecU8(name),
@@ -42,14 +42,14 @@ library NativeTokensTypes {
     // solhint-disable-next-line func-name-mixedcase
     function Mint(address origin, address token, ParaID dest, bytes memory recipient, uint128 amount)
         internal
-        pure
+        view
         returns (bytes memory)
     {
         return bytes.concat(
-            0x00,
+            bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
-            0x01,
-            0x01,
+            bytes1(0x01),
+            bytes1(0x01),
             SubstrateTypes.H160(origin),
             SubstrateTypes.H160(token),
             SubstrateTypes.OptionParaID(dest),

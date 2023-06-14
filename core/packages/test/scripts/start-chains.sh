@@ -9,7 +9,7 @@ source scripts/deploy-polkadot.sh
 start_chains()
 {   #1 start ethereum and deploy contracts
     echo "start ethereum and deploy bridge contrancts"
-    deploy_ethereum &
+    deploy_ethereum
     #2 start polkadot relaychain and snowbridge parachain
     echo "Starting Polkadot, BridgeHub, and Snowbridge"
     deploy_polkadot

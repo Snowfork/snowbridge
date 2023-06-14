@@ -17,12 +17,12 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
-use frame_support::traits::EnsureOrigin;
-use snowbridge_core::{OutboundQueue as OutboundQueueTrait, ParaId};
-use sp_core::{H160, H256};
+use snowbridge_core::{ContractId, OutboundMessage, OutboundQueue as OutboundQueueTrait, ParaId};
+use sp_core::{H160, H256, U256};
 use sp_runtime::traits::Hash;
-use sp_std::vec::Vec;
-use xcm::v3::MultiLocation;
+use sp_std::prelude::*;
+
+use ethabi::Token;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -38,9 +38,8 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type MessageHasher: Hash<Output = H256>;
 		type OutboundQueue: OutboundQueueTrait;
-		type RemarkOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = H160>;
-		type HandleRemarkOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
 		type OwnParaId: Get<ParaId>;
+		type GovernanceProxyContract: Get<ContractId>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -51,37 +50,45 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Remarked { sender: H160, hash: H256 },
+		UpgradeTaskSubmitted { upgrade_task: H160 },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		NoneValue,
+		SubmissionFailed,
 	}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T>
-	where
-		T::AccountId: AsRef<[u8]>,
-	{
-		// #[pallet::call_index(0)]
-		// #[pallet::weight(T::WeightInfo::remark())]
-		// pub fn upgrade(origin: OriginFor<T>, upgrade_task: H160) -> DispatchResult {
-		// 	let who = ensure_root(origin)?;
-		// 	let message_id = Self::make_message_id(who, upgrade_task.as_ref());
-		// 	let _ = T::OutboundQueue::submit(message_id, T::OwnParaId::get(), 2, &_remark);
-		// 	Ok(())
-		// }
+	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
+		#[pallet::weight(T::WeightInfo::upgrade())]
+		pub fn upgrade(origin: OriginFor<T>, upgrade_task: H160) -> DispatchResult {
+			let _ = ensure_signed(origin)?;
+
+			let message = OutboundMessage {
+				id: T::MessageHasher::hash(upgrade_task.as_ref()),
+				origin: T::OwnParaId::get(),
+				gateway: T::GovernanceProxyContract::get(),
+				payload: Self::encode_upgrade_payload(upgrade_task),
+			};
+
+			let ticket =
+				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
+
+			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
+
+			Self::deposit_event(Event::<T>::UpgradeTaskSubmitted { upgrade_task });
+
+			Ok(())
+		}
 	}
 
-	impl<T: Config> Pallet<T>
-	where
-		T::AccountId: AsRef<[u8]>,
-	{
-		fn make_message_id(who: T::AccountId, remark: &[u8]) -> H256 {
-			let who: Vec<u8> = who.as_ref().into();
-			let appended: Vec<u8> = who.iter().copied().chain(remark.iter().copied()).collect();
-			T::MessageHasher::hash(&appended)
+	impl<T: Config> Pallet<T> {
+		fn encode_upgrade_payload(upgrade_task: H160) -> Vec<u8> {
+			ethabi::encode(&vec![
+				Token::Uint(U256::from(0u64)),
+				Token::Bytes(ethabi::encode(&vec![Token::Address(upgrade_task)])),
+			])
 		}
 	}
 }

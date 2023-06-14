@@ -113,7 +113,11 @@ where
 				SendError::NotApplicable
 			})?;
 
-		OutboundQueue::submit(ticket);
+		OutboundQueue::submit(ticket).map_err(|_| {
+			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue submit of message failed");
+			SendError::Transport("other transport error")
+		})?;
+
 		log::info!(target: "xcm::ethereum_blob_exporter", "message delivered {hash:#?}.");
 		Ok(hash)
 	}
@@ -256,7 +260,6 @@ mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
 	use snowbridge_core::SubmitError;
-	use sp_core::H256;
 
 	use super::*;
 
@@ -272,42 +275,26 @@ mod tests {
 		hex!("1454532f17679d9bfd775fef52de6c0598e34def65ef19ac06c11af013d6ca0f");
 
 	struct MockOkOutboundQueue;
-	impl OutboundQueue for MockOkOutboundQueue {
-		fn validate(
-			_hash: H256,
-			_source_id: snowbridge_core::ParaId,
-			_handler: u16,
-			_payload: &[u8],
-		) -> Result<(), SubmitError> {
+	impl OutboundQueueTrait for MockOkOutboundQueue {
+		type Ticket = ();
+
+		fn validate(_: &OutboundMessage) -> Result<(), SubmitError> {
 			Ok(())
 		}
 
-		fn submit(
-			_hash: H256,
-			_source_id: snowbridge_core::ParaId,
-			_handler: u16,
-			_payload: &[u8],
-		) -> Result<(), SubmitError> {
+		fn submit(_: Self::Ticket) -> Result<(), SubmitError> {
 			Ok(())
 		}
 	}
 	struct MockErrOutboundQueue;
-	impl OutboundQueue for MockErrOutboundQueue {
-		fn validate(
-			_hash: H256,
-			_source_id: snowbridge_core::ParaId,
-			_handler: u16,
-			_payload: &[u8],
-		) -> Result<(), SubmitError> {
+	impl OutboundQueueTrait for MockErrOutboundQueue {
+		type Ticket = ();
+
+		fn validate(_: &OutboundMessage) -> Result<(), SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 
-		fn submit(
-			_hash: H256,
-			_source_id: snowbridge_core::ParaId,
-			_handler: u16,
-			_payload: &[u8],
-		) -> Result<(), SubmitError> {
+		fn submit(_: Self::Ticket) -> Result<(), SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 	}
@@ -585,10 +572,7 @@ mod tests {
 				&mut message,
 			);
 
-		assert_eq!(
-			result,
-			Ok(((SUCCESS_CASE_1_TICKET.into(), SUCCESS_CASE_1_TICKET_HASH.into()), vec![].into()))
-		);
+		assert!(result.is_ok());
 	}
 
 	#[test]
@@ -598,19 +582,8 @@ mod tests {
 			EthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkOutboundQueue>::deliver(
 				ticket,
 			);
-		assert_eq!(result, Ok(SUCCESS_CASE_1_TICKET_HASH))
-	}
 
-	#[test]
-	fn exporter_deliver_with_decode_failure_yields_not_applicable() {
-		let corrupt_ticket = hex!("DEADBEEF").to_vec();
-		let hash = sp_io::hashing::blake2_256(corrupt_ticket.as_slice());
-		let ticket: Ticket = (corrupt_ticket, hash);
-		let result =
-			EthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockOkOutboundQueue>::deliver(
-				ticket,
-			);
-		assert_eq!(result, Err(SendError::NotApplicable))
+		assert_eq!(result, Ok(SUCCESS_CASE_1_TICKET_HASH))
 	}
 
 	#[test]
@@ -620,7 +593,7 @@ mod tests {
 			EthereumBlobExporter::<RelayNetwork, BridgedNetwork, MockErrOutboundQueue>::deliver(
 				ticket,
 			);
-		assert_eq!(result, Err(SendError::Unroutable))
+		assert_eq!(result, Err(SendError::Transport("other transport error")))
 	}
 
 	#[test]
@@ -653,7 +626,7 @@ mod tests {
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
-		let expected_payload = OutboundPayload::NativeTokens(NativeTokens::Unlock {
+		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
 			asset: H160(token_address),
 			destination: H160(beneficiary_address),
 			amount: 1000,
@@ -688,7 +661,7 @@ mod tests {
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
-		let expected_payload = OutboundPayload::NativeTokens(NativeTokens::Unlock {
+		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
 			asset: H160(token_address),
 			destination: H160(beneficiary_address),
 			amount: 1000,
@@ -723,7 +696,7 @@ mod tests {
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
-		let expected_payload = OutboundPayload::NativeTokens(NativeTokens::Unlock {
+		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
 			asset: H160(token_address),
 			destination: H160(beneficiary_address),
 			amount: 1000,

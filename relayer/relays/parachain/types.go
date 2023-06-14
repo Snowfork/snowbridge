@@ -1,12 +1,11 @@
 package parachain
 
 import (
-	"math/big"
-
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
+	"github.com/vedhavyas/go-subkey/scale"
 )
 
 // A Task contains the working state for message commitments in a single parachain block
@@ -39,12 +38,25 @@ type ProofOutput struct {
 	MerkleProofData MerkleProofData
 }
 
+type OptionRawMerkleProof struct {
+	HasValue bool
+	Value RawMerkleProof
+}
+
+func (o OptionRawMerkleProof) Encode(encoder scale.Encoder) error {
+	return encoder.EncodeOption(o.HasValue, o.Value)
+}
+
+func (o *OptionRawMerkleProof) Decode(decoder scale.Decoder) error {
+	return decoder.DecodeOption(&o.HasValue, &o.Value)
+}
+
 type RawMerkleProof struct {
 	Root           types.H256
 	Proof          []types.H256
 	NumberOfLeaves uint64
 	LeafIndex      uint64
-	Leaf           []byte
+	Leaf           types.H256
 }
 
 type MerkleProof struct {
@@ -70,17 +82,17 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 
 type OutboundQueueMessage struct {
 	Origin  uint32
-	Nonce   types.UCompact
-	Handler uint16
+	Nonce   uint64
+	Gateway [32]byte
 	Payload []byte
 }
 
 func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundQueueMessage {
 	return contracts.InboundQueueMessage{
-		Origin:  m.Origin,
-		Nonce:   (*big.Int)(&m.Nonce).Uint64(),
-		Handler: m.Handler,
-		Payload: m.Payload,
+		Origin:    m.Origin,
+		Nonce:     m.Nonce,
+		Recipient: m.Gateway,
+		Payload:   m.Payload,
 	}
 }
 

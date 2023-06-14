@@ -7,7 +7,7 @@ contract Registry is AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant REGISTER_ROLE = keccak256("REGISTER_ROLE");
 
-    mapping(bytes32 contractID => address) registry;
+    mapping(bytes32 contractID => address) public registry;
 
     constructor() {
         _grantRole(ADMIN_ROLE, msg.sender);

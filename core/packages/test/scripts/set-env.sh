@@ -78,6 +78,9 @@ export RELAYER_REWARD=100
 ## NativeTokens
 export ASSET_HUB_PARAID=$statemine_para_id
 export CREATE_TOKEN_FEE=100
+export CREATE_CALL_INDEX="0x3500"
+export SET_METADATA_CALL_INDEX="0x3511"
+
 
 address_for()
 {

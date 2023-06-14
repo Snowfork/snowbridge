@@ -1,13 +1,9 @@
-
-
 use codec::{Decode, Encode};
-use frame_support::{weights::Weight};
+use frame_support::weights::Weight;
 
 use sp_core::{RuntimeDebug, H160};
 use sp_std::prelude::*;
 use xcm::v3::prelude::*;
-
-
 
 /// Messages from Ethereum are versioned. This is because in future,
 /// we want to evolve the protocol so that the ethereum side sends XCM messages directly. Instead
@@ -44,8 +40,8 @@ pub enum NativeTokensMessage {
 		name: Vec<u8>,
 		symbol: Vec<u8>,
 		decimals: u8,
-		create_call_index: [u8; 4],
-		set_metadata_call_index: [u8; 4],
+		create_call_index: [u8; 2],
+		set_metadata_call_index: [u8; 2],
 	},
 	Mint {
 		origin: H160,

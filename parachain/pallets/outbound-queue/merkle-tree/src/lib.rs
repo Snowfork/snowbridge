@@ -39,7 +39,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 use codec::{Decode, Encode};
-use sp_core::H256;
+use scale_info::TypeInfo;
+use sp_core::{RuntimeDebug, H256};
 use sp_runtime::traits::Hash;
 
 /// Construct a root hash of a Binary Merkle Tree created from given leaves.
@@ -86,8 +87,8 @@ where
 /// A generated merkle proof.
 ///
 /// The structure contains all necessary data to later on verify the proof and the leaf itself.
-#[derive(Encode, Decode, Debug, PartialEq, Eq)]
-pub struct MerkleProof<T> {
+#[derive(Encode, Decode, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+pub struct MerkleProof {
 	/// Root hash of generated merkle tree.
 	pub root: H256,
 	/// Proof items (does not contain the leaf hash, nor the root obviously).
@@ -102,8 +103,8 @@ pub struct MerkleProof<T> {
 	pub number_of_leaves: u64,
 	/// Index of the leaf the proof is for (0-based).
 	pub leaf_index: u64,
-	/// Leaf content.
-	pub leaf: T,
+	/// Leaf content (hashed).
+	pub leaf: H256,
 }
 
 /// A trait of object inspecting merkle root creation.
@@ -139,12 +140,10 @@ impl Visitor for () {
 /// # Panic
 ///
 /// The function will panic if given `leaf_index` is greater than the number of leaves.
-pub fn merkle_proof<H, I, T>(leaves: I, leaf_index: u64) -> MerkleProof<T>
+pub fn merkle_proof<H, I>(leaves: I, leaf_index: u64) -> MerkleProof
 where
 	H: Hash<Output = H256>,
-	I: IntoIterator<Item = T>,
-	I::IntoIter: ExactSizeIterator,
-	T: AsRef<[u8]>,
+	I: Iterator<Item = H256>,
 {
 	let mut leaf = None;
 	let mut hashes = vec![];
@@ -152,9 +151,7 @@ where
 	for (idx, l) in (0u64..).zip(leaves) {
 		// count the leaves
 		number_of_leaves = idx + 1;
-		// hash all leaves
-		let hash = <H as Hash>::hash(l.as_ref());
-		hashes.push(hash);
+		hashes.push(l);
 		// find the leaf for the proof
 		if idx == leaf_index {
 			leaf = Some(l);
@@ -446,7 +443,7 @@ mod tests {
 		let data = vec!["a", "b", "c"];
 
 		// when
-		let proof0 = merkle_proof::<Keccak256, _, _>(data.clone(), 0);
+		let proof0 = merkle_proof::<Keccak256, _>(data.clone(), 0);
 		assert!(verify_proof::<Keccak256, _, _>(
 			&proof0.root,
 			proof0.proof.clone(),
@@ -455,7 +452,7 @@ mod tests {
 			&proof0.leaf,
 		));
 
-		let proof1 = merkle_proof::<Keccak256, _, _>(data.clone(), 1);
+		let proof1 = merkle_proof::<Keccak256, _>(data.clone(), 1);
 		assert!(verify_proof::<Keccak256, _, _>(
 			&proof1.root,
 			proof1.proof,
@@ -464,7 +461,7 @@ mod tests {
 			&proof1.leaf,
 		));
 
-		let proof2 = merkle_proof::<Keccak256, _, _>(data.clone(), 2);
+		let proof2 = merkle_proof::<Keccak256, _>(data.clone(), 2);
 		assert!(verify_proof::<Keccak256, _, _>(
 			&proof2.root,
 			proof2.proof,

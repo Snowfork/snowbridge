@@ -19,18 +19,15 @@ use frame_system::ensure_signed;
 use snowbridge_core::ParaId;
 use sp_core::{ConstU32, H160};
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::convert::TryFrom;
-use sp_std::vec::Vec;
-use sp_std::collections::btree_set::BTreeSet;
+use sp_std::{collections::btree_set::BTreeSet, convert::TryFrom, vec::Vec};
 
 use envelope::Envelope;
 use snowbridge_core::{Message, Verifier};
 use snowbridge_router_primitives::inbound;
 
-use xcm::latest::{send_xcm, SendError};
+use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError};
 
 pub use weights::WeightInfo;
-
 
 use frame_support::{CloneNoBound, EqNoBound, PartialEqNoBound};
 
@@ -59,7 +56,7 @@ pub mod pallet {
 
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
-	use xcm::{v2::ExecuteXcm, v3::SendXcm};
+	use xcm::v3::SendXcm;
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -181,7 +178,8 @@ pub mod pallet {
 				};
 
 			// Attempt to convert to XCM
-			let sibling_para = MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest)) };
+			let sibling_para =
+				MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
 			let xcm = match decoded_message.try_into() {
 				Ok(xcm) => xcm,
 				Err(_) => {

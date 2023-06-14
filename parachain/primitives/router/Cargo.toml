@@ -20,7 +20,6 @@ xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", d
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
-snowbridge-control = { path = "../../pallets/control", default-features = false }
 
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 

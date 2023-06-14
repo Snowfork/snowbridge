@@ -97,8 +97,6 @@ impl Verifier for MockVerifier {
 	}
 }
 
-use snowbridge_router_primitives::InboundMessageConverter;
-
 parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15};
 }
@@ -108,7 +106,6 @@ impl inbound_queue::Config for Test {
 	type Verifier = MockVerifier;
 	type Token = Balances;
 	type Reward = ConstU64<100>;
-	type MessageConversion = InboundMessageConverter<EthereumNetwork>;
 	type XcmSender = ();
 	type WeightInfo = ();
 }

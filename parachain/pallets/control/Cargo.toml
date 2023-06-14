@@ -29,6 +29,8 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ma
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
+ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
+
 
 [dev-dependencies]
 
@@ -45,7 +47,8 @@ std = [
 	"sp-std/std",
 	"sp-io/std",
 	"sp-runtime/std",
-	"xcm/std"
+	"xcm/std",
+	"ethabi/std"
 ]
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 try-runtime = ["frame-support/try-runtime"]

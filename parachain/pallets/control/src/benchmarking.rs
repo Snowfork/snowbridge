@@ -6,20 +6,19 @@ use crate::Pallet as Template;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 
-#[benchmarks(
-	where
-		T::AccountId: AsRef<[u8]>
-)]
+#[benchmarks]
 mod benchmarks {
 	use super::*;
 
 	#[benchmark]
-	fn remark() {
+	fn upgrade() -> Result<(), BenchmarkError> {
 		let caller: T::AccountId = whitelisted_caller();
-		let data: Vec<u8> = [1u8; 256].into();
+		let upgrade_task = H160::repeat_byte(3);
 
 		#[extrinsic_call]
-		remark(RawOrigin::Signed(caller), data);
+		_(RawOrigin::Signed(caller), upgrade_task);
+
+		Ok(())
 	}
 
 	impl_benchmark_test_suite!(Template, crate::mock::new_test_ext(), crate::mock::Test);

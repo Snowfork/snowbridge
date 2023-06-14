@@ -72,6 +72,7 @@ deploy_contracts()
         --rpc-url $eth_endpoint_http \
         --broadcast \
         -vvv \
+        --via-ir \
         scripts/DeployScript.sol:DeployScript
     node scripts/generateContractInfo.js "$output_dir/contracts.json"
     popd

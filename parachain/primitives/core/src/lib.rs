@@ -11,6 +11,7 @@ use frame_support::dispatch::DispatchError;
 use scale_info::TypeInfo;
 use snowbridge_ethereum::Log;
 use sp_core::{RuntimeDebug, H256};
+use sp_std::vec::Vec;
 
 pub mod ringbuffer;
 pub mod types;
@@ -41,6 +42,12 @@ impl ContractId {
 	}
 	pub fn as_fixed_bytes(&self) -> &[u8; 32] {
 		&self.0
+	}
+}
+
+impl ContractId {
+	pub const fn new(id: [u8; 32]) -> Self {
+		Self(id)
 	}
 }
 
@@ -80,4 +87,16 @@ pub trait OutboundQueue {
 
 	/// Submit the message for eventual delivery to Ethereum
 	fn submit(ticket: Self::Ticket) -> Result<(), SubmitError>;
+}
+
+impl OutboundQueue for () {
+	type Ticket = u64;
+
+	fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError> {
+		Ok(0)
+	}
+
+	fn submit(ticket: Self::Ticket) -> Result<(), SubmitError> {
+		Ok(())
+	}
 }

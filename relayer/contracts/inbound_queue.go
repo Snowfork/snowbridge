@@ -31,15 +31,15 @@ var (
 
 // InboundQueueMessage is an auto generated low-level Go binding around an user-defined struct.
 type InboundQueueMessage struct {
-	Origin  uint32
-	Nonce   uint64
-	Handler uint16
-	Payload []byte
+	Origin    uint32
+	Nonce     uint64
+	Recipient [32]byte
+	Payload   []byte
 }
 
 // InboundQueueMetaData contains all meta data concerning the InboundQueue contract.
 var InboundQueueMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"},{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidHandler\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotEnoughGas\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasToForward\",\"type\":\"uint256\"}],\"name\":\"GasToForwardUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"indexed\":false,\"internalType\":\"contractIRecipient\",\"name\":\"handler\",\"type\":\"address\"}],\"name\":\"HandlerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"enumInboundQueue.DispatchResult\",\"name\":\"result\",\"type\":\"uint8\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"parachainClient\",\"type\":\"address\"}],\"name\":\"ParachainClientUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"name\":\"RewardUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vault\",\"type\":\"address\"}],\"name\":\"VaultUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasToForward\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"handlerID\",\"type\":\"uint16\"}],\"name\":\"handlers\",\"outputs\":[{\"internalType\":\"contractIRecipient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reward\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"uint16\",\"name\":\"handler\",\"type\":\"uint16\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structInboundQueue.Message\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"headerProof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_gasToForward\",\"type\":\"uint256\"}],\"name\":\"updateGasToForward\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"internalType\":\"contractIRecipient\",\"name\":\"handler\",\"type\":\"address\"}],\"name\":\"updateHandler\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"name\":\"updateParachainClient\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"name\":\"updateReward\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIVault\",\"name\":\"_vault\",\"type\":\"address\"}],\"name\":\"updateVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vault\",\"outputs\":[{\"internalType\":\"contractIVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"contractRegistry\",\"name\":\"registry\",\"type\":\"address\"},{\"internalType\":\"contractIParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"},{\"internalType\":\"contractVault\",\"name\":\"_vault\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidRecipient\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"LookupError\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotEnoughGas\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasToForward\",\"type\":\"uint256\"}],\"name\":\"GasToForwardUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"id\",\"type\":\"uint16\"},{\"indexed\":false,\"internalType\":\"contractIRecipient\",\"name\":\"handler\",\"type\":\"address\"}],\"name\":\"HandlerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"enumInboundQueue.DispatchResult\",\"name\":\"result\",\"type\":\"uint8\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"parachainClient\",\"type\":\"address\"}],\"name\":\"ParachainClientUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"name\":\"RewardUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vault\",\"type\":\"address\"}],\"name\":\"VaultUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasToForward\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"}],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractIParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registry\",\"outputs\":[{\"internalType\":\"contractRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reward\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"recipient\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structInboundQueue.Message\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"headerProof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_gasToForward\",\"type\":\"uint256\"}],\"name\":\"updateGasToForward\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"name\":\"updateReward\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vault\",\"outputs\":[{\"internalType\":\"contractVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // InboundQueueABI is the input ABI used to generate the binding from.
@@ -343,37 +343,6 @@ func (_InboundQueue *InboundQueueCallerSession) GetRoleAdmin(role [32]byte) ([32
 	return _InboundQueue.Contract.GetRoleAdmin(&_InboundQueue.CallOpts, role)
 }
 
-// Handlers is a free data retrieval call binding the contract method 0x0d20fb87.
-//
-// Solidity: function handlers(uint16 handlerID) view returns(address)
-func (_InboundQueue *InboundQueueCaller) Handlers(opts *bind.CallOpts, handlerID uint16) (common.Address, error) {
-	var out []interface{}
-	err := _InboundQueue.contract.Call(opts, &out, "handlers", handlerID)
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// Handlers is a free data retrieval call binding the contract method 0x0d20fb87.
-//
-// Solidity: function handlers(uint16 handlerID) view returns(address)
-func (_InboundQueue *InboundQueueSession) Handlers(handlerID uint16) (common.Address, error) {
-	return _InboundQueue.Contract.Handlers(&_InboundQueue.CallOpts, handlerID)
-}
-
-// Handlers is a free data retrieval call binding the contract method 0x0d20fb87.
-//
-// Solidity: function handlers(uint16 handlerID) view returns(address)
-func (_InboundQueue *InboundQueueCallerSession) Handlers(handlerID uint16) (common.Address, error) {
-	return _InboundQueue.Contract.Handlers(&_InboundQueue.CallOpts, handlerID)
-}
-
 // HasRole is a free data retrieval call binding the contract method 0x91d14854.
 //
 // Solidity: function hasRole(bytes32 role, address account) view returns(bool)
@@ -465,6 +434,37 @@ func (_InboundQueue *InboundQueueSession) ParachainClient() (common.Address, err
 // Solidity: function parachainClient() view returns(address)
 func (_InboundQueue *InboundQueueCallerSession) ParachainClient() (common.Address, error) {
 	return _InboundQueue.Contract.ParachainClient(&_InboundQueue.CallOpts)
+}
+
+// Registry is a free data retrieval call binding the contract method 0x7b103999.
+//
+// Solidity: function registry() view returns(address)
+func (_InboundQueue *InboundQueueCaller) Registry(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _InboundQueue.contract.Call(opts, &out, "registry")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// Registry is a free data retrieval call binding the contract method 0x7b103999.
+//
+// Solidity: function registry() view returns(address)
+func (_InboundQueue *InboundQueueSession) Registry() (common.Address, error) {
+	return _InboundQueue.Contract.Registry(&_InboundQueue.CallOpts)
+}
+
+// Registry is a free data retrieval call binding the contract method 0x7b103999.
+//
+// Solidity: function registry() view returns(address)
+func (_InboundQueue *InboundQueueCallerSession) Registry() (common.Address, error) {
+	return _InboundQueue.Contract.Registry(&_InboundQueue.CallOpts)
 }
 
 // Reward is a free data retrieval call binding the contract method 0x228cb733.
@@ -623,23 +623,23 @@ func (_InboundQueue *InboundQueueTransactorSession) RevokeRole(role [32]byte, ac
 	return _InboundQueue.Contract.RevokeRole(&_InboundQueue.TransactOpts, role, account)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x052c6867.
+// Submit is a paid mutator transaction binding the contract method 0x90d7fbe9.
 //
-// Solidity: function submit((uint32,uint64,uint16,bytes) message, bytes32[] leafProof, bytes headerProof) returns()
+// Solidity: function submit((uint32,uint64,bytes32,bytes) message, bytes32[] leafProof, bytes headerProof) returns()
 func (_InboundQueue *InboundQueueTransactor) Submit(opts *bind.TransactOpts, message InboundQueueMessage, leafProof [][32]byte, headerProof []byte) (*types.Transaction, error) {
 	return _InboundQueue.contract.Transact(opts, "submit", message, leafProof, headerProof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x052c6867.
+// Submit is a paid mutator transaction binding the contract method 0x90d7fbe9.
 //
-// Solidity: function submit((uint32,uint64,uint16,bytes) message, bytes32[] leafProof, bytes headerProof) returns()
+// Solidity: function submit((uint32,uint64,bytes32,bytes) message, bytes32[] leafProof, bytes headerProof) returns()
 func (_InboundQueue *InboundQueueSession) Submit(message InboundQueueMessage, leafProof [][32]byte, headerProof []byte) (*types.Transaction, error) {
 	return _InboundQueue.Contract.Submit(&_InboundQueue.TransactOpts, message, leafProof, headerProof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x052c6867.
+// Submit is a paid mutator transaction binding the contract method 0x90d7fbe9.
 //
-// Solidity: function submit((uint32,uint64,uint16,bytes) message, bytes32[] leafProof, bytes headerProof) returns()
+// Solidity: function submit((uint32,uint64,bytes32,bytes) message, bytes32[] leafProof, bytes headerProof) returns()
 func (_InboundQueue *InboundQueueTransactorSession) Submit(message InboundQueueMessage, leafProof [][32]byte, headerProof []byte) (*types.Transaction, error) {
 	return _InboundQueue.Contract.Submit(&_InboundQueue.TransactOpts, message, leafProof, headerProof)
 }
@@ -665,48 +665,6 @@ func (_InboundQueue *InboundQueueTransactorSession) UpdateGasToForward(_gasToFor
 	return _InboundQueue.Contract.UpdateGasToForward(&_InboundQueue.TransactOpts, _gasToForward)
 }
 
-// UpdateHandler is a paid mutator transaction binding the contract method 0x419e19cf.
-//
-// Solidity: function updateHandler(uint16 id, address handler) returns()
-func (_InboundQueue *InboundQueueTransactor) UpdateHandler(opts *bind.TransactOpts, id uint16, handler common.Address) (*types.Transaction, error) {
-	return _InboundQueue.contract.Transact(opts, "updateHandler", id, handler)
-}
-
-// UpdateHandler is a paid mutator transaction binding the contract method 0x419e19cf.
-//
-// Solidity: function updateHandler(uint16 id, address handler) returns()
-func (_InboundQueue *InboundQueueSession) UpdateHandler(id uint16, handler common.Address) (*types.Transaction, error) {
-	return _InboundQueue.Contract.UpdateHandler(&_InboundQueue.TransactOpts, id, handler)
-}
-
-// UpdateHandler is a paid mutator transaction binding the contract method 0x419e19cf.
-//
-// Solidity: function updateHandler(uint16 id, address handler) returns()
-func (_InboundQueue *InboundQueueTransactorSession) UpdateHandler(id uint16, handler common.Address) (*types.Transaction, error) {
-	return _InboundQueue.Contract.UpdateHandler(&_InboundQueue.TransactOpts, id, handler)
-}
-
-// UpdateParachainClient is a paid mutator transaction binding the contract method 0x33b9d6ee.
-//
-// Solidity: function updateParachainClient(address _parachainClient) returns()
-func (_InboundQueue *InboundQueueTransactor) UpdateParachainClient(opts *bind.TransactOpts, _parachainClient common.Address) (*types.Transaction, error) {
-	return _InboundQueue.contract.Transact(opts, "updateParachainClient", _parachainClient)
-}
-
-// UpdateParachainClient is a paid mutator transaction binding the contract method 0x33b9d6ee.
-//
-// Solidity: function updateParachainClient(address _parachainClient) returns()
-func (_InboundQueue *InboundQueueSession) UpdateParachainClient(_parachainClient common.Address) (*types.Transaction, error) {
-	return _InboundQueue.Contract.UpdateParachainClient(&_InboundQueue.TransactOpts, _parachainClient)
-}
-
-// UpdateParachainClient is a paid mutator transaction binding the contract method 0x33b9d6ee.
-//
-// Solidity: function updateParachainClient(address _parachainClient) returns()
-func (_InboundQueue *InboundQueueTransactorSession) UpdateParachainClient(_parachainClient common.Address) (*types.Transaction, error) {
-	return _InboundQueue.Contract.UpdateParachainClient(&_InboundQueue.TransactOpts, _parachainClient)
-}
-
 // UpdateReward is a paid mutator transaction binding the contract method 0x425c8abd.
 //
 // Solidity: function updateReward(uint256 _reward) returns()
@@ -726,27 +684,6 @@ func (_InboundQueue *InboundQueueSession) UpdateReward(_reward *big.Int) (*types
 // Solidity: function updateReward(uint256 _reward) returns()
 func (_InboundQueue *InboundQueueTransactorSession) UpdateReward(_reward *big.Int) (*types.Transaction, error) {
 	return _InboundQueue.Contract.UpdateReward(&_InboundQueue.TransactOpts, _reward)
-}
-
-// UpdateVault is a paid mutator transaction binding the contract method 0xe7563f3f.
-//
-// Solidity: function updateVault(address _vault) returns()
-func (_InboundQueue *InboundQueueTransactor) UpdateVault(opts *bind.TransactOpts, _vault common.Address) (*types.Transaction, error) {
-	return _InboundQueue.contract.Transact(opts, "updateVault", _vault)
-}
-
-// UpdateVault is a paid mutator transaction binding the contract method 0xe7563f3f.
-//
-// Solidity: function updateVault(address _vault) returns()
-func (_InboundQueue *InboundQueueSession) UpdateVault(_vault common.Address) (*types.Transaction, error) {
-	return _InboundQueue.Contract.UpdateVault(&_InboundQueue.TransactOpts, _vault)
-}
-
-// UpdateVault is a paid mutator transaction binding the contract method 0xe7563f3f.
-//
-// Solidity: function updateVault(address _vault) returns()
-func (_InboundQueue *InboundQueueTransactorSession) UpdateVault(_vault common.Address) (*types.Transaction, error) {
-	return _InboundQueue.Contract.UpdateVault(&_InboundQueue.TransactOpts, _vault)
 }
 
 // InboundQueueGasToForwardUpdatedIterator is returned from FilterGasToForwardUpdated and is used to iterate over the raw logs and unpacked data for GasToForwardUpdated events raised by the InboundQueue contract.

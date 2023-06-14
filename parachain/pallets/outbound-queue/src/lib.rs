@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod api;
 pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -26,8 +27,9 @@ use sp_std::prelude::*;
 use snowbridge_core::{
 	ContractId, OutboundMessage, OutboundQueue as OutboundQueueTrait, SubmitError,
 };
-use snowbridge_outbound_queue_merkle_proof::merkle_root;
+use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
+pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 pub use weights::WeightInfo;
 
 /// Aggregate message origin for the `MessageQueue` pallet.
@@ -156,6 +158,7 @@ pub mod pallet {
 	/// `on_initialize`, so should never go into block PoV.
 	#[pallet::storage]
 	#[pallet::unbounded]
+	#[pallet::getter(fn message_leaves)]
 	pub(super) type MessageLeaves<T: Config> = StorageValue<_, Vec<H256>, ValueQuery>;
 
 	/// The current nonce for each message origin
