@@ -3,12 +3,14 @@ name: ethereum
 on:
   push:
     paths:
-      - "!core/**/README.md"
+      - *
+      - "!**/README.md"
     branches:
       - main
   pull_request:
     paths:
-      - "!core/**/README.md"
+      - *
+      - "!**/README.md"
 
 jobs:
   build:
