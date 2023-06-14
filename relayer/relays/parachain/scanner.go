@@ -216,7 +216,6 @@ func (s *Scanner) findTasksImpl(
 
 		fmt.Printf("BAZ %#+v\n", result)
 
-
 		scanOutboundQueueDone = result.scanDone
 
 		if len(result.proofs) > 0 {
@@ -236,7 +235,6 @@ func (s *Scanner) findTasksImpl(
 	}
 
 	fmt.Printf("%#+v\n", "GOZ")
-
 
 	return tasks, nil
 }

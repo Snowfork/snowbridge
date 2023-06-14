@@ -40,7 +40,7 @@ type ProofOutput struct {
 
 type OptionRawMerkleProof struct {
 	HasValue bool
-	Value RawMerkleProof
+	Value    RawMerkleProof
 }
 
 func (o OptionRawMerkleProof) Encode(encoder scale.Encoder) error {
