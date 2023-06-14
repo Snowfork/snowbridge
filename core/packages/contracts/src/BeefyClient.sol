@@ -441,9 +441,6 @@ contract BeefyClient is Ownable {
             }
 
             // Check that validator is actually in a validator set
-            //
-            // NOTE: This currently insecure due to a regression documented in SNO-427.
-            // Basically `proof.index` (the merkle leaf index) is not being validated.
             if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
                 revert InvalidValidatorProof();
             }
