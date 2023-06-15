@@ -13,6 +13,10 @@ codecov:
 #      - "parachain/*"
 #    carryforward: true
 
+flag_management:
+  default_rules:
+    carryforward: true
+
 ignore:
   - "core/packages/contracts/test/mocks"
   - "core/packages/contracts/src/utils"
