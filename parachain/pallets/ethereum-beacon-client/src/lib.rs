@@ -180,6 +180,8 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::force_checkpoint())]
 		#[transactional]
+		/// Used for pallet initialization and light client resetting. Needs to be called by
+		/// the root origin.
 		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::process_checkpoint_update(&update)?;
@@ -194,6 +196,8 @@ pub mod pallet {
 			}
 		})]
 		#[transactional]
+		/// Submits a new finalized beacon header update. The update may contain the next
+		/// sync committee.
 		pub fn submit(origin: OriginFor<T>, update: Update) -> DispatchResult {
 			ensure_signed(origin)?;
 			Self::process_update(&update)?;
@@ -203,6 +207,8 @@ pub mod pallet {
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::submit_execution_header())]
 		#[transactional]
+		/// Submits a new execution header update. The relevant related beacon header
+		/// is also included to prove the execution header, as well as ancestry proof data.
 		pub fn submit_execution_header(
 			origin: OriginFor<T>,
 			update: ExecutionHeaderUpdate,
@@ -214,12 +220,17 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// Forces a finalized beacon header checkpoint update. The current sync committee,
+		/// with a header attesting to the current sync committee, should be provided.
+		/// An `block_roots` proof should also be provided. This is used for ancestry proofs
+		/// for execution header updates.
 		pub(crate) fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
 			let sync_committee_root = update
 				.current_sync_committee
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
+			// Verifies the sync committee in the Beacon state.
 			ensure!(
 				verify_merkle_branch(
 					sync_committee_root,
@@ -236,7 +247,9 @@ pub mod pallet {
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
-			// Verify update.block_roots_root
+			// This is used for ancestry proofs in ExecutionHeader updates. This verifies the
+			// BeaconState: the beacon state root is the tree root; the `block_roots` hash is the
+			// tree leaf.
 			ensure!(
 				verify_merkle_branch(
 					update.block_roots_root,
@@ -269,14 +282,16 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Cross check to make sure ExecutionHeader not fall behind FinalizedHeader too much, if
-		// that happens just return error so to pause processing FinalizedHeader until
-		// ExecutionHeader catch up
+		/// Cross check to make sure that execution header import does not fall too far behind
+		/// finalised beacon header import. If that happens just return an error and pause processing
+		/// until execution header processing has caught up.
 		fn cross_check_execution_state() -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
 			let latest_execution_state = Self::latest_execution_state();
+			// The execution header import should be at least within the slot range of a sync
+			// committee period.
 			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
 			ensure!(
 				latest_execution_state.beacon_slot == 0 ||
@@ -287,21 +302,24 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// reference and strict follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#validate_light_client_update
+		/// References and strictly follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#validate_light_client_update
+		/// Verifies that provided next sync committee is valid through a series of checks
+		/// (including checking that a sync committee period isn't skipped and that the header is
+		/// signed by the current sync committee.
 		fn verify_update(update: &Update) -> DispatchResult {
-			// Verify sync committee has sufficient participants
+			// Verify sync committee has sufficient participants.
 			let participation =
 				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
 			Self::sync_committee_participation_is_supermajority(&participation)?;
 
-			// Verify update does not skip a sync committee period
+			// Verify update does not skip a sync committee period.
 			ensure!(
 				update.signature_slot > update.attested_header.slot &&
 					update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidUpdateSlot
 			);
 
-			// Retrieve latest finalized state
+			// Retrieve latest finalized state.
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
@@ -317,7 +335,7 @@ pub mod pallet {
 				ensure!(signature_period == store_period, Error::<T>::SkippedSyncCommitteePeriod)
 			}
 
-			// Verify update is relevant
+			// Verify update is relevant.
 			let update_attested_period = compute_period(update.attested_header.slot);
 			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
 				(update.next_sync_committee_update.is_some() &&
@@ -347,7 +365,7 @@ pub mod pallet {
 
 			// Though following check does not belong to ALC spec we verify block_roots_root to
 			// match the finalized checkpoint root saved in the state of `finalized_header` so to
-			// cache it for later use in `verify_ancestry_proof`
+			// cache it for later use in `verify_ancestry_proof`.
 			ensure!(
 				verify_merkle_branch(
 					update.block_roots_root,
@@ -360,7 +378,7 @@ pub mod pallet {
 			);
 
 			// Verify that the `next_sync_committee`, if present, actually is the next sync
-			// committee saved in the state of the `attested_header`
+			// committee saved in the state of the `attested_header`.
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
 				let sync_committee_root = next_sync_committee_update
 					.next_sync_committee
@@ -385,7 +403,7 @@ pub mod pallet {
 				);
 			}
 
-			// Verify sync committee aggregate signature
+			// Verify sync committee aggregate signature.
 			let sync_committee = if signature_period == store_period {
 				<CurrentSyncCommittee<T>>::get()
 			} else {
@@ -412,7 +430,10 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// reference and strict follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#apply_light_client_update
+		/// Reference and strictly follows https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#apply_light_client_update
+		/// Applies a finalized beacon header update to the beacon client. If a next sync committee
+		/// is present in the update, verify the sync committee by converting it to a
+		/// SyncCommitteePrepared type. Stores the provided finalized header.
 		fn apply_update(update: &Update) -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
@@ -460,17 +481,22 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Validates an execution header for import. The beacon header containing the execution
+		/// header is sent, plus the execution header, along with a proof that the execution header
+		/// is rooted in the beacon header body.
 		pub(crate) fn process_execution_header_update(
 			update: &ExecutionHeaderUpdate,
 		) -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
+			// Checks that the header is an ancestor of a finalized header, using slot number.
 			ensure!(
 				update.header.slot <= latest_finalized_state.slot,
 				Error::<T>::HeaderNotFinalized
 			);
 
+			// Checks that we don't skip execution headers, they need to be imported sequentially.
 			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
 			ensure!(
 				latest_execution_state.block_number == 0 ||
@@ -479,6 +505,9 @@ pub mod pallet {
 				Error::<T>::ExecutionHeaderSkippedSlot
 			);
 
+			// Gets the hash tree root of the execution header, in preparation for the execution
+			// header proof (used to check that the execution header is rooted in the beacon
+			// header body.
 			let execution_header_root: H256 = update
 				.execution_header
 				.hash_tree_root()
@@ -531,7 +560,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Verify that `block_root` is an ancestor of `finalized_block_root`
+		/// Verify that `block_root` is an ancestor of `finalized_block_root` Used to prove that
+		/// an execution header is an ancestor of a finalized header (i.e. the blocks are
+		/// on the same chain).
 		fn verify_ancestry_proof(
 			block_root: H256,
 			block_slot: u64,
@@ -560,6 +591,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Computes the signing root for a given beacon header and domain. The hash tree root
+		/// of the beacon header is computed, and then the combination of the beacon header hash
+		/// and the domain makes up the signing root.
 		pub(super) fn compute_signing_root(
 			beacon_header: &BeaconHeader,
 			domain: H256,
@@ -575,6 +609,9 @@ pub mod pallet {
 			Ok(hash_root)
 		}
 
+		/// Stores a compacted (slot and block roots root (hash of the `block_roots` beacon state
+		/// field, used for ancestry proof)) beacon state in a ring buffer map, with the header root
+		/// as map key.
 		fn store_finalized_header(
 			header_root: H256,
 			header: BeaconHeader,
@@ -600,6 +637,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Stores the provided execution header in pallet storage. The header is stored
+		/// in a ring buffer map, with the block hash as map key. The last imported execution
+		/// header is also kept in storage, for the relayer to check import progress.
 		pub(crate) fn store_execution_header(
 			block_hash: H256,
 			header: CompactExecutionHeader,
@@ -627,11 +667,19 @@ pub mod pallet {
 			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
 		}
 
+		/// Stores the validators root in storage. Validators root is the hash tree root of all the
+		/// validators at genesis and is used to used to identify the chain that we are on
+		/// (used in conjunction with the fork version).
+		/// https://eth2book.info/capella/part3/containers/state/#genesis_validators_root
 		fn store_validators_root(validators_root: H256) {
 			<ValidatorsRoot<T>>::set(validators_root);
 		}
 
-		/// Return the domain for the domain_type and fork_version.
+		/// Returns the domain for the domain_type and fork_version. The domain is used to
+		/// distinguish between the different players in the chain (see DomainTypes
+		/// https://eth2book.info/capella/part3/config/constants/#domain-types) and to ensure we are
+		/// addressing the correct chain.
+		/// https://eth2book.info/capella/part3/helper/misc/#compute_domain
 		pub(super) fn compute_domain(
 			domain_type: Vec<u8>,
 			fork_version: ForkVersion,
@@ -647,6 +695,8 @@ pub mod pallet {
 			Ok(domain.into())
 		}
 
+		/// Computes the fork data root. The fork data root is a merkleization of the current
+		/// fork version and the genesis validators root.
 		fn compute_fork_data_root(
 			current_version: ForkVersion,
 			genesis_validators_root: H256,
@@ -661,6 +711,9 @@ pub mod pallet {
 			Ok(hash_root)
 		}
 
+		/// Checks that the sync committee bits (the votes of the sync committee members,
+		/// represented by bits 0 and 1) is more than a supermajority (2/3 of the votes are
+		/// positive).
 		pub(super) fn sync_committee_participation_is_supermajority(
 			sync_committee_bits: &[u8],
 		) -> DispatchResult {
@@ -673,6 +726,8 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Returns the fork version based on the current epoch. The hard fork versions
+		/// are defined in pallet config.
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
 			let fork_versions = T::ForkVersions::get();
 
@@ -689,6 +744,12 @@ pub mod pallet {
 			fork_versions.genesis.version
 		}
 
+		/// Returns a vector of public keys that participated in the sync committee block signage.
+		/// Sync committee bits is an array of 0s and 1s, 0 meaning the corresponding sync committee
+		/// member did not participate in the vote, 1 meaning they participated.
+		/// This method can find the absent or participating members, based on the participant
+		/// parameter. participant = false will return absent participants, participant = true will
+		/// return participating members.
 		pub fn find_pubkeys(
 			sync_committee_bits: &[u8],
 			sync_committee_pubkeys: &[PublicKeyPrepared],
@@ -703,7 +764,8 @@ pub mod pallet {
 			pubkeys
 		}
 
-		// Calculate signing root for BeaconHeader
+		/// Calculates signing root for BeaconHeader. The signing root is used for the message
+		/// value in BLS signature verification.
 		pub fn signing_root(
 			header: &BeaconHeader,
 			validators_root: H256,

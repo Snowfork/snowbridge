@@ -14,11 +14,11 @@ source_up_if_exists
 # export INFURA_PROJECT_ID=           # Your Infura project id
 # export ETH_NETWORK=goerli
 # export ETH_NETWORK_ID=5
+# export ETHERSCAN_API_KEY=           # Your etherscan api key
 
 # export ETH_RPC_ENDPOINT=https://goerli.infura.io/v3
 # export ETH_WS_ENDPOINT=wss://goerli.infura.io/ws/v3
 # export BEACON_HTTP_ENDPOINT=https://lodestar-goerli.chainsafe.io
-# export ETH_GAS_LIMIT=0  # For real network just uncomment and set as 0 here
 # export ACTIVE_SPEC=mainnet # For real network just uncomment and set as mainnet here
 # export ETH_FAST_MODE=false  # For local setup only, set as true will hack beacon client for fast slot time
 

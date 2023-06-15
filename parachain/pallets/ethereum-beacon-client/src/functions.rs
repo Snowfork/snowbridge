@@ -13,17 +13,17 @@ pub fn decompress_sync_committee_bits(
 	)
 }
 
-/// Compute the sync committee period in which a slot is contained
+/// Compute the sync committee period in which a slot is contained.
 pub fn compute_period(slot: u64) -> u64 {
 	slot / SLOTS_PER_EPOCH as u64 / EPOCHS_PER_SYNC_COMMITTEE_PERIOD as u64
 }
 
-/// Compute epoch in which a slot is contained
+/// Compute epoch in which a slot is contained.
 pub fn compute_epoch(slot: u64, slots_per_epoch: u64) -> u64 {
 	slot / slots_per_epoch
 }
 
-/// Sums the bit vector of sync committee particpation.
+/// Sums the bit vector of sync committee participation.
 pub fn sync_committee_sum(sync_committee_bits: &[u8]) -> u32 {
 	sync_committee_bits.iter().fold(0, |acc: u32, x| acc + *x as u32)
 }
