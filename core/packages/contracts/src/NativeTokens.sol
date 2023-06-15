@@ -100,7 +100,7 @@ contract NativeTokens is AccessControl, IRecipient {
             revert InvalidAmount();
         }
 
-        vault.deposit(msg.sender, token, amount);
+        vault.deposit( msg.sender, token, amount);
 
         bytes memory payload = NativeTokensTypes.Mint(token, dest, recipient, amount);
         outboundQueue.submit{ value: msg.value }(assetHubParaID, payload);
