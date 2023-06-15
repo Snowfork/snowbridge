@@ -61,7 +61,7 @@ library Bitfield {
      * @dev Helper to create a bitfield.
      */
     function createBitfield(uint256[] calldata bitsToSet, uint256 length)
-        internal
+        public
         pure
         returns (uint256[] memory bitfield)
     {
