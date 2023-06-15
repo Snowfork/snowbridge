@@ -157,7 +157,7 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 
 	for _, task := range tasks {
 		// do final proof generation right before sending. The proof needs to be fresh.
-		task.ProofOutput, err = li.generateProof(ctx, task.ProofInput)
+		task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
 		if err != nil {
 			return err
 		}
@@ -221,7 +221,7 @@ func (li *BeefyListener) fetchLatestBeefyBlock(ctx context.Context) (uint64, typ
 
 // Generates a proof for an MMR leaf, and then generates a merkle proof for our parachain header, which should be verifiable against the
 // parachains root in the mmr leaf.
-func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (*ProofOutput, error) {
+func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, header *types.Header) (*ProofOutput, error) {
 	latestBeefyBlockNumber, latestBeefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("fetch latest beefy block: %w", err)
@@ -234,7 +234,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 
 	// Generate the MMR proof for the polkadot block.
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
-		input.RelayBlockNumber,
+		input.RelayBlockNumber+1,
 		latestBeefyBlockHash,
 		li.config.BeefyActivationBlock,
 	)
@@ -280,6 +280,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 	output := ProofOutput{
 		MMRProof:        simplifiedProof,
 		MMRRootHash:     mmrRootHash,
+		Header: *header,
 		MerkleProofData: merkleProofData,
 	}
 
