@@ -1,19 +1,13 @@
-# https://rust-lang.github.io/rustup/overrides.html
-
 [toolchain]
-# To update version:
-#   - Find the latest nightly release that matches RUST_VERSION here: https://github.com/oxalica/rust-overlay/tree/master/manifests/nightly/2023
-#   - update `channel = "nightly-OLD_DATE"` below
-#   - update nightly-OLD_DATE in .github/workflows/parachain.yml
-
-channel = "nightly-2023-04-22" # 1.71.0 nightly for unstable features
-targets = [
-    "wasm32-unknown-unknown",
-]
-
-profile = "default"
+channel = "1.69.0"
 components = [
-    # Rust source code, useful for dev tooling
+    "cargo",
+    "clippy",
+    "rust-analyzer",
     "rust-src",
-    "rustfmt"
+    "rustc",
+    "rust-std",
+    "rustfmt",
 ]
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"

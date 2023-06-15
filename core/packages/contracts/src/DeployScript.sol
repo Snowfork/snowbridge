@@ -17,6 +17,16 @@ import {Registry} from "../src/Registry.sol";
 import {ParaID} from "../src/Types.sol";
 
 contract DeployScript is Script {
+    Registry public registry;
+    Vault public vault;
+    BeefyClient public beefyClient;
+    ParachainClient public parachainClient;
+    InboundQueue public inboundQueue;
+    OutboundQueue public outboundQueue;
+    TokenVault public tokenVault;
+    NativeTokens public nativeTokens;
+    UpgradeProxy public upgradeProxy;
+
     function setUp() public {}
 
     function run() public {
@@ -25,35 +35,35 @@ contract DeployScript is Script {
         vm.startBroadcast(deployer);
 
         // Registry
-        Registry registry = new Registry();
+        registry = new Registry();
         registry.grantRole(registry.REGISTER_ROLE(), deployer);
 
         // SovereignTreasury
-        Vault vault = new Vault();
+        vault = new Vault();
         SovereignTreasury treasury = new SovereignTreasury(registry, vault);
 
         // BeefyClient
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
-        BeefyClient beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
+        beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
 
         // ParachainClient
         uint32 paraId = uint32(vm.envUint("BRIDGE_HUB_PARAID"));
-        ParachainClient parachainClient = new ParachainClient(beefyClient, paraId);
+        parachainClient = new ParachainClient(beefyClient, paraId);
 
         // InboundQueue
         uint256 relayerReward = vm.envUint("RELAYER_REWARD");
-        InboundQueue inboundQueue = new InboundQueue(registry, parachainClient, vault, relayerReward);
+        inboundQueue = new InboundQueue(registry, parachainClient, vault, relayerReward);
         registry.registerContract(keccak256("InboundQueue"), address(inboundQueue));
 
         // OutboundQueue
         uint256 relayerFee = vm.envUint("RELAYER_FEE");
-        OutboundQueue outboundQueue = new OutboundQueue(registry, vault, relayerFee);
+        outboundQueue = new OutboundQueue(registry, vault, relayerFee);
         registry.registerContract(keccak256("OutboundQueue"), address(outboundQueue));
 
         // NativeTokens
-        TokenVault tokenVault = new TokenVault();
-        NativeTokens nativeTokens = new NativeTokens(
+        tokenVault = new TokenVault();
+        nativeTokens = new NativeTokens(
             registry,
             tokenVault,
             ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID"))),
@@ -67,7 +77,7 @@ contract DeployScript is Script {
         new WETH9();
 
         // Upgrades
-        UpgradeProxy upgradeProxy = new UpgradeProxy(registry, ParaID.wrap(paraId));
+        upgradeProxy = new UpgradeProxy(registry, ParaID.wrap(paraId));
 
         // Allow inbound queue to send messages to handlers
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(inboundQueue));
