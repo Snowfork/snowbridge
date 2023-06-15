@@ -5,66 +5,51 @@ library MerkleProof {
     /**
      * @notice Verify that a specific leaf element is part of the Merkle Tree at a specific position in the tree
      *
+     * The tree would have been constructed using
+     * https://paritytech.github.io/substrate/master/binary_merkle_tree/fn.merkle_root.html
+     *
+     * This implementation adapted from
+     * https://paritytech.github.io/substrate/master/binary_merkle_tree/fn.verify_proof.html
+     *
      * @param root the root of the merkle tree
      * @param leaf the leaf which needs to be proven
-     * @param pos the position of the leaf, index starting with 0
+     * @param position the position of the leaf, index starting with 0
      * @param width the width or number of leaves in the tree
      * @param proof the array of proofs to help verify the leaf's membership, ordered from leaf to root
      * @return a boolean value representing the success or failure of the operation
      */
-    function verifyMerkleLeafAtPosition(
-        bytes32 root,
-        bytes32 leaf,
-        uint256 pos,
-        uint256 width,
-        bytes32[] memory proof
-    ) internal pure returns (bool) {
-        bytes32 computedHash = computeRootFromProofAtPosition(leaf, pos, width, proof);
-
-        return computedHash == root;
+    function verify(bytes32 root, bytes32 leaf, uint256 position, uint256 width, bytes32[] memory proof)
+        internal
+        pure
+        returns (bool)
+    {
+        if (position >= width) {
+            return false;
+        }
+        return root == computeRoot(leaf, position, width, proof);
     }
 
-    function computeRootFromProofAtPosition(
-        bytes32 leaf,
-        uint256 pos,
-        uint256 width,
-        bytes32[] memory proof
-    ) internal pure returns (bytes32) {
-        bytes32 computedHash = leaf;
-
-        require(pos < width, "Merkle position is too high");
-
+    function computeRoot(bytes32 leaf, uint256 position, uint256 width, bytes32[] memory proof)
+        internal
+        pure
+        returns (bytes32)
+    {
+        bytes32 node = leaf;
         unchecked {
-            uint256 i = 0;
-            for (uint256 height = 0; width > 1; height++) {
-                bool computedHashLeft = pos & 1 == 0;
-
-                // check if at rightmost branch and whether the computedHash is left
-                if (pos + 1 == width && computedHashLeft) {
-                    // there is no sibling and also no element in proofs, so we just go up one layer in the tree
-                    pos = pos >> 1;
-                    width = ((width - 1) >> 1) + 1;
-                    continue;
-                }
-
-                require(i < proof.length, "Merkle proof is too short");
-
-                if (computedHashLeft) {
-                    computedHash = efficientHash(computedHash, proof[i]);
+            for (uint256 i = 0; i < proof.length; i++) {
+                if (position & 1 == 1 || position + 1 == width) {
+                    node = efficientHash(proof[i], node);
                 } else {
-                    computedHash = efficientHash(proof[i], computedHash);
+                    node = efficientHash(node, proof[i]);
                 }
-
-                pos = pos >> 1;
+                position = position >> 1;
                 width = ((width - 1) >> 1) + 1;
-                i++;
             }
-
-            return computedHash;
+            return node;
         }
     }
 
-    function efficientHash(bytes32 a, bytes32 b) private pure returns (bytes32 value) {
+    function efficientHash(bytes32 a, bytes32 b) internal pure returns (bytes32 value) {
         /// @solidity memory-safe-assembly
         assembly {
             mstore(0x00, a)

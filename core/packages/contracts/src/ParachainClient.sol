@@ -74,11 +74,8 @@ contract ParachainClient is IParachainClient {
         bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(proof.header);
 
         // Compute the merkle root hash of all parachain heads
-        bytes32 parachainHeadsRoot = MerkleProof.computeRootFromProofAtPosition(
-            parachainHeadHash,
-            proof.headProof.pos,
-            proof.headProof.width,
-            proof.headProof.proof
+        bytes32 parachainHeadsRoot = MerkleProof.computeRoot(
+            parachainHeadHash, proof.headProof.pos, proof.headProof.width, proof.headProof.proof
         );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);

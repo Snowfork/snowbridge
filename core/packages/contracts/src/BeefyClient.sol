@@ -501,7 +501,7 @@ contract BeefyClient is Ownable {
         returns (bool)
     {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
-        return MerkleProof.verifyMerkleLeafAtPosition(vset.root, hashedLeaf, index, vset.length, proof);
+        return MerkleProof.verify(vset.root, hashedLeaf, index, vset.length, proof);
     }
 
     /**
