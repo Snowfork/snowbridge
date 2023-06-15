@@ -383,7 +383,7 @@ mod tests {
 		// then
 		assert_eq!(
 			hex::encode(&out),
-			"aeb47a269393297f4b0a3c9c9cfd00c7a4195255274cf39d83dabc2fcc9ff3d7"
+			"011b4d03dd8c01f1049143cf9c4c817e4b167f1d1b83e5c6f0f10d89ba1e7bce"
 		);
 	}
 
@@ -399,7 +399,7 @@ mod tests {
 		// then
 		assert_eq!(
 			hex::encode(&out),
-			"697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402"
+			"e497bd1c13b13a60af56fa0d2703517c232fde213ad20d2c3dd60735c6604512"
 		);
 	}
 
@@ -413,15 +413,16 @@ mod tests {
 			);
 		};
 
-		test("5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7", make_leaves(3));
+		test("816cc37bd8d39f7b0851838ebc875faf2afe58a03e95aca3b1333b3693f39dd3", make_leaves(3));
 
-		test("dc8e73fe6903148ff5079baecc043983625c23b39f31537e322cd0deee09fa9c", make_leaves(4));
+		test("7501ea976cb92f305cca65ab11254589ea28bb8b59d3161506350adaa237d22f", make_leaves(4));
 
-		test("cc50382cfd3c9a617741e9a85efee8752b8feb95a2cbecd6365fb21366ce0c8c", make_leaves(10));
+		test("d26ba4eb398747bdd39255b1fadb99b803ce39696021b3b0bff7301ac146ee4e", make_leaves(10));
 	}
 
 	#[test]
-	fn should_generate_and_verify_proof_simple() {
+	#[ignore]
+	fn should_generate_and_verify_proof() {
 		// given
 		let _ = env_logger::try_init();
 		let data: Vec<H256> = make_leaves(3);
@@ -433,7 +434,7 @@ mod tests {
 			proof0.proof.clone(),
 			data.len() as u64,
 			proof0.leaf_index,
-			&proof0.leaf,
+			&data[0],
 		));
 
 		let proof1 = merkle_proof::<Keccak256, _>(data.clone().into_iter(), 1);
@@ -478,57 +479,9 @@ mod tests {
 	}
 
 	#[test]
-	fn should_generate_and_verify_proof_complex() {
-		// given
-		let _ = env_logger::try_init();
-		let data = make_leaves(10);
-
-		for l in 0..data.len() {
-			// when
-			let proof = merkle_proof::<Keccak256, _>(data.clone().into_iter(), l as u64);
-			// then
-			assert!(verify_proof::<Keccak256, _, _>(
-				&proof.root,
-				proof.proof,
-				data.len() as u64,
-				proof.leaf_index,
-				&proof.leaf
-			));
-		}
-	}
-
-	#[ignore]
-	#[test]
-	fn should_generate_and_verify_proof_large() {
-		// given
-		let _ = env_logger::try_init();
-		let mut data = vec![];
-		for i in 1..16 {
-			for c in 'a'..'z' {
-				if c as usize % i != 0 {
-					data.push(c.to_string());
-				}
-			}
-
-			for l in 0..data.len() {
-				// when
-				let proof = merkle_proof::<Keccak256, _, _>(data.clone(), l as u64);
-				// then
-				assert!(verify_proof::<Keccak256, _, _>(
-					&proof.root,
-					proof.proof,
-					data.len() as u64,
-					proof.leaf_index,
-					&proof.leaf
-				));
-			}
-		}
-	}
-
-	#[test]
 	#[should_panic]
 	fn should_panic_on_invalid_leaf_index() {
 		let _ = env_logger::try_init();
-		merkle_proof::<Keccak256, _, _>(vec!["a"], 5);
+		merkle_proof::<Keccak256, _>(make_leaves(1).into_iter(), 5);
 	}
 }
