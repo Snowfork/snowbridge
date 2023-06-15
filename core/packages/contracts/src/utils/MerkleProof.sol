@@ -16,21 +16,20 @@ library MerkleProof {
         bytes32 root,
         bytes32 leaf,
         uint256 pos,
-        uint128 width,
-        bytes32[] calldata proof
-    ) public pure returns (bool) {
-        return true;
-        // bytes32 computedHash = computeRootFromProofAtPosition(leaf, pos, width, proof);
+        uint256 width,
+        bytes32[] memory proof
+    ) internal pure returns (bool) {
+        bytes32 computedHash = computeRootFromProofAtPosition(leaf, pos, width, proof);
 
-        // return computedHash == root;
+        return computedHash == root;
     }
 
     function computeRootFromProofAtPosition(
         bytes32 leaf,
         uint256 pos,
         uint256 width,
-        bytes32[] calldata proof
-    ) public pure returns (bytes32) {
+        bytes32[] memory proof
+    ) internal pure returns (bytes32) {
         bytes32 computedHash = leaf;
 
         require(pos < width, "Merkle position is too high");
