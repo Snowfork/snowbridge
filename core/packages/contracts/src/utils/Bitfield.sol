@@ -61,7 +61,7 @@ library Bitfield {
      * @dev Helper to create a bitfield.
      */
     function createBitfield(uint256[] calldata bitsToSet, uint256 length)
-        public
+        internal
         pure
         returns (uint256[] memory bitfield)
     {
@@ -82,7 +82,7 @@ library Bitfield {
      * The algorithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
      * Further improvements are possible, see the article above.
      */
-    function countSetBits(uint256[] memory self) public pure returns (uint256) {
+    function countSetBits(uint256[] memory self) internal pure returns (uint256) {
         unchecked {
             uint256 count = 0;
             for (uint256 i = 0; i < self.length; i++) {
