@@ -36,7 +36,7 @@ jobs:
         run: pnpm install --frozen-lockfile && pnpm build
       - name: Test
         working-directory: core/packages/contracts
-        run: forge test -vv
+        run: forge test
       - name: Coverage
         working-directory: core/packages/contracts
         run: forge coverage --report=lcov
