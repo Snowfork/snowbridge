@@ -3,15 +3,15 @@ codecov:
   notify:
     wait_for_ci: yes
 
-flags:
-  ethereum:
-    paths:
-      - "core/*"
-    carryforward: true
-  parachain:
-    paths:
-      - "parachain/*"
-    carryforward: true
+#flags:
+#  ethereum:
+#    paths:
+#      - "core/*"
+#    carryforward: true
+#  parachain:
+#    paths:
+#      - "parachain/*"
+#    carryforward: true
 
 ignore:
   - "core/packages/contracts/test/mocks"
