@@ -3,14 +3,24 @@ name: ethereum
 on:
   push:
     paths:
-      - "*"
-      - "!**/README.md"
+      - "core/**"
+      - "!core/**/README.md"
+      - "!core/**/LICENSE"
+      - "!core/.gitignore"
+      - "!core/.editorconfig"
+      - "!core/packages/api/**"
+      - "!core/packages/test/**"
     branches:
       - main
   pull_request:
     paths:
-      - "*"
-      - "!**/README.md"
+      - "core/**"
+      - "!core/**/README.md"
+      - "!core/**/LICENSE"
+      - "!core/.gitignore"
+      - "!core/.editorconfig"
+      - "!core/packages/api/**"
+      - "!core/packages/test/**"
 
 jobs:
   build:

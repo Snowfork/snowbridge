@@ -3,16 +3,18 @@ name: parachain
 on:
   push:
     paths:
-      - "*"
+      - "parachain/**"
       - "!parachain/README.md"
       - "!parachain/LICENSE"
+      - "!parachain/.gitignore"
     branches:
       - main
   pull_request:
     paths:
-      - "*"
+      - "parachain/**"
       - "!parachain/README.md"
       - "!parachain/LICENSE"
+      - "!parachain/.gitignore"
   workflow_dispatch:
 
 jobs:
