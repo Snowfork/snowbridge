@@ -39,7 +39,7 @@ jobs:
         run: forge test
       - name: Coverage
         working-directory: core/packages/contracts
-        run: forge coverage --report=lcov
+        run: forge coverage --report=lcov --via-ir
       - name: Lint
         working-directory: core/packages/contracts
         run: pnpm lint
@@ -48,4 +48,3 @@ jobs:
         with:
           working-directory: core/packages/contracts
           files: lcov.info
-
