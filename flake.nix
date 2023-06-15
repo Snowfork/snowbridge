@@ -40,7 +40,7 @@
 
                     # ethereum
                     foundry-bin
-                    go-ethereum
+                    # go-ethereum
                     # gnupg for forge install
                     gnupg
 
@@ -69,6 +69,7 @@
                     # explicitly setting HOME allows go to infer these vars
                     #
                     export HOME=~
+                    export PATH=~/go/bin/:$PATH
 
                     eval "$(direnv hook bash)"
 

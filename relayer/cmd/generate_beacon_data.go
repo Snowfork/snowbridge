@@ -165,7 +165,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		// ETH_FAST_MODE hack for fast slot period
 		SlotTimeDuration := 6 * time.Second
 		if os.Getenv("ETH_FAST_MODE") == "true" {
-			SlotTimeDuration = 2 * time.Second
+			SlotTimeDuration = 1 * time.Second
 		}
 
 		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
