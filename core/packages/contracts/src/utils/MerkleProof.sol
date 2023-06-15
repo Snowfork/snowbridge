@@ -47,7 +47,7 @@ library MerkleProof {
                     continue;
                 }
 
-                // require(i < proof.length, "Merkle proof is too short");
+                require(i < proof.length, "Merkle proof is too short");
 
                 if (computedHashLeft) {
                     computedHash = efficientHash(computedHash, proof[i]);
