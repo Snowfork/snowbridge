@@ -41,7 +41,7 @@ contract NativeTokensTest is Test {
         registry.registerContract(keccak256("OutboundQueue"), address(outboundQueue));
 
         vault = new TokenVault();
-        nativeTokens = new NativeTokens(registry, vault, ASSET_HUB, 1);
+        nativeTokens = new NativeTokens(registry, vault, ASSET_HUB, 1, 0x0000, 0x0000);
         vault.grantRole(vault.WITHDRAW_ROLE(), address(nativeTokens));
         vault.grantRole(vault.DEPOSIT_ROLE(), address(nativeTokens));
 

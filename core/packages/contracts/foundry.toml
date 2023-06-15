@@ -2,16 +2,9 @@
 solc_version = '0.8.19'
 optimizer = true
 optimizer_runs = 20_000
-via_ir = false
+via_ir = true
 test = 'test'
-remappings = [
-    'canonical-weth=lib/canonical-weth/contracts/',
-    'ds-test=lib/ds-test/src/',
-    'forge-std=lib/forge-std/src/',
-    'openzeppelin=lib/openzeppelin-contracts/contracts/',
-]
 ffi = true
-
 
 ignored_error_codes = [
     # prevrandao not supported by Anvil VM

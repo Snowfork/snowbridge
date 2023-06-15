@@ -12,7 +12,6 @@ send_governance_transact_from_relaychain() {
     echo "      relay_url: ${relaychain_ws_url}"
     echo "      relay_chain_seed: ${relaychain_sudo_seed}"
     echo "      para_id: ${para_id}"
-    echo "      hex_encoded_data: ${hex_encoded_data}"
     echo "      require_weight_at_most_ref_time: ${require_weight_at_most_ref_time}"
     echo "      require_weight_at_most_proof_size: ${require_weight_at_most_proof_size}"
     echo "      params:"
