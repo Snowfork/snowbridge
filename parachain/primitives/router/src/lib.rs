@@ -69,7 +69,7 @@ where
 				let mut instructions: Vec<Instruction<()>> = vec![
 					UniversalOrigin(GlobalConsensus(network)),
 					DescendOrigin(X1(Junction::AccountKey20 { network: None, key: origin.into() })),
-					ReserveAssetDeposited( vec![asset.clone()].into()),
+					ReserveAssetDeposited(vec![asset.clone()].into()),
 					ClearOrigin,
 				];
 
