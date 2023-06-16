@@ -64,6 +64,13 @@ cp .envrc.example .envrc
 direnv allow
 ````
 
+## Upgrade
+
+Sometimes we would like to upgrade rust toolchain. First update `parachain/rust-toolchain.toml` as required and then update `flake.lock` running 
+```sh
+nix flake lock --update-input rust-overlay
+```
+
 ## Security
 
 The security policy and procedures can be found in SECURITY.md.

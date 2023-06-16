@@ -18,7 +18,7 @@
             pkgs = import nixpkgs { inherit system overlays; };
             cwd = builtins.toString ./.;
             rust =
-              pkgs.rust-bin.fromRustupToolchainFile "${cwd}/parachain/rust-toolchain.toml";
+              pkgs.rust-bin.fromRustupToolchainFile "${cwd}/rust-toolchain.toml";
         in
         with pkgs;
         {
