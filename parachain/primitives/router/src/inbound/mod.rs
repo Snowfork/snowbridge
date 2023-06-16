@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use codec::{Decode, Encode};
-use frame_support::weights::Weight;
-
+use core::marker::PhantomData;
+use frame_support::{traits::ContainsPair, weights::Weight};
 use sp_core::{RuntimeDebug, H160};
+use sp_io::hashing::blake2_256;
 use sp_std::prelude::*;
-use xcm::v3::prelude::*;
+use xcm::v3::{prelude::*, Junction::AccountKey20};
+use xcm_executor::traits::ConvertLocation;
+
+const MINIMUM_DEPOSIT: u128 = 1;
 
 /// Messages from Ethereum are versioned. This is because in future,
 /// we want to evolve the protocol so that the ethereum side sends XCM messages directly. Instead
@@ -90,6 +94,11 @@ impl NativeTokensMessage {
 				create_call_index,
 				set_metadata_call_index,
 			} => {
+				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
+					&chain_id,
+					origin.as_fixed_bytes(),
+				);
+
 				let asset_id = Self::convert_token_address(network, origin, token);
 				let instructions: Vec<Instruction<()>> = vec![
 					UniversalOrigin(GlobalConsensus(network)),
@@ -97,7 +106,7 @@ impl NativeTokensMessage {
 					Transact {
 						origin_kind: OriginKind::Xcm,
 						require_weight_at_most: Weight::from_parts(40_000_000_000, 8000),
-						call: (create_call_index, asset_id, [7u8; 32], 1u128).encode().into(),
+						call: (create_call_index, asset_id, owner, MINIMUM_DEPOSIT).encode().into(),
 					},
 					Transact {
 						origin_kind: OriginKind::SovereignAccount,
@@ -156,5 +165,41 @@ impl NativeTokensMessage {
 				AccountKey20 { network: None, key: token.into() },
 			),
 		};
+	}
+}
+
+pub struct FromEthereumGlobalConsensus;
+impl ContainsPair<MultiLocation, MultiLocation> for FromEthereumGlobalConsensus {
+	fn contains(a: &MultiLocation, b: &MultiLocation) -> bool {
+		let a_network_id = a.interior().global_consensus();
+		if let Ok(Ethereum { .. }) = a_network_id {
+			b.interior().global_consensus() == a_network_id
+		} else {
+			false
+		}
+	}
+}
+
+pub struct GlobalConsensusEthereumAccountConvertsFor<AccountId>(PhantomData<AccountId>);
+impl<AccountId> ConvertLocation<AccountId> for GlobalConsensusEthereumAccountConvertsFor<AccountId>
+where
+	AccountId: From<[u8; 32]> + Clone,
+{
+	fn convert_location(location: &MultiLocation) -> Option<AccountId> {
+		if let MultiLocation {
+			interior: X2(GlobalConsensus(Ethereum { chain_id }), AccountKey20 { key, .. }),
+			..
+		} = location
+		{
+			Some(Self::from_params(chain_id, key).into())
+		} else {
+			None
+		}
+	}
+}
+
+impl<AccountId> GlobalConsensusEthereumAccountConvertsFor<AccountId> {
+	fn from_params(chain_id: &u64, key: &[u8; 20]) -> [u8; 32] {
+		(b"ethereum", chain_id, key).using_encoded(blake2_256)
 	}
 }
