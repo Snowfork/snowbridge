@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod difficulty;
-pub mod ethashdata;
 pub mod header;
 pub mod log;
 pub mod mpt;
