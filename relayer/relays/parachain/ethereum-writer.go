@@ -34,7 +34,7 @@ type EthereumWriter struct {
 	tasks            <-chan *Task
 	abiPacker        abi.Arguments
 	abiBasicUnpacker abi.Arguments
-	inboundQueueABI abi.ABI
+	inboundQueueABI  abi.ABI
 }
 
 func NewEthereumWriter(
@@ -219,7 +219,6 @@ func (wr *EthereumWriter) WriteChannel(
 		}).
 		Info("Sent transaction InboundQueue.submit")
 
-
 	receipt, err := wr.waitForTransaction(ctx, tx, 1)
 
 	if receipt.Status != 1 {
@@ -235,7 +234,7 @@ func (wr *EthereumWriter) WriteChannel(
 			}
 			log.WithFields(log.Fields{
 				"origin": holder.Origin,
-				"nonce": holder.Nonce,
+				"nonce":  holder.Nonce,
 				"result": holder.Result,
 			}).Info("Message dispatched")
 		}
