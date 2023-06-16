@@ -9,10 +9,10 @@ artifacts/
 coverage.json
 coverage/
 .vscode/
-deployments/
 out/
 cache/
 broadcast/
 types/
 tsconfig.tsbuildinfo
 lcov.info
+tenderly.yaml

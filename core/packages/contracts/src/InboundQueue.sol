@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {AccessControl} from "openzeppelin/access/AccessControl.sol";
-import {IParachainClient} from "./ParachainClient.sol";
+import {IParachainClient, ParachainClient} from "./ParachainClient.sol";
 import {Registry} from "./Registry.sol";
 import {RegistryLookup} from "./RegistryLookup.sol";
 import {Auth} from "./Auth.sol";
@@ -42,16 +42,16 @@ contract InboundQueue is Auth, RegistryLookup {
         Failure
     }
 
-    event MessageDispatched(ParaID indexed origin, uint64 indexed nonce, DispatchResult result);
+    event MessageDispatched(ParaID origin, uint64 nonce, DispatchResult result);
     event HandlerUpdated(uint16 id, IRecipient handler);
     event ParachainClientUpdated(address parachainClient);
     event VaultUpdated(address vault);
     event RewardUpdated(uint256 reward);
     event GasToForwardUpdated(uint256 gasToForward);
+    event InvalidRecipient(bytes32 recipient);
 
     error InvalidProof();
     error InvalidNonce();
-    error InvalidRecipient();
     error NotEnoughGas();
 
     constructor(Registry registry, IParachainClient _parachainClient, Vault _vault, uint256 _reward)

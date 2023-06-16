@@ -69,17 +69,48 @@ contract ParachainClient is IParachainClient {
         if (!isCommitmentInHeaderDigest(commitment, proof.header)) {
             return false;
         }
-
         // Compute the merkle leaf hash of our parachain
         bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(proof.header);
 
         // Compute the merkle root hash of all parachain heads
+        if (proof.headProof.pos >= proof.headProof.width) {
+            return false;
+        }
         bytes32 parachainHeadsRoot = MerkleProof.computeRoot(
             parachainHeadHash, proof.headProof.pos, proof.headProof.width, proof.headProof.proof
         );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
         return beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
+    }
+
+    function verifyCommitmentTest(bytes32 commitment, Proof memory proof) external view returns (bytes memory) {
+        if (!isCommitmentInHeaderDigest(commitment, proof.header)) {
+            return abi.encode(0);
+        }
+        // Compute the merkle leaf hash of our parachain
+        bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(proof.header);
+
+        // Compute the merkle root hash of all parachain heads
+        if (proof.headProof.pos >= proof.headProof.width) {
+            return abi.encode(1);
+        }
+        bytes32 parachainHeadsRoot = MerkleProof.computeRoot(
+            parachainHeadHash, proof.headProof.pos, proof.headProof.width, proof.headProof.proof
+        );
+
+        bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
+        bool res = beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
+
+        return bytes.concat(
+            abi.encode(2),
+            abi.encode(res),
+            commitment,
+            parachainHeadHash,
+            parachainHeadsRoot,
+            leafHash,
+            createParachainHeader(proof.header)
+        );
     }
 
     // Verify that a message commitment is in the header digest
@@ -140,22 +171,52 @@ contract ParachainClient is IParachainClient {
 
     // Creates a keccak hash of a SCALE-encoded parachain header
     function createParachainHeaderMerkleLeaf(ParachainHeader memory header) internal view returns (bytes32) {
+        bytes memory encodedHeader = bytes.concat(
+            // H256
+            header.parentHash,
+            // Compact unsigned int
+            ScaleCodec.encodeCompactUint(header.number),
+            // H256
+            header.stateRoot,
+            // H256
+            header.extrinsicsRoot,
+            // Vec<DigestItem>
+            ScaleCodec.encodeCompactUint(header.digestItems.length),
+            encodeDigestItems(header.digestItems)
+        );
+
         return keccak256(
             bytes.concat(
                 // u32
                 encodedParachainID,
-                // H256
-                header.parentHash,
-                // Compact unsigned int
-                ScaleCodec.encodeCompactUint(header.number),
-                // H256
-                header.stateRoot,
-                // H256
-                header.extrinsicsRoot,
-                // Vec<DigestItem>
-                ScaleCodec.encodeCompactUint(header.digestItems.length),
-                encodeDigestItems(header.digestItems)
+                // length of encoded header
+                ScaleCodec.encodeCompactUint(encodedHeader.length),
+                encodedHeader
             )
+        );
+    }
+
+    function createParachainHeader(ParachainHeader memory header) internal view returns (bytes memory) {
+        bytes memory encodedHeader = bytes.concat(
+            // H256
+            header.parentHash,
+            // Compact unsigned int
+            ScaleCodec.encodeCompactUint(header.number),
+            // H256
+            header.stateRoot,
+            // H256
+            header.extrinsicsRoot,
+            // Vec<DigestItem>
+            ScaleCodec.encodeCompactUint(header.digestItems.length),
+            encodeDigestItems(header.digestItems)
+        );
+
+        return bytes.concat(
+            // u32
+            encodedParachainID,
+            // length of encoded header
+            ScaleCodec.encodeCompactUint(encodedHeader.length),
+            encodedHeader
         );
     }
 

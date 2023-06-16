@@ -47,7 +47,7 @@ wait_contract_deployed
 # 5. config beefy client
 echo "Config beefy client"
 source scripts/configure-beefy.sh
-configure_beefy &
+configure_beefy
 
 # 6. config beacon client
 echo "Config beacon client"

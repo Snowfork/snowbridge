@@ -186,8 +186,6 @@ func (s *Scanner) findTasksImpl(
 			continue
 		}
 
-		fmt.Printf("%#+v\n", "FOOO")
-
 		var messages []OutboundQueueMessage
 		ok, err := s.paraConn.API().RPC.State.GetStorage(messagesKey, &messages, blockHash)
 		if err != nil {
@@ -196,8 +194,6 @@ func (s *Scanner) findTasksImpl(
 		if !ok {
 			return nil, fmt.Errorf("committed messages not found for block %v", blockHash.Hex())
 		}
-
-		fmt.Printf("%#+v\n", "BAR")
 
 		// For the outbound channel, the commitment hash is the merkle root of the messages
 		// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/basic-channel/src/outbound/mod.rs#L275-L277
@@ -213,8 +209,6 @@ func (s *Scanner) findTasksImpl(
 		if err != nil {
 			return nil, err
 		}
-
-		fmt.Printf("BAZ %#+v\n", result)
 
 		scanOutboundQueueDone = result.scanDone
 
@@ -233,8 +227,6 @@ func (s *Scanner) findTasksImpl(
 	for i, j := 0, len(tasks)-1; i < j; i, j = i+1, j-1 {
 		tasks[i], tasks[j] = tasks[j], tasks[i]
 	}
-
-	fmt.Printf("%#+v\n", "GOZ")
 
 	return tasks, nil
 }
@@ -364,20 +356,14 @@ func scanForOutboundQueueProofs(
 	// m3). With nonce ascending, m1.nonce < 2 but we can't assume case 2 yet (where all messages have been relayed).
 	// With nonce descending, we find m3, then m2 where m2.nonce == 2.
 
-	fmt.Printf("message: %#+v\n", messages)
-
 	for i := len(messages) - 1; i >= 0; i-- {
 		message := messages[i]
-
-		fmt.Printf("ORIG: %v %v", message.Origin, laneID)
 
 		if message.Origin != laneID {
 			continue
 		}
 
 		messageNonce := message.Nonce
-
-		fmt.Printf("WAPPA: %v %v\n ", messageNonce, startingNonce)
 
 		// This case will be hit when there are no new messages to relay.
 		if messageNonce < startingNonce {

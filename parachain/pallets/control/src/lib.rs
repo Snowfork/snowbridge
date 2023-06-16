@@ -85,10 +85,12 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		fn encode_upgrade_payload(upgrade_task: H160) -> Vec<u8> {
-			ethabi::encode(&vec![
+			ethabi::encode(&vec![Token::Tuple(vec![
 				Token::Uint(U256::from(0u64)),
-				Token::Bytes(ethabi::encode(&vec![Token::Address(upgrade_task)])),
-			])
+				Token::Bytes(ethabi::encode(&vec![Token::Tuple(vec![Token::Address(
+					upgrade_task,
+				)])])),
+			])])
 		}
 	}
 }

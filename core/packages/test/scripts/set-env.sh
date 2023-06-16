@@ -69,14 +69,14 @@ export RANDAO_COMMIT_EXP=8
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
 
 ## OutboundChannel
-export RELAYER_FEE=100
+export RELAYER_FEE=1
 
 ## InboundChannel
-export RELAYER_REWARD=100
+export RELAYER_REWARD=1
 
 ## NativeTokens
 export ASSET_HUB_PARAID=$statemine_para_id
-export CREATE_TOKEN_FEE=100
+export CREATE_TOKEN_FEE=1
 export CREATE_CALL_INDEX="0x3500"
 export SET_METADATA_CALL_INDEX="0x3511"
 

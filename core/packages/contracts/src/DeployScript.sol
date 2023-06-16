@@ -38,9 +38,12 @@ contract DeployScript is Script {
         registry = new Registry();
         registry.grantRole(registry.REGISTER_ROLE(), deployer);
 
-        // SovereignTreasury
+        // Vault
         vault = new Vault();
+
+        // SovereignTreasury
         SovereignTreasury treasury = new SovereignTreasury(registry, vault);
+        registry.registerContract(keccak256("SovereignTreasury"), address(treasury));
 
         // BeefyClient
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
@@ -76,8 +79,9 @@ contract DeployScript is Script {
         // Deploy WETH for testing
         new WETH9();
 
-        // Upgrades
+        // UpgradeProxy
         upgradeProxy = new UpgradeProxy(registry, ParaID.wrap(paraId));
+        registry.registerContract(keccak256("UpgradeProxy"), address(upgradeProxy));
 
         // Allow inbound queue to send messages to handlers
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(inboundQueue));
@@ -121,6 +125,8 @@ contract DeployScript is Script {
         registry.revokeRole(outboundQueue.ADMIN_ROLE(), deployer);
 
         upgradeProxy.revokeRole(upgradeProxy.ADMIN_ROLE(), deployer);
+
+        vault.deposit{value: 1000}(ParaID.wrap(paraId));
 
         vm.stopBroadcast();
     }

@@ -148,7 +148,7 @@ func (t *Tree) MerklePath(preLeaf []byte) []*Node {
 		}
 
 		// if i is odd we want to get the left sibling
-		if index % 2 != 0 {
+		if index%2 != 0 {
 			path = append(path, &Node{Hash: level[index-1], Position: PositionLeft})
 		} else {
 			path = append(path, &Node{Hash: level[index+1], Position: PositionRight})

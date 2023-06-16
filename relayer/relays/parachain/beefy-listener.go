@@ -280,7 +280,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 	output := ProofOutput{
 		MMRProof:        simplifiedProof,
 		MMRRootHash:     mmrRootHash,
-		Header: *header,
+		Header:          *header,
 		MerkleProofData: merkleProofData,
 	}
 
