@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "./utils/MerkleProof.sol";
-import "./BeefyClient.sol";
-import "./IParachainClient.sol";
-import "./ScaleCodec.sol";
-import "./SubstrateTypes.sol";
+import {MerkleProof} from "./utils/MerkleProof.sol";
+import {BeefyClient} from "./BeefyClient.sol";
+import {IParachainClient} from "./IParachainClient.sol";
+import {ScaleCodec} from "./ScaleCodec.sol";
+import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 contract ParachainClient is IParachainClient {
     BeefyClient public immutable beefyClient;
