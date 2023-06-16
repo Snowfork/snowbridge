@@ -80,6 +80,8 @@ export CREATE_TOKEN_FEE=1
 export CREATE_CALL_INDEX="0x3500"
 export SET_METADATA_CALL_INDEX="0x3511"
 
+## Vault
+export BRIDGE_HUB_INITIAL_DEPOSIT=1000
 
 address_for()
 {

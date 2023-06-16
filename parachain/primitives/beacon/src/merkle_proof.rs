@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 
@@ -12,7 +14,7 @@ pub fn verify_merkle_branch(
 ) -> bool {
 	// verify the proof length
 	if branch.len() != depth {
-		return false
+		return false;
 	}
 	// verify the computed merkle root
 	root == compute_merkle_root(leaf, branch, index)

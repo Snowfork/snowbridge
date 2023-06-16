@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use hex_literal::hex;
 
 pub const DAGS_START_EPOCH: u64 = 0;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use sp_std::{convert::TryInto, prelude::*};
 use ssz_rs::{Bitvector, Deserialize};
 

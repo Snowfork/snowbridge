@@ -1,14 +1,11 @@
-
-
-
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use ethabi::{self, Token};
 
 use hex_literal::hex;
-use snowbridge_core::{ContractId};
+use snowbridge_core::ContractId;
 use sp_core::{RuntimeDebug, H160};
-use sp_std::{prelude::*};
-
-
+use sp_std::prelude::*;
 
 #[derive(Clone, PartialEq, RuntimeDebug)]
 pub enum Message {

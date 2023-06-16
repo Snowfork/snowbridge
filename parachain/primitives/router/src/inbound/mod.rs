@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use codec::{Decode, Encode};
 use frame_support::weights::Weight;
 
@@ -153,6 +155,6 @@ impl NativeTokensMessage {
 				AccountKey20 { network: None, key: origin.into() },
 				AccountKey20 { network: None, key: token.into() },
 			),
-		}
+		};
 	}
 }

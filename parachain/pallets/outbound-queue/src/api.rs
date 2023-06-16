@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 //! Helpers for implementing runtime api
 
 use frame_support::storage::StorageStreamIter;
@@ -10,7 +12,7 @@ where
 	Runtime: Config,
 {
 	if !MessageLeaves::<Runtime>::exists() {
-		return None
+		return None;
 	}
 	let proof = merkle_proof::<<Runtime as Config>::Hashing, _>(
 		MessageLeaves::<Runtime>::stream_iter(),

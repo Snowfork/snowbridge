@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use codec::{Decode, Encode};
 use ethereum_types::{H128, H256, H512, H64};
 use sp_io::hashing::{keccak_256, keccak_512, sha2_256};
@@ -165,7 +167,7 @@ impl EthashProver {
 		// Check that we have the expected number of nodes with proofs
 		const MIXHASHES: usize = MIX_BYTES / HASH_BYTES;
 		if nodes.len() != MIXHASHES * ACCESSES / 2 {
-			return Err(Error::UnexpectedNumberOfNodes)
+			return Err(Error::UnexpectedNumberOfNodes);
 		}
 
 		let epoch = header_number / EPOCH_LENGTH;
@@ -227,7 +229,7 @@ impl EthashProver {
 			None => panic!("EthashProver wasn't configured with hashimoto light cache"),
 		};
 		let full_size = ethash::get_full_size(epoch as usize);
-		return ethash::hashimoto_light(header_hash, nonce, full_size, cache.as_slice())
+		return ethash::hashimoto_light(header_hash, nonce, full_size, cache.as_slice());
 	}
 }
 

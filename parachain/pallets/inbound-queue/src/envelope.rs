@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use ethabi::{Event, Param, ParamKind, Token};
 use snowbridge_core::ParaId;
 use snowbridge_ethereum::{log::Log, H160};

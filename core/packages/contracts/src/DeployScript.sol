@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+pragma solidity 0.8.20;
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
@@ -126,7 +127,10 @@ contract DeployScript is Script {
 
         upgradeProxy.revokeRole(upgradeProxy.ADMIN_ROLE(), deployer);
 
-        vault.deposit{value: 1000}(ParaID.wrap(paraId));
+        // Fund the sovereign account for the BridgeHub parachain. Used to reward relayers
+        // of messages originating from BridgeHub
+        uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
+        vault.deposit{value: initialDeposit}(ParaID.wrap(paraId));
 
         vm.stopBroadcast();
     }

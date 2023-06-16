@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 //! Helper types to work with Ethereum's Merkle Patricia Trie nodes
 
 use ethereum_types::H256;

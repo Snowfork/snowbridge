@@ -1,5 +1,5 @@
 [profile.default]
-solc_version = '0.8.19'
+solc_version = "0.8.20"
 optimizer = true
 optimizer_runs = 20_000
 via_ir = true
@@ -7,6 +7,6 @@ test = 'test'
 ffi = true
 
 ignored_error_codes = [
-    # prevrandao not supported by Anvil VM
-    9432
+    # DeployScript.sol is never deployed
+    5574
 ]

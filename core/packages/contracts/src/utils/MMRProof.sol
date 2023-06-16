@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+pragma solidity 0.8.20;
 
 library MMRProof {
     /**
@@ -9,14 +10,13 @@ library MMRProof {
      * @param proof an array of hashes
      * @param proofOrder a bitfield describing the order of each item (left vs right)
      */
-    function verifyLeafProof(
-        bytes32 root,
-        bytes32 leafHash,
-        bytes32[] calldata proof,
-        uint256 proofOrder
-    ) internal pure returns (bool) {
+    function verifyLeafProof(bytes32 root, bytes32 leafHash, bytes32[] calldata proof, uint256 proofOrder)
+        internal
+        pure
+        returns (bool)
+    {
         bytes32 acc = leafHash;
-        for (uint256 i = 0; i < proof.length; ) {
+        for (uint256 i = 0; i < proof.length;) {
             acc = hashPairs(acc, proof[i], (proofOrder >> i) & 1);
             unchecked {
                 i++;

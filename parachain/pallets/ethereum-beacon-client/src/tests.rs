@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{
 	functions::compute_period, mock::minimal::*, pallet::ExecutionHeaders, sync_committee_sum,
 	verify_merkle_branch, BeaconHeader, CompactBeaconState, Error, FinalizedBeaconState,

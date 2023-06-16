@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod envelope;
@@ -142,7 +144,7 @@ pub mod pallet {
 			// outbound channel on the ethereum side
 			let allowlist = <AllowList<T>>::get();
 			if !allowlist.contains(&envelope.outbound_queue_address) {
-				return Err(Error::<T>::InvalidOutboundQueue.into())
+				return Err(Error::<T>::InvalidOutboundQueue.into());
 			}
 
 			// Verify message nonce
@@ -173,7 +175,7 @@ pub mod pallet {
 							nonce: envelope.nonce,
 							result: MessageDispatchResult::InvalidPayload,
 						});
-						return Ok(())
+						return Ok(());
 					},
 				};
 
@@ -188,7 +190,7 @@ pub mod pallet {
 						nonce: envelope.nonce,
 						result: MessageDispatchResult::InvalidPayload,
 					});
-					return Ok(())
+					return Ok(());
 				},
 			};
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use codec::FullCodec;
 use core::{cmp::Ord, marker::PhantomData, ops::Add};
 use frame_support::storage::{types::QueryKindTrait, StorageMap, StorageValue};
