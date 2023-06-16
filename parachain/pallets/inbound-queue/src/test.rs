@@ -193,7 +193,7 @@ fn test_submit() {
 			dest: dest_para,
 			nonce: 1,
 			// dummy xcm sender doesn't actually send messages
-			result: MessageDispatchResult::NotDispatched(xcm::v3::SendError::NotApplicable),
+			result: MessageDispatchResult::InvalidPayload,
 		}
 		.into()]);
 	});
