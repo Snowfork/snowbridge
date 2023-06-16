@@ -54,13 +54,8 @@ echo "Config beacon client"
 source scripts/configure-beacon.sh
 configure_beacon
 
-# 7. Configure bridgehub exporter on statemine
-echo "Config bridgehub exporter on statemine"
-source scripts/configure-statemine.sh
-configure_statemine > "$output_dir/configure_statemine.log" 2>&1 &
-
 if [ "$skip_relayer" == "false" ]; then
-    # 8. start relayer
+    # 7. start relayer
     echo "Starting relayers"
     source scripts/start-relayer.sh
     deploy_relayer
