@@ -18,7 +18,7 @@ contract InboundQueueTest is Test {
 
     Vault public vault;
 
-    event MessageDispatched(ParaID indexed origin, uint64 indexed nonce, InboundQueue.DispatchResult result);
+    event MessageDispatched(ParaID origin, uint64 nonce, InboundQueue.DispatchResult result);
 
     ParaID public constant ORIGIN = ParaID.wrap(1001);
     bytes32[] public proof = [bytes32(0x2f9ee6cfdf244060dc28aa46347c5219e303fc95062dd672b4e406ca5c29764b)];
@@ -90,7 +90,7 @@ contract InboundQueueTest is Test {
         vault.deposit{value: 50 ether}(ORIGIN);
 
         recipient.setShouldFail();
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit();
         emit MessageDispatched(ORIGIN, 1, InboundQueue.DispatchResult.Failure);
 
         address relayer = makeAddr("alice");
@@ -106,7 +106,7 @@ contract InboundQueueTest is Test {
         vault.deposit{value: 50 ether}(ORIGIN);
 
         recipient.setShouldConsumeAllGas();
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit();
         emit MessageDispatched(ORIGIN, 1, InboundQueue.DispatchResult.Failure);
 
         address relayer = makeAddr("alice");

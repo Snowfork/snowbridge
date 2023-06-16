@@ -128,12 +128,15 @@ contract ParachainClient is IParachainClient {
         return false;
     }
 
+    // encodes Vec<DigestItem>
     function encodeDigestItems(DigestItem[] memory digestItems) internal pure returns (bytes memory) {
+        // encode all digest items into a buffer
         bytes memory accum = hex"";
         for (uint256 i = 0; i < digestItems.length; i++) {
             accum = bytes.concat(accum, encodeDigestItem(digestItems[i]));
         }
-        return accum;
+        // encode number of digest items, followed by encoded digest items
+        return bytes.concat(ScaleCodec.encodeCompactUint(digestItems.length), accum);
     }
 
     function encodeDigestItem(DigestItem memory digestItem) internal pure returns (bytes memory) {
@@ -171,6 +174,7 @@ contract ParachainClient is IParachainClient {
 
     // Creates a keccak hash of a SCALE-encoded parachain header
     function createParachainHeaderMerkleLeaf(ParachainHeader memory header) internal view returns (bytes32) {
+        // Encode Parachain header
         bytes memory encodedHeader = bytes.concat(
             // H256
             header.parentHash,
@@ -181,15 +185,15 @@ contract ParachainClient is IParachainClient {
             // H256
             header.extrinsicsRoot,
             // Vec<DigestItem>
-            ScaleCodec.encodeCompactUint(header.digestItems.length),
             encodeDigestItems(header.digestItems)
         );
 
+        // Hash of encoded parachain header merkle leaf
         return keccak256(
             bytes.concat(
                 // u32
                 encodedParachainID,
-                // length of encoded header
+                // Vec<u8>
                 ScaleCodec.encodeCompactUint(encodedHeader.length),
                 encodedHeader
             )

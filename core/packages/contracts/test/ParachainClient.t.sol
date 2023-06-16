@@ -43,11 +43,15 @@ contract ParachainClientTest is Test {
             digestItems: digestItems
         });
 
+        bytes memory headerExpected =
+            hex"1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259daae334007b2d59d4de7c629b55a9bc9b76d932616f2011a26f09b52da36e070d6a7eee0d9d1c5d256003f68dda03dc33810a88a61f73791dc7ff92b04232a6b1b4f4b3c00c066175726120c1f05e080000000004525053529073a902d5a4fa8fea942d01ad3c1dc32b51192c3a98c39fcc59299006ed391a5e2e00550105617572610101fcfbfaf1ad15d24cb4980436c18aec6211e2255f648df0e05e73a7858fba8c31726925f1a825383d0d3cb590502b18978101a6391fbeef5ab53e14c05124188c";
+
         assertEq(
             keccak256(
                 bytes.concat(
                     ScaleCodec.encodeU32(BRIDGE_HUB_PARA_ID),
-                    hex"1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259daae334007b2d59d4de7c629b55a9bc9b76d932616f2011a26f09b52da36e070d6a7eee0d9d1c5d256003f68dda03dc33810a88a61f73791dc7ff92b04232a6b1b4f4b3c00c066175726120c1f05e080000000004525053529073a902d5a4fa8fea942d01ad3c1dc32b51192c3a98c39fcc59299006ed391a5e2e00550105617572610101fcfbfaf1ad15d24cb4980436c18aec6211e2255f648df0e05e73a7858fba8c31726925f1a825383d0d3cb590502b18978101a6391fbeef5ab53e14c05124188c"
+                    ScaleCodec.encodeCompactUint(headerExpected.length),
+                    headerExpected
                 )
             ),
             parachainClient.createParachainHeaderMerkleLeaf_public(header)
