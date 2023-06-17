@@ -20,7 +20,6 @@ config_inbound_queue()
     send_governance_transact_from_relaychain $bridgehub_para_id "$payload" 180000000000 900000
 }
 
-
 wait_beacon_chain_ready()
 {
     local initial_beacon_block=""

@@ -292,7 +292,7 @@ fn test_submit_no_funds_to_reward_relayers() {
 
 #[test]
 fn test_add_allow_list_without_root_yields_bad_origin() {
-	new_tester_with_config(Default::default()).execute_with(||{
+	new_tester_with_config(Default::default()).execute_with(|| {
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
@@ -305,18 +305,16 @@ fn test_add_allow_list_without_root_yields_bad_origin() {
 
 #[test]
 fn test_add_allow_list_with_root_succeeds() {
-	new_tester_with_config(Default::default()).execute_with(||{
+	new_tester_with_config(Default::default()).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 
 		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert_ok!(
-			InboundQueue::add_allow_list(origin, contract_address)
-		);
+		assert_ok!(InboundQueue::add_allow_list(origin, contract_address));
 
-		System::assert_last_event(RuntimeEvent::InboundQueue(
-			crate::Event::AllowListAdded { address: contract_address },
-		));
+		System::assert_last_event(RuntimeEvent::InboundQueue(crate::Event::AllowListAdded {
+			address: contract_address,
+		}));
 
 		assert_eq!(<AllowList<Test>>::get().len(), 1);
 		assert!(<AllowList<Test>>::get().contains(&contract_address));
@@ -325,19 +323,15 @@ fn test_add_allow_list_with_root_succeeds() {
 
 #[test]
 fn test_add_allow_list_ignores_duplicates() {
-	new_tester_with_config(Default::default()).execute_with(||{
+	new_tester_with_config(Default::default()).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 
 		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert_ok!(
-			InboundQueue::add_allow_list(origin.clone(), contract_address)
-		);
+		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address));
 		assert_eq!(<AllowList<Test>>::get().len(), 1);
 		assert!(<AllowList<Test>>::get().contains(&contract_address));
-		assert_ok!(
-			InboundQueue::add_allow_list(origin, contract_address)
-		);
+		assert_ok!(InboundQueue::add_allow_list(origin, contract_address));
 		assert_eq!(<AllowList<Test>>::get().len(), 1);
 		assert!(<AllowList<Test>>::get().contains(&contract_address));
 	});
@@ -345,7 +339,7 @@ fn test_add_allow_list_ignores_duplicates() {
 
 #[test]
 fn test_add_allow_list_fails_when_exceeding_bounds() {
-	new_tester_with_config(Default::default()).execute_with(||{
+	new_tester_with_config(Default::default()).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let contract_address1 = hex!("0000000000000000000000000000000000000000").into();
 		let contract_address2 = hex!("1000000000000000000000000000000000000000").into();
@@ -353,14 +347,10 @@ fn test_add_allow_list_fails_when_exceeding_bounds() {
 
 		assert_eq!(<AllowList<Test>>::get().len(), 0);
 
-		assert_ok!(
-			InboundQueue::add_allow_list(origin.clone(), contract_address1)
-		);
+		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address1));
 		assert_eq!(<AllowList<Test>>::get().len(), 1);
 
-		assert_ok!(
-			InboundQueue::add_allow_list(origin.clone(), contract_address2)
-		);
+		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address2));
 		assert_eq!(<AllowList<Test>>::get().len(), 2);
 
 		assert_noop!(
@@ -373,7 +363,7 @@ fn test_add_allow_list_fails_when_exceeding_bounds() {
 
 #[test]
 fn test_remove_allow_list_without_root_yields_bad_origin() {
-	new_tester_with_config(Default::default()).execute_with(||{
+	new_tester_with_config(Default::default()).execute_with(|| {
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
@@ -386,22 +376,18 @@ fn test_remove_allow_list_without_root_yields_bad_origin() {
 
 #[test]
 fn test_remove_allow_list_with_root_succeeds() {
-	new_tester_with_config(Default::default()).execute_with(||{
+	new_tester_with_config(Default::default()).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 
 		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert_ok!(
-			InboundQueue::add_allow_list(origin.clone(), contract_address)
-		);
+		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address));
 		assert_eq!(<AllowList<Test>>::get().len(), 1);
 
-		assert_ok!(
-			InboundQueue::remove_allow_list(origin, contract_address)
-		);
-		System::assert_last_event(RuntimeEvent::InboundQueue(
-			crate::Event::AllowListRemoved { address: contract_address },
-		));
+		assert_ok!(InboundQueue::remove_allow_list(origin, contract_address));
+		System::assert_last_event(RuntimeEvent::InboundQueue(crate::Event::AllowListRemoved {
+			address: contract_address,
+		}));
 
 		assert_eq!(<AllowList<Test>>::get().len(), 0);
 		assert!(!<AllowList<Test>>::get().contains(&contract_address));
@@ -410,14 +396,12 @@ fn test_remove_allow_list_with_root_succeeds() {
 
 #[test]
 fn test_remove_allow_list_event_not_emitted_for_none_existent_item() {
-	new_tester_with_config(Default::default()).execute_with(||{
+	new_tester_with_config(Default::default()).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 
 		let start = System::event_count();
-		assert_ok!(
-			InboundQueue::remove_allow_list(origin, contract_address)
-		);
+		assert_ok!(InboundQueue::remove_allow_list(origin, contract_address));
 		let end = System::event_count();
 
 		assert_eq!(start, end); // No new events

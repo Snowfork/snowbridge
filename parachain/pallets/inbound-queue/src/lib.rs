@@ -222,14 +222,10 @@ pub mod pallet {
 		pub fn add_allow_list(origin: OriginFor<T>, address: sp_core::H160) -> DispatchResult {
 			ensure_root(origin)?;
 
-			let success = <AllowList<T>>::mutate(|allowlist|{
-				allowlist.try_insert(address).is_ok()
-			});
+			let success = <AllowList<T>>::mutate(|allowlist| allowlist.try_insert(address).is_ok());
 
 			if success {
-				Self::deposit_event(Event::AllowListAdded {
-					address: address,
-				});
+				Self::deposit_event(Event::AllowListAdded { address });
 
 				Ok(())
 			} else {
@@ -243,14 +239,10 @@ pub mod pallet {
 		pub fn remove_allow_list(origin: OriginFor<T>, address: sp_core::H160) -> DispatchResult {
 			ensure_root(origin)?;
 
-			let removed = <AllowList<T>>::mutate(|allowlist|{
-					allowlist.remove(&address)
-			});
+			let removed = <AllowList<T>>::mutate(|allowlist| allowlist.remove(&address));
 
 			if removed {
-				Self::deposit_event(Event::AllowListRemoved {
-					address: address,
-				});
+				Self::deposit_event(Event::AllowListRemoved { address });
 			}
 
 			Ok(())
