@@ -8,7 +8,7 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU64, Everything, GenesisBuild},
 };
-use sp_core::{H160, H256};
+use sp_core::{ConstU32, H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	testing::Header,
@@ -110,6 +110,7 @@ impl inbound_queue::Config for Test {
 	type Reward = ConstU64<100>;
 	type XcmSender = ();
 	type WeightInfo = ();
+	type AllowListLength = ConstU32<2>;
 }
 
 fn last_events(n: usize) -> Vec<RuntimeEvent> {
@@ -286,5 +287,97 @@ fn test_submit_no_funds_to_reward_relayers() {
 			// https://github.com/paritytech/substrate/issues/13866
 			ArithmeticError::Underflow
 		);
+	});
+}
+
+#[test]
+fn test_add_allow_list_without_root_yields_bad_origin() {
+	new_tester_with_config(Default::default()).execute_with(||{
+		let relayer: AccountId = Keyring::Bob.into();
+		let origin = RuntimeOrigin::signed(relayer);
+		assert_noop!(
+			InboundQueue::add_allow_list(origin, vec![]),
+			sp_runtime::DispatchError::BadOrigin,
+		);
+	});
+}
+
+#[test]
+fn test_add_allow_list_with_root_succeeds() {
+	new_tester_with_config(Default::default()).execute_with(||{
+		let origin = RuntimeOrigin::root();
+		let contract_address = hex!("0000000000000000000000000000000000000000").into();
+
+		assert_eq!(<AllowList<Test>>::get().len(), 0);
+		assert_ok!(
+			InboundQueue::add_allow_list(origin, vec![
+				contract_address
+			])
+		);
+		assert_eq!(<AllowList<Test>>::get().len(), 1);
+		assert!(<AllowList<Test>>::get().contains(&contract_address));
+	});
+}
+
+#[test]
+fn test_add_allow_list_ignores_duplicates() {
+	new_tester_with_config(Default::default()).execute_with(||{
+		let origin = RuntimeOrigin::root();
+		let contract_address = hex!("0000000000000000000000000000000000000000").into();
+
+		assert_eq!(<AllowList<Test>>::get().len(), 0);
+		assert_ok!(
+			InboundQueue::add_allow_list(origin.clone(), vec![
+				contract_address,
+				contract_address
+			])
+		);
+		assert_eq!(<AllowList<Test>>::get().len(), 1);
+		assert!(<AllowList<Test>>::get().contains(&contract_address));
+		assert_ok!(
+			InboundQueue::add_allow_list(origin, vec![
+				contract_address,
+			])
+		);
+		assert_eq!(<AllowList<Test>>::get().len(), 1);
+		assert!(<AllowList<Test>>::get().contains(&contract_address));
+	});
+}
+
+#[test]
+fn test_add_allow_list_fails_when_exceeding_bounds() {
+	new_tester_with_config(Default::default()).execute_with(||{
+		let origin = RuntimeOrigin::root();
+		let contract_address1 = hex!("0000000000000000000000000000000000000000").into();
+		let contract_address2 = hex!("1000000000000000000000000000000000000000").into();
+		let contract_address3 = hex!("3000000000000000000000000000000000000000").into();
+
+		assert_eq!(<AllowList<Test>>::get().len(), 0);
+		assert_noop!(
+			InboundQueue::add_allow_list(origin, vec![
+				contract_address1, contract_address2, contract_address3
+			]),
+			Error::<Test>::AllowListFull,
+		);
+		assert_eq!(<AllowList<Test>>::get().len(), 0);
+	});
+}
+
+#[test]
+fn test_add_allow_list_can_insert_multiple() {
+	new_tester_with_config(Default::default()).execute_with(||{
+		let origin = RuntimeOrigin::root();
+		let contract_address1 = hex!("0000000000000000000000000000000000000000").into();
+		let contract_address2 = hex!("1000000000000000000000000000000000000000").into();
+
+		assert_eq!(<AllowList<Test>>::get().len(), 0);
+		assert_ok!(
+			InboundQueue::add_allow_list(origin, vec![
+				contract_address1, contract_address2,
+			])
+		);
+		assert_eq!(<AllowList<Test>>::get().len(), 2);
+		assert!(<AllowList<Test>>::get().contains(&contract_address1));
+		assert!(<AllowList<Test>>::get().contains(&contract_address2));
 	});
 }

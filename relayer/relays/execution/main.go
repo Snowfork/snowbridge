@@ -101,8 +101,10 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			}
 
 			log.WithFields(log.Fields{
-				"paraNonce": paraNonce,
-				"ethNonce":  ethNonce,
+				"ethBlockNumber": executionHeaderState.BlockNumber,
+				"laneId":         r.config.Source.LaneID,
+				"paraNonce":      paraNonce,
+				"ethNonce":       ethNonce,
 			}).Info("Polled Nonces")
 
 			if paraNonce == ethNonce {
