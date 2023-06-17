@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -21,6 +22,8 @@ import (
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 
+	goEthereum "github.com/ethereum/go-ethereum"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,6 +34,7 @@ type EthereumWriter struct {
 	tasks            <-chan *Task
 	abiPacker        abi.Arguments
 	abiBasicUnpacker abi.Arguments
+	inboundQueueABI  abi.ABI
 }
 
 func NewEthereumWriter(
@@ -64,6 +68,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
+	wr.inboundQueueABI = inboundQueueABI
 	wr.abiBasicUnpacker = abi.Arguments{inboundQueueABI.Methods["submit"].Inputs[0]}
 
 	eg.Go(func() error {
@@ -121,7 +126,7 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			err := wr.WriteChannels(options, task)
+			err := wr.WriteChannels(ctx, options, task)
 			if err != nil {
 				return fmt.Errorf("write message: %w", err)
 			}
@@ -130,11 +135,12 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 }
 
 func (wr *EthereumWriter) WriteChannels(
+	ctx context.Context,
 	options *bind.TransactOpts,
 	task *Task,
 ) error {
 	for _, proof := range *task.BasicChannelProofs {
-		err := wr.WriteChannel(options, &proof, task.ProofOutput)
+		err := wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
 		if err != nil {
 			return fmt.Errorf("write basic channel: %w", err)
 		}
@@ -145,6 +151,7 @@ func (wr *EthereumWriter) WriteChannels(
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (wr *EthereumWriter) WriteChannel(
+	ctx context.Context,
 	options *bind.TransactOpts,
 	commitmentProof *MessageProof,
 	proof *ProofOutput,
@@ -195,7 +202,6 @@ func (wr *EthereumWriter) WriteChannel(
 	}
 
 	hasher := &keccak.Keccak256{}
-
 	mmrLeafEncoded, err := gsrpcTypes.EncodeToBytes(proof.MMRProof.Leaf)
 	if err != nil {
 		return fmt.Errorf("encode MMRLeaf: %w", err)
@@ -212,6 +218,27 @@ func (wr *EthereumWriter) WriteChannel(
 			"header":               proof.Header,
 		}).
 		Info("Sent transaction InboundQueue.submit")
+
+	receipt, err := wr.waitForTransaction(ctx, tx, 1)
+
+	if receipt.Status != 1 {
+		return fmt.Errorf("transaction failed: %s", receipt.TxHash.Hex())
+	}
+
+	for _, ev := range receipt.Logs {
+		if ev.Topics[0] == wr.inboundQueueABI.Events["MessageDispatched"].ID {
+			var holder contracts.InboundQueueMessageDispatched
+			err = wr.inboundQueueABI.UnpackIntoInterface(&holder, "MessageDispatched", ev.Data)
+			if err != nil {
+				return fmt.Errorf("unpack event log: %w", err)
+			}
+			log.WithFields(log.Fields{
+				"origin": holder.Origin,
+				"nonce":  holder.Nonce,
+				"result": holder.Result,
+			}).Info("Message dispatched")
+		}
+	}
 
 	return nil
 }
@@ -236,7 +263,7 @@ func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachai
 			})
 		case di.IsConsensus:
 			consensusEngineID := make([]byte, 4)
-			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsPreRuntime.ConsensusEngineID))
+			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsConsensus.ConsensusEngineID))
 			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
 				Kind:              big.NewInt(4),
 				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
@@ -244,7 +271,7 @@ func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachai
 			})
 		case di.IsSeal:
 			consensusEngineID := make([]byte, 4)
-			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsPreRuntime.ConsensusEngineID))
+			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsSeal.ConsensusEngineID))
 			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
 				Kind:              big.NewInt(5),
 				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
@@ -262,4 +289,43 @@ func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachai
 		ExtrinsicsRoot: header.ExtrinsicsRoot,
 		DigestItems:    digestItems,
 	}, nil
+}
+
+func (wr *EthereumWriter) waitForTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
+	for {
+		receipt, err := wr.pollTransaction(ctx, tx, confirmations)
+		if err != nil {
+			return nil, err
+		}
+
+		if receipt != nil {
+			return receipt, nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+}
+
+func (wr *EthereumWriter) pollTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
+	receipt, err := wr.conn.Client().TransactionReceipt(ctx, tx.Hash())
+	if err != nil {
+		if errors.Is(err, goEthereum.NotFound) {
+			return nil, nil
+		}
+	}
+
+	latestHeader, err := wr.conn.Client().HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if latestHeader.Number.Uint64()-receipt.BlockNumber.Uint64() >= confirmations {
+		return receipt, nil
+	}
+
+	return nil, nil
 }

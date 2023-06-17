@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -18,13 +17,12 @@ import (
 )
 
 type Scanner struct {
-	config           *SourceConfig
-	ethConn          *ethereum.Connection
-	relayConn        *relaychain.Connection
-	paraConn         *parachain.Connection
-	paraID           uint32
-	tasks            chan<- *Task
-	eventQueryClient QueryClient
+	config    *SourceConfig
+	ethConn   *ethereum.Connection
+	relayConn *relaychain.Connection
+	paraConn  *parachain.Connection
+	paraID    uint32
+	tasks     chan<- *Task
 }
 
 // Scans for all parachain message commitments for the configured parachain laneID that need to be relayed and can be
@@ -153,6 +151,11 @@ func (s *Scanner) findTasksImpl(
 		"latestBlockNumber": lastParaBlockNumber,
 	}).Debug("Searching backwards from latest block on parachain to find block with nonce")
 
+	messagesKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueue", "Messages", nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create storage key: %w", err)
+	}
+
 	scanOutboundQueueDone := false
 	var tasks []*Task
 
@@ -179,17 +182,17 @@ func (s *Scanner) findTasksImpl(
 		if err != nil {
 			return nil, err
 		}
+		if commitmentHash == nil {
+			continue
+		}
 
-		event, err := s.eventQueryClient.QueryEvent(ctx, s.config.Parachain.Endpoint, blockHash)
+		var messages []OutboundQueueMessage
+		ok, err := s.paraConn.API().RPC.State.GetStorage(messagesKey, &messages, blockHash)
 		if err != nil {
-			return nil, fmt.Errorf("query event: %w", err)
+			return nil, fmt.Errorf("fetch committed messages for block %v: %w", blockHash.Hex(), err)
 		}
-		if event == nil {
-			return nil, fmt.Errorf("event outboundQueue.Committed not found in block with commitment digest item")
-		}
-
-		if *commitmentHash != event.Hash {
-			return nil, fmt.Errorf("outbound queue commitment hash in digest item does not match the one in the Committed event")
+		if !ok {
+			return nil, fmt.Errorf("committed messages not found for block %v", blockHash.Hex())
 		}
 
 		// For the outbound channel, the commitment hash is the merkle root of the messages
@@ -197,10 +200,11 @@ func (s *Scanner) findTasksImpl(
 		// To verify it we fetch the message proof from the parachain
 		result, err := scanForOutboundQueueProofs(
 			s.paraConn.API(),
+			blockHash,
 			*commitmentHash,
 			startingNonce,
 			laneID,
-			event.Messages,
+			messages,
 		)
 		if err != nil {
 			return nil, err
@@ -323,7 +327,8 @@ func (s *Scanner) findInclusionBlockNumber(
 
 func scanForOutboundQueueProofs(
 	api *gsrpc.SubstrateAPI,
-	digestItemHash types.H256,
+	blockHash types.Hash,
+	commitmentHash types.H256,
 	startingNonce uint64,
 	laneID uint32,
 	messages []OutboundQueueMessage,
@@ -350,15 +355,15 @@ func scanForOutboundQueueProofs(
 	// eg. m1 has nonce 1 and has been relayed. We're looking for messages from nonce 2 upwards in [m1, m2, m3] (m2 and
 	// m3). With nonce ascending, m1.nonce < 2 but we can't assume case 2 yet (where all messages have been relayed).
 	// With nonce descending, we find m3, then m2 where m2.nonce == 2.
-	for i := len(messages) - 1; i > 0; i-- {
+
+	for i := len(messages) - 1; i >= 0; i-- {
 		message := messages[i]
 
 		if message.Origin != laneID {
 			continue
 		}
 
-		messageNonceBigInt := big.Int(message.Nonce)
-		messageNonce := messageNonceBigInt.Uint64()
+		messageNonce := message.Nonce
 
 		// This case will be hit when there are no new messages to relay.
 		if messageNonce < startingNonce {
@@ -370,17 +375,17 @@ func scanForOutboundQueueProofs(
 			break
 		}
 
-		messageProof, err := fetchMessageProof(api, digestItemHash, i, message)
+		messageProof, err := fetchMessageProof(api, blockHash, uint64(i), message)
 		if err != nil {
 			return nil, err
 		}
 		// Check that the merkle root in the proof is the same as the digest hash from the header
-		if messageProof.Proof.Root != digestItemHash {
+		if messageProof.Proof.Root != commitmentHash {
 			return nil, fmt.Errorf(
 				"Halting scan for laneID '%v'. Outbound queue proof root '%v' doesn't match digest item's commitment hash '%v'",
 				message.Origin,
 				messageProof.Proof.Root,
-				digestItemHash,
+				commitmentHash,
 			)
 		}
 
@@ -409,32 +414,35 @@ func scanForOutboundQueueProofs(
 
 func fetchMessageProof(
 	api *gsrpc.SubstrateAPI,
-	commitmentHash types.H256,
-	messageIndex int,
+	blockHash types.Hash,
+	messageIndex uint64,
 	message OutboundQueueMessage,
 ) (MessageProof, error) {
 	var proofHex string
-	var rawProof RawMerkleProof
-	var messageProof MessageProof
 
-	commitmentHashHex, err := types.EncodeToHexString(commitmentHash)
+	params, err := types.EncodeToHexString(messageIndex)
 	if err != nil {
-		return messageProof, fmt.Errorf("encode commitmentHash(%v): %w", commitmentHash, err)
+		return MessageProof{}, fmt.Errorf("encode params: %w", err)
 	}
 
-	err = api.Client.Call(&proofHex, "outboundQueue_getMerkleProof", commitmentHashHex, messageIndex)
+	err = api.Client.Call(&proofHex, "state_call", "OutboundQueueApi_prove_message", params, blockHash.Hex())
 	if err != nil {
-		return messageProof, fmt.Errorf("call rpc basicOutboundQueue_getMerkleProof(%v, %v): %w", commitmentHash, messageIndex, err)
+		return MessageProof{}, fmt.Errorf("call RPC OutboundQueueApi_prove_message(%v, %v): %w", messageIndex, blockHash, err)
 	}
 
-	err = types.DecodeFromHexString(proofHex, &rawProof)
+	var optionRawMerkleProof OptionRawMerkleProof
+	err = types.DecodeFromHexString(proofHex, &optionRawMerkleProof)
 	if err != nil {
-		return messageProof, fmt.Errorf("decode merkle proof: %w", err)
+		return MessageProof{}, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
-	proof, err := NewMerkleProof(rawProof)
+	if !optionRawMerkleProof.HasValue {
+		return MessageProof{}, fmt.Errorf("retrieve proof failed")
+	}
+
+	proof, err := NewMerkleProof(optionRawMerkleProof.Value)
 	if err != nil {
-		return messageProof, fmt.Errorf("decode merkle proof: %w", err)
+		return MessageProof{}, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
 	return MessageProof{Message: message, Proof: proof}, nil

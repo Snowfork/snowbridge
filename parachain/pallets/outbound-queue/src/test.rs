@@ -1,19 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use super::*;
 
 use frame_support::{
-	assert_noop, assert_ok, parameter_types,
-	traits::{Everything, GenesisBuild, OnInitialize},
+	assert_err, assert_noop, assert_ok, parameter_types,
+	traits::{Everything, Hooks, ProcessMessageError},
+	weights::WeightMeter,
 };
-use snowbridge_core::ParaId;
+
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
-	MultiSignature,
+	BoundedVec, MultiSignature,
 };
 use sp_std::convert::From;
-
-use crate::{self as outbound_channel};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -25,7 +26,8 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		BasicOutboundChannel: outbound_channel::{Pallet, Config<T>, Storage, Event<T>},
+		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
+		OutboundQueue: crate::{Pallet, Storage, Event<T>},
 	}
 );
 
@@ -64,113 +66,161 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMessagePayloadSize: u32 = 256;
-	pub const MaxMessagesPerCommit: u32 = 20;
+	pub const HeapSize: u32 = 32 * 1024;
+	pub const MaxStale: u32 = 32;
+	pub static ServiceWeight: Option<Weight> = Some(Weight::from_parts(100, 100));
 }
 
-impl outbound_channel::Config for Test {
+impl pallet_message_queue::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type MessageProcessor = OutboundQueue;
+	type Size = u32;
+	type QueueChangeHandler = ();
+	type HeapSize = HeapSize;
+	type MaxStale = MaxStale;
+	type ServiceWeight = ServiceWeight;
+}
+
+parameter_types! {
+	pub const MaxMessagePayloadSize: u32 = 256;
+	pub const MaxMessagesPerBlock: u32 = 20;
+}
+
+impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
+	type MessageQueue = MessageQueue;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
-	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type MaxMessagesPerBlock = MaxMessagesPerBlock;
 	type WeightInfo = ();
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-	let config: outbound_channel::GenesisConfig<Test> =
-		outbound_channel::GenesisConfig { interval: 1u64 };
-	config.assimilate_storage(&mut storage).unwrap();
-
+	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
-
 	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
 
-fn run_to_block(n: u64) {
-	while System::block_number() < n {
-		System::set_block_number(System::block_number() + 1);
-		System::on_initialize(System::block_number());
-		BasicOutboundChannel::on_initialize(System::block_number());
-	}
+fn run_to_end_of_next_block() {
+	// finish current block
+	MessageQueue::on_finalize(System::block_number());
+	OutboundQueue::on_finalize(System::block_number());
+	System::on_finalize(System::block_number());
+	// start next block
+	System::set_block_number(System::block_number() + 1);
+	System::on_initialize(System::block_number());
+	OutboundQueue::on_initialize(System::block_number());
+	MessageQueue::on_initialize(System::block_number());
+	// finish next block
+	MessageQueue::on_finalize(System::block_number());
+	OutboundQueue::on_finalize(System::block_number());
+	System::on_finalize(System::block_number());
 }
 
 #[test]
-fn test_submit() {
+fn submit_messages_from_multiple_origins_and_commit() {
 	new_tester().execute_with(|| {
-		let parachain_id: ParaId = ParaId::new(1000);
+		//next_block();
 
-		assert_ok!(BasicOutboundChannel::submit(parachain_id, 0, &vec![0, 1, 2]));
+		for para_id in 1000..1004 {
+			let message = OutboundMessage {
+				id: H256::repeat_byte(1).into(),
+				origin: para_id.into(),
+				gateway: [1u8; 32].into(),
+				payload: (0..100).map(|_| 1u8).collect::<Vec<u8>>(),
+			};
 
-		assert_eq!(<Nonce<Test>>::get(parachain_id), 1);
-		assert_eq!(<MessageQueue<Test>>::get().len(), 1);
+			let result = OutboundQueue::validate(&message);
+			assert!(result.is_ok());
+			let ticket = result.unwrap();
+
+			assert_ok!(OutboundQueue::submit(ticket));
+		}
+
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+
+		for para_id in 1000..1004 {
+			let origin: ParaId = (para_id as u32).into();
+			assert_eq!(Nonce::<Test>::get(origin), 1);
+		}
+
+		let digest = System::digest();
+		let digest_items = digest.logs();
+		assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
 	});
 }
 
 #[test]
-fn test_submit_exceeds_queue_limit() {
+fn submit_message_fail_too_large() {
 	new_tester().execute_with(|| {
-		let parachain_id: ParaId = ParaId::new(1000);
+		let message = OutboundMessage {
+			id: H256::repeat_byte(1).into(),
+			origin: 1000.into(),
+			gateway: [1u8; 32].into(),
+			payload: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
+		};
 
-		let max_messages = MaxMessagesPerCommit::get();
-		(0..max_messages)
-			.for_each(|_| BasicOutboundChannel::submit(parachain_id, 0, &vec![0, 1, 2]).unwrap());
+		assert_err!(OutboundQueue::validate(&message), SubmitError::MessageTooLarge);
+	});
+}
+
+#[test]
+fn commit_exits_early_if_no_processed_messages() {
+	new_tester().execute_with(|| {
+		// on_finalize should do nothing, nor should it panic
+		OutboundQueue::on_finalize(System::block_number());
+
+		let digest = System::digest();
+		let digest_items = digest.logs();
+		assert_eq!(digest_items.len(), 0);
+	});
+}
+
+#[test]
+fn process_message_yields_on_max_messages_per_block() {
+	new_tester().execute_with(|| {
+		for _ in 0..<Test as Config>::MaxMessagesPerBlock::get() {
+			MessageLeaves::<Test>::append(H256::zero())
+		}
+
+		let origin = AggregateMessageOrigin::Parachain(1000.into());
+		let message = (0..100).map(|_| 1u8).collect::<Vec<u8>>();
+		let message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<Test>> = message.try_into().unwrap();
+
+		let mut meter = WeightMeter::max_limit();
 
 		assert_noop!(
-			BasicOutboundChannel::submit(parachain_id, 0, &vec![0, 1, 2]),
-			Error::<Test>::QueueSizeLimitReached,
+			OutboundQueue::process_message(
+				&message.as_bounded_slice(),
+				origin,
+				&mut meter,
+				&mut [0u8; 32]
+			),
+			ProcessMessageError::Yield
 		);
 	})
 }
 
 #[test]
-fn test_submit_exceeds_payload_limit() {
+fn process_message_fails_on_overweight_message() {
 	new_tester().execute_with(|| {
-		let parachain_id: ParaId = ParaId::new(1000);
+		let origin = AggregateMessageOrigin::Parachain(1000.into());
+		let message = (0..100).map(|_| 1u8).collect::<Vec<u8>>();
+		let message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<Test>> = message.try_into().unwrap();
 
-		let max_payload_bytes = MaxMessagePayloadSize::get() - 1;
-
-		let mut payload: Vec<u8> = (0..).take(max_payload_bytes as usize).collect();
-		// Make payload oversize
-		payload.push(5);
-		payload.push(10);
+		let mut meter = WeightMeter::from_limit(Weight::from_parts(1, 1));
 
 		assert_noop!(
-			BasicOutboundChannel::submit(parachain_id, 0, payload.as_slice()),
-			Error::<Test>::PayloadTooLarge,
+			OutboundQueue::process_message(
+				&message.as_bounded_slice(),
+				origin,
+				&mut meter,
+				&mut [0u8; 32]
+			),
+			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
 		);
-	})
-}
-
-#[test]
-fn test_commit_single_user() {
-	new_tester().execute_with(|| {
-		let parachain_id: ParaId = ParaId::new(1000);
-
-		assert_ok!(BasicOutboundChannel::submit(parachain_id, 0, &vec![0, 1, 2]));
-		run_to_block(2);
-		BasicOutboundChannel::commit(Weight::MAX);
-
-		assert_eq!(<Nonce<Test>>::get(parachain_id), 1);
-		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
-	})
-}
-
-#[test]
-fn test_commit_multi_user() {
-	new_tester().execute_with(|| {
-		let parachain0: ParaId = ParaId::new(1000);
-		let parachain1: ParaId = ParaId::new(1001);
-
-		assert_ok!(BasicOutboundChannel::submit(parachain0, 0, &vec![0, 1, 2]));
-		assert_ok!(BasicOutboundChannel::submit(parachain1, 0, &vec![0, 1, 2]));
-		run_to_block(2);
-		BasicOutboundChannel::commit(Weight::MAX);
-
-		assert_eq!(<Nonce<Test>>::get(parachain0), 1);
-		assert_eq!(<Nonce<Test>>::get(parachain1), 1);
-		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
 	})
 }

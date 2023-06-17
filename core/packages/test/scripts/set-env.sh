@@ -1,6 +1,6 @@
 root_dir="$(realpath ../../..)"
 bridge_hub_runtime="${PARACHAIN_RUNTIME:-bridge-hub-rococo-local}"
-relaychain_version="${POLKADOT_VER:-v0.9.42}"
+relaychain_version="${POLKADOT_VER:-v0.9.43}"
 relaychain_dir="$root_dir/parachain/.cargo/$relaychain_version"
 relaychain_bin="${POLKADOT_BIN:-$relaychain_dir/bin/polkadot}"
 cumulus_version="${CUMULUS_VER:-snowbridge}"
@@ -69,14 +69,19 @@ export RANDAO_COMMIT_EXP=8
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
 
 ## OutboundChannel
-export RELAYER_FEE=100
+export RELAYER_FEE=1
 
 ## InboundChannel
-export RELAYER_REWARD=100
+export RELAYER_REWARD=1
 
 ## NativeTokens
 export ASSET_HUB_PARAID=$statemine_para_id
-export CREATE_TOKEN_FEE=100
+export CREATE_TOKEN_FEE=1
+export CREATE_CALL_INDEX="0x3500"
+export SET_METADATA_CALL_INDEX="0x3511"
+
+## Vault
+export BRIDGE_HUB_INITIAL_DEPOSIT=1000
 
 address_for()
 {

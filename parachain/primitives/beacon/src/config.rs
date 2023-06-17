@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pub const MAX_PROOF_SIZE: u32 = 20;
 
 pub const FEE_RECIPIENT_SIZE: usize = 20;

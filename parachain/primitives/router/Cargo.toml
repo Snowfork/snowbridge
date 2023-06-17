@@ -20,11 +20,13 @@ xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", d
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
+
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
+hex-literal = { version = "0.4.1"  }
+
 [dev-dependencies]
-hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
-hex-literal = { version = "0.4.1", default-features = false }
+hex = { package = "rustc-hex", version = "2.1.0" }
 
 [features]
 default = [ "std" ]

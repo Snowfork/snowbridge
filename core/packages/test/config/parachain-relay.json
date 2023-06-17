@@ -14,7 +14,7 @@
       "InboundQueue": null
     },
     "beefy-activation-block": 0,
-    "lane-id": 1000
+    "lane-id": 0
   },
   "sink": {
     "ethereum": {

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod envelope;
@@ -19,18 +21,15 @@ use frame_system::ensure_signed;
 use snowbridge_core::ParaId;
 use sp_core::{ConstU32, H160};
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::convert::TryFrom;
-use sp_std::vec::Vec;
-use sp_std::collections::btree_set::BTreeSet;
+use sp_std::{collections::btree_set::BTreeSet, convert::TryFrom, vec::Vec};
 
 use envelope::Envelope;
 use snowbridge_core::{Message, Verifier};
-use snowbridge_router_primitives::{ConvertMessage, Payload};
+use snowbridge_router_primitives::inbound;
 
-use xcm::latest::{send_xcm, SendError};
+use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError};
 
 pub use weights::WeightInfo;
-
 
 use frame_support::{CloneNoBound, EqNoBound, PartialEqNoBound};
 
@@ -72,8 +71,6 @@ pub mod pallet {
 		type Token: Mutate<Self::AccountId>;
 
 		type Reward: Get<BalanceOf<Self>>;
-
-		type MessageConversion: ConvertMessage;
 
 		type XcmSender: SendXcm;
 
@@ -146,8 +143,8 @@ pub mod pallet {
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
 			let allowlist = <AllowList<T>>::get();
-			if !allowlist.contains(&envelope.channel) {
-				return Err(Error::<T>::InvalidOutboundQueue.into())
+			if !allowlist.contains(&envelope.outbound_queue_address) {
+				return Err(Error::<T>::InvalidOutboundQueue.into());
 			}
 
 			// Verify message nonce
@@ -165,30 +162,50 @@ pub mod pallet {
 			let sovereign_account = envelope.dest.into_account_truncating();
 			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
 
-			// Dispatch message. From this point, any errors are masked, i.e the extrinsic will
-			// succeed even if the message was not successfully dispatched.
+			// From this point, any errors are masked, i.e the extrinsic will
+			// succeed even if the message was not successfully decoded or dispatched.
 
-			if let Ok(payload) = Payload::decode_all(&mut envelope.payload.as_ref()) {
-				let (dest, xcm) =
-					T::MessageConversion::convert(envelope.channel, envelope.dest.into(), payload);
-				match send_xcm::<T::XcmSender>(dest, xcm) {
-					Ok(_) => Self::deposit_event(Event::MessageReceived {
+			// Attempt to decode message
+			let decoded_message =
+				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+					Ok(inbound::VersionedMessage::V1(decoded_message)) => decoded_message,
+					Err(_) => {
+						Self::deposit_event(Event::MessageReceived {
+							dest: envelope.dest,
+							nonce: envelope.nonce,
+							result: MessageDispatchResult::InvalidPayload,
+						});
+						return Ok(());
+					},
+				};
+
+			// Attempt to convert to XCM
+			let sibling_para =
+				MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
+			let xcm = match decoded_message.try_into() {
+				Ok(xcm) => xcm,
+				Err(_) => {
+					Self::deposit_event(Event::MessageReceived {
 						dest: envelope.dest,
 						nonce: envelope.nonce,
-						result: MessageDispatchResult::Dispatched,
-					}),
-					Err(err) => Self::deposit_event(Event::MessageReceived {
-						dest: envelope.dest,
-						nonce: envelope.nonce,
-						result: MessageDispatchResult::NotDispatched(err),
-					}),
-				}
-			} else {
-				Self::deposit_event(Event::MessageReceived {
+						result: MessageDispatchResult::InvalidPayload,
+					});
+					return Ok(());
+				},
+			};
+
+			// Attempt to send XCM to a sibling parachain
+			match send_xcm::<T::XcmSender>(sibling_para, xcm) {
+				Ok(_) => Self::deposit_event(Event::MessageReceived {
 					dest: envelope.dest,
 					nonce: envelope.nonce,
-					result: MessageDispatchResult::InvalidPayload,
-				})
+					result: MessageDispatchResult::Dispatched,
+				}),
+				Err(err) => Self::deposit_event(Event::MessageReceived {
+					dest: envelope.dest,
+					nonce: envelope.nonce,
+					result: MessageDispatchResult::NotDispatched(err),
+				}),
 			}
 
 			Ok(())

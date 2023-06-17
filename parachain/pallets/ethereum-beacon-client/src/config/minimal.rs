@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pub const SLOTS_PER_EPOCH: usize = 8;
 pub const SECONDS_PER_SLOT: usize = 6;
 pub const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: usize = 8;

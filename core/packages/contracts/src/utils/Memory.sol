@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.19;
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+pragma solidity 0.8.20;
 
 library Memory {
     uint256 internal constant WORD_SIZE = 32;
@@ -19,11 +19,7 @@ library Memory {
     // the first 'len' bytes will be compared.
     // Requires that 'bts.length >= len'
 
-    function equals(
-        uint256 addr,
-        uint256 len,
-        bytes memory bts
-    ) internal pure returns (bool equal) {
+    function equals(uint256 addr, uint256 len, bytes memory bts) internal pure returns (bool equal) {
         require(bts.length >= len);
         uint256 addr2;
         assembly {
@@ -75,9 +71,8 @@ library Memory {
         }
 
         // Copy remaining bytes
-        uint256 mask = len == 0
-            ? 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-            : 256 ** (WORD_SIZE - len) - 1;
+        uint256 mask =
+            len == 0 ? 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff : 256 ** (WORD_SIZE - len) - 1;
         assembly {
             let srcpart := and(mload(src), not(mask))
             let destpart := and(mload(dest), mask)

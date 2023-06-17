@@ -1,27 +1,28 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+pragma solidity 0.8.20;
 
 import {AccessControl} from "openzeppelin/access/AccessControl.sol";
 import {IOutboundQueue} from "./IOutboundQueue.sol";
-import {IVault} from "./IVault.sol";
+import {Registry} from "./Registry.sol";
+import {Vault} from "./Vault.sol";
 import {ParaID} from "./Types.sol";
+import {Auth} from "./Auth.sol";
+import {RegistryLookup} from "./RegistryLookup.sol";
 
-contract OutboundQueue is IOutboundQueue, AccessControl {
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+contract OutboundQueue is Auth, RegistryLookup, IOutboundQueue {
     bytes32 public constant SUBMIT_ROLE = keccak256("SUBMIT_ROLE");
 
     mapping(ParaID dest => uint64) public nonce;
 
-    IVault public vault;
+    Vault public immutable vault;
     uint256 public fee;
 
     event FeeUpdated(uint256 fee);
 
     error FeePaymentToLow();
 
-    constructor(IVault _vault, uint256 _fee) {
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
+    constructor(Registry registry, Vault _vault, uint256 _fee) RegistryLookup(registry) {
         _setRoleAdmin(SUBMIT_ROLE, ADMIN_ROLE);
         vault = _vault;
         fee = _fee;

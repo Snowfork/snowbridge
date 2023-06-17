@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+pragma solidity 0.8.20;
 
-import "openzeppelin/utils/cryptography/MerkleProof.sol";
-import "./BeefyClient.sol";
-import "./IParachainClient.sol";
-import "./ScaleCodec.sol";
-import "./SubstrateTypes.sol";
+import {MerkleProof} from "./utils/MerkleProof.sol";
+import {BeefyClient} from "./BeefyClient.sol";
+import {IParachainClient} from "./IParachainClient.sol";
+import {ScaleCodec} from "./ScaleCodec.sol";
+import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 contract ParachainClient is IParachainClient {
     BeefyClient public immutable beefyClient;
@@ -69,15 +70,48 @@ contract ParachainClient is IParachainClient {
         if (!isCommitmentInHeaderDigest(commitment, proof.header)) {
             return false;
         }
-
         // Compute the merkle leaf hash of our parachain
         bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(proof.header);
 
         // Compute the merkle root hash of all parachain heads
-        bytes32 parachainHeadsRoot = MerkleProof.processProof(proof.headProof.proof, parachainHeadHash);
+        if (proof.headProof.pos >= proof.headProof.width) {
+            return false;
+        }
+        bytes32 parachainHeadsRoot = MerkleProof.computeRoot(
+            parachainHeadHash, proof.headProof.pos, proof.headProof.width, proof.headProof.proof
+        );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
         return beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
+    }
+
+    function verifyCommitmentTest(bytes32 commitment, Proof memory proof) external view returns (bytes memory) {
+        if (!isCommitmentInHeaderDigest(commitment, proof.header)) {
+            return abi.encode(0);
+        }
+        // Compute the merkle leaf hash of our parachain
+        bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(proof.header);
+
+        // Compute the merkle root hash of all parachain heads
+        if (proof.headProof.pos >= proof.headProof.width) {
+            return abi.encode(1);
+        }
+        bytes32 parachainHeadsRoot = MerkleProof.computeRoot(
+            parachainHeadHash, proof.headProof.pos, proof.headProof.width, proof.headProof.proof
+        );
+
+        bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
+        bool res = beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
+
+        return bytes.concat(
+            abi.encode(2),
+            abi.encode(res),
+            commitment,
+            parachainHeadHash,
+            parachainHeadsRoot,
+            leafHash,
+            createParachainHeader(proof.header)
+        );
     }
 
     // Verify that a message commitment is in the header digest
@@ -95,12 +129,15 @@ contract ParachainClient is IParachainClient {
         return false;
     }
 
+    // encodes Vec<DigestItem>
     function encodeDigestItems(DigestItem[] memory digestItems) internal pure returns (bytes memory) {
+        // encode all digest items into a buffer
         bytes memory accum = hex"";
         for (uint256 i = 0; i < digestItems.length; i++) {
             accum = bytes.concat(accum, encodeDigestItem(digestItems[i]));
         }
-        return accum;
+        // encode number of digest items, followed by encoded digest items
+        return bytes.concat(ScaleCodec.encodeCompactUint(digestItems.length), accum);
     }
 
     function encodeDigestItem(DigestItem memory digestItem) internal pure returns (bytes memory) {
@@ -138,22 +175,53 @@ contract ParachainClient is IParachainClient {
 
     // Creates a keccak hash of a SCALE-encoded parachain header
     function createParachainHeaderMerkleLeaf(ParachainHeader memory header) internal view returns (bytes32) {
+        // Encode Parachain header
+        bytes memory encodedHeader = bytes.concat(
+            // H256
+            header.parentHash,
+            // Compact unsigned int
+            ScaleCodec.encodeCompactUint(header.number),
+            // H256
+            header.stateRoot,
+            // H256
+            header.extrinsicsRoot,
+            // Vec<DigestItem>
+            encodeDigestItems(header.digestItems)
+        );
+
+        // Hash of encoded parachain header merkle leaf
         return keccak256(
             bytes.concat(
                 // u32
                 encodedParachainID,
-                // H256
-                header.parentHash,
-                // Compact unsigned int
-                ScaleCodec.encodeCompactUint(header.number),
-                // H256
-                header.stateRoot,
-                // H256
-                header.extrinsicsRoot,
-                // Vec<DigestItem>
-                ScaleCodec.encodeCompactUint(header.digestItems.length),
-                encodeDigestItems(header.digestItems)
+                // Vec<u8>
+                ScaleCodec.encodeCompactUint(encodedHeader.length),
+                encodedHeader
             )
+        );
+    }
+
+    function createParachainHeader(ParachainHeader memory header) internal view returns (bytes memory) {
+        bytes memory encodedHeader = bytes.concat(
+            // H256
+            header.parentHash,
+            // Compact unsigned int
+            ScaleCodec.encodeCompactUint(header.number),
+            // H256
+            header.stateRoot,
+            // H256
+            header.extrinsicsRoot,
+            // Vec<DigestItem>
+            ScaleCodec.encodeCompactUint(header.digestItems.length),
+            encodeDigestItems(header.digestItems)
+        );
+
+        return bytes.concat(
+            // u32
+            encodedParachainID,
+            // length of encoded header
+            ScaleCodec.encodeCompactUint(encodedHeader.length),
+            encodedHeader
         );
     }
 

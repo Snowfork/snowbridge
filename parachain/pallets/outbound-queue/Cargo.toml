@@ -25,11 +25,14 @@ sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master"
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
-snowbridge-outbound-queue-merkle-proof = { path = "merkle-proof", default-features = false }
+snowbridge-outbound-queue-merkle-tree = { path = "merkle-tree", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
+
+xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 [dev-dependencies]
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+pallet-message-queue = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 hex-literal = { version = "0.4.1" }
 rlp = { version = "0.5" }
@@ -48,8 +51,9 @@ std = [
     "sp-std/std",
     "sp-io/std",
     "snowbridge-core/std",
-    "snowbridge-outbound-queue-merkle-proof/std",
-    "ethabi/std"
+    "snowbridge-outbound-queue-merkle-tree/std",
+    "ethabi/std",
+    "xcm/std"
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",

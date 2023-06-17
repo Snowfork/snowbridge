@@ -35,43 +35,28 @@
 use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use sp_std::marker::PhantomData;
 
-/// Weight functions needed for basic_channel::outbound.
 pub trait WeightInfo {
-	fn on_commit_no_messages() -> Weight;
-	fn on_commit(m: u32, p: u32, ) -> Weight;
+	fn do_process_message() -> Weight;
+	fn on_finalize() -> Weight;
 }
 
-/// Weights for basic_channel::outbound using the Snowbridge node and recommended hardware.
 pub struct SnowbridgeWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
-	fn on_commit_no_messages() -> Weight {
-		Weight::from_parts(5_228_000 as u64, 0)
+	fn do_process_message() -> Weight {
+		Weight::from_parts(100_000_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().reads(2))
 	}
-	fn on_commit(m: u32, p: u32, ) -> Weight {
-		Weight::from_parts(3_294_000 as u64, 0)
-			// Standard Error: 31_000
-			.saturating_add(Weight::from_parts(100_849_000 as u64, 0).saturating_mul(m as u64))
-			// Standard Error: 1_000
-			.saturating_add(Weight::from_parts(3_880_000 as u64, 0).saturating_mul(p as u64))
-			.saturating_add(T::DbWeight::get().reads(3 as u64))
-			.saturating_add(T::DbWeight::get().writes(2 as u64))
+	fn on_finalize() -> Weight {
+		Weight::from_parts(100_000_000 as u64, 0)
+			.saturating_add(T::DbWeight::get().reads(2))
 	}
 }
 
-// For backwards compatibility and tests
 impl WeightInfo for () {
-	fn on_commit_no_messages() -> Weight {
-		Weight::from_parts(5_228_000 as u64, 0)
-			.saturating_add(RocksDbWeight::get().reads(2))
+	fn do_process_message() -> Weight {
+		Weight::from_parts(100 as u64, 100)
 	}
-	fn on_commit(m: u32, p: u32, ) -> Weight {
-		Weight::from_parts(0 as u64, 0)
-			// Standard Error: 31_000
-			.saturating_add(Weight::from_parts(100_849_000 as u64, 0).saturating_mul(m as u64))
-			// Standard Error: 1_000
-			.saturating_add(Weight::from_parts(3_880_000 as u64, 0).saturating_mul(p as u64))
-			.saturating_add(RocksDbWeight::get().reads(3 as u64))
-			.saturating_add(RocksDbWeight::get().writes(2 as u64))
+	fn on_finalize() -> Weight {
+		Weight::from_parts(100 as u64, 100)
 	}
 }

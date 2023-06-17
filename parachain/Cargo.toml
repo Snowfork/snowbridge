@@ -6,9 +6,9 @@ members = [
     "primitives/router",
     "pallets/inbound-queue",
     "pallets/outbound-queue",
-    "pallets/outbound-queue/rpc",
-    "pallets/outbound-queue/merkle-proof",
+    "pallets/outbound-queue/runtime-api",
+    "pallets/outbound-queue/merkle-tree",
     "pallets/ethereum-beacon-client",
-    "tools/query-events",
+    "pallets/control",
     "tools/call-index"
 ]

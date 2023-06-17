@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+pragma solidity 0.8.20;
 
 import "./Bits.sol";
 
@@ -82,7 +83,7 @@ library Bitfield {
      * The algorithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
      * Further improvements are possible, see the article above.
      */
-    function countSetBits(uint256[] memory self) public pure returns (uint256) {
+    function countSetBits(uint256[] memory self) internal pure returns (uint256) {
         unchecked {
             uint256 count = 0;
             for (uint256 i = 0; i < self.length; i++) {

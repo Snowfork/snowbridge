@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+pragma solidity 0.8.20;
 
-import { Ownable } from "openzeppelin/access/Ownable.sol";
-import { AccessControl } from "openzeppelin/access/AccessControl.sol";
-import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
+import {Ownable} from "openzeppelin/access/Ownable.sol";
+import {AccessControl} from "openzeppelin/access/AccessControl.sol";
+import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
-import { IRecipient } from "./IRecipient.sol";
-import { TokenVault } from "./TokenVault.sol";
-import { SubstrateTypes } from "./SubstrateTypes.sol";
-import { NativeTokensTypes } from "./NativeTokensTypes.sol";
-import { IOutboundQueue } from "./OutboundQueue.sol";
-import { ParaID } from "./Types.sol";
+import {TokenVault} from "./TokenVault.sol";
+import {SubstrateTypes} from "./SubstrateTypes.sol";
+import {NativeTokensTypes} from "./NativeTokensTypes.sol";
+import {IOutboundQueue} from "./OutboundQueue.sol";
+import {ParaID} from "./Types.sol";
+import {Gateway} from "./Gateway.sol";
+import {Registry} from "./Registry.sol";
 
 /// @title Native Tokens
 /// @dev Manages locking, unlocking ERC20 tokens in the vault. Initializes ethereum native
 /// tokens on the substrate side via create.
-contract NativeTokens is AccessControl, IRecipient {
+contract NativeTokens is Gateway {
     /// @dev Describes the type of message.
-    enum Action {
-        Unlock
-    }
+    enum Action {Unlock}
 
     /// @dev Message format.
     struct Message {
@@ -53,36 +53,39 @@ contract NativeTokens is AccessControl, IRecipient {
 
     /* State */
 
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant SENDER_ROLE = keccak256("SENDER_ROLE");
-
     // Parachain ID of AssetHub (aka Statemint)
     ParaID public immutable assetHubParaID;
 
     TokenVault public immutable vault;
-    IOutboundQueue public outboundQueue;
 
     uint256 public createTokenFee;
+
+    /* Constants */
+
+    // Call index for ForeignAssets::create dispatchable on AssetHub parachain
+    bytes2 public immutable createCallId;
+
+    // Call index for ForeignAssets::set_metata dispatchable AssetHub parachain
+    bytes2 public immutable setMetadataCallId;
 
     /* Errors */
 
     error InvalidAmount();
-    error Unauthorized();
     error NoFundsforCreateToken();
 
     constructor(
+        Registry registry,
         TokenVault _vault,
-        IOutboundQueue _outboundQueue,
         ParaID _assetHubParaID,
-        uint256 _createTokenFee
-    ) {
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(SENDER_ROLE, ADMIN_ROLE);
+        uint256 _createTokenFee,
+        bytes2 _createCallId,
+        bytes2 _setMetadataCallId
+    ) Gateway(registry) {
         vault = _vault;
-        outboundQueue = _outboundQueue;
         assetHubParaID = _assetHubParaID;
         createTokenFee = _createTokenFee;
+        createCallId = _createCallId;
+        setMetadataCallId = _setMetadataCallId;
     }
 
     /// @dev Locks an amount of ERC20 Tokens in the vault and enqueues a mint message.
@@ -90,20 +93,15 @@ contract NativeTokens is AccessControl, IRecipient {
     /// @param token The token to lock.
     /// @param recipient The recipient on the substrate side.
     /// @param amount The amount to lock.
-    function lock(
-        address token,
-        ParaID dest,
-        bytes calldata recipient,
-        uint128 amount
-    ) external payable {
+    function lock(address token, ParaID dest, bytes calldata recipient, uint128 amount) external payable {
         if (amount == 0) {
             revert InvalidAmount();
         }
 
         vault.deposit(msg.sender, token, amount);
 
-        bytes memory payload = NativeTokensTypes.Mint(token, dest, recipient, amount);
-        outboundQueue.submit{ value: msg.value }(assetHubParaID, payload);
+        bytes memory payload = NativeTokensTypes.Mint(address(registry), token, dest, recipient, amount);
+        outboundQueue().submit{value: msg.value}(assetHubParaID, payload);
 
         emit Locked(recipient, token, amount);
     }
@@ -127,8 +125,9 @@ contract NativeTokens is AccessControl, IRecipient {
         }
         uint8 decimals = metadata.decimals();
 
-        bytes memory payload = NativeTokensTypes.Create(token, name, symbol, decimals);
-        outboundQueue.submit{ value: msg.value }(assetHubParaID, payload);
+        bytes memory payload =
+            NativeTokensTypes.Create(address(registry), token, name, symbol, decimals, createCallId, setMetadataCallId);
+        outboundQueue().submit{value: msg.value}(assetHubParaID, payload);
 
         emit Created(token);
     }
@@ -136,10 +135,8 @@ contract NativeTokens is AccessControl, IRecipient {
     /// @dev Processes messages from inbound channel.
     /// @param origin The multilocation of the source parachain
     /// @param message The message enqueued from substrate.
-    function handle(ParaID origin, bytes calldata message) external onlyRole(SENDER_ROLE) {
-        if (origin != assetHubParaID) {
-            revert Unauthorized();
-        }
+    function handle(ParaID origin, bytes calldata message) external override onlyRole(SENDER_ROLE) {
+        ensureOrigin(origin, assetHubParaID);
 
         Message memory decoded = abi.decode(message, (Message));
         if (decoded.action == Action.Unlock) {
@@ -147,10 +144,5 @@ contract NativeTokens is AccessControl, IRecipient {
             vault.withdraw(payload.recipient, payload.token, payload.amount);
             emit Unlocked(payload.recipient, payload.token, payload.amount);
         }
-    }
-
-    function setOutboundQueue(IOutboundQueue _outboundQueue) external onlyRole(ADMIN_ROLE) {
-        outboundQueue = _outboundQueue;
-        emit OutboundQueueUpdated(address(_outboundQueue));
     }
 }

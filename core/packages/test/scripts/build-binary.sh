@@ -59,17 +59,6 @@ build_relayer()
     cp $relay_bin "$output_bin_dir"
 }
 
-build_query_tool() {
-    pushd $root_dir/parachain
-    echo "Building query tool"
-    cargo build \
-        --manifest-path tools/query-events/Cargo.toml \
-        --release --features bridgehub-rococo-local \
-        --bin snowbridge-query-events
-    cp "target/release/snowbridge-query-events" "$output_bin_dir"
-    popd
-}
-
 build_geth() {
     if [ ! -f "$geth_dir/geth" ]; then
         echo "Building geth binary"
@@ -86,7 +75,6 @@ install_binary() {
     build_cumulus_from_source
     build_relaychain
     build_relayer
-    build_query_tool
 }
 
 if [ -z "${from_start_services:-}" ]; then

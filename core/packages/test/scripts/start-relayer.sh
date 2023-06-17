@@ -17,7 +17,25 @@ config_relayer(){
     ' \
     config/beefy-relay.json > $output_dir/beefy-relay.json
 
-    # Configure parachain relay
+    # Configure parachain relay (bridge hub)
+    jq \
+        --arg k1 "$(address_for InboundQueue)" \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg laneID $BRIDGE_HUB_PARAID \
+        --arg eth_gas_limit $eth_gas_limit \
+    '
+      .source.contracts.InboundQueue = $k1
+    | .source.contracts.BeefyClient = $k2
+    | .sink.contracts.InboundQueue = $k1
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
+    | .source."lane-id" = $laneID
+    ' \
+    config/parachain-relay.json > $output_dir/parachain-relay-bridge-hub.json
+
+    # Configure parachain relay (asset hub)
     jq \
         --arg k1 "$(address_for InboundQueue)" \
         --arg k2 "$(address_for BeefyClient)" \
@@ -33,7 +51,7 @@ config_relayer(){
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."lane-id" = $laneID
     ' \
-    config/parachain-relay.json > $output_dir/parachain-relay.json
+    config/parachain-relay.json > $output_dir/parachain-relay-asset-hub.json
 
     # Configure beacon relay
     jq \
@@ -75,16 +93,30 @@ start_relayer()
         done
     ) &
 
-    # Launch parachain relay
+    # Launch parachain relay for bridgehub
     (
-        : > "$output_dir"/parachain-relay.log
+        : > "$output_dir"/parachain-relay-bridge-hub.log
         while :
         do
-          echo "Starting parachain relay at $(date)"
+          echo "Starting parachain-relay (bridgehub) at $(date)"
             "${relay_bin}" run parachain \
-                --config "$output_dir/parachain-relay.json" \
+                --config "$output_dir/parachain-relay-bridge-hub.json" \
                 --ethereum.private-key $parachain_relay_eth_key \
-                >> "$output_dir"/parachain-relay.log 2>&1 || true
+                >> "$output_dir"/parachain-relay-bridge-hub.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch parachain relay for statemint
+    (
+        : > "$output_dir"/parachain-relay-asset-hub.log
+        while :
+        do
+          echo "Starting parachain relay (asset-hub) at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay-asset-hub.json" \
+                --ethereum.private-key $parachain_relay_eth_key \
+                >> "$output_dir"/parachain-relay-asset-hub.log 2>&1 || true
             sleep 20
         done
     ) &

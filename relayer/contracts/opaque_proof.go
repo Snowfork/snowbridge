@@ -26,7 +26,6 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
-	_ = abi.ConvertType
 )
 
 // ParachainClientDigestItem is an auto generated low-level Go binding around an user-defined struct.
@@ -177,11 +176,11 @@ func NewOpaqueProofFilterer(address common.Address, filterer bind.ContractFilter
 
 // bindOpaqueProof binds a generic wrapper to an already deployed contract.
 func bindOpaqueProof(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := OpaqueProofMetaData.GetAbi()
+	parsed, err := abi.JSON(strings.NewReader(OpaqueProofABI))
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and

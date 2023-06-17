@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+pragma solidity 0.8.20;
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
@@ -11,12 +12,22 @@ import {OutboundQueue} from "../src/OutboundQueue.sol";
 import {NativeTokens} from "../src/NativeTokens.sol";
 import {TokenVault} from "../src/TokenVault.sol";
 import {Vault} from "../src/Vault.sol";
-import {IVault} from "../src/IVault.sol";
 import {UpgradeProxy} from "../src/UpgradeProxy.sol";
 import {SovereignTreasury} from "../src/SovereignTreasury.sol";
+import {Registry} from "../src/Registry.sol";
 import {ParaID} from "../src/Types.sol";
 
 contract DeployScript is Script {
+    Registry public registry;
+    Vault public vault;
+    BeefyClient public beefyClient;
+    ParachainClient public parachainClient;
+    InboundQueue public inboundQueue;
+    OutboundQueue public outboundQueue;
+    TokenVault public tokenVault;
+    NativeTokens public nativeTokens;
+    UpgradeProxy public upgradeProxy;
+
     function setUp() public {}
 
     function run() public {
@@ -24,42 +35,54 @@ contract DeployScript is Script {
         address deployer = vm.rememberKey(privateKey);
         vm.startBroadcast(deployer);
 
+        // Registry
+        registry = new Registry();
+        registry.grantRole(registry.REGISTER_ROLE(), deployer);
+
+        // Vault
+        vault = new Vault();
+
         // SovereignTreasury
-        Vault vault = new Vault();
-        SovereignTreasury treasury = new SovereignTreasury(vault);
+        SovereignTreasury treasury = new SovereignTreasury(registry, vault);
+        registry.registerContract(keccak256("SovereignTreasury"), address(treasury));
 
         // BeefyClient
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
-        BeefyClient beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
+        beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
 
         // ParachainClient
         uint32 paraId = uint32(vm.envUint("BRIDGE_HUB_PARAID"));
-        ParachainClient parachainClient = new ParachainClient(beefyClient, paraId);
+        parachainClient = new ParachainClient(beefyClient, paraId);
 
         // InboundQueue
         uint256 relayerReward = vm.envUint("RELAYER_REWARD");
-        InboundQueue inboundQueue = new InboundQueue(parachainClient, vault, relayerReward);
+        inboundQueue = new InboundQueue(registry, parachainClient, vault, relayerReward);
+        registry.registerContract(keccak256("InboundQueue"), address(inboundQueue));
 
         // OutboundQueue
         uint256 relayerFee = vm.envUint("RELAYER_FEE");
-        OutboundQueue outboundQueue = new OutboundQueue(vault, relayerFee);
+        outboundQueue = new OutboundQueue(registry, vault, relayerFee);
+        registry.registerContract(keccak256("OutboundQueue"), address(outboundQueue));
 
         // NativeTokens
-        TokenVault tokenVault = new TokenVault();
-        NativeTokens nativeTokens = new NativeTokens(
+        tokenVault = new TokenVault();
+        nativeTokens = new NativeTokens(
+            registry,
             tokenVault,
-            outboundQueue,
             ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID"))),
-            vm.envUint("CREATE_TOKEN_FEE")
+            vm.envUint("CREATE_TOKEN_FEE"),
+            bytes2(vm.envBytes("CREATE_CALL_INDEX")),
+            bytes2(vm.envBytes("SET_METADATA_CALL_INDEX"))
         );
-        inboundQueue.updateHandler(1, IRecipient(nativeTokens));
+        registry.registerContract(keccak256("NativeTokens"), address(nativeTokens));
 
         // Deploy WETH for testing
         new WETH9();
 
-        // Upgrades
-        UpgradeProxy upgradeProxy = new UpgradeProxy(ParaID.wrap(paraId));
+        // UpgradeProxy
+        upgradeProxy = new UpgradeProxy(registry, ParaID.wrap(paraId));
+        registry.registerContract(keccak256("UpgradeProxy"), address(upgradeProxy));
 
         // Allow inbound queue to send messages to handlers
         nativeTokens.grantRole(nativeTokens.SENDER_ROLE(), address(inboundQueue));
@@ -82,24 +105,32 @@ contract DeployScript is Script {
         // Move ownership of everything to Upgrades app
 
         treasury.grantRole(treasury.ADMIN_ROLE(), address(upgradeProxy));
-        treasury.revokeRole(treasury.ADMIN_ROLE(), address(this));
+        treasury.revokeRole(treasury.ADMIN_ROLE(), deployer);
 
         nativeTokens.grantRole(nativeTokens.ADMIN_ROLE(), address(upgradeProxy));
-        nativeTokens.revokeRole(nativeTokens.ADMIN_ROLE(), address(this));
+        nativeTokens.revokeRole(nativeTokens.ADMIN_ROLE(), deployer);
 
         vault.grantRole(vault.ADMIN_ROLE(), address(upgradeProxy));
-        vault.revokeRole(vault.ADMIN_ROLE(), address(this));
+        vault.revokeRole(vault.ADMIN_ROLE(), deployer);
 
         tokenVault.grantRole(tokenVault.ADMIN_ROLE(), address(upgradeProxy));
-        tokenVault.revokeRole(tokenVault.ADMIN_ROLE(), address(this));
+        tokenVault.revokeRole(tokenVault.ADMIN_ROLE(), deployer);
 
         inboundQueue.grantRole(inboundQueue.ADMIN_ROLE(), address(upgradeProxy));
-        inboundQueue.revokeRole(inboundQueue.ADMIN_ROLE(), address(this));
+        inboundQueue.revokeRole(inboundQueue.ADMIN_ROLE(), deployer);
 
         outboundQueue.grantRole(outboundQueue.ADMIN_ROLE(), address(upgradeProxy));
-        outboundQueue.revokeRole(outboundQueue.ADMIN_ROLE(), address(this));
+        outboundQueue.revokeRole(outboundQueue.ADMIN_ROLE(), deployer);
 
-        upgradeProxy.revokeRole(upgradeProxy.ADMIN_ROLE(), address(this));
+        registry.grantRole(outboundQueue.ADMIN_ROLE(), address(upgradeProxy));
+        registry.revokeRole(outboundQueue.ADMIN_ROLE(), deployer);
+
+        upgradeProxy.revokeRole(upgradeProxy.ADMIN_ROLE(), deployer);
+
+        // Fund the sovereign account for the BridgeHub parachain. Used to reward relayers
+        // of messages originating from BridgeHub
+        uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
+        vault.deposit{value: initialDeposit}(ParaID.wrap(paraId));
 
         vm.stopBroadcast();
     }

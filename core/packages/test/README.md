@@ -79,13 +79,6 @@ The `start-services.sh` script writes the following logs:
 
 ### Common issues
 
-Sometimes during development tests will fail for transfers in the substrate->ethereum direction. If you see this, look in `parachain-relay.log` for the following error:
-```
-{"@timestamp":"2022-08-26T15:10:50.263740077+02:00","args":"[--api ws://127.0.0.1:11144 --block 0xe2e21a61b017699961b6d87c6aecbae18f2ce0c89bd87e0e8b0d808c26e2aad3]","level":"error","message":"Failed to query events.","name":"snowbridge-query-events","stdErr":"Error: Metadata(IncompatibleMetadata)\n","stdOut":""}
-```
-
-That means a dependency of the relayer has obsolete parachain metadata and needs to be refreshed. Please refer [here](../../../parachain/README.md#Chain_metadata) for steps to fix.
-
 ## Running E2E tests against Ropsten
 
 To run the E2E tests on Ropsten you need to have separate accounts for the relayers, an account for deployment and one for running the E2E test stack. You will also require an [Infura](https://infura.io/) account and project.

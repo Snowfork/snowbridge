@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use sp_core::H256;
 use sp_io::hashing::keccak_256;
 use sp_std::prelude::*;
@@ -28,7 +30,7 @@ fn apply_merkle_proof(proof: &[Vec<u8>]) -> Option<(H256, Vec<u8>)> {
 			let expected_hash = maybe_hash?;
 			let node: Box<dyn mpt::Node> = bytes.as_slice().try_into().ok()?;
 			if (*node).contains_hash(expected_hash.into()) {
-				return Some(keccak_256(bytes))
+				return Some(keccak_256(bytes));
 			}
 			None
 		});

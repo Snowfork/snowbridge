@@ -22,9 +22,10 @@ func (wr *EthereumWriter) logFieldsForSubmission(
 
 	params := log.Fields{
 		"message": log.Fields{
-			"origin":  message.Origin,
-			"nonce":   message.Nonce,
-			"payload": message.Payload,
+			"origin":    message.Origin,
+			"nonce":     message.Nonce,
+			"recipient": Hex(message.Recipient[:]),
+			"payload":   Hex(message.Payload),
 		},
 		"leafProof": leafProofHexes,
 		"proof":     Hex(proof),

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 // Code from https://github.com/ethereum/solidity-examples
-pragma solidity ^0.8.19;
+pragma solidity 0.8.20;
 
 library Bits {
     uint256 internal constant ONE = uint256(1);
