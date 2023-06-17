@@ -12,6 +12,15 @@ config_beacon_checkpoint()
     send_governance_transact_from_relaychain $bridgehub_para_id "$check_point_call" 180000000000 900000
 }
 
+config_inbound_queue()
+{
+    local pallet="30"
+    local callindex="01"
+    local payload="$pallet$callindex$(address_for OutboundQueue | cut -c3-)"
+    send_governance_transact_from_relaychain $bridgehub_para_id "$payload" 180000000000 900000
+}
+
+
 wait_beacon_chain_ready()
 {
     local initial_beacon_block=""
@@ -24,7 +33,7 @@ wait_beacon_chain_ready()
     done
 }
 
-function configure_beacon()
+function configure_bridgehub()
 {
     wait_beacon_chain_ready
     config_beacon_checkpoint
@@ -32,6 +41,7 @@ function configure_beacon()
 
 if [ -z "${from_start_services:-}" ]; then
     echo "config beacon checkpoint only!"
-    configure_beacon
+    configure_bridgehub
+    config_inbound_queue
     wait
 fi

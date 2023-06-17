@@ -85,6 +85,8 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T> {
 		MessageReceived { dest: ParaId, nonce: u64, result: MessageDispatchResult },
+		AllowListAdded { address: sp_core::H160 },
+		AllowListRemoved { address: sp_core::H160 },
 	}
 
 	#[pallet::error]
@@ -217,20 +219,38 @@ pub mod pallet {
 		#[pallet::call_index(1)]
 		#[pallet::weight({100_000_000})]
 		#[transactional]
-		pub fn add_allow_list(origin: OriginFor<T>, addresses: Vec<sp_core::H160>) -> DispatchResult {
+		pub fn add_allow_list(origin: OriginFor<T>, address: sp_core::H160) -> DispatchResult {
 			ensure_root(origin)?;
 
 			let success = <AllowList<T>>::mutate(|allowlist|{
-				for address in addresses {
-					if allowlist.try_insert(address).is_err() {
-						return false
-					}
-				}
-				true
+				allowlist.try_insert(address).is_ok()
 			});
 
-			if !success {
-				return Err(Error::<T>::AllowListFull.into())
+			if success {
+				Self::deposit_event(Event::AllowListAdded {
+					address: address,
+				});
+
+				Ok(())
+			} else {
+				Err(Error::<T>::AllowListFull.into())
+			}
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight({100_000_000})]
+		#[transactional]
+		pub fn remove_allow_list(origin: OriginFor<T>, address: sp_core::H160) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let removed = <AllowList<T>>::mutate(|allowlist|{
+					allowlist.remove(&address)
+			});
+
+			if removed {
+				Self::deposit_event(Event::AllowListRemoved {
+					address: address,
+				});
 			}
 
 			Ok(())
