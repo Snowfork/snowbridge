@@ -16,7 +16,7 @@ config_inbound_queue()
 {
     local pallet="30"
     local callindex="01"
-    local payload="$pallet$callindex$(address_for OutboundQueue | cut -c3-)"
+    local payload="0x$pallet$callindex$(address_for OutboundQueue | cut -c3-)"
     send_governance_transact_from_relaychain $bridgehub_para_id "$payload" 180000000000 900000
 }
 
