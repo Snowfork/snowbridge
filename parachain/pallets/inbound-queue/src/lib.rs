@@ -16,7 +16,6 @@ use codec::DecodeAll;
 use frame_support::{
 	storage::bounded_btree_set::BoundedBTreeSet,
 	traits::fungible::{Inspect, Mutate},
-	transactional,
 };
 use frame_system::ensure_signed;
 use snowbridge_core::ParaId;
@@ -218,7 +217,6 @@ pub mod pallet {
 
 		#[pallet::call_index(1)]
 		#[pallet::weight({100_000_000})]
-		#[transactional]
 		pub fn add_allow_list(origin: OriginFor<T>, address: sp_core::H160) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -235,7 +233,6 @@ pub mod pallet {
 
 		#[pallet::call_index(2)]
 		#[pallet::weight({100_000_000})]
-		#[transactional]
 		pub fn remove_allow_list(origin: OriginFor<T>, address: sp_core::H160) -> DispatchResult {
 			ensure_root(origin)?;
 

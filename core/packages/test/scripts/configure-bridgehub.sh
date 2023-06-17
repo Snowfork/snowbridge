@@ -36,11 +36,11 @@ function configure_bridgehub()
 {
     wait_beacon_chain_ready
     config_beacon_checkpoint
+    config_inbound_queue
 }
 
 if [ -z "${from_start_services:-}" ]; then
     echo "config beacon checkpoint only!"
     configure_bridgehub
-    config_inbound_queue
     wait
 fi
