@@ -125,7 +125,7 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
-			let allowlist: BoundedBTreeSet<H160, _> =
+			let allowlist: BoundedBTreeSet<H160, T::AllowListLength> =
 				BTreeSet::from_iter(self.allowlist.clone().into_iter())
 					.try_into()
 					.expect("exceeded bound");
