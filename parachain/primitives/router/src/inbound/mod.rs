@@ -98,16 +98,23 @@ impl NativeTokensMessage {
 					&chain_id,
 					origin.as_fixed_bytes(),
 				);
+				let buy_execution_fee_amount = 1_000_000_000_000; //WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
+				let buy_execution_fee = MultiAsset {
+					id: Concrete(MultiLocation::parent()),
+					fun: Fungible(buy_execution_fee_amount),
+				};
 
 				let asset_id = Self::convert_token_address(network, origin, token);
 				let instructions: Vec<Instruction<()>> = vec![
 					UniversalOrigin(GlobalConsensus(network)),
 					DescendOrigin(X1(Junction::AccountKey20 { network: None, key: origin.into() })),
+					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
 					Transact {
 						origin_kind: OriginKind::Xcm,
 						require_weight_at_most: Weight::from_parts(40_000_000, 10_000),
 						call: (create_call_index, asset_id, owner, MINIMUM_DEPOSIT).encode().into(),
 					},
+					ExpectTransactStatus(MaybeErrorCode::Success),
 					Transact {
 						origin_kind: OriginKind::SovereignAccount,
 						require_weight_at_most: Weight::from_parts(60_000_000, 8_000),
@@ -115,6 +122,8 @@ impl NativeTokensMessage {
 							.encode()
 							.into(),
 					},
+					ExpectTransactStatus(MaybeErrorCode::Success),
+					RefundSurplus,
 				];
 				Ok(instructions.into())
 			},
