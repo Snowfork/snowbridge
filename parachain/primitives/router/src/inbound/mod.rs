@@ -105,12 +105,12 @@ impl NativeTokensMessage {
 					DescendOrigin(X1(Junction::AccountKey20 { network: None, key: origin.into() })),
 					Transact {
 						origin_kind: OriginKind::Xcm,
-						require_weight_at_most: Weight::from_parts(40_000_000_000, 8000),
+						require_weight_at_most: Weight::from_parts(40_000_000, 10_000),
 						call: (create_call_index, asset_id, owner, MINIMUM_DEPOSIT).encode().into(),
 					},
 					Transact {
 						origin_kind: OriginKind::SovereignAccount,
-						require_weight_at_most: Weight::from_parts(20_000_000_000, 8000),
+						require_weight_at_most: Weight::from_parts(60_000_000, 8_000),
 						call: (set_metadata_call_index, asset_id, name, symbol, decimals)
 							.encode()
 							.into(),
