@@ -1,3 +1,5 @@
+github_checks:
+    annotations: false
 ignore:
   - "core/packages/contracts/test/mocks"
   - "core/packages/contracts/src/utils"
@@ -8,3 +10,12 @@ ignore:
   - "parachain/pallets/ethereum-beacon-client/src/benchmarking"
   - "parachain/pallets/ethereum-beacon-client/src/weights.rs"
   - "core/packages/contracts/src/DeployScript.sol"
+flags:
+  solidity:
+    paths:
+      - core/packages/contracts
+    carryforward: true
+  rust:
+    paths:
+      - parachain
+    carryforward: true
