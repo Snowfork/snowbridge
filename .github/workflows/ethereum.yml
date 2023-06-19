@@ -48,3 +48,4 @@ jobs:
         with:
           working-directory: core/packages/contracts
           files: lcov.info
+          flags: solidity
