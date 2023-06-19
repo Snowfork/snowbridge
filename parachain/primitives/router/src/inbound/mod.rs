@@ -5,8 +5,8 @@ use core::marker::PhantomData;
 use frame_support::{traits::ContainsPair, weights::Weight};
 use sp_core::{RuntimeDebug, H160};
 use sp_io::hashing::blake2_256;
-use sp_std::prelude::*;
 use sp_runtime::MultiAddress;
+use sp_std::prelude::*;
 use xcm::v3::{prelude::*, Junction::AccountKey20};
 use xcm_executor::traits::ConvertLocation;
 
@@ -113,17 +113,33 @@ impl NativeTokensMessage {
 					DescendOrigin(X1(origin_location)),
 					WithdrawAsset(buy_execution_fee.clone().into()),
 					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
-					SetAppendix(vec![
-						RefundSurplus, 
-						DepositAsset { 
-							assets: Wild(WildMultiAsset::All),
-							beneficiary: (Parent, Parent, GlobalConsensus(network), origin_location).into(),
-						},
-					].into()),
+					SetAppendix(
+						vec![
+							RefundSurplus,
+							DepositAsset {
+								assets: Wild(WildMultiAsset::All),
+								beneficiary: (
+									Parent,
+									Parent,
+									GlobalConsensus(network),
+									origin_location,
+								)
+									.into(),
+							},
+						]
+						.into(),
+					),
 					Transact {
 						origin_kind: OriginKind::Xcm,
 						require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
-						call: (create_call_index, asset_id, MultiAddress::<[u8; 32], ()>::Id(owner), MINIMUM_DEPOSIT).encode().into(),
+						call: (
+							create_call_index,
+							asset_id,
+							MultiAddress::<[u8; 32], ()>::Id(owner),
+							MINIMUM_DEPOSIT,
+						)
+							.encode()
+							.into(),
 					},
 					ExpectTransactStatus(MaybeErrorCode::Success),
 					Transact {
@@ -228,9 +244,9 @@ impl<AccountId> GlobalConsensusEthereumAccountConvertsFor<AccountId> {
 mod tests {
 	use super::GlobalConsensusEthereumAccountConvertsFor;
 	use hex_literal::hex;
-	use xcm_executor::traits::ConvertLocation;
 	use sp_core::crypto::Ss58Codec;
 	use xcm::v3::prelude::*;
+	use xcm_executor::traits::ConvertLocation;
 
 	const CONTRACT_ADDRESS: [u8; 20] = hex!("D184c103F7acc340847eEE82a0B909E3358bc28d");
 	const NETWORK: NetworkId = Ethereum { chain_id: 15 };
@@ -250,9 +266,10 @@ mod tests {
 			),
 		};
 
-		let account =
-			GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(&contract_location)
-				.unwrap();
+		let account = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(
+			&contract_location,
+		)
+		.unwrap();
 		let address = frame_support::sp_runtime::AccountId32::new(account)
 			.to_ss58check_with_version(SS58_FORMAT.into());
 		assert_eq!(account, EXPECTED_SOVEREIGN_KEY);
@@ -271,9 +288,10 @@ mod tests {
 			),
 		};
 
-		let account =
-			GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(&contract_location)
-				.unwrap();
+		let account = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(
+			&contract_location,
+		)
+		.unwrap();
 		let address = frame_support::sp_runtime::AccountId32::new(account)
 			.to_ss58check_with_version(SS58_FORMAT.into());
 		assert_eq!(account, EXPECTED_SOVEREIGN_KEY);
@@ -288,7 +306,9 @@ mod tests {
 			MultiLocation { parents: 2, interior: X2(GlobalConsensus(Polkadot), Parachain(1000)) };
 
 		assert_eq!(
-			GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(&contract_location),
+			GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(
+				&contract_location
+			),
 			None,
 		);
 	}
