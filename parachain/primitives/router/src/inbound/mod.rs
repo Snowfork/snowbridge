@@ -94,6 +94,7 @@ impl NativeTokensMessage {
 				create_call_index,
 				set_metadata_call_index,
 			} => {
+				frame_support::log::trace!(target:"xcm::ali", "{:?}", origin);
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
 					&chain_id,
 					origin.as_fixed_bytes(),
@@ -108,6 +109,7 @@ impl NativeTokensMessage {
 				let instructions: Vec<Instruction<()>> = vec![
 					UniversalOrigin(GlobalConsensus(network)),
 					DescendOrigin(X1(Junction::AccountKey20 { network: None, key: origin.into() })),
+					WithdrawAsset(buy_execution_fee.clone().into()),
 					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
 					Transact {
 						origin_kind: OriginKind::Xcm,
@@ -166,7 +168,7 @@ impl NativeTokensMessage {
 
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
 	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {
-		return MultiLocation {
+		let res = MultiLocation {
 			parents: 2,
 			interior: X3(
 				GlobalConsensus(network),
@@ -174,6 +176,8 @@ impl NativeTokensMessage {
 				AccountKey20 { network: None, key: token.into() },
 			),
 		};
+		frame_support::log::trace!(target:"xcm::ali", "{:?}", res);
+		res
 	}
 }
 
@@ -210,5 +214,92 @@ where
 impl<AccountId> GlobalConsensusEthereumAccountConvertsFor<AccountId> {
 	fn from_params(chain_id: &u64, key: &[u8; 20]) -> [u8; 32] {
 		(b"ethereum", chain_id, key).using_encoded(blake2_256)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::GlobalConsensusEthereumAccountConvertsFor;
+	use hex_literal::hex;
+	use xcm_executor::traits::ConvertLocation;
+	use sp_core::crypto::Ss58Codec;
+	use xcm::v3::prelude::*;
+
+	const CONTRACT_ADDRESS: [u8; 20] = hex!("87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d");
+	const NETWORK: NetworkId = Ethereum { chain_id: 15 };
+	const SS58_FORMAT: u16 = 2;
+	const EXPECTED_SOVEREIGN_KEY: [u8; 32] =
+		hex!("bbd510c884fe76c06b5543d600debeb545b1a3c44ad6ec5b353d37ba0d5e3884");
+	const EXPECTED_SOVEREIGN_ADDRESS: &'static str =
+		"GpbmNoGHPZJ9EJNMsjj5CjFepawX8VNfS6T4D54EezrLF7p";
+
+	#[test]
+	fn test_contract_location_without_network_converts_successfully() {
+		let contract_location = MultiLocation {
+			parents: 2,
+			interior: X2(
+				GlobalConsensus(NETWORK),
+				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
+			),
+		};
+
+		let account =
+			GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(&contract_location)
+				.unwrap();
+		let address = frame_support::sp_runtime::AccountId32::new(account)
+			.to_ss58check_with_version(SS58_FORMAT.into());
+		assert_eq!(account, EXPECTED_SOVEREIGN_KEY);
+		assert_eq!(address, EXPECTED_SOVEREIGN_ADDRESS);
+
+		println!("SS58: {}\nBytes: {:?}", address, account);
+	}
+
+	#[test]
+	fn test_contract_location_with_network_converts_successfully() {
+		let contract_location = MultiLocation {
+			parents: 2,
+			interior: X2(
+				GlobalConsensus(NETWORK),
+				AccountKey20 { network: Some(NETWORK), key: CONTRACT_ADDRESS },
+			),
+		};
+
+		let account =
+			GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(&contract_location)
+				.unwrap();
+		let address = frame_support::sp_runtime::AccountId32::new(account)
+			.to_ss58check_with_version(SS58_FORMAT.into());
+		assert_eq!(account, EXPECTED_SOVEREIGN_KEY);
+		assert_eq!(address, EXPECTED_SOVEREIGN_ADDRESS);
+
+		println!("SS58: {}\nBytes: {:?}", address, account);
+	}
+
+	#[test]
+	fn test_contract_location_with_incorrect_network_fails_convert() {
+		let bad_network = Ethereum { chain_id: 1 };
+		let contract_location = MultiLocation {
+			parents: 2,
+			interior: X2(
+				GlobalConsensus(NETWORK),
+				AccountKey20 { network: Some(bad_network), key: CONTRACT_ADDRESS },
+			),
+		};
+
+		assert_eq!(
+			GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(&contract_location),
+			None,
+		);
+	}
+
+	#[test]
+	fn test_contract_location_with_incorrect_location_fails_convert() {
+		let contract_location =
+			MultiLocation { parents: 2, interior: X2(GlobalConsensus(Polkadot), Parachain(1000)) };
+
+		assert_eq!(
+			GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(&contract_location),
+			None,
+		);
 	}
 }
