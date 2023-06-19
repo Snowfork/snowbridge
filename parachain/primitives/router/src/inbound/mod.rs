@@ -85,6 +85,12 @@ impl UpgradeProxyMessage {
 impl NativeTokensMessage {
 	pub fn convert(self, chain_id: u64) -> Result<Xcm<()>, ConvertError> {
 		let network = NetworkId::Ethereum { chain_id };
+		let buy_execution_fee_amount = 2_000_000_000; //WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
+		let buy_execution_fee = MultiAsset {
+			id: Concrete(MultiLocation::parent()),
+			fun: Fungible(buy_execution_fee_amount),
+		};
+
 		match self {
 			NativeTokensMessage::Create {
 				origin,
@@ -99,11 +105,6 @@ impl NativeTokensMessage {
 					&chain_id,
 					origin.as_fixed_bytes(),
 				);
-				let buy_execution_fee_amount = 2_000_000_000; //WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
-				let buy_execution_fee = MultiAsset {
-					id: Concrete(MultiLocation::parent()),
-					fun: Fungible(buy_execution_fee_amount),
-				};
 
 				let origin_location = Junction::AccountKey20 { network: None, key: origin.into() };
 
@@ -117,14 +118,14 @@ impl NativeTokensMessage {
 						vec![
 							RefundSurplus,
 							DepositAsset {
-								assets: Wild(WildMultiAsset::All),
+								assets: buy_execution_fee.into(),
 								beneficiary: (
 									Parent,
 									Parent,
 									GlobalConsensus(network),
 									origin_location,
 								)
-									.into(),
+								.into(),
 							},
 						]
 						.into(),
@@ -158,9 +159,29 @@ impl NativeTokensMessage {
 				let asset =
 					MultiAsset::from((Self::convert_token_address(network, origin, token), amount));
 
+				let origin_location = Junction::AccountKey20 { network: None, key: origin.into() };
+
 				let mut instructions: Vec<Instruction<()>> = vec![
 					UniversalOrigin(GlobalConsensus(network)),
-					DescendOrigin(X1(Junction::AccountKey20 { network: None, key: origin.into() })),
+					DescendOrigin(X1(origin_location)),
+					WithdrawAsset(buy_execution_fee.clone().into()),
+					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
+					SetAppendix(
+						vec![
+							RefundSurplus,
+							DepositAsset {
+								assets: buy_execution_fee.into(),
+								beneficiary: (
+									Parent,
+									Parent,
+									GlobalConsensus(network),
+									origin_location,
+								)
+								.into(),
+							},
+						]
+						.into(),
+					),
 					ReserveAssetDeposited(vec![asset.clone()].into()),
 					ClearOrigin,
 				];
