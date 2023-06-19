@@ -99,7 +99,7 @@ impl NativeTokensMessage {
 					&chain_id,
 					origin.as_fixed_bytes(),
 				);
-				let buy_execution_fee_amount = 1_000_000_000_000; //WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
+				let buy_execution_fee_amount = 2_000_000_000; //WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
 				let buy_execution_fee = MultiAsset {
 					id: Concrete(MultiLocation::parent()),
 					fun: Fungible(buy_execution_fee_amount),
