@@ -95,7 +95,6 @@ impl NativeTokensMessage {
 				create_call_index,
 				set_metadata_call_index,
 			} => {
-				frame_support::log::trace!(target:"xcm::ali", "{:?}", origin);
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
 					&chain_id,
 					origin.as_fixed_bytes(),
@@ -106,21 +105,30 @@ impl NativeTokensMessage {
 					fun: Fungible(buy_execution_fee_amount),
 				};
 
+				let origin_location = Junction::AccountKey20 { network: None, key: origin.into() };
+
 				let asset_id = Self::convert_token_address(network, origin, token);
 				let instructions: Vec<Instruction<()>> = vec![
 					UniversalOrigin(GlobalConsensus(network)),
-					DescendOrigin(X1(Junction::AccountKey20 { network: None, key: origin.into() })),
+					DescendOrigin(X1(origin_location)),
 					WithdrawAsset(buy_execution_fee.clone().into()),
 					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
+					SetAppendix(vec![
+						RefundSurplus, 
+						DepositAsset { 
+							assets: Wild(WildMultiAsset::All),
+							beneficiary: (Parent, Parent, GlobalConsensus(network), origin_location).into(),
+						},
+					].into()),
 					Transact {
 						origin_kind: OriginKind::Xcm,
-						require_weight_at_most: Weight::from_parts(40_000_000, 10_000),
+						require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
 						call: (create_call_index, asset_id, MultiAddress::<[u8; 32], ()>::Id(owner), MINIMUM_DEPOSIT).encode().into(),
 					},
 					ExpectTransactStatus(MaybeErrorCode::Success),
 					Transact {
 						origin_kind: OriginKind::SovereignAccount,
-						require_weight_at_most: Weight::from_parts(60_000_000, 8_000),
+						require_weight_at_most: Weight::from_parts(200_000_000, 8_000),
 						call: (set_metadata_call_index, asset_id, name, symbol, decimals)
 							.encode()
 							.into(),
@@ -169,16 +177,14 @@ impl NativeTokensMessage {
 
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
 	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {
-		let res = MultiLocation {
+		MultiLocation {
 			parents: 2,
 			interior: X3(
 				GlobalConsensus(network),
 				AccountKey20 { network: None, key: origin.into() },
 				AccountKey20 { network: None, key: token.into() },
 			),
-		};
-		frame_support::log::trace!(target:"xcm::ali", "{:?}", res);
-		res
+		}
 	}
 }
 
