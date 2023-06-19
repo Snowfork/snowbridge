@@ -11,7 +11,6 @@
       "endpoint": "ws://127.0.0.1:8546",
       "gas-limit": null
     },
-    "start-block": 0,
     "descendants-until-final": 3,
     "contracts": {
       "BeefyClient": null

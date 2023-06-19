@@ -234,9 +234,8 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 
 	// Generate the MMR proof for the polkadot block.
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
-		input.RelayBlockNumber+1,
+		input.RelayBlockNumber,
 		latestBeefyBlockHash,
-		li.config.BeefyActivationBlock,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("generate MMR leaf proof: %w", err)
