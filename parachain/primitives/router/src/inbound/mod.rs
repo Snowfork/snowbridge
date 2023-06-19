@@ -6,6 +6,7 @@ use frame_support::{traits::ContainsPair, weights::Weight};
 use sp_core::{RuntimeDebug, H160};
 use sp_io::hashing::blake2_256;
 use sp_std::prelude::*;
+use sp_runtime::MultiAddress;
 use xcm::v3::{prelude::*, Junction::AccountKey20};
 use xcm_executor::traits::ConvertLocation;
 
@@ -114,7 +115,7 @@ impl NativeTokensMessage {
 					Transact {
 						origin_kind: OriginKind::Xcm,
 						require_weight_at_most: Weight::from_parts(40_000_000, 10_000),
-						call: (create_call_index, asset_id, owner, MINIMUM_DEPOSIT).encode().into(),
+						call: (create_call_index, asset_id, MultiAddress::<[u8; 32], ()>::Id(owner), MINIMUM_DEPOSIT).encode().into(),
 					},
 					ExpectTransactStatus(MaybeErrorCode::Success),
 					Transact {
