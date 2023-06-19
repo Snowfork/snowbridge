@@ -38,11 +38,7 @@ library MerkleProof {
         bytes32 node = leaf;
         unchecked {
             for (uint256 i = 0; i < proof.length; i++) {
-                if (position & 1 == 1 || position + 1 == width) {
-                    node = efficientHash(proof[i], node);
-                } else {
-                    node = efficientHash(node, proof[i]);
-                }
+                node = efficientHash(proof[i], node, position & 1 == 1 || position + 1 == width);
                 position = position >> 1;
                 width = ((width - 1) >> 1) + 1;
             }
@@ -50,12 +46,18 @@ library MerkleProof {
         }
     }
 
-    function efficientHash(bytes32 a, bytes32 b) internal pure returns (bytes32 value) {
-        /// @solidity memory-safe-assembly
+    function efficientHash(bytes32 x, bytes32 y, bool leftFirst) internal pure returns (bytes32 value) {
         assembly {
-            mstore(0x00, a)
-            mstore(0x20, b)
-            value := keccak256(0x00, 0x40)
+            switch leftFirst
+            case true {
+                mstore(0x00, x)
+                mstore(0x20, y)
+            }
+            default {
+                mstore(0x00, y)
+                mstore(0x20, x)
+            }
+            value := keccak256(0x0, 0x40)
         }
     }
 }
