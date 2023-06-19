@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use frame_support::{traits::ContainsPair, weights::Weight};
-use sp_core::{RuntimeDebug, H160};
+use sp_core::{Get, H160, RuntimeDebug};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use sp_std::prelude::*;
@@ -204,15 +204,13 @@ impl NativeTokensMessage {
 	}
 }
 
-pub struct FromEthereumGlobalConsensus;
-impl ContainsPair<MultiLocation, MultiLocation> for FromEthereumGlobalConsensus {
-	fn contains(a: &MultiLocation, b: &MultiLocation) -> bool {
-		let a_network_id = a.interior().global_consensus();
-		if let Ok(Ethereum { .. }) = a_network_id {
-			b.interior().global_consensus() == a_network_id
-		} else {
-			false
-		}
+pub struct FromEthereumGlobalConsensus<EthereumBridgeLocation>(PhantomData<EthereumBridgeLocation>);
+impl<EthereumBridgeLocation> ContainsPair<MultiLocation, MultiLocation> for FromEthereumGlobalConsensus<EthereumBridgeLocation>
+where 
+	EthereumBridgeLocation: Get<MultiLocation>
+{
+	fn contains(asset: &MultiLocation, origin: &MultiLocation) -> bool {
+		origin == &EthereumBridgeLocation::get() && asset.starts_with(origin)
 	}
 }
 
@@ -242,7 +240,8 @@ impl<AccountId> GlobalConsensusEthereumAccountConvertsFor<AccountId> {
 
 #[cfg(test)]
 mod tests {
-	use super::GlobalConsensusEthereumAccountConvertsFor;
+	use super::{FromEthereumGlobalConsensus, GlobalConsensusEthereumAccountConvertsFor};
+	use frame_support::{parameter_types, traits::ContainsPair};
 	use hex_literal::hex;
 	use sp_core::crypto::Ss58Codec;
 	use xcm::v3::prelude::*;
@@ -255,6 +254,11 @@ mod tests {
 		hex!("5d6987649e0dac78ddf852eb0f1b1d1bf2be9623d81cb16c17cfa145948bb6dc");
 	const EXPECTED_SOVEREIGN_ADDRESS: &'static str =
 		"EgoKVgdhGVz41LyP2jckLrmXjnD35xitaX221ktZjQ2Xsxw";
+
+	parameter_types! {
+		pub EthereumNetwork: NetworkId = NETWORK;
+		pub EthereumLocation: MultiLocation = MultiLocation::new(2, X2(GlobalConsensus(EthereumNetwork::get()), AccountKey20 { network: None, key: CONTRACT_ADDRESS }));
+	}
 
 	#[test]
 	fn test_contract_location_without_network_converts_successfully() {
@@ -311,5 +315,58 @@ mod tests {
 			),
 			None,
 		);
+	}
+
+	#[test]
+	fn test_from_ethereum_global_consensus_with_containing_asset_yields_true() {
+		let origin = MultiLocation {
+			parents: 2,
+			interior: X2(
+				GlobalConsensus(NETWORK),
+				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
+			),
+		};
+		let asset = MultiLocation {
+			parents: 2,
+			interior: X3(
+				GlobalConsensus(NETWORK),
+				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
+				AccountKey20 { network: None, key: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] }
+			),
+		};
+		assert!(FromEthereumGlobalConsensus::<EthereumLocation>::contains(&asset, &origin));
+	}
+
+	#[test]
+	fn test_from_ethereum_global_consensus_without_containing_asset_yields_false() {
+		let origin = MultiLocation {
+			parents: 2,
+			interior: X2(
+				GlobalConsensus(NETWORK),
+				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
+			),
+		};
+		let asset = MultiLocation { 
+			parents: 2,
+			interior: X2(GlobalConsensus(Polkadot), Parachain(1000))
+		};
+		assert!(!FromEthereumGlobalConsensus::<EthereumLocation>::contains(&asset, &origin));
+	}
+
+	#[test]
+	fn test_from_ethereum_global_consensus_without_bridge_origin_yields_false() {
+		let origin = MultiLocation { 
+			parents: 2,
+			interior: X2(GlobalConsensus(Polkadot), Parachain(1000))
+		};
+		let asset = MultiLocation {
+			parents: 2,
+			interior: X3(
+				GlobalConsensus(NETWORK),
+				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
+				AccountKey20 { network: None, key: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] }
+			),
+		};
+		assert!(!FromEthereumGlobalConsensus::<EthereumLocation>::contains(&asset, &origin));
 	}
 }
