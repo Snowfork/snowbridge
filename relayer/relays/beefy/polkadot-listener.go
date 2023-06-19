@@ -78,18 +78,17 @@ func (li *PolkadotListener) scanCommitments(
 				return fmt.Errorf("scan safe commitments: %w", result.Error)
 			}
 
-			if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet+1 {
-				// Workaround for https://github.com/paritytech/polkadot/pull/6577
-				if uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID) != result.SignedCommitment.Commitment.ValidatorSetID+1 {
-					log.WithFields(log.Fields{
-						"commitment": log.Fields{
-							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
-							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
-						},
-					}).Info("Discarded invalid handover commitment with BeefyNextAuthoritySet not change")
-					continue
-				}
-				currentValidatorSet++
+			logEntry := log.WithFields(log.Fields{
+				"commitment": log.Fields{
+					"blockNumber":        result.SignedCommitment.Commitment.BlockNumber,
+					"validatorSetID":     result.SignedCommitment.Commitment.ValidatorSetID,
+					"nextValidatorSetID": result.MMRProof.Leaf.BeefyNextAuthoritySet.ID,
+				},
+				"validatorSetID": currentValidatorSet,
+			})
+
+			if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet+1 && result.SignedCommitment.Commitment.ValidatorSetID == uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID)-1 {
+
 				validators, err := li.queryBeefyAuthorities(result.BlockHash)
 				if err != nil {
 					return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
@@ -106,15 +105,14 @@ func (li *PolkadotListener) scanCommitments(
 				case <-ctx.Done():
 					return ctx.Err()
 				case requests <- task:
+					logEntry.Info("New commitment with handover added to channel")
+					currentValidatorSet++
+				default:
+					logEntry.Warn("Discarded commitment fail adding to channel")
 				}
-			} else if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet {
+			} else if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet && result.SignedCommitment.Commitment.ValidatorSetID == uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID) {
 				if result.Depth > li.config.Source.FastForwardDepth {
-					log.WithFields(log.Fields{
-						"commitment": log.Fields{
-							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
-							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
-						},
-					}).Warn("Discarded commitment with depth not fast forward")
+					logEntry.Warn("Discarded commitment with depth not fast forward")
 					continue
 				}
 
@@ -133,20 +131,12 @@ func (li *PolkadotListener) scanCommitments(
 				// drop task if it can't be processed immediately
 				select {
 				case requests <- task:
+					logEntry.Info("New commitment added to channel")
 				default:
-					log.WithFields(log.Fields{
-						"commitment": log.Fields{
-							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
-							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
-						},
-					}).Info("Discarded commitment")
+					logEntry.Warn("Discarded commitment fail adding to channel")
 				}
 			} else {
-				return fmt.Errorf("commitment has unexpected validatorSetID: blockNumber=%v validatorSetID=%v expectedValidatorSetID=%v",
-					result.SignedCommitment.Commitment.BlockNumber,
-					result.SignedCommitment.Commitment.ValidatorSetID,
-					currentValidatorSet,
-				)
+				logEntry.Warn("Discarded invalid commitment")
 			}
 		}
 	}
