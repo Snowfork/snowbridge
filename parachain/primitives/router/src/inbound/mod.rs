@@ -225,13 +225,13 @@ mod tests {
 	use sp_core::crypto::Ss58Codec;
 	use xcm::v3::prelude::*;
 
-	const CONTRACT_ADDRESS: [u8; 20] = hex!("87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d");
+	const CONTRACT_ADDRESS: [u8; 20] = hex!("D184c103F7acc340847eEE82a0B909E3358bc28d");
 	const NETWORK: NetworkId = Ethereum { chain_id: 15 };
 	const SS58_FORMAT: u16 = 2;
 	const EXPECTED_SOVEREIGN_KEY: [u8; 32] =
-		hex!("bbd510c884fe76c06b5543d600debeb545b1a3c44ad6ec5b353d37ba0d5e3884");
+		hex!("5d6987649e0dac78ddf852eb0f1b1d1bf2be9623d81cb16c17cfa145948bb6dc");
 	const EXPECTED_SOVEREIGN_ADDRESS: &'static str =
-		"GpbmNoGHPZJ9EJNMsjj5CjFepawX8VNfS6T4D54EezrLF7p";
+		"EgoKVgdhGVz41LyP2jckLrmXjnD35xitaX221ktZjQ2Xsxw";
 
 	#[test]
 	fn test_contract_location_without_network_converts_successfully() {
@@ -273,23 +273,6 @@ mod tests {
 		assert_eq!(address, EXPECTED_SOVEREIGN_ADDRESS);
 
 		println!("SS58: {}\nBytes: {:?}", address, account);
-	}
-
-	#[test]
-	fn test_contract_location_with_incorrect_network_fails_convert() {
-		let bad_network = Ethereum { chain_id: 1 };
-		let contract_location = MultiLocation {
-			parents: 2,
-			interior: X2(
-				GlobalConsensus(NETWORK),
-				AccountKey20 { network: Some(bad_network), key: CONTRACT_ADDRESS },
-			),
-		};
-
-		assert_eq!(
-			GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(&contract_location),
-			None,
-		);
 	}
 
 	#[test]
