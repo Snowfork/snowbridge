@@ -8,3 +8,4 @@ ignore:
   - "parachain/pallets/ethereum-beacon-client/src/benchmarking"
   - "parachain/pallets/ethereum-beacon-client/src/weights.rs"
   - "core/packages/contracts/src/DeployScript.sol"
+  - "core/packages/contracts/src/utils/OpaqueProof.sol"
