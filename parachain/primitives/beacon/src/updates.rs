@@ -45,10 +45,10 @@ impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 pub struct Update<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
-	/// A recent header attesting to the finalized header, in its `state_root`
+	/// A recent header attesting to the finalized header, using its `state_root`.
 	pub attested_header: BeaconHeader,
 	/// The signing data that the sync committee produced for this attested header, including
-	/// who participated in the vote and the resulting signature
+	/// who participated in the vote and the resulting signature.
 	pub sync_aggregate: SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>,
 	/// The slot at which the sync aggregate can be found, typically attested_header.slot + 1, if
 	/// the next slot block was not missed.
