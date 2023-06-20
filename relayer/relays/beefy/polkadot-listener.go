@@ -86,6 +86,14 @@ func (li *PolkadotListener) scanCommitments(
 				},
 				"validatorSetID": currentValidatorSet,
 			})
+			if result.SignedCommitment.Commitment.ValidatorSetID > currentValidatorSet+2 {
+
+				return fmt.Errorf("commitment has unexpected validatorSetID: blockNumber=%v validatorSetID=%v expectedValidatorSetID=%v",
+					result.SignedCommitment.Commitment.BlockNumber,
+					result.SignedCommitment.Commitment.ValidatorSetID,
+					currentValidatorSet,
+				)
+			}
 
 			if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet+1 && result.SignedCommitment.Commitment.ValidatorSetID == uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID)-1 {
 
@@ -107,8 +115,6 @@ func (li *PolkadotListener) scanCommitments(
 				case requests <- task:
 					logEntry.Info("New commitment with handover added to channel")
 					currentValidatorSet++
-				default:
-					logEntry.Warn("Discarded commitment fail adding to channel")
 				}
 			} else if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet && result.SignedCommitment.Commitment.ValidatorSetID == uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID) {
 				if result.Depth > li.config.Source.FastForwardDepth {
