@@ -151,7 +151,6 @@ impl NativeTokensMessage {
 							.into(),
 					},
 					ExpectTransactStatus(MaybeErrorCode::Success),
-					RefundSurplus,
 				];
 				Ok(instructions.into())
 			},
