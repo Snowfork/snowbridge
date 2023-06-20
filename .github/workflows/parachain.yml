@@ -119,6 +119,7 @@ jobs:
         with:
           working-directory: parachain
           files: cobertura.xml
+          flags: rust
 
   check-cumulus-bridgehub:
     runs-on: snowbridge-runner
