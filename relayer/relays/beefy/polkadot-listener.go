@@ -116,7 +116,7 @@ func (li *PolkadotListener) scanCommitments(
 					logEntry.Info("New commitment with handover added to channel")
 					currentValidatorSet++
 				}
-			} else if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet && result.SignedCommitment.Commitment.ValidatorSetID == uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID) {
+			} else if (result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet || result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet+1) && result.SignedCommitment.Commitment.ValidatorSetID == uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID) {
 				if result.Depth > li.config.Source.FastForwardDepth {
 					logEntry.Warn("Discarded commitment with depth not fast forward")
 					continue
