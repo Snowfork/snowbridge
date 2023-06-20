@@ -86,8 +86,7 @@ func (li *PolkadotListener) scanCommitments(
 				},
 				"validatorSetID": currentValidatorSet,
 			})
-			if result.SignedCommitment.Commitment.ValidatorSetID > currentValidatorSet+2 {
-
+			if result.SignedCommitment.Commitment.ValidatorSetID < currentValidatorSet || result.SignedCommitment.Commitment.ValidatorSetID > currentValidatorSet+1 {
 				return fmt.Errorf("commitment has unexpected validatorSetID: blockNumber=%v validatorSetID=%v expectedValidatorSetID=%v",
 					result.SignedCommitment.Commitment.BlockNumber,
 					result.SignedCommitment.Commitment.ValidatorSetID,
