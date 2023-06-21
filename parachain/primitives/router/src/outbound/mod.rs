@@ -211,10 +211,8 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 		// assert that the benificiary is ethereum account key 20
 		let destination = {
-			if let MultiLocation {
-				parents: 0,
-				interior: X1(AccountKey20 { network, key }),
-			} = beneficiary
+			if let MultiLocation { parents: 0, interior: X1(AccountKey20 { network, key }) } =
+				beneficiary
 			{
 				if network.is_some() && network != &Some(*self.bridged_location) {
 					return Err(BeneficiaryResolutionFailed);
@@ -241,10 +239,9 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			ensure!(*amount > 0, ZeroAssetTransfer);
 
 			// extract ERC20 contract address
-			if let MultiLocation {
-				parents: 0,
-				interior: X1(AccountKey20 { network, key }),
-			} = asset_location {
+			if let MultiLocation { parents: 0, interior: X1(AccountKey20 { network, key }) } =
+				asset_location
+			{
 				if network.is_some() && network != &Some(*self.bridged_location) {
 					return Err(AssetResolutionFailed);
 				}
@@ -629,8 +626,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -667,8 +663,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -705,8 +700,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -776,8 +770,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -814,8 +807,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			ClearTopic,
 		]
@@ -849,8 +841,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -887,8 +878,7 @@ mod tests {
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -951,8 +941,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -979,15 +968,11 @@ mod tests {
 
 		let assets: MultiAssets = vec![
 			MultiAsset {
-				id: Concrete(
-					X1(AccountKey20 { network: None, key: token_address_1 }).into(),
-				),
+				id: Concrete(X1(AccountKey20 { network: None, key: token_address_1 }).into()),
 				fun: Fungible(1000),
 			},
 			MultiAsset {
-				id: Concrete(
-					X1(AccountKey20 { network: None, key: token_address_2 }).into(),
-				),
+				id: Concrete(X1(AccountKey20 { network: None, key: token_address_2 }).into()),
 				fun: Fungible(500),
 			},
 		]
@@ -1000,8 +985,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1038,8 +1022,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1076,8 +1059,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1114,8 +1096,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1151,8 +1132,47 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+			},
+			SetTopic([
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0,
+			]),
+		]
+		.into();
+		let mut converter = XcmConverter::new(&message, &network);
+
+		let result = converter.convert();
+		assert_eq!(result, Err(XcmConverterError::AssetResolutionFailed));
+	}
+
+	#[test]
+	fn xcm_converter_convert_non_ethereum_chain_asset_yields_asset_resolution_failed() {
+		let network = BridgedNetwork::get();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(
+				X1(AccountKey20 { network: Some(Ethereum { chain_id: 2 }), key: token_address })
 					.into(),
+			),
+			fun: Fungible(1000),
+		}]
+		.into();
+		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			WithdrawAsset(assets),
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1171,6 +1191,7 @@ mod tests {
 		let network = BridgedNetwork::get();
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+
 		let beneficiary_address: [u8; 32] =
 			hex!("2000000000000000000000000000000000000000000000000000000000000000");
 
@@ -1195,6 +1216,48 @@ mod tests {
 					Parachain(1000),
 					AccountId32 { network: Some(Polkadot), id: beneficiary_address },
 				)
+				.into(),
+			},
+			SetTopic([
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0,
+			]),
+		]
+		.into();
+		let mut converter = XcmConverter::new(&message, &network);
+
+		let result = converter.convert();
+		assert_eq!(result, Err(XcmConverterError::BeneficiaryResolutionFailed));
+	}
+
+	#[test]
+	fn xcm_converter_convert_with_non_ethereum_chain_beneficiary_yields_beneficiary_resolution_failed(
+	) {
+		let network = BridgedNetwork::get();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
+			fun: Fungible(1000),
+		}]
+		.into();
+		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			WithdrawAsset(assets),
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 {
+					network: Some(Ethereum { chain_id: 2 }),
+					key: beneficiary_address,
+				})
 				.into(),
 			},
 			SetTopic([
