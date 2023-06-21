@@ -45,7 +45,6 @@ if (command == "GenerateInitialSet") {
     } else {
         validatorSet = new ValidatorSet(validatorSetID, validatorSetSize)
     }
-    const validatorProof = validatorSet.createSignatureProof(subset[0], commitHash)
     const finalBitfieldLength = parseInt(process.argv[3])
     let finalBitfield: any = []
     for (let i = 0; i < finalBitfieldLength; i++) {
@@ -58,7 +57,6 @@ if (command == "GenerateInitialSet") {
         `${encoder.encode(
             [
                 "bytes32",
-                "tuple(uint8 v, bytes32 r, bytes32 s, uint256 index,address account,bytes32[] proof)",
                 "tuple(uint8 v, bytes32 r, bytes32 s, uint256 index,address account,bytes32[] proof)[]",
                 "bytes32[]",
                 "tuple(uint8 version,uint32 parentNumber,bytes32 parentHash,uint64 nextAuthoritySetID,uint32 nextAuthoritySetLen,bytes32 nextAuthoritySetRoot,bytes32 parachainHeadsRoot)",
@@ -66,7 +64,6 @@ if (command == "GenerateInitialSet") {
             ],
             [
                 validatorSet.root,
-                validatorProof,
                 validatorFinalProofs,
                 mmrLeafProofs,
                 mmrLeaf,

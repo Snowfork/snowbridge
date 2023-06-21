@@ -61,10 +61,9 @@ contract BeefyClientTest is Test {
             inputs[i + 4] = Strings.toString(finalBitfield[i]);
         }
         BeefyClient.ValidatorProof[] memory proofs;
-        // TODO: use first item in _proofs instead of validatorProof
-        (root, validatorProof, proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) = abi.decode(
+        (root, proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) = abi.decode(
             vm.ffi(inputs),
-            (bytes32, BeefyClient.ValidatorProof, BeefyClient.ValidatorProof[], bytes32[], BeefyClient.MMRLeaf, uint256)
+            (bytes32, BeefyClient.ValidatorProof[], bytes32[], BeefyClient.MMRLeaf, uint256)
         );
         // Cache finalValidatorProofs to storage in order to reuse in submitFinal later
         for (uint256 i = 0; i < proofs.length; i++) {
@@ -84,7 +83,7 @@ contract BeefyClientTest is Test {
     function testSubmit() public {
         initialize(setId);
 
-        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
 
         // mine random delay blocks
         vm.roll(block.number + randaoCommitDelay);
@@ -103,7 +102,7 @@ contract BeefyClientTest is Test {
     function testSubmitFailInvalidSignature() public {
         initialize(setId);
 
-        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
 
         // mine random delay blocks
         vm.roll(block.number + randaoCommitDelay);
@@ -124,7 +123,7 @@ contract BeefyClientTest is Test {
     function testSubmitFailValidatorNotInBitfield() public {
         initialize(setId);
 
-        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
 
         // mine random delay blocks
         vm.roll(block.number + randaoCommitDelay);
@@ -146,7 +145,7 @@ contract BeefyClientTest is Test {
         // first round of submit should be fine
         testSubmit();
 
-        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
         vm.roll(block.number + randaoCommitDelay);
         vm.prevrandao(bytes32(uint256(difficulty)));
         beefyClient.commitPrevRandao(commitHash);
@@ -159,7 +158,7 @@ contract BeefyClientTest is Test {
     function testSubmitFailWithInvalidBitfield() public {
         initialize(setId);
 
-        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
 
         vm.roll(block.number + randaoCommitDelay);
 
@@ -176,7 +175,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitFailWithoutPrevRandao() public {
         initialize(setId);
-        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
         // reverted without commit PrevRandao
         vm.expectRevert(BeefyClient.PrevRandaoNotCaptured.selector);
@@ -185,7 +184,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitFailForPrevRandaoTooEarlyOrTooLate() public {
         initialize(setId);
-        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
         // reverted for commit PrevRandao too early
         vm.expectRevert(BeefyClient.WaitPeriodNotOver.selector);
         beefyClient.commitPrevRandao(commitHash);
@@ -198,7 +197,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitFailForPrevRandaoCapturedMoreThanOnce() public {
         initialize(setId);
-        beefyClient.submitInitial(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
         vm.roll(block.number + randaoCommitDelay);
         vm.prevrandao(bytes32(uint256(difficulty)));
         beefyClient.commitPrevRandao(commitHash);
@@ -211,7 +210,7 @@ contract BeefyClientTest is Test {
         //initialize with previous set
         initialize(setId - 1);
 
-        beefyClient.submitInitialWithHandover(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitialWithHandover(commitHash, bitfield, finalValidatorProofs[0]);
 
         vm.roll(block.number + randaoCommitDelay);
 
@@ -230,7 +229,7 @@ contract BeefyClientTest is Test {
         //initialize with previous set
         initialize(setId - 1);
 
-        beefyClient.submitInitialWithHandover(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitialWithHandover(commitHash, bitfield, finalValidatorProofs[0]);
 
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
 
@@ -243,7 +242,7 @@ contract BeefyClientTest is Test {
     function testSubmitWithHandoverFailStaleCommitment() public {
         testSubmit();
 
-        beefyClient.submitInitialWithHandover(commitHash, bitfield, validatorProof);
+        beefyClient.submitInitialWithHandover(commitHash, bitfield, finalValidatorProofs[0]);
 
         vm.roll(block.number + randaoCommitDelay);
 
