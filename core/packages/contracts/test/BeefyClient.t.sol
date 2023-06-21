@@ -60,16 +60,15 @@ contract BeefyClientTest is Test {
         for (uint256 i = 0; i < finalBitfield.length; i++) {
             inputs[i + 4] = Strings.toString(finalBitfield[i]);
         }
-        BeefyClient.ValidatorProof[] memory _proofs;
+        BeefyClient.ValidatorProof[] memory proofs;
         // TODO: use first item in _proofs instead of validatorProof
-        // TODO: s/_proofs/proofs/g
-        (root, validatorProof, _proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) = abi.decode(
+        (root, validatorProof, proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) = abi.decode(
             vm.ffi(inputs),
             (bytes32, BeefyClient.ValidatorProof, BeefyClient.ValidatorProof[], bytes32[], BeefyClient.MMRLeaf, uint256)
         );
         // Cache finalValidatorProofs to storage in order to reuse in submitFinal later
-        for (uint256 i = 0; i < _proofs.length; i++) {
-            finalValidatorProofs.push(_proofs[i]);
+        for (uint256 i = 0; i < proofs.length; i++) {
+            finalValidatorProofs.push(proofs[i]);
         }
         console.log("current validator's merkle root is: %s", Strings.toHexString(uint256(root), 32));
     }
