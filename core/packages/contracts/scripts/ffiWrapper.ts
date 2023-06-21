@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { ValidatorSet, createRandomSubset, readSetBits } from "./helpers"
-import { ethers } from "ethers"
+import { BigNumber, ethers } from "ethers"
 import fs from "fs"
 import type { BeefyClient } from "../types/BeefyClient"
 import { accounts } from "./wallets"
@@ -46,7 +46,7 @@ if (command == "GenerateInitialSet") {
         validatorSet = new ValidatorSet(validatorSetID, validatorSetSize)
     }
     const finalBitfieldLength = parseInt(process.argv[3])
-    let finalBitfield: any = []
+    let finalBitfield: BigNumber[] = []
     for (let i = 0; i < finalBitfieldLength; i++) {
         finalBitfield.push(ethers.BigNumber.from(process.argv[4 + i]))
     }
