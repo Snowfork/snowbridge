@@ -8,7 +8,7 @@ use codec::{Decode, Encode};
 
 use frame_support::{ensure, log, traits::Get};
 use snowbridge_core::{OutboundMessage, OutboundQueue as OutboundQueueTrait};
-use sp_core::{RuntimeDebug, H160, H256};
+use sp_core::{H160, H256};
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
 use xcm_executor::traits::ExportXcm;
@@ -126,13 +126,14 @@ where
 }
 
 /// Errors that can be thrown to the pattern matching step.
-#[derive(PartialEq, RuntimeDebug)]
+#[derive(PartialEq, Debug)]
 enum XcmConverterError {
 	UnexpectedEndOfXcm,
 	TargetFeeExpected,
 	BuyExecutionExpected,
 	EndOfXcmMessageExpected,
-	ReserveAssetDepositedExpected,
+	WithdrawExpected,
+	DepositExpected,
 	NoReserveAssets,
 	FilterDoesNotConsumeAllAssets,
 	TooManyAssets,
@@ -140,6 +141,7 @@ enum XcmConverterError {
 	ZeroAssetTransfer,
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
+	SetTopicExpected,
 }
 
 struct XcmConverter<'a, Call> {
@@ -152,20 +154,24 @@ impl<'a, Call> XcmConverter<'a, Call> {
 	}
 
 	fn convert(&mut self) -> Result<(Message, Option<&'a MultiAsset>), XcmConverterError> {
-		use XcmConverterError::*;
-
 		// Get target fees if specified.
 		let max_target_fee = self.fee_info()?;
 
-		// Get deposit reserved asset
-		let result = self.reserve_deposited_asset()?;
+		// Get withdraw/deposit and make native tokens create message.
+		let result = self.to_native_tokens_unlock()?;
+
+		// Match last set topic. Later could use message id for replies
+		let _ = match self.next()? {
+			SetTopic(id) => id,
+			_ => return Err(XcmConverterError::SetTopicExpected),
+		};
 
 		// All xcm instructions must be consumed before exit.
 		if self.next().is_ok() {
-			Err(EndOfXcmMessageExpected)
-		} else {
-			Ok((result, max_target_fee))
+			return Err(XcmConverterError::EndOfXcmMessageExpected);
 		}
+
+		Ok((result, max_target_fee))
 	}
 
 	fn fee_info(&mut self) -> Result<Option<&'a MultiAsset>, XcmConverterError> {
@@ -185,24 +191,23 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(execution_fee)
 	}
 
-	fn reserve_deposited_asset(&mut self) -> Result<Message, XcmConverterError> {
+	fn to_native_tokens_unlock(&mut self) -> Result<Message, XcmConverterError> {
 		use XcmConverterError::*;
-		let (assets, beneficiary) = if let ReserveAssetDeposited(reserved_assets) = self.next()? {
+		let (assets, beneficiary) = if let WithdrawAsset(reserved_assets) = self.next()? {
 			if reserved_assets.len() == 0 {
 				return Err(NoReserveAssets);
 			}
-			if let (ClearOrigin, DepositAsset { assets, beneficiary }) =
-				(self.next()?, self.next()?)
+			if let DepositAsset { assets, beneficiary } = self.next()?
 			{
 				if reserved_assets.inner().iter().any(|asset| !assets.matches(asset)) {
 					return Err(FilterDoesNotConsumeAllAssets);
 				}
 				(reserved_assets, beneficiary)
 			} else {
-				return Err(ReserveAssetDepositedExpected);
+				return Err(DepositExpected);
 			}
 		} else {
-			return Err(ReserveAssetDepositedExpected);
+			return Err(WithdrawExpected);
 		};
 
 		// assert that the benificiary is ethereum account key 20
@@ -553,8 +558,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = Some(
 			vec![
 				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-				ReserveAssetDeposited(assets),
-				ClearOrigin,
+				WithdrawAsset(assets),
 				DepositAsset {
 					assets: filter,
 					beneficiary: X1(AccountKey20 {
@@ -563,6 +567,7 @@ mod tests {
 					})
 					.into(),
 				},
+				SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 			]
 			.into(),
 		);
@@ -620,13 +625,13 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -655,13 +660,13 @@ mod tests {
 
 		let message: Xcm<()> = vec![
 			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -690,13 +695,13 @@ mod tests {
 
 		let message: Xcm<()> = vec![
 			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -721,8 +726,7 @@ mod tests {
 		.into();
 		let message: Xcm<()> = vec![
 			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 		]
 		.into();
 
@@ -758,19 +762,55 @@ mod tests {
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			ClearTopic,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::TargetFeeExpected));
+	}
+
+	#[test]
+	fn xcm_converter_convert_without_set_topic_suffix_yields_set_topic_expected() {
+		let network = BridgedNetwork::get();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			fun: Fungible(1000),
+		}]
+		.into();
+		let filter: MultiAssetFilter = assets.clone().into();
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			WithdrawAsset(assets),
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+					.into(),
+			},
+			ClearTopic,
+		]
+		.into();
+		let mut converter = XcmConverter::new(&message, &network);
+
+		let result = converter.convert();
+		assert_eq!(result, Err(XcmConverterError::SetTopicExpected));
 	}
 
 	#[test]
@@ -793,13 +833,13 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 			ClearOrigin,
 		]
 		.into();
@@ -810,7 +850,7 @@ mod tests {
 	}
 
 	#[test]
-	fn xcm_converter_convert_without_asset_deposited_yields_reserve_asset_deposited_expected() {
+	fn xcm_converter_convert_without_withdraw_asset_yields_withdraw_expected() {
 		let network = BridgedNetwork::get();
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
@@ -829,18 +869,47 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			ClearOrigin,
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::ReserveAssetDepositedExpected));
+		assert_eq!(result, Err(XcmConverterError::WithdrawExpected));
+	}
+
+
+	#[test]
+	fn xcm_converter_convert_without_withdraw_asset_yields_deposit_expected() {
+		let network = BridgedNetwork::get();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			fun: Fungible(1000),
+		}]
+		.into();
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			WithdrawAsset(assets),
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+		]
+		.into();
+		let mut converter = XcmConverter::new(&message, &network);
+
+		let result = converter.convert();
+		assert_eq!(result, Err(XcmConverterError::DepositExpected));
 	}
 
 	#[test]
@@ -858,13 +927,13 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -904,13 +973,13 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -939,13 +1008,13 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -974,13 +1043,13 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1009,13 +1078,13 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1043,13 +1112,13 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
 					.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1079,8 +1148,7 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			ReserveAssetDeposited(assets),
-			ClearOrigin,
+			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
 				beneficiary: X3(
@@ -1090,6 +1158,7 @@ mod tests {
 				)
 				.into(),
 			},
+			SetTopic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
