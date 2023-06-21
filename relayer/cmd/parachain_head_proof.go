@@ -72,16 +72,15 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 	copy(beefyBlockHash[:], beefyBlockHashHex[0:32])
 
 	relayChainBlock, _ := cmd.Flags().GetUint64("relaychain-block")
-	mmrProof, err := conn.GenerateProofForBlock(relayChainBlock, beefyBlockHash, 0)
+	mmrProof, err := conn.GenerateProofForBlock(relayChainBlock, beefyBlockHash)
 	if err != nil {
 		log.WithError(err).Error("Cannot connect.")
 		return err
 	}
 	log.WithFields(log.Fields{
-		"relayChainBlock":      relayChainBlock,
-		"beefyBlockHash":       beefyBlockHash,
-		"beefyActivationBlock": 0,
-		"mmrProof":             mmrProof,
+		"relayChainBlock": relayChainBlock,
+		"beefyBlockHash":  beefyBlockHash,
+		"mmrProof":        mmrProof,
 	}).Info("conn.GenerateProofForBlock")
 
 	paraID, _ := cmd.Flags().GetUint32("parachain-id")

@@ -236,7 +236,6 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
 		input.RelayBlockNumber+1,
 		latestBeefyBlockHash,
-		li.config.BeefyActivationBlock,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("generate MMR leaf proof: %w", err)

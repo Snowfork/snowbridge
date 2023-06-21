@@ -14,9 +14,7 @@ type SourceConfig struct {
 	Parachain config.ParachainConfig `mapstructure:"parachain"`
 	Ethereum  config.EthereumConfig  `mapstructure:"ethereum"`
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
-	// Block number when Beefy was activated
-	BeefyActivationBlock uint64 `mapstructure:"beefy-activation-block"`
-	LaneID               uint32 `mapstructure:"lane-id"`
+	LaneID    uint32                 `mapstructure:"lane-id"`
 }
 
 type SourceContractsConfig struct {

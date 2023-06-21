@@ -41,7 +41,7 @@ func (li *PolkadotListener) Start(
 	}
 	li.beefyAuthoritiesKey = storageKey
 
-	requests := make(chan Request)
+	requests := make(chan Request, 1)
 
 	eg.Go(func() error {
 		defer close(requests)
@@ -61,7 +61,7 @@ func (li *PolkadotListener) scanCommitments(
 	currentValidatorSet uint64,
 	requests chan<- Request,
 ) error {
-	in, err := ScanSafeCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1, li.config.Source.BeefyActivationBlock)
+	in, err := ScanSafeCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1)
 	if err != nil {
 		return fmt.Errorf("scan commitments: %w", err)
 	}
@@ -78,18 +78,28 @@ func (li *PolkadotListener) scanCommitments(
 				return fmt.Errorf("scan safe commitments: %w", result.Error)
 			}
 
-			if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet+1 {
-				// Workaround for https://github.com/paritytech/polkadot/pull/6577
-				if uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID) != result.SignedCommitment.Commitment.ValidatorSetID+1 {
-					log.WithFields(log.Fields{
-						"commitment": log.Fields{
-							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
-							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
-						},
-					}).Info("Discarded invalid handover commitment with BeefyNextAuthoritySet not change")
-					continue
-				}
-				currentValidatorSet++
+			committedBeefyBlock := result.SignedCommitment.Commitment.BlockNumber
+			validatorSetID := result.SignedCommitment.Commitment.ValidatorSetID
+			nextValidatorSetID := uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID)
+
+			logEntry := log.WithFields(log.Fields{
+				"commitment": log.Fields{
+					"blockNumber":        committedBeefyBlock,
+					"validatorSetID":     validatorSetID,
+					"nextValidatorSetID": nextValidatorSetID,
+				},
+				"validatorSetID": currentValidatorSet,
+			})
+			if validatorSetID < currentValidatorSet || validatorSetID > currentValidatorSet+1 {
+				return fmt.Errorf("commitment has unexpected validatorSetID: blockNumber=%v validatorSetID=%v expectedValidatorSetID=%v",
+					committedBeefyBlock,
+					validatorSetID,
+					currentValidatorSet,
+				)
+			}
+
+			if validatorSetID == currentValidatorSet+1 && validatorSetID == nextValidatorSetID-1 {
+
 				validators, err := li.queryBeefyAuthorities(result.BlockHash)
 				if err != nil {
 					return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
@@ -106,15 +116,12 @@ func (li *PolkadotListener) scanCommitments(
 				case <-ctx.Done():
 					return ctx.Err()
 				case requests <- task:
+					logEntry.Info("New commitment with handover added to channel")
+					currentValidatorSet++
 				}
-			} else if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet {
+			} else if (validatorSetID == currentValidatorSet || validatorSetID == currentValidatorSet+1) && validatorSetID == nextValidatorSetID {
 				if result.Depth > li.config.Source.FastForwardDepth {
-					log.WithFields(log.Fields{
-						"commitment": log.Fields{
-							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
-							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
-						},
-					}).Warn("Discarded commitment with depth not fast forward")
+					logEntry.Warn("Discarded commitment with depth not fast forward")
 					continue
 				}
 
@@ -133,20 +140,12 @@ func (li *PolkadotListener) scanCommitments(
 				// drop task if it can't be processed immediately
 				select {
 				case requests <- task:
+					logEntry.Info("New commitment added to channel")
 				default:
-					log.WithFields(log.Fields{
-						"commitment": log.Fields{
-							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
-							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
-						},
-					}).Info("Discarded commitment")
+					logEntry.Warn("Discarded commitment fail adding to channel")
 				}
 			} else {
-				return fmt.Errorf("commitment has unexpected validatorSetID: blockNumber=%v validatorSetID=%v expectedValidatorSetID=%v",
-					result.SignedCommitment.Commitment.BlockNumber,
-					result.SignedCommitment.Commitment.ValidatorSetID,
-					currentValidatorSet,
-				)
+				logEntry.Warn("Discarded invalid commitment")
 			}
 		}
 	}
