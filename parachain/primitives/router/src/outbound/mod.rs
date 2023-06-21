@@ -78,7 +78,7 @@ where
 			SendError::MissingArgument
 		})?;
 
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &bridged_network);
 		let (converted_message, max_target_fee) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
@@ -146,10 +146,11 @@ enum XcmConverterError {
 
 struct XcmConverter<'a, Call> {
 	iter: Iter<'a, Instruction<Call>>,
+	bridged_location: &'a NetworkId,
 }
 impl<'a, Call> XcmConverter<'a, Call> {
-	fn new(message: &'a Xcm<Call>) -> Self {
-		Self { iter: message.inner().iter() }
+	fn new(message: &'a Xcm<Call>, bridged_location: &'a NetworkId) -> Self {
+		Self { iter: message.inner().iter(), bridged_location }
 	}
 
 	fn convert(&mut self) -> Result<(Message, Option<&'a MultiAsset>), XcmConverterError> {
@@ -210,9 +211,14 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 		// assert that the benificiary is ethereum account key 20
 		let destination = {
-			if let MultiLocation { parents: 0, interior: X1(AccountKey20 { network: None, key }) } =
-				beneficiary
+			if let MultiLocation {
+				parents: 0,
+				interior: X1(AccountKey20 { network, key }),
+			} = beneficiary
 			{
+				if network.is_some() && network != &Some(*self.bridged_location) {
+					return Err(BeneficiaryResolutionFailed);
+				}
 				H160(*key)
 			} else {
 				return Err(BeneficiaryResolutionFailed);
@@ -235,9 +241,13 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			ensure!(*amount > 0, ZeroAssetTransfer);
 
 			// extract ERC20 contract address
-			if let MultiLocation { parents: 0, interior: X1(AccountKey20 { network: None, key }) } =
-				asset_location
-			{
+			if let MultiLocation {
+				parents: 0,
+				interior: X1(AccountKey20 { network, key }),
+			} = asset_location {
+				if network.is_some() && network != &Some(*self.bridged_location) {
+					return Err(AssetResolutionFailed);
+				}
 				(H160(*key), *amount)
 			} else {
 				return Err(AssetResolutionFailed);
@@ -549,8 +559,11 @@ mod tests {
 				WithdrawAsset(assets),
 				DepositAsset {
 					assets: filter,
-					beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-						.into(),
+					beneficiary: X1(AccountKey20 {
+						network: Some(network),
+						key: beneficiary_address,
+					})
+					.into(),
 				},
 				SetTopic([
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -595,6 +608,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_success_with_max_target_fee() {
+		let network = BridgedNetwork::get();
+
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
 		let fees: MultiAssets = vec![fee.clone()].into();
 
@@ -614,7 +629,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -622,7 +638,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
 			asset: H160(token_address),
 			destination: H160(beneficiary_address),
@@ -634,6 +650,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_success_without_max_target_fee() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
@@ -649,7 +667,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -657,7 +676,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
 			asset: H160(token_address),
 			destination: H160(beneficiary_address),
@@ -669,6 +688,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_with_wildcard_all_asset_filter_succeeds() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
@@ -684,7 +705,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -692,7 +714,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
 			asset: H160(token_address),
 			destination: H160(beneficiary_address),
@@ -704,6 +726,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_with_partial_message_yields_unexpected_end_of_xcm() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
@@ -716,16 +740,18 @@ mod tests {
 		]
 		.into();
 
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::UnexpectedEndOfXcm));
 	}
 
 	#[test]
 	fn xcm_converter_convert_with_empty_xcm_yields_unexpected_end_of_xcm() {
+		let network = BridgedNetwork::get();
+
 		let message: Xcm<()> = vec![].into();
 
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::UnexpectedEndOfXcm));
@@ -733,6 +759,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_without_max_target_fee_yields_target_fee_expected() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
@@ -748,7 +776,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -756,7 +785,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::TargetFeeExpected));
@@ -764,6 +793,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_without_set_topic_suffix_yields_set_topic_expected() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
@@ -783,12 +814,13 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			ClearTopic,
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::SetTopicExpected));
@@ -796,6 +828,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_with_extra_instructions_yields_end_of_xcm_message_expected() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
@@ -815,7 +849,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -824,7 +859,7 @@ mod tests {
 			ClearOrigin,
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::EndOfXcmMessageExpected));
@@ -832,6 +867,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_without_withdraw_asset_yields_withdraw_expected() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
@@ -850,7 +887,8 @@ mod tests {
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -858,7 +896,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::WithdrawExpected));
@@ -866,6 +904,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_without_withdraw_asset_yields_deposit_expected() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
@@ -887,7 +927,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::DepositExpected));
@@ -895,6 +935,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_without_assets_yields_no_reserve_assets() {
+		let network = BridgedNetwork::get();
+
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
@@ -909,7 +951,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -917,7 +960,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::NoReserveAssets));
@@ -925,6 +968,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_with_two_assets_yields_too_many_assets() {
+		let network = BridgedNetwork::get();
+
 		let token_address_1: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let token_address_2: [u8; 20] = hex!("1100000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
@@ -934,11 +979,15 @@ mod tests {
 
 		let assets: MultiAssets = vec![
 			MultiAsset {
-				id: Concrete(X1(AccountKey20 { network: None, key: token_address_1 }).into()),
+				id: Concrete(
+					X1(AccountKey20 { network: None, key: token_address_1 }).into(),
+				),
 				fun: Fungible(1000),
 			},
 			MultiAsset {
-				id: Concrete(X1(AccountKey20 { network: None, key: token_address_2 }).into()),
+				id: Concrete(
+					X1(AccountKey20 { network: None, key: token_address_2 }).into(),
+				),
 				fun: Fungible(500),
 			},
 		]
@@ -951,7 +1000,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -959,7 +1009,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::TooManyAssets));
@@ -967,6 +1017,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_without_consuming_filter_yields_filter_does_not_consume_all_assets() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
@@ -986,7 +1038,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -994,7 +1047,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::FilterDoesNotConsumeAllAssets));
@@ -1002,6 +1055,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_with_non_fungible_asset_yields_asset_not_concrete_fungible() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
@@ -1021,7 +1076,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1029,7 +1085,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::AssetNotConcreteFungible));
@@ -1037,6 +1093,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_with_zero_amount_asset_yields_zero_asset_transfer() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
@@ -1056,7 +1114,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1064,7 +1123,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::ZeroAssetTransfer));
@@ -1072,6 +1131,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_non_ethereum_asset_yields_asset_resolution_failed() {
+		let network = BridgedNetwork::get();
+
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
@@ -1090,7 +1151,8 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+					.into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1098,7 +1160,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::AssetResolutionFailed));
@@ -1106,6 +1168,8 @@ mod tests {
 
 	#[test]
 	fn xcm_converter_convert_with_non_ethereum_beneficiary_yields_beneficiary_resolution_failed() {
+		let network = BridgedNetwork::get();
+
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 32] =
 			hex!("2000000000000000000000000000000000000000000000000000000000000000");
@@ -1139,7 +1203,7 @@ mod tests {
 			]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message);
+		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
 		assert_eq!(result, Err(XcmConverterError::BeneficiaryResolutionFailed));
