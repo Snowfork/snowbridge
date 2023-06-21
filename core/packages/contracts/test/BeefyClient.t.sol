@@ -242,7 +242,7 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitWithHandoverFailStaleCommitment() public {
-        testSubmitWithHandover();
+        testSubmit();
 
         beefyClient.submitInitialWithHandover(commitHash, bitfield, validatorProof);
 
