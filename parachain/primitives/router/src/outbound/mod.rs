@@ -158,7 +158,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		let max_target_fee = self.fee_info()?;
 
 		// Get withdraw/deposit and make native tokens create message.
-		let result = self.to_native_tokens_unlock()?;
+		let result = self.to_native_tokens_unlock_message()?;
 
 		// Match last set topic. Later could use message id for replies
 		let _ = match self.next()? {
@@ -191,7 +191,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(execution_fee)
 	}
 
-	fn to_native_tokens_unlock(&mut self) -> Result<Message, XcmConverterError> {
+	fn to_native_tokens_unlock_message(&mut self) -> Result<Message, XcmConverterError> {
 		use XcmConverterError::*;
 		let (assets, beneficiary) = if let WithdrawAsset(reserved_assets) = self.next()? {
 			if reserved_assets.len() == 0 {
