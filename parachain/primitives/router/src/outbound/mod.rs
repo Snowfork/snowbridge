@@ -213,12 +213,9 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		let destination = {
 			if let MultiLocation {
 				parents: 0,
-				interior: X1(AccountKey20 { network: Some(network), key }),
+				interior: X1(AccountKey20 { network: None, key }),
 			} = beneficiary
 			{
-				if network != self.bridged_location {
-					return Err(BeneficiaryResolutionFailed);
-				}
 				H160(*key)
 			} else {
 				return Err(BeneficiaryResolutionFailed);
@@ -243,12 +240,9 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			// extract ERC20 contract address
 			if let MultiLocation {
 				parents: 0,
-				interior: X1(AccountKey20 { network: Some(network), key }),
+				interior: X1(AccountKey20 { network: None, key }),
 			} = asset_location
 			{
-				if network != self.bridged_location {
-					return Err(AssetResolutionFailed);
-				}
 				(H160(*key), *amount)
 			} else {
 				return Err(AssetResolutionFailed);
@@ -499,7 +493,7 @@ mod tests {
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
 		let fees: MultiAssets = vec![fee.clone()].into();
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -548,7 +542,7 @@ mod tests {
 
 		let channel: u32 = 0;
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -561,7 +555,7 @@ mod tests {
 				DepositAsset {
 					assets: filter,
 					beneficiary: X1(AccountKey20 {
-						network: Some(network),
+						network: None,
 						key: beneficiary_address,
 					})
 					.into(),
@@ -618,7 +612,7 @@ mod tests {
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -630,7 +624,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -657,7 +651,7 @@ mod tests {
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -668,7 +662,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -695,7 +689,7 @@ mod tests {
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -706,7 +700,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -731,7 +725,7 @@ mod tests {
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -766,7 +760,7 @@ mod tests {
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -777,7 +771,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -803,7 +797,7 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -815,7 +809,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			ClearTopic,
@@ -838,7 +832,7 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -850,7 +844,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -877,7 +871,7 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -888,7 +882,7 @@ mod tests {
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -913,7 +907,7 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -952,7 +946,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -981,13 +975,13 @@ mod tests {
 		let assets: MultiAssets = vec![
 			MultiAsset {
 				id: Concrete(
-					X1(AccountKey20 { network: Some(network), key: token_address_1 }).into(),
+					X1(AccountKey20 { network: None, key: token_address_1 }).into(),
 				),
 				fun: Fungible(1000),
 			},
 			MultiAsset {
 				id: Concrete(
-					X1(AccountKey20 { network: Some(network), key: token_address_2 }).into(),
+					X1(AccountKey20 { network: None, key: token_address_2 }).into(),
 				),
 				fun: Fungible(500),
 			},
@@ -1001,7 +995,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -1027,7 +1021,7 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -1039,7 +1033,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -1065,7 +1059,7 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: NonFungible(AssetInstance::Index(0)),
 		}]
 		.into();
@@ -1077,7 +1071,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -1103,7 +1097,7 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(0),
 		}]
 		.into();
@@ -1115,7 +1109,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -1152,7 +1146,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: Some(network), key: beneficiary_address })
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
 					.into(),
 			},
 			SetTopic([
@@ -1179,7 +1173,7 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: Some(network), key: token_address }).into()),
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
