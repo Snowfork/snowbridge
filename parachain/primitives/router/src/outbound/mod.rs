@@ -211,10 +211,8 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 		// assert that the benificiary is ethereum account key 20
 		let destination = {
-			if let MultiLocation {
-				parents: 0,
-				interior: X1(AccountKey20 { network: None, key }),
-			} = beneficiary
+			if let MultiLocation { parents: 0, interior: X1(AccountKey20 { network: None, key }) } =
+				beneficiary
 			{
 				H160(*key)
 			} else {
@@ -238,10 +236,8 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			ensure!(*amount > 0, ZeroAssetTransfer);
 
 			// extract ERC20 contract address
-			if let MultiLocation {
-				parents: 0,
-				interior: X1(AccountKey20 { network: None, key }),
-			} = asset_location
+			if let MultiLocation { parents: 0, interior: X1(AccountKey20 { network: None, key }) } =
+				asset_location
 			{
 				(H160(*key), *amount)
 			} else {
@@ -554,11 +550,8 @@ mod tests {
 				WithdrawAsset(assets),
 				DepositAsset {
 					assets: filter,
-					beneficiary: X1(AccountKey20 {
-						network: None,
-						key: beneficiary_address,
-					})
-					.into(),
+					beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+						.into(),
 				},
 				SetTopic([
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -624,8 +617,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -662,8 +654,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -700,8 +691,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -771,8 +761,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -809,8 +798,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			ClearTopic,
 		]
@@ -844,8 +832,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -882,8 +869,7 @@ mod tests {
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -946,8 +932,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -974,15 +959,11 @@ mod tests {
 
 		let assets: MultiAssets = vec![
 			MultiAsset {
-				id: Concrete(
-					X1(AccountKey20 { network: None, key: token_address_1 }).into(),
-				),
+				id: Concrete(X1(AccountKey20 { network: None, key: token_address_1 }).into()),
 				fun: Fungible(1000),
 			},
 			MultiAsset {
-				id: Concrete(
-					X1(AccountKey20 { network: None, key: token_address_2 }).into(),
-				),
+				id: Concrete(X1(AccountKey20 { network: None, key: token_address_2 }).into()),
 				fun: Fungible(500),
 			},
 		]
@@ -995,8 +976,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1033,8 +1013,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1071,8 +1050,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1109,8 +1087,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1146,8 +1123,7 @@ mod tests {
 			WithdrawAsset(assets),
 			DepositAsset {
 				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
-					.into(),
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
