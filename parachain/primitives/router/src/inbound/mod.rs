@@ -85,7 +85,7 @@ impl UpgradeProxyMessage {
 impl NativeTokensMessage {
 	pub fn convert(self, chain_id: u64) -> Result<Xcm<()>, ConvertError> {
 		let network = NetworkId::Ethereum { chain_id };
-		let buy_execution_fee_amount = 2_000_000_000; //WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
+		let buy_execution_fee_amount = 2_000_000_000; //TODO: WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
 		let buy_execution_fee = MultiAsset {
 			id: Concrete(MultiLocation::parent()),
 			fun: Fungible(buy_execution_fee_amount),
@@ -354,7 +354,7 @@ mod tests {
 				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
 				AccountKey20 {
 					network: None,
-					key: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+					key: [0; 20],
 				},
 			),
 		};
@@ -386,7 +386,7 @@ mod tests {
 				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
 				AccountKey20 {
 					network: None,
-					key: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+					key: [0; 20],
 				},
 			),
 		};
