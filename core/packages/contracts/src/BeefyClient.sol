@@ -463,8 +463,8 @@ contract BeefyClient is Ownable {
     function encodeCommitment(Commitment calldata commitment) internal pure returns (bytes memory) {
         return bytes.concat(
             commitment.payload.prefix,
-            hex"6d68", // "mh" (MMR_ROOT_ID)
-            hex"80", // 128 (32 << 2, compact encoding)
+            bytes2("mh"), // BeefyPayloadId::MMR_ROOT_ID
+            hex"80", // ScaleCodec.encodeU64(commitment.payload.mmrRootHash.length)
             commitment.payload.mmrRootHash,
             commitment.payload.suffix,
             ScaleCodec.encodeU32(commitment.blockNumber),
