@@ -239,13 +239,21 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			ensure!(*amount > 0, ZeroAssetTransfer);
 
 			// extract ERC20 contract address
-			if let MultiLocation { parents: 0, interior: X1(AccountKey20 { network, key }) } =
-				asset_location
+			if let MultiLocation { parents: 0,
+					interior: X2(
+						AccountKey20 { network: registry_network, key: _registry_key }, 
+						AccountKey20 { network: erc20_network, key: erc20_key },
+					) 
+				} = asset_location
 			{
-				if network.is_some() && network != &Some(*self.bridged_location) {
+				//TODO: _registry_key validation?
+				if registry_network.is_some() && registry_network != &Some(*self.bridged_location) {
 					return Err(AssetResolutionFailed);
 				}
-				(H160(*key), *amount)
+				if erc20_network.is_some() && erc20_network != &Some(*self.bridged_location) {
+					return Err(AssetResolutionFailed);
+				}
+				(H160(*erc20_key), *amount)
 			} else {
 				return Err(AssetResolutionFailed);
 			}
@@ -562,10 +570,7 @@ mod tests {
 					})
 					.into(),
 				},
-				SetTopic([
-					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0,
-				]),
+				SetTopic([0; 32]),
 			]
 			.into(),
 		);
@@ -628,10 +633,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -665,10 +667,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -702,10 +701,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -772,10 +768,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -843,10 +836,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 			ClearOrigin,
 		]
 		.into();
@@ -880,10 +870,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -911,10 +898,7 @@ mod tests {
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
 			WithdrawAsset(assets),
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -943,10 +927,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -987,10 +968,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1024,10 +1002,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1061,10 +1036,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1098,10 +1070,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1134,10 +1103,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1174,10 +1140,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1218,10 +1181,7 @@ mod tests {
 				)
 				.into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -1260,10 +1220,7 @@ mod tests {
 				})
 				.into(),
 			},
-			SetTopic([
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0,
-			]),
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
