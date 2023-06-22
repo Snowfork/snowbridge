@@ -44,7 +44,7 @@ beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 
 # Local substrate chain endpoints
 bridgehub_ws_url="${BRIDGEHUB_WS_URL:-ws://127.0.0.1:11144}"
-bridgehub_para_id="${BRIDGEHUB_PARA_ID:-1013}"
+bridgehub_para_id="${BRIDGEHUB_PARA_ID:-1002}"
 bridgehub_seed="${BRIDGEHUB_SEED:-//Alice}"
 
 statemine_ws_url="${STATEMINE_WS_URL:-ws://127.0.0.1:12144}"
