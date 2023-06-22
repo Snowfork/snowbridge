@@ -19,7 +19,7 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use snowbridge_core::ParaId;
-use sp_core::{ConstU32, H160};
+use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::{collections::btree_set::BTreeSet, convert::TryFrom, vec::Vec};
 
@@ -39,8 +39,6 @@ use scale_info::TypeInfo;
 
 type BalanceOf<T> =
 	<<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
-
-type AllowListLength = ConstU32<8>;
 
 #[derive(CloneNoBound, EqNoBound, PartialEqNoBound, Encode, Decode, Debug, TypeInfo)]
 pub enum MessageDispatchResult {
@@ -75,6 +73,8 @@ pub mod pallet {
 		type XcmSender: SendXcm;
 
 		type WeightInfo: WeightInfo;
+
+		type AllowListLength: Get<u32>;
 	}
 
 	#[pallet::hooks]
@@ -84,6 +84,8 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T> {
 		MessageReceived { dest: ParaId, nonce: u64, result: MessageDispatchResult },
+		AllowListAdded { address: sp_core::H160 },
+		AllowListRemoved { address: sp_core::H160 },
 	}
 
 	#[pallet::error]
@@ -96,12 +98,14 @@ pub mod pallet {
 		InvalidNonce,
 		/// Cannot convert location
 		InvalidAccountConversion,
+		// Allow list is full.
+		AllowListFull,
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn peer)]
 	pub type AllowList<T: Config> =
-		StorageValue<_, BoundedBTreeSet<H160, AllowListLength>, ValueQuery>;
+		StorageValue<_, BoundedBTreeSet<H160, T::AllowListLength>, ValueQuery>;
 
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
@@ -120,7 +124,7 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
-			let allowlist: BoundedBTreeSet<H160, AllowListLength> =
+			let allowlist: BoundedBTreeSet<H160, T::AllowListLength> =
 				BTreeSet::from_iter(self.allowlist.clone().into_iter())
 					.try_into()
 					.expect("exceeded bound");
@@ -206,6 +210,36 @@ pub mod pallet {
 					nonce: envelope.nonce,
 					result: MessageDispatchResult::NotDispatched(err),
 				}),
+			}
+
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight({100_000_000})]
+		pub fn add_allow_list(origin: OriginFor<T>, address: sp_core::H160) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let success = <AllowList<T>>::mutate(|allowlist| allowlist.try_insert(address).is_ok());
+
+			if success {
+				Self::deposit_event(Event::AllowListAdded { address });
+
+				Ok(())
+			} else {
+				Err(Error::<T>::AllowListFull.into())
+			}
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight({100_000_000})]
+		pub fn remove_allow_list(origin: OriginFor<T>, address: sp_core::H160) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let removed = <AllowList<T>>::mutate(|allowlist| allowlist.remove(&address));
+
+			if removed {
+				Self::deposit_event(Event::AllowListRemoved { address });
 			}
 
 			Ok(())
