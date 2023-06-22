@@ -55,7 +55,7 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const OwnParaId: ParaId = ParaId::new(1002);
+	pub const OwnParaId: ParaId = ParaId::new(1013);
 	pub const GovernanceProxyContract: ContractId = ContractId::new([3u8; 32]);
 	pub const SS58Prefix: u8 = 42;
 }
