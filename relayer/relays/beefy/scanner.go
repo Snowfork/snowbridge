@@ -170,13 +170,13 @@ type ScanSafeCommitmentsResult struct {
 	Error            error
 }
 
-func ScanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, beefyActivationBlock uint64) (<-chan ScanSafeCommitmentsResult, error) {
+func ScanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanSafeCommitmentsResult, error) {
 	out := make(chan ScanSafeCommitmentsResult)
-	go scanSafeCommitments(ctx, meta, api, startBlock, beefyActivationBlock, out)
+	go scanSafeCommitments(ctx, meta, api, startBlock, out)
 	return out, nil
 }
 
-func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, beefyActivationBlock uint64, out chan<- ScanSafeCommitmentsResult) {
+func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, out chan<- ScanSafeCommitmentsResult) {
 	defer close(out)
 
 	sendError := func(err error) {

@@ -1,5 +1,4 @@
 use snowbridge_smoketest::contracts::{native_tokens, weth9};
-
 use std::{sync::Arc, time::Duration};
 
 use ethers::{

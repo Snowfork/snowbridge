@@ -9,7 +9,9 @@ This is necessary to cover rewards for "execution message" relayers. Messages wi
 
 # Bindings
 
-Generate bindings:
+First make sure the E2E Stack is running.
+
+Then run this command:
 
 ```shell
 ./make-bindings.sh

@@ -87,7 +87,6 @@ func (conn *Connection) GetMMRRootHash(blockHash types.Hash) (types.Hash, error)
 func (co *Connection) GenerateProofForBlock(
 	blockNumber uint64,
 	latestBeefyBlockHash types.Hash,
-	beefyActivationBlock uint64,
 ) (types.GenerateMMRProofResponse, error) {
 	log.WithFields(log.Fields{
 		"blockNumber": blockNumber,

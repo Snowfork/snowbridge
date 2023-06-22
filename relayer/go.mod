@@ -1,6 +1,6 @@
 module github.com/snowfork/snowbridge/relayer
 
-go 1.18
+go 1.20
 
 require (
 	github.com/cbroglie/mustache v1.4.0
