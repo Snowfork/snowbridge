@@ -213,8 +213,8 @@ contract BeefyClient is Ownable {
     }
 
     function doSubmitInitial(ValidatorSet memory vset, bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) internal {
-        // Check if merkle proof is valid based on the validatorSetRoot
-        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
+        // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
+        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index)) {
             revert InvalidValidatorProof();
         }
 
