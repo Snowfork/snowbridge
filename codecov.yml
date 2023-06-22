@@ -1,9 +1,12 @@
+coverage:
+  status:
+    project: off
+    patch: off
 github_checks:
     annotations: false
 ignore:
   - "core/packages/contracts/test/mocks"
   - "core/packages/contracts/src/utils"
-  # Forge's coverage analysis isn't able to handle functions with internal linkage in libraries
   - "core/packages/contracts/src/ScaleCodec.sol"
   - "core/packages/contracts/src/SubstrateTypes.sol"
   - "parachain/tools"

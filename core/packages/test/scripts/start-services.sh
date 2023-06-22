@@ -49,10 +49,10 @@ echo "Config beefy client"
 source scripts/configure-beefy.sh
 configure_beefy
 
-# 6. config beacon client
-echo "Config beacon client"
-source scripts/configure-beacon.sh
-configure_beacon
+# 6. config bridgehub 
+echo "Config bridgehub"
+source scripts/configure-bridgehub.sh
+configure_bridgehub
 
 if [ "$skip_relayer" == "false" ]; then
     # 7. start relayer

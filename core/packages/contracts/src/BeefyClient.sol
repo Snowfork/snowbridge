@@ -196,21 +196,34 @@ contract BeefyClient is Ownable {
      * @dev Begin submission of commitment that was signed by the current validator set
      * @param commitmentHash contains the commitmentHash signed by the validators
      * @param bitfield a bitfield claiming which validators have signed the commitment
+     * @param proof a proof that a single validator from currentValidatorSet has signed the commitmentHash
      */
-    function submitInitial(bytes32 commitmentHash, uint256[] calldata bitfield) external payable {
-        doSubmitInitial(currentValidatorSet, commitmentHash, bitfield);
+    function submitInitial(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
+        doSubmitInitial(currentValidatorSet, commitmentHash, bitfield, proof);
     }
 
     /**
      * @dev Begin submission of commitment that was signed by the next validator set
      * @param commitmentHash contains the commitmentHash signed by the validators
      * @param bitfield a bitfield claiming which validators have signed the commitment
+     * @param proof a proof that a single validator from nextValidatorSet has signed the commitmentHash
      */
-    function submitInitialWithHandover(bytes32 commitmentHash, uint256[] calldata bitfield) external payable {
-        doSubmitInitial(nextValidatorSet, commitmentHash, bitfield);
+    function submitInitialWithHandover(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
+        doSubmitInitial(nextValidatorSet, commitmentHash, bitfield, proof);
     }
 
-    function doSubmitInitial(ValidatorSet memory vset, bytes32 commitmentHash, uint256[] calldata bitfield) internal {
+    function doSubmitInitial(ValidatorSet memory vset, bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) internal {
+        // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
+        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index)) {
+            revert InvalidValidatorProof();
+        }
+
+        // Check if validatorSignature is correct, ie. check if it matches
+        // the signature of senderPublicKey on the commitmentHash
+        if (ECDSA.recover(commitmentHash, proof.v, proof.r, proof.s) != proof.account) {
+            revert InvalidSignature();
+        }
+
         // For the initial submission, the supplied bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
         if (Bitfield.countSetBits(bitfield) < vset.length - (vset.length - 1) / 3) {
