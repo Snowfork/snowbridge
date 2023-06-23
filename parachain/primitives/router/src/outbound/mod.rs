@@ -119,7 +119,7 @@ where
 
 		let ticket = OutboundQueue::validate(&outbound_message).map_err(|_| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed");
-			SendError::ExceedsMaxMessageSize
+			SendError::Unroutable
 		})?;
 
 		log::info!(target: "xcm::ethereum_blob_exporter", "message validated {message_id:#?}.");
