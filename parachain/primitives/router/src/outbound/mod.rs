@@ -614,6 +614,37 @@ mod tests {
 	}
 
 	#[test]
+	fn exporter_validate_with_unparsable_xcm_yields_unroutable() {
+		let network = BridgedNetwork::get();
+		let mut destination: Option<InteriorMultiLocation> = Here.into();
+
+		let mut universal_source: Option<InteriorMultiLocation> =
+			Some(X2(GlobalConsensus(Polkadot), Parachain(1000)));
+
+		let channel: u32 = 0;
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let mut message: Option<Xcm<()>> = Some(
+			vec![
+				WithdrawAsset(fees),
+			]
+			.into(),
+		);
+
+		let result =
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
+
+		assert_eq!(result, Err(SendError::Unroutable));
+	}
+
+	#[test]
 	fn exporter_validate_xcm_success_case_1() {
 		let network = BridgedNetwork::get();
 		let mut destination: Option<InteriorMultiLocation> = Here.into();
