@@ -587,8 +587,7 @@ mod tests {
 			vec![
 				WithdrawAsset(fees),
 				BuyExecution { fees: fee, weight_limit: Unlimited },
-				ReserveAssetDeposited(assets),
-				ClearOrigin,
+				WithdrawAsset(assets),
 				DepositAsset {
 					assets: filter,
 					beneficiary: X1(AccountKey20 {
@@ -597,6 +596,7 @@ mod tests {
 					})
 					.into(),
 				},
+				SetTopic([0; 32]),
 			]
 			.into(),
 		);
