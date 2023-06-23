@@ -361,7 +361,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<RelayNetwork, BridgedLocation, MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
 				network,
 				channel,
 				&mut universal_source,
