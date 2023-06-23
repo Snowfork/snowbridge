@@ -194,25 +194,25 @@ contract BeefyClient is Ownable {
 
     /**
      * @dev Begin submission of commitment that was signed by the current validator set
-     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param commitment contains the commitment signed by the validators
      * @param bitfield a bitfield claiming which validators have signed the commitment
-     * @param proof a proof that a single validator from currentValidatorSet has signed the commitmentHash
+     * @param proof a proof that a single validator from currentValidatorSet has signed the commitment
      */
-    function submitInitial(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
-        doSubmitInitial(currentValidatorSet, commitmentHash, bitfield, proof);
+    function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
+        doSubmitInitial(currentValidatorSet, commitment, bitfield, proof);
     }
 
     /**
      * @dev Begin submission of commitment that was signed by the next validator set
-     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param commitment contains the commitment signed by the validators
      * @param bitfield a bitfield claiming which validators have signed the commitment
-     * @param proof a proof that a single validator from nextValidatorSet has signed the commitmentHash
+     * @param proof a proof that a single validator from nextValidatorSet has signed the commitment
      */
-    function submitInitialWithHandover(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
-        doSubmitInitial(nextValidatorSet, commitmentHash, bitfield, proof);
+    function submitInitialWithHandover(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
+        doSubmitInitial(nextValidatorSet, commitment, bitfield, proof);
     }
 
-    function doSubmitInitial(ValidatorSet memory vset, bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) internal {
+    function doSubmitInitial(ValidatorSet memory vset, Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof) internal {
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
         if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index)) {
             revert InvalidValidatorProof();
@@ -220,6 +220,7 @@ contract BeefyClient is Ownable {
 
         // Check if validatorSignature is correct, ie. check if it matches
         // the signature of senderPublicKey on the commitmentHash
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         if (ECDSA.recover(commitmentHash, proof.v, proof.r, proof.s) != proof.account) {
             revert InvalidSignature();
         }

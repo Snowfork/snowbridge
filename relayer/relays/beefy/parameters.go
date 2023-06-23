@@ -12,9 +12,9 @@ import (
 )
 
 type InitialRequestParams struct {
-	CommitmentHash [32]byte
-	Bitfield       []*big.Int
-	Proof          contracts.BeefyClientValidatorProof
+	Commitment contracts.BeefyClientCommitment
+	Bitfield   []*big.Int
+	Proof      contracts.BeefyClientValidatorProof
 }
 
 type FinalRequestParams struct {
@@ -43,9 +43,9 @@ func (r *Request) CommitmentHash() (*[32]byte, error) {
 // Generate RequestParams which contains merkle proof by validator's index
 // together with the signature which will be verified in BeefyClient contract later
 func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []*big.Int) (*InitialRequestParams, error) {
-	commitmentHash, err := r.CommitmentHash()
+	commitment, err := toBeefyClientCommitment(&r.SignedCommitment.Commitment)
 	if err != nil {
-		return nil, fmt.Errorf("generate commitment hash: %w", err)
+		return nil, fmt.Errorf("map to beefy client commitment: %w", err)
 	}
 
 	proof, err := r.generateValidatorAddressProof(valAddrIndex)
@@ -66,8 +66,8 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	v, _r, s := cleanSignature(validatorSignature)
 
 	msg := InitialRequestParams{
-		CommitmentHash: *commitmentHash,
-		Bitfield:       initialBitfield,
+		Commitment: *commitment,
+		Bitfield:   initialBitfield,
 		Proof: contracts.BeefyClientValidatorProof{
 			V:       v,
 			R:       _r,
@@ -79,6 +79,19 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	}
 
 	return &msg, nil
+}
+
+func toBeefyClientCommitment(c *types.Commitment) (*contracts.BeefyClientCommitment, error) {
+	payload, err := buildPayload(c.Payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return &contracts.BeefyClientCommitment{
+		BlockNumber:    c.BlockNumber,
+		ValidatorSetID: c.ValidatorSetID,
+		Payload:        *payload,
+	}, nil
 }
 
 func cleanSignature(input types.BeefySignature) (uint8, [32]byte, [32]byte) {
