@@ -299,6 +299,8 @@ mod tests {
 		const UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(1013));
 		const BridgedNetwork: NetworkId =  Ethereum{ chain_id: 1 };
 		BridgedLocation: MultiLocation = MultiLocation::new(0, (GlobalConsensus(BridgedNetwork::get()), AccountKey20 { network: None, key: BRIDGE_REGISTRY }));
+		BridgedLocationWithoutRegistry: MultiLocation = MultiLocation::new(0, GlobalConsensus(BridgedNetwork::get()));
+		BridgedLocationWithoutGlobalConsensus: MultiLocation = MultiLocation::new(0, AccountKey20 { network: None, key: BRIDGE_REGISTRY });
 	}
 
 	type Ticket = (Vec<u8>, XcmHash);
@@ -428,6 +430,44 @@ mod tests {
 				&mut message,
 			);
 		assert_eq!(result, Err(SendError::Unroutable));
+	}
+
+	#[test]
+	fn exporter_validate_without_global_bridge_location_yields_not_applicable() {
+		let network = BridgedNetwork::get();
+		let channel: u32 = 0;
+		let mut universal_source: Option<InteriorMultiLocation> = Here.into();
+		let mut destination: Option<InteriorMultiLocation> = Here.into();
+		let mut message: Option<Xcm<()>> = None;
+
+		let result =
+			EthereumBlobExporter::<UniversalLocation, BridgedLocationWithoutGlobalConsensus, MockOkOutboundQueue>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
+		assert_eq!(result, Err(SendError::NotApplicable));
+	}
+
+	#[test]
+	fn exporter_validate_without_registry_bridge_location_yields_not_applicable() {
+		let network = BridgedNetwork::get();
+		let channel: u32 = 0;
+		let mut universal_source: Option<InteriorMultiLocation> = Here.into();
+		let mut destination: Option<InteriorMultiLocation> = Here.into();
+		let mut message: Option<Xcm<()>> = None;
+
+		let result =
+			EthereumBlobExporter::<UniversalLocation, BridgedLocationWithoutGlobalConsensus, MockOkOutboundQueue>::validate(
+				network,
+				channel,
+				&mut universal_source,
+				&mut destination,
+				&mut message,
+			);
+		assert_eq!(result, Err(SendError::NotApplicable));
 	}
 
 	#[test]
@@ -613,7 +653,7 @@ mod tests {
 	fn exporter_deliver_success_case_1() {
 		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::deliver(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::deliver(
 				ticket,
 			);
 
