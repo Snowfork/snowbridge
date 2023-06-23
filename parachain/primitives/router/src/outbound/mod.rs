@@ -1302,6 +1302,88 @@ mod tests {
 	}
 
 	#[test]
+	fn xcm_converter_convert_bad_registry_asset_yields_asset_resolution_failed() {
+		let network = BridgedNetwork::get();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		const BAD_REGISTRY: [u8; 20] = hex!("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(
+				X2(
+					AccountKey20 { network: Some(network), key: BAD_REGISTRY },
+					AccountKey20 { network: Some(network), key: token_address },
+				)
+				.into(),
+			),
+			fun: Fungible(1000),
+		}]
+		.into();
+		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			WithdrawAsset(assets),
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+			},
+			SetTopic([0; 32]),
+		]
+		.into();
+		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+
+		let result = converter.convert();
+		assert_eq!(result, Err(XcmConverterError::AssetResolutionFailed));
+	}
+
+	#[test]
+	fn xcm_converter_convert_non_ethereum_chain_registry_asset_yields_asset_resolution_failed() {
+		let network = BridgedNetwork::get();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(
+				X2(
+					AccountKey20 { network: Some(Ethereum { chain_id: 2 }), key: BRIDGE_REGISTRY },
+					AccountKey20 { network: Some(network), key: token_address },
+				)
+				.into(),
+			),
+			fun: Fungible(1000),
+		}]
+		.into();
+		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			WithdrawAsset(assets),
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+			},
+			SetTopic([0; 32]),
+		]
+		.into();
+		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+
+		let result = converter.convert();
+		assert_eq!(result, Err(XcmConverterError::AssetResolutionFailed));
+	}
+
+	#[test]
 	fn xcm_converter_convert_with_non_ethereum_beneficiary_yields_beneficiary_resolution_failed() {
 		let network = BridgedNetwork::get();
 
