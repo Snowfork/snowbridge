@@ -273,10 +273,10 @@ impl<'a, Call> XcmConverter<'a, Call> {
 					),
 			} = asset_location
 			{
-				if registry_contract != self.registry_contract {
+				if registry_network.is_some() && registry_network != &Some(*self.bridged_location) {
 					return Err(AssetResolutionFailed);
 				}
-				if registry_network.is_some() && registry_network != &Some(*self.bridged_location) {
+				if registry_contract != self.registry_contract {
 					return Err(AssetResolutionFailed);
 				}
 				if erc20_network.is_some() && erc20_network != &Some(*self.bridged_location) {
