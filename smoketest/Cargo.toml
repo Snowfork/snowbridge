@@ -17,3 +17,4 @@ ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = fals
 
 [dev-dependencies]
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
+hex-literal = "0.4.1"
