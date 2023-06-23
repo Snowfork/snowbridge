@@ -57,11 +57,15 @@ where
 		}
 
 		let registry_contract = match registry_location {
-			X1(AccountKey20 { network, key }) if network.is_none() || network == Some(bridge_network) => key,
+			X1(AccountKey20 { network, key })
+				if network.is_none() || network == Some(bridge_network) =>
+			{
+				key
+			},
 			_ => {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched registry contract {registry_location:?}.");
 				return Err(SendError::NotApplicable);
-			}
+			},
 		};
 
 		let (local_net, local_sub) = universal_source
@@ -166,7 +170,11 @@ struct XcmConverter<'a, Call> {
 	registry_contract: &'a [u8; 20],
 }
 impl<'a, Call> XcmConverter<'a, Call> {
-	fn new(message: &'a Xcm<Call>, bridged_location: &'a NetworkId, registry_contract: &'a [u8; 20]) -> Self {
+	fn new(
+		message: &'a Xcm<Call>,
+		bridged_location: &'a NetworkId,
+		registry_contract: &'a [u8; 20],
+	) -> Self {
 		Self { iter: message.inner().iter(), bridged_location, registry_contract }
 	}
 
@@ -256,12 +264,14 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			ensure!(*amount > 0, ZeroAssetTransfer);
 
 			// extract ERC20 contract address
-			if let MultiLocation { parents: 0,
-					interior: X2(
-						AccountKey20 { network: registry_network, key: registry_contract }, 
+			if let MultiLocation {
+				parents: 0,
+				interior:
+					X2(
+						AccountKey20 { network: registry_network, key: registry_contract },
 						AccountKey20 { network: erc20_network, key: erc20_contract },
-					) 
-				} = asset_location
+					),
+			} = asset_location
 			{
 				if registry_contract != self.registry_contract {
 					return Err(AssetResolutionFailed);
@@ -441,13 +451,11 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocationWithoutGlobalConsensus, MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocationWithoutGlobalConsensus,
+				MockOkOutboundQueue,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
 
@@ -460,13 +468,11 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocationWithoutGlobalConsensus, MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocationWithoutGlobalConsensus,
+				MockOkOutboundQueue,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
 
@@ -565,7 +571,13 @@ mod tests {
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
 		let fees: MultiAssets = vec![fee.clone()].into();
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -614,7 +626,13 @@ mod tests {
 
 		let channel: u32 = 0;
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -681,7 +699,13 @@ mod tests {
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -716,7 +740,13 @@ mod tests {
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -750,7 +780,13 @@ mod tests {
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -782,7 +818,13 @@ mod tests {
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -817,7 +859,13 @@ mod tests {
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -850,7 +898,13 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -884,7 +938,13 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -919,7 +979,13 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -951,7 +1017,13 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -1050,7 +1122,13 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -1084,7 +1162,13 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: NonFungible(AssetInstance::Index(0)),
 		}]
 		.into();
@@ -1118,7 +1202,13 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(0),
 		}]
 		.into();
@@ -1224,7 +1314,13 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
@@ -1264,7 +1360,13 @@ mod tests {
 		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X2(AccountKey20 { network: None, key: BRIDGE_REGISTRY }, AccountKey20 { network: None, key: token_address }).into()),
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: token_address },
+				)
+				.into(),
+			),
 			fun: Fungible(1000),
 		}]
 		.into();
