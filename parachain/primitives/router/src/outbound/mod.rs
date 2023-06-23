@@ -625,12 +625,7 @@ mod tests {
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
 		let fees: MultiAssets = vec![fee.clone()].into();
 
-		let mut message: Option<Xcm<()>> = Some(
-			vec![
-				WithdrawAsset(fees),
-			]
-			.into(),
-		);
+		let mut message: Option<Xcm<()>> = Some(vec![WithdrawAsset(fees)].into());
 
 		let result =
 			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
@@ -1307,8 +1302,11 @@ mod tests {
 
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
-				X1(AccountKey20 { network: Some(Ethereum { chain_id: 2 }), key: token_address })
-					.into(),
+				X2(
+					AccountKey20 { network: Some(network), key: BRIDGE_REGISTRY },
+					AccountKey20 { network: Some(Ethereum { chain_id: 2 }), key: token_address },
+				)
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
@@ -1333,7 +1331,7 @@ mod tests {
 	}
 
 	#[test]
-	fn xcm_converter_convert_bad_registry_asset_yields_asset_resolution_failed() {
+	fn xcm_converter_convert_bad_registry_yields_asset_resolution_failed() {
 		let network = BridgedNetwork::get();
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
