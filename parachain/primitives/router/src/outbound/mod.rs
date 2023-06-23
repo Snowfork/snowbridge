@@ -470,7 +470,7 @@ mod tests {
 		let result =
 			EthereumBlobExporter::<
 				UniversalLocation,
-				BridgedLocationWithoutGlobalConsensus,
+				BridgedLocationWithoutRegistry,
 				MockOkOutboundQueue,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
