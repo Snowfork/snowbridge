@@ -625,10 +625,12 @@ mod tests {
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
 		let fees: MultiAssets = vec![fee.clone()].into();
 
-		let mut message: Option<Xcm<()>> = Some(vec![WithdrawAsset(fees)].into());
+		let mut message: Option<Xcm<()>> = Some(
+			vec![WithdrawAsset(fees), BuyExecution { fees: fee, weight_limit: Unlimited }].into(),
+		);
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
 				network,
 				channel,
 				&mut universal_source,
