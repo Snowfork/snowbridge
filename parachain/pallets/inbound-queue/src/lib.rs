@@ -26,6 +26,7 @@ use sp_std::{collections::btree_set::BTreeSet, convert::TryFrom, vec::Vec};
 use envelope::Envelope;
 use snowbridge_core::{Message, Verifier};
 use snowbridge_router_primitives::inbound;
+use frame_support::log;
 
 use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError};
 
@@ -137,6 +138,11 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight({100_000_000})]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
+			log::info!(
+					target: "inbound-queue",
+					"💫 In submit."
+				);
+
 			let who = ensure_signed(origin)?;
 			// submit message to verifier for verification
 			let log = T::Verifier::verify(&message)?;
