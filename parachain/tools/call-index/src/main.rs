@@ -15,11 +15,11 @@ fn main() {
 		if f.metadata().unwrap().is_file() {
 			// Only process Rust files:
 			if !f.path().to_str().unwrap().ends_with(".rs") {
-				continue;
+				continue
 			}
 			// Exclude the pallet-ui tests:
 			if f.path().to_str().unwrap().contains("pallet_ui") {
-				continue;
+				continue
 			}
 
 			let content = std::fs::read_to_string(f.path()).unwrap();
@@ -31,12 +31,12 @@ fn main() {
 				if let Some(m) = m {
 					// Skip if there is already a call index before or after:
 					if i > 0 && content.lines().nth(i - 1).unwrap().contains("pallet::call_index") {
-						continue;
+						continue
 					}
-					if i + 1 < content.lines().count()
-						&& content.lines().nth(i + 1).unwrap().contains("pallet::call_index")
+					if i + 1 < content.lines().count() &&
+						content.lines().nth(i + 1).unwrap().contains("pallet::call_index")
 					{
-						continue;
+						continue
 					}
 
 					println!("{}:{} index {}", f.path().display(), i, call_index);

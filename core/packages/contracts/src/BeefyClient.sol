@@ -198,7 +198,10 @@ contract BeefyClient is Ownable {
      * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof a proof that a single validator from currentValidatorSet has signed the commitmentHash
      */
-    function submitInitial(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
+    function submitInitial(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof)
+        external
+        payable
+    {
         doSubmitInitial(currentValidatorSet, commitmentHash, bitfield, proof);
     }
 
@@ -208,13 +211,23 @@ contract BeefyClient is Ownable {
      * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof a proof that a single validator from nextValidatorSet has signed the commitmentHash
      */
-    function submitInitialWithHandover(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
+    function submitInitialWithHandover(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        ValidatorProof calldata proof
+    ) external payable {
         doSubmitInitial(nextValidatorSet, commitmentHash, bitfield, proof);
     }
 
-    function doSubmitInitial(ValidatorSet memory vset, bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) internal {
+    function doSubmitInitial(
+        ValidatorSet memory vset,
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        ValidatorProof calldata proof
+    ) internal {
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
-        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index)) {
+        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index))
+        {
             revert InvalidValidatorProof();
         }
 

@@ -107,7 +107,7 @@ impl Header {
 				let expected_hash = maybe_hash?;
 				let node: Box<dyn mpt::Node> = bytes.as_slice().try_into().ok()?;
 				if (*node).contains_hash(expected_hash.into()) {
-					return Some(keccak_256(bytes));
+					return Some(keccak_256(bytes))
 				}
 				None
 			});
@@ -142,7 +142,7 @@ impl Header {
 	fn decoded_seal_field(&self, index: usize, max_len: usize) -> Option<Bytes> {
 		let bytes: Bytes = rlp::decode(self.seal.get(index)?).ok()?;
 		if bytes.len() > max_len {
-			return None;
+			return None
 		}
 		Some(bytes)
 	}
