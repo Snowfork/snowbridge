@@ -30,7 +30,7 @@ if (command == "GenerateInitialSet") {
                 "uint32",
                 "uint256[]",
                 "bytes32",
-                "tuple(bytes32 mmrRootHash,bytes prefix,bytes suffix)",
+                "tuple(bytes32 mmrRootHash)",
             ],
             [blockNumber, validatorSetID, validatorSetSize, subset, commitHash, payload]
         )}`

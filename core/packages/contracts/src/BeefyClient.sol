@@ -30,6 +30,8 @@ import {ScaleCodec} from "./ScaleCodec.sol";
  *
  */
 contract BeefyClient is Ownable {
+    bytes4 internal constant COMMITMENT_SCALE_ENCODE_PREFIX = 0x046d6880;
+
     /* Events */
 
     /**
@@ -58,8 +60,6 @@ contract BeefyClient is Ownable {
 
     struct Payload {
         bytes32 mmrRootHash;
-        bytes prefix;
-        bytes suffix;
     }
 
     /**
@@ -475,11 +475,8 @@ contract BeefyClient is Ownable {
 
     function encodeCommitment(Commitment calldata commitment) internal pure returns (bytes memory) {
         return bytes.concat(
-            commitment.payload.prefix,
-            bytes2("mh"), // BeefyPayloadId::MMR_ROOT_ID
-            hex"80", // ScaleCodec.encodeU64(commitment.payload.mmrRootHash.length)
+            COMMITMENT_SCALE_ENCODE_PREFIX,
             commitment.payload.mmrRootHash,
-            commitment.payload.suffix,
             ScaleCodec.encodeU32(commitment.blockNumber),
             ScaleCodec.encodeU64(commitment.validatorSetID)
         );

@@ -1,7 +1,6 @@
 package beefy
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 
@@ -205,24 +204,7 @@ func buildPayload(items []types.PayloadItem) (*contracts.BeefyClientPayload, err
 		return nil, fmt.Errorf("mmr root hash is invalid")
 	}
 
-	payloadBytes, err := types.EncodeToBytes(items)
-	if err != nil {
-		return nil, err
-	}
-
-	// Trick here is that in payload of beefy commitment only MmrRootHash is required
-	// so just split to some unknown prefix and suffix in order to reconstruct later
-	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/BeefyClient.sol#L483-L492
-	// MMR_ROOT_ID is "mh" = 0x6d68 & root hash has length 32 encoded as 32 << 2 = 128 = 0x80
-	slices := bytes.Split(payloadBytes, append([]byte{0x6d, 0x68, 0x80}, mmrRootHash[:]...))
-	if len(slices) != 2 {
-		// Its theoretically possible that the payload items may contain mmrRootHash more than once, causing an invalid split
-		return nil, fmt.Errorf("expected 2 slices")
-	}
-
 	return &contracts.BeefyClientPayload{
 		MmrRootHash: mmrRootHash,
-		Prefix:      slices[0],
-		Suffix:      slices[1],
 	}, nil
 }
