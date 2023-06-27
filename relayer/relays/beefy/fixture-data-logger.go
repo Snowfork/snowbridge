@@ -43,11 +43,7 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 			"commitment": log.Fields{
 				"blockNumber":    params.Commitment.BlockNumber,
 				"validatorSetID": params.Commitment.ValidatorSetID,
-				"payload": log.Fields{
-					"mmrRootHash": Hex(params.Commitment.Payload.MmrRootHash[:]),
-					"prefix":      Hex(params.Commitment.Payload.Prefix),
-					"suffix":      Hex(params.Commitment.Payload.Suffix),
-				},
+				"payload":        params.Commitment.Payload,
 			},
 			"bitfield": params.Bitfield,
 			"proof":    proofs,
@@ -96,11 +92,7 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 			"commitment": log.Fields{
 				"blockNumber":    params.Commitment.BlockNumber,
 				"validatorSetID": params.Commitment.ValidatorSetID,
-				"payload": log.Fields{
-					"mmrRootHash": Hex(params.Commitment.Payload.MmrRootHash[:]),
-					"prefix":      Hex(params.Commitment.Payload.Prefix),
-					"suffix":      Hex(params.Commitment.Payload.Suffix),
-				},
+				"payload":        params.Commitment.Payload,
 			},
 			"bitfield": params.Bitfield,
 			"proofs":   proofs,

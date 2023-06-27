@@ -23,7 +23,7 @@ contract BeefyClientTest is Test {
     bytes32 root;
     uint256[] bitSetArray;
     uint256[] bitfield;
-    BeefyClient.Payload payload;
+    BeefyClient.PayloadItem[] payload;
     uint256[] finalBitfield;
     BeefyClient.ValidatorProof validatorProof;
     BeefyClient.ValidatorProof[] finalValidatorProofs;
@@ -46,7 +46,7 @@ contract BeefyClientTest is Test {
 
         // generate initial fixture data with ffi
         (blockNumber, setId, setSize, bitSetArray, commitHash, payload) =
-            abi.decode(vm.ffi(inputs), (uint32, uint32, uint32, uint256[], bytes32, BeefyClient.Payload));
+            abi.decode(vm.ffi(inputs), (uint32, uint32, uint32, uint256[], bytes32, BeefyClient.PayloadItem[]));
         bitfield = Bitfield.createBitfield(bitSetArray, setSize);
 
         // To avoid another round of ffi in multiple tests
@@ -257,11 +257,14 @@ contract BeefyClientTest is Test {
     }
 
     function testScaleEncodeCommit() public {
-        BeefyClient.Payload memory _payload = BeefyClient.Payload(
-            0x3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c, hex"0861620c000102", hex""
-        );
+        BeefyClient.PayloadItem[] memory _payload = new BeefyClient.PayloadItem[](2);
+        _payload[0] = BeefyClient.PayloadItem(bytes2(0x6162), hex"000102");
+        _payload[1] = BeefyClient.PayloadItem(bytes2(0x6d68), hex"3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c");
+
         BeefyClient.Commitment memory _commitment = BeefyClient.Commitment(5, 7, _payload);
+
         bytes memory encoded = beefyClient.encodeCommitment_public(_commitment);
+
         assertEq(
             encoded,
             hex"0861620c0001026d68803ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c050000000700000000000000"

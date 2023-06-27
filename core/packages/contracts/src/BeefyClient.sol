@@ -53,13 +53,12 @@ contract BeefyClient is Ownable {
     struct Commitment {
         uint32 blockNumber;
         uint64 validatorSetID;
-        Payload payload;
+        PayloadItem[] payload;
     }
 
-    struct Payload {
-        bytes32 mmrRootHash;
-        bytes prefix;
-        bytes suffix;
+    struct PayloadItem {
+        bytes2 payloadID;
+        bytes data;
     }
 
     /**
@@ -143,6 +142,12 @@ contract BeefyClient is Ownable {
     /* Constants */
 
     /**
+     * @dev Beefy payload id for MMR Root payload items:
+     * https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L33
+     */
+    bytes2 public constant mmrRootID = bytes2("mh");
+
+    /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
      * submitInitial and commitPrevRandao. In production this should be set to MAX_SEED_LOOKAHEAD:
      * https://eth2book.info/altair/part3/config/preset#max_seed_lookahead
@@ -172,6 +177,8 @@ contract BeefyClient is Ownable {
     error TicketExpired();
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
+    error InvalidMMRRootLength();
+    error NoMMRRootInCommitment();
 
     constructor(uint256 _randaoCommitDelay, uint256 _randaoCommitExpiration) {
         randaoCommitDelay = _randaoCommitDelay;
@@ -292,10 +299,11 @@ contract BeefyClient is Ownable {
 
         verifyCommitment(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
 
-        latestMMRRoot = commitment.payload.mmrRootHash;
+        bytes32 newMMRRoot = getFirstMMRRoot(commitment);
+        latestMMRRoot = newMMRRoot;
         latestBeefyBlock = commitment.blockNumber;
 
-        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
+        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
         delete tickets[ticketID];
     }
 
@@ -340,8 +348,9 @@ contract BeefyClient is Ownable {
 
         verifyCommitment(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
 
+        bytes32 newMMRRoot = getFirstMMRRoot(commitment);
         bool leafIsValid = MMRProof.verifyLeafProof(
-            commitment.payload.mmrRootHash, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
+            newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
         );
         if (!leafIsValid) {
             revert InvalidMMRLeafProof();
@@ -352,10 +361,10 @@ contract BeefyClient is Ownable {
         nextValidatorSet.length = leaf.nextAuthoritySetLen;
         nextValidatorSet.root = leaf.nextAuthoritySetRoot;
 
-        latestMMRRoot = commitment.payload.mmrRootHash;
+        latestMMRRoot = newMMRRoot;
         latestBeefyBlock = commitment.blockNumber;
 
-        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
+        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
         delete tickets[ticketID];
     }
 
@@ -474,16 +483,43 @@ contract BeefyClient is Ownable {
         }
     }
 
+    // TODO: do we need to handle duplicate MMR_ROOT_ID entries in the payload?
+    // Unnecessary if we have a guarantee of unique payloadIDs per item.
+    // eg. if payload was a key-value mapping like a hash table.
+    function getFirstMMRRoot(Commitment calldata commitment) internal pure returns (bytes32) {
+        for (uint256 i = 0; i < commitment.payload.length; i++) {
+            if (commitment.payload[i].payloadID == mmrRootID) {
+                if (commitment.payload[i].data.length != 32) {
+                    revert InvalidMMRRootLength();
+                } else {
+                    return bytes32(commitment.payload[i].data);
+                }
+            }
+        }
+
+        revert NoMMRRootInCommitment();
+    }
+
     function encodeCommitment(Commitment calldata commitment) internal pure returns (bytes memory) {
         return bytes.concat(
-            commitment.payload.prefix,
-            bytes2("mh"), // BeefyPayloadId::MMR_ROOT_ID
-            hex"80", // ScaleCodec.encodeU64(commitment.payload.mmrRootHash.length)
-            commitment.payload.mmrRootHash,
-            commitment.payload.suffix,
+            encodePayload(commitment.payload),
             ScaleCodec.encodeU32(commitment.blockNumber),
             ScaleCodec.encodeU64(commitment.validatorSetID)
         );
+    }
+
+    function encodePayload(PayloadItem[] calldata items) internal pure returns (bytes memory) {
+        bytes memory payload = ScaleCodec.encodeCompactUint(items.length);
+        for (uint256 i = 0; i < items.length; i++) {
+            payload = bytes.concat(
+                payload,
+                items[i].payloadID,
+                ScaleCodec.encodeCompactUint(items[i].data.length),
+                items[i].data
+            );
+        }
+
+        return payload;
     }
 
     function encodeMMRLeaf(MMRLeaf calldata leaf) internal pure returns (bytes memory) {
