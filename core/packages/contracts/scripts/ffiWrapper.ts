@@ -13,7 +13,7 @@ const validatorSetSize = process.env["FixedSet"] == "true" ? accounts.length : 3
 const commitHash = fixtureData.commitmentHash
 const blockNumber = fixtureData.params.commitment.blockNumber
 const mmrLeafProofs = fixtureData.params.leafProof
-const payload: BeefyClient.PayloadItemStruct[] = fixtureData.params.commitment.payload
+const mmrRoot = fixtureData.params.commitment.payload[0].data
 const mmrLeaf: BeefyClient.MMRLeafStruct = fixtureData.params.leaf
 const leafProofOrder = fixtureData.params.leafProofOrder
 
@@ -30,9 +30,9 @@ if (command == "GenerateInitialSet") {
                 "uint32",
                 "uint256[]",
                 "bytes32",
-                "tuple(bytes2 payloadID, bytes data)[]"
+                "bytes32"
             ],
-            [blockNumber, validatorSetID, validatorSetSize, subset, commitHash, payload]
+            [blockNumber, validatorSetID, validatorSetSize, subset, commitHash, mmrRoot]
         )}`
     )
 } else if (command == "GenerateProofs") {
