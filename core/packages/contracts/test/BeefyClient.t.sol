@@ -30,6 +30,7 @@ contract BeefyClientTest is Test {
     bytes32[] mmrLeafProofs;
     BeefyClient.MMRLeaf mmrLeaf;
     uint256 leafProofOrder;
+    bytes2 mmrRootID = bytes2("mh");
 
     function setUp() public {
         randaoCommitDelay = 3;
@@ -84,7 +85,7 @@ contract BeefyClientTest is Test {
         initialize(setId);
 
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
@@ -106,7 +107,7 @@ contract BeefyClientTest is Test {
         initialize(setId);
 
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
@@ -129,7 +130,7 @@ contract BeefyClientTest is Test {
         initialize(setId);
 
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
@@ -153,7 +154,7 @@ contract BeefyClientTest is Test {
         testSubmit();
 
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
@@ -169,7 +170,7 @@ contract BeefyClientTest is Test {
         initialize(setId);
 
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
@@ -189,7 +190,7 @@ contract BeefyClientTest is Test {
     function testSubmitFailWithoutPrevRandao() public {
         initialize(setId);
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
@@ -201,7 +202,7 @@ contract BeefyClientTest is Test {
     function testSubmitFailForPrevRandaoTooEarlyOrTooLate() public {
         initialize(setId);
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
@@ -218,7 +219,7 @@ contract BeefyClientTest is Test {
     function testSubmitFailForPrevRandaoCapturedMoreThanOnce() public {
         initialize(setId);
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
@@ -235,7 +236,7 @@ contract BeefyClientTest is Test {
         initialize(setId - 1);
 
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
@@ -257,7 +258,7 @@ contract BeefyClientTest is Test {
         initialize(setId - 1);
 
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
@@ -272,7 +273,7 @@ contract BeefyClientTest is Test {
         testSubmit();
 
         BeefyClient.PayloadItem[] memory items = new BeefyClient.PayloadItem[](1);
-        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(bytes2(0x6d68), abi.encodePacked(mmrRoot));
+        BeefyClient.PayloadItem memory payload = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
         items[0] = payload;
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, items);
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
@@ -291,8 +292,8 @@ contract BeefyClientTest is Test {
 
     function testScaleEncodeCommit() public {
         BeefyClient.PayloadItem[] memory _payload = new BeefyClient.PayloadItem[](2);
-        _payload[0] = BeefyClient.PayloadItem(bytes2(0x6162), hex"000102");
-        _payload[1] = BeefyClient.PayloadItem(bytes2(0x6d68), hex"3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c");
+        _payload[0] = BeefyClient.PayloadItem(bytes2("ab"), hex"000102");
+        _payload[1] = BeefyClient.PayloadItem(mmrRootID, hex"3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c");
 
         BeefyClient.Commitment memory _commitment = BeefyClient.Commitment(5, 7, _payload);
 
