@@ -42,10 +42,7 @@ func (r *Request) CommitmentHash() (*[32]byte, error) {
 // Generate RequestParams which contains merkle proof by validator's index
 // together with the signature which will be verified in BeefyClient contract later
 func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []*big.Int) (*InitialRequestParams, error) {
-	commitment, err := toBeefyClientCommitment(&r.SignedCommitment.Commitment)
-	if err != nil {
-		return nil, fmt.Errorf("map to beefy client commitment: %w", err)
-	}
+	commitment := toBeefyClientCommitment(&r.SignedCommitment.Commitment)
 
 	proof, err := r.generateValidatorAddressProof(valAddrIndex)
 	if err != nil {
@@ -80,12 +77,12 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	return &msg, nil
 }
 
-func toBeefyClientCommitment(c *types.Commitment) (*contracts.BeefyClientCommitment, error) {
+func toBeefyClientCommitment(c *types.Commitment) *contracts.BeefyClientCommitment {
 	return &contracts.BeefyClientCommitment{
 		BlockNumber:    c.BlockNumber,
 		ValidatorSetID: c.ValidatorSetID,
 		Payload:        toBeefyPayload(c.Payload),
-	}, nil
+	}
 }
 
 func cleanSignature(input types.BeefySignature) (uint8, [32]byte, [32]byte) {
