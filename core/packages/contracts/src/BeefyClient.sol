@@ -43,12 +43,12 @@ contract BeefyClient is Ownable {
 
     /**
      * @dev The Commitment, with its payload, is the core thing we are trying to verify with
-     * this contract. It contains a MMR root that commits to the polkadot history, including
+     * this contract. It contains an MMR root that commits to the polkadot history, including
      * past blocks and parachain blocks and can be used to verify both polkadot and parachain blocks.
+     * @param blockNumber relay chain block number
+     * @param validatorSetID id of the validator set that signed the commitment
      * @param payload the payload of the new commitment in beefy justifications (in
      * our case, this is a new MMR root for all past polkadot blocks)
-     * @param blockNumber block number for the given commitment
-     * @param validatorSetID validator set id that signed the given commitment
      */
     struct Commitment {
         uint32 blockNumber;
@@ -56,6 +56,13 @@ contract BeefyClient is Ownable {
         PayloadItem[] payload;
     }
 
+    /**
+     * @dev Each PayloadItem is a piece of data signed by validators at a particular block.
+     * This includes the relay chain's MMR root.
+     * @param payloadID an ID that references a description of the data in the payload item.
+     * Known payload ids can be found [upstream](https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L27).
+     * @param data the contents of the payload item.
+     */
     struct PayloadItem {
         bytes2 payloadID;
         bytes data;
@@ -272,6 +279,7 @@ contract BeefyClient is Ownable {
     /**
      * @dev Submit a commitment for final verification
      * @param commitment contains the full commitment that was used for the commitmentHash
+     * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proofs a struct containing the data needed to verify all validator signatures
      */
     function submitFinal(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof[] calldata proofs)
