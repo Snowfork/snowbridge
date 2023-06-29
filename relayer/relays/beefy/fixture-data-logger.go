@@ -15,8 +15,8 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 	params *FinalRequestParams,
 ) (log.Fields, error) {
 	proofs := make([]log.Fields, len(params.Proofs))
-	for _, proof := range params.Proofs {
-		proofs = append(proofs, proofToLog(proof))
+	for i, proof := range params.Proofs {
+		proofs[i] = proofToLog(proof)
 	}
 
 	encodedCommitment, err := gsrpcTypes.EncodeToBytes(task.SignedCommitment.Commitment)
@@ -42,8 +42,8 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 	params *FinalRequestParams,
 ) (log.Fields, error) {
 	proofs := make([]log.Fields, len(params.Proofs))
-	for _, proof := range params.Proofs {
-		proofs = append(proofs, proofToLog(proof))
+	for i, proof := range params.Proofs {
+		proofs[i] = proofToLog(proof)
 	}
 
 	encodedCommitment, err := gsrpcTypes.EncodeToBytes(task.SignedCommitment.Commitment)
