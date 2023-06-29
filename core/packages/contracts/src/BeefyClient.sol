@@ -212,7 +212,10 @@ contract BeefyClient is Ownable {
      * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof a proof that a single validator from currentValidatorSet has signed the commitment
      */
-    function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
+    function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
+        external
+        payable
+    {
         doSubmitInitial(currentValidatorSet, commitment, bitfield, proof);
     }
 
@@ -222,13 +225,23 @@ contract BeefyClient is Ownable {
      * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof a proof that a single validator from nextValidatorSet has signed the commitment
      */
-    function submitInitialWithHandover(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
+    function submitInitialWithHandover(
+        Commitment calldata commitment,
+        uint256[] calldata bitfield,
+        ValidatorProof calldata proof
+    ) external payable {
         doSubmitInitial(nextValidatorSet, commitment, bitfield, proof);
     }
 
-    function doSubmitInitial(ValidatorSet memory vset, Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof) internal {
+    function doSubmitInitial(
+        ValidatorSet memory vset,
+        Commitment calldata commitment,
+        uint256[] calldata bitfield,
+        ValidatorProof calldata proof
+    ) internal {
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
-        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index)) {
+        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index))
+        {
             revert InvalidValidatorProof();
         }
 
@@ -357,9 +370,8 @@ contract BeefyClient is Ownable {
         verifyCommitment(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
 
         bytes32 newMMRRoot = getFirstMMRRoot(commitment);
-        bool leafIsValid = MMRProof.verifyLeafProof(
-            newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
-        );
+        bool leafIsValid =
+            MMRProof.verifyLeafProof(newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder);
         if (!leafIsValid) {
             revert InvalidMMRLeafProof();
         }
@@ -520,10 +532,7 @@ contract BeefyClient is Ownable {
         bytes memory payload = ScaleCodec.encodeCompactUint(items.length);
         for (uint256 i = 0; i < items.length; i++) {
             payload = bytes.concat(
-                payload,
-                items[i].payloadID,
-                ScaleCodec.encodeCompactUint(items[i].data.length),
-                items[i].data
+                payload, items[i].payloadID, ScaleCodec.encodeCompactUint(items[i].data.length), items[i].data
             );
         }
 

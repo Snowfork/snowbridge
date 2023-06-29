@@ -62,10 +62,8 @@ contract BeefyClientTest is Test {
             inputs[i + 4] = Strings.toString(finalBitfield[i]);
         }
         BeefyClient.ValidatorProof[] memory proofs;
-        (root, proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) = abi.decode(
-            vm.ffi(inputs),
-            (bytes32, BeefyClient.ValidatorProof[], bytes32[], BeefyClient.MMRLeaf, uint256)
-        );
+        (root, proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) =
+            abi.decode(vm.ffi(inputs), (bytes32, BeefyClient.ValidatorProof[], bytes32[], BeefyClient.MMRLeaf, uint256));
         // Cache finalValidatorProofs to storage in order to reuse in submitFinal later
         for (uint256 i = 0; i < proofs.length; i++) {
             finalValidatorProofs.push(proofs[i]);
@@ -282,7 +280,8 @@ contract BeefyClientTest is Test {
     function testScaleEncodeCommit() public {
         BeefyClient.PayloadItem[] memory payload = new BeefyClient.PayloadItem[](2);
         payload[0] = BeefyClient.PayloadItem(bytes2("ab"), hex"000102");
-        payload[1] = BeefyClient.PayloadItem(mmrRootID, hex"3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c");
+        payload[1] =
+            BeefyClient.PayloadItem(mmrRootID, hex"3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c");
 
         BeefyClient.Commitment memory _commitment = BeefyClient.Commitment(5, 7, payload);
 
