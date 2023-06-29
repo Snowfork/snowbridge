@@ -178,11 +178,11 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 
 func toBeefyPayload(items []types.PayloadItem) []contracts.BeefyClientPayloadItem {
 	beefyItems := make([]contracts.BeefyClientPayloadItem, len(items))
-	for i := 0; i < len(items); i++ {
-		beefyItems = append(beefyItems, contracts.BeefyClientPayloadItem{
-			PayloadID: items[i].ID,
-			Data:      items[i].Data,
-		})
+	for i, item := range items {
+		beefyItems[i] = contracts.BeefyClientPayloadItem{
+			PayloadID: item.ID,
+			Data:      item.Data,
+		}
 	}
 
 	return beefyItems
@@ -190,11 +190,11 @@ func toBeefyPayload(items []types.PayloadItem) []contracts.BeefyClientPayloadIte
 
 func commitmentToLog(commitment contracts.BeefyClientCommitment) logrus.Fields {
 	payloadFields := make([]logrus.Fields, len(commitment.Payload))
-	for _, payloadItem := range commitment.Payload {
-		payloadFields = append(payloadFields, logrus.Fields{
+	for i, payloadItem := range commitment.Payload {
+		payloadFields[i] = logrus.Fields{
 			"PayloadID": payloadItem.PayloadID,
 			"Data":      payloadItem.Data,
-		})
+		}
 	}
 
 	return logrus.Fields{
@@ -206,8 +206,8 @@ func commitmentToLog(commitment contracts.BeefyClientCommitment) logrus.Fields {
 
 func proofToLog(proof contracts.BeefyClientValidatorProof) logrus.Fields {
 	hexProof := make([]string, len(proof.Proof))
-	for _, proof := range proof.Proof {
-		hexProof = append(hexProof, Hex(proof[:]))
+	for i, proof := range proof.Proof {
+		hexProof[i] = Hex(proof[:])
 	}
 
 	return logrus.Fields{
