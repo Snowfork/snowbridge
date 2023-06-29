@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -185,4 +186,36 @@ func toBeefyPayload(items []types.PayloadItem) []contracts.BeefyClientPayloadIte
 	}
 
 	return beefyItems
+}
+
+func commitmentToLog(commitment contracts.BeefyClientCommitment) logrus.Fields {
+	payloadFields := make([]logrus.Fields, len(commitment.Payload))
+	for _, payloadItem := range commitment.Payload {
+		payloadFields = append(payloadFields, logrus.Fields{
+			"PayloadID": payloadItem.PayloadID,
+			"Data":      payloadItem.Data,
+		})
+	}
+
+	return logrus.Fields{
+		"BlockNumber":    commitment.BlockNumber,
+		"ValidatorSetID": commitment.ValidatorSetID,
+		"Payload":        payloadFields,
+	}
+}
+
+func proofToLog(proof contracts.BeefyClientValidatorProof) logrus.Fields {
+	hexProof := make([]string, len(proof.Proof))
+	for _, proof := range proof.Proof {
+		hexProof = append(hexProof, Hex(proof[:]))
+	}
+
+	return logrus.Fields{
+		"V":       proof.V,
+		"R":       Hex(proof.R[:]),
+		"S":       Hex(proof.S[:]),
+		"Index":   proof.Index.Uint64(),
+		"Account": proof.Account.Hex(),
+		"Proof":   hexProof,
+	}
 }

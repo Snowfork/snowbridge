@@ -279,10 +279,10 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	}
 	log.WithFields(logrus.Fields{
 		"txHash":         tx.Hash().Hex(),
-		"CommitmentHash": commitmentHash,
-		"Commitment":     msg.Commitment,
+		"CommitmentHash": "0x" + hex.EncodeToString(commitmentHash[:]),
+		"Commitment":     commitmentToLog(msg.Commitment),
 		"Bitfield":       msg.Bitfield,
-		"Proof":          msg.Proof,
+		"Proof":          proofToLog(msg.Proof),
 		"HandOver":       task.IsHandover,
 	}).Info("Transaction submitted for initial verification")
 
