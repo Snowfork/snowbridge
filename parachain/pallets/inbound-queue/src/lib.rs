@@ -153,6 +153,8 @@ pub mod pallet {
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
 			let allowlist = <AllowList<T>>::get();
+
+			log::info!(target: "inbound-queue","💫 envelope: {:?}.", envelope.outbound_queue_address);
 			if !allowlist.contains(&envelope.outbound_queue_address) {
 				return Err(Error::<T>::InvalidOutboundQueue.into())
 			}
@@ -167,10 +169,28 @@ pub mod pallet {
 				}
 			})?;
 
+			log::info!(target: "inbound-queue","💫 verified nonce");
+
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
 			let sovereign_account = envelope.dest.into_account_truncating();
+
+			let para_id: u32 = envelope.dest.into();
+			log::info!(target: "inbound-queue","💫 envelope.dest: {:?}", para_id);
+			log::info!(target: "inbound-queue","💫 envelope.nonce: {:?}", envelope.nonce);
+			log::info!(target: "inbound-queue","💫 envelope.payload: {:?}", envelope.payload);
+			log::info!(target: "inbound-queue","💫 envelope.outbound_queue_address: {:?}", envelope.outbound_queue_address);
+			log::info!(target: "inbound-queue","💫 sovereign_account: {:?}", sovereign_account);
+			log::info!(target: "inbound-queue","💫 who: {:?}", who);
+			log::info!(target: "inbound-queue","💫 reward: {:?}", T::Reward::get());
+			log::info!(target: "inbound-queue","💫 preservation: {:?}", Preservation::Preserve);
+
+			T::Token::set_balance(&sovereign_account, 100u32.into());
+			log::info!(target: "inbound-queue","💫 set balance done: {:?}", T::Token::total_balance(&sovereign_account));
+
 			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
+
+			log::info!(target: "inbound-queue","💫 transfer done");
 
 			// From this point, any errors are masked, i.e the extrinsic will
 			// succeed even if the message was not successfully decoded or dispatched.
@@ -189,6 +209,8 @@ pub mod pallet {
 					},
 				};
 
+			log::info!(target: "inbound-queue","💫 decoded message");
+
 			// Attempt to convert to XCM
 			let sibling_para =
 				MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
@@ -204,6 +226,8 @@ pub mod pallet {
 				},
 			};
 
+			log::info!(target: "inbound-queue","💫 convert to xcm");
+
 			// Attempt to send XCM to a sibling parachain
 			match send_xcm::<T::XcmSender>(sibling_para, xcm) {
 				Ok(_) => Self::deposit_event(Event::MessageReceived {
@@ -217,6 +241,8 @@ pub mod pallet {
 					result: MessageDispatchResult::NotDispatched(err),
 				}),
 			}
+
+			log::info!(target: "inbound-queue","💫 sent xcm");
 
 			Ok(())
 		}
