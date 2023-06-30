@@ -45,11 +45,29 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*paracha
 		},
 	}
 
+	type PrintProof struct {
+		Keys   []string
+		Values []string
+	}
+
+	printProof := PrintProof{
+		Keys:   make([]string, 0),
+		Values: make([]string, 0),
+	}
+
+	for _, b := range proof.Keys {
+		printProof.Keys = append(printProof.Keys, hex.EncodeToString(b))
+	}
+	for _, b := range proof.Values {
+		printProof.Values = append(printProof.Values, hex.EncodeToString(b))
+	}
+
 	value := hex.EncodeToString(m.Data)
 	log.WithFields(logrus.Fields{
 		"payload":    value,
 		"blockHash":  m.Proof.BlockHash.Hex(),
 		"eventIndex": m.Proof.TxIndex,
+		"proofData":  printProof,
 	}).Debug("Generated message from Ethereum log")
 
 	return &m, nil
