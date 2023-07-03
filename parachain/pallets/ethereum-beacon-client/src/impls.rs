@@ -67,10 +67,6 @@ impl<T: Config> Verifier for Pallet<T> {
 
 		Ok(log)
 	}
-
-	fn initialize_storage(block_hash: H256, header: CompactExecutionHeader) {
-		<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
-	}
 }
 
 impl<T: Config> Pallet<T> {

@@ -10,15 +10,15 @@ use frame_support::{
 };
 use sp_core::{ConstU32, H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
-use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	ArithmeticError, MultiSignature,
-};
+use sp_runtime::{testing::Header, traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify}, ArithmeticError, MultiSignature, BuildStorage};
 use sp_std::convert::From;
 
 use snowbridge_core::{Message, Proof};
 use snowbridge_ethereum::Log;
+use snowbridge_beacon_primitives::{Fork, ForkVersions};
+use snowbridge_ethereum_beacon_client::ExecutionHeaderBuffer;
+use snowbridge_beacon_primitives::CompactExecutionHeader;
+use snowbridge_core::RingBufferMap;
 
 use hex_literal::hex;
 
@@ -35,6 +35,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
 		InboundQueue: inbound_queue::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -89,6 +90,35 @@ impl pallet_balances::Config for Test {
 	type MaxHolds = ();
 }
 
+parameter_types! {
+		pub const ExecutionHeadersPruneThreshold: u32 = 10;
+		pub const ChainForkVersions: ForkVersions = ForkVersions{
+			genesis: Fork {
+				version: [0, 0, 0, 1], // 0x00000001
+				epoch: 0,
+			},
+			altair: Fork {
+				version: [1, 0, 0, 1], // 0x01000001
+				epoch: 0,
+			},
+			bellatrix: Fork {
+				version: [2, 0, 0, 1], // 0x02000001
+				epoch: 0,
+			},
+			capella: Fork {
+				version: [3, 0, 0, 1], // 0x03000001
+				epoch: 0,
+			},
+		};
+	}
+
+impl snowbridge_ethereum_beacon_client::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type ForkVersions = ChainForkVersions;
+	type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
+	type WeightInfo = ();
+}
+
 // Mock verifier
 pub struct MockVerifier;
 
@@ -125,6 +155,34 @@ fn last_events(n: usize) -> Vec<RuntimeEvent> {
 
 fn expect_events(e: Vec<RuntimeEvent>) {
 	assert_eq!(last_events(e.len()), e);
+}
+
+#[test]
+fn test_with_data() {
+	new_tester_with_test_data(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+
+	});
+}
+
+pub fn new_tester_with_test_data(outbound_queue_address: H160) -> sp_io::TestExternalities {
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+	let config =  inbound_queue::GenesisConfig { allowlist: vec![outbound_queue_address] };
+	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
+
+	let execution_header = CompactExecutionHeader{
+		parent_hash: hex!("93a72ceae4c8af8f4438784980d3f57c7a149495a5a49e0be9a6dffabc10de6e").into(),
+		block_number: 42,
+		state_root: hex!("9798febbce70182a623475afced52b6809e5d6a6d3dfe4a8c2d4bffec72f29bf").into(),
+		receipts_root: hex!("113d2f9760141c1a13e0d6fecca13f84b8aec0b88e05cb53923441aa51fbdbff").into(),
+	};
+	let block_hash: H256 = hex!("f4a8647b907dca350b62f39c39bf61c89b2032d586aff486b7c628259772820f").into();
+
+	ExecutionHeaderBuffer::<Test>::insert(block_hash, execution_header);
+
+	let mut ext: sp_io::TestExternalities = storage.into();
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }
 
 pub fn new_tester(outbound_queue_address: H160) -> sp_io::TestExternalities {
@@ -167,6 +225,31 @@ const OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
 );
 
 use snowbridge_core::ParaId;
+
+#[test]
+fn test_submit_for_benchmark() {
+	new_tester_with_test_data(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+		let relayer: AccountId = Keyring::Bob.into();
+		let origin = RuntimeOrigin::signed(relayer);
+
+		// Deposit funds into sovereign account of Asset Hub (Statemint)
+		let dest_para: ParaId = 1000u32.into();
+		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		println!("account: {}", sovereign_account);
+		let _ = Balances::mint_into(&sovereign_account, 10000);
+
+		// Submit message
+		let message = Message {
+			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+		};
+		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
+	});
+}
 
 #[test]
 fn test_submit() {

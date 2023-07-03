@@ -61,7 +61,6 @@ impl ContractId {
 /// functionality.
 pub trait Verifier {
 	fn verify(message: &Message) -> Result<Log, DispatchError>;
-	fn initialize_storage(block_hash: H256, header: CompactExecutionHeader);
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]

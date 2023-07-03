@@ -28,8 +28,6 @@ mod benchmarks {
         };
         let block_hash: H256 = hex!("f4a8647b907dca350b62f39c39bf61c89b2032d586aff486b7c628259772820f").into();
 
-        T::Verifier::initialize_storage(block_hash, execution_header);
-
         let message = Message {
             data: payload.into(),
             proof: Proof {
