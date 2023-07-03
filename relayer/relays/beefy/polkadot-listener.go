@@ -90,6 +90,7 @@ func (li *PolkadotListener) scanCommitments(
 				},
 				"validatorSetID": currentValidatorSet,
 			})
+			logEntry.Info("new commitment received")
 			if validatorSetID < currentValidatorSet || validatorSetID > currentValidatorSet+1 {
 				return fmt.Errorf("commitment has unexpected validatorSetID: blockNumber=%v validatorSetID=%v expectedValidatorSetID=%v",
 					committedBeefyBlock,
