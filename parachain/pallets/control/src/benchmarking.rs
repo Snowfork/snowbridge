@@ -14,11 +14,10 @@ mod benchmarks {
 
 	#[benchmark]
 	fn upgrade() -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
 		let upgrade_task = H160::repeat_byte(3);
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), upgrade_task);
+		_(RawOrigin::Root, upgrade_task, None);
 
 		Ok(())
 	}

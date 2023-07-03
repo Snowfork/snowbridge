@@ -3,7 +3,7 @@
 pragma solidity 0.8.20;
 
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
-import {Ownable} from "openzeppelin/access/Ownable.sol";
+import {Auth} from "./Auth.sol";
 import {MerkleProof} from "./utils/MerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
@@ -29,7 +29,7 @@ import {ScaleCodec} from "./ScaleCodec.sol";
  * 4. submitFinalWithHandover (with signature proofs specified by (3))
  *
  */
-contract BeefyClient is Ownable {
+contract BeefyClient is Auth {
     /* Events */
 
     /**
@@ -178,16 +178,14 @@ contract BeefyClient is Ownable {
         randaoCommitExpiration = _randaoCommitExpiration;
     }
 
-    // Once-off post-construction call to set initial configuration.
     function initialize(
         uint64 _initialBeefyBlock,
         ValidatorSet calldata _initialValidatorSet,
         ValidatorSet calldata _nextValidatorSet
-    ) external onlyOwner {
+    ) external onlyRole(ADMIN_ROLE) {
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
         nextValidatorSet = _nextValidatorSet;
-        renounceOwnership();
     }
 
     /* Public Functions */

@@ -13,7 +13,7 @@ contract UpgradeTaskMock is UpgradeTask {
     function handle(ParaID origin, bytes calldata message) external override onlyRole(SENDER_ROLE) {}
 
     // In this simple upgrade we just update a fee parameter
-    function run() external override {
+    function run(bytes calldata) external override {
         OutboundQueue(resolve(keccak256("OutboundQueue"))).updateFee(2 ether);
     }
 }
@@ -22,7 +22,7 @@ contract FailingUpgradeTaskMock is UpgradeTask {
     constructor(Registry registry) UpgradeTask(registry) {}
     function handle(ParaID origin, bytes calldata message) external override onlyRole(SENDER_ROLE) {}
 
-    function run() external pure override {
+    function run(bytes calldata) external pure override {
         revert("failed");
     }
 }

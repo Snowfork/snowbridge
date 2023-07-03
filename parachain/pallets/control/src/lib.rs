@@ -29,6 +29,7 @@ use ethabi::Token;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use frame_support::log;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
@@ -45,10 +46,6 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 	}
 
-	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	pub type Something<T> = StorageValue<_, u32>;
-
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -64,20 +61,32 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::upgrade())]
-		pub fn upgrade(origin: OriginFor<T>, upgrade_task: H160) -> DispatchResult {
-			let _ = ensure_signed(origin)?;
+		pub fn upgrade(
+			origin: OriginFor<T>,
+			upgrade_task: H160,
+			upgrade_params: Option<Vec<u8>>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
 
 			let message = OutboundMessage {
 				id: T::MessageHasher::hash(upgrade_task.as_ref()),
 				origin: T::OwnParaId::get(),
 				gateway: T::GovernanceProxyContract::get(),
-				payload: Self::encode_upgrade_payload(upgrade_task),
+				payload: Self::encode_upgrade_payload(
+					upgrade_task,
+					upgrade_params.unwrap_or(Vec::<u8>::new()),
+				),
 			};
 
-			let ticket =
-				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
+			let ticket = T::OutboundQueue::validate(&message).map_err(|e| {
+				log::error!(target: "snowbridge-control", "validate message error: {:?}.", e);
+				return Error::<T>::SubmissionFailed;
+			})?;
 
-			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
+			T::OutboundQueue::submit(ticket).map_err(|e| {
+				log::error!(target: "snowbridge-control", "submit message error: {:?}.", e);
+				return Error::<T>::SubmissionFailed;
+			})?;
 
 			Self::deposit_event(Event::<T>::UpgradeTaskSubmitted { upgrade_task });
 
@@ -86,12 +95,13 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn encode_upgrade_payload(upgrade_task: H160) -> Vec<u8> {
+		fn encode_upgrade_payload(upgrade_task: H160, upgrade_params: Vec<u8>) -> Vec<u8> {
 			ethabi::encode(&vec![Token::Tuple(vec![
 				Token::Uint(U256::from(0u64)),
-				Token::Bytes(ethabi::encode(&vec![Token::Tuple(vec![Token::Address(
-					upgrade_task,
-				)])])),
+				Token::Bytes(ethabi::encode(&vec![Token::Tuple(vec![
+					Token::Address(upgrade_task),
+					Token::Bytes(upgrade_params),
+				])])),
 			])])
 		}
 	}

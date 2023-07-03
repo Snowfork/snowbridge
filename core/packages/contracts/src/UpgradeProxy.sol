@@ -19,6 +19,7 @@ contract UpgradeProxy is Gateway {
 
     struct UpgradePayload {
         address task;
+        bytes params;
     }
 
     error InvalidMessage();
@@ -41,7 +42,7 @@ contract UpgradeProxy is Gateway {
 
         UpgradePayload memory payload = abi.decode(decoded.payload, (UpgradePayload));
 
-        (bool success,) = payload.task.delegatecall(abi.encodeCall(UpgradeTask.run, ()));
+        (bool success,) = payload.task.delegatecall(abi.encodeCall(UpgradeTask.run, (payload.params)));
         if (!success) {
             revert UpgradeFailed();
         }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {AccessControl} from "openzeppelin/access/AccessControl.sol";
 
 import {Test} from "forge-std/Test.sol";
+import "forge-std/console.sol";
 
 import {UpgradeProxy} from "../src/UpgradeProxy.sol";
 import {UpgradeTask} from "../src/UpgradeTask.sol";
@@ -14,11 +15,13 @@ import {Registry} from "../src/Registry.sol";
 import {Gateway} from "../src/Gateway.sol";
 
 import {UpgradeTaskMock, FailingUpgradeTaskMock} from "./mocks/UpgradeTaskMock.sol";
+import "../src/UpdateOutboundFee.sol";
 
 contract UpgradeProxyTest is Test {
     UpgradeProxy public upgradeProxy;
     UpgradeTask public upgradeTask;
     UpgradeTask public failedUpgradeTask;
+    UpdateOutboundFee public updateOutboundFeeTask;
 
     OutboundQueue public outboundQueue;
 
@@ -44,16 +47,13 @@ contract UpgradeProxyTest is Test {
         // create upgrade tasks
         upgradeTask = new UpgradeTaskMock(registry);
         failedUpgradeTask = new FailingUpgradeTaskMock(registry);
-    }
 
-    function createUpgradeMessage(UpgradeTask task) internal pure returns (bytes memory) {
-        return abi.encode(
-            UpgradeProxy.Message(UpgradeProxy.Action.Upgrade, abi.encode(UpgradeProxy.UpgradePayload(address(task))))
-        );
+        // parameterized tasks
+        updateOutboundFeeTask = new UpdateOutboundFee(registry, 50000);
     }
 
     function testUpgrade() public {
-        bytes memory message = createUpgradeMessage(upgradeTask);
+        bytes memory message = upgradeTask.createUpgradeMessage();
         upgradeProxy.handle(origin, message);
         assertEq(outboundQueue.fee(), 2 ether);
     }
@@ -64,8 +64,14 @@ contract UpgradeProxyTest is Test {
     }
 
     function testUpgradeFail() public {
-        bytes memory message = createUpgradeMessage(failedUpgradeTask);
+        bytes memory message = failedUpgradeTask.createUpgradeMessage();
         vm.expectRevert(UpgradeProxy.UpgradeFailed.selector);
         upgradeProxy.handle(origin, message);
+    }
+
+    function testUpdateOutboundFee() public {
+        bytes memory message = updateOutboundFeeTask.createUpgradeMessage();
+        upgradeProxy.handle(origin, message);
+        assertEq(outboundQueue.fee(), 50000);
     }
 }
