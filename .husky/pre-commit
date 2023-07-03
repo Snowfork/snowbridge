@@ -14,7 +14,7 @@ chronic typos .
 # lint and format for relayer codes
 (cd relayer && chronic mage lint && chronic go fmt ./...)
 
-# cargo fmt
-(cd parachain && SKIP_WASM_BUILD= cargo fmt --all)
+# comment here and run `cargo +nightly fmt` manually without nix for https://github.com/oxalica/rust-overlay/issues/66#issuecomment-993816000
+#(cd parachain && SKIP_WASM_BUILD= cargo +nightly fmt --all)
 
 echo 'Pre-commit hook successful!'
