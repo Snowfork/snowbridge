@@ -503,9 +503,6 @@ contract BeefyClient is Ownable {
         }
     }
 
-    // TODO: do we need to handle duplicate MMR_ROOT_ID entries in the payload?
-    // Unnecessary if we have a guarantee of unique payloadIDs per item.
-    // eg. if payload was a key-value mapping like a hash table.
     function getFirstMMRRoot(Commitment calldata commitment) internal pure returns (bytes32) {
         for (uint256 i = 0; i < commitment.payload.length; i++) {
             if (commitment.payload[i].payloadID == mmrRootID) {
