@@ -17,6 +17,8 @@ mod benchmarks {
 	const OUTBOUND_QUEUE_ADDRESS: [u8; 20] = hex!["ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0"];
 
 	#[benchmark]
+	// method submit_create_message and submit_mint_message must be combined somehow so there's
+	// only one submit method, for which 1 weight is calculated
 	fn submit_create_message() -> Result<(), BenchmarkError> {
 		let caller: T::AccountId = whitelisted_caller();
 
