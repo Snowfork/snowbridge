@@ -61,10 +61,8 @@ contract BeefyClientTest is Test {
             inputs[i + 4] = Strings.toString(finalBitfield[i]);
         }
         BeefyClient.ValidatorProof[] memory proofs;
-        (root, proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) = abi.decode(
-            vm.ffi(inputs),
-            (bytes32, BeefyClient.ValidatorProof[], bytes32[], BeefyClient.MMRLeaf, uint256)
-        );
+        (root, proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) =
+            abi.decode(vm.ffi(inputs), (bytes32, BeefyClient.ValidatorProof[], bytes32[], BeefyClient.MMRLeaf, uint256));
         // Cache finalValidatorProofs to storage in order to reuse in submitFinal later
         for (uint256 i = 0; i < proofs.length; i++) {
             finalValidatorProofs.push(proofs[i]);
@@ -252,7 +250,7 @@ contract BeefyClientTest is Test {
 
         BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
 
-        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        vm.expectRevert(BeefyClient.StaleCommitment.selector);
         beefyClient.submitFinalWithHandover(
             commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );

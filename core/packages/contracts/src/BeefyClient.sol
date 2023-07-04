@@ -198,7 +198,10 @@ contract BeefyClient is Ownable {
      * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof a proof that a single validator from currentValidatorSet has signed the commitmentHash
      */
-    function submitInitial(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
+    function submitInitial(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof)
+        external
+        payable
+    {
         doSubmitInitial(currentValidatorSet, commitmentHash, bitfield, proof);
     }
 
@@ -208,13 +211,23 @@ contract BeefyClient is Ownable {
      * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof a proof that a single validator from nextValidatorSet has signed the commitmentHash
      */
-    function submitInitialWithHandover(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) external payable {
+    function submitInitialWithHandover(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        ValidatorProof calldata proof
+    ) external payable {
         doSubmitInitial(nextValidatorSet, commitmentHash, bitfield, proof);
     }
 
-    function doSubmitInitial(ValidatorSet memory vset, bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof) internal {
+    function doSubmitInitial(
+        ValidatorSet memory vset,
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        ValidatorProof calldata proof
+    ) internal {
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
-        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index)) {
+        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index))
+        {
             revert InvalidValidatorProof();
         }
 
@@ -269,32 +282,12 @@ contract BeefyClient is Ownable {
     function submitFinal(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof[] calldata proofs)
         public
     {
-        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
-        Ticket storage ticket = tickets[ticketID];
+        (bytes32 commitmentHash, bytes32 ticketID) = _checkCommitment(commitment, bitfield);
 
-        if (ticket.prevRandao == 0) {
-            revert PrevRandaoNotCaptured();
-        }
+        _verifyCommitment(commitment.validatorSetID, bitfield, proofs, commitmentHash, ticketID);
 
-        if (commitment.validatorSetID != currentValidatorSet.id && commitment.validatorSetID != nextValidatorSet.id) {
-            revert InvalidCommitment();
-        }
+        _applyCommitment(commitment);
 
-        if (commitment.blockNumber <= latestBeefyBlock) {
-            revert StaleCommitment();
-        }
-
-        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
-            revert InvalidBitfield();
-        }
-
-        verifyCommitment(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
-
-        latestMMRRoot = commitment.payload.mmrRootHash;
-        latestBeefyBlock = commitment.blockNumber;
-
-        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
         delete tickets[ticketID];
     }
 
@@ -313,48 +306,14 @@ contract BeefyClient is Ownable {
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) public {
-        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
-        Ticket storage ticket = tickets[ticketID];
+        (bytes32 commitmentHash, bytes32 ticketID) = _checkCommitment(commitment, bitfield);
 
-        if (ticket.prevRandao == 0) {
-            revert PrevRandaoNotCaptured();
-        }
+        _verifyCommitmentWithHandover(commitment.validatorSetID, bitfield, proofs, commitmentHash, ticketID);
 
-        if (commitment.validatorSetID != nextValidatorSet.id) {
-            revert InvalidCommitment();
-        }
+        _verifyMMRProof(commitment, leaf, leafProof, leafProofOrder);
 
-        if (commitment.blockNumber <= latestBeefyBlock) {
-            revert StaleCommitment();
-        }
+        _applyCommitmentWithHandover(commitment, leaf);
 
-        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
-            revert InvalidMMRLeaf();
-        }
-
-        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
-            revert InvalidBitfield();
-        }
-
-        verifyCommitment(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
-
-        bool leafIsValid = MMRProof.verifyLeafProof(
-            commitment.payload.mmrRootHash, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
-        );
-        if (!leafIsValid) {
-            revert InvalidMMRLeafProof();
-        }
-
-        currentValidatorSet = nextValidatorSet;
-        nextValidatorSet.id = leaf.nextAuthoritySetID;
-        nextValidatorSet.length = leaf.nextAuthoritySetLen;
-        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
-
-        latestMMRRoot = commitment.payload.mmrRootHash;
-        latestBeefyBlock = commitment.blockNumber;
-
-        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
         delete tickets[ticketID];
     }
 
@@ -372,6 +331,98 @@ contract BeefyClient is Ownable {
     }
 
     /* Private Functions */
+
+    // Basic checks for commitment
+    function _checkCommitment(Commitment calldata commitment, uint256[] calldata bitfield)
+        internal
+        view
+        returns (bytes32, bytes32)
+    {
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
+        bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
+        Ticket storage ticket = tickets[ticketID];
+
+        if (ticket.prevRandao == 0) {
+            revert PrevRandaoNotCaptured();
+        }
+
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            revert StaleCommitment();
+        }
+
+        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
+            revert InvalidBitfield();
+        }
+        return (commitmentHash, ticketID);
+    }
+
+    // Verify commitment
+    function _verifyCommitment(
+        uint64 validatorSetID,
+        uint256[] calldata bitfield,
+        ValidatorProof[] calldata proofs,
+        bytes32 commitmentHash,
+        bytes32 ticketID
+    ) internal view {
+        if (validatorSetID != currentValidatorSet.id && validatorSetID != nextValidatorSet.id) {
+            revert InvalidCommitment();
+        }
+
+        Ticket storage ticket = tickets[ticketID];
+
+        verifyCommitment(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
+    }
+
+    // Verify commitment with handover
+    function _verifyCommitmentWithHandover(
+        uint64 validatorSetID,
+        uint256[] calldata bitfield,
+        ValidatorProof[] calldata proofs,
+        bytes32 commitmentHash,
+        bytes32 ticketID
+    ) internal view {
+        if (validatorSetID != nextValidatorSet.id) {
+            revert InvalidCommitment();
+        }
+
+        Ticket storage ticket = tickets[ticketID];
+
+        verifyCommitment(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
+    }
+
+    // Verify MMR proof
+    function _verifyMMRProof(
+        Commitment calldata commitment,
+        MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) internal view {
+        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            revert InvalidMMRLeaf();
+        }
+        bool leafIsValid = MMRProof.verifyLeafProof(
+            commitment.payload.mmrRootHash, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
+        );
+        if (!leafIsValid) {
+            revert InvalidMMRLeafProof();
+        }
+    }
+
+    // Apply commitment
+    function _applyCommitment(Commitment calldata commitment) internal {
+        latestMMRRoot = commitment.payload.mmrRootHash;
+        latestBeefyBlock = commitment.blockNumber;
+        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
+    }
+
+    // Apply commitment with handover
+    function _applyCommitmentWithHandover(Commitment calldata commitment, MMRLeaf calldata leaf) internal {
+        _applyCommitment(commitment);
+        currentValidatorSet = nextValidatorSet;
+        nextValidatorSet.id = leaf.nextAuthoritySetID;
+        nextValidatorSet.length = leaf.nextAuthoritySetLen;
+        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+    }
 
     // Creates a unique ticket ID for a new interactive prover-verifier session
     function createTicketID(address account, bytes32 commitmentHash) internal pure returns (bytes32 value) {
