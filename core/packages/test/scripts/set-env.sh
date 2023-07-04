@@ -62,8 +62,10 @@ skip_relayer="${SKIP_RELAYER:-false}"
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
 
 ## BeefyClient
-export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-24}"
-export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-32}"
+# For max safety delay should be MAX_SEED_LOOKAHEAD=3 epochs=3*8*6=144s
+# but for rococo-local each session is only 10 slots=60s so relax to 6 slot=36s here
+export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-6}"
+export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-12}"
 
 ## ParachainClient
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
