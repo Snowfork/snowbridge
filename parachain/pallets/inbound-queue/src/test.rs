@@ -10,15 +10,17 @@ use frame_support::{
 };
 use sp_core::{ConstU32, H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
-use sp_runtime::{testing::Header, traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify}, ArithmeticError, MultiSignature, BuildStorage};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	ArithmeticError, BuildStorage, MultiSignature,
+};
 use sp_std::convert::From;
 
-use snowbridge_core::{Message, Proof};
+use snowbridge_beacon_primitives::{CompactExecutionHeader, Fork, ForkVersions};
+use snowbridge_core::{Message, Proof, RingBufferMap};
 use snowbridge_ethereum::Log;
-use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_ethereum_beacon_client::ExecutionHeaderBuffer;
-use snowbridge_beacon_primitives::CompactExecutionHeader;
-use snowbridge_core::RingBufferMap;
 
 use hex_literal::hex;
 
@@ -91,26 +93,26 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-		pub const ExecutionHeadersPruneThreshold: u32 = 10;
-		pub const ChainForkVersions: ForkVersions = ForkVersions{
-			genesis: Fork {
-				version: [0, 0, 0, 1], // 0x00000001
-				epoch: 0,
-			},
-			altair: Fork {
-				version: [1, 0, 0, 1], // 0x01000001
-				epoch: 0,
-			},
-			bellatrix: Fork {
-				version: [2, 0, 0, 1], // 0x02000001
-				epoch: 0,
-			},
-			capella: Fork {
-				version: [3, 0, 0, 1], // 0x03000001
-				epoch: 0,
-			},
-		};
-	}
+	pub const ExecutionHeadersPruneThreshold: u32 = 10;
+	pub const ChainForkVersions: ForkVersions = ForkVersions{
+		genesis: Fork {
+			version: [0, 0, 0, 1], // 0x00000001
+			epoch: 0,
+		},
+		altair: Fork {
+			version: [1, 0, 0, 1], // 0x01000001
+			epoch: 0,
+		},
+		bellatrix: Fork {
+			version: [2, 0, 0, 1], // 0x02000001
+			epoch: 0,
+		},
+		capella: Fork {
+			version: [3, 0, 0, 1], // 0x03000001
+			epoch: 0,
+		},
+	};
+}
 
 impl snowbridge_ethereum_beacon_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;

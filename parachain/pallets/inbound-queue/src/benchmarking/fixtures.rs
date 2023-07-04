@@ -3,8 +3,6 @@ use hex_literal::hex;
 use snowbridge_beacon_primitives::CompactExecutionHeader;
 use snowbridge_core::{Message, Proof};
 
-// Generated, do not edit!
-// See README.md for instructions to generate
 pub struct InboundQueueTest {
 	pub execution_header: CompactExecutionHeader,
 	pub message: Message,
