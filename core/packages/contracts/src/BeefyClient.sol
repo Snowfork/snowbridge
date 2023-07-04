@@ -158,15 +158,12 @@ contract BeefyClient is Ownable {
     uint256 public immutable randaoCommitExpiration;
 
     /* Errors */
-
-    error InvalidCommitment();
     error StaleCommitment();
     error InvalidValidatorProof();
     error InvalidSignature();
     error NotEnoughClaims();
     error InvalidMMRLeaf();
     error InvalidMMRLeafProof();
-    error InvalidTask();
     error InvalidBitfield();
     error WaitPeriodNotOver();
     error TicketExpired();
@@ -174,6 +171,8 @@ contract BeefyClient is Ownable {
     error PrevRandaoNotCaptured();
     error InvalidBitfieldLength();
     error InvalidProofIndex();
+    error InvalidValidatorSet();
+    error InvalidTicket();
 
     constructor(uint256 _randaoCommitDelay, uint256 _randaoCommitExpiration) {
         randaoCommitDelay = _randaoCommitDelay;
@@ -348,6 +347,10 @@ contract BeefyClient is Ownable {
         bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
         Ticket storage ticket = tickets[ticketID];
 
+        if (ticket.blockNumber == 0) {
+            revert InvalidTicket();
+        }
+
         if (ticket.prevRandao == 0) {
             revert PrevRandaoNotCaptured();
         }
@@ -371,7 +374,7 @@ contract BeefyClient is Ownable {
         bytes32 ticketID
     ) internal view {
         if (validatorSetID != currentValidatorSet.id && validatorSetID != nextValidatorSet.id) {
-            revert InvalidCommitment();
+            revert InvalidValidatorSet();
         }
 
         Ticket storage ticket = tickets[ticketID];
@@ -388,7 +391,7 @@ contract BeefyClient is Ownable {
         bytes32 ticketID
     ) internal view {
         if (validatorSetID != nextValidatorSet.id) {
-            revert InvalidCommitment();
+            revert InvalidValidatorSet();
         }
 
         Ticket storage ticket = tickets[ticketID];
