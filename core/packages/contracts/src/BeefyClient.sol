@@ -287,11 +287,11 @@ contract BeefyClient is Ownable {
     function submitFinal(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof[] calldata proofs)
         public
     {
-        (bytes32 commitmentHash, bytes32 ticketID) = _checkCommitment(commitment, bitfield);
+        (bytes32 commitmentHash, bytes32 ticketID) = checkInternal(commitment, bitfield);
 
-        _verifyCommitment(commitment.validatorSetID, bitfield, proofs, commitmentHash, ticketID);
+        verifyInternal(commitment.validatorSetID, bitfield, proofs, commitmentHash, ticketID);
 
-        _applyCommitment(commitment);
+        applyInternal(commitment);
 
         delete tickets[ticketID];
     }
@@ -311,13 +311,13 @@ contract BeefyClient is Ownable {
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) public {
-        (bytes32 commitmentHash, bytes32 ticketID) = _checkCommitment(commitment, bitfield);
+        (bytes32 commitmentHash, bytes32 ticketID) = checkInternal(commitment, bitfield);
 
-        _verifyCommitmentWithHandover(commitment.validatorSetID, bitfield, proofs, commitmentHash, ticketID);
+        verifyInternalWithHandover(commitment.validatorSetID, bitfield, proofs, commitmentHash, ticketID);
 
-        _verifyMMRProof(commitment, leaf, leafProof, leafProofOrder);
+        verifyMMRLeaf(commitment, leaf, leafProof, leafProofOrder);
 
-        _applyCommitmentWithHandover(commitment, leaf);
+        applyInternalWithHandover(commitment, leaf);
 
         delete tickets[ticketID];
     }
@@ -338,7 +338,7 @@ contract BeefyClient is Ownable {
     /* Private Functions */
 
     // Basic checks for commitment
-    function _checkCommitment(Commitment calldata commitment, uint256[] calldata bitfield)
+    function checkInternal(Commitment calldata commitment, uint256[] calldata bitfield)
         internal
         view
         returns (bytes32, bytes32)
@@ -366,7 +366,7 @@ contract BeefyClient is Ownable {
     }
 
     // Verify commitment
-    function _verifyCommitment(
+    function verifyInternal(
         uint64 validatorSetID,
         uint256[] calldata bitfield,
         ValidatorProof[] calldata proofs,
@@ -379,11 +379,11 @@ contract BeefyClient is Ownable {
 
         Ticket storage ticket = tickets[ticketID];
 
-        verifyCommitment(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
+        verifyCommitmentInternal(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
     }
 
     // Verify commitment with handover
-    function _verifyCommitmentWithHandover(
+    function verifyInternalWithHandover(
         uint64 validatorSetID,
         uint256[] calldata bitfield,
         ValidatorProof[] calldata proofs,
@@ -396,11 +396,11 @@ contract BeefyClient is Ownable {
 
         Ticket storage ticket = tickets[ticketID];
 
-        verifyCommitment(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
+        verifyCommitmentInternal(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
     }
 
-    // Verify MMR proof
-    function _verifyMMRProof(
+    // Verify MMR leaf
+    function verifyMMRLeaf(
         Commitment calldata commitment,
         MMRLeaf calldata leaf,
         bytes32[] calldata leafProof,
@@ -417,16 +417,16 @@ contract BeefyClient is Ownable {
         }
     }
 
-    // Apply commitment
-    function _applyCommitment(Commitment calldata commitment) internal {
+    // Apply MMR root
+    function applyInternal(Commitment calldata commitment) internal {
         latestMMRRoot = commitment.payload.mmrRootHash;
         latestBeefyBlock = commitment.blockNumber;
         emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
     }
 
-    // Apply commitment with handover
-    function _applyCommitmentWithHandover(Commitment calldata commitment, MMRLeaf calldata leaf) internal {
-        _applyCommitment(commitment);
+    // Apply MMR root together with handover validator set
+    function applyInternalWithHandover(Commitment calldata commitment, MMRLeaf calldata leaf) internal {
+        applyInternal(commitment);
         currentValidatorSet = nextValidatorSet;
         nextValidatorSet.id = leaf.nextAuthoritySetID;
         nextValidatorSet.length = leaf.nextAuthoritySetLen;
@@ -490,7 +490,7 @@ contract BeefyClient is Ownable {
     /**
      * @dev Verify commitment using the supplied signature proofs
      */
-    function verifyCommitment(
+    function verifyCommitmentInternal(
         bytes32 commitmentHash,
         uint256[] calldata bitfield,
         ValidatorSet memory vset,

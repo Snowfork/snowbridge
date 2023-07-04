@@ -110,8 +110,7 @@ library Bitfield {
 
     function isSet(uint256[] memory self, uint256 index) internal pure returns (bool) {
         uint256 element = index >> 8;
-        uint8 within = uint8(index);
-        return self[element].bit(within) == 1;
+        return self[element].bit(uint8(index)) == 1;
     }
 
     function set(uint256[] memory self, uint256 index) internal pure {
