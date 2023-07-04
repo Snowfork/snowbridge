@@ -24,9 +24,9 @@ use sp_runtime::traits::AccountIdConversion;
 use sp_std::{collections::btree_set::BTreeSet, convert::TryFrom, vec::Vec};
 
 use envelope::Envelope;
+use frame_support::log;
 use snowbridge_core::{Message, Verifier};
 use snowbridge_router_primitives::inbound;
-use frame_support::log;
 
 use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError};
 
@@ -57,8 +57,8 @@ pub mod pallet {
 
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
-	use xcm::v3::SendXcm;
 	use snowbridge_router_primitives::inbound::{GatewayMessage, NativeTokensMessage};
+	use xcm::v3::SendXcm;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -163,6 +163,7 @@ pub mod pallet {
 			// Verify message nonce
 			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {
 				if envelope.nonce != *nonce + 1 {
+					log::info!(target: "inbound-queue","💫 expected nonce to be {}", *nonce + 1);
 					Err(Error::<T>::InvalidNonce.into())
 				} else {
 					*nonce += 1;
@@ -205,18 +206,18 @@ pub mod pallet {
 			match cloned_message {
 				GatewayMessage::UpgradeProxy(_) => {
 					log::info!(target: "inbound-queue","💫 message is UpgradeProxy");
-				}
+				},
 				GatewayMessage::NativeTokens(message) => {
 					log::info!(target: "inbound-queue","💫 message is NativeTokens");
 					match message {
 						NativeTokensMessage::Create { .. } => {
 							log::info!(target: "inbound-queue","💫 message is Create");
-						}
+						},
 						NativeTokensMessage::Mint { .. } => {
 							log::info!(target: "inbound-queue","💫 message is Mint");
-						}
+						},
 					}
-				}
+				},
 			}
 
 			log::info!(target: "inbound-queue","💫 decoded message");
