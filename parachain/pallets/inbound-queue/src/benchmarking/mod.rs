@@ -25,6 +25,7 @@ mod benchmarks {
 		// TODO I've tried removing this and setting ExecutionHeaderBuffer directly in
 		// storage as Vincent suggested, but that doesn't seem to work, can't import the
 		// beacon pallet here directly. I've tried setting it in new_tester_with_config(),
+		// branch clara/sno-515-set-storage-directly
 		// but same issue as the allowlist, doesn't seem to actually populating storage.
 		T::Verifier::initialize_storage(
 			create_message.message.proof.block_hash,
