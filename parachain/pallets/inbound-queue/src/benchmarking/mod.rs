@@ -22,11 +22,17 @@ mod benchmarks {
 
 		let create_message = make_create_message();
 
+		// TODO I've tried removing this and setting ExecutionHeaderBuffer directly in
+		// storage as Vincent suggested, but that doesn't seem to work, can't import the
+		// beacon pallet here directly. I've tried setting it in new_tester_with_config(),
+		// but same issue as the allowlist, doesn't seem to actually populating storage.
 		T::Verifier::initialize_storage(
 			create_message.message.proof.block_hash,
 			create_message.execution_header,
 		);
 
+		// TODO: The allowlist set in new_tester_with_config() doesn't seem to have any effect.
+		// If I leave the allowlist setting in these lines out, I get a InvalidOutboundQueue error.
 		let allowlist: BoundedBTreeSet<H160, T::AllowListLength> =
 			BTreeSet::from_iter(vec![OUTBOUND_QUEUE_ADDRESS.into()].into_iter())
 				.try_into()
@@ -37,6 +43,8 @@ mod benchmarks {
 
 		#[block]
 		{
+			// TODO: Calling this results in xcm failed: Transport("NoChannel"). Not sure
+			// if that is a problem.
 			let _ = InboundQueue::<T>::submit(
 				RawOrigin::Signed(caller.clone()).into(),
 				create_message.message,
