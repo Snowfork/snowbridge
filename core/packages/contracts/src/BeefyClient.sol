@@ -201,7 +201,6 @@ contract BeefyClient is Ownable {
      */
     function submitInitial(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof)
         external
-        payable
     {
         doSubmitInitial(currentValidatorSet, commitmentHash, bitfield, proof);
     }
@@ -216,7 +215,7 @@ contract BeefyClient is Ownable {
         bytes32 commitmentHash,
         uint256[] calldata bitfield,
         ValidatorProof calldata proof
-    ) external payable {
+    ) external {
         doSubmitInitial(nextValidatorSet, commitmentHash, bitfield, proof);
     }
 
@@ -244,7 +243,7 @@ contract BeefyClient is Ownable {
 
         // For the initial submission, the supplied bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
-        if (Bitfield.countSetBits(bitfield) < vset.length - (vset.length - 1) / 3) {
+        if (!Bitfield.countSetBitsMoreThanThreshold(bitfield, vset.length - (vset.length - 1) / 3)) {
             revert NotEnoughClaims();
         }
 
