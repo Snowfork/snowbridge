@@ -68,7 +68,7 @@ contract BeefyClient is Ownable {
      * @param r the x component on the secp256k1 curve
      * @param s the challenge solution
      * @param index index of the validator address in the merkle tree
-     * @param addr validator address
+     * @param account validator address
      * @param proof merkle proof for the validator
      */
     struct ValidatorProof {
@@ -282,6 +282,7 @@ contract BeefyClient is Ownable {
     /**
      * @dev Submit a commitment for final verification
      * @param commitment contains the full commitment that was used for the commitmentHash
+     * @param bitfield claiming which validators have signed the commitment
      * @param proofs a struct containing the data needed to verify all validator signatures
      */
     function submitFinal(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof[] calldata proofs)
@@ -299,9 +300,11 @@ contract BeefyClient is Ownable {
     /**
      * @dev Submit a commitment and leaf for final verification
      * @param commitment contains the full commitment that was used for the commitmentHash
+     * @param bitfield claiming which validators have signed the commitment
      * @param proofs a struct containing the data needed to verify all validator signatures
      * @param leaf an MMR leaf provable using the MMR root in the commitment payload
      * @param leafProof an MMR leaf proof
+     * @param leafProofOrder a bitfield describing the order of each item (left vs right)
      */
     function submitFinalWithHandover(
         Commitment calldata commitment,
@@ -326,6 +329,7 @@ contract BeefyClient is Ownable {
      * @dev Verify that the supplied MMR leaf is included in the latest verified MMR root.
      * @param leafHash contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
+     * @param proofOrder a bitfield describing the order of each item (left vs right)
      */
     function verifyMMRLeafProof(bytes32 leafHash, bytes32[] calldata proof, uint256 proofOrder)
         external
@@ -567,16 +571,16 @@ contract BeefyClient is Ownable {
      * the previous version did not require any sorting.
      *
      * @dev Checks if a validators address is a member of the merkle tree
-     * @param addr The address of the validator to check
+     * @param account The address of the validator to check
      * @param proof Merkle proof required for validation of the address
      * @return true if the validator is in the set
      */
-    function isValidatorInSet(ValidatorSet memory vset, address addr, uint256 index, bytes32[] calldata proof)
+    function isValidatorInSet(ValidatorSet memory vset, address account, uint256 index, bytes32[] calldata proof)
         internal
         pure
         returns (bool)
     {
-        bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
+        bytes32 hashedLeaf = keccak256(abi.encodePacked(account));
         return MerkleProof.verify(vset.root, hashedLeaf, index, vset.length, proof);
     }
 

@@ -62,8 +62,8 @@ skip_relayer="${SKIP_RELAYER:-false}"
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
 
 ## BeefyClient
-export RANDAO_COMMIT_DELAY=3
-export RANDAO_COMMIT_EXP=8
+export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-24}"
+export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-32}"
 
 ## ParachainClient
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
