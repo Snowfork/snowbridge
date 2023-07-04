@@ -14,8 +14,11 @@ mod benchmarks {
     use hex_literal::hex;
     use sp_core::H256;
 
+    const OUTBOUND_QUEUE_ADDRESS: [u8; 20] = hex!["ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0"];
+
     #[benchmark]
-    fn submit() -> Result<(), BenchmarkError> {
+    // create message
+    fn submit_create() -> Result<(), BenchmarkError> {
         let caller: T::AccountId = whitelisted_caller();
 
         let payload = hex!("f9011c94ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0f863a01b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ada000000000000000000000000000000000000000000000000000000000000003e8a00000000000000000000000000000000000000000000000000000000000000001b8a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004b000f000000000000000100d184c103f7acc340847eee82a0b909e3358bc28d440edffa1352b13227e8ee646f3ea37456dec701345772617070656420457468657210574554481235003511000000000000000000000000000000000000000000");
@@ -39,12 +42,13 @@ mod benchmarks {
             },
         };
 
-        let al: Vec<H160> = vec![hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into()];
         let allowlist: BoundedBTreeSet<H160, T::AllowListLength> =
-            BTreeSet::from_iter(al.clone().into_iter())
+            BTreeSet::from_iter(vec![OUTBOUND_QUEUE_ADDRESS.into()].into_iter())
                 .try_into()
                 .expect("exceeded bound");
         <AllowList<T>>::put(allowlist);
+
+        let _ = T::Token::mint_into(&caller, T::Token::minimum_balance().into());
 
         #[block]
         {
@@ -54,5 +58,5 @@ mod benchmarks {
         Ok(())
     }
 
-    impl_benchmark_test_suite!(InboundQueue, crate::test::new_tester(hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into()), crate::test::Test);
+    impl_benchmark_test_suite!(InboundQueue, crate::test::new_tester(OUTBOUND_QUEUE_ADDRESS.into()), crate::test::Test);
 }

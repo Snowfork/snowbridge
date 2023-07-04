@@ -58,6 +58,8 @@ pub mod pallet {
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
 	use xcm::v3::SendXcm;
+	use snowbridge_router_primitives::inbound::{GatewayMessage, NativeTokensMessage};
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -138,10 +140,7 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight({100_000_000})]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
-			log::info!(
-					target: "inbound-queue",
-					"💫 In submit."
-				);
+			log::info!(target: "inbound-queue","💫 In submit.");
 
 			let who = ensure_signed(origin)?;
 			// submit message to verifier for verification
@@ -150,14 +149,16 @@ pub mod pallet {
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
+			log::info!(target: "inbound-queue","💫 envelope available");
+
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
 			let allowlist = <AllowList<T>>::get();
-
-			log::info!(target: "inbound-queue","💫 envelope: {:?}.", envelope.outbound_queue_address);
 			if !allowlist.contains(&envelope.outbound_queue_address) {
 				return Err(Error::<T>::InvalidOutboundQueue.into())
 			}
+
+			log::info!(target: "inbound-queue","💫 allow list checked");
 
 			// Verify message nonce
 			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {
@@ -169,28 +170,14 @@ pub mod pallet {
 				}
 			})?;
 
-			log::info!(target: "inbound-queue","💫 verified nonce");
+			log::info!(target: "inbound-queue","💫 updated nonce");
 
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
 			let sovereign_account = envelope.dest.into_account_truncating();
-
-			let para_id: u32 = envelope.dest.into();
-			log::info!(target: "inbound-queue","💫 envelope.dest: {:?}", para_id);
-			log::info!(target: "inbound-queue","💫 envelope.nonce: {:?}", envelope.nonce);
-			log::info!(target: "inbound-queue","💫 envelope.payload: {:?}", envelope.payload);
-			log::info!(target: "inbound-queue","💫 envelope.outbound_queue_address: {:?}", envelope.outbound_queue_address);
-			log::info!(target: "inbound-queue","💫 sovereign_account: {:?}", sovereign_account);
-			log::info!(target: "inbound-queue","💫 who: {:?}", who);
-			log::info!(target: "inbound-queue","💫 reward: {:?}", T::Reward::get());
-			log::info!(target: "inbound-queue","💫 preservation: {:?}", Preservation::Preserve);
-
-			T::Token::set_balance(&sovereign_account, 100u32.into());
-			log::info!(target: "inbound-queue","💫 set balance done: {:?}", T::Token::total_balance(&sovereign_account));
-
 			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
 
-			log::info!(target: "inbound-queue","💫 transfer done");
+			log::info!(target: "inbound-queue","💫 relayer rewarded nonce");
 
 			// From this point, any errors are masked, i.e the extrinsic will
 			// succeed even if the message was not successfully decoded or dispatched.
@@ -198,8 +185,12 @@ pub mod pallet {
 			// Attempt to decode message
 			let decoded_message =
 				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(inbound::VersionedMessage::V1(decoded_message)) => decoded_message,
+					Ok(inbound::VersionedMessage::V1(decoded_message)) => {
+						log::info!(target: "inbound-queue","💫 message decoded successfully");
+						decoded_message
+					},
 					Err(_) => {
+						log::info!(target: "inbound-queue","💫 message decoding failed");
 						Self::deposit_event(Event::MessageReceived {
 							dest: envelope.dest,
 							nonce: envelope.nonce,
@@ -209,14 +200,37 @@ pub mod pallet {
 					},
 				};
 
+			let cloned_message = decoded_message.message.clone();
+
+			match cloned_message {
+				GatewayMessage::UpgradeProxy(_) => {
+					log::info!(target: "inbound-queue","💫 message is UpgradeProxy");
+				}
+				GatewayMessage::NativeTokens(message) => {
+					log::info!(target: "inbound-queue","💫 message is NativeTokens");
+					match message {
+						NativeTokensMessage::Create { .. } => {
+							log::info!(target: "inbound-queue","💫 message is Create");
+						}
+						NativeTokensMessage::Mint { .. } => {
+							log::info!(target: "inbound-queue","💫 message is Mint");
+						}
+					}
+				}
+			}
+
 			log::info!(target: "inbound-queue","💫 decoded message");
 
 			// Attempt to convert to XCM
 			let sibling_para =
 				MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
 			let xcm = match decoded_message.try_into() {
-				Ok(xcm) => xcm,
+				Ok(xcm) => {
+					log::info!(target: "inbound-queue","💫 converted to xcm");
+					xcm
+				},
 				Err(_) => {
+					log::info!(target: "inbound-queue","💫 convert to xcm failed");
 					Self::deposit_event(Event::MessageReceived {
 						dest: envelope.dest,
 						nonce: envelope.nonce,
@@ -230,19 +244,25 @@ pub mod pallet {
 
 			// Attempt to send XCM to a sibling parachain
 			match send_xcm::<T::XcmSender>(sibling_para, xcm) {
-				Ok(_) => Self::deposit_event(Event::MessageReceived {
-					dest: envelope.dest,
-					nonce: envelope.nonce,
-					result: MessageDispatchResult::Dispatched,
-				}),
-				Err(err) => Self::deposit_event(Event::MessageReceived {
-					dest: envelope.dest,
-					nonce: envelope.nonce,
-					result: MessageDispatchResult::NotDispatched(err),
-				}),
+				Ok(_) => {
+					log::info!(target: "inbound-queue","💫 xcm sent");
+					Self::deposit_event(Event::MessageReceived {
+						dest: envelope.dest,
+						nonce: envelope.nonce,
+						result: MessageDispatchResult::Dispatched,
+					})
+				},
+				Err(err) => {
+					log::info!(target: "inbound-queue","💫 xcm failed: {:?}", err);
+					Self::deposit_event(Event::MessageReceived {
+						dest: envelope.dest,
+						nonce: envelope.nonce,
+						result: MessageDispatchResult::NotDispatched(err),
+					})
+				},
 			}
 
-			log::info!(target: "inbound-queue","💫 sent xcm");
+			log::info!(target: "inbound-queue","💫 done");
 
 			Ok(())
 		}
