@@ -64,6 +64,8 @@ statemine_sovereign_account="${STATEMINE_SOVEREIGN_ACCOUNT:-0x70617261e803000000
 beacon_relayer_account="${BEACON_RELAYER_ACCOUNT:-//BeaconRelay}"
 # Execution relay account (5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)
 execution_relayer_account="${EXECUTION_RELAYER_ACCOUNT:-//ExecutionRelay}"
+# Registry contract account (5EBBfBLm4uV4JMXXcKvZrPVmP9VyER9YSCgGdMUw5wBXnqag in testnet)
+registry_contract_sovereign_account="${REGISTRY_CONTRACT_SOVEREIGN_ACCOUNT:-0x5d6987649e0dac78ddf852eb0f1b1d1bf2be9623d81cb16c17cfa145948bb6dc}"
 
 # Config for deploying contracts
 
