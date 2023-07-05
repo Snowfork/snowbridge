@@ -7,6 +7,13 @@ mod envelope;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub use snowbridge_ethereum_beacon_client::ExecutionHeaderBuffer;
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_beacon_primitives::CompactExecutionHeader;
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_core::RingBufferMap;
+
 pub mod weights;
 
 #[cfg(test)]
@@ -57,11 +64,23 @@ pub mod pallet {
 
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
+	use sp_core::H256;
 	use snowbridge_router_primitives::inbound::{GatewayMessage, NativeTokensMessage};
 	use xcm::v3::SendXcm;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<T> {
+		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader);
+	}
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for () {
+		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader) {
+			<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
+		}
+	}
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -78,6 +97,10 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		type AllowListLength: Get<u32>;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		/// A set of helper functions for benchmarking.
+		type Helper: BenchmarkHelper<Self>;
 	}
 
 	#[pallet::hooks]
