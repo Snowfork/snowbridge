@@ -56,6 +56,15 @@ relaychain_sudo_seed="${RELAYCHAIN_SUDO_SEED:-//Alice}"
 
 skip_relayer="${SKIP_RELAYER:-false}"
 
+## Important accounts
+
+# Account for statemine (1000 5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ in testnet) 
+statemine_sovereign_account="${STATEMINE_SOVEREIGN_ACCOUNT:-0x70617261e8030000000000000000000000000000000000000000000000000000}"
+# Beacon relay account (5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c in testnet)
+beacon_relayer_account="${BEACON_RELAYER_ACCOUNT:-//BeaconRelay}"
+# Execution relay account (5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)
+execution_relayer_account="${EXECUTION_RELAYER_ACCOUNT:-//ExecutionRelay}"
+
 # Config for deploying contracts
 
 ## Deployment key
