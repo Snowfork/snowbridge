@@ -117,8 +117,8 @@ impl BlockWithProofs {
 			.map(|(i, (a, b))| {
 				mapper(
 					[*a, *b],
-					self.merkle_proofs[i / 2 * self.proof_length as usize
-						..(i / 2 + 1) * self.proof_length as usize]
+					self.merkle_proofs[i / 2 * self.proof_length as usize..
+						(i / 2 + 1) * self.proof_length as usize]
 						.to_vec(),
 				)
 			})
