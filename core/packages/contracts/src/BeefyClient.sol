@@ -289,11 +289,9 @@ contract BeefyClient is Ownable {
     {
         (bytes32 commitmentHash, bytes32 ticketID) = checkInternal(commitment, bitfield);
 
-        verifyInternal(commitment.validatorSetID, bitfield, proofs, commitmentHash, ticketID);
+        verifyInternal(commitment, bitfield, proofs, commitmentHash, ticketID);
 
-        applyInternal(commitment);
-
-        delete tickets[ticketID];
+        applyInternal(commitment, ticketID);
     }
 
     /**
@@ -315,13 +313,11 @@ contract BeefyClient is Ownable {
     ) public {
         (bytes32 commitmentHash, bytes32 ticketID) = checkInternal(commitment, bitfield);
 
-        verifyInternalWithHandover(commitment.validatorSetID, bitfield, proofs, commitmentHash, ticketID);
+        verifyInternalWithHandover(
+            commitment, bitfield, proofs, leaf, leafProof, leafProofOrder, commitmentHash, ticketID
+        );
 
-        verifyMMRLeaf(commitment, leaf, leafProof, leafProofOrder);
-
-        applyInternalWithHandover(commitment, leaf);
-
-        delete tickets[ticketID];
+        applyInternalWithHandover(commitment, leaf, ticketID);
     }
 
     /**
@@ -338,103 +334,35 @@ contract BeefyClient is Ownable {
         return MMRProof.verifyLeafProof(latestMMRRoot, leafHash, proof, proofOrder);
     }
 
-    /* Private Functions */
-
-    // Basic checks for commitment
-    function checkInternal(Commitment calldata commitment, uint256[] calldata bitfield)
-        internal
-        view
-        returns (bytes32, bytes32)
+    /**
+     * @dev Helper to create an initial validator bitfield.
+     */
+    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
+        external
+        pure
+        returns (uint256[] memory)
     {
-        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
-        Ticket storage ticket = tickets[ticketID];
-
-        if (ticket.blockNumber == 0) {
-            revert InvalidTicket();
+        if (length < bitsToSet.length) {
+            revert InvalidBitfieldLength();
         }
-
-        if (ticket.prevRandao == 0) {
-            revert PrevRandaoNotCaptured();
-        }
-
-        if (commitment.blockNumber <= latestBeefyBlock) {
-            revert StaleCommitment();
-        }
-
-        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
-            revert InvalidBitfield();
-        }
-        return (commitmentHash, ticketID);
+        return Bitfield.createBitfield(bitsToSet, length);
     }
 
-    // Verify commitment
-    function verifyInternal(
-        uint64 validatorSetID,
-        uint256[] calldata bitfield,
-        ValidatorProof[] calldata proofs,
-        bytes32 commitmentHash,
-        bytes32 ticketID
-    ) internal view {
-        if (validatorSetID != currentValidatorSet.id && validatorSetID != nextValidatorSet.id) {
-            revert InvalidValidatorSet();
-        }
-
-        Ticket storage ticket = tickets[ticketID];
-
-        verifyCommitmentInternal(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
-    }
-
-    // Verify commitment with handover
-    function verifyInternalWithHandover(
-        uint64 validatorSetID,
-        uint256[] calldata bitfield,
-        ValidatorProof[] calldata proofs,
-        bytes32 commitmentHash,
-        bytes32 ticketID
-    ) internal view {
-        if (validatorSetID != nextValidatorSet.id) {
-            revert InvalidValidatorSet();
-        }
-
-        Ticket storage ticket = tickets[ticketID];
-
-        verifyCommitmentInternal(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
-    }
-
-    // Verify MMR leaf
-    function verifyMMRLeaf(
-        Commitment calldata commitment,
-        MMRLeaf calldata leaf,
-        bytes32[] calldata leafProof,
-        uint256 leafProofOrder
-    ) internal view {
-        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
-            revert InvalidMMRLeaf();
-        }
-        bool leafIsValid = MMRProof.verifyLeafProof(
-            commitment.payload.mmrRootHash, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
+    /**
+     * @dev Helper to create a final bitfield, with subsampled validator selections
+     */
+    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        Ticket storage ticket = tickets[createTicketID(msg.sender, commitmentHash)];
+        return Bitfield.subsample(
+            ticket.prevRandao, bitfield, minimumSignatureThreshold(ticket.validatorSetLen), ticket.validatorSetLen
         );
-        if (!leafIsValid) {
-            revert InvalidMMRLeafProof();
-        }
     }
 
-    // Apply MMR root
-    function applyInternal(Commitment calldata commitment) internal {
-        latestMMRRoot = commitment.payload.mmrRootHash;
-        latestBeefyBlock = commitment.blockNumber;
-        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
-    }
-
-    // Apply MMR root together with handover validator set
-    function applyInternalWithHandover(Commitment calldata commitment, MMRLeaf calldata leaf) internal {
-        applyInternal(commitment);
-        currentValidatorSet = nextValidatorSet;
-        nextValidatorSet.id = leaf.nextAuthoritySetID;
-        nextValidatorSet.length = leaf.nextAuthoritySetLen;
-        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
-    }
+    /* Private Functions */
 
     // Creates a unique ticket ID for a new interactive prover-verifier session
     function createTicketID(address account, bytes32 commitmentHash) internal pure returns (bytes32 value) {
@@ -583,31 +511,107 @@ contract BeefyClient is Ownable {
         return MerkleProof.verify(vset.root, hashedLeaf, index, vset.length, proof);
     }
 
-    /**
-     * @dev Helper to create an initial validator bitfield.
-     */
-    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
-        external
-        pure
-        returns (uint256[] memory)
+    // Basic checks for commitment
+    function checkInternal(Commitment calldata commitment, uint256[] calldata bitfield)
+        internal
+        view
+        returns (bytes32, bytes32)
     {
-        if (length < bitsToSet.length) {
-            revert InvalidBitfieldLength();
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
+        bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
+        Ticket storage ticket = tickets[ticketID];
+
+        if (ticket.blockNumber == 0) {
+            revert InvalidTicket();
         }
-        return Bitfield.createBitfield(bitsToSet, length);
+
+        if (ticket.prevRandao == 0) {
+            revert PrevRandaoNotCaptured();
+        }
+
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            revert StaleCommitment();
+        }
+
+        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
+            revert InvalidBitfield();
+        }
+        return (commitmentHash, ticketID);
     }
 
-    /**
-     * @dev Helper to create a final bitfield, with subsampled validator selections
-     */
-    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        Ticket storage ticket = tickets[createTicketID(msg.sender, commitmentHash)];
-        return Bitfield.subsample(
-            ticket.prevRandao, bitfield, minimumSignatureThreshold(ticket.validatorSetLen), ticket.validatorSetLen
+    // Verify commitment
+    function verifyInternal(
+        Commitment calldata commitment,
+        uint256[] calldata bitfield,
+        ValidatorProof[] calldata proofs,
+        bytes32 commitmentHash,
+        bytes32 ticketID
+    ) internal view {
+        if (commitment.validatorSetID != currentValidatorSet.id && commitment.validatorSetID != nextValidatorSet.id) {
+            revert InvalidValidatorSet();
+        }
+
+        Ticket storage ticket = tickets[ticketID];
+
+        verifyCommitmentInternal(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
+    }
+
+    // Verify commitment with handover MMR leaf
+    function verifyInternalWithHandover(
+        Commitment calldata commitment,
+        uint256[] calldata bitfield,
+        ValidatorProof[] calldata proofs,
+        MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder,
+        bytes32 commitmentHash,
+        bytes32 ticketID
+    ) internal view {
+        if (commitment.validatorSetID != nextValidatorSet.id) {
+            revert InvalidValidatorSet();
+        }
+
+        Ticket storage ticket = tickets[ticketID];
+
+        verifyCommitmentInternal(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
+
+        verifyMMRLeaf(commitment, leaf, leafProof, leafProofOrder);
+    }
+
+    // Verify MMR leaf
+    function verifyMMRLeaf(
+        Commitment calldata commitment,
+        MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) internal view {
+        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            revert InvalidMMRLeaf();
+        }
+        bool leafIsValid = MMRProof.verifyLeafProof(
+            commitment.payload.mmrRootHash, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
         );
+        if (!leafIsValid) {
+            revert InvalidMMRLeafProof();
+        }
+    }
+
+    // Apply MMR root
+    function applyInternal(Commitment calldata commitment, bytes32 ticketID) internal {
+        latestMMRRoot = commitment.payload.mmrRootHash;
+        latestBeefyBlock = commitment.blockNumber;
+        delete tickets[ticketID];
+        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
+    }
+
+    // Apply MMR root together with handover validator set in MMR leaf
+    function applyInternalWithHandover(Commitment calldata commitment, MMRLeaf calldata leaf, bytes32 ticketID)
+        internal
+    {
+        applyInternal(commitment, ticketID);
+        currentValidatorSet = nextValidatorSet;
+        nextValidatorSet.id = leaf.nextAuthoritySetID;
+        nextValidatorSet.length = leaf.nextAuthoritySetLen;
+        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
     }
 }
