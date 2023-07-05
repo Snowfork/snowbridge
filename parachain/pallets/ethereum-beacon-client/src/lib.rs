@@ -165,16 +165,16 @@ pub mod pallet {
 
 	/// Execution Headers
 	#[pallet::storage]
-	pub(super) type ExecutionHeaders<T: Config> =
+	pub type ExecutionHeaders<T: Config> =
 		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
 
 	/// Execution Headers: Current position in ring buffer
 	#[pallet::storage]
-	pub(crate) type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+	pub type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Execution Headers: Mapping of ring buffer index to a pruning candidate
 	#[pallet::storage]
-	pub(crate) type ExecutionHeaderMapping<T: Config> =
+	pub type ExecutionHeaderMapping<T: Config> =
 		StorageMap<_, Identity, u32, H256, ValueQuery>;
 
 	#[pallet::call]
@@ -285,8 +285,8 @@ pub mod pallet {
 		}
 
 		/// Cross check to make sure that execution header import does not fall too far behind
-		/// finalised beacon header import. If that happens just return an error and pause processing
-		/// until execution header processing has caught up.
+		/// finalised beacon header import. If that happens just return an error and pause
+		/// processing until execution header processing has caught up.
 		fn cross_check_execution_state() -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
@@ -296,9 +296,9 @@ pub mod pallet {
 			// committee period.
 			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
 			ensure!(
-				latest_execution_state.beacon_slot == 0
-					|| latest_finalized_state.slot
-						< latest_execution_state.beacon_slot + max_latency as u64,
+				latest_execution_state.beacon_slot == 0 ||
+					latest_finalized_state.slot <
+						latest_execution_state.beacon_slot + max_latency as u64,
 				Error::<T>::ExecutionHeaderTooFarBehind
 			);
 			Ok(())
@@ -316,8 +316,8 @@ pub mod pallet {
 
 			// Verify update does not skip a sync committee period.
 			ensure!(
-				update.signature_slot > update.attested_header.slot
-					&& update.attested_header.slot >= update.finalized_header.slot,
+				update.signature_slot > update.attested_header.slot &&
+					update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidUpdateSlot
 			);
 
@@ -339,12 +339,12 @@ pub mod pallet {
 
 			// Verify update is relevant.
 			let update_attested_period = compute_period(update.attested_header.slot);
-			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists()
-				&& (update.next_sync_committee_update.is_some()
-					&& update_attested_period == store_period);
+			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
+				(update.next_sync_committee_update.is_some() &&
+					update_attested_period == store_period);
 			ensure!(
-				update.attested_header.slot > latest_finalized_state.slot
-					|| update_has_next_sync_committee,
+				update.attested_header.slot > latest_finalized_state.slot ||
+					update_has_next_sync_committee,
 				Error::<T>::NotRelevant
 			);
 
@@ -501,9 +501,9 @@ pub mod pallet {
 			// Checks that we don't skip execution headers, they need to be imported sequentially.
 			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
 			ensure!(
-				latest_execution_state.block_number == 0
-					|| update.execution_header.block_number
-						== latest_execution_state.block_number + 1,
+				latest_execution_state.block_number == 0 ||
+					update.execution_header.block_number ==
+						latest_execution_state.block_number + 1,
 				Error::<T>::ExecutionHeaderSkippedSlot
 			);
 
@@ -547,7 +547,7 @@ pub mod pallet {
 					let state = <FinalizedBeaconState<T>>::get(block_root)
 						.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
 					if update.header.slot != state.slot {
-						return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into());
+						return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
 					}
 				},
 			}
@@ -734,13 +734,13 @@ pub mod pallet {
 			let fork_versions = T::ForkVersions::get();
 
 			if epoch >= fork_versions.capella.epoch {
-				return fork_versions.capella.version;
+				return fork_versions.capella.version
 			}
 			if epoch >= fork_versions.bellatrix.epoch {
-				return fork_versions.bellatrix.version;
+				return fork_versions.bellatrix.version
 			}
 			if epoch >= fork_versions.altair.epoch {
-				return fork_versions.altair.version;
+				return fork_versions.altair.version
 			}
 
 			fork_versions.genesis.version

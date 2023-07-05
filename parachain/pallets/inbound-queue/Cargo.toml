@@ -31,6 +31,7 @@ snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
+snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
@@ -60,6 +61,7 @@ std = [
     "ethabi/std",
     "xcm/std",
     "snowbridge-beacon-primitives/std",
+    "snowbridge-ethereum-beacon-client/std",
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",
