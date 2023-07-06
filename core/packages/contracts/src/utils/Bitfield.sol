@@ -85,13 +85,13 @@ library Bitfield {
     }
 
     /**
-     * @notice Check the number of set bits if more than threshold or not
+     * @notice Calculates the number of set bits by using the hamming weight of the bitfield.
      * The algorithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
      * Further improvements are possible, see the article above.
      */
-    function hasMinSetBits(uint256[] memory self, uint256 threshold) internal pure returns (bool) {
-        uint256 count = 0;
+    function countSetBits(uint256[] memory self) internal pure returns (uint256) {
         unchecked {
+            uint256 count = 0;
             for (uint256 i = 0; i < self.length; i++) {
                 uint256 x = self[i];
                 x = (x & M1) + ((x >> 1) & M1); //put count of each  2 bits into those  2 bits
@@ -103,12 +103,9 @@ library Bitfield {
                 x = (x & M64) + ((x >> 64) & M64); //put count of each 128 bits into those 128 bits
                 x = (x & M128) + ((x >> 128) & M128); //put count of each 256 bits into those 256 bits
                 count += x;
-                if (count >= threshold) {
-                    return true;
-                }
             }
+            return count;
         }
-        return false;
     }
 
     function isSet(uint256[] memory self, uint256 index) internal pure returns (bool) {

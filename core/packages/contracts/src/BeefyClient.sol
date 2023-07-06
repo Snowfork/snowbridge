@@ -243,7 +243,7 @@ contract BeefyClient is Ownable {
 
         // For the initial submission, the supplied bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
-        if (!Bitfield.hasMinSetBits(bitfield, vset.length - (vset.length - 1) / 3)) {
+        if (Bitfield.countSetBits(bitfield) < vset.length - (vset.length - 1) / 3) {
             revert NotEnoughClaims();
         }
 
