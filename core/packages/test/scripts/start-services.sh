@@ -5,7 +5,7 @@ start=$(date +%s)
 
 from_start_services=true
 
-source scripts/set-env.sh
+source scripts/xcm-helper.sh
 source scripts/build-binary.sh
 
 trap kill_all SIGINT SIGTERM EXIT
@@ -44,18 +44,25 @@ deploy_polkadot
 echo "Waiting contract deployed"
 wait_contract_deployed
 
-# 5. config beefy client
+# 5. fund substrate accounts
+echo "Funding substrate accounts"
+transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $statemine_sovereign_account 
+transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $beacon_relayer_pub_key
+transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_pub_key
+transfer_balance $relaychain_ws_url "//Charlie" 1000 1000000000000000 $registry_contract_sovereign_account
+
+# 6. config beefy client
 echo "Config beefy client"
 source scripts/configure-beefy.sh
 configure_beefy
 
-# 6. config bridgehub 
+# 7. config bridgehub 
 echo "Config bridgehub"
 source scripts/configure-bridgehub.sh
 configure_bridgehub
 
 if [ "$skip_relayer" == "false" ]; then
-    # 7. start relayer
+    # 8. start relayer
     echo "Starting relayers"
     source scripts/start-relayer.sh
     deploy_relayer

@@ -65,3 +65,56 @@ send_governance_transact_from_relaychain() {
             "${dest}" \
             "${message}"
 }
+
+transfer_balance() {
+    local runtime_para_endpoint=$1
+    local seed=$2
+    local para_id=$3
+    local amount=$4
+    local target_account=$5
+
+    local dest=$(jq --null-input \
+                    --arg para_id "$para_id" \
+                    '{ "v3": { "parents": 0, "interior": { "x1": { "parachain": $para_id } } } }')
+    local benificiary=$(jq --null-input \
+                    --arg target_account "$target_account" \
+                    '{ "v3": { "parents": 0, "interior": { "x1": { "accountid32": { "id": $target_account } } } } }')
+    local assets=$(jq --null-input \
+                    --arg amount "$amount" \
+        '
+        {
+            "V3": [
+                {
+                    "id": {
+                        "Concrete": {
+                            "parents": 0,
+                            "interior": "Here"
+                        }
+                    },
+                    "fun": {
+                        "Fungible": $amount
+                    }
+                }
+            ]
+        }
+        '
+    )
+    local asset_fee_item=0
+
+    echo "  calling transfer_balance:"
+    echo "      target_account: ${target_account}"
+    echo "      dest: ${dest}"
+    echo "      benificiary: ${benificiary}"
+    echo "      assets: ${assets}"
+    echo "      asset_fee_item: ${asset_fee_item}"
+    echo "--------------------------------------------------"
+
+    npx polkadot-js-api \
+        --ws "${runtime_para_endpoint}" \
+        --seed "${seed?}" \
+        tx.xcmPallet.teleportAssets \
+            "${dest}" \
+            "${benificiary}" \
+            "${assets}" \
+            "${asset_fee_item}"
+}

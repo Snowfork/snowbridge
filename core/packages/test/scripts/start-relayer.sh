@@ -129,7 +129,7 @@ start_relayer()
         echo "Starting beacon relay at $(date)"
             "${relay_bin}" run beacon \
                 --config $output_dir/beacon-relay.json \
-                --substrate.private-key $beacon_relayer_account \
+                --substrate.private-key "//BeaconRelay" \
                 >> "$output_dir"/beacon-relay.log 2>&1 || true
             sleep 20
         done
@@ -143,7 +143,7 @@ start_relayer()
         echo "Starting execution relay at $(date)"
             "${relay_bin}" run execution \
                 --config $output_dir/execution-relay.json \
-                --substrate.private-key $execution_relayer_account \
+                --substrate.private-key "//ExecutionRelay" \
                 >> "$output_dir"/execution-relay.log 2>&1 || true
             sleep 20
         done
