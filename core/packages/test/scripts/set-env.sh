@@ -58,7 +58,7 @@ skip_relayer="${SKIP_RELAYER:-false}"
 
 ## Important accounts
 
-# Account for statemine (1000 5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ in testnet) 
+# Account for statemine (1000 5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ in testnet)
 statemine_sovereign_account="${STATEMINE_SOVEREIGN_ACCOUNT:-0x70617261e8030000000000000000000000000000000000000000000000000000}"
 # Beacon relay account (//BeaconRelay 5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c in testnet)
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
