@@ -13,14 +13,13 @@ use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	ArithmeticError, BuildStorage, MultiSignature,
+	ArithmeticError, MultiSignature,
 };
 use sp_std::convert::From;
 
-use snowbridge_beacon_primitives::{CompactExecutionHeader, Fork, ForkVersions};
-use snowbridge_core::{Message, Proof, RingBufferMap};
+use snowbridge_beacon_primitives::{Fork, ForkVersions};
+use snowbridge_core::{Message, Proof};
 use snowbridge_ethereum::Log;
-use snowbridge_ethereum_beacon_client::ExecutionHeaderBuffer;
 
 use hex_literal::hex;
 
@@ -129,10 +128,6 @@ impl Verifier for MockVerifier {
 		let log: Log = rlp::decode(&message.data).unwrap();
 		Ok(log)
 	}
-
-	fn initialize_storage(block_hash: H256, header: CompactExecutionHeader) {
-		todo!()
-	}
 }
 
 parameter_types! {
@@ -147,6 +142,7 @@ impl inbound_queue::Config for Test {
 	type XcmSender = ();
 	type WeightInfo = ();
 	type AllowListLength = ConstU32<2>;
+	type Helper = ();
 }
 
 fn last_events(n: usize) -> Vec<RuntimeEvent> {
@@ -171,11 +167,6 @@ pub fn new_tester_with_config(config: inbound_queue::GenesisConfig) -> sp_io::Te
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
-
-	let dest_para: ParaId = 1000u32.into();
-	let sovereign_account: AccountId = dest_para.into_account_truncating();
-	println!("account: {}", sovereign_account);
-	let _ = Balances::mint_into(&sovereign_account, 10000);
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));

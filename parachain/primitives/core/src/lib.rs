@@ -14,7 +14,6 @@ use scale_info::TypeInfo;
 use snowbridge_ethereum::Log;
 use sp_core::{RuntimeDebug, H256};
 use sp_std::vec::Vec;
-use snowbridge_beacon_primitives::CompactExecutionHeader;
 
 pub mod ringbuffer;
 pub mod types;
