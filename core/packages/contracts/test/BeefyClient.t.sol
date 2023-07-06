@@ -47,7 +47,7 @@ contract BeefyClientTest is Test {
         // generate initial fixture data with ffi
         (blockNumber, setId, setSize, bitSetArray, commitHash, payload) =
             abi.decode(vm.ffi(inputs), (uint32, uint32, uint32, uint256[], bytes32, BeefyClient.Payload));
-        bitfield = Bitfield.createBitfield(bitSetArray, setSize);
+        bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
 
         // To avoid another round of ffi in multiple tests
         // except for the initial merkle root and proof for validators

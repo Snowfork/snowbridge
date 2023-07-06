@@ -65,7 +65,7 @@ library Bitfield {
      * @dev Helper to create a bitfield.
      */
     function createBitfield(uint256[] calldata bitsToSet, uint256 length)
-        public
+        internal
         pure
         returns (uint256[] memory bitfield)
     {
@@ -89,7 +89,7 @@ library Bitfield {
      * The algorithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
      * Further improvements are possible, see the article above.
      */
-    function countSetBitsMoreThanThreshold(uint256[] memory self, uint256 threshold) internal pure returns (bool) {
+    function hasMinSetBits(uint256[] memory self, uint256 threshold) internal pure returns (bool) {
         uint256 count = 0;
         unchecked {
             for (uint256 i = 0; i < self.length; i++) {
@@ -104,11 +104,11 @@ library Bitfield {
                 x = (x & M128) + ((x >> 128) & M128); //put count of each 256 bits into those 256 bits
                 count += x;
                 if (count >= threshold) {
-                    break;
+                    return true;
                 }
             }
         }
-        return count >= threshold;
+        return false;
     }
 
     function isSet(uint256[] memory self, uint256 index) internal pure returns (bool) {

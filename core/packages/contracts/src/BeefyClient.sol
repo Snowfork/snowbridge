@@ -158,6 +158,7 @@ contract BeefyClient is Ownable {
     uint256 public immutable randaoCommitExpiration;
 
     /* Errors */
+    error InvalidCommitment();
     error StaleCommitment();
     error InvalidValidatorProof();
     error InvalidSignature();
@@ -171,7 +172,6 @@ contract BeefyClient is Ownable {
     error PrevRandaoNotCaptured();
     error InvalidBitfieldLength();
     error InvalidProofIndex();
-    error InvalidValidatorSet();
     error InvalidTicket();
 
     constructor(uint256 _randaoCommitDelay, uint256 _randaoCommitExpiration) {
@@ -226,7 +226,7 @@ contract BeefyClient is Ownable {
         ValidatorProof calldata proof
     ) internal {
         // Check if proof index is valid
-        if (proof.index > vset.length || proof.index > bitfield.length * 256) {
+        if (proof.index > bitfield.length * 256) {
             revert InvalidProofIndex();
         }
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
@@ -243,7 +243,7 @@ contract BeefyClient is Ownable {
 
         // For the initial submission, the supplied bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
-        if (!Bitfield.countSetBitsMoreThanThreshold(bitfield, vset.length - (vset.length - 1) / 3)) {
+        if (!Bitfield.hasMinSetBits(bitfield, vset.length - (vset.length - 1) / 3)) {
             revert NotEnoughClaims();
         }
 
@@ -336,6 +336,8 @@ contract BeefyClient is Ownable {
 
     /**
      * @dev Helper to create an initial validator bitfield.
+     * @param bitsToSet contains indexes of all signed validators, should be deduplicated
+     * @param length of validator set
      */
     function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
         external
@@ -350,6 +352,8 @@ contract BeefyClient is Ownable {
 
     /**
      * @dev Helper to create a final bitfield, with subsampled validator selections
+     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param bitfield claiming which validators have signed the commitment
      */
     function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
         external
@@ -548,7 +552,7 @@ contract BeefyClient is Ownable {
         bytes32 ticketID
     ) internal view {
         if (commitment.validatorSetID != currentValidatorSet.id && commitment.validatorSetID != nextValidatorSet.id) {
-            revert InvalidValidatorSet();
+            revert InvalidCommitment();
         }
 
         Ticket storage ticket = tickets[ticketID];
@@ -568,7 +572,7 @@ contract BeefyClient is Ownable {
         bytes32 ticketID
     ) internal view {
         if (commitment.validatorSetID != nextValidatorSet.id) {
-            revert InvalidValidatorSet();
+            revert InvalidCommitment();
         }
 
         Ticket storage ticket = tickets[ticketID];
