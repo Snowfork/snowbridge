@@ -142,6 +142,7 @@ impl inbound_queue::Config for Test {
 	type XcmSender = ();
 	type WeightInfo = ();
 	type AllowListLength = ConstU32<2>;
+	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
 }
 
