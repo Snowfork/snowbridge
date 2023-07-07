@@ -291,6 +291,9 @@ contract BeefyClient is Ownable {
 
         Ticket storage ticket = tickets[ticketID];
 
+        if (commitment.validatorSetID != currentValidatorSet.id) {
+            revert InvalidCommitment();
+        }
         verifyCommitment(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
 
         latestMMRRoot = commitment.payload.mmrRootHash;
@@ -321,6 +324,9 @@ contract BeefyClient is Ownable {
 
         Ticket storage ticket = tickets[ticketID];
 
+        if (commitment.validatorSetID != nextValidatorSet.id) {
+            revert InvalidCommitment();
+        }
         verifyCommitment(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
 
         bool leafIsValid = MMRProof.verifyLeafProof(
