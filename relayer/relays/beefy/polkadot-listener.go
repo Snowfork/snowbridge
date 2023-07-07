@@ -119,7 +119,7 @@ func (li *PolkadotListener) scanCommitments(
 					logEntry.Info("New commitment with handover added to channel")
 					currentValidatorSet++
 				}
-			} else if validatorSetID == currentValidatorSet && validatorSetID == nextValidatorSetID {
+			} else if validatorSetID == currentValidatorSet {
 				if result.Depth > li.config.Source.FastForwardDepth {
 					logEntry.Warn("Discarded commitment with depth not fast forward")
 					continue
