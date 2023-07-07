@@ -389,6 +389,9 @@ contract BeefyClient is Ownable {
         returns (uint256[] memory)
     {
         Ticket storage ticket = tickets[createTicketID(msg.sender, commitmentHash)];
+        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
+            revert InvalidBitfield();
+        }
         return Bitfield.subsample(
             ticket.prevRandao, bitfield, minimumSignatureThreshold(ticket.validatorSetLen), ticket.validatorSetLen
         );
