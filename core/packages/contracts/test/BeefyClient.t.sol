@@ -75,7 +75,7 @@ contract BeefyClientTest is Test {
         nextSetId = _setId + 1;
         BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(currentSetId, setSize, root);
         BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(nextSetId, setSize, root);
-        beefyClient.initialize(0, vset, nextvset);
+        beefyClient.initialize_public(0, vset, nextvset);
     }
 
     function testSubmit() public {
@@ -265,6 +265,78 @@ contract BeefyClientTest is Test {
         assertEq(
             encoded,
             hex"0861620c0001026d68803ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c050000000700000000000000"
+        );
+    }
+
+    function testCreateInitialBitfield() public {
+        initialize(setId);
+        beefyClient.createInitialBitfield(bitSetArray, setSize);
+    }
+
+    function testCreateInitialBitfieldInvalid() public {
+        initialize(setId);
+        vm.expectRevert(BeefyClient.InvalidBitfieldLength.selector);
+        beefyClient.createInitialBitfield(bitSetArray, bitSetArray.length - 1);
+    }
+
+    function testCreateFinalBitfield() public {
+        initialize(setId);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        vm.prevrandao(bytes32(uint256(difficulty)));
+        beefyClient.commitPrevRandao(commitHash);
+
+        uint256[] memory finalBits = beefyClient.createFinalBitfield(commitHash, bitfield);
+        assertTrue(Bitfield.countSetBits(finalBits) < Bitfield.countSetBits(bitfield));
+    }
+
+    function testCreateFinalBitfieldInvalid() public {
+        initialize(setId);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        vm.prevrandao(bytes32(uint256(difficulty)));
+        beefyClient.commitPrevRandao(commitHash);
+
+        // make invalid bitfield not same as before
+        bitfield[0] = 0;
+        vm.expectRevert(BeefyClient.InvalidBitfield.selector);
+        beefyClient.createFinalBitfield(commitHash, bitfield);
+    }
+
+    function testSubmitFailWithInvalidValidatorSet() public {
+        initialize(setId);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        vm.prevrandao(bytes32(uint256(difficulty)));
+        beefyClient.commitPrevRandao(commitHash);
+
+        //reinitialize with next validator set
+        initialize(setId + 1);
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
+        //submit will be reverted with InvalidCommitment
+        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
+    }
+
+    function testSubmitWithHandoverFailWithInvalidValidatorSet() public {
+        //initialize with previous set
+        initialize(setId - 1);
+
+        beefyClient.submitInitialWithHandover(commitHash, bitfield, finalValidatorProofs[0]);
+
+        vm.roll(block.number + randaoCommitDelay);
+
+        vm.prevrandao(bytes32(uint256(difficulty)));
+
+        beefyClient.commitPrevRandao(commitHash);
+
+        //reinitialize with next validator set
+        initialize(setId);
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
+        //submit will be reverted with InvalidCommitment
+        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        beefyClient.submitFinalWithHandover(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 }
