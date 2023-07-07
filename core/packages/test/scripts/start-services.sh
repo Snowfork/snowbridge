@@ -49,7 +49,7 @@ echo "Config beefy client"
 source scripts/configure-beefy.sh
 configure_beefy
 
-# 6. config bridgehub 
+# 6. config bridgehub
 echo "Config bridgehub"
 source scripts/configure-bridgehub.sh
 configure_bridgehub
