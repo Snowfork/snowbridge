@@ -297,7 +297,7 @@ contract BeefyClientTest is Test {
         vm.prevrandao(bytes32(uint256(difficulty)));
         beefyClient.commitPrevRandao(commitHash);
 
-        // make invalid bitfield not same as before
+        // make invalid bitfield not same as initialized
         bitfield[0] = 0;
         vm.expectRevert(BeefyClient.InvalidBitfield.selector);
         beefyClient.createFinalBitfield(commitHash, bitfield);
@@ -338,5 +338,18 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinalWithHandover(
             commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
+    }
+
+    function testSubmitFailWithInvalidTicket() public {
+        initialize(setId);
+        beefyClient.submitInitial(commitHash, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        vm.prevrandao(bytes32(uint256(difficulty)));
+        beefyClient.commitPrevRandao(commitHash);
+
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId + 1, payload);
+        //submit will be reverted with InvalidTicket
+        vm.expectRevert(BeefyClient.InvalidTicket.selector);
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
     }
 }

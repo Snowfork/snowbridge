@@ -171,7 +171,6 @@ contract BeefyClient is Ownable {
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
     error InvalidBitfieldLength();
-    error InvalidProofIndex();
     error InvalidTicket();
 
     constructor(uint256 _randaoCommitDelay, uint256 _randaoCommitExpiration) {
@@ -225,10 +224,6 @@ contract BeefyClient is Ownable {
         uint256[] calldata bitfield,
         ValidatorProof calldata proof
     ) internal {
-        // Check if proof index is valid
-        if (proof.index > bitfield.length << 8) {
-            revert InvalidProofIndex();
-        }
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
         if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index))
         {
