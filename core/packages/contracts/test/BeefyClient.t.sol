@@ -22,7 +22,9 @@ contract BeefyClientTest is Test {
     bytes32 commitHash;
     bytes32 root;
     uint256[] bitSetArray;
+    uint256[] badBitSetArray;
     uint256[] bitfield;
+    uint256[] badBitfield;
     BeefyClient.Payload payload;
     uint256[] finalBitfield;
     BeefyClient.ValidatorProof validatorProof;
@@ -45,9 +47,10 @@ contract BeefyClientTest is Test {
         inputs[2] = "GenerateInitialSet";
 
         // generate initial fixture data with ffi
-        (blockNumber, setId, setSize, bitSetArray, commitHash, payload) =
-            abi.decode(vm.ffi(inputs), (uint32, uint32, uint32, uint256[], bytes32, BeefyClient.Payload));
+        (blockNumber, setId, setSize, bitSetArray, badBitSetArray, commitHash, payload) =
+            abi.decode(vm.ffi(inputs), (uint32, uint32, uint32, uint256[], uint256[], bytes32, BeefyClient.Payload));
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
+        badBitfield = beefyClient.createInitialBitfield(badBitSetArray, setSize);
 
         // To avoid another round of ffi in multiple tests
         // except for the initial merkle root and proof for validators
@@ -76,6 +79,12 @@ contract BeefyClientTest is Test {
         BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(currentSetId, setSize, root);
         BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(nextSetId, setSize, root);
         beefyClient.initialize_public(0, vset, nextvset);
+    }
+
+    function printBitArray(uint256[] memory bits) private view {
+        for (uint256 i = 0; i < bits.length; i++) {
+            console.log("bits index at %d is %x", i, bits[i]);
+        }
     }
 
     function testSubmit() public {
@@ -272,7 +281,9 @@ contract BeefyClientTest is Test {
         initialize(setId);
         uint256[] memory initialBitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
         assertTrue(initialBitfield.length == 2);
-        assertEq(initialBitfield[0], 98596627071924595640577178714555971058171641770340987439165018618189172569819);
+        printBitArray(initialBitfield);
+        assertEq(initialBitfield[0], 0xd9fbb69bb8dfe46bffd2fd7feefffb185aef39fafcec0beba6db619efad1f6db);
+        assertEq(initialBitfield[1], 0x7f76cee2a3f);
     }
 
     function testCreateInitialBitfieldInvalid() public {
@@ -397,5 +408,14 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinalWithHandover(
             commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
+    }
+
+    function testSubmitFailWithNotEnoughClaims() public {
+        initialize(setId);
+        uint256[] memory initialBits = badBitfield;
+        Bitfield.set(initialBits, finalValidatorProofs[0].index);
+        printBitArray(initialBits);
+        vm.expectRevert(BeefyClient.NotEnoughClaims.selector);
+        beefyClient.submitInitial(commitHash, initialBits, finalValidatorProofs[0]);
     }
 }
