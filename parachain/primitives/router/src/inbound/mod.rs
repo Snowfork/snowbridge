@@ -125,7 +125,7 @@ impl NativeTokensMessage {
 									GlobalConsensus(network),
 									origin_location,
 								)
-								.into(),
+									.into(),
 							},
 						]
 						.into(),
@@ -176,7 +176,7 @@ impl NativeTokensMessage {
 									GlobalConsensus(network),
 									origin_location,
 								)
-								.into(),
+									.into(),
 							},
 						]
 						.into(),
@@ -352,10 +352,7 @@ mod tests {
 			interior: X3(
 				GlobalConsensus(NETWORK),
 				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
-				AccountKey20 {
-					network: None,
-					key: [0; 20],
-				},
+				AccountKey20 { network: None, key: [0; 20] },
 			),
 		};
 		assert!(FromEthereumGlobalConsensus::<EthereumLocation>::contains(&asset, &origin));
@@ -384,10 +381,7 @@ mod tests {
 			interior: X3(
 				GlobalConsensus(NETWORK),
 				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
-				AccountKey20 {
-					network: None,
-					key: [0; 20],
-				},
+				AccountKey20 { network: None, key: [0; 20] },
 			),
 		};
 		assert!(!FromEthereumGlobalConsensus::<EthereumLocation>::contains(&asset, &origin));
