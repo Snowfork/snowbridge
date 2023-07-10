@@ -519,13 +519,13 @@ contract BeefyClient is Ownable {
 
     function encodeCommitment(Commitment calldata commitment) internal pure returns (bytes memory) {
         return bytes.concat(
-            encodePayload(commitment.payload),
+            encodeCommitmentPayload(commitment.payload),
             ScaleCodec.encodeU32(commitment.blockNumber),
             ScaleCodec.encodeU64(commitment.validatorSetID)
         );
     }
 
-    function encodePayload(PayloadItem[] calldata items) internal pure returns (bytes memory) {
+    function encodeCommitmentPayload(PayloadItem[] calldata items) internal pure returns (bytes memory) {
         bytes memory payload = ScaleCodec.encodeCompactUint(items.length);
         for (uint256 i = 0; i < items.length; i++) {
             payload = bytes.concat(
