@@ -270,7 +270,9 @@ contract BeefyClientTest is Test {
 
     function testCreateInitialBitfield() public {
         initialize(setId);
-        beefyClient.createInitialBitfield(bitSetArray, setSize);
+        uint256[] memory initialBitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
+        assertTrue(initialBitfield.length == 2);
+        assertEq(initialBitfield[0], 98596627071924595640577178714555971058171641770340987439165018618189172569819);
     }
 
     function testCreateInitialBitfieldInvalid() public {
