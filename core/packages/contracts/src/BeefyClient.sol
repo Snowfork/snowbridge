@@ -324,6 +324,9 @@ contract BeefyClient is Ownable {
         }
         verifyCommitment(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
 
+        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            revert InvalidMMRLeaf();
+        }
         bool leafIsValid = MMRProof.verifyLeafProof(
             commitment.payload.mmrRootHash, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
         );

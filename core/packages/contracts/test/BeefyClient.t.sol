@@ -352,4 +352,48 @@ contract BeefyClientTest is Test {
         vm.expectRevert(BeefyClient.InvalidTicket.selector);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
     }
+
+    function testSubmitFailWithInvalidMMRLeaf() public {
+        //initialize with previous set
+        initialize(setId - 1);
+
+        beefyClient.submitInitialWithHandover(commitHash, bitfield, finalValidatorProofs[0]);
+
+        vm.roll(block.number + randaoCommitDelay);
+
+        vm.prevrandao(bytes32(uint256(difficulty)));
+
+        beefyClient.commitPrevRandao(commitHash);
+
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
+        //construct nextAuthoritySetID with a wrong value
+        mmrLeaf.nextAuthoritySetID = setId;
+        //submit will be reverted with InvalidCommitment
+        vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
+        beefyClient.submitFinalWithHandover(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+    }
+
+    function testSubmitFailWithInvalidMMRLeafProof() public {
+        //initialize with previous set
+        initialize(setId - 1);
+
+        beefyClient.submitInitialWithHandover(commitHash, bitfield, finalValidatorProofs[0]);
+
+        vm.roll(block.number + randaoCommitDelay);
+
+        vm.prevrandao(bytes32(uint256(difficulty)));
+
+        beefyClient.commitPrevRandao(commitHash);
+
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(blockNumber, setId, payload);
+        //construct parentNumber with a wrong value
+        mmrLeaf.parentNumber = 1;
+        //submit will be reverted with InvalidCommitment
+        vm.expectRevert(BeefyClient.InvalidMMRLeafProof.selector);
+        beefyClient.submitFinalWithHandover(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+    }
 }
