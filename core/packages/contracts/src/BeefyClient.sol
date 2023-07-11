@@ -43,23 +43,29 @@ contract BeefyClient is Ownable {
 
     /**
      * @dev The Commitment, with its payload, is the core thing we are trying to verify with
-     * this contract. It contains a MMR root that commits to the polkadot history, including
+     * this contract. It contains an MMR root that commits to the polkadot history, including
      * past blocks and parachain blocks and can be used to verify both polkadot and parachain blocks.
+     * @param blockNumber relay chain block number
+     * @param validatorSetID id of the validator set that signed the commitment
      * @param payload the payload of the new commitment in beefy justifications (in
      * our case, this is a new MMR root for all past polkadot blocks)
-     * @param blockNumber block number for the given commitment
-     * @param validatorSetID validator set id that signed the given commitment
      */
     struct Commitment {
         uint32 blockNumber;
         uint64 validatorSetID;
-        Payload payload;
+        PayloadItem[] payload;
     }
 
-    struct Payload {
-        bytes32 mmrRootHash;
-        bytes prefix;
-        bytes suffix;
+    /**
+     * @dev Each PayloadItem is a piece of data signed by validators at a particular block.
+     * This includes the relay chain's MMR root.
+     * @param payloadID an ID that references a description of the data in the payload item.
+     * Known payload ids can be found [upstream](https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L27).
+     * @param data the contents of the payload item.
+     */
+    struct PayloadItem {
+        bytes2 payloadID;
+        bytes data;
     }
 
     /**
@@ -143,6 +149,12 @@ contract BeefyClient is Ownable {
     /* Constants */
 
     /**
+     * @dev Beefy payload id for MMR Root payload items:
+     * https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L33
+     */
+    bytes2 public constant mmrRootID = bytes2("mh");
+
+    /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
      * submitInitial and commitPrevRandao. In production this should be set to MAX_SEED_LOOKAHEAD:
      * https://eth2book.info/altair/part3/config/preset#max_seed_lookahead
@@ -172,6 +184,8 @@ contract BeefyClient is Ownable {
     error TicketExpired();
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
+    error InvalidMMRRootLength();
+    error NoMMRRootInCommitment();
 
     constructor(uint256 _randaoCommitDelay, uint256 _randaoCommitExpiration) {
         randaoCommitDelay = _randaoCommitDelay;
@@ -194,34 +208,34 @@ contract BeefyClient is Ownable {
 
     /**
      * @dev Begin submission of commitment that was signed by the current validator set
-     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param commitment contains the commitment signed by the validators
      * @param bitfield a bitfield claiming which validators have signed the commitment
-     * @param proof a proof that a single validator from currentValidatorSet has signed the commitmentHash
+     * @param proof a proof that a single validator from currentValidatorSet has signed the commitment
      */
-    function submitInitial(bytes32 commitmentHash, uint256[] calldata bitfield, ValidatorProof calldata proof)
+    function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
         external
         payable
     {
-        doSubmitInitial(currentValidatorSet, commitmentHash, bitfield, proof);
+        doSubmitInitial(currentValidatorSet, commitment, bitfield, proof);
     }
 
     /**
      * @dev Begin submission of commitment that was signed by the next validator set
-     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param commitment contains the commitment signed by the validators
      * @param bitfield a bitfield claiming which validators have signed the commitment
-     * @param proof a proof that a single validator from nextValidatorSet has signed the commitmentHash
+     * @param proof a proof that a single validator from nextValidatorSet has signed the commitment
      */
     function submitInitialWithHandover(
-        bytes32 commitmentHash,
+        Commitment calldata commitment,
         uint256[] calldata bitfield,
         ValidatorProof calldata proof
     ) external payable {
-        doSubmitInitial(nextValidatorSet, commitmentHash, bitfield, proof);
+        doSubmitInitial(nextValidatorSet, commitment, bitfield, proof);
     }
 
     function doSubmitInitial(
         ValidatorSet memory vset,
-        bytes32 commitmentHash,
+        Commitment calldata commitment,
         uint256[] calldata bitfield,
         ValidatorProof calldata proof
     ) internal {
@@ -233,6 +247,7 @@ contract BeefyClient is Ownable {
 
         // Check if validatorSignature is correct, ie. check if it matches
         // the signature of senderPublicKey on the commitmentHash
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         if (ECDSA.recover(commitmentHash, proof.v, proof.r, proof.s) != proof.account) {
             revert InvalidSignature();
         }
@@ -277,6 +292,7 @@ contract BeefyClient is Ownable {
     /**
      * @dev Submit a commitment for final verification
      * @param commitment contains the full commitment that was used for the commitmentHash
+     * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proofs a struct containing the data needed to verify all validator signatures
      */
     function submitFinal(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof[] calldata proofs)
@@ -304,10 +320,11 @@ contract BeefyClient is Ownable {
 
         verifyCommitment(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
 
-        latestMMRRoot = commitment.payload.mmrRootHash;
+        bytes32 newMMRRoot = getFirstMMRRoot(commitment);
+        latestMMRRoot = newMMRRoot;
         latestBeefyBlock = commitment.blockNumber;
 
-        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
+        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
         delete tickets[ticketID];
     }
 
@@ -352,9 +369,9 @@ contract BeefyClient is Ownable {
 
         verifyCommitment(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
 
-        bool leafIsValid = MMRProof.verifyLeafProof(
-            commitment.payload.mmrRootHash, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
-        );
+        bytes32 newMMRRoot = getFirstMMRRoot(commitment);
+        bool leafIsValid =
+            MMRProof.verifyLeafProof(newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder);
         if (!leafIsValid) {
             revert InvalidMMRLeafProof();
         }
@@ -364,10 +381,10 @@ contract BeefyClient is Ownable {
         nextValidatorSet.length = leaf.nextAuthoritySetLen;
         nextValidatorSet.root = leaf.nextAuthoritySetRoot;
 
-        latestMMRRoot = commitment.payload.mmrRootHash;
+        latestMMRRoot = newMMRRoot;
         latestBeefyBlock = commitment.blockNumber;
 
-        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
+        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
         delete tickets[ticketID];
     }
 
@@ -486,16 +503,37 @@ contract BeefyClient is Ownable {
         }
     }
 
+    function getFirstMMRRoot(Commitment calldata commitment) internal pure returns (bytes32) {
+        for (uint256 i = 0; i < commitment.payload.length; i++) {
+            if (commitment.payload[i].payloadID == mmrRootID) {
+                if (commitment.payload[i].data.length != 32) {
+                    revert InvalidMMRRootLength();
+                } else {
+                    return bytes32(commitment.payload[i].data);
+                }
+            }
+        }
+
+        revert NoMMRRootInCommitment();
+    }
+
     function encodeCommitment(Commitment calldata commitment) internal pure returns (bytes memory) {
         return bytes.concat(
-            commitment.payload.prefix,
-            bytes2("mh"), // BeefyPayloadId::MMR_ROOT_ID
-            hex"80", // ScaleCodec.encodeU64(commitment.payload.mmrRootHash.length)
-            commitment.payload.mmrRootHash,
-            commitment.payload.suffix,
+            encodeCommitmentPayload(commitment.payload),
             ScaleCodec.encodeU32(commitment.blockNumber),
             ScaleCodec.encodeU64(commitment.validatorSetID)
         );
+    }
+
+    function encodeCommitmentPayload(PayloadItem[] calldata items) internal pure returns (bytes memory) {
+        bytes memory payload = ScaleCodec.encodeCompactUint(items.length);
+        for (uint256 i = 0; i < items.length; i++) {
+            payload = bytes.concat(
+                payload, items[i].payloadID, ScaleCodec.encodeCompactUint(items[i].data.length), items[i].data
+            );
+        }
+
+        return payload;
     }
 
     function encodeMMRLeaf(MMRLeaf calldata leaf) internal pure returns (bytes memory) {

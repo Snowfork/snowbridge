@@ -1,10 +1,10 @@
 package beefy
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 
+	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -12,9 +12,9 @@ import (
 )
 
 type InitialRequestParams struct {
-	CommitmentHash [32]byte
-	Bitfield       []*big.Int
-	Proof          contracts.BeefyClientValidatorProof
+	Commitment contracts.BeefyClientCommitment
+	Bitfield   []*big.Int
+	Proof      contracts.BeefyClientValidatorProof
 }
 
 type FinalRequestParams struct {
@@ -43,10 +43,7 @@ func (r *Request) CommitmentHash() (*[32]byte, error) {
 // Generate RequestParams which contains merkle proof by validator's index
 // together with the signature which will be verified in BeefyClient contract later
 func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []*big.Int) (*InitialRequestParams, error) {
-	commitmentHash, err := r.CommitmentHash()
-	if err != nil {
-		return nil, fmt.Errorf("generate commitment hash: %w", err)
-	}
+	commitment := toBeefyClientCommitment(&r.SignedCommitment.Commitment)
 
 	proof, err := r.generateValidatorAddressProof(valAddrIndex)
 	if err != nil {
@@ -66,8 +63,8 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	v, _r, s := cleanSignature(validatorSignature)
 
 	msg := InitialRequestParams{
-		CommitmentHash: *commitmentHash,
-		Bitfield:       initialBitfield,
+		Commitment: *commitment,
+		Bitfield:   initialBitfield,
 		Proof: contracts.BeefyClientValidatorProof{
 			V:       v,
 			R:       _r,
@@ -79,6 +76,14 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	}
 
 	return &msg, nil
+}
+
+func toBeefyClientCommitment(c *types.Commitment) *contracts.BeefyClientCommitment {
+	return &contracts.BeefyClientCommitment{
+		BlockNumber:    c.BlockNumber,
+		ValidatorSetID: c.ValidatorSetID,
+		Payload:        toBeefyPayload(c.Payload),
+	}
 }
 
 func cleanSignature(input types.BeefySignature) (uint8, [32]byte, [32]byte) {
@@ -138,13 +143,8 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 		})
 	}
 
-	payload, err := buildPayload(r.SignedCommitment.Commitment.Payload)
-	if err != nil {
-		return nil, err
-	}
-
 	commitment := contracts.BeefyClientCommitment{
-		Payload:        *payload,
+		Payload:        toBeefyPayload(r.SignedCommitment.Commitment.Payload),
 		BlockNumber:    r.SignedCommitment.Commitment.BlockNumber,
 		ValidatorSetID: r.SignedCommitment.Commitment.ValidatorSetID,
 	}
@@ -176,53 +176,55 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 	return &msg, nil
 }
 
-// Builds a payload which is partially SCALE-encoded. This is more efficient for the light client to verify
-// as it does not have to implement a fully fledged SCALE-encoder.
-func buildPayload(items []types.PayloadItem) (*contracts.BeefyClientPayload, error) {
-	index := -1
-
-	for i, payloadItem := range items {
-		// MMR Root ID as "mh"
-		// https://github.com/paritytech/substrate/blob/cbd8f1b56fd8ab9af0d9317432cc735264c89d70/primitives/beefy/src/payload.rs#L33
-		if payloadItem.ID == [2]byte{0x6d, 0x68} {
-			index = i
+func toBeefyPayload(items []types.PayloadItem) []contracts.BeefyClientPayloadItem {
+	beefyItems := make([]contracts.BeefyClientPayloadItem, len(items))
+	for i, item := range items {
+		beefyItems[i] = contracts.BeefyClientPayloadItem{
+			PayloadID: item.ID,
+			Data:      item.Data,
 		}
 	}
 
-	// Contains one entry so index should be 0
-	// https://github.com/paritytech/substrate/blob/cbd8f1b56fd8ab9af0d9317432cc735264c89d70/primitives/beefy/src/payload.rs#L48
-	if index < 0 {
-		return nil, fmt.Errorf("did not find mmr root hash in commitment")
+	return beefyItems
+}
+
+func commitmentToLog(commitment contracts.BeefyClientCommitment) logrus.Fields {
+	payloadFields := make([]logrus.Fields, len(commitment.Payload))
+	for i, payloadItem := range commitment.Payload {
+		payloadFields[i] = logrus.Fields{
+			"PayloadID": string(rune(payloadItem.PayloadID[0])) + string(rune(payloadItem.PayloadID[1])),
+			"Data":      payloadItem.Data,
+		}
 	}
 
-	mmrRootHash := [32]byte{}
+	return logrus.Fields{
+		"BlockNumber":    commitment.BlockNumber,
+		"ValidatorSetID": commitment.ValidatorSetID,
+		"Payload":        payloadFields,
+	}
+}
 
-	if len(items[index].Data) != 32 {
-		return nil, fmt.Errorf("mmr root hash is invalid")
+func bitfieldToStrings(bitfield []*big.Int) []string {
+	strings := make([]string, len(bitfield))
+	for i, subfield := range bitfield {
+		strings[i] = fmt.Sprintf("%0256b", subfield)
 	}
 
-	if copy(mmrRootHash[:], items[index].Data) != 32 {
-		return nil, fmt.Errorf("mmr root hash is invalid")
+	return strings
+}
+
+func proofToLog(proof contracts.BeefyClientValidatorProof) logrus.Fields {
+	hexProof := make([]string, len(proof.Proof))
+	for i, proof := range proof.Proof {
+		hexProof[i] = Hex(proof[:])
 	}
 
-	payloadBytes, err := types.EncodeToBytes(items)
-	if err != nil {
-		return nil, err
+	return logrus.Fields{
+		"V":       proof.V,
+		"R":       Hex(proof.R[:]),
+		"S":       Hex(proof.S[:]),
+		"Index":   proof.Index.Uint64(),
+		"Account": proof.Account.Hex(),
+		"Proof":   hexProof,
 	}
-
-	// Trick here is that in payload of beefy commitment only MmrRootHash is required
-	// so just split to some unknown prefix and suffix in order to reconstruct later
-	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/BeefyClient.sol#L483-L492
-	// MMR_ROOT_ID is "mh" = 0x6d68 & root hash has length 32 encoded as 32 << 2 = 128 = 0x80
-	slices := bytes.Split(payloadBytes, append([]byte{0x6d, 0x68, 0x80}, mmrRootHash[:]...))
-	if len(slices) != 2 {
-		// Its theoretically possible that the payload items may contain mmrRootHash more than once, causing an invalid split
-		return nil, fmt.Errorf("expected 2 slices")
-	}
-
-	return &contracts.BeefyClientPayload{
-		MmrRootHash: mmrRootHash,
-		Prefix:      slices[0],
-		Suffix:      slices[1],
-	}, nil
 }
