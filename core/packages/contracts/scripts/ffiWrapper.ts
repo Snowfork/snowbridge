@@ -17,17 +17,17 @@ const mmrRoot = fixtureData.params.commitment.payload[0].data
 const mmrLeaf: BeefyClient.MMRLeafStruct = fixtureData.params.leaf
 const leafProofOrder = fixtureData.params.leafProofOrder
 
-const badSubsetSize = Math.floor((validatorSetSize - 1) / 3)
-const subsetSize = validatorSetSize - badSubsetSize
+const absentSubsetSize = Math.floor((validatorSetSize - 1) / 3)
+const subsetSize = validatorSetSize - absentSubsetSize
 const subset = createRandomSubset(validatorSetSize, subsetSize)
-const badSubset = createRandomSubset(validatorSetSize, badSubsetSize)
+const absentSubset = createRandomSubset(validatorSetSize, absentSubsetSize)
 let validatorSet: ValidatorSet
 
 if (command == "GenerateInitialSet") {
     process.stdout.write(
         `${encoder.encode(
             ["uint32", "uint32", "uint32", "uint256[]", "uint256[]", "bytes32", "bytes32"],
-            [blockNumber, validatorSetID, validatorSetSize, subset, badSubset, commitHash, mmrRoot]
+            [blockNumber, validatorSetID, validatorSetSize, subset, absentSubset, commitHash, mmrRoot]
         )}`
     )
 } else if (command == "GenerateProofs") {

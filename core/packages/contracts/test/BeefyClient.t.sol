@@ -22,9 +22,9 @@ contract BeefyClientTest is Test {
     bytes32 commitHash;
     bytes32 root;
     uint256[] bitSetArray;
-    uint256[] badBitSetArray;
+    uint256[] absentBitSetArray;
     uint256[] bitfield;
-    uint256[] badBitfield;
+    uint256[] absentBitfield;
     bytes32 mmrRoot;
     uint256[] finalBitfield;
     BeefyClient.ValidatorProof validatorProof;
@@ -50,10 +50,10 @@ contract BeefyClientTest is Test {
         inputs[2] = "GenerateInitialSet";
 
         // generate initial fixture data with ffi
-        (blockNumber, setId, setSize, bitSetArray, badBitSetArray, commitHash, mmrRoot) =
+        (blockNumber, setId, setSize, bitSetArray, absentBitSetArray, commitHash, mmrRoot) =
             abi.decode(vm.ffi(inputs), (uint32, uint32, uint32, uint256[], uint256[], bytes32, bytes32));
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
-        badBitfield = beefyClient.createInitialBitfield(badBitSetArray, setSize);
+        absentBitfield = beefyClient.createInitialBitfield(absentBitSetArray, setSize);
 
         // To avoid another round of ffi in multiple tests
         // except for the initial merkle root and proof for validators
@@ -408,7 +408,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitFailWithNotEnoughClaims() public {
         initialize(setId);
-        uint256[] memory initialBits = badBitfield;
+        uint256[] memory initialBits = absentBitfield;
         Bitfield.set(initialBits, finalValidatorProofs[0].index);
         printBitArray(initialBits);
         vm.expectRevert(BeefyClient.NotEnoughClaims.selector);
