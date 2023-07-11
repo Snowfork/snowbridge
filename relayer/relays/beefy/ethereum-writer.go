@@ -281,7 +281,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		"txHash":         tx.Hash().Hex(),
 		"CommitmentHash": "0x" + hex.EncodeToString(commitmentHash[:]),
 		"Commitment":     commitmentToLog(msg.Commitment),
-		"Bitfield":       msg.Bitfield,
+		"Bitfield":       bitfieldToStrings(msg.Bitfield),
 		"Proof":          proofToLog(msg.Proof),
 		"HandOver":       task.IsHandover,
 	}).Info("Transaction submitted for initial verification")

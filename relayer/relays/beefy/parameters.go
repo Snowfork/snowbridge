@@ -192,7 +192,7 @@ func commitmentToLog(commitment contracts.BeefyClientCommitment) logrus.Fields {
 	payloadFields := make([]logrus.Fields, len(commitment.Payload))
 	for i, payloadItem := range commitment.Payload {
 		payloadFields[i] = logrus.Fields{
-			"PayloadID": payloadItem.PayloadID,
+			"PayloadID": string(rune(payloadItem.PayloadID[0])) + string(rune(payloadItem.PayloadID[1])),
 			"Data":      payloadItem.Data,
 		}
 	}
@@ -202,6 +202,15 @@ func commitmentToLog(commitment contracts.BeefyClientCommitment) logrus.Fields {
 		"ValidatorSetID": commitment.ValidatorSetID,
 		"Payload":        payloadFields,
 	}
+}
+
+func bitfieldToStrings(bitfield []*big.Int) []string {
+	strings := make([]string, len(bitfield))
+	for i, subfield := range bitfield {
+		strings[i] = fmt.Sprintf("%0256b", subfield)
+	}
+
+	return strings
 }
 
 func proofToLog(proof contracts.BeefyClientValidatorProof) logrus.Fields {

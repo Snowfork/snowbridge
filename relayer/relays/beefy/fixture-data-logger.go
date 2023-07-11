@@ -28,7 +28,7 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 	fields := log.Fields{
 		"params": log.Fields{
 			"commitment": commitmentToLog(params.Commitment),
-			"bitfield":   params.Bitfield,
+			"bitfield":   bitfieldToStrings(params.Bitfield),
 			"proof":      proofs,
 		},
 		"commitmentHash": commitmentHash,
@@ -60,7 +60,7 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 	fields := log.Fields{
 		"params": log.Fields{
 			"commitment": commitmentToLog(params.Commitment),
-			"bitfield":   params.Bitfield,
+			"bitfield":   bitfieldToStrings(params.Bitfield),
 			"proofs":     proofs,
 			"leaf": log.Fields{
 				"version":              params.Leaf.Version,
