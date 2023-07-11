@@ -9,11 +9,10 @@
         "id": 10,
         "commitment": {
             "blockNumber": 109,
-            "payload": {
-                "mmrRootHash": "0x64a57bff4956c0c2ac63121fc91d4d81f910c664dba0cecdb9f9cd0ccac462d6",
-                "prefix": "0x04",
-                "suffix": "0x"
-            },
+            "payload": [{
+                "payloadID": "0x6d68",
+                "data": "0x64a57bff4956c0c2ac63121fc91d4d81f910c664dba0cecdb9f9cd0ccac462d6"
+            }],
             "validatorSetID": 10
         },
         "leaf": {

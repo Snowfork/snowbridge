@@ -14,22 +14,9 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 	task *Request,
 	params *FinalRequestParams,
 ) (log.Fields, error) {
-	var proofs []log.Fields
-	for _, proof := range params.Proofs {
-		var merkleProof []string
-		for _, item := range proof.Proof {
-			merkleProof = append(merkleProof, Hex(item[:]))
-		}
-		proofs = append(proofs,
-			log.Fields{
-				"v":       proof.V,
-				"r":       Hex(proof.R[:]),
-				"s":       Hex(proof.S[:]),
-				"index":   proof.Index.Uint64(),
-				"account": proof.Account.Hex(),
-				"proof":   merkleProof,
-			},
-		)
+	proofs := make([]log.Fields, len(params.Proofs))
+	for i, proof := range params.Proofs {
+		proofs[i] = proofToLog(proof)
 	}
 
 	encodedCommitment, err := gsrpcTypes.EncodeToBytes(task.SignedCommitment.Commitment)
@@ -40,17 +27,9 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 
 	fields := log.Fields{
 		"params": log.Fields{
-			"commitment": log.Fields{
-				"blockNumber":    params.Commitment.BlockNumber,
-				"validatorSetID": params.Commitment.ValidatorSetID,
-				"payload": log.Fields{
-					"mmrRootHash": Hex(params.Commitment.Payload.MmrRootHash[:]),
-					"prefix":      Hex(params.Commitment.Payload.Prefix),
-					"suffix":      Hex(params.Commitment.Payload.Suffix),
-				},
-			},
-			"bitfield": params.Bitfield,
-			"proof":    proofs,
+			"commitment": commitmentToLog(params.Commitment),
+			"bitfield":   bitfieldToStrings(params.Bitfield),
+			"proof":      proofs,
 		},
 		"commitmentHash": commitmentHash,
 	}
@@ -62,22 +41,9 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 	task *Request,
 	params *FinalRequestParams,
 ) (log.Fields, error) {
-	var proofs []log.Fields
-	for _, proof := range params.Proofs {
-		var merkleProof []string
-		for _, item := range proof.Proof {
-			merkleProof = append(merkleProof, Hex(item[:]))
-		}
-		proofs = append(proofs,
-			log.Fields{
-				"v":       proof.V,
-				"r":       Hex(proof.R[:]),
-				"s":       Hex(proof.S[:]),
-				"index":   proof.Index,
-				"account": proof.Account.Hex(),
-				"proof":   merkleProof,
-			},
-		)
+	proofs := make([]log.Fields, len(params.Proofs))
+	for i, proof := range params.Proofs {
+		proofs[i] = proofToLog(proof)
 	}
 
 	encodedCommitment, err := gsrpcTypes.EncodeToBytes(task.SignedCommitment.Commitment)
@@ -93,17 +59,9 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 
 	fields := log.Fields{
 		"params": log.Fields{
-			"commitment": log.Fields{
-				"blockNumber":    params.Commitment.BlockNumber,
-				"validatorSetID": params.Commitment.ValidatorSetID,
-				"payload": log.Fields{
-					"mmrRootHash": Hex(params.Commitment.Payload.MmrRootHash[:]),
-					"prefix":      Hex(params.Commitment.Payload.Prefix),
-					"suffix":      Hex(params.Commitment.Payload.Suffix),
-				},
-			},
-			"bitfield": params.Bitfield,
-			"proofs":   proofs,
+			"commitment": commitmentToLog(params.Commitment),
+			"bitfield":   bitfieldToStrings(params.Bitfield),
+			"proofs":     proofs,
 			"leaf": log.Fields{
 				"version":              params.Leaf.Version,
 				"parentNumber":         params.Leaf.ParentNumber,
