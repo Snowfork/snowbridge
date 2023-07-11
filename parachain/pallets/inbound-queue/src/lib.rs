@@ -64,7 +64,6 @@ pub mod pallet {
 
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
-	use sp_core::H256;
 	use snowbridge_router_primitives::inbound::{GatewayMessage, NativeTokensMessage};
 	use xcm::v3::SendXcm;
 
