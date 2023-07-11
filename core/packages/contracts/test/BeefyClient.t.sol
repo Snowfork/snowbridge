@@ -33,8 +33,6 @@ contract BeefyClientTest is Test {
     BeefyClient.MMRLeaf mmrLeaf;
     uint256 leafProofOrder;
     bytes2 mmrRootID = bytes2("mh");
-    BeefyClient.PayloadItem[] payload;
-    BeefyClient.Commitment commitment;
 
     function setUp() public {
         randaoCommitDelay = 3;
@@ -73,18 +71,18 @@ contract BeefyClientTest is Test {
         for (uint256 i = 0; i < proofs.length; i++) {
             finalValidatorProofs.push(proofs[i]);
         }
-        payload.push(BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot)));
-        commitment = BeefyClient.Commitment(blockNumber, setId, payload);
-
         console.log("current validator's merkle root is: %s", Strings.toHexString(uint256(root), 32));
     }
 
-    function initialize(uint32 _setId) public {
+    function initialize(uint32 _setId) public returns (BeefyClient.Commitment memory) {
         currentSetId = _setId;
         nextSetId = _setId + 1;
         BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(currentSetId, setSize, root);
         BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(nextSetId, setSize, root);
         beefyClient.initialize_public(0, vset, nextvset);
+        BeefyClient.PayloadItem[] memory payload = new BeefyClient.PayloadItem[](1);
+        payload[0] = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
+        return BeefyClient.Commitment(blockNumber, setId, payload);
     }
 
     function printBitArray(uint256[] memory bits) private view {
@@ -93,8 +91,8 @@ contract BeefyClientTest is Test {
         }
     }
 
-    function testSubmit() public {
-        initialize(setId);
+    function testSubmit() public returns (BeefyClient.Commitment memory) {
+        BeefyClient.Commitment memory commitment = initialize(setId);
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -109,10 +107,11 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
 
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+        return commitment;
     }
 
     function testSubmitFailInvalidSignature() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -131,7 +130,7 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitFailValidatorNotInBitfield() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -151,7 +150,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitFailWithStaleCommitment() public {
         // first round of submit should be fine
-        testSubmit();
+        BeefyClient.Commitment memory commitment = testSubmit();
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
         vm.roll(block.number + randaoCommitDelay);
@@ -163,7 +162,7 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitFailWithInvalidBitfield() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -180,7 +179,7 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitFailWithoutPrevRandao() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
         // reverted without commit PrevRandao
@@ -189,7 +188,7 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitFailForPrevRandaoTooEarlyOrTooLate() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
         // reverted for commit PrevRandao too early
@@ -203,7 +202,7 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitFailForPrevRandaoCapturedMoreThanOnce() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
         vm.roll(block.number + randaoCommitDelay);
@@ -216,7 +215,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitWithHandover() public {
         //initialize with previous set
-        initialize(setId - 1);
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -234,7 +233,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitWithHandoverFailWithoutPrevRandao() public {
         //initialize with previous set
-        initialize(setId - 1);
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -245,7 +244,7 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitWithHandoverFailStaleCommitment() public {
-        testSubmit();
+        BeefyClient.Commitment memory commitment = testSubmit();
 
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -293,7 +292,7 @@ contract BeefyClientTest is Test {
     }
 
     function testCreateFinalBitfield() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
         vm.roll(block.number + randaoCommitDelay);
         vm.prevrandao(bytes32(uint256(difficulty)));
@@ -304,7 +303,7 @@ contract BeefyClientTest is Test {
     }
 
     function testCreateFinalBitfieldInvalid() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
         vm.roll(block.number + randaoCommitDelay);
         vm.prevrandao(bytes32(uint256(difficulty)));
@@ -317,7 +316,7 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitFailWithInvalidValidatorSet() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
         vm.roll(block.number + randaoCommitDelay);
         vm.prevrandao(bytes32(uint256(difficulty)));
@@ -332,7 +331,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitWithHandoverFailWithInvalidValidatorSet() public {
         //initialize with previous set
-        initialize(setId - 1);
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -352,13 +351,13 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitFailWithInvalidTicket() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
         vm.roll(block.number + randaoCommitDelay);
         vm.prevrandao(bytes32(uint256(difficulty)));
         beefyClient.commitPrevRandao(commitHash);
 
-        BeefyClient.Commitment memory _commitment = BeefyClient.Commitment(blockNumber, setId + 1, payload);
+        BeefyClient.Commitment memory _commitment = BeefyClient.Commitment(blockNumber, setId + 1, commitment.payload);
         //submit will be reverted with InvalidTicket
         vm.expectRevert(BeefyClient.InvalidTicket.selector);
         beefyClient.submitFinal(_commitment, bitfield, finalValidatorProofs);
@@ -366,7 +365,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitFailWithInvalidMMRLeaf() public {
         //initialize with previous set
-        initialize(setId - 1);
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -387,7 +386,7 @@ contract BeefyClientTest is Test {
 
     function testSubmitFailWithInvalidMMRLeafProof() public {
         //initialize with previous set
-        initialize(setId - 1);
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -407,7 +406,7 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitFailWithNotEnoughClaims() public {
-        initialize(setId);
+        BeefyClient.Commitment memory commitment = initialize(setId);
         uint256[] memory initialBits = absentBitfield;
         Bitfield.set(initialBits, finalValidatorProofs[0].index);
         printBitArray(initialBits);
