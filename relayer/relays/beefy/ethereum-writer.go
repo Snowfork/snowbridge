@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -237,8 +238,8 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		return nil, nil, fmt.Errorf("create initial bitfield: %w", err)
 	}
 
-	// Pick first validator who signs beefy commitment
-	valIndex := signedValidators[0].Int64()
+	// Random pick validator who signs beefy commitment
+	valIndex := signedValidators[rand.Intn(len(signedValidators))].Int64()
 
 	msg, err := task.MakeSubmitInitialParams(valIndex, initialBitfield)
 	if err != nil {
@@ -284,6 +285,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		"Bitfield":       bitfieldToStrings(msg.Bitfield),
 		"Proof":          proofToLog(msg.Proof),
 		"HandOver":       task.IsHandover,
+		"valIndex":       valIndex,
 	}).Info("Transaction submitted for initial verification")
 
 	return tx, initialBitfield, nil

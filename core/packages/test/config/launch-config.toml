@@ -37,6 +37,14 @@ default_args = [
     name = "rococo03"
     validator = true
 
+    [[relaychain.nodes]]
+    name = "rococo04"
+    validator = true
+
+    [[relaychain.nodes]]
+    name = "rococo05"
+    validator = true
+
 ## Bridge Hub
 [[parachains]]
 id = 1013

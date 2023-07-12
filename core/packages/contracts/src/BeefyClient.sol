@@ -8,6 +8,7 @@ import {MerkleProof} from "./utils/MerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./ScaleCodec.sol";
+import {BitMaps} from "openzeppelin/utils/structs/BitMaps.sol";
 
 /**
  * @title BeefyClient
@@ -146,6 +147,8 @@ contract BeefyClient is Ownable {
     // Currently pending tickets for commitment submission
     mapping(bytes32 => Ticket) public tickets;
 
+    BitMaps.BitMap private claimerBitMap;
+
     /* Constants */
 
     /**
@@ -186,6 +189,7 @@ contract BeefyClient is Ownable {
     error InvalidTicket();
     error InvalidMMRRootLength();
     error NoMMRRootInCommitment();
+    error ClaimerAlreadyCaptured();
 
     constructor(uint256 _randaoCommitDelay, uint256 _randaoCommitExpiration) {
         randaoCommitDelay = _randaoCommitDelay;
@@ -256,6 +260,12 @@ contract BeefyClient is Ownable {
         if (Bitfield.countSetBits(bitfield) < vset.length - (vset.length - 1) / 3) {
             revert NotEnoughClaims();
         }
+
+        uint256 claimerKey = uint256(keccak256(abi.encodePacked(msg.sender, proof.account, vset.id)));
+        if (BitMaps.get(claimerBitMap, claimerKey)) {
+            revert ClaimerAlreadyCaptured();
+        }
+        BitMaps.set(claimerBitMap, claimerKey);
 
         tickets[createTicketID(msg.sender, commitmentHash)] =
             Ticket(msg.sender, uint64(block.number), uint32(vset.length), 0, keccak256(abi.encodePacked(bitfield)));

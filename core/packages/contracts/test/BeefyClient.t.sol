@@ -151,8 +151,8 @@ contract BeefyClientTest is Test {
     function testSubmitFailWithStaleCommitment() public {
         // first round of submit should be fine
         BeefyClient.Commitment memory commitment = testSubmit();
-
-        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        // use signature from another validator for second round
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[1]);
         vm.roll(block.number + randaoCommitDelay);
         vm.prevrandao(bytes32(uint256(difficulty)));
         beefyClient.commitPrevRandao(commitHash);
