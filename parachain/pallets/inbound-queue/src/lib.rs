@@ -66,6 +66,8 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use snowbridge_router_primitives::inbound::{GatewayMessage, NativeTokensMessage};
 	use xcm::v3::SendXcm;
+	#[cfg(feature = "runtime-benchmarks")]
+	use snowbridge_ethereum::H256;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -98,7 +100,6 @@ pub mod pallet {
 		type AllowListLength: Get<u32>;
 
 		#[cfg(feature = "runtime-benchmarks")]
-		/// A set of helper functions for benchmarking.
 		type Helper: BenchmarkHelper<Self>;
 	}
 
@@ -162,16 +163,12 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight({100_000_000})]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
-			log::info!(target: "inbound-queue","💫 In submit.");
-
 			let who = ensure_signed(origin)?;
 			// submit message to verifier for verification
 			let log = T::Verifier::verify(&message)?;
 
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
-
-			log::info!(target: "inbound-queue","💫 envelope available");
 
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
@@ -180,12 +177,9 @@ pub mod pallet {
 				return Err(Error::<T>::InvalidOutboundQueue.into())
 			}
 
-			log::info!(target: "inbound-queue","💫 allow list checked");
-
 			// Verify message nonce
 			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {
 				if envelope.nonce != *nonce + 1 {
-					log::info!(target: "inbound-queue","💫 expected nonce to be {}", *nonce + 1);
 					Err(Error::<T>::InvalidNonce.into())
 				} else {
 					*nonce += 1;
@@ -193,14 +187,10 @@ pub mod pallet {
 				}
 			})?;
 
-			log::info!(target: "inbound-queue","💫 updated nonce");
-
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
 			let sovereign_account = envelope.dest.into_account_truncating();
 			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
-
-			log::info!(target: "inbound-queue","💫 relayer rewarded nonce");
 
 			// From this point, any errors are masked, i.e the extrinsic will
 			// succeed even if the message was not successfully decoded or dispatched.
@@ -208,12 +198,8 @@ pub mod pallet {
 			// Attempt to decode message
 			let decoded_message =
 				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(inbound::VersionedMessage::V1(decoded_message)) => {
-						log::info!(target: "inbound-queue","💫 message decoded successfully");
-						decoded_message
-					},
+					Ok(inbound::VersionedMessage::V1(decoded_message)) => decoded_message,
 					Err(_) => {
-						log::info!(target: "inbound-queue","💫 message decoding failed");
 						Self::deposit_event(Event::MessageReceived {
 							dest: envelope.dest,
 							nonce: envelope.nonce,
@@ -223,37 +209,12 @@ pub mod pallet {
 					},
 				};
 
-			let cloned_message = decoded_message.message.clone();
-
-			match cloned_message {
-				GatewayMessage::UpgradeProxy(_) => {
-					log::info!(target: "inbound-queue","💫 message is UpgradeProxy");
-				},
-				GatewayMessage::NativeTokens(message) => {
-					log::info!(target: "inbound-queue","💫 message is NativeTokens");
-					match message {
-						NativeTokensMessage::Create { .. } => {
-							log::info!(target: "inbound-queue","💫 message is Create");
-						},
-						NativeTokensMessage::Mint { .. } => {
-							log::info!(target: "inbound-queue","💫 message is Mint");
-						},
-					}
-				},
-			}
-
-			log::info!(target: "inbound-queue","💫 decoded message");
-
 			// Attempt to convert to XCM
 			let sibling_para =
 				MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
 			let xcm = match decoded_message.try_into() {
-				Ok(xcm) => {
-					log::info!(target: "inbound-queue","💫 converted to xcm");
-					xcm
-				},
+				Ok(xcm) => xcm,
 				Err(_) => {
-					log::info!(target: "inbound-queue","💫 convert to xcm failed");
 					Self::deposit_event(Event::MessageReceived {
 						dest: envelope.dest,
 						nonce: envelope.nonce,
@@ -263,29 +224,19 @@ pub mod pallet {
 				},
 			};
 
-			log::info!(target: "inbound-queue","💫 convert to xcm");
-
 			// Attempt to send XCM to a sibling parachain
 			match send_xcm::<T::XcmSender>(sibling_para, xcm) {
-				Ok(_) => {
-					log::info!(target: "inbound-queue","💫 xcm sent");
-					Self::deposit_event(Event::MessageReceived {
-						dest: envelope.dest,
-						nonce: envelope.nonce,
-						result: MessageDispatchResult::Dispatched,
-					})
-				},
-				Err(err) => {
-					log::info!(target: "inbound-queue","💫 xcm failed: {:?}", err);
-					Self::deposit_event(Event::MessageReceived {
-						dest: envelope.dest,
-						nonce: envelope.nonce,
-						result: MessageDispatchResult::NotDispatched(err),
-					})
-				},
+				Ok(_) => Self::deposit_event(Event::MessageReceived {
+					dest: envelope.dest,
+					nonce: envelope.nonce,
+					result: MessageDispatchResult::Dispatched,
+				}),
+				Err(err) => Self::deposit_event(Event::MessageReceived {
+					dest: envelope.dest,
+					nonce: envelope.nonce,
+					result: MessageDispatchResult::NotDispatched(err),
+				}),
 			}
-
-			log::info!(target: "inbound-queue","💫 done");
 
 			Ok(())
 		}
