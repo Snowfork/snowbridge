@@ -24,8 +24,8 @@ source_up_if_exists
 # export BEEFY_RELAY_ETH_KEY=         # Your Beefy relayer account private key
 # export PARACHAIN_RELAY_ETH_KEY=     # Your Parachain relayer account private key
 # export E2E_TEST_ETH_KEY=            # Your E2E test account private key
-# export ETH_RANDAO_DELAY=96          # 3 epochs=96 slots=20mins
-# export ETH_RANDAO_EXP=128           # 1 epoch more than ETH_RANDAO_DELAY 
+# export ETH_RANDAO_DELAY=128         # 4 epochs=128 slots=25.6mins
+# export ETH_RANDAO_EXP=6             # 6 slots before expired
 
 
 ## For local dev setup

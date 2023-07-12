@@ -73,12 +73,12 @@ registry_contract_sovereign_account="${REGISTRY_CONTRACT_SOVEREIGN_ACCOUNT:-0x5d
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
 
 ## BeefyClient
-# For max safety delay should be MAX_SEED_LOOKAHEAD=3 epochs=3*8*6=144s
-# but for rococo-local each session is only 20 slots=120s 
-# so relax to use 3 here just for quick test
+# For max safety delay should be MAX_SEED_LOOKAHEAD=4 epochs=4*8*6=192s
+# but for rococo-local each session is only 20 slots=120s
+# so relax somehow here just for quick test
 # for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
-export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
-export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-8}"
+export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-6}"
+export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
 
 ## ParachainClient
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
