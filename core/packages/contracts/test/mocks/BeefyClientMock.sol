@@ -15,4 +15,14 @@ contract BeefyClientMock is BeefyClient {
     function minimumSignatureThreshold_public(uint256 validatorSetLen) external pure returns (uint256) {
         return minimumSignatureThreshold(validatorSetLen);
     }
+
+    function initialize_public(
+        uint64 _initialBeefyBlock,
+        ValidatorSet calldata _initialValidatorSet,
+        ValidatorSet calldata _nextValidatorSet
+    ) external {
+        latestBeefyBlock = _initialBeefyBlock;
+        currentValidatorSet = _initialValidatorSet;
+        nextValidatorSet = _nextValidatorSet;
+    }
 }
