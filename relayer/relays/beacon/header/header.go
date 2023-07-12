@@ -398,13 +398,6 @@ func (h *Header) batchSyncHeaders(ctx context.Context, headerUpdates []scale.Hea
 	headerUpdatesInf := make([]interface{}, len(headerUpdates))
 	for i, v := range headerUpdates {
 		headerUpdatesInf[i] = v
-		log.WithFields(log.Fields{
-			"BlockHash":    v.ExecutionHeader.BlockHash.Hex(),
-			"ParentHash":   v.ExecutionHeader.ParentHash.Hex(),
-			"BlockNumber":  v.ExecutionHeader.BlockNumber,
-			"StateRoot":    v.ExecutionHeader.StateRoot.Hex(),
-			"ReceiptsRoot": v.ExecutionHeader.ReceiptsRoot.Hex(),
-		}).Debug("syncing header")
 	}
 	err := h.writer.BatchCall(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdatesInf)
 	if err != nil {
