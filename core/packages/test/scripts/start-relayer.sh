@@ -9,9 +9,11 @@ config_relayer(){
         --arg k1 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_gas_limit $eth_gas_limit \
+        --arg relaychain_ws_url $relaychain_ws_url \
     '
       .sink.contracts.BeefyClient = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .source.polkadot.endpoint = $relaychain_ws_url
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     ' \
@@ -24,11 +26,15 @@ config_relayer(){
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg laneID $BRIDGE_HUB_PARAID \
         --arg eth_gas_limit $eth_gas_limit \
+        --arg relaychain_ws_url $relaychain_ws_url \
+        --arg bridgehub_ws_url $bridgehub_ws_url \
     '
       .source.contracts.InboundQueue = $k1
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.InboundQueue = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .source.polkadot.endpoint = $relaychain_ws_url
+    | .source.parachain.endpoint = $bridgehub_ws_url
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."lane-id" = $laneID
@@ -42,11 +48,15 @@ config_relayer(){
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg laneID $ASSET_HUB_PARAID \
         --arg eth_gas_limit $eth_gas_limit \
+        --arg relaychain_ws_url $relaychain_ws_url \
+        --arg bridgehub_ws_url $bridgehub_ws_url \
     '
       .source.contracts.InboundQueue = $k1
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.InboundQueue = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .source.polkadot.endpoint = $relaychain_ws_url
+    | .source.parachain.endpoint = $bridgehub_ws_url
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."lane-id" = $laneID
@@ -57,9 +67,11 @@ config_relayer(){
     jq \
         --arg beacon_endpoint_http $beacon_endpoint_http \
         --arg active_spec $active_spec \
+        --arg bridgehub_ws_url $bridgehub_ws_url \
     '
       .source.beacon.endpoint = $beacon_endpoint_http
     | .source.beacon.activeSpec = $active_spec
+    | .sink.parachain.endpoint = $bridgehub_ws_url
     ' \
     config/beacon-relay.json > $output_dir/beacon-relay.json
 
@@ -68,10 +80,12 @@ config_relayer(){
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg k1 "$(address_for OutboundQueue)" \
         --arg laneID $ASSET_HUB_PARAID \
+        --arg bridgehub_ws_url $bridgehub_ws_url \
     '
       .source.ethereum.endpoint = $eth_endpoint_ws
     | .source.contracts.OutboundQueue = $k1
     | .source."lane-id" = $laneID
+    | .sink.parachain.endpoint = $bridgehub_ws_url
     ' \
     config/execution-relay.json > $output_dir/execution-relay.json
 }
@@ -150,6 +164,16 @@ start_relayer()
     ) &
 }
 
+docker_start_relayer()
+{
+    docker-compose up -d
+}
+
+docker_stop_relayer()
+{
+    docker-compose down
+}
+
 build_relayer()
 {
     echo "Building relayer"
@@ -159,7 +183,7 @@ build_relayer()
 
 deploy_relayer()
 {
-    check_tool && build_relayer && config_relayer && start_relayer
+    check_tool && build_relayer && config_relayer && start_relayer # docker_start_relayer
 }
 
 if [ -z "${from_start_services:-}" ]; then

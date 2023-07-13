@@ -1,8 +1,15 @@
-FROM golang:1.14
-WORKDIR /opt/relayer
-ADD . .
+FROM golang:1.20 as builder
+WORKDIR /app
+COPY ./relayer .
+WORKDIR /app
 RUN go build -v -o build/snowbridge-relay main.go
 
-FROM parity/subkey:2.0.0
-COPY --from=0 /opt/relayer/build/snowbridge-relay /usr/local/bin/
+# =============
+FROM ubuntu:22.04
+COPY --from=builder /app/build/snowbridge-relay /usr/local/bin
+
+# check if executable works in this container
+RUN /usr/local/bin/snowbridge-relay --help
+
+VOLUME ["/config"]
 ENTRYPOINT ["/usr/local/bin/snowbridge-relay"]

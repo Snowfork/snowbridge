@@ -16,6 +16,7 @@ start_geth() {
             --miner.etherbase=0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD \
             --authrpc.addr="127.0.0.1" \
             --http.addr="0.0.0.0" \
+            --ws.addr="0.0.0.0" \
             --http.corsdomain '*' \
             --allow-insecure-unlock \
             --authrpc.jwtsecret config/jwtsecret \
@@ -51,6 +52,7 @@ start_lodestar() {
             --genesisTime $timestamp \
             --startValidators "0..7" \
             --enr.ip6 "127.0.0.1" \
+            --rest.address "0.0.0.0" \
             --eth1.providerUrls "http://127.0.0.1:8545" \
             --execution.urls "http://127.0.0.1:8551" \
             --dataDir "$ethereum_data_dir" \

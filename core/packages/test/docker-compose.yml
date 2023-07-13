@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  beacon:
+    platform: linux/amd64
+    image: ronyang/snowbridge-relay # change to snowfork
+    command: run beacon --config /config/beacon-relay.json --substrate.private-key "//BeaconRelay"
+    volumes:
+      - $output_dir:/config
+    env_file:
+      - .env
+    restart: on-failure
+  
+  execution:
+    platform: linux/amd64
+    image: ronyang/snowbridge-relay
+    command: run execution --config /config/execution-relay.json --substrate.private-key "//ExecutionRelay"
+    volumes:
+      - $output_dir:/config
+    env_file:
+      - .env
+    restart: on-failure
+
+  beefy:
+    platform: linux/amd64
+    image: ronyang/snowbridge-relay
+    command: run beefy --config /config/beefy-relay.json --ethereum.private-key ${BEEFY_RELAY_ETH_KEY}
+    volumes:
+      - $output_dir:/config
+    env_file:
+      - .env
+    restart: on-failure
+  
+  parachain-bridgehub:
+    platform: linux/amd64
+    image: ronyang/snowbridge-relay
+    command: run parachain --config /config/parachain-relay-bridge-hub.json --ethereum.private-key ${PARACHAIN_RELAY_ETH_KEY}
+    volumes:
+      - $output_dir:/config
+    env_file:
+      - .env
+    restart: on-failure
+
+  

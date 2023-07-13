@@ -1,0 +1,6 @@
+.vscode
+.idea
+core/
+parachain/
+cumulus/
+smoketest/
