@@ -3,22 +3,22 @@ pragma solidity ^0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 
-import {InboundQueue} from "../src/InboundQueue.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
-import {Vault} from "../src/Vault.sol";
 import {IParachainClient} from "../src/IParachainClient.sol";
+import {Gateway} from "../src/Gateway.sol";
+import {Executor} from "../src/Executor.sol";
+import {Tokens} from "../src/tokens/Tokens.sol";
 import {ParaID} from "../src/Types.sol";
 import {ParachainClientMock} from "./mocks/ParachainClientMock.sol";
 import {IRecipient, RecipientMock} from "./mocks/RecipientMock.sol";
-import {Registry} from "../src/Registry.sol";
 
-contract InboundQueueTest is Test {
-    InboundQueue public channel;
+contract GatewayTest is Test {
+    Gateway public gateway;
     RecipientMock public recipient;
 
     Vault public vault;
 
-    event MessageDispatched(ParaID origin, uint64 nonce, InboundQueue.DispatchResult result);
+    event InboundMessageDispatched(ParaID origin, uint64 nonce, InboundQueue.DispatchResult result);
 
     ParaID public constant ORIGIN = ParaID.wrap(1001);
     bytes32[] public proof = [bytes32(0x2f9ee6cfdf244060dc28aa46347c5219e303fc95062dd672b4e406ca5c29764b)];
@@ -28,18 +28,12 @@ contract InboundQueueTest is Test {
     bytes32 constant RECIPIENT = keccak256("RecipientMock");
 
     function setUp() public {
-        Registry registry = new Registry();
-        registry.grantRole(registry.REGISTER_ROLE(), address(this));
-
         IParachainClient parachainClient = new ParachainClientMock(BeefyClient(address(0)), 0);
         recipient = new RecipientMock();
-        registry.registerContract(RECIPIENT, address(recipient));
-
-        vault = new Vault();
 
         deal(address(this), 100 ether);
 
-        channel = new InboundQueue(registry, parachainClient, vault, 1 ether);
+        gateway = new Gateway(parachainClient, 1 ether, 1 ether, executor, tokens);
         vault.grantRole(vault.WITHDRAW_ROLE(), address(channel));
     }
 

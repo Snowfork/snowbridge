@@ -6,13 +6,13 @@ import {ScaleCodec} from "./ScaleCodec.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {ParaID} from "./Types.sol";
 
-library NativeTokensTypes {
+library ExecutorTypes {
     /**
      * @dev SCALE-encodes `router_primitives::inbound::VersionedMessage` containing payload
      * `NativeTokensMessage::Create`
      */
     // solhint-disable-next-line func-name-mixedcase
-    function Create(
+    function CreateNativeToken(
         address origin,
         address token,
         bytes memory name,
@@ -41,7 +41,7 @@ library NativeTokensTypes {
      * `NativeTokensMessage::Mint`
      */
     // solhint-disable-next-line func-name-mixedcase
-    function Mint(address origin, address token, ParaID dest, bytes memory recipient, uint128 amount)
+    function MintNativeToken(address origin, address token, ParaID dest, bytes memory recipient, uint128 amount)
         internal
         view
         returns (bytes memory)

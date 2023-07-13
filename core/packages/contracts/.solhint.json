@@ -3,6 +3,7 @@
   "rules": {
     "compiler-version": ["error", "0.8.20"],
     "func-visibility": ["warn", {"ignoreConstructors":true}],
+    "private-vars-leading-underscore": ["off",{"strict":false}],
     "not-rely-on-time": "off",
     "avoid-low-level-calls": "off",
     "no-inline-assembly": "off"
