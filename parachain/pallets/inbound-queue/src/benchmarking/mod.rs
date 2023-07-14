@@ -56,8 +56,8 @@ mod benchmarks {
 	);
 
 	fn create_allowlist<T>() -> BoundedBTreeSet<H160, T::AllowListLength>
-		where
-			T: Config,
+	where
+		T: Config,
 	{
 		let allowlist: BoundedBTreeSet<H160, T::AllowListLength> =
 			BTreeSet::from_iter(vec![OUTBOUND_QUEUE_ADDRESS.into()].into_iter())
@@ -66,5 +66,4 @@ mod benchmarks {
 
 		allowlist
 	}
-
 }

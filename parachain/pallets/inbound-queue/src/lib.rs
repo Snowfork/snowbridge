@@ -60,10 +60,10 @@ pub mod pallet {
 
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
-	use snowbridge_router_primitives::inbound::{GatewayMessage, NativeTokensMessage};
-	use xcm::v3::SendXcm;
 	#[cfg(feature = "runtime-benchmarks")]
 	use snowbridge_ethereum::H256;
+	use snowbridge_router_primitives::inbound::{GatewayMessage, NativeTokensMessage};
+	use xcm::v3::SendXcm;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);

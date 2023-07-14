@@ -36,11 +36,11 @@ use snowbridge_core::Proof;
 use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
-use types::{
-	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedBeaconStateBuffer,
-	SyncCommitteePrepared, Update,
-};
 pub use types::ExecutionHeaderBuffer;
+use types::{
+	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared,
+	Update,
+};
 
 pub use pallet::*;
 
@@ -175,8 +175,7 @@ pub mod pallet {
 
 	/// Execution Headers: Mapping of ring buffer index to a pruning candidate
 	#[pallet::storage]
-	pub type ExecutionHeaderMapping<T: Config> =
-		StorageMap<_, Identity, u32, H256, ValueQuery>;
+	pub type ExecutionHeaderMapping<T: Config> = StorageMap<_, Identity, u32, H256, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

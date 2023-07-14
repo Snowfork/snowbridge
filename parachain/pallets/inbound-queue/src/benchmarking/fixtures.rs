@@ -9,7 +9,7 @@ pub struct InboundQueueTest {
 }
 
 pub fn make_create_message() -> InboundQueueTest {
-    InboundQueueTest{
+	InboundQueueTest{
         execution_header: CompactExecutionHeader{
             parent_hash: hex!("04a7f6ab8282203562c62f38b0ab41d32aaebe2c7ea687702b463148a6429e04").into(),
             block_number: 55,

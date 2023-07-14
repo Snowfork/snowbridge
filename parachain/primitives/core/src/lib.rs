@@ -22,7 +22,6 @@ pub use polkadot_parachain::primitives::Id as ParaId;
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 pub use types::{Message, MessageId, MessageNonce, Proof};
 
-
 /// A stable id for a bridge contract on the Ethereum side
 #[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, TypeInfo, RuntimeDebug)]
 pub struct ContractId([u8; 32]);
