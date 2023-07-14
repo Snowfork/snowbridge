@@ -8,11 +8,7 @@ mod envelope;
 mod benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
-pub use snowbridge_ethereum_beacon_client::ExecutionHeaderBuffer;
-#[cfg(feature = "runtime-benchmarks")]
 use snowbridge_beacon_primitives::CompactExecutionHeader;
-#[cfg(feature = "runtime-benchmarks")]
-use snowbridge_core::RingBufferMap;
 
 pub mod weights;
 
@@ -75,12 +71,6 @@ pub mod pallet {
 	#[cfg(feature = "runtime-benchmarks")]
 	pub trait BenchmarkHelper<T> {
 		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader);
-	}
-	#[cfg(feature = "runtime-benchmarks")]
-	impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for () {
-		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader) {
-			<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
-		}
 	}
 
 	#[pallet::config]

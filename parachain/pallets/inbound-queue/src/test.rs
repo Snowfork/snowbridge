@@ -134,6 +134,12 @@ parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15};
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Test {
+	// not implemented since the MockVerifier is used for tests
+	fn initialize_storage(_: H256, _: CompactExecutionHeader) {}
+}
+
 impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
@@ -143,7 +149,7 @@ impl inbound_queue::Config for Test {
 	type WeightInfo = ();
 	type AllowListLength = ConstU32<2>;
 	#[cfg(feature = "runtime-benchmarks")]
-	type Helper = ();
+	type Helper = Test;
 }
 
 fn last_events(n: usize) -> Vec<RuntimeEvent> {
@@ -200,6 +206,7 @@ const OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
 );
 
 use snowbridge_core::ParaId;
+use snowbridge_ethereum_beacon_client::ExecutionHeaderBuffer;
 
 #[test]
 fn test_submit() {
