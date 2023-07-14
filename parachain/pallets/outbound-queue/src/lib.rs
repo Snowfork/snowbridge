@@ -79,6 +79,12 @@ impl Into<Token> for Message {
 	}
 }
 
+impl From<u32> for AggregateMessageOrigin {
+	fn from(value: u32) -> Self {
+		AggregateMessageOrigin::Parachain(value.into())
+	}
+}
+
 /// The maximal length of an enqueued message, as determined by the MessageQueue pallet
 pub type MaxEnqueuedMessageSizeOf<T> =
 	<<T as Config>::MessageQueue as EnqueueMessage<AggregateMessageOrigin>>::MaxMessageLen;

@@ -2585,8 +2585,8 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "ssz-rs",
- "ssz-rs-derive",
+ "ssz_rs",
+ "ssz_rs_derive",
  "static_assertions",
 ]
 
@@ -3255,28 +3255,6 @@ dependencies = [
  "serde",
  "serde_json",
  "unicode-xid",
-]
-
-[[package]]
-name = "ssz-rs"
-version = "0.8.0"
-source = "git+https://github.com/ralexstokes/ssz-rs?rev=d18af912abacbf84219be37ab3b42a9abcf10d2a#d18af912abacbf84219be37ab3b42a9abcf10d2a"
-dependencies = [
- "bitvec",
- "num-bigint",
- "sha2 0.9.9",
- "ssz-rs-derive",
- "thiserror",
-]
-
-[[package]]
-name = "ssz-rs-derive"
-version = "0.8.0"
-source = "git+https://github.com/ralexstokes/ssz-rs?rev=d18af912abacbf84219be37ab3b42a9abcf10d2a#d18af912abacbf84219be37ab3b42a9abcf10d2a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]

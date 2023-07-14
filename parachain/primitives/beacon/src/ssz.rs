@@ -11,7 +11,7 @@ use sp_core::H256;
 use sp_std::{vec, vec::Vec};
 use ssz_rs::{
 	prelude::{List, Vector},
-	Bitvector, Deserialize, MerkleizationError, SimpleSerialize, Sized, U256,
+	Bitvector, Deserialize, DeserializeError, SimpleSerialize, SimpleSerializeError, Sized, U256,
 };
 use ssz_rs_derive::SimpleSerialize as SimpleSerializeDerive;
 
@@ -49,16 +49,23 @@ impl<const COMMITTEE_SIZE: usize> From<SyncCommittee<COMMITTEE_SIZE>>
 		let mut pubkeys_vec = Vec::new();
 
 		for pubkey in sync_committee.pubkeys.iter() {
-			let conv_pubkey = Vector::<u8, PUBKEY_SIZE>::from_iter(pubkey.0);
+			// The only thing that can go wrong in the conversion from vec to Vector (ssz type) is
+			// that the Vector size is 0, or that the given data to create the Vector from does not
+			// match the expected size N. Because these sizes are statically checked (i.e.
+			// PublicKey's size is 48, and const PUBKEY_SIZE is 48, it is impossible for "try_from"
+			// to return an error condition.
+			let conv_pubkey = Vector::<u8, PUBKEY_SIZE>::try_from(pubkey.0.to_vec())
+				.expect("checked statically; qed");
 
 			pubkeys_vec.push(conv_pubkey);
 		}
 
-		let pubkeys =
-			Vector::<Vector<u8, PUBKEY_SIZE>, { COMMITTEE_SIZE }>::from_iter(pubkeys_vec.clone());
+		let pubkeys = Vector::<Vector<u8, PUBKEY_SIZE>, { COMMITTEE_SIZE }>::try_from(pubkeys_vec)
+			.expect("checked statically; qed");
 
 		let aggregate_pubkey =
-			Vector::<u8, PUBKEY_SIZE>::from_iter(sync_committee.aggregate_pubkey.0);
+			Vector::<u8, PUBKEY_SIZE>::try_from(sync_committee.aggregate_pubkey.0.to_vec())
+				.expect("checked statically; qed");
 
 		SSZSyncCommittee { pubkeys, aggregate_pubkey }
 	}
@@ -79,9 +86,10 @@ impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 				&sync_aggregate.sync_committee_bits,
 			)
 			.expect("checked statically; qed"),
-			sync_committee_signature: Vector::<u8, SIGNATURE_SIZE>::from_iter(
-				sync_aggregate.sync_committee_signature.0,
-			),
+			sync_committee_signature: Vector::<u8, SIGNATURE_SIZE>::try_from(
+				sync_aggregate.sync_committee_signature.0.to_vec(),
+			)
+			.expect("checked statically; qed"),
 		}
 	}
 }
@@ -135,22 +143,31 @@ pub struct SSZExecutionPayloadHeader {
 	pub withdrawals_root: [u8; 32],
 }
 
-impl From<ExecutionPayloadHeader> for SSZExecutionPayloadHeader {
-	fn from(payload: ExecutionPayloadHeader) -> Self {
-		SSZExecutionPayloadHeader {
+impl TryFrom<ExecutionPayloadHeader> for SSZExecutionPayloadHeader {
+	type Error = SimpleSerializeError;
+
+	fn try_from(payload: ExecutionPayloadHeader) -> Result<Self, Self::Error> {
+		Ok(SSZExecutionPayloadHeader {
 			parent_hash: payload.parent_hash.to_fixed_bytes(),
-			fee_recipient: Vector::<u8, FEE_RECIPIENT_SIZE>::from_iter(
-				payload.fee_recipient.to_fixed_bytes(),
-			),
+			fee_recipient: Vector::<u8, FEE_RECIPIENT_SIZE>::try_from(
+				payload.fee_recipient.to_fixed_bytes().to_vec(),
+			)
+			.expect("checked statically; qed"),
 			state_root: payload.state_root.to_fixed_bytes(),
 			receipts_root: payload.receipts_root.to_fixed_bytes(),
-			logs_bloom: Vector::<u8, 256>::from_iter(payload.logs_bloom),
+			// Logs bloom bytes size is not constrained, so here we do need to check the try_from
+			// error
+			logs_bloom: Vector::<u8, LOGS_BLOOM_SIZE>::try_from(payload.logs_bloom)
+				.map_err(|(_, err)| err)?,
 			prev_randao: payload.prev_randao.to_fixed_bytes(),
 			block_number: payload.block_number,
 			gas_limit: payload.gas_limit,
 			gas_used: payload.gas_used,
 			timestamp: payload.timestamp,
-			extra_data: List::<u8, EXTRA_DATA_SIZE>::from_iter(payload.extra_data),
+			// Extra data bytes size is not constrained, so here we do need to check the try_from
+			// error
+			extra_data: List::<u8, EXTRA_DATA_SIZE>::try_from(payload.extra_data)
+				.map_err(|(_, err)| err)?,
 			base_fee_per_gas: U256::from_bytes_le(
 				payload
 					.base_fee_per_gas
@@ -161,17 +178,17 @@ impl From<ExecutionPayloadHeader> for SSZExecutionPayloadHeader {
 			block_hash: payload.block_hash.to_fixed_bytes(),
 			transactions_root: payload.transactions_root.to_fixed_bytes(),
 			withdrawals_root: payload.withdrawals_root.to_fixed_bytes(),
-		}
+		})
 	}
 }
 
-pub fn hash_tree_root<T: SimpleSerialize>(mut object: T) -> Result<H256, MerkleizationError> {
+pub fn hash_tree_root<T: SimpleSerialize>(mut object: T) -> Result<H256, SimpleSerializeError> {
 	match object.hash_tree_root() {
 		Ok(node) => {
 			let fixed_bytes: [u8; 32] =
-				node.as_bytes().try_into().expect("Node is a newtype over [u8; 32]; qed");
+				node.as_ref().try_into().expect("Node is a newtype over [u8; 32]; qed");
 			Ok(fixed_bytes.into())
 		},
-		Err(err) => Err(err),
+		Err(err) => Err(err.into()),
 	}
 }
