@@ -61,24 +61,16 @@ skip_relayer="${SKIP_RELAYER:-false}"
 ## Deployment key
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
 
-## BeefyClient
+## Gateway params
 export RANDAO_COMMIT_DELAY=3
-export RANDAO_COMMIT_EXP=8
-
-## ParachainClient
+export RANDAO_COMMIT_EXP=3
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
-
-## OutboundChannel
 export RELAYER_FEE=1
-
-## InboundChannel
 export RELAYER_REWARD=1
-
-## NativeTokens
 export ASSET_HUB_PARAID=$statemine_para_id
 export CREATE_TOKEN_FEE=1
 export CREATE_CALL_INDEX="0x3500"
-export SET_METADATA_CALL_INDEX="0x3511"
+export GAS_TO_FORWARD=500000
 
 ## Vault
 export BRIDGE_HUB_INITIAL_DEPOSIT=1000

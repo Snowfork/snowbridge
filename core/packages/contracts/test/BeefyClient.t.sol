@@ -1,35 +1,36 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
-import "openzeppelin/utils/Strings.sol";
-import "forge-std/Test.sol";
-import "forge-std/console.sol";
+import {Strings} from "openzeppelin/utils/Strings.sol";
+import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 
-import "./mocks/BeefyClientMock.sol";
-import "../src/ScaleCodec.sol";
-import "../src/utils/Bitfield.sol";
+import {BeefyClient} from "../src/BeefyClient.sol";
+import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
+import {ScaleCodec} from "../src/ScaleCodec.sol";
+import {Bitfield} from "../src/utils/Bitfield.sol";
 
 contract BeefyClientTest is Test {
-    BeefyClientMock beefyClient;
-    uint8 randaoCommitDelay;
-    uint8 randaoCommitExpiration;
-    uint32 blockNumber;
-    uint32 difficulty;
-    uint32 setSize;
-    uint32 setId;
-    uint128 currentSetId;
-    uint128 nextSetId;
-    bytes32 commitHash;
-    bytes32 root;
-    uint256[] bitSetArray;
-    uint256[] bitfield;
-    BeefyClient.Payload payload;
-    uint256[] finalBitfield;
-    BeefyClient.ValidatorProof validatorProof;
-    BeefyClient.ValidatorProof[] finalValidatorProofs;
-    bytes32[] mmrLeafProofs;
-    BeefyClient.MMRLeaf mmrLeaf;
-    uint256 leafProofOrder;
+    BeefyClientMock public beefyClient;
+    uint8 public randaoCommitDelay;
+    uint8 public randaoCommitExpiration;
+    uint32 public blockNumber;
+    uint32 public difficulty;
+    uint32 public setSize;
+    uint32 public setId;
+    uint128 public currentSetId;
+    uint128 public nextSetId;
+    bytes32 public commitHash;
+    bytes32 public root;
+    uint256[] public bitSetArray;
+    uint256[] public bitfield;
+    BeefyClient.Payload public payload;
+    uint256[] public finalBitfield;
+    BeefyClient.ValidatorProof public validatorProof;
+    BeefyClient.ValidatorProof[] public finalValidatorProofs;
+    bytes32[] public mmrLeafProofs;
+    BeefyClient.MMRLeaf public mmrLeaf;
+    uint256 public leafProofOrder;
 
     function setUp() public {
         randaoCommitDelay = 3;
@@ -61,10 +62,8 @@ contract BeefyClientTest is Test {
             inputs[i + 4] = Strings.toString(finalBitfield[i]);
         }
         BeefyClient.ValidatorProof[] memory proofs;
-        (root, proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) = abi.decode(
-            vm.ffi(inputs),
-            (bytes32, BeefyClient.ValidatorProof[], bytes32[], BeefyClient.MMRLeaf, uint256)
-        );
+        (root, proofs, mmrLeafProofs, mmrLeaf, leafProofOrder) =
+            abi.decode(vm.ffi(inputs), (bytes32, BeefyClient.ValidatorProof[], bytes32[], BeefyClient.MMRLeaf, uint256));
         // Cache finalValidatorProofs to storage in order to reuse in submitFinal later
         for (uint256 i = 0; i < proofs.length; i++) {
             finalValidatorProofs.push(proofs[i]);

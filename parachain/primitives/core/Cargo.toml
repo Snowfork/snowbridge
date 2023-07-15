@@ -19,6 +19,9 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ma
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
+ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
+
+
 [dev-dependencies]
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 
@@ -35,6 +38,7 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
     "snowbridge-ethereum/std",
-    "xcm/std"
+    "xcm/std",
+    "ethabi/std"
 ]
 runtime-benchmarks = []

@@ -7,18 +7,32 @@ use super::*;
 use crate::Pallet as Template;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
+use sp_core::Get;
 
 #[benchmarks]
 mod benchmarks {
 	use super::*;
 
 	#[benchmark]
-	fn upgrade() -> Result<(), BenchmarkError> {
+	fn upgrade(x: Linear<0, { T::MaxUpgradeDataSize::get() }>) -> Result<(), BenchmarkError> {
 		let caller: T::AccountId = whitelisted_caller();
-		let upgrade_task = H160::repeat_byte(3);
+		let logic = H160::repeat_byte(1);
+		let data: Vec<u8> = (0..x).map(|_| 1u8).collect();
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), upgrade_task);
+		_(RawOrigin::Signed(caller), logic, Some(data));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn create_agent(x: Linear<0, { T::MaxUpgradeDataSize::get() }>) -> Result<(), BenchmarkError> {
+		let caller: T::AccountId = whitelisted_caller();
+		let logic = H160::repeat_byte(1);
+		let data: Vec<u8> = (0..x).map(|_| 1u8).collect();
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller), logic, Some(data));
 
 		Ok(())
 	}

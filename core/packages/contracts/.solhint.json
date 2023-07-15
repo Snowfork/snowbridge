@@ -6,6 +6,9 @@
     "private-vars-leading-underscore": ["off",{"strict":false}],
     "not-rely-on-time": "off",
     "avoid-low-level-calls": "off",
-    "no-inline-assembly": "off"
+    "no-inline-assembly": "off",
+    "no-empty-blocks": "off",
+    "func-name-mixedcase": "off",
+    "no-console": "off",
   }
 }

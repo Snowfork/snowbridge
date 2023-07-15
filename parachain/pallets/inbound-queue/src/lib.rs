@@ -91,7 +91,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Message came from an invalid outbound channel on the Ethereum side.
-		InvalidOutboundQueue,
+		InvalidGateway,
 		/// Message has an invalid envelope.
 		InvalidEnvelope,
 		/// Message has an unexpected nonce.
@@ -103,32 +103,27 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn peer)]
-	pub type AllowList<T: Config> =
-		StorageValue<_, BoundedBTreeSet<H160, T::AllowListLength>, ValueQuery>;
+	#[pallet::getter(fn gateway)]
+	pub type Gateway<T: Config> = StorageValue<_, H160, ValueQuery>;
 
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
-		pub allowlist: Vec<H160>,
+		pub gateway: H160,
 	}
 
 	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self { allowlist: Default::default() }
+			Self { gateway: Default::default() }
 		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
-			let allowlist: BoundedBTreeSet<H160, T::AllowListLength> =
-				BTreeSet::from_iter(self.allowlist.clone().into_iter())
-					.try_into()
-					.expect("exceeded bound");
-			<AllowList<T>>::put(allowlist);
+			Gateway::<T>::put(self.gateway);
 		}
 	}
 
@@ -144,12 +139,8 @@ pub mod pallet {
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
-			// Verify that the message was submitted to us from a known
-			// outbound channel on the ethereum side
-			let allowlist = <AllowList<T>>::get();
-			if !allowlist.contains(&envelope.outbound_queue_address) {
-				return Err(Error::<T>::InvalidOutboundQueue.into());
-			}
+			// Verify that the message was submitted from the known Gateway contract
+			ensure!(Gateway::<T>::get() == envelope.gateway, Error::<T>::InvalidGateway,);
 
 			// Verify message nonce
 			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {

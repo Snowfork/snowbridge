@@ -32,25 +32,12 @@ pub struct MessageV1 {
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub enum GatewayMessage {
-	UpgradeProxy(UpgradeProxyMessage),
-	NativeTokens(NativeTokensMessage),
-}
-
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum UpgradeProxyMessage {}
-
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum NativeTokensMessage {
-	Create {
+	CreateForeignAsset {
 		origin: H160,
 		token: H160,
-		name: Vec<u8>,
-		symbol: Vec<u8>,
-		decimals: u8,
 		create_call_index: [u8; 2],
-		set_metadata_call_index: [u8; 2],
 	},
-	Mint {
+	MintForeignAsset {
 		origin: H160,
 		token: H160,
 		dest: Option<u32>,
@@ -68,21 +55,11 @@ impl TryInto<Xcm<()>> for MessageV1 {
 	type Error = ConvertError;
 
 	fn try_into(self) -> Result<Xcm<()>, Self::Error> {
-		match self.message {
-			GatewayMessage::UpgradeProxy(message) => message.convert(self.chain_id),
-			GatewayMessage::NativeTokens(message) => message.convert(self.chain_id),
-		}
+		self.message.convert(self.chain_id)
 	}
 }
 
-impl UpgradeProxyMessage {
-	pub fn convert(self, _chain_id: u64) -> Result<Xcm<()>, ConvertError> {
-		// The UpgradeProxy gateway doesn't send any messages to Polkadot
-		Err(ConvertError::BadFormat)
-	}
-}
-
-impl NativeTokensMessage {
+impl GatewayMessage {
 	pub fn convert(self, chain_id: u64) -> Result<Xcm<()>, ConvertError> {
 		let network = NetworkId::Ethereum { chain_id };
 		let buy_execution_fee_amount = 2_000_000_000; //TODO: WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
@@ -92,15 +69,7 @@ impl NativeTokensMessage {
 		};
 
 		match self {
-			NativeTokensMessage::Create {
-				origin,
-				token,
-				name,
-				symbol,
-				decimals,
-				create_call_index,
-				set_metadata_call_index,
-			} => {
+			GatewayMessage::CreateForeignAsset { origin, token, create_call_index } => {
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
 					&chain_id,
 					origin.as_fixed_bytes(),
@@ -143,18 +112,10 @@ impl NativeTokensMessage {
 							.into(),
 					},
 					ExpectTransactStatus(MaybeErrorCode::Success),
-					Transact {
-						origin_kind: OriginKind::SovereignAccount,
-						require_weight_at_most: Weight::from_parts(200_000_000, 8_000),
-						call: (set_metadata_call_index, asset_id, name, symbol, decimals)
-							.encode()
-							.into(),
-					},
-					ExpectTransactStatus(MaybeErrorCode::Success),
 				];
 				Ok(instructions.into())
 			},
-			NativeTokensMessage::Mint { origin, token, dest, recipient, amount } => {
+			GatewayMessage::MintForeignAsset { origin, token, dest, recipient, amount } => {
 				let asset =
 					MultiAsset::from((Self::convert_token_address(network, origin, token), amount));
 

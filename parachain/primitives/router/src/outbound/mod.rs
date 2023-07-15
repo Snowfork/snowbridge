@@ -7,13 +7,13 @@ use core::slice::Iter;
 use codec::{Decode, Encode};
 
 use frame_support::{ensure, log, traits::Get};
-use snowbridge_core::{OutboundMessage, OutboundQueue as OutboundQueueTrait};
+use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTrait};
 use sp_core::{H160, H256};
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
 use xcm_executor::traits::ExportXcm;
 
-use payload::{Message, NativeTokensMessage};
+use payload::Message;
 
 pub struct EthereumBlobExporter<UniversalLocation, BridgeLocation, OutboundQueue>(
 	PhantomData<(UniversalLocation, BridgeLocation, OutboundQueue)>,
@@ -109,10 +109,12 @@ where
 			return Err(SendError::Unroutable);
 		}
 
-		let (gateway, payload) = converted_message.encode();
+		let params = converted_message.encode();
 
 		let hash_input = (para_id, gateway, payload.clone()).encode();
 		let message_id: H256 = sp_io::hashing::blake2_256(&hash_input).into();
+
+		let (command, params) = Command::ExecuteXCM { origin_agent_id: (), payload: params }
 
 		let outbound_message =
 			OutboundMessage { id: message_id, origin: para_id.into(), gateway, payload };

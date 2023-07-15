@@ -4,28 +4,34 @@ pragma solidity 0.8.20;
 
 type ParaID is uint256;
 
-using {paraIDeq as ==, paraIDne as !=, paraIDisNone} for ParaID global;
+using {ParaIDEq as ==, ParaIDNe as !=} for ParaID global;
 
-function paraIDeq(ParaID a, ParaID b) pure returns (bool) {
+function ParaIDEq(ParaID a, ParaID b) pure returns (bool) {
     return ParaID.unwrap(a) == ParaID.unwrap(b);
 }
 
-function paraIDne(ParaID a, ParaID b) pure returns (bool) {
-    return !paraIDeq(a, b);
+function ParaIDNe(ParaID a, ParaID b) pure returns (bool) {
+    return !ParaIDEq(a, b);
 }
 
-function paraIDisNone(ParaID a) pure returns (bool) {
-    return ParaID.unwrap(a) == 0;
+struct Channel {
+    OperatingMode mode;
+    uint64 inboundNonce;
+    uint64 outboundNonce;
+    address agent;
+    uint256 fee;
+    uint256 reward;
 }
 
-type ChannelID is uint256;
-
-using {channelIDeq as ==, channelIDne as !=} for ChannelID global;
-
-function channelIDeq(ChannelID a, ChannelID b) pure returns (bool) {
-    return ChannelID.unwrap(a) == ChannelID.unwrap(b);
+// Inbound message from a Polkadot parachain (via BridgeHub)
+struct InboundMessage {
+    ParaID origin;
+    uint64 nonce;
+    bytes32 command;
+    bytes params;
 }
 
-function channelIDne(ChannelID a, ChannelID b) pure returns (bool) {
-    return !channelIDeq(a, b);
+enum OperatingMode {
+    Normal,
+    RejectingOutboundMessages
 }
