@@ -24,11 +24,21 @@ library Features {
     error InvalidAmount();
     error NoFundsforCreateToken();
 
-    struct Storage {
+    struct InitParams {
+        // AssetHub
         ParaID assetHubParaID;
-        address assetHubAgent;
+        // Registering new tokens
         uint256 createTokenFee;
         bytes2 createTokenCallId;
+    }
+
+    function initialize(InitParams calldata params, address assetHubAgent) external {
+        FeaturesStorage.Layout storage $ = FeaturesStorage.layout();
+
+        $.assetHubParaID = params.assetHubParaID;
+        $.assetHubAgent = assetHubAgent;
+        $.createTokenFee = params.createTokenFee;
+        $.createTokenCallId = params.createTokenCallId;
     }
 
     /// @dev Locks an amount of ERC20 Tokens in the vault and enqueues a mint message.

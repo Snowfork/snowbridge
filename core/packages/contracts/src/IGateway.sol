@@ -3,6 +3,7 @@
 pragma solidity 0.8.20;
 
 import {OperatingMode, InboundMessage, ParaID} from "./Types.sol";
+import {Verification} from "./Verification.sol";
 
 interface IGateway {
     // * Events *
@@ -29,11 +30,13 @@ interface IGateway {
     function channelFeeRewardOf(ParaID paraID) external view returns (uint256, uint256);
     function channelNoncesOf(ParaID paraID) external view returns (uint64, uint64);
     function agentOf(bytes32 agentID) external view returns (address);
-    function parachainClient() external view returns (address);
 
     // Submit an inbound message for dispatch
-    function submitInbound(InboundMessage calldata message, bytes32[] calldata leafProof, bytes calldata headerProof)
-        external;
+    function submitInbound(
+        InboundMessage calldata message,
+        bytes32[] calldata leafProof,
+        Verification.Proof calldata headerProof
+    ) external;
 
     // Features for Ethereum users
 

@@ -19,7 +19,7 @@ library MerkleProof {
      * @param proof the array of proofs to help verify the leaf's membership, ordered from leaf to root
      * @return a boolean value representing the success or failure of the operation
      */
-    function verify(bytes32 root, bytes32 leaf, uint256 position, uint256 width, bytes32[] memory proof)
+    function verify(bytes32 root, bytes32 leaf, uint256 position, uint256 width, bytes32[] calldata proof)
         internal
         pure
         returns (bool)
@@ -30,7 +30,7 @@ library MerkleProof {
         return root == computeRoot(leaf, position, width, proof);
     }
 
-    function computeRoot(bytes32 leaf, uint256 position, uint256 width, bytes32[] memory proof)
+    function computeRoot(bytes32 leaf, uint256 position, uint256 width, bytes32[] calldata proof)
         internal
         pure
         returns (bytes32)

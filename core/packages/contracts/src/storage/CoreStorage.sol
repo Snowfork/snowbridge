@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {IParachainClient} from "../ParachainClient.sol";
 import {AgentExecutor} from "../AgentExecutor.sol";
 import {Agent} from "../Agent.sol";
 import {Channel, OperatingMode, ParaID} from "../Types.sol";
@@ -15,8 +14,6 @@ library CoreStorage {
         mapping(ParaID paraID => Channel) channels;
         // All agents
         mapping(bytes32 agentID => address) agents;
-        // Light client message verifier
-        IParachainClient parachainClient;
         // Executor logic for agents
         address agentExecutor;
         // The fee charged to users for submitting outbound message to Polkadot

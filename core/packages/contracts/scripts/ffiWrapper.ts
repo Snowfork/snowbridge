@@ -13,26 +13,21 @@ const validatorSetSize = process.env["FixedSet"] == "true" ? accounts.length : 3
 const commitHash = fixtureData.commitmentHash
 const blockNumber = fixtureData.params.commitment.blockNumber
 const mmrLeafProofs = fixtureData.params.leafProof
-const payload: BeefyClient.PayloadStruct = fixtureData.params.commitment.payload
+const mmrRoot = fixtureData.params.commitment.payload[0].data
 const mmrLeaf: BeefyClient.MMRLeafStruct = fixtureData.params.leaf
 const leafProofOrder = fixtureData.params.leafProofOrder
 
-const subsetSize = validatorSetSize - Math.floor((validatorSetSize - 1) / 3)
+const absentSubsetSize = Math.floor((validatorSetSize - 1) / 3)
+const subsetSize = validatorSetSize - absentSubsetSize
 const subset = createRandomSubset(validatorSetSize, subsetSize)
+const absentSubset = createRandomSubset(validatorSetSize, absentSubsetSize)
 let validatorSet: ValidatorSet
 
 if (command == "GenerateInitialSet") {
     process.stdout.write(
         `${encoder.encode(
-            [
-                "uint32",
-                "uint32",
-                "uint32",
-                "uint256[]",
-                "bytes32",
-                "tuple(bytes32 mmrRootHash,bytes prefix,bytes suffix)",
-            ],
-            [blockNumber, validatorSetID, validatorSetSize, subset, commitHash, payload]
+            ["uint32", "uint32", "uint32", "uint256[]", "uint256[]", "bytes32", "bytes32"],
+            [blockNumber, validatorSetID, validatorSetSize, subset, absentSubset, commitHash, mmrRoot]
         )}`
     )
 } else if (command == "GenerateProofs") {
@@ -62,13 +57,7 @@ if (command == "GenerateInitialSet") {
                 "tuple(uint8 version,uint32 parentNumber,bytes32 parentHash,uint64 nextAuthoritySetID,uint32 nextAuthoritySetLen,bytes32 nextAuthoritySetRoot,bytes32 parachainHeadsRoot)",
                 "uint256",
             ],
-            [
-                validatorSet.root,
-                validatorFinalProofs,
-                mmrLeafProofs,
-                mmrLeaf,
-                leafProofOrder,
-            ]
+            [validatorSet.root, validatorFinalProofs, mmrLeafProofs, mmrLeaf, leafProofOrder]
         )}`
     )
 }

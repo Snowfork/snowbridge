@@ -5,10 +5,13 @@ pragma solidity 0.8.20;
 import "./Bits.sol";
 
 library Bitfield {
+    using Bits for uint256;
+
     /**
      * @dev Constants used to efficiently calculate the hamming weight of a bitfield. See
      * https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation for an explanation of those constants.
      */
+
     uint256 internal constant M1 = 0x5555555555555555555555555555555555555555555555555555555555555555;
     uint256 internal constant M2 = 0x3333333333333333333333333333333333333333333333333333333333333333;
     uint256 internal constant M4 = 0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f;
@@ -62,7 +65,7 @@ library Bitfield {
      * @dev Helper to create a bitfield.
      */
     function createBitfield(uint256[] calldata bitsToSet, uint256 length)
-        public
+        internal
         pure
         returns (uint256[] memory bitfield)
     {
@@ -71,8 +74,11 @@ library Bitfield {
 
         bitfield = new uint256[](arrayLength);
 
-        for (uint256 i = 0; i < bitsToSet.length; i++) {
+        for (uint256 i = 0; i < bitsToSet.length;) {
             set(bitfield, bitsToSet[i]);
+            unchecked {
+                ++i;
+            }
         }
 
         return bitfield;
@@ -104,20 +110,17 @@ library Bitfield {
 
     function isSet(uint256[] memory self, uint256 index) internal pure returns (bool) {
         uint256 element = index >> 8;
-        uint8 within = uint8(index & 0xFF);
-        return Bits.bit(self[element], within) == 1;
+        return self[element].bit(uint8(index)) == 1;
     }
 
     function set(uint256[] memory self, uint256 index) internal pure {
         uint256 element = index >> 8;
-        uint8 within = uint8(index & 0xFF);
-        self[element] = Bits.setBit(self[element], within);
+        self[element] = self[element].setBit(uint8(index));
     }
 
     function unset(uint256[] memory self, uint256 index) internal pure {
         uint256 element = index >> 8;
-        uint8 within = uint8(index & 0xFF);
-        self[element] = Bits.clearBit(self[element], within);
+        self[element] = self[element].clearBit(uint8(index));
     }
 
     function makeIndex(uint256 seed, uint256 iteration, uint256 length) internal pure returns (uint256 index) {

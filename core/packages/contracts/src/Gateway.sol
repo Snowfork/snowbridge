@@ -3,7 +3,7 @@
 pragma solidity 0.8.20;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
-import {IParachainClient, ParachainClient} from "./ParachainClient.sol";
+import {Verification} from "./Verification.sol";
 
 import {Features} from "./Features.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
@@ -13,6 +13,7 @@ import {IGateway} from "./IGateway.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {FeaturesStorage} from "./storage/FeaturesStorage.sol";
+import {VerificationStorage} from "./storage/VerificationStorage.sol";
 
 import {console} from "forge-std/console.sol";
 
@@ -58,8 +59,6 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
     error InvalidConfig();
 
     struct InitParams {
-        // Beefy light client subsystem
-        IParachainClient parachainClient;
         // Agent Executor
         address agentExecutor;
         // default fee & Reward parameters
@@ -71,11 +70,10 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
         // AssetHub
         ParaID assetHubParaID;
         bytes32 assetHubAgentID;
-        // Registering new tokens
-        uint256 createTokenFee;
-        bytes2 createTokenCallId;
         // Gas to forward to message handlers
         uint256 gasToForward;
+        Features.InitParams features;
+        Verification.InitParams verification;
     }
 
     // handler functions are privileged
@@ -98,7 +96,6 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
         }
 
         $.mode = OperatingMode.Normal;
-        $.parachainClient = params.parachainClient;
         $.agentExecutor = params.agentExecutor;
         $.defaultFee = params.fee;
         $.defaultReward = params.reward;
@@ -129,26 +126,22 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
             reward: params.reward
         });
 
-        FeaturesStorage.Layout storage fsp = FeaturesStorage.layout();
-
-        // Initialize storage for features
-        fsp.assetHubParaID = params.assetHubParaID;
-        fsp.assetHubAgent = address(assetHubAgent);
-        fsp.createTokenFee = params.createTokenFee;
-        fsp.createTokenCallId = params.createTokenCallId;
+        Features.initialize(params.features, address(assetHubAgent));
+        Verification.initialize(params.verification);
     }
 
-    function submitInbound(InboundMessage calldata message, bytes32[] calldata leafProof, bytes calldata headerProof)
-        external
-        onlyProxy
-    {
+    function submitInbound(
+        InboundMessage calldata message,
+        bytes32[] calldata leafProof,
+        Verification.Proof calldata headerProof
+    ) external onlyProxy {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         Channel storage channel = ensureChannel(message.origin);
 
         bytes32 leafHash = keccak256(abi.encode(message));
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
 
-        if (!$.parachainClient.verifyCommitment(commitment, headerProof)) {
+        if (!Verification.verifyCommitment(commitment, headerProof)) {
             revert InvalidProof();
         }
 
@@ -242,11 +235,6 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
     function agentOf(bytes32 agentID) external view returns (address) {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         return $.agents[agentID];
-    }
-
-    function parachainClient() external view returns (address) {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        return address($.parachainClient);
     }
 
     /**

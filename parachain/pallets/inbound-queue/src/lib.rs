@@ -139,8 +139,17 @@ pub mod pallet {
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
+<<<<<<< HEAD
 			// Verify that the message was submitted from the known Gateway contract
 			ensure!(Gateway::<T>::get() == envelope.gateway, Error::<T>::InvalidGateway,);
+=======
+			// Verify that the message was submitted to us from a known
+			// outbound channel on the ethereum side
+			let allowlist = <AllowList<T>>::get();
+			if !allowlist.contains(&envelope.outbound_queue_address) {
+				return Err(Error::<T>::InvalidOutboundQueue.into())
+			}
+>>>>>>> main
 
 			// Verify message nonce
 			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {
@@ -170,7 +179,7 @@ pub mod pallet {
 							nonce: envelope.nonce,
 							result: MessageDispatchResult::InvalidPayload,
 						});
-						return Ok(());
+						return Ok(())
 					},
 				};
 
@@ -185,7 +194,7 @@ pub mod pallet {
 						nonce: envelope.nonce,
 						result: MessageDispatchResult::InvalidPayload,
 					});
-					return Ok(());
+					return Ok(())
 				},
 			};
 

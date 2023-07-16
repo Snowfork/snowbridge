@@ -254,7 +254,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	if task.IsHandover {
 		tx, err = wr.contract.SubmitInitialWithHandover(
 			wr.makeTxOpts(ctx),
-			msg.CommitmentHash,
+			msg.Commitment,
 			msg.Bitfield,
 			msg.Proof,
 		)
@@ -264,7 +264,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	} else {
 		tx, err = wr.contract.SubmitInitial(
 			wr.makeTxOpts(ctx),
-			msg.CommitmentHash,
+			msg.Commitment,
 			msg.Bitfield,
 			msg.Proof,
 		)
@@ -272,11 +272,17 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 			return nil, nil, fmt.Errorf("initial submit: %w", err)
 		}
 	}
+
+	commitmentHash, err := task.CommitmentHash()
+	if err != nil {
+		return nil, nil, fmt.Errorf("create commitment hash: %w", err)
+	}
 	log.WithFields(logrus.Fields{
 		"txHash":         tx.Hash().Hex(),
-		"CommitmentHash": "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
-		"BlockNumber":    task.SignedCommitment.Commitment.BlockNumber,
-		"ValidatorSetID": task.SignedCommitment.Commitment.ValidatorSetID,
+		"CommitmentHash": "0x" + hex.EncodeToString(commitmentHash[:]),
+		"Commitment":     commitmentToLog(msg.Commitment),
+		"Bitfield":       bitfieldToStrings(msg.Bitfield),
+		"Proof":          proofToLog(msg.Proof),
 		"HandOver":       task.IsHandover,
 	}).Info("Transaction submitted for initial verification")
 

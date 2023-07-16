@@ -119,7 +119,7 @@ func (li *PolkadotListener) scanCommitments(
 					logEntry.Info("New commitment with handover added to channel")
 					currentValidatorSet++
 				}
-			} else if (validatorSetID == currentValidatorSet || validatorSetID == currentValidatorSet+1) && validatorSetID == nextValidatorSetID {
+			} else if validatorSetID == currentValidatorSet {
 				if result.Depth > li.config.Source.FastForwardDepth {
 					logEntry.Warn("Discarded commitment with depth not fast forward")
 					continue
@@ -139,6 +139,8 @@ func (li *PolkadotListener) scanCommitments(
 
 				// drop task if it can't be processed immediately
 				select {
+				case <-ctx.Done():
+					return ctx.Err()
 				case requests <- task:
 					logEntry.Info("New commitment added to channel")
 				default:

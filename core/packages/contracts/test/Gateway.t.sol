@@ -5,8 +5,6 @@ import {Strings} from "openzeppelin/utils/Strings.sol";
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 
-import {ParachainClientMock} from "./mocks/ParachainClientMock.sol";
-import {IParachainClient} from "../src/IParachainClient.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 
 import {IGateway} from "../src/IGateway.sol";
@@ -18,6 +16,9 @@ import {GatewayProxy} from "../src/GatewayProxy.sol";
 
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {Agent} from "../src/Agent.sol";
+import {Verification} from "../src/Verification.sol";
+import {Features} from "../src/Features.sol";
+
 import {InboundMessage, OperatingMode, ParaID} from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
@@ -51,25 +52,27 @@ contract GatewayTest is Test {
     address public account1;
     address public account2;
 
-    IParachainClient public parachainClient;
-
     function setUp() public {
-        parachainClient = new ParachainClientMock(BeefyClient(address(0)), 0);
-
         AgentExecutor executor = new AgentExecutor();
 
         Gateway.InitParams memory initParams = Gateway.InitParams({
-            parachainClient: parachainClient,
             agentExecutor: address(executor),
             fee: 1 ether,
             reward: 1 ether,
             bridgeHubParaID: bridgeHubParaID,
             bridgeHubAgentID: bridgeHubAgentID,
-            assetHubParaID: ParaID.wrap(1002),
-            assetHubAgentID: keccak256("1002"),
-            createTokenFee: 1,
-            createTokenCallId: bytes2(0x3500),
-            gasToForward: 500_000
+            assetHubParaID: assetHubParaID,
+            assetHubAgentID: assetHubAgentID,
+            gasToForward: 500_000,
+            features: Features.InitParams({
+                assetHubParaID: ParaID.wrap(1002),
+                createTokenFee: 1,
+                createTokenCallId: bytes2(0x3500)
+            }),
+            verification: Verification.InitParams({
+                beefyClient: address(0),
+                parachainID: uint32(ParaID.unwrap(bridgeHubParaID))
+            })
         });
 
         gatewayLogic = new GatewayMock();
@@ -100,6 +103,29 @@ contract GatewayTest is Test {
         return (keccak256("createAgent"), abi.encode((keccak256("6666"))));
     }
 
+    function makeMockProof() public pure returns (Verification.Proof memory) {
+        return Verification.Proof({
+            header: Verification.ParachainHeader({
+                parentHash: bytes32(0),
+                number: 0,
+                stateRoot: bytes32(0),
+                extrinsicsRoot: bytes32(0),
+                digestItems: new Verification.DigestItem[](0)
+            }),
+            headProof: Verification.HeadProof({pos: 0, width: 0, proof: new bytes32[](0)}),
+            leafPartial: Verification.MMRLeafPartial({
+                version: 0,
+                parentNumber: 0,
+                parentHash: bytes32(0),
+                nextAuthoritySetID: 0,
+                nextAuthoritySetLen: 0,
+                nextAuthoritySetRoot: 0
+            }),
+            leafProof: new bytes32[](0),
+            leafProofOrder: 0
+        });
+    }
+
     /**
      * Message Verification
      */
@@ -115,7 +141,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, parachainHeaderProof
+            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
         );
     }
 
@@ -128,7 +154,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, bytes("invalidProof")
+            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
         );
     }
 
@@ -139,23 +165,21 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, parachainHeaderProof
+            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
         );
 
         // try to replay the message
         vm.expectRevert(Gateway.InvalidNonce.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, parachainHeaderProof
+            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
         );
     }
 
     function testSubmitFailInvalidChannel() public {
         vm.expectRevert(Gateway.ChannelDoesNotExist.selector);
         hoax(relayer);
-        IGateway(address(gateway)).submitInbound(
-            InboundMessage(ParaID.wrap(42), 1, "", ""), proof, parachainHeaderProof
-        );
+        IGateway(address(gateway)).submitInbound(InboundMessage(ParaID.wrap(42), 1, "", ""), proof, makeMockProof());
     }
 
     // Handling of Out-of-Gas errors
@@ -170,7 +194,7 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitInbound(
             InboundMessage(assetHubParaID, 1, keccak256("agentExecute"), abi.encode(assetHubAgentID, bytes("foo..."))),
             proof,
-            parachainHeaderProof
+            makeMockProof()
         );
     }
 
@@ -186,7 +210,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, parachainHeaderProof
+            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
         );
 
         assertEq(address(bridgeHubAgent).balance, 49 ether);
@@ -200,7 +224,7 @@ contract GatewayTest is Test {
         vm.expectRevert(Agent.InsufficientBalance.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, parachainHeaderProof
+            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
         );
 
         assertEq(address(bridgeHubAgent).balance, 0 ether);
@@ -385,9 +409,6 @@ contract GatewayTest is Test {
 
         address agent = gw.agentOf(bridgeHubAgentID);
         assertEq(agent, bridgeHubAgent);
-
-        address pc = gw.parachainClient();
-        assertEq(pc, address(parachainClient));
     }
 
     /**

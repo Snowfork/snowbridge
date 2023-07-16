@@ -30,7 +30,7 @@ fn apply_merkle_proof(proof: &[Vec<u8>]) -> Option<(H256, Vec<u8>)> {
 			let expected_hash = maybe_hash?;
 			let node: Box<dyn mpt::Node> = bytes.as_slice().try_into().ok()?;
 			if (*node).contains_hash(expected_hash.into()) {
-				return Some(keccak_256(bytes));
+				return Some(keccak_256(bytes))
 			}
 			None
 		});
