@@ -14,13 +14,13 @@ import (
 )
 
 type PolkadotListener struct {
-	config              *Config
+	config              *SourceConfig
 	conn                *relaychain.Connection
 	beefyAuthoritiesKey types.StorageKey
 }
 
 func NewPolkadotListener(
-	config *Config,
+	config *SourceConfig,
 	conn *relaychain.Connection,
 ) *PolkadotListener {
 	return &PolkadotListener{
@@ -120,7 +120,7 @@ func (li *PolkadotListener) scanCommitments(
 					currentValidatorSet++
 				}
 			} else if validatorSetID == currentValidatorSet {
-				if result.Depth > li.config.Source.FastForwardDepth {
+				if result.Depth > li.config.FastForwardDepth {
 					logEntry.Warn("Discarded commitment with depth not fast forward")
 					continue
 				}
