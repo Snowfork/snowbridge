@@ -27,7 +27,6 @@ use sp_runtime::traits::AccountIdConversion;
 use sp_std::{collections::btree_set::BTreeSet, convert::TryFrom, vec::Vec};
 
 use envelope::Envelope;
-use frame_support::log;
 use snowbridge_core::{Message, Verifier};
 use snowbridge_router_primitives::inbound;
 
@@ -62,7 +61,6 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	#[cfg(feature = "runtime-benchmarks")]
 	use snowbridge_ethereum::H256;
-	use snowbridge_router_primitives::inbound::{GatewayMessage, NativeTokensMessage};
 	use xcm::v3::SendXcm;
 
 	#[pallet::pallet]

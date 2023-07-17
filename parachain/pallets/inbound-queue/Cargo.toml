@@ -61,6 +61,7 @@ std = [
     "ethabi/std",
     "xcm/std",
     "snowbridge-beacon-primitives/std",
+    "snowbridge-ethereum-beacon-client/std",
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",
