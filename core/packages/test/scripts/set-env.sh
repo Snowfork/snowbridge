@@ -46,6 +46,7 @@ beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 bridgehub_ws_url="${BRIDGEHUB_WS_URL:-ws://127.0.0.1:11144}"
 bridgehub_para_id="${BRIDGEHUB_PARA_ID:-1013}"
 bridgehub_seed="${BRIDGEHUB_SEED:-//Alice}"
+bridgehub_pallets_owner="${BRIDGEHUB_PALLETS_OWNER:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d}"
 
 statemine_ws_url="${STATEMINE_WS_URL:-ws://127.0.0.1:12144}"
 statemine_para_id="${STATEMINE_PARA_ID:-1000}"

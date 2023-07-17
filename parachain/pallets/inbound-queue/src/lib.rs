@@ -278,7 +278,6 @@ pub mod pallet {
 		}
 
 		/// Change `PalletOwner`.
-		///
 		/// May only be called either by root, or by `PalletOwner`.
 		#[pallet::call_index(3)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
@@ -287,7 +286,6 @@ pub mod pallet {
 		}
 
 		/// Halt or resume all pallet operations.
-		///
 		/// May only be called either by root, or by `PalletOwner`.
 		#[pallet::call_index(4)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]

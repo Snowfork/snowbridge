@@ -172,7 +172,6 @@ pub mod pallet {
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
 	/// Optional pallet owner.
-	///
 	/// Pallet owner has a right to halt all pallet operations and then resume them. If it is
 	/// `None`, then there are no direct ways to halt/resume pallet operations, but other
 	/// runtime methods may still be used to do that (i.e. democracy::referendum to update halt
@@ -181,7 +180,6 @@ pub mod pallet {
 	pub type PalletOwner<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
 	/// The current operating mode of the pallet.
-	///
 	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
