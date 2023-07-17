@@ -26,8 +26,6 @@ type Relay struct {
 }
 
 func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
-	log.Info("Relay created")
-
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, ethereumKeypair)
 
@@ -37,6 +35,8 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 	)
 
 	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn)
+
+	log.Info("Beefy relay created")
 
 	return &Relay{
 		config:           config,
