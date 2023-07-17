@@ -37,7 +37,7 @@ func (li *PolkadotListener) Start(
 ) (<-chan Request, error) {
 	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Beefy", "Authorities", nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create storage key: %w", err)
 	}
 	li.beefyAuthoritiesKey = storageKey
 

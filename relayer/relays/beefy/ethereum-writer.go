@@ -45,7 +45,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
 	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
 	if err != nil {
-		return err
+		return fmt.Errorf("create beefy client: %w", err)
 	}
 	wr.contract = contract
 
@@ -54,7 +54,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 	}
 	blockWaitPeriod, err := wr.contract.RandaoCommitDelay(&callOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("create randao commit delay: %w", err)
 	}
 	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
 
@@ -134,12 +134,12 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return err
 	}
 	if receipt.Status != 1 {
-		return fmt.Errorf("initial commitment transaction failed")
+		return fmt.Errorf("initial commitment transaction failed, status (%v), logs (%v)", receipt.Status, receipt.Logs)
 	}
 
 	commitmentHash, err := task.CommitmentHash()
 	if err != nil {
-		return fmt.Errorf("generate commitment hash")
+		return fmt.Errorf("generate commitment hash: %w", err)
 	}
 
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators

@@ -49,12 +49,12 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	err := relay.relaychainConn.Connect(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("create relaychain connection: %w", err)
 	}
 
 	err = relay.ethereumConn.Connect(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("create ethereum connection: %w", err)
 	}
 
 	initialBeefyBlock, initialValidatorSetID, err := relay.getInitialState(ctx)
