@@ -18,10 +18,19 @@ interface IGateway {
     event AgentCreated(bytes32 agentID, address agent);
 
     // Emitted when a channel has been created
-    event ChannelCreated(ParaID paraID);
+    event ChannelCreated(ParaID indexed paraID);
 
     // Emitted when a channel has been updated
-    event ChannelUpdated(ParaID paraID);
+    event ChannelUpdated(ParaID indexed paraID);
+
+    // Emitted when the gateway is upgraded
+    event Upgraded(address indexed implementation);
+
+    // Emitted when the operating mode is changed
+    event OperatingModeChanged(OperatingMode mode);
+
+    // Emitted when funds are withdrawn from an agent
+    event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
     // * Getters *
 

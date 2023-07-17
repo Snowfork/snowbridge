@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {MerkleProof} from "./utils/MerkleProof.sol";
+import {SubstrateMerkleProof} from "./utils/MerkleProof.sol";
 import {BeefyClient} from "./BeefyClient.sol";
 import {ScaleCodec} from "./ScaleCodec.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
@@ -70,7 +70,7 @@ library Verification {
     function verifyCommitment(bytes32 commitment, Proof calldata proof) external view returns (bool) {
         VerificationStorage.Layout storage $ = VerificationStorage.layout();
 
-        // for testing
+        // bypass verification for unit tests
         if ($.beefyClient == address(0)) {
             return true;
         }
@@ -85,7 +85,7 @@ library Verification {
         if (proof.headProof.pos >= proof.headProof.width) {
             return false;
         }
-        bytes32 parachainHeadsRoot = MerkleProof.computeRoot(
+        bytes32 parachainHeadsRoot = SubstrateMerkleProof.computeRoot(
             parachainHeadHash, proof.headProof.pos, proof.headProof.width, proof.headProof.proof
         );
 

@@ -10,18 +10,14 @@ import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID} from "./Types.sol";
 import {IGateway} from "./IGateway.sol";
+import {ERC1967} from "./utils/ERC1967.sol";
+import {Address} from "./utils/Address.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {FeaturesStorage} from "./storage/FeaturesStorage.sol";
 import {VerificationStorage} from "./storage/VerificationStorage.sol";
 
-import {console} from "forge-std/console.sol";
-
-import {Initializable} from "./Initializable.sol";
-import {UUPSUpgradeable} from "openzeppelin/proxy/utils/UUPSUpgradeable.sol";
-import {Address} from "openzeppelin/utils/Address.sol";
-
-contract Gateway is IGateway, Initializable, UUPSUpgradeable {
+contract Gateway is IGateway {
     using Address for address;
 
     // Inbound messages correspond to these commands
@@ -31,32 +27,13 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
     bytes32 internal constant COMMAND_UPDATE_CHANNEL = keccak256("updateChannel");
     bytes32 internal constant COMMAND_UPGRADE = keccak256("upgrade");
     bytes32 internal constant COMMAND_SET_OPERATING_MODE = keccak256("setOperatingMode");
-    bytes32 internal constant COMMAND_WITHDRAW_SOVEREIGN_FUNDS = keccak256("withdrawSovereignFunds");
+    bytes32 internal constant COMMAND_WITHDRAW_AGENT_FUNDS = keccak256("withdrawAgentFunds");
     bytes32 internal constant COMMAND_CONFIGURE = keccak256("configure");
 
     // After message dispatch, there should be some gas left over for post dispatch logic
     uint256 internal constant GAS_BUFFER = 24000;
 
-    // Ensure that operators don't brick the bridge by reconfiguring `gasToForward` to 0 by mistake
-    uint256 internal constant MIN_GAS_TO_FORWARD = 500_000;
-
-    error InvalidProof();
-    error InvalidNonce();
-    error NotEnoughGas();
-    error FeePaymentToLow();
-    error FailedPayment();
-    error Unauthorized();
-    error UnknownChannel();
-    error Disabled();
-    error AgentAlreadyCreated();
-    error AgentDoesNotExist();
-    error ChannelAlreadyCreated();
-    error ChannelDoesNotExist();
-    error InvalidChannelUpdate();
-    error WithdrawalFailed();
-    error AgentExecutionFailed();
-    error InvalidAgentExecutionPayload();
-    error InvalidConfig();
+    uint256 internal constant GAS_FOR_DISPATCH = 500_000;
 
     struct InitParams {
         // Agent Executor
@@ -76,6 +53,27 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
         Verification.InitParams verification;
     }
 
+    error InvalidProof();
+    error InvalidNonce();
+    error NotEnoughGas();
+    error FeePaymentToLow();
+    error FailedPayment();
+    error Unauthorized();
+    error UnknownChannel();
+    error Disabled();
+    error AgentAlreadyCreated();
+    error AgentDoesNotExist();
+    error ChannelAlreadyCreated();
+    error ChannelDoesNotExist();
+    error InvalidChannelUpdate();
+    error WithdrawalFailed();
+    error AgentExecutionFailed();
+    error InvalidAgentExecutionPayload();
+    error InvalidConfig();
+    error SetupFailed();
+    error NotProxy();
+    error InvalidCodeHash();
+
     // handler functions are privileged
     modifier onlySelf() {
         if (msg.sender != address(this)) {
@@ -84,59 +82,12 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
         _;
     }
 
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(InitParams calldata params) external initializer {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-
-        if (!params.agentExecutor.isContract() || params.gasToForward < MIN_GAS_TO_FORWARD) {
-            revert InvalidConfig();
-        }
-
-        $.mode = OperatingMode.Normal;
-        $.agentExecutor = params.agentExecutor;
-        $.defaultFee = params.fee;
-        $.defaultReward = params.reward;
-        $.gasToForward = params.gasToForward;
-        $.bridgeHubParaID = params.bridgeHubParaID;
-
-        // Initialize an agent & channel for BridgeHub
-        Agent bridgeHubAgent = new Agent(params.bridgeHubAgentID);
-        $.agents[params.bridgeHubAgentID] = payable(bridgeHubAgent);
-        $.channels[params.bridgeHubParaID] = Channel({
-            mode: OperatingMode.Normal,
-            agent: address(bridgeHubAgent),
-            inboundNonce: 0,
-            outboundNonce: 0,
-            fee: params.fee,
-            reward: params.reward
-        });
-
-        // Initialize an agent & channel for AssetHub
-        Agent assetHubAgent = new Agent(params.assetHubAgentID);
-        $.agents[params.assetHubAgentID] = payable(assetHubAgent);
-        $.channels[params.assetHubParaID] = Channel({
-            mode: OperatingMode.Normal,
-            agent: address(assetHubAgent),
-            inboundNonce: 0,
-            outboundNonce: 0,
-            fee: params.fee,
-            reward: params.reward
-        });
-
-        Features.initialize(params.features, address(assetHubAgent));
-        Verification.initialize(params.verification);
-    }
-
     function submitInbound(
         InboundMessage calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
-    ) external onlyProxy {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        Channel storage channel = ensureChannel(message.origin);
+    ) external {
+        Channel storage channel = _ensureChannel(message.origin);
 
         bytes32 leafHash = keccak256(abi.encode(message));
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
@@ -163,44 +114,44 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
         // Otherwise malicious relayers can break the bridge by allowing handlers to run out gas.
         // Resubmission of the message by honest relayers will fail as the tracked nonce
         // has already been updated.
-        if (gasleft() < $.gasToForward + GAS_BUFFER) {
+        if (gasleft() < GAS_FOR_DISPATCH + GAS_BUFFER) {
             revert NotEnoughGas();
         }
 
         bool success = true;
 
         if (message.command == COMMAND_AGENT_EXECUTE) {
-            try Gateway(this).handleAgentExecute{gas: $.gasToForward}(message.params) {}
+            try Gateway(this).agentExecute{gas: GAS_FOR_DISPATCH}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == COMMAND_CREATE_AGENT) {
-            try Gateway(this).handleCreateAgent{gas: $.gasToForward}(message.params) {}
+            try Gateway(this).createAgent{gas: GAS_FOR_DISPATCH}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == COMMAND_CREATE_CHANNEL) {
-            try Gateway(this).handleCreateChannel{gas: $.gasToForward}(message.params) {}
+            try Gateway(this).createChannel{gas: GAS_FOR_DISPATCH}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == COMMAND_UPDATE_CHANNEL) {
-            try Gateway(this).handleUpdateChannel{gas: $.gasToForward}(message.params) {}
+            try Gateway(this).updateChannel{gas: GAS_FOR_DISPATCH}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == COMMAND_SET_OPERATING_MODE) {
-            try Gateway(this).handleSetOperatingMode{gas: $.gasToForward}(message.params) {}
+            try Gateway(this).setOperatingMode{gas: GAS_FOR_DISPATCH}(message.params) {}
             catch {
                 success = false;
             }
-        } else if (message.command == COMMAND_WITHDRAW_SOVEREIGN_FUNDS) {
-            try Gateway(this).handleWithdrawSovereignFunds{gas: $.gasToForward}(message.params) {}
+        } else if (message.command == COMMAND_WITHDRAW_AGENT_FUNDS) {
+            try Gateway(this).withdrawAgentFunds{gas: GAS_FOR_DISPATCH}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == COMMAND_UPGRADE) {
-            try Gateway(this).handleUpgrade{gas: $.gasToForward}(message.params) {}
+            try Gateway(this).upgrade{gas: GAS_FOR_DISPATCH}(message.params) {}
             catch {
                 success = false;
             }
@@ -241,135 +192,168 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
      * Handlers
      */
 
+    struct AgentExecuteParams {
+        bytes32 agentID;
+        bytes payload;
+    }
+
     // Execute code within an agent
-    function handleAgentExecute(bytes calldata params) external onlySelf {
+    function agentExecute(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        (bytes32 originID, bytes memory payload) = abi.decode(params, (bytes32, bytes));
+        AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
 
-        address agent = $.agents[originID];
+        address agent = $.agents[params.agentID];
         if (agent == address(0)) {
             revert AgentDoesNotExist();
         }
 
-        if (payload.length == 0) {
+        if (params.payload.length == 0) {
             revert InvalidAgentExecutionPayload();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, (address(this), payload));
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, (address(this), params.payload));
         try Agent(payable(agent)).invoke($.agentExecutor, call) {}
         catch {
             revert AgentExecutionFailed();
         }
     }
 
+    struct CreateAgentParams {
+        bytes32 agentID;
+    }
+
     // Create an agent for a consensus system on Polkadot
-    function handleCreateAgent(bytes calldata params) external onlySelf {
+    function createAgent(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        (bytes32 agentID) = abi.decode(params, (bytes32));
-        if (address($.agents[agentID]) != address(0)) {
+        CreateAgentParams memory params = abi.decode(data, (CreateAgentParams));
+
+        if (address($.agents[params.agentID]) != address(0)) {
             revert AgentAlreadyCreated();
         }
-        address payable agent = payable(new Agent(agentID));
+        address payable agent = payable(new Agent(params.agentID));
 
-        $.agents[agentID] = agent;
-        emit AgentCreated(agentID, agent);
+        $.agents[params.agentID] = agent;
+        emit AgentCreated(params.agentID, agent);
+    }
+
+    struct CreateChannelParams {
+        ParaID paraID;
+        bytes32 agentID;
     }
 
     // Create a messaging channel to a Polkadot parachain
-    function handleCreateChannel(bytes calldata params) external onlySelf {
+    function createChannel(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        (ParaID paraID, bytes32 agentID) = abi.decode(params, (ParaID, bytes32));
+        CreateChannelParams memory params = abi.decode(data, (CreateChannelParams));
 
         // Ensure that specified agent actually exists
-        address agent = $.agents[agentID];
+        address agent = $.agents[params.agentID];
         if (agent == address(0)) {
             revert AgentDoesNotExist();
         }
 
         // Ensure channel has not already been created
-        Channel storage ch = $.channels[paraID];
+        Channel storage ch = $.channels[params.paraID];
         if (address(ch.agent) != address(0)) {
             revert ChannelAlreadyCreated();
         }
 
         ch.mode = OperatingMode.Normal;
-        ch.agent = $.agents[agentID];
+        ch.agent = $.agents[params.agentID];
         ch.inboundNonce = 0;
         ch.outboundNonce = 0;
         ch.fee = $.defaultFee;
         ch.reward = $.defaultReward;
 
-        emit ChannelCreated(paraID);
+        emit ChannelCreated(params.paraID);
+    }
+
+    struct UpdateChannelParams {
+        ParaID paraID;
+        OperatingMode mode;
+        uint256 fee;
+        uint256 reward;
     }
 
     // Update parameters for a channel
-    function handleUpdateChannel(bytes calldata params) external onlySelf {
+    function updateChannel(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        (ParaID paraID, OperatingMode mode, uint256 fee, uint256 reward) =
-            abi.decode(params, (ParaID, OperatingMode, uint256, uint256));
+        UpdateChannelParams memory params = abi.decode(data, (UpdateChannelParams));
 
-        Channel storage ch = ensureChannel(paraID);
+        Channel storage ch = _ensureChannel(params.paraID);
 
         // Extra sanity checks when updating the BridgeHub channel. For example, a huge reward could
-        // effectively brick the bridge.
-        if (paraID == $.bridgeHubParaID && (fee > 1 ether || reward > 1 ether)) {
+        // effectively brick the bridge permanently.
+        if (
+            params.paraID == $.bridgeHubParaID
+                && (params.mode != OperatingMode.Normal || params.fee > 1 ether || params.reward > 1 ether)
+        ) {
             revert InvalidChannelUpdate();
         }
 
-        ch.mode = mode;
-        ch.fee = fee;
-        ch.reward = reward;
+        ch.mode = params.mode;
+        ch.fee = params.fee;
+        ch.reward = params.reward;
 
-        emit ChannelUpdated(paraID);
+        emit ChannelUpdated(params.paraID);
+    }
+
+    struct UpgradeParams {
+        address impl;
+        bytes32 implCodeHash;
+        bytes initParams;
     }
 
     // Perform an upgrade
-    function handleUpgrade(bytes calldata params) external onlySelf {
-        (address logic, bytes memory data) = abi.decode(params, (address, bytes));
-        _upgradeToAndCall(logic, data, false);
+    function upgrade(bytes calldata data) external onlySelf {
+        UpgradeParams memory params = abi.decode(data, (UpgradeParams));
+        if (params.impl.isContract() && params.impl.codehash != params.implCodeHash) {
+            revert InvalidCodeHash();
+        }
+        ERC1967.store(params.impl);
+        if (params.initParams.length > 0) {
+            (bool success,) =
+                params.impl.delegatecall(abi.encodeWithSelector(this.initialize.selector, params.initParams));
+            if (!success) {
+                revert SetupFailed();
+            }
+        }
+        emit Upgraded(params.impl);
+    }
+
+    struct SetOperatingModeParams {
+        OperatingMode mode;
     }
 
     // Set the operating mode
-    function handleSetOperatingMode(bytes calldata params) external onlySelf {
+    function setOperatingMode(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
-        (OperatingMode mode) = abi.decode(params, (OperatingMode));
-        $.mode = mode;
+        SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
+        $.mode = params.mode;
+    }
+
+    struct WithdrawAgentFundsParams {
+        bytes32 agentID;
+        address recipient;
+        uint256 amount;
     }
 
     // Withdraw funds from an agent to a recipient account
-    function handleWithdrawSovereignFunds(bytes calldata params) external onlySelf {
-        (ParaID paraID, address payable recipient, uint256 amount) = abi.decode(params, (ParaID, address, uint256));
-        Channel storage ch = ensureChannel(paraID);
-        Agent(payable(ch.agent)).withdrawTo(recipient, amount);
-    }
-
-    // Reconfigure a selection of parameters.
-    //
-    // Only allow reconfiguring mostly non-critical parameters to prevent future maintainers/operators
-    // from bricking the bridge due to careless operational mistakes.
-    //
-    // More complicated reconfiguration should be done via an upgrade that has been audited.
-    //
-    function handleConfigure(bytes calldata params) external onlySelf {
+    function withdrawAgentFunds(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
-        (address agentExecutor, uint256 defaultFee, uint256 defaultReward, uint256 gasToForward, uint256 createTokenFee)
-        = abi.decode(params, (address, uint256, uint256, uint256, uint256));
 
-        // sanity checks
-        if (!agentExecutor.isContract() || gasToForward < MIN_GAS_TO_FORWARD || defaultFee == 0 || defaultReward == 0) {
-            revert InvalidConfig();
+        WithdrawAgentFundsParams memory params = abi.decode(data, (WithdrawAgentFundsParams));
+
+        address agent = $.agents[params.agentID];
+        if (agent == address(0)) {
+            revert AgentDoesNotExist();
         }
 
-        $.agentExecutor = agentExecutor;
-        $.defaultFee = defaultFee;
-        $.defaultReward = defaultReward;
-        $.gasToForward = gasToForward;
-
-        FeaturesStorage.layout().createTokenFee = createTokenFee;
+        Agent(payable(agent)).withdrawTo(payable(params.recipient), params.amount);
     }
 
     /**
@@ -380,24 +364,23 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
     function lockNativeTokens(address token, ParaID finalDestPara, bytes calldata recipient, uint128 amount)
         external
         payable
-        onlyProxy
     {
         (ParaID dest, bytes memory payload) =
             Features.lockNativeToken(token, msg.sender, finalDestPara, recipient, amount);
-        submitOutbound(dest, payload);
+        _submitOutbound(dest, payload);
     }
 
     // Register a token on AssetHub
-    function registerNativeToken(address token) external payable onlyProxy {
+    function registerNativeToken(address token) external payable {
         (ParaID dest, bytes memory payload) = Features.registerNativeToken(token);
-        submitOutbound(dest, payload);
+        _submitOutbound(dest, payload);
     }
 
     /* Internal functions */
 
-    function submitOutbound(ParaID dest, bytes memory payload) internal {
-        Channel storage channel = ensureChannel(dest);
-        ensureOutboundMessagingEnabled(channel);
+    function _submitOutbound(ParaID dest, bytes memory payload) internal {
+        Channel storage channel = _ensureChannel(dest);
+        _ensureOutboundMessagingEnabled(channel);
 
         if (msg.value < channel.fee) {
             revert FeePaymentToLow();
@@ -414,7 +397,7 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
         emit IGateway.OutboundMessageAccepted(dest, channel.outboundNonce, payload);
     }
 
-    function ensureOutboundMessagingEnabled(Channel storage ch) internal view {
+    function _ensureOutboundMessagingEnabled(Channel storage ch) internal view {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         if ($.mode != OperatingMode.Normal || ch.mode != OperatingMode.Normal) {
             revert Disabled();
@@ -422,7 +405,7 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
     }
 
     // transfer funds from an agent to a recipient
-    function withdrawTo(address agent, address payable recipient, uint256 amount) internal {
+    function _withdrawTo(address agent, address payable recipient, uint256 amount) internal {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         bytes memory data = abi.encodeCall(AgentExecutor.withdrawTo, (recipient, amount));
         try Agent(payable(agent)).invoke($.agentExecutor, data) {}
@@ -431,7 +414,7 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
         }
     }
 
-    function ensureChannel(ParaID paraID) internal view returns (Channel storage ch) {
+    function _ensureChannel(ParaID paraID) internal view returns (Channel storage ch) {
         ch = CoreStorage.layout().channels[paraID];
         // A channel always has an agent specified.
         if (ch.agent == address(0)) {
@@ -439,9 +422,56 @@ contract Gateway is IGateway, Initializable, UUPSUpgradeable {
         }
     }
 
-    function _authorizeUpgrade(address) internal view override {
-        if (msg.sender != address(this)) {
+    /**
+     * Upgrades
+     */
+
+    /// @dev Not publicly accessible as overshadowed in the proxy
+    function initialize(bytes memory data) external {
+        // Prevent initialization of storage in implementation contract
+        if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
+
+        InitParams memory params = abi.decode(data, (InitParams));
+
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+
+        $.mode = OperatingMode.Normal;
+        $.agentExecutor = params.agentExecutor;
+        $.defaultFee = params.fee;
+        $.defaultReward = params.reward;
+        $.bridgeHubParaID = params.bridgeHubParaID;
+
+        // Initialize an agent & channel for BridgeHub
+        Agent bridgeHubAgent = new Agent(params.bridgeHubAgentID);
+        $.agents[params.bridgeHubAgentID] = payable(bridgeHubAgent);
+        $.channels[params.bridgeHubParaID] = Channel({
+            mode: OperatingMode.Normal,
+            agent: address(bridgeHubAgent),
+            inboundNonce: 0,
+            outboundNonce: 0,
+            fee: params.fee,
+            reward: params.reward
+        });
+
+        // Initialize an agent & channel for AssetHub
+        Agent assetHubAgent = new Agent(params.assetHubAgentID);
+        $.agents[params.assetHubAgentID] = payable(assetHubAgent);
+        $.channels[params.assetHubParaID] = Channel({
+            mode: OperatingMode.Normal,
+            agent: address(assetHubAgent),
+            inboundNonce: 0,
+            outboundNonce: 0,
+            fee: params.fee,
+            reward: params.reward
+        });
+
+        Features.initialize(params.features, address(assetHubAgent));
+        Verification.initialize(params.verification);
+    }
+
+    function implementation() public view returns (address) {
+        return ERC1967.load();
     }
 }

@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
+import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
+
 contract Agent {
+    using SafeNativeTransfer for address payable;
+
     error Unauthorized();
-    error InsufficientBalance();
-    error WithdrawFailed();
     error InvokeFailed();
 
     // The unique ID for this agent, derived from the MultiLocation of the corresponding consensus system on Polkadot
@@ -14,13 +16,6 @@ contract Agent {
     // The gateway contract owning this agent
     address public immutable gateway;
 
-    modifier onlyGateway() {
-        if (msg.sender != gateway) {
-            revert Unauthorized();
-        }
-        _;
-    }
-
     constructor(bytes32 _agentID) {
         agentID = _agentID;
         gateway = msg.sender;
@@ -28,22 +23,17 @@ contract Agent {
 
     receive() external payable {}
 
-    function withdrawTo(address payable recipient, uint256 amount) external onlyGateway {
-        if (amount == 0) {
-            return;
+    function withdrawTo(address payable recipient, uint256 amount) external {
+        if (msg.sender != gateway) {
+            revert Unauthorized();
         }
-
-        if (address(this).balance < amount) {
-            revert InsufficientBalance();
-        }
-
-        (bool success,) = recipient.call{value: amount}("");
-        if (!success) {
-            revert WithdrawFailed();
-        }
+        recipient.safeNativeTransfer(amount);
     }
 
-    function invoke(address delegate, bytes calldata data) external onlyGateway returns (bytes memory) {
+    function invoke(address delegate, bytes calldata data) external returns (bytes memory) {
+        if (msg.sender != gateway) {
+            revert Unauthorized();
+        }
         (bool success, bytes memory result) = delegate.delegatecall(data);
         if (!success) {
             revert InvokeFailed();

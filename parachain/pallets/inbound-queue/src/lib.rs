@@ -13,15 +13,12 @@ pub mod weights;
 mod test;
 
 use codec::DecodeAll;
-use frame_support::{
-	storage::bounded_btree_set::BoundedBTreeSet,
-	traits::fungible::{Inspect, Mutate},
-};
+use frame_support::traits::fungible::{Inspect, Mutate};
 use frame_system::ensure_signed;
 use snowbridge_core::ParaId;
 use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::{collections::btree_set::BTreeSet, convert::TryFrom, vec::Vec};
+use sp_std::convert::TryFrom;
 
 use envelope::Envelope;
 use snowbridge_core::{Message, Verifier};
@@ -94,8 +91,6 @@ pub mod pallet {
 		InvalidNonce,
 		/// Cannot convert location
 		InvalidAccountConversion,
-		// Allow list is full.
-		AllowListFull,
 	}
 
 	#[pallet::storage]
@@ -106,18 +101,20 @@ pub mod pallet {
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {
+	pub struct GenesisConfig<T: Config> {
 		pub gateway: H160,
+		#[serde(skip)]
+		pub _config: sp_std::marker::PhantomData<T>,
 	}
 
-	impl Default for GenesisConfig {
+	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { gateway: Default::default() }
+			Self { gateway: Default::default(), _config: Default::default() }
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			Gateway::<T>::put(self.gateway);
 		}
@@ -204,31 +201,9 @@ pub mod pallet {
 
 		#[pallet::call_index(1)]
 		#[pallet::weight({100_000_000})]
-		pub fn add_allow_list(origin: OriginFor<T>, address: sp_core::H160) -> DispatchResult {
+		pub fn set_gateway(origin: OriginFor<T>, gateway: H160) -> DispatchResult {
 			ensure_root(origin)?;
-
-			let success = <AllowList<T>>::mutate(|allowlist| allowlist.try_insert(address).is_ok());
-
-			if success {
-				Self::deposit_event(Event::AllowListAdded { address });
-
-				Ok(())
-			} else {
-				Err(Error::<T>::AllowListFull.into())
-			}
-		}
-
-		#[pallet::call_index(2)]
-		#[pallet::weight({100_000_000})]
-		pub fn remove_allow_list(origin: OriginFor<T>, address: sp_core::H160) -> DispatchResult {
-			ensure_root(origin)?;
-
-			let removed = <AllowList<T>>::mutate(|allowlist| allowlist.remove(&address));
-
-			if removed {
-				Self::deposit_event(Event::AllowListRemoved { address });
-			}
-
+			Gateway::<T>::put(gateway);
 			Ok(())
 		}
 	}

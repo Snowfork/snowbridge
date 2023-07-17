@@ -9,6 +9,7 @@
     "no-inline-assembly": "off",
     "no-empty-blocks": "off",
     "func-name-mixedcase": "off",
-    "no-console": "off"
+    "no-console": "off",
+    "var-name-mixedcase": "off"
   }
 }

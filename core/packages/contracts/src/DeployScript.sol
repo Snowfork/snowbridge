@@ -52,9 +52,7 @@ contract DeployScript is Script {
         });
 
         Gateway gatewayLogic = new Gateway();
-        //gatewayLogic.initialize(initParams);
-
-        GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), hex"");
+        GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(initParams));
 
         // Deploy WETH for testing
         new WETH9();

@@ -20,8 +20,6 @@ library CoreStorage {
         uint256 defaultFee;
         // The reward given to relayers for submitting inbound messages from Polkadot
         uint256 defaultReward;
-        // Relayers must provide enough gas to cover message dispatch plus a buffer
-        uint256 gasToForward;
         // Parachain ID of BridgeHub
         ParaID bridgeHubParaID;
     }

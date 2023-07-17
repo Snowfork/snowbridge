@@ -2,18 +2,15 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {Ownable} from "openzeppelin/access/Ownable.sol";
-import {AccessControl} from "openzeppelin/access/AccessControl.sol";
-import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
-import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "./interfaces/IERC20.sol";
+import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
 
 import {FeaturesStorage} from "./storage/FeaturesStorage.sol";
-
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {ParaID} from "./Types.sol";
 
 library Features {
-    using SafeERC20 for IERC20;
+    using SafeTokenTransferFrom for IERC20;
 
     /// @dev Emitted once the funds are locked and a message is successfully queued.
     event NativeTokensLocked(address token, ParaID destParaID, bytes recipient, uint128 amount);

@@ -3,44 +3,39 @@ pragma solidity ^0.8.20;
 
 import {Gateway} from "../../src/Gateway.sol";
 import {ParaID, OperatingMode} from "../../src/Types.sol";
-import {Initializable} from "../../src/Initializable.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 
 contract GatewayMock is Gateway {
-    function handleAgentExecutePublic(bytes calldata params) external {
-        this.handleAgentExecute(params);
+    function agentExecutePublic(bytes calldata params) external {
+        this.agentExecute(params);
     }
 
-    function handleCreateAgentPublic(bytes calldata params) external {
-        this.handleCreateAgent(params);
+    function createAgentPublic(bytes calldata params) external {
+        this.createAgent(params);
     }
 
-    function handleUpgradePublic(bytes calldata params) external {
-        this.handleUpgrade(params);
+    function upgradePublic(bytes calldata params) external {
+        this.upgrade(params);
     }
 
-    function handleCreateChannelPublic(bytes calldata params) external {
-        this.handleCreateChannel(params);
+    function createChannelPublic(bytes calldata params) external {
+        this.createChannel(params);
     }
 
-    function handleUpdateChannelPublic(bytes calldata params) external {
-        this.handleUpdateChannel(params);
+    function updateChannelPublic(bytes calldata params) external {
+        this.updateChannel(params);
     }
 
-    function handleSetOperatingModePublic(bytes calldata params) external {
-        this.handleSetOperatingMode(params);
+    function setOperatingModePublic(bytes calldata params) external {
+        this.setOperatingMode(params);
+    }
+
+    function withdrawAgentFundsPublic(bytes calldata params) external {
+        this.withdrawAgentFunds(params);
     }
 
     function setAgentExecutor(address agentExecutor) external {
         CoreStorage.layout().agentExecutor = agentExecutor;
-    }
-
-    function setOperatingMode(OperatingMode mode) external {
-        CoreStorage.layout().mode = mode;
-    }
-
-    function setChannelOperatingMode(ParaID paraID, OperatingMode mode) external {
-        CoreStorage.layout().channels[paraID].mode = mode;
     }
 }
 
@@ -60,11 +55,18 @@ library AdditionalStorage {
 }
 
 // Used to test upgrades.
-contract GatewayV2 is Gateway {
+contract GatewayV2 {
     // Reinitialize gateway with some additional storage fields
-    function initializeV2() external reinitializer(2) {
+    function initialize(bytes memory params) external {
         AdditionalStorage.Layout storage $ = AdditionalStorage.layout();
-        $.value = 42;
+
+        uint256 value = abi.decode(params, (uint256));
+
+        if (value == 666) {
+            revert("initialize failed");
+        }
+
+        $.value = value;
     }
 
     function getValue() external view returns (uint256) {

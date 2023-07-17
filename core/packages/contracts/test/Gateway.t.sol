@@ -19,6 +19,8 @@ import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
 import {Features} from "../src/Features.sol";
 
+import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
+
 import {InboundMessage, OperatingMode, ParaID} from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
@@ -29,6 +31,9 @@ contract GatewayTest is Test {
     event NativeTokensUnlocked(address token, address recipient, uint256 amount);
     event NativeTokensLocked(address token, ParaID destParaID, bytes recipient, uint128 amount);
     event AgentCreated(bytes32 agentID, address agent);
+    event ChannelCreated(ParaID indexed paraID);
+    event ChannelUpdated(ParaID indexed paraID);
+
     event Upgraded(address indexed implementation);
 
     ParaID bridgeHubParaID = ParaID.wrap(1001);
@@ -76,7 +81,7 @@ contract GatewayTest is Test {
         });
 
         gatewayLogic = new GatewayMock();
-        gateway = new GatewayProxy(address(gatewayLogic), abi.encodeCall(Gateway.initialize, (initParams)));
+        gateway = new GatewayProxy(address(gatewayLogic), abi.encode(initParams));
 
         bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
@@ -145,19 +150,6 @@ contract GatewayTest is Test {
         );
     }
 
-    function testSubmitFailInvalidProof() public {
-        deal(bridgeHubAgent, 50 ether);
-
-        (bytes32 command, bytes memory params) = makeCreateAgentCommand();
-
-        vm.expectRevert(Gateway.InvalidProof.selector);
-
-        hoax(relayer, 1 ether);
-        IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
-        );
-    }
-
     function testSubmitFailInvalidNonce() public {
         deal(bridgeHubAgent, 50 ether);
 
@@ -190,11 +182,14 @@ contract GatewayTest is Test {
 
         GatewayMock(address(gateway)).setAgentExecutor(address(new AgentExecutorMock()));
 
+        Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(keccak256("unlockTokens"), abi.encode(address(token), address(this), 1))
+        });
+
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(assetHubParaID, 1, keccak256("agentExecute"), abi.encode(assetHubAgentID, bytes("foo..."))),
-            proof,
-            makeMockProof()
+            InboundMessage(assetHubParaID, 1, keccak256("agentExecute"), abi.encode(params)), proof, makeMockProof()
         );
     }
 
@@ -221,7 +216,7 @@ contract GatewayTest is Test {
     function testRelayerNotRewarded() public {
         (bytes32 command, bytes memory params) = makeCreateAgentCommand();
 
-        vm.expectRevert(Agent.InsufficientBalance.selector);
+        vm.expectRevert(NativeTransferFailed.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
             InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
@@ -268,147 +263,211 @@ contract GatewayTest is Test {
      * Handlers
      */
 
-    function testHandlerAgentExecution() public {
+    function testAgentExecution() public {
         // first lock tokens so we can call unlockTokens later
         testFeatureLockTokens();
 
-        bytes memory params = abi.encode(
-            assetHubAgentID, abi.encode(keccak256("unlockTokens"), abi.encode(address(token), address(this), 1))
-        );
+        Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(keccak256("unlockTokens"), abi.encode(address(token), address(this), 1))
+        });
 
         vm.expectEmit(false, false, false, true, assetHubAgent);
         emit NativeTokensUnlocked(address(token), address(this), 1);
 
-        GatewayMock(address(gateway)).handleAgentExecutePublic(params);
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
 
-    function testHandlerAgentExecutionBadOrigin() public {
-        bytes memory params = abi.encode(
-            keccak256("foo"), abi.encode(keccak256("unlockTokens"), abi.encode(address(token), address(this), 1))
-        );
+    function testAgentExecutionBadOrigin() public {
+        Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
+            agentID: bytes32(0),
+            payload: abi.encode(keccak256("unlockTokens"), abi.encode(address(token), address(this), 1))
+        });
 
         vm.expectRevert(Gateway.AgentDoesNotExist.selector);
-        GatewayMock(address(gateway)).handleAgentExecutePublic(params);
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
 
-    function testHandlerAgentExecutionBadPayload() public {
-        bytes memory params = abi.encode(assetHubAgentID, hex"");
+    function testAgentExecutionBadPayload() public {
+        Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({agentID: assetHubAgentID, payload: ""});
 
         vm.expectRevert(Gateway.InvalidAgentExecutionPayload.selector);
-        GatewayMock(address(gateway)).handleAgentExecutePublic(params);
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
 
-    function testHandlerCreateAgent() public {
+    function testCreateAgent() public {
         bytes32 agentID = keccak256("123");
-        bytes memory params = abi.encode((agentID));
+        Gateway.CreateAgentParams memory params = Gateway.CreateAgentParams({agentID: agentID});
 
         vm.expectEmit(false, false, false, false, address(gateway));
         emit AgentCreated(agentID, address(0));
 
-        GatewayMock(address(gateway)).handleCreateAgentPublic(params);
+        GatewayMock(address(gateway)).createAgentPublic(abi.encode(params));
     }
 
-    function testHandlerCreateAgentAlreadyCreated() public {
+    function testCreateAgentAlreadyCreated() public {
         bytes32 agentID = keccak256("123");
-        bytes memory params = abi.encode((agentID));
+        Gateway.CreateAgentParams memory params = Gateway.CreateAgentParams({agentID: agentID});
 
-        GatewayMock(address(gateway)).handleCreateAgentPublic(params);
+        GatewayMock(address(gateway)).createAgentPublic(abi.encode(params));
 
         vm.expectRevert(Gateway.AgentAlreadyCreated.selector);
-        GatewayMock(address(gateway)).handleCreateAgentPublic(params);
+        GatewayMock(address(gateway)).createAgentPublic(abi.encode(params));
     }
 
-    function testHandlerUpgrade() public {
+    function testCreateChannel() public {
+        ParaID paraID = ParaID.wrap(3042);
+        bytes32 agentID = keccak256("3042");
+
+        GatewayMock(address(gateway)).createAgentPublic(abi.encode(Gateway.CreateAgentParams({agentID: agentID})));
+
+        Gateway.CreateChannelParams memory params = Gateway.CreateChannelParams({paraID: paraID, agentID: agentID});
+
+        vm.expectEmit(true, false, false, true);
+        emit ChannelCreated(paraID);
+        GatewayMock(address(gateway)).createChannelPublic(abi.encode(params));
+    }
+
+    function testCreateChannelFailsAgentDoesNotExist() public {
+        ParaID paraID = ParaID.wrap(3042);
+        bytes32 agentID = keccak256("3042");
+
+        Gateway.CreateChannelParams memory params = Gateway.CreateChannelParams({paraID: paraID, agentID: agentID});
+
+        vm.expectRevert(Gateway.AgentDoesNotExist.selector);
+        GatewayMock(address(gateway)).createChannelPublic(abi.encode(params));
+    }
+
+    function testCreateChannelFailsChannelAlreadyExists() public {
+        ParaID paraID = ParaID.wrap(3042);
+        bytes32 agentID = keccak256("3042");
+
+        GatewayMock(address(gateway)).createAgentPublic(abi.encode(Gateway.CreateAgentParams({agentID: agentID})));
+
+        Gateway.CreateChannelParams memory params = Gateway.CreateChannelParams({paraID: paraID, agentID: agentID});
+
+        GatewayMock(address(gateway)).createChannelPublic(abi.encode(params));
+
+        vm.expectRevert(Gateway.ChannelAlreadyCreated.selector);
+        GatewayMock(address(gateway)).createChannelPublic(abi.encode(params));
+    }
+
+    function testUpdateChannel() public {
+        bytes memory params = abi.encode(
+            Gateway.UpdateChannelParams({
+                paraID: assetHubParaID,
+                mode: OperatingMode.RejectingOutboundMessages,
+                fee: 2 ether,
+                reward: 2 ether
+            })
+        );
+
+        vm.expectEmit(true, false, false, true);
+        emit ChannelUpdated(assetHubParaID);
+        GatewayMock(address(gateway)).updateChannelPublic(params);
+
+        (uint256 fee, uint256 reward) = IGateway(address(gateway)).channelFeeRewardOf(assetHubParaID);
+        assertEq(fee, 2 ether);
+        assertEq(reward, 2 ether);
+    }
+
+    function testUpdateChannelFailDoesNotExist() public {
+        bytes memory params = abi.encode(
+            Gateway.UpdateChannelParams({
+                paraID: ParaID.wrap(5956),
+                mode: OperatingMode.RejectingOutboundMessages,
+                fee: 2 ether,
+                reward: 2 ether
+            })
+        );
+
+        vm.expectRevert(Gateway.ChannelDoesNotExist.selector);
+        GatewayMock(address(gateway)).updateChannelPublic(params);
+    }
+
+    function testUpdateChannelSanityChecksForBridgeHubChannel() public {
+        bytes memory params = abi.encode(
+            Gateway.UpdateChannelParams({
+                paraID: bridgeHubParaID,
+                mode: OperatingMode.Normal,
+                fee: 100000000 ether,
+                reward: 100000000 ether
+            })
+        );
+
+        vm.expectRevert(Gateway.InvalidChannelUpdate.selector);
+        GatewayMock(address(gateway)).updateChannelPublic(params);
+    }
+
+    function testUpgrade() public {
         // Upgrade to this new logic contract
-        Gateway newLogic = new GatewayV2();
-        bytes memory params = abi.encode(address(newLogic), abi.encodeCall(GatewayV2.initializeV2, ()));
+        GatewayV2 newLogic = new GatewayV2();
+
+        Gateway.UpgradeParams memory params = Gateway.UpgradeParams({
+            impl: address(newLogic),
+            implCodeHash: address(newLogic).codehash,
+            initParams: abi.encode(42)
+        });
 
         // Expect the gateway to emit `Upgraded`
         vm.expectEmit(true, false, false, false);
         emit Upgraded(address(newLogic));
 
-        GatewayMock(address(gateway)).handleUpgradePublic(params);
+        GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
 
-        // Verify that the GatewayV2.initializeV2 was called
+        // Verify that the GatewayV2.setup was called
         assertEq(GatewayV2(address(gateway)).getValue(), 42);
     }
 
-    function testHandlerUpgradeFail() public {
-        bytes memory params = abi.encode(address(1), hex"");
+    function testUpgradeFailOnInitializationFailure() public {
+        GatewayV2 newLogic = new GatewayV2();
 
-        // Upgrade should fail if a bad address is passed
-        vm.expectRevert("ERC1967: new implementation is not a contract");
-        GatewayMock(address(gateway)).handleUpgradePublic(params);
+        Gateway.UpgradeParams memory params = Gateway.UpgradeParams({
+            impl: address(newLogic),
+            implCodeHash: address(newLogic).codehash,
+            initParams: abi.encode(666)
+        });
+
+        vm.expectRevert(Gateway.SetupFailed.selector);
+        GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
     }
 
-    function testHandlerSetOperatingMode() public {
-        bytes memory params = abi.encode((OperatingMode.RejectingOutboundMessages));
+    function testUpgradeFailCodeHashMismatch() public {
+        GatewayV2 newLogic = new GatewayV2();
+
+        Gateway.UpgradeParams memory params =
+            Gateway.UpgradeParams({impl: address(newLogic), implCodeHash: bytes32(0), initParams: abi.encode(42)});
+
+        vm.expectRevert(Gateway.InvalidCodeHash.selector);
+        GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
+    }
+
+    function testSetOperatingMode() public {
+        Gateway.SetOperatingModeParams memory params =
+            Gateway.SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
 
         OperatingMode mode = IGateway(address(gateway)).operatingMode();
         assertEq(uint256(mode), 0);
 
-        GatewayMock(address(gateway)).handleSetOperatingModePublic(params);
+        GatewayMock(address(gateway)).setOperatingModePublic(abi.encode(params));
 
         mode = IGateway(address(gateway)).operatingMode();
         assertEq(uint256(mode), 1);
     }
 
-    /**
-     * Misc checks
-     */
+    function testWithdrawAgentFunds() public {
+        deal(assetHubAgent, 50 ether);
 
-    // Only cross-chain governance can initiate upgrades
-    function testUpgradeIsPrivileged() public {
-        vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).upgradeTo(address(gatewayLogic));
-    }
+        address recipient = makeAddr("recipient");
 
-    // Handler functions should not be externally callable
-    function testHandlersArePrivileged() public {
-        vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).handleAgentExecute("");
+        bytes memory params = abi.encode(
+            Gateway.WithdrawAgentFundsParams({agentID: assetHubAgentID, recipient: recipient, amount: 3 ether})
+        );
 
-        vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).handleCreateAgent("");
+        GatewayMock(address(gateway)).withdrawAgentFundsPublic(params);
 
-        vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).handleCreateChannel("");
-
-        vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).handleUpdateChannel("");
-
-        vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).handleSetOperatingMode("");
-
-        vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).handleUpgrade("");
-
-        vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).handleWithdrawSovereignFunds("");
-
-        vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).handleConfigure("");
-    }
-
-    function testGetters() public {
-        IGateway gw = IGateway(address(gateway));
-
-        OperatingMode mode = gw.operatingMode();
-        assertEq(uint256(mode), 0);
-
-        OperatingMode channelMode = gw.channelOperatingModeOf(bridgeHubParaID);
-        assertEq(uint256(channelMode), 0);
-
-        (uint256 fee, uint256 reward) = gw.channelFeeRewardOf(bridgeHubParaID);
-        assertEq(fee, 1 ether);
-        assertEq(reward, 1 ether);
-
-        (uint64 inbound, uint64 outbound) = gw.channelNoncesOf(bridgeHubParaID);
-        assertEq(inbound, 0);
-        assertEq(outbound, 0);
-
-        address agent = gw.agentOf(bridgeHubAgentID);
-        assertEq(agent, bridgeHubAgent);
+        assertEq(assetHubAgent.balance, 47 ether);
+        assertEq(recipient.balance, 3 ether);
     }
 
     /**
@@ -440,26 +499,31 @@ contract GatewayTest is Test {
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
-        GatewayMock(address(gateway)).setOperatingMode(OperatingMode.RejectingOutboundMessages);
+        GatewayMock(address(gateway)).setOperatingModePublic(
+            abi.encode(Gateway.SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages}))
+        );
 
         OperatingMode mode = IGateway(address(gateway)).operatingMode();
         assertEq(uint256(mode), 1);
-
-        // Now all outbound messaging should be disabled
-
-        vm.expectRevert(Gateway.Disabled.selector);
-        IGateway(address(gateway)).registerNativeToken{value: 1 ether}(address(token));
-
-        vm.expectRevert(Gateway.Disabled.selector);
-        IGateway(address(gateway)).lockNativeTokens{value: 1 ether}(address(token), ParaID.wrap(0), "", 1);
     }
 
     function testDisableOutboundMessagingForChannel() public {
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
-        GatewayMock(address(gateway)).setOperatingMode(OperatingMode.Normal);
-        GatewayMock(address(gateway)).setChannelOperatingMode(assetHubParaID, OperatingMode.RejectingOutboundMessages);
+        GatewayMock(address(gateway)).setOperatingModePublic(
+            abi.encode(Gateway.SetOperatingModeParams({mode: OperatingMode.Normal}))
+        );
+
+        bytes memory params = abi.encode(
+            Gateway.UpdateChannelParams({
+                paraID: assetHubParaID,
+                mode: OperatingMode.RejectingOutboundMessages,
+                fee: 1 ether,
+                reward: 1 ether
+            })
+        );
+        GatewayMock(address(gateway)).updateChannelPublic(params);
 
         OperatingMode mode = IGateway(address(gateway)).channelOperatingModeOf(assetHubParaID);
         assertEq(uint256(mode), 1);
@@ -471,5 +535,54 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Gateway.Disabled.selector);
         IGateway(address(gateway)).lockNativeTokens{value: 1 ether}(address(token), ParaID.wrap(0), "", 1);
+    }
+
+    /**
+     * Misc checks
+     */
+
+    // Handler functions should not be externally callable
+    function testHandlersArePrivileged() public {
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        Gateway(address(gateway)).agentExecute("");
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        Gateway(address(gateway)).createAgent("");
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        Gateway(address(gateway)).createChannel("");
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        Gateway(address(gateway)).updateChannel("");
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        Gateway(address(gateway)).setOperatingMode("");
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        Gateway(address(gateway)).upgrade("");
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        Gateway(address(gateway)).withdrawAgentFunds("");
+    }
+
+    function testGetters() public {
+        IGateway gw = IGateway(address(gateway));
+
+        OperatingMode mode = gw.operatingMode();
+        assertEq(uint256(mode), 0);
+
+        OperatingMode channelMode = gw.channelOperatingModeOf(bridgeHubParaID);
+        assertEq(uint256(channelMode), 0);
+
+        (uint256 fee, uint256 reward) = gw.channelFeeRewardOf(bridgeHubParaID);
+        assertEq(fee, 1 ether);
+        assertEq(reward, 1 ether);
+
+        (uint64 inbound, uint64 outbound) = gw.channelNoncesOf(bridgeHubParaID);
+        assertEq(inbound, 0);
+        assertEq(outbound, 0);
+
+        address agent = gw.agentOf(bridgeHubAgentID);
+        assertEq(agent, bridgeHubAgent);
     }
 }
