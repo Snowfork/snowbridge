@@ -57,6 +57,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 		return fmt.Errorf("create randao commit delay: %w", err)
 	}
 	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
+	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
 
 	// launch task processor
 	eg.Go(func() error {
@@ -131,6 +132,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
 	receipt, err := wr.waitForTransaction(ctx, tx, wr.blockWaitPeriod+1)
 	if err != nil {
+		log.WithError(err).Error("Failed to wait for RandaoCommitDelay")
 		return err
 	}
 	if receipt.Status != 1 {
