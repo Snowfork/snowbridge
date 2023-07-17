@@ -61,7 +61,6 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return fmt.Errorf("fetch BeefyClient current state: %w", err)
 	}
-
 	log.WithFields(log.Fields{
 		"beefyBlock":     initialBeefyBlock,
 		"validatorSetID": initialValidatorSetID,
@@ -82,7 +81,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error) {
 	address := common.HexToAddress(relay.config.Sink.Contracts.BeefyClient)
-	contract, err := contracts.NewBeefyClient(address, relay.ethereumConn.Client())
+	beefyClient, err := contracts.NewBeefyClient(address, relay.ethereumConn.Client())
 	if err != nil {
 		return 0, 0, err
 	}
@@ -91,15 +90,15 @@ func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error)
 		Context: ctx,
 	}
 
-	initialBeefyBlock, err := contract.LatestBeefyBlock(&callOpts)
+	latestBeefyBlock, err := beefyClient.LatestBeefyBlock(&callOpts)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	initialValidatorSetID, err := contract.CurrentValidatorSet(&callOpts)
+	currentValidatorSet, err := beefyClient.CurrentValidatorSet(&callOpts)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	return initialBeefyBlock, initialValidatorSetID.Id.Uint64(), nil
+	return latestBeefyBlock, currentValidatorSet.Id.Uint64(), nil
 }

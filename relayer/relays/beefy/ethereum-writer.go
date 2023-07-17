@@ -42,7 +42,6 @@ func NewEthereumWriter(
 }
 
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, requests <-chan Request) error {
-
 	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
 	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
 	if err != nil {
@@ -53,7 +52,6 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 	callOpts := bind.CallOpts{
 		Context: ctx,
 	}
-
 	blockWaitPeriod, err := wr.contract.RandaoCommitDelay(&callOpts)
 	if err != nil {
 		return err
