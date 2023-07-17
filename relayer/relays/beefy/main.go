@@ -22,7 +22,6 @@ type Relay struct {
 	ethereumConn     *ethereum.Connection
 	polkadotListener *PolkadotListener
 	ethereumWriter   *EthereumWriter
-	tasks            chan Request
 }
 
 func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
@@ -44,7 +43,6 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 		ethereumConn:     ethereumConn,
 		polkadotListener: polkadotListener,
 		ethereumWriter:   ethereumWriter,
-		tasks:            make(chan Request),
 	}, nil
 }
 
