@@ -9,6 +9,8 @@ mod benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
 use snowbridge_beacon_primitives::CompactExecutionHeader;
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_ethereum::H256;
 
 pub mod weights;
 
@@ -59,8 +61,6 @@ pub mod pallet {
 
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
-	#[cfg(feature = "runtime-benchmarks")]
-	use snowbridge_ethereum::H256;
 	use xcm::v3::SendXcm;
 
 	#[pallet::pallet]
