@@ -103,9 +103,16 @@ impl NativeTokensMessage {
 				create_call_index,
 				set_metadata_call_index,
 			} => {
-				let some_owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(
-					&MultiLocation::new(2, (GlobalConsensus(Ethereum{ chain_id}), AccountKey20 { network: None, key: *origin.as_fixed_bytes() }))
-				);
+				let some_owner =
+					GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(
+						&MultiLocation::new(
+							2,
+							(
+								GlobalConsensus(Ethereum { chain_id }),
+								AccountKey20 { network: None, key: *origin.as_fixed_bytes() },
+							),
+						),
+					);
 
 				let owner = match some_owner {
 					Some(owner) => owner,
@@ -234,13 +241,15 @@ pub struct DescribeEthereumAccountKey20Terminal;
 impl DescribeLocation for DescribeEthereumAccountKey20Terminal {
 	fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
 		match (l.parents, &l.interior) {
-			(_, X2(GlobalConsensus(Ethereum { chain_id }), AccountKey20 {key, ..})) => Some((b"ethereum", chain_id, key).encode()),
+			(_, X2(GlobalConsensus(Ethereum { chain_id }), AccountKey20 { key, .. })) => {
+				Some((b"ethereum", chain_id, key).encode())
+			},
 			_ => return None,
 		}
 	}
 }
 
-pub type GlobalConsensusEthereumAccountConvertsFor<AccountId> = 
+pub type GlobalConsensusEthereumAccountConvertsFor<AccountId> =
 	HashedDescription<AccountId, DescribeEthereumAccountKey20Terminal>;
 
 pub struct FromEthereumGlobalConsensus<EthereumBridgeLocation>(PhantomData<EthereumBridgeLocation>);
