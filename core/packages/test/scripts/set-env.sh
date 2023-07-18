@@ -84,14 +84,14 @@ export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
 
 ## OutboundChannel
-export RELAYER_FEE=1
+export RELAYER_FEE=${RELAYER_FEE:-1}
 
 ## InboundChannel
-export RELAYER_REWARD=1
+export RELAYER_REWARD=${RELAYER_REWARD:-1}
 
 ## NativeTokens
 export ASSET_HUB_PARAID=$statemine_para_id
-export CREATE_TOKEN_FEE=1
+export CREATE_TOKEN_FEE=${CREATE_TOKEN_FEE:-1}
 export CREATE_CALL_INDEX="0x3500"
 export SET_METADATA_CALL_INDEX="0x3511"
 
