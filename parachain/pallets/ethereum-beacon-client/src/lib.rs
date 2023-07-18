@@ -92,7 +92,7 @@ pub mod pallet {
 	#[cfg_attr(test, derive(PartialEq))]
 	pub enum Error<T> {
 		SkippedSyncCommitteePeriod,
-		/// Attested header is older than latest finalized header
+		/// Attested header is older than latest finalized header.
 		IrrelevantUpdate,
 		NotBootstrapped,
 		SyncCommitteeParticipantsNotSupermajority,
@@ -114,6 +114,7 @@ pub mod pallet {
 		BLSPreparePublicKeysFailed,
 		BLSVerificationFailed(BlsError),
 		InvalidUpdateSlot,
+		/// The given update is not in the expected period, or the given next sync committee does not match the next sync committee in storage.
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedSlot,
