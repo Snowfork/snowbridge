@@ -42,23 +42,22 @@ func NewEthereumWriter(
 }
 
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, requests <-chan Request) error {
-
 	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
 	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
 	if err != nil {
-		return err
+		return fmt.Errorf("create beefy client: %w", err)
 	}
 	wr.contract = contract
 
 	callOpts := bind.CallOpts{
 		Context: ctx,
 	}
-
 	blockWaitPeriod, err := wr.contract.RandaoCommitDelay(&callOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("create randao commit delay: %w", err)
 	}
 	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
+	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
 
 	// launch task processor
 	eg.Go(func() error {
@@ -133,15 +132,16 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
 	receipt, err := wr.waitForTransaction(ctx, tx, wr.blockWaitPeriod+1)
 	if err != nil {
+		log.WithError(err).Error("Failed to wait for RandaoCommitDelay")
 		return err
 	}
 	if receipt.Status != 1 {
-		return fmt.Errorf("initial commitment transaction failed")
+		return fmt.Errorf("initial commitment transaction failed, status (%v), logs (%v)", receipt.Status, receipt.Logs)
 	}
 
 	commitmentHash, err := task.CommitmentHash()
 	if err != nil {
-		return fmt.Errorf("generate commitment hash")
+		return fmt.Errorf("generate commitment hash: %w", err)
 	}
 
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
@@ -225,29 +225,23 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 			signedValidators = append(signedValidators, big.NewInt(int64(i)))
 		}
 	}
-	numberOfValidators := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
+	validatorCount := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
 	initialBitfield, err := wr.contract.CreateInitialBitfield(
 		&bind.CallOpts{
 			Pending: true,
 			From:    wr.conn.Keypair().CommonAddress(),
 		},
-		signedValidators, numberOfValidators,
+		signedValidators, validatorCount,
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create initial bitfield: %w", err)
 	}
 
 	// Pick first validator who signs beefy commitment
-	valIndex := signedValidators[0].Int64()
-
-	msg, err := task.MakeSubmitInitialParams(valIndex, initialBitfield)
+	chosenValidator := signedValidators[0].Int64()
+	msg, err := task.MakeSubmitInitialParams(chosenValidator, initialBitfield)
 	if err != nil {
 		return nil, nil, err
-	}
-
-	var pkProofHex []string
-	for _, proofItem := range msg.Proof.Proof {
-		pkProofHex = append(pkProofHex, "0x"+hex.EncodeToString(proofItem[:]))
 	}
 
 	var tx *types.Transaction
