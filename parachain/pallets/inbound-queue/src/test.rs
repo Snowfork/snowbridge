@@ -206,7 +206,6 @@ const OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
 );
 
 use snowbridge_core::ParaId;
-use snowbridge_ethereum_beacon_client::ExecutionHeaderBuffer;
 
 #[test]
 fn test_submit() {

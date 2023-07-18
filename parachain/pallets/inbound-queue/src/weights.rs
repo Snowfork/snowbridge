@@ -21,12 +21,11 @@ pub trait WeightInfo {
 }
 
 // For backwards compatibility and tests
-pub struct SnowbridgeWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
+impl WeightInfo for () {
     fn submit() -> Weight {
         Weight::from_parts(125_000_000, 0)
             .saturating_add(Weight::from_parts(0, 4042))
-            .saturating_add(T::DbWeight::get().reads(9))
-            .saturating_add(T::DbWeight::get().writes(4))
+            .saturating_add(RocksDbWeight::get().reads(9))
+            .saturating_add(RocksDbWeight::get().writes(4))
     }
 }
