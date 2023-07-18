@@ -138,8 +138,8 @@ func (s *Scanner) findTasks(
 	return tasks, nil
 }
 
-// Searches for all lost commitments on the basic channel from the given parachain block number backwards
-// until it finds the given nonces
+// Searches from the given parachain block number backwards on the given channel (landID) for all outstanding
+// commitments until it finds the given startingNonce
 func (s *Scanner) findTasksImpl(
 	_ context.Context,
 	lastParaBlockNumber uint64,
