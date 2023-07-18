@@ -225,22 +225,21 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 			signedValidators = append(signedValidators, big.NewInt(int64(i)))
 		}
 	}
-	numberOfValidators := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
+	validatorCount := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
 	initialBitfield, err := wr.contract.CreateInitialBitfield(
 		&bind.CallOpts{
 			Pending: true,
 			From:    wr.conn.Keypair().CommonAddress(),
 		},
-		signedValidators, numberOfValidators,
+		signedValidators, validatorCount,
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create initial bitfield: %w", err)
 	}
 
 	// Pick first validator who signs beefy commitment
-	valIndex := signedValidators[0].Int64()
-
-	msg, err := task.MakeSubmitInitialParams(valIndex, initialBitfield)
+	chosenValidator := signedValidators[0].Int64()
+	msg, err := task.MakeSubmitInitialParams(chosenValidator, initialBitfield)
 	if err != nil {
 		return nil, nil, err
 	}
