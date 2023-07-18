@@ -244,11 +244,6 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		return nil, nil, err
 	}
 
-	var pkProofHex []string
-	for _, proofItem := range msg.Proof.Proof {
-		pkProofHex = append(pkProofHex, "0x"+hex.EncodeToString(proofItem[:]))
-	}
-
 	var tx *types.Transaction
 	if task.IsHandover {
 		tx, err = wr.contract.SubmitInitialWithHandover(
