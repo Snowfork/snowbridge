@@ -88,6 +88,8 @@ library Bitfield {
      * @notice Calculates the number of set bits by using the hamming weight of the bitfield.
      * The algorithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
      * Further improvements are possible, see the article above.
+     * TODO: return early when validator count > 768:
+     * https://github.com/Snowfork/snowbridge/pull/877#discussion_r1255589788
      */
     function countSetBits(uint256[] memory self) internal pure returns (uint256) {
         unchecked {
