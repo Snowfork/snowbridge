@@ -141,7 +141,7 @@ func (s *Scanner) findTasks(
 // Searches for all lost commitments on the basic channel from the given parachain block number backwards
 // until it finds the given nonces
 func (s *Scanner) findTasksImpl(
-	ctx context.Context,
+	_ context.Context,
 	lastParaBlockNumber uint64,
 	laneID uint32,
 	startingNonce uint64,
