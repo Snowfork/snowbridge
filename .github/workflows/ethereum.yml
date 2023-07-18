@@ -22,11 +22,11 @@ jobs:
           fetch-depth: 2
       - uses: pnpm/action-setup@v2.0.1
         with:
-          version: 8.4.0
+          version: 8.6.6
       - name: Setup Node.js environment
         uses: actions/setup-node@v3
         with:
-          node-version: v18.16.0
+          node-version: v18.16.1
           cache: "pnpm"
           cache-dependency-path: core/pnpm-lock.yaml
       - name: Install Foundry
