@@ -149,7 +149,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight({100_000_000})]
+		#[pallet::weight(T::WeightInfo::submit())]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			// submit message to verifier for verification
