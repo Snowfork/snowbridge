@@ -68,6 +68,7 @@ interface IGateway {
     ///      in the `ForeignAssets` pallet.
     function registerToken(address token) external payable;
 
+<<<<<<<< HEAD:contracts/src/interfaces/IGateway.sol
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
     function sendToken(address token, ParaID destinationChain, bytes32 destinationAddress, uint128 amount)
         external
@@ -77,4 +78,9 @@ interface IGateway {
     function sendToken(address token, ParaID destinationChain, address destinationAddress, uint128 amount)
         external
         payable;
+========
+    // Send ERC20 tokens to Polkadot. The bridged assets will be minted on AssetHub
+    // and then reserve transferred to `recipient` on `finalDestPara`.
+    function sendNativeToken(address token, bytes calldata recipient, uint128 amount) external payable;
+>>>>>>>> 6d44b0dd (More improvements to contracts):core/packages/contracts/src/interfaces/IGateway.sol
 }
