@@ -92,6 +92,7 @@ pub mod pallet {
 	#[cfg_attr(test, derive(PartialEq))]
 	pub enum Error<T> {
 		SkippedSyncCommitteePeriod,
+		/// Attested header is older than latest finalized header
 		IrrelevantUpdate,
 		NotBootstrapped,
 		SyncCommitteeParticipantsNotSupermajority,
