@@ -49,4 +49,5 @@ std = [
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
 ]
