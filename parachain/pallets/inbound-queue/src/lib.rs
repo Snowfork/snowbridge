@@ -7,6 +7,11 @@ mod envelope;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_beacon_primitives::CompactExecutionHeader;
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_ethereum::H256;
+
 pub mod weights;
 
 #[cfg(test)]
@@ -57,8 +62,14 @@ pub mod pallet {
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
 	use xcm::v3::SendXcm;
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<T> {
+		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader);
+	}
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -75,6 +86,9 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		type AllowListLength: Get<u32>;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type Helper: BenchmarkHelper<Self>;
 	}
 
 	#[pallet::hooks]
@@ -135,7 +149,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight({100_000_000})]
+		#[pallet::weight(T::WeightInfo::submit())]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			// submit message to verifier for verification
