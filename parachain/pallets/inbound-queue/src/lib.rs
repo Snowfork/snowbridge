@@ -39,6 +39,9 @@ use codec::{Decode, Encode};
 
 use scale_info::TypeInfo;
 
+type BalanceOf<T> =
+    <<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+
 #[derive(CloneNoBound, EqNoBound, PartialEqNoBound, Encode, Decode, Debug, TypeInfo)]
 pub enum MessageDispatchResult {
 	InvalidPayload,
@@ -64,9 +67,6 @@ pub mod pallet {
 	pub trait BenchmarkHelper<T> {
 		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader);
 	}
-
-	type BalanceOf<T> =
-		<<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
