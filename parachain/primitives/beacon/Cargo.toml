@@ -18,8 +18,8 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
-ssz-rs = { git = "https://github.com/ralexstokes/ssz-rs", default-features = false, rev = "d18af912abacbf84219be37ab3b42a9abcf10d2a" }
-ssz-rs-derive = { git = "https://github.com/ralexstokes/ssz-rs", default-features = false, rev = "d18af912abacbf84219be37ab3b42a9abcf10d2a" }
+ssz_rs = { version="0.9.0", default-features = false }
+ssz_rs_derive = { version="0.9.0", default-features = false }
 byte-slice-cast = { version = "1.2.1", default-features = false }
 
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
@@ -43,7 +43,7 @@ std = [
     "sp-io/std",
     "rlp/std",
     "snowbridge-ethereum/std",
-    "ssz-rs/std",
+    "ssz_rs/std",
     "byte-slice-cast/std",
     "milagro_bls/std",
 ]
