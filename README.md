@@ -40,6 +40,12 @@ Then activate a developer shell in the root of our repo, where [`flake.nix`](./f
 nix develop
 ```
 
+For first-time setup:
+
+```sh
+cd core && pnpm install
+```
+
 To ensure your code editor (such as VS Code) can execute tools in the nix shell, startup your editor within the
 interactive shell.
 
