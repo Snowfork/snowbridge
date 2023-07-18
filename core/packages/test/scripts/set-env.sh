@@ -78,7 +78,7 @@ export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea
 # but for rococo-local each session is only 20 slots=120s
 # so relax somehow here just for quick test
 # for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
-export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-6}"
+export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
 export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
 
 ## ParachainClient
