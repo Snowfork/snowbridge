@@ -92,7 +92,7 @@ pub mod pallet {
 	#[cfg_attr(test, derive(PartialEq))]
 	pub enum Error<T> {
 		SkippedSyncCommitteePeriod,
-		NotRelevant,
+		IrrelevantUpdate,
 		NotBootstrapped,
 		SyncCommitteeParticipantsNotSupermajority,
 		InvalidHeaderMerkleProof,
@@ -343,7 +343,7 @@ pub mod pallet {
 			ensure!(
 				update.attested_header.slot > latest_finalized_state.slot ||
 					update_has_next_sync_committee,
-				Error::<T>::NotRelevant
+				Error::<T>::IrrelevantUpdate
 			);
 
 			// Verify that the `finality_branch`, if present, confirms `finalized_header` to match
