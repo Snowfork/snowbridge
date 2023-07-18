@@ -19,7 +19,7 @@ config_relayer(){
 
     # Configure parachain relay (bridge hub)
     jq \
-        --arg k1 "$(address_for Gateway)" \
+        --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg laneID $BRIDGE_HUB_PARAID \
@@ -37,7 +37,7 @@ config_relayer(){
 
     # Configure parachain relay (asset hub)
     jq \
-        --arg k1 "$(address_for Gateway)" \
+        --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg laneID $ASSET_HUB_PARAID \
