@@ -1,27 +1,26 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.20;
 
-import {Strings} from "openzeppelin/utils/Strings.sol";
 import {Test} from "forge-std/Test.sol";
+import {Strings} from "openzeppelin/utils/Strings.sol";
 import {console} from "forge-std/console.sol";
 
 import {BeefyClient} from "../src/BeefyClient.sol";
 
-import {IGateway} from "../src/IGateway.sol";
+import {IGateway} from "../src/interfaces/IGateway.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {GatewayMock, GatewayV2} from "./mocks/GatewayMock.sol";
-import {AgentExecutorMock} from "./mocks/AgentExecutorMock.sol";
 
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
-import {Features} from "../src/Features.sol";
+import {Assets} from "../src/Assets.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 
-import {InboundMessage, OperatingMode, ParaID} from "../src/Types.sol";
+import {InboundMessage, OperatingMode, ParaID, Config} from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 
@@ -29,7 +28,7 @@ contract GatewayTest is Test {
     event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool result);
     event OutboundMessageAccepted(ParaID indexed dest, uint64 nonce, bytes payload);
     event NativeTokensUnlocked(address token, address recipient, uint256 amount);
-    event NativeTokensLocked(address token, ParaID destParaID, bytes recipient, uint128 amount);
+    event NativeTokensLocked(address token, bytes recipient, uint128 amount);
     event AgentCreated(bytes32 agentID, address agent);
     event ChannelCreated(ParaID indexed paraID);
     event ChannelUpdated(ParaID indexed paraID);
@@ -57,31 +56,34 @@ contract GatewayTest is Test {
     address public account1;
     address public account2;
 
+    uint256 public constant DISPATCH_GAS = 500_000;
+
+    uint256 public defaultFee = 1 ether;
+    uint256 public defaultReward = 1 ether;
+    uint256 public registerNativeTokenFee = 1 ether;
+    uint256 public sendNativeTokenFee = 1 ether;
+
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
-
-        Gateway.InitParams memory initParams = Gateway.InitParams({
-            agentExecutor: address(executor),
-            fee: 1 ether,
-            reward: 1 ether,
-            bridgeHubParaID: bridgeHubParaID,
-            bridgeHubAgentID: bridgeHubAgentID,
-            assetHubParaID: assetHubParaID,
-            assetHubAgentID: assetHubAgentID,
-            gasToForward: 500_000,
-            features: Features.InitParams({
-                assetHubParaID: ParaID.wrap(1002),
-                createTokenFee: 1,
-                createTokenCallId: bytes2(0x3500)
-            }),
-            verification: Verification.InitParams({
-                beefyClient: address(0),
-                parachainID: uint32(ParaID.unwrap(bridgeHubParaID))
-            })
-        });
-
-        gatewayLogic = new GatewayMock();
-        gateway = new GatewayProxy(address(gatewayLogic), abi.encode(initParams));
+        gatewayLogic = new GatewayMock(
+            address(0),
+            address(executor),
+            DISPATCH_GAS,
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            assetHubParaID,
+            assetHubAgentID,
+            bytes2(0x3500)
+        );
+        gateway = new GatewayProxy(
+            address(gatewayLogic),
+            abi.encode(
+                defaultFee,
+                defaultReward,
+                registerNativeTokenFee,
+                sendNativeTokenFee
+            )
+        );
 
         bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
@@ -177,21 +179,9 @@ contract GatewayTest is Test {
     // Handling of Out-of-Gas errors
 
     // Run with forge test -vvvv to verify that a nested call reverts with `EvmError: OutOfGas`
-    function testSubmitSucceedsWhenHandlerOOG() public {
-        deal(assetHubAgent, 50 ether);
+    // function testSubmitSucceedsWhenHandlerOOG() public {
 
-        GatewayMock(address(gateway)).setAgentExecutor(address(new AgentExecutorMock()));
-
-        Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
-            agentID: assetHubAgentID,
-            payload: abi.encode(keccak256("unlockTokens"), abi.encode(address(token), address(this), 1))
-        });
-
-        hoax(relayer, 1 ether);
-        IGateway(address(gateway)).submitInbound(
-            InboundMessage(assetHubParaID, 1, keccak256("agentExecute"), abi.encode(params)), proof, makeMockProof()
-        );
-    }
+    // }
 
     /**
      * Fees & Rewards
@@ -237,9 +227,9 @@ contract GatewayTest is Test {
         token.approve(address(gateway), 1);
 
         hoax(user, 2 ether);
-        IGateway(address(gateway)).lockNativeTokens{value: 1 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).sendNativeToken{value: 2 ether}(address(token), "", 1);
 
-        assertEq(user.balance, 1 ether);
+        assertEq(user.balance, 0 ether);
     }
 
     // User doesn't have enough funds to send message
@@ -254,7 +244,7 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Gateway.FeePaymentToLow.selector);
         hoax(user, 2 ether);
-        IGateway(address(gateway)).lockNativeTokens{value: 0.5 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).sendNativeToken{value: 0.5 ether}(address(token), "", 1);
 
         assertEq(user.balance, 2 ether);
     }
@@ -264,16 +254,12 @@ contract GatewayTest is Test {
      */
 
     function testAgentExecution() public {
-        // first lock tokens so we can call unlockTokens later
-        testFeatureLockTokens();
+        token.transfer(address(assetHubAgent), 1);
 
         Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(keccak256("unlockTokens"), abi.encode(address(token), address(this), 1))
+            payload: abi.encode(keccak256("transferToken"), abi.encode(address(token), address(this), 1))
         });
-
-        vm.expectEmit(false, false, false, true, assetHubAgent);
-        emit NativeTokensUnlocked(address(token), address(this), 1);
 
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
@@ -281,7 +267,7 @@ contract GatewayTest is Test {
     function testAgentExecutionBadOrigin() public {
         Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
             agentID: bytes32(0),
-            payload: abi.encode(keccak256("unlockTokens"), abi.encode(address(token), address(this), 1))
+            payload: abi.encode(keccak256("transferNativeToken"), abi.encode(address(token), address(this), 1))
         });
 
         vm.expectRevert(Gateway.AgentDoesNotExist.selector);
@@ -464,17 +450,17 @@ contract GatewayTest is Test {
             Gateway.WithdrawAgentFundsParams({agentID: assetHubAgentID, recipient: recipient, amount: 3 ether})
         );
 
-        GatewayMock(address(gateway)).withdrawAgentFundsPublic(params);
+        GatewayMock(address(gateway)).transferNativeFromAgentPublic(params);
 
         assertEq(assetHubAgent.balance, 47 ether);
         assertEq(recipient.balance, 3 ether);
     }
 
     /**
-     * Features
+     * Assets
      */
 
-    function testFeatureLockTokens() public {
+    function testSendNativeToken() public {
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
@@ -482,13 +468,13 @@ contract GatewayTest is Test {
         bytes memory recipient = "/Alice";
 
         vm.expectEmit();
-        emit NativeTokensLocked(address(token), ParaID.wrap(0), recipient, 1);
+        emit NativeTokensLocked(address(token), recipient, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
         emit OutboundMessageAccepted(assetHubParaID, 1, hex"");
 
-        IGateway(address(gateway)).lockNativeTokens{value: 1 ether}(address(token), ParaID.wrap(0), recipient, 1);
+        IGateway(address(gateway)).sendNativeToken{value: 2 ether}(address(token), recipient, 1);
     }
 
     /**
@@ -534,7 +520,7 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).registerNativeToken{value: 1 ether}(address(token));
 
         vm.expectRevert(Gateway.Disabled.selector);
-        IGateway(address(gateway)).lockNativeTokens{value: 1 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).sendNativeToken{value: 1 ether}(address(token), "", 1);
     }
 
     /**
@@ -562,7 +548,7 @@ contract GatewayTest is Test {
         Gateway(address(gateway)).upgrade("");
 
         vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).withdrawAgentFunds("");
+        Gateway(address(gateway)).transferNativeFromAgent("");
     }
 
     function testGetters() public {

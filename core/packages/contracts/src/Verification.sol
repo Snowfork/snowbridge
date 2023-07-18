@@ -7,8 +7,6 @@ import {BeefyClient} from "./BeefyClient.sol";
 import {ScaleCodec} from "./ScaleCodec.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
-import {VerificationStorage} from "./storage/VerificationStorage.sol";
-
 library Verification {
     struct HeadProof {
         uint256 pos;
@@ -55,31 +53,18 @@ library Verification {
 
     error InvalidParachainHeader();
 
-    struct InitParams {
-        address beefyClient;
-        uint32 parachainID;
-    }
-
-    function initialize(InitParams calldata params) external {
-        VerificationStorage.Layout storage $ = VerificationStorage.layout();
-        $.beefyClient = params.beefyClient;
-        $.parachainID = params.parachainID;
-        $.encodedParachainID = ScaleCodec.encodeU32(params.parachainID);
-    }
-
-    function verifyCommitment(bytes32 commitment, Proof calldata proof) external view returns (bool) {
-        VerificationStorage.Layout storage $ = VerificationStorage.layout();
-
-        // bypass verification for unit tests
-        if ($.beefyClient == address(0)) {
-            return true;
-        }
-
+    function verifyCommitment(address beefyClient, bytes4 encodedParaID, bytes32 commitment, Proof calldata proof)
+        external
+        view
+        returns (bool)
+    {
+        // Verify that parachain header contains the commitment
         if (!isCommitmentInHeaderDigest(commitment, proof.header)) {
             return false;
         }
+
         // Compute the merkle leaf hash of our parachain
-        bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(proof.header);
+        bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(encodedParaID, proof.header);
 
         // Compute the merkle root hash of all parachain heads
         if (proof.headProof.pos >= proof.headProof.width) {
@@ -90,7 +75,7 @@ library Verification {
         );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
-        return BeefyClient($.beefyClient).verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
+        return BeefyClient(beefyClient).verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
     }
 
     // Verify that a message commitment is in the header digest
@@ -153,9 +138,11 @@ library Verification {
     }
 
     // Creates a keccak hash of a SCALE-encoded parachain header
-    function createParachainHeaderMerkleLeaf(ParachainHeader calldata header) internal view returns (bytes32) {
-        VerificationStorage.Layout storage $ = VerificationStorage.layout();
-
+    function createParachainHeaderMerkleLeaf(bytes4 encodedParaID, ParachainHeader calldata header)
+        internal
+        pure
+        returns (bytes32)
+    {
         // Encode Parachain header
         bytes memory encodedHeader = bytes.concat(
             // H256
@@ -174,7 +161,7 @@ library Verification {
         return keccak256(
             bytes.concat(
                 // u32
-                $.encodedParachainID,
+                encodedParaID,
                 // Vec<u8>
                 ScaleCodec.encodeCompactUint(encodedHeader.length),
                 encodedHeader
@@ -182,9 +169,11 @@ library Verification {
         );
     }
 
-    function createParachainHeader(ParachainHeader calldata header) internal view returns (bytes memory) {
-        VerificationStorage.Layout storage $ = VerificationStorage.layout();
-
+    function createParachainHeader(bytes4 encodedParaID, ParachainHeader calldata header)
+        internal
+        pure
+        returns (bytes memory)
+    {
         bytes memory encodedHeader = bytes.concat(
             // H256
             header.parentHash,
@@ -201,7 +190,7 @@ library Verification {
 
         return bytes.concat(
             // u32
-            $.encodedParachainID,
+            encodedParaID,
             // length of encoded header
             ScaleCodec.encodeCompactUint(encodedHeader.length),
             encodedHeader

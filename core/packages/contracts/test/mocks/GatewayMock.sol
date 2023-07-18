@@ -6,6 +6,28 @@ import {ParaID, OperatingMode} from "../../src/Types.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 
 contract GatewayMock is Gateway {
+    constructor(
+        address beefyClient,
+        address agentExecutor,
+        uint256 dispatchGas,
+        ParaID bridgeHubParaID,
+        bytes32 bridgeHubHubAgentID,
+        ParaID assetHubParaID,
+        bytes32 assetHubHubAgentID,
+        bytes2 createTokenCallID
+    )
+        Gateway(
+            beefyClient,
+            agentExecutor,
+            dispatchGas,
+            bridgeHubParaID,
+            bridgeHubHubAgentID,
+            assetHubParaID,
+            assetHubHubAgentID,
+            createTokenCallID
+        )
+    {}
+
     function agentExecutePublic(bytes calldata params) external {
         this.agentExecute(params);
     }
@@ -30,12 +52,8 @@ contract GatewayMock is Gateway {
         this.setOperatingMode(params);
     }
 
-    function withdrawAgentFundsPublic(bytes calldata params) external {
-        this.withdrawAgentFunds(params);
-    }
-
-    function setAgentExecutor(address agentExecutor) external {
-        CoreStorage.layout().agentExecutor = agentExecutor;
+    function transferNativeFromAgentPublic(bytes calldata params) external {
+        this.transferNativeFromAgent(params);
     }
 }
 

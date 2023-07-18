@@ -2,16 +2,16 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {BeefyClient} from "../BeefyClient.sol";
+import {Agent} from "../Agent.sol";
+import {ParaID} from "../Types.sol";
 
-library VerificationStorage {
+library AssetsStorage {
     struct Layout {
-        address beefyClient;
-        uint32 parachainID;
-        bytes4 encodedParachainID;
+        uint256 registerNativeTokenFee;
+        uint256 sendNativeTokenFee;
     }
 
-    bytes32 constant SLOT = keccak256("org.snowbridge.storage.verification");
+    bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");
 
     function layout() internal pure returns (Layout storage $) {
         bytes32 slot = SLOT;

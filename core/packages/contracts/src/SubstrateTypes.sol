@@ -54,7 +54,7 @@ library SubstrateTypes {
      * `NativeTokensMessage::Create`
      */
     // solhint-disable-next-line func-name-mixedcase
-    function CreateNativeToken(address origin, address token, bytes2 createCallIndex)
+    function CreateNativeToken(address agent, address token, bytes2 createCallIndex)
         internal
         view
         returns (bytes memory)
@@ -63,7 +63,7 @@ library SubstrateTypes {
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x00),
-            SubstrateTypes.H160(origin),
+            SubstrateTypes.H160(agent),
             SubstrateTypes.H160(token),
             createCallIndex
         );
@@ -74,7 +74,7 @@ library SubstrateTypes {
      * `NativeTokensMessage::Mint`
      */
     // solhint-disable-next-line func-name-mixedcase
-    function MintNativeToken(address origin, address token, ParaID dest, bytes memory recipient, uint128 amount)
+    function MintNativeToken(address agent, address token, bytes memory recipient, uint128 amount)
         internal
         view
         returns (bytes memory)
@@ -83,9 +83,8 @@ library SubstrateTypes {
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x01),
-            SubstrateTypes.H160(origin),
+            SubstrateTypes.H160(agent),
             SubstrateTypes.H160(token),
-            SubstrateTypes.OptionParaID(dest),
             recipient,
             ScaleCodec.encodeU128(amount)
         );
