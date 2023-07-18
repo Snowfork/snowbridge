@@ -33,7 +33,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::{pallet_prelude::*, traits::EnsureOrigin};
 	use frame_system::pallet_prelude::*;
-	use xcm::v2::MultiLocation;
+	use xcm::v3::MultiLocation;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);

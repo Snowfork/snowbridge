@@ -18,7 +18,7 @@ pub mod weights;
 mod test;
 
 use codec::DecodeAll;
-use frame_support::traits::fungible::{Inspect, Mutate};
+use frame_support::traits::{GenesisBuild, fungible::{Inspect, Mutate}};
 use frame_system::ensure_signed;
 use snowbridge_core::ParaId;
 use sp_core::H160;
@@ -38,9 +38,6 @@ use frame_support::{CloneNoBound, EqNoBound, PartialEqNoBound};
 use codec::{Decode, Encode};
 
 use scale_info::TypeInfo;
-
-type BalanceOf<T> =
-	<<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[derive(CloneNoBound, EqNoBound, PartialEqNoBound, Encode, Decode, Debug, TypeInfo)]
 pub enum MessageDispatchResult {
@@ -67,6 +64,9 @@ pub mod pallet {
 	pub trait BenchmarkHelper<T> {
 		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader);
 	}
+
+	type BalanceOf<T> =
+		<<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -115,20 +115,18 @@ pub mod pallet {
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
+	pub struct GenesisConfig {
 		pub gateway: H160,
-		#[serde(skip)]
-		pub _config: sp_std::marker::PhantomData<T>,
 	}
 
-	impl<T: Config> Default for GenesisConfig<T> {
+	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self { gateway: Default::default(), _config: Default::default() }
+			Self { gateway: Default::default() }
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
 			Gateway::<T>::put(self.gateway);
 		}

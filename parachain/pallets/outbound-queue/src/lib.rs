@@ -23,7 +23,7 @@ use frame_support::{
 use scale_info::TypeInfo;
 use snowbridge_core::ParaId;
 use sp_core::{RuntimeDebug, H256};
-use sp_runtime::traits::Hash;
+use sp_runtime::traits::{Hash, BlockNumberProvider};
 use sp_std::prelude::*;
 
 use snowbridge_core::{
@@ -178,7 +178,7 @@ pub mod pallet {
 	where
 		T::AccountId: AsRef<[u8]>,
 	{
-		fn on_initialize(_: T::BlockNumber) -> Weight {
+		fn on_initialize(_: BlockNumberFor<T>) -> Weight {
 			// Remove storage from previous block
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
@@ -186,7 +186,7 @@ pub mod pallet {
 			return T::WeightInfo::on_finalize()
 		}
 
-		fn on_finalize(_: T::BlockNumber) {
+		fn on_finalize(_: BlockNumberFor<T>) {
 			Self::commit_messages();
 		}
 	}
