@@ -14,14 +14,10 @@ library CoreStorage {
         mapping(ParaID paraID => Channel) channels;
         // All agents
         mapping(bytes32 agentID => address) agents;
-        // Executor logic for agents
-        address agentExecutor;
         // The fee charged to users for submitting outbound message to Polkadot
         uint256 defaultFee;
         // The reward given to relayers for submitting inbound messages from Polkadot
         uint256 defaultReward;
-        // Parachain ID of BridgeHub
-        ParaID bridgeHubParaID;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.core");

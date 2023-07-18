@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {OperatingMode, InboundMessage, ParaID} from "./Types.sol";
-import {Verification} from "./Verification.sol";
+import {OperatingMode, InboundMessage, ParaID} from "../Types.sol";
+import {Verification} from "../Verification.sol";
 
 interface IGateway {
     // * Events *
@@ -57,7 +57,5 @@ interface IGateway {
 
     // Send ERC20 tokens to Polkadot. The bridged assets will be minted on AssetHub
     // and then reserve transferred to `recipient` on `finalDestPara`.
-    function lockNativeTokens(address token, ParaID finalDestPara, bytes calldata recipient, uint128 amount)
-        external
-        payable;
+    function sendNativeToken(address token, bytes calldata recipient, uint128 amount) external payable;
 }
