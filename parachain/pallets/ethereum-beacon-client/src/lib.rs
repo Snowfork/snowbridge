@@ -328,7 +328,7 @@ pub mod pallet {
 			let signature_period = compute_period(update.signature_slot);
 			if <NextSyncCommittee<T>>::exists() {
 				ensure!(
-					(store_period..=store_periodF + 1).contains(&signature_period),
+					(store_period..=store_period + 1).contains(&signature_period),
 					Error::<T>::SkippedSyncCommitteePeriod
 				)
 			} else {
