@@ -19,15 +19,15 @@ config_relayer(){
 
     # Configure parachain relay (bridge hub)
     jq \
-        --arg k1 "$(address_for InboundQueue)" \
+        --arg k1 "$(address_for Gateway)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg laneID $BRIDGE_HUB_PARAID \
         --arg eth_gas_limit $eth_gas_limit \
     '
-      .source.contracts.InboundQueue = $k1
+      .source.contracts.Gateway = $k1
     | .source.contracts.BeefyClient = $k2
-    | .sink.contracts.InboundQueue = $k1
+    | .sink.contracts.Gateway = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
@@ -37,15 +37,15 @@ config_relayer(){
 
     # Configure parachain relay (asset hub)
     jq \
-        --arg k1 "$(address_for InboundQueue)" \
+        --arg k1 "$(address_for Gateway)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg laneID $ASSET_HUB_PARAID \
         --arg eth_gas_limit $eth_gas_limit \
     '
-      .source.contracts.InboundQueue = $k1
+      .source.contracts.Gateway = $k1
     | .source.contracts.BeefyClient = $k2
-    | .sink.contracts.InboundQueue = $k1
+    | .sink.contracts.Gateway = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit

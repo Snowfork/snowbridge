@@ -1,6 +1,8 @@
 package parachain
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/contracts"
@@ -11,24 +13,66 @@ func Hex(b []byte) string {
 }
 
 func (wr *EthereumWriter) logFieldsForSubmission(
-	message contracts.InboundQueueMessage,
-	leafProof [][32]byte,
-	proof []byte,
+	message contracts.InboundMessage,
+	messageProof [][32]byte,
+	proof contracts.VerificationProof,
 ) log.Fields {
-	leafProofHexes := make([]string, len(leafProof))
-	for i, leaf := range leafProof {
-		leafProofHexes[i] = Hex(leaf[:])
+	messageProofHexes := make([]string, len(messageProof))
+	for i, proof := range messageProof {
+		messageProofHexes[i] = Hex(proof[:])
+	}
+
+	digestItems := make([]log.Fields, len(proof.Header.DigestItems))
+	for i, digestItem := range proof.Header.DigestItems {
+		digestItems[i] = log.Fields{
+			"kind":              digestItem.Kind,
+			"consensusEngineID": digestItem.ConsensusEngineID,
+			"data":              Hex(digestItem.Data),
+		}
+	}
+
+	headProofHexes := make([]string, len(proof.HeadProof.Proof))
+	for i, proof := range proof.HeadProof.Proof {
+		headProofHexes[i] = Hex(proof[:])
+	}
+
+	mmrLeafProofHexes := make([]string, len(proof.LeafProof))
+	for i, proof := range proof.LeafProof {
+		mmrLeafProofHexes[i] = Hex(proof[:])
 	}
 
 	params := log.Fields{
 		"message": log.Fields{
-			"origin":    message.Origin,
-			"nonce":     message.Nonce,
-			"recipient": Hex(message.Recipient[:]),
-			"payload":   Hex(message.Payload),
+			"origin":  message.Origin,
+			"nonce":   message.Nonce,
+			"command": Hex(message.Command[:]),
+			"params":  Hex(message.Params),
 		},
-		"leafProof": leafProofHexes,
-		"proof":     Hex(proof),
+		"messageProof": messageProofHexes,
+		"proof": log.Fields{
+			"header": log.Fields{
+				"parentHash":     Hex(proof.Header.ParentHash[:]),
+				"number":         proof.Header.Number,
+				"stateRoot":      Hex(proof.Header.StateRoot[:]),
+				"extrinsicsRoot": Hex(proof.Header.ExtrinsicsRoot[:]),
+				"digestItems":    digestItems,
+			},
+			"headProof": log.Fields{
+				"pos":   proof.HeadProof.Pos,
+				"width": proof.HeadProof.Width,
+				"proof": headProofHexes,
+			},
+			"leafPartial": log.Fields{
+				"version":              proof.LeafPartial.Version,
+				"parentNumber":         proof.LeafPartial.ParentNumber,
+				"parentHash":           Hex(proof.LeafPartial.ParentHash[:]),
+				"nextAuthoritySetID":   proof.LeafPartial.NextAuthoritySetID,
+				"nextAuthoritySetLen":  proof.LeafPartial.NextAuthoritySetLen,
+				"nextAuthoritySetRoot": Hex(proof.LeafPartial.NextAuthoritySetRoot[:]),
+			},
+			"leafProof":      mmrLeafProofHexes,
+			"leafProofOrder": fmt.Sprintf("%b", proof.LeafProofOrder),
+		},
 	}
 
 	return params

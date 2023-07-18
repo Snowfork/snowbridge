@@ -9,6 +9,8 @@ type Config struct {
 	Sink   SinkConfig   `mapstructure:"sink"`
 }
 
+// TODO: check whether LaneID should be uint32 (as in the parachain) or big.Int (uint256, as in the Gateway contract)
+// TODO: rename LaneID to ChannelID
 type SourceConfig struct {
 	Polkadot  config.PolkadotConfig  `mapstructure:"polkadot"`
 	Parachain config.ParachainConfig `mapstructure:"parachain"`
@@ -18,8 +20,8 @@ type SourceConfig struct {
 }
 
 type SourceContractsConfig struct {
-	BeefyClient  string `mapstructure:"BeefyClient"`
-	InboundQueue string `mapstructure:"InboundQueue"`
+	BeefyClient string `mapstructure:"BeefyClient"`
+	Gateway     string `mapstructure:"Gateway"`
 }
 
 type SinkConfig struct {
@@ -28,5 +30,5 @@ type SinkConfig struct {
 }
 
 type SinkContractsConfig struct {
-	InboundQueue string `mapstructure:"InboundQueue"`
+	Gateway string `mapstructure:"Gateway"`
 }

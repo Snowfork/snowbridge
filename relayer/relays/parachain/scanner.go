@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -69,28 +70,28 @@ func (s *Scanner) findTasks(
 	paraBlock uint64,
 	paraHash types.Hash,
 ) ([]*Task, error) {
-	// Fetch latest nonce in ethereum inbound queue
-	inboundQueueAddress := common.HexToAddress(s.config.Contracts.InboundQueue)
-	inboundQueueContract, err := contracts.NewInboundQueue(
-		inboundQueueAddress,
+	// Fetch latest nonce in ethereum gateway
+	gatewayAddress := common.HexToAddress(s.config.Contracts.Gateway)
+	gatewayContract, err := contracts.NewGateway(
+		gatewayAddress,
 		s.ethConn.Client(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("create inbound queue contract for address '%v': %w", inboundQueueAddress, err)
+		return nil, fmt.Errorf("create gateway contract for address '%v': %w", gatewayAddress, err)
 	}
 
 	options := bind.CallOpts{
 		Pending: true,
 		Context: ctx,
 	}
-	ethNonce, err := inboundQueueContract.Nonce(&options, s.config.LaneID)
+	ethNonce, _, err := gatewayContract.ChannelNoncesOf(&options, big.NewInt(int64(s.config.LaneID)))
 	if err != nil {
-		return nil, fmt.Errorf("fetch nonce from inbound queue contract for laneID '%v': %w", s.config.LaneID, err)
+		return nil, fmt.Errorf("fetch nonce from gateway contract for laneID '%v': %w", s.config.LaneID, err)
 	}
 	log.WithFields(log.Fields{
 		"nonce":  ethNonce,
 		"laneID": s.config.LaneID,
-	}).Info("Checked latest nonce delivered to ethereum inbound queue")
+	}).Info("Checked latest nonce delivered to ethereum gateway")
 
 	// Fetch latest nonce in parachain outbound queue
 	sourceIDBytes := make([]byte, 4)

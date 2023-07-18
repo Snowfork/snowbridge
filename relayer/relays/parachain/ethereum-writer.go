@@ -28,13 +28,12 @@ import (
 )
 
 type EthereumWriter struct {
-	config           *SinkConfig
-	conn             *ethereum.Connection
-	inboundQueue     *contracts.InboundQueue
-	tasks            <-chan *Task
-	abiPacker        abi.Arguments
-	abiBasicUnpacker abi.Arguments
-	inboundQueueABI  abi.ABI
+	config     *SinkConfig
+	conn       *ethereum.Connection
+	gateway    *contracts.Gateway
+	tasks      <-chan *Task
+	abiPacker  abi.Arguments
+	gatewayABI abi.ABI
 }
 
 func NewEthereumWriter(
@@ -43,33 +42,33 @@ func NewEthereumWriter(
 	tasks <-chan *Task,
 ) (*EthereumWriter, error) {
 	return &EthereumWriter{
-		config:       config,
-		conn:         conn,
-		inboundQueue: nil,
-		tasks:        tasks,
+		config:  config,
+		conn:    conn,
+		gateway: nil,
+		tasks:   tasks,
 	}, nil
 }
 
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	address := common.HexToAddress(wr.config.Contracts.InboundQueue)
-	basicChannel, err := contracts.NewInboundQueue(address, wr.conn.Client())
+	address := common.HexToAddress(wr.config.Contracts.Gateway)
+	gateway, err := contracts.NewGateway(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}
-	wr.inboundQueue = basicChannel
+	wr.gateway = gateway
 
+	// TODO: remove OpaqueProofABI bindings once they're no longer needed
 	opaqueProofABI, err := abi.JSON(strings.NewReader(contracts.OpaqueProofABI))
 	if err != nil {
 		return err
 	}
 	wr.abiPacker = opaqueProofABI.Methods["dummy"].Inputs
 
-	inboundQueueABI, err := abi.JSON(strings.NewReader(contracts.InboundQueueABI))
+	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayABI))
 	if err != nil {
 		return err
 	}
-	wr.inboundQueueABI = inboundQueueABI
-	wr.abiBasicUnpacker = abi.Arguments{inboundQueueABI.Methods["submit"].Inputs[0]}
+	wr.gatewayABI = gatewayABI
 
 	eg.Go(func() error {
 		err := wr.writeMessagesLoop(ctx)
@@ -158,10 +157,9 @@ func (wr *EthereumWriter) WriteChannel(
 ) error {
 	message := commitmentProof.Message.IntoInboundMessage()
 
-	paraHeadProof := contracts.ParachainClientHeadProof{
-		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
-		Width: big.NewInt(int64(proof.MerkleProofData.NumberOfLeaves)),
-		Proof: proof.MerkleProofData.Proof,
+	convertedHeader, err := convertHeader(proof.Header)
+	if err != nil {
+		return fmt.Errorf("convert header: %w", err)
 	}
 
 	var merkleProofItems [][32]byte
@@ -169,15 +167,14 @@ func (wr *EthereumWriter) WriteChannel(
 		merkleProofItems = append(merkleProofItems, proofItem)
 	}
 
-	convertedHeader, err := convertHeader(proof.Header)
-	if err != nil {
-		return fmt.Errorf("convert header: %w", err)
-	}
-
-	finalProof := contracts.ParachainClientProof{
-		Header:    *convertedHeader,
-		HeadProof: paraHeadProof,
-		LeafPartial: contracts.ParachainClientMMRLeafPartial{
+	verificationProof := contracts.VerificationProof{
+		Header: *convertedHeader,
+		HeadProof: contracts.VerificationHeadProof{
+			Pos:   big.NewInt(proof.MerkleProofData.ProvenLeafIndex),
+			Width: big.NewInt(int64(proof.MerkleProofData.NumberOfLeaves)),
+			Proof: proof.MerkleProofData.Proof,
+		},
+		LeafPartial: contracts.VerificationMMRLeafPartial{
 			Version:              uint8(proof.MMRProof.Leaf.Version),
 			ParentNumber:         uint32(proof.MMRProof.Leaf.ParentNumberAndHash.ParentNumber),
 			ParentHash:           proof.MMRProof.Leaf.ParentNumberAndHash.Hash,
@@ -189,16 +186,11 @@ func (wr *EthereumWriter) WriteChannel(
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
-	opaqueProof, err := wr.abiPacker.Pack(finalProof)
-	if err != nil {
-		return fmt.Errorf("pack proof: %w", err)
-	}
-
-	tx, err := wr.inboundQueue.Submit(
-		options, message, commitmentProof.Proof.InnerHashes, opaqueProof,
+	tx, err := wr.gateway.SubmitInbound(
+		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
 	)
 	if err != nil {
-		return fmt.Errorf("send transaction InboundQueue.submit: %w", err)
+		return fmt.Errorf("send transaction Gateway.submit: %w", err)
 	}
 
 	hasher := &keccak.Keccak256{}
@@ -207,7 +199,7 @@ func (wr *EthereumWriter) WriteChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("params", wr.logFieldsForSubmission(message, commitmentProof.Proof.InnerHashes, opaqueProof)).
+		WithField("params", wr.logFieldsForSubmission(message, commitmentProof.Proof.InnerHashes, verificationProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentProof.Proof.Root.Hex(),
 			"MMRRoot":              proof.MMRRootHash.Hex(),
@@ -217,7 +209,7 @@ func (wr *EthereumWriter) WriteChannel(
 			"beefyBlock":           proof.MMRProof.Blockhash.Hex(),
 			"header":               proof.Header,
 		}).
-		Info("Sent transaction InboundQueue.submit")
+		Info("Sent transaction Gateway.submit")
 
 	receipt, err := wr.waitForTransaction(ctx, tx, 1)
 
@@ -226,16 +218,16 @@ func (wr *EthereumWriter) WriteChannel(
 	}
 
 	for _, ev := range receipt.Logs {
-		if ev.Topics[0] == wr.inboundQueueABI.Events["MessageDispatched"].ID {
-			var holder contracts.InboundQueueMessageDispatched
-			err = wr.inboundQueueABI.UnpackIntoInterface(&holder, "MessageDispatched", ev.Data)
+		if ev.Topics[0] == wr.gatewayABI.Events["InboundMessageDispatched"].ID {
+			var holder contracts.GatewayInboundMessageDispatched
+			err = wr.gatewayABI.UnpackIntoInterface(&holder, "InboundMessageDispatched", ev.Data)
 			if err != nil {
 				return fmt.Errorf("unpack event log: %w", err)
 			}
 			log.WithFields(log.Fields{
-				"origin": holder.Origin,
-				"nonce":  holder.Nonce,
-				"result": holder.Result,
+				"origin":  holder.Origin,
+				"nonce":   holder.Nonce,
+				"success": holder.Success,
 			}).Info("Message dispatched")
 		}
 	}
@@ -243,20 +235,20 @@ func (wr *EthereumWriter) WriteChannel(
 	return nil
 }
 
-func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachainHeader, error) {
-	var digestItems []contracts.ParachainClientDigestItem
+func convertHeader(header gsrpcTypes.Header) (*contracts.VerificationParachainHeader, error) {
+	var digestItems []contracts.VerificationDigestItem
 
 	for _, di := range header.Digest {
 		switch {
 		case di.IsOther:
-			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
+			digestItems = append(digestItems, contracts.VerificationDigestItem{
 				Kind: big.NewInt(0),
 				Data: di.AsOther,
 			})
 		case di.IsPreRuntime:
 			consensusEngineID := make([]byte, 4)
 			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsPreRuntime.ConsensusEngineID))
-			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
+			digestItems = append(digestItems, contracts.VerificationDigestItem{
 				Kind:              big.NewInt(6),
 				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
 				Data:              di.AsPreRuntime.Bytes,
@@ -264,7 +256,7 @@ func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachai
 		case di.IsConsensus:
 			consensusEngineID := make([]byte, 4)
 			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsConsensus.ConsensusEngineID))
-			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
+			digestItems = append(digestItems, contracts.VerificationDigestItem{
 				Kind:              big.NewInt(4),
 				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
 				Data:              di.AsConsensus.Bytes,
@@ -272,7 +264,7 @@ func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachai
 		case di.IsSeal:
 			consensusEngineID := make([]byte, 4)
 			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsSeal.ConsensusEngineID))
-			digestItems = append(digestItems, contracts.ParachainClientDigestItem{
+			digestItems = append(digestItems, contracts.VerificationDigestItem{
 				Kind:              big.NewInt(5),
 				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
 				Data:              di.AsSeal.Bytes,
@@ -282,7 +274,7 @@ func convertHeader(header gsrpcTypes.Header) (*contracts.ParachainClientParachai
 		}
 	}
 
-	return &contracts.ParachainClientParachainHeader{
+	return &contracts.VerificationParachainHeader{
 		ParentHash:     header.ParentHash,
 		Number:         big.NewInt(int64(header.Number)),
 		StateRoot:      header.StateRoot,

@@ -11,7 +11,7 @@
     },
     "contracts": {
       "BeefyClient": null,
-      "InboundQueue": null
+      "Gateway": null
     },
     "beefy-activation-block": 0,
     "lane-id": 0
@@ -22,7 +22,7 @@
       "gas-limit": null
     },
     "contracts": {
-      "InboundQueue": null
+      "Gateway": null
     }
   }
 }
