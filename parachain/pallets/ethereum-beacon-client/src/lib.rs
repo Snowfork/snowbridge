@@ -320,17 +320,15 @@ pub mod pallet {
 					update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidUpdateSlot
 			);
-
 			// Retrieve latest finalized state.
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
-
 			let store_period = compute_period(latest_finalized_state.slot);
 			let signature_period = compute_period(update.signature_slot);
 			if <NextSyncCommittee<T>>::exists() {
 				ensure!(
-					(store_period..=store_period + 1).contains(&signature_period),
+					(store_period..=store_periodF + 1).contains(&signature_period),
 					Error::<T>::SkippedSyncCommitteePeriod
 				)
 			} else {
