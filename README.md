@@ -96,7 +96,7 @@ git clean -ndx | awk '{print $3}'
 
 Check Nix config in `~/.config/nix/nix.conf`.
 
-Run a pure developer shell:
+Run a pure developer shell (note that this removes access to your local tools):
 ```sh
 nix develop -i --pure-eval
 ```
