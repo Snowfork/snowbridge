@@ -2,8 +2,8 @@
   "name": "@snowbridge/core",
   "private": true,
   "engines": {
-    "node": "v18.16.0",
-    "pnpm": "8.4.0"
+    "node": "v18.16.1",
+    "pnpm": "8.6.6"
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
