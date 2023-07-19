@@ -14,6 +14,7 @@ use sp_runtime::{
 };
 use xcm::v3::NetworkId;
 use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
+use xcm::prelude::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
