@@ -19,7 +19,7 @@ chronic typos .
 
 check_duplicate_versions() {
         local duplicates=`grep -Ei "source = \"git.*$1" cumulus/Cargo.lock parachain/Cargo.lock | sed 's/\.git//g' | sort -u`
-	echo $duplicates
+	echo \"$duplicates\"
         local version_count=`echo $duplicates | awk -F':' '{for (i=2; i<NF; i++) printf $i " "; print $NF}' | sort -u | wc -l | xargs`
 	echo $version_count
         if [ "$version_count" != "1" ]; then
