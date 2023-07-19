@@ -22,7 +22,7 @@ contract MMRProofTest is Test {
         uint256 order;
     }
 
-    Fixture public fixture;
+    bytes public fixtureData;
 
     MMRProofWrapper public wrapper;
 
@@ -31,23 +31,26 @@ contract MMRProofTest is Test {
 
         string memory root = vm.projectRoot();
         string memory path = string.concat(root, "/test/data/mmr-fixture-data-15-leaves.json");
-        string memory json = vm.readFile(path);
-        bytes memory mockData = json.parseRaw("");
-        fixture = abi.decode(mockData, (Fixture));
+        //string memory json = vm.readFile(path);
+        fixtureData = vm.readFile(path).parseRaw("");
+    }
+
+    function fixture() public view returns (Fixture memory) {
+        return abi.decode(fixtureData, (Fixture));
     }
 
     function testVerifyLeafProof() public {
-        for (uint256 i = 0; i < fixture.leaves.length; i++) {
-            assertTrue(
-                wrapper.verifyLeafProof(
-                    fixture.rootHash, fixture.leaves[i], fixture.proofs[i].items, fixture.proofs[i].order
-                )
-            );
+        Fixture memory fix = fixture();
+
+        for (uint256 i = 0; i < fix.leaves.length; i++) {
+            assertTrue(wrapper.verifyLeafProof(fix.rootHash, fix.leaves[i], fix.proofs[i].items, fix.proofs[i].order));
         }
     }
 
     function testVerifyLeafProofFailsExceededProofSize() public {
+        Fixture memory fix = fixture();
+
         vm.expectRevert(MMRProof.ProofSizeExceeded.selector);
-        wrapper.verifyLeafProof(fixture.rootHash, fixture.leaves[0], new bytes32[](257), fixture.proofs[0].order);
+        wrapper.verifyLeafProof(fix.rootHash, fix.leaves[0], new bytes32[](257), fix.proofs[0].order);
     }
 }
