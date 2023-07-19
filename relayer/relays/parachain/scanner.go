@@ -215,10 +215,10 @@ func (s *Scanner) findTasksImpl(
 
 		if len(result.proofs) > 0 {
 			task := Task{
-				Header:             header,
-				BasicChannelProofs: &result.proofs,
-				ProofInput:         nil,
-				ProofOutput:        nil,
+				Header:        header,
+				MessageProofs: &result.proofs,
+				ProofInput:    nil,
+				ProofOutput:   nil,
 			}
 			tasks = append(tasks, &task)
 		}

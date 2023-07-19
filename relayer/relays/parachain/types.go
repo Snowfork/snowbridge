@@ -18,8 +18,8 @@ type Task struct {
 	ProofInput *ProofInput
 	// Outputs of MMR proof generation
 	ProofOutput *ProofOutput
-	// Commitments for basic channel
-	BasicChannelProofs *[]MessageProof
+	// Proofs for messages from outbound channel on Polkadot
+	MessageProofs *[]MessageProof
 }
 
 // A ProofInput is data needed to generate a proof of parachain header inclusion

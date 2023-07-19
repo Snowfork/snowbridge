@@ -130,10 +130,10 @@ func (wr *EthereumWriter) WriteChannels(
 	options *bind.TransactOpts,
 	task *Task,
 ) error {
-	for _, proof := range *task.BasicChannelProofs {
+	for _, proof := range *task.MessageProofs {
 		err := wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
 		if err != nil {
-			return fmt.Errorf("write basic channel: %w", err)
+			return fmt.Errorf("write eth gateway: %w", err)
 		}
 	}
 
