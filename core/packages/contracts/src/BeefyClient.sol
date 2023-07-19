@@ -6,7 +6,7 @@ import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/MerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
-import {ScaleCodec} from "./ScaleCodec.sol";
+import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 /**
  * @title BeefyClient
@@ -538,10 +538,13 @@ contract BeefyClient {
     }
 
     function encodeCommitmentPayload(PayloadItem[] calldata items) internal pure returns (bytes memory) {
-        bytes memory payload = ScaleCodec.encodeCompactUint(items.length);
+        bytes memory payload = ScaleCodec.checkedEncodeCompactU32(uint32(items.length));
         for (uint256 i = 0; i < items.length; i++) {
             payload = bytes.concat(
-                payload, items[i].payloadID, ScaleCodec.encodeCompactUint(items[i].data.length), items[i].data
+                payload,
+                items[i].payloadID,
+                ScaleCodec.checkedEncodeCompactU32(uint32(items[i].data.length)),
+                items[i].data
             );
         }
 
