@@ -23,11 +23,11 @@ use frame_support::{
 use scale_info::TypeInfo;
 use snowbridge_core::ParaId;
 use sp_core::{RuntimeDebug, H256};
-use sp_runtime::traits::{Hash, BlockNumberProvider};
+use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
 use snowbridge_core::{
-	ContractId, OutboundMessage, OutboundQueue as OutboundQueueTrait, SubmitError,
+	OutboundMessage, OutboundQueue as OutboundQueueTrait, SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 

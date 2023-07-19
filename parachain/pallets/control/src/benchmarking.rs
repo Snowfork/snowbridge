@@ -14,13 +14,12 @@ mod benchmarks {
 	use super::*;
 
 	#[benchmark]
-	fn upgrade(x: Linear<0, { T::MaxUpgradeDataSize::get() }>) -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
+	fn upgrade(x: Linear<0, { T::MaxUpgradeDataSize::get() - 1 }>) -> Result<(), BenchmarkError> {
 		let logic = H160::repeat_byte(1);
 		let data: Vec<u8> = (0..x).map(|_| 1u8).collect();
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), logic, Some(data));
+		_(RawOrigin::Root, logic, Some(data));
 
 		Ok(())
 	}

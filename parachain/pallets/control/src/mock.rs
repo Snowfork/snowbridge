@@ -8,16 +8,16 @@ use frame_support::{
 use snowbridge_core::{ParaId};
 use sp_core::H256;
 use sp_runtime::{
-    BuildStorage,
+	AccountId32,
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-
-
 use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
+use xcm::prelude::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+type AccountId = AccountId32;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -42,7 +42,7 @@ impl frame_system::Config for Test {
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
@@ -59,12 +59,16 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
+	pub const AnyNetwork: Option<NetworkId> = None;
+}
+
+pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, AnyNetwork>;
+
+parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
 	pub const MaxUpgradeDataSize: u32 = 1024;
 	pub const SS58Prefix: u8 = 42;
 }
-
-pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
 
 impl snowbridge_control::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
