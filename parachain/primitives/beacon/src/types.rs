@@ -19,7 +19,7 @@ use crate::ssz::{
 	hash_tree_root, SSZBeaconBlockHeader, SSZExecutionPayloadHeader, SSZForkData, SSZSigningData,
 	SSZSyncAggregate, SSZSyncCommittee,
 };
-use ssz_rs::MerkleizationError;
+use ssz_rs::SimpleSerializeError;
 
 pub use crate::bits::decompress_sync_committee_bits;
 
@@ -131,7 +131,7 @@ pub struct ForkData {
 }
 
 impl ForkData {
-	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+	pub fn hash_tree_root(&self) -> Result<H256, SimpleSerializeError> {
 		hash_tree_root::<SSZForkData>(self.clone().into())
 	}
 }
@@ -143,7 +143,7 @@ pub struct SigningData {
 }
 
 impl SigningData {
-	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+	pub fn hash_tree_root(&self) -> Result<H256, SimpleSerializeError> {
 		hash_tree_root::<SSZSigningData>(self.clone().into())
 	}
 }
@@ -174,7 +174,7 @@ impl<const COMMITTEE_SIZE: usize> Default for SyncCommittee<COMMITTEE_SIZE> {
 }
 
 impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
-	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+	pub fn hash_tree_root(&self) -> Result<H256, SimpleSerializeError> {
 		hash_tree_root::<SSZSyncCommittee<COMMITTEE_SIZE>>(self.clone().into())
 	}
 }
@@ -235,7 +235,7 @@ pub struct BeaconHeader {
 }
 
 impl BeaconHeader {
-	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+	pub fn hash_tree_root(&self) -> Result<H256, SimpleSerializeError> {
 		hash_tree_root::<SSZBeaconBlockHeader>((*self).into())
 	}
 }
@@ -271,7 +271,7 @@ impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> Default
 impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 	SyncAggregate<COMMITTEE_SIZE, COMMITTEE_BITS_SIZE>
 {
-	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
+	pub fn hash_tree_root(&self) -> Result<H256, SimpleSerializeError> {
 		hash_tree_root::<SSZSyncAggregate<COMMITTEE_SIZE>>(self.clone().into())
 	}
 }
@@ -335,8 +335,8 @@ pub struct ExecutionPayloadHeader {
 }
 
 impl ExecutionPayloadHeader {
-	pub fn hash_tree_root(&self) -> Result<H256, MerkleizationError> {
-		hash_tree_root::<SSZExecutionPayloadHeader>(self.clone().into())
+	pub fn hash_tree_root(&self) -> Result<H256, SimpleSerializeError> {
+		hash_tree_root::<SSZExecutionPayloadHeader>(self.clone().try_into()?)
 	}
 }
 

@@ -14,13 +14,13 @@ import (
 )
 
 type PolkadotListener struct {
-	config              *Config
+	config              *SourceConfig
 	conn                *relaychain.Connection
 	beefyAuthoritiesKey types.StorageKey
 }
 
 func NewPolkadotListener(
-	config *Config,
+	config *SourceConfig,
 	conn *relaychain.Connection,
 ) *PolkadotListener {
 	return &PolkadotListener{
@@ -37,7 +37,7 @@ func (li *PolkadotListener) Start(
 ) (<-chan Request, error) {
 	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Beefy", "Authorities", nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create storage key: %w", err)
 	}
 	li.beefyAuthoritiesKey = storageKey
 
@@ -120,7 +120,7 @@ func (li *PolkadotListener) scanCommitments(
 					currentValidatorSet++
 				}
 			} else if validatorSetID == currentValidatorSet {
-				if result.Depth > li.config.Source.FastForwardDepth {
+				if result.Depth > li.config.FastForwardDepth {
 					logEntry.Warn("Discarded commitment with depth not fast forward")
 					continue
 				}
