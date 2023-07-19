@@ -35,3 +35,13 @@ enum OperatingMode {
     Normal,
     RejectingOutboundMessages
 }
+
+// Initial configuration for bridge
+struct Config {
+    // default fee/reward parameters
+    uint256 fee;
+    uint256 reward;
+    // Assets
+    uint256 registerNativeTokenFee;
+    uint256 sendNativeTokenFee;
+}

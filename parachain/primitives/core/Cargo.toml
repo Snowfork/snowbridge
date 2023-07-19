@@ -18,6 +18,7 @@ frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
 
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
@@ -38,6 +39,7 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
     "snowbridge-ethereum/std",
+    "snowbridge-beacon-primitives/std",
     "xcm/std",
     "ethabi/std"
 ]

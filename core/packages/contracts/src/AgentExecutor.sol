@@ -5,42 +5,28 @@ pragma solidity 0.8.20;
 import {ParaID} from "./Types.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
-import {IGateway} from "./IGateway.sol";
-
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
-
-import {console} from "forge-std/console.sol";
 
 contract AgentExecutor {
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
 
-    bytes32 public constant ACTION_UNLOCK_TOKENS = keccak256("unlockTokens");
-
-    event NativeTokensUnlocked(address token, address recipient, uint256 amount);
-
-    error InsufficientBalance();
-    error TransferEthFailed();
-    error Unauthorized();
+    bytes32 internal constant COMMAND_TRANSFER_TOKEN = keccak256("transferToken");
 
     function execute(address, bytes memory data) external {
-        (bytes32 action, bytes memory actionData) = abi.decode(data, (bytes32, bytes));
-        if (action == ACTION_UNLOCK_TOKENS) {
-            unlockNativeTokens(actionData);
+        (bytes32 command, bytes memory params) = abi.decode(data, (bytes32, bytes));
+        if (command == COMMAND_TRANSFER_TOKEN) {
+            (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
+            _transferToken(token, recipient, amount);
         }
     }
 
-    function unlockNativeTokens(bytes memory data) internal {
-        (address token, address recipient, uint256 amount) = abi.decode(data, (address, address, uint256));
-        IERC20(token).safeTransfer(recipient, amount);
-        emit NativeTokensUnlocked(token, recipient, amount);
-    }
-
-    function withdrawTo(address payable recipient, uint256 amount) external {
-        if (address(this).balance < amount) {
-            revert InsufficientBalance();
-        }
+    function transferNative(address payable recipient, uint256 amount) external {
         recipient.safeNativeTransfer(amount);
+    }
+
+    function _transferToken(address token, address recipient, uint128 amount) internal {
+        IERC20(token).safeTransfer(recipient, amount);
     }
 }

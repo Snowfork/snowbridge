@@ -6,16 +6,17 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "./BeefyClient.sol";
 
-import {IGateway} from "./IGateway.sol";
+import {IGateway} from "./interfaces/IGateway.sol";
 import {GatewayProxy} from "./GatewayProxy.sol";
 import {Gateway} from "./Gateway.sol";
 import {Agent} from "./Agent.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
-import {Features} from "./Features.sol";
-import {Verification} from "./Verification.sol";
-import {ParaID} from "./Types.sol";
+import {ParaID, Config} from "./Types.sol";
+import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 
 contract DeployScript is Script {
+    using SafeNativeTransfer for address payable;
+
     function setUp() public {}
 
     function run() public {
@@ -28,31 +29,31 @@ contract DeployScript is Script {
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
         BeefyClient beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
 
-        // Agent Executor
+        ParaID bridgeHubParaID = ParaID.wrap(vm.envUint("BRIDGE_HUB_PARAID"));
+        bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
+        ParaID assetHubParaID = ParaID.wrap(vm.envUint("ASSET_HUB_PARAID"));
+        bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
+
         AgentExecutor executor = new AgentExecutor();
+        Gateway gatewayLogic = new Gateway(
+            address(beefyClient),
+            address(executor),
+            vm.envUint("DISPATCH_GAS"),
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            assetHubParaID,
+            assetHubAgentID,
+            bytes2(vm.envBytes("CREATE_CALL_INDEX"))
+        );
 
-        Gateway.InitParams memory initParams = Gateway.InitParams({
-            agentExecutor: address(executor),
-            fee: vm.envUint("RELAYER_FEE"),
-            reward: vm.envUint("RELAYER_REWARD"),
-            bridgeHubParaID: ParaID.wrap(uint32(vm.envUint("BRIDGE_HUB_PARAID"))),
-            bridgeHubAgentID: keccak256("bridgeHub"),
-            assetHubParaID: ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID"))),
-            assetHubAgentID: keccak256("assetHub"),
-            gasToForward: vm.envUint("GAS_TO_FORWARD"),
-            features: Features.InitParams({
-                assetHubParaID: ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID"))),
-                createTokenFee: vm.envUint("CREATE_TOKEN_FEE"),
-                createTokenCallId: bytes2(vm.envBytes("CREATE_CALL_INDEX"))
-            }),
-            verification: Verification.InitParams({
-                beefyClient: address(beefyClient),
-                parachainID: uint32(vm.envUint("BRIDGE_HUB_PARAID"))
-            })
-        });
+        bytes memory initParams = abi.encode(
+            vm.envUint("DEFAULT_FEE"),
+            vm.envUint("DEFAULT_REWARD"),
+            vm.envUint("REGISTER_NATIVE_TOKEN_FEE"),
+            vm.envUint("SEND_NATIVE_TOKEN_FEE")
+        );
 
-        Gateway gatewayLogic = new Gateway();
-        GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(initParams));
+        GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), initParams);
 
         // Deploy WETH for testing
         new WETH9();
@@ -61,18 +62,11 @@ contract DeployScript is Script {
         // of messages originating from BridgeHub
         uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
 
-        address bridgeHubAgent = IGateway(address(gateway)).agentOf(initParams.bridgeHubAgentID);
-        address assetHubAgent = IGateway(address(gateway)).agentOf(initParams.assetHubAgentID);
+        address bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
+        address assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
 
-        (bool success,) = bridgeHubAgent.call{value: initialDeposit}("");
-        if (!success) {
-            revert("failed to deposit");
-        }
-
-        (success,) = assetHubAgent.call{value: initialDeposit}("");
-        if (!success) {
-            revert("failed to deposit");
-        }
+        payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
+        payable(assetHubAgent).safeNativeTransfer(initialDeposit);
 
         vm.stopBroadcast();
     }

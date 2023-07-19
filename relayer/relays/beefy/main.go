@@ -22,47 +22,45 @@ type Relay struct {
 	ethereumConn     *ethereum.Connection
 	polkadotListener *PolkadotListener
 	ethereumWriter   *EthereumWriter
-	tasks            chan Request
 }
 
 func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
-	log.Info("Relay created")
-
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, ethereumKeypair)
 
-	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn)
-
 	polkadotListener := NewPolkadotListener(
-		config,
+		&config.Source,
 		relaychainConn,
 	)
+
+	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn)
+
+	log.Info("Beefy relay created")
 
 	return &Relay{
 		config:           config,
 		relaychainConn:   relaychainConn,
 		ethereumConn:     ethereumConn,
-		ethereumWriter:   ethereumWriter,
 		polkadotListener: polkadotListener,
+		ethereumWriter:   ethereumWriter,
 	}, nil
 }
 
 func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	err := relay.relaychainConn.Connect(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("create relaychain connection: %w", err)
 	}
 
 	err = relay.ethereumConn.Connect(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("create ethereum connection: %w", err)
 	}
 
 	initialBeefyBlock, initialValidatorSetID, err := relay.getInitialState(ctx)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyClient current state: %w", err)
 	}
-
 	log.WithFields(log.Fields{
 		"beefyBlock":     initialBeefyBlock,
 		"validatorSetID": initialValidatorSetID,
@@ -83,7 +81,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error) {
 	address := common.HexToAddress(relay.config.Sink.Contracts.BeefyClient)
-	contract, err := contracts.NewBeefyClient(address, relay.ethereumConn.Client())
+	beefyClient, err := contracts.NewBeefyClient(address, relay.ethereumConn.Client())
 	if err != nil {
 		return 0, 0, err
 	}
@@ -92,15 +90,15 @@ func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error)
 		Context: ctx,
 	}
 
-	initialBeefyBlock, err := contract.LatestBeefyBlock(&callOpts)
+	latestBeefyBlock, err := beefyClient.LatestBeefyBlock(&callOpts)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	initialValidatorSetID, err := contract.CurrentValidatorSet(&callOpts)
+	currentValidatorSet, err := beefyClient.CurrentValidatorSet(&callOpts)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	return initialBeefyBlock, initialValidatorSetID.Id.Uint64(), nil
+	return latestBeefyBlock, currentValidatorSet.Id.Uint64(), nil
 }

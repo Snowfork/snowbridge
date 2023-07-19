@@ -7,13 +7,18 @@ mod envelope;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_beacon_primitives::CompactExecutionHeader;
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_ethereum::H256;
+
 pub mod weights;
 
 #[cfg(test)]
 mod test;
 
 use codec::DecodeAll;
-use frame_support::traits::fungible::{Inspect, Mutate};
+use frame_support::traits::{GenesisBuild, fungible::{Inspect, Mutate}};
 use frame_system::ensure_signed;
 use snowbridge_core::ParaId;
 use sp_core::H160;
@@ -35,7 +40,7 @@ use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 
 type BalanceOf<T> =
-	<<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+    <<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[derive(CloneNoBound, EqNoBound, PartialEqNoBound, Encode, Decode, Debug, TypeInfo)]
 pub enum MessageDispatchResult {
@@ -54,8 +59,14 @@ pub mod pallet {
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
 	use xcm::v3::SendXcm;
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<T> {
+		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader);
+	}
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -70,6 +81,9 @@ pub mod pallet {
 		type XcmSender: SendXcm;
 
 		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type Helper: BenchmarkHelper<Self>;
 	}
 
 	#[pallet::hooks]
@@ -101,20 +115,18 @@ pub mod pallet {
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
+	pub struct GenesisConfig {
 		pub gateway: H160,
-		#[serde(skip)]
-		pub _config: sp_std::marker::PhantomData<T>,
 	}
 
-	impl<T: Config> Default for GenesisConfig<T> {
+	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self { gateway: Default::default(), _config: Default::default() }
+			Self { gateway: Default::default() }
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
 			Gateway::<T>::put(self.gateway);
 		}
@@ -123,7 +135,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight({100_000_000})]
+		#[pallet::weight(T::WeightInfo::submit())]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			// submit message to verifier for verification

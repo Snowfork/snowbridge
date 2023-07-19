@@ -17,6 +17,7 @@ use sp_runtime::{
 };
 use sp_std::convert::From;
 
+use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::{Message, Proof};
 use snowbridge_ethereum::Log;
 
@@ -32,6 +33,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
 		InboundQueue: inbound_queue::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -86,6 +88,35 @@ impl pallet_balances::Config for Test {
 	type MaxHolds = ();
 }
 
+parameter_types! {
+	pub const ExecutionHeadersPruneThreshold: u32 = 10;
+	pub const ChainForkVersions: ForkVersions = ForkVersions{
+		genesis: Fork {
+			version: [0, 0, 0, 1], // 0x00000001
+			epoch: 0,
+		},
+		altair: Fork {
+			version: [1, 0, 0, 1], // 0x01000001
+			epoch: 0,
+		},
+		bellatrix: Fork {
+			version: [2, 0, 0, 1], // 0x02000001
+			epoch: 0,
+		},
+		capella: Fork {
+			version: [3, 0, 0, 1], // 0x03000001
+			epoch: 0,
+		},
+	};
+}
+
+impl snowbridge_ethereum_beacon_client::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type ForkVersions = ChainForkVersions;
+	type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
+	type WeightInfo = ();
+}
+
 // Mock verifier
 pub struct MockVerifier;
 
@@ -100,6 +131,12 @@ parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15};
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Test {
+	// not implemented since the MockVerifier is used for tests
+	fn initialize_storage(_: H256, _: CompactExecutionHeader) {}
+}
+
 impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
@@ -107,6 +144,8 @@ impl inbound_queue::Config for Test {
 	type Reward = ConstU64<100>;
 	type XcmSender = ();
 	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type Helper = Test;
 }
 
 fn last_events(n: usize) -> Vec<RuntimeEvent> {
