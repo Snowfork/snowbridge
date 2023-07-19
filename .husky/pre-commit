@@ -18,8 +18,10 @@ chronic typos .
 #(cd parachain && SKIP_WASM_BUILD= cargo +nightly fmt --all)
 
 check_duplicate_versions() {
-        local duplicates=`grep -Ei 'source = "git.*substrate' cumulus/Cargo.lock parachain/Cargo.lock | sed 's/\.git//g' | sort -u`
-        local version_count=`echo $dups | awk -F':' '{for (i=2; i<NF; i++) printf $i " "; print $NF}' | sort -u | wc -l | xargs`
+        local duplicates=`grep -Ei "source = \"git.*$1" cumulus/Cargo.lock parachain/Cargo.lock | sed 's/\.git//g' | sort -u`
+	echo $duplicates
+        local version_count=`echo $duplicates | awk -F':' '{for (i=2; i<NF; i++) printf $i " "; print $NF}' | sort -u | wc -l | xargs`
+	echo $version_count
         if [ "$version_count" != "1" ]; then
                 echo Duplicate $1 versions detected
                 echo $duplicates
