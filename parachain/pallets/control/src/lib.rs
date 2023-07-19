@@ -24,8 +24,6 @@ use sp_core::{H160, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use xcm::prelude::*;
-
 pub use pallet::*;
 
 #[frame_support::pallet]

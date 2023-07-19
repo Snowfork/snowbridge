@@ -19,7 +19,6 @@ mod test;
 
 use codec::DecodeAll;
 use frame_support::{
-	storage::bounded_btree_set::BoundedBTreeSet,
 	traits::{
 		fungible::{Inspect, Mutate},
 		GenesisBuild,
@@ -210,7 +209,7 @@ pub mod pallet {
 							nonce: envelope.nonce,
 							result: MessageDispatchResult::InvalidPayload,
 						});
-						return Ok(())
+						return Ok(());
 					},
 				};
 
@@ -225,7 +224,7 @@ pub mod pallet {
 						nonce: envelope.nonce,
 						result: MessageDispatchResult::InvalidPayload,
 					});
-					return Ok(())
+					return Ok(());
 				},
 			};
 
