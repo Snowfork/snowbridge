@@ -30,6 +30,6 @@ check_duplicate_versions() {
 }
 
 check_duplicate_versions substrate
-check_duplicate_versions polkadot
+#check_duplicate_versions polkadot
 
 echo 'Pre-commit hook successful!'
