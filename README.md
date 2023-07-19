@@ -114,3 +114,29 @@ nix develop -i --pure-eval
 ## Security
 
 The security policy and procedures can be found in SECURITY.md.
+
+## Troubleshooting
+
+Check the contents of all `.envrc` files.
+
+Remove untracked files:
+```sh
+git clean -idx
+```
+
+Ensure submodules are up-to-date:
+```sh
+git submodule update
+```
+
+Check untracked files & directories:
+```sh
+git clean -ndx | awk '{print $3}'
+```
+
+Check Nix config in `~/.config/nix/nix.conf`.
+
+Run a pure developer shell (note that this removes access to your local tools):
+```sh
+nix develop -i --pure-eval
+```
