@@ -29,7 +29,10 @@ type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-	pub struct Test
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
@@ -163,13 +166,13 @@ fn expect_events(e: Vec<RuntimeEvent>) {
 }
 
 pub fn new_tester<T: Config>(gateway: H160) -> sp_io::TestExternalities {
-	new_tester_with_config(inbound_queue::GenesisConfig { gateway })
+	new_tester_with_config::<T>(inbound_queue::GenesisConfig { gateway, owner: None })
 }
 
 pub fn new_tester_with_config<T: Config>(
-	config: inbound_queue::GenesisConfig<Test>,
+	config: inbound_queue::GenesisConfig<T>,
 ) -> sp_io::TestExternalities {
-	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<T>().unwrap();
 
 	GenesisBuild::<T>::assimilate_storage(&config, &mut storage).unwrap();
 
@@ -259,7 +262,7 @@ fn test_submit_with_invalid_outbound_queue() {
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
-			Error::<Test>::InvalidOutboundQueue
+			Error::<Test>::InvalidGateway
 		);
 	});
 }
@@ -324,123 +327,5 @@ fn test_submit_no_funds_to_reward_relayers() {
 			// https://github.com/paritytech/substrate/issues/13866
 			ArithmeticError::Underflow
 		);
-	});
-}
-
-#[test]
-fn test_add_allow_list_without_root_yields_bad_origin() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-		let relayer: AccountId = Keyring::Bob.into();
-		let origin = RuntimeOrigin::signed(relayer);
-		assert_noop!(
-			InboundQueue::add_allow_list(origin, contract_address),
-			sp_runtime::DispatchError::BadOrigin,
-		);
-	});
-}
-
-#[test]
-fn test_add_allow_list_with_root_succeeds() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-
-		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert_ok!(InboundQueue::add_allow_list(origin, contract_address));
-
-		System::assert_last_event(RuntimeEvent::InboundQueue(crate::Event::AllowListAdded {
-			address: contract_address,
-		}));
-
-		assert_eq!(<AllowList<Test>>::get().len(), 1);
-		assert!(<AllowList<Test>>::get().contains(&contract_address));
-	});
-}
-
-#[test]
-fn test_add_allow_list_ignores_duplicates() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-
-		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address));
-		assert_eq!(<AllowList<Test>>::get().len(), 1);
-		assert!(<AllowList<Test>>::get().contains(&contract_address));
-		assert_ok!(InboundQueue::add_allow_list(origin, contract_address));
-		assert_eq!(<AllowList<Test>>::get().len(), 1);
-		assert!(<AllowList<Test>>::get().contains(&contract_address));
-	});
-}
-
-#[test]
-fn test_add_allow_list_fails_when_exceeding_bounds() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let contract_address1 = hex!("0000000000000000000000000000000000000000").into();
-		let contract_address2 = hex!("1000000000000000000000000000000000000000").into();
-		let contract_address3 = hex!("3000000000000000000000000000000000000000").into();
-
-		assert_eq!(<AllowList<Test>>::get().len(), 0);
-
-		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address1));
-		assert_eq!(<AllowList<Test>>::get().len(), 1);
-
-		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address2));
-		assert_eq!(<AllowList<Test>>::get().len(), 2);
-
-		assert_noop!(
-			InboundQueue::add_allow_list(origin, contract_address3),
-			Error::<Test>::AllowListFull,
-		);
-		assert_eq!(<AllowList<Test>>::get().len(), 2);
-	});
-}
-
-#[test]
-fn test_remove_allow_list_without_root_yields_bad_origin() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-		let relayer: AccountId = Keyring::Bob.into();
-		let origin = RuntimeOrigin::signed(relayer);
-		assert_noop!(
-			InboundQueue::remove_allow_list(origin, contract_address),
-			sp_runtime::DispatchError::BadOrigin,
-		);
-	});
-}
-
-#[test]
-fn test_remove_allow_list_with_root_succeeds() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-
-		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address));
-		assert_eq!(<AllowList<Test>>::get().len(), 1);
-
-		assert_ok!(InboundQueue::remove_allow_list(origin, contract_address));
-		System::assert_last_event(RuntimeEvent::InboundQueue(crate::Event::AllowListRemoved {
-			address: contract_address,
-		}));
-
-		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert!(!<AllowList<Test>>::get().contains(&contract_address));
-	});
-}
-
-#[test]
-fn test_remove_allow_list_event_not_emitted_for_none_existent_item() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-
-		let start = System::event_count();
-		assert_ok!(InboundQueue::remove_allow_list(origin, contract_address));
-		let end = System::event_count();
-
-		assert_eq!(start, end); // No new events
 	});
 }
