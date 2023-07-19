@@ -57,13 +57,6 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	wr.gateway = gateway
 
-	// TODO: remove OpaqueProofABI bindings once they're no longer needed
-	opaqueProofABI, err := abi.JSON(strings.NewReader(contracts.OpaqueProofABI))
-	if err != nil {
-		return err
-	}
-	wr.abiPacker = opaqueProofABI.Methods["dummy"].Inputs
-
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayABI))
 	if err != nil {
 		return err
