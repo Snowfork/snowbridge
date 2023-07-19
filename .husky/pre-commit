@@ -17,4 +17,17 @@ chronic typos .
 # comment here and run `cargo +nightly fmt` manually without nix for https://github.com/oxalica/rust-overlay/issues/66#issuecomment-993816000
 #(cd parachain && SKIP_WASM_BUILD= cargo +nightly fmt --all)
 
+check_duplicate_versions() {
+        local duplicates=`grep -Ei 'source = "git.*substrate' cumulus/Cargo.lock parachain/Cargo.lock | sed 's/\.git//g' | sort -u`
+        local version_count=`echo $dups | awk -F':' '{for (i=2; i<NF; i++) printf $i " "; print $NF}' | sort -u | wc -l | xargs`
+        if [ "$version_count" != "1" ]; then
+                echo Duplicate $1 versions detected
+                echo $duplicates
+                exit 1
+        fi
+}
+
+check_duplicate_versions substrate
+check_duplicate_versions polkadot
+
 echo 'Pre-commit hook successful!'
