@@ -209,7 +209,7 @@ pub mod pallet {
 							nonce: envelope.nonce,
 							result: MessageDispatchResult::InvalidPayload,
 						});
-						return Ok(());
+						return Ok(())
 					},
 				};
 
@@ -224,7 +224,7 @@ pub mod pallet {
 						nonce: envelope.nonce,
 						result: MessageDispatchResult::InvalidPayload,
 					});
-					return Ok(());
+					return Ok(())
 				},
 			};
 
