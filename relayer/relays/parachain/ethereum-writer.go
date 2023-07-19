@@ -32,7 +32,6 @@ type EthereumWriter struct {
 	conn       *ethereum.Connection
 	gateway    *contracts.Gateway
 	tasks      <-chan *Task
-	abiPacker  abi.Arguments
 	gatewayABI abi.ABI
 }
 
