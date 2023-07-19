@@ -20,7 +20,10 @@ mod test;
 use codec::DecodeAll;
 use frame_support::{
 	storage::bounded_btree_set::BoundedBTreeSet,
-	traits::fungible::{Inspect, Mutate},
+	traits::{
+		fungible::{Inspect, Mutate},
+		GenesisBuild,
+	},
 	DefaultNoBound,
 };
 use frame_system::ensure_signed;
@@ -44,7 +47,7 @@ use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 
 type BalanceOf<T> =
-	<<T as Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[derive(CloneNoBound, EqNoBound, PartialEqNoBound, Encode, Decode, Debug, TypeInfo)]
 pub enum MessageDispatchResult {
@@ -89,6 +92,9 @@ pub mod pallet {
 		type XcmSender: SendXcm;
 
 		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type Helper: BenchmarkHelper<Self>;
 	}
 
 	#[pallet::hooks]
@@ -141,12 +147,10 @@ pub mod pallet {
 	pub struct GenesisConfig<T: Config> {
 		pub gateway: H160,
 		pub owner: Option<T::AccountId>,
-		#[serde(skip)]
-		pub _config: sp_std::marker::PhantomData<T>,
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			Gateway::<T>::put(self.gateway);
 			if let Some(ref owner) = self.owner {
@@ -206,7 +210,7 @@ pub mod pallet {
 							nonce: envelope.nonce,
 							result: MessageDispatchResult::InvalidPayload,
 						});
-						return Ok(());
+						return Ok(())
 					},
 				};
 
@@ -221,7 +225,7 @@ pub mod pallet {
 						nonce: envelope.nonce,
 						result: MessageDispatchResult::InvalidPayload,
 					});
-					return Ok(());
+					return Ok(())
 				},
 			};
 

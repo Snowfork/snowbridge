@@ -144,6 +144,8 @@ impl inbound_queue::Config for Test {
 	type Reward = ConstU64<100>;
 	type XcmSender = ();
 	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type Helper = Test;
 }
 
 fn last_events(n: usize) -> Vec<RuntimeEvent> {

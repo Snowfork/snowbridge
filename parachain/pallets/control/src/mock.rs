@@ -5,13 +5,13 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 };
-use snowbridge_core::{ParaId};
+use snowbridge_core::ParaId;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+	BuildStorage,
 };
-
 
 use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
 
@@ -71,7 +71,7 @@ impl snowbridge_control::Config for Test {
 	type OutboundQueue = ();
 	type MessageHasher = BlakeTwo256;
 	type MaxUpgradeDataSize = MaxUpgradeDataSize;
-	typeEnsureCreateAgentOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;;
+	type EnsureCreateAgentOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type WeightInfo = ();
 }
 

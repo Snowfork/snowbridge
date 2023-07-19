@@ -25,17 +25,5 @@ mod benchmarks {
 		Ok(())
 	}
 
-	#[benchmark]
-	fn create_agent(x: Linear<0, { T::MaxUpgradeDataSize::get() }>) -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
-		let logic = H160::repeat_byte(1);
-		let data: Vec<u8> = (0..x).map(|_| 1u8).collect();
-
-		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), logic, Some(data));
-
-		Ok(())
-	}
-
 	impl_benchmark_test_suite!(Template, crate::mock::new_test_ext(), crate::mock::Test);
 }

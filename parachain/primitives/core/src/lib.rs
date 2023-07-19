@@ -13,7 +13,7 @@ use frame_support::dispatch::DispatchError;
 use scale_info::TypeInfo;
 use snowbridge_ethereum::Log;
 use sp_core::{RuntimeDebug, H160, H256, U256};
-use sp_std::vec::Vec;
+use sp_std::{borrow::ToOwned, vec, vec::Vec};
 
 pub mod ringbuffer;
 pub mod types;
