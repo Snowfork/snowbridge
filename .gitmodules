@@ -16,3 +16,6 @@
 [submodule "core/packages/contracts/lib/canonical-weth"]
 	path = core/packages/contracts/lib/canonical-weth
 	url = https://github.com/snowfork/canonical-weth
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
