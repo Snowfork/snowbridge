@@ -22,7 +22,7 @@ config_relayer(){
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg laneID $BRIDGE_HUB_PARAID \
+        --arg channelID $BRIDGE_HUB_PARAID \
         --arg eth_gas_limit $eth_gas_limit \
     '
       .source.contracts.Gateway = $k1
@@ -31,7 +31,7 @@ config_relayer(){
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
-    | .source."lane-id" = $laneID
+    | .source."channel-id" = $channelID
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay-bridge-hub.json
 
@@ -40,7 +40,7 @@ config_relayer(){
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg laneID $ASSET_HUB_PARAID \
+        --arg channelID $ASSET_HUB_PARAID \
         --arg eth_gas_limit $eth_gas_limit \
     '
       .source.contracts.Gateway = $k1
@@ -49,7 +49,7 @@ config_relayer(){
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
-    | .source."lane-id" = $laneID
+    | .source."channel-id" = $channelID
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay-asset-hub.json
 
@@ -67,11 +67,11 @@ config_relayer(){
     jq \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg k1 "$(address_for OutboundQueue)" \
-        --arg laneID $ASSET_HUB_PARAID \
+        --arg channelID $ASSET_HUB_PARAID \
     '
       .source.ethereum.endpoint = $eth_endpoint_ws
     | .source.contracts.OutboundQueue = $k1
-    | .source."lane-id" = $laneID
+    | .source."channel-id" = $channelID
     ' \
     config/execution-relay.json > $output_dir/execution-relay.json
 }
