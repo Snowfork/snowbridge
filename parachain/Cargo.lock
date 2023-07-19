@@ -4165,6 +4165,7 @@ version = "0.9.43"
 source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "environmental",
+ "frame-benchmarking",
  "frame-support",
  "impl-trait-for-tuples",
  "log",
