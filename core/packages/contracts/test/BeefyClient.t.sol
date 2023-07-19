@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
-import "openzeppelin/utils/Strings.sol";
-import "forge-std/Test.sol";
-import "forge-std/console.sol";
+import {Strings} from "openzeppelin/utils/Strings.sol";
+import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 
-import "./mocks/BeefyClientMock.sol";
-import "../src/ScaleCodec.sol";
-import "../src/utils/Bitfield.sol";
+import {BeefyClient} from "../src/BeefyClient.sol";
+import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
+import {ScaleCodec} from "../src/ScaleCodec.sol";
+import {Bitfield} from "../src/utils/Bitfield.sol";
 
 contract BeefyClientTest is Test {
     BeefyClientMock beefyClient;

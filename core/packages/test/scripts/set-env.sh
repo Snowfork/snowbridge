@@ -73,28 +73,24 @@ registry_contract_sovereign_account="${REGISTRY_CONTRACT_SOVEREIGN_ACCOUNT:-0x5d
 ## Deployment key
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
 
-## BeefyClient
-# For max safety delay should be MAX_SEED_LOOKAHEAD=4 epochs=4*8*6=192s
-# but for rococo-local each session is only 20 slots=120s
-# so relax somehow here just for quick test
-# for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
-export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
-export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
+## Gateway params
+export RANDAO_COMMIT_DELAY=3
+export RANDAO_COMMIT_EXP=3
 
-## ParachainClient
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
+export BRIDGE_HUB_AGENT_ID=""
 
-## OutboundChannel
-export RELAYER_FEE=1
-
-## InboundChannel
-export RELAYER_REWARD=1
-
-## NativeTokens
 export ASSET_HUB_PARAID=$statemine_para_id
-export CREATE_TOKEN_FEE=1
+export ASSET_HUB_AGENT_ID=""
+
+export DEFAULT_FEE=1
+export DEFAULT_REWARD=1
+
 export CREATE_CALL_INDEX="0x3500"
-export SET_METADATA_CALL_INDEX="0x3511"
+export DISPATCH_GAS=500000
+
+export REGISTER_NATIVE_TOKEN_FEE=0
+export SEND_NATIVE_TOKEN_FEE=0
 
 ## Vault
 export BRIDGE_HUB_INITIAL_DEPOSIT=1000

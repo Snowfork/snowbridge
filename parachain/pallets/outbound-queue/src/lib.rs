@@ -49,9 +49,9 @@ pub struct EnqueuedMessage {
 	/// ID of source parachain
 	pub origin: ParaId,
 	/// The receiving gateway contract
-	pub gateway: ContractId,
+	pub command: H256,
 	/// Payload for target application.
-	pub payload: Vec<u8>,
+	pub params: Vec<u8>,
 }
 
 /// Message which has been assigned a nonce and will be committed at the end of a block
@@ -61,10 +61,10 @@ pub struct Message {
 	origin: ParaId,
 	/// Unique nonce to prevent replaying messages
 	nonce: u64,
-	/// The receiving gateway contract
-	gateway: ContractId,
+	/// Command to execute in the Gateway contract
+	command: H256,
 	/// Payload for target application.
-	payload: Vec<u8>,
+	params: Vec<u8>,
 }
 
 /// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
@@ -73,8 +73,8 @@ impl Into<Token> for Message {
 		Token::Tuple(vec![
 			Token::Uint(u32::from(self.origin).into()),
 			Token::Uint(self.nonce.into()),
-			Token::FixedBytes(self.gateway.to_fixed_bytes().into()),
-			Token::Bytes(self.payload.to_vec()),
+			Token::FixedBytes(self.command.to_fixed_bytes().into()),
+			Token::Bytes(self.params.to_vec()),
 		])
 	}
 }
@@ -266,8 +266,8 @@ pub mod pallet {
 			let message: Message = Message {
 				origin: enqueued_message.origin,
 				nonce: next_nonce,
-				gateway: enqueued_message.gateway,
-				payload: enqueued_message.payload,
+				command: enqueued_message.command,
+				params: enqueued_message.params,
 			};
 
 			let message_abi_encoded = ethabi::encode(&vec![message.clone().into()]);
@@ -300,14 +300,14 @@ pub mod pallet {
 		fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError> {
 			// The inner payload should not be too large
 			ensure!(
-				message.payload.len() < T::MaxMessagePayloadSize::get() as usize,
+				message.params.len() < T::MaxMessagePayloadSize::get() as usize,
 				SubmitError::MessageTooLarge
 			);
 			let message: EnqueuedMessage = EnqueuedMessage {
 				id: message.id,
 				origin: message.origin,
-				gateway: message.gateway,
-				payload: message.payload.clone().into(),
+				command: message.command,
+				params: message.params.clone().into(),
 			};
 			// The whole message should not be too large
 			let encoded = message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;

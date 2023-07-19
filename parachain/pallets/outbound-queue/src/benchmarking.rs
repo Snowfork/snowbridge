@@ -25,8 +25,8 @@ mod benchmarks {
 		let enqueued_message = EnqueuedMessage {
 			id: H256::zero().into(),
 			origin: 1000.into(),
-			gateway: [1u8; 32].into(),
-			payload: payload.try_into().unwrap(),
+			command: [1u8; 32].into(),
+			params: payload.try_into().unwrap(),
 		};
 		let encoded_enqueued_message = enqueued_message.encode();
 

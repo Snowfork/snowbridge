@@ -20,6 +20,9 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
 
+ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
+
+
 [dev-dependencies]
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 
@@ -37,6 +40,7 @@ std = [
     "sp-runtime/std",
     "snowbridge-ethereum/std",
     "snowbridge-beacon-primitives/std",
-    "xcm/std"
+    "xcm/std",
+    "ethabi/std"
 ]
 runtime-benchmarks = []

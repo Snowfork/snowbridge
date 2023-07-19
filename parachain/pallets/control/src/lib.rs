@@ -19,18 +19,21 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
-use snowbridge_core::{ContractId, OutboundMessage, OutboundQueue as OutboundQueueTrait, ParaId};
-use sp_core::{H160, H256, U256};
+use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTrait, ParaId};
+use sp_core::{H160, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use ethabi::Token;
+use xcm::prelude::*;
+
+pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, traits::EnsureOrigin};
 	use frame_system::pallet_prelude::*;
+	use xcm::v2::MultiLocation;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -41,37 +44,54 @@ pub mod pallet {
 		type MessageHasher: Hash<Output = H256>;
 		type OutboundQueue: OutboundQueueTrait;
 		type OwnParaId: Get<ParaId>;
-		type GovernanceProxyContract: Get<ContractId>;
 		type WeightInfo: WeightInfo;
-	}
 
-	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	pub type Something<T> = StorageValue<_, u32>;
+		type MaxUpgradeDataSize: Get<u32>;
+
+		type EnsureCreateAgentOrigin: EnsureOrigin<
+			<Self as frame_system::Config>::RuntimeOrigin,
+			Success = MultiLocation,
+		>;
+	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		UpgradeTaskSubmitted { upgrade_task: H160 },
+		Upgrade { logic: H160, data: Option<Vec<u8>> },
+		CreateAgent { agent_id: H256 },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
+		UpgradeDataTooLarge,
 		SubmissionFailed,
 	}
+
+	#[pallet::storage]
+	pub type Agents<T: Config> = StorageMap<_, Twox64Concat, H256, (), OptionQuery>;
+
+	#[pallet::storage]
+	pub type Channels<T: Config> = StorageMap<_, Twox64Concat, ParaId, (), OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::upgrade())]
-		pub fn upgrade(origin: OriginFor<T>, upgrade_task: H160) -> DispatchResult {
-			ensure_root(origin)?;
+		#[pallet::weight(T::WeightInfo::upgrade(data.clone().map_or(0, |d| d.len() as u32)))]
+		pub fn upgrade(origin: OriginFor<T>, logic: H160, data: Option<Vec<u8>>) -> DispatchResult {
+			let _ = ensure_root(origin)?;
+
+			ensure!(
+				data.clone().map_or(0, |d| d.len() as u32) < T::MaxUpgradeDataSize::get(),
+				Error::<T>::UpgradeDataTooLarge
+			);
+
+			let (command, params) = Command::Upgrade { logic, data: data.clone() }.encode();
 
 			let message = OutboundMessage {
-				id: T::MessageHasher::hash(upgrade_task.as_ref()),
+				id: T::MessageHasher::hash(&(logic, data.clone()).encode()),
 				origin: T::OwnParaId::get(),
-				gateway: T::GovernanceProxyContract::get(),
-				payload: Self::encode_upgrade_payload(upgrade_task),
+				command,
+				params,
 			};
 
 			let ticket =
@@ -79,20 +99,9 @@ pub mod pallet {
 
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 
-			Self::deposit_event(Event::<T>::UpgradeTaskSubmitted { upgrade_task });
+			Self::deposit_event(Event::<T>::Upgrade { logic, data });
 
 			Ok(())
-		}
-	}
-
-	impl<T: Config> Pallet<T> {
-		fn encode_upgrade_payload(upgrade_task: H160) -> Vec<u8> {
-			ethabi::encode(&vec![Token::Tuple(vec![
-				Token::Uint(U256::from(0u64)),
-				Token::Bytes(ethabi::encode(&vec![Token::Tuple(vec![Token::Address(
-					upgrade_task,
-				)])])),
-			])])
 		}
 	}
 }

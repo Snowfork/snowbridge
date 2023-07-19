@@ -3,8 +3,7 @@
 pragma solidity 0.8.20;
 
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
-import {Ownable} from "openzeppelin/access/Ownable.sol";
-import {MerkleProof} from "./utils/MerkleProof.sol";
+import {SubstrateMerkleProof} from "./utils/MerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./ScaleCodec.sol";
@@ -29,7 +28,7 @@ import {ScaleCodec} from "./ScaleCodec.sol";
  * 4. submitFinalWithHandover (with signature proofs specified by (3))
  *
  */
-contract BeefyClient is Ownable {
+contract BeefyClient {
     /* Events */
 
     /**
@@ -136,6 +135,9 @@ contract BeefyClient is Ownable {
 
     /* State */
 
+    // foo
+    bool internal initialized;
+
     // The latest verified MMRRoot and corresponding BlockNumber from the Polkadot relay chain
     bytes32 public latestMMRRoot;
     uint64 public latestBeefyBlock;
@@ -152,7 +154,7 @@ contract BeefyClient is Ownable {
      * @dev Beefy payload id for MMR Root payload items:
      * https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L33
      */
-    bytes2 public constant mmrRootID = bytes2("mh");
+    bytes2 public constant MMR_ROOT_ID = bytes2("mh");
 
     /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
@@ -197,11 +199,11 @@ contract BeefyClient is Ownable {
         uint64 _initialBeefyBlock,
         ValidatorSet calldata _initialValidatorSet,
         ValidatorSet calldata _nextValidatorSet
-    ) external onlyOwner {
+    ) external {
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
         nextValidatorSet = _nextValidatorSet;
-        renounceOwnership();
+        initialized = true;
     }
 
     /* Public Functions */
@@ -515,7 +517,7 @@ contract BeefyClient is Ownable {
 
     function getFirstMMRRoot(Commitment calldata commitment) internal pure returns (bytes32) {
         for (uint256 i = 0; i < commitment.payload.length; i++) {
-            if (commitment.payload[i].payloadID == mmrRootID) {
+            if (commitment.payload[i].payloadID == MMR_ROOT_ID) {
                 if (commitment.payload[i].data.length != 32) {
                     revert InvalidMMRRootLength();
                 } else {
@@ -578,7 +580,7 @@ contract BeefyClient is Ownable {
         returns (bool)
     {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(account));
-        return MerkleProof.verify(vset.root, hashedLeaf, index, vset.length, proof);
+        return SubstrateMerkleProof.verify(vset.root, hashedLeaf, index, vset.length, proof);
     }
 
     // Basic checks for commitment

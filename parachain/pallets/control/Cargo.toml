@@ -33,6 +33,8 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 
 
 [dev-dependencies]
+xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master" }
+
 
 
 [features]

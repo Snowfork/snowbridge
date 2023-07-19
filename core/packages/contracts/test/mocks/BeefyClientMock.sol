@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
-import "../../src/BeefyClient.sol";
+import {BeefyClient} from "../../src/BeefyClient.sol";
 
 contract BeefyClientMock is BeefyClient {
     constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration)

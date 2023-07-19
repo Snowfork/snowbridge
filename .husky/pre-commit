@@ -6,7 +6,7 @@ set -e
 echo 'Running pre-commit hook...'
 
 # check typos
-chronic typos .
+#chronic typos .
 
 # lint and format for core contracts and typescript codes
 (cd core && chronic pnpm lint && pnpm format)

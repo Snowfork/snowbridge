@@ -5,12 +5,15 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 };
-use snowbridge_core::{ContractId, ParaId};
+use snowbridge_core::{ParaId};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+
+
+use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -56,16 +59,19 @@ impl frame_system::Config for Test {
 
 parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
-	pub const GovernanceProxyContract: ContractId = ContractId::new([3u8; 32]);
+	pub const MaxUpgradeDataSize: u32 = 1024;
 	pub const SS58Prefix: u8 = 42;
 }
+
+pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
 
 impl snowbridge_control::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = ();
-	type GovernanceProxyContract = GovernanceProxyContract;
 	type MessageHasher = BlakeTwo256;
+	type MaxUpgradeDataSize = MaxUpgradeDataSize;
+	typeEnsureCreateAgentOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;;
 	type WeightInfo = ();
 }
 

@@ -12,7 +12,7 @@ use codec::{Decode, Encode};
 use frame_support::dispatch::DispatchError;
 use scale_info::TypeInfo;
 use snowbridge_ethereum::Log;
-use sp_core::{RuntimeDebug, H256};
+use sp_core::{RuntimeDebug, H160, H256, U256};
 use sp_std::vec::Vec;
 
 pub mod ringbuffer;
@@ -76,9 +76,58 @@ pub struct OutboundMessage {
 	/// The parachain from which the message originated
 	pub origin: ParaId,
 	/// The stable ID for a receiving gateway contract
-	pub gateway: ContractId,
+	pub command: H256,
 	/// ABI-encoded message payload which can be interpreted by the receiving gateway contract
-	pub payload: Vec<u8>,
+	pub params: Vec<u8>,
+}
+
+use ethabi::Token;
+
+const COMMAND_EXECUTE_XCM: H256 = H256::zero();
+const COMMAND_CREATE_AGENT: H256 = H256::zero();
+const COMMAND_CREATE_CHANNEL: H256 = H256::zero();
+const COMMAND_UPGRADE: H256 = H256::zero();
+
+pub enum Command {
+	ExecuteXCM { origin_agent_id: H256, payload: Vec<u8> },
+	CreateAgent { agent_id: H256 },
+	CreateChannel { para_id: ParaId, agent_id: H256 },
+	Upgrade { logic: H160, data: Option<Vec<u8>> },
+}
+
+impl Command {
+	pub fn encode(self) -> (H256, Vec<u8>) {
+		match self {
+			Command::ExecuteXCM { origin_agent_id, payload } => (
+				COMMAND_EXECUTE_XCM,
+				ethabi::encode(&vec![
+					Token::FixedBytes(origin_agent_id.as_bytes().to_owned()),
+					Token::Bytes(payload),
+				]),
+			),
+			Command::CreateAgent { agent_id } => (
+				COMMAND_CREATE_AGENT,
+				ethabi::encode(&vec![Token::FixedBytes(agent_id.as_bytes().to_owned())]),
+			),
+			Command::CreateChannel { para_id, agent_id } => {
+				let para_id: u32 = para_id.into();
+				(
+					COMMAND_CREATE_CHANNEL,
+					ethabi::encode(&vec![
+						Token::Uint(U256::from(para_id)),
+						Token::FixedBytes(agent_id.as_bytes().to_owned()),
+					]),
+				)
+			},
+			Command::Upgrade { logic, data } => (
+				COMMAND_UPGRADE,
+				ethabi::encode(&vec![
+					Token::Address(logic),
+					data.map_or(Token::Bytes(vec![]), |d| Token::Bytes(d)),
+				]),
+			),
+		}
+	}
 }
 
 // A trait for enqueueing messages for delivery to Ethereum

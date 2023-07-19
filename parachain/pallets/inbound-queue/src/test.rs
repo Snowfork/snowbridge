@@ -6,9 +6,9 @@ use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::DispatchError,
 	parameter_types,
-	traits::{ConstU64, Everything, GenesisBuild},
+	traits::{ConstU64, Everything},
 };
-use sp_core::{ConstU32, H160, H256};
+use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	testing::Header,
@@ -29,10 +29,7 @@ type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
+	pub struct Test
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
@@ -147,9 +144,6 @@ impl inbound_queue::Config for Test {
 	type Reward = ConstU64<100>;
 	type XcmSender = ();
 	type WeightInfo = ();
-	type AllowListLength = ConstU32<2>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type Helper = Test;
 }
 
 fn last_events(n: usize) -> Vec<RuntimeEvent> {
@@ -166,15 +160,12 @@ fn expect_events(e: Vec<RuntimeEvent>) {
 	assert_eq!(last_events(e.len()), e);
 }
 
-pub fn new_tester<T: Config>(outbound_queue_address: H160) -> sp_io::TestExternalities {
-	new_tester_with_config::<T>(inbound_queue::GenesisConfig {
-		allowlist: vec![outbound_queue_address],
-		owner: None,
-	})
+pub fn new_tester<T: Config>(gateway: H160) -> sp_io::TestExternalities {
+	new_tester_with_config(inbound_queue::GenesisConfig { gateway })
 }
 
 pub fn new_tester_with_config<T: Config>(
-	config: inbound_queue::GenesisConfig<T>,
+	config: inbound_queue::GenesisConfig<Test>,
 ) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 

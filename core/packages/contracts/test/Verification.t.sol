@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "openzeppelin/utils/Strings.sol";
 import "forge-std/Test.sol";
@@ -7,35 +7,36 @@ import "forge-std/console.sol";
 
 import {ScaleCodec} from "../src/ScaleCodec.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
-import {ParachainClient, ParachainClientMock} from "./mocks/ParachainClientMock.sol";
+import {Verification, VerificationWrapper} from "./mocks/VerificationWrapper.sol";
 
-contract ParachainClientTest is Test {
-    BeefyClientMock beefyClient;
-    ParachainClientMock parachainClient;
+contract VerificationTest is Test {
+    BeefyClientMock public beefyClient;
+    VerificationWrapper public v;
 
     uint32 public constant BRIDGE_HUB_PARA_ID = 1013;
+    bytes4 public encodedParachainID;
 
     function setUp() public {
         beefyClient = new BeefyClientMock(3, 8);
-        parachainClient = new ParachainClientMock(beefyClient, BRIDGE_HUB_PARA_ID);
+        encodedParachainID = ScaleCodec.encodeU32(BRIDGE_HUB_PARA_ID);
+        v = new VerificationWrapper();
     }
 
     function testCreateParachainHeaderMerkleLeaf() public {
-        ParachainClient.DigestItem[] memory digestItems = new ParachainClient.DigestItem[](3);
-        digestItems[0] =
-            ParachainClient.DigestItem({kind: 6, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"});
-        digestItems[1] = ParachainClient.DigestItem({
+        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](3);
+        digestItems[0] = Verification.DigestItem({kind: 6, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"});
+        digestItems[1] = Verification.DigestItem({
             kind: 4,
             consensusEngineID: 0x52505352,
             data: hex"73a902d5a4fa8fea942d01ad3c1dc32b51192c3a98c39fcc59299006ed391a5e2e005501"
         });
-        digestItems[2] = ParachainClient.DigestItem({
+        digestItems[2] = Verification.DigestItem({
             kind: 5,
             consensusEngineID: 0x61757261,
             data: hex"fcfbfaf1ad15d24cb4980436c18aec6211e2255f648df0e05e73a7858fba8c31726925f1a825383d0d3cb590502b18978101a6391fbeef5ab53e14c05124188c"
         });
 
-        ParachainClient.ParachainHeader memory header = ParachainClient.ParachainHeader({
+        Verification.ParachainHeader memory header = Verification.ParachainHeader({
             parentHash: 0x1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259d,
             number: 866538,
             stateRoot: 0x7b2d59d4de7c629b55a9bc9b76d932616f2011a26f09b52da36e070d6a7eee0d,
@@ -54,17 +55,17 @@ contract ParachainClientTest is Test {
                     headerExpected
                 )
             ),
-            parachainClient.createParachainHeaderMerkleLeaf_public(header)
+            v.createParachainHeaderMerkleLeaf(encodedParachainID, header)
         );
     }
 
     function testCreateParachainHeaderMerkleFailInvalidHeader() public {
-        ParachainClient.DigestItem[] memory digestItems = new ParachainClient.DigestItem[](1);
+        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](1);
         // Create an invalid digest item
         digestItems[0] =
-            ParachainClient.DigestItem({kind: 666, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"});
+            Verification.DigestItem({kind: 666, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"});
 
-        ParachainClient.ParachainHeader memory header = ParachainClient.ParachainHeader({
+        Verification.ParachainHeader memory header = Verification.ParachainHeader({
             parentHash: 0x1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259d,
             number: 866538,
             stateRoot: 0x7b2d59d4de7c629b55a9bc9b76d932616f2011a26f09b52da36e070d6a7eee0d,
@@ -72,31 +73,30 @@ contract ParachainClientTest is Test {
             digestItems: digestItems
         });
 
-        vm.expectRevert(ParachainClient.InvalidParachainHeader.selector);
-        parachainClient.createParachainHeaderMerkleLeaf_public(header);
+        vm.expectRevert(Verification.InvalidParachainHeader.selector);
+        v.createParachainHeaderMerkleLeaf(encodedParachainID, header);
     }
 
     function testIsCommitmentInHeaderDigest() public view {
-        ParachainClient.DigestItem[] memory digestItems = new ParachainClient.DigestItem[](4);
-        digestItems[0] =
-            ParachainClient.DigestItem({kind: 6, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"});
-        digestItems[1] = ParachainClient.DigestItem({
+        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](4);
+        digestItems[0] = Verification.DigestItem({kind: 6, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"});
+        digestItems[1] = Verification.DigestItem({
             kind: 4,
             consensusEngineID: 0x52505352,
             data: hex"73a902d5a4fa8fea942d01ad3c1dc32b51192c3a98c39fcc59299006ed391a5e2e005501"
         });
-        digestItems[2] = ParachainClient.DigestItem({
+        digestItems[2] = Verification.DigestItem({
             kind: 0,
             consensusEngineID: 0x00000000,
             data: hex"b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
         });
-        digestItems[3] = ParachainClient.DigestItem({
+        digestItems[3] = Verification.DigestItem({
             kind: 5,
             consensusEngineID: 0x61757261,
             data: hex"fcfbfaf1ad15d24cb4980436c18aec6211e2255f648df0e05e73a7858fba8c31726925f1a825383d0d3cb590502b18978101a6391fbeef5ab53e14c05124188c"
         });
 
-        ParachainClient.ParachainHeader memory header = ParachainClient.ParachainHeader({
+        Verification.ParachainHeader memory header = Verification.ParachainHeader({
             parentHash: 0x1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259d,
             number: 866538,
             stateRoot: 0x7b2d59d4de7c629b55a9bc9b76d932616f2011a26f09b52da36e070d6a7eee0d,
@@ -105,18 +105,12 @@ contract ParachainClientTest is Test {
         });
 
         // Digest item at index 2 contains the commitment
-        assert(
-            parachainClient.isCommitmentInHeaderDigest_public(
-                0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header
-            )
-        );
+        assert(v.isCommitmentInHeaderDigest(0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header));
 
         // Now remove the commitment from the parachain header
         header.digestItems[2] = header.digestItems[3];
         assert(
-            !parachainClient.isCommitmentInHeaderDigest_public(
-                0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header
-            )
+            !v.isCommitmentInHeaderDigest(0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header)
         );
     }
 }
