@@ -3,14 +3,16 @@
 use crate::{
 	functions::compute_period, mock::minimal::*, pallet::ExecutionHeaders, sync_committee_sum,
 	verify_merkle_branch, BeaconHeader, CompactBeaconState, Error, FinalizedBeaconState,
-	LatestFinalizedBlockRoot, NextSyncCommittee,
+	LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared
 };
 
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
-use primitives::{CompactExecutionHeader, NextSyncCommitteeUpdate};
+use primitives::{CompactExecutionHeader, ForkVersions, NextSyncCommitteeUpdate, Fork};
 use rand::{thread_rng, Rng};
 use sp_core::H256;
+
+/* UNIT TESTS */
 
 #[test]
 pub fn sum_sync_committee_participation() {
@@ -32,23 +34,6 @@ pub fn compute_domain() {
 		assert_eq!(
 			domain.unwrap(),
 			hex!("0700000046324489ceb6ada6d118eacdbe94f49b1fcb49d5481a685979670c7c").into()
-		);
-	});
-}
-
-#[test]
-pub fn compute_domain_kiln() {
-	new_tester().execute_with(|| {
-		let domain = EthereumBeaconClient::compute_domain(
-			hex!("07000000").into(),
-			hex!("70000071").into(),
-			hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-		);
-
-		assert_ok!(&domain);
-		assert_eq!(
-			domain.unwrap(),
-			hex!("07000000e7acb21061790987fa1c1e745cccfb358370b33e8af2b2c18938e6c2").into()
 		);
 	});
 }
@@ -83,36 +68,7 @@ pub fn compute_signing_root_bls() {
 }
 
 #[test]
-pub fn compute_signing_root_kiln() {
-	new_tester().execute_with(|| {
-		let signing_root = EthereumBeaconClient::compute_signing_root(
-			&BeaconHeader {
-				slot: 221316,
-				proposer_index: 79088,
-				parent_root: hex!(
-					"b4c15cd79da1a4e645b0104fa66d226cb6dce0fae3522789cc4d0b3ae41d96f7"
-				)
-				.into(),
-				state_root: hex!(
-					"6f711ef2e36decbc8f7037e73bbdace42c11f2896a43e44ab8a78dcb2ba66122"
-				)
-				.into(),
-				body_root: hex!("963eaa01341c16dc8f288da47eedad0792978fdaab9f1f97ae0a1103494d1a10")
-					.into(),
-			},
-			hex!("07000000afcaaba0efab1ca832a15152469bb09bb84641c405171dfa2d3fb45f").into(),
-		);
-
-		assert_ok!(&signing_root);
-		assert_eq!(
-			signing_root.unwrap(),
-			hex!("4ce7b4192c0292a2bbf4107766ddc0f613261bb8e6968ccd0e6b71b30fad6d7c").into()
-		);
-	});
-}
-
-#[test]
-pub fn compute_signing_root_kiln_head_update() {
+pub fn compute_signing_root() {
 	new_tester().execute_with(|| {
 		let signing_root = EthereumBeaconClient::compute_signing_root(
 			&BeaconHeader {
@@ -294,6 +250,78 @@ pub fn execution_header_pruning() {
 		}
 	});
 }
+
+#[test]
+fn compute_fork_version() {
+	let mock_fork_versions = ForkVersions{
+		genesis: Fork {
+			version: [0, 0, 0, 0],
+			epoch: 0,
+		},
+		altair: Fork {
+			version: [0, 0, 0, 1],
+			epoch: 10,
+		},
+		bellatrix: Fork {
+			version: [0, 0, 0, 2],
+			epoch: 20,
+		},
+		capella: Fork {
+			version: [0, 0, 0, 3],
+			epoch: 30,
+		},
+	};
+	new_tester().execute_with(|| {
+		assert_eq!(EthereumBeaconClient::select_fork_version(&mock_fork_versions, 0), [0,0,0,0]);
+		assert_eq!(EthereumBeaconClient::select_fork_version(&mock_fork_versions, 1), [0,0,0,0]);
+		assert_eq!(EthereumBeaconClient::select_fork_version(&mock_fork_versions, 10), [0,0,0,1]);
+		assert_eq!(EthereumBeaconClient::select_fork_version(&mock_fork_versions, 21), [0,0,0,2]);
+		assert_eq!(EthereumBeaconClient::select_fork_version(&mock_fork_versions, 20), [0,0,0,2]);
+		assert_eq!(EthereumBeaconClient::select_fork_version(&mock_fork_versions, 32), [0,0,0,3]);
+	});
+}
+
+#[test]
+fn find_absent_keys() {
+	let participation: [u8; 32] = [0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1];
+	let update = load_sync_committee_update_fixture();
+	let sync_committee_prepared: SyncCommitteePrepared = (&update
+		.next_sync_committee_update
+		.unwrap()
+		.next_sync_committee)
+		.try_into()
+		.unwrap();
+
+	new_tester().execute_with(|| {
+		let pubkeys = EthereumBeaconClient::find_pubkeys(&participation, (*sync_committee_prepared.pubkeys).as_ref(), false);
+		assert_eq!(pubkeys.len(), 2);
+		assert_eq!(pubkeys[0], sync_committee_prepared.pubkeys[0]);
+		assert_eq!(pubkeys[1], sync_committee_prepared.pubkeys[7]);
+	});
+}
+
+#[test]
+fn find_present_keys() {
+	let participation: [u8; 32] = [0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0];
+	let update = load_sync_committee_update_fixture();
+	let sync_committee_prepared: SyncCommitteePrepared = (&update
+		.next_sync_committee_update
+		.unwrap()
+		.next_sync_committee)
+		.try_into()
+		.unwrap();
+
+	new_tester().execute_with(|| {
+		let pubkeys = EthereumBeaconClient::find_pubkeys(&participation, (*sync_committee_prepared.pubkeys).as_ref(), true);
+		assert_eq!(pubkeys.len(), 4);
+		assert_eq!(pubkeys[0], sync_committee_prepared.pubkeys[1]);
+		assert_eq!(pubkeys[1], sync_committee_prepared.pubkeys[8]);
+		assert_eq!(pubkeys[2], sync_committee_prepared.pubkeys[26]);
+		assert_eq!(pubkeys[3], sync_committee_prepared.pubkeys[30]);
+	});
+}
+
+/* SYNC PROCESS TESTS */
 
 #[test]
 fn process_initial_checkpoint() {

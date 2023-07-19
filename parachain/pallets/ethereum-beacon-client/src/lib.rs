@@ -778,8 +778,11 @@ pub mod pallet {
 		/// Returns the fork version based on the current epoch. The hard fork versions
 		/// are defined in pallet config.
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
-			let fork_versions = T::ForkVersions::get();
+			Self::select_fork_version(&T::ForkVersions::get(), epoch)
+		}
 
+		/// Returns the fork version based on the current epoch.
+		pub(super) fn select_fork_version(fork_versions: &ForkVersions, epoch: u64) -> ForkVersion {
 			if epoch >= fork_versions.capella.epoch {
 				return fork_versions.capella.version
 			}
