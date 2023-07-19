@@ -19,3 +19,4 @@ rococo-local.json
 .pnp.*
 ethereum-goerli
 testdata
+.env

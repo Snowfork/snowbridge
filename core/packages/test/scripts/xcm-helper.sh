@@ -6,8 +6,14 @@ source scripts/set-env.sh
 send_governance_transact_from_relaychain() {
     local para_id=$1
     local hex_encoded_data=$2
-    local require_weight_at_most_ref_time=$3
-    local require_weight_at_most_proof_size=$4
+    local require_weight_at_most_ref_time=$(echo "$3")
+    local require_weight_at_most_proof_size=$(echo "$4")
+    if [ -z "${require_weight_at_most_ref_time}" ]; then 
+      require_weight_at_most_ref_time=200000000
+    fi
+    if [ -z "${require_weight_at_most_proof_size}" ]; then 
+      require_weight_at_most_proof_size=12000
+    fi
     echo "  calling send_governance_transact:"
     echo "      relay_url: ${relaychain_ws_url}"
     echo "      relay_chain_seed: ${relaychain_sudo_seed}"

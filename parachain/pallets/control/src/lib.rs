@@ -65,7 +65,7 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::upgrade())]
 		pub fn upgrade(origin: OriginFor<T>, upgrade_task: H160) -> DispatchResult {
-			let _ = ensure_signed(origin)?;
+			ensure_root(origin)?;
 
 			let message = OutboundMessage {
 				id: T::MessageHasher::hash(upgrade_task.as_ref()),
