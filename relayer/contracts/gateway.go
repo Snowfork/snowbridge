@@ -26,6 +26,7 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
 // InboundMessage is an auto generated low-level Go binding around an user-defined struct.
@@ -80,7 +81,7 @@ type VerificationProof struct {
 
 // GatewayMetaData contains all meta data concerning the Gateway contract.
 var GatewayMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"AgentAlreadyCreated\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AgentDoesNotExist\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AgentExecutionFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ChannelAlreadyCreated\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ChannelDoesNotExist\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"Disabled\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedPayment\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FeePaymentToLow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidAgentExecutionPayload\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidChannelUpdate\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidCodeHash\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidConfig\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotEnoughGas\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotProxy\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SetupFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"Unauthorized\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UnknownChannel\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"WithdrawalFailed\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"}],\"name\":\"AgentCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"AgentFundsWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"name\":\"InboundMessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"enumOperatingMode\",\"name\":\"mode\",\"type\":\"uint8\"}],\"name\":\"OperatingModeChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"dest\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"OutboundMessageAccepted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"agentExecute\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"}],\"name\":\"agentOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelFeeRewardOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelNoncesOf\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelOperatingModeOf\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"createAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"createChannel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"implementation\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"ParaID\",\"name\":\"finalDestPara\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"recipient\",\"type\":\"bytes\"},{\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"lockNativeTokens\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"operatingMode\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"registerNativeToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"setOperatingMode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"command\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"params\",\"type\":\"bytes\"}],\"internalType\":\"structInboundMessage\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"components\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"stateRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"kind\",\"type\":\"uint256\"},{\"internalType\":\"bytes4\",\"name\":\"consensusEngineID\",\"type\":\"bytes4\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"internalType\":\"structVerification.DigestItem[]\",\"name\":\"digestItems\",\"type\":\"tuple[]\"}],\"internalType\":\"structVerification.ParachainHeader\",\"name\":\"header\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structVerification.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structVerification.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"leafProofOrder\",\"type\":\"uint256\"}],\"internalType\":\"structVerification.Proof\",\"name\":\"headerProof\",\"type\":\"tuple\"}],\"name\":\"submitInbound\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"updateChannel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"withdrawAgentFunds\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"}],\"name\":\"AgentCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"AgentFundsWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"name\":\"InboundMessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"enumOperatingMode\",\"name\":\"mode\",\"type\":\"uint8\"}],\"name\":\"OperatingModeChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"dest\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"OutboundMessageAccepted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"}],\"name\":\"agentOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelFeeRewardOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelNoncesOf\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelOperatingModeOf\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"operatingMode\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"registerNativeToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"recipient\",\"type\":\"bytes\"},{\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"sendNativeToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"command\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"params\",\"type\":\"bytes\"}],\"internalType\":\"structInboundMessage\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"components\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"stateRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"kind\",\"type\":\"uint256\"},{\"internalType\":\"bytes4\",\"name\":\"consensusEngineID\",\"type\":\"bytes4\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"internalType\":\"structVerification.DigestItem[]\",\"name\":\"digestItems\",\"type\":\"tuple[]\"}],\"internalType\":\"structVerification.ParachainHeader\",\"name\":\"header\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structVerification.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structVerification.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"leafProofOrder\",\"type\":\"uint256\"}],\"internalType\":\"structVerification.Proof\",\"name\":\"headerProof\",\"type\":\"tuple\"}],\"name\":\"submitInbound\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // GatewayABI is the input ABI used to generate the binding from.
@@ -184,11 +185,11 @@ func NewGatewayFilterer(address common.Address, filterer bind.ContractFilterer) 
 
 // bindGateway binds a generic wrapper to an already deployed contract.
 func bindGateway(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(GatewayABI))
+	parsed, err := GatewayMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -355,37 +356,6 @@ func (_Gateway *GatewayCallerSession) ChannelOperatingModeOf(paraID *big.Int) (u
 	return _Gateway.Contract.ChannelOperatingModeOf(&_Gateway.CallOpts, paraID)
 }
 
-// Implementation is a free data retrieval call binding the contract method 0x5c60da1b.
-//
-// Solidity: function implementation() view returns(address)
-func (_Gateway *GatewayCaller) Implementation(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "implementation")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// Implementation is a free data retrieval call binding the contract method 0x5c60da1b.
-//
-// Solidity: function implementation() view returns(address)
-func (_Gateway *GatewaySession) Implementation() (common.Address, error) {
-	return _Gateway.Contract.Implementation(&_Gateway.CallOpts)
-}
-
-// Implementation is a free data retrieval call binding the contract method 0x5c60da1b.
-//
-// Solidity: function implementation() view returns(address)
-func (_Gateway *GatewayCallerSession) Implementation() (common.Address, error) {
-	return _Gateway.Contract.Implementation(&_Gateway.CallOpts)
-}
-
 // OperatingMode is a free data retrieval call binding the contract method 0x38004f69.
 //
 // Solidity: function operatingMode() view returns(uint8)
@@ -417,111 +387,6 @@ func (_Gateway *GatewayCallerSession) OperatingMode() (uint8, error) {
 	return _Gateway.Contract.OperatingMode(&_Gateway.CallOpts)
 }
 
-// AgentExecute is a paid mutator transaction binding the contract method 0x35ede969.
-//
-// Solidity: function agentExecute(bytes data) returns()
-func (_Gateway *GatewayTransactor) AgentExecute(opts *bind.TransactOpts, data []byte) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "agentExecute", data)
-}
-
-// AgentExecute is a paid mutator transaction binding the contract method 0x35ede969.
-//
-// Solidity: function agentExecute(bytes data) returns()
-func (_Gateway *GatewaySession) AgentExecute(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.AgentExecute(&_Gateway.TransactOpts, data)
-}
-
-// AgentExecute is a paid mutator transaction binding the contract method 0x35ede969.
-//
-// Solidity: function agentExecute(bytes data) returns()
-func (_Gateway *GatewayTransactorSession) AgentExecute(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.AgentExecute(&_Gateway.TransactOpts, data)
-}
-
-// CreateAgent is a paid mutator transaction binding the contract method 0xc3b8ec8e.
-//
-// Solidity: function createAgent(bytes data) returns()
-func (_Gateway *GatewayTransactor) CreateAgent(opts *bind.TransactOpts, data []byte) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "createAgent", data)
-}
-
-// CreateAgent is a paid mutator transaction binding the contract method 0xc3b8ec8e.
-//
-// Solidity: function createAgent(bytes data) returns()
-func (_Gateway *GatewaySession) CreateAgent(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.CreateAgent(&_Gateway.TransactOpts, data)
-}
-
-// CreateAgent is a paid mutator transaction binding the contract method 0xc3b8ec8e.
-//
-// Solidity: function createAgent(bytes data) returns()
-func (_Gateway *GatewayTransactorSession) CreateAgent(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.CreateAgent(&_Gateway.TransactOpts, data)
-}
-
-// CreateChannel is a paid mutator transaction binding the contract method 0x17abcf60.
-//
-// Solidity: function createChannel(bytes data) returns()
-func (_Gateway *GatewayTransactor) CreateChannel(opts *bind.TransactOpts, data []byte) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "createChannel", data)
-}
-
-// CreateChannel is a paid mutator transaction binding the contract method 0x17abcf60.
-//
-// Solidity: function createChannel(bytes data) returns()
-func (_Gateway *GatewaySession) CreateChannel(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.CreateChannel(&_Gateway.TransactOpts, data)
-}
-
-// CreateChannel is a paid mutator transaction binding the contract method 0x17abcf60.
-//
-// Solidity: function createChannel(bytes data) returns()
-func (_Gateway *GatewayTransactorSession) CreateChannel(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.CreateChannel(&_Gateway.TransactOpts, data)
-}
-
-// Initialize is a paid mutator transaction binding the contract method 0x439fab91.
-//
-// Solidity: function initialize(bytes data) returns()
-func (_Gateway *GatewayTransactor) Initialize(opts *bind.TransactOpts, data []byte) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "initialize", data)
-}
-
-// Initialize is a paid mutator transaction binding the contract method 0x439fab91.
-//
-// Solidity: function initialize(bytes data) returns()
-func (_Gateway *GatewaySession) Initialize(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.Initialize(&_Gateway.TransactOpts, data)
-}
-
-// Initialize is a paid mutator transaction binding the contract method 0x439fab91.
-//
-// Solidity: function initialize(bytes data) returns()
-func (_Gateway *GatewayTransactorSession) Initialize(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.Initialize(&_Gateway.TransactOpts, data)
-}
-
-// LockNativeTokens is a paid mutator transaction binding the contract method 0x85b3d991.
-//
-// Solidity: function lockNativeTokens(address token, uint256 finalDestPara, bytes recipient, uint128 amount) payable returns()
-func (_Gateway *GatewayTransactor) LockNativeTokens(opts *bind.TransactOpts, token common.Address, finalDestPara *big.Int, recipient []byte, amount *big.Int) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "lockNativeTokens", token, finalDestPara, recipient, amount)
-}
-
-// LockNativeTokens is a paid mutator transaction binding the contract method 0x85b3d991.
-//
-// Solidity: function lockNativeTokens(address token, uint256 finalDestPara, bytes recipient, uint128 amount) payable returns()
-func (_Gateway *GatewaySession) LockNativeTokens(token common.Address, finalDestPara *big.Int, recipient []byte, amount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.LockNativeTokens(&_Gateway.TransactOpts, token, finalDestPara, recipient, amount)
-}
-
-// LockNativeTokens is a paid mutator transaction binding the contract method 0x85b3d991.
-//
-// Solidity: function lockNativeTokens(address token, uint256 finalDestPara, bytes recipient, uint128 amount) payable returns()
-func (_Gateway *GatewayTransactorSession) LockNativeTokens(token common.Address, finalDestPara *big.Int, recipient []byte, amount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.LockNativeTokens(&_Gateway.TransactOpts, token, finalDestPara, recipient, amount)
-}
-
 // RegisterNativeToken is a paid mutator transaction binding the contract method 0x0830ce14.
 //
 // Solidity: function registerNativeToken(address token) payable returns()
@@ -543,25 +408,25 @@ func (_Gateway *GatewayTransactorSession) RegisterNativeToken(token common.Addre
 	return _Gateway.Contract.RegisterNativeToken(&_Gateway.TransactOpts, token)
 }
 
-// SetOperatingMode is a paid mutator transaction binding the contract method 0x8257f3d5.
+// SendNativeToken is a paid mutator transaction binding the contract method 0x1125e84b.
 //
-// Solidity: function setOperatingMode(bytes data) returns()
-func (_Gateway *GatewayTransactor) SetOperatingMode(opts *bind.TransactOpts, data []byte) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "setOperatingMode", data)
+// Solidity: function sendNativeToken(address token, bytes recipient, uint128 amount) payable returns()
+func (_Gateway *GatewayTransactor) SendNativeToken(opts *bind.TransactOpts, token common.Address, recipient []byte, amount *big.Int) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "sendNativeToken", token, recipient, amount)
 }
 
-// SetOperatingMode is a paid mutator transaction binding the contract method 0x8257f3d5.
+// SendNativeToken is a paid mutator transaction binding the contract method 0x1125e84b.
 //
-// Solidity: function setOperatingMode(bytes data) returns()
-func (_Gateway *GatewaySession) SetOperatingMode(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.SetOperatingMode(&_Gateway.TransactOpts, data)
+// Solidity: function sendNativeToken(address token, bytes recipient, uint128 amount) payable returns()
+func (_Gateway *GatewaySession) SendNativeToken(token common.Address, recipient []byte, amount *big.Int) (*types.Transaction, error) {
+	return _Gateway.Contract.SendNativeToken(&_Gateway.TransactOpts, token, recipient, amount)
 }
 
-// SetOperatingMode is a paid mutator transaction binding the contract method 0x8257f3d5.
+// SendNativeToken is a paid mutator transaction binding the contract method 0x1125e84b.
 //
-// Solidity: function setOperatingMode(bytes data) returns()
-func (_Gateway *GatewayTransactorSession) SetOperatingMode(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.SetOperatingMode(&_Gateway.TransactOpts, data)
+// Solidity: function sendNativeToken(address token, bytes recipient, uint128 amount) payable returns()
+func (_Gateway *GatewayTransactorSession) SendNativeToken(token common.Address, recipient []byte, amount *big.Int) (*types.Transaction, error) {
+	return _Gateway.Contract.SendNativeToken(&_Gateway.TransactOpts, token, recipient, amount)
 }
 
 // SubmitInbound is a paid mutator transaction binding the contract method 0xea635c21.
@@ -583,69 +448,6 @@ func (_Gateway *GatewaySession) SubmitInbound(message InboundMessage, leafProof 
 // Solidity: function submitInbound((uint256,uint64,bytes32,bytes) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof) returns()
 func (_Gateway *GatewayTransactorSession) SubmitInbound(message InboundMessage, leafProof [][32]byte, headerProof VerificationProof) (*types.Transaction, error) {
 	return _Gateway.Contract.SubmitInbound(&_Gateway.TransactOpts, message, leafProof, headerProof)
-}
-
-// UpdateChannel is a paid mutator transaction binding the contract method 0xafce33c4.
-//
-// Solidity: function updateChannel(bytes data) returns()
-func (_Gateway *GatewayTransactor) UpdateChannel(opts *bind.TransactOpts, data []byte) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "updateChannel", data)
-}
-
-// UpdateChannel is a paid mutator transaction binding the contract method 0xafce33c4.
-//
-// Solidity: function updateChannel(bytes data) returns()
-func (_Gateway *GatewaySession) UpdateChannel(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.UpdateChannel(&_Gateway.TransactOpts, data)
-}
-
-// UpdateChannel is a paid mutator transaction binding the contract method 0xafce33c4.
-//
-// Solidity: function updateChannel(bytes data) returns()
-func (_Gateway *GatewayTransactorSession) UpdateChannel(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.UpdateChannel(&_Gateway.TransactOpts, data)
-}
-
-// Upgrade is a paid mutator transaction binding the contract method 0x25394645.
-//
-// Solidity: function upgrade(bytes data) returns()
-func (_Gateway *GatewayTransactor) Upgrade(opts *bind.TransactOpts, data []byte) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "upgrade", data)
-}
-
-// Upgrade is a paid mutator transaction binding the contract method 0x25394645.
-//
-// Solidity: function upgrade(bytes data) returns()
-func (_Gateway *GatewaySession) Upgrade(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.Upgrade(&_Gateway.TransactOpts, data)
-}
-
-// Upgrade is a paid mutator transaction binding the contract method 0x25394645.
-//
-// Solidity: function upgrade(bytes data) returns()
-func (_Gateway *GatewayTransactorSession) Upgrade(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.Upgrade(&_Gateway.TransactOpts, data)
-}
-
-// WithdrawAgentFunds is a paid mutator transaction binding the contract method 0x4f71f074.
-//
-// Solidity: function withdrawAgentFunds(bytes data) returns()
-func (_Gateway *GatewayTransactor) WithdrawAgentFunds(opts *bind.TransactOpts, data []byte) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "withdrawAgentFunds", data)
-}
-
-// WithdrawAgentFunds is a paid mutator transaction binding the contract method 0x4f71f074.
-//
-// Solidity: function withdrawAgentFunds(bytes data) returns()
-func (_Gateway *GatewaySession) WithdrawAgentFunds(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.WithdrawAgentFunds(&_Gateway.TransactOpts, data)
-}
-
-// WithdrawAgentFunds is a paid mutator transaction binding the contract method 0x4f71f074.
-//
-// Solidity: function withdrawAgentFunds(bytes data) returns()
-func (_Gateway *GatewayTransactorSession) WithdrawAgentFunds(data []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.WithdrawAgentFunds(&_Gateway.TransactOpts, data)
 }
 
 // GatewayAgentCreatedIterator is returned from FilterAgentCreated and is used to iterate over the raw logs and unpacked data for AgentCreated events raised by the Gateway contract.
