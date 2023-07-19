@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {SubstrateMerkleProof} from "./utils/MerkleProof.sol";
+import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {BeefyClient} from "./BeefyClient.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
