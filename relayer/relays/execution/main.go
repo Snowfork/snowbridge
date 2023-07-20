@@ -161,7 +161,7 @@ func (r *Relay) fetchEthereumNonce(ctx context.Context, blockNumber uint64) (uin
 	}
 	_, ethOutboundNonce, err := r.gatewayContract.ChannelNoncesOf(&opts, big.NewInt(int64(r.config.Source.ChannelID)))
 	if err != nil {
-		return 0, fmt.Errorf("fetch OutboundQueue.Nonce(%v): %w", r.config.Source.ChannelID, err)
+		return 0, fmt.Errorf("fetch Gateway.ChannelNoncesOf(%v): %w", r.config.Source.ChannelID, err)
 	}
 
 	return ethOutboundNonce, nil
