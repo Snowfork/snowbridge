@@ -112,7 +112,8 @@ impl NativeTokensMessage {
 								AccountKey20 { network: None, key: *origin.as_fixed_bytes() },
 							),
 						),
-					).ok_or(ConvertError::BadOrigin)?;
+					)
+					.ok_or(ConvertError::BadOrigin)?;
 
 				let origin_location = Junction::AccountKey20 { network: None, key: origin.into() };
 
