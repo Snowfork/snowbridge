@@ -15,8 +15,6 @@ type SourceConfig struct {
 	LaneID    uint32                `mapstructure:"lane-id"`
 }
 
-type Address []byte
-
 type ContractsConfig struct {
 	Gateway string `mapstructure:"Gateway"`
 }
