@@ -73,9 +73,13 @@ registry_contract_sovereign_account="${REGISTRY_CONTRACT_SOVEREIGN_ACCOUNT:-0x5d
 ## Deployment key
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
 
-## Gateway params
-export RANDAO_COMMIT_DELAY=3
-export RANDAO_COMMIT_EXP=3
+## BeefyClient
+# For max safety delay should be MAX_SEED_LOOKAHEAD=4 epochs=4*8*6=192s
+# but for rococo-local each session is only 20 slots=120s
+# so relax somehow here just for quick test
+# for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
+export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
+export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
 
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
 export BRIDGE_HUB_AGENT_ID="0x0000000000000000000000000000000000000000000000000000000000000000"

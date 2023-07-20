@@ -432,7 +432,7 @@ fn submit_irrelevant_update() {
 
 		assert_err!(
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()),
-			Error::<Test>::NotRelevant
+			Error::<Test>::IrrelevantUpdate
 		);
 	});
 }

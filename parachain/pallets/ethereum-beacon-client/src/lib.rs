@@ -96,7 +96,8 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		SkippedSyncCommitteePeriod,
-		NotRelevant,
+		/// Attested header is older than latest finalized header.
+		IrrelevantUpdate,
 		NotBootstrapped,
 		SyncCommitteeParticipantsNotSupermajority,
 		InvalidHeaderMerkleProof,
@@ -117,6 +118,7 @@ pub mod pallet {
 		BLSPreparePublicKeysFailed,
 		BLSVerificationFailed(BlsError),
 		InvalidUpdateSlot,
+		/// The given update is not in the expected period, or the given next sync committee does not match the next sync committee in storage.
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedSlot,
@@ -367,12 +369,10 @@ pub mod pallet {
 					update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidUpdateSlot
 			);
-
 			// Retrieve latest finalized state.
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
-
 			let store_period = compute_period(latest_finalized_state.slot);
 			let signature_period = compute_period(update.signature_slot);
 			if <NextSyncCommittee<T>>::exists() {
@@ -392,7 +392,7 @@ pub mod pallet {
 			ensure!(
 				update.attested_header.slot > latest_finalized_state.slot ||
 					update_has_next_sync_committee,
-				Error::<T>::NotRelevant
+				Error::<T>::IrrelevantUpdate
 			);
 
 			// Verify that the `finality_branch`, if present, confirms `finalized_header` to match
