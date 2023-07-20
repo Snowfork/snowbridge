@@ -43,13 +43,8 @@ pub mod pallet {
 		type OutboundQueue: OutboundQueueTrait;
 		type OwnParaId: Get<ParaId>;
 		type WeightInfo: WeightInfo;
-
 		type MaxUpgradeDataSize: Get<u32>;
-
-		type EnsureCreateAgentOrigin: EnsureOrigin<
-			<Self as frame_system::Config>::RuntimeOrigin,
-			Success = MultiLocation,
-		>;
+		type CreateAgentOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
 	}
 
 	#[pallet::event]
@@ -63,6 +58,7 @@ pub mod pallet {
 	pub enum Error<T> {
 		UpgradeDataTooLarge,
 		SubmissionFailed,
+		LocationConversionFailed,
 	}
 
 	#[pallet::storage]
@@ -98,6 +94,40 @@ pub mod pallet {
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 
 			Self::deposit_event(Event::<T>::Upgrade { logic, data });
+
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::create_agent())]
+		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
+			let agent_location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+
+			let agent_id = match agent_location {
+				MultiLocation { parents: 0, interior: X1(AccountId32 { id, .. }) } => Ok(H256(id)),
+				_ => Err(Error::<T>::LocationConversionFailed),
+			}?;
+
+			if Agents::<T>::contains_key(agent_id) {
+				return Ok(());
+			}
+
+			let (command, params) = Command::CreateAgent { agent_id }.encode();
+
+			let message = OutboundMessage {
+				id: T::MessageHasher::hash(&agent_id.encode()),
+				origin: T::OwnParaId::get(),
+				command,
+				params,
+			};
+
+			let ticket =
+				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
+
+			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
+
+			Agents::<T>::insert(agent_id, ());
+			Self::deposit_event(Event::<T>::CreateAgent { agent_id });
 
 			Ok(())
 		}
