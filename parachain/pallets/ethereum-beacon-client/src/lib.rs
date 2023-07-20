@@ -121,7 +121,7 @@ pub mod pallet {
 		/// The given update is not in the expected period, or the given next sync committee does not match the next sync committee in storage.
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
-		ExecutionHeaderSkippedSlot,
+		ExecutionHeaderSkippedBlock,
 		BridgeModule(bp_runtime::OwnedBridgeModuleError),
 	}
 
@@ -551,7 +551,7 @@ pub mod pallet {
 				latest_execution_state.block_number == 0 ||
 					update.execution_header.block_number ==
 						latest_execution_state.block_number + 1,
-				Error::<T>::ExecutionHeaderSkippedSlot
+				Error::<T>::ExecutionHeaderSkippedBlock
 			);
 
 			// Gets the hash tree root of the execution header, in preparation for the execution

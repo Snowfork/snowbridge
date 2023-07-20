@@ -413,8 +413,58 @@ fn submit_update_with_sync_committee_in_current_period() {
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 		assert!(!<NextSyncCommittee<Test>>::exists());
-		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone(),));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
 		assert!(<NextSyncCommittee<Test>>::exists());
+	});
+}
+
+#[test]
+fn submit_update_with_invalid_header_proof() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let mut update = load_sync_committee_update_fixture();
+	let init_period = compute_period(checkpoint.header.slot);
+	let update_period = compute_period(update.finalized_header.slot);
+	assert_eq!(init_period, update_period);
+	update.finality_branch[0] = TEST_HASH.into();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert!(!<NextSyncCommittee<Test>>::exists());
+		assert_err!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update), Error::<Test>::InvalidHeaderMerkleProof);
+	});
+}
+
+#[test]
+fn submit_update_with_invalid_block_roots_proof() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let mut update = load_sync_committee_update_fixture();
+	let init_period = compute_period(checkpoint.header.slot);
+	let update_period = compute_period(update.finalized_header.slot);
+	assert_eq!(init_period, update_period);
+	update.block_roots_branch[0] = TEST_HASH.into();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert!(!<NextSyncCommittee<Test>>::exists());
+		assert_err!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update), Error::<Test>::InvalidBlockRootsRootMerkleProof);
+	});
+}
+
+#[test]
+fn submit_update_with_invalid_next_sync_committee_proof() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let mut update = load_sync_committee_update_fixture();
+	let init_period = compute_period(checkpoint.header.slot);
+	let update_period = compute_period(update.finalized_header.slot);
+	assert_eq!(init_period, update_period);
+	if let Some(ref mut next_sync_committee_update) = update.next_sync_committee_update {
+		next_sync_committee_update.next_sync_committee_branch[0] = TEST_HASH.into();
+	}
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert!(!<NextSyncCommittee<Test>>::exists());
+		assert_err!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update), Error::<Test>::InvalidSyncCommitteeMerkleProof);
 	});
 }
 
@@ -433,27 +483,6 @@ fn submit_update_with_skipped_period() {
 			sync_committee_update.clone()
 		));
 		assert_err!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()), Error::<Test>::SkippedSyncCommitteePeriod);
-	});
-}
-
-#[test]
-fn submit_update_in_next_period() {
-	let checkpoint = load_checkpoint_update_fixture();
-	let sync_committee_update = load_sync_committee_update_fixture();
-	let update = load_next_finalized_header_update_fixture();
-	let sync_committee_period = compute_period(sync_committee_update.finalized_header.slot);
-	let next_sync_committee_period = compute_period(update.finalized_header.slot);
-	assert_eq!(sync_committee_period + 1, next_sync_committee_period);
-
-	new_tester().execute_with(|| {
-		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			sync_committee_update.clone()
-		));
-		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
-		let block_root: H256 = update.finalized_header.clone().hash_tree_root().unwrap();
-		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
 	});
 }
 
@@ -511,6 +540,33 @@ fn submit_update_with_skipped_sync_committee_period() {
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_update.clone()),
 			Error::<Test>::SkippedSyncCommitteePeriod
 		);
+	});
+}
+
+#[test]
+fn submit_update_execution_headers_too_far_behind() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let finalized_header_update = load_finalized_header_update_fixture();
+	let execution_header_update = load_execution_header_update_fixture();
+	let next_update = load_next_sync_committee_update_fixture();
+
+	new_tester().execute_with(|| {
+		let far_ahead_finalized_header_slot = finalized_header_update.finalized_header.slot + (EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH  * 2) as u64;
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+		assert_ok!(EthereumBeaconClient::submit_execution_header(
+			RuntimeOrigin::signed(1),
+			execution_header_update.clone()
+		));
+
+		let header_root: H256 = TEST_HASH.into();
+		<FinalizedBeaconState<Test>>::insert(header_root, CompactBeaconState{
+			slot: far_ahead_finalized_header_slot,
+			block_roots_root: Default::default()
+		});
+		LatestFinalizedBlockRoot::<Test>::set(header_root);
+
+		assert_err!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), next_update), Error::<Test>::ExecutionHeaderTooFarBehind);
 	});
 }
 
@@ -591,6 +647,77 @@ fn submit_execution_header_update() {
 		assert!(<ExecutionHeaders<Test>>::contains_key(
 			execution_header_update.execution_header.block_hash
 		));
+	});
+}
+
+#[test]
+fn submit_execution_header_update_that_skips_block() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let finalized_header_update = load_finalized_header_update_fixture();
+	let execution_header_update = load_execution_header_update_fixture();
+	let mut skipped_block_execution_header_update = load_execution_header_update_fixture();
+	skipped_block_execution_header_update.execution_header.block_number = execution_header_update.execution_header.block_number + 2;
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+		assert_ok!(EthereumBeaconClient::submit_execution_header(
+			RuntimeOrigin::signed(1),
+			execution_header_update.clone()
+		));
+		assert!(<ExecutionHeaders<Test>>::contains_key(
+			execution_header_update.execution_header.block_hash
+		));
+		assert_err!(EthereumBeaconClient::submit_execution_header(
+			RuntimeOrigin::signed(1),
+			skipped_block_execution_header_update.clone()
+		), Error::<Test>::ExecutionHeaderSkippedBlock);
+	});
+}
+
+#[test]
+fn submit_execution_header_update_that_is_also_finalized_header_which_is_not_stored() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let finalized_header_update = load_finalized_header_update_fixture();
+	let mut execution_header_update = load_execution_header_update_fixture();
+	execution_header_update.ancestry_proof = None;
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+		assert_err!(EthereumBeaconClient::submit_execution_header(
+			RuntimeOrigin::signed(1),
+			execution_header_update
+		), Error::<Test>::ExpectedFinalizedHeaderNotStored);
+	});
+}
+
+#[test]
+fn submit_execution_header_update_that_is_also_finalized_header_which_is_stored_but_slots_dont_match() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let finalized_header_update = load_finalized_header_update_fixture();
+	let mut execution_header_update = load_execution_header_update_fixture();
+	execution_header_update.ancestry_proof = None;
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+
+		let block_root: H256 = execution_header_update
+			.header
+			.hash_tree_root()
+			.unwrap();
+
+		<FinalizedBeaconState<Test>>::insert(block_root, CompactBeaconState{
+			slot: execution_header_update.header.slot + 1,
+			block_roots_root: Default::default()
+		});
+		LatestFinalizedBlockRoot::<Test>::set(block_root);
+
+		assert_err!(EthereumBeaconClient::submit_execution_header(
+			RuntimeOrigin::signed(1),
+			execution_header_update
+		), Error::<Test>::ExpectedFinalizedHeaderNotStored);
 	});
 }
 
