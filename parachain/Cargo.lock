@@ -285,6 +285,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "bp-runtime"
+version = "0.1.0"
+source = "git+https://github.com/Snowfork/cumulus.git?branch=snowbridge#1a8a815c224fa51a5df00a92eb28235b42defda6"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hash-db",
+ "impl-trait-for-tuples",
+ "num-traits",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-state-machine",
+ "sp-std",
+ "sp-trie",
+ "trie-db",
+]
+
+[[package]]
 name = "bs58"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2674,6 +2696,7 @@ dependencies = [
 name = "snowbridge-ethereum-beacon-client"
 version = "0.0.1"
 dependencies = [
+ "bp-runtime",
  "byte-slice-cast",
  "frame-benchmarking",
  "frame-support",
@@ -2704,6 +2727,7 @@ dependencies = [
 name = "snowbridge-inbound-queue"
 version = "0.1.1"
 dependencies = [
+ "bp-runtime",
  "ethabi-decode",
  "frame-benchmarking",
  "frame-support",
@@ -2731,6 +2755,7 @@ dependencies = [
 name = "snowbridge-outbound-queue"
 version = "0.1.1"
 dependencies = [
+ "bp-runtime",
  "ethabi-decode",
  "frame-benchmarking",
  "frame-support",
@@ -4140,6 +4165,7 @@ version = "0.9.43"
 source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "environmental",
+ "frame-benchmarking",
  "frame-support",
  "impl-trait-for-tuples",
  "log",

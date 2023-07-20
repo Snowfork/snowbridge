@@ -26,6 +26,7 @@ sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master"
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
+bp-runtime = { git = "https://github.com/Snowfork/cumulus.git", branch = "snowbridge", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
@@ -36,7 +37,7 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 [dev-dependencies]
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
-snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client", default-features = false }
+snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
 
 hex-literal = { version = "0.4.1" }
 rlp = { version = "0.5" }
@@ -60,8 +61,7 @@ std = [
     "snowbridge-router-primitives/std",
     "ethabi/std",
     "xcm/std",
-    "snowbridge-beacon-primitives/std",
-    "snowbridge-ethereum-beacon-client/std",
+    "bp-runtime/std",
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",
