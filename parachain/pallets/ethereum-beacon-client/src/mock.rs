@@ -6,7 +6,6 @@ use pallet_timestamp;
 use primitives::{Fork, ForkVersions};
 use sp_core::H256;
 use sp_runtime::{
-	BuildStorage,
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
