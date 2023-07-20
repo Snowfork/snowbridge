@@ -328,9 +328,35 @@ fn process_initial_checkpoint() {
 	let checkpoint = load_checkpoint_update_fixture();
 
 	new_tester().execute_with(|| {
-		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::force_checkpoint(RuntimeOrigin::root(), checkpoint.clone()));
 		let block_root: H256 = checkpoint.header.hash_tree_root().unwrap();
 		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
+	});
+}
+
+#[test]
+fn process_initial_checkpoint_with_invalid_sync_committee_proof() {
+	let mut checkpoint = load_checkpoint_update_fixture();
+	checkpoint.current_sync_committee_branch[0] = hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into();
+
+	new_tester().execute_with(|| {
+		assert_err!(
+			EthereumBeaconClient::force_checkpoint(RuntimeOrigin::root(), checkpoint),
+			Error::<Test>::InvalidSyncCommitteeMerkleProof
+		);
+	});
+}
+
+#[test]
+fn process_initial_checkpoint_with_invalid_blocks_root_proof() {
+	let mut checkpoint = load_checkpoint_update_fixture();
+	checkpoint.block_roots_branch[0] = hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into();
+
+	new_tester().execute_with(|| {
+		assert_err!(
+			EthereumBeaconClient::force_checkpoint(RuntimeOrigin::root(), checkpoint),
+			Error::<Test>::InvalidBlockRootsRootMerkleProof
+		);
 	});
 }
 
