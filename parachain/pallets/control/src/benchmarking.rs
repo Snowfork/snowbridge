@@ -24,5 +24,15 @@ mod benchmarks {
 		Ok(())
 	}
 
+	#[benchmark]
+	fn create_agent() -> Result<(), BenchmarkError> {
+		let caller: T::AccountId = whitelisted_caller();
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller));
+
+		Ok(())
+	}
+
 	impl_benchmark_test_suite!(Template, crate::mock::new_test_ext(), crate::mock::Test);
 }

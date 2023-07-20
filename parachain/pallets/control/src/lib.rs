@@ -23,6 +23,7 @@ use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTr
 use sp_core::{H160, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
+use xcm_executor::traits::ConvertLocation;
 use xcm::prelude::*;
 
 pub use pallet::*;
@@ -43,13 +44,9 @@ pub mod pallet {
 		type OutboundQueue: OutboundQueueTrait;
 		type OwnParaId: Get<ParaId>;
 		type WeightInfo: WeightInfo;
-
 		type MaxUpgradeDataSize: Get<u32>;
-
-		type EnsureCreateAgentOrigin: EnsureOrigin<
-			<Self as frame_system::Config>::RuntimeOrigin,
-			Success = MultiLocation,
-		>;
+		type CreateAgentOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
+		type LocationConverter: ConvertLocation<Self::AccountId>;
 	}
 
 	#[pallet::event]
@@ -63,6 +60,7 @@ pub mod pallet {
 	pub enum Error<T> {
 		UpgradeDataTooLarge,
 		SubmissionFailed,
+		LocationConversionFailed,
 	}
 
 	#[pallet::storage]
@@ -98,6 +96,26 @@ pub mod pallet {
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 
 			Self::deposit_event(Event::<T>::Upgrade { logic, data });
+
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::create_agent())]
+		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
+			let agent_location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+
+			let agent_id_account: T::AccountId =
+				T::LocationConverter::convert_location(&agent_location)
+					.ok_or(Error::<T>::LocationConversionFailed)?;
+			let agent_id: H256 = agent_id_account.as_ref().into();
+
+			if Agents::<T>::get(agent_id).is_some() {
+				return Ok(());
+			}
+
+			Agents::<T>::insert(agent_id, ());
+			Self::deposit_event(Event::<T>::CreateAgent { agent_id });
 
 			Ok(())
 		}
