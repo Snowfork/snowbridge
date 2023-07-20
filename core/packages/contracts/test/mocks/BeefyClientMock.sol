@@ -5,7 +5,13 @@ import {BeefyClient} from "../../src/BeefyClient.sol";
 
 contract BeefyClientMock is BeefyClient {
     constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration)
-        BeefyClient(randaoCommitDelay, randaoCommitExpiration)
+        BeefyClient(
+            randaoCommitDelay,
+            randaoCommitExpiration,
+            0,
+            BeefyClient.ValidatorSet(0, 0, 0x0),
+            BeefyClient.ValidatorSet(0, 0, 0x0)
+        )
     {}
 
     function encodeCommitment_public(Commitment calldata commitment) external pure returns (bytes memory) {

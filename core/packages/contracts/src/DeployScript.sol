@@ -13,9 +13,11 @@ import {Agent} from "./Agent.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {ParaID, Config} from "./Types.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 
 contract DeployScript is Script {
     using SafeNativeTransfer for address payable;
+    using stdJson for string;
 
     function setUp() public {}
 
@@ -25,9 +27,18 @@ contract DeployScript is Script {
         vm.startBroadcast(deployer);
 
         // BeefyClient
+        // Seems `fs_permissions` explicitly configured as absolute path does not work and only allowed from project root
+        string memory root = vm.projectRoot();
+        string memory beefyCheckpointFile = string.concat(root, "/beefy-state.json");
+        string memory beefyCheckpointRaw = vm.readFile(beefyCheckpointFile);
+        uint64 startBlock = uint64(beefyCheckpointRaw.readUint(".validatorSets.startBlock"));
+        bytes memory currentRaw = beefyCheckpointRaw.parseRaw(".validatorSets.current");
+        BeefyClient.ValidatorSet memory current = abi.decode(currentRaw, (BeefyClient.ValidatorSet));
+        bytes memory nextRaw = beefyCheckpointRaw.parseRaw(".validatorSets.next");
+        BeefyClient.ValidatorSet memory next = abi.decode(nextRaw, (BeefyClient.ValidatorSet));
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
-        BeefyClient beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration);
+        BeefyClient beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration, startBlock, current, next);
 
         ParaID bridgeHubParaID = ParaID.wrap(vm.envUint("BRIDGE_HUB_PARAID"));
         bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
