@@ -23,7 +23,6 @@ use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTr
 use sp_core::{H160, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
-use xcm_executor::traits::ConvertLocation;
 use xcm::prelude::*;
 
 pub use pallet::*;
@@ -46,7 +45,6 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 		type MaxUpgradeDataSize: Get<u32>;
 		type CreateAgentOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
-		type LocationConverter: ConvertLocation<Self::AccountId>;
 	}
 
 	#[pallet::event]
@@ -105,10 +103,10 @@ pub mod pallet {
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let agent_location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			let agent_id_account: T::AccountId =
-				T::LocationConverter::convert_location(&agent_location)
-					.ok_or(Error::<T>::LocationConversionFailed)?;
-			let agent_id: H256 = agent_id_account.as_ref().into();
+			let agent_id = match agent_location {
+				MultiLocation { parents: 0, interior: X1(AccountId32 { id, .. }) } => Ok(H256(id)),
+				_ => Err(Error::<T>::LocationConversionFailed),
+			}?;
 
 			if Agents::<T>::get(agent_id).is_some() {
 				return Ok(());

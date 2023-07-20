@@ -74,7 +74,6 @@ impl snowbridge_control::Config for Test {
 	type MessageHasher = BlakeTwo256;
 	type MaxUpgradeDataSize = MaxUpgradeDataSize;
 	type CreateAgentOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-	type LocationConverter = ();
 	type WeightInfo = ();
 }
 
