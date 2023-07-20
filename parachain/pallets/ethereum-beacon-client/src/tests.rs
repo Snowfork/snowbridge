@@ -651,6 +651,25 @@ fn submit_execution_header_update() {
 }
 
 #[test]
+fn submit_execution_header_update_invalid_ancestry_proof() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let finalized_header_update = load_finalized_header_update_fixture();
+	let mut execution_header_update = load_execution_header_update_fixture();
+	if let Some(ref mut ancestry_proof) = execution_header_update.ancestry_proof {
+		ancestry_proof.header_branch[0] = TEST_HASH.into()
+	}
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+		assert_err!(EthereumBeaconClient::submit_execution_header(
+			RuntimeOrigin::signed(1),
+			execution_header_update.clone()
+		), Error::<Test>::InvalidAncestryMerkleProof);
+	});
+}
+
+#[test]
 fn submit_execution_header_update_that_skips_block() {
 	let checkpoint = load_checkpoint_update_fixture();
 	let finalized_header_update = load_finalized_header_update_fixture();
