@@ -108,7 +108,7 @@ impl NativeTokensMessage {
 						&MultiLocation::new(
 							2,
 							(
-								GlobalConsensus(Ethereum { chain_id }),
+								GlobalConsensus(network),
 								AccountKey20 { network: None, key: *origin.as_fixed_bytes() },
 							),
 						),
