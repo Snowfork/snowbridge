@@ -11,6 +11,7 @@
     "func-name-mixedcase": "off",
     "no-console": "off",
     "var-name-mixedcase": "off",
-    "reason-string": "off"
+    "reason-string": "off",
+    "max-states-count": "off"
   }
 }

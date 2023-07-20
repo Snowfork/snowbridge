@@ -8,7 +8,7 @@ import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {Channel, InboundMessage, OperatingMode, ParaID, Config} from "./Types.sol";
+import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
@@ -22,15 +22,6 @@ import {AssetsStorage} from "./storage/AssetsStorage.sol";
 contract Gateway is IGateway {
     using Address for address;
     using SafeNativeTransfer for address payable;
-
-    // Inbound messages correspond to these commands
-    bytes32 internal constant COMMAND_AGENT_EXECUTE = keccak256("agentExecute");
-    bytes32 internal constant COMMAND_CREATE_AGENT = keccak256("createAgent");
-    bytes32 internal constant COMMAND_CREATE_CHANNEL = keccak256("createChannel");
-    bytes32 internal constant COMMAND_UPDATE_CHANNEL = keccak256("updateChannel");
-    bytes32 internal constant COMMAND_UPGRADE = keccak256("upgrade");
-    bytes32 internal constant COMMAND_SET_OPERATING_MODE = keccak256("setOperatingMode");
-    bytes32 internal constant COMMAND_TRANSFER_NATIVE_FROM_AGENT = keccak256("transferNativeFromAgent");
 
     // After message dispatch, there should be some gas left over for post dispatch logic
     uint256 internal constant BUFFER_GAS = 32_000;
@@ -139,37 +130,37 @@ contract Gateway is IGateway {
 
         bool success = true;
 
-        if (message.command == COMMAND_AGENT_EXECUTE) {
+        if (message.command == Command.AgentExecute) {
             try Gateway(this).agentExecute{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
             }
-        } else if (message.command == COMMAND_CREATE_AGENT) {
+        } else if (message.command == Command.CreateAgent) {
             try Gateway(this).createAgent{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
             }
-        } else if (message.command == COMMAND_CREATE_CHANNEL) {
+        } else if (message.command == Command.CreateChannel) {
             try Gateway(this).createChannel{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
             }
-        } else if (message.command == COMMAND_UPDATE_CHANNEL) {
+        } else if (message.command == Command.UpdateChannel) {
             try Gateway(this).updateChannel{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
             }
-        } else if (message.command == COMMAND_SET_OPERATING_MODE) {
+        } else if (message.command == Command.SetOperatingMode) {
             try Gateway(this).setOperatingMode{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
             }
-        } else if (message.command == COMMAND_TRANSFER_NATIVE_FROM_AGENT) {
+        } else if (message.command == Command.TransferNativeFromAgent) {
             try Gateway(this).transferNativeFromAgent{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
             }
-        } else if (message.command == COMMAND_UPGRADE) {
+        } else if (message.command == Command.Upgrade) {
             try Gateway(this).upgrade{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
@@ -367,7 +358,7 @@ contract Gateway is IGateway {
         $.mode = params.mode;
     }
 
-    struct WithdrawAgentFundsParams {
+    struct TransferNativeFromAgentParams {
         bytes32 agentID;
         address recipient;
         uint256 amount;
@@ -377,7 +368,7 @@ contract Gateway is IGateway {
     function transferNativeFromAgent(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        WithdrawAgentFundsParams memory params = abi.decode(data, (WithdrawAgentFundsParams));
+        TransferNativeFromAgentParams memory params = abi.decode(data, (TransferNativeFromAgentParams));
 
         address agent = $.agents[params.agentID];
         if (agent == address(0)) {

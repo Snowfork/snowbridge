@@ -20,7 +20,7 @@ import {Assets} from "../src/Assets.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 
-import {InboundMessage, OperatingMode, ParaID, Config} from "../src/Types.sol";
+import {InboundMessage, OperatingMode, ParaID, Config, Command} from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 
@@ -106,8 +106,8 @@ contract GatewayTest is Test {
         token.deposit{value: 500}();
     }
 
-    function makeCreateAgentCommand() public pure returns (bytes32, bytes memory) {
-        return (keccak256("createAgent"), abi.encode((keccak256("6666"))));
+    function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
+        return (Command.CreateAgent, abi.encode((keccak256("6666"))));
     }
 
     function makeMockProof() public pure returns (Verification.Proof memory) {
@@ -140,7 +140,7 @@ contract GatewayTest is Test {
     function testSubmitHappyPath() public {
         deal(bridgeHubAgent, 50 ether);
 
-        (bytes32 command, bytes memory params) = makeCreateAgentCommand();
+        (Command command, bytes memory params) = makeCreateAgentCommand();
 
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, false, false, false);
@@ -155,7 +155,7 @@ contract GatewayTest is Test {
     function testSubmitFailInvalidNonce() public {
         deal(bridgeHubAgent, 50 ether);
 
-        (bytes32 command, bytes memory params) = makeCreateAgentCommand();
+        (Command command, bytes memory params) = makeCreateAgentCommand();
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
@@ -171,9 +171,13 @@ contract GatewayTest is Test {
     }
 
     function testSubmitFailInvalidChannel() public {
+        (Command command,) = makeCreateAgentCommand();
+
         vm.expectRevert(Gateway.ChannelDoesNotExist.selector);
         hoax(relayer);
-        IGateway(address(gateway)).submitInbound(InboundMessage(ParaID.wrap(42), 1, "", ""), proof, makeMockProof());
+        IGateway(address(gateway)).submitInbound(
+            InboundMessage(ParaID.wrap(42), 1, command, ""), proof, makeMockProof()
+        );
     }
 
     /**
@@ -184,7 +188,7 @@ contract GatewayTest is Test {
     function testRelayerRewardedFromAgent() public {
         deal(bridgeHubAgent, 50 ether);
 
-        (bytes32 command, bytes memory params) = makeCreateAgentCommand();
+        (Command command, bytes memory params) = makeCreateAgentCommand();
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
@@ -197,7 +201,7 @@ contract GatewayTest is Test {
 
     // In this case, the agent has no funds to reward the relayer
     function testRelayerNotRewarded() public {
-        (bytes32 command, bytes memory params) = makeCreateAgentCommand();
+        (Command command, bytes memory params) = makeCreateAgentCommand();
 
         vm.expectRevert(NativeTransferFailed.selector);
         hoax(relayer, 1 ether);
@@ -440,7 +444,7 @@ contract GatewayTest is Test {
         address recipient = makeAddr("recipient");
 
         bytes memory params = abi.encode(
-            Gateway.WithdrawAgentFundsParams({agentID: assetHubAgentID, recipient: recipient, amount: 3 ether})
+            Gateway.TransferNativeFromAgentParams({agentID: assetHubAgentID, recipient: recipient, amount: 3 ether})
         );
 
         GatewayMock(address(gateway)).transferNativeFromAgentPublic(params);

@@ -50,7 +50,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Upgrade { logic: H160, data: Option<Vec<u8>> },
+		Upgrade { impl_address: H160, impl_code_hash: H256, params_hash: Option<H256> },
 		CreateAgent { agent_id: H256 },
 	}
 
@@ -70,22 +70,28 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::upgrade(data.clone().map_or(0, |d| d.len() as u32)))]
-		pub fn upgrade(origin: OriginFor<T>, logic: H160, data: Option<Vec<u8>>) -> DispatchResult {
-			let _ = ensure_root(origin)?;
+		#[pallet::weight(T::WeightInfo::upgrade(params.clone().map_or(0, |d| d.len() as u32)))]
+		pub fn upgrade(
+			origin: OriginFor<T>,
+			impl_address: H160,
+			impl_code_hash: H256,
+			params: Option<Vec<u8>>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
 
 			ensure!(
-				data.clone().map_or(0, |d| d.len() as u32) < T::MaxUpgradeDataSize::get(),
+				params.clone().map_or(0, |d| d.len() as u32) < T::MaxUpgradeDataSize::get(),
 				Error::<T>::UpgradeDataTooLarge
 			);
 
-			let (command, params) = Command::Upgrade { logic, data: data.clone() }.encode();
+			let params_hash = params.as_ref().map(|p| T::MessageHasher::hash(p));
 
 			let message = OutboundMessage {
-				id: T::MessageHasher::hash(&(logic, data.clone()).encode()),
+				id: T::MessageHasher::hash(
+					&(impl_address, impl_code_hash, params.clone()).encode(),
+				),
 				origin: T::OwnParaId::get(),
-				command,
-				params,
+				command: Command::Upgrade { impl_address, impl_code_hash, params },
 			};
 
 			let ticket =
@@ -93,7 +99,7 @@ pub mod pallet {
 
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 
-			Self::deposit_event(Event::<T>::Upgrade { logic, data });
+			Self::deposit_event(Event::<T>::Upgrade { impl_address, impl_code_hash, params_hash });
 
 			Ok(())
 		}
@@ -112,13 +118,10 @@ pub mod pallet {
 				return Ok(());
 			}
 
-			let (command, params) = Command::CreateAgent { agent_id }.encode();
-
 			let message = OutboundMessage {
 				id: T::MessageHasher::hash(&agent_id.encode()),
 				origin: T::OwnParaId::get(),
-				command,
-				params,
+				command: Command::CreateAgent { agent_id },
 			};
 
 			let ticket =

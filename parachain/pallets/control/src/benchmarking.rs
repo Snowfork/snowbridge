@@ -15,11 +15,12 @@ mod benchmarks {
 
 	#[benchmark]
 	fn upgrade(x: Linear<0, { T::MaxUpgradeDataSize::get() - 1 }>) -> Result<(), BenchmarkError> {
-		let logic = H160::repeat_byte(1);
-		let data: Vec<u8> = (0..x).map(|_| 1u8).collect();
+		let impl_address = H160::repeat_byte(1);
+		let impl_code_hash = H256::repeat_byte(1);
+		let params: Vec<u8> = (0..x).map(|_| 1u8).collect();
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, logic, Some(data));
+		_(RawOrigin::Root, impl_address, impl_code_hash, Some(params));
 
 		Ok(())
 	}

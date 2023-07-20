@@ -10,7 +10,6 @@
 
 use codec::{Decode, Encode};
 use frame_support::dispatch::DispatchError;
-use scale_info::TypeInfo;
 use snowbridge_ethereum::Log;
 use sp_core::{RuntimeDebug, H160, H256, U256};
 use sp_std::{borrow::ToOwned, vec, vec::Vec};
@@ -21,37 +20,6 @@ pub mod types;
 pub use polkadot_parachain::primitives::Id as ParaId;
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 pub use types::{Message, MessageId, MessageNonce, Proof};
-
-/// A stable id for a bridge contract on the Ethereum side
-#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, TypeInfo, RuntimeDebug)]
-pub struct ContractId([u8; 32]);
-
-impl From<[u8; 32]> for ContractId {
-	fn from(value: [u8; 32]) -> Self {
-		Self(value)
-	}
-}
-
-impl From<H256> for ContractId {
-	fn from(value: H256) -> Self {
-		Self(value.to_fixed_bytes())
-	}
-}
-
-impl ContractId {
-	pub fn to_fixed_bytes(self) -> [u8; 32] {
-		self.0
-	}
-	pub fn as_fixed_bytes(&self) -> &[u8; 32] {
-		&self.0
-	}
-}
-
-impl ContractId {
-	pub const fn new(id: [u8; 32]) -> Self {
-		Self(id)
-	}
-}
 
 /// A trait for verifying messages.
 ///
@@ -76,56 +44,117 @@ pub struct OutboundMessage {
 	/// The parachain from which the message originated
 	pub origin: ParaId,
 	/// The stable ID for a receiving gateway contract
-	pub command: H256,
-	/// ABI-encoded message payload which can be interpreted by the receiving gateway contract
-	pub params: Vec<u8>,
+	pub command: Command,
 }
 
 use ethabi::Token;
 
-const COMMAND_EXECUTE_XCM: H256 = H256::zero();
-const COMMAND_CREATE_AGENT: H256 = H256::zero();
-const COMMAND_CREATE_CHANNEL: H256 = H256::zero();
-const COMMAND_UPGRADE: H256 = H256::zero();
+#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
+pub enum OperatingMode {
+	Normal,
+	RejectingOutboundMessages,
+}
 
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub enum Command {
-	ExecuteXCM { origin_agent_id: H256, payload: Vec<u8> },
+	AgentExecute { agent_id: H256, command: AgentExecuteCommand },
+	Upgrade { impl_address: H160, impl_code_hash: H256, params: Option<Vec<u8>> },
 	CreateAgent { agent_id: H256 },
 	CreateChannel { para_id: ParaId, agent_id: H256 },
-	Upgrade { logic: H160, data: Option<Vec<u8>> },
+	UpdateChannel { para_id: ParaId, mode: OperatingMode, fee: u128, reward: u128 },
+	SetOperatingMode { mode: OperatingMode },
+	TransferNativeFromAgent { agent_id: H256, recipient: H160, amount: u128 },
 }
 
 impl Command {
-	pub fn encode(self) -> (H256, Vec<u8>) {
+	pub fn index(&self) -> u8 {
 		match self {
-			Command::ExecuteXCM { origin_agent_id, payload } => (
-				COMMAND_EXECUTE_XCM,
-				ethabi::encode(&vec![
-					Token::FixedBytes(origin_agent_id.as_bytes().to_owned()),
-					Token::Bytes(payload),
-				]),
+			Command::AgentExecute { .. } => 0,
+			Command::Upgrade { .. } => 1,
+			Command::CreateAgent { .. } => 2,
+			Command::CreateChannel { .. } => 3,
+			Command::UpdateChannel { .. } => 4,
+			Command::SetOperatingMode { .. } => 5,
+			Command::TransferNativeFromAgent { .. } => 6,
+		}
+	}
+
+	pub fn abi_encode(&self) -> (u8, Vec<u8>) {
+		match self {
+			Command::AgentExecute { agent_id, command } => (
+				self.index(),
+				ethabi::encode(&vec![Token::Tuple(vec![
+					Token::FixedBytes(agent_id.as_bytes().to_owned()),
+					Token::Bytes(command.abi_encode()),
+				])]),
+			),
+			Command::Upgrade { impl_address, impl_code_hash, params } => (
+				self.index(),
+				ethabi::encode(&vec![Token::Tuple(vec![
+					Token::Address(*impl_address),
+					Token::FixedBytes(impl_code_hash.as_bytes().to_owned()),
+					params.clone().map_or(Token::Bytes(vec![]), |p| Token::Bytes(p)),
+				])]),
 			),
 			Command::CreateAgent { agent_id } => (
-				COMMAND_CREATE_AGENT,
-				ethabi::encode(&vec![Token::FixedBytes(agent_id.as_bytes().to_owned())]),
+				self.index(),
+				ethabi::encode(&vec![Token::Tuple(vec![Token::FixedBytes(
+					agent_id.as_bytes().to_owned(),
+				)])]),
 			),
 			Command::CreateChannel { para_id, agent_id } => {
-				let para_id: u32 = para_id.into();
+				let para_id: u32 = (*para_id).into();
 				(
-					COMMAND_CREATE_CHANNEL,
-					ethabi::encode(&vec![
+					self.index(),
+					ethabi::encode(&vec![Token::Tuple(vec![
 						Token::Uint(U256::from(para_id)),
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
-					]),
+					])]),
 				)
 			},
-			Command::Upgrade { logic, data } => (
-				COMMAND_UPGRADE,
-				ethabi::encode(&vec![
-					Token::Address(logic),
-					data.map_or(Token::Bytes(vec![]), |d| Token::Bytes(d)),
-				]),
+			Command::UpdateChannel { para_id, mode, fee, reward } => {
+				let para_id: u32 = (*para_id).into();
+				(
+					self.index(),
+					ethabi::encode(&vec![Token::Tuple(vec![
+						Token::Uint(U256::from(para_id)),
+						Token::Uint(U256::from((*mode) as u64)),
+						Token::Uint(U256::from(*fee)),
+						Token::Uint(U256::from(*reward)),
+					])]),
+				)
+			},
+			Command::SetOperatingMode { mode } => (
+				self.clone().index(),
+				ethabi::encode(&vec![Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
 			),
+			Command::TransferNativeFromAgent { agent_id, recipient, amount } => (
+				self.clone().index(),
+				ethabi::encode(&vec![Token::Tuple(vec![
+					Token::FixedBytes(agent_id.as_bytes().to_owned()),
+					Token::Address(*recipient),
+					Token::Uint(U256::from(*amount)),
+				])]),
+			),
+		}
+	}
+}
+
+#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+pub enum AgentExecuteCommand {
+	TransferToken { token: H160, recipient: H160, amount: u128 },
+}
+
+impl AgentExecuteCommand {
+	pub fn abi_encode(&self) -> Vec<u8> {
+		match self {
+			AgentExecuteCommand::TransferToken { token, recipient, amount } => {
+				ethabi::encode(&vec![
+					Token::Address(*token),
+					Token::Address(*token),
+					Token::Uint(U256::from(*amount)),
+				])
+			},
 		}
 	}
 }
