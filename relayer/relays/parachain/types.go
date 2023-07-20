@@ -1,6 +1,8 @@
 package parachain
 
 import (
+	"math/big"
+
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
@@ -16,8 +18,8 @@ type Task struct {
 	ProofInput *ProofInput
 	// Outputs of MMR proof generation
 	ProofOutput *ProofOutput
-	// Commitments for basic channel
-	BasicChannelProofs *[]MessageProof
+	// Proofs for messages from outbound channel on Polkadot
+	MessageProofs *[]MessageProof
 }
 
 // A ProofInput is data needed to generate a proof of parachain header inclusion
@@ -83,16 +85,16 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 type OutboundQueueMessage struct {
 	Origin  uint32
 	Nonce   uint64
-	Gateway [32]byte
-	Payload []byte
+	Command [32]byte
+	Params  []byte
 }
 
-func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundQueueMessage {
-	return contracts.InboundQueueMessage{
-		Origin:    m.Origin,
-		Nonce:     m.Nonce,
-		Recipient: m.Gateway,
-		Payload:   m.Payload,
+func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
+	return contracts.InboundMessage{
+		Origin:  big.NewInt(int64(m.Origin)),
+		Nonce:   m.Nonce,
+		Command: m.Command,
+		Params:  m.Params,
 	}
 }
 
