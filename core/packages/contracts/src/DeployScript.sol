@@ -31,10 +31,10 @@ contract DeployScript is Script {
         string memory root = vm.projectRoot();
         string memory beefyCheckpointFile = string.concat(root, "/beefy-state.json");
         string memory beefyCheckpointRaw = vm.readFile(beefyCheckpointFile);
-        uint64 startBlock = uint64(beefyCheckpointRaw.readUint(".validatorSets.startBlock"));
-        bytes memory currentRaw = beefyCheckpointRaw.parseRaw(".validatorSets.current");
+        uint64 startBlock = uint64(beefyCheckpointRaw.readUint(".startBlock"));
+        bytes memory currentRaw = beefyCheckpointRaw.parseRaw(".current");
         BeefyClient.ValidatorSet memory current = abi.decode(currentRaw, (BeefyClient.ValidatorSet));
-        bytes memory nextRaw = beefyCheckpointRaw.parseRaw(".validatorSets.next");
+        bytes memory nextRaw = beefyCheckpointRaw.parseRaw(".next");
         BeefyClient.ValidatorSet memory next = abi.decode(nextRaw, (BeefyClient.ValidatorSet));
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");

@@ -50,7 +50,7 @@ async function generateBeefyCheckpoint() {
 
     let nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<BeefyNextAuthoritySet>()
 
-    let validatorSets = {
+    let beefyCheckpoint = {
         startBlock: beefyStartBlock,
         current: {
             id: validatorSetId.toNumber(),
@@ -64,10 +64,9 @@ async function generateBeefyCheckpoint() {
         },
     }
 
-    console.log("Configuring BeefyClient with initial BEEFY state")
-    console.log("Validator sets: ", validatorSets)
+    console.log("Configuring BeefyClient with initial BEEFY state", beefyCheckpoint)
 
-    fs.writeFileSync(BeefyStateFile, JSON.stringify({ validatorSets }, null, 2), "utf8")
+    fs.writeFileSync(BeefyStateFile, JSON.stringify(beefyCheckpoint, null, 2), "utf8")
     console.log("Beefy state writing to dest file: " + BeefyStateFile)
 
     return
