@@ -397,7 +397,7 @@ fn submit_update_in_current_period() {
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
-		let block_root: H256 = update.finalized_header.clone().hash_tree_root().unwrap();
+		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
 	});
 }
@@ -413,7 +413,7 @@ fn submit_update_with_sync_committee_in_current_period() {
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 		assert!(!<NextSyncCommittee<Test>>::exists());
-		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update));
 		assert!(<NextSyncCommittee<Test>>::exists());
 	});
 }
@@ -482,7 +482,7 @@ fn submit_update_with_skipped_period() {
 			RuntimeOrigin::signed(1),
 			sync_committee_update.clone()
 		));
-		assert_err!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()), Error::<Test>::SkippedSyncCommitteePeriod);
+		assert_err!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update), Error::<Test>::SkippedSyncCommitteePeriod);
 	});
 }
 
@@ -520,7 +520,7 @@ fn submit_update_with_sync_committee_invalid_signature_slot() {
 		update.signature_slot = update.attested_header.slot;
 
 		assert_err!(
-			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()),
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update),
 			Error::<Test>::InvalidUpdateSlot
 		);
 	});
@@ -537,7 +537,7 @@ fn submit_update_with_skipped_sync_committee_period() {
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 		assert_err!(
-			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_update.clone()),
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_update),
 			Error::<Test>::SkippedSyncCommitteePeriod
 		);
 	});
@@ -556,7 +556,7 @@ fn submit_update_execution_headers_too_far_behind() {
 		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
 		assert_ok!(EthereumBeaconClient::submit_execution_header(
 			RuntimeOrigin::signed(1),
-			execution_header_update.clone()
+			execution_header_update
 		));
 
 		let header_root: H256 = TEST_HASH.into();
@@ -585,7 +585,7 @@ fn submit_irrelevant_update() {
 		update.signature_slot = checkpoint.header.slot + 1;
 
 		assert_err!(
-			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()),
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update),
 			Error::<Test>::IrrelevantUpdate
 		);
 	});
@@ -597,7 +597,7 @@ fn submit_update_with_missing_bootstrap() {
 
 	new_tester().execute_with(|| {
 		assert_err!(
-			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()),
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update),
 			Error::<Test>::NotBootstrapped
 		);
 	});
@@ -612,7 +612,7 @@ fn submit_update_with_invalid_sync_committee_update() {
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 
-		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update));
 
 		// makes update with invalid next_sync_committee
 		<FinalizedBeaconState<Test>>::mutate(<LatestFinalizedBlockRoot<Test>>::get(), |x| {
@@ -625,7 +625,7 @@ fn submit_update_with_invalid_sync_committee_update() {
 		next_update.next_sync_committee_update = Some(next_sync_committee);
 
 		assert_err!(
-			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), next_update.clone()),
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), next_update),
 			Error::<Test>::InvalidSyncCommitteeUpdate
 		);
 	});
@@ -664,7 +664,7 @@ fn submit_execution_header_update_invalid_ancestry_proof() {
 		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
 		assert_err!(EthereumBeaconClient::submit_execution_header(
 			RuntimeOrigin::signed(1),
-			execution_header_update.clone()
+			execution_header_update
 		), Error::<Test>::InvalidAncestryMerkleProof);
 	});
 }
@@ -689,7 +689,7 @@ fn submit_execution_header_update_that_skips_block() {
 		));
 		assert_err!(EthereumBeaconClient::submit_execution_header(
 			RuntimeOrigin::signed(1),
-			skipped_block_execution_header_update.clone()
+			skipped_block_execution_header_update
 		), Error::<Test>::ExecutionHeaderSkippedBlock);
 	});
 }
@@ -756,7 +756,7 @@ fn submit_execution_header_not_finalized() {
 		});
 
 		assert_err!(
-			EthereumBeaconClient::submit_execution_header(RuntimeOrigin::signed(1), update.clone()),
+			EthereumBeaconClient::submit_execution_header(RuntimeOrigin::signed(1), update),
 			Error::<Test>::HeaderNotFinalized
 		);
 	});
