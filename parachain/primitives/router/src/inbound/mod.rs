@@ -103,7 +103,7 @@ impl NativeTokensMessage {
 				create_call_index,
 				set_metadata_call_index,
 			} => {
-				let some_owner =
+				let owner =
 					GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(
 						&MultiLocation::new(
 							2,
@@ -112,12 +112,7 @@ impl NativeTokensMessage {
 								AccountKey20 { network: None, key: *origin.as_fixed_bytes() },
 							),
 						),
-					);
-
-				let owner = match some_owner {
-					Some(owner) => owner,
-					None => return Err(ConvertError::BadOrigin),
-				};
+					).ok_or(ConvertError::BadOrigin)?;
 
 				let origin_location = Junction::AccountKey20 { network: None, key: origin.into() };
 
