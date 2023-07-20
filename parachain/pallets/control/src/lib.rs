@@ -108,7 +108,7 @@ pub mod pallet {
 				_ => Err(Error::<T>::LocationConversionFailed),
 			}?;
 
-			if Agents::<T>::get(agent_id).is_some() {
+			if Agents::<T>::contains_key(agent_id) {
 				return Ok(());
 			}
 
