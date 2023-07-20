@@ -3,14 +3,18 @@
 use crate::{
 	functions::compute_period, mock::minimal::*, pallet::ExecutionHeaders, sync_committee_sum,
 	verify_merkle_branch, BeaconHeader, CompactBeaconState, Error, FinalizedBeaconState,
-	LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared
+	LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared, LatestExecutionState,
+	config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH},
 };
 
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
-use primitives::{CompactExecutionHeader, ForkVersions, NextSyncCommitteeUpdate, Fork};
+use primitives::{CompactExecutionHeader, ForkVersions, NextSyncCommitteeUpdate, Fork, ExecutionHeaderState};
 use rand::{thread_rng, Rng};
 use sp_core::H256;
+
+/// Arbitrary hash used for tests and invalid hashes.
+const TEST_HASH: [u8; 32] = hex!["5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371"];
 
 /* UNIT TESTS */
 
@@ -321,6 +325,28 @@ fn find_present_keys() {
 	});
 }
 
+#[test]
+fn cross_check_execution_state() {
+	new_tester().execute_with(|| {
+		let header_root: H256 = TEST_HASH.into();
+		<FinalizedBeaconState<Test>>::insert(header_root,CompactBeaconState{
+			// set slot to period 5
+			slot: ((EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) * 5) as u64,
+			block_roots_root: Default::default()
+		});
+		LatestFinalizedBlockRoot::<Test>::set(header_root);
+		<LatestExecutionState<Test>>::set(ExecutionHeaderState{
+			beacon_block_root: Default::default(),
+			// set slot to period 2
+			beacon_slot: ((EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) * 2) as u64,
+			block_hash: Default::default(),
+			block_number: 0,
+		});
+
+		assert_err!(EthereumBeaconClient::cross_check_execution_state(), Error::<Test>::ExecutionHeaderTooFarBehind);
+	});
+}
+
 /* SYNC PROCESS TESTS */
 
 #[test]
@@ -337,7 +363,7 @@ fn process_initial_checkpoint() {
 #[test]
 fn process_initial_checkpoint_with_invalid_sync_committee_proof() {
 	let mut checkpoint = load_checkpoint_update_fixture();
-	checkpoint.current_sync_committee_branch[0] = hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into();
+	checkpoint.current_sync_committee_branch[0] = TEST_HASH.into();
 
 	new_tester().execute_with(|| {
 		assert_err!(
@@ -350,7 +376,7 @@ fn process_initial_checkpoint_with_invalid_sync_committee_proof() {
 #[test]
 fn process_initial_checkpoint_with_invalid_blocks_root_proof() {
 	let mut checkpoint = load_checkpoint_update_fixture();
-	checkpoint.block_roots_branch[0] = hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into();
+	checkpoint.block_roots_branch[0] = TEST_HASH.into();
 
 	new_tester().execute_with(|| {
 		assert_err!(
@@ -389,6 +415,24 @@ fn submit_update_with_sync_committee_in_current_period() {
 		assert!(!<NextSyncCommittee<Test>>::exists());
 		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone(),));
 		assert!(<NextSyncCommittee<Test>>::exists());
+	});
+}
+
+#[test]
+fn submit_update_with_skipped_period() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let sync_committee_update = load_sync_committee_update_fixture();
+	let mut update = load_next_finalized_header_update_fixture();
+	update.signature_slot = update.signature_slot + (EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) as u64;
+	update.attested_header.slot = update.signature_slot-1;
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(
+			RuntimeOrigin::signed(1),
+			sync_committee_update.clone()
+		));
+		assert_err!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()), Error::<Test>::SkippedSyncCommitteePeriod);
 	});
 }
 

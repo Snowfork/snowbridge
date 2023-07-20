@@ -336,7 +336,7 @@ pub mod pallet {
 		/// Cross check to make sure that execution header import does not fall too far behind
 		/// finalised beacon header import. If that happens just return an error and pause
 		/// processing until execution header processing has caught up.
-		fn cross_check_execution_state() -> DispatchResult {
+		pub(crate) fn cross_check_execution_state() -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
