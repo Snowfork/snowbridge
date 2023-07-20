@@ -12,7 +12,7 @@ type Config struct {
 type SourceConfig struct {
 	Ethereum  config.EthereumConfig `mapstructure:"ethereum"`
 	Contracts ContractsConfig       `mapstructure:"contracts"`
-	LaneID    uint32                `mapstructure:"lane-id"`
+	ChannelID uint32                `mapstructure:"channel-id"`
 }
 
 type ContractsConfig struct {

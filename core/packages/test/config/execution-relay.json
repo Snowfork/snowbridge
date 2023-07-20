@@ -6,7 +6,7 @@
     "contracts": {
       "Gateway": null
     },
-    "lane-id": 1000
+    "channel-id": 1000
   },
   "sink": {
     "parachain": {

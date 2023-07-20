@@ -102,7 +102,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 			log.WithFields(log.Fields{
 				"ethBlockNumber": executionHeaderState.BlockNumber,
-				"laneId":         r.config.Source.LaneID,
+				"channelId":      r.config.Source.ChannelID,
 				"paraNonce":      paraNonce,
 				"ethNonce":       ethNonce,
 			}).Info("Polled Nonces")
@@ -129,8 +129,8 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (r *Relay) fetchLatestParachainNonce() (uint64, error) {
-	paraID := r.config.Source.LaneID
-	encodedParaID, err := types.EncodeToBytes(r.config.Source.LaneID)
+	paraID := r.config.Source.ChannelID
+	encodedParaID, err := types.EncodeToBytes(r.config.Source.ChannelID)
 	if err != nil {
 		return 0, err
 	}
@@ -159,9 +159,9 @@ func (r *Relay) fetchEthereumNonce(ctx context.Context, blockNumber uint64) (uin
 		BlockNumber: new(big.Int).SetUint64(blockNumber),
 		Context:     ctx,
 	}
-	_, ethOutboundNonce, err := r.gatewayContract.ChannelNoncesOf(&opts, big.NewInt(int64(r.config.Source.LaneID)))
+	_, ethOutboundNonce, err := r.gatewayContract.ChannelNoncesOf(&opts, big.NewInt(int64(r.config.Source.ChannelID)))
 	if err != nil {
-		return 0, fmt.Errorf("fetch OutboundQueue.Nonce(%v): %w", r.config.Source.LaneID, err)
+		return 0, fmt.Errorf("fetch OutboundQueue.Nonce(%v): %w", r.config.Source.ChannelID, err)
 	}
 
 	return ethOutboundNonce, nil
@@ -175,7 +175,7 @@ func (r *Relay) findEvents(
 	start uint64,
 ) ([]*contracts.GatewayOutboundMessageAccepted, error) {
 
-	paraID := r.config.Source.LaneID
+	paraID := r.config.Source.ChannelID
 
 	var allEvents []*contracts.GatewayOutboundMessageAccepted
 
