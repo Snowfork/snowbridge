@@ -5,6 +5,7 @@ optimizer_runs = 20_000
 via_ir = true
 test = 'test'
 ffi = true
+fs_permissions = [{ access = "read", path = "test/data"}]
 
 ignored_error_codes = [
     # DeployScript.sol is never deployed

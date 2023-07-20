@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import {ScaleCodec} from "../src/ScaleCodec.sol";
+import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 
 contract ScaleCodecTest is Test {
     function testEncodeU256() public {
@@ -28,5 +28,23 @@ contract ScaleCodecTest is Test {
 
     function testEncodeU16() public {
         assertEq(ScaleCodec.encodeU16(6827), hex"ab1a");
+    }
+
+    function testEncodeCompactU32() public {
+        assertEq(ScaleCodec.encodeCompactU32(0), hex"00");
+        assertEq(ScaleCodec.encodeCompactU32(63), hex"fc");
+        assertEq(ScaleCodec.encodeCompactU32(64), hex"0101");
+        assertEq(ScaleCodec.encodeCompactU32(16383), hex"fdff");
+        assertEq(ScaleCodec.encodeCompactU32(16384), hex"02000100");
+        assertEq(ScaleCodec.encodeCompactU32(1073741823), hex"feffffff");
+        assertEq(ScaleCodec.encodeCompactU32(1073741824), hex"0300000040");
+        assertEq(ScaleCodec.encodeCompactU32(type(uint32).max), hex"03ffffffff");
+    }
+
+    function testCheckedEncodeCompactU32() public {
+        assertEq(ScaleCodec.checkedEncodeCompactU32(type(uint32).max), hex"03ffffffff");
+
+        vm.expectRevert(ScaleCodec.UnsupportedCompactEncoding.selector);
+        ScaleCodec.checkedEncodeCompactU32(uint256(type(uint32).max) + 1);
     }
 }

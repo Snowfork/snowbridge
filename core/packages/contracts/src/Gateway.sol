@@ -14,7 +14,7 @@ import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
-import {ScaleCodec} from "./ScaleCodec.sol";
+import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
@@ -214,6 +214,10 @@ contract Gateway is IGateway {
     function agentOf(bytes32 agentID) external view returns (address) {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         return $.agents[agentID];
+    }
+
+    function implementation() public view returns (address) {
+        return ERC1967.load();
     }
 
     /**
@@ -456,7 +460,7 @@ contract Gateway is IGateway {
      * Upgrades
      */
 
-    /// @dev Not publicly accessible as overshadowed in the proxy
+    /// @dev Not externally accessible as overshadowed in the proxy
     function initialize(bytes memory data) external {
         // Prevent initialization of storage in implementation contract
         if (ERC1967.load() == address(0)) {
@@ -497,9 +501,5 @@ contract Gateway is IGateway {
         });
 
         Assets.initialize(registerNativeTokenFee, sendNativeTokenFee);
-    }
-
-    function implementation() public view returns (address) {
-        return ERC1967.load();
     }
 }

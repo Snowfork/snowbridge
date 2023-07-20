@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import "./utils/Bytes.sol";
-
 library ScaleCodec {
+    error UnsupportedCompactEncoding();
+
+    uint256 internal constant MAX_COMPACT_ENCODABLE_UINT = 2 ** 30 - 1;
+
     // Sources:
     //   * https://ethereum.stackexchange.com/questions/15350/how-to-convert-an-bytes-to-address-in-solidity/50528
     //   * https://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel
@@ -102,7 +104,8 @@ library ScaleCodec {
         return bytes1(input);
     }
 
-    function encodeCompactUint(uint256 value) internal pure returns (bytes memory) {
+    // Supports compact encoding of integers in [0, uint32.MAX]
+    function encodeCompactU32(uint32 value) internal pure returns (bytes memory) {
         if (value <= 2 ** 6 - 1) {
             // add single byte flag
             return abi.encodePacked(uint8(value << 2));
@@ -113,29 +116,14 @@ library ScaleCodec {
             // add four byte flag and create little endian encoding
             return abi.encodePacked(ScaleCodec.reverse32(uint32((value << 2)) + 2));
         } else {
-            if (value <= 2 ** 62 - 1) {
-                uint8 numBytes = getLengthBytes(value);
-                uint8 prefix = ((numBytes - 4) << 2) + 3;
-                bytes memory paddedWithZeros = abi.encodePacked(ScaleCodec.reverse64(uint64((value << 8)) + prefix));
-                bytes memory encodedValue = Bytes.removeEndingZero(paddedWithZeros);
-                return encodedValue;
-            } else {
-                uint8 numBytes = getLengthBytes(value);
-                uint8 prefix = ((numBytes - 4) << 2) + 3;
-                bytes memory paddedWithZeros = abi.encodePacked(ScaleCodec.reverse128(uint128((value << 8)) + prefix));
-                bytes memory encodedValue = Bytes.removeEndingZero(paddedWithZeros);
-                return encodedValue;
-            }
+            return abi.encodePacked(uint8(3), ScaleCodec.reverse32(value));
         }
     }
 
-    function getLengthBytes(uint256 value) internal pure returns (uint8) {
-        uint8 length = 0;
-        uint256 temp = value;
-        while (temp != 0) {
-            temp >>= 8;
-            length++;
+    function checkedEncodeCompactU32(uint256 value) internal pure returns (bytes memory) {
+        if (value > type(uint32).max) {
+            revert UnsupportedCompactEncoding();
         }
-        return length;
+        return encodeCompactU32(uint32(value));
     }
 }

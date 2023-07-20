@@ -26,7 +26,9 @@ use sp_core::{RuntimeDebug, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use snowbridge_core::{OutboundMessage, OutboundQueue as OutboundQueueTrait, SubmitError};
+use snowbridge_core::{
+	OutboundMessage, OutboundQueue as OutboundQueueTrait, SubmitError,
+};
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;

@@ -143,18 +143,14 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	#[derive(DefaultNoBound)]
-	pub struct GenesisConfig<T: Config> {
+	pub struct GenesisConfig {
 		pub gateway: H160,
-		pub owner: Option<T::AccountId>,
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
 			Gateway::<T>::put(self.gateway);
-			if let Some(ref owner) = self.owner {
-				PalletOwner::<T>::put(owner);
-			}
 		}
 	}
 
@@ -209,7 +205,7 @@ pub mod pallet {
 							nonce: envelope.nonce,
 							result: MessageDispatchResult::InvalidPayload,
 						});
-						return Ok(())
+						return Ok(());
 					},
 				};
 
@@ -224,7 +220,7 @@ pub mod pallet {
 						nonce: envelope.nonce,
 						result: MessageDispatchResult::InvalidPayload,
 					});
-					return Ok(())
+					return Ok(());
 				},
 			};
 

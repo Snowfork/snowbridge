@@ -35,20 +35,20 @@ contract GatewayTest is Test {
 
     event Upgraded(address indexed implementation);
 
-    ParaID bridgeHubParaID = ParaID.wrap(1001);
+    ParaID public bridgeHubParaID = ParaID.wrap(1001);
     bytes32 public bridgeHubAgentID = keccak256("1001");
     address public bridgeHubAgent;
 
-    ParaID assetHubParaID = ParaID.wrap(1002);
+    ParaID public assetHubParaID = ParaID.wrap(1002);
     bytes32 public assetHubAgentID = keccak256("1002");
     address public assetHubAgent;
 
-    address relayer;
+    address public relayer;
 
     bytes32[] public proof = [bytes32(0x2f9ee6cfdf244060dc28aa46347c5219e303fc95062dd672b4e406ca5c29764b)];
     bytes public parachainHeaderProof = bytes("validProof");
 
-    GatewayMock gatewayLogic;
+    GatewayMock public gatewayLogic;
     GatewayProxy public gateway;
 
     WETH9 public token;
@@ -175,13 +175,6 @@ contract GatewayTest is Test {
         hoax(relayer);
         IGateway(address(gateway)).submitInbound(InboundMessage(ParaID.wrap(42), 1, "", ""), proof, makeMockProof());
     }
-
-    // Handling of Out-of-Gas errors
-
-    // Run with forge test -vvvv to verify that a nested call reverts with `EvmError: OutOfGas`
-    // function testSubmitSucceedsWhenHandlerOOG() public {
-
-    // }
 
     /**
      * Fees & Rewards
@@ -527,8 +520,17 @@ contract GatewayTest is Test {
      * Misc checks
      */
 
+    // Initialize function should not be externally callable on either proxy or implementation contract
+    function testInitializeNotExternallyCallable() public {
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        Gateway(address(gateway)).initialize("");
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        GatewayMock(address(gatewayLogic)).initialize("");
+    }
+
     // Handler functions should not be externally callable
-    function testHandlersArePrivileged() public {
+    function testHandlersNotExternallyCallable() public {
         vm.expectRevert(Gateway.Unauthorized.selector);
         Gateway(address(gateway)).agentExecute("");
 
@@ -570,5 +572,8 @@ contract GatewayTest is Test {
 
         address agent = gw.agentOf(bridgeHubAgentID);
         assertEq(agent, bridgeHubAgent);
+
+        address implementation = gw.implementation();
+        assertEq(implementation, address(gatewayLogic));
     }
 }

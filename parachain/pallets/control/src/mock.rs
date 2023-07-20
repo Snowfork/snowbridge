@@ -10,17 +10,14 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
-	BuildStorage,
+	AccountId32,
 };
-
-use sp_runtime::AccountId32;
 use xcm::v3::NetworkId;
 use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-
-pub type AccountId = AccountId32;
+type AccountId = AccountId32;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(

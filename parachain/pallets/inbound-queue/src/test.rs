@@ -165,16 +165,14 @@ fn expect_events(e: Vec<RuntimeEvent>) {
 	assert_eq!(last_events(e.len()), e);
 }
 
-pub fn new_tester<T: Config>(gateway: H160) -> sp_io::TestExternalities {
-	new_tester_with_config::<T>(inbound_queue::GenesisConfig { gateway, owner: None })
+pub fn new_tester(gateway: H160) -> sp_io::TestExternalities {
+	new_tester_with_config(inbound_queue::GenesisConfig { gateway })
 }
 
-pub fn new_tester_with_config<T: Config>(
-	config: inbound_queue::GenesisConfig<T>,
-) -> sp_io::TestExternalities {
-	let mut storage = frame_system::GenesisConfig::default().build_storage::<T>().unwrap();
+pub fn new_tester_with_config(config: inbound_queue::GenesisConfig) -> sp_io::TestExternalities {
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	GenesisBuild::<T>::assimilate_storage(&config, &mut storage).unwrap();
+	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
@@ -198,7 +196,7 @@ fn parse_dest(message: Message) -> ParaId {
 }
 
 // The originating channel address for the messages below
-const OUTBOUND_QUEUE_ADDRESS: [u8; 20] = hex!["87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d"];
+const GATEWAY_ADDRESS: [u8; 20] = hex!["87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d"];
 
 const OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
 	"
@@ -210,7 +208,7 @@ use snowbridge_core::ParaId;
 
 #[test]
 fn test_submit() {
-	new_tester::<Test>(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+	new_tester(GATEWAY_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -241,8 +239,8 @@ fn test_submit() {
 }
 
 #[test]
-fn test_submit_with_invalid_outbound_queue() {
-	new_tester::<Test>(H160::zero()).execute_with(|| {
+fn test_submit_with_invalid_gateway() {
+	new_tester(H160::zero()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -269,7 +267,7 @@ fn test_submit_with_invalid_outbound_queue() {
 
 #[test]
 fn test_submit_with_invalid_nonce() {
-	new_tester::<Test>(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+	new_tester(GATEWAY_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -303,7 +301,7 @@ fn test_submit_with_invalid_nonce() {
 
 #[test]
 fn test_submit_no_funds_to_reward_relayers() {
-	new_tester::<Test>(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+	new_tester(GATEWAY_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -326,6 +324,34 @@ fn test_submit_no_funds_to_reward_relayers() {
 			// should actually be `NoFunds`. See this bug in substrate:
 			// https://github.com/paritytech/substrate/issues/13866
 			ArithmeticError::Underflow
+		);
+	});
+}
+
+#[test]
+fn test_set_gateway_with_root_succeeds() {
+	new_tester_with_config(Default::default()).execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let default_gateway_address = hex!("0000000000000000000000000000000000000000").into();
+		let gateway_address = hex!("1000000000000000000000000000000000000000").into();
+
+		assert_eq!(<Gateway<Test>>::get(), default_gateway_address);
+
+		assert_ok!(InboundQueue::set_gateway(origin, gateway_address));
+
+		assert_eq!(<Gateway<Test>>::get(), gateway_address);
+	});
+}
+
+#[test]
+fn test_set_gateway_without_root_yields_bad_origin() {
+	new_tester_with_config(Default::default()).execute_with(|| {
+		let gateway_address = hex!("0000000000000000000000000000000000000000").into();
+		let relayer: AccountId = Keyring::Bob.into();
+		let origin = RuntimeOrigin::signed(relayer);
+		assert_noop!(
+			InboundQueue::set_gateway(origin, gateway_address),
+			sp_runtime::DispatchError::BadOrigin,
 		);
 	});
 }

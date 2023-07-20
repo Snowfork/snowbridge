@@ -5,7 +5,7 @@ import "openzeppelin/utils/Strings.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import {ScaleCodec} from "../src/ScaleCodec.sol";
+import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {Verification, VerificationWrapper} from "./mocks/VerificationWrapper.sol";
 
@@ -51,7 +51,7 @@ contract VerificationTest is Test {
             keccak256(
                 bytes.concat(
                     ScaleCodec.encodeU32(BRIDGE_HUB_PARA_ID),
-                    ScaleCodec.encodeCompactUint(headerExpected.length),
+                    ScaleCodec.encodeCompactU32(uint32(headerExpected.length)),
                     headerExpected
                 )
             ),

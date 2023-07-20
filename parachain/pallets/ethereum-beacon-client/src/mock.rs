@@ -8,7 +8,6 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
-	BuildStorage,
 };
 
 #[cfg(not(feature = "beacon-spec-mainnet"))]
