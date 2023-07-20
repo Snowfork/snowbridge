@@ -46,6 +46,7 @@ beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 bridgehub_ws_url="${BRIDGEHUB_WS_URL:-ws://127.0.0.1:11144}"
 bridgehub_para_id="${BRIDGEHUB_PARA_ID:-1013}"
 bridgehub_seed="${BRIDGEHUB_SEED:-//Alice}"
+bridgehub_pallets_owner="${BRIDGEHUB_PALLETS_OWNER:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d}"
 
 statemine_ws_url="${STATEMINE_WS_URL:-ws://127.0.0.1:12144}"
 statemine_para_id="${STATEMINE_PARA_ID:-1000}"
@@ -72,9 +73,13 @@ registry_contract_sovereign_account="${REGISTRY_CONTRACT_SOVEREIGN_ACCOUNT:-0x5d
 ## Deployment key
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
 
-## Gateway params
-export RANDAO_COMMIT_DELAY=3
-export RANDAO_COMMIT_EXP=3
+## BeefyClient
+# For max safety delay should be MAX_SEED_LOOKAHEAD=4 epochs=4*8*6=192s
+# but for rococo-local each session is only 20 slots=120s
+# so relax somehow here just for quick test
+# for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
+export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
+export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
 
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
 # TODO: update placeholder value

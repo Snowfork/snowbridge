@@ -794,11 +794,11 @@ mod tests {
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
-		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
-			asset: H160(token_address),
-			destination: H160(beneficiary_address),
+		let expected_payload = Message::UnlockNativeTokens {
+			token: H160(token_address),
+			recipient: H160(beneficiary_address),
 			amount: 1000,
-		});
+		};
 		let result = converter.convert();
 		assert_eq!(result, Ok((expected_payload, None)));
 	}
@@ -834,11 +834,11 @@ mod tests {
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
-		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
-			asset: H160(token_address),
-			destination: H160(beneficiary_address),
+		let expected_payload = Message::UnlockNativeTokens {
+			token: H160(token_address),
+			recipient: H160(beneficiary_address),
 			amount: 1000,
-		});
+		};
 		let result = converter.convert();
 		assert_eq!(result, Ok((expected_payload, None)));
 	}

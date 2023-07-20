@@ -27,7 +27,7 @@ mod benchmarks {
 			create_message.execution_header,
 		);
 
-		<Gateway::<T>>::put(H160(GATEWAY_ADDRESS));
+		<Gateway<T>>::put(H160(GATEWAY_ADDRESS));
 
 		let dest_para: ParaId = 1000u32.into();
 		let sovereign_account = dest_para.into_account_truncating();

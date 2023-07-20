@@ -7,7 +7,7 @@ import {console} from "forge-std/console.sol";
 
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
-import {ScaleCodec} from "../src/ScaleCodec.sol";
+import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 
 contract BeefyClientTest is Test {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
-import "../../src/utils/MMRProof.sol";
+import {MMRProof} from "../../src/utils/MMRProof.sol";
 
 contract MMRProofWrapper {
     function verifyLeafProof(bytes32 root, bytes32 leafHash, bytes32[] calldata proof, uint256 proofOrder)

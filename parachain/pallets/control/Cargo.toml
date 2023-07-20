@@ -31,11 +31,8 @@ xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", d
 
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
-
 [dev-dependencies]
-xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master" }
-
-
+xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 [features]
 default = ["std"]
@@ -50,7 +47,11 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"xcm/std",
+	"xcm-builder/std",
 	"ethabi/std"
 ]
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks"
+]
 try-runtime = ["frame-support/try-runtime"]

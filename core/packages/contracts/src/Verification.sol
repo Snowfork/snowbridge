@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {SubstrateMerkleProof} from "./utils/MerkleProof.sol";
+import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {BeefyClient} from "./BeefyClient.sol";
-import {ScaleCodec} from "./ScaleCodec.sol";
+import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 library Verification {
@@ -101,7 +101,7 @@ library Verification {
             accum = bytes.concat(accum, encodeDigestItem(digestItems[i]));
         }
         // encode number of digest items, followed by encoded digest items
-        return bytes.concat(ScaleCodec.encodeCompactUint(digestItems.length), accum);
+        return bytes.concat(ScaleCodec.checkedEncodeCompactU32(uint32(digestItems.length)), accum);
     }
 
     function encodeDigestItem(DigestItem calldata digestItem) internal pure returns (bytes memory) {
@@ -109,26 +109,28 @@ library Verification {
             return bytes.concat(
                 bytes1(uint8(DIGEST_ITEM_PRERUNTIME)),
                 digestItem.consensusEngineID,
-                ScaleCodec.encodeCompactUint(digestItem.data.length),
+                ScaleCodec.checkedEncodeCompactU32(digestItem.data.length),
                 digestItem.data
             );
         } else if (digestItem.kind == DIGEST_ITEM_CONSENSUS) {
             return bytes.concat(
                 bytes1(uint8(DIGEST_ITEM_CONSENSUS)),
                 digestItem.consensusEngineID,
-                ScaleCodec.encodeCompactUint(digestItem.data.length),
+                ScaleCodec.checkedEncodeCompactU32(digestItem.data.length),
                 digestItem.data
             );
         } else if (digestItem.kind == DIGEST_ITEM_SEAL) {
             return bytes.concat(
                 bytes1(uint8(DIGEST_ITEM_SEAL)),
                 digestItem.consensusEngineID,
-                ScaleCodec.encodeCompactUint(digestItem.data.length),
+                ScaleCodec.checkedEncodeCompactU32(digestItem.data.length),
                 digestItem.data
             );
         } else if (digestItem.kind == DIGEST_ITEM_OTHER) {
             return bytes.concat(
-                bytes1(uint8(DIGEST_ITEM_OTHER)), ScaleCodec.encodeCompactUint(digestItem.data.length), digestItem.data
+                bytes1(uint8(DIGEST_ITEM_OTHER)),
+                ScaleCodec.checkedEncodeCompactU32(digestItem.data.length),
+                digestItem.data
             );
         } else if (digestItem.kind == DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED) {
             return bytes.concat(bytes1(uint8(DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED)));
@@ -148,7 +150,7 @@ library Verification {
             // H256
             header.parentHash,
             // Compact unsigned int
-            ScaleCodec.encodeCompactUint(header.number),
+            ScaleCodec.checkedEncodeCompactU32(uint32(header.number)),
             // H256
             header.stateRoot,
             // H256
@@ -163,7 +165,7 @@ library Verification {
                 // u32
                 encodedParaID,
                 // Vec<u8>
-                ScaleCodec.encodeCompactUint(encodedHeader.length),
+                ScaleCodec.checkedEncodeCompactU32(encodedHeader.length),
                 encodedHeader
             )
         );
@@ -178,13 +180,13 @@ library Verification {
             // H256
             header.parentHash,
             // Compact unsigned int
-            ScaleCodec.encodeCompactUint(header.number),
+            ScaleCodec.checkedEncodeCompactU32(header.number),
             // H256
             header.stateRoot,
             // H256
             header.extrinsicsRoot,
             // Vec<DigestItem>
-            ScaleCodec.encodeCompactUint(header.digestItems.length),
+            ScaleCodec.checkedEncodeCompactU32(header.digestItems.length),
             encodeDigestItems(header.digestItems)
         );
 
@@ -192,7 +194,7 @@ library Verification {
             // u32
             encodedParaID,
             // length of encoded header
-            ScaleCodec.encodeCompactUint(encodedHeader.length),
+            ScaleCodec.checkedEncodeCompactU32(uint32(encodedHeader.length)),
             encodedHeader
         );
     }

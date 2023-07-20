@@ -3,6 +3,10 @@
 pragma solidity 0.8.20;
 
 library MMRProof {
+    error ProofSizeExceeded();
+
+    uint256 internal constant MAXIMUM_PROOF_SIZE = 256;
+
     /**
      * @dev Verify inclusion of a leaf in an MMR
      * @param root MMR root hash
@@ -15,6 +19,11 @@ library MMRProof {
         pure
         returns (bool)
     {
+        // Size of the proof is bounded, since `proofOrder` can only contain `MAXIMUM_PROOF_SIZE` orderings.
+        if (proof.length > MAXIMUM_PROOF_SIZE) {
+            revert ProofSizeExceeded();
+        }
+
         bytes32 acc = leafHash;
         for (uint256 i = 0; i < proof.length;) {
             acc = hashPairs(acc, proof[i], (proofOrder >> i) & 1);

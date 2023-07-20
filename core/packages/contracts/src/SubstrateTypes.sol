@@ -2,13 +2,15 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {ScaleCodec} from "./ScaleCodec.sol";
+import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {ParaID} from "./Types.sol";
 
 /**
  * @title SCALE encoders for common Substrate types
  */
 library SubstrateTypes {
+    error UnsupportedCompactEncoding();
+
     /**
      * @dev Encodes `MultiAddress::Id`: https://crates.parity.io/sp_runtime/enum.MultiAddress.html#variant.Id
      * @return bytes SCALE-encoded bytes
@@ -28,7 +30,7 @@ library SubstrateTypes {
     }
 
     function VecU8(bytes memory input) internal pure returns (bytes memory) {
-        return bytes.concat(ScaleCodec.encodeCompactUint(input.length), input);
+        return bytes.concat(ScaleCodec.checkedEncodeCompactU32(input.length), input);
     }
 
     /**

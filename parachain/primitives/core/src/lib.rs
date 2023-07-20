@@ -64,6 +64,7 @@ pub trait Verifier {
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 pub enum SubmitError {
 	MessageTooLarge,
+	BridgeHalted,
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
