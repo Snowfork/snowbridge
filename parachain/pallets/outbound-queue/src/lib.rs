@@ -198,7 +198,7 @@ pub mod pallet {
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
 			// Reserve some weight for the `on_finalize` handler
-			return T::WeightInfo::on_finalize()
+			return T::WeightInfo::on_finalize();
 		}
 
 		fn on_finalize(_: BlockNumberFor<T>) {
@@ -240,7 +240,7 @@ pub mod pallet {
 		pub(crate) fn commit_messages() {
 			let count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
 			if count == 0 {
-				return
+				return;
 			}
 
 			// Create merkle root of messages
@@ -337,14 +337,14 @@ pub mod pallet {
 			// Yield if we don't want to accept any more messages in the current block.
 			// There is hard limit to ensure the weight of `on_finalize` is bounded.
 			ensure!(
-				MessageLeaves::<T>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerBlock::get() as usize,
+				MessageLeaves::<T>::decode_len().unwrap_or(0)
+					< T::MaxMessagesPerBlock::get() as usize,
 				ProcessMessageError::Yield
 			);
 
 			let weight = T::WeightInfo::do_process_message();
 			if !meter.check_accrue(weight) {
-				return Err(ProcessMessageError::Overweight(weight))
+				return Err(ProcessMessageError::Overweight(weight));
 			}
 
 			Self::do_process_message(message)
