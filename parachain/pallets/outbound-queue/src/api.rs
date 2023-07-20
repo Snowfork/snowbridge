@@ -12,7 +12,7 @@ where
 	Runtime: Config,
 {
 	if !MessageLeaves::<Runtime>::exists() {
-		return None
+		return None;
 	}
 	let proof = merkle_proof::<<Runtime as Config>::Hashing, _>(
 		MessageLeaves::<Runtime>::stream_iter(),
