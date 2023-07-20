@@ -169,10 +169,12 @@ pub fn new_tester(gateway: H160) -> sp_io::TestExternalities {
 	new_tester_with_config(inbound_queue::GenesisConfig { gateway })
 }
 
-pub fn new_tester_with_config(config: inbound_queue::GenesisConfig) -> sp_io::TestExternalities {
+pub fn new_tester_with_config<T: Config>(
+	config: inbound_queue::GenesisConfig<T>,
+) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
+	GenesisBuild::<T>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));

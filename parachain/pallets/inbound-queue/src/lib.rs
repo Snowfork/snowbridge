@@ -148,7 +148,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			Gateway::<T>::put(self.gateway);
 		}
@@ -247,6 +247,25 @@ pub mod pallet {
 			ensure_root(origin)?;
 			Gateway::<T>::put(gateway);
 			Ok(())
+		}
+
+		/// Change `PalletOwner`.
+		/// May only be called either by root, or by `PalletOwner`.
+		#[pallet::call_index(3)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_owner(origin: OriginFor<T>, new_owner: Option<T::AccountId>) -> DispatchResult {
+			<Self as OwnedBridgeModule<_>>::set_owner(origin, new_owner)
+		}
+
+		/// Halt or resume all pallet operations.
+		/// May only be called either by root, or by `PalletOwner`.
+		#[pallet::call_index(4)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_operating_mode(
+			origin: OriginFor<T>,
+			operating_mode: BasicOperatingMode,
+		) -> DispatchResult {
+			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
 		}
 
 		/// Change `PalletOwner`.
