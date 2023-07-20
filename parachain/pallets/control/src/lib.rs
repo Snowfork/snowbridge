@@ -112,6 +112,20 @@ pub mod pallet {
 				return Ok(());
 			}
 
+			let (command, params) = Command::CreateAgent { agent_id }.encode();
+
+			let message = OutboundMessage {
+				id: T::MessageHasher::hash(&agent_id.encode()),
+				origin: T::OwnParaId::get(),
+				command,
+				params,
+			};
+
+			let ticket =
+				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
+
+			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
+
 			Agents::<T>::insert(agent_id, ());
 			Self::deposit_event(Event::<T>::CreateAgent { agent_id });
 
