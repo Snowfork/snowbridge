@@ -27,7 +27,7 @@ struct Channel {
 struct InboundMessage {
     ParaID origin;
     uint64 nonce;
-    bytes32 command;
+    Command command;
     bytes params;
 }
 
@@ -44,4 +44,14 @@ struct Config {
     // Assets
     uint256 registerNativeTokenFee;
     uint256 sendNativeTokenFee;
+}
+
+enum Command {
+    AgentExecute,
+    Upgrade,
+    CreateAgent,
+    CreateChannel,
+    UpdateChannel,
+    SetOperatingMode,
+    TransferNativeFromAgent
 }

@@ -4,6 +4,7 @@ use super::*;
 
 use codec::Encode;
 use frame_benchmarking::v2::*;
+use snowbridge_core::Command;
 
 #[allow(unused_imports)]
 use crate::Pallet as OutboundQueue;
@@ -17,16 +18,11 @@ mod benchmarks {
 
 	/// Benchmark for processing a message payload of length `x`.
 	#[benchmark]
-	fn do_process_message(
-		x: Linear<0, { T::MaxMessagePayloadSize::get() }>,
-	) -> Result<(), BenchmarkError> {
-		let payload = (0..x).map(|_| 1u8).collect::<Vec<u8>>();
-
+	fn do_process_message() -> Result<(), BenchmarkError> {
 		let enqueued_message = EnqueuedMessage {
 			id: H256::zero().into(),
 			origin: 1000.into(),
-			command: [1u8; 32].into(),
-			params: payload.try_into().unwrap(),
+			command: Command::CreateAgent { agent_id: H256::zero() },
 		};
 		let encoded_enqueued_message = enqueued_message.encode();
 

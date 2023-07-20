@@ -8,7 +8,7 @@ use frame_support::{
 	weights::WeightMeter,
 };
 
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
@@ -83,7 +83,7 @@ impl pallet_message_queue::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMessagePayloadSize: u32 = 256;
+	pub const MaxMessagePayloadSize: u32 = 1024;
 	pub const MaxMessagesPerBlock: u32 = 20;
 }
 
@@ -128,8 +128,11 @@ fn submit_messages_from_multiple_origins_and_commit() {
 			let message = OutboundMessage {
 				id: H256::repeat_byte(1).into(),
 				origin: para_id.into(),
-				command: [1u8; 32].into(),
-				params: (0..100).map(|_| 1u8).collect::<Vec<u8>>(),
+				command: Command::Upgrade {
+					impl_address: H160::zero(),
+					impl_code_hash: H256::zero(),
+					params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
+				},
 			};
 
 			let result = OutboundQueue::validate(&message);
@@ -159,8 +162,11 @@ fn submit_message_fail_too_large() {
 		let message = OutboundMessage {
 			id: H256::repeat_byte(1).into(),
 			origin: 1000.into(),
-			command: [1u8; 32].into(),
-			params: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
+			command: Command::Upgrade {
+				impl_address: H160::zero(),
+				impl_code_hash: H256::zero(),
+				params: Some((0..1000).map(|_| 1u8).collect::<Vec<u8>>()),
+			},
 		};
 
 		assert_err!(OutboundQueue::validate(&message), SubmitError::MessageTooLarge);

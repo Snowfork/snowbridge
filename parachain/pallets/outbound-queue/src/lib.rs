@@ -26,7 +26,7 @@ use sp_core::{RuntimeDebug, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use snowbridge_core::{OutboundMessage, OutboundQueue as OutboundQueueTrait, SubmitError};
+use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTrait, SubmitError};
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
@@ -40,16 +40,14 @@ pub enum AggregateMessageOrigin {
 }
 
 /// Message which is awaiting processing in the MessageQueue pallet
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug)]
 pub struct EnqueuedMessage {
 	/// Message ID (usually hash of message)
 	pub id: H256,
 	/// ID of source parachain
 	pub origin: ParaId,
-	/// The receiving gateway contract
-	pub command: H256,
-	/// Payload for target application.
-	pub params: Vec<u8>,
+	/// Command to execute in the Gateway contract
+	pub command: Command,
 }
 
 /// Message which has been assigned a nonce and will be committed at the end of a block
@@ -60,8 +58,7 @@ pub struct Message {
 	/// Unique nonce to prevent replaying messages
 	nonce: u64,
 	/// Command to execute in the Gateway contract
-	command: H256,
-	/// Payload for target application.
+	command: u8,
 	params: Vec<u8>,
 }
 
@@ -71,7 +68,7 @@ impl Into<Token> for Message {
 		Token::Tuple(vec![
 			Token::Uint(u32::from(self.origin).into()),
 			Token::Uint(self.nonce.into()),
-			Token::FixedBytes(self.command.to_fixed_bytes().into()),
+			Token::Uint(self.command.into()),
 			Token::Bytes(self.params.to_vec()),
 		])
 	}
@@ -198,7 +195,7 @@ pub mod pallet {
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
 			// Reserve some weight for the `on_finalize` handler
-			return T::WeightInfo::on_finalize()
+			return T::WeightInfo::on_finalize();
 		}
 
 		fn on_finalize(_: BlockNumberFor<T>) {
@@ -240,7 +237,7 @@ pub mod pallet {
 		pub(crate) fn commit_messages() {
 			let count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
 			if count == 0 {
-				return
+				return;
 			}
 
 			// Create merkle root of messages
@@ -261,12 +258,10 @@ pub mod pallet {
 
 			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
 
-			let message: Message = Message {
-				origin: enqueued_message.origin,
-				nonce: next_nonce,
-				command: enqueued_message.command,
-				params: enqueued_message.params,
-			};
+			let (command, params) = enqueued_message.command.abi_encode();
+
+			let message: Message =
+				Message { origin: enqueued_message.origin, nonce: next_nonce, command, params };
 
 			let message_abi_encoded = ethabi::encode(&vec![message.clone().into()]);
 			let message_abi_encoded_hash = <T as Config>::Hashing::hash(&message_abi_encoded);
@@ -297,15 +292,16 @@ pub mod pallet {
 
 		fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError> {
 			// The inner payload should not be too large
+			let (_, payload) = message.command.abi_encode();
+
 			ensure!(
-				message.params.len() < T::MaxMessagePayloadSize::get() as usize,
+				payload.len() < T::MaxMessagePayloadSize::get() as usize,
 				SubmitError::MessageTooLarge
 			);
 			let message: EnqueuedMessage = EnqueuedMessage {
 				id: message.id,
 				origin: message.origin,
-				command: message.command,
-				params: message.params.clone().into(),
+				command: message.command.clone(),
 			};
 			// The whole message should not be too large
 			let encoded = message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
@@ -337,14 +333,14 @@ pub mod pallet {
 			// Yield if we don't want to accept any more messages in the current block.
 			// There is hard limit to ensure the weight of `on_finalize` is bounded.
 			ensure!(
-				MessageLeaves::<T>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerBlock::get() as usize,
+				MessageLeaves::<T>::decode_len().unwrap_or(0)
+					< T::MaxMessagesPerBlock::get() as usize,
 				ProcessMessageError::Yield
 			);
 
 			let weight = T::WeightInfo::do_process_message();
 			if !meter.check_accrue(weight) {
-				return Err(ProcessMessageError::Overweight(weight))
+				return Err(ProcessMessageError::Overweight(weight));
 			}
 
 			Self::do_process_message(message)

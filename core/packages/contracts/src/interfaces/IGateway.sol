@@ -6,7 +6,9 @@ import {OperatingMode, InboundMessage, ParaID} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 
 interface IGateway {
-    // * Events *
+    /**
+     * Events
+     */
 
     // Emitted when inbound message has been dispatched
     event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool success);
@@ -32,7 +34,9 @@ interface IGateway {
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
-    // * Getters *
+    /**
+     * Getters
+     */
 
     function operatingMode() external view returns (OperatingMode);
     function channelOperatingModeOf(ParaID paraID) external view returns (OperatingMode);
@@ -41,6 +45,10 @@ interface IGateway {
     function agentOf(bytes32 agentID) external view returns (address);
     function implementation() external view returns (address);
 
+    /**
+     * Messaging
+     */
+
     // Submit an inbound message for dispatch
     function submitInbound(
         InboundMessage calldata message,
@@ -48,15 +56,18 @@ interface IGateway {
         Verification.Proof calldata headerProof
     ) external;
 
-    // Features for Ethereum users
+    /**
+     * Token Transfers
+     */
 
-    // Register a new fungible asset in the `ForeignAssets` pallet on AssetHub. This new asset
-    // is a wrapped token correspondig to the ERC20 token `token`.
-    //
-    // This instruction is idempotent, and will fail if `ForeignAssets`
+    /// @dev Send a message to the AssetHub parachain to register a new fungible asset
+    /// in the `ForeignAssets` pallet.
     function registerNativeToken(address token) external payable;
 
-    // Send ERC20 tokens to Polkadot. The bridged assets will be minted on AssetHub
-    // and then reserve transferred to `recipient` on `finalDestPara`.
+    /// @dev Send ERC20 tokens to Polkadot. The bridged tokens will be minted on AssetHub
+    /// and then reserve transferred to `recipient`.
+    /// @param token The address of the ERC20 token
+    /// @param recipient The SCALE-encoded VersionedMultiLocation of the recipient
+    /// @param amount Number of tokens to send
     function sendNativeToken(address token, bytes calldata recipient, uint128 amount) external payable;
 }
