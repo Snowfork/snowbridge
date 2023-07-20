@@ -27,7 +27,7 @@ impl<T: Config> Verifier for Pallet<T> {
 					message.proof.block_hash,
 					err
 				);
-				return Err(err)
+				return Err(err);
 			},
 		};
 
@@ -46,7 +46,7 @@ impl<T: Config> Verifier for Pallet<T> {
 					message.proof.block_hash,
 					err
 				);
-				return Err(Error::<T>::DecodeFailed.into())
+				return Err(Error::<T>::DecodeFailed.into());
 			},
 		};
 
@@ -56,7 +56,7 @@ impl<T: Config> Verifier for Pallet<T> {
 				"💫 Event log not found in receipt for transaction at index {} in block {}",
 				message.proof.tx_index, message.proof.block_hash,
 			);
-			return Err(Error::<T>::InvalidProof.into())
+			return Err(Error::<T>::InvalidProof.into());
 		}
 
 		log::info!(

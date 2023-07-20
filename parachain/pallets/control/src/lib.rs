@@ -23,6 +23,7 @@ use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTr
 use sp_core::{H160, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
+use xcm::prelude::*;
 
 pub use pallet::*;
 
@@ -31,7 +32,6 @@ pub mod pallet {
 	use super::*;
 	use frame_support::{pallet_prelude::*, traits::EnsureOrigin};
 	use frame_system::pallet_prelude::*;
-	use xcm::v3::MultiLocation;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
