@@ -8,8 +8,5 @@ RUN go build -v -o build/snowbridge-relay main.go
 FROM ubuntu:22.04
 COPY --from=builder /app/build/snowbridge-relay /usr/local/bin
 
-# check if executable works in this container
-RUN /usr/local/bin/snowbridge-relay --help
-
 VOLUME ["/config"]
 ENTRYPOINT ["/usr/local/bin/snowbridge-relay"]

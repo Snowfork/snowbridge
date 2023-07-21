@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: tag (ex. v1.0) to publish
+        description: tag (e.g. v1.0) to publish
         required: false
 
 jobs:
