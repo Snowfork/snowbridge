@@ -135,9 +135,6 @@ contract BeefyClient {
 
     /* State */
 
-    // foo
-    bool internal initialized;
-
     // The latest verified MMRRoot and corresponding BlockNumber from the Polkadot relay chain
     bytes32 public latestMMRRoot;
     uint64 public latestBeefyBlock;
@@ -189,21 +186,18 @@ contract BeefyClient {
     error InvalidMMRRootLength();
     error NoMMRRootInCommitment();
 
-    constructor(uint256 _randaoCommitDelay, uint256 _randaoCommitExpiration) {
+    constructor(
+        uint256 _randaoCommitDelay,
+        uint256 _randaoCommitExpiration,
+        uint64 _initialBeefyBlock,
+        ValidatorSet memory _initialValidatorSet,
+        ValidatorSet memory _nextValidatorSet
+    ) {
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
-    }
-
-    // Once-off post-construction call to set initial configuration.
-    function initialize(
-        uint64 _initialBeefyBlock,
-        ValidatorSet calldata _initialValidatorSet,
-        ValidatorSet calldata _nextValidatorSet
-    ) external {
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
         nextValidatorSet = _nextValidatorSet;
-        initialized = true;
     }
 
     /* Public Functions */

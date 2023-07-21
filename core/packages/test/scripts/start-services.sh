@@ -30,24 +30,20 @@ else
   deploy_goerli
 fi
 
-# 3. deploy contracts
-echo "Deploying ethereum contracts"
-source scripts/deploy-contracts.sh
-deploy_contracts &
-
-# 4. start polkadot
+# 3. start polkadot
 echo "Starting polkadot nodes"
 source scripts/deploy-polkadot.sh
 deploy_polkadot
 
-# wait for contract deployed
-echo "Waiting contract deployed"
-wait_contract_deployed
+# 4. generate beefy checkpoint
+echo "Generate beefy checkpoint"
+source scripts/generate-beefy-checkpoint.sh
+generate_beefy_checkpoint
 
-# 5. config beefy client
-echo "Config beefy client"
-source scripts/configure-beefy.sh
-configure_beefy
+# 5. deploy contracts
+echo "Deploying ethereum contracts"
+source scripts/deploy-contracts.sh
+deploy_contracts
 
 # 6. config bridgehub
 echo "Config bridgehub"

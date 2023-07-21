@@ -12,10 +12,9 @@ import path from "path"
 
 let endpoint = process.env.RELAYCHAIN_ENDPOINT || "ws://127.0.0.1:9944"
 const beefyStartBlock = process.env.BEEFY_START_BLOCK ? parseInt(process.env.BEEFY_START_BLOCK) : 1
-const BeefyStateFile =
-    process.env.BEEFY_STATE_FILE || path.join(process.env.output_dir!, "beefy-state.json")
+const BeefyStateFile = path.join(process.env.contract_dir!, "beefy-state.json")
 
-async function configureBeefy() {
+async function generateBeefyCheckpoint() {
     let api1 = await ApiPromise.create({
         provider: new WsProvider(endpoint),
     })
@@ -51,7 +50,8 @@ async function configureBeefy() {
 
     let nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<BeefyNextAuthoritySet>()
 
-    let validatorSets = {
+    let beefyCheckpoint = {
+        startBlock: beefyStartBlock,
         current: {
             id: validatorSetId.toNumber(),
             root: tree.getHexRoot(),
@@ -64,10 +64,9 @@ async function configureBeefy() {
         },
     }
 
-    console.log("Configuring BeefyClient with initial BEEFY state")
-    console.log("Validator sets: ", validatorSets)
+    console.log("Configuring BeefyClient with initial BEEFY state", beefyCheckpoint)
 
-    fs.writeFileSync(BeefyStateFile, JSON.stringify({ validatorSets }, null, 2), "utf8")
+    fs.writeFileSync(BeefyStateFile, JSON.stringify(beefyCheckpoint, null, 2), "utf8")
     console.log("Beefy state writing to dest file: " + BeefyStateFile)
 
     return
@@ -88,7 +87,7 @@ function createMerkleTree(leaves: Buffer[]) {
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
-configureBeefy()
+generateBeefyCheckpoint()
     .then(() => process.exit(0))
     .catch((error) => {
         console.error(error)
