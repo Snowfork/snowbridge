@@ -28,11 +28,9 @@ sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master"
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
-
-[dev-dependencies]
-xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master" }
 
 [features]
 default = ["std"]
@@ -47,6 +45,7 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"xcm/std",
+	"xcm-builder/std",
 	"ethabi/std"
 ]
 runtime-benchmarks = [

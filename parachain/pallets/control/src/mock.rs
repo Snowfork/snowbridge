@@ -3,7 +3,7 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{ConstU16, ConstU64},
+	traits::{ConstU16, ConstU64, Everything},
 };
 use snowbridge_core::ParaId;
 use sp_core::H256;
@@ -13,7 +13,7 @@ use sp_runtime::{
 	AccountId32,
 };
 use xcm::v3::NetworkId;
-use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
+use xcm_builder::{DescribeFamily, DescribeAllTerminal};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -65,15 +65,14 @@ parameter_types! {
 	pub const AnyNetwork: Option<NetworkId> = None;
 }
 
-pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, AnyNetwork>;
-
 impl snowbridge_control::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = ();
 	type MessageHasher = BlakeTwo256;
 	type MaxUpgradeDataSize = MaxUpgradeDataSize;
-	type CreateAgentOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
+	type CreateAgentOrigin = EnsureXcm<Everything>;
+	type DescribeAgentLocation = DescribeFamily<DescribeAllTerminal>;
 	type WeightInfo = ();
 }
 
