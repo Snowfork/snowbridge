@@ -17,6 +17,8 @@ use snowbridge_core::{Verifier, RingBufferMap};
 /// Arbitrary hash used for tests and invalid hashes.
 const TEST_HASH: [u8; 32] = hex!["5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371"];
 
+/* UNIT TESTS */
+
 #[test]
 pub fn sum_sync_committee_participation() {
 	new_tester().execute_with(|| {
