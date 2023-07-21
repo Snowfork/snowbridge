@@ -32,6 +32,9 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "ma
 
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
+[dev-dependencies]
+hex-literal = { version = "0.4.1" }
+
 [features]
 default = ["std"]
 std = [

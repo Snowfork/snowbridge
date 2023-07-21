@@ -112,9 +112,8 @@ pub mod pallet {
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let agent_location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			let agent_description = 
-				T::DescribeAgentLocation::describe_location(&agent_location)
-					.ok_or(Error::<T>::LocationConversionFailed)?;
+			let agent_description = T::DescribeAgentLocation::describe_location(&agent_location)
+				.ok_or(Error::<T>::LocationConversionFailed)?;
 
 			let agent_id = H256(blake2_256(&agent_description));
 
@@ -134,7 +133,7 @@ pub mod pallet {
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 
 			Agents::<T>::insert(agent_id, ());
-			Self::deposit_event(Event::<T>::CreateAgent { 
+			Self::deposit_event(Event::<T>::CreateAgent {
 				agent_location: VersionedMultiLocation::V3(agent_location),
 				agent_id,
 			});
