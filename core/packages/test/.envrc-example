@@ -10,6 +10,7 @@ source_up_if_exists
 # export PARACHAIN_RUNTIME=           # Runtime type of parachain should be one of snowbase|snowblink|snowbridge
 # export RELAYCHAIN_WS_URL=   # Relaychain ws url
 # export BRIDGEHUB_WS_URL=    # BridgeHub ws url
+# export BRIDGEHUB_PALLETS_OWNER=     # Pubkey of bridge owner which can be used to halt/resume the bridge pallets
 
 ## Eth config
 # export INFURA_PROJECT_ID=           # Your Infura project id
@@ -32,4 +33,3 @@ source_up_if_exists
 # export CUMULUS_VER=snowbridge       # For dev setup change to some feature branch
 # export SKIP_RELAYER=false           # For local setup only, set as true to skip starting relayer so to manually debug later
 # export ETH_FAST_MODE=false          # For local setup only, set as true will hack beacon client for fast slot time
-

@@ -17,6 +17,7 @@ use sp_runtime::{
 };
 use sp_std::convert::From;
 
+use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::{Message, Proof};
 use snowbridge_ethereum::Log;
 
@@ -35,6 +36,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
 		InboundQueue: inbound_queue::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -89,6 +91,35 @@ impl pallet_balances::Config for Test {
 	type MaxHolds = ();
 }
 
+parameter_types! {
+	pub const ExecutionHeadersPruneThreshold: u32 = 10;
+	pub const ChainForkVersions: ForkVersions = ForkVersions{
+		genesis: Fork {
+			version: [0, 0, 0, 1], // 0x00000001
+			epoch: 0,
+		},
+		altair: Fork {
+			version: [1, 0, 0, 1], // 0x01000001
+			epoch: 0,
+		},
+		bellatrix: Fork {
+			version: [2, 0, 0, 1], // 0x02000001
+			epoch: 0,
+		},
+		capella: Fork {
+			version: [3, 0, 0, 1], // 0x03000001
+			epoch: 0,
+		},
+	};
+}
+
+impl snowbridge_ethereum_beacon_client::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type ForkVersions = ChainForkVersions;
+	type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
+	type WeightInfo = ();
+}
+
 // Mock verifier
 pub struct MockVerifier;
 
@@ -103,6 +134,12 @@ parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15};
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Test {
+	// not implemented since the MockVerifier is used for tests
+	fn initialize_storage(_: H256, _: CompactExecutionHeader) {}
+}
+
 impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
@@ -111,6 +148,8 @@ impl inbound_queue::Config for Test {
 	type XcmSender = ();
 	type WeightInfo = ();
 	type AllowListLength = ConstU32<2>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type Helper = Test;
 }
 
 fn last_events(n: usize) -> Vec<RuntimeEvent> {
@@ -127,14 +166,19 @@ fn expect_events(e: Vec<RuntimeEvent>) {
 	assert_eq!(last_events(e.len()), e);
 }
 
-pub fn new_tester(outbound_queue_address: H160) -> sp_io::TestExternalities {
-	new_tester_with_config(inbound_queue::GenesisConfig { allowlist: vec![outbound_queue_address] })
+pub fn new_tester<T: Config>(outbound_queue_address: H160) -> sp_io::TestExternalities {
+	new_tester_with_config::<T>(inbound_queue::GenesisConfig {
+		allowlist: vec![outbound_queue_address],
+		owner: None,
+	})
 }
 
-pub fn new_tester_with_config(config: inbound_queue::GenesisConfig) -> sp_io::TestExternalities {
+pub fn new_tester_with_config<T: Config>(
+	config: inbound_queue::GenesisConfig<T>,
+) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
+	GenesisBuild::<T>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
@@ -170,7 +214,7 @@ use snowbridge_core::ParaId;
 
 #[test]
 fn test_submit() {
-	new_tester(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+	new_tester::<Test>(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -202,7 +246,7 @@ fn test_submit() {
 
 #[test]
 fn test_submit_with_invalid_outbound_queue() {
-	new_tester(H160::zero()).execute_with(|| {
+	new_tester::<Test>(H160::zero()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -229,7 +273,7 @@ fn test_submit_with_invalid_outbound_queue() {
 
 #[test]
 fn test_submit_with_invalid_nonce() {
-	new_tester(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+	new_tester::<Test>(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -263,7 +307,7 @@ fn test_submit_with_invalid_nonce() {
 
 #[test]
 fn test_submit_no_funds_to_reward_relayers() {
-	new_tester(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+	new_tester::<Test>(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -292,7 +336,7 @@ fn test_submit_no_funds_to_reward_relayers() {
 
 #[test]
 fn test_add_allow_list_without_root_yields_bad_origin() {
-	new_tester_with_config(Default::default()).execute_with(|| {
+	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
@@ -305,7 +349,7 @@ fn test_add_allow_list_without_root_yields_bad_origin() {
 
 #[test]
 fn test_add_allow_list_with_root_succeeds() {
-	new_tester_with_config(Default::default()).execute_with(|| {
+	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 
@@ -323,7 +367,7 @@ fn test_add_allow_list_with_root_succeeds() {
 
 #[test]
 fn test_add_allow_list_ignores_duplicates() {
-	new_tester_with_config(Default::default()).execute_with(|| {
+	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 
@@ -339,7 +383,7 @@ fn test_add_allow_list_ignores_duplicates() {
 
 #[test]
 fn test_add_allow_list_fails_when_exceeding_bounds() {
-	new_tester_with_config(Default::default()).execute_with(|| {
+	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let contract_address1 = hex!("0000000000000000000000000000000000000000").into();
 		let contract_address2 = hex!("1000000000000000000000000000000000000000").into();
@@ -363,7 +407,7 @@ fn test_add_allow_list_fails_when_exceeding_bounds() {
 
 #[test]
 fn test_remove_allow_list_without_root_yields_bad_origin() {
-	new_tester_with_config(Default::default()).execute_with(|| {
+	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
@@ -376,7 +420,7 @@ fn test_remove_allow_list_without_root_yields_bad_origin() {
 
 #[test]
 fn test_remove_allow_list_with_root_succeeds() {
-	new_tester_with_config(Default::default()).execute_with(|| {
+	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 
@@ -396,7 +440,7 @@ fn test_remove_allow_list_with_root_succeeds() {
 
 #[test]
 fn test_remove_allow_list_event_not_emitted_for_none_existent_item() {
-	new_tester_with_config(Default::default()).execute_with(|| {
+	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let contract_address = hex!("0000000000000000000000000000000000000000").into();
 

@@ -36,14 +36,17 @@ use snowbridge_core::Proof;
 use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
+pub use types::ExecutionHeaderBuffer;
 use types::{
-	CheckpointUpdate, ExecutionHeaderBuffer, ExecutionHeaderUpdate, FinalizedBeaconStateBuffer,
-	SyncCommitteePrepared, Update,
+	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared,
+	Update,
 };
 
 pub use pallet::*;
 
 pub use config::SLOTS_PER_HISTORICAL_ROOT;
+
+pub const LOG_TARGET: &str = "ethereum-beacon-client";
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -51,6 +54,8 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+
+	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 
 	#[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
 	#[codec(mel_bound(T: Config))]
@@ -89,10 +94,10 @@ pub mod pallet {
 	}
 
 	#[pallet::error]
-	#[cfg_attr(test, derive(PartialEq))]
 	pub enum Error<T> {
 		SkippedSyncCommitteePeriod,
-		NotRelevant,
+		/// Attested header is older than latest finalized header.
+		IrrelevantUpdate,
 		NotBootstrapped,
 		SyncCommitteeParticipantsNotSupermajority,
 		InvalidHeaderMerkleProof,
@@ -113,9 +118,11 @@ pub mod pallet {
 		BLSPreparePublicKeysFailed,
 		BLSVerificationFailed(BlsError),
 		InvalidUpdateSlot,
+		/// The given update is not in the expected period, or the given next sync committee does not match the next sync committee in storage.
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedSlot,
+		BridgeModule(bp_runtime::OwnedBridgeModuleError),
 	}
 
 	/// Latest imported checkpoint root
@@ -165,17 +172,38 @@ pub mod pallet {
 
 	/// Execution Headers
 	#[pallet::storage]
-	pub(super) type ExecutionHeaders<T: Config> =
+	pub type ExecutionHeaders<T: Config> =
 		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
 
 	/// Execution Headers: Current position in ring buffer
 	#[pallet::storage]
-	pub(crate) type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+	pub type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Execution Headers: Mapping of ring buffer index to a pruning candidate
 	#[pallet::storage]
-	pub(crate) type ExecutionHeaderMapping<T: Config> =
-		StorageMap<_, Identity, u32, H256, ValueQuery>;
+	pub type ExecutionHeaderMapping<T: Config> = StorageMap<_, Identity, u32, H256, ValueQuery>;
+
+	/// Optional pallet owner.
+	///
+	/// Pallet owner has a right to halt all pallet operations and then resume them. If it is
+	/// `None`, then there are no direct ways to halt/resume pallet operations, but other
+	/// runtime methods may still be used to do that (i.e. democracy::referendum to update halt
+	/// flag directly or call the `halt_operations`).
+	#[pallet::storage]
+	pub type PalletOwner<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
+	/// The current operating mode of the pallet.
+	///
+	/// Depending on the mode either all, or no transactions will be allowed.
+	#[pallet::storage]
+	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
+
+	impl<T: Config> OwnedBridgeModule<T> for Pallet<T> {
+		const LOG_TARGET: &'static str = LOG_TARGET;
+		type OwnerStorage = PalletOwner<T>;
+		type OperatingMode = BasicOperatingMode;
+		type OperatingModeStorage = PalletOperatingMode<T>;
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -201,6 +229,7 @@ pub mod pallet {
 		/// Submits a new finalized beacon header update. The update may contain the next
 		/// sync committee.
 		pub fn submit(origin: OriginFor<T>, update: Update) -> DispatchResult {
+			Self::ensure_not_halted().map_err(Error::<T>::BridgeModule)?;
 			ensure_signed(origin)?;
 			Self::process_update(&update)?;
 			Ok(())
@@ -215,9 +244,29 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			update: ExecutionHeaderUpdate,
 		) -> DispatchResult {
+			Self::ensure_not_halted().map_err(Error::<T>::BridgeModule)?;
 			ensure_signed(origin)?;
 			Self::process_execution_header_update(&update)?;
 			Ok(())
+		}
+
+		/// Change `PalletOwner`.
+		/// May only be called either by root, or by `PalletOwner`.
+		#[pallet::call_index(3)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_owner(origin: OriginFor<T>, new_owner: Option<T::AccountId>) -> DispatchResult {
+			<Self as OwnedBridgeModule<_>>::set_owner(origin, new_owner)
+		}
+
+		/// Halt or resume all pallet operations.
+		/// May only be called either by root, or by `PalletOwner`.
+		#[pallet::call_index(4)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_operating_mode(
+			origin: OriginFor<T>,
+			operating_mode: BasicOperatingMode,
+		) -> DispatchResult {
+			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
 		}
 	}
 
@@ -320,12 +369,10 @@ pub mod pallet {
 					update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidUpdateSlot
 			);
-
 			// Retrieve latest finalized state.
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
-
 			let store_period = compute_period(latest_finalized_state.slot);
 			let signature_period = compute_period(update.signature_slot);
 			if <NextSyncCommittee<T>>::exists() {
@@ -345,7 +392,7 @@ pub mod pallet {
 			ensure!(
 				update.attested_header.slot > latest_finalized_state.slot ||
 					update_has_next_sync_committee,
-				Error::<T>::NotRelevant
+				Error::<T>::IrrelevantUpdate
 			);
 
 			// Verify that the `finality_branch`, if present, confirms `finalized_header` to match
@@ -459,7 +506,7 @@ pub mod pallet {
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
 				}
 				log::info!(
-					target: "ethereum-beacon-client",
+					target: LOG_TARGET,
 					"💫 SyncCommitteeUpdated at period {}.",
 					update_finalized_period
 				);
@@ -628,7 +675,7 @@ pub mod pallet {
 			<LatestFinalizedBlockRoot<T>>::set(header_root);
 
 			log::info!(
-				target: "ethereum-beacon-client",
+				target: LOG_TARGET,
 				"💫 Updated latest finalized block root {} at slot {}.",
 				header_root,
 				slot
@@ -653,7 +700,7 @@ pub mod pallet {
 			<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
 
 			log::trace!(
-				target: "ethereum-beacon-client",
+				target: LOG_TARGET,
 				"💫 Updated latest execution block at {} to number {}.",
 				block_hash,
 				block_number
