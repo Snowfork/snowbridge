@@ -83,7 +83,9 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		case <-ctx.Done():
 			return nil
 		case <-time.After(12 * time.Second):
-			log.Info("Polling")
+			log.WithFields(log.Fields{
+				"channelId": r.config.Source.ChannelID,
+			}).Info("Polling Nonces")
 
 			executionHeaderState, err := writer.GetLastExecutionHeaderState()
 			if err != nil {
