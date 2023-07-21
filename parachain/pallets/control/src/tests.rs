@@ -86,35 +86,68 @@ fn create_agent_with_relaychain_origin_yields_success() {
 }
 
 #[test]
-fn create_agent_with_local_account32_yields_location_conversion_failed() {
+fn create_agent_with_local_account32_yields_success() {
 	new_test_ext().execute_with(|| {
 		let origin = RuntimeOrigin::signed(AccountId32::new([2; 32]));
-		frame_support::assert_noop!(
-			EthereumControl::create_agent(origin),
-			Error::<Test>::LocationConversionFailed
-		);
+		let expected_agent_id =
+			H256(hex!("9e85ef53611dcb973a337977a79217890f6c0d605de20ae4a828b1b9a95162c4"));
+		let expected_multi_location = VersionedMultiLocation::V3(MultiLocation {
+			parents: 0,
+			interior: X1(Junction::AccountId32 { network: None, id: [0; 32] }),
+		});
+
+		assert!(!Agents::<Test>::contains_key(expected_agent_id));
+		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
+		assert!(Agents::<Test>::contains_key(expected_agent_id));
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
+			agent_location: expected_multi_location,
+			agent_id: expected_agent_id,
+		}));
 	});
 }
 
 #[test]
-fn create_agent_with_local_account20_yields_location_conversion_failed() {
+fn create_agent_with_local_account20_yields_success() {
 	new_test_ext().execute_with(|| {
 		let origin = RuntimeOrigin::signed(AccountId32::new([3; 32]));
-		frame_support::assert_noop!(
-			EthereumControl::create_agent(origin),
-			Error::<Test>::LocationConversionFailed
-		);
+		let expected_agent_id =
+			H256(hex!("927a4def0d0bdd151dfa247a07e4036e12335ee71977426847be6e6e36e3c460"));
+		let expected_multi_location = VersionedMultiLocation::V3(MultiLocation {
+			parents: 0,
+			interior: X1(AccountKey20 { network: None, key: [0; 20] }),
+		});
+
+		assert!(!Agents::<Test>::contains_key(expected_agent_id));
+		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
+		assert!(Agents::<Test>::contains_key(expected_agent_id));
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
+			agent_location: expected_multi_location,
+			agent_id: expected_agent_id,
+		}));
 	});
 }
 
 #[test]
-fn create_agent_with_local_pallet_yields_location_conversion_failed() {
+fn create_agent_with_local_pallet_yields_success() {
 	new_test_ext().execute_with(|| {
 		let origin = RuntimeOrigin::signed(AccountId32::new([4; 32]));
-		frame_support::assert_noop!(
-			EthereumControl::create_agent(origin),
-			Error::<Test>::LocationConversionFailed
-		);
+		let expected_agent_id =
+			H256(hex!("964c3b3f978db1febb282d675dcf2196eae3c28fd7c0885b738cee828262fcc2"));
+		let expected_multi_location = VersionedMultiLocation::V3(MultiLocation {
+			parents: 0,
+			interior: X1(PalletInstance(1)),
+		});
+
+		assert!(!Agents::<Test>::contains_key(expected_agent_id));
+		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
+		assert!(Agents::<Test>::contains_key(expected_agent_id));
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
+			agent_location: expected_multi_location,
+			agent_id: expected_agent_id,
+		}));
 	});
 }
 

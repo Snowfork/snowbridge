@@ -19,7 +19,10 @@ use sp_runtime::{
 	AccountId32,
 };
 use xcm::prelude::*;
-use xcm_builder::{DescribeAllTerminal, DescribeFamily};
+use xcm_builder::{
+	DescribeAccountId32Terminal, DescribeAccountKey20Terminal, DescribeAllTerminal, DescribeFamily,
+	DescribePalletTerminal,
+};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -173,7 +176,6 @@ pub struct MockOutboundQueue;
 impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	type Ticket = H256;
 
-	/// Validate a message destined for Ethereum
 	fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError> {
 		if message.id
 			== H256(hex!("387ee72178e7f3df432c2c15a72c7739cf20ee389c9a9ff783e060f095fbd9c4"))
@@ -183,7 +185,6 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 		Ok(message.id)
 	}
 
-	/// Submit the message for eventual delivery to Ethereum
 	fn submit(ticket: Self::Ticket) -> Result<(), SubmitError> {
 		if ticket == H256(hex!("9fda9e8f79b36136c0b48959bdcb92d2d02e705dbc641db0e4901aba5a7b5faa"))
 		{
@@ -193,6 +194,13 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	}
 }
 
+pub type DescribeAgentLocation = (
+	DescribePalletTerminal,
+	DescribeAccountId32Terminal,
+	DescribeAccountKey20Terminal,
+	DescribeFamily<DescribeAllTerminal>,
+);
+
 impl snowbridge_control::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = OwnParaId;
@@ -200,7 +208,7 @@ impl snowbridge_control::Config for Test {
 	type MessageHasher = BlakeTwo256;
 	type MaxUpgradeDataSize = MaxUpgradeDataSize;
 	type CreateAgentOrigin = EnsureOriginFromTable;
-	type DescribeAgentLocation = DescribeFamily<DescribeAllTerminal>;
+	type DescribeAgentLocation = DescribeAgentLocation;
 	type WeightInfo = ();
 }
 
