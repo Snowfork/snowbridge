@@ -121,7 +121,7 @@ pub mod pallet {
 		/// The given update is not in the expected period, or the given next sync committee does not match the next sync committee in storage.
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
-		ExecutionHeaderSkippedSlot,
+		ExecutionHeaderSkippedBlock,
 		BridgeModule(bp_runtime::OwnedBridgeModuleError),
 	}
 
@@ -336,7 +336,7 @@ pub mod pallet {
 		/// Cross check to make sure that execution header import does not fall too far behind
 		/// finalised beacon header import. If that happens just return an error and pause
 		/// processing until execution header processing has caught up.
-		fn cross_check_execution_state() -> DispatchResult {
+		pub(crate) fn cross_check_execution_state() -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
@@ -551,7 +551,7 @@ pub mod pallet {
 				latest_execution_state.block_number == 0 ||
 					update.execution_header.block_number ==
 						latest_execution_state.block_number + 1,
-				Error::<T>::ExecutionHeaderSkippedSlot
+				Error::<T>::ExecutionHeaderSkippedBlock
 			);
 
 			// Gets the hash tree root of the execution header, in preparation for the execution
@@ -778,8 +778,11 @@ pub mod pallet {
 		/// Returns the fork version based on the current epoch. The hard fork versions
 		/// are defined in pallet config.
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
-			let fork_versions = T::ForkVersions::get();
+			Self::select_fork_version(&T::ForkVersions::get(), epoch)
+		}
 
+		/// Returns the fork version based on the current epoch.
+		pub(super) fn select_fork_version(fork_versions: &ForkVersions, epoch: u64) -> ForkVersion {
 			if epoch >= fork_versions.capella.epoch {
 				return fork_versions.capella.version
 			}
