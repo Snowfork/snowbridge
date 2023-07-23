@@ -3,6 +3,8 @@
 pragma solidity 0.8.20;
 
 import {IERC20} from "./interfaces/IERC20.sol";
+import {IGateway} from "./interfaces/IGateway.sol";
+
 import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
 
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
@@ -15,36 +17,69 @@ library Assets {
     using SafeTokenTransferFrom for IERC20;
 
     /// @dev Emitted once the funds are locked and a message is successfully queued.
-    event NativeTokensLocked(address token, bytes recipient, uint128 amount);
-    event NativeTokenRegistered(address token);
+    event TokenSent(
+        address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
+    );
+    event TokenRegistrationSent(address token);
 
     /* Errors */
 
     error InvalidToken();
     error InvalidAmount();
-    error NoFundsforCreateToken();
+    error InvalidDestination();
 
-    function initialize(uint256 registerNativeTokenFee, uint256 sendNativeTokenFee) external {
+    function initialize(uint256 registerTokenFee, uint256 sendTokenFee) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        $.registerNativeTokenFee = registerNativeTokenFee;
-        $.sendNativeTokenFee = sendNativeTokenFee;
+        $.registerTokenFee = registerTokenFee;
+        $.sendTokenFee = sendTokenFee;
     }
 
-    /// @dev Locks an amount of ERC20 Tokens in the vault and enqueues a mint message.
-    /// Requires the allowance to be set on the ERC20 token where the spender is the vault.
-    /// @param token The token to lock.
-    /// @param recipient The recipient on Polkadot side. This is an encoded VersionedMultiLocation
-    /// @param amount The amount to lock.
-    function sendNativeToken(
+    function sendToken(
+        ParaID assetHubParaID,
         address assetHubAgent,
         address token,
         address sender,
-        bytes calldata recipient,
+        ParaID destinationChain,
+        bytes32 destinationAddress,
         uint128 amount
     ) external returns (bytes memory payload, uint256 extraFee) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
+        _transferToAgent(assetHubAgent, token, sender, amount);
+        if (destinationChain == assetHubParaID) {
+            payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationAddress, amount);
+        } else {
+            payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationChain, destinationAddress, amount);
+        }
+        extraFee = $.sendTokenFee;
+
+        emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
+    }
+
+    function sendToken(
+        ParaID assetHubParaID,
+        address assetHubAgent,
+        address token,
+        address sender,
+        ParaID destinationChain,
+        address destinationAddress,
+        uint128 amount
+    ) external returns (bytes memory payload, uint256 extraFee) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if (destinationChain == assetHubParaID) {
+            // AssetHub parachain doesn't support Ethereum-style addresses
+            revert InvalidDestination();
+        }
+
+        _transferToAgent(assetHubAgent, token, sender, amount);
+
+        payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationChain, destinationAddress, amount);
+        extraFee = $.sendTokenFee;
+        emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
+    }
+
+    function _transferToAgent(address assetHubAgent, address token, address sender, uint128 amount) internal {
         if (!token.isContract()) {
             revert InvalidToken();
         }
@@ -54,16 +89,11 @@ library Assets {
         }
 
         IERC20(token).safeTransferFrom(sender, assetHubAgent, amount);
-
-        payload = SubstrateTypes.MintNativeToken(assetHubAgent, token, recipient, amount);
-        extraFee = $.sendNativeTokenFee;
-
-        emit NativeTokensLocked(token, recipient, amount);
     }
 
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
-    function registerNativeToken(address assetHubAgent, bytes2 createTokenCallID, address token)
+    function registerToken(address gateway, address token, bytes2 createTokenCallID)
         external
         returns (bytes memory payload, uint256 extraFee)
     {
@@ -73,9 +103,9 @@ library Assets {
             revert InvalidToken();
         }
 
-        payload = SubstrateTypes.CreateNativeToken(assetHubAgent, token, createTokenCallID);
-        extraFee = $.registerNativeTokenFee;
+        payload = SubstrateTypes.RegisterToken(gateway, token, createTokenCallID);
+        extraFee = $.registerTokenFee;
 
-        emit NativeTokenRegistered(token);
+        emit TokenRegistrationSent(token);
     }
 }
