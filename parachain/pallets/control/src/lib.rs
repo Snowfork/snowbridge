@@ -21,9 +21,11 @@ pub use weights::*;
 
 use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTrait, ParaId};
 use sp_core::{H160, H256};
+use sp_io::hashing::blake2_256;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 use xcm::prelude::*;
+use xcm_builder::DescribeLocation;
 
 pub use pallet::*;
 
@@ -45,13 +47,14 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 		type MaxUpgradeDataSize: Get<u32>;
 		type CreateAgentOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
+		type DescribeAgentLocation: DescribeLocation;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		Upgrade { impl_address: H160, impl_code_hash: H256, params_hash: Option<H256> },
-		CreateAgent { agent_id: H256 },
+		CreateAgent { agent_location: VersionedMultiLocation, agent_id: H256 },
 	}
 
 	#[pallet::error]
@@ -109,10 +112,10 @@ pub mod pallet {
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let agent_location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			let agent_id = match agent_location {
-				MultiLocation { parents: 0, interior: X1(AccountId32 { id, .. }) } => Ok(H256(id)),
-				_ => Err(Error::<T>::LocationConversionFailed),
-			}?;
+			let agent_description = T::DescribeAgentLocation::describe_location(&agent_location)
+				.ok_or(Error::<T>::LocationConversionFailed)?;
+
+			let agent_id = H256(blake2_256(&agent_description));
 
 			if Agents::<T>::contains_key(agent_id) {
 				return Ok(());
@@ -130,7 +133,10 @@ pub mod pallet {
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 
 			Agents::<T>::insert(agent_id, ());
-			Self::deposit_event(Event::<T>::CreateAgent { agent_id });
+			Self::deposit_event(Event::<T>::CreateAgent {
+				agent_location: VersionedMultiLocation::V3(agent_location),
+				agent_id,
+			});
 
 			Ok(())
 		}
