@@ -56,7 +56,7 @@ library SubstrateTypes {
      * `NativeTokensMessage::Create`
      */
     // solhint-disable-next-line func-name-mixedcase
-    function CreateNativeToken(address agent, address token, bytes2 createCallIndex)
+    function RegisterToken(address gateway, address token, bytes2 createCallIndex)
         internal
         view
         returns (bytes memory)
@@ -65,7 +65,7 @@ library SubstrateTypes {
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x00),
-            SubstrateTypes.H160(agent),
+            SubstrateTypes.H160(gateway),
             SubstrateTypes.H160(token),
             createCallIndex
         );
@@ -76,7 +76,7 @@ library SubstrateTypes {
      * `NativeTokensMessage::Mint`
      */
     // solhint-disable-next-line func-name-mixedcase
-    function MintNativeToken(address agent, address token, bytes memory recipient, uint128 amount)
+    function SendToken(address gateway, address token, bytes32 recipient, uint128 amount)
         internal
         view
         returns (bytes memory)
@@ -85,9 +85,46 @@ library SubstrateTypes {
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x01),
-            SubstrateTypes.H160(agent),
+            SubstrateTypes.H160(gateway),
             SubstrateTypes.H160(token),
+            bytes1(0x00),
             recipient,
+            ScaleCodec.encodeU128(amount)
+        );
+    }
+
+    function SendToken(address gateway, address token, ParaID paraID, bytes32 recipient, uint128 amount)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return bytes.concat(
+            bytes1(0x00),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x01),
+            SubstrateTypes.H160(gateway),
+            SubstrateTypes.H160(token),
+            bytes1(0x01),
+            ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
+            recipient,
+            ScaleCodec.encodeU128(amount)
+        );
+    }
+
+    function SendToken(address gateway, address token, ParaID paraID, address recipient, uint128 amount)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return bytes.concat(
+            bytes1(0x00),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x01),
+            SubstrateTypes.H160(gateway),
+            SubstrateTypes.H160(token),
+            bytes1(0x02),
+            ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
+            abi.encodePacked(recipient),
             ScaleCodec.encodeU128(amount)
         );
     }

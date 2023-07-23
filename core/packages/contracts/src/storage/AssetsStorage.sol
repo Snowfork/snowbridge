@@ -7,8 +7,8 @@ import {ParaID} from "../Types.sol";
 
 library AssetsStorage {
     struct Layout {
-        uint256 registerNativeTokenFee;
-        uint256 sendNativeTokenFee;
+        uint256 registerTokenFee;
+        uint256 sendTokenFee;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");

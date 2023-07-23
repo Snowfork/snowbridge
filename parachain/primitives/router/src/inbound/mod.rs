@@ -26,24 +26,21 @@ pub enum VersionedMessage {
 pub struct MessageV1 {
 	/// EIP-155 chain id of the origin Ethereum network
 	pub chain_id: u64,
-	/// The gateway-specific message
-	pub message: GatewayMessage,
+	/// The command
+	pub message: Command,
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum GatewayMessage {
-	CreateForeignAsset {
-		origin: H160,
-		token: H160,
-		create_call_index: [u8; 2],
-	},
-	MintForeignAsset {
-		origin: H160,
-		token: H160,
-		dest: Option<u32>,
-		recipient: MultiLocation, // Recipient of funds on final destination
-		amount: u128,
-	},
+pub enum Command {
+	RegisterToken { origin: H160, token: H160, create_call_index: [u8; 2] },
+	SendToken { origin: H160, token: H160, destination: Destination, amount: u128 },
+}
+
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
+pub enum Destination {
+	AccountId32 { id: [u8; 32] },
+	ForeignAccountId32 { para_id: u32, id: [u8; 32] },
+	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
 pub enum ConvertError {
@@ -59,7 +56,7 @@ impl TryInto<Xcm<()>> for MessageV1 {
 	}
 }
 
-impl GatewayMessage {
+impl Command {
 	pub fn convert(self, chain_id: u64) -> Result<Xcm<()>, ConvertError> {
 		let network = NetworkId::Ethereum { chain_id };
 		let buy_execution_fee_amount = 2_000_000_000; //TODO: WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
@@ -69,7 +66,7 @@ impl GatewayMessage {
 		};
 
 		match self {
-			GatewayMessage::CreateForeignAsset { origin, token, create_call_index } => {
+			Command::RegisterToken { origin, token, create_call_index } => {
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
 					&chain_id,
 					origin.as_fixed_bytes(),
@@ -115,7 +112,7 @@ impl GatewayMessage {
 				];
 				Ok(instructions.into())
 			},
-			GatewayMessage::MintForeignAsset { origin, token, dest, recipient, amount } => {
+			Command::SendToken { origin, token, destination, amount } => {
 				let asset =
 					MultiAsset::from((Self::convert_token_address(network, origin, token), amount));
 
@@ -146,27 +143,48 @@ impl GatewayMessage {
 					ClearOrigin,
 				];
 
-				match dest {
-					Some(para) => {
-						let mut fragment: Vec<Instruction<()>> = vec![DepositReserveAsset {
-							assets: MultiAssetFilter::Definite(vec![asset.clone()].into()),
-							dest: MultiLocation { parents: 1, interior: X1(Parachain(para)) },
-							xcm: vec![DepositAsset {
-								assets: MultiAssetFilter::Definite(vec![asset.clone()].into()),
-								beneficiary: recipient,
-							}]
-							.into(),
-						}];
-						instructions.append(&mut fragment);
+				let (dest_para_id, beneficiary) = match destination {
+					Destination::AccountId32 { id } => (
+						None,
+						MultiLocation {
+							parents: 0,
+							interior: X1(AccountId32 { network: None, id }),
+						},
+					),
+					Destination::ForeignAccountId32 { para_id, id } => (
+						Some(para_id),
+						MultiLocation {
+							parents: 0,
+							interior: X1(AccountId32 { network: None, id }),
+						},
+					),
+					Destination::ForeignAccountId20 { para_id, id } => (
+						Some(para_id),
+						MultiLocation {
+							parents: 0,
+							interior: X1(AccountKey20 { network: None, key: id }),
+						},
+					),
+				};
+
+				let assets = MultiAssetFilter::Definite(vec![asset.clone()].into());
+
+				let mut fragment: Vec<Instruction<()>> = match dest_para_id {
+					Some(dest_para_id) => {
+						vec![DepositReserveAsset {
+							assets: assets.clone(),
+							dest: MultiLocation {
+								parents: 1,
+								interior: X1(Parachain(dest_para_id.into())),
+							},
+							xcm: vec![DepositAsset { assets: assets.clone(), beneficiary }].into(),
+						}]
 					},
 					None => {
-						let mut fragment: Vec<Instruction<()>> = vec![DepositAsset {
-							assets: MultiAssetFilter::Definite(vec![asset.clone()].into()),
-							beneficiary: recipient,
-						}];
-						instructions.append(&mut fragment);
+						vec![DepositAsset { assets, beneficiary }]
 					},
-				}
+				};
+				instructions.append(&mut fragment);
 				Ok(instructions.into())
 			},
 		}

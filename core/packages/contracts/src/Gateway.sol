@@ -382,24 +382,42 @@ contract Gateway is IGateway {
      * Assets
      */
 
-    // Transfer ERC20 tokens to a Polkadot parachain
-    function sendNativeToken(address token, bytes calldata recipient, uint128 amount) external payable {
+    // Register a token on AssetHub
+    function registerToken(address token) external payable {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
 
-        (bytes memory payload, uint256 extraFee) =
-            Assets.sendNativeToken(assetHubAgent, token, msg.sender, recipient, amount);
+        (bytes memory payload, uint256 extraFee) = Assets.registerToken(assetHubAgent, token, CREATE_TOKEN_CALL_ID);
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
     }
 
-    // Register a token on AssetHub
-    function registerNativeToken(address token) external payable {
+    // Transfer ERC20 tokens to a Polkadot parachain
+    function sendToken(address token, ParaID destinationChain, bytes32 destinationAddress, uint128 amount)
+        external
+        payable
+    {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
 
-        (bytes memory payload, uint256 extraFee) =
-            Assets.registerNativeToken(assetHubAgent, CREATE_TOKEN_CALL_ID, token);
+        (bytes memory payload, uint256 extraFee) = Assets.sendToken(
+            ASSET_HUB_PARA_ID, assetHubAgent, token, msg.sender, destinationChain, destinationAddress, amount
+        );
+
+        _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
+    }
+
+    // Transfer ERC20 tokens to a Polkadot parachain
+    function sendToken(address token, ParaID destinationChain, address destinationAddress, uint128 amount)
+        external
+        payable
+    {
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+        address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
+
+        (bytes memory payload, uint256 extraFee) = Assets.sendToken(
+            ASSET_HUB_PARA_ID, assetHubAgent, token, msg.sender, destinationChain, destinationAddress, amount
+        );
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
     }
@@ -458,7 +476,7 @@ contract Gateway is IGateway {
             revert Unauthorized();
         }
 
-        (uint256 defaultFee, uint256 defaultReward, uint256 registerNativeTokenFee, uint256 sendNativeTokenFee) =
+        (uint256 defaultFee, uint256 defaultReward, uint256 registerTokenFee, uint256 sendTokenFee) =
             abi.decode(data, (uint256, uint256, uint256, uint256));
 
         CoreStorage.Layout storage $ = CoreStorage.layout();
@@ -491,6 +509,6 @@ contract Gateway is IGateway {
             reward: defaultReward
         });
 
-        Assets.initialize(registerNativeTokenFee, sendNativeTokenFee);
+        Assets.initialize(registerTokenFee, sendTokenFee);
     }
 }

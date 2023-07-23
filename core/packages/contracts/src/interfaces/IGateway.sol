@@ -14,7 +14,7 @@ interface IGateway {
     event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool success);
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
-    event OutboundMessageAccepted(ParaID indexed dest, uint64 nonce, bytes payload);
+    event OutboundMessageAccepted(ParaID indexed destination, uint64 nonce, bytes payload);
 
     // Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);
@@ -33,6 +33,10 @@ interface IGateway {
 
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
+
+    event TokenRegistered(address token);
+
+    event TokenSent(address token, ParaID destinationChain, bytes destinationAddress, uint128 amount);
 
     /**
      * Getters
@@ -62,12 +66,14 @@ interface IGateway {
 
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset
     /// in the `ForeignAssets` pallet.
-    function registerNativeToken(address token) external payable;
+    function registerToken(address token) external payable;
 
-    /// @dev Send ERC20 tokens to Polkadot. The bridged tokens will be minted on AssetHub
-    /// and then reserve transferred to `recipient`.
-    /// @param token The address of the ERC20 token
-    /// @param recipient The SCALE-encoded VersionedMultiLocation of the recipient
-    /// @param amount Number of tokens to send
-    function sendNativeToken(address token, bytes calldata recipient, uint128 amount) external payable;
+    /// @dev Send ERC20 tokens to Polkadot.
+    function sendToken(address token, ParaID destinationChain, bytes32 destinationAddress, uint128 amount)
+        external
+        payable;
+
+    function sendToken(address token, ParaID destinationChain, address destinationAddress, uint128 amount)
+        external
+        payable;
 }

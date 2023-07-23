@@ -17,6 +17,7 @@ import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
 import {Assets} from "../src/Assets.sol";
+import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 
@@ -28,7 +29,10 @@ contract GatewayTest is Test {
     event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool result);
     event OutboundMessageAccepted(ParaID indexed dest, uint64 nonce, bytes payload);
     event NativeTokensUnlocked(address token, address recipient, uint256 amount);
-    event NativeTokensLocked(address token, bytes recipient, uint128 amount);
+    event TokenRegistrationSent(address token);
+    event TokenSent(
+        address indexed sender, address indexed token, ParaID destinationChain, bytes destinationAddress, uint128 amount
+    );
     event AgentCreated(bytes32 agentID, address agent);
     event ChannelCreated(ParaID indexed paraID);
     event ChannelUpdated(ParaID indexed paraID);
@@ -224,7 +228,7 @@ contract GatewayTest is Test {
         token.approve(address(gateway), 1);
 
         hoax(user, 2 ether);
-        IGateway(address(gateway)).sendNativeToken{value: 2 ether}(address(token), "", 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), ParaID.wrap(0), "", 1);
 
         assertEq(user.balance, 0 ether);
     }
@@ -241,7 +245,7 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Gateway.FeePaymentToLow.selector);
         hoax(user, 2 ether);
-        IGateway(address(gateway)).sendNativeToken{value: 0.5 ether}(address(token), "", 1);
+        IGateway(address(gateway)).sendToken{value: 0.5 ether}(address(token), ParaID.wrap(0), "", 1);
 
         assertEq(user.balance, 2 ether);
     }
@@ -457,21 +461,86 @@ contract GatewayTest is Test {
      * Assets
      */
 
-    function testSendNativeToken() public {
+    function testRegisterToken() public {
+        vm.expectEmit(false, false, false, true);
+        emit TokenRegistrationSent(address(token));
+
+        vm.expectEmit(true, false, false, false);
+        emit OutboundMessageAccepted(
+            assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token), bytes2(0x3500))
+        );
+
+        IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
+    }
+
+    function testSendTokenAddress32() public {
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
         // Multilocation for recipient
-        bytes memory recipient = "/Alice";
+        ParaID destPara = ParaID.wrap(2043);
+        bytes32 destAddress = keccak256("/Alice");
 
-        vm.expectEmit();
-        emit NativeTokensLocked(address(token), recipient, 1);
+        vm.expectEmit(true, true, false, true);
+        emit TokenSent(address(this), address(token), destPara, abi.encodePacked(destAddress), 1);
+
+        // Expect the gateway to emit `OutboundMessageAccepted`
+        vm.expectEmit(true, false, false, false);
+        emit OutboundMessageAccepted(
+            assetHubParaID, 1, SubstrateTypes.SendToken(address(gateway), address(token), destPara, destAddress, 1)
+        );
+
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+    }
+
+    function testSendTokenAddress32ToAssetHub() public {
+        // Let gateway lock up to 1 tokens
+        token.approve(address(gateway), 1);
+
+        // Multilocation for recipient
+        ParaID destPara = assetHubParaID;
+        bytes32 destAddress = keccak256("/Alice");
+
+        vm.expectEmit(true, true, false, true);
+        emit TokenSent(address(this), address(token), destPara, abi.encodePacked(destAddress), 1);
+
+        // Expect the gateway to emit `OutboundMessageAccepted`
+        vm.expectEmit(true, false, false, false);
+        emit OutboundMessageAccepted(
+            assetHubParaID, 1, SubstrateTypes.SendToken(address(gateway), address(token), destAddress, 1)
+        );
+
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+    }
+
+    function testSendTokenAddress20() public {
+        // Let gateway lock up to 1 tokens
+        token.approve(address(gateway), 1);
+
+        // Multilocation for recipient
+        ParaID destPara = ParaID.wrap(2043);
+        address destAddress = makeAddr("/Alice");
+
+        vm.expectEmit(true, true, false, true);
+        emit TokenSent(address(this), address(token), destPara, abi.encodePacked(destAddress), 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
         emit OutboundMessageAccepted(assetHubParaID, 1, hex"");
 
-        IGateway(address(gateway)).sendNativeToken{value: 2 ether}(address(token), recipient, 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+    }
+
+    function testSendTokenAddress20FailsInvalidDestination() public {
+        // Let gateway lock up to 1 tokens
+        token.approve(address(gateway), 1);
+
+        ParaID destPara = assetHubParaID;
+        address destAddress = makeAddr("/Alice");
+
+        // Should fail to send tokens to AssetHub
+        vm.expectRevert(Assets.InvalidDestination.selector);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
     }
 
     /**
@@ -514,10 +583,10 @@ contract GatewayTest is Test {
         // Now all outbound messaging should be disabled
 
         vm.expectRevert(Gateway.Disabled.selector);
-        IGateway(address(gateway)).registerNativeToken{value: 1 ether}(address(token));
+        IGateway(address(gateway)).registerToken{value: 1 ether}(address(token));
 
         vm.expectRevert(Gateway.Disabled.selector);
-        IGateway(address(gateway)).sendNativeToken{value: 1 ether}(address(token), "", 1);
+        IGateway(address(gateway)).sendToken{value: 1 ether}(address(token), ParaID.wrap(0), "", 1);
     }
 
     /**
