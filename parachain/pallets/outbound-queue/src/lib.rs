@@ -26,7 +26,9 @@ use sp_core::{RuntimeDebug, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTrait, SubmitError};
+use snowbridge_core::{
+	Command, OutboundMessage, OutboundMessageHash, OutboundQueue as OutboundQueueTrait, SubmitError,
+};
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
@@ -294,12 +296,16 @@ pub mod pallet {
 			// The inner payload should not be too large
 			let (_, payload) = message.command.abi_encode();
 
+			// Create a message id for tracking progress in submission pipeline
+			let message_id: OutboundMessageHash =
+				sp_io::hashing::blake2_256(&(message.encode())).into();
+
 			ensure!(
 				payload.len() < T::MaxMessagePayloadSize::get() as usize,
 				SubmitError::MessageTooLarge
 			);
 			let message: EnqueuedMessage = EnqueuedMessage {
-				id: message.id,
+				id: message_id,
 				origin: message.origin,
 				command: message.command.clone(),
 			};
@@ -311,14 +317,14 @@ pub mod pallet {
 			Ok(ticket)
 		}
 
-		fn submit(ticket: Self::Ticket) -> Result<(), SubmitError> {
+		fn submit(ticket: Self::Ticket) -> Result<OutboundMessageHash, SubmitError> {
 			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 			T::MessageQueue::enqueue_message(
 				ticket.message.as_bounded_slice(),
 				AggregateMessageOrigin::Parachain(ticket.origin),
 			);
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
-			Ok(())
+			Ok(ticket.id)
 		}
 	}
 

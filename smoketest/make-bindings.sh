@@ -21,4 +21,5 @@ subxt codegen --url ws://localhost:11144 | rustfmt --edition 2021 --emit=stdout 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \
     --bindings-path src/contracts \
+    --select 
     --root ../core/packages/contracts

@@ -10,8 +10,7 @@ use frame_support::{
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
 
-use hex_literal::hex;
-use snowbridge_core::{OutboundMessage, ParaId, SubmitError};
+use snowbridge_core::{OutboundMessage, OutboundMessageHash, ParaId, SubmitError};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -174,23 +173,14 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureOriginFromTable {
 
 pub struct MockOutboundQueue;
 impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
-	type Ticket = H256;
+	type Ticket = OutboundMessage;
 
 	fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError> {
-		if message.id
-			== H256(hex!("387ee72178e7f3df432c2c15a72c7739cf20ee389c9a9ff783e060f095fbd9c4"))
-		{
-			return Err(SubmitError::MessageTooLarge);
-		}
-		Ok(message.id)
+		Ok(message.clone())
 	}
 
-	fn submit(ticket: Self::Ticket) -> Result<(), SubmitError> {
-		if ticket == H256(hex!("9fda9e8f79b36136c0b48959bdcb92d2d02e705dbc641db0e4901aba5a7b5faa"))
-		{
-			return Err(SubmitError::MessageTooLarge);
-		}
-		Ok(())
+	fn submit(_ticket: Self::Ticket) -> Result<OutboundMessageHash, SubmitError> {
+		Ok(OutboundMessageHash::zero())
 	}
 }
 

@@ -12,7 +12,7 @@ use ethers::{
 
 use codec::Encode;
 
-use xcm::v3::{MultiLocation, Junction, Junctions::X1};
+use xcm::v3::{Junction, Junctions::X1, MultiLocation};
 
 // The deployment addresses of the following contracts are stable, unless we modify the order in
 // contracts are deployed in DeployScript.sol.
@@ -26,8 +26,8 @@ const WETH_CONTRACT: &str = "0x440eDFFA1352B13227e8eE646f3Ea37456deC701";
 const FERDIE: [u8; 32] = hex!("1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c");
 
 // TODO: test sendNativeToken
-// #[tokio::test]
-async fn test_lock_tokens() {
+#[tokio::test]
+async fn send_tokens() {
     let provider = Provider::<Http>::try_from(ETHEREUM_API)
         .unwrap()
         .interval(Duration::from_millis(10u64));
@@ -73,11 +73,12 @@ async fn test_lock_tokens() {
 
     let recipient = MultiLocation {
         parents: 0,
-        interior: X1(Junction::AccountId32{
+        interior: X1(Junction::AccountId32 {
             network: None,
             id: FERDIE,
-        })
-    }.encode();
+        }),
+    }
+    .encode();
 
     // Lock tokens into vault
     let value1: u128 = U256::from(value).low_u128();

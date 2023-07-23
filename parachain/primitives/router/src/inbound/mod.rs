@@ -32,8 +32,8 @@ pub struct MessageV1 {
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub enum Command {
-	RegisterToken { origin: H160, token: H160, create_call_index: [u8; 2] },
-	SendToken { origin: H160, token: H160, destination: Destination, amount: u128 },
+	RegisterToken { gateway: H160, token: H160, create_call_index: [u8; 2] },
+	SendToken { gateway: H160, token: H160, destination: Destination, amount: u128 },
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
@@ -43,38 +43,32 @@ pub enum Destination {
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-pub enum ConvertError {
-	/// Message is in the wrong format
-	BadFormat,
-}
-
-impl TryInto<Xcm<()>> for MessageV1 {
-	type Error = ConvertError;
-
-	fn try_into(self) -> Result<Xcm<()>, Self::Error> {
+impl Into<Xcm<()>> for MessageV1 {
+	fn into(self) -> Xcm<()> {
 		self.message.convert(self.chain_id)
 	}
 }
 
 impl Command {
-	pub fn convert(self, chain_id: u64) -> Result<Xcm<()>, ConvertError> {
+	pub fn convert(self, chain_id: u64) -> Xcm<()> {
 		let network = NetworkId::Ethereum { chain_id };
-		let buy_execution_fee_amount = 2_000_000_000; //TODO: WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
+		// TODO: WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
+		let buy_execution_fee_amount = 2_000_000_000;
 		let buy_execution_fee = MultiAsset {
 			id: Concrete(MultiLocation::parent()),
 			fun: Fungible(buy_execution_fee_amount),
 		};
 
 		match self {
-			Command::RegisterToken { origin, token, create_call_index } => {
+			Command::RegisterToken { gateway, token, create_call_index } => {
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
 					&chain_id,
-					origin.as_fixed_bytes(),
+					gateway.as_fixed_bytes(),
 				);
 
-				let origin_location = Junction::AccountKey20 { network: None, key: origin.into() };
+				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
 
-				let asset_id = Self::convert_token_address(network, origin, token);
+				let asset_id = Self::convert_token_address(network, gateway, token);
 				let instructions: Vec<Instruction<()>> = vec![
 					UniversalOrigin(GlobalConsensus(network)),
 					DescendOrigin(X1(origin_location)),
@@ -110,13 +104,15 @@ impl Command {
 					},
 					ExpectTransactStatus(MaybeErrorCode::Success),
 				];
-				Ok(instructions.into())
+				instructions.into()
 			},
-			Command::SendToken { origin, token, destination, amount } => {
-				let asset =
-					MultiAsset::from((Self::convert_token_address(network, origin, token), amount));
+			Command::SendToken { gateway, token, destination, amount } => {
+				let asset = MultiAsset::from((
+					Self::convert_token_address(network, gateway, token),
+					amount,
+				));
 
-				let origin_location = Junction::AccountKey20 { network: None, key: origin.into() };
+				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
 
 				let mut instructions: Vec<Instruction<()>> = vec![
 					UniversalOrigin(GlobalConsensus(network)),
@@ -185,7 +181,7 @@ impl Command {
 					},
 				};
 				instructions.append(&mut fragment);
-				Ok(instructions.into())
+				instructions.into()
 			},
 		}
 	}

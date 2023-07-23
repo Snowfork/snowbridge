@@ -196,24 +196,8 @@ pub mod pallet {
 			// succeed even if the message was not successfully decoded or dispatched.
 
 			// Attempt to decode message
-			let decoded_message =
-				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(inbound::VersionedMessage::V1(decoded_message)) => decoded_message,
-					Err(_) => {
-						Self::deposit_event(Event::MessageReceived {
-							dest: envelope.dest,
-							nonce: envelope.nonce,
-							result: MessageDispatchResult::InvalidPayload,
-						});
-						return Ok(());
-					},
-				};
-
-			// Attempt to convert to XCM
-			let sibling_para =
-				MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
-			let xcm = match decoded_message.try_into() {
-				Ok(xcm) => xcm,
+			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+				Ok(inbound::VersionedMessage::V1(message_v1)) => message_v1.into(),
 				Err(_) => {
 					Self::deposit_event(Event::MessageReceived {
 						dest: envelope.dest,
@@ -223,6 +207,10 @@ pub mod pallet {
 					return Ok(());
 				},
 			};
+
+			// Attempt to convert to XCM
+			let sibling_para =
+				MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
 
 			// Attempt to send XCM to a sibling parachain
 			match send_xcm::<T::XcmSender>(sibling_para, xcm) {

@@ -54,7 +54,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		Upgrade { impl_address: H160, impl_code_hash: H256, params_hash: Option<H256> },
-		CreateAgent { agent_location: VersionedMultiLocation, agent_id: H256 },
+		CreateAgent { agent_id: H256, agent_location: MultiLocation },
 	}
 
 	#[pallet::error]
@@ -90,9 +90,6 @@ pub mod pallet {
 			let params_hash = params.as_ref().map(|p| T::MessageHasher::hash(p));
 
 			let message = OutboundMessage {
-				id: T::MessageHasher::hash(
-					&(impl_address, impl_code_hash, params.clone()).encode(),
-				),
 				origin: T::OwnParaId::get(),
 				command: Command::Upgrade { impl_address, impl_code_hash, params },
 			};
@@ -115,14 +112,13 @@ pub mod pallet {
 			let agent_description = T::DescribeAgentLocation::describe_location(&agent_location)
 				.ok_or(Error::<T>::LocationConversionFailed)?;
 
-			let agent_id = H256(blake2_256(&agent_description));
+			let agent_id: H256 = blake2_256(&agent_description).into();
 
 			if Agents::<T>::contains_key(agent_id) {
 				return Ok(());
 			}
 
 			let message = OutboundMessage {
-				id: T::MessageHasher::hash(&agent_id.encode()),
 				origin: T::OwnParaId::get(),
 				command: Command::CreateAgent { agent_id },
 			};
@@ -133,10 +129,7 @@ pub mod pallet {
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 
 			Agents::<T>::insert(agent_id, ());
-			Self::deposit_event(Event::<T>::CreateAgent {
-				agent_location: VersionedMultiLocation::V3(agent_location),
-				agent_id,
-			});
+			Self::deposit_event(Event::<T>::CreateAgent { agent_location, agent_id });
 
 			Ok(())
 		}

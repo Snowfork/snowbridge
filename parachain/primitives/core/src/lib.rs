@@ -19,7 +19,7 @@ pub mod types;
 
 pub use polkadot_parachain::primitives::Id as ParaId;
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
-pub use types::{Message, MessageId, MessageNonce, Proof};
+pub use types::{Message, MessageNonce, Proof};
 
 /// A trait for verifying messages.
 ///
@@ -36,11 +36,8 @@ pub enum SubmitError {
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
-#[derive(Clone, RuntimeDebug)]
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub struct OutboundMessage {
-	/// A unique ID to identify a message while its in the processing queue. Usually the Xcm
-	/// message hash.
-	pub id: H256,
 	/// The parachain from which the message originated
 	pub origin: ParaId,
 	/// The stable ID for a receiving gateway contract
@@ -159,6 +156,8 @@ impl AgentExecuteCommand {
 	}
 }
 
+pub type OutboundMessageHash = H256;
+
 // A trait for enqueueing messages for delivery to Ethereum
 pub trait OutboundQueue {
 	type Ticket;
@@ -167,7 +166,7 @@ pub trait OutboundQueue {
 	fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError>;
 
 	/// Submit the message for eventual delivery to Ethereum
-	fn submit(ticket: Self::Ticket) -> Result<(), SubmitError>;
+	fn submit(ticket: Self::Ticket) -> Result<OutboundMessageHash, SubmitError>;
 }
 
 impl OutboundQueue for () {
@@ -177,7 +176,7 @@ impl OutboundQueue for () {
 		Ok(0)
 	}
 
-	fn submit(ticket: Self::Ticket) -> Result<(), SubmitError> {
-		Ok(())
+	fn submit(ticket: Self::Ticket) -> Result<OutboundMessageHash, SubmitError> {
+		Ok(OutboundMessageHash::zero())
 	}
 }

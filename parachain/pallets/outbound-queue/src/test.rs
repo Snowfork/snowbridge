@@ -126,7 +126,6 @@ fn submit_messages_from_multiple_origins_and_commit() {
 
 		for para_id in 1000..1004 {
 			let message = OutboundMessage {
-				id: H256::repeat_byte(1).into(),
 				origin: para_id.into(),
 				command: Command::Upgrade {
 					impl_address: H160::zero(),
@@ -160,7 +159,6 @@ fn submit_messages_from_multiple_origins_and_commit() {
 fn submit_message_fail_too_large() {
 	new_tester().execute_with(|| {
 		let message = OutboundMessage {
-			id: H256::repeat_byte(1).into(),
 			origin: 1000.into(),
 			command: Command::Upgrade {
 				impl_address: H160::zero(),
