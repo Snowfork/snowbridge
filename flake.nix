@@ -46,6 +46,14 @@
 
                     # relayer
                     go
+                    gotools
+                    gopls
+                    go-outline
+                    gocode
+                    gopkgs
+                    gocode-gomod
+                    godef
+                    golint
                     mage
                     revive
 

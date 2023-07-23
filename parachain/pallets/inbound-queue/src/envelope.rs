@@ -7,12 +7,12 @@ use snowbridge_ethereum::{log::Log, H160};
 use sp_core::RuntimeDebug;
 use sp_std::{convert::TryFrom, prelude::*};
 
-// Used to decode a raw Ethereum log into an [`Envelope`].
+// Used to decode an OutboundMessageAccepted log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
-	signature: "Message(uint32,uint64,bytes)",
+	signature: "OutboundMessageAccepted(uint256,uint64,bytes)",
 	inputs: &[
-		Param { kind: ParamKind::Uint(32), indexed: true },
-		Param { kind: ParamKind::Uint(64), indexed: true },
+		Param { kind: ParamKind::Uint(256), indexed: true },
+		Param { kind: ParamKind::Uint(64), indexed: false },
 		Param { kind: ParamKind::Bytes, indexed: false },
 	],
 	anonymous: false,

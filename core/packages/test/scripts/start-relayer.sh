@@ -66,11 +66,11 @@ config_relayer(){
     # Configure execution relay
     jq \
         --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg k1 "$(address_for OutboundQueue)" \
+        --arg k1 "$(address_for GatewayProxy)" \
         --arg channelID $ASSET_HUB_PARAID \
     '
       .source.ethereum.endpoint = $eth_endpoint_ws
-    | .source.contracts.OutboundQueue = $k1
+    | .source.contracts.Gateway = $k1
     | .source."channel-id" = $channelID
     ' \
     config/execution-relay.json > $output_dir/execution-relay.json

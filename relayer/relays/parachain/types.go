@@ -85,7 +85,7 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 type OutboundQueueMessage struct {
 	Origin  uint32
 	Nonce   uint64
-	Command [32]byte
+	Command uint8
 	Params  []byte
 }
 

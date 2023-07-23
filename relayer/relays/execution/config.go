@@ -12,13 +12,11 @@ type Config struct {
 type SourceConfig struct {
 	Ethereum  config.EthereumConfig `mapstructure:"ethereum"`
 	Contracts ContractsConfig       `mapstructure:"contracts"`
-	LaneID    uint32                `mapstructure:"lane-id"`
+	ChannelID uint32                `mapstructure:"channel-id"`
 }
 
-type Address []byte
-
 type ContractsConfig struct {
-	OutboundQueue string `mapstructure:"OutboundQueue"`
+	Gateway string `mapstructure:"Gateway"`
 }
 
 type SinkConfig struct {
