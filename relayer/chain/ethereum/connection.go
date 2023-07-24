@@ -87,8 +87,8 @@ func (co *Connection) ChainID() *big.Int {
 	return co.chainID
 }
 
-func (co *Connection) queryFailingError(hash common.Hash) error {
-	tx, _, err := co.client.TransactionByHash(context.Background(), hash)
+func (co *Connection) queryFailingError(ctx context.Context, hash common.Hash) error {
+	tx, _, err := co.client.TransactionByHash(ctx, hash)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (co *Connection) queryFailingError(hash common.Hash) error {
 	// The logger does a test call to the actual contract to check for any revert message and log it, as well
 	// as logging the call info. This is because the golang client can sometimes suppress the log message and so
 	// it can be helpful to use the call info to do the same call in Truffle/Web3js to get better logs.
-	_, err = co.client.CallContract(context.Background(), params, nil)
+	_, err = co.client.CallContract(ctx, params, nil)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (co *Connection) WatchTransaction(ctx context.Context, tx *types.Transactio
 		return nil, err
 	}
 	if receipt.Status != 1 {
-		err = co.queryFailingError(receipt.TxHash)
+		err = co.queryFailingError(ctx, receipt.TxHash)
 		logFields := log.Fields{
 			"txHash": tx.Hash().Hex(),
 		}
