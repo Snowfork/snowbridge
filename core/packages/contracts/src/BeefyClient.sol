@@ -169,22 +169,22 @@ contract BeefyClient {
     uint256 public immutable randaoCommitExpiration;
 
     /* Errors */
+    error InvalidBitfield();
+    error InvalidBitfieldLength();
     error InvalidCommitment();
-    error StaleCommitment();
-    error InvalidValidatorProof();
-    error InvalidSignature();
-    error NotEnoughClaims();
     error InvalidMMRLeaf();
     error InvalidMMRLeafProof();
-    error InvalidBitfield();
-    error WaitPeriodNotOver();
-    error TicketExpired();
+    error InvalidMMRRootLength();
+    error InvalidSignature();
+    error InvalidTicket();
+    error InvalidValidatorProof();
+    error NoMMRRootInCommitment();
+    error NotEnoughClaims();
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
-    error InvalidBitfieldLength();
-    error InvalidTicket();
-    error InvalidMMRRootLength();
-    error NoMMRRootInCommitment();
+    error StaleCommitment();
+    error TicketExpired();
+    error WaitPeriodNotOver();
 
     constructor(
         uint256 _randaoCommitDelay,
