@@ -297,6 +297,10 @@ contract BeefyClient {
 
         Ticket storage ticket = tickets[ticketID];
 
+        if (ticket.validatorSetLen != currentValidatorSet.length) {
+            revert InvalidTicket();
+        }
+
         if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
@@ -330,6 +334,10 @@ contract BeefyClient {
         (bytes32 commitmentHash, bytes32 ticketID) = validate(commitment, bitfield);
 
         Ticket storage ticket = tickets[ticketID];
+
+        if (ticket.validatorSetLen != nextValidatorSet.length) {
+            revert InvalidTicket();
+        }
 
         if (commitment.validatorSetID != nextValidatorSet.id) {
             revert InvalidCommitment();
