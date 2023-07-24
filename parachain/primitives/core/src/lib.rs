@@ -19,7 +19,7 @@ pub mod types;
 
 pub use polkadot_parachain::primitives::Id as ParaId;
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
-pub use types::{Message, MessageId, MessageNonce, Proof};
+pub use types::{Message, MessageNonce, Proof};
 
 /// A trait for verifying messages.
 ///
@@ -145,12 +145,13 @@ pub enum AgentExecuteCommand {
 impl AgentExecuteCommand {
 	pub fn abi_encode(&self) -> Vec<u8> {
 		match self {
-			AgentExecuteCommand::TransferToken { token, recipient, amount } =>
+			AgentExecuteCommand::TransferToken { token, recipient, amount } => {
 				ethabi::encode(&vec![
 					Token::Address(*token),
 					Token::Address(*token),
 					Token::Uint(U256::from(*amount)),
-				]),
+				])
+			},
 		}
 	}
 }
