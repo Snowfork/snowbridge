@@ -1,6 +1,6 @@
 FROM golang:1.20 as builder
 WORKDIR /app
-COPY ./relayer .
+COPY . .
 WORKDIR /app
 RUN go build -v -o build/snowbridge-relay main.go
 
