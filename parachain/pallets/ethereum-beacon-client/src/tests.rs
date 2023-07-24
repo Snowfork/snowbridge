@@ -4,7 +4,7 @@ use crate::{
 	functions::compute_period, mock::minimal::*, pallet::ExecutionHeaders, sync_committee_sum,
 	verify_merkle_branch, BeaconHeader, CompactBeaconState, Error, FinalizedBeaconState,
 	LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared, LatestExecutionState,
-	config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH},
+	ExecutionHeaderBuffer, config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH},
 };
 
 use frame_support::{assert_err, assert_ok};
@@ -12,6 +12,7 @@ use hex_literal::hex;
 use primitives::{CompactExecutionHeader, ForkVersions, NextSyncCommitteeUpdate, Fork, ExecutionHeaderState};
 use rand::{thread_rng, Rng};
 use sp_core::H256;
+use snowbridge_core::{Verifier, RingBufferMap};
 
 /// Arbitrary hash used for tests and invalid hashes.
 const TEST_HASH: [u8; 32] = hex!["5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371"];
@@ -419,6 +420,27 @@ fn submit_update_with_sync_committee_in_current_period() {
 }
 
 #[test]
+fn submit_update_in_next_period() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let sync_committee_update = load_sync_committee_update_fixture();
+	let update = load_next_finalized_header_update_fixture();
+	let sync_committee_period = compute_period(sync_committee_update.finalized_header.slot);
+	let next_sync_committee_period = compute_period(update.finalized_header.slot);
+	assert_eq!(sync_committee_period + 1, next_sync_committee_period);
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(
+			RuntimeOrigin::signed(1),
+			sync_committee_update.clone()
+		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
+		let block_root: H256 = update.finalized_header.clone().hash_tree_root().unwrap();
+		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
+	});
+}
+
+#[test]
 fn submit_update_with_invalid_header_proof() {
 	let checkpoint = load_checkpoint_update_fixture();
 	let mut update = load_sync_committee_update_fixture();
@@ -776,5 +798,80 @@ fn submit_execution_header_not_finalized() {
 			EthereumBeaconClient::submit_execution_header(RuntimeOrigin::signed(1), update),
 			Error::<Test>::HeaderNotFinalized
 		);
+	});
+}
+
+/* IMPLS */
+
+#[test]
+fn verify_message() {
+	let header = get_message_verification_header();
+	let message = get_message_verification_payload();
+	let block_hash = message.proof.block_hash;
+
+	new_tester().execute_with(|| {
+		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
+		assert_ok!(EthereumBeaconClient::verify(&message));
+	});
+}
+
+#[test]
+fn verify_message_missing_header() {
+	let message = get_message_verification_payload();
+
+	new_tester().execute_with(|| {
+		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::MissingHeader);
+	});
+}
+
+#[test]
+fn verify_message_invalid_proof() {
+	let header = get_message_verification_header();
+	let mut message = get_message_verification_payload();
+	message.proof.data.1[0] = TEST_HASH.into();
+	let block_hash = message.proof.block_hash;
+
+	new_tester().execute_with(|| {
+		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
+		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::InvalidProof);
+	});
+}
+
+#[test]
+fn verify_message_invalid_receipts_root() {
+	let mut header = get_message_verification_header();
+	let message = get_message_verification_payload();
+	let block_hash = message.proof.block_hash;
+	header.receipts_root = TEST_HASH.into();
+
+	new_tester().execute_with(|| {
+		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
+		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::InvalidProof);
+	});
+}
+
+#[test]
+fn verify_message_invalid_message_data() {
+	let header = get_message_verification_header();
+	let mut message = get_message_verification_payload();
+	let block_hash = message.proof.block_hash;
+	message.data = TEST_HASH.into();
+
+	new_tester().execute_with(|| {
+		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
+		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::DecodeFailed);
+	});
+}
+
+#[test]
+fn verify_message_receipt_does_not_contain_log() {
+	let header = get_message_verification_header();
+	let mut message = get_message_verification_payload();
+	let block_hash = message.proof.block_hash;
+	message.data = hex!("f9013c94ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0f863a01b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ada000000000000000000000000000000000000000000000000000000000000003e8a00000000000000000000000000000000000000000000000000000000000000002b8c000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000068000f000000000000000101d184c103f7acc340847eee82a0b909e3358bc28d440edffa1352b13227e8ee646f3ea37456dec70100000101001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0000e8890423c78a0000000000000000000000000000000000000000000000000000000000000000").to_vec();
+
+	new_tester().execute_with(|| {
+		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
+		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::InvalidProof);
 	});
 }

@@ -7,7 +7,9 @@ use snowbridge_ethereum::{Log, Receipt};
 
 impl<T: Config> Verifier for Pallet<T> {
 	/// Verify a message by verifying the existence of the corresponding
-	/// Ethereum log in a block. Returns the log if successful.
+	/// Ethereum log in a block. Returns the log if successful. The execution header containing
+	/// the log should be in the beacon client storage, meaning it has been verified and is an
+	/// ancestor of a finalized beacon block.
 	fn verify(message: &Message) -> Result<Log, DispatchError> {
 		log::info!(
 			target: "ethereum-beacon-client",
@@ -71,7 +73,7 @@ impl<T: Config> Verifier for Pallet<T> {
 
 impl<T: Config> Pallet<T> {
 	/// Verifies that the receipt encoded in `proof.data` is included in the block given by
-	/// `proof.block_hash`. Inclusion is only recognized if the block has been finalized.
+	/// `proof.block_hash`.
 	pub fn verify_receipt_inclusion(
 		receipts_root: H256,
 		proof: &Proof,
