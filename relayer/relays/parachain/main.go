@@ -29,7 +29,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 
 	// TODO: This is used by both the source & sink. They should use separate connections
-	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, keypair)
+	ethereumConn := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
 	var tasks = make(chan *Task, 1)

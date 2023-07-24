@@ -26,7 +26,7 @@ type Relay struct {
 
 func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
-	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, ethereumKeypair)
+	ethereumConn := ethereum.NewConnection(&config.Sink.Ethereum, ethereumKeypair)
 
 	polkadotListener := NewPolkadotListener(
 		&config.Source,
