@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -171,15 +172,18 @@ func (co *Connection) WatchTransaction(ctx context.Context, tx *types.Transactio
 	}
 	if receipt.Status != 1 {
 		err = co.queryFailingError(receipt.TxHash)
-		errLogger := log.WithField("txHash", tx.Hash().Hex())
+		logFields := log.Fields{
+			"txHash": tx.Hash().Hex(),
+		}
 		if err != nil {
-			errLogger = errLogger.WithError(err)
+			logFields["error"] = err.Error()
 			jsonErr, ok := err.(JsonError)
 			if ok {
-				errLogger.WithField("data", jsonErr.ErrorData())
+				errorCode := fmt.Sprintf("%v", jsonErr.ErrorData())
+				logFields["code"] = errorCode
 			}
 		}
-		errLogger.Error("Failed to send transaction")
+		log.WithFields(logFields).Error("Failed to send transaction")
 		return receipt, err
 	}
 	return receipt, nil
