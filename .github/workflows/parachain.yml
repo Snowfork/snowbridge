@@ -41,6 +41,10 @@ jobs:
           --manifest-path parachain/Cargo.toml
           --workspace
           --features runtime-benchmarks
+      - name: cargo fmt
+        run: > 
+          cargo +nightly fmt --all --check
+          --manifest-path parachain/Cargo.toml 
 
   test:
     needs: check
