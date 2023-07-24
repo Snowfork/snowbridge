@@ -118,8 +118,7 @@ pub mod pallet {
 		BLSPreparePublicKeysFailed,
 		BLSVerificationFailed(BlsError),
 		InvalidUpdateSlot,
-		/// The given update is not in the expected period, or the given next sync committee does
-		/// not match the next sync committee in storage.
+		/// The given update is not in the expected period, or the given next sync committee does not match the next sync committee in storage.
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedSlot,
