@@ -79,7 +79,7 @@
                     #
                     export HOME=~
                     export GOPATH=$PWD/go
-                    export PATH=~$GOPATH/bin:$PATH
+                    export PATH=$GOPATH/bin:$PATH
 
                     eval "$(direnv hook bash)"
 
