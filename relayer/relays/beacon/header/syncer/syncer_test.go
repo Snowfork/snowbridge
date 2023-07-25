@@ -30,8 +30,8 @@ func TestCalculateNextCheckpointSlot(t *testing.T) {
 	}
 
 	syncer := Syncer{}
-	syncer.SlotsInEpoch = 8
-	syncer.EpochsPerSyncCommitteePeriod = 8
+	syncer.setting.SlotsInEpoch = 8
+	syncer.setting.EpochsPerSyncCommitteePeriod = 8
 
 	for _, tt := range values {
 		result := syncer.CalculateNextCheckpointSlot(tt.slot)

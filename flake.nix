@@ -56,6 +56,7 @@
                     golint
                     mage
                     revive
+                    delve
 
                     # parachain
                     clang
@@ -77,7 +78,8 @@
                     # explicitly setting HOME allows go to infer these vars
                     #
                     export HOME=~
-                    export PATH=~/go/bin/:$PATH
+                    export GOPATH=$PWD/go
+                    export PATH=~$GOPATH/bin:$PATH
 
                     eval "$(direnv hook bash)"
 

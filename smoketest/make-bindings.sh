@@ -20,6 +20,6 @@ subxt codegen --url ws://localhost:11144 | rustfmt --edition 2021 --emit=stdout 
 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \
-    --bindings-path src/contracts \
-    --select 
+    --select 'IGateway|WETH9' \
+    --bindings-path src/contracts  \
     --root ../core/packages/contracts
