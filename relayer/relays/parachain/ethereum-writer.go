@@ -7,22 +7,18 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
-
-	goEthereum "github.com/ethereum/go-ethereum"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -76,39 +72,8 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
-	chainID := wr.conn.ChainID()
-	keypair := wr.conn.Keypair()
-
-	options := bind.TransactOpts{
-		From: keypair.CommonAddress(),
-		Signer: func(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			return types.SignTx(tx, types.NewLondonSigner(chainID), keypair.PrivateKey())
-		},
-		Context: ctx,
-	}
-
-	if wr.config.Ethereum.GasFeeCap > 0 {
-		fee := big.NewInt(0)
-		fee.SetUint64(wr.config.Ethereum.GasFeeCap)
-		options.GasFeeCap = fee
-	}
-
-	if wr.config.Ethereum.GasTipCap > 0 {
-		tip := big.NewInt(0)
-		tip.SetUint64(wr.config.Ethereum.GasTipCap)
-		options.GasTipCap = tip
-	}
-
-	if wr.config.Ethereum.GasLimit > 0 {
-		options.GasLimit = wr.config.Ethereum.GasLimit
-	}
-
-	return &options
-}
-
 func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
-	options := wr.makeTxOpts(ctx)
+	options := wr.conn.MakeTxOpts(ctx)
 	for {
 		select {
 		case <-ctx.Done():
@@ -203,10 +168,11 @@ func (wr *EthereumWriter) WriteChannel(
 		}).
 		Info("Sent transaction Gateway.submit")
 
-	receipt, err := wr.waitForTransaction(ctx, tx, 1)
+	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
 
-	if receipt.Status != 1 {
-		return fmt.Errorf("transaction failed: %s", receipt.TxHash.Hex())
+	if err != nil {
+		log.WithError(err).Error("Failed to SubmitInbound")
+		return err
 	}
 
 	for _, ev := range receipt.Logs {
@@ -273,43 +239,4 @@ func convertHeader(header gsrpcTypes.Header) (*contracts.VerificationParachainHe
 		ExtrinsicsRoot: header.ExtrinsicsRoot,
 		DigestItems:    digestItems,
 	}, nil
-}
-
-func (wr *EthereumWriter) waitForTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
-	for {
-		receipt, err := wr.pollTransaction(ctx, tx, confirmations)
-		if err != nil {
-			return nil, err
-		}
-
-		if receipt != nil {
-			return receipt, nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(500 * time.Millisecond):
-		}
-	}
-}
-
-func (wr *EthereumWriter) pollTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
-	receipt, err := wr.conn.Client().TransactionReceipt(ctx, tx.Hash())
-	if err != nil {
-		if errors.Is(err, goEthereum.NotFound) {
-			return nil, nil
-		}
-	}
-
-	latestHeader, err := wr.conn.Client().HeaderByNumber(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if latestHeader.Number.Uint64()-receipt.BlockNumber.Uint64() >= confirmations {
-		return receipt, nil
-	}
-
-	return nil, nil
 }
