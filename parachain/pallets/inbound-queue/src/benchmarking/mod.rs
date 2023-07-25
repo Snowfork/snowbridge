@@ -14,7 +14,7 @@ mod benchmarks {
 	use crate::benchmarking::fixtures::make_create_message;
 	use hex_literal::hex;
 
-	const GATEWAY_ADDRESS: [u8; 20] = hex!["ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0"];
+	const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39"];
 
 	#[benchmark]
 	fn submit() -> Result<(), BenchmarkError> {
@@ -32,11 +32,19 @@ mod benchmarks {
 		let dest_para: ParaId = 1000u32.into();
 		let sovereign_account = dest_para.into_account_truncating();
 
+		let minimum_balance = T::Token::minimum_balance();
+		let minimum_balance_u32: u32 = match minimum_balance.try_into() {
+			Ok(val) => val,
+			Err(_) => panic!("unable to cast minimum balance to u32")
+		};
+		// Make sure the sovereign balance is enough
+		let sovereign_balance = minimum_balance_u32 * 5;
+
 		// So that the receiving account exists
-		let _ = T::Token::mint_into(&caller, T::Token::minimum_balance().into());
+		let _ = T::Token::mint_into(&caller, minimum_balance.into());
 		// Fund the sovereign account (parachain sovereign account) so it can transfer a reward
 		// fee to the caller account
-		let _ = T::Token::mint_into(&sovereign_account, 10000u32.into());
+		let _ = T::Token::mint_into(&sovereign_account, sovereign_balance.into());
 
 		#[block]
 		{
