@@ -13,6 +13,7 @@ mod benchmarks {
 	use super::*;
 	use crate::benchmarking::fixtures::make_create_message;
 	use hex_literal::hex;
+	use sp_runtime::print;
 
 	const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39"];
 
@@ -36,14 +37,22 @@ mod benchmarks {
 		let minimum_balance_u32: u32 = minimum_balance.try_into()
 			.unwrap_or_else(|_| panic!("unable to cast minimum balance to u32"));
 
-		// Make sure the sovereign balance is enough
-		let sovereign_balance = minimum_balance_u32 * 5;
+		// Make sure the sovereign balance is enough. This is a funny number, because
+		// in some cases the minimum balance is really high, in other cases very low.
+		// e.g. on bridgehub the minium balance is 33333, on test it is 1. So this equation makes
+		// it is at least twice the minimum balance (so as to satisfy the minimum balance
+		// requirement, and then some (in case the minimum balance is very low, even lower
+		// than the relayer reward fee).
+		let sovereign_balance = (minimum_balance_u32 * 2) + 5000;
 
 		// So that the receiving account exists
 		let _ = T::Token::mint_into(&caller, minimum_balance.into());
 		// Fund the sovereign account (parachain sovereign account) so it can transfer a reward
 		// fee to the caller account
 		let _ = T::Token::mint_into(&sovereign_account, sovereign_balance.into());
+
+		println!("Balance sovereign acc: {:?}", T::Token::total_balance(&sovereign_account));
+		println!("Balance caller: {:?}", T::Token::total_balance(&caller));
 
 		#[block]
 		{
