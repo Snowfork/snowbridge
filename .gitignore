@@ -26,3 +26,5 @@ node_modules/
 parachain/build_rs_cov.profraw
 compiler_config.json
 core/packages/contracts/beefy-state.json
+
+go/
