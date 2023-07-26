@@ -36,6 +36,7 @@ library Assets {
     }
 
     function sendToken(
+        address gateway,
         ParaID assetHubParaID,
         address assetHubAgent,
         address token,
@@ -48,9 +49,9 @@ library Assets {
 
         _transferToAgent(assetHubAgent, token, sender, amount);
         if (destinationChain == assetHubParaID) {
-            payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationAddress, amount);
+            payload = SubstrateTypes.SendToken(gateway, token, destinationAddress, amount);
         } else {
-            payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationChain, destinationAddress, amount);
+            payload = SubstrateTypes.SendToken(gateway, token, destinationChain, destinationAddress, amount);
         }
         extraFee = $.sendTokenFee;
 
@@ -58,6 +59,7 @@ library Assets {
     }
 
     function sendToken(
+        address gateway,
         ParaID assetHubParaID,
         address assetHubAgent,
         address token,
@@ -74,7 +76,7 @@ library Assets {
 
         _transferToAgent(assetHubAgent, token, sender, amount);
 
-        payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationChain, destinationAddress, amount);
+        payload = SubstrateTypes.SendToken(gateway, token, destinationChain, destinationAddress, amount);
         extraFee = $.sendTokenFee;
         emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }

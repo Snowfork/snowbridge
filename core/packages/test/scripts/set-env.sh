@@ -62,8 +62,8 @@ statemine_sovereign_account="${STATEMINE_SOVEREIGN_ACCOUNT:-0x70617261e803000000
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
 # Execution relay account (//ExecutionRelay 5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)
 execution_relayer_pub_key="${EXECUTION_RELAYER_PUB_KEY:-0x08228efd065c58a043da95c8bf177659fc587643e71e7ed1534666177730196f}"
-# Registry contract account (H8VBFC4LG91ByxMG6GwsCcAacjitnzGmGbqnvSEQFBywJEL in testnet)
-registry_contract_sovereign_account="${REGISTRY_CONTRACT_SOVEREIGN_ACCOUNT:-0xc9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5}"
+# Gateway contract account (H8VBFC4LG91ByxMG6GwsCcAacjitnzGmGbqnvSEQFBywJEL in testnet)
+gateway_contract_sovereign_account="${GATEWAY_CONTRACT_SOVEREIGN_ACCOUNT:-0xc9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5}"
 
 # Config for deploying contracts
 
