@@ -43,6 +43,7 @@ contract BeefyClientTest is Test {
     string beefyValidatorSetRaw;
     string beefyValidatorProofFile;
     string beefyValidatorProofRaw;
+    string beefyFinalBitFieldFile;
 
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
@@ -57,8 +58,10 @@ contract BeefyClientTest is Test {
         beefyValidatorSetFile = string.concat(vm.projectRoot(), "/test/data/beefy-validator-set.json");
         beefyValidatorSetRaw = vm.readFile(beefyValidatorSetFile);
 
-        beefyValidatorProofFile = string.concat(vm.projectRoot(), "/test/data/beefy-validator-proof.json");
+        beefyValidatorProofFile = string.concat(vm.projectRoot(), "/test/data/beefy-final-proof.json");
         beefyValidatorProofRaw = vm.readFile(beefyValidatorProofFile);
+
+        beefyFinalBitFieldFile = string.concat(vm.projectRoot(), "/test/data/beefy-final-bitfield.json");
 
         blockNumber = uint32(beefyCommitmentRaw.readUint(".params.commitment.blockNumber"));
         setId = uint32(beefyCommitmentRaw.readUint(".params.commitment.validatorSetID"));
@@ -119,8 +122,8 @@ contract BeefyClientTest is Test {
         beefyClient.commitPrevRandao(commitHash);
     }
 
-    // Regenerate finalBitField
-    function regenerateFinalBitField() internal {
+    // Regenerate bitField file
+    function regenerateBitField() internal {
         console.log("print initialBitField");
         printBitArray(bitfield);
         prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
@@ -132,9 +135,12 @@ contract BeefyClientTest is Test {
         string memory finalBitFieldRaw = "";
         finalBitFieldRaw = finalBitFieldRaw.serialize("finalBitFieldRaw", abi.encode(finalBitfield));
 
-        // string memory output = finalBitFieldStr.serialize("bitField", finalBitFieldRaw);
+        string memory finaliBitFieldStr = "";
+        finaliBitFieldStr = finaliBitFieldStr.serialize("finalBitField", finalBitfield);
 
-        vm.writeJson(finalBitFieldRaw, beefyValidatorProofFile);
+        string memory output = finalBitFieldRaw.serialize("final", finaliBitFieldStr);
+
+        vm.writeJson(output, beefyFinalBitFieldFile);
     }
 
     function decodeMMRLeaf() internal {
@@ -480,5 +486,9 @@ contract BeefyClientTest is Test {
         printBitArray(initialBits);
         vm.expectRevert(BeefyClient.NotEnoughClaims.selector);
         beefyClient.submitInitial(commitment, initialBits, finalValidatorProofs[0]);
+    }
+
+    function testRegenerateBitField() public {
+        regenerateBitField();
     }
 }

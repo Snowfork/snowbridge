@@ -11,3 +11,5 @@ ignored_error_codes = [
     # DeployScript.sol is never deployed
     5574
 ]
+
+no_match_test = "testRegenerateBitField"
