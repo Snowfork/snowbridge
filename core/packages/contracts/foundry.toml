@@ -11,4 +11,4 @@ ignored_error_codes = [
     5574
 ]
 
-no_match_test = "testRegenerateBitField"
+# no_match_test = "testRegenerateBitField"

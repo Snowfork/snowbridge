@@ -6,6 +6,7 @@ source_up_if_exists
 export RANDAO_COMMIT_DELAY=3
 export RANDAO_COMMIT_EXP=8
 export PREV_RANDAO=377
+export ValidatorSetSize=300
 
 ## ParachainClient
 export PARAID=1000
