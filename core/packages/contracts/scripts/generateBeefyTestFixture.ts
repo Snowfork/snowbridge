@@ -51,19 +51,11 @@ const run = async () => {
         const participants = randomSet.participants
         const absentees = randomSet.absentees
 
-        const mmrLeafRaw = encoder.encode(
-            [
-                "tuple(uint8 version,uint32 parentNumber,bytes32 parentHash,uint64 nextAuthoritySetID,uint32 nextAuthoritySetLen,bytes32 nextAuthoritySetRoot,bytes32 parachainHeadsRoot)",
-            ],
-            [mmrLeaf]
-        )
-
         const testFixture = {
             validatorSetSize,
             participants,
             absentees,
             validatorRoot: validatorSet.root,
-            mmrLeafRaw,
         }
         fs.writeFileSync(BeefyValidatorSetFile, JSON.stringify(testFixture, null, 2), "utf8")
         console.log("Beefy fixture writing to dest file: " + BeefyValidatorSetFile)

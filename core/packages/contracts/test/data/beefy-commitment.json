@@ -16,13 +16,13 @@
             "validatorSetID": 10
         },
         "leaf": {
+            "version": 0,
+            "parentNumber": 108,
+            "parentHash": "0xce81cd173b6a9bd9e30b21ca5f8764c09aa15f93634ff11f283d35bc695c7869",
             "nextAuthoritySetID": 11,
             "nextAuthoritySetLen": 4,
             "nextAuthoritySetRoot": "0xf14e4528b1a93933bc4d2bb5c8e29cbc843eb49b95b2ec8a1764cf2d77672782",
-            "parachainHeadsRoot": "0x4091cef7046c464d80126d3f667af6ad0f1c98d6dfa0d03f6978e51dd7f50717",
-            "parentHash": "0xce81cd173b6a9bd9e30b21ca5f8764c09aa15f93634ff11f283d35bc695c7869",
-            "parentNumber": 108,
-            "version": 0
+            "parachainHeadsRoot": "0x4091cef7046c464d80126d3f667af6ad0f1c98d6dfa0d03f6978e51dd7f50717"
         },
         "leafProof": [
             "0xed8137d63b7c5b2827b73d356d8002a81efe6e0bbc35b9c9e25220f0e9507904",

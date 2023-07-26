@@ -74,7 +74,7 @@ contract BeefyClientTest is Test {
         mmrRoot = beefyCommitmentRaw.readBytes32(".params.commitment.payload[0].data");
         mmrLeafProofs = beefyCommitmentRaw.readBytes32Array(".params.leafProof");
         leafProofOrder = beefyCommitmentRaw.readUint(".params.leafProofOrder");
-        mmrLeaf = abi.decode(beefyValidatorSetRaw.readBytes(".mmrLeafRaw"), (BeefyClient.MMRLeaf));
+        decodeMMRLeaf();
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
         absentBitfield = beefyClient.createInitialBitfield(absentBitSetArray, setSize);
@@ -137,9 +137,24 @@ contract BeefyClientTest is Test {
         vm.writeJson(finalBitFieldRaw, beefyValidatorProofFile);
     }
 
-    //    function testRegenerateFinalBitField() public {
-    //        regenerateFinalBitField();
-    //    }
+    function decodeMMRLeaf() internal {
+        uint8 version = uint8(beefyCommitmentRaw.readUint(".params.leaf.version"));
+        uint32 parentNumber = uint32(beefyCommitmentRaw.readUint(".params.leaf.parentNumber"));
+        bytes32 parentHash = beefyCommitmentRaw.readBytes32(".params.leaf.parentHash");
+        uint64 nextAuthoritySetID = uint64(beefyCommitmentRaw.readUint(".params.leaf.nextAuthoritySetID"));
+        uint32 nextAuthoritySetLen = uint32(beefyCommitmentRaw.readUint(".params.leaf.nextAuthoritySetLen"));
+        bytes32 nextAuthoritySetRoot = beefyCommitmentRaw.readBytes32(".params.leaf.nextAuthoritySetRoot");
+        bytes32 parachainHeadsRoot = beefyCommitmentRaw.readBytes32(".params.leaf.parachainHeadsRoot");
+        mmrLeaf = BeefyClient.MMRLeaf(
+            version,
+            parentNumber,
+            parentHash,
+            nextAuthoritySetID,
+            nextAuthoritySetLen,
+            nextAuthoritySetRoot,
+            parachainHeadsRoot
+        );
+    }
 
     function testSubmit() public returns (BeefyClient.Commitment memory) {
         BeefyClient.Commitment memory commitment = initialize(setId);
