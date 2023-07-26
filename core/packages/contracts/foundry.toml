@@ -4,7 +4,6 @@ optimizer = true
 optimizer_runs = 20_000
 via_ir = true
 test = 'test'
-ffi = true
 fs_permissions = [{ access = "read-write", path = "test/data"}, { access = "read", path = "./"}]
 
 ignored_error_codes = [
