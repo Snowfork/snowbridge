@@ -51,9 +51,6 @@ mod benchmarks {
 		// fee to the caller account
 		let _ = T::Token::mint_into(&sovereign_account, sovereign_balance.into());
 
-		println!("Balance sovereign acc: {:?}", T::Token::total_balance(&sovereign_account));
-		println!("Balance caller: {:?}", T::Token::total_balance(&caller));
-
 		#[block]
 		{
 			let _ = InboundQueue::<T>::submit(
