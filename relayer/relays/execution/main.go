@@ -116,6 +116,9 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			events, err := r.findEvents(ctx, executionHeaderState.BlockNumber, paraNonce+1)
 
 			for _, ev := range events {
+				log.WithFields(log.Fields{
+					"nonce": ev.Nonce,
+				}).Info("Event nonce is")
 				inboundMsg, err := r.makeInboundMessage(ctx, headerCache, ev)
 				if err != nil {
 					return fmt.Errorf("make outgoing message: %w", err)
@@ -184,20 +187,23 @@ func (r *Relay) findEvents(
 	blockNumber := latestFinalizedBlockNumber
 
 	for {
-		log.Info("loop")
-
-		var begin uint64
-		if blockNumber < BlocksPerQuery {
-			begin = 0
+		var end uint64
+		log.WithFields(log.Fields{"blockNumber": blockNumber, "BlocksPerQuery": BlocksPerQuery}).Info("details")
+		if blockNumber-start > BlocksPerQuery {
+			end = BlocksPerQuery
 		} else {
-			begin = blockNumber - BlocksPerQuery
+			end = blockNumber
 		}
+
+		log.WithField("end", end).Info("loop")
 
 		opts := bind.FilterOpts{
-			Start:   begin,
-			End:     &blockNumber,
+			Start:   start,
+			End:     &end,
 			Context: ctx,
 		}
+
+		log.WithField("start", start).Info("loop")
 
 		done, events, err := r.findEventsWithFilter(&opts, paraID, start)
 		if err != nil {
@@ -208,9 +214,9 @@ func (r *Relay) findEvents(
 			allEvents = append(allEvents, events...)
 		}
 
-		blockNumber = begin
+		blockNumber = end + BlocksPerQuery
 
-		if done || begin == 0 {
+		if done || blockNumber == 0 {
 			break
 		}
 	}
@@ -223,6 +229,7 @@ func (r *Relay) findEvents(
 }
 
 func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start uint64) (bool, []*contracts.GatewayOutboundMessageAccepted, error) {
+
 	iter, err := r.gatewayContract.FilterOutboundMessageAccepted(opts, []*big.Int{big.NewInt(int64(paraID))})
 	if err != nil {
 		return false, nil, err
