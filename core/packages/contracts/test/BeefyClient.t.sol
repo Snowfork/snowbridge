@@ -37,8 +37,12 @@ contract BeefyClientTest is Test {
     BeefyClient.MMRLeaf mmrLeaf;
     uint256 leafProofOrder;
     bytes2 mmrRootID = bytes2("mh");
-    string beefyTestFixtureFile;
-    string beefyTestFixtureRaw;
+    string beefyCommitmentFile;
+    string beefyCommitmentRaw;
+    string beefyValidatorSetFile;
+    string beefyValidatorSetRaw;
+    string beefyValidatorProofFile;
+    string beefyValidatorProofRaw;
 
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
@@ -47,21 +51,30 @@ contract BeefyClientTest is Test {
 
         beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration);
 
-        beefyTestFixtureFile = string.concat(vm.projectRoot(), "/beefy-test-fixture.json");
-        beefyTestFixtureRaw = vm.readFile(beefyTestFixtureFile);
-        blockNumber = uint32(beefyTestFixtureRaw.readUint(".blockNumber"));
-        setId = uint32(beefyTestFixtureRaw.readUint(".validatorSetID"));
-        setSize = uint32(beefyTestFixtureRaw.readUint(".validatorSetSize"));
-        bitSetArray = beefyTestFixtureRaw.readUintArray(".participants"); //abi.decode(beefyTestFixtureRaw.parseRaw("participants"),uint256[]);
-        absentBitSetArray = beefyTestFixtureRaw.readUintArray(".absentees"); //abi.decode(beefyTestFixtureRaw.parseRaw("absentees"),uint256[]);
-        commitHash = beefyTestFixtureRaw.readBytes32(".commitHash");
-        root = beefyTestFixtureRaw.readBytes32(".validatorRoot");
+        beefyCommitmentFile = string.concat(vm.projectRoot(), "/test/data/beefy-commitment.json");
+        beefyCommitmentRaw = vm.readFile(beefyCommitmentFile);
+
+        beefyValidatorSetFile = string.concat(vm.projectRoot(), "/test/data/beefy-validator-set.json");
+        beefyValidatorSetRaw = vm.readFile(beefyValidatorSetFile);
+
+        beefyValidatorProofFile = string.concat(vm.projectRoot(), "/test/data/beefy-validator-proof.json");
+        beefyValidatorProofRaw = vm.readFile(beefyValidatorProofFile);
+
+        blockNumber = uint32(beefyCommitmentRaw.readUint(".params.commitment.blockNumber"));
+        setId = uint32(beefyCommitmentRaw.readUint(".params.commitment.validatorSetID"));
+        commitHash = beefyCommitmentRaw.readBytes32(".commitmentHash");
+
+        setSize = uint32(beefyValidatorSetRaw.readUint(".validatorSetSize"));
+        root = beefyValidatorSetRaw.readBytes32(".validatorRoot");
+        bitSetArray = beefyValidatorSetRaw.readUintArray(".participants");
+        absentBitSetArray = beefyValidatorSetRaw.readUintArray(".absentees");
+
         console.log("current validator's merkle root is: %s", Strings.toHexString(uint256(root), 32));
 
-        mmrRoot = beefyTestFixtureRaw.readBytes32(".mmrRoot");
-        mmrLeafProofs = beefyTestFixtureRaw.readBytes32Array(".mmrLeafProofs");
-        leafProofOrder = beefyTestFixtureRaw.readUint(".leafProofOrder");
-        mmrLeaf = abi.decode(beefyTestFixtureRaw.readBytes(".mmrLeafRaw"), (BeefyClient.MMRLeaf));
+        mmrRoot = beefyCommitmentRaw.readBytes32(".params.commitment.payload[0].data");
+        mmrLeafProofs = beefyCommitmentRaw.readBytes32Array(".params.leafProof");
+        leafProofOrder = beefyCommitmentRaw.readUint(".params.leafProofOrder");
+        mmrLeaf = abi.decode(beefyValidatorSetRaw.readBytes(".mmrLeafRaw"), (BeefyClient.MMRLeaf));
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
         absentBitfield = beefyClient.createInitialBitfield(absentBitSetArray, setSize);
@@ -87,8 +100,7 @@ contract BeefyClientTest is Test {
     }
 
     function loadFinalProofs() internal {
-        delete finalValidatorProofs;
-        bytes memory proofRaw = beefyTestFixtureRaw.readBytes(".finalValidatorsProofRaw");
+        bytes memory proofRaw = beefyValidatorProofRaw.readBytes(".finalValidatorsProofRaw");
         BeefyClient.ValidatorProof[] memory proofs = abi.decode(proofRaw, (BeefyClient.ValidatorProof[]));
         for (uint256 i = 0; i < proofs.length; i++) {
             finalValidatorProofs.push(proofs[i]);
@@ -107,17 +119,27 @@ contract BeefyClientTest is Test {
         beefyClient.commitPrevRandao(commitHash);
     }
 
-    // Use the finalBitField to regenerate proofs
-    function testCreateFinalBitField() public {
-        prevRandao = uint32(vm.envOr("PREV_RANDAO_PLUS_ONE", prevRandao + 1));
+    // Regenerate finalBitField
+    function regenerateFinalBitField() internal {
+        console.log("print initialBitField");
+        printBitArray(bitfield);
+        prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
         finalBitfield =
             Bitfield.subsample(prevRandao, bitfield, beefyClient.minimumSignatureThreshold_public(setSize), setSize);
+        console.log("print finalBitField");
         printBitArray(finalBitfield);
-        prevRandao = uint32(vm.envOr("PREV_RANDAO_PLUS_TWO", prevRandao + 2));
-        finalBitfield =
-            Bitfield.subsample(prevRandao, bitfield, beefyClient.minimumSignatureThreshold_public(setSize), setSize);
-        printBitArray(finalBitfield);
+
+        string memory finalBitFieldRaw = "";
+        finalBitFieldRaw = finalBitFieldRaw.serialize("finalBitFieldRaw", abi.encode(finalBitfield));
+
+        // string memory output = finalBitFieldStr.serialize("bitField", finalBitFieldRaw);
+
+        vm.writeJson(finalBitFieldRaw, beefyValidatorProofFile);
     }
+
+    //    function testRegenerateFinalBitField() public {
+    //        regenerateFinalBitField();
+    //    }
 
     function testSubmit() public returns (BeefyClient.Commitment memory) {
         BeefyClient.Commitment memory commitment = initialize(setId);
