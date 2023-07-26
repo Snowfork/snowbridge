@@ -599,6 +599,7 @@ contract BeefyClient {
         Ticket storage ticket = tickets[ticketID];
 
         if (ticket.blockNumber == 0) {
+            // Zero value ticket: submitInitial hasn't run for this commitment
             revert InvalidTicket();
         }
 
