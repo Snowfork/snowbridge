@@ -22,6 +22,10 @@ contract BeefyClientMock is BeefyClient {
         return minimumSignatureThreshold(validatorSetLen);
     }
 
+    function setTicketValidatorSetLen(bytes32 commitmentHash, uint32 validatorSetLen) external {
+        tickets[createTicketID(msg.sender, commitmentHash)].validatorSetLen = validatorSetLen;
+    }
+
     function initialize_public(
         uint64 _initialBeefyBlock,
         ValidatorSet calldata _initialValidatorSet,
