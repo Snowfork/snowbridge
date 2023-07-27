@@ -80,11 +80,11 @@ export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
 
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
 # TODO: update placeholder value
-export BRIDGE_HUB_AGENT_ID="05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6"
+export BRIDGE_HUB_AGENT_ID="0x05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6"
 
 export ASSET_HUB_PARAID=$statemine_para_id
 # TODO: update placeholder value
-export ASSET_HUB_AGENT_ID="72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4"
+export ASSET_HUB_AGENT_ID="0x72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4"
 
 export DEFAULT_FEE=1
 export DEFAULT_REWARD=1
