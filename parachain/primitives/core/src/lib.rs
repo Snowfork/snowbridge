@@ -153,9 +153,11 @@ impl AgentExecuteCommand {
 			AgentExecuteCommand::TransferToken { token, recipient, amount } => {
 				ethabi::encode(&vec![
 					Token::Uint(self.index().into()),
-					Token::Address(*token),
-					Token::Address(*recipient),
-					Token::Uint(U256::from(*amount)),
+					Token::Bytes(ethabi::encode(&vec![
+						Token::Address(*token),
+						Token::Address(*recipient),
+						Token::Uint(U256::from(*amount)),
+					])),
 				])
 			},
 		}
