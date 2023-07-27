@@ -398,13 +398,7 @@ contract Gateway is IGateway {
         address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
 
         (bytes memory payload, uint256 extraFee) = Assets.sendToken(
-            ASSET_HUB_PARA_ID,
-            assetHubAgent,
-            token,
-            msg.sender,
-            destinationChain,
-            destinationAddress,
-            amount
+            ASSET_HUB_PARA_ID, assetHubAgent, token, msg.sender, destinationChain, destinationAddress, amount
         );
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
@@ -419,13 +413,7 @@ contract Gateway is IGateway {
         address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
 
         (bytes memory payload, uint256 extraFee) = Assets.sendToken(
-            ASSET_HUB_PARA_ID,
-            assetHubAgent,
-            token,
-            msg.sender,
-            destinationChain,
-            destinationAddress,
-            amount
+            ASSET_HUB_PARA_ID, assetHubAgent, token, msg.sender, destinationChain, destinationAddress, amount
         );
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
