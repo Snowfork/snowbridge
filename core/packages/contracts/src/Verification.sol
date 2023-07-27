@@ -8,12 +8,19 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 library Verification {
+    /// @dev Merkle proof for parachain header finalized by BEEFY
+    /// Reference: https://github.com/paritytech/polkadot/blob/09b61286da11921a3dda0a8e4015ceb9ef9cffca/runtime/rococo/src/lib.rs#L1312
     struct HeadProof {
+        /// @dev The leaf index of the parachain being proven
         uint256 pos;
+        /// @dev The number of leaves in the merkle tree
         uint256 width;
+        /// @dev The proof items
         bytes32[] proof;
     }
 
+    /// @dev An MMRLeaf without the `leaf_extra` field.
+    /// Reference: https://github.com/paritytech/substrate/blob/14e0a0b628f9154c5a2c870062c3aac7df8983ed/primitives/consensus/beefy/src/mmr.rs#L52
     struct MMRLeafPartial {
         uint8 version;
         uint32 parentNumber;
@@ -23,18 +30,10 @@ library Verification {
         bytes32 nextAuthoritySetRoot;
     }
 
-    uint256 public constant DIGEST_ITEM_PRERUNTIME = 6;
-    uint256 public constant DIGEST_ITEM_CONSENSUS = 4;
-    uint256 public constant DIGEST_ITEM_SEAL = 5;
-    uint256 public constant DIGEST_ITEM_OTHER = 0;
-    uint256 public constant DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED = 8;
-
-    struct DigestItem {
-        uint256 kind;
-        bytes4 consensusEngineID;
-        bytes data;
-    }
-
+    /// @dev Parachain header
+    /// References:
+    /// * https://paritytech.github.io/substrate/master/sp_runtime/generic/struct.Header.html
+    /// * https://github.com/paritytech/substrate/blob/14e0a0b628f9154c5a2c870062c3aac7df8983ed/primitives/runtime/src/generic/header.rs#L41
     struct ParachainHeader {
         bytes32 parentHash;
         uint256 number;
@@ -43,16 +42,60 @@ library Verification {
         DigestItem[] digestItems;
     }
 
+    /// @dev Represents a digest item within a parachain header.
+    /// References:
+    /// * https://paritytech.github.io/substrate/master/sp_runtime/generic/enum.DigestItem.html
+    /// * https://github.com/paritytech/substrate/blob/14e0a0b628f9154c5a2c870062c3aac7df8983ed/primitives/runtime/src/generic/digest.rs#L75
+    struct DigestItem {
+        uint256 kind;
+        bytes4 consensusEngineID;
+        bytes data;
+    }
+
+    /// @dev A chain of proofs
     struct Proof {
+        /// @dev The parachain header containing the message commitment as a digest item
         ParachainHeader header;
+        /// @dev The proof used to generate a merkle root of parachain heads
         HeadProof headProof;
+        /// @dev The MMR leaf to be proven
         MMRLeafPartial leafPartial;
+        /// @dev The MMR leaf prove
         bytes32[] leafProof;
+        /// @dev The order in which proof items should be combined
         uint256 leafProofOrder;
     }
 
     error InvalidParachainHeader();
 
+    /// @dev IDs of enum variants of DigestItem
+    /// Reference: https://github.com/paritytech/substrate/blob/14e0a0b628f9154c5a2c870062c3aac7df8983ed/primitives/runtime/src/generic/digest.rs#L201
+    uint256 public constant DIGEST_ITEM_OTHER = 0;
+    uint256 public constant DIGEST_ITEM_CONSENSUS = 4;
+    uint256 public constant DIGEST_ITEM_SEAL = 5;
+    uint256 public constant DIGEST_ITEM_PRERUNTIME = 6;
+    uint256 public constant DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED = 8;
+
+    /// @dev Verify the message commitment by applying several proofs
+    ///
+    /// 1. First check that the commitment is included in the digest items of the parachain header
+    /// 2. Generate the root of the parachain heads merkle tree
+    /// 3. Construct an MMR leaf containing the parachain heads root.
+    /// 4. Verify that the MMR leaf is included in the MMR maintained by the BEEFY light client.
+    ///
+    /// Background info:
+    ///
+    /// In the Polkadot relay chain, for every block:
+    /// 1. A merkle root of finalized parachain headers is constructed:
+    ///    https://github.com/paritytech/polkadot/blob/09b61286da11921a3dda0a8e4015ceb9ef9cffca/runtime/rococo/src/lib.rs#L1312.
+    /// 2. An MMR leaf is produced, containing this parachain headers root, and is then inserted into the
+    ///    MMR maintained by the `merkle-mountain-range` pallet:
+    ///    https://github.com/paritytech/substrate/tree/master/frame/merkle-mountain-range
+    ///
+    /// @param beefyClient The address of the BEEFY light client
+    /// @param encodedParaID The SCALE-encoded parachain ID of BridgeHub
+    /// @param commitment The message commitment root expected to be contained within the
+    ///                   digest of BridgeHub parachain header.
     function verifyCommitment(address beefyClient, bytes4 encodedParaID, bytes32 commitment, Proof calldata proof)
         external
         view
@@ -67,6 +110,8 @@ library Verification {
         bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(encodedParaID, proof.header);
 
         // Compute the merkle root hash of all parachain heads
+        //
+        // For reference, in the polkadot relay chain, this is where the merkle tree root is constructed:
         if (proof.headProof.pos >= proof.headProof.width) {
             return false;
         }
@@ -75,6 +120,8 @@ library Verification {
         );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
+
+        // Verify that the MMR leaf is part of the MMR maintained by the BEEFY light client
         return BeefyClient(beefyClient).verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
     }
 
@@ -93,14 +140,15 @@ library Verification {
         return false;
     }
 
-    // encodes Vec<DigestItem>
+    // SCALE-Encodes: Vec<DigestItem>
+    // Reference: https://github.com/paritytech/substrate/blob/14e0a0b628f9154c5a2c870062c3aac7df8983ed/primitives/runtime/src/generic/digest.rs#L40
     function encodeDigestItems(DigestItem[] calldata digestItems) internal pure returns (bytes memory) {
         // encode all digest items into a buffer
         bytes memory accum = hex"";
         for (uint256 i = 0; i < digestItems.length; i++) {
             accum = bytes.concat(accum, encodeDigestItem(digestItems[i]));
         }
-        // encode number of digest items, followed by encoded digest items
+        // Encode number of digest items, followed by encoded digest items
         return bytes.concat(ScaleCodec.checkedEncodeCompactU32(uint32(digestItems.length)), accum);
     }
 
@@ -199,6 +247,8 @@ library Verification {
         );
     }
 
+    // SCALE-encode: MMRLeaf
+    // Reference: https://github.com/paritytech/substrate/blob/14e0a0b628f9154c5a2c870062c3aac7df8983ed/primitives/consensus/beefy/src/mmr.rs#L52
     function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot) internal pure returns (bytes32) {
         bytes memory encodedLeaf = bytes.concat(
             ScaleCodec.encodeU8(leaf.version),
