@@ -19,7 +19,6 @@ ssz_rs_derive = { version="0.9.0", default-features = false }
 byte-slice-cast = { version = "1.2.1", default-features = false }
 rlp = { version = "0.5", default-features = false }
 hex-literal = { version = "0.4.1", optional = true }
-libfuzzer-sys = { version = "0.4", optional = true , features = [ "arbitrary-derive" ]}
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
@@ -47,8 +46,6 @@ hex-literal = { version = "0.4.1" }
 fuzzing = [
     "sp-io",
     "pallet-timestamp",
-    "libfuzzer-sys",
-    "primitives/fuzzing"
 ]
 default = ["std"]
 std = [
