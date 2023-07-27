@@ -42,7 +42,7 @@ async fn send_tokens() {
     let weth = weth9::WETH9::new(weth_addr, client.clone());
 
     // Mint WETH tokens
-    let value = parse_units("10", "ether").unwrap();
+    let value = parse_units("1", "ether").unwrap();
     let receipt = weth
         .deposit()
         .value(value)
@@ -66,7 +66,7 @@ async fn send_tokens() {
 
     // Lock tokens into vault
     let value1: u128 = U256::from(value).low_u128();
-    gateway
+    let receipt = gateway
         .send_token(weth.address(), 1000.into(), FERDIE, value1)
         .value(1000)
         .send()
