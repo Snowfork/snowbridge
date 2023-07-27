@@ -240,6 +240,10 @@ contract BeefyClient {
             revert InvalidValidatorProof();
         }
 
+        if (commitment.validatorSetID != vset.id) {
+            revert InvalidCommitment();
+        }
+
         // Check if validatorSignature is correct, ie. check if it matches
         // the signature of senderPublicKey on the commitmentHash
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
@@ -297,10 +301,6 @@ contract BeefyClient {
 
         Ticket storage ticket = tickets[ticketID];
 
-        if (ticket.validatorSetLen != currentValidatorSet.length) {
-            revert InvalidTicket();
-        }
-
         if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
@@ -334,10 +334,6 @@ contract BeefyClient {
         (bytes32 commitmentHash, bytes32 ticketID) = validate(commitment, bitfield);
 
         Ticket storage ticket = tickets[ticketID];
-
-        if (ticket.validatorSetLen != nextValidatorSet.length) {
-            revert InvalidTicket();
-        }
 
         if (commitment.validatorSetID != nextValidatorSet.id) {
             revert InvalidCommitment();

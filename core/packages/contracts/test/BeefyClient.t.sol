@@ -488,36 +488,18 @@ contract BeefyClientTest is Test {
         beefyClient.submitInitial(commitment, initialBits, finalValidatorProofs[0]);
     }
 
-    function testSubmitFailWithIncorrectValidatorSetLengthOnTicket() public {
+    function testSubmitInitialFailWithIncorrectValidatorSet() public {
         BeefyClient.Commitment memory commitment = initialize(setId);
 
-        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
-
-        beefyClient.setTicketValidatorSetLen(keccak256(beefyClient.encodeCommitment_public(commitment)), setSize / 2);
-
-        vm.roll(block.number + randaoCommitDelay);
-        vm.prevrandao(bytes32(uint256(difficulty)));
-        beefyClient.commitPrevRandao(commitHash);
-
-        vm.expectRevert(BeefyClient.InvalidTicket.selector);
-        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs);
+        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
     }
 
-    function testSubmitHandoverFailWithIncorrectValidatorSetLengthOnTicket() public {
-        BeefyClient.Commitment memory commitment = initialize(setId);
+    function testSubmitInitialHandoverFailWithIncorrectValidatorSet() public {
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
-        beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
-
-        beefyClient.setTicketValidatorSetLen(keccak256(beefyClient.encodeCommitment_public(commitment)), setSize / 2);
-
-        vm.roll(block.number + randaoCommitDelay);
-        vm.prevrandao(bytes32(uint256(difficulty)));
-        beefyClient.commitPrevRandao(commitHash);
-
-        vm.expectRevert(BeefyClient.InvalidTicket.selector);
-        beefyClient.submitFinalWithHandover(
-            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
-        );
+        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
     }
 
     function testRegenerateBitField() public {
