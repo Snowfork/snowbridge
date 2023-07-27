@@ -112,7 +112,8 @@ where
 		}
 
 		// local_sub is relative to the relaychain. No conversion needed.
-		let agent_id = match AgentHashedDescription::convert_location(&local_sub.into()) {
+		let local_sub_location: MultiLocation = local_sub.into();
+		let agent_id = match AgentHashedDescription::convert_location(&local_sub_location) {
 			Some(id) => id,
 			None => {
 				log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to not being able to create agent id. '{local_sub:?}'");
@@ -133,7 +134,7 @@ where
 			SendError::Unroutable
 		})?;
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "message validated");
+		log::info!(target: "xcm::ethereum_blob_exporter", "message validated: location = {local_sub_location:?}, agent_id = '{agent_id:?}'");
 
 		// TODO: Fees if any currently returning empty multi assets as cost
 		Ok((ticket.encode(), MultiAssets::default()))
