@@ -138,7 +138,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 					"blockHash":   ev.Raw.BlockHash.Hex(),
 					"blockNumber": ev.Raw.BlockNumber,
 					"txHash":      ev.Raw.TxHash.Hex(),
-					"dest":        ev.Dest,
+					"dest":        ev.Destination,
 				})
 
 				if ev.Nonce <= paraNonce {
