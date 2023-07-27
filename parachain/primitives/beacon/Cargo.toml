@@ -28,6 +28,7 @@ milagro_bls = { git = "https://github.com/snowfork/milagro_bls", default-feature
 
 [dev-dependencies]
 hex-literal = { version = "0.4.1" }
+
 [features]
 default = ["std"]
 std = [

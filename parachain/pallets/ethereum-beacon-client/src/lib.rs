@@ -363,7 +363,7 @@ pub mod pallet {
 		/// Verifies that provided next sync committee is valid through a series of checks
 		/// (including checking that a sync committee period isn't skipped and that the header is
 		/// signed by the current sync committee.
-		pub fn verify_update(update: &Update) -> DispatchResult {
+		fn verify_update(update: &Update) -> DispatchResult {
 			// Verify sync committee has sufficient participants.
 			let participation =
 				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
@@ -649,7 +649,7 @@ pub mod pallet {
 		/// Computes the signing root for a given beacon header and domain. The hash tree root
 		/// of the beacon header is computed, and then the combination of the beacon header hash
 		/// and the domain makes up the signing root.
-		pub fn compute_signing_root(
+		pub(super) fn compute_signing_root(
 			beacon_header: &BeaconHeader,
 			domain: H256,
 		) -> Result<H256, DispatchError> {
