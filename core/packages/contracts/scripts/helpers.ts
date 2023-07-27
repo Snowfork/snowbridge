@@ -101,9 +101,12 @@ class ValidatorSet {
 
 function createRandomSubset(population: number, size: number) {
     seedrandom("test", { global: true })
-    return _.runInContext()
-        .sampleSize(Array.from(Array(population).keys()), size)
+    const all = Array.from(Array(population).keys())
+    const participants = _.runInContext()
+        .sampleSize(all, size)
         .sort((a, b) => a - b)
+    const absentees = all.filter((o) => !participants.includes(o))
+    return { participants, absentees }
 }
 
 export { encodeLog, createRandomSubset, ValidatorSet, readSetBits }
