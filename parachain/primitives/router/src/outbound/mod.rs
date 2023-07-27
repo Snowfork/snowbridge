@@ -116,7 +116,7 @@ where
 		let agent_id = match AgentHashedDescription::convert_location(&local_sub_location) {
 			Some(id) => id,
 			None => {
-				log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to not being able to create agent id. '{local_sub:?}'");
+				log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to not being able to create agent id. '{local_sub_location:?}'");
 				return Err(SendError::Unroutable);
 			}
 		};
@@ -129,8 +129,8 @@ where
 			},
 		};
 
-		let ticket = OutboundQueue::validate(&outbound_message).map_err(|_| {
-			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed");
+		let ticket = OutboundQueue::validate(&outbound_message).map_err(|err| {
+			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
 			SendError::Unroutable
 		})?;
 

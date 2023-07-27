@@ -55,3 +55,7 @@ enum Command {
     SetOperatingMode,
     TransferNativeFromAgent
 }
+
+enum AgentExecuteCommand {
+    TransferToken
+}

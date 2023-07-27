@@ -131,10 +131,7 @@ contract Gateway is IGateway {
         bool success = true;
 
         if (message.command == Command.AgentExecute) {
-            try Gateway(this).agentExecute{gas: DISPATCH_GAS}(message.params) {}
-            catch {
-                success = false;
-            }
+            Gateway(this).agentExecute{gas: DISPATCH_GAS}(message.params);
         } else if (message.command == Command.CreateAgent) {
             try Gateway(this).createAgent{gas: DISPATCH_GAS}(message.params) {}
             catch {

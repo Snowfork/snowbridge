@@ -8,15 +8,17 @@ import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 
+enum AgentExecuteCommand {
+    TransferToken
+}
+
 contract AgentExecutor {
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
 
-    bytes32 internal constant COMMAND_TRANSFER_TOKEN = keccak256("transferToken");
-
     function execute(address, bytes memory data) external {
-        (bytes32 command, bytes memory params) = abi.decode(data, (bytes32, bytes));
-        if (command == COMMAND_TRANSFER_TOKEN) {
+        (AgentExecuteCommand command, bytes memory params) = abi.decode(data, (AgentExecuteCommand, bytes));
+        if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
             _transferToken(token, recipient, amount);
         }
