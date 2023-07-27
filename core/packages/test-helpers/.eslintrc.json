@@ -17,16 +17,5 @@
       }
     ]
   },
-  "ignorePatterns": [
-    "dist",
-    "artifacts",
-    "build",
-    "contracts",
-    "src/**/*.ts",
-    "src/**/*.js",
-    "truffle-config.js",
-    "coverage",
-    "test/**/ffi*.js",
-    "scripts/generateContractInfo.js"
-  ]
+  "ignorePatterns": []
 }

@@ -1,31 +1,19 @@
-#!/usr/bin/env ts-node
 import { ValidatorSet, createRandomSubset, readSetBits } from "./helpers"
 import { BigNumber, ethers } from "ethers"
-import fs from "fs"
-import type { BeefyClient } from "../types/BeefyClient"
+import type { BeefyClient } from "@snowbridge/contract-types"
 import { accounts } from "./wallets"
 import path from "path"
+import fs from "fs"
 const encoder = new ethers.utils.AbiCoder()
 
 const run = async () => {
+    const basedir = process.env.contract_dir || "../contracts"
     const fixtureData = JSON.parse(
-        fs.readFileSync(
-            path.join(process.env.contract_dir || ".", "test/data/beefy-commitment.json"),
-            "utf8"
-        )
+        fs.readFileSync(path.join(basedir, "test/data/beefy-commitment.json"), "utf8")
     )
-    const BeefyValidatorSetFile = path.join(
-        process.env.contract_dir || ".",
-        "test/data/beefy-validator-set.json"
-    )
-    const BeefyBitFieldFile = path.join(
-        process.env.contract_dir || ".",
-        "test/data/beefy-final-bitfield.json"
-    )
-    const BeefyValidatorProofFile = path.join(
-        process.env.contract_dir || ".",
-        "test/data/beefy-final-proof.json"
-    )
+    const BeefyValidatorSetFile = path.join(basedir, "test/data/beefy-validator-set.json")
+    const BeefyBitFieldFile = path.join(basedir, "test/data/beefy-final-bitfield.json")
+    const BeefyValidatorProofFile = path.join(basedir, "test/data/beefy-final-proof.json")
     const command = process.argv[2]
     const validatorSetID = fixtureData.params.id
     const validatorSetSize =
@@ -47,8 +35,6 @@ const run = async () => {
     }
 
     if (command == "GenerateInitialSet") {
-        const mmrLeaf: BeefyClient.MMRLeafStruct = fixtureData.params.leaf
-
         const absentSubsetSize = Math.floor((validatorSetSize - 1) / 3)
         const subsetSize = validatorSetSize - absentSubsetSize
         const randomSet = createRandomSubset(validatorSetSize, subsetSize)
@@ -61,6 +47,7 @@ const run = async () => {
             absentees,
             validatorRoot: validatorSet.root,
         }
+        console.log("Validator Set", testFixture)
         fs.writeFileSync(BeefyValidatorSetFile, JSON.stringify(testFixture, null, 2), "utf8")
         console.log("Beefy fixture writing to dest file: " + BeefyValidatorSetFile)
     } else if (command == "GenerateProofs") {

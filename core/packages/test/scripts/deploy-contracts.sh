@@ -21,8 +21,12 @@ deploy_contracts()
             -vvv \
             src/DeployScript.sol:DeployScript
     fi
-    node scripts/generateContractInfo.js "$output_dir/contracts.json"
     popd
+
+    pushd "$test_helpers_dir"
+    pnpm generateContracts "$output_dir/contracts.json"
+    popd
+
     echo "Exported contract artifacts: $output_dir/contracts.json"
 }
 

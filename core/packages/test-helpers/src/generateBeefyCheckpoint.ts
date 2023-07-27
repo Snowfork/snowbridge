@@ -10,12 +10,15 @@ import type {
 import fs from "fs"
 import path from "path"
 
-let endpoint = process.env.RELAYCHAIN_ENDPOINT || "ws://127.0.0.1:9944"
-const beefyStartBlock = process.env.BEEFY_START_BLOCK ? parseInt(process.env.BEEFY_START_BLOCK) : 1
-const BeefyStateFile = path.join(process.env.contract_dir!, "beefy-state.json")
-
 async function generateBeefyCheckpoint() {
-    let api1 = await ApiPromise.create({
+    const endpoint = process.env.RELAYCHAIN_ENDPOINT || "ws://127.0.0.1:9944"
+    const beefyStartBlock = process.env.BEEFY_START_BLOCK
+        ? parseInt(process.env.BEEFY_START_BLOCK)
+        : 1
+    const basedir = process.env.contract_dir || "../contracts"
+    const BeefyStateFile = path.join(basedir, "beefy-state.json")
+
+    const api1 = await ApiPromise.create({
         provider: new WsProvider(endpoint),
     })
 
@@ -32,12 +35,12 @@ async function generateBeefyCheckpoint() {
         })
     })
 
-    let blockHash = await api1.rpc.chain.getBlockHash(beefyStartBlock)
+    const blockHash = await api1.rpc.chain.getBlockHash(beefyStartBlock)
 
-    let api = await api1.at(blockHash)
+    const api = await api1.at(blockHash)
 
-    let validatorSetId = await api.query.beefy.validatorSetId<ValidatorSetId>()
-    let authorities = await api.query.beefy.authorities<BeefyId[]>()
+    const validatorSetId = await api.query.beefy.validatorSetId<ValidatorSetId>()
+    const authorities = await api.query.beefy.authorities<BeefyId[]>()
 
     let addrs = []
     for (let i = 0; i < authorities.length; i++) {
@@ -46,11 +49,11 @@ async function generateBeefyCheckpoint() {
         addrs.push(publicKeyHashed.slice(12))
     }
 
-    let tree = createMerkleTree(addrs)
+    const tree = createMerkleTree(addrs)
 
-    let nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<BeefyNextAuthoritySet>()
+    const nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<BeefyNextAuthoritySet>()
 
-    let beefyCheckpoint = {
+    const beefyCheckpoint = {
         startBlock: beefyStartBlock,
         current: {
             id: validatorSetId.toNumber(),
@@ -68,8 +71,6 @@ async function generateBeefyCheckpoint() {
 
     fs.writeFileSync(BeefyStateFile, JSON.stringify(beefyCheckpoint, null, 2), "utf8")
     console.log("Beefy state writing to dest file: " + BeefyStateFile)
-
-    return
 }
 
 function hasher(data: Buffer): Buffer {

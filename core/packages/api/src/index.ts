@@ -1,16 +1,8 @@
 import "@polkadot/api-augment/polkadot"
+import { IGateway, IGateway__factory } from "@snowbridge/contract-types/types"
 
 import { ethers } from "ethers"
 import { ApiPromise, WsProvider } from "@polkadot/api"
-import { H160 } from "@polkadot/types/interfaces"
-import {
-    DOTApp,
-    DOTApp__factory,
-    ETHApp,
-    ETHApp__factory,
-    ERC20App,
-    ERC20App__factory
-} from "@snowbridge/contracts"
 
 interface Config {
     ethereum: {
@@ -22,9 +14,7 @@ interface Config {
 }
 
 interface AppContracts {
-    dotApp: DOTApp
-    ethApp: ETHApp
-    erc20App: ERC20App
+    gateway: IGateway
 }
 
 class Context {
@@ -58,17 +48,13 @@ class PolkadotContext {
 const contextFactory = async (config: Config): Promise<Context> => {
     let ethApi = new ethers.providers.WebSocketProvider(config.ethereum.url)
     let polApi = await ApiPromise.create({
-        provider: new WsProvider(config.polkadot.url)
+        provider: new WsProvider(config.polkadot.url),
     })
 
-    let dotAppAddr = await polApi.query.dotApp.address<H160>()
-    let ethAppAddr = await polApi.query.ethApp.address<H160>()
-    let erc20AppAddr = await polApi.query.erc20App.address<H160>()
+    let gatewayAddr = "" //address_for GatewayProxy
 
     let appContracts: AppContracts = {
-        dotApp: DOTApp__factory.connect(dotAppAddr.toHex(), ethApi),
-        ethApp: ETHApp__factory.connect(ethAppAddr.toHex(), ethApi),
-        erc20App: ERC20App__factory.connect(erc20AppAddr.toHex(), ethApi)
+        gateway: IGateway__factory.connect(gatewayAddr, ethApi),
     }
 
     let ethCtx = new EthereumContext(ethApi, appContracts)

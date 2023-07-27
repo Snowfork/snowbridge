@@ -5,8 +5,8 @@ source scripts/set-env.sh
 
 generate_beefy_checkpoint()
 {
-    pushd "$contract_dir"
-    npx ts-node ./scripts/generateBeefyCheckpoint.ts
+    pushd "$test_helpers_dir"
+    pnpm generateBeefyCheckpoint
     popd
 }
 
