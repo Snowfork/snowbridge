@@ -315,7 +315,8 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitWithHandoverFailStaleCommitment() public {
-        BeefyClient.Commitment memory commitment = testSubmit();
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+        beefyClient.setLatestBeefyBlock(blockNumber);
 
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
 

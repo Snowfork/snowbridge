@@ -26,6 +26,10 @@ contract BeefyClientMock is BeefyClient {
         tickets[createTicketID(msg.sender, commitmentHash)].validatorSetLen = validatorSetLen;
     }
 
+    function setLatestBeefyBlock(uint32 _latestBeefyBlock) external {
+        latestBeefyBlock = _latestBeefyBlock;
+    }
+
     function initialize_public(
         uint64 _initialBeefyBlock,
         ValidatorSet calldata _initialValidatorSet,
