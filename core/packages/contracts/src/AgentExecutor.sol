@@ -8,9 +8,7 @@ import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 
-enum AgentExecuteCommand {
-    TransferToken
-}
+enum AgentExecuteCommand {TransferToken}
 
 contract AgentExecutor {
     using SafeTokenTransfer for IERC20;

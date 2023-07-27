@@ -56,6 +56,4 @@ enum Command {
     TransferNativeFromAgent
 }
 
-enum AgentExecuteCommand {
-    TransferToken
-}
+enum AgentExecuteCommand {TransferToken}
