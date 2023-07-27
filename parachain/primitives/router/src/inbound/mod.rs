@@ -4,10 +4,10 @@ use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use frame_support::{traits::ContainsPair, weights::Weight};
 use sp_core::{Get, RuntimeDebug, H160};
+use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use sp_std::prelude::*;
 use xcm::v3::{prelude::*, Junction::AccountKey20};
-use xcm_builder::{DescribeLocation, HashedDescription};
 use xcm_executor::traits::ConvertLocation;
 
 const MINIMUM_DEPOSIT: u128 = 1;
@@ -62,8 +62,6 @@ pub enum NativeTokensMessage {
 pub enum ConvertError {
 	/// Message is in the wrong format
 	BadFormat,
-	// Origin conversion failed.
-	BadOrigin,
 }
 
 impl TryInto<Xcm<()>> for MessageV1 {
@@ -103,17 +101,10 @@ impl NativeTokensMessage {
 				create_call_index,
 				set_metadata_call_index,
 			} => {
-				let owner =
-					GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(
-						&MultiLocation::new(
-							2,
-							(
-								GlobalConsensus(network),
-								AccountKey20 { network: None, key: *origin.as_fixed_bytes() },
-							),
-						),
-					)
-					.ok_or(ConvertError::BadOrigin)?;
+				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
+					&chain_id,
+					origin.as_fixed_bytes(),
+				);
 
 				let origin_location = Junction::AccountKey20 { network: None, key: origin.into() };
 
@@ -233,21 +224,6 @@ impl NativeTokensMessage {
 	}
 }
 
-pub struct DescribeEthereumAccountKey20Terminal;
-impl DescribeLocation for DescribeEthereumAccountKey20Terminal {
-	fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
-		match (l.parents, &l.interior) {
-			(_, X2(GlobalConsensus(Ethereum { chain_id }), AccountKey20 { key, .. })) => {
-				Some((b"ethereum", chain_id, key).encode())
-			},
-			_ => return None,
-		}
-	}
-}
-
-pub type GlobalConsensusEthereumAccountConvertsFor<AccountId> =
-	HashedDescription<AccountId, DescribeEthereumAccountKey20Terminal>;
-
 pub struct FromEthereumGlobalConsensus<EthereumBridgeLocation>(PhantomData<EthereumBridgeLocation>);
 impl<EthereumBridgeLocation> ContainsPair<MultiLocation, MultiLocation>
 	for FromEthereumGlobalConsensus<EthereumBridgeLocation>
@@ -256,6 +232,30 @@ where
 {
 	fn contains(asset: &MultiLocation, origin: &MultiLocation) -> bool {
 		origin == &EthereumBridgeLocation::get() && asset.starts_with(origin)
+	}
+}
+
+pub struct GlobalConsensusEthereumAccountConvertsFor<AccountId>(PhantomData<AccountId>);
+impl<AccountId> ConvertLocation<AccountId> for GlobalConsensusEthereumAccountConvertsFor<AccountId>
+where
+	AccountId: From<[u8; 32]> + Clone,
+{
+	fn convert_location(location: &MultiLocation) -> Option<AccountId> {
+		if let MultiLocation {
+			interior: X2(GlobalConsensus(Ethereum { chain_id }), AccountKey20 { key, .. }),
+			..
+		} = location
+		{
+			Some(Self::from_params(chain_id, key).into())
+		} else {
+			None
+		}
+	}
+}
+
+impl<AccountId> GlobalConsensusEthereumAccountConvertsFor<AccountId> {
+	fn from_params(chain_id: &u64, key: &[u8; 20]) -> [u8; 32] {
+		(b"ethereum", chain_id, key).using_encoded(blake2_256)
 	}
 }
 
