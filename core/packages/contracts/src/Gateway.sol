@@ -76,9 +76,9 @@ contract Gateway is IGateway {
         address agentExecutor,
         uint256 dispatchGas,
         ParaID bridgeHubParaID,
-        bytes32 bridgeHubHubAgentID,
+        bytes32 bridgeHubAgentID,
         ParaID assetHubParaID,
-        bytes32 assetHubHubAgentID,
+        bytes32 assetHubAgentID,
         bytes2 createTokenCallID
     ) {
         BEEFY_CLIENT = beefyClient;
@@ -86,10 +86,13 @@ contract Gateway is IGateway {
         DISPATCH_GAS = dispatchGas;
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
-        BRIDGE_HUB_AGENT_ID = bridgeHubHubAgentID;
+        BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         ASSET_HUB_PARA_ID = assetHubParaID;
-        ASSET_HUB_AGENT_ID = assetHubHubAgentID;
+        ASSET_HUB_AGENT_ID = assetHubAgentID;
         CREATE_TOKEN_CALL_ID = createTokenCallID;
+
+        _createAgentInternal(abi.encode(BRIDGE_HUB_AGENT_ID));
+        _createAgentInternal(abi.encode(ASSET_HUB_AGENT_ID));
     }
 
     function submitInbound(
@@ -249,17 +252,7 @@ contract Gateway is IGateway {
 
     // Create an agent for a consensus system on Polkadot
     function createAgent(bytes calldata data) external onlySelf {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-
-        CreateAgentParams memory params = abi.decode(data, (CreateAgentParams));
-
-        if (address($.agents[params.agentID]) != address(0)) {
-            revert AgentAlreadyCreated();
-        }
-        address payable agent = payable(new Agent(params.agentID));
-
-        $.agents[params.agentID] = agent;
-        emit AgentCreated(params.agentID, agent);
+        _createAgentInternal(data);
     }
 
     struct CreateChannelParams {
@@ -420,6 +413,20 @@ contract Gateway is IGateway {
     }
 
     /* Internal functions */
+
+    function _createAgentInternal(bytes memory data) internal {
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+
+        CreateAgentParams memory params = abi.decode(data, (CreateAgentParams));
+
+        if (address($.agents[params.agentID]) != address(0)) {
+            revert AgentAlreadyCreated();
+        }
+        address payable agent = payable(new Agent(params.agentID));
+
+        $.agents[params.agentID] = agent;
+        emit AgentCreated(params.agentID, agent);
+    }
 
     function _submitOutbound(ParaID dest, bytes memory payload, uint256 extraFee) internal {
         Channel storage channel = _ensureChannel(dest);
