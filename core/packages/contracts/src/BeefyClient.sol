@@ -285,41 +285,6 @@ contract BeefyClient {
     }
 
     /**
-     * @dev Helper to create an initial validator bitfield.
-     * @param bitsToSet contains indexes of all signed validators, should be deduplicated
-     * @param length of validator set
-     */
-    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
-        external
-        pure
-        returns (uint256[] memory)
-    {
-        if (length < bitsToSet.length) {
-            revert InvalidBitfieldLength();
-        }
-        return Bitfield.createBitfield(bitsToSet, length);
-    }
-
-    /**
-     * @dev Helper to create a final bitfield, with subsampled validator selections
-     * @param commitmentHash contains the commitmentHash signed by the validators
-     * @param bitfield claiming which validators have signed the commitment
-     */
-    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        Ticket storage ticket = tickets[createTicketID(msg.sender, commitmentHash)];
-        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
-            revert InvalidBitfield();
-        }
-        return Bitfield.subsample(
-            ticket.prevRandao, bitfield, minimumSignatureThreshold(ticket.validatorSetLen), ticket.validatorSetLen
-        );
-    }
-
-    /**
      * @dev Submit a commitment for final verification
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param bitfield a bitfield claiming which validators have signed the commitment
@@ -413,6 +378,41 @@ contract BeefyClient {
         returns (bool)
     {
         return MMRProof.verifyLeafProof(latestMMRRoot, leafHash, proof, proofOrder);
+    }
+
+    /**
+     * @dev Helper to create an initial validator bitfield.
+     * @param bitsToSet contains indexes of all signed validators, should be deduplicated
+     * @param length of validator set
+     */
+    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
+        external
+        pure
+        returns (uint256[] memory)
+    {
+        if (length < bitsToSet.length) {
+            revert InvalidBitfieldLength();
+        }
+        return Bitfield.createBitfield(bitsToSet, length);
+    }
+
+    /**
+     * @dev Helper to create a final bitfield, with subsampled validator selections
+     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param bitfield claiming which validators have signed the commitment
+     */
+    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        Ticket storage ticket = tickets[createTicketID(msg.sender, commitmentHash)];
+        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
+            revert InvalidBitfield();
+        }
+        return Bitfield.subsample(
+            ticket.prevRandao, bitfield, minimumSignatureThreshold(ticket.validatorSetLen), ticket.validatorSetLen
+        );
     }
 
     /* Private Functions */
