@@ -1,0 +1,27 @@
+[package]
+name = "snowbridge-ethereum-beacon-client-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = { version = "0.4", features = [ "arbitrary-derive" ]}
+snowbridge-ethereum-beacon-client = {path = "..", features = [ "fuzzing" ]}
+snowbridge-beacon-primitives= {path = "../../../primitives/beacon"}
+hex-literal = { version = "0.4.1" }
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "fuzz_beacon"
+path = "fuzz_targets/fuzz_beacon.rs"
+test = false
+doc = false

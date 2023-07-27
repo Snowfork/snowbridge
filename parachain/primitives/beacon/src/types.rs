@@ -7,9 +7,6 @@ use sp_core::{H160, H256, U256};
 use sp_runtime::RuntimeDebug;
 use sp_std::{boxed::Box, prelude::*};
 
-#[cfg(feature = "fuzzing")]
-use libfuzzer_sys::arbitrary;
-
 use crate::config::{PUBKEY_SIZE, SIGNATURE_SIZE};
 
 #[cfg(feature = "std")]
