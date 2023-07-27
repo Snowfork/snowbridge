@@ -7,7 +7,6 @@ pub use crate::config::{
 use frame_support::storage::types::OptionQuery;
 use snowbridge_core::RingBufferMapImpl;
 
-
 // Specialize types based on configured sync committee size
 pub type SyncCommittee = primitives::SyncCommittee<SC_SIZE>;
 pub type SyncCommitteePrepared = primitives::SyncCommitteePrepared<SC_SIZE>;
