@@ -11,6 +11,10 @@ pub mod weights;
 
 #[cfg(test)]
 mod mock;
+
+#[cfg(feature = "fuzzing")]
+pub mod fuzzing;
+
 #[cfg(all(test, not(feature = "beacon-spec-mainnet")))]
 mod tests;
 
@@ -359,7 +363,7 @@ pub mod pallet {
 		/// Verifies that provided next sync committee is valid through a series of checks
 		/// (including checking that a sync committee period isn't skipped and that the header is
 		/// signed by the current sync committee.
-		fn verify_update(update: &Update) -> DispatchResult {
+		pub fn verify_update(update: &Update) -> DispatchResult {
 			// Verify sync committee has sufficient participants.
 			let participation =
 				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
@@ -645,7 +649,7 @@ pub mod pallet {
 		/// Computes the signing root for a given beacon header and domain. The hash tree root
 		/// of the beacon header is computed, and then the combination of the beacon header hash
 		/// and the domain makes up the signing root.
-		pub(super) fn compute_signing_root(
+		pub fn compute_signing_root(
 			beacon_header: &BeaconHeader,
 			domain: H256,
 		) -> Result<H256, DispatchError> {
@@ -731,7 +735,7 @@ pub mod pallet {
 		/// https://eth2book.info/capella/part3/config/constants/#domain-types) and to ensure we are
 		/// addressing the correct chain.
 		/// https://eth2book.info/capella/part3/helper/misc/#compute_domain
-		pub(super) fn compute_domain(
+		pub fn compute_domain(
 			domain_type: Vec<u8>,
 			fork_version: ForkVersion,
 			genesis_validators_root: H256,

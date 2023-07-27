@@ -19,6 +19,7 @@ ssz_rs_derive = { version="0.9.0", default-features = false }
 byte-slice-cast = { version = "1.2.1", default-features = false }
 rlp = { version = "0.5", default-features = false }
 hex-literal = { version = "0.4.1", optional = true }
+libfuzzer-sys = { version = "0.4", optional = true , features = [ "arbitrary-derive" ]}
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
@@ -32,16 +33,23 @@ snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = f
 primitives = { package = "snowbridge-beacon-primitives", path = "../../primitives/beacon", default-features = false }
 static_assertions = { version = "1.1.0" }
 bp-runtime = { git = "https://github.com/Snowfork/cumulus.git", branch = "snowbridge", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "master", optional = true }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+snowbridge-testutils = { path = "../../primitives/testutils" }
 serde_json = "1.0.96"
 hex-literal = { version = "0.4.1" }
-pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 [features]
+fuzzing = [
+    "sp-io",
+    "pallet-timestamp",
+    "libfuzzer-sys",
+    "primitives/fuzzing"
+]
 default = ["std"]
 std = [
     "serde",

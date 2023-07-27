@@ -6,6 +6,9 @@ use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_std::prelude::*;
 
+#[cfg(feature = "fuzzing")]
+use libfuzzer_sys::arbitrary;
+
 use crate::types::{BeaconHeader, ExecutionPayloadHeader, SyncAggregate, SyncCommittee};
 
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
