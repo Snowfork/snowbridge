@@ -68,7 +68,10 @@ fn create_agent_with_local_account32_yields_success() {
 		let origin = RuntimeOrigin::signed(AccountId32::new([2; 32]));
 		let expected_agent_id =
 			H256(hex!("57fc5659083f0cc883125ccb2c380a1397a3b08434586b8647cc44bcb3647d29"));
-		let expected_multi_location = MultiLocation { parents: 0, interior: X2(Parachain(1013), Junction::AccountId32 { network: None, id: [0; 32] }) };
+		let expected_multi_location = MultiLocation {
+			parents: 0,
+			interior: X2(Parachain(1013), Junction::AccountId32 { network: None, id: [0; 32] }),
+		};
 
 		assert!(!Agents::<Test>::contains_key(expected_agent_id));
 		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
@@ -109,7 +112,8 @@ fn create_agent_with_local_pallet_yields_success() {
 		let origin = RuntimeOrigin::signed(AccountId32::new([4; 32]));
 		let expected_agent_id =
 			H256(hex!("ed40c69763094b73c0e3585eeb576fbcee6999123ff1f1beac1f05f5f4c9d945"));
-		let expected_multi_location = MultiLocation { parents: 0, interior: X2(Parachain(1013), PalletInstance(1)) };
+		let expected_multi_location =
+			MultiLocation { parents: 0, interior: X2(Parachain(1013), PalletInstance(1)) };
 
 		assert!(!Agents::<Test>::contains_key(expected_agent_id));
 		assert_eq!(EthereumControl::create_agent(origin), Ok(()));

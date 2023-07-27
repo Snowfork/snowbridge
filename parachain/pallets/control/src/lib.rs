@@ -113,7 +113,8 @@ pub mod pallet {
 			// Normalize all locations relative to the relay unless its the relay itself.
 			let relay_location = T::RelayLocation::get();
 			if agent_location != relay_location {
-				agent_location.reanchor(&relay_location, T::UniversalLocation::get())
+				agent_location
+					.reanchor(&relay_location, T::UniversalLocation::get())
 					.or(Err(Error::<T>::LocationConversionFailed))?;
 			}
 

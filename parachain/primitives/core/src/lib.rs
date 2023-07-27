@@ -145,7 +145,7 @@ pub enum AgentExecuteCommand {
 impl AgentExecuteCommand {
 	fn index(&self) -> u8 {
 		match self {
-			AgentExecuteCommand::TransferToken { .. } => 0
+			AgentExecuteCommand::TransferToken { .. } => 0,
 		}
 	}
 	pub fn abi_encode(&self) -> Vec<u8> {
