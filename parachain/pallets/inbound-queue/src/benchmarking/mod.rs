@@ -13,7 +13,6 @@ mod benchmarks {
 	use super::*;
 	use crate::benchmarking::fixtures::make_create_message;
 	use hex_literal::hex;
-	use sp_runtime::print;
 
 	const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39"];
 

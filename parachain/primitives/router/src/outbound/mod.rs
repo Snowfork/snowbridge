@@ -11,19 +11,23 @@ use snowbridge_core::{
 use sp_core::{H160, H256};
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
-use xcm_executor::traits::ExportXcm;
+use xcm_executor::traits::{ConvertLocation, ExportXcm};
+use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
-pub struct EthereumBlobExporter<UniversalLocation, BridgeLocation, OutboundQueue>(
-	PhantomData<(UniversalLocation, BridgeLocation, OutboundQueue)>,
+pub type AgentHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
+
+pub struct EthereumBlobExporter<UniversalLocation, BridgeLocation, OutboundQueue, AgentHashedDescription>(
+	PhantomData<(UniversalLocation, BridgeLocation, OutboundQueue, AgentHashedDescription)>,
 );
 
-impl<UniversalLocation, BridgeLocation, OutboundQueue> ExportXcm
-	for EthereumBlobExporter<UniversalLocation, BridgeLocation, OutboundQueue>
+impl<UniversalLocation, BridgeLocation, OutboundQueue, AgentHashedDescription> ExportXcm
+	for EthereumBlobExporter<UniversalLocation, BridgeLocation, OutboundQueue, AgentHashedDescription>
 where
 	UniversalLocation: Get<InteriorMultiLocation>,
 	BridgeLocation: Get<MultiLocation>,
 	OutboundQueue: OutboundQueueTrait,
 	OutboundQueue::Ticket: Encode + Decode,
+	AgentHashedDescription: ConvertLocation<H256>,
 {
 	type Ticket = Vec<u8>;
 
@@ -107,10 +111,19 @@ where
 			return Err(SendError::Unroutable);
 		}
 
+		// local_sub is relative to the relaychain. No conversion needed.
+		let agent_id = match AgentHashedDescription::convert_location(&local_sub.into()) {
+			Some(id) => id,
+			None => {
+				log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to not being able to create agent id. '{local_sub:?}'");
+				return Err(SendError::Unroutable);
+			}
+		};
+
 		let outbound_message = OutboundMessage {
 			origin: para_id.into(),
 			command: Command::AgentExecute {
-				agent_id: H256::zero(),
+				agent_id: agent_id,
 				command: agent_execute_command,
 			},
 		};
@@ -351,7 +364,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -370,7 +383,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -391,7 +404,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -410,7 +423,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -429,7 +442,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -452,6 +465,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocationWithoutGlobalConsensus,
 				MockOkOutboundQueue,
+				AgentHashedDescription,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -469,6 +483,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocationWithoutRegistry,
 				MockOkOutboundQueue,
+				AgentHashedDescription,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -483,7 +498,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -503,7 +518,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -523,7 +538,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -543,7 +558,7 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -599,7 +614,7 @@ mod tests {
 		);
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -627,7 +642,7 @@ mod tests {
 		);
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -681,7 +696,7 @@ mod tests {
 		);
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue, AgentHashedDescription>::validate(
 				network,
 				channel,
 				&mut universal_source,
@@ -695,7 +710,7 @@ mod tests {
 	#[test]
 	fn exporter_deliver_with_submit_failure_yields_unroutable() {
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockErrOutboundQueue>::deliver(
+			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockErrOutboundQueue, AgentHashedDescription>::deliver(
 				hex!("deadbeef").to_vec(),
 			);
 		assert_eq!(result, Err(SendError::Transport("other transport error")))
