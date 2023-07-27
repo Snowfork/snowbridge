@@ -43,11 +43,11 @@ serde_json = "1.0.96"
 hex-literal = { version = "0.4.1" }
 
 [features]
+default = ["std", "fuzzing"]
 fuzzing = [
     "sp-io",
     "pallet-timestamp",
 ]
-default = ["std"]
 std = [
     "serde",
     "codec/std",
