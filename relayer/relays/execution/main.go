@@ -97,6 +97,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				return err
 			}
 
+			if executionHeaderState.BlockNumber == 0 {
+				log.WithFields(log.Fields{
+					"channelId": r.config.Source.ChannelID,
+				}).Info("Beacon execution state syncing not started, waiting...")
+				continue
+			}
+
 			ethNonce, err := r.fetchEthereumNonce(ctx, executionHeaderState.BlockNumber)
 			if err != nil {
 				return err
@@ -114,17 +121,42 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			}
 
 			events, err := r.findEvents(ctx, executionHeaderState.BlockNumber, paraNonce+1)
+			if err != nil {
+				return fmt.Errorf("find events: %w", err)
+			}
 
 			for _, ev := range events {
 				inboundMsg, err := r.makeInboundMessage(ctx, headerCache, ev)
 				if err != nil {
 					return fmt.Errorf("make outgoing message: %w", err)
 				}
+				logger := log.WithFields(log.Fields{
+					"paraNonce":   paraNonce,
+					"ethNonce":    ethNonce,
+					"msgNonce":    ev.Nonce,
+					"address":     ev.Raw.Address.Hex(),
+					"blockHash":   ev.Raw.BlockHash.Hex(),
+					"blockNumber": ev.Raw.BlockNumber,
+					"txHash":      ev.Raw.TxHash.Hex(),
+					"dest":        ev.Dest,
+				})
+
+				if ev.Nonce <= paraNonce {
+					logger.Warn("inbound message outdated, just skipped")
+					continue
+				}
 
 				err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
 				if err != nil {
+					logger.Error("inbound message fail to sent")
 					return fmt.Errorf("write to parachain: %w", err)
 				}
+				paraNonce, _ = r.fetchLatestParachainNonce()
+				if paraNonce != ev.Nonce {
+					logger.Error("inbound message sent but fail to execute")
+					return fmt.Errorf("inbound message fail to execute")
+				}
+				logger.Info("inbound message executed successfully")
 			}
 		}
 	}
@@ -240,9 +272,10 @@ func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start
 			}
 			break
 		}
-
-		events = append(events, iter.Event)
-		if iter.Event.Nonce == start {
+		if iter.Event.Nonce >= start {
+			events = append(events, iter.Event)
+		}
+		if iter.Event.Nonce == start && opts.Start != 0 {
 			done = true
 			iter.Close()
 			break
