@@ -5,8 +5,8 @@ use core::slice::Iter;
 use codec::{Decode, Encode};
 
 use frame_support::{ensure, log, traits::Get};
-use snowbridge_core::{
-	AgentExecuteCommand, Command, OutboundMessage, OutboundQueue as OutboundQueueTrait,
+use snowbridge_core::outbound::{
+	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
 };
 use sp_core::{H160, H256};
 use sp_std::{marker::PhantomData, prelude::*};
@@ -124,7 +124,7 @@ where
 			},
 		};
 
-		let outbound_message = OutboundMessage {
+		let outbound_message = Message {
 			origin: para_id.into(),
 			command: Command::AgentExecute { agent_id, command: agent_execute_command },
 		};
@@ -316,7 +316,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::{OutboundMessageHash, SubmitError};
+	use snowbridge_core::outbound::{MessageHash, SubmitError};
 
 	use super::*;
 
@@ -335,23 +335,23 @@ mod tests {
 	impl OutboundQueueTrait for MockOkOutboundQueue {
 		type Ticket = ();
 
-		fn validate(_: &OutboundMessage) -> Result<(), SubmitError> {
+		fn validate(_: &Message) -> Result<(), SubmitError> {
 			Ok(())
 		}
 
-		fn submit(_: Self::Ticket) -> Result<OutboundMessageHash, SubmitError> {
-			Ok(OutboundMessageHash::zero())
+		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			Ok(MessageHash::zero())
 		}
 	}
 	struct MockErrOutboundQueue;
 	impl OutboundQueueTrait for MockErrOutboundQueue {
 		type Ticket = ();
 
-		fn validate(_: &OutboundMessage) -> Result<(), SubmitError> {
+		fn validate(_: &Message) -> Result<(), SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 
-		fn submit(_: Self::Ticket) -> Result<OutboundMessageHash, SubmitError> {
+		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 	}

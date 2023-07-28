@@ -12,6 +12,7 @@ import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {ParaID, Config} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
 
+/// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library Assets {
     using Address for address;
     using SafeTokenTransferFrom for IERC20;
@@ -23,11 +24,11 @@ library Assets {
     event TokenRegistrationSent(address token);
 
     /* Errors */
-
     error InvalidToken();
     error InvalidAmount();
     error InvalidDestination();
 
+    // This library requires state which must be initialized in the gateway's storage.
     function initialize(uint256 registerTokenFee, uint256 sendTokenFee) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
@@ -79,6 +80,7 @@ library Assets {
         emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
+    /// @dev transfer tokens from the sender to the specified
     function _transferToAgent(address assetHubAgent, address token, address sender, uint128 amount) internal {
         if (!token.isContract()) {
             revert InvalidToken();

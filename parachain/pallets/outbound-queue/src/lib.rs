@@ -1,7 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-#![cfg_attr(not(feature = "std"), no_std)]
 
+//! Pallet for committing outbound messages for delivery to Ethereum
+//! 
+//! The message submission pipeline works like this:
+//! 1. The message is first validated via [`OutboundQueue::validate`]
+//! 2. The message is then enqueued for processing via [`OutboundQueue::submit`]
+//! 3. The message queue is maintained by the external [`MessageQueue`] pallet
+//! 4. [`MessageQueue`] delivers messages back to this pallet via `ProcessMessage::process_message`
+//! 5. The message is processed in `do_process_message`
+//!    a. Assigned a nonce
+//!    b. ABI-encoded, hashed, and stored in the `Leaves` vector
+//! 6. At the end of the block, a merkle root is constructed from all the leaves in `Leaves`.
+//! 7. This merkle root is inserted into the parachain header as a digest item
+//! 
+//! On the Ethereum side, the message root is ultimately the thing being
+//! by the Polkadot light client. 
+//!
+#![cfg_attr(not(feature = "std"), no_std)]
 pub mod api;
 pub mod weights;
 
@@ -26,8 +42,8 @@ use sp_core::{RuntimeDebug, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use snowbridge_core::{
-	Command, OutboundMessage, OutboundMessageHash, OutboundQueue as OutboundQueueTrait, SubmitError,
+use snowbridge_core::outbound::{
+	Command, Message, MessageHash, OutboundQueue as OutboundQueueTrait, SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
@@ -54,7 +70,7 @@ pub struct EnqueuedMessage {
 
 /// Message which has been assigned a nonce and will be committed at the end of a block
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-pub struct Message {
+pub struct PreparedMessage {
 	/// ID of source parachain
 	origin: ParaId,
 	/// Unique nonce to prevent replaying messages
@@ -65,7 +81,7 @@ pub struct Message {
 }
 
 /// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
-impl Into<Token> for Message {
+impl Into<Token> for PreparedMessage {
 	fn into(self) -> Token {
 		Token::Tuple(vec![
 			Token::Uint(u32::from(self.origin).into()),
@@ -155,12 +171,12 @@ pub mod pallet {
 	/// Messages to be committed in the current block. This storage value is killed in
 	/// `on_initialize`, so should never go into block PoV.
 	///
-	/// Is never read in the runtime, only by offchain code.
+	/// Is never read in the runtime, only by offchain message relayers.
 	///
 	/// Inspired by the `frame_system::Pallet::Events` storage value
 	#[pallet::storage]
 	#[pallet::unbounded]
-	pub(super) type Messages<T: Config> = StorageValue<_, Vec<Message>, ValueQuery>;
+	pub(super) type Messages<T: Config> = StorageValue<_, Vec<PreparedMessage>, ValueQuery>;
 
 	/// Hashes of the ABI-encoded messages in the [`Messages`] storage value. Used to generate a
 	/// merkle root during `on_finalize`. This storage value is killed in
@@ -262,9 +278,16 @@ pub mod pallet {
 
 			let (command, params) = enqueued_message.command.abi_encode();
 
-			let message: Message =
-				Message { origin: enqueued_message.origin, nonce: next_nonce, command, params };
+			// Construct a prepared message, which when ABI-encoded is what the 
+			// other side of the bridge will verify.
+			let message: PreparedMessage = PreparedMessage {
+				origin: enqueued_message.origin,
+				nonce: next_nonce,
+				command,
+				params,
+			};
 
+			// ABI-encode and hash the prepared message
 			let message_abi_encoded = ethabi::encode(&vec![message.clone().into()]);
 			let message_abi_encoded_hash = <T as Config>::Hashing::hash(&message_abi_encoded);
 
@@ -292,13 +315,12 @@ pub mod pallet {
 	impl<T: Config> OutboundQueueTrait for Pallet<T> {
 		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
 
-		fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError> {
+		fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
 			// The inner payload should not be too large
 			let (_, payload) = message.command.abi_encode();
 
 			// Create a message id for tracking progress in submission pipeline
-			let message_id: OutboundMessageHash =
-				sp_io::hashing::blake2_256(&(message.encode())).into();
+			let message_id: MessageHash = sp_io::hashing::blake2_256(&(message.encode())).into();
 
 			ensure!(
 				payload.len() < T::MaxMessagePayloadSize::get() as usize,
@@ -317,7 +339,7 @@ pub mod pallet {
 			Ok(ticket)
 		}
 
-		fn submit(ticket: Self::Ticket) -> Result<OutboundMessageHash, SubmitError> {
+		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 			T::MessageQueue::enqueue_message(
 				ticket.message.as_bounded_slice(),

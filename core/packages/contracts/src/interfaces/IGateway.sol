@@ -65,14 +65,15 @@ interface IGateway {
      */
 
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset
-    /// in the `ForeignAssets` pallet.
+    ///      in the `ForeignAssets` pallet.
     function registerToken(address token) external payable;
 
-    /// @dev Send ERC20 tokens to Polkadot.
+    /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
     function sendToken(address token, ParaID destinationChain, bytes32 destinationAddress, uint128 amount)
         external
         payable;
 
+    /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
     function sendToken(address token, ParaID destinationChain, address destinationAddress, uint128 amount)
         external
         payable;

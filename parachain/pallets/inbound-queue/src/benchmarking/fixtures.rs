@@ -1,7 +1,7 @@
 use super::*;
 use hex_literal::hex;
 use snowbridge_beacon_primitives::CompactExecutionHeader;
-use snowbridge_core::{Message, Proof};
+use snowbridge_core::inbound::{Message, Proof};
 
 pub struct InboundQueueTest {
 	pub execution_header: CompactExecutionHeader,

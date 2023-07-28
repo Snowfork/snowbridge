@@ -37,7 +37,6 @@ bp-runtime = { git = "https://github.com/Snowfork/cumulus.git", branch = "snowbr
 rand = "0.8.5"
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
-snowbridge-testutils = { path = "../../primitives/testutils" }
 serde_json = "1.0.96"
 hex-literal = { version = "0.4.1" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "master" }

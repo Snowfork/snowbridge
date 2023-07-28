@@ -10,14 +10,17 @@ contract GatewayProxy {
     error NativeCurrencyNotAccepted();
 
     constructor(address implementation, bytes memory params) {
+        // Store the address of the implementation contract
         ERC1967.store(implementation);
+        // Initialize storage by calling the implementation's `initialize(bytes)` function
+        // using `delegatecall`.
         (bool success,) = implementation.delegatecall(abi.encodeCall(GatewayProxy.initialize, params));
         if (!success) {
             revert InitializationFailed();
         }
     }
 
-    // Prevent fallback() from calling `initialize(bytes)` on implementation contract
+    // Prevent fallback() from calling `initialize(bytes)` on the implementation contract
     function initialize(bytes calldata) external pure {
         revert Unauthorized();
     }
@@ -34,6 +37,8 @@ contract GatewayProxy {
         }
     }
 
+    // Prevent users from unwittingly sending ether to the gateway, as these funds
+    // would otherwise be lost forever.
     receive() external payable {
         revert NativeCurrencyNotAccepted();
     }

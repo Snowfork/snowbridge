@@ -10,7 +10,7 @@ use frame_support::{
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::v2::whitelisted_caller;
 
-use snowbridge_core::{OutboundMessage, OutboundMessageHash, ParaId, SubmitError};
+use snowbridge_core::outbound::{Message, MessageHash, ParaId, SubmitError};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -174,14 +174,14 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureOriginFromTable {
 
 pub struct MockOutboundQueue;
 impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
-	type Ticket = OutboundMessage;
+	type Ticket = Message;
 
-	fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError> {
+	fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
 		Ok(message.clone())
 	}
 
-	fn submit(_ticket: Self::Ticket) -> Result<OutboundMessageHash, SubmitError> {
-		Ok(OutboundMessageHash::zero())
+	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+		Ok(MessageHash::zero())
 	}
 }
 

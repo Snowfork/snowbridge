@@ -4,7 +4,7 @@ use super::*;
 
 use codec::Encode;
 use frame_benchmarking::v2::*;
-use snowbridge_core::Command;
+use snowbridge_core::outbound::Command;
 
 #[allow(unused_imports)]
 use crate::Pallet as OutboundQueue;
