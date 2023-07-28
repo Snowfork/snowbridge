@@ -11,17 +11,18 @@
   "scripts": {
     "build": "pnpm build:sol",
     "build:sol": "forge build",
+    "postinstall": "pnpm build",
     "lint": "pnpm lint:solhint",
     "lint:solhint": "solhint 'src/**/*.sol'",
     "format": "forge fmt",
     "size": "forge build --sizes",
+    "doc": "forge doc",
     "test": "pnpm test:foundry",
     "test:foundry": "forge test -vvv",
     "deploy": "pnpm deploy:foundry",
     "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ scripts/Deploy.sol:DeployScript --broadcast -vvvv"
   },
   "devDependencies": {
-    "solhint": "^3.4.1",
-    "solidity-docgen": "^0.5.16"
+    "solhint": "^3.4.1"
   }
 }

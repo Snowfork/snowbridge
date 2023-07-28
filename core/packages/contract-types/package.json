@@ -8,11 +8,12 @@
     "url": "https://github.com/Snowfork/snowbridge.git",
     "directory": "core/packages/contract-types"
   },
-  "main": "types/index.ts",
+  "main": "dist/index.js",
   "types": "types/index.ts",
   "scripts": {
-    "build": "rm -rf types && npx typechain --target ethers-v5 '../contracts/out/**/!(*.t|test).sol/!(*.abi).json' --out-dir types",
-    "postinstall": "pnpm build"
+    "build": "tsc",
+    "typechain": "rm -rf types && npx typechain --target ethers-v5 '../contracts/out/**/!(*.t|test).sol/!(*.abi).json' --out-dir types",
+    "postinstall": "pnpm typechain"
   },
   "devDependencies": {
     "@types/node": "^18.13.0",
