@@ -3,9 +3,9 @@
 pragma solidity 0.8.20;
 
 import {ERC1967} from "./utils/ERC1967.sol";
+import {IInitializable} from "./interfaces/IInitializable.sol";
 
-contract GatewayProxy {
-    error InitializationFailed();
+contract GatewayProxy is IInitializable {
     error Unauthorized();
     error NativeCurrencyNotAccepted();
 
@@ -14,7 +14,7 @@ contract GatewayProxy {
         ERC1967.store(implementation);
         // Initialize storage by calling the implementation's `initialize(bytes)` function
         // using `delegatecall`.
-        (bool success,) = implementation.delegatecall(abi.encodeCall(GatewayProxy.initialize, params));
+        (bool success,) = implementation.delegatecall(abi.encodeCall(IInitializable.initialize, params));
         if (!success) {
             revert InitializationFailed();
         }

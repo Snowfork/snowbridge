@@ -53,7 +53,7 @@ interface IGateway {
      * Messaging
      */
 
-    // Submit an inbound message for dispatch
+    // Submit an inbound message from Polkadot
     function submitInbound(
         InboundMessage calldata message,
         bytes32[] calldata leafProof,

@@ -8,6 +8,7 @@ import {console} from "forge-std/console.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 
 import {IGateway} from "../src/interfaces/IGateway.sol";
+import {IInitializable} from "../src/interfaces/IInitializable.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {GatewayMock, GatewayV2} from "./mocks/GatewayMock.sol";
 
@@ -415,7 +416,7 @@ contract GatewayTest is Test {
             initParams: abi.encode(666)
         });
 
-        vm.expectRevert(Gateway.SetupFailed.selector);
+        vm.expectRevert(IInitializable.InitializationFailed.selector);
         GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
     }
 

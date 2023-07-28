@@ -10,6 +10,7 @@ import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
+import {IInitializable} from "./interfaces/IInitializable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
@@ -19,7 +20,7 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
-contract Gateway is IGateway {
+contract Gateway is IGateway, IInitializable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
@@ -59,7 +60,6 @@ contract Gateway is IGateway {
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidConfig();
-    error SetupFailed();
     error NotProxy();
     error InvalidCodeHash();
 
@@ -368,7 +368,7 @@ contract Gateway is IGateway {
             (bool success,) =
                 params.impl.delegatecall(abi.encodeWithSelector(this.initialize.selector, params.initParams));
             if (!success) {
-                revert SetupFailed();
+                revert InitializationFailed();
             }
         }
 
