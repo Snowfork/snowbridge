@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Snowfork/snowbridge.git",
-    "directory": "core/packages/api"
+    "directory": "web/packages/api"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

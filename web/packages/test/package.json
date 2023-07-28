@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Snowfork/snowbridge.git",
-    "directory": "core/packages/test"
+    "directory": "web/packages/test"
   },
   "scripts": {
     "test:integration": "mocha --timeout 600000 --exit",

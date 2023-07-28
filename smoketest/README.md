@@ -10,7 +10,7 @@ From Ethereum:
 
 # Setup
 
-1. First make sure the E2E Stack is running. See [core/packages/test/README.md](../core/packages/test/README.md).
+1. First make sure the E2E Stack is running. See [web/packages/test/README.md](../web/packages/test/README.md).
 
 2. Generate Rust bindings for both sides of the bridge
 
