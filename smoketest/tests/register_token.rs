@@ -11,7 +11,7 @@ use ethers::{
     utils::rlp::Encodable,
 };
 
-// The deployment addresses of the following contracts are stable, unless we modify the order in
+// The deployment addresses of the following contracts are stable in our E2E env, unless we modify the order in
 // contracts are deployed in DeployScript.sol.
 const ETHEREUM_API: &str = "http://localhost:8545";
 const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";

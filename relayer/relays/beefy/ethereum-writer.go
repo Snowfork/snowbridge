@@ -100,7 +100,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	}
 
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
-	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/BeefyClient.sol#L446-L447
+	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
 	tx, err = wr.contract.CommitPrevRandao(
 		wr.conn.MakeTxOpts(ctx),
 		*commitmentHash,
@@ -225,7 +225,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 
 		// In Handover mode except for the validator proof to verify commitment signature
 		// will also add mmr leaf proof which contains nextAuthoritySet to verify against mmr root
-		// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/BeefyClient.sol#L342-L350
+		// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L342-L350
 		tx, err := wr.contract.SubmitFinalWithHandover(
 			wr.conn.MakeTxOpts(ctx),
 			params.Commitment,

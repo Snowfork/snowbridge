@@ -15,7 +15,7 @@ async function generateBeefyCheckpoint() {
     const beefyStartBlock = process.env.BEEFY_START_BLOCK
         ? parseInt(process.env.BEEFY_START_BLOCK)
         : 1
-    const basedir = process.env.contract_dir || "../contracts"
+    const basedir = process.env.contract_dir || "../../../contracts"
     const BeefyStateFile = path.join(basedir, "beefy-state.json")
 
     const api1 = await ApiPromise.create({

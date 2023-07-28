@@ -14,7 +14,7 @@ Off-chain relayer services for relaying messages between Polkadot and Ethereum. 
 
 ### Contracts
 
-Ethereum contracts and unit tests. See [core/packages/contracts/README.md](core/packages/contracts/README.md)
+Ethereum contracts and unit tests. See [contracts/README.md](contracts/README.md)
 
 ### Integration Tests
 

@@ -28,7 +28,7 @@ To enable revive for linting in VS-code, add the following to your config:
 
 The relayer relies on dynamically generated bindings for our Ethereum contracts. They need to be updated whenever the contracts change.
 
-Compile the contracts in the [contracts](../core/packages/contracts) directory:
+Compile the contracts in the [contracts](../contracts) directory:
 
 ```bash
 pnpm build

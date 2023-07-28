@@ -126,7 +126,7 @@ This guide uses the root of the `$HOME/` folder for all source code.
     direnv allow
     ```
 
-    In the `core/packages/contracts` subfolder of the `snowbridge` repo copy the envrc-example. Here we do not need to edit the `.envrc` as defaults are set.
+    In the `contracts` subfolder of the `snowbridge` repo copy the envrc-example. Here we do not need to edit the `.envrc` as defaults are set.
 
     ```bash
     cp .envrc-example .envrc

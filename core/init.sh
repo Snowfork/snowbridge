@@ -10,5 +10,4 @@ echo "Installing sszgen"
 go install github.com/ferranbt/fastssz/sszgen@latest
 
 echo "Initialize foundry libraries"
-(cd packages/contracts && forge install)
-
+(cd ../contracts && forge install)

@@ -1,6 +1,6 @@
 [files]
 extend-exclude = [
-    "core/packages/contracts/lib",
+    "contracts/lib",
     "**/*.yaml",
     "**/*.json",
     "**/fixtures/*.js",

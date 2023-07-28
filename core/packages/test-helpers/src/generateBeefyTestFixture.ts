@@ -7,7 +7,7 @@ import fs from "fs"
 const encoder = new ethers.utils.AbiCoder()
 
 const run = async () => {
-    const basedir = process.env.contract_dir || "../contracts"
+    const basedir = process.env.contract_dir || "../../../contracts"
     const fixtureData = JSON.parse(
         fs.readFileSync(path.join(basedir, "test/data/beefy-commitment.json"), "utf8")
     )

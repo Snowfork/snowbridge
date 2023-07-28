@@ -35,17 +35,17 @@ jobs:
         working-directory: core
         run: pnpm install --frozen-lockfile
       - name: Test
-        working-directory: core/packages/contracts
+        working-directory: contracts
         run: forge test
       - name: Coverage
-        working-directory: core/packages/contracts
+        working-directory: contracts
         run: forge coverage --report=lcov --via-ir
       - name: Lint
-        working-directory: core/packages/contracts
+        working-directory: contracts
         run: pnpm lint
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v3
         with:
-          working-directory: core/packages/contracts
+          working-directory: contracts
           files: lcov.info
           flags: solidity
