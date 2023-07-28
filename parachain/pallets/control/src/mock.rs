@@ -8,7 +8,7 @@ use frame_support::{
 };
 
 #[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::whitelisted_caller;
+use frame_benchmarking::v2::whitelisted_caller;
 
 use snowbridge_core::{OutboundMessage, OutboundMessageHash, ParaId, SubmitError};
 use sp_core::H256;
