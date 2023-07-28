@@ -384,10 +384,7 @@ contract Gateway is IGateway {
 
     // Register a token on AssetHub
     function registerToken(address token) external payable {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
-
-        (bytes memory payload, uint256 extraFee) = Assets.registerToken(assetHubAgent, token, CREATE_TOKEN_CALL_ID);
+        (bytes memory payload, uint256 extraFee) = Assets.registerToken(token, CREATE_TOKEN_CALL_ID);
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
     }

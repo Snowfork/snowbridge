@@ -63,7 +63,7 @@ fund_accounts()
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $statemine_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $beacon_relayer_pub_key
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_pub_key
-    transfer_balance $relaychain_ws_url "//Charlie" 1000 1000000000000000 $registry_contract_sovereign_account
+    transfer_balance $relaychain_ws_url "//Charlie" 1000 1000000000000000 $gateway_contract_sovereign_account
 }
 
 configure_bridgehub()

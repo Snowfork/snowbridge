@@ -62,8 +62,8 @@ statemine_sovereign_account="${STATEMINE_SOVEREIGN_ACCOUNT:-0x70617261e803000000
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
 # Execution relay account (//ExecutionRelay 5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)
 execution_relayer_pub_key="${EXECUTION_RELAYER_PUB_KEY:-0x08228efd065c58a043da95c8bf177659fc587643e71e7ed1534666177730196f}"
-# Registry contract account (5EBBfBLm4uV4JMXXcKvZrPVmP9VyER9YSCgGdMUw5wBXnqag in testnet)
-registry_contract_sovereign_account="${REGISTRY_CONTRACT_SOVEREIGN_ACCOUNT:-0x5d6987649e0dac78ddf852eb0f1b1d1bf2be9623d81cb16c17cfa145948bb6dc}"
+# Gateway contract account (H8VBFC4LG91ByxMG6GwsCcAacjitnzGmGbqnvSEQFBywJEL in testnet)
+gateway_contract_sovereign_account="${GATEWAY_CONTRACT_SOVEREIGN_ACCOUNT:-0xc9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5}"
 
 # Config for deploying contracts
 
@@ -80,11 +80,11 @@ export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
 
 export BRIDGE_HUB_PARAID=$bridgehub_para_id
 # TODO: update placeholder value
-export BRIDGE_HUB_AGENT_ID="00000000000000000000000000000000000000000000000000000000000003f5"
+export BRIDGE_HUB_AGENT_ID="0x05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6"
 
 export ASSET_HUB_PARAID=$statemine_para_id
 # TODO: update placeholder value
-export ASSET_HUB_AGENT_ID="00000000000000000000000000000000000000000000000000000000000003e8"
+export ASSET_HUB_AGENT_ID="0x72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4"
 
 export DEFAULT_FEE=1
 export DEFAULT_REWARD=1
