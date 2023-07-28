@@ -2,7 +2,6 @@
 members = [
     "primitives/core",
     "primitives/ethereum",
-    "primitives/testutils",
     "primitives/router",
     "pallets/inbound-queue",
     "pallets/outbound-queue",

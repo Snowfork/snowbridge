@@ -52,7 +52,7 @@ async fn register_token() {
     let outbound_message_accepted_log = receipt.logs.last().unwrap();
     // RLP-encode log and print it
     println!(
-        "receipt: {:?}",
+        "receipt: {:#?}",
         hex::encode(outbound_message_accepted_log.rlp_bytes())
     );
 

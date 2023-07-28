@@ -26,12 +26,13 @@ use primitives::{
 	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, ForkData, ForkVersion,
 	ForkVersions, PublicKeyPrepared, SigningData,
 };
-use snowbridge_core::{Message, RingBufferMap, Verifier};
+use snowbridge_core::{
+	inbound::{Message, Proof, Verifier},
+	RingBufferMap,
+};
 use sp_core::H256;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
-
-use snowbridge_core::Proof;
 
 use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
@@ -122,7 +123,7 @@ pub mod pallet {
 		/// not match the next sync committee in storage.
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
-		ExecutionHeaderSkippedSlot,
+		ExecutionHeaderSkippedBlock,
 		BridgeModule(bp_runtime::OwnedBridgeModuleError),
 	}
 
@@ -337,7 +338,7 @@ pub mod pallet {
 		/// Cross check to make sure that execution header import does not fall too far behind
 		/// finalised beacon header import. If that happens just return an error and pause
 		/// processing until execution header processing has caught up.
-		fn cross_check_execution_state() -> DispatchResult {
+		pub(crate) fn cross_check_execution_state() -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
@@ -346,9 +347,9 @@ pub mod pallet {
 			// committee period.
 			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
 			ensure!(
-				latest_execution_state.beacon_slot == 0 ||
-					latest_finalized_state.slot <
-						latest_execution_state.beacon_slot + max_latency as u64,
+				latest_execution_state.beacon_slot == 0
+					|| latest_finalized_state.slot
+						< latest_execution_state.beacon_slot + max_latency as u64,
 				Error::<T>::ExecutionHeaderTooFarBehind
 			);
 			Ok(())
@@ -366,8 +367,8 @@ pub mod pallet {
 
 			// Verify update does not skip a sync committee period.
 			ensure!(
-				update.signature_slot > update.attested_header.slot &&
-					update.attested_header.slot >= update.finalized_header.slot,
+				update.signature_slot > update.attested_header.slot
+					&& update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidUpdateSlot
 			);
 			// Retrieve latest finalized state.
@@ -387,12 +388,12 @@ pub mod pallet {
 
 			// Verify update is relevant.
 			let update_attested_period = compute_period(update.attested_header.slot);
-			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
-				(update.next_sync_committee_update.is_some() &&
-					update_attested_period == store_period);
+			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists()
+				&& (update.next_sync_committee_update.is_some()
+					&& update_attested_period == store_period);
 			ensure!(
-				update.attested_header.slot > latest_finalized_state.slot ||
-					update_has_next_sync_committee,
+				update.attested_header.slot > latest_finalized_state.slot
+					|| update_has_next_sync_committee,
 				Error::<T>::IrrelevantUpdate
 			);
 
@@ -552,7 +553,7 @@ pub mod pallet {
 				latest_execution_state.block_number == 0 ||
 					update.execution_header.block_number ==
 						latest_execution_state.block_number + 1,
-				Error::<T>::ExecutionHeaderSkippedSlot
+				Error::<T>::ExecutionHeaderSkippedBlock
 			);
 
 			// Gets the hash tree root of the execution header, in preparation for the execution
@@ -595,7 +596,7 @@ pub mod pallet {
 					let state = <FinalizedBeaconState<T>>::get(block_root)
 						.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
 					if update.header.slot != state.slot {
-						return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
+						return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into());
 					}
 				},
 			}
@@ -779,16 +780,19 @@ pub mod pallet {
 		/// Returns the fork version based on the current epoch. The hard fork versions
 		/// are defined in pallet config.
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
-			let fork_versions = T::ForkVersions::get();
+			Self::select_fork_version(&T::ForkVersions::get(), epoch)
+		}
 
+		/// Returns the fork version based on the current epoch.
+		pub(super) fn select_fork_version(fork_versions: &ForkVersions, epoch: u64) -> ForkVersion {
 			if epoch >= fork_versions.capella.epoch {
-				return fork_versions.capella.version
+				return fork_versions.capella.version;
 			}
 			if epoch >= fork_versions.bellatrix.epoch {
-				return fork_versions.bellatrix.version
+				return fork_versions.bellatrix.version;
 			}
 			if epoch >= fork_versions.altair.epoch {
-				return fork_versions.altair.version
+				return fork_versions.altair.version;
 			}
 
 			fork_versions.genesis.version

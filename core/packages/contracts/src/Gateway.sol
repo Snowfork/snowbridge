@@ -92,6 +92,10 @@ contract Gateway is IGateway {
         CREATE_TOKEN_CALL_ID = createTokenCallID;
     }
 
+    /// @dev Submit a message from Polkadot for verification and dispatch
+    /// @param message A message produced by the OutboundQueue pallet on BridgeHub
+    /// @param leafProof A message proof used to verify that the message is in the merkle tree committed by the OutboundQueue pallet
+    /// @param headerProof A proof used to verify that the commitment was included in a BridgeHub header that was finalized by BEEFY.
     function submitInbound(
         InboundMessage calldata message,
         bytes32[] calldata leafProof,
@@ -99,37 +103,43 @@ contract Gateway is IGateway {
     ) external {
         Channel storage channel = _ensureChannel(message.origin);
 
+        // Produce the commitment (message root) by applying the leaf proof to the message leaf
         bytes32 leafHash = keccak256(abi.encode(message));
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
 
+        // Verify that the commitment is included in a parachain header finalized by BEEFY.
         if (!verifyCommitment(commitment, headerProof)) {
             revert InvalidProof();
         }
 
+        // Ensure this message is not being replayed
         if (message.nonce != channel.inboundNonce + 1) {
             revert InvalidNonce();
         }
 
-        // Increment nonce for origin. Together with the above nonce check, this should prevent reentrancy.
+        // Increment nonce for origin.
+        // This also prevents the re-entrancy case in which a malicous party tries to re-enter by calling `submitInbound`
+        // again with the same (message, leafProof, headerProof) arguments.
         channel.inboundNonce++;
 
-        // reward the relayer from the agent contract
-        // Should revert if there are not enough funds. In which case, the origin
-        // should top up the funds and have a relayer resend the message.
+        // Reward the relayer from the agent contract
+        // Expected to revert if the agent for the message origin does not have enough funds to reward the relayer.
+        // In that case, the origin should top up the funds of their agent.
         if (channel.reward > 0) {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), channel.reward);
         }
 
         // Ensure relayers pass enough gas for message to execute.
-        // Otherwise malicious relayers can break the bridge by allowing handlers to run out gas.
-        // Resubmission of the message by honest relayers will fail as the tracked nonce
-        // has already been updated.
+        // Otherwise malicious relayers can break the bridge by allowing the message handlers below to run out gas and fail silently.
+        // In this scenario case, the channel's state would have been updated to accept the message (by virtue of the nonce increment), yet the actual message
+        // dispatch would have failed
         if (gasleft() < DISPATCH_GAS + BUFFER_GAS) {
             revert NotEnoughGas();
         }
 
         bool success = true;
 
+        // Dispatch message to a handler
         if (message.command == Command.AgentExecute) {
             try Gateway(this).agentExecute{gas: DISPATCH_GAS}(message.params) {}
             catch {
@@ -168,15 +178,6 @@ contract Gateway is IGateway {
         }
 
         emit IGateway.InboundMessageDispatched(message.origin, message.nonce, success);
-    }
-
-    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof) internal view returns (bool) {
-        if (BEEFY_CLIENT != address(0)) {
-            return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
-        } else {
-            // for unit tests, verification is bypassed
-            return true;
-        }
     }
 
     /**
@@ -244,30 +245,35 @@ contract Gateway is IGateway {
     }
 
     struct CreateAgentParams {
+        /// @dev The agent ID of the consensus system
         bytes32 agentID;
     }
 
-    // Create an agent for a consensus system on Polkadot
+    /// @dev Create an agent for a consensus system on Polkadot
     function createAgent(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
         CreateAgentParams memory params = abi.decode(data, (CreateAgentParams));
 
+        // Ensure we don't overwrite an existing agent
         if (address($.agents[params.agentID]) != address(0)) {
             revert AgentAlreadyCreated();
         }
-        address payable agent = payable(new Agent(params.agentID));
 
+        address payable agent = payable(new Agent(params.agentID));
         $.agents[params.agentID] = agent;
+
         emit AgentCreated(params.agentID, agent);
     }
 
     struct CreateChannelParams {
+        /// @dev The parachain which will own the newly created channel
         ParaID paraID;
+        /// @dev The agent ID of the parachain
         bytes32 agentID;
     }
 
-    // Create a messaging channel to a Polkadot parachain
+    /// @dev Create a messaging channel for a Polkadot parachain
     function createChannel(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
@@ -296,13 +302,17 @@ contract Gateway is IGateway {
     }
 
     struct UpdateChannelParams {
+        /// @dev The parachain used to identify the channel to update
         ParaID paraID;
+        /// @dev The new operating mode
         OperatingMode mode;
+        /// @dev The new fee for accepting outbound messages
         uint256 fee;
+        /// @dev The new reward to be given to relayers for submitting inbound messages
         uint256 reward;
     }
 
-    // Update parameters for a channel
+    /// @dev Update the configuration for a channel
     function updateChannel(bytes calldata data) external onlySelf {
         UpdateChannelParams memory params = abi.decode(data, (UpdateChannelParams));
 
@@ -325,18 +335,35 @@ contract Gateway is IGateway {
     }
 
     struct UpgradeParams {
+        /// @dev The address of the implementation contract
         address impl;
+        /// @dev the codehash of the new implementation contract.
+        /// Used to ensure the implementation isn't updated while
+        /// the upgrade is in flight
         bytes32 implCodeHash;
+        /// @dev parameters used to upgrade storage of the gateway
         bytes initParams;
     }
 
-    // Perform an upgrade
+    /// @dev Perform an upgrade of the gateway
     function upgrade(bytes calldata data) external onlySelf {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
-        if (params.impl.isContract() && params.impl.codehash != params.implCodeHash) {
+
+        // Verify that the implementation is actually a contract
+        if (!params.impl.isContract()) {
             revert InvalidCodeHash();
         }
+
+        // Verify that the code in the implementation contract was not changed
+        // after the upgrade initiated on BridgeHub parachain.
+        if (params.impl.codehash != params.implCodeHash) {
+            revert InvalidCodeHash();
+        }
+
+        // Update the proxy with the address of the new implementation
         ERC1967.store(params.impl);
+
+        // Apply the initialization function of the implementation only if params were provided
         if (params.initParams.length > 0) {
             (bool success,) =
                 params.impl.delegatecall(abi.encodeWithSelector(this.initialize.selector, params.initParams));
@@ -344,14 +371,16 @@ contract Gateway is IGateway {
                 revert SetupFailed();
             }
         }
+
         emit Upgraded(params.impl);
     }
 
     struct SetOperatingModeParams {
+        /// @dev The new operating mode
         OperatingMode mode;
     }
 
-    // Set the operating mode
+    // @dev Set the operating mode of the gateway
     function setOperatingMode(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
@@ -359,12 +388,15 @@ contract Gateway is IGateway {
     }
 
     struct TransferNativeFromAgentParams {
+        /// @dev The ID of the agent to transfer funds from
         bytes32 agentID;
+        /// @dev The recipient of the funds
         address recipient;
+        /// @dev The amount to transfer
         uint256 amount;
     }
 
-    // Withdraw funds from an agent to a recipient account
+    // @dev Transfer funds from an agent to a recipient account
     function transferNativeFromAgent(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
@@ -384,10 +416,7 @@ contract Gateway is IGateway {
 
     // Register a token on AssetHub
     function registerToken(address token) external payable {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
-
-        (bytes memory payload, uint256 extraFee) = Assets.registerToken(assetHubAgent, token, CREATE_TOKEN_CALL_ID);
+        (bytes memory payload, uint256 extraFee) = Assets.registerToken(token, CREATE_TOKEN_CALL_ID);
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
     }
@@ -424,10 +453,24 @@ contract Gateway is IGateway {
 
     /* Internal functions */
 
+    // Verify that a message commitment is considered finalized by our BEEFY light client.
+    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof) internal view returns (bool) {
+        if (BEEFY_CLIENT != address(0)) {
+            return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
+        } else {
+            // for unit tests, verification is bypassed
+            return true;
+        }
+    }
+
+    // Submit an outbound message to Polkadot
     function _submitOutbound(ParaID dest, bytes memory payload, uint256 extraFee) internal {
         Channel storage channel = _ensureChannel(dest);
+
+        // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled(channel);
 
+        // Ensure the user has enough funds for this message to be accepted
         if (msg.value < channel.fee + extraFee) {
             revert FeePaymentToLow();
         }
@@ -440,6 +483,7 @@ contract Gateway is IGateway {
         emit IGateway.OutboundMessageAccepted(dest, channel.outboundNonce, payload);
     }
 
+    /// @dev Outbound message can be disabled globally or on a per-channel basis.
     function _ensureOutboundMessagingEnabled(Channel storage ch) internal view {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         if ($.mode != OperatingMode.Normal || ch.mode != OperatingMode.Normal) {
@@ -447,6 +491,7 @@ contract Gateway is IGateway {
         }
     }
 
+    /// @dev Ensure that the specified parachain has a channel allocated
     function _ensureChannel(ParaID paraID) internal view returns (Channel storage ch) {
         ch = CoreStorage.layout().channels[paraID];
         // A channel always has an agent specified.
@@ -455,11 +500,13 @@ contract Gateway is IGateway {
         }
     }
 
+    /// @dev Invoke some code within an agent
     function _invokeOnAgent(address agent, bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(AGENT_EXECUTOR, data));
         return Call.verifyResult(success, returndata);
     }
 
+    /// @dev Transfer ether from an agent
     function _transferNativeFromAgent(address agent, address payable recipient, uint256 amount) internal {
         bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
         _invokeOnAgent(agent, call);
@@ -469,7 +516,8 @@ contract Gateway is IGateway {
      * Upgrades
      */
 
-    /// @dev Not externally accessible as overshadowed in the proxy
+    /// @dev Initialize storage in the gateway
+    /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
     function initialize(bytes memory data) external {
         // Prevent initialization of storage in implementation contract
         if (ERC1967.load() == address(0)) {

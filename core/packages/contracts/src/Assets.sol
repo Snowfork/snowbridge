@@ -12,6 +12,7 @@ import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {ParaID, Config} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
 
+/// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library Assets {
     using Address for address;
     using SafeTokenTransferFrom for IERC20;
@@ -23,11 +24,11 @@ library Assets {
     event TokenRegistrationSent(address token);
 
     /* Errors */
-
     error InvalidToken();
     error InvalidAmount();
     error InvalidDestination();
 
+    // This library requires state which must be initialized in the gateway's storage.
     function initialize(uint256 registerTokenFee, uint256 sendTokenFee) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
@@ -48,9 +49,9 @@ library Assets {
 
         _transferToAgent(assetHubAgent, token, sender, amount);
         if (destinationChain == assetHubParaID) {
-            payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationAddress, amount);
+            payload = SubstrateTypes.SendToken(address(this), token, destinationAddress, amount);
         } else {
-            payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationChain, destinationAddress, amount);
+            payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         }
         extraFee = $.sendTokenFee;
 
@@ -74,11 +75,12 @@ library Assets {
 
         _transferToAgent(assetHubAgent, token, sender, amount);
 
-        payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationChain, destinationAddress, amount);
+        payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         extraFee = $.sendTokenFee;
         emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
+    /// @dev transfer tokens from the sender to the specified
     function _transferToAgent(address assetHubAgent, address token, address sender, uint128 amount) internal {
         if (!token.isContract()) {
             revert InvalidToken();
@@ -93,7 +95,7 @@ library Assets {
 
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
-    function registerToken(address gateway, address token, bytes2 createTokenCallID)
+    function registerToken(address token, bytes2 createTokenCallID)
         external
         returns (bytes memory payload, uint256 extraFee)
     {
@@ -103,7 +105,7 @@ library Assets {
             revert InvalidToken();
         }
 
-        payload = SubstrateTypes.RegisterToken(gateway, token, createTokenCallID);
+        payload = SubstrateTypes.RegisterToken(address(this), token, createTokenCallID);
         extraFee = $.registerTokenFee;
 
         emit TokenRegistrationSent(token);

@@ -315,7 +315,8 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitWithHandoverFailStaleCommitment() public {
-        BeefyClient.Commitment memory commitment = testSubmit();
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+        beefyClient.setLatestBeefyBlock(blockNumber);
 
         beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
 
@@ -427,6 +428,8 @@ contract BeefyClientTest is Test {
 
         createFinalProofs();
 
+        // Changing the commitment changes its hash, so the ticket can't be found.
+        // A zero value ticket is returned in this case, because submitInitial hasn't run for this commitment.
         BeefyClient.Commitment memory _commitment = BeefyClient.Commitment(blockNumber, setId + 1, commitment.payload);
         //submit will be reverted with InvalidTicket
         vm.expectRevert(BeefyClient.InvalidTicket.selector);
@@ -484,6 +487,20 @@ contract BeefyClientTest is Test {
         printBitArray(initialBits);
         vm.expectRevert(BeefyClient.NotEnoughClaims.selector);
         beefyClient.submitInitial(commitment, initialBits, finalValidatorProofs[0]);
+    }
+
+    function testSubmitInitialFailWithIncorrectValidatorSet() public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+
+        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        beefyClient.submitInitialWithHandover(commitment, bitfield, finalValidatorProofs[0]);
+    }
+
+    function testSubmitInitialHandoverFailWithIncorrectValidatorSet() public {
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+
+        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
     }
 
     function testRegenerateBitField() public {

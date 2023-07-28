@@ -13,7 +13,6 @@ mod benchmarks {
 	use super::*;
 	use crate::benchmarking::fixtures::make_create_message;
 	use hex_literal::hex;
-	use sp_runtime::print;
 
 	const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39"];
 
@@ -34,7 +33,8 @@ mod benchmarks {
 		let sovereign_account = dest_para.into_account_truncating();
 
 		let minimum_balance = T::Token::minimum_balance();
-		let minimum_balance_u32: u32 = minimum_balance.try_into()
+		let minimum_balance_u32: u32 = minimum_balance
+			.try_into()
 			.unwrap_or_else(|_| panic!("unable to cast minimum balance to u32"));
 
 		// Make sure the sovereign balance is enough. This is a funny number, because

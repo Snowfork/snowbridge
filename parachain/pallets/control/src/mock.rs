@@ -8,9 +8,9 @@ use frame_support::{
 };
 
 #[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::whitelisted_caller;
+use frame_benchmarking::v2::whitelisted_caller;
 
-use snowbridge_core::{OutboundMessage, OutboundMessageHash, ParaId, SubmitError};
+use snowbridge_core::outbound::{Message, MessageHash, ParaId, SubmitError};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -18,10 +18,7 @@ use sp_runtime::{
 	AccountId32,
 };
 use xcm::prelude::*;
-use xcm_builder::{
-	DescribeAccountId32Terminal, DescribeAccountKey20Terminal, DescribeAllTerminal, DescribeFamily,
-	DescribePalletTerminal,
-};
+use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -71,6 +68,10 @@ parameter_types! {
 	pub const MaxUpgradeDataSize: u32 = 1024;
 	pub const SS58Prefix: u8 = 42;
 	pub const AnyNetwork: Option<NetworkId> = None;
+	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Kusama);
+	pub const RelayLocation: MultiLocation = MultiLocation::parent();
+	pub UniversalLocation: InteriorMultiLocation =
+		X2(GlobalConsensus(RelayNetwork::get().unwrap()), Parachain(1013));
 }
 
 static ORIGIN_TABLE: &[([u8; 32], MultiLocation)] = &[
@@ -173,23 +174,16 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureOriginFromTable {
 
 pub struct MockOutboundQueue;
 impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
-	type Ticket = OutboundMessage;
+	type Ticket = Message;
 
-	fn validate(message: &OutboundMessage) -> Result<Self::Ticket, SubmitError> {
+	fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
 		Ok(message.clone())
 	}
 
-	fn submit(_ticket: Self::Ticket) -> Result<OutboundMessageHash, SubmitError> {
-		Ok(OutboundMessageHash::zero())
+	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+		Ok(MessageHash::zero())
 	}
 }
-
-pub type DescribeAgentLocation = (
-	DescribePalletTerminal,
-	DescribeAccountId32Terminal,
-	DescribeAccountKey20Terminal,
-	DescribeFamily<DescribeAllTerminal>,
-);
 
 impl snowbridge_control::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -198,7 +192,9 @@ impl snowbridge_control::Config for Test {
 	type MessageHasher = BlakeTwo256;
 	type MaxUpgradeDataSize = MaxUpgradeDataSize;
 	type CreateAgentOrigin = EnsureOriginFromTable;
-	type DescribeAgentLocation = DescribeAgentLocation;
+	type UniversalLocation = UniversalLocation;
+	type RelayLocation = RelayLocation;
+	type AgentHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 	type WeightInfo = ();
 }
 

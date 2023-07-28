@@ -5,25 +5,32 @@ use core::slice::Iter;
 use codec::{Decode, Encode};
 
 use frame_support::{ensure, log, traits::Get};
-use snowbridge_core::{
-	AgentExecuteCommand, Command, OutboundMessage, OutboundQueue as OutboundQueueTrait,
+use snowbridge_core::outbound::{
+	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
 };
 use sp_core::{H160, H256};
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
-use xcm_executor::traits::ExportXcm;
+use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
+use xcm_executor::traits::{ConvertLocation, ExportXcm};
 
-pub struct EthereumBlobExporter<UniversalLocation, BridgeLocation, OutboundQueue>(
-	PhantomData<(UniversalLocation, BridgeLocation, OutboundQueue)>,
-);
+pub type AgentHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 
-impl<UniversalLocation, BridgeLocation, OutboundQueue> ExportXcm
-	for EthereumBlobExporter<UniversalLocation, BridgeLocation, OutboundQueue>
+pub struct EthereumBlobExporter<
+	UniversalLocation,
+	BridgeLocation,
+	OutboundQueue,
+	AgentHashedDescription,
+>(PhantomData<(UniversalLocation, BridgeLocation, OutboundQueue, AgentHashedDescription)>);
+
+impl<UniversalLocation, BridgeLocation, OutboundQueue, AgentHashedDescription> ExportXcm
+	for EthereumBlobExporter<UniversalLocation, BridgeLocation, OutboundQueue, AgentHashedDescription>
 where
 	UniversalLocation: Get<InteriorMultiLocation>,
 	BridgeLocation: Get<MultiLocation>,
 	OutboundQueue: OutboundQueueTrait,
 	OutboundQueue::Ticket: Encode + Decode,
+	AgentHashedDescription: ConvertLocation<H256>,
 {
 	type Ticket = Vec<u8>;
 
@@ -107,20 +114,27 @@ where
 			return Err(SendError::Unroutable);
 		}
 
-		let outbound_message = OutboundMessage {
-			origin: para_id.into(),
-			command: Command::AgentExecute {
-				agent_id: H256::zero(),
-				command: agent_execute_command,
+		// local_sub is relative to the relaychain. No conversion needed.
+		let local_sub_location: MultiLocation = local_sub.into();
+		let agent_id = match AgentHashedDescription::convert_location(&local_sub_location) {
+			Some(id) => id,
+			None => {
+				log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to not being able to create agent id. '{local_sub_location:?}'");
+				return Err(SendError::Unroutable);
 			},
 		};
 
-		let ticket = OutboundQueue::validate(&outbound_message).map_err(|_| {
-			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed");
+		let outbound_message = Message {
+			origin: para_id.into(),
+			command: Command::AgentExecute { agent_id, command: agent_execute_command },
+		};
+
+		let ticket = OutboundQueue::validate(&outbound_message).map_err(|err| {
+			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
 			SendError::Unroutable
 		})?;
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "message validated");
+		log::info!(target: "xcm::ethereum_blob_exporter", "message validated: location = {local_sub_location:?}, agent_id = '{agent_id:?}'");
 
 		// TODO: Fees if any currently returning empty multi assets as cost
 		Ok((ticket.encode(), MultiAssets::default()))
@@ -302,7 +316,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::{OutboundMessageHash, SubmitError};
+	use snowbridge_core::outbound::{MessageHash, SubmitError};
 
 	use super::*;
 
@@ -321,23 +335,23 @@ mod tests {
 	impl OutboundQueueTrait for MockOkOutboundQueue {
 		type Ticket = ();
 
-		fn validate(_: &OutboundMessage) -> Result<(), SubmitError> {
+		fn validate(_: &Message) -> Result<(), SubmitError> {
 			Ok(())
 		}
 
-		fn submit(_: Self::Ticket) -> Result<OutboundMessageHash, SubmitError> {
-			Ok(OutboundMessageHash::zero())
+		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			Ok(MessageHash::zero())
 		}
 	}
 	struct MockErrOutboundQueue;
 	impl OutboundQueueTrait for MockErrOutboundQueue {
 		type Ticket = ();
 
-		fn validate(_: &OutboundMessage) -> Result<(), SubmitError> {
+		fn validate(_: &Message) -> Result<(), SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 
-		fn submit(_: Self::Ticket) -> Result<OutboundMessageHash, SubmitError> {
+		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 	}
@@ -351,13 +365,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
 
@@ -370,13 +383,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -391,13 +403,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
 
@@ -410,13 +421,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -429,13 +439,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::Unroutable));
 	}
 
@@ -452,6 +461,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocationWithoutGlobalConsensus,
 				MockOkOutboundQueue,
+				AgentHashedDescription,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -469,6 +479,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocationWithoutRegistry,
 				MockOkOutboundQueue,
+				AgentHashedDescription,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -483,13 +494,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
 
@@ -503,13 +513,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -523,13 +532,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -543,13 +551,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -599,13 +606,12 @@ mod tests {
 		);
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
 		assert_eq!(result, Err(SendError::Unroutable));
 	}
@@ -627,13 +633,12 @@ mod tests {
 		);
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
 		assert_eq!(result, Err(SendError::Unroutable));
 	}
@@ -681,23 +686,24 @@ mod tests {
 		);
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
 		assert!(result.is_ok());
 	}
 
 	#[test]
 	fn exporter_deliver_with_submit_failure_yields_unroutable() {
-		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockErrOutboundQueue>::deliver(
-				hex!("deadbeef").to_vec(),
-			);
+		let result = EthereumBlobExporter::<
+			UniversalLocation,
+			BridgedLocation,
+			MockErrOutboundQueue,
+			AgentHashedDescription,
+		>::deliver(hex!("deadbeef").to_vec());
 		assert_eq!(result, Err(SendError::Transport("other transport error")))
 	}
 

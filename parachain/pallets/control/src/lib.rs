@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+//! Governance API for controlling the Ethereum side of the bridge
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// <https://docs.substrate.io/reference/frame-pallets/>
 pub use pallet::*;
 
 #[cfg(test)]
@@ -19,13 +17,13 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
-use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTrait, ParaId};
+use snowbridge_core::outbound::{Command, Message, OutboundQueue as OutboundQueueTrait, ParaId};
+use snowbridge_core::AgentId;
 use sp_core::{H160, H256};
-use sp_io::hashing::blake2_256;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 use xcm::prelude::*;
-use xcm_builder::DescribeLocation;
+use xcm_executor::traits::ConvertLocation;
 
 pub use pallet::*;
 
@@ -41,20 +39,41 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		/// General-purpose hasher
 		type MessageHasher: Hash<Output = H256>;
+
+		/// Send messages to Ethereum
 		type OutboundQueue: OutboundQueueTrait;
+
+		/// The ID of this parachain
 		type OwnParaId: Get<ParaId>;
-		type WeightInfo: WeightInfo;
+
+		/// Max size of params passed to initializer of the new implementation contract
 		type MaxUpgradeDataSize: Get<u32>;
+
+		/// Origin check for `create_agent`
 		type CreateAgentOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
-		type DescribeAgentLocation: DescribeLocation;
+
+		/// Converts MultiLocation to H256 in a way that is stable across multiple versions of XCM
+		type AgentHashedDescription: ConvertLocation<H256>;
+
+		/// The universal location
+		type UniversalLocation: Get<InteriorMultiLocation>;
+
+		/// Location of the relay chain
+		type RelayLocation: Get<MultiLocation>;
+
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// An Upgrade message was sent to the Gateway
 		Upgrade { impl_address: H160, impl_code_hash: H256, params_hash: Option<H256> },
-		CreateAgent { agent_id: H256, agent_location: MultiLocation },
+		/// An CreateAgent message was sent to the Gateway
+		CreateAgent { location: MultiLocation, agent_id: AgentId },
 	}
 
 	#[pallet::error]
@@ -62,16 +81,21 @@ pub mod pallet {
 		UpgradeDataTooLarge,
 		SubmissionFailed,
 		LocationConversionFailed,
+		AgentAlreadyCreated,
 	}
 
 	#[pallet::storage]
-	pub type Agents<T: Config> = StorageMap<_, Twox64Concat, H256, (), OptionQuery>;
-
-	#[pallet::storage]
-	pub type Channels<T: Config> = StorageMap<_, Twox64Concat, ParaId, (), OptionQuery>;
+	pub type Agents<T: Config> = StorageMap<_, Twox64Concat, AgentId, (), OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Sends a message to the Gateway contract to upgrade itself.
+		///
+		/// - `origin`: Must be `Root`.
+		/// - `impl_address`: The address of the new implementation contract.
+		/// - `impl_code_hash`: The codehash of `impl_address`.
+		/// - `params`: An optional list of ABI-encoded parameters for the implementation
+		///   contract's `initialize(bytes) function. If `None`, the initialization function is not called.
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::upgrade(params.clone().map_or(0, |d| d.len() as u32)))]
 		pub fn upgrade(
@@ -89,49 +113,58 @@ pub mod pallet {
 
 			let params_hash = params.as_ref().map(|p| T::MessageHasher::hash(p));
 
-			let message = OutboundMessage {
+			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::Upgrade { impl_address, impl_code_hash, params },
 			};
-
-			let ticket =
-				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
-
-			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
+			Self::submit_outbound(message)?;
 
 			Self::deposit_event(Event::<T>::Upgrade { impl_address, impl_code_hash, params_hash });
-
 			Ok(())
 		}
 
+		/// Sends a message to the Gateway contract to create a new Agent representing `origin`
+		///
+		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::create_agent())]
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
-			let agent_location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+			let mut location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			let agent_description = T::DescribeAgentLocation::describe_location(&agent_location)
-				.ok_or(Error::<T>::LocationConversionFailed)?;
-
-			let agent_id: H256 = blake2_256(&agent_description).into();
-
-			if Agents::<T>::contains_key(agent_id) {
-				return Ok(());
+			// Normalize all locations relative to the relay chain unless its the relay itself.
+			let relay_location = T::RelayLocation::get();
+			if location != relay_location {
+				location
+					.reanchor(&relay_location, T::UniversalLocation::get())
+					.or(Err(Error::<T>::LocationConversionFailed))?;
 			}
 
-			let message = OutboundMessage {
-				origin: T::OwnParaId::get(),
-				command: Command::CreateAgent { agent_id },
-			};
+			// Hash the location to produce an agent id
+			let agent_id = T::AgentHashedDescription::convert_location(&location)
+				.ok_or(Error::<T>::LocationConversionFailed)?;
 
-			let ticket =
-				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
-
-			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
-
+			// Record the agent id or fail if it has already been created
+			if let Some(_) = Agents::<T>::get(agent_id) {
+				return Err(Error::<T>::AgentAlreadyCreated.into());
+			}
 			Agents::<T>::insert(agent_id, ());
-			Self::deposit_event(Event::<T>::CreateAgent { agent_location, agent_id });
 
+			let message = Message {
+					origin: T::OwnParaId::get(),
+					command: Command::CreateAgent { agent_id } 
+			};
+			Self::submit_outbound(message)?;
+			
+			Self::deposit_event(Event::<T>::CreateAgent { location, agent_id });
 			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		fn submit_outbound(message: Message) -> DispatchResult {
+			let ticket = T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
+			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
+			Ok(())			
 		}
 	}
 }

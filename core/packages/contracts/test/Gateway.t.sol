@@ -21,7 +21,7 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 
-import {InboundMessage, OperatingMode, ParaID, Config, Command} from "../src/Types.sol";
+import {AgentExecuteCommand, InboundMessage, OperatingMode, ParaID, Config, Command} from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 
@@ -259,7 +259,7 @@ contract GatewayTest is Test {
 
         Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(keccak256("transferToken"), abi.encode(address(token), address(this), 1))
+            payload: abi.encode(AgentExecuteCommand.TransferToken, abi.encode(address(token), address(this), 1))
         });
 
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));

@@ -169,22 +169,22 @@ contract BeefyClient {
     uint256 public immutable randaoCommitExpiration;
 
     /* Errors */
+    error InvalidBitfield();
+    error InvalidBitfieldLength();
     error InvalidCommitment();
-    error StaleCommitment();
-    error InvalidValidatorProof();
-    error InvalidSignature();
-    error NotEnoughClaims();
     error InvalidMMRLeaf();
     error InvalidMMRLeafProof();
-    error InvalidBitfield();
-    error WaitPeriodNotOver();
-    error TicketExpired();
+    error InvalidMMRRootLength();
+    error InvalidSignature();
+    error InvalidTicket();
+    error InvalidValidatorProof();
+    error NoMMRRootInCommitment();
+    error NotEnoughClaims();
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
-    error InvalidBitfieldLength();
-    error InvalidTicket();
-    error InvalidMMRRootLength();
-    error NoMMRRootInCommitment();
+    error StaleCommitment();
+    error TicketExpired();
+    error WaitPeriodNotOver();
 
     constructor(
         uint256 _randaoCommitDelay,
@@ -238,6 +238,10 @@ contract BeefyClient {
         if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index))
         {
             revert InvalidValidatorProof();
+        }
+
+        if (commitment.validatorSetID != vset.id) {
+            revert InvalidCommitment();
         }
 
         // Check if validatorSignature is correct, ie. check if it matches
@@ -591,6 +595,7 @@ contract BeefyClient {
         Ticket storage ticket = tickets[ticketID];
 
         if (ticket.blockNumber == 0) {
+            // Zero value ticket: submitInitial hasn't run for this commitment
             revert InvalidTicket();
         }
 
