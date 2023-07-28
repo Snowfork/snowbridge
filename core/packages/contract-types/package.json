@@ -9,10 +9,10 @@
     "directory": "core/packages/contract-types"
   },
   "main": "dist/index.js",
-  "types": "types/index.ts",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "typechain": "rm -rf types && npx typechain --target ethers-v5 '../contracts/out/**/!(*.t|test).sol/!(*.abi).json' --out-dir types"
+    "typechain": "typechain --target ethers-v5 '../../../contracts/out/?(IGateway.sol|BeefyClient.sol)/!(*.abi).json' --out-dir src"
   },
   "devDependencies": {
     "@types/node": "^18.13.0",

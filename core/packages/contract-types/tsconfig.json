@@ -12,7 +12,7 @@
     "declaration": true,
     "declarationMap": true,
     "baseUrl": ".",
-    "rootDir": "types",
+    "rootDir": "src",
     "noEmitOnError": true,
     "skipLibCheck": true,
     "allowJs": true
@@ -21,6 +21,6 @@
     "require": ["tsconfig-paths/register"]
   },
   "exclude": ["node_modules", "dist"],
-  "include": ["types/**/*.ts"],
+  "include": ["src/**/*.ts"],
   "references": []
 }
