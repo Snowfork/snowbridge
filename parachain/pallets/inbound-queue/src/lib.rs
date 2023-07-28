@@ -23,27 +23,21 @@ use frame_support::{
 		fungible::{Inspect, Mutate},
 		GenesisBuild,
 	},
-	DefaultNoBound,
+	DefaultNoBound, CloneNoBound, EqNoBound, PartialEqNoBound
 };
 use frame_system::ensure_signed;
-use snowbridge_core::ParaId;
 use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
+use codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError};
 
+use snowbridge_core::ParaId;
 use envelope::Envelope;
 use snowbridge_core::inbound::{Message, Verifier};
 use snowbridge_router_primitives::inbound;
-
-use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError};
-
 pub use weights::WeightInfo;
-
-use frame_support::{CloneNoBound, EqNoBound, PartialEqNoBound};
-
-use codec::{Decode, Encode};
-
-use scale_info::TypeInfo;
 
 type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
@@ -82,12 +76,16 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
+		/// The verifier for inbound messages from Ethereum
 		type Verifier: Verifier;
 
+		/// Message relayers are rewarded with this asset
 		type Token: Mutate<Self::AccountId>;
 
+		/// The amount to reward message relayers
 		type Reward: Get<BalanceOf<Self>>;
 
+		/// XCM message sender
 		type XcmSender: SendXcm;
 
 		type WeightInfo: WeightInfo;
@@ -102,7 +100,15 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T> {
-		MessageReceived { dest: ParaId, nonce: u64, result: MessageDispatchResult },
+		/// A message was received from Ethereum
+		MessageReceived {
+			/// The destination parachain
+			dest: ParaId,
+			/// The message nonce
+			nonce: u64,
+			/// The result of the message dispatch
+			result: MessageDispatchResult
+		},
 	}
 
 	#[pallet::error]
@@ -234,7 +240,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight({100_000_000})]
+		#[pallet::weight((T::DbWeight::get().writes(1), DispatchClass::Normal))]
 		pub fn set_gateway(origin: OriginFor<T>, gateway: H160) -> DispatchResult {
 			ensure_root(origin)?;
 			Gateway::<T>::put(gateway);

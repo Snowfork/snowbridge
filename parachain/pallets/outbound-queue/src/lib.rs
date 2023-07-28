@@ -1,7 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-#![cfg_attr(not(feature = "std"), no_std)]
 
+//! Pallet for committing outbound messages for delivery to Ethereum
+//! 
+//! The message submission pipeline works like this:
+//! 1. The message is first validated via [`OutboundQueue::validate`]
+//! 2. The message is then enqueued for processing via [`OutboundQueue::submit`]
+//! 3. The message queue is maintained by the external [`MessageQueue`] pallet
+//! 4. [`MessageQueue`] delivers messages back to this pallet via `ProcessMessage::process_message`
+//! 5. The message is processed in `do_process_message`
+//!    a. Assigned a nonce
+//!    b. ABI-encoded, hashed, and stored in the `Leaves` vector
+//! 6. At the end of the block, a merkle root is constructed from all the leaves in `Leaves`.
+//! 7. This merkle root is inserted into the parachain header as a digest item
+//! 
+//! On the Ethereum side, the message root is ultimately the thing being
+//! by the Polkadot light client. 
+//!
+#![cfg_attr(not(feature = "std"), no_std)]
 pub mod api;
 pub mod weights;
 
@@ -155,7 +171,7 @@ pub mod pallet {
 	/// Messages to be committed in the current block. This storage value is killed in
 	/// `on_initialize`, so should never go into block PoV.
 	///
-	/// Is never read in the runtime, only by offchain code.
+	/// Is never read in the runtime, only by offchain message relayers.
 	///
 	/// Inspired by the `frame_system::Pallet::Events` storage value
 	#[pallet::storage]
@@ -262,6 +278,8 @@ pub mod pallet {
 
 			let (command, params) = enqueued_message.command.abi_encode();
 
+			// Construct a prepared message, which when ABI-encoded is what the 
+			// other side of the bridge will verify.
 			let message: PreparedMessage = PreparedMessage {
 				origin: enqueued_message.origin,
 				nonce: next_nonce,
@@ -269,6 +287,7 @@ pub mod pallet {
 				params,
 			};
 
+			// ABI-encode and hash the prepared message
 			let message_abi_encoded = ethabi::encode(&vec![message.clone().into()]);
 			let message_abi_encoded_hash = <T as Config>::Hashing::hash(&message_abi_encoded);
 

@@ -14,3 +14,7 @@ pub mod ringbuffer;
 
 pub use polkadot_parachain::primitives::Id as ParaId;
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
+use sp_core::H256;
+
+/// The ID of an agent contract
+pub type AgentId = H256;
