@@ -31,9 +31,9 @@ jobs:
           cache-dependency-path: core/pnpm-lock.yaml
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
-      - name: Install dependencies and Build all
+      - name: Install dependencies
         working-directory: core
-        run: pnpm install --frozen-lockfile && pnpm build
+        run: pnpm install --frozen-lockfile
       - name: Test
         working-directory: core/packages/contracts
         run: forge test

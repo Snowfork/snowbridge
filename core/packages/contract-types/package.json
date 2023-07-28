@@ -12,8 +12,7 @@
   "types": "types/index.ts",
   "scripts": {
     "build": "tsc",
-    "typechain": "rm -rf types && npx typechain --target ethers-v5 '../contracts/out/**/!(*.t|test).sol/!(*.abi).json' --out-dir types",
-    "postinstall": "pnpm typechain"
+    "typechain": "rm -rf types && npx typechain --target ethers-v5 '../contracts/out/**/!(*.t|test).sol/!(*.abi).json' --out-dir types"
   },
   "devDependencies": {
     "@types/node": "^18.13.0",

@@ -1,7 +1,7 @@
 // import "@polkadot/api-augment/polkadot"
 import { ApiPromise, WsProvider } from "@polkadot/api"
 import { ethers } from "ethers"
-import { IGateway, IGateway__factory } from "@snowbridge/contract-types/types"
+import { IGateway, IGateway__factory } from "@snowbridge/contract-types"
 
 interface Config {
     ethereum: {
