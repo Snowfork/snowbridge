@@ -8,10 +8,6 @@
     "url": "https://github.com/Snowfork/snowbridge.git",
     "directory": "web/packages/test"
   },
-  "scripts": {
-    "test:integration": "mocha --timeout 600000 --exit",
-    "test:bootstrap": "mocha --timeout 600000 --parallel --grep Bootstrap --exit"
-  },
   "devDependencies": {
     "@chainsafe/lodestar": "1.8.0",
     "@polkadot/api": "^10.7.1",

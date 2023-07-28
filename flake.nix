@@ -86,10 +86,12 @@
                     # LIBCLANG_PATH points rocksdb to a clang.so on Linux
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
-                    echo "Initializing Snowbridge Dev Environment..."
-                    (cd core && pnpm install)
+                    (cd web && pnpm install)
+                    git submodule update --init --recursive || true
+                    go install github.com/ferranbt/fastssz/sszgen@latest
+                    ln -s pre-commit.sh .git/hooks/pre-commit
 
-                    cowsay "Snowbridge Dev Environment Ready"
+                    cowsay "Development Environment Ready"
                 '';
             };
         }
