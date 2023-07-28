@@ -42,24 +42,34 @@ pub trait WeightInfo {
 /// Weights for pallet_template using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-	fn upgrade(_data_size: u32) -> Weight {
-		Weight::from_parts(9_000_000, 0)
-			.saturating_add(T::DbWeight::get().writes(1_u64))
+	fn upgrade(data_size: u32) -> Weight {
+		Weight::from_parts(30_740_411, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(Weight::from_parts(8_805, 0).saturating_mul(data_size.into()))
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(3))
 	}
 	fn create_agent() -> Weight {
-		Weight::from_parts(9_000_000, 0)
-			.saturating_add(T::DbWeight::get().writes(1_u64))
+		Weight::from_parts(35_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().writes(4))
 	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn upgrade(_data_size: u32) -> Weight {
-		Weight::from_parts(9_000_000, 0)
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	fn upgrade(data_size: u32) -> Weight {
+		Weight::from_parts(30_740_411, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(Weight::from_parts(8_805, 0).saturating_mul(data_size.into()))
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(3))
 	}
 	fn create_agent() -> Weight {
-		Weight::from_parts(9_000_000, 0)
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
+		Weight::from_parts(35_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(RocksDbWeight::get().reads(5))
+			.saturating_add(RocksDbWeight::get().writes(4))
 	}
 }
