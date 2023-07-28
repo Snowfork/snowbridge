@@ -243,13 +243,13 @@ mod tests {
 	use xcm::v3::prelude::*;
 	use xcm_executor::traits::ConvertLocation;
 
-	const CONTRACT_ADDRESS: [u8; 20] = hex!("D184c103F7acc340847eEE82a0B909E3358bc28d");
+	const CONTRACT_ADDRESS: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
 	const NETWORK: NetworkId = Ethereum { chain_id: 15 };
 	const SS58_FORMAT: u16 = 2;
 	const EXPECTED_SOVEREIGN_KEY: [u8; 32] =
-		hex!("5d6987649e0dac78ddf852eb0f1b1d1bf2be9623d81cb16c17cfa145948bb6dc");
+		hex!("c9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5");
 	const EXPECTED_SOVEREIGN_ADDRESS: &'static str =
-		"EgoKVgdhGVz41LyP2jckLrmXjnD35xitaX221ktZjQ2Xsxw";
+		"H8VBFC4LG91ByxMG6GwsCcAacjitnzGmGbqnvSEQFBywJEL";
 
 	parameter_types! {
 		pub EthereumNetwork: NetworkId = NETWORK;
@@ -272,10 +272,11 @@ mod tests {
 		.unwrap();
 		let address = frame_support::sp_runtime::AccountId32::new(account)
 			.to_ss58check_with_version(SS58_FORMAT.into());
-		assert_eq!(account, EXPECTED_SOVEREIGN_KEY);
-		assert_eq!(address, EXPECTED_SOVEREIGN_ADDRESS);
 
 		println!("SS58: {}\nBytes: {:?}", address, account);
+
+		assert_eq!(account, EXPECTED_SOVEREIGN_KEY);
+		assert_eq!(address, EXPECTED_SOVEREIGN_ADDRESS);
 	}
 
 	#[test]

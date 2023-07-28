@@ -49,9 +49,9 @@ library Assets {
 
         _transferToAgent(assetHubAgent, token, sender, amount);
         if (destinationChain == assetHubParaID) {
-            payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationAddress, amount);
+            payload = SubstrateTypes.SendToken(address(this), token, destinationAddress, amount);
         } else {
-            payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationChain, destinationAddress, amount);
+            payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         }
         extraFee = $.sendTokenFee;
 
@@ -75,7 +75,7 @@ library Assets {
 
         _transferToAgent(assetHubAgent, token, sender, amount);
 
-        payload = SubstrateTypes.SendToken(assetHubAgent, token, destinationChain, destinationAddress, amount);
+        payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         extraFee = $.sendTokenFee;
         emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
@@ -95,7 +95,7 @@ library Assets {
 
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
-    function registerToken(address gateway, address token, bytes2 createTokenCallID)
+    function registerToken(address token, bytes2 createTokenCallID)
         external
         returns (bytes memory payload, uint256 extraFee)
     {
@@ -105,7 +105,7 @@ library Assets {
             revert InvalidToken();
         }
 
-        payload = SubstrateTypes.RegisterToken(gateway, token, createTokenCallID);
+        payload = SubstrateTypes.RegisterToken(address(this), token, createTokenCallID);
         extraFee = $.registerTokenFee;
 
         emit TokenRegistrationSent(token);

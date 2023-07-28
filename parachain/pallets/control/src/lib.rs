@@ -21,11 +21,10 @@ pub use weights::*;
 
 use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTrait, ParaId};
 use sp_core::{H160, H256};
-use sp_io::hashing::blake2_256;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 use xcm::prelude::*;
-use xcm_builder::DescribeLocation;
+use xcm_executor::traits::ConvertLocation;
 
 pub use pallet::*;
 
@@ -47,7 +46,9 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 		type MaxUpgradeDataSize: Get<u32>;
 		type CreateAgentOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
-		type DescribeAgentLocation: DescribeLocation;
+		type AgentHashedDescription: ConvertLocation<H256>;
+		type UniversalLocation: Get<InteriorMultiLocation>;
+		type RelayLocation: Get<MultiLocation>;
 	}
 
 	#[pallet::event]
@@ -107,12 +108,18 @@ pub mod pallet {
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::create_agent())]
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
-			let agent_location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+			let mut agent_location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			let agent_description = T::DescribeAgentLocation::describe_location(&agent_location)
+			// Normalize all locations relative to the relay unless its the relay itself.
+			let relay_location = T::RelayLocation::get();
+			if agent_location != relay_location {
+				agent_location
+					.reanchor(&relay_location, T::UniversalLocation::get())
+					.or(Err(Error::<T>::LocationConversionFailed))?;
+			}
+
+			let agent_id = T::AgentHashedDescription::convert_location(&agent_location)
 				.ok_or(Error::<T>::LocationConversionFailed)?;
-
-			let agent_id: H256 = blake2_256(&agent_description).into();
 
 			if Agents::<T>::contains_key(agent_id) {
 				return Ok(());

@@ -143,13 +143,21 @@ pub enum AgentExecuteCommand {
 }
 
 impl AgentExecuteCommand {
+	fn index(&self) -> u8 {
+		match self {
+			AgentExecuteCommand::TransferToken { .. } => 0,
+		}
+	}
 	pub fn abi_encode(&self) -> Vec<u8> {
 		match self {
 			AgentExecuteCommand::TransferToken { token, recipient, amount } => {
 				ethabi::encode(&vec![
-					Token::Address(*token),
-					Token::Address(*token),
-					Token::Uint(U256::from(*amount)),
+					Token::Uint(self.index().into()),
+					Token::Bytes(ethabi::encode(&vec![
+						Token::Address(*token),
+						Token::Address(*recipient),
+						Token::Uint(U256::from(*amount)),
+					])),
 				])
 			},
 		}
