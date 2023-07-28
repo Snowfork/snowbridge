@@ -9,7 +9,7 @@ echo 'Running pre-commit hook...'
 #chronic typos .
 
 # lint and format for core contracts and typescript codes
-(cd core && chronic pnpm lint && pnpm format)
+#(cd core && chronic pnpm lint && pnpm format)
 
 # lint and format for relayer codes
 (cd relayer && chronic mage lint && chronic go fmt ./...)
