@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-// @title Gateway implementations are initializable
+/**
+ * @title Initialization of gateway contracts
+ */
 interface IInitializable {
     error InitializationFailed();
 
