@@ -12,11 +12,11 @@ library CoreStorage {
         OperatingMode mode;
         // Message channels
         mapping(ParaID paraID => Channel) channels;
-        // All agents
+        // Agents
         mapping(bytes32 agentID => address) agents;
-        // The fee charged to users for submitting outbound message to Polkadot
+        // The default fee charged to users for submitting outbound message to Polkadot
         uint256 defaultFee;
-        // The reward given to relayers for submitting inbound messages from Polkadot
+        // The default reward given to relayers for submitting inbound messages from Polkadot
         uint256 defaultReward;
     }
 

@@ -18,7 +18,7 @@ use sp_runtime::{
 use sp_std::convert::From;
 
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
-use snowbridge_core::{Message, Proof};
+use snowbridge_core::inbound::{Message, Proof};
 use snowbridge_ethereum::Log;
 
 use hex_literal::hex;

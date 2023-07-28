@@ -19,7 +19,7 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
-use snowbridge_core::{Command, OutboundMessage, OutboundQueue as OutboundQueueTrait, ParaId};
+use snowbridge_core::outbound::{Command, Message, OutboundQueue as OutboundQueueTrait, ParaId};
 use sp_core::{H160, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
@@ -73,6 +73,13 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Sends a message to the Gateway contract to upgrade itself.
+		///
+		/// - `origin`: Must be `Root`.
+		/// - `impl_address`: The address of the new implementation contract.
+		/// - `impl_code_hash`: The codehash of `impl_address`.
+		/// - `params`: An optional list of ABI-encoded parameters for the implementation
+		///   contract's `initialize(bytes) function. If `None`, the initialization function is not called.
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::upgrade(params.clone().map_or(0, |d| d.len() as u32)))]
 		pub fn upgrade(
@@ -90,7 +97,7 @@ pub mod pallet {
 
 			let params_hash = params.as_ref().map(|p| T::MessageHasher::hash(p));
 
-			let message = OutboundMessage {
+			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::Upgrade { impl_address, impl_code_hash, params },
 			};
@@ -105,6 +112,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Sends a message to the Gateway contract to create a new Agent representing `origin`
+		///
+		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::create_agent())]
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
@@ -125,10 +135,8 @@ pub mod pallet {
 				return Ok(());
 			}
 
-			let message = OutboundMessage {
-				origin: T::OwnParaId::get(),
-				command: Command::CreateAgent { agent_id },
-			};
+			let message =
+				Message { origin: T::OwnParaId::get(), command: Command::CreateAgent { agent_id } };
 
 			let ticket =
 				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;

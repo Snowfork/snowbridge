@@ -2686,7 +2686,6 @@ dependencies = [
  "serde",
  "serde-big-array",
  "serde_json",
- "snowbridge-testutils",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -2714,7 +2713,6 @@ dependencies = [
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-ethereum",
- "snowbridge-testutils",
  "sp-core",
  "sp-io",
  "sp-keyring",
@@ -2823,16 +2821,6 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
-]
-
-[[package]]
-name = "snowbridge-testutils"
-version = "0.1.0"
-dependencies = [
- "ethereum-types",
- "rustc-hex",
- "serde",
- "serde_json",
 ]
 
 [[package]]

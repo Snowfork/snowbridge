@@ -32,7 +32,7 @@ use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
 
 use envelope::Envelope;
-use snowbridge_core::{Message, Verifier};
+use snowbridge_core::inbound::{Message, Verifier};
 use snowbridge_router_primitives::inbound;
 
 use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError};
@@ -119,10 +119,12 @@ pub mod pallet {
 		BridgeModule(bp_runtime::OwnedBridgeModuleError),
 	}
 
+	/// The address of the Gateway contract on Ethereum
 	#[pallet::storage]
 	#[pallet::getter(fn gateway)]
 	pub type Gateway<T: Config> = StorageValue<_, H160, ValueQuery>;
 
+	/// The current nonce for each parachain
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
@@ -144,6 +146,7 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	#[derive(DefaultNoBound)]
 	pub struct GenesisConfig {
+		/// The address of the Gateway contract on Ethereum
 		pub gateway: H160,
 	}
 
@@ -163,6 +166,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Submit an inbound message originating from the Gateway contract on Ethereum
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::submit())]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {

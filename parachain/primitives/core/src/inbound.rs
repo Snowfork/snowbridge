@@ -1,23 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-//! Types for representing messages
+//! Types for representing inbound messages
 
 use codec::{Decode, Encode};
+use frame_support::dispatch::DispatchError;
 use frame_support::{scale_info::TypeInfo, RuntimeDebug};
-use sp_core::{H160, H256};
-use sp_runtime::DigestItem;
+use snowbridge_ethereum::Log;
+use sp_core::H256;
 use sp_std::vec::Vec;
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct MessageId {
-	account: H160,
-	nonce: u64,
-}
-
-impl MessageId {
-	pub fn new(account: H160, nonce: u64) -> MessageId {
-		MessageId { account, nonce }
-	}
+/// A trait for verifying inbound messages from Ethereum.
+///
+/// This trait should be implemented by runtime modules that wish to provide message verification
+/// functionality.
+pub trait Verifier {
+	fn verify(message: &Message) -> Result<Log, DispatchError>;
 }
 
 pub type MessageNonce = u64;
@@ -41,19 +38,6 @@ pub struct Proof {
 	pub block_hash: H256,
 	// The index of the transaction (and receipt) within the block.
 	pub tx_index: u32,
-	// Proof keys and values
+	// Proof keys and values (receipts tree)
 	pub data: (Vec<Vec<u8>>, Vec<Vec<u8>>),
-}
-
-/// Auxiliary [`DigestItem`] to include in header digest.
-#[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum AuxiliaryDigestItem {
-	/// A batch of messages has been committed.
-	Commitment(H256),
-}
-
-impl Into<DigestItem> for AuxiliaryDigestItem {
-	fn into(self) -> DigestItem {
-		DigestItem::Other(self.encode())
-	}
 }

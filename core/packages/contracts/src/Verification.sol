@@ -96,6 +96,7 @@ library Verification {
     /// @param encodedParaID The SCALE-encoded parachain ID of BridgeHub
     /// @param commitment The message commitment root expected to be contained within the
     ///                   digest of BridgeHub parachain header.
+    /// @param proof The chain of proofs described above
     function verifyCommitment(address beefyClient, bytes4 encodedParaID, bytes32 commitment, Proof calldata proof)
         external
         view
@@ -109,12 +110,11 @@ library Verification {
         // Compute the merkle leaf hash of our parachain
         bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(encodedParaID, proof.header);
 
-        // Compute the merkle root hash of all parachain heads
-        //
-        // For reference, in the polkadot relay chain, this is where the merkle tree root is constructed:
         if (proof.headProof.pos >= proof.headProof.width) {
             return false;
         }
+
+        // Compute the merkle root hash of all parachain heads
         bytes32 parachainHeadsRoot = SubstrateMerkleProof.computeRoot(
             parachainHeadHash, proof.headProof.pos, proof.headProof.width, proof.headProof.proof
         );
