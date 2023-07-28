@@ -11,3 +11,6 @@
 [submodule "contracts/lib/ds-test"]
 	path = contracts/lib/ds-test
 	url = https://github.com/dapphub/ds-test
+[submodule "contracts/lib/canonical-weth"]
+	path = contracts/lib/canonical-weth
+	url = https://github.com/Snowfork/canonical-weth
