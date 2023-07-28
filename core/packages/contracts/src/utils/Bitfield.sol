@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import "./Bits.sol";
+import {Bits} from "./Bits.sol";
 
 library Bitfield {
     using Bits for uint256;

@@ -1,0 +1,27 @@
+{
+  "name": "@snowbridge/contracts",
+  "version": "1.0.0",
+  "description": "Snowbridge smart contracts",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Snowfork/snowbridge.git",
+    "directory": "core/packages/contracts"
+  },
+  "scripts": {
+    "build": "pnpm build:sol",
+    "build:sol": "forge build",
+    "lint": "pnpm lint:solhint",
+    "lint:solhint": "solhint 'src/**/*.sol'",
+    "format": "forge fmt",
+    "size": "forge build --sizes",
+    "test": "pnpm test:foundry",
+    "test:foundry": "forge test -vvv",
+    "deploy": "pnpm deploy:foundry",
+    "deploy:foundry": "forge script --rpc-url http://127.0.0.1:8545/ scripts/Deploy.sol:DeployScript --broadcast -vvvv"
+  },
+  "devDependencies": {
+    "solhint": "^3.4.1",
+    "solidity-docgen": "^0.5.16"
+  }
+}

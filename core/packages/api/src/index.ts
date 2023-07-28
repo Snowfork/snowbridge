@@ -1,8 +1,7 @@
-import "@polkadot/api-augment/polkadot"
-import { IGateway, IGateway__factory } from "@snowbridge/contract-types/types"
-
-import { ethers } from "ethers"
+// import "@polkadot/api-augment/polkadot"
 import { ApiPromise, WsProvider } from "@polkadot/api"
+import { ethers } from "ethers"
+import { IGateway, IGateway__factory } from "@snowbridge/contract-types/types"
 
 interface Config {
     ethereum: {
@@ -51,7 +50,7 @@ const contextFactory = async (config: Config): Promise<Context> => {
         provider: new WsProvider(config.polkadot.url),
     })
 
-    let gatewayAddr = "" //address_for GatewayProxy
+    let gatewayAddr = process.env["GatewayProxyAddress"]!
 
     let appContracts: AppContracts = {
         gateway: IGateway__factory.connect(gatewayAddr, ethApi),
