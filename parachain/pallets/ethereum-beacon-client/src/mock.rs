@@ -16,8 +16,9 @@ pub mod minimal {
 
 	use crate::config;
 	use primitives::CompactExecutionHeader;
-	use snowbridge_core::Message;
+	use snowbridge_core::inbound::{Message, Proof};
 	use std::{fs::File, path::PathBuf};
+	use hex_literal::hex;
 
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
