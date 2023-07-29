@@ -97,6 +97,6 @@ async fn upgrade_gateway() {
         .await
         .expect("sudo call success");
 
-    println!("{:#?}", result);
+    println!("{:?}", result);
 
 }
