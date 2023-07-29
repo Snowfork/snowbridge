@@ -3740,6 +3740,7 @@ dependencies = [
  "hex",
  "hex-literal",
  "parity-scale-codec",
+ "sp-core 16.0.0",
  "subxt",
  "tokio",
  "xcm",

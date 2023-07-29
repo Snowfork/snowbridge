@@ -14,7 +14,7 @@ hex-literal = "0.4.1"
 subxt = { git = "https://github.com/paritytech/subxt.git", tag = "v0.27.1" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = false, features = ["abigen"] }
 
-
 [dev-dependencies]
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
+sp-core = { version = "16.0.0" }
 hex-literal = "0.4.1"
