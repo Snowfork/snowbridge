@@ -14,11 +14,11 @@ Off-chain relayer services for relaying messages between Polkadot and Ethereum. 
 
 ### Contracts
 
-Ethereum contracts and unit tests. See [core/packages/contracts/README.md](core/packages/contracts/README.md)
+Ethereum contracts and unit tests. See [contracts/README.md](contracts/README.md)
 
 ### Integration Tests
 
-This component includes our end to end tests, that pull together all the above services and set them up easily through scripts for automated E2E tests. See [core/packages/test/README.md](core/packages/test/README.md).
+This component includes our end to end tests, that pull together all the above services and set them up easily through scripts for automated E2E tests. See [web/packages/test/README.md](web/packages/test/README.md).
 
 ## Development
 

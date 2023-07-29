@@ -14,7 +14,7 @@ Obviously this means that if wDOT accounts have very small amounts of dust that 
 
 ## Implementation
 
-* [DOTApp smart contract](../../../core/packages/contracts/contracts/DOTApp.sol)
+* [DOTApp smart contract](../../../contracts/contracts/DOTApp.sol)
 * [DOTApp pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/dot-app)
 
 wDOT is implemented using this ERC-777 contract: [WrappedToken](../../../ethereum/contracts/WrappedToken.sol)

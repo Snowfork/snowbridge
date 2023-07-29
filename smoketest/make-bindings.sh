@@ -22,4 +22,4 @@ subxt codegen --url ws://localhost:11144 | rustfmt --edition 2021 --emit=stdout 
 forge bind --module --overwrite \
     --select 'IGateway|WETH9' \
     --bindings-path src/contracts  \
-    --root ../core/packages/contracts
+    --root ../contracts

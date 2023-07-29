@@ -112,7 +112,7 @@ This guide uses the root of the `$HOME/` folder for all source code.
     ```
 4.  Edit `.envrc` and `direnv allow`
 
-    In the `core/packages/test` subfolder of the `snowbridge` repo copy the envrc-example.
+    In the `web/packages/test` subfolder of the `snowbridge` repo copy the envrc-example.
 
     ```bash
     cp .envrc-example .envrc
@@ -126,7 +126,7 @@ This guide uses the root of the `$HOME/` folder for all source code.
     direnv allow
     ```
 
-    In the `core/packages/contracts` subfolder of the `snowbridge` repo copy the envrc-example. Here we do not need to edit the `.envrc` as defaults are set.
+    In the `contracts` subfolder of the `snowbridge` repo copy the envrc-example. Here we do not need to edit the `.envrc` as defaults are set.
 
     ```bash
     cp .envrc-example .envrc
@@ -137,7 +137,7 @@ This guide uses the root of the `$HOME/` folder for all source code.
 
 1. Start up the local E2E test stack
 
-In a separate terminal change directory to the `core/packages/test` subfolder of the `snowbridge` repo. Run `start-services.sh` script to start the bridge.
+In a separate terminal change directory to the `web/packages/test` subfolder of the `snowbridge` repo. Run `start-services.sh` script to start the bridge.
 
 ```bash
 scripts/start-services.sh
@@ -157,7 +157,7 @@ When this is complete `Testnet has been initialized` will be printed to the term
 
     The bridge requires a certain amount of funds (SnowDOT and SnowETH) in order for Incentivized channels to be used. The bootstrap process are the first two test cases and needs to be run before other tests will pass.
 
-    In the `core/packages/test` subfolder of the `snowbridge` repo run the bootstrap tests:
+    In the `web/packages/test` subfolder of the `snowbridge` repo run the bootstrap tests:
 
     ```bash
     pnpm test:integration test/bootstrap.js
@@ -189,28 +189,28 @@ When this is complete `Testnet has been initialized` will be printed to the term
     The Lodestar log file is `/tmp/snowbridge/lodestar.log`.
 2.  Relaychain
 
-    The relay chain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `alice.log`, `bob.log`, `charlie.log`
+    The relay chain log files are in the `web/packages/test` subdirectory of the `snowbridge` repo. `alice.log`, `bob.log`, `charlie.log`
 
     The relay chain can be accessed via the polkadot.js web using the following url:
 
     [https://polkadot.js.org/apps/?rpc=ws%3A%2F%127.0.0.1%3A9944#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A9944#/explorer)
 3.  Parachain
 
-    The Snowbridge parachain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `11144.log`, `11155.log`
+    The Snowbridge parachain log files are in the `web/packages/test` subdirectory of the `snowbridge` repo. `11144.log`, `11155.log`
 
     The Snowbridge parachain can be accessed via the polkadot.js web using the following url:
 
     [https://polkadot.js.org/apps/?rpc=ws%3A%2F%127.0.0.1%3A11144#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144#/explorer)
 4.  Test Parachain
 
-    The third-party test parachain log files are in the `core/packages/test` subdirectory of the `snowbridge` repo. `13144.log`, `13155.log`
+    The third-party test parachain log files are in the `web/packages/test` subdirectory of the `snowbridge` repo. `13144.log`, `13155.log`
 
     The Snowbridge Test parachain can be accessed via the polkadot.js web using the following url:
 
     [https://polkadot.js.org/apps/?rpc=ws%3A%2F%127.0.0.1%3A13144#/explorer](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A13144#/explorer)
 5. Relayers
 
-The relayers log files can be found in the `core/packages/test` subdirectory of the `snowbridge` repo.
+The relayers log files can be found in the `web/packages/test` subdirectory of the `snowbridge` repo.
 
 * `beacon-relay.log`
 * `parachain-relay.log`

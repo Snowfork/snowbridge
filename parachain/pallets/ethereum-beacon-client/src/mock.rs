@@ -9,17 +9,16 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use hex_literal::hex;
-use snowbridge_core::Proof;
 
 #[cfg(not(feature = "beacon-spec-mainnet"))]
 pub mod minimal {
 	use super::*;
 
 	use crate::config;
-	use std::{fs::File, path::PathBuf};
 	use primitives::CompactExecutionHeader;
-	use snowbridge_core::Message;
+	use snowbridge_core::inbound::{Message, Proof};
+	use std::{fs::File, path::PathBuf};
+	use hex_literal::hex;
 
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
@@ -150,7 +149,7 @@ pub mod minimal {
 		load_fixture("next-finalized-header-update.minimal.json").unwrap()
 	}
 
-	pub fn get_message_verification_payload() -> Message{
+	pub fn get_message_verification_payload() -> Message {
 		Message {
 			data: hex!("f9011c94ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0f863a01b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ada000000000000000000000000000000000000000000000000000000000000003e8a00000000000000000000000000000000000000000000000000000000000000001b8a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004b000f000000000000000100d184c103f7acc340847eee82a0b909e3358bc28d440edffa1352b13227e8ee646f3ea37456dec701345772617070656420457468657210574554481235003511000000000000000000000000000000000000000000").to_vec(),
 			proof: Proof {
@@ -169,12 +168,15 @@ pub mod minimal {
 		}
 	}
 
-	pub fn get_message_verification_header() -> CompactExecutionHeader{
-		CompactExecutionHeader{
-			parent_hash: hex!("04a7f6ab8282203562c62f38b0ab41d32aaebe2c7ea687702b463148a6429e04").into(),
+	pub fn get_message_verification_header() -> CompactExecutionHeader {
+		CompactExecutionHeader {
+			parent_hash: hex!("04a7f6ab8282203562c62f38b0ab41d32aaebe2c7ea687702b463148a6429e04")
+				.into(),
 			block_number: 55,
-			state_root: hex!("894d968712976d613519f973a317cb0781c7b039c89f27ea2b7ca193f7befdb3").into(),
-			receipts_root: hex!("cf0d1c1ba57d1e0edfb59786c7e30c2b7e12bd54612b00cd21c4eaeecedf44fb").into(),
+			state_root: hex!("894d968712976d613519f973a317cb0781c7b039c89f27ea2b7ca193f7befdb3")
+				.into(),
+			receipts_root: hex!("cf0d1c1ba57d1e0edfb59786c7e30c2b7e12bd54612b00cd21c4eaeecedf44fb")
+				.into(),
 		}
 	}
 }

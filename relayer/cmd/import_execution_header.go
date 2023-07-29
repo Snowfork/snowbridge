@@ -79,7 +79,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		spec, _ := cmd.Flags().GetString("spec")
 
 		activeSpec, _ := config.ToSpec(spec)
-		viper.SetConfigFile("core/packages/test/config/beacon-relay.json")
+		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
 		if err := viper.ReadInConfig(); err != nil {
 			return err
 		}

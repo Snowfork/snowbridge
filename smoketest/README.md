@@ -1,17 +1,18 @@
 # Smoketests
 
-Before running deposit funds into Statemint's sovereign account on BridgeHub:
-```
-5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ
-```
+Smoke tests for a running E2E environment
 
-This is necessary to cover rewards for "execution message" relayers. Messages will be rejected if the account is empty.
+Currently it only supports coverage for the following:
 
-# Bindings
+From Ethereum:
+* Registering new tokens on the AssetHub parachain
+* Sending tokens to the AssetHub parachain
 
-First make sure the E2E Stack is running.
+# Setup
 
-Then run this command:
+1. First make sure the E2E Stack is running. See [web/packages/test/README.md](../web/packages/test/README.md).
+
+2. Generate Rust bindings for both sides of the bridge
 
 ```shell
 ./make-bindings.sh
@@ -19,6 +20,12 @@ Then run this command:
 
 # Run Tests
 
+Send an ethereum transaction to register a new token
 ```
-cargo test --test lock_tokens -- --nocapture
+cargo test --test register_token -- --nocapture
+```
+
+Send an ethereum transaction to send tokens
+```
+cargo test --test send_token -- --nocapture
 ```
