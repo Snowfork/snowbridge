@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use crate::mock::*;
-use crate::*;
+use crate::{mock::*, *};
 use hex_literal::hex;
 use sp_core::H256;
-use sp_runtime::AccountId32;
-use sp_runtime::DispatchError::BadOrigin;
+use sp_runtime::{AccountId32, DispatchError::BadOrigin};
 
 #[test]
 fn create_agent_with_unknown_origin_yields_bad_origin() {
@@ -39,7 +37,7 @@ fn create_agent_with_relaychain_origin_yields_success() {
 		assert!(Agents::<Test>::contains_key(expected_agent_id));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: expected_multi_location,
+			location: Box::new(expected_multi_location),
 			agent_id: expected_agent_id,
 		}));
 	});
@@ -61,7 +59,7 @@ fn create_agent_with_local_account32_yields_success() {
 		assert!(Agents::<Test>::contains_key(expected_agent_id));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: expected_multi_location,
+			location: Box::new(expected_multi_location),
 			agent_id: expected_agent_id,
 		}));
 	});
@@ -83,7 +81,7 @@ fn create_agent_with_local_account20_yields_success() {
 		assert!(Agents::<Test>::contains_key(expected_agent_id));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: expected_multi_location,
+			location: Box::new(expected_multi_location),
 			agent_id: expected_agent_id,
 		}));
 	});
@@ -103,7 +101,7 @@ fn create_agent_with_local_pallet_yields_success() {
 		assert!(Agents::<Test>::contains_key(expected_agent_id));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: expected_multi_location,
+			location: Box::new(expected_multi_location),
 			agent_id: expected_agent_id,
 		}));
 	});
@@ -122,7 +120,7 @@ fn create_agent_with_sibling_chain_origin_yields_success() {
 		assert!(Agents::<Test>::contains_key(expected_agent_id));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: expected_multi_location,
+			location: Box::new(expected_multi_location),
 			agent_id: expected_agent_id,
 		}));
 	});
@@ -144,7 +142,7 @@ fn create_agent_with_sibling_chain_account32_origin_yields_success() {
 		assert!(Agents::<Test>::contains_key(expected_agent_id));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: expected_multi_location,
+			location: Box::new(expected_multi_location),
 			agent_id: expected_agent_id,
 		}));
 	});
@@ -166,7 +164,7 @@ fn create_agent_with_sibling_chain_account20_origin_yields_success() {
 		assert!(Agents::<Test>::contains_key(expected_agent_id));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: expected_multi_location,
+			location: Box::new(expected_multi_location),
 			agent_id: expected_agent_id,
 		}));
 	});

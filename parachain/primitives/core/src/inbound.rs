@@ -3,8 +3,7 @@
 //! Types for representing inbound messages
 
 use codec::{Decode, Encode};
-use frame_support::dispatch::DispatchError;
-use frame_support::{scale_info::TypeInfo, RuntimeDebug};
+use frame_support::{dispatch::DispatchError, scale_info::TypeInfo, RuntimeDebug};
 use snowbridge_ethereum::Log;
 use sp_core::H256;
 use sp_std::vec::Vec;

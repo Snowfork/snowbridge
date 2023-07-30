@@ -16,7 +16,7 @@ pub struct Receipt {
 
 impl Receipt {
 	pub fn contains_log(&self, log: &Log) -> bool {
-		self.logs.iter().find(|&l| l == log).is_some()
+		self.logs.iter().any(|l| l == log)
 	}
 
 	fn decode_list(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {

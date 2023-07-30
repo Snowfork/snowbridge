@@ -43,20 +43,20 @@ pub trait WeightInfo {
 pub struct SnowbridgeWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 	fn do_process_message() -> Weight {
-		Weight::from_parts(100_000_000 as u64, 0)
+		Weight::from_parts(100_000_000_u64, 0)
 			.saturating_add(T::DbWeight::get().reads(2))
 	}
 	fn on_finalize() -> Weight {
-		Weight::from_parts(100_000_000 as u64, 0)
+		Weight::from_parts(100_000_000_u64, 0)
 			.saturating_add(T::DbWeight::get().reads(2))
 	}
 }
 
 impl WeightInfo for () {
 	fn do_process_message() -> Weight {
-		Weight::from_parts(100 as u64, 100)
+		Weight::from_parts(100_u64, 100)
 	}
 	fn on_finalize() -> Weight {
-		Weight::from_parts(100 as u64, 100)
+		Weight::from_parts(100_u64, 100)
 	}
 }

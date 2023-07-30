@@ -2,21 +2,19 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
 //! Pallet for committing outbound messages for delivery to Ethereum
-//! 
+//!
 //! The message submission pipeline works like this:
 //! 1. The message is first validated via [`OutboundQueue::validate`]
 //! 2. The message is then enqueued for processing via [`OutboundQueue::submit`]
 //! 3. The message queue is maintained by the external [`MessageQueue`] pallet
 //! 4. [`MessageQueue`] delivers messages back to this pallet via `ProcessMessage::process_message`
-//! 5. The message is processed in `do_process_message`
-//!    a. Assigned a nonce
-//!    b. ABI-encoded, hashed, and stored in the `Leaves` vector
+//! 5. The message is processed in `do_process_message` a. Assigned a nonce b. ABI-encoded, hashed,
+//!    and stored in the `Leaves` vector
 //! 6. At the end of the block, a merkle root is constructed from all the leaves in `Leaves`.
 //! 7. This merkle root is inserted into the parachain header as a digest item
-//! 
-//! On the Ethereum side, the message root is ultimately the thing being
-//! by the Polkadot light client. 
 //!
+//! On the Ethereum side, the message root is ultimately the thing being
+//! by the Polkadot light client.
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod api;
 pub mod weights;
@@ -81,13 +79,13 @@ pub struct PreparedMessage {
 }
 
 /// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
-impl Into<Token> for PreparedMessage {
-	fn into(self) -> Token {
+impl From<PreparedMessage> for Token  {
+	fn from(x: PreparedMessage) -> Token {
 		Token::Tuple(vec![
-			Token::Uint(u32::from(self.origin).into()),
-			Token::Uint(self.nonce.into()),
-			Token::Uint(self.command.into()),
-			Token::Bytes(self.params.to_vec()),
+			Token::Uint(u32::from(x.origin).into()),
+			Token::Uint(x.nonce.into()),
+			Token::Uint(x.command.into()),
+			Token::Bytes(x.params.to_vec()),
 		])
 	}
 }
@@ -213,7 +211,7 @@ pub mod pallet {
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
 			// Reserve some weight for the `on_finalize` handler
-			return T::WeightInfo::on_finalize();
+			T::WeightInfo::on_finalize()
 		}
 
 		fn on_finalize(_: BlockNumberFor<T>) {
@@ -255,7 +253,7 @@ pub mod pallet {
 		pub(crate) fn commit_messages() {
 			let count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
 			if count == 0 {
-				return;
+				return
 			}
 
 			// Create merkle root of messages
@@ -278,7 +276,7 @@ pub mod pallet {
 
 			let (command, params) = enqueued_message.command.abi_encode();
 
-			// Construct a prepared message, which when ABI-encoded is what the 
+			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
 			let message: PreparedMessage = PreparedMessage {
 				origin: enqueued_message.origin,
@@ -288,7 +286,7 @@ pub mod pallet {
 			};
 
 			// ABI-encode and hash the prepared message
-			let message_abi_encoded = ethabi::encode(&vec![message.clone().into()]);
+			let message_abi_encoded = ethabi::encode(&[message.clone().into()]);
 			let message_abi_encoded_hash = <T as Config>::Hashing::hash(&message_abi_encoded);
 
 			Messages::<T>::append(Box::new(message));
@@ -361,14 +359,14 @@ pub mod pallet {
 			// Yield if we don't want to accept any more messages in the current block.
 			// There is hard limit to ensure the weight of `on_finalize` is bounded.
 			ensure!(
-				MessageLeaves::<T>::decode_len().unwrap_or(0)
-					< T::MaxMessagesPerBlock::get() as usize,
+				MessageLeaves::<T>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerBlock::get() as usize,
 				ProcessMessageError::Yield
 			);
 
 			let weight = T::WeightInfo::do_process_message();
 			if !meter.check_accrue(weight) {
-				return Err(ProcessMessageError::Overweight(weight));
+				return Err(ProcessMessageError::Overweight(weight))
 			}
 
 			Self::do_process_message(message)

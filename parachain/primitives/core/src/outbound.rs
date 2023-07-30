@@ -76,7 +76,8 @@ pub enum Command {
 	},
 	/// Create an agent representing a consensus system on Polkadot
 	CreateAgent {
-		/// The ID of the agent, derived from the `MultiLocation` of the consensus system on Polkadot
+		/// The ID of the agent, derived from the `MultiLocation` of the consensus system on
+		/// Polkadot
 		agent_id: H256,
 	},
 	/// Create bidirectional messaging channel to a parachain
@@ -135,22 +136,22 @@ impl Command {
 		match self {
 			Command::AgentExecute { agent_id, command } => (
 				self.index(),
-				ethabi::encode(&vec![Token::Tuple(vec![
+				ethabi::encode(&[Token::Tuple(vec![
 					Token::FixedBytes(agent_id.as_bytes().to_owned()),
 					Token::Bytes(command.abi_encode()),
 				])]),
 			),
 			Command::Upgrade { impl_address, impl_code_hash, params } => (
 				self.index(),
-				ethabi::encode(&vec![Token::Tuple(vec![
+				ethabi::encode(&[Token::Tuple(vec![
 					Token::Address(*impl_address),
 					Token::FixedBytes(impl_code_hash.as_bytes().to_owned()),
-					params.clone().map_or(Token::Bytes(vec![]), |p| Token::Bytes(p)),
+					params.clone().map_or(Token::Bytes(vec![]), Token::Bytes),
 				])]),
 			),
 			Command::CreateAgent { agent_id } => (
 				self.index(),
-				ethabi::encode(&vec![Token::Tuple(vec![Token::FixedBytes(
+				ethabi::encode(&[Token::Tuple(vec![Token::FixedBytes(
 					agent_id.as_bytes().to_owned(),
 				)])]),
 			),
@@ -158,7 +159,7 @@ impl Command {
 				let para_id: u32 = (*para_id).into();
 				(
 					self.index(),
-					ethabi::encode(&vec![Token::Tuple(vec![
+					ethabi::encode(&[Token::Tuple(vec![
 						Token::Uint(U256::from(para_id)),
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 					])]),
@@ -168,7 +169,7 @@ impl Command {
 				let para_id: u32 = (*para_id).into();
 				(
 					self.index(),
-					ethabi::encode(&vec![Token::Tuple(vec![
+					ethabi::encode(&[Token::Tuple(vec![
 						Token::Uint(U256::from(para_id)),
 						Token::Uint(U256::from((*mode) as u64)),
 						Token::Uint(U256::from(*fee)),
@@ -178,11 +179,11 @@ impl Command {
 			},
 			Command::SetOperatingMode { mode } => (
 				self.clone().index(),
-				ethabi::encode(&vec![Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
+				ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
 			),
 			Command::TransferNativeFromAgent { agent_id, recipient, amount } => (
 				self.clone().index(),
-				ethabi::encode(&vec![Token::Tuple(vec![
+				ethabi::encode(&[Token::Tuple(vec![
 					Token::FixedBytes(agent_id.as_bytes().to_owned()),
 					Token::Address(*recipient),
 					Token::Uint(U256::from(*amount)),
@@ -216,16 +217,11 @@ impl AgentExecuteCommand {
 	/// ABI-encode the sub-command
 	pub fn abi_encode(&self) -> Vec<u8> {
 		match self {
-			AgentExecuteCommand::TransferToken { token, recipient, amount } => {
-				ethabi::encode(&vec![
-					Token::Uint(self.index().into()),
-					Token::Bytes(ethabi::encode(&vec![
-						Token::Address(*token),
+			AgentExecuteCommand::TransferToken { token, recipient, amount } =>
+				ethabi::encode(&[Token::Uint(self.index().into()),
+					Token::Bytes(ethabi::encode(&[Token::Address(*token),
 						Token::Address(*recipient),
-						Token::Uint(U256::from(*amount)),
-					])),
-				])
-			},
+						Token::Uint(U256::from(*amount))]))]),
 		}
 	}
 }

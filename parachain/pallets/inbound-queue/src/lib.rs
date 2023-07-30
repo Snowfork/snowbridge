@@ -17,25 +17,26 @@ pub mod weights;
 #[cfg(test)]
 mod test;
 
-use codec::DecodeAll;
+use codec::{Decode, DecodeAll, Encode};
 use frame_support::{
 	traits::{
 		fungible::{Inspect, Mutate},
 		GenesisBuild,
 	},
-	DefaultNoBound, CloneNoBound, EqNoBound, PartialEqNoBound
+	CloneNoBound, DefaultNoBound, EqNoBound, PartialEqNoBound,
 };
 use frame_system::ensure_signed;
+use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
-use codec::{Decode, Encode};
-use scale_info::TypeInfo;
 use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError};
 
-use snowbridge_core::ParaId;
 use envelope::Envelope;
-use snowbridge_core::inbound::{Message, Verifier};
+use snowbridge_core::{
+	inbound::{Message, Verifier},
+	ParaId,
+};
 use snowbridge_router_primitives::inbound;
 pub use weights::WeightInfo;
 
@@ -107,7 +108,7 @@ pub mod pallet {
 			/// The message nonce
 			nonce: u64,
 			/// The result of the message dispatch
-			result: MessageDispatchResult
+			result: MessageDispatchResult,
 		},
 	}
 
@@ -214,7 +215,7 @@ pub mod pallet {
 						nonce: envelope.nonce,
 						result: MessageDispatchResult::InvalidPayload,
 					});
-					return Ok(());
+					return Ok(())
 				},
 			};
 

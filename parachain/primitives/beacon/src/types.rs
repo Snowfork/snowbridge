@@ -374,7 +374,7 @@ impl From<ExecutionPayloadHeader> for CompactExecutionHeader {
 	Encode,
 	Decode,
 	Copy,
-	CloneNoBound,
+	Clone,
 	PartialEqNoBound,
 	RuntimeDebugNoBound,
 	TypeInfo,
