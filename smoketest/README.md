@@ -2,12 +2,6 @@
 
 Smoke tests for a running E2E environment
 
-Currently it only supports coverage for the following:
-
-From Ethereum:
-* Registering new tokens on the AssetHub parachain
-* Sending tokens to the AssetHub parachain
-
 # Setup
 
 1. First make sure the E2E Stack is running. See [web/packages/test/README.md](../web/packages/test/README.md).
@@ -20,20 +14,26 @@ From Ethereum:
 
 # Run Tests
 
+## Assets
+
+### Token Registration
+
 Send an ethereum transaction to register a new token
+
 ```
 cargo test --test register_token -- --nocapture
 ```
+### Send Tokens
 
-Send an ethereum transaction to send tokens
+Send an ethereum transaction to send tokens over the bridge. Must have registered the token previously.
+
 ```
 cargo test --test send_token -- --nocapture
 ```
 
-Send an upgrade transaction via the relaychain.
-Tests that the upgrade path works in terms of message routing and abi encoding.
-This operation will brick the bridge as it upgrades the gateway to a mock gateway which has no implementation.
-Please restart the testnet after running the test.
+### Upgrade the Gateway (Governance)
+
+Send an upgrade transaction via the relaychain. This operation will brick the bridge as it upgrades the gateway to mock implementation. Please restart the testnet after running the test.
 
 ```
 cargo test --test upgrade_gateway -- --nocapture

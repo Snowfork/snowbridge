@@ -8,4 +8,4 @@ NONE, project is still work in progress and has not been reviewed for security. 
 
 ## Reporting a Vulnerability
 
-Please email polkaeth@snowfork.com
+Please email contact@snowfork.com
