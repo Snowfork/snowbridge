@@ -130,7 +130,7 @@ async fn upgrade_gateway() {
         .expect("sudo call success");
 
     println!(
-        "sudo call issued at relaychain block hash {:?}",
+        "Sudo call issued at relaychain block hash {:?}",
         result.block_hash()
     );
 
@@ -142,7 +142,7 @@ async fn upgrade_gateway() {
         .expect("block subscription")
         .take(wait_for_blocks);
 
-    let mut event_found = false;
+    let mut upgrade_event_found = false;
     while let Some(Ok(block)) = blocks.next().await {
         println!(
             "Polling bridgehub block {} for upgrade event.",
@@ -158,14 +158,13 @@ async fn upgrade_gateway() {
             );
             assert_eq!(upgrade.params_hash, Some(params_hash.into()));
             println!("Event found at bridgehub block {}.", block.number());
-            event_found = true;
-            break;
+            upgrade_event_found = true;
         }
-        if event_found {
+        if upgrade_event_found {
             break;
         }
     }
-    assert!(event_found);
+    assert!(upgrade_event_found);
 
     let wait_for_blocks = 30;
     let mut stream = ethereum_client
@@ -188,7 +187,7 @@ async fn upgrade_gateway() {
             .await
         {
             for upgrade in upgrades {
-                println!("Upgrade found at ethereum block {:?}", block.number.unwrap());
+                println!("Upgrade event found at ethereum block {:?}", block.number.unwrap());
                 assert_eq!(
                     upgrade.implementation,
                     GATETWAY_UPGRADE_MOCK_CONTRACT.into()
@@ -196,14 +195,14 @@ async fn upgrade_gateway() {
                 upgrade_event_found = true;
             }
             if upgrade_event_found {
-                if let Ok(initilizes) = mock_gateway
+                if let Ok(initializes) = mock_gateway
                     .event::<InitializedFilter>()
                     .at_block_hash(block.hash.unwrap())
                     .query()
                     .await
                 {
-                    for initialize in initilizes {
-                        println!("Initialize found at ethereum block {:?}", block.number.unwrap());
+                    for initialize in initializes {
+                        println!("Initialize event found at ethereum block {:?}", block.number.unwrap());
                         assert_eq!(initialize.d_0, d_0.into());
                         assert_eq!(initialize.d_1, d_1.into());
                         initialize_event_found = true;

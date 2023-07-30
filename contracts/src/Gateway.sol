@@ -118,7 +118,7 @@ contract Gateway is IGateway, IInitializable {
         }
 
         // Increment nonce for origin.
-        // This also prevents the re-entrancy case in which a malicous party tries to re-enter by calling `submitInbound`
+        // This also prevents the re-entrancy case in which a malicious party tries to re-enter by calling `submitInbound`
         // again with the same (message, leafProof, headerProof) arguments.
         channel.inboundNonce++;
 
