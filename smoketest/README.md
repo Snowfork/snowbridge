@@ -37,8 +37,3 @@ Please restart the testnet after running the test.
 ```
 cargo test --test upgrade_gateway -- --nocapture
 ```
-
-Send a substrate transaction to send tokens using bridge-transfer pallet on asset hub.
-```
-cargo test --test bridge_transfer_token -- --nocapture
-```
