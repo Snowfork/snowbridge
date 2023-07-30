@@ -152,7 +152,7 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureOriginFromTable {
 		#[cfg(feature = "runtime-benchmarks")]
 		{
 			if account == whitelisted_caller() {
-				return Ok(MultiLocation::new(1, Here));
+				return Ok(MultiLocation::new(1, Here))
 			}
 		}
 
@@ -160,7 +160,7 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureOriginFromTable {
 		let key: [u8; 32] = account.into();
 		for entry in ORIGIN_TABLE {
 			if entry.0 == key {
-				return Ok(entry.1);
+				return Ok(entry.1)
 			}
 		}
 		Err(outer)

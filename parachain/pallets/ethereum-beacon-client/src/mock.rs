@@ -15,10 +15,10 @@ pub mod minimal {
 	use super::*;
 
 	use crate::config;
+	use hex_literal::hex;
 	use primitives::CompactExecutionHeader;
 	use snowbridge_core::inbound::{Message, Proof};
 	use std::{fs::File, path::PathBuf};
-	use hex_literal::hex;
 
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;

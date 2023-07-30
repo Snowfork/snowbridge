@@ -17,8 +17,10 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
-use snowbridge_core::outbound::{Command, Message, OutboundQueue as OutboundQueueTrait, ParaId};
-use snowbridge_core::AgentId;
+use snowbridge_core::{
+	outbound::{Command, Message, OutboundQueue as OutboundQueueTrait, ParaId},
+	AgentId,
+};
 use sp_core::{H160, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
@@ -73,7 +75,7 @@ pub mod pallet {
 		/// An Upgrade message was sent to the Gateway
 		Upgrade { impl_address: H160, impl_code_hash: H256, params_hash: Option<H256> },
 		/// An CreateAgent message was sent to the Gateway
-		CreateAgent { location: MultiLocation, agent_id: AgentId },
+		CreateAgent { location: Box<MultiLocation>, agent_id: AgentId },
 	}
 
 	#[pallet::error]
@@ -94,8 +96,8 @@ pub mod pallet {
 		/// - `origin`: Must be `Root`.
 		/// - `impl_address`: The address of the new implementation contract.
 		/// - `impl_code_hash`: The codehash of `impl_address`.
-		/// - `params`: An optional list of ABI-encoded parameters for the implementation
-		///   contract's `initialize(bytes) function. If `None`, the initialization function is not called.
+		/// - `params`: An optional list of ABI-encoded parameters for the implementation contract's
+		///   `initialize(bytes) function. If `None`, the initialization function is not called.
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::upgrade(params.clone().map_or(0, |d| d.len() as u32)))]
 		pub fn upgrade(
@@ -144,27 +146,26 @@ pub mod pallet {
 				.ok_or(Error::<T>::LocationConversionFailed)?;
 
 			// Record the agent id or fail if it has already been created
-			if let Some(_) = Agents::<T>::get(agent_id) {
-				return Err(Error::<T>::AgentAlreadyCreated.into());
+			if Agents::<T>::get(agent_id).is_some() {
+				return Err(Error::<T>::AgentAlreadyCreated.into())
 			}
 			Agents::<T>::insert(agent_id, ());
 
-			let message = Message {
-					origin: T::OwnParaId::get(),
-					command: Command::CreateAgent { agent_id } 
-			};
+			let message =
+				Message { origin: T::OwnParaId::get(), command: Command::CreateAgent { agent_id } };
 			Self::submit_outbound(message)?;
-			
-			Self::deposit_event(Event::<T>::CreateAgent { location, agent_id });
+
+			Self::deposit_event(Event::<T>::CreateAgent { location: Box::new(location), agent_id });
 			Ok(())
 		}
 	}
 
 	impl<T: Config> Pallet<T> {
 		fn submit_outbound(message: Message) -> DispatchResult {
-			let ticket = T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
+			let ticket =
+				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
-			Ok(())			
+			Ok(())
 		}
 	}
 }

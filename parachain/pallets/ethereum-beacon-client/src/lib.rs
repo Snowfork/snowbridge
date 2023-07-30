@@ -214,7 +214,7 @@ pub mod pallet {
 		#[transactional]
 		/// Used for pallet initialization and light client resetting. Needs to be called by
 		/// the root origin.
-		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
+		pub fn force_checkpoint(origin: OriginFor<T>, update: Box<CheckpointUpdate>) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::process_checkpoint_update(&update)?;
 			Ok(())
@@ -230,7 +230,7 @@ pub mod pallet {
 		#[transactional]
 		/// Submits a new finalized beacon header update. The update may contain the next
 		/// sync committee.
-		pub fn submit(origin: OriginFor<T>, update: Update) -> DispatchResult {
+		pub fn submit(origin: OriginFor<T>, update: Box<Update>) -> DispatchResult {
 			Self::ensure_not_halted().map_err(Error::<T>::BridgeModule)?;
 			ensure_signed(origin)?;
 			Self::process_update(&update)?;
@@ -244,7 +244,7 @@ pub mod pallet {
 		/// is also included to prove the execution header, as well as ancestry proof data.
 		pub fn submit_execution_header(
 			origin: OriginFor<T>,
-			update: ExecutionHeaderUpdate,
+			update: Box<ExecutionHeaderUpdate>,
 		) -> DispatchResult {
 			Self::ensure_not_halted().map_err(Error::<T>::BridgeModule)?;
 			ensure_signed(origin)?;
@@ -347,9 +347,9 @@ pub mod pallet {
 			// committee period.
 			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
 			ensure!(
-				latest_execution_state.beacon_slot == 0
-					|| latest_finalized_state.slot
-						< latest_execution_state.beacon_slot + max_latency as u64,
+				latest_execution_state.beacon_slot == 0 ||
+					latest_finalized_state.slot <
+						latest_execution_state.beacon_slot + max_latency as u64,
 				Error::<T>::ExecutionHeaderTooFarBehind
 			);
 			Ok(())
@@ -367,8 +367,8 @@ pub mod pallet {
 
 			// Verify update does not skip a sync committee period.
 			ensure!(
-				update.signature_slot > update.attested_header.slot
-					&& update.attested_header.slot >= update.finalized_header.slot,
+				update.signature_slot > update.attested_header.slot &&
+					update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidUpdateSlot
 			);
 			// Retrieve latest finalized state.
@@ -388,12 +388,12 @@ pub mod pallet {
 
 			// Verify update is relevant.
 			let update_attested_period = compute_period(update.attested_header.slot);
-			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists()
-				&& (update.next_sync_committee_update.is_some()
-					&& update_attested_period == store_period);
+			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
+				(update.next_sync_committee_update.is_some() &&
+					update_attested_period == store_period);
 			ensure!(
-				update.attested_header.slot > latest_finalized_state.slot
-					|| update_has_next_sync_committee,
+				update.attested_header.slot > latest_finalized_state.slot ||
+					update_has_next_sync_committee,
 				Error::<T>::IrrelevantUpdate
 			);
 
@@ -596,7 +596,7 @@ pub mod pallet {
 					let state = <FinalizedBeaconState<T>>::get(block_root)
 						.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
 					if update.header.slot != state.slot {
-						return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into());
+						return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
 					}
 				},
 			}
@@ -631,7 +631,7 @@ pub mod pallet {
 			ensure!(
 				verify_merkle_branch(
 					block_root,
-					&block_root_proof,
+					block_root_proof,
 					leaf_index as usize,
 					config::BLOCK_ROOT_AT_INDEX_DEPTH,
 					state.block_roots_root
@@ -786,13 +786,13 @@ pub mod pallet {
 		/// Returns the fork version based on the current epoch.
 		pub(super) fn select_fork_version(fork_versions: &ForkVersions, epoch: u64) -> ForkVersion {
 			if epoch >= fork_versions.capella.epoch {
-				return fork_versions.capella.version;
+				return fork_versions.capella.version
 			}
 			if epoch >= fork_versions.bellatrix.epoch {
-				return fork_versions.bellatrix.version;
+				return fork_versions.bellatrix.version
 			}
 			if epoch >= fork_versions.altair.epoch {
-				return fork_versions.altair.version;
+				return fork_versions.altair.version
 			}
 
 			fork_versions.genesis.version

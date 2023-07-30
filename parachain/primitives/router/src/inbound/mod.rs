@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+//! Converts messages from Ethereum to XCM messages
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use frame_support::{traits::ContainsPair, weights::Weight};
@@ -13,7 +14,7 @@ use xcm_executor::traits::ConvertLocation;
 const MINIMUM_DEPOSIT: u128 = 1;
 
 /// Messages from Ethereum are versioned. This is because in future,
-/// we want to evolve the protocol so that the ethereum side sends XCM messages directly. Instead
+/// we may want to evolve the protocol so that the ethereum side sends XCM messages directly. Instead
 /// having BridgeHub transcode the messages into XCM.
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub enum VersionedMessage {
@@ -26,33 +27,60 @@ pub enum VersionedMessage {
 pub struct MessageV1 {
 	/// EIP-155 chain id of the origin Ethereum network
 	pub chain_id: u64,
-	/// The command
+	/// The command originating from the Gateway contract
 	pub message: Command,
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub enum Command {
-	RegisterToken { gateway: H160, token: H160, create_call_index: [u8; 2] },
-	SendToken { gateway: H160, token: H160, destination: Destination, amount: u128 },
+	/// Register a wrapped token on the AssetHub `ForeignAssets` pallet
+	RegisterToken {
+		/// The address of the gateway
+		gateway: H160,
+		/// The address of the ERC20 token to be bridged over to AssetHub
+		token: H160,
+		/// The stable ID of the `ForeignAssets::create` extrinsic
+		create_call_index: [u8; 2]
+	},
+	/// Send a token to AssetHub or another parachain
+	SendToken {
+		/// The address of the gateway
+		gateway: H160,
+		/// The address of the ERC20 token to be bridged over to AssetHub
+		token: H160,
+		/// The destination for the transfer
+		destination: Destination,
+		/// Amount to transfer
+		amount: u128
+	},
 }
 
+/// Destination for bridged tokens
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub enum Destination {
+	/// The funds will be deposited into account `id` on AssetHub
 	AccountId32 { id: [u8; 32] },
+	///	The funds will deposited into the sovereign account of destination parachain `para_id` on AssetHub,
+	/// Account `id` on the destination parachain will receive the funds via a reserve-backed transfer.
+	/// See https://github.com/paritytech/xcm-format#depositreserveasset
 	ForeignAccountId32 { para_id: u32, id: [u8; 32] },
+	///	The funds will deposited into the sovereign account of destination parachain `para_id` on AssetHub,
+	/// Account `id` on the destination parachain will receive the funds via a reserve-backed transfer.
+	/// See https://github.com/paritytech/xcm-format#depositreserveasset
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-impl Into<Xcm<()>> for MessageV1 {
-	fn into(self) -> Xcm<()> {
-		self.message.convert(self.chain_id)
+impl From<MessageV1> for Xcm<()> {
+	fn from(val: MessageV1) -> Self {
+		val.message.convert(val.chain_id)
 	}
 }
 
 impl Command {
 	pub fn convert(self, chain_id: u64) -> Xcm<()> {
 		let network = NetworkId::Ethereum { chain_id };
-		// TODO: WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
+		// TODO (SNO-582): The fees need to be made configurable and must match the weight
+		// required by the generated XCM script when executed on the foreign chain.
 		let buy_execution_fee_amount = 2_000_000_000;
 		let buy_execution_fee = MultiAsset {
 			id: Concrete(MultiLocation::parent()),
@@ -163,7 +191,7 @@ impl Command {
 					),
 				};
 
-				let assets = MultiAssetFilter::Definite(vec![asset.clone()].into());
+				let assets = MultiAssetFilter::Definite(vec![asset].into());
 
 				let mut fragment: Vec<Instruction<()>> = match dest_para_id {
 					Some(dest_para_id) => {
@@ -171,9 +199,9 @@ impl Command {
 							assets: assets.clone(),
 							dest: MultiLocation {
 								parents: 1,
-								interior: X1(Parachain(dest_para_id.into())),
+								interior: X1(Parachain(dest_para_id)),
 							},
-							xcm: vec![DepositAsset { assets: assets.clone(), beneficiary }].into(),
+							xcm: vec![DepositAsset { assets, beneficiary }].into(),
 						}]
 					},
 					None => {

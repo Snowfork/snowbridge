@@ -89,6 +89,9 @@ jobs:
           --release
           --features runtime-benchmarks
           --package snowbridge-ethereum-beacon-client
+      - name: Clippy
+        run: cargo clippy --manifest-path parachain/Cargo.toml -- -D warnings
+
 
   coverage:
     needs: check

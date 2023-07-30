@@ -59,7 +59,7 @@ impl rlp::Decodable for FullNode {
 
 impl Node for FullNode {
 	fn contains_hash(&self, hash: H256) -> bool {
-		self.children.iter().find(|&h| Some(hash) == *h).is_some()
+		self.children.iter().any(|h| Some(hash) == *h)
 	}
 }
 

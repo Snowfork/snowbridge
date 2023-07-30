@@ -95,7 +95,7 @@ impl Header {
 	}
 
 	pub fn apply_merkle_proof(&self, proof: &[Vec<u8>]) -> Option<(H256, Vec<u8>)> {
-		let mut iter = proof.into_iter().rev();
+		let mut iter = proof.iter().rev();
 		let first_bytes = match iter.next() {
 			Some(b) => b,
 			None => return None,
@@ -103,11 +103,10 @@ impl Header {
 		let item_to_prove: mpt::ShortNode = rlp::decode(first_bytes).ok()?;
 
 		let final_hash: Option<[u8; 32]> =
-			iter.fold(Some(keccak_256(first_bytes)), |maybe_hash, bytes| {
-				let expected_hash = maybe_hash?;
-				let node: Box<dyn mpt::Node> = bytes.as_slice().try_into().ok()?;
-				if (*node).contains_hash(expected_hash.into()) {
-					return Some(keccak_256(bytes))
+			iter.try_fold(keccak_256(first_bytes), |acc, x| {
+				let node: Box<dyn mpt::Node> = x.as_slice().try_into().ok()?;
+				if (*node).contains_hash(acc.into()) {
+					return Some(keccak_256(x))
 				}
 				None
 			});
@@ -148,7 +147,7 @@ impl Header {
 	}
 
 	/// Returns header RLP with or without seals.
-	///	For EIP-1559 baseFee addition refer to:
+	/// For EIP-1559 baseFee addition refer to:
 	/// https://github.com/openethereum/openethereum/blob/193b25a22d5ff07759c6431129e95235510516f9/crates/ethcore/types/src/header.rs#L341
 	fn rlp(&self, with_seal: bool) -> Bytes {
 		let mut s = RlpStream::new();
