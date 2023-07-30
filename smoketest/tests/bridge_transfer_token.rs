@@ -8,36 +8,22 @@ use ethers::{
 use futures::StreamExt;
 use hex_literal::hex;
 use snowbridge_smoketest::{
-	contracts::{
-		gateway_upgrade_mock::{self, InitializedFilter},
-		i_gateway::{self, UpgradedFilter},
-		weth9::TransferFilter,
-	},
+	contracts::weth9::{TransferFilter, WETH9},
 	parachains::{
-		assethub::api::runtime_types::{
-			pallet_xcm::pallet::Call,
-			sp_weights::weight_v2::Weight,
-			xcm::{
-				double_encoded::DoubleEncoded,
-				v3::{
-					self,
-					junction::{Junction, NetworkId},
-					junctions::Junctions,
-					multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
-					multilocation::MultiLocation,
-					Instruction, WeightLimit, Xcm,
-				},
-				VersionedMultiAssets, VersionedMultiLocation,
+		assethub::api::runtime_types::xcm::{
+			v3::{
+				junction::{Junction, NetworkId},
+				junctions::Junctions,
+				multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
+				multilocation::MultiLocation,
 			},
+			VersionedMultiAssets, VersionedMultiLocation,
 		},
 		assethub::{self},
 	},
 };
-use sp_core::{blake2_256, sr25519::Pair, Pair as PairT};
-use subxt::{
-	tx::{PairSigner, TxPayload},
-	OnlineClient, PolkadotConfig,
-};
+use sp_core::{sr25519::Pair, Pair as PairT};
+use subxt::{tx::PairSigner, OnlineClient, PolkadotConfig};
 
 const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
 const ETHEREUM_API: &str = "ws://localhost:8546";
@@ -57,7 +43,7 @@ async fn bridge_transfer_token() {
 	let ethereum_client = Arc::new(ethereum_provider);
 
 	let weth_addr: Address = WETH_CONTRACT.into();
-	let weth = i_gateway::IGateway::new(weth_addr, ethereum_client.clone());
+	let weth = WETH9::new(weth_addr, ethereum_client.clone());
 
 	let assethub: OnlineClient<PolkadotConfig> =
 		OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
@@ -67,19 +53,18 @@ async fn bridge_transfer_token() {
 	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(ferdie);
 
 	let amount: u128 = 1_000_000_000;
-	let assets: assethub::api::runtime_types::xcm::VersionedMultiAssets =
-		VersionedMultiAssets::V3(MultiAssets(vec![MultiAsset {
-			id: AssetId::Concrete(MultiLocation {
-				parents: 2,
-				interior: Junctions::X3(
-					Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
-					Junction::AccountKey20 { network: None, key: GATEWAY_PROXY_CONTRACT.into() },
-					Junction::AccountKey20 { network: None, key: WETH_CONTRACT.into() },
-				),
-			}),
-			fun: Fungibility::Fungible(amount),
-		}]));
-	let destination: VersionedMultiLocation = VersionedMultiLocation::V3(MultiLocation {
+	let assets = VersionedMultiAssets::V3(MultiAssets(vec![MultiAsset {
+		id: AssetId::Concrete(MultiLocation {
+			parents: 2,
+			interior: Junctions::X3(
+				Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+				Junction::AccountKey20 { network: None, key: GATEWAY_PROXY_CONTRACT.into() },
+				Junction::AccountKey20 { network: None, key: WETH_CONTRACT.into() },
+			),
+		}),
+		fun: Fungibility::Fungible(amount),
+	}]));
+	let destination = VersionedMultiLocation::V3(MultiLocation {
 		parents: 2,
 		interior: Junctions::X2(
 			Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
@@ -107,11 +92,8 @@ async fn bridge_transfer_token() {
 	let mut transfer_event_found = false;
 	while let Some(block) = stream.next().await {
 		println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
-		if let Ok(transfers) = weth
-			.event::<TransferFilter>()
-			.at_block_hash(block.hash.unwrap())
-			.query()
-			.await
+		if let Ok(transfers) =
+			weth.event::<TransferFilter>().at_block_hash(block.hash.unwrap()).query().await
 		{
 			for transfer in transfers {
 				println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
