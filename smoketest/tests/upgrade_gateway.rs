@@ -134,13 +134,13 @@ async fn upgrade_gateway() {
         result.block_hash()
     );
 
-    let max_blocks = 4;
+    let wait_for_blocks = 4;
     let mut blocks = bridgehub
         .blocks()
         .subscribe_finalized()
         .await
         .expect("block subscription")
-        .take(max_blocks);
+        .take(wait_for_blocks);
 
     let mut event_found = false;
     while let Some(Ok(block)) = blocks.next().await {
@@ -157,7 +157,7 @@ async fn upgrade_gateway() {
                 GATETWAY_UPGRADE_MOCK_CODE_HASH.into()
             );
             assert_eq!(upgrade.params_hash, Some(params_hash.into()));
-            println!("Event found at {}.", block.number());
+            println!("Event found at bridgehub block {}.", block.number());
             event_found = true;
             break;
         }
@@ -167,14 +167,15 @@ async fn upgrade_gateway() {
     }
     assert!(event_found);
 
-    let max_blocks = 10;
+    let wait_for_blocks = 30;
     let mut stream = ethereum_client
         .subscribe_blocks()
         .await
         .unwrap()
-        .take(max_blocks);
+        .take(wait_for_blocks);
 
-    let mut event_found = false;
+    let mut upgrade_event_found = false;
+    let mut initialize_event_found = false;
     while let Some(block) = stream.next().await {
         println!(
             "Polling ethereum block {:?} for upgraded event",
@@ -186,40 +187,34 @@ async fn upgrade_gateway() {
             .query()
             .await
         {
-            println!(
-                "Upgrade found at block {:?}",
-                block.number.unwrap()
-            );
             for upgrade in upgrades {
+                println!("Upgrade found at block {:?}", block.number.unwrap());
                 assert_eq!(
                     upgrade.implementation,
                     GATETWAY_UPGRADE_MOCK_CONTRACT.into()
                 );
-                event_found = true;
-                break;
+                upgrade_event_found = true;
             }
-            if let Ok(initilizes) = mock_gateway
-                .event::<InitializedFilter>()
-                .at_block_hash(block.hash.unwrap())
-                .query()
-                .await
-            {
-                println!(
-                    "Initialize found at block {:?}",
-                    block.number.unwrap()
-                );
-                for initialize in initilizes {
-                    assert_eq!(initialize.d_0, d_0.into());
-                    assert_eq!(initialize.d_1, d_1.into());
-                    break;
+            if upgrade_event_found {
+                if let Ok(initilizes) = mock_gateway
+                    .event::<InitializedFilter>()
+                    .at_block_hash(block.hash.unwrap())
+                    .query()
+                    .await
+                {
+                    for initialize in initilizes {
+                        println!("Initialize found at block {:?}", block.number.unwrap());
+                        assert_eq!(initialize.d_0, d_0.into());
+                        assert_eq!(initialize.d_1, d_1.into());
+                        initialize_event_found = true;
+                    }
                 }
-            } else {
-                panic!("No initialize event found")
             }
         }
-        if event_found {
+        if upgrade_event_found {
             break;
         }
     }
-    assert!(event_found);
+    assert!(upgrade_event_found);
+    assert!(initialize_event_found);
 }
