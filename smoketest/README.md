@@ -34,7 +34,11 @@ Send an upgrade transaction via the relaychain.
 Tests that the upgrade path works in terms of message routing and abi encoding.
 This operation will brick the bridge as it upgrades the gateway to a mock gateway which has no implementation.
 Please restart the testnet after running the test.
-
 ```
 cargo test --test upgrade_gateway -- --nocapture
+```
+
+Send a substrate transaction to send tokens using bridge-transfer pallet on asset hub.
+```
+cargo test --test bridge_transfer_token -- --nocapture
 ```
