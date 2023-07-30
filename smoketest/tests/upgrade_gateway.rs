@@ -149,7 +149,7 @@ async fn upgrade_gateway() {
 	}
 	assert!(upgrade_event_found);
 
-	let wait_for_blocks = 30;
+	let wait_for_blocks = 50;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
 
 	let mut upgrade_event_found = false;
