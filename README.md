@@ -8,17 +8,21 @@ Snowbridge is a trustless bridge between Polkadot and Ethereum. For documentatio
 
 Polkadot parachain and our pallets. See [parachain/README.md](parachain/README.md).
 
-### Relayer
-
-Off-chain relayer services for relaying messages between Polkadot and Ethereum. See [relayer/README.md](relayer/README.md)
-
 ### Contracts
 
 Ethereum contracts and unit tests. See [contracts/README.md](contracts/README.md)
 
-### Integration Tests
+### Relayer
 
-This component includes our end to end tests, that pull together all the above services and set them up easily through scripts for automated E2E tests. See [web/packages/test/README.md](web/packages/test/README.md).
+Off-chain relayer services for relaying messages between Polkadot and Ethereum. See [relayer/README.md](relayer/README.md)
+
+### Local Testnet
+
+Scripts to provision a local testnet, running the above services to bridge between local deployments of Polkadot and Ethereum. See [web/packages/test/README.md](web/packages/test/README.md).
+
+### Smoke Tests
+
+Integration tests for our local testnet. See [smoketest/README.md](smoketest/README.md).
 
 ## Development
 
@@ -79,10 +83,6 @@ Sometimes we would like to upgrade rust toolchain. First update `parachain/rust-
 nix flake lock --update-input rust-overlay
 ```
 
-## Security
-
-The security policy and procedures can be found in SECURITY.md.
-
 ## Troubleshooting
 
 Check the contents of all `.envrc` files.
@@ -108,3 +108,7 @@ Run a pure developer shell (note that this removes access to your local tools):
 ```sh
 nix develop -i --pure-eval
 ```
+
+## Security
+
+The security policy and procedures can be found in SECURITY.md.
