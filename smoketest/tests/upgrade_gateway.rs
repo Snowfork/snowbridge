@@ -188,7 +188,7 @@ async fn upgrade_gateway() {
             .await
         {
             for upgrade in upgrades {
-                println!("Upgrade found at block {:?}", block.number.unwrap());
+                println!("Upgrade found at ethereum block {:?}", block.number.unwrap());
                 assert_eq!(
                     upgrade.implementation,
                     GATETWAY_UPGRADE_MOCK_CONTRACT.into()
@@ -203,7 +203,7 @@ async fn upgrade_gateway() {
                     .await
                 {
                     for initialize in initilizes {
-                        println!("Initialize found at block {:?}", block.number.unwrap());
+                        println!("Initialize found at ethereum block {:?}", block.number.unwrap());
                         assert_eq!(initialize.d_0, d_0.into());
                         assert_eq!(initialize.d_1, d_1.into());
                         initialize_event_found = true;
