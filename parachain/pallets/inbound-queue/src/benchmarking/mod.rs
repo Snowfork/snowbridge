@@ -39,7 +39,7 @@ mod benchmarks {
 
 		// Make sure the sovereign balance is enough. This is a funny number, because
 		// in some cases the minimum balance is really high, in other cases very low.
-		// e.g. on bridgehub the minium balance is 33333, on test it is 1. So this equation makes
+		// e.g. on bridgehub the minimum balance is 33333, on test it is 1. So this equation makes
 		// it is at least twice the minimum balance (so as to satisfy the minimum balance
 		// requirement, and then some (in case the minimum balance is very low, even lower
 		// than the relayer reward fee).

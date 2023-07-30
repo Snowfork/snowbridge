@@ -1,2 +1,3 @@
-// TODO: implement smoke tests for Polkadot -> Ethereum
-// pub mod bridgehub;
+pub mod bridgehub;
+pub mod assethub;
+pub mod relaychain;

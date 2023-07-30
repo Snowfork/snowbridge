@@ -171,3 +171,74 @@ fn create_agent_with_sibling_chain_account20_origin_yields_success() {
 		}));
 	});
 }
+
+#[test]
+fn create_agent_without_root_yields_bad_origin() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::new([0; 32]));
+		let address: H160 = Default::default();
+		let code_hash: H256 = Default::default();
+		let params: Option<Vec<u8>> = None;
+
+		frame_support::assert_noop!(
+			EthereumControl::upgrade(origin, address, code_hash, params),
+			BadOrigin
+		);
+	});
+}
+
+#[test]
+fn create_agent_with_root_yields_success() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let address: H160 = Default::default();
+		let code_hash: H256 = Default::default();
+		let params: Option<Vec<u8>> = None;
+		let expected_hash = None;
+
+		frame_support::assert_ok!(EthereumControl::upgrade(origin, address, code_hash, params));
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::Upgrade {
+			impl_address: address,
+			impl_code_hash: code_hash,
+			params_hash: expected_hash,
+		}));
+	});
+}
+
+#[test]
+fn create_agent_with_large_params_yields_upgrade_too_large() {
+	new_test_ext().execute_with(|| {
+		const MAX_SIZE: usize = MaxUpgradeDataSize::get() as usize;
+		let origin = RuntimeOrigin::root();
+		let address: H160 = Default::default();
+		let code_hash: H256 = Default::default();
+		let params: Option<Vec<u8>> = Some([0; MAX_SIZE].into());
+
+		frame_support::assert_noop!(
+			EthereumControl::upgrade(origin, address, code_hash, params),
+			Error::<Test>::UpgradeDataTooLarge
+		);
+	});
+}
+
+#[test]
+fn create_agent_with_small_params_yields_success() {
+	new_test_ext().execute_with(|| {
+		const MAX_SIZE_LESS_ONE: usize = (MaxUpgradeDataSize::get() - 1) as usize;
+		let origin = RuntimeOrigin::root();
+		let address: H160 = Default::default();
+		let code_hash: H256 = Default::default();
+		let params: Option<Vec<u8>> = Some([0; MAX_SIZE_LESS_ONE].into());
+		let expected_hash =
+			Some(H256(hex!("c95ef6b0bf891c06e1318f07b86977998674a0ae996999915c1f5d93359e72a9")));
+
+		frame_support::assert_ok!(EthereumControl::upgrade(origin, address, code_hash, params));
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::Upgrade {
+			impl_address: address,
+			impl_code_hash: code_hash,
+			params_hash: expected_hash,
+		}));
+	});
+}
