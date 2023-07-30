@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
@@ -120,6 +121,8 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 				return fmt.Errorf("parachain write status was dropped, invalid, usurped or finality timed out")
 			}
 			if status.IsFinalized {
+				log.WithFields(log.Fields{
+					"extrinsic": extrinsicName, "block": status.AsFinalized}).Debug("extrinsic finalized")
 				return nil
 			}
 		case err = <-sub.Err():

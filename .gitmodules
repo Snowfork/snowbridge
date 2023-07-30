@@ -2,17 +2,15 @@
 	path = cumulus
 	url = https://github.com/Snowfork/cumulus
 	branch = snowbridge
-[submodule "core/packages/contracts/lib/forge-std"]
-	path = core/packages/contracts/lib/forge-std
+[submodule "contracts/lib/forge-std"]
+	path = contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-	branch = master
-[submodule "core/packages/contracts/lib/ds-test"]
-	path = core/packages/contracts/lib/ds-test
+[submodule "contracts/lib/openzeppelin-contracts"]
+	path = contracts/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "contracts/lib/ds-test"]
+	path = contracts/lib/ds-test
 	url = https://github.com/dapphub/ds-test
-[submodule "core/packages/contracts/lib/openzeppelin-contracts"]
-	path = core/packages/contracts/lib/openzeppelin-contracts
-	url = https://github.com/openzeppelin/openzeppelin-contracts
-	branch = v4.8.2
-[submodule "core/packages/contracts/lib/canonical-weth"]
-	path = core/packages/contracts/lib/canonical-weth
-	url = https://github.com/snowfork/canonical-weth
+[submodule "contracts/lib/canonical-weth"]
+	path = contracts/lib/canonical-weth
+	url = https://github.com/Snowfork/canonical-weth

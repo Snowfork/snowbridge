@@ -14,7 +14,7 @@ Given that native Ether has 18 decimal places, this means that a maximum of $$3.
 
 The app consists of two peer components which communicate via [channels](../channels/):
 
-* [EtherApp smart contract](../../../core/packages/contracts/contracts/ETHApp.sol)
+* [EtherApp smart contract](../../../contracts/contracts/ETHApp.sol)
 * [EtherApp pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/eth-app)
 
 On the parachain, the wrapped Ether is stored in a FRAME [assets](https://github.com/paritytech/substrate/tree/master/frame/assets) pallet with an asset id of `0`.

@@ -26,89 +26,49 @@ pub enum VersionedMessage {
 pub struct MessageV1 {
 	/// EIP-155 chain id of the origin Ethereum network
 	pub chain_id: u64,
-	/// The gateway-specific message
-	pub message: GatewayMessage,
+	/// The command
+	pub message: Command,
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum GatewayMessage {
-	UpgradeProxy(UpgradeProxyMessage),
-	NativeTokens(NativeTokensMessage),
+pub enum Command {
+	RegisterToken { gateway: H160, token: H160, create_call_index: [u8; 2] },
+	SendToken { gateway: H160, token: H160, destination: Destination, amount: u128 },
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum UpgradeProxyMessage {}
-
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum NativeTokensMessage {
-	Create {
-		origin: H160,
-		token: H160,
-		name: Vec<u8>,
-		symbol: Vec<u8>,
-		decimals: u8,
-		create_call_index: [u8; 2],
-		set_metadata_call_index: [u8; 2],
-	},
-	Mint {
-		origin: H160,
-		token: H160,
-		dest: Option<u32>,
-		recipient: MultiLocation, // Recipient of funds on final destination
-		amount: u128,
-	},
+pub enum Destination {
+	AccountId32 { id: [u8; 32] },
+	ForeignAccountId32 { para_id: u32, id: [u8; 32] },
+	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-pub enum ConvertError {
-	/// Message is in the wrong format
-	BadFormat,
-}
-
-impl TryInto<Xcm<()>> for MessageV1 {
-	type Error = ConvertError;
-
-	fn try_into(self) -> Result<Xcm<()>, Self::Error> {
-		match self.message {
-			GatewayMessage::UpgradeProxy(message) => message.convert(self.chain_id),
-			GatewayMessage::NativeTokens(message) => message.convert(self.chain_id),
-		}
+impl Into<Xcm<()>> for MessageV1 {
+	fn into(self) -> Xcm<()> {
+		self.message.convert(self.chain_id)
 	}
 }
 
-impl UpgradeProxyMessage {
-	pub fn convert(self, _chain_id: u64) -> Result<Xcm<()>, ConvertError> {
-		// The UpgradeProxy gateway doesn't send any messages to Polkadot
-		Err(ConvertError::BadFormat)
-	}
-}
-
-impl NativeTokensMessage {
-	pub fn convert(self, chain_id: u64) -> Result<Xcm<()>, ConvertError> {
+impl Command {
+	pub fn convert(self, chain_id: u64) -> Xcm<()> {
 		let network = NetworkId::Ethereum { chain_id };
-		let buy_execution_fee_amount = 2_000_000_000; //TODO: WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
+		// TODO: WeightToFee::weight_to_fee(&Weight::from_parts(100_000_000, 18_000));
+		let buy_execution_fee_amount = 2_000_000_000;
 		let buy_execution_fee = MultiAsset {
 			id: Concrete(MultiLocation::parent()),
 			fun: Fungible(buy_execution_fee_amount),
 		};
 
 		match self {
-			NativeTokensMessage::Create {
-				origin,
-				token,
-				name,
-				symbol,
-				decimals,
-				create_call_index,
-				set_metadata_call_index,
-			} => {
+			Command::RegisterToken { gateway, token, create_call_index } => {
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
 					&chain_id,
-					origin.as_fixed_bytes(),
+					gateway.as_fixed_bytes(),
 				);
 
-				let origin_location = Junction::AccountKey20 { network: None, key: origin.into() };
+				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
 
-				let asset_id = Self::convert_token_address(network, origin, token);
+				let asset_id = Self::convert_token_address(network, gateway, token);
 				let instructions: Vec<Instruction<()>> = vec![
 					UniversalOrigin(GlobalConsensus(network)),
 					DescendOrigin(X1(origin_location)),
@@ -143,22 +103,16 @@ impl NativeTokensMessage {
 							.into(),
 					},
 					ExpectTransactStatus(MaybeErrorCode::Success),
-					Transact {
-						origin_kind: OriginKind::SovereignAccount,
-						require_weight_at_most: Weight::from_parts(200_000_000, 8_000),
-						call: (set_metadata_call_index, asset_id, name, symbol, decimals)
-							.encode()
-							.into(),
-					},
-					ExpectTransactStatus(MaybeErrorCode::Success),
 				];
-				Ok(instructions.into())
+				instructions.into()
 			},
-			NativeTokensMessage::Mint { origin, token, dest, recipient, amount } => {
-				let asset =
-					MultiAsset::from((Self::convert_token_address(network, origin, token), amount));
+			Command::SendToken { gateway, token, destination, amount } => {
+				let asset = MultiAsset::from((
+					Self::convert_token_address(network, gateway, token),
+					amount,
+				));
 
-				let origin_location = Junction::AccountKey20 { network: None, key: origin.into() };
+				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
 
 				let mut instructions: Vec<Instruction<()>> = vec![
 					UniversalOrigin(GlobalConsensus(network)),
@@ -185,28 +139,49 @@ impl NativeTokensMessage {
 					ClearOrigin,
 				];
 
-				match dest {
-					Some(para) => {
-						let mut fragment: Vec<Instruction<()>> = vec![DepositReserveAsset {
-							assets: MultiAssetFilter::Definite(vec![asset.clone()].into()),
-							dest: MultiLocation { parents: 1, interior: X1(Parachain(para)) },
-							xcm: vec![DepositAsset {
-								assets: MultiAssetFilter::Definite(vec![asset.clone()].into()),
-								beneficiary: recipient,
-							}]
-							.into(),
-						}];
-						instructions.append(&mut fragment);
+				let (dest_para_id, beneficiary) = match destination {
+					Destination::AccountId32 { id } => (
+						None,
+						MultiLocation {
+							parents: 0,
+							interior: X1(AccountId32 { network: None, id }),
+						},
+					),
+					Destination::ForeignAccountId32 { para_id, id } => (
+						Some(para_id),
+						MultiLocation {
+							parents: 0,
+							interior: X1(AccountId32 { network: None, id }),
+						},
+					),
+					Destination::ForeignAccountId20 { para_id, id } => (
+						Some(para_id),
+						MultiLocation {
+							parents: 0,
+							interior: X1(AccountKey20 { network: None, key: id }),
+						},
+					),
+				};
+
+				let assets = MultiAssetFilter::Definite(vec![asset.clone()].into());
+
+				let mut fragment: Vec<Instruction<()>> = match dest_para_id {
+					Some(dest_para_id) => {
+						vec![DepositReserveAsset {
+							assets: assets.clone(),
+							dest: MultiLocation {
+								parents: 1,
+								interior: X1(Parachain(dest_para_id.into())),
+							},
+							xcm: vec![DepositAsset { assets: assets.clone(), beneficiary }].into(),
+						}]
 					},
 					None => {
-						let mut fragment: Vec<Instruction<()>> = vec![DepositAsset {
-							assets: MultiAssetFilter::Definite(vec![asset.clone()].into()),
-							beneficiary: recipient,
-						}];
-						instructions.append(&mut fragment);
+						vec![DepositAsset { assets, beneficiary }]
 					},
-				}
-				Ok(instructions.into())
+				};
+				instructions.append(&mut fragment);
+				instructions.into()
 			},
 		}
 	}
@@ -268,13 +243,13 @@ mod tests {
 	use xcm::v3::prelude::*;
 	use xcm_executor::traits::ConvertLocation;
 
-	const CONTRACT_ADDRESS: [u8; 20] = hex!("D184c103F7acc340847eEE82a0B909E3358bc28d");
+	const CONTRACT_ADDRESS: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
 	const NETWORK: NetworkId = Ethereum { chain_id: 15 };
 	const SS58_FORMAT: u16 = 2;
 	const EXPECTED_SOVEREIGN_KEY: [u8; 32] =
-		hex!("5d6987649e0dac78ddf852eb0f1b1d1bf2be9623d81cb16c17cfa145948bb6dc");
+		hex!("c9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5");
 	const EXPECTED_SOVEREIGN_ADDRESS: &'static str =
-		"EgoKVgdhGVz41LyP2jckLrmXjnD35xitaX221ktZjQ2Xsxw";
+		"H8VBFC4LG91ByxMG6GwsCcAacjitnzGmGbqnvSEQFBywJEL";
 
 	parameter_types! {
 		pub EthereumNetwork: NetworkId = NETWORK;
@@ -297,10 +272,11 @@ mod tests {
 		.unwrap();
 		let address = frame_support::sp_runtime::AccountId32::new(account)
 			.to_ss58check_with_version(SS58_FORMAT.into());
-		assert_eq!(account, EXPECTED_SOVEREIGN_KEY);
-		assert_eq!(address, EXPECTED_SOVEREIGN_ADDRESS);
 
 		println!("SS58: {}\nBytes: {:?}", address, account);
+
+		assert_eq!(account, EXPECTED_SOVEREIGN_KEY);
+		assert_eq!(address, EXPECTED_SOVEREIGN_ADDRESS);
 	}
 
 	#[test]

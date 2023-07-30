@@ -24,7 +24,7 @@ Our approach is to just document clearly that rebasing tokens are not supported.
 
 The app consists of two peer components which communicate via [channels](../channels/):
 
-* [ERC20App smart contract](../../../core/packages/contracts/contracts/ERC20App.sol)
+* [ERC20App smart contract](../../../contracts/contracts/ERC20App.sol)
 * [ERC20App pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/erc20-app)
 
 On the parachain, the wrapped tokens are stored in a FRAME [assets](https://github.com/paritytech/substrate/tree/master/frame/assets) pallet using numeric identifiers allocated by our [asset-registry](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/asset-registry) pallet.

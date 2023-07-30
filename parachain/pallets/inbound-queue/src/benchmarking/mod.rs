@@ -14,7 +14,7 @@ mod benchmarks {
 	use crate::benchmarking::fixtures::make_create_message;
 	use hex_literal::hex;
 
-	const OUTBOUND_QUEUE_ADDRESS: [u8; 20] = hex!["ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0"];
+	const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39"];
 
 	#[benchmark]
 	fn submit() -> Result<(), BenchmarkError> {
@@ -27,16 +27,29 @@ mod benchmarks {
 			create_message.execution_header,
 		);
 
-		<AllowList<T>>::put(create_allowlist::<T>());
+		<Gateway<T>>::put(H160(GATEWAY_ADDRESS));
 
 		let dest_para: ParaId = 1000u32.into();
 		let sovereign_account = dest_para.into_account_truncating();
 
+		let minimum_balance = T::Token::minimum_balance();
+		let minimum_balance_u32: u32 = minimum_balance
+			.try_into()
+			.unwrap_or_else(|_| panic!("unable to cast minimum balance to u32"));
+
+		// Make sure the sovereign balance is enough. This is a funny number, because
+		// in some cases the minimum balance is really high, in other cases very low.
+		// e.g. on bridgehub the minium balance is 33333, on test it is 1. So this equation makes
+		// it is at least twice the minimum balance (so as to satisfy the minimum balance
+		// requirement, and then some (in case the minimum balance is very low, even lower
+		// than the relayer reward fee).
+		let sovereign_balance = (minimum_balance_u32 * 2) + 5000;
+
 		// So that the receiving account exists
-		let _ = T::Token::mint_into(&caller, T::Token::minimum_balance().into());
+		let _ = T::Token::mint_into(&caller, minimum_balance.into());
 		// Fund the sovereign account (parachain sovereign account) so it can transfer a reward
 		// fee to the caller account
-		let _ = T::Token::mint_into(&sovereign_account, 10000u32.into());
+		let _ = T::Token::mint_into(&sovereign_account, sovereign_balance.into());
 
 		#[block]
 		{
@@ -51,19 +64,7 @@ mod benchmarks {
 
 	impl_benchmark_test_suite!(
 		InboundQueue,
-		crate::test::new_tester::<crate::test::Test>(crate::H160::default()),
+		crate::test::new_tester(crate::H160::default()),
 		crate::test::Test
 	);
-
-	fn create_allowlist<T>() -> BoundedBTreeSet<H160, T::AllowListLength>
-	where
-		T: Config,
-	{
-		let allowlist: BoundedBTreeSet<H160, T::AllowListLength> =
-			BTreeSet::from_iter(vec![OUTBOUND_QUEUE_ADDRESS.into()].into_iter())
-				.try_into()
-				.expect("exceeded bound");
-
-		allowlist
-	}
 }

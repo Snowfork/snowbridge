@@ -1,11 +1,7 @@
 package beefy
 
 import (
-	"fmt"
-	"testing"
-
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/stretchr/testify/assert"
 )
 
 func makeCommitment() (*types.Commitment, error) {
@@ -28,19 +24,4 @@ func makeCommitment() (*types.Commitment, error) {
 	}
 
 	return &commitment, nil
-}
-
-func TestCommitment_Split(t *testing.T) {
-	c, err := makeCommitment()
-	assert.NoError(t, err)
-
-	payload, err := buildPayload(c.Payload)
-	assert.NoError(t, err)
-
-	fmt.Printf("mmrroothash: %s\n", types.HexEncodeToString(payload.MmrRootHash[:]))
-	fmt.Printf("prefix: %s\n", types.HexEncodeToString(payload.Prefix))
-	fmt.Printf("suffix: %s\n", types.HexEncodeToString(payload.Suffix))
-
-	commitmentBytes, _ := types.EncodeToHexString(c)
-	fmt.Println(commitmentBytes)
 }

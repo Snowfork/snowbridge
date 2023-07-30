@@ -3,14 +3,11 @@ package beefy
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/big"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
-	goEthereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -81,45 +78,6 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 	return nil
 }
 
-func (wr *EthereumWriter) waitForTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
-	for {
-		receipt, err := wr.pollTransaction(ctx, tx, confirmations)
-		if err != nil {
-			return nil, err
-		}
-
-		if receipt != nil {
-			return receipt, nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(500 * time.Millisecond):
-		}
-	}
-}
-
-func (wr *EthereumWriter) pollTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
-	receipt, err := wr.conn.Client().TransactionReceipt(ctx, tx.Hash())
-	if err != nil {
-		if errors.Is(err, goEthereum.NotFound) {
-			return nil, nil
-		}
-	}
-
-	latestHeader, err := wr.conn.Client().HeaderByNumber(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if latestHeader.Number.Uint64()-receipt.BlockNumber.Uint64() >= confirmations {
-		return receipt, nil
-	}
-
-	return nil, nil
-}
-
 func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	// Initial submission
 	tx, initialBitfield, err := wr.doSubmitInitial(ctx, &task)
@@ -130,13 +88,10 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 
 	// Wait RandaoCommitDelay before submit CommitPrevRandao to prevent attacker from manipulating committee memberships
 	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
-	receipt, err := wr.waitForTransaction(ctx, tx, wr.blockWaitPeriod+1)
+	_, err = wr.conn.WatchTransaction(ctx, tx, wr.blockWaitPeriod+1)
 	if err != nil {
 		log.WithError(err).Error("Failed to wait for RandaoCommitDelay")
 		return err
-	}
-	if receipt.Status != 1 {
-		return fmt.Errorf("initial commitment transaction failed, status (%v), logs (%v)", receipt.Status, receipt.Logs)
 	}
 
 	commitmentHash, err := task.CommitmentHash()
@@ -145,17 +100,15 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	}
 
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
-	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/BeefyClient.sol#L446-L447
+	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
 	tx, err = wr.contract.CommitPrevRandao(
-		wr.makeTxOpts(ctx),
+		wr.conn.MakeTxOpts(ctx),
 		*commitmentHash,
 	)
-	receipt, err = wr.waitForTransaction(ctx, tx, 1)
+	_, err = wr.conn.WatchTransaction(ctx, tx, 1)
 	if err != nil {
+		log.WithError(err).Error("Failed to CommitPrevRandao")
 		return err
-	}
-	if receipt.Status != 1 {
-		return fmt.Errorf("commitmentPrevRandao transaction failed")
 	}
 
 	// Final submission
@@ -165,57 +118,16 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return err
 	}
 
-	success, err := wr.watchTransaction(ctx, tx, 0)
+	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
-		return fmt.Errorf("monitoring failed for transaction SubmitFinal (%v): %w", tx.Hash().Hex(), err)
-	}
-	if !success {
-		return fmt.Errorf("transaction SubmitFinal failed (%v), handover (%v)", tx.Hash().Hex(), task.IsHandover)
+		log.WithError(err).Error("Failed to submitFinal")
+		return err
 	}
 
 	log.WithFields(logrus.Fields{"tx": tx.Hash().Hex(), "handover": task.IsHandover, "blockNumber": task.SignedCommitment.Commitment.BlockNumber}).Debug("Transaction SubmitFinal succeeded")
 
 	return nil
 
-}
-
-func (wr *EthereumWriter) watchTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (bool, error) {
-	receipt, err := wr.waitForTransaction(ctx, tx, confirmations)
-	if err != nil {
-		return false, err
-	}
-	return receipt.Status == 1, nil
-}
-
-func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
-	chainID := wr.conn.ChainID()
-	keypair := wr.conn.Keypair()
-
-	options := bind.TransactOpts{
-		From: keypair.CommonAddress(),
-		Signer: func(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			return types.SignTx(tx, types.NewLondonSigner(chainID), keypair.PrivateKey())
-		},
-		Context: ctx,
-	}
-
-	if wr.config.Ethereum.GasFeeCap > 0 {
-		fee := big.NewInt(0)
-		fee.SetUint64(wr.config.Ethereum.GasFeeCap)
-		options.GasFeeCap = fee
-	}
-
-	if wr.config.Ethereum.GasTipCap > 0 {
-		tip := big.NewInt(0)
-		tip.SetUint64(wr.config.Ethereum.GasTipCap)
-		options.GasTipCap = tip
-	}
-
-	if wr.config.Ethereum.GasLimit > 0 {
-		options.GasLimit = wr.config.Ethereum.GasLimit
-	}
-
-	return &options
 }
 
 func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*types.Transaction, []*big.Int, error) {
@@ -247,7 +159,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	var tx *types.Transaction
 	if task.IsHandover {
 		tx, err = wr.contract.SubmitInitialWithHandover(
-			wr.makeTxOpts(ctx),
+			wr.conn.MakeTxOpts(ctx),
 			msg.Commitment,
 			msg.Bitfield,
 			msg.Proof,
@@ -257,7 +169,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		}
 	} else {
 		tx, err = wr.contract.SubmitInitial(
-			wr.makeTxOpts(ctx),
+			wr.conn.MakeTxOpts(ctx),
 			msg.Commitment,
 			msg.Bitfield,
 			msg.Proof,
@@ -313,9 +225,9 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 
 		// In Handover mode except for the validator proof to verify commitment signature
 		// will also add mmr leaf proof which contains nextAuthoritySet to verify against mmr root
-		// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/core/packages/contracts/contracts/BeefyClient.sol#L342-L350
+		// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L342-L350
 		tx, err := wr.contract.SubmitFinalWithHandover(
-			wr.makeTxOpts(ctx),
+			wr.conn.MakeTxOpts(ctx),
 			params.Commitment,
 			params.Bitfield,
 			params.Proofs,
@@ -339,7 +251,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 		}
 
 		tx, err := wr.contract.SubmitFinal(
-			wr.makeTxOpts(ctx),
+			wr.conn.MakeTxOpts(ctx),
 			params.Commitment,
 			params.Bitfield,
 			params.Proofs,
