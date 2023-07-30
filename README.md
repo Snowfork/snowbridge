@@ -31,14 +31,18 @@ mkdir -p ~/.config/nix
 echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
 ```
 
-(if you don't want to use flakes, you can instead pass the flag `--experimental-features nix-command flakes` to nix, eg.
-`nix --experimental-features 'nix-command flakes' develop`)
-
 Then activate a developer shell in the root of our repo, where [`flake.nix`](./flake.nix) is located:
 
 ```sh
 nix develop
 ```
+
+Also make sure to run this initialization script once:
+```sh
+scripts/init.sh
+```
+
+### Support for code editors
 
 To ensure your code editor (such as VS Code) can execute tools in the nix shell, startup your editor within the
 interactive shell.
@@ -50,11 +54,15 @@ nix develop
 code .
 ```
 
+### Custom shells
+
 The developer shell is bash by default. To preserve your existing shell:
 
 ```sh
 nix develop --command $SHELL
 ```
+
+### Automatic developer shells
 
 To automatically enter the developer shell whenever you open the project, install
 [`direnv`](https://direnv.net/docs/installation.html) and use the template `.envrc`:
@@ -62,9 +70,9 @@ To automatically enter the developer shell whenever you open the project, instal
 ```sh
 cp .envrc.example .envrc
 direnv allow
-````
+```
 
-## Upgrade
+### Upgrading the Rust toolchain
 
 Sometimes we would like to upgrade rust toolchain. First update `parachain/rust-toolchain.toml` as required and then update `flake.lock` running
 ```sh

@@ -31,6 +31,8 @@
                     jq
                     moreutils
                     typos
+                    ripgrep
+                    tree
                     # ps for zombienet, required in pure shells on Linux
                     ps
 
@@ -85,11 +87,6 @@
 
                     # LIBCLANG_PATH points rocksdb to a clang.so on Linux
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
-
-                    (cd web && pnpm install)
-                    git submodule update --init --recursive || true
-                    go install github.com/ferranbt/fastssz/sszgen@latest
-                    ln -s pre-commit.sh .git/hooks/pre-commit
 
                     cowsay "Development Environment Ready"
                 '';
