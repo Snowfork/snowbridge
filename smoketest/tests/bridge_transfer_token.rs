@@ -1,7 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
 use ethers::{
-	abi::Token,
 	prelude::*,
 	providers::{Provider, Ws},
 	types::Address,
@@ -12,22 +11,26 @@ use snowbridge_smoketest::{
 	contracts::{
 		gateway_upgrade_mock::{self, InitializedFilter},
 		i_gateway::{self, UpgradedFilter},
+		weth9::TransferFilter,
 	},
 	parachains::{
-		assethub::{self, api::ethereum_control},
 		assethub::api::runtime_types::{
 			pallet_xcm::pallet::Call,
 			sp_weights::weight_v2::Weight,
 			xcm::{
 				double_encoded::DoubleEncoded,
-				v2::OriginKind,
 				v3::{
-					junction::Junction, junctions::Junctions, multilocation::MultiLocation,
+					self,
+					junction::{Junction, NetworkId},
+					junctions::Junctions,
+					multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
+					multilocation::MultiLocation,
 					Instruction, WeightLimit, Xcm,
 				},
-				VersionedMultiLocation, VersionedXcm,
+				VersionedMultiAssets, VersionedMultiLocation,
 			},
 		},
+		assethub::{self},
 	},
 };
 use sp_core::{blake2_256, sr25519::Pair, Pair as PairT};
@@ -38,14 +41,11 @@ use subxt::{
 
 const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
 const ETHEREUM_API: &str = "ws://localhost:8546";
-const RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
-const BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
-const BRIDGE_HUB_PARA_ID: u32 = 1013;
 
-const GATEWAY_PROXY_CONTRACT: &str = "0xEDa338E4dC46038493b885327842fD3E301CaB39";
-const GATETWAY_UPGRADE_MOCK_CONTRACT: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228e73");
-const GATETWAY_UPGRADE_MOCK_CODE_HASH: [u8; 32] =
-	hex!("c8168aa7d2c90c399ac40b4f069bae8189ad263c8d6a9b1fc681fc05d31c8425");
+const WETH_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
+const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
+
+const DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 
 #[tokio::test]
 async fn bridge_transfer_token() {
@@ -56,8 +56,8 @@ async fn bridge_transfer_token() {
 
 	let ethereum_client = Arc::new(ethereum_provider);
 
-	let gateway_addr = GATEWAY_PROXY_CONTRACT.parse::<Address>().unwrap();
-	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
+	let weth_addr: Address = WETH_CONTRACT.into();
+	let weth = i_gateway::IGateway::new(weth_addr, ethereum_client.clone());
 
 	let assethub: OnlineClient<PolkadotConfig> =
 		OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
@@ -66,10 +66,29 @@ async fn bridge_transfer_token() {
 
 	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(ferdie);
 
-    let assets: assethub::api::runtime_types::xcm::VersionedMultiAssets = todo!();
-    let destination: VersionedMultiLocation = todo!();
+	let amount: u128 = 1_000_000_000;
+	let assets: assethub::api::runtime_types::xcm::VersionedMultiAssets =
+		VersionedMultiAssets::V3(MultiAssets(vec![MultiAsset {
+			id: AssetId::Concrete(MultiLocation {
+				parents: 2,
+				interior: Junctions::X3(
+					Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+					Junction::AccountKey20 { network: None, key: GATEWAY_PROXY_CONTRACT.into() },
+					Junction::AccountKey20 { network: None, key: WETH_CONTRACT.into() },
+				),
+			}),
+			fun: Fungibility::Fungible(amount),
+		}]));
+	let destination: VersionedMultiLocation = VersionedMultiLocation::V3(MultiLocation {
+		parents: 2,
+		interior: Junctions::X2(
+			Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+			Junction::AccountKey20 { network: None, key: DESTINATION_ADDRESS.into() },
+		),
+	});
+
 	let bridge_transfer_api = assethub::api::bridge_transfer::calls::TransactionApi;
-	let bridge_transfer_call = bridge_transfer_api.transfer_asset_via_bridge(assets, destination)
+	let bridge_transfer_call = bridge_transfer_api.transfer_asset_via_bridge(assets, destination);
 
 	let result = assethub
 		.tx()
@@ -82,47 +101,29 @@ async fn bridge_transfer_token() {
 
 	println!("bridge_transfer call issued at assethub block hash {:?}", result.block_hash());
 
-	let wait_for_blocks = 30;
+	let wait_for_blocks = 50;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
 
-	let mut upgrade_event_found = false;
-	let mut initialize_event_found = false;
+	let mut transfer_event_found = false;
 	while let Some(block) = stream.next().await {
-		println!("Polling ethereum block {:?} for upgraded event", block.number.unwrap());
-		if let Ok(upgrades) = gateway
-			.event::<UpgradedFilter>()
+		println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
+		if let Ok(transfers) = weth
+			.event::<TransferFilter>()
 			.at_block_hash(block.hash.unwrap())
 			.query()
 			.await
 		{
-			for upgrade in upgrades {
-				println!("Upgrade event found at ethereum block {:?}", block.number.unwrap());
-				assert_eq!(upgrade.implementation, GATETWAY_UPGRADE_MOCK_CONTRACT.into());
-				upgrade_event_found = true;
-			}
-			if upgrade_event_found {
-				if let Ok(initializes) = mock_gateway
-					.event::<InitializedFilter>()
-					.at_block_hash(block.hash.unwrap())
-					.query()
-					.await
-				{
-					for initialize in initializes {
-						println!(
-							"Initialize event found at ethereum block {:?}",
-							block.number.unwrap()
-						);
-						assert_eq!(initialize.d_0, d_0.into());
-						assert_eq!(initialize.d_1, d_1.into());
-						initialize_event_found = true;
-					}
-				}
+			for transfer in transfers {
+				println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
+				assert_eq!(transfer.src, DESTINATION_ADDRESS.into());
+				assert_eq!(transfer.dst, DESTINATION_ADDRESS.into());
+				assert_eq!(transfer.wad, amount.into());
+				transfer_event_found = true;
 			}
 		}
-		if upgrade_event_found {
+		if transfer_event_found {
 			break;
 		}
 	}
-	assert!(upgrade_event_found);
-	assert!(initialize_event_found);
+	assert!(transfer_event_found);
 }
