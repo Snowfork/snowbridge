@@ -187,7 +187,7 @@ async fn upgrade_gateway() {
             .await
         {
             println!(
-                "Event found at block {:?}",
+                "Upgrade found at block {:?}",
                 block.number.unwrap()
             );
             for upgrade in upgrades {
@@ -204,13 +204,17 @@ async fn upgrade_gateway() {
                 .query()
                 .await
             {
+                println!(
+                    "Initialize found at block {:?}",
+                    block.number.unwrap()
+                );
                 for initialize in initilizes {
                     assert_eq!(initialize.d_0, d_0.into());
                     assert_eq!(initialize.d_1, d_1.into());
                     break;
                 }
             } else {
-                panic!("no initialize event found")
+                panic!("No initialize event found")
             }
         }
         if event_found {
