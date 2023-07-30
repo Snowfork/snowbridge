@@ -9,7 +9,7 @@ use frame_support::{ensure, log, traits::Get};
 use snowbridge_core::outbound::{
 	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
 };
-use sp_core::{H160, H256};
+use sp_core::H256;
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
 use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
@@ -740,8 +740,8 @@ mod tests {
 		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 		let expected_payload = AgentExecuteCommand::TransferToken {
-			token: H160(token_address),
-			recipient: H160(beneficiary_address),
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
 			amount: 1000,
 		};
 		let result = converter.convert();
@@ -780,8 +780,8 @@ mod tests {
 		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 		let expected_payload = AgentExecuteCommand::TransferToken {
-			token: H160(token_address),
-			recipient: H160(beneficiary_address),
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
 			amount: 1000,
 		};
 		let result = converter.convert();
@@ -820,8 +820,8 @@ mod tests {
 		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 		let expected_payload = AgentExecuteCommand::TransferToken {
-			token: H160(token_address),
-			recipient: H160(beneficiary_address),
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
 			amount: 1000,
 		};
 		let result = converter.convert();

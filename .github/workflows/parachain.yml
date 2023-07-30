@@ -41,6 +41,8 @@ jobs:
           --manifest-path parachain/Cargo.toml
           --workspace
           --features runtime-benchmarks
+      - name: clippy
+        run: cargo clippy --manifest-path parachain/Cargo.toml -- -D warnings
 
   test:
     needs: check
@@ -89,9 +91,6 @@ jobs:
           --release
           --features runtime-benchmarks
           --package snowbridge-ethereum-beacon-client
-      - name: Clippy
-        run: cargo clippy --manifest-path parachain/Cargo.toml -- -D warnings
-
 
   coverage:
     needs: check
