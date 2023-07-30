@@ -29,3 +29,10 @@ Send an ethereum transaction to send tokens
 ```
 cargo test --test send_token -- --nocapture
 ```
+
+Send an upgrade transaction via the relaychain. This is to test that upgrade path works in terms of message routing, abi encoding and relaying. This operation will brick the bridge as it upgrades the gateway to a mock gateway.
+Please restart the testnet after running this.
+
+```
+cargo test --test upgrade_gateway -- --nocapture
+```

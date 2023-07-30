@@ -4,9 +4,10 @@ pragma solidity 0.8.20;
 
 import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command} from "../src/Types.sol";
 import {IGateway} from "../src/interfaces/IGateway.sol";
+import {IInitializable} from "../src/interfaces/IInitializable.sol";
 import {Verification} from "../src/Verification.sol";
 
-contract GatewayUpgradeMock is IGateway {
+contract GatewayUpgradeMock is IGateway, IInitializable {
     /**
      * Getters
      */

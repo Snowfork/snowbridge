@@ -1,38 +1,69 @@
-use ethers::abi::Token;
+use std::{sync::Arc, time::Duration};
+
+use ethers::{
+    abi::Token,
+    prelude::*,
+    providers::{Provider, Ws},
+    types::Address,
+};
+use futures::StreamExt;
 use hex_literal::hex;
-use snowbridge_smoketest::parachains::{
-    bridgehub, relaychain,
-    relaychain::api::runtime_types::{
-        pallet_xcm::pallet::Call,
-        rococo_runtime::RuntimeCall,
-        sp_weights::weight_v2::Weight,
-        xcm::{
-            double_encoded::DoubleEncoded,
-            v2::OriginKind,
-            v3::{
-                junction::Junction, junctions::Junctions, multilocation::MultiLocation,
-                Instruction, WeightLimit, Xcm,
+use snowbridge_smoketest::{
+    contracts::{
+        gateway_upgrade_mock::{self, InitializedFilter},
+        i_gateway::{self, UpgradedFilter},
+    },
+    parachains::{
+        bridgehub::{self, api::ethereum_control},
+        relaychain,
+        relaychain::api::runtime_types::{
+            pallet_xcm::pallet::Call,
+            rococo_runtime::RuntimeCall,
+            sp_weights::weight_v2::Weight,
+            xcm::{
+                double_encoded::DoubleEncoded,
+                v2::OriginKind,
+                v3::{
+                    junction::Junction, junctions::Junctions, multilocation::MultiLocation,
+                    Instruction, WeightLimit, Xcm,
+                },
+                VersionedMultiLocation, VersionedXcm,
             },
-            VersionedMultiLocation, VersionedXcm,
         },
     },
 };
-use sp_core::{sr25519::Pair, Pair as PairT};
+use sp_core::{blake2_256, sr25519::Pair, Pair as PairT};
 use subxt::{
-    tx::{PairSigner, TxClient, TxPayload},
+    tx::{PairSigner, TxPayload},
     OnlineClient, PolkadotConfig,
 };
 
+const ETHEREUM_API: &str = "ws://localhost:8546";
 const RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
 const BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
 const BRIDGE_HUB_PARA_ID: u32 = 1013;
 
+const GATEWAY_PROXY_CONTRACT: &str = "0xEDa338E4dC46038493b885327842fD3E301CaB39";
 const GATETWAY_UPGRADE_MOCK_CONTRACT: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228e73");
 const GATETWAY_UPGRADE_MOCK_CODE_HASH: [u8; 32] =
-    hex!("67726aaac6200cf26f4c7afe76a0bc90e89cc5d7e96a5217c96b2bbe96a29671");
+    hex!("c8168aa7d2c90c399ac40b4f069bae8189ad263c8d6a9b1fc681fc05d31c8425");
 
 #[tokio::test]
 async fn upgrade_gateway() {
+    let ethereum_provider = Provider::<Ws>::connect(ETHEREUM_API)
+        .await
+        .unwrap()
+        .interval(Duration::from_millis(10u64));
+
+    let ethereum_client = Arc::new(ethereum_provider);
+
+    let gateway_addr = GATEWAY_PROXY_CONTRACT.parse::<Address>().unwrap();
+    let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
+
+    let mock_gateway_addr: Address = GATETWAY_UPGRADE_MOCK_CONTRACT.into();
+    let mock_gateway =
+        gateway_upgrade_mock::GatewayUpgradeMock::new(mock_gateway_addr, ethereum_client.clone());
+
     let relaychain: OnlineClient<PolkadotConfig> =
         OnlineClient::from_url(RELAY_CHAIN_WS_URL).await.unwrap();
     let bridgehub: OnlineClient<PolkadotConfig> =
@@ -41,20 +72,20 @@ async fn upgrade_gateway() {
     let sudo: Pair = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
     let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
-    let tx: TxClient<PolkadotConfig, _> = TxClient::new(relaychain);
 
     let ethereum_control_api = bridgehub::api::ethereum_control::calls::TransactionApi;
-    let params = Some(ethers::abi::encode(&[
-        Token::Uint(100.into()),
-        Token::Uint(200.into()),
-    ]));
+
+    let d_0 = 99;
+    let d_1 = 66;
+    let params = ethers::abi::encode(&[Token::Uint(d_0.into()), Token::Uint(d_1.into())]);
+    let params_hash = blake2_256(&params);
 
     // The upgrade call
     let upgrade_call = ethereum_control_api
         .upgrade(
             GATETWAY_UPGRADE_MOCK_CONTRACT.into(),
             GATETWAY_UPGRADE_MOCK_CODE_HASH.into(),
-            params,
+            Some(params),
         )
         .encode_call_data(&bridgehub.metadata())
         .expect("encoded call");
@@ -89,7 +120,8 @@ async fn upgrade_gateway() {
     let sudo_api = relaychain::api::sudo::calls::TransactionApi;
     let sudo_call = sudo_api.sudo(RuntimeCall::XcmPallet(Call::send { dest, message }));
 
-    let result = tx
+    let result = relaychain
+        .tx()
         .sign_and_submit_then_watch_default(&sudo_call, &signer)
         .await
         .expect("send through sudo call.")
@@ -97,6 +129,93 @@ async fn upgrade_gateway() {
         .await
         .expect("sudo call success");
 
-    println!("{:?}", result);
+    println!(
+        "sudo call issued at relaychain block hash {:?}",
+        result.block_hash()
+    );
 
+    let max_blocks = 4;
+    let mut blocks = bridgehub
+        .blocks()
+        .subscribe_finalized()
+        .await
+        .expect("block subscription")
+        .take(max_blocks);
+
+    let mut event_found = false;
+    while let Some(Ok(block)) = blocks.next().await {
+        println!(
+            "Polling bridgehub block {} for upgrade event.",
+            block.number()
+        );
+        let upgrades = block.events().await.expect("read block events");
+        for upgrade in upgrades.find::<ethereum_control::events::Upgrade>() {
+            let upgrade = upgrade.expect("expect upgrade");
+            assert_eq!(upgrade.impl_address, GATETWAY_UPGRADE_MOCK_CONTRACT.into());
+            assert_eq!(
+                upgrade.impl_code_hash,
+                GATETWAY_UPGRADE_MOCK_CODE_HASH.into()
+            );
+            assert_eq!(upgrade.params_hash, Some(params_hash.into()));
+            println!("Event found at {}.", block.number());
+            event_found = true;
+            break;
+        }
+        if event_found {
+            break;
+        }
+    }
+    assert!(event_found);
+
+    let max_blocks = 10;
+    let mut stream = ethereum_client
+        .subscribe_blocks()
+        .await
+        .unwrap()
+        .take(max_blocks);
+
+    let mut event_found = false;
+    while let Some(block) = stream.next().await {
+        println!(
+            "Polling ethereum block {:?} for upgraded event",
+            block.number.unwrap()
+        );
+        if let Ok(upgrades) = gateway
+            .event::<UpgradedFilter>()
+            .at_block_hash(block.hash.unwrap())
+            .query()
+            .await
+        {
+            println!(
+                "Event found at block {:?}",
+                block.number.unwrap()
+            );
+            for upgrade in upgrades {
+                assert_eq!(
+                    upgrade.implementation,
+                    GATETWAY_UPGRADE_MOCK_CONTRACT.into()
+                );
+                event_found = true;
+                break;
+            }
+            if let Ok(initilizes) = mock_gateway
+                .event::<InitializedFilter>()
+                .at_block_hash(block.hash.unwrap())
+                .query()
+                .await
+            {
+                for initialize in initilizes {
+                    assert_eq!(initialize.d_0, d_0.into());
+                    assert_eq!(initialize.d_1, d_1.into());
+                    break;
+                }
+            } else {
+                panic!("no initialize event found")
+            }
+        }
+        if event_found {
+            break;
+        }
+    }
+    assert!(event_found);
 }
