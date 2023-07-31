@@ -10,23 +10,28 @@ use ethers::{
     utils::parse_units,
     utils::rlp::Encodable,
 };
+use ethers::prelude::Middleware;
 
 // The deployment addresses of the following contracts are stable, unless we modify the order in
 // contracts are deployed in DeployScript.sol.
 const ETHEREUM_API: &str = "http://localhost:8545";
 const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
-const GATEWAY_PROXY_CONTRACT: &str = "0xEDa338E4dC46038493b885327842fD3E301CaB39";
-const WETH_CONTRACT: &str = "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d";
+const ACCOUNT: &str = "0xBa9bC9a8Aa87872f7B990031bde984A00b9CEd49";
+const GATEWAY_PROXY_CONTRACT: &str = "0x1DE857fe7c1Bd30B3d139a0e13db33C6a4DAC8d3";
+const WETH_CONTRACT: &str = "0x5Cb49a00cEc1Ab0035240d3D2451eacbe1c288F1";
 
 #[tokio::test]
 async fn register_token() {
     let provider = Provider::<Http>::try_from(ETHEREUM_API)
         .unwrap()
         .interval(Duration::from_millis(10u64));
+
     let wallet: LocalWallet = ETHEREUM_KEY
         .parse::<LocalWallet>()
         .unwrap()
-        .with_chain_id(15u64);
+        //.with_chain_id(15u64);
+        .with_chain_id(5u64);
+
     let client = SignerMiddleware::new(provider, wallet);
     let client = Arc::new(client);
 
@@ -36,8 +41,11 @@ async fn register_token() {
     let weth_addr = WETH_CONTRACT.parse::<Address>().unwrap();
     let weth = weth9::WETH9::new(weth_addr, client.clone());
 
-    let fee = parse_units(2, "ether").unwrap();
+    let fee = parse_units(0.02, "ether").unwrap();
 
+    let balance = client.get_balance(ACCOUNT, None).await.unwrap();
+
+    println!("balance is {}", balance);
     let receipt = gateway
         .register_token(weth.address())
         .value(fee)

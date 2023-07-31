@@ -644,7 +644,7 @@ pub mod pallet {
 		/// Computes the signing root for a given beacon header and domain. The hash tree root
 		/// of the beacon header is computed, and then the combination of the beacon header hash
 		/// and the domain makes up the signing root.
-		pub(super) fn compute_signing_root(
+		pub fn compute_signing_root(
 			beacon_header: &BeaconHeader,
 			domain: H256,
 		) -> Result<H256, DispatchError> {
