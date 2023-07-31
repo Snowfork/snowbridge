@@ -6,9 +6,9 @@ use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::DispatchError,
 	parameter_types,
-	traits::{ConstU64, Everything, GenesisBuild},
+	traits::{ConstU64, Everything},
 };
-use sp_core::{ConstU32, H160, H256};
+use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	testing::Header,
@@ -18,7 +18,7 @@ use sp_runtime::{
 use sp_std::convert::From;
 
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
-use snowbridge_core::{Message, Proof};
+use snowbridge_core::inbound::{Message, Proof};
 use snowbridge_ethereum::Log;
 
 use hex_literal::hex;
@@ -147,7 +147,6 @@ impl inbound_queue::Config for Test {
 	type Reward = ConstU64<100>;
 	type XcmSender = ();
 	type WeightInfo = ();
-	type AllowListLength = ConstU32<2>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
 }
@@ -166,19 +165,14 @@ fn expect_events(e: Vec<RuntimeEvent>) {
 	assert_eq!(last_events(e.len()), e);
 }
 
-pub fn new_tester<T: Config>(outbound_queue_address: H160) -> sp_io::TestExternalities {
-	new_tester_with_config::<T>(inbound_queue::GenesisConfig {
-		allowlist: vec![outbound_queue_address],
-		owner: None,
-	})
+pub fn new_tester(gateway: H160) -> sp_io::TestExternalities {
+	new_tester_with_config(inbound_queue::GenesisConfig { gateway })
 }
 
-pub fn new_tester_with_config<T: Config>(
-	config: inbound_queue::GenesisConfig<T>,
-) -> sp_io::TestExternalities {
+pub fn new_tester_with_config(config: inbound_queue::GenesisConfig) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	GenesisBuild::<T>::assimilate_storage(&config, &mut storage).unwrap();
+	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
@@ -202,19 +196,19 @@ fn parse_dest(message: Message) -> ParaId {
 }
 
 // The originating channel address for the messages below
-const OUTBOUND_QUEUE_ADDRESS: [u8; 20] = hex!["87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d"];
+const GATEWAY_ADDRESS: [u8; 20] = hex!["EDa338E4dC46038493b885327842fD3E301CaB39"];
 
-const OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
+const OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
 	"
-	f8fc9487d1f7fdfee7f651fabc8bfcb6e086c278b77a7df863a01b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ada000000000000000000000000000000000000000000000000000000000000003e8a00000000000000000000000000000000000000000000000000000000000000001b880000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000290001f8f7758fbcefd546eaeff7de24aff666b6228e730000000000e8890423c78a00000000000000000000000000000000000000000000000000000000000000
+	f8fb94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000034000f000000000000000057a2d4ff0c3866d96556884bf09fecdd7ccd530c87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d3500000000000000000000000000
 	"
 );
 
 use snowbridge_core::ParaId;
 
 #[test]
-fn test_submit() {
-	new_tester::<Test>(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+fn test_submit_happy_path() {
+	new_tester(GATEWAY_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -238,15 +232,15 @@ fn test_submit() {
 			dest: dest_para,
 			nonce: 1,
 			// dummy xcm sender doesn't actually send messages
-			result: MessageDispatchResult::InvalidPayload,
+			result: MessageDispatchResult::NotDispatched(SendError::NotApplicable),
 		}
 		.into()]);
 	});
 }
 
 #[test]
-fn test_submit_with_invalid_outbound_queue() {
-	new_tester::<Test>(H160::zero()).execute_with(|| {
+fn test_submit_with_invalid_gateway() {
+	new_tester(H160::zero()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -266,14 +260,14 @@ fn test_submit_with_invalid_outbound_queue() {
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
-			Error::<Test>::InvalidOutboundQueue
+			Error::<Test>::InvalidGateway
 		);
 	});
 }
 
 #[test]
 fn test_submit_with_invalid_nonce() {
-	new_tester::<Test>(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+	new_tester(GATEWAY_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -307,7 +301,7 @@ fn test_submit_with_invalid_nonce() {
 
 #[test]
 fn test_submit_no_funds_to_reward_relayers() {
-	new_tester::<Test>(OUTBOUND_QUEUE_ADDRESS.into()).execute_with(|| {
+	new_tester(GATEWAY_ADDRESS.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -335,119 +329,29 @@ fn test_submit_no_funds_to_reward_relayers() {
 }
 
 #[test]
-fn test_add_allow_list_without_root_yields_bad_origin() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
+fn test_set_gateway_with_root_succeeds() {
+	new_tester_with_config(Default::default()).execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let default_gateway_address = hex!("0000000000000000000000000000000000000000").into();
+		let gateway_address = hex!("1000000000000000000000000000000000000000").into();
+
+		assert_eq!(<Gateway<Test>>::get(), default_gateway_address);
+
+		assert_ok!(InboundQueue::set_gateway(origin, gateway_address));
+
+		assert_eq!(<Gateway<Test>>::get(), gateway_address);
+	});
+}
+
+#[test]
+fn test_set_gateway_without_root_yields_bad_origin() {
+	new_tester_with_config(Default::default()).execute_with(|| {
+		let gateway_address = hex!("0000000000000000000000000000000000000000").into();
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 		assert_noop!(
-			InboundQueue::add_allow_list(origin, contract_address),
+			InboundQueue::set_gateway(origin, gateway_address),
 			sp_runtime::DispatchError::BadOrigin,
 		);
-	});
-}
-
-#[test]
-fn test_add_allow_list_with_root_succeeds() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-
-		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert_ok!(InboundQueue::add_allow_list(origin, contract_address));
-
-		System::assert_last_event(RuntimeEvent::InboundQueue(crate::Event::AllowListAdded {
-			address: contract_address,
-		}));
-
-		assert_eq!(<AllowList<Test>>::get().len(), 1);
-		assert!(<AllowList<Test>>::get().contains(&contract_address));
-	});
-}
-
-#[test]
-fn test_add_allow_list_ignores_duplicates() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-
-		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address));
-		assert_eq!(<AllowList<Test>>::get().len(), 1);
-		assert!(<AllowList<Test>>::get().contains(&contract_address));
-		assert_ok!(InboundQueue::add_allow_list(origin, contract_address));
-		assert_eq!(<AllowList<Test>>::get().len(), 1);
-		assert!(<AllowList<Test>>::get().contains(&contract_address));
-	});
-}
-
-#[test]
-fn test_add_allow_list_fails_when_exceeding_bounds() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let contract_address1 = hex!("0000000000000000000000000000000000000000").into();
-		let contract_address2 = hex!("1000000000000000000000000000000000000000").into();
-		let contract_address3 = hex!("3000000000000000000000000000000000000000").into();
-
-		assert_eq!(<AllowList<Test>>::get().len(), 0);
-
-		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address1));
-		assert_eq!(<AllowList<Test>>::get().len(), 1);
-
-		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address2));
-		assert_eq!(<AllowList<Test>>::get().len(), 2);
-
-		assert_noop!(
-			InboundQueue::add_allow_list(origin, contract_address3),
-			Error::<Test>::AllowListFull,
-		);
-		assert_eq!(<AllowList<Test>>::get().len(), 2);
-	});
-}
-
-#[test]
-fn test_remove_allow_list_without_root_yields_bad_origin() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-		let relayer: AccountId = Keyring::Bob.into();
-		let origin = RuntimeOrigin::signed(relayer);
-		assert_noop!(
-			InboundQueue::remove_allow_list(origin, contract_address),
-			sp_runtime::DispatchError::BadOrigin,
-		);
-	});
-}
-
-#[test]
-fn test_remove_allow_list_with_root_succeeds() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-
-		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert_ok!(InboundQueue::add_allow_list(origin.clone(), contract_address));
-		assert_eq!(<AllowList<Test>>::get().len(), 1);
-
-		assert_ok!(InboundQueue::remove_allow_list(origin, contract_address));
-		System::assert_last_event(RuntimeEvent::InboundQueue(crate::Event::AllowListRemoved {
-			address: contract_address,
-		}));
-
-		assert_eq!(<AllowList<Test>>::get().len(), 0);
-		assert!(!<AllowList<Test>>::get().contains(&contract_address));
-	});
-}
-
-#[test]
-fn test_remove_allow_list_event_not_emitted_for_none_existent_item() {
-	new_tester_with_config::<Test>(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let contract_address = hex!("0000000000000000000000000000000000000000").into();
-
-		let start = System::event_count();
-		assert_ok!(InboundQueue::remove_allow_list(origin, contract_address));
-		let end = System::event_count();
-
-		assert_eq!(start, end); // No new events
 	});
 }

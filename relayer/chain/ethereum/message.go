@@ -50,6 +50,7 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*paracha
 		"payload":    value,
 		"blockHash":  m.Proof.BlockHash.Hex(),
 		"eventIndex": m.Proof.TxIndex,
+		"txHash":     event.TxHash.Hex(),
 	}).Debug("Generated message from Ethereum log")
 
 	return &m, nil

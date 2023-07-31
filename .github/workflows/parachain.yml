@@ -41,6 +41,8 @@ jobs:
           --manifest-path parachain/Cargo.toml
           --workspace
           --features runtime-benchmarks
+      - name: clippy
+        run: cargo clippy --manifest-path parachain/Cargo.toml -- -D warnings
 
   test:
     needs: check

@@ -3,7 +3,7 @@
 ## Configuration
 
 Note: This section is not necessary for local development, as there are scripts to auto-configure the parachain in the
-[test directory](../core/packages/test).
+[test directory](../web/packages/test).
 
 For a fully operational chain, further configuration of the initial chain spec is required. The specific configuration will depend heavily on your environment, so this guide will remain high-level.
 
@@ -18,7 +18,7 @@ Now edit the spec and configure the following:
 2. Contract addresses for the Ether, Erc20, and Dot apps.
 3. Authorized principal for the basic channel
 
-For an example configuration, consult the [setup script](https://github.com/Snowfork/snowbridge/blob/main/core/packages/test/scripts/start-services.sh) for our local development stack. Specifically the `start_polkadot_launch` bash function.
+For an example configuration, consult the [setup script](https://github.com/Snowfork/snowbridge/blob/main/web/packages/test/scripts/start-services.sh) for our local development stack. Specifically the `start_polkadot_launch` bash function.
 
 ## Tests
 
@@ -108,7 +108,7 @@ target/release/snowbridge benchmark pallet \
 To generate `minimal` test data and benchmarking data, make sure to start the local E2E setup to spin up a local beacon node instance to connect to:
 
 ```bash
-cd core/packages/test
+cd web/packages/test
 ./scripts/start-services.sh
 ```
 
@@ -127,7 +127,7 @@ We only use the mainnet spec for generating fixtures for pallet weight benchmark
 To generate the data we can connect to the Lodestar Goerli public node. The script already connects to the Lodestar node, so no need to start up additional services. In the event of the Lodestar node not being available, you can start up your own stack with these commands:
 
 ```bash
-cd core/packages/test
+cd web/packages/test
 ./scripts/start-goerli.sh
 ```
 

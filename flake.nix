@@ -31,6 +31,8 @@
                     jq
                     moreutils
                     typos
+                    ripgrep
+                    tree
                     # ps for zombienet, required in pure shells on Linux
                     ps
 
@@ -46,8 +48,17 @@
 
                     # relayer
                     go
+                    gotools
+                    gopls
+                    go-outline
+                    gocode
+                    gopkgs
+                    gocode-gomod
+                    godef
+                    golint
                     mage
                     revive
+                    delve
 
                     # parachain
                     clang
@@ -69,17 +80,15 @@
                     # explicitly setting HOME allows go to infer these vars
                     #
                     export HOME=~
-                    export PATH=~/go/bin/:$PATH
+                    export GOPATH=$PWD/go
+                    export PATH=$GOPATH/bin:$PATH
 
                     eval "$(direnv hook bash)"
 
                     # LIBCLANG_PATH points rocksdb to a clang.so on Linux
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
-                    echo "Initializing Snowbridge Dev Environment..."
-                    (cd core && pnpm install)
-
-                    cowsay "Snowbridge Dev Environment Ready"
+                    cowsay "Development Environment Ready"
                 '';
             };
         }

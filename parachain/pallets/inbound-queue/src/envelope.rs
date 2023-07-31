@@ -7,12 +7,12 @@ use snowbridge_ethereum::{log::Log, H160};
 use sp_core::RuntimeDebug;
 use sp_std::{convert::TryFrom, prelude::*};
 
-// Used to decode a raw Ethereum log into an [`Envelope`].
+// Used to decode an OutboundMessageAccepted log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
-	signature: "Message(uint32,uint64,bytes)",
+	signature: "OutboundMessageAccepted(uint256,uint64,bytes)",
 	inputs: &[
-		Param { kind: ParamKind::Uint(32), indexed: true },
-		Param { kind: ParamKind::Uint(64), indexed: true },
+		Param { kind: ParamKind::Uint(256), indexed: true },
+		Param { kind: ParamKind::Uint(64), indexed: false },
 		Param { kind: ParamKind::Bytes, indexed: false },
 	],
 	anonymous: false,
@@ -22,7 +22,7 @@ static EVENT_ABI: &Event = &Event {
 #[derive(Clone, RuntimeDebug)]
 pub struct Envelope {
 	/// The address of the outbound queue on Ethereum that emitted this message as an event log
-	pub outbound_queue_address: H160,
+	pub gateway: H160,
 	/// The destination parachain.
 	pub dest: ParaId,
 	/// A nonce for enforcing replay protection and ordering.
@@ -57,6 +57,6 @@ impl TryFrom<Log> for Envelope {
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		Ok(Self { outbound_queue_address: log.address, dest, nonce, payload })
+		Ok(Self { gateway: log.address, dest, nonce, payload })
 	}
 }

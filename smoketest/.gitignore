@@ -6,7 +6,6 @@
 
 *.log
 
-
 .envrc
 
 # The cache for docker container dependency
@@ -17,5 +16,6 @@
 .local
 
 src/parachains/bridgehub.rs
+src/parachains/assethub.rs
+src/parachains/relaychain.rs
 src/contracts
-

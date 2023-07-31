@@ -1,33 +1,39 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pub mod payload;
-
+//! Converts XCM messages into simpler commands that can be processed by the Gateway contract
 use core::slice::Iter;
 
 use codec::{Decode, Encode};
 
 use frame_support::{ensure, log, traits::Get};
-use snowbridge_core::{OutboundMessage, OutboundQueue as OutboundQueueTrait};
-use sp_core::{H160, H256};
+use snowbridge_core::outbound::{
+	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
+};
+use sp_core::H256;
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
-use xcm_executor::traits::ExportXcm;
+use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
+use xcm_executor::traits::{ConvertLocation, ExportXcm};
 
-use payload::{Message, NativeTokensMessage};
+pub type AgentHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 
-pub struct EthereumBlobExporter<UniversalLocation, BridgeLocation, OutboundQueue>(
-	PhantomData<(UniversalLocation, BridgeLocation, OutboundQueue)>,
-);
+pub struct EthereumBlobExporter<
+	UniversalLocation,
+	GatewayLocation,
+	OutboundQueue,
+	AgentHashedDescription,
+>(PhantomData<(UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription)>);
 
-impl<UniversalLocation, BridgeLocation, OutboundQueue> ExportXcm
-	for EthereumBlobExporter<UniversalLocation, BridgeLocation, OutboundQueue>
+impl<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription> ExportXcm
+	for EthereumBlobExporter<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription>
 where
 	UniversalLocation: Get<InteriorMultiLocation>,
-	BridgeLocation: Get<MultiLocation>,
+	GatewayLocation: Get<MultiLocation>,
 	OutboundQueue: OutboundQueueTrait,
 	OutboundQueue::Ticket: Encode + Decode,
+	AgentHashedDescription: ConvertLocation<H256>,
 {
-	type Ticket = (Vec<u8>, XcmHash);
+	type Ticket = Vec<u8>;
 
 	fn validate(
 		network: NetworkId,
@@ -36,16 +42,16 @@ where
 		destination: &mut Option<InteriorMultiLocation>,
 		message: &mut Option<Xcm<()>>,
 	) -> SendResult<Self::Ticket> {
-		let bridge_location = BridgeLocation::get();
+		let gateway_location = GatewayLocation::get();
 		let universal_location = UniversalLocation::get();
 
-		let (bridge_network, registry_location) = bridge_location.interior().split_global()
+		let (gateway_network, gateway_junctions) = gateway_location.interior().split_global()
 			.map_err(|_| {
-				log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to bridge location not being remote. universal_location: {universal_location:?}, {bridge_location:?}");
+				log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to bridge location not being remote. universal_location: {universal_location:?}, {gateway_location:?}");
 				SendError::NotApplicable
 			})?;
 
-		if network != bridge_network {
+		if network != gateway_network {
 			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched bridge network {network:?}.");
 			return Err(SendError::NotApplicable)
 		}
@@ -56,12 +62,12 @@ where
 			return Err(SendError::NotApplicable)
 		}
 
-		let registry_contract = match registry_location {
+		let gateway_address = match gateway_junctions {
 			X1(AccountKey20 { network, key })
-				if network.is_none() || network == Some(bridge_network) =>
+				if network.is_none() || network == Some(gateway_network) =>
 				key,
 			_ => {
-				log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched registry contract {registry_location:?}.");
+				log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched registry contract {gateway_junctions:?}.");
 				return Err(SendError::NotApplicable)
 			},
 		};
@@ -96,8 +102,8 @@ where
 			SendError::MissingArgument
 		})?;
 
-		let mut converter = XcmConverter::new(&message, &bridge_network, &registry_contract);
-		let (converted_message, max_target_fee) = converter.convert().map_err(|err|{
+		let mut converter = XcmConverter::new(&message, &gateway_network, &gateway_address);
+		let (agent_execute_command, max_target_fee) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
@@ -107,39 +113,46 @@ where
 			return Err(SendError::Unroutable)
 		}
 
-		let (gateway, payload) = converted_message.encode();
+		// local_sub is relative to the relaychain. No conversion needed.
+		let local_sub_location: MultiLocation = local_sub.into();
+		let agent_id = match AgentHashedDescription::convert_location(&local_sub_location) {
+			Some(id) => id,
+			None => {
+				log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to not being able to create agent id. '{local_sub_location:?}'");
+				return Err(SendError::Unroutable)
+			},
+		};
 
-		let hash_input = (para_id, gateway, payload.clone()).encode();
-		let message_id: H256 = sp_io::hashing::blake2_256(&hash_input).into();
+		let outbound_message = Message {
+			origin: para_id.into(),
+			command: Command::AgentExecute { agent_id, command: agent_execute_command },
+		};
 
-		let outbound_message =
-			OutboundMessage { id: message_id, origin: para_id.into(), gateway, payload };
-
-		let ticket = OutboundQueue::validate(&outbound_message).map_err(|_| {
-			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed");
+		let ticket = OutboundQueue::validate(&outbound_message).map_err(|err| {
+			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
 			SendError::Unroutable
 		})?;
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "message validated {message_id:#?}.");
+		log::info!(target: "xcm::ethereum_blob_exporter", "message validated: location = {local_sub_location:?}, agent_id = '{agent_id:?}'");
 
-		// TODO: Fees if any currently returning empty multi assets as cost
-		Ok(((ticket.encode(), message_id.into()), MultiAssets::default()))
+		// TODO (SNO-581): Make sure we charge fees for message delivery. Currently this is set to zero.
+		Ok((ticket.encode(), MultiAssets::default()))
 	}
 
-	fn deliver((blob, hash): (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {
+	fn deliver(blob: Vec<u8>) -> Result<XcmHash, SendError> {
 		let ticket: OutboundQueue::Ticket = OutboundQueue::Ticket::decode(&mut blob.as_ref())
 			.map_err(|_| {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "undeliverable due to decoding error");
 				SendError::NotApplicable
 			})?;
 
-		OutboundQueue::submit(ticket).map_err(|_| {
+		let message_hash = OutboundQueue::submit(ticket).map_err(|_| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue submit of message failed");
 			SendError::Transport("other transport error")
 		})?;
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "message delivered {hash:#?}.");
-		Ok(hash)
+		log::info!(target: "xcm::ethereum_blob_exporter", "message delivered {message_hash:#?}.");
+		Ok(message_hash.into())
 	}
 }
 
@@ -164,24 +177,26 @@ enum XcmConverterError {
 
 struct XcmConverter<'a, Call> {
 	iter: Iter<'a, Instruction<Call>>,
-	bridged_location: &'a NetworkId,
-	registry_contract: &'a [u8; 20],
+	ethereum_network: &'a NetworkId,
+	gateway_address: &'a [u8; 20],
 }
 impl<'a, Call> XcmConverter<'a, Call> {
 	fn new(
 		message: &'a Xcm<Call>,
-		bridged_location: &'a NetworkId,
-		registry_contract: &'a [u8; 20],
+		ethereum_network: &'a NetworkId,
+		gateway_address: &'a [u8; 20],
 	) -> Self {
-		Self { iter: message.inner().iter(), bridged_location, registry_contract }
+		Self { iter: message.inner().iter(), ethereum_network, gateway_address }
 	}
 
-	fn convert(&mut self) -> Result<(Message, Option<&'a MultiAsset>), XcmConverterError> {
+	fn convert(
+		&mut self,
+	) -> Result<(AgentExecuteCommand, Option<&'a MultiAsset>), XcmConverterError> {
 		// Get target fees if specified.
 		let max_target_fee = self.fee_info()?;
 
 		// Get withdraw/deposit and make native tokens create message.
-		let result = self.to_native_tokens_unlock_message()?;
+		let result = self.native_tokens_unlock_message()?;
 
 		// Match last set topic. Later could use message id for replies
 		let _ = match self.next()? {
@@ -202,7 +217,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		let execution_fee = match self.next()? {
 			WithdrawAsset(fee_asset) => match self.next()? {
 				BuyExecution { fees: execution_fee, weight_limit: Unlimited }
-					if fee_asset.len() == 1 && fee_asset.contains(&execution_fee) =>
+					if fee_asset.len() == 1 && fee_asset.contains(execution_fee) =>
 					Some(execution_fee),
 				_ => return Err(BuyExecutionExpected),
 			},
@@ -212,7 +227,9 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(execution_fee)
 	}
 
-	fn to_native_tokens_unlock_message(&mut self) -> Result<Message, XcmConverterError> {
+	fn native_tokens_unlock_message(
+		&mut self,
+	) -> Result<AgentExecuteCommand, XcmConverterError> {
 		use XcmConverterError::*;
 		let (assets, beneficiary) = if let WithdrawAsset(reserved_assets) = self.next()? {
 			if reserved_assets.len() == 0 {
@@ -230,15 +247,15 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			return Err(WithdrawExpected)
 		};
 
-		// assert that the benificiary is ethereum account key 20
+		// assert that the beneficiary is AccountKey20
 		let destination = {
 			if let MultiLocation { parents: 0, interior: X1(AccountKey20 { network, key }) } =
 				beneficiary
 			{
-				if network.is_some() && network != &Some(*self.bridged_location) {
+				if network.is_some() && network != &Some(*self.ethereum_network) {
 					return Err(BeneficiaryResolutionFailed)
 				}
-				H160(*key)
+				key.into()
 			} else {
 				return Err(BeneficiaryResolutionFailed)
 			}
@@ -264,27 +281,27 @@ impl<'a, Call> XcmConverter<'a, Call> {
 				parents: 0,
 				interior:
 					X2(
-						AccountKey20 { network: registry_network, key: registry_contract },
-						AccountKey20 { network: erc20_network, key: erc20_contract },
+						AccountKey20 { network: gateway_network, key: gateway_address },
+						AccountKey20 { network: token_network, key: token_address },
 					),
 			} = asset_location
 			{
-				if registry_network.is_some() && registry_network != &Some(*self.bridged_location) {
+				if gateway_network.is_some() && gateway_network != &Some(*self.ethereum_network) {
 					return Err(AssetResolutionFailed)
 				}
-				if registry_contract != self.registry_contract {
+				if gateway_address != self.gateway_address {
 					return Err(AssetResolutionFailed)
 				}
-				if erc20_network.is_some() && erc20_network != &Some(*self.bridged_location) {
+				if token_network.is_some() && token_network != &Some(*self.ethereum_network) {
 					return Err(AssetResolutionFailed)
 				}
-				(H160(*erc20_contract), *amount)
+				(token_address.into(), *amount)
 			} else {
 				return Err(AssetResolutionFailed)
 			}
 		};
 
-		Ok(Message::NativeTokens(NativeTokensMessage::Unlock { asset, destination, amount }))
+		Ok(AgentExecuteCommand::TransferToken { token: asset, recipient: destination, amount })
 	}
 
 	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {
@@ -296,7 +313,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::SubmitError;
+	use snowbridge_core::outbound::{MessageHash, SubmitError};
 
 	use super::*;
 
@@ -304,39 +321,34 @@ mod tests {
 		const RelayNetwork: NetworkId = Polkadot;
 		const UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(1013));
 		const BridgedNetwork: NetworkId =  Ethereum{ chain_id: 1 };
-		BridgedLocation: MultiLocation = MultiLocation::new(0, (GlobalConsensus(BridgedNetwork::get()), AccountKey20 { network: None, key: BRIDGE_REGISTRY }));
+		BridgedLocation: MultiLocation = MultiLocation::new(0, (GlobalConsensus(BridgedNetwork::get()), AccountKey20 { network: None, key: GATEWAY }));
 		BridgedLocationWithoutRegistry: MultiLocation = MultiLocation::new(0, GlobalConsensus(BridgedNetwork::get()));
-		BridgedLocationWithoutGlobalConsensus: MultiLocation = MultiLocation::new(0, AccountKey20 { network: None, key: BRIDGE_REGISTRY });
+		BridgedLocationWithoutGlobalConsensus: MultiLocation = MultiLocation::new(0, AccountKey20 { network: None, key: GATEWAY });
 	}
 
-	type Ticket = (Vec<u8>, XcmHash);
-
-	const BRIDGE_REGISTRY: [u8; 20] = hex!("D184c103F7acc340847eEE82a0B909E3358bc28d");
-	const SUCCESS_CASE_1_TICKET: [u8; 232] = hex!("e80300000100810300000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000600000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003e8");
-	const SUCCESS_CASE_1_TICKET_HASH: [u8; 32] =
-		hex!("1454532f17679d9bfd775fef52de6c0598e34def65ef19ac06c11af013d6ca0f");
+	const GATEWAY: [u8; 20] = hex!("D184c103F7acc340847eEE82a0B909E3358bc28d");
 
 	struct MockOkOutboundQueue;
 	impl OutboundQueueTrait for MockOkOutboundQueue {
 		type Ticket = ();
 
-		fn validate(_: &OutboundMessage) -> Result<(), SubmitError> {
+		fn validate(_: &Message) -> Result<(), SubmitError> {
 			Ok(())
 		}
 
-		fn submit(_: Self::Ticket) -> Result<(), SubmitError> {
-			Ok(())
+		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			Ok(MessageHash::zero())
 		}
 	}
 	struct MockErrOutboundQueue;
 	impl OutboundQueueTrait for MockErrOutboundQueue {
 		type Ticket = ();
 
-		fn validate(_: &OutboundMessage) -> Result<(), SubmitError> {
+		fn validate(_: &Message) -> Result<(), SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 
-		fn submit(_: Self::Ticket) -> Result<(), SubmitError> {
+		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 	}
@@ -350,13 +362,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
 
@@ -369,13 +380,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -390,13 +400,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
 
@@ -409,13 +418,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -428,13 +436,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::Unroutable));
 	}
 
@@ -451,6 +458,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocationWithoutGlobalConsensus,
 				MockOkOutboundQueue,
+				AgentHashedDescription,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -468,6 +476,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocationWithoutRegistry,
 				MockOkOutboundQueue,
+				AgentHashedDescription,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -482,13 +491,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
 
@@ -502,13 +510,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -522,13 +529,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -542,13 +548,12 @@ mod tests {
 		let mut message: Option<Xcm<()>> = None;
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
 
@@ -569,7 +574,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -598,13 +603,12 @@ mod tests {
 		);
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
 		assert_eq!(result, Err(SendError::Unroutable));
 	}
@@ -626,13 +630,12 @@ mod tests {
 		);
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
 		assert_eq!(result, Err(SendError::Unroutable));
 	}
@@ -652,7 +655,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -680,35 +683,24 @@ mod tests {
 		);
 
 		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockOkOutboundQueue>::validate(
-				network,
-				channel,
-				&mut universal_source,
-				&mut destination,
-				&mut message,
-			);
+			EthereumBlobExporter::<
+				UniversalLocation,
+				BridgedLocation,
+				MockOkOutboundQueue,
+				AgentHashedDescription,
+			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
 		assert!(result.is_ok());
 	}
 
 	#[test]
-	fn exporter_deliver_success_case_1() {
-		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
-		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation, MockOkOutboundQueue>::deliver(
-				ticket,
-			);
-
-		assert_eq!(result, Ok(SUCCESS_CASE_1_TICKET_HASH))
-	}
-
-	#[test]
 	fn exporter_deliver_with_submit_failure_yields_unroutable() {
-		let ticket: Ticket = (SUCCESS_CASE_1_TICKET.to_vec(), SUCCESS_CASE_1_TICKET_HASH);
-		let result =
-			EthereumBlobExporter::<UniversalLocation, BridgedLocation,MockErrOutboundQueue>::deliver(
-				ticket,
-			);
+		let result = EthereumBlobExporter::<
+			UniversalLocation,
+			BridgedLocation,
+			MockErrOutboundQueue,
+			AgentHashedDescription,
+		>::deliver(hex!("deadbeef").to_vec());
 		assert_eq!(result, Err(SendError::Transport("other transport error")))
 	}
 
@@ -725,7 +717,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -746,12 +738,12 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
-		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
-			asset: H160(token_address),
-			destination: H160(beneficiary_address),
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
+		let expected_payload = AgentExecuteCommand::TransferToken {
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
 			amount: 1000,
-		});
+		};
 		let result = converter.convert();
 		assert_eq!(result, Ok((expected_payload, Some(&fee))));
 	}
@@ -766,7 +758,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -786,12 +778,12 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
-		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
-			asset: H160(token_address),
-			destination: H160(beneficiary_address),
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
+		let expected_payload = AgentExecuteCommand::TransferToken {
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
 			amount: 1000,
-		});
+		};
 		let result = converter.convert();
 		assert_eq!(result, Ok((expected_payload, None)));
 	}
@@ -806,7 +798,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -826,12 +818,12 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
-		let expected_payload = Message::NativeTokens(NativeTokensMessage::Unlock {
-			asset: H160(token_address),
-			destination: H160(beneficiary_address),
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
+		let expected_payload = AgentExecuteCommand::TransferToken {
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
 			amount: 1000,
-		});
+		};
 		let result = converter.convert();
 		assert_eq!(result, Ok((expected_payload, None)));
 	}
@@ -844,7 +836,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -858,9 +850,9 @@ mod tests {
 		]
 		.into();
 
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::UnexpectedEndOfXcm));
+		assert_eq!(result.err(), Some(XcmConverterError::UnexpectedEndOfXcm));
 	}
 
 	#[test]
@@ -869,10 +861,10 @@ mod tests {
 
 		let message: Xcm<()> = vec![].into();
 
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::UnexpectedEndOfXcm));
+		assert_eq!(result.err(), Some(XcmConverterError::UnexpectedEndOfXcm));
 	}
 
 	#[test]
@@ -885,7 +877,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -905,10 +897,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::TargetFeeExpected));
+		assert_eq!(result.err(), Some(XcmConverterError::TargetFeeExpected));
 	}
 
 	#[test]
@@ -924,7 +916,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -945,10 +937,10 @@ mod tests {
 			ClearTopic,
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::SetTopicExpected));
+		assert_eq!(result.err(), Some(XcmConverterError::SetTopicExpected));
 	}
 
 	#[test]
@@ -964,7 +956,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -986,10 +978,10 @@ mod tests {
 			ClearOrigin,
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::EndOfXcmMessageExpected));
+		assert_eq!(result.err(), Some(XcmConverterError::EndOfXcmMessageExpected));
 	}
 
 	#[test]
@@ -1005,7 +997,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -1025,10 +1017,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::WithdrawExpected));
+		assert_eq!(result.err(), Some(XcmConverterError::WithdrawExpected));
 	}
 
 	#[test]
@@ -1043,7 +1035,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -1059,10 +1051,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::DepositExpected));
+		assert_eq!(result.err(), Some(XcmConverterError::DepositExpected));
 	}
 
 	#[test]
@@ -1088,10 +1080,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::NoReserveAssets));
+		assert_eq!(result.err(), Some(XcmConverterError::NoReserveAssets));
 	}
 
 	#[test]
@@ -1129,10 +1121,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::TooManyAssets));
+		assert_eq!(result.err(), Some(XcmConverterError::TooManyAssets));
 	}
 
 	#[test]
@@ -1148,7 +1140,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -1169,10 +1161,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::FilterDoesNotConsumeAllAssets));
+		assert_eq!(result.err(), Some(XcmConverterError::FilterDoesNotConsumeAllAssets));
 	}
 
 	#[test]
@@ -1188,7 +1180,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -1209,10 +1201,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::AssetNotConcreteFungible));
+		assert_eq!(result.err(), Some(XcmConverterError::AssetNotConcreteFungible));
 	}
 
 	#[test]
@@ -1228,7 +1220,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -1249,10 +1241,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::ZeroAssetTransfer));
+		assert_eq!(result.err(), Some(XcmConverterError::ZeroAssetTransfer));
 	}
 
 	#[test]
@@ -1282,10 +1274,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::AssetResolutionFailed));
+		assert_eq!(result.err(), Some(XcmConverterError::AssetResolutionFailed));
 	}
 
 	#[test]
@@ -1301,7 +1293,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: Some(network), key: BRIDGE_REGISTRY },
+					AccountKey20 { network: Some(network), key: GATEWAY },
 					AccountKey20 { network: Some(Ethereum { chain_id: 2 }), key: token_address },
 				)
 				.into(),
@@ -1322,10 +1314,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::AssetResolutionFailed));
+		assert_eq!(result.err(), Some(XcmConverterError::AssetResolutionFailed));
 	}
 
 	#[test]
@@ -1364,10 +1356,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::AssetResolutionFailed));
+		assert_eq!(result.err(), Some(XcmConverterError::AssetResolutionFailed));
 	}
 
 	#[test]
@@ -1383,7 +1375,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: Some(Ethereum { chain_id: 2 }), key: BRIDGE_REGISTRY },
+					AccountKey20 { network: Some(Ethereum { chain_id: 2 }), key: GATEWAY },
 					AccountKey20 { network: Some(network), key: token_address },
 				)
 				.into(),
@@ -1404,10 +1396,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::AssetResolutionFailed));
+		assert_eq!(result.err(), Some(XcmConverterError::AssetResolutionFailed));
 	}
 
 	#[test]
@@ -1425,7 +1417,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -1451,10 +1443,10 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::BeneficiaryResolutionFailed));
+		assert_eq!(result.err(), Some(XcmConverterError::BeneficiaryResolutionFailed));
 	}
 
 	#[test]
@@ -1471,7 +1463,7 @@ mod tests {
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X2(
-					AccountKey20 { network: None, key: BRIDGE_REGISTRY },
+					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
 				.into(),
@@ -1496,9 +1488,9 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
-		let mut converter = XcmConverter::new(&message, &network, &BRIDGE_REGISTRY);
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
-		assert_eq!(result, Err(XcmConverterError::BeneficiaryResolutionFailed));
+		assert_eq!(result.err(), Some(XcmConverterError::BeneficiaryResolutionFailed));
 	}
 }

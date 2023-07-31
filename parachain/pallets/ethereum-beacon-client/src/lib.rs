@@ -26,12 +26,13 @@ use primitives::{
 	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, ForkData, ForkVersion,
 	ForkVersions, PublicKeyPrepared, SigningData,
 };
-use snowbridge_core::{Message, RingBufferMap, Verifier};
+use snowbridge_core::{
+	inbound::{Message, Proof, Verifier},
+	RingBufferMap,
+};
 use sp_core::H256;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
-
-use snowbridge_core::Proof;
 
 use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
@@ -118,10 +119,11 @@ pub mod pallet {
 		BLSPreparePublicKeysFailed,
 		BLSVerificationFailed(BlsError),
 		InvalidUpdateSlot,
-		/// The given update is not in the expected period, or the given next sync committee does not match the next sync committee in storage.
+		/// The given update is not in the expected period, or the given next sync committee does
+		/// not match the next sync committee in storage.
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
-		ExecutionHeaderSkippedSlot,
+		ExecutionHeaderSkippedBlock,
 		BridgeModule(bp_runtime::OwnedBridgeModuleError),
 	}
 
@@ -212,7 +214,7 @@ pub mod pallet {
 		#[transactional]
 		/// Used for pallet initialization and light client resetting. Needs to be called by
 		/// the root origin.
-		pub fn force_checkpoint(origin: OriginFor<T>, update: CheckpointUpdate) -> DispatchResult {
+		pub fn force_checkpoint(origin: OriginFor<T>, update: Box<CheckpointUpdate>) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::process_checkpoint_update(&update)?;
 			Ok(())
@@ -228,7 +230,7 @@ pub mod pallet {
 		#[transactional]
 		/// Submits a new finalized beacon header update. The update may contain the next
 		/// sync committee.
-		pub fn submit(origin: OriginFor<T>, update: Update) -> DispatchResult {
+		pub fn submit(origin: OriginFor<T>, update: Box<Update>) -> DispatchResult {
 			Self::ensure_not_halted().map_err(Error::<T>::BridgeModule)?;
 			ensure_signed(origin)?;
 			Self::process_update(&update)?;
@@ -242,7 +244,7 @@ pub mod pallet {
 		/// is also included to prove the execution header, as well as ancestry proof data.
 		pub fn submit_execution_header(
 			origin: OriginFor<T>,
-			update: ExecutionHeaderUpdate,
+			update: Box<ExecutionHeaderUpdate>,
 		) -> DispatchResult {
 			Self::ensure_not_halted().map_err(Error::<T>::BridgeModule)?;
 			ensure_signed(origin)?;
@@ -336,7 +338,7 @@ pub mod pallet {
 		/// Cross check to make sure that execution header import does not fall too far behind
 		/// finalised beacon header import. If that happens just return an error and pause
 		/// processing until execution header processing has caught up.
-		fn cross_check_execution_state() -> DispatchResult {
+		pub(crate) fn cross_check_execution_state() -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
@@ -551,7 +553,7 @@ pub mod pallet {
 				latest_execution_state.block_number == 0 ||
 					update.execution_header.block_number ==
 						latest_execution_state.block_number + 1,
-				Error::<T>::ExecutionHeaderSkippedSlot
+				Error::<T>::ExecutionHeaderSkippedBlock
 			);
 
 			// Gets the hash tree root of the execution header, in preparation for the execution
@@ -629,7 +631,7 @@ pub mod pallet {
 			ensure!(
 				verify_merkle_branch(
 					block_root,
-					&block_root_proof,
+					block_root_proof,
 					leaf_index as usize,
 					config::BLOCK_ROOT_AT_INDEX_DEPTH,
 					state.block_roots_root
@@ -778,8 +780,11 @@ pub mod pallet {
 		/// Returns the fork version based on the current epoch. The hard fork versions
 		/// are defined in pallet config.
 		pub(super) fn compute_fork_version(epoch: u64) -> ForkVersion {
-			let fork_versions = T::ForkVersions::get();
+			Self::select_fork_version(&T::ForkVersions::get(), epoch)
+		}
 
+		/// Returns the fork version based on the current epoch.
+		pub(super) fn select_fork_version(fork_versions: &ForkVersions, epoch: u64) -> ForkVersion {
 			if epoch >= fork_versions.capella.epoch {
 				return fork_versions.capella.version
 			}

@@ -247,22 +247,13 @@ where
 	let mut combined = [0_u8; 64];
 	let computed = proof.into_iter().fold(leaf_hash, |a, b| {
 		if a < b {
-			combined[..hash_len].copy_from_slice(&a.as_ref());
-			combined[hash_len..].copy_from_slice(&b.as_ref());
+			combined[..hash_len].copy_from_slice(a.as_ref());
+			combined[hash_len..].copy_from_slice(b.as_ref());
 		} else {
-			combined[..hash_len].copy_from_slice(&b.as_ref());
-			combined[hash_len..].copy_from_slice(&a.as_ref());
+			combined[..hash_len].copy_from_slice(b.as_ref());
+			combined[hash_len..].copy_from_slice(a.as_ref());
 		}
-		let hash = <H as Hash>::hash(&combined);
-		#[cfg(feature = "debug")]
-		log::debug!(
-			"[verify_proof]: (a, b) {:?}, {:?} => {:?} ({:?}) hash",
-			hex::encode(a),
-			hex::encode(b),
-			hex::encode(hash),
-			hex::encode(combined)
-		);
-		hash
+		<H as Hash>::hash(&combined)
 	});
 
 	root == &computed

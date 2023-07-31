@@ -17,6 +17,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ma
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
@@ -41,6 +42,7 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     "xcm/std",
+    "xcm-builder/std",
     "xcm-executor/std",
     "snowbridge-core/std",
     "ethabi/std",

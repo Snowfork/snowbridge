@@ -30,7 +30,7 @@ mod benchmarks {
 		let block_root: H256 = checkpoint_update.header.hash_tree_root().unwrap();
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, *checkpoint_update);
+		_(RawOrigin::Root, Box::new(*checkpoint_update));
 
 		assert!(<LatestFinalizedBlockRoot<T>>::get() == block_root);
 		assert!(<FinalizedBeaconState<T>>::get(block_root).is_some());
@@ -47,7 +47,7 @@ mod benchmarks {
 		EthereumBeaconClient::<T>::process_checkpoint_update(&checkpoint_update)?;
 
 		#[extrinsic_call]
-		submit(RawOrigin::Signed(caller.clone()), *finalized_header_update);
+		submit(RawOrigin::Signed(caller.clone()), Box::new(*finalized_header_update));
 
 		assert!(<LatestFinalizedBlockRoot<T>>::get() == block_root);
 		assert!(<FinalizedBeaconState<T>>::get(block_root).is_some());
@@ -63,7 +63,7 @@ mod benchmarks {
 		EthereumBeaconClient::<T>::process_checkpoint_update(&checkpoint_update)?;
 
 		#[extrinsic_call]
-		submit(RawOrigin::Signed(caller.clone()), *sync_committee_update);
+		submit(RawOrigin::Signed(caller.clone()), Box::new(*sync_committee_update));
 
 		assert!(<NextSyncCommittee<T>>::exists());
 
@@ -81,7 +81,7 @@ mod benchmarks {
 		EthereumBeaconClient::<T>::process_update(&finalized_header_update)?;
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller.clone()), *execution_header_update);
+		_(RawOrigin::Signed(caller.clone()), Box::new(*execution_header_update));
 
 		assert!(<ExecutionHeaders<T>>::contains_key(execution_header_hash));
 

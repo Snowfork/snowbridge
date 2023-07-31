@@ -35,7 +35,7 @@ func TestIsStartOfEpoch(t *testing.T) {
 	}
 
 	syncer := Syncer{}
-	syncer.SlotsInEpoch = 32
+	syncer.setting.SlotsInEpoch = 32
 
 	for _, tt := range values {
 		result := syncer.IsStartOfEpoch(tt.slot)

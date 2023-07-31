@@ -20,11 +20,11 @@ import (
 )
 
 type Relay struct {
-	config                *Config
-	keypair               *sr25519.Keypair
-	paraconn              *parachain.Connection
-	ethconn               *ethereum.Connection
-	outboundQueueContract *contracts.OutboundQueue
+	config          *Config
+	keypair         *sr25519.Keypair
+	paraconn        *parachain.Connection
+	ethconn         *ethereum.Connection
+	gatewayContract *contracts.Gateway
 }
 
 func NewRelay(
@@ -39,7 +39,7 @@ func NewRelay(
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
-	ethconn := ethereum.NewConnection(r.config.Source.Ethereum.Endpoint, nil)
+	ethconn := ethereum.NewConnection(&r.config.Source.Ethereum, nil)
 
 	err := paraconn.Connect(ctx)
 	if err != nil {
@@ -71,19 +71,21 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	address := common.HexToAddress(r.config.Source.Contracts.OutboundQueue)
-	contract, err := contracts.NewOutboundQueue(address, ethconn.Client())
+	address := common.HexToAddress(r.config.Source.Contracts.Gateway)
+	contract, err := contracts.NewGateway(address, ethconn.Client())
 	if err != nil {
 		return err
 	}
-	r.outboundQueueContract = contract
+	r.gatewayContract = contract
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-time.After(12 * time.Second):
-			log.Info("Polling")
+			log.WithFields(log.Fields{
+				"channelId": r.config.Source.ChannelID,
+			}).Info("Polling Nonces")
 
 			executionHeaderState, err := writer.GetLastExecutionHeaderState()
 			if err != nil {
@@ -95,6 +97,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				return err
 			}
 
+			if executionHeaderState.BlockNumber == 0 {
+				log.WithFields(log.Fields{
+					"channelId": r.config.Source.ChannelID,
+				}).Info("Beacon execution state syncing not started, waiting...")
+				continue
+			}
+
 			ethNonce, err := r.fetchEthereumNonce(ctx, executionHeaderState.BlockNumber)
 			if err != nil {
 				return err
@@ -102,7 +111,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 			log.WithFields(log.Fields{
 				"ethBlockNumber": executionHeaderState.BlockNumber,
-				"laneId":         r.config.Source.LaneID,
+				"channelId":      r.config.Source.ChannelID,
 				"paraNonce":      paraNonce,
 				"ethNonce":       ethNonce,
 			}).Info("Polled Nonces")
@@ -112,25 +121,50 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			}
 
 			events, err := r.findEvents(ctx, executionHeaderState.BlockNumber, paraNonce+1)
+			if err != nil {
+				return fmt.Errorf("find events: %w", err)
+			}
 
 			for _, ev := range events {
 				inboundMsg, err := r.makeInboundMessage(ctx, headerCache, ev)
 				if err != nil {
 					return fmt.Errorf("make outgoing message: %w", err)
 				}
+				logger := log.WithFields(log.Fields{
+					"paraNonce":   paraNonce,
+					"ethNonce":    ethNonce,
+					"msgNonce":    ev.Nonce,
+					"address":     ev.Raw.Address.Hex(),
+					"blockHash":   ev.Raw.BlockHash.Hex(),
+					"blockNumber": ev.Raw.BlockNumber,
+					"txHash":      ev.Raw.TxHash.Hex(),
+					"dest":        ev.Destination,
+				})
+
+				if ev.Nonce <= paraNonce {
+					logger.Warn("inbound message outdated, just skipped")
+					continue
+				}
 
 				err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
 				if err != nil {
+					logger.Error("inbound message fail to sent")
 					return fmt.Errorf("write to parachain: %w", err)
 				}
+				paraNonce, _ = r.fetchLatestParachainNonce()
+				if paraNonce != ev.Nonce {
+					logger.Error("inbound message sent but fail to execute")
+					return fmt.Errorf("inbound message fail to execute")
+				}
+				logger.Info("inbound message executed successfully")
 			}
 		}
 	}
 }
 
 func (r *Relay) fetchLatestParachainNonce() (uint64, error) {
-	paraID := r.config.Source.LaneID
-	encodedParaID, err := types.EncodeToBytes(r.config.Source.LaneID)
+	paraID := r.config.Source.ChannelID
+	encodedParaID, err := types.EncodeToBytes(r.config.Source.ChannelID)
 	if err != nil {
 		return 0, err
 	}
@@ -159,21 +193,25 @@ func (r *Relay) fetchEthereumNonce(ctx context.Context, blockNumber uint64) (uin
 		BlockNumber: new(big.Int).SetUint64(blockNumber),
 		Context:     ctx,
 	}
-	nonce, err := r.outboundQueueContract.Nonce(&opts, r.config.Source.LaneID)
+	_, ethOutboundNonce, err := r.gatewayContract.ChannelNoncesOf(&opts, big.NewInt(int64(r.config.Source.ChannelID)))
 	if err != nil {
-		return 0, fmt.Errorf("fetch OutboundQueue.Nonce(%v): %w", r.config.Source.LaneID, err)
+		return 0, fmt.Errorf("fetch Gateway.ChannelNoncesOf(%v): %w", r.config.Source.ChannelID, err)
 	}
 
-	return nonce, nil
+	return ethOutboundNonce, nil
 }
 
 const BlocksPerQuery = 4096
 
-func (r *Relay) findEvents(ctx context.Context, latestFinalizedBlockNumber uint64, start uint64) ([]*contracts.OutboundQueueMessage, error) {
+func (r *Relay) findEvents(
+	ctx context.Context,
+	latestFinalizedBlockNumber uint64,
+	start uint64,
+) ([]*contracts.GatewayOutboundMessageAccepted, error) {
 
-	paraID := r.config.Source.LaneID
+	paraID := r.config.Source.ChannelID
 
-	var allEvents []*contracts.OutboundQueueMessage
+	var allEvents []*contracts.GatewayOutboundMessageAccepted
 
 	blockNumber := latestFinalizedBlockNumber
 
@@ -216,13 +254,13 @@ func (r *Relay) findEvents(ctx context.Context, latestFinalizedBlockNumber uint6
 	return allEvents, nil
 }
 
-func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start uint64) (bool, []*contracts.OutboundQueueMessage, error) {
-	iter, err := r.outboundQueueContract.FilterMessage(opts, []uint32{paraID}, []uint64{})
+func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start uint64) (bool, []*contracts.GatewayOutboundMessageAccepted, error) {
+	iter, err := r.gatewayContract.FilterOutboundMessageAccepted(opts, []*big.Int{big.NewInt(int64(paraID))})
 	if err != nil {
 		return false, nil, err
 	}
 
-	var events []*contracts.OutboundQueueMessage
+	var events []*contracts.GatewayOutboundMessageAccepted
 	done := false
 
 	for {
@@ -234,9 +272,10 @@ func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start
 			}
 			break
 		}
-
-		events = append(events, iter.Event)
-		if iter.Event.Nonce == start {
+		if iter.Event.Nonce >= start {
+			events = append(events, iter.Event)
+		}
+		if iter.Event.Nonce == start && opts.Start != 0 {
 			done = true
 			iter.Close()
 			break
@@ -249,7 +288,7 @@ func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start
 func (r *Relay) makeInboundMessage(
 	ctx context.Context,
 	headerCache *ethereum.HeaderCache,
-	event *contracts.OutboundQueueMessage,
+	event *contracts.GatewayOutboundMessageAccepted,
 ) (*parachain.Message, error) {
 	receiptTrie, err := headerCache.GetReceiptTrie(ctx, event.Raw.BlockHash)
 	if err != nil {
