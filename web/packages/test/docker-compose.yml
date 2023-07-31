@@ -3,7 +3,7 @@ version: '3'
 services:
   beacon:
     platform: linux/amd64
-    image: ronyang/snowbridge-relay # change to snowfork
+    image: ghcr.io/snowfork/snowbridge-relay
     command: run beacon --config /config/beacon-relay.json --substrate.private-key "//BeaconRelay"
     volumes:
       - $output_dir:/config
@@ -13,7 +13,7 @@ services:
   
   execution:
     platform: linux/amd64
-    image: ronyang/snowbridge-relay
+    image: ghcr.io/snowfork/snowbridge-relay
     command: run execution --config /config/execution-relay.json --substrate.private-key "//ExecutionRelay"
     volumes:
       - $output_dir:/config
@@ -23,7 +23,7 @@ services:
 
   beefy:
     platform: linux/amd64
-    image: ronyang/snowbridge-relay
+    image: ghcr.io/snowfork/snowbridge-relay
     command: run beefy --config /config/beefy-relay.json --ethereum.private-key ${BEEFY_RELAY_ETH_KEY}
     volumes:
       - $output_dir:/config
@@ -33,7 +33,7 @@ services:
   
   parachain-bridgehub:
     platform: linux/amd64
-    image: ronyang/snowbridge-relay
+    image: ghcr.io/snowfork/snowbridge-relay
     command: run parachain --config /config/parachain-relay-bridge-hub.json --ethereum.private-key ${PARACHAIN_RELAY_ETH_KEY}
     volumes:
       - $output_dir:/config
