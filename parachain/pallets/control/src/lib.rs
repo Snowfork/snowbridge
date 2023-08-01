@@ -198,9 +198,9 @@ pub mod pallet {
 			// Normalize all locations relative to the relay chain unless its the relay itself.
 			let relay_location = T::RelayLocation::get();
 
-			let _ = location
+			location
 				.reanchor(&relay_location, T::UniversalLocation::get())
-				.map_err(|_| Error::<T>::LocationReanchorFailed);
+				.map_err(|_| Error::<T>::LocationReanchorFailed)?;
 
 			let para_id = match location.interior.first() {
 				Some(Parachain(index)) => Some((*index).into()),
