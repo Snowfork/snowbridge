@@ -3,23 +3,23 @@
 
     inputs = {
         nixpkgs.url = "nixpkgs/nixos-unstable";
-        rust-overlay.url = "github:oxalica/rust-overlay";
         flake-utils.url  = "github:numtide/flake-utils";
         foundry.url = "github:shazow/foundry.nix/monthly";
     };
 
-    outputs = { self, nixpkgs, rust-overlay, flake-utils, foundry }:
+    outputs = { self, nixpkgs, flake-utils, foundry }:
+
     let
         supportedSystems = [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" ];
-        overlays = [ (import rust-overlay) foundry.overlay ];
+        overlays = [ foundry.overlay ];
     in
+
     flake-utils.lib.eachSystem supportedSystems (system:
         let
             pkgs = import nixpkgs { inherit system overlays; };
             cwd = builtins.toString ./.;
-            rust =
-              pkgs.rust-bin.fromRustupToolchainFile "${cwd}/rust-toolchain.toml";
         in
+
         with pkgs;
         {
             devShells.default = pkgs.mkShell {
@@ -65,7 +65,7 @@
                     gcc
                     libiconv
                     protobuf
-                    rust
+                    rustup
 
                     cowsay
                 ];
