@@ -76,14 +76,19 @@ pub mod pallet {
 		Upgrade { impl_address: H160, impl_code_hash: H256, params_hash: Option<H256> },
 		/// An CreateAgent message was sent to the Gateway
 		CreateAgent { location: Box<MultiLocation>, agent_id: AgentId },
+		/// An CreateChannel message was sent to the Gateway
+		CreateChannel { location: Box<MultiLocation>, para_id: ParaId, agent_id: AgentId },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		UpgradeDataTooLarge,
 		SubmissionFailed,
-		LocationConversionFailed,
+		LocationReanchorFailed,
+		LocationToParaIdConversionFailed,
+		LocationToAgentIdConversionFailed,
 		AgentAlreadyCreated,
+		AgentNotExist,
 	}
 
 	#[pallet::storage]
@@ -128,22 +133,12 @@ pub mod pallet {
 		/// Sends a message to the Gateway contract to create a new Agent representing `origin`
 		///
 		/// - `origin`: Must be `MultiLocation`
-		#[pallet::call_index(1)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::create_agent())]
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
-			let mut location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+			let location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			// Normalize all locations relative to the relay chain unless its the relay itself.
-			let relay_location = T::RelayLocation::get();
-			if location != relay_location {
-				location
-					.reanchor(&relay_location, T::UniversalLocation::get())
-					.or(Err(Error::<T>::LocationConversionFailed))?;
-			}
-
-			// Hash the location to produce an agent id
-			let agent_id = T::AgentHashedDescription::convert_location(&location)
-				.ok_or(Error::<T>::LocationConversionFailed)?;
+			let (_, agent_id) = Self::convert_location(location)?;
 
 			// Record the agent id or fail if it has already been created
 			if Agents::<T>::get(agent_id).is_some() {
@@ -158,6 +153,34 @@ pub mod pallet {
 			Self::deposit_event(Event::<T>::CreateAgent { location: Box::new(location), agent_id });
 			Ok(())
 		}
+
+		/// Sends a message to the Gateway contract to create a new Agent representing `origin`
+		///
+		/// - `origin`: Must be `MultiLocation`
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::create_agent())]
+		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
+			let location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+
+			let (para_id, agent_id) = Self::convert_location(location)?;
+
+			if !Agents::<T>::contains_key(agent_id) {
+				return Err(Error::<T>::AgentNotExist.into())
+			}
+
+			let message = Message {
+				origin: T::OwnParaId::get(),
+				command: Command::CreateChannel { agent_id, para_id },
+			};
+			Self::submit_outbound(message)?;
+
+			Self::deposit_event(Event::<T>::CreateChannel {
+				location: Box::new(location),
+				para_id,
+				agent_id,
+			});
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -166,6 +189,28 @@ pub mod pallet {
 				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 			Ok(())
+		}
+
+		fn convert_location(mut location: MultiLocation) -> Result<(ParaId, H256), DispatchError> {
+			// Normalize all locations relative to the relay chain unless its the relay itself.
+			let relay_location = T::RelayLocation::get();
+			if location != relay_location {
+				location
+					.reanchor(&relay_location, T::UniversalLocation::get())
+					.or(Err(Error::<T>::LocationReanchorFailed))?;
+			}
+
+			let para_id: ParaId = match location.interior.first() {
+				Some(Parachain(index)) => Some((*index).into()),
+				_ => None,
+			}
+			.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
+
+			// Hash the location to produce an agent id
+			let agent_id = T::AgentHashedDescription::convert_location(&location)
+				.ok_or(Error::<T>::LocationToAgentIdConversionFailed)?;
+
+			Ok((para_id, agent_id))
 		}
 	}
 }
