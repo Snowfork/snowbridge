@@ -85,6 +85,7 @@
                     export GOPATH=$PWD/go
                     export PATH=$GOPATH/bin:$PATH
 
+                    export CARGO_HOME=$PWD/.cargo
                     export RUSTUP_HOME=$PWD/.rustup
 
                     eval "$(direnv hook bash)"
