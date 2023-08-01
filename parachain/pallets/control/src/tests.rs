@@ -19,7 +19,7 @@ fn create_agent_with_bad_multi_location_yields_location_conversion_failed() {
 		let origin = RuntimeOrigin::signed(AccountId32::new([9; 32]));
 		frame_support::assert_noop!(
 			EthereumControl::create_agent(origin),
-			Error::<Test>::LocationConversionFailed
+			Error::<Test>::LocationToAgentIdConversionFailed
 		);
 	});
 }

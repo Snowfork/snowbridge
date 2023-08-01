@@ -138,7 +138,7 @@ pub mod pallet {
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			let (_, agent_id) = Self::convert_location(location)?;
+			let (agent_id, _, location) = Self::convert_location(location)?;
 
 			// Record the agent id or fail if it has already been created
 			if Agents::<T>::get(agent_id).is_some() {
@@ -162,11 +162,13 @@ pub mod pallet {
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
 			let location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			let (para_id, agent_id) = Self::convert_location(location)?;
+			let (agent_id, some_para_id, location) = Self::convert_location(location)?;
 
 			if !Agents::<T>::contains_key(agent_id) {
 				return Err(Error::<T>::AgentNotExist.into())
 			}
+
+			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
@@ -179,6 +181,7 @@ pub mod pallet {
 				para_id,
 				agent_id,
 			});
+
 			Ok(())
 		}
 	}
@@ -191,26 +194,28 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn convert_location(mut location: MultiLocation) -> Result<(ParaId, H256), DispatchError> {
+		fn convert_location(
+			mut location: MultiLocation,
+		) -> Result<(H256, Option<ParaId>, MultiLocation), DispatchError> {
 			// Normalize all locations relative to the relay chain unless its the relay itself.
 			let relay_location = T::RelayLocation::get();
+
 			if location != relay_location {
 				location
 					.reanchor(&relay_location, T::UniversalLocation::get())
 					.or(Err(Error::<T>::LocationReanchorFailed))?;
 			}
 
-			let para_id: ParaId = match location.interior.first() {
+			let para_id = match location.interior.first() {
 				Some(Parachain(index)) => Some((*index).into()),
 				_ => None,
-			}
-			.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
+			};
 
 			// Hash the location to produce an agent id
 			let agent_id = T::AgentHashedDescription::convert_location(&location)
 				.ok_or(Error::<T>::LocationToAgentIdConversionFailed)?;
 
-			Ok((para_id, agent_id))
+			Ok((agent_id, para_id, location))
 		}
 	}
 }
