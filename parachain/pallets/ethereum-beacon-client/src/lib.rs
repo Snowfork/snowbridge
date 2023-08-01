@@ -281,7 +281,7 @@ pub mod pallet {
 		/// with a header attesting to the current sync committee, should be provided.
 		/// An `block_roots` proof should also be provided. This is used for ancestry proofs
 		/// for execution header updates.
-		pub(crate) fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
+		pub fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
 			let sync_committee_root = update
 				.current_sync_committee
 				.hash_tree_root()
@@ -332,7 +332,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub(crate) fn process_update(update: &Update) -> DispatchResult {
+		pub fn process_update(update: &Update) -> DispatchResult {
 			Self::cross_check_execution_state()?;
 			Self::verify_update(update)?;
 			Self::apply_update(update)?;
@@ -649,7 +649,7 @@ pub mod pallet {
 		/// Computes the signing root for a given beacon header and domain. The hash tree root
 		/// of the beacon header is computed, and then the combination of the beacon header hash
 		/// and the domain makes up the signing root.
-		pub(super) fn compute_signing_root(
+		pub fn compute_signing_root(
 			beacon_header: &BeaconHeader,
 			domain: H256,
 		) -> Result<H256, DispatchError> {
