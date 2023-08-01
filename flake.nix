@@ -65,6 +65,8 @@
                     gcc
                     libiconv
                     protobuf
+                    # NOTE: when upgrading rustup, check for a command to install the version in the toolchain file:
+                    # https://github.com/rust-lang/rustup/issues/2686
                     rustup
 
                     cowsay
@@ -82,6 +84,8 @@
                     export HOME=~
                     export GOPATH=$PWD/go
                     export PATH=$GOPATH/bin:$PATH
+
+                    export RUSTUP_HOME=$PWD/.rustup
 
                     eval "$(direnv hook bash)"
 
