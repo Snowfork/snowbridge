@@ -2,7 +2,16 @@
 
 set -e
 
+echo "Setup git hooks"
+git config --local core.hooksPath hooks/
+
+echo "Update submodules"
 git submodule update --init --recursive || true
+
+echo "Installing dev tools"
+go install github.com/ferranbt/fastssz/sszgen@v0.1.3
+
+echo "Install node packages"
 (cd web && pnpm install)
-go install github.com/ferranbt/fastssz/sszgen@latest
-ln -sf pre-commit.sh .git/hooks/pre-commit
+
+./scripts/generate_bindings.sh
