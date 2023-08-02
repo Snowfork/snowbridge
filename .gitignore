@@ -17,7 +17,7 @@ node_modules/
 .vscode
 
 .rustup/
-.cargo/*
+.cargo/
 !.cargo/config.toml
 
 .DS_Store
