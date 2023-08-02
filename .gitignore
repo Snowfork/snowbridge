@@ -16,8 +16,9 @@ node_modules/
 /relaychain/
 .vscode
 
-.rustup
-.cargo
+.rustup/
+.cargo/*
+!.cargo/config.toml
 
 .DS_Store
 
