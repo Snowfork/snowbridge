@@ -9,9 +9,14 @@ echo "Setting up git hooks"
 ln -sf pre-commit.sh .git/hooks/pre-commit
 
 echo "Installing Rust toolchains"
-# https://stackoverflow.com/questions/59895/how-do-i-get-the-directory-where-a-bash-script-is-located-from-within-the-script
-script_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-"$script_dir"/set-rust-toolchain.sh
+# NOTE: This ensures that the toolchain in rust-toolchain.toml is installed.
+# rustup has no subcommand (yet) for installing the toolchain in rust-toolchain.toml:
+# https://github.com/rust-lang/rustup/issues/2686
+# The auto-installation behaviour in rustup will likely be removed:
+# https://github.com/rust-lang/rustup/issues/1397
+rustup show
+rustup install --profile minimal nightly-2023-07-31
+rustup component add --toolchain nightly-2023-07-31 rustfmt
 
 echo "Installing sszgen"
 go install github.com/ferranbt/fastssz/sszgen@latest

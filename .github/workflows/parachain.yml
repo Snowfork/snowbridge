@@ -34,7 +34,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: setup rust toolchain
-        run: scripts/set-rust-toolchain.sh
+        run: rustup show
       - name: cargo check
         run: >
           cargo check
@@ -65,7 +65,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: setup rust toolchain
-        run: scripts/set-rust-toolchain.sh
+        run: rustup show
       # Increase stack limit for beacon light client tests
       - run: sudo prlimit --pid $$ --stack=32768
       # Run tests for everything except the beacon light client
@@ -105,7 +105,7 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
       - name: setup rust toolchain
-        run: scripts/set-rust-toolchain.sh
+        run: rustup show
       - name: run coverage test
         run: >
           cargo install cargo-tarpaulin &&
@@ -133,7 +133,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: setup rust toolchain
-        run: scripts/set-rust-toolchain.sh
+        run: rustup show
       - name: check bridge-hub runtime
         run: >
           cargo check
