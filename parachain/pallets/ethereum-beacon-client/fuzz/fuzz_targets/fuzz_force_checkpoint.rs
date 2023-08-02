@@ -44,13 +44,7 @@ impl TryFrom<FuzzCheckpointUpdate> for CheckpointUpdate
 	fn try_from(other: FuzzCheckpointUpdate) -> Result<Self, Self::Error> {
 		Ok(Self {
 			header: other.header.clone().try_into().unwrap(),
-			current_sync_committee: SyncCommittee{
-				pubkeys: other.current_sync_committee.pubkeys.iter().map(|&pk| {
-					let p: PublicKey = pk.into();
-					p
-				}).collect::<Vec<_>>().as_slice().try_into().unwrap(),
-				aggregate_pubkey: other.current_sync_committee.aggregate_pubkey.into(),
-			},
+			current_sync_committee: other.current_sync_committee.try_into().unwrap(),
 			current_sync_committee_branch: other.current_sync_committee_branch.iter().map(|&hash| {
 				H256::from(hash)
 			}).collect::<Vec<_>>().as_slice().try_into().unwrap(),
@@ -59,6 +53,22 @@ impl TryFrom<FuzzCheckpointUpdate> for CheckpointUpdate
 			block_roots_branch: other.block_roots_branch.iter().map(|&hash| {
 				H256::from(hash)
 			}).collect::<Vec<_>>().as_slice().try_into().unwrap(),
+		})
+	}
+}
+
+impl TryFrom<FuzzSyncCommittee> for SyncCommittee
+{
+	type Error = String;
+
+	fn try_from(other: FuzzSyncCommittee) -> Result<Self, Self::Error> {
+		Ok(Self{
+			pubkeys: other.pubkeys.iter().map(|&pk| {
+				let p: PublicKey = pk.into();
+				p
+			}).collect::<Vec<_>>().as_slice().try_into().unwrap(),
+			//pubkeys: Default::default(),
+			aggregate_pubkey: other.aggregate_pubkey.into(),
 		})
 	}
 }
@@ -81,7 +91,8 @@ impl TryFrom<FuzzBeaconHeader> for BeaconHeader
 fuzz_target!(|input: FuzzCheckpointUpdate| {
    new_tester().execute_with(|| {
 		let update: CheckpointUpdate = input.try_into().unwrap();
-        _ = EthereumBeaconClient::process_checkpoint_update(&update);
+        let _result = EthereumBeaconClient::process_checkpoint_update(&update);
+		//assert!();
 	});
 });
 
