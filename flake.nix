@@ -73,15 +73,12 @@
                 ];
 
                 shellHook = ''
-                    # set HOME for direnv and go
-                    #
+                    # set HOME for direnv:
                     # direnv needs config, cache & data dirs (DIRENV_CONFIG, XDG_CACHE_HOME & XDG_DATA_HOME
                     # respectively) that can be automatically set when HOME is available
-                    #
-                    # relayer builds fail without GOPATH & GOCACHE set
-                    # explicitly setting HOME allows go to infer these vars
-                    #
                     export HOME=~
+
+                    export GOCACHE=$PWD/gocache
                     export GOPATH=$PWD/go
                     export PATH=$GOPATH/bin:$PATH
 

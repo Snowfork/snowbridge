@@ -29,3 +29,4 @@ compiler_config.json
 contracts/beefy-state.json
 
 go/
+gocache/
