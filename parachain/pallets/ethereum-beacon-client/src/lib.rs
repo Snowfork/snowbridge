@@ -539,7 +539,7 @@ pub mod pallet {
 		/// Validates an execution header for import. The beacon header containing the execution
 		/// header is sent, plus the execution header, along with a proof that the execution header
 		/// is rooted in the beacon header body.
-		pub(crate) fn process_execution_header_update(
+		pub fn process_execution_header_update(
 			update: &ExecutionHeaderUpdate,
 		) -> DispatchResult {
 			let latest_finalized_state =

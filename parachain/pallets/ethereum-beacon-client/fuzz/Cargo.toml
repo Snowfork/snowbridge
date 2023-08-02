@@ -34,7 +34,7 @@ test = false
 doc = false
 
 [[bin]]
-name = "fuzz_compute_signing_root"
-path = "fuzz_targets/fuzz_compute_signing_root.rs"
+name = "fuzz_submit_execution_header"
+path = "fuzz_targets/fuzz_submit_execution_header.rs"
 test = false
 doc = false

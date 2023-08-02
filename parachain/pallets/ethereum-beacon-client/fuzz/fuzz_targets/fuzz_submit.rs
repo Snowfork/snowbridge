@@ -124,7 +124,8 @@ impl TryFrom<FuzzBeaconHeader> for BeaconHeader
 fuzz_target!(|input: FuzzUpdate| {
    new_tester().execute_with(|| {
 		let update: Update = input.try_into().unwrap();
-        _ = EthereumBeaconClient::process_update(&update);
+        let result = EthereumBeaconClient::process_update(&update);
+		assert!(result.is_err());
 	});
 });
 

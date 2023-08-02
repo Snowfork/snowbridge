@@ -30,7 +30,6 @@ pub struct FuzzBeaconHeader {
 	pub body_root: [u8; 32],
 }
 
-
 #[derive(arbitrary::Arbitrary, Debug, Clone)]
 pub struct FuzzSyncCommittee {
 	pub pubkeys: [[u8; 48]; 32],
@@ -67,7 +66,6 @@ impl TryFrom<FuzzSyncCommittee> for SyncCommittee
 				let p: PublicKey = pk.into();
 				p
 			}).collect::<Vec<_>>().as_slice().try_into().unwrap(),
-			//pubkeys: Default::default(),
 			aggregate_pubkey: other.aggregate_pubkey.into(),
 		})
 	}
@@ -91,8 +89,8 @@ impl TryFrom<FuzzBeaconHeader> for BeaconHeader
 fuzz_target!(|input: FuzzCheckpointUpdate| {
    new_tester().execute_with(|| {
 		let update: CheckpointUpdate = input.try_into().unwrap();
-        let _result = EthereumBeaconClient::process_checkpoint_update(&update);
-		//assert!();
+        let result = EthereumBeaconClient::process_checkpoint_update(&update);
+		assert!(result.is_err());
 	});
 });
 
