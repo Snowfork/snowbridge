@@ -34,9 +34,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: setup rust toolchain
-        run: rustup show
+        run: scripts/set-rust-toolchain.sh
       - name: cargo check
-        run: > 
+        run: >
           cargo check
           --manifest-path parachain/Cargo.toml
           --workspace
@@ -65,7 +65,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: setup rust toolchain
-        run: rustup show
+        run: scripts/set-rust-toolchain.sh
       # Increase stack limit for beacon light client tests
       - run: sudo prlimit --pid $$ --stack=32768
       # Run tests for everything except the beacon light client
@@ -73,8 +73,8 @@ jobs:
         run: >
           cargo test
           --manifest-path parachain/Cargo.toml
-          --workspace 
-          --features runtime-benchmarks 
+          --workspace
+          --features runtime-benchmarks
           --exclude snowbridge-query-events
           --exclude snowbridge-ethereum-beacon-client
       # Run tests for beacon light client, excluding benchmark tests
@@ -105,11 +105,11 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
       - name: setup rust toolchain
-        run: rustup show
+        run: scripts/set-rust-toolchain.sh
       - name: run coverage test
         run: >
           cargo install cargo-tarpaulin &&
-          cargo tarpaulin 
+          cargo tarpaulin
           --manifest-path parachain/Cargo.toml
           --workspace
           --engine llvm
@@ -133,10 +133,10 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: setup rust toolchain
-        run: rustup show
+        run: scripts/set-rust-toolchain.sh
       - name: check bridge-hub runtime
         run: >
-          cargo check 
-          --manifest-path cumulus/Cargo.toml 
-          --release --verbose 
+          cargo check
+          --manifest-path cumulus/Cargo.toml
+          --release --verbose
           --package bridge-hub-rococo-runtime
