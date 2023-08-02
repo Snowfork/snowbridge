@@ -34,6 +34,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::{pallet_prelude::*, traits::EnsureOrigin};
 	use frame_system::pallet_prelude::*;
+	use snowbridge_core::outbound::OperatingMode;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -78,6 +79,17 @@ pub mod pallet {
 		CreateAgent { location: Box<MultiLocation>, agent_id: AgentId },
 		/// An CreateChannel message was sent to the Gateway
 		CreateChannel { location: Box<MultiLocation>, para_id: ParaId, agent_id: AgentId },
+		/// An UpdateChannel message was sent to the Gateway
+		UpdateChannel {
+			location: Box<MultiLocation>,
+			para_id: ParaId,
+			agent_id: AgentId,
+			mode: OperatingMode,
+			fee: u128,
+			reward: u128,
+		},
+		/// An CreateChannel message was sent to the Gateway
+		SetOperationMode { mode: OperatingMode },
 	}
 
 	#[pallet::error]
@@ -154,7 +166,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Sends a message to the Gateway contract to create a new Agent representing `origin`
+		/// Sends a message to the Gateway contract to create a new channel for `origin`
 		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(2)]
@@ -179,6 +191,62 @@ pub mod pallet {
 				para_id,
 				agent_id,
 			});
+
+			Ok(())
+		}
+
+		/// Sends a message to the Gateway contract to update channel
+		///
+		/// - `origin`: Must be `MultiLocation`
+		#[pallet::call_index(3)]
+		#[pallet::weight(T::WeightInfo::create_agent())]
+		pub fn update_channel(
+			origin: OriginFor<T>,
+			mode: OperatingMode,
+			fee: u128,
+			reward: u128,
+		) -> DispatchResult {
+			let location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+
+			let (agent_id, para_id, location) = Self::convert_location(location)?;
+
+			if !Agents::<T>::contains_key(agent_id) {
+				return Err(Error::<T>::AgentNotExist.into())
+			}
+
+			let message = Message {
+				origin: T::OwnParaId::get(),
+				command: Command::UpdateChannel { para_id, mode, fee, reward },
+			};
+			Self::submit_outbound(message)?;
+
+			Self::deposit_event(Event::<T>::UpdateChannel {
+				location: Box::new(location),
+				para_id,
+				agent_id,
+				mode,
+				fee,
+				reward,
+			});
+
+			Ok(())
+		}
+
+		/// Sends a message to the Gateway contract to set OperationMode
+		///
+		/// - `origin`: Must be `MultiLocation`
+		#[pallet::call_index(4)]
+		#[pallet::weight(T::WeightInfo::create_agent())]
+		pub fn set_operating_mode(origin: OriginFor<T>, mode: OperatingMode) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let message = Message {
+				origin: T::OwnParaId::get(),
+				command: Command::SetOperatingMode { mode },
+			};
+			Self::submit_outbound(message)?;
+
+			Self::deposit_event(Event::<T>::SetOperationMode { mode });
 
 			Ok(())
 		}
