@@ -197,14 +197,15 @@ pub mod pallet {
 		) -> Result<(H256, ParaId, MultiLocation), DispatchError> {
 			// Normalize all locations relative to the relay chain unless its the relay itself.
 			let relay_location = T::RelayLocation::get();
-
-			location
-				.reanchor(&relay_location, T::UniversalLocation::get())
-				.map_err(|_| Error::<T>::LocationReanchorFailed)?;
+			if location != relay_location {
+				location
+					.reanchor(&relay_location, T::UniversalLocation::get())
+					.map_err(|_| Error::<T>::LocationReanchorFailed)?;
+			}
 
 			let para_id = match location.interior.first() {
 				Some(Parachain(index)) => Some((*index).into()),
-				_ => None,
+				_ => Some(T::OwnParaId::get()),
 			}
 			.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
 
