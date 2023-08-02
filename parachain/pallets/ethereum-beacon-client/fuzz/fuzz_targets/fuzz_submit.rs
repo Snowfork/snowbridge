@@ -30,7 +30,6 @@ pub struct FuzzBeaconHeader {
 	pub parent_root: [u8; 32],
 	pub state_root: [u8; 32],
 	pub body_root: [u8; 32],
-	pub domain: [u8; 32]
 }
 
 #[derive(arbitrary::Arbitrary, Debug, Clone)]
@@ -128,5 +127,4 @@ fuzz_target!(|input: FuzzUpdate| {
         _ = EthereumBeaconClient::process_update(&update);
 	});
 });
-
 

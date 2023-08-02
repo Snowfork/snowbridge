@@ -22,7 +22,19 @@ members = ["."]
 debug = 1
 
 [[bin]]
-name = "fuzz_beacon"
-path = "fuzz_targets/fuzz_beacon.rs"
+name = "fuzz_force_checkpoint"
+path = "fuzz_targets/fuzz_force_checkpoint.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_submit"
+path = "fuzz_targets/fuzz_submit.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_compute_signing_root"
+path = "fuzz_targets/fuzz_compute_signing_root.rs"
 test = false
 doc = false
