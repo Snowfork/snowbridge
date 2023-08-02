@@ -16,7 +16,7 @@ node_modules/
 /relaychain/
 .vscode
 
-.rustup/
+/.rustup/
 .cargo/
 !.cargo/config.toml
 
