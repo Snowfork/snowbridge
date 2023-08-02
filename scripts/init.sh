@@ -14,9 +14,11 @@ echo "Installing Rust toolchains"
 # https://github.com/rust-lang/rustup/issues/2686
 # The auto-installation behaviour in rustup will likely be removed:
 # https://github.com/rust-lang/rustup/issues/1397
+cp rust-toolchain-stable.toml rust-toolchain.toml
 rustup show
-rustup install --profile minimal nightly-2023-07-31
-rustup component add --toolchain nightly-2023-07-31 rustfmt
+cp rust-toolchain-nightly.toml rust-toolchain.toml
+rustup show
+cp rust-toolchain-stable.toml rust-toolchain.toml
 
 echo "Installing sszgen"
 go install github.com/ferranbt/fastssz/sszgen@latest
