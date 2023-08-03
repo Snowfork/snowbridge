@@ -8,10 +8,6 @@
 
 .envrc
 
-# The cache for docker container dependency
-.cargo/*
-!.cargo/config
-
 # The cache for chain data in container
 .local
 

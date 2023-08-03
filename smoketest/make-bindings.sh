@@ -15,11 +15,10 @@ command -v subxt || cargo install subxt-cli \
     --tag $subxt_version \
     --root $cargo_dir
 
-
 # Fetch metadata from BridgeHub and generate client
-subxt codegen --url ws://localhost:11144 | rustfmt --edition 2021 --emit=stdout > src/parachains/bridgehub.rs
-subxt codegen --url ws://localhost:12144 | rustfmt --edition 2021 --emit=stdout > src/parachains/assethub.rs
-subxt codegen --url ws://localhost:9944  | rustfmt --edition 2021 --emit=stdout > src/parachains/relaychain.rs
+subxt codegen --url ws://localhost:11144 | rustfmt +nightly-"$SNOWBRIDGE_RUST_NIGHTLY" --edition 2021 --emit=stdout > src/parachains/bridgehub.rs
+subxt codegen --url ws://localhost:12144 | rustfmt +nightly-"$SNOWBRIDGE_RUST_NIGHTLY" --edition 2021 --emit=stdout > src/parachains/assethub.rs
+subxt codegen --url ws://localhost:9944  | rustfmt +nightly-"$SNOWBRIDGE_RUST_NIGHTLY" --edition 2021 --emit=stdout > src/parachains/relaychain.rs
 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \

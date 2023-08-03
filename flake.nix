@@ -65,23 +65,26 @@
                     gcc
                     libiconv
                     protobuf
+                    # NOTE: when upgrading rustup, check for a command to install the version in the toolchain file:
+                    # https://github.com/rust-lang/rustup/issues/2686
                     rustup
 
                     cowsay
                 ];
 
                 shellHook = ''
-                    # set HOME for direnv and go
-                    #
+                    # set HOME for direnv:
                     # direnv needs config, cache & data dirs (DIRENV_CONFIG, XDG_CACHE_HOME & XDG_DATA_HOME
                     # respectively) that can be automatically set when HOME is available
-                    #
-                    # relayer builds fail without GOPATH & GOCACHE set
-                    # explicitly setting HOME allows go to infer these vars
-                    #
                     export HOME=~
+
+                    export GOCACHE=$PWD/gocache
                     export GOPATH=$PWD/go
                     export PATH=$GOPATH/bin:$PATH
+
+                    export CARGO_HOME=$PWD/.cargo
+                    export RUSTUP_HOME=$PWD/.rustup
+                    export SNOWBRIDGE_RUST_NIGHTLY='2023-05-23'
 
                     eval "$(direnv hook bash)"
 
