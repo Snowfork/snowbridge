@@ -13,6 +13,3 @@ go install github.com/ferranbt/fastssz/sszgen@v0.1.3
 
 echo "Install node packages"
 (cd web && pnpm install)
-
-echo "Initialize foundry libraries"
-(cd contracts && forge install)
