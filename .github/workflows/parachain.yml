@@ -161,8 +161,6 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - name: setup rust toolchain
-        run: rustup show
       - name: install nightly
         run: rustup install --profile minimal nightly-2023-06-14
       - name: Install cargo-fuzz from crates.io
@@ -174,14 +172,11 @@ jobs:
         run: >
           cd parachain/pallets/ethereum-beacon-client && cargo +nightly-2023-06-14 fuzz run fuzz_force_checkpoint --
           -max_len=34359738368
-          -runs=10000
       - name: Fuzz submit extrinsic
         run: >
           cd parachain/pallets/ethereum-beacon-client && cargo +nightly-2023-06-14 fuzz run fuzz_submit --
           -max_len=34359738368
-          -runs=10000
       - name: Fuzz submit execution header extrinsic
         run: >
           cd parachain/pallets/ethereum-beacon-client && cargo +nightly-2023-06-14 fuzz run fuzz_submit_execution_header --
           -max_len=34359738368
-          -runs=10000
