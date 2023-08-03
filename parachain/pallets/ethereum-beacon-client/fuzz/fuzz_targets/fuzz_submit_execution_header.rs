@@ -1,8 +1,9 @@
 #![no_main]
 extern crate snowbridge_ethereum_beacon_client;
 
-use snowbridge_beacon_primitives::updates::AncestryProof;
+use snowbridge_ethereum_beacon_client::mock::minimal::*;
 use snowbridge_beacon_primitives::ExecutionHeaderUpdate;
+use snowbridge_ethereum_beacon_client_fuzz::types::FuzzExecutionHeaderUpdate;
 
 use libfuzzer_sys::fuzz_target;
 
