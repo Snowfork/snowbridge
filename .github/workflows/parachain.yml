@@ -140,3 +140,36 @@ jobs:
           --manifest-path cumulus/Cargo.toml
           --release --verbose
           --package bridge-hub-rococo-runtime
+
+  beacon-fuzz:
+    needs: check
+    runs-on: snowbridge-runner
+    env:
+      CARGO_INCREMENTAL: 0
+      RUST_BACKTRACE: 1
+      RUSTFLAGS: -C debuginfo=1
+      SKIP_WASM_BUILD: 1
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/cache@v1
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - name: setup rust toolchain
+        run: rustup show
+      - name: Install cargo-fuzz from crates.io
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-fuzz
+          version: "^0.11.2"
+      - name: Fuzz tests
+        run: >
+          cargo fuzz run submit --
+          -max_len=34359738368
+          -runs=10000
