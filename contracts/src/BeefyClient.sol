@@ -200,10 +200,10 @@ contract BeefyClient {
         nextValidatorSet = _nextValidatorSet;
     }
 
-    /* Public Functions */
+    /* External Functions */
 
     /**
-     * @dev Begin submission of commitment that was signed by the current validator set
+     * @dev Begin submission of commitment
      * @param commitment contains the commitment signed by the validators
      * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof a proof that a single validator from currentValidatorSet has signed the commitment
@@ -211,29 +211,13 @@ contract BeefyClient {
     function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
         external
     {
-        doSubmitInitial(currentValidatorSet, commitment, bitfield, proof);
-    }
+        if (commitment.validatorSetID != currentValidatorSet.id && commitment.validatorSetID != nextValidatorSet.id) {
+            revert InvalidCommitment();
+        }
 
-    /**
-     * @dev Begin submission of commitment that was signed by the next validator set
-     * @param commitment contains the commitment signed by the validators
-     * @param bitfield a bitfield claiming which validators have signed the commitment
-     * @param proof a proof that a single validator from nextValidatorSet has signed the commitment
-     */
-    function submitInitialWithHandover(
-        Commitment calldata commitment,
-        uint256[] calldata bitfield,
-        ValidatorProof calldata proof
-    ) external {
-        doSubmitInitial(nextValidatorSet, commitment, bitfield, proof);
-    }
+        bool is_next_validator_set = commitment.validatorSetID == nextValidatorSet.id;
+        ValidatorSet memory vset = is_next_validator_set ? nextValidatorSet : currentValidatorSet;
 
-    function doSubmitInitial(
-        ValidatorSet memory vset,
-        Commitment calldata commitment,
-        uint256[] calldata bitfield,
-        ValidatorProof calldata proof
-    ) internal {
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
         if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index))
         {
@@ -289,32 +273,6 @@ contract BeefyClient {
     }
 
     /**
-     * @dev Submit a commitment for final verification
-     * @param commitment contains the full commitment that was used for the commitmentHash
-     * @param bitfield a bitfield claiming which validators have signed the commitment
-     * @param proofs a struct containing the data needed to verify all validator signatures
-     */
-    function submitFinal(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof[] calldata proofs)
-        public
-    {
-        (bytes32 commitmentHash, bytes32 ticketID) = validate(commitment, bitfield);
-
-        Ticket storage ticket = tickets[ticketID];
-
-        if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
-        }
-        verifyCommitment(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
-
-        bytes32 newMMRRoot = getFirstMMRRoot(commitment);
-        latestMMRRoot = newMMRRoot;
-        latestBeefyBlock = commitment.blockNumber;
-
-        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
-        delete tickets[ticketID];
-    }
-
-    /**
      * @dev Submit a commitment and leaf for final verification
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param bitfield claiming which validators have signed the commitment
@@ -323,26 +281,32 @@ contract BeefyClient {
      * @param leafProof an MMR leaf proof
      * @param leafProofOrder a bitfield describing the order of each item (left vs right)
      */
-    function submitFinalWithHandover(
+    function submitFinal(
         Commitment calldata commitment,
         uint256[] calldata bitfield,
         ValidatorProof[] calldata proofs,
         MMRLeaf calldata leaf,
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
-    ) public {
+    ) external {
         (bytes32 commitmentHash, bytes32 ticketID) = validate(commitment, bitfield);
 
         Ticket storage ticket = tickets[ticketID];
 
-        if (commitment.validatorSetID != nextValidatorSet.id) {
+        if (commitment.validatorSetID != currentValidatorSet.id && commitment.validatorSetID != nextValidatorSet.id) {
             revert InvalidCommitment();
         }
-        verifyCommitment(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
 
-        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+        bool is_next_validator_set = commitment.validatorSetID == nextValidatorSet.id;
+
+        verifyCommitment(
+            commitmentHash, bitfield, is_next_validator_set ? nextValidatorSet : currentValidatorSet, ticket, proofs
+        );
+
+        if (is_next_validator_set && leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
             revert InvalidMMRLeaf();
         }
+
         bytes32 newMMRRoot = getFirstMMRRoot(commitment);
         bool leafIsValid =
             MMRProof.verifyLeafProof(newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder);
@@ -350,16 +314,18 @@ contract BeefyClient {
             revert InvalidMMRLeafProof();
         }
 
-        currentValidatorSet = nextValidatorSet;
-        nextValidatorSet.id = leaf.nextAuthoritySetID;
-        nextValidatorSet.length = leaf.nextAuthoritySetLen;
-        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+        if (is_next_validator_set) {
+            currentValidatorSet = nextValidatorSet;
+            nextValidatorSet.id = leaf.nextAuthoritySetID;
+            nextValidatorSet.length = leaf.nextAuthoritySetLen;
+            nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+        }
 
         latestMMRRoot = newMMRRoot;
         latestBeefyBlock = commitment.blockNumber;
+        delete tickets[ticketID];
 
         emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
-        delete tickets[ticketID];
     }
 
     /**
@@ -411,7 +377,7 @@ contract BeefyClient {
         );
     }
 
-    /* Private Functions */
+    /* Internal Functions */
 
     // Creates a unique ticket ID for a new interactive prover-verifier session
     function createTicketID(address account, bytes32 commitmentHash) internal pure returns (bytes32 value) {
