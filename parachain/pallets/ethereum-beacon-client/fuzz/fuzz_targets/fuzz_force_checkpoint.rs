@@ -2,7 +2,7 @@
 extern crate snowbridge_ethereum_beacon_client;
 
 use std::convert::TryInto;
-use snowbridge_ethereum_beacon_client::fuzzing::minimal::*;
+use snowbridge_ethereum_beacon_client::mock::minimal::*;
 use snowbridge_beacon_primitives::types::BeaconHeader;
 use snowbridge_ethereum_beacon_client::types::{SyncCommittee, CheckpointUpdate};
 use snowbridge_beacon_primitives::PublicKey;

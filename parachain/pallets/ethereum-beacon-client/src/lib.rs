@@ -9,11 +9,8 @@ pub mod impls;
 pub mod types;
 pub mod weights;
 
-#[cfg(test)]
-mod mock;
-
-#[cfg(feature = "fuzzing")]
-pub mod fuzzing;
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod mock;
 
 #[cfg(all(test, not(feature = "beacon-spec-mainnet")))]
 mod tests;

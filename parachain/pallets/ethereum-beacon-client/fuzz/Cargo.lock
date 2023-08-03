@@ -1803,7 +1803,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 [[package]]
 name = "pallet-timestamp"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate.git?branch=master#14e0a0b628f9154c5a2c870062c3aac7df8983ed"
+source = "git+https://github.com/paritytech/substrate.git?branch=master#f7e81b9be4fb3f2906a3768fe74d70c8228ab553"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2600,11 +2600,13 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "pallet-timestamp",
  "parity-scale-codec",
  "rlp",
  "scale-info",
  "serde",
+ "serde_json",
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-ethereum",
@@ -2960,7 +2962,7 @@ dependencies = [
 [[package]]
 name = "sp-timestamp"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate.git?branch=master#14e0a0b628f9154c5a2c870062c3aac7df8983ed"
+source = "git+https://github.com/paritytech/substrate.git?branch=master#f7e81b9be4fb3f2906a3768fe74d70c8228ab553"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
