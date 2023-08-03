@@ -321,11 +321,11 @@ contract BeefyClient {
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
         }
 
+        uint64 newBeefyBlock = commitment.blockNumber;
         latestMMRRoot = newMMRRoot;
-        latestBeefyBlock = commitment.blockNumber;
+        latestBeefyBlock = newBeefyBlock;
         delete tickets[ticketID];
-
-        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
+        emit NewMMRRoot(newMMRRoot, newBeefyBlock);
     }
 
     /**
