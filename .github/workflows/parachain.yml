@@ -170,6 +170,6 @@ jobs:
           version: "^0.11.2"
       - name: Fuzz tests
         run: >
-          cargo fuzz run submit --
+          cd parachain/pallets/ethereum-beacon-client && cargo fuzz run submit --
           -max_len=34359738368
           -runs=10000
