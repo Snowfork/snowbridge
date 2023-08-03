@@ -34,6 +34,7 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "m
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
+hex = "0.4.1"
 hex-literal = { version = "0.4.1" }
 
 [features]

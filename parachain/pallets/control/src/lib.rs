@@ -29,10 +29,12 @@ use xcm_executor::traits::ConvertLocation;
 
 pub use pallet::*;
 
+pub const LOG_TARGET: &str = "snowbridge-control";
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{pallet_prelude::*, traits::EnsureOrigin};
+	use frame_support::{log, pallet_prelude::*, traits::EnsureOrigin};
 	use frame_system::pallet_prelude::*;
 	use snowbridge_core::outbound::OperatingMode;
 
@@ -148,19 +150,32 @@ pub mod pallet {
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::create_agent())]
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
-			let location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+			let origin_location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, _, location) = Self::convert_location(location)?;
+			let (agent_id, _, location) = Self::convert_location(origin_location)?;
+
+			log::debug!(
+				target: LOG_TARGET,
+				"💫 Create Agent request with agent_id {:?}, origin_location at {:?}, location at {:?}",
+				agent_id,
+				origin_location,
+				location
+			);
 
 			// Record the agent id or fail if it has already been created
-			if Agents::<T>::get(agent_id).is_some() {
-				return Err(Error::<T>::AgentAlreadyCreated.into())
-			}
+			ensure!(!Agents::<T>::contains_key(agent_id), Error::<T>::AgentAlreadyCreated);
+
 			Agents::<T>::insert(agent_id, ());
 
 			let message =
 				Message { origin: T::OwnParaId::get(), command: Command::CreateAgent { agent_id } };
-			Self::submit_outbound(message)?;
+			Self::submit_outbound(message.clone())?;
+
+			log::debug!(
+				target: LOG_TARGET,
+				"💫 Create Agent request processed with outbound message {:?}",
+				message
+			);
 
 			Self::deposit_event(Event::<T>::CreateAgent { location: Box::new(location), agent_id });
 			Ok(())
@@ -174,11 +189,11 @@ pub mod pallet {
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
 			let location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, para_id, location) = Self::convert_location(location)?;
+			let (agent_id, some_para_id, location) = Self::convert_location(location)?;
 
-			if !Agents::<T>::contains_key(agent_id) {
-				return Err(Error::<T>::AgentNotExist.into())
-			}
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
+
+			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
@@ -208,11 +223,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, para_id, location) = Self::convert_location(location)?;
+			let (agent_id, some_para_id, location) = Self::convert_location(location)?;
 
-			if !Agents::<T>::contains_key(agent_id) {
-				return Err(Error::<T>::AgentNotExist.into())
-			}
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
+
+			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
@@ -260,22 +275,19 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn convert_location(
+		pub fn convert_location(
 			mut location: MultiLocation,
-		) -> Result<(H256, ParaId, MultiLocation), DispatchError> {
-			// Normalize all locations relative to the relay chain unless its the relay itself.
+		) -> Result<(H256, Option<ParaId>, MultiLocation), DispatchError> {
+			// Normalize all locations relative to the relay chain.
 			let relay_location = T::RelayLocation::get();
-			if location != relay_location {
-				location
-					.reanchor(&relay_location, T::UniversalLocation::get())
-					.map_err(|_| Error::<T>::LocationReanchorFailed)?;
-			}
+			location
+				.reanchor(&relay_location, T::UniversalLocation::get())
+				.map_err(|_| Error::<T>::LocationReanchorFailed)?;
 
 			let para_id = match location.interior.first() {
 				Some(Parachain(index)) => Some((*index).into()),
-				_ => Some(T::OwnParaId::get()),
-			}
-			.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
+				_ => None,
+			};
 
 			// Hash the location to produce an agent id
 			let agent_id = T::AgentHashedDescription::convert_location(&location)

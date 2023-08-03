@@ -75,8 +75,8 @@ parameter_types! {
 }
 
 static ORIGIN_TABLE: &[([u8; 32], MultiLocation)] = &[
-	// Case 1: Relay chain
-	([1; 32], MultiLocation { parents: 1, interior: Here }),
+	// Case 1: Bridge hub
+	([1; 32], MultiLocation { parents: 0, interior: Here }),
 	// Case 2: Local AccountId32
 	(
 		[2; 32],
@@ -152,7 +152,7 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureOriginFromTable {
 		#[cfg(feature = "runtime-benchmarks")]
 		{
 			if account == whitelisted_caller() {
-				return Ok(MultiLocation::new(1, Here))
+				return Ok(MultiLocation::new(0, Here))
 			}
 		}
 
