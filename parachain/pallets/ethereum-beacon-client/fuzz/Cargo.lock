@@ -2623,8 +2623,10 @@ dependencies = [
 name = "snowbridge-ethereum-beacon-client-fuzz"
 version = "0.0.0"
 dependencies = [
+ "arbitrary",
  "hex-literal",
  "libfuzzer-sys",
+ "rand 0.8.5",
  "snowbridge-beacon-primitives",
  "snowbridge-ethereum-beacon-client",
  "sp-core",

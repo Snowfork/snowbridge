@@ -6,6 +6,10 @@ use snowbridge_beacon_primitives::{PublicKey, ExecutionPayloadHeader, ExecutionH
 use sp_core::H256;
 use crate::types::{FuzzExecutionHeaderUpdate, FuzzSyncAggregate, FuzzNextSyncCommitteeUpdate,
                    FuzzUpdate, FuzzSyncCommittee, FuzzAncestryProof, FuzzExecutionPayloadHeader, FuzzBeaconHeader, FuzzCheckpointUpdate};
+use arbitrary::{Unstructured, Result};
+use libfuzzer_sys::arbitrary;
+use rand::Rng;
+use crate::impls::arbitrary::Arbitrary;
 
 impl TryFrom<FuzzUpdate> for Update
 {
@@ -88,6 +92,7 @@ impl TryFrom<FuzzSyncCommittee> for SyncCommittee
     type Error = String;
 
     fn try_from(other: FuzzSyncCommittee) -> Result<Self, Self::Error> {
+
         Ok(Self{
             pubkeys: other.pubkeys.iter().map(|&pk| {
                 let p: PublicKey = pk.into();
