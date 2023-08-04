@@ -141,9 +141,6 @@ contract Gateway is IGateway, IInitializable {
 
         // Dispatch message to a handler
         if (message.command == Command.AgentExecute) {
-            if (channel.mode == OperatingMode.RejectingInboundMessages) {
-                revert Disabled();
-            }
             try Gateway(this).agentExecute{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
@@ -490,7 +487,7 @@ contract Gateway is IGateway, IInitializable {
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
     function _ensureOutboundMessagingEnabled(Channel storage ch) internal view {
         CoreStorage.Layout storage $ = CoreStorage.layout();
-        if ($.mode != OperatingMode.Normal || ch.mode == OperatingMode.RejectingOutboundMessages) {
+        if ($.mode != OperatingMode.Normal || ch.mode != OperatingMode.Normal) {
             revert Disabled();
         }
     }

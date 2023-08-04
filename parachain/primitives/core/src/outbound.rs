@@ -1,5 +1,4 @@
 use codec::{Decode, Encode};
-use frame_support::scale_info::TypeInfo;
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
@@ -55,7 +54,6 @@ use ethabi::Token;
 pub enum OperatingMode {
 	Normal,
 	RejectingOutboundMessages,
-	RejectingInboundMessages,
 }
 
 /// A command which is executable by the Gateway contract on Ethereum
