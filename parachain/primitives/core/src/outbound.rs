@@ -217,11 +217,14 @@ impl AgentExecuteCommand {
 	/// ABI-encode the sub-command
 	pub fn abi_encode(&self) -> Vec<u8> {
 		match self {
-			AgentExecuteCommand::TransferToken { token, recipient, amount } =>
-				ethabi::encode(&[Token::Uint(self.index().into()),
-					Token::Bytes(ethabi::encode(&[Token::Address(*token),
-						Token::Address(*recipient),
-						Token::Uint(U256::from(*amount))]))]),
+			AgentExecuteCommand::TransferToken { token, recipient, amount } => ethabi::encode(&[
+				Token::Uint(self.index().into()),
+				Token::Bytes(ethabi::encode(&[
+					Token::Address(*token),
+					Token::Address(*recipient),
+					Token::Uint(U256::from(*amount)),
+				])),
+			]),
 		}
 	}
 }
