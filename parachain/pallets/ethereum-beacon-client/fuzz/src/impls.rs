@@ -6,10 +6,8 @@ use snowbridge_beacon_primitives::{PublicKey, ExecutionPayloadHeader, ExecutionH
 use sp_core::H256;
 use crate::types::{FuzzExecutionHeaderUpdate, FuzzSyncAggregate, FuzzNextSyncCommitteeUpdate,
                    FuzzUpdate, FuzzSyncCommittee, FuzzAncestryProof, FuzzExecutionPayloadHeader, FuzzBeaconHeader, FuzzCheckpointUpdate};
-use arbitrary::{Unstructured, Result};
 use libfuzzer_sys::arbitrary;
-use rand::Rng;
-use crate::impls::arbitrary::Arbitrary;
+use arbitrary::{Arbitrary, Unstructured, Result};
 
 impl TryFrom<FuzzUpdate> for Update
 {
@@ -166,11 +164,28 @@ impl TryFrom<FuzzExecutionHeaderUpdate> for ExecutionHeaderUpdate
 
         Ok(Self {
             header: other.header.try_into().unwrap(),
-            ancestry_proof: ancestry_proof,
+            ancestry_proof,
             execution_header: other.execution_header.try_into().unwrap(),
             execution_branch: other.execution_branch.iter().map(|&hash| {
                 H256::from(hash)
             }).collect::<Vec<_>>().as_slice().try_into().unwrap(),
+        })
+    }
+}
+
+// The arbitrary derive implementation is super slow for the pubkey set, so create a custom
+// impl for the sync committee.
+impl Arbitrary<'_>  for FuzzSyncCommittee {
+    fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self> {
+        let mut pubkeys = [[0u8; 48]; 32];
+
+        for i in 0..32 {
+            pubkeys[i] = <[u8; 48]>::arbitrary(u)?;
+        }
+
+        Ok(FuzzSyncCommittee {
+            pubkeys,
+            aggregate_pubkey: <[u8; 48]>::arbitrary(u)?,
         })
     }
 }

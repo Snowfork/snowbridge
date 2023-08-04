@@ -1,6 +1,4 @@
 use libfuzzer_sys::arbitrary;
-use arbitrary::{Arbitrary, Unstructured, Result};
-use rand::Rng;
 
 #[derive(arbitrary::Arbitrary, Debug, Clone)]
 pub struct FuzzCheckpointUpdate {
@@ -83,25 +81,4 @@ pub struct FuzzExecutionPayloadHeader {
     pub block_hash: [u8; 32],
     pub transactions_root: [u8; 32],
     pub withdrawals_root: [u8; 32],
-}
-
-impl Arbitrary<'_>  for FuzzSyncCommittee {
-    fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self> {
-        let mut pubkeys = [[0u8; 48]; 32];
-
-        for i in 0..10 {
-            pubkeys[i] = <[u8; 48]>::arbitrary(u)?;
-        }
-
-        for i in 10..32 {
-            let (first, second) = pubkeys[i].split_at_mut(32);
-            rand::thread_rng().fill(first);
-            rand::thread_rng().fill(second);
-        }
-
-        Ok(FuzzSyncCommittee {
-            pubkeys,
-            aggregate_pubkey: <[u8; 48]>::arbitrary(u)?,
-        })
-    }
 }

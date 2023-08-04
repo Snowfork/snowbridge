@@ -15,6 +15,11 @@ on:
       - "!parachain/LICENSE"
   workflow_dispatch:
 
+env:
+  FUZZ_MAX_LEN: 10000000000
+  FUZZ_MAX_RUNS: 1000000
+  RUST_NIGHTLY: "2023-06-14"
+
 jobs:
   check:
     runs-on: snowbridge-runner
@@ -170,13 +175,13 @@ jobs:
           version: "^0.11.2"
       - name: Fuzz force checkpoint extrinsic
         run: >
-          cd parachain/pallets/ethereum-beacon-client && cargo +nightly-2023-06-14 fuzz run fuzz_force_checkpoint --
-          -max_len=34359738368 -runs=100000
+          cd parachain/pallets/ethereum-beacon-client && cargo +nightly-$RUST_NIGHTLY fuzz run fuzz_force_checkpoint --
+          -max_len=$FUZZ_MAX_LEN -runs=$FUZZ_MAX_RUNS
       - name: Fuzz submit extrinsic
         run: >
-          cd parachain/pallets/ethereum-beacon-client && cargo +nightly-2023-06-14 fuzz run fuzz_submit --
-          -max_len=34359738368 -runs=100000
+          cd parachain/pallets/ethereum-beacon-client && cargo +nightly-$RUST_NIGHTLY fuzz run fuzz_submit --
+          -max_len=$FUZZ_MAX_LEN -runs=$FUZZ_MAX_RUNS
       - name: Fuzz submit execution header extrinsic
         run: >
-          cd parachain/pallets/ethereum-beacon-client && cargo +nightly-2023-06-14 fuzz run fuzz_submit_execution_header --
-          -max_len=34359738368 -runs=100000
+          cd parachain/pallets/ethereum-beacon-client && cargo +nightly-$RUST_NIGHTLY fuzz run fuzz_submit_execution_header --
+          -max_len=$FUZZ_MAX_LEN -runs=$FUZZ_MAX_RUNS
