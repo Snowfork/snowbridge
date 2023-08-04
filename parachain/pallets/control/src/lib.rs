@@ -18,7 +18,7 @@ pub mod weights;
 pub use weights::*;
 
 use snowbridge_core::{
-	outbound::{Command, Message, OutboundQueue as OutboundQueueTrait, ParaId},
+	outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
 	AgentId,
 };
 use sp_core::{H160, H256};
@@ -36,7 +36,6 @@ pub mod pallet {
 	use super::*;
 	use frame_support::{log, pallet_prelude::*, traits::EnsureOrigin};
 	use frame_system::pallet_prelude::*;
-	use snowbridge_core::outbound::OperatingMode;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -188,7 +187,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Sends a message to the Gateway contract to create a new channel for `origin`
+		/// Sends a message to the Gateway contract to create a new Agent representing `origin`
 		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(2)]

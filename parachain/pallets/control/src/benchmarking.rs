@@ -57,7 +57,7 @@ mod benchmarks {
 		));
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), OperatingMode::RejectingInboundMessages, 1, 1);
+		_(RawOrigin::Signed(caller), OperatingMode::RejectingOutboundMessages, 1, 1);
 
 		Ok(())
 	}

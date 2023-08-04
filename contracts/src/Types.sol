@@ -45,8 +45,7 @@ struct InboundMessage {
 
 enum OperatingMode {
     Normal,
-    RejectingOutboundMessages,
-    RejectingInboundMessages
+    RejectingOutboundMessages
 }
 
 // Initial configuration for bridge
