@@ -214,7 +214,10 @@ pub mod pallet {
 		#[transactional]
 		/// Used for pallet initialization and light client resetting. Needs to be called by
 		/// the root origin.
-		pub fn force_checkpoint(origin: OriginFor<T>, update: Box<CheckpointUpdate>) -> DispatchResult {
+		pub fn force_checkpoint(
+			origin: OriginFor<T>,
+			update: Box<CheckpointUpdate>,
+		) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::process_checkpoint_update(&update)?;
 			Ok(())
