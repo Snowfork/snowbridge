@@ -4,9 +4,10 @@
 use super::*;
 
 #[allow(unused)]
-use crate::Pallet as Template;
+use crate::Pallet as SnowbridgeControl;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
+use snowbridge_core::outbound::OperatingMode;
 use sp_core::Get;
 
 #[benchmarks]
@@ -35,5 +36,52 @@ mod benchmarks {
 		Ok(())
 	}
 
-	impl_benchmark_test_suite!(Template, crate::mock::new_test_ext(), crate::mock::Test);
+	#[benchmark]
+	fn create_channel() -> Result<(), BenchmarkError> {
+		let caller: T::AccountId = whitelisted_caller();
+		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
+			RawOrigin::Signed(caller.clone()).into()
+		));
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn update_channel() -> Result<(), BenchmarkError> {
+		let caller: T::AccountId = whitelisted_caller();
+		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
+			RawOrigin::Signed(caller.clone()).into()
+		));
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller), OperatingMode::RejectingInboundMessages, 1, 1);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_operating_mode() -> Result<(), BenchmarkError> {
+		#[extrinsic_call]
+		_(RawOrigin::Root, OperatingMode::RejectingOutboundMessages);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn transfer_native_from_agent() -> Result<(), BenchmarkError> {
+		let caller: T::AccountId = whitelisted_caller();
+		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
+			RawOrigin::Signed(caller.clone()).into()
+		));
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller), H160::default(), 1);
+
+		Ok(())
+	}
+
+	impl_benchmark_test_suite!(SnowbridgeControl, crate::mock::new_test_ext(), crate::mock::Test);
 }

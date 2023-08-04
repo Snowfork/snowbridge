@@ -191,7 +191,7 @@ impl snowbridge_control::Config for Test {
 	type OutboundQueue = MockOutboundQueue;
 	type MessageHasher = BlakeTwo256;
 	type MaxUpgradeDataSize = MaxUpgradeDataSize;
-	type CreateAgentOrigin = EnsureOriginFromTable;
+	type ControlOrigin = EnsureOriginFromTable;
 	type UniversalLocation = UniversalLocation;
 	type RelayLocation = RelayLocation;
 	type AgentHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;

@@ -58,7 +58,7 @@ pub mod pallet {
 		type MaxUpgradeDataSize: Get<u32>;
 
 		/// Origin check for `create_agent`
-		type CreateAgentOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
 
 		/// Converts MultiLocation to H256 in a way that is stable across multiple versions of XCM
 		type AgentHashedDescription: ConvertLocation<H256>;
@@ -90,8 +90,15 @@ pub mod pallet {
 			fee: u128,
 			reward: u128,
 		},
-		/// An CreateChannel message was sent to the Gateway
+		/// An SetOperationMode message was sent to the Gateway
 		SetOperationMode { mode: OperatingMode },
+		/// An TransferNativeFromAgent message was sent to the Gateway
+		TransferNativeFromAgent {
+			location: Box<MultiLocation>,
+			agent_id: AgentId,
+			recipient: H160,
+			amount: u128,
+		},
 	}
 
 	#[pallet::error]
@@ -150,7 +157,7 @@ pub mod pallet {
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::create_agent())]
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
-			let origin_location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+			let origin_location: MultiLocation = T::ControlOrigin::ensure_origin(origin)?;
 
 			let (agent_id, _, location) = Self::convert_location(origin_location)?;
 
@@ -185,9 +192,9 @@ pub mod pallet {
 		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::create_agent())]
+		#[pallet::weight(T::WeightInfo::create_channel())]
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
-			let location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+			let location: MultiLocation = T::ControlOrigin::ensure_origin(origin)?;
 
 			let (agent_id, some_para_id, location) = Self::convert_location(location)?;
 
@@ -214,14 +221,14 @@ pub mod pallet {
 		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::create_agent())]
+		#[pallet::weight(T::WeightInfo::update_channel())]
 		pub fn update_channel(
 			origin: OriginFor<T>,
 			mode: OperatingMode,
 			fee: u128,
 			reward: u128,
 		) -> DispatchResult {
-			let location: MultiLocation = T::CreateAgentOrigin::ensure_origin(origin)?;
+			let location: MultiLocation = T::ControlOrigin::ensure_origin(origin)?;
 
 			let (agent_id, some_para_id, location) = Self::convert_location(location)?;
 
@@ -251,7 +258,7 @@ pub mod pallet {
 		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::create_agent())]
+		#[pallet::weight(T::WeightInfo::set_operating_mode())]
 		pub fn set_operating_mode(origin: OriginFor<T>, mode: OperatingMode) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -262,6 +269,38 @@ pub mod pallet {
 			Self::submit_outbound(message)?;
 
 			Self::deposit_event(Event::<T>::SetOperationMode { mode });
+
+			Ok(())
+		}
+
+		/// Sends a message to the Gateway contract to transfer asset from agent
+		///
+		/// - `origin`: Must be `MultiLocation`
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::transfer_native_from_agent())]
+		pub fn transfer_native_from_agent(
+			origin: OriginFor<T>,
+			recipient: H160,
+			amount: u128,
+		) -> DispatchResult {
+			let location: MultiLocation = T::ControlOrigin::ensure_origin(origin)?;
+
+			let (agent_id, _, location) = Self::convert_location(location)?;
+
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
+
+			let message = Message {
+				origin: T::OwnParaId::get(),
+				command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
+			};
+			Self::submit_outbound(message)?;
+
+			Self::deposit_event(Event::<T>::TransferNativeFromAgent {
+				location: Box::new(location),
+				agent_id,
+				recipient,
+				amount,
+			});
 
 			Ok(())
 		}
