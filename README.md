@@ -92,6 +92,8 @@ Remove untracked files:
 git clean -idx
 ```
 
+Ensure that the current Rust toolchain is the one selected in `scripts/init.sh`.
+
 Ensure submodules are up-to-date:
 ```sh
 git submodule update

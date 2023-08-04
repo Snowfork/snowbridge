@@ -16,8 +16,9 @@ node_modules/
 /relaychain/
 .vscode
 
-.rustup
-.cargo
+/.rustup/
+.cargo/
+!.cargo/config.toml
 
 .DS_Store
 
@@ -28,3 +29,4 @@ compiler_config.json
 contracts/beefy-state.json
 
 go/
+gocache/

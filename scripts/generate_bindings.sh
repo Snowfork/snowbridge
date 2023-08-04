@@ -2,7 +2,7 @@
 
 set -e
 
-echo "Initialize foundry libraries and build contracts"
+echo "Build contracts"
 (cd contracts && forge build)
 
 echo "Generate contract bindings for javascript"

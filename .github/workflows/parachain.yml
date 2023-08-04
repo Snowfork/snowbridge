@@ -36,7 +36,7 @@ jobs:
       - name: setup rust toolchain
         run: rustup show
       - name: cargo check
-        run: > 
+        run: >
           cargo check
           --manifest-path parachain/Cargo.toml
           --workspace
@@ -73,8 +73,8 @@ jobs:
         run: >
           cargo test
           --manifest-path parachain/Cargo.toml
-          --workspace 
-          --features runtime-benchmarks 
+          --workspace
+          --features runtime-benchmarks
           --exclude snowbridge-query-events
           --exclude snowbridge-ethereum-beacon-client
       # Run tests for beacon light client, excluding benchmark tests
@@ -109,7 +109,7 @@ jobs:
       - name: run coverage test
         run: >
           cargo install cargo-tarpaulin &&
-          cargo tarpaulin 
+          cargo tarpaulin
           --manifest-path parachain/Cargo.toml
           --workspace
           --engine llvm
@@ -136,7 +136,7 @@ jobs:
         run: rustup show
       - name: check bridge-hub runtime
         run: >
-          cargo check 
-          --manifest-path cumulus/Cargo.toml 
-          --release --verbose 
+          cargo check
+          --manifest-path cumulus/Cargo.toml
+          --release --verbose
           --package bridge-hub-rococo-runtime
