@@ -11,14 +11,6 @@ build_cumulus() {
     mkdir -p $output_bin_dir && cp "$cumulus_bin" "$output_bin_dir"/polkadot-parachain
 }
 
-build_relaychain() {
-    if [ ! -f "$relaychain_bin" ]; then
-        echo "Building polkadot binary as $relaychain_bin"
-        rebuild_relaychain
-    fi
-    mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
-}
-
 rebuild_cumulus(){
     pushd $root_dir/parachain
     mkdir -p $cumulus_dir
@@ -41,6 +33,14 @@ build_cumulus_from_source(){
     popd
 }
 
+build_relaychain() {
+    if [ ! -f "$relaychain_bin" ]; then
+        echo "Building polkadot binary as $relaychain_bin"
+        rebuild_relaychain
+    fi
+    mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
+}
+
 rebuild_relaychain(){
     pushd $root_dir/parachain
     mkdir -p $relaychain_dir
@@ -49,6 +49,14 @@ rebuild_relaychain(){
         --tag "$relaychain_version" polkadot \
         --locked \
         --root $relaychain_dir #add version path to root to avoid recompiling when switch between versions
+    popd
+}
+
+build_contracts()
+{
+    echo "Building contracts"
+    pushd $root_dir/contracts
+    forge build
     popd
 }
 
@@ -64,6 +72,7 @@ install_binary() {
     mkdir -p $output_bin_dir
     build_cumulus_from_source
     build_relaychain
+    build_contracts
     build_relayer
 }
 
