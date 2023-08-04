@@ -2,13 +2,12 @@
 
 We have implemented a Proof-of-Stake (PoS) light client for the Beacon chain. This  client deprecates the older PoW light client we developed in 2020.
 
-The beacon client tracks the beacon chain, the new Ethereum chain that will replace Ethereum's Proof-of-Work consensus method around mid-September, called the Merge. The work we have done consists of the following parts:
+The beacon client tracks the beacon chain, the new Ethereum chain that replaced the Ethereum's Proof-of-Work consensus method around on 15 September 2022, called the Merge. The work we have done consists of the following parts:
 
 * Beacon Client pallet
-  * Initial chain snapshot (forms part of the Genesis Config)
-  * Sync committee updates
-  * Finalized beacon header updates
-  * Execution header updates
+  * Force checkpoint
+  * Submit (finalized header & sync committee update)
+  * Submit execution header
   * Message verification
 * Beacon Relayer
   * Sends data from a beacon node to the beacon client
@@ -28,6 +27,8 @@ After the Merge, the Beacon chain became the sole manner in which consensus is t
 <figure><img src="../../.gitbook/assets/Screenshot 2022-10-19 at 16.07.23.png" alt=""><figcaption><p>Ethereum Chains after the Merge</p></figcaption></figure>
 
 ### **Snowbridge Beacon Client**
+
+The Snowbridge beacon client is based on the [Altair Sync Protocol](https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md) (often referred to as ALC - Altair Light Client). Although there has been [some criticism of the protocol](https://prestwich.substack.com/p/altair) and its security, the ALC protocol remains the best explored light client to track the Beacon chain with reasonable security. If you are interested in additional reading about the sync committee's security, please read [our analysis on the Polkadot Forum](https://forum.polkadot.network/t/snowforks-analysis-of-sync-committee-security/2712/8).
 
 #### **Beacon Headers & Execution Headers**
 
@@ -55,36 +56,46 @@ The Beacon client checks the following proofs before storing beacon headers and 
 
 * Merkle proof of the beacon state root to verify if the supposedly finalized header is finalized
 * BLS signature verification to assert that the sync committee signed the block attesting to the finalized header
+* Ancestry proofs to verify that the imported execution header is indeed a valid ancestor of a finalized header (also merkle proofs).
 
 Additionally, the sync committee and next sync committee is also verified using Merkle proofs, to verify if those sync committees are part of the beacon state.
 
 ## Beacon Client Operations
 
-### **Initial Snapshot**
+### **Force checkpoint**
 
-The beacon light client expects an initial snapshot of the beacon chain, in the form of a finalized header and the current sync committee (the current elected subset of validators that signs blocks and is used for light client tracking). This initial config is used for the genesis config of the parachain.
+This operation can only be executed by the root origin (on pallet initialization or by governance) and serves a starting point for syncing blocks.&#x20;
 
-### **Sync committee updates**
+The `force_checkpoint` payload contain:
 
-After the initial snapshot has been validated, the beacon relayer periodically sends sync committee updates. These updates contain the next sync committee. The sync committee subset of validators change every \~27 hours. The sync committee is verified using a Merkle proof and then stored in storage.
+* A beacon header (validated manually to ensure it is on the correct chain).
+* The current sync committee plus a merkle proof branch to verify the sync committee.
+* The validators root (the merkle root of all the validators that were present at genesis time - this is used to determine the correct chain).
+* The block roots merkle root (the merkle root of the `blocks_root` field in the beacon state of the beacon header - used for ancestry proofs using the beacon header in this payload) plus the merkle branch roots to proof the blocks root merkle root against the beacon header state root.
 
-Storage will always contain:
+### **Submit**
 
-* The current sync committee
-* The next sync committee
+After the checkpoint has been validated, the beacon relayer periodically sends updates. These updates contain finalized headers and optionally, the next sync committee.&#x20;
 
-### **Finalized beacon header updates**
+The `submit` update contains:
 
-After the initial snapshot, the relayer sends finalized beacon header updates to the beacon client. The beacon client verifies the finalized beacon header in the following ways:
-
-* Checks that the beacon state confirms the finalized header using a merkle proof
-* Checks that the header attesting to the finalized header was signed by the sync committee
-
-The finalized beacon header is stored in storage.
+* An attested header: A recent header attesting to the finalized header in the update. This header is not finalized, but its `state_root` field is used to prove the `finalized_header` field in the same update. This header isn't stored (because we are not interested in headers that are not finalized), but only used for proofs.
+* A sync aggregate: The signing information concerning the attested header (the sync committee signature and voting information regarding the attested header, to see if we can trust it)
+* The signature slot: The slot at which the sync committee signature for the attested header can be found. This is typically `attested_header.slot + 1`, unless the next slot is a skipped slot, in which case it will be `attested_header.slot + 2`, and so forth until a block at the slot is present (some slots contain no blocks and is called a missed block slot)
+* The next sync committee update (optional): If the next sync committee is known and has not be stored in the beacon light client, the relayer will send it. The sync committee subset of validators change every \~27 hours. The sync committee is verified using a Merkle proof and then stored in storage.
+* The finalized header and its merkle proof: This serves as a checkpoint to know which execution headers can safely be imported which being in danger of a reorg. The finalized block root header is stored along with the slot number and block roots root.
+* The block roots root and its proof, similar to the force checkpoint update.
 
 ### **Execution header updates**
 
-Once there are more than 2 beacon finalized headers, all the execution headers between the two finalized beacon headers are backfilled. The execution header lives on the Ethereum execution layer (historically just the Ethereum chain). The execution header looks almost the same as it used to in the Ethereum PoW world. Each beacon header contains an ExecutionPayload header which is on the execution layer. The execution header is also stored in storage.
+Once there are more than 2 beacon finalized headers, all the execution headers between the two finalized beacon headers are backfilled. The execution header lives on the Ethereum execution layer (historically just the Ethereum chain). The execution header looks almost the same as it used to in the Ethereum PoW world. Each beacon header contains an ExecutionPayload header which is on the execution layer. A compacted version of the execution header is stored in storage in order to use the `receipts_root` field for message verification.
+
+The `submit_execution_header` update contains:
+
+* A header: The beacon header containing an execution header.
+* An ancestry proof: The merkle proof branch to the block\_root in the beacon state pointing to this header, plus the finalized header root used to proof this ancestor block.
+* The execution header of this beacon header.
+* The merkle proof to prove that this execution header is in fact contained in the header provided.
 
 ### **Message verification**
 

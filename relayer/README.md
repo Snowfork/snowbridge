@@ -31,10 +31,10 @@ The relayer relies on dynamically generated bindings for our Ethereum contracts.
 Compile the contracts in the [contracts](../contracts) directory:
 
 ```bash
-pnpm build
+forge build
 ```
 
-Generate the bindings in the [contracts](contracts/) directory:
+Generate contract bindings:
 
 ```bash
 go generate ./...
