@@ -17,6 +17,10 @@ func BuildMain() error {
 	if err != nil {
 		return err
 	}
+	err = sh.Run("go", "generate", "./...")
+	if err != nil {
+		return err
+	}
 	return sh.Run("go", "build", "-o", "build/snowbridge-relay", "main.go")
 }
 
