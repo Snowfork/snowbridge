@@ -422,10 +422,7 @@ fn submit_update_in_current_period() {
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(update.clone())
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(update.clone())));
 		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
 	});
@@ -462,10 +459,7 @@ fn submit_update_in_next_period() {
 			RuntimeOrigin::signed(1),
 			Box::new(sync_committee_update.clone())
 		));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(update.clone())
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(update.clone())));
 		let block_root: H256 = update.finalized_header.clone().hash_tree_root().unwrap();
 		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
 	});
@@ -564,15 +558,9 @@ fn submit_update_with_sync_committee_in_next_period() {
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 		assert!(!<NextSyncCommittee<Test>>::exists());
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(update.clone())
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(update.clone())));
 		assert!(<NextSyncCommittee<Test>>::exists());
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(next_update.clone())
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(next_update.clone())));
 		let last_finalized_state =
 			FinalizedBeaconState::<Test>::get(LatestFinalizedBlockRoot::<Test>::get()).unwrap();
 		let last_synced_period = compute_period(last_finalized_state.slot);
@@ -626,10 +614,7 @@ fn submit_update_execution_headers_too_far_behind() {
 		let far_ahead_finalized_header_slot = finalized_header_update.finalized_header.slot +
 			(EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH * 2) as u64;
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(finalized_header_update)
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(finalized_header_update)));
 		assert_ok!(EthereumBeaconClient::submit_execution_header(
 			RuntimeOrigin::signed(1),
 			Box::new(execution_header_update)
@@ -721,10 +706,7 @@ fn submit_execution_header_update() {
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(finalized_header_update)
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(finalized_header_update)));
 		assert_ok!(EthereumBeaconClient::submit_execution_header(
 			RuntimeOrigin::signed(1),
 			Box::new(execution_header_update.clone())
@@ -746,10 +728,7 @@ fn submit_execution_header_update_invalid_ancestry_proof() {
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(finalized_header_update)
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(finalized_header_update)));
 		assert_err!(
 			EthereumBeaconClient::submit_execution_header(
 				RuntimeOrigin::signed(1),
@@ -769,10 +748,7 @@ fn submit_execution_header_update_invalid_execution_header_proof() {
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(finalized_header_update)
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(finalized_header_update)));
 		assert_err!(
 			EthereumBeaconClient::submit_execution_header(
 				RuntimeOrigin::signed(1),
@@ -794,10 +770,7 @@ fn submit_execution_header_update_that_skips_block() {
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(finalized_header_update)
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(finalized_header_update)));
 		assert_ok!(EthereumBeaconClient::submit_execution_header(
 			RuntimeOrigin::signed(1),
 			Box::new(execution_header_update.clone())
@@ -824,10 +797,7 @@ fn submit_execution_header_update_that_is_also_finalized_header_which_is_not_sto
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(finalized_header_update)
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(finalized_header_update)));
 		assert_err!(
 			EthereumBeaconClient::submit_execution_header(
 				RuntimeOrigin::signed(1),
@@ -848,10 +818,7 @@ fn submit_execution_header_update_that_is_also_finalized_header_which_is_stored_
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(finalized_header_update)
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(finalized_header_update)));
 
 		let block_root: H256 = execution_header_update.header.hash_tree_root().unwrap();
 
@@ -882,10 +849,7 @@ fn submit_execution_header_not_finalized() {
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(finalized_header_update)
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(finalized_header_update)));
 
 		<FinalizedBeaconState<Test>>::mutate(<LatestFinalizedBlockRoot<Test>>::get(), |x| {
 			let prev = x.unwrap();
@@ -893,10 +857,7 @@ fn submit_execution_header_not_finalized() {
 		});
 
 		assert_err!(
-			EthereumBeaconClient::submit_execution_header(
-				RuntimeOrigin::signed(1),
-				Box::new(update)
-			),
+			EthereumBeaconClient::submit_execution_header(RuntimeOrigin::signed(1), Box::new(update)),
 			Error::<Test>::HeaderNotFinalized
 		);
 	});

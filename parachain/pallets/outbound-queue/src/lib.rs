@@ -79,7 +79,7 @@ pub struct PreparedMessage {
 }
 
 /// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
-impl From<PreparedMessage> for Token {
+impl From<PreparedMessage> for Token  {
 	fn from(x: PreparedMessage) -> Token {
 		Token::Tuple(vec![
 			Token::Uint(u32::from(x.origin).into()),

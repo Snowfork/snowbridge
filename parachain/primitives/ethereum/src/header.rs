@@ -102,13 +102,14 @@ impl Header {
 		};
 		let item_to_prove: mpt::ShortNode = rlp::decode(first_bytes).ok()?;
 
-		let final_hash: Option<[u8; 32]> = iter.try_fold(keccak_256(first_bytes), |acc, x| {
-			let node: Box<dyn mpt::Node> = x.as_slice().try_into().ok()?;
-			if (*node).contains_hash(acc.into()) {
-				return Some(keccak_256(x))
-			}
-			None
-		});
+		let final_hash: Option<[u8; 32]> =
+			iter.try_fold(keccak_256(first_bytes), |acc, x| {
+				let node: Box<dyn mpt::Node> = x.as_slice().try_into().ok()?;
+				if (*node).contains_hash(acc.into()) {
+					return Some(keccak_256(x))
+				}
+				None
+			});
 
 		final_hash.map(|hash| (hash.into(), item_to_prove.value))
 	}
