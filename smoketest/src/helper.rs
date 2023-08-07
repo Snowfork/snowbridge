@@ -16,6 +16,12 @@ use std::time::Duration;
 use subxt::blocks::ExtrinsicEvents;
 use subxt::events::StaticEvent;
 use subxt::tx::{PairSigner, TxPayload};
+use subxt::{Config, OnlineClient, PolkadotConfig, SubstrateConfig};
+
+/// Custom config that works with Statemint
+pub enum StatemintConfig {}
+
+impl Config for StatemintConfig {
 use subxt::{Config, OnlineClient, PolkadotConfig};
 use templateXcm::{
     v3::{junction::Junction, junctions::Junctions, multilocation::MultiLocation},
