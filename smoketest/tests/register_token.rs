@@ -28,7 +28,7 @@ use subxt::{utils::AccountId32, OnlineClient, PolkadotConfig};
 
 // The deployment addresses of the following contracts are stable in our E2E env, unless we modify the order in
 // contracts are deployed in DeployScript.sol.
-const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
+const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:13144";
 const ETHEREUM_API: &str = "http://localhost:8545";
 const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
 const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
@@ -66,10 +66,12 @@ async fn register_token() {
 		.unwrap()
 		.unwrap();
 
+	println!("receipt transaction hash: {:#?}", hex::encode(receipt.transaction_hash));
+
 	// Log for OutboundMessageAccepted
 	let outbound_message_accepted_log = receipt.logs.last().unwrap();
 	// RLP-encode log and print it
-	println!("receipt: {:#?}", hex::encode(outbound_message_accepted_log.rlp_bytes()));
+	println!("receipt log: {:#?}", hex::encode(outbound_message_accepted_log.rlp_bytes()));
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
