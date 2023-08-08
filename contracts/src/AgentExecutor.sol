@@ -20,9 +20,14 @@ contract AgentExecutor {
     /// NOTE: There are no authorization checks here. Since this contract is only used for its code.
     function execute(address, bytes memory data) external {
         (AgentExecuteCommand command, bytes memory params) = abi.decode(data, (AgentExecuteCommand, bytes));
+
         if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
             _transferToken(token, recipient, amount);
+        }
+        if (command == AgentExecuteCommand.Transact) {
+            (address target, bytes payload) = abi.decode(params, (address, bytes));
+            _executeCall(token, target, amount);
         }
     }
 
@@ -37,5 +42,10 @@ contract AgentExecutor {
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
     function _transferToken(address token, address recipient, uint128 amount) internal {
         IERC20(token).safeTransfer(recipient, amount);
+    }
+
+    /// @dev Call a contract at the given address, with provided bytes as payload.
+    function _executeCall(address target, bytes memory payload) internal {
+       target.call(payload);
     }
 }

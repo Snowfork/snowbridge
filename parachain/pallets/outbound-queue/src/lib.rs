@@ -13,7 +13,7 @@
 //! 6. At the end of the block, a merkle root is constructed from all the leaves in `Leaves`.
 //! 7. This merkle root is inserted into the parachain header as a digest item
 //!
-//! On the Ethereum side, the message root is ultimately the thing being
+//! On the Ethereum side, the message root is ultimately the thing being verified
 //! by the Polkadot light client.
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod api;
