@@ -167,7 +167,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: install nightly
-        run: rustup install --profile minimal nightly-2023-06-14
+        run: rustup install --profile minimal nightly-$RUST_NIGHTLY
       - name: Install cargo-fuzz from crates.io
         uses: baptiste0928/cargo-install@v2
         with:
