@@ -4,6 +4,7 @@
 pragma solidity 0.8.20;
 
 import {IERC20} from "./interfaces/IERC20.sol";
+import {Ownable} from "openzeppelin-contracts/access/Ownable.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -29,7 +30,7 @@ import {IERC20} from "./interfaces/IERC20.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract ERC20 is IERC20 {
+contract ERC20 is IERC20, Ownable {
     mapping(address => uint256) public override balanceOf;
 
     mapping(address => mapping(address => uint256)) public override allowance;
@@ -137,6 +138,10 @@ contract ERC20 is IERC20 {
     function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
         _approve(msg.sender, spender, allowance[msg.sender][spender] - subtractedValue);
         return true;
+    }
+
+    function mint(address account, uint256 amount) external virtual onlyOwner {
+        _mint(account, amount);
     }
 
     /**
