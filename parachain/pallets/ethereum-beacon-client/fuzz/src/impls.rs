@@ -116,11 +116,8 @@ impl TryFrom<FuzzSyncCommittee> for SyncCommittee {
 			pubkeys: other
 				.pubkeys
 				.iter()
-				.map(|&pk| {
-					let p: PublicKey = pk.into();
-					p
-				})
-				.collect::<Vec<_>>()
+				.map(|&pk| { pk.into() })
+				.collect::<Vec<PublicKey>>()
 				.as_slice()
 				.try_into()
 				.unwrap(),
