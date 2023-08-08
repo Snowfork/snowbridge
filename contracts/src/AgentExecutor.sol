@@ -26,8 +26,8 @@ contract AgentExecutor {
             _transferToken(token, recipient, amount);
         }
         if (command == AgentExecuteCommand.Transact) {
-            (address target, bytes payload) = abi.decode(params, (address, bytes));
-            _executeCall(token, target, amount);
+            (address target, bytes payload, uint256 dynamicGas) = abi.decode(params, (address, bytes, uint256));
+            _executeCall(target, payload, dynamicGas);
         }
     }
 
@@ -45,7 +45,7 @@ contract AgentExecutor {
     }
 
     /// @dev Call a contract at the given address, with provided bytes as payload.
-    function _executeCall(address target, bytes memory payload) internal {
-       target.call(payload);
+    function _executeCall(address target, bytes memory payload, uint256 dynamicGas) internal {
+       target.call{gas: dynamicGas}(payload);
     }
 }
