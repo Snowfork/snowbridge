@@ -26,7 +26,7 @@ contract AgentExecutor {
             _transferToken(token, recipient, amount);
         }
         if (command == AgentExecuteCommand.Transact) {
-            (address target, bytes payload, uint256 dynamicGas) = abi.decode(params, (address, bytes, uint256));
+            (address target, bytes memory payload, uint256 dynamicGas) = abi.decode(params, (address, bytes, uint256));
             _executeCall(target, payload, dynamicGas);
         }
     }
