@@ -14,8 +14,8 @@ use xcm_executor::traits::ConvertLocation;
 const MINIMUM_DEPOSIT: u128 = 1;
 
 /// Messages from Ethereum are versioned. This is because in future,
-/// we may want to evolve the protocol so that the ethereum side sends XCM messages directly. Instead
-/// having BridgeHub transcode the messages into XCM.
+/// we may want to evolve the protocol so that the ethereum side sends XCM messages directly.
+/// Instead having BridgeHub transcode the messages into XCM.
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
 pub enum VersionedMessage {
 	V1(MessageV1),
@@ -40,7 +40,7 @@ pub enum Command {
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
 		/// The stable ID of the `ForeignAssets::create` extrinsic
-		create_call_index: [u8; 2]
+		create_call_index: [u8; 2],
 	},
 	/// Send a token to AssetHub or another parachain
 	SendToken {
@@ -51,7 +51,7 @@ pub enum Command {
 		/// The destination for the transfer
 		destination: Destination,
 		/// Amount to transfer
-		amount: u128
+		amount: u128,
 	},
 }
 
@@ -60,13 +60,13 @@ pub enum Command {
 pub enum Destination {
 	/// The funds will be deposited into account `id` on AssetHub
 	AccountId32 { id: [u8; 32] },
-	/// The funds will deposited into the sovereign account of destination parachain `para_id` on AssetHub,
-	/// Account `id` on the destination parachain will receive the funds via a reserve-backed transfer.
-	/// See https://github.com/paritytech/xcm-format#depositreserveasset
+	/// The funds will deposited into the sovereign account of destination parachain `para_id` on
+	/// AssetHub, Account `id` on the destination parachain will receive the funds via a
+	/// reserve-backed transfer. See https://github.com/paritytech/xcm-format#depositreserveasset
 	ForeignAccountId32 { para_id: u32, id: [u8; 32] },
-	/// The funds will deposited into the sovereign account of destination parachain `para_id` on AssetHub,
-	/// Account `id` on the destination parachain will receive the funds via a reserve-backed transfer.
-	/// See https://github.com/paritytech/xcm-format#depositreserveasset
+	/// The funds will deposited into the sovereign account of destination parachain `para_id` on
+	/// AssetHub, Account `id` on the destination parachain will receive the funds via a
+	/// reserve-backed transfer. See https://github.com/paritytech/xcm-format#depositreserveasset
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
