@@ -41,8 +41,6 @@ struct InboundMessage {
     Command command;
     /// @dev The Parameters for the command
     bytes params;
-    /// @dev The dynamic gas fee required to execute arbitrary calls
-    uint256 dynamicGas;
 }
 
 enum OperatingMode {

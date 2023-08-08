@@ -141,7 +141,7 @@ contract Gateway is IGateway, IInitializable {
 
         // Dispatch message to a handler
         if (message.command == Command.AgentExecute) {
-            try Gateway(this).agentExecute{gas: DISPATCH_GAS}(message.params, message.dynamicGas) {}
+            try Gateway(this).agentExecute{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
             }
@@ -222,7 +222,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Execute code within an agent
-    function agentExecute(bytes calldata data, uint256 dynamicGas) external onlySelf {
+    function agentExecute(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
         AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
@@ -236,7 +236,7 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidAgentExecutionPayload();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, (address(this), params.payload, dynamicGas));
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, (address(this), params.payload));
 
         (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         if (!success) {
