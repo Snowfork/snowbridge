@@ -140,6 +140,16 @@ contract ERC20 is IERC20, Ownable {
         return true;
     }
 
+    /**
+     * @dev Creates `amount` tokens and assigns them to `account`, increasing
+     * the total supply. Can only be called by the owner.
+     *
+     * Emits a {Transfer} event with `from` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     */
     function mint(address account, uint256 amount) external virtual onlyOwner {
         _mint(account, amount);
     }
