@@ -206,12 +206,22 @@ pub enum AgentExecuteCommand {
 		/// The amount of tokens to transfer
 		amount: u128,
 	},
+	/// Execute a contract on the target chain
+	Transact {
+		/// Target contract address
+		target: H160,
+		/// The call data to the contract
+		payload: Vec<u8>,
+		/// The dynamic gas component that needs to be specified when executing the contract
+		dynamic_gas: U256,
+	},
 }
 
 impl AgentExecuteCommand {
 	fn index(&self) -> u8 {
 		match self {
 			AgentExecuteCommand::TransferToken { .. } => 0,
+			AgentExecuteCommand::Transact { .. } => 1,
 		}
 	}
 
@@ -224,6 +234,14 @@ impl AgentExecuteCommand {
 					Token::Address(*token),
 					Token::Address(*recipient),
 					Token::Uint(U256::from(*amount)),
+				])),
+			]),
+			AgentExecuteCommand::Transact { target, payload, dynamic_gas } => ethabi::encode(&[
+				Token::Uint(self.index().into()), // TODO not sure what this does
+				Token::Bytes(ethabi::encode(&[
+					Token::Address(*target),
+					Token::Bytes(payload.clone()),
+					Token::Uint(U256::from(*dynamic_gas)),
 				])),
 			]),
 		}
