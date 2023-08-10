@@ -111,6 +111,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
+	use frame_support::log;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -251,6 +252,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Generate a messages commitment and insert it into the header digest
 		pub(crate) fn commit_messages() {
+			log::info!(target: LOG_TARGET, "⭐ commit messages.");
 			let count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
 			if count == 0 {
 				return
@@ -269,6 +271,7 @@ pub mod pallet {
 
 		/// Process a message delivered by the MessageQueue pallet
 		pub(crate) fn do_process_message(mut message: &[u8]) -> Result<bool, ProcessMessageError> {
+			log::info!(target: LOG_TARGET, "⭐ do process message.");
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
 
@@ -314,6 +317,7 @@ pub mod pallet {
 		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
 
 		fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
+			log::info!(target: LOG_TARGET, "⭐ validate ticket.");
 			// The inner payload should not be too large
 			let (_, payload) = message.command.abi_encode();
 
@@ -338,6 +342,7 @@ pub mod pallet {
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			log::info!(target: LOG_TARGET, "⭐ submit.");
 			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 			T::MessageQueue::enqueue_message(
 				ticket.message.as_bounded_slice(),
@@ -356,6 +361,7 @@ pub mod pallet {
 			meter: &mut frame_support::weights::WeightMeter,
 			_: &mut [u8; 32],
 		) -> Result<bool, ProcessMessageError> {
+			log::info!(target: LOG_TARGET, "⭐ process message.");
 			// Yield if we don't want to accept any more messages in the current block.
 			// There is hard limit to ensure the weight of `on_finalize` is bounded.
 			ensure!(

@@ -216,6 +216,16 @@ pub async fn construct_create_agent_call(
     Ok(call)
 }
 
+pub async fn construct_transact_call(
+    bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
+    target: H160,
+    bytes: Vec<u8>,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    //let call = bridgehub::api::
+
+    Ok(call)
+}
+
 pub async fn construct_create_channel_call(
     bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {

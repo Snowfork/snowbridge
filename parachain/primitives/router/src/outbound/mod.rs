@@ -45,6 +45,8 @@ where
 		let gateway_location = GatewayLocation::get();
 		let universal_location = UniversalLocation::get();
 
+		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 validate.");
+
 		let (gateway_network, gateway_junctions) = gateway_location.interior().split_global()
 			.map_err(|_| {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to bridge location not being remote. universal_location: {universal_location:?}, {gateway_location:?}");
@@ -102,7 +104,8 @@ where
 			SendError::MissingArgument
 		})?;
 
-		let mut converter = XcmConverter::new(&message, &gateway_network, &gateway_address);
+		let mut converter = XcmConverter::new(&message,  &gateway_network, &gateway_address);
+		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 converting.");
 		let (agent_execute_command, max_target_fee) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
@@ -174,6 +177,7 @@ enum XcmConverterError {
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
 	SetTopicExpected,
+	UnknownCommand
 }
 
 struct XcmConverter<'a, Call> {
@@ -197,7 +201,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		let max_target_fee = self.fee_info()?;
 
 		// Get withdraw/deposit and make native tokens create message.
-		let result = self.native_tokens_unlock_message()?;
+		let result = self.agent_execute_message()?;
 
 		// Match last set topic. Later could use message id for replies
 		let _ = match self.next()? {
@@ -228,8 +232,13 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(execution_fee)
 	}
 
+	fn agent_execute_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
+		return self.native_tokens_unlock_message()
+	}
+
 	fn native_tokens_unlock_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
 		use XcmConverterError::*;
+
 		let (assets, beneficiary) = if let WithdrawAsset(reserved_assets) = self.next()? {
 			if reserved_assets.len() == 0 {
 				return Err(NoReserveAssets)
@@ -279,10 +288,10 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			if let MultiLocation {
 				parents: 0,
 				interior:
-					X2(
-						AccountKey20 { network: gateway_network, key: gateway_address },
-						AccountKey20 { network: token_network, key: token_address },
-					),
+				X2(
+					AccountKey20 { network: gateway_network, key: gateway_address },
+					AccountKey20 { network: token_network, key: token_address },
+				),
 			} = asset_location
 			{
 				if gateway_network.is_some() && gateway_network != &Some(*self.ethereum_network) {
@@ -303,6 +312,16 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(AgentExecuteCommand::TransferToken { token: asset, recipient: destination, amount })
 	}
 
+	fn transact_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
+		use XcmConverterError::*;
+
+		Ok(AgentExecuteCommand::Transact {
+			target: Default::default(),
+			payload: vec![],
+			dynamic_gas: Default::default(),
+		})
+	}
+
 	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {
 		self.iter.next().ok_or(XcmConverterError::UnexpectedEndOfXcm)
 	}
@@ -312,6 +331,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
+	use xcm::DoubleEncoded;
 	use snowbridge_core::outbound::{MessageHash, SubmitError};
 
 	use super::*;
@@ -742,6 +762,35 @@ mod tests {
 			token: token_address.into(),
 			recipient: beneficiary_address.into(),
 			amount: 1000,
+		};
+		let result = converter.convert();
+		assert_eq!(result, Ok((expected_payload, Some(&fee))));
+	}
+
+	#[test]
+	fn xcm_converter_convert_success_with_transact_message() {
+		let network = BridgedNetwork::get();
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			Transact{
+				origin_kind: OriginKind::Native,
+				require_weight_at_most: Default::default(),
+				call: Default::default(),// TODO fix
+			},
+			SetTopic([0; 32]),
+		]
+			.into();
+
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
+		let expected_payload = AgentExecuteCommand::Transact {
+			target: Default::default(),
+			payload: vec![],
+			dynamic_gas: Default::default(),
 		};
 		let result = converter.convert();
 		assert_eq!(result, Ok((expected_payload, Some(&fee))));

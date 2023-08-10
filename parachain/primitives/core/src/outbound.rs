@@ -237,7 +237,7 @@ impl AgentExecuteCommand {
 				])),
 			]),
 			AgentExecuteCommand::Transact { target, payload, dynamic_gas } => ethabi::encode(&[
-				Token::Uint(self.index().into()), // TODO not sure what this does
+				Token::Uint(self.index().into()),
 				Token::Bytes(ethabi::encode(&[
 					Token::Address(*target),
 					Token::Bytes(payload.clone()),
