@@ -48,12 +48,15 @@ library Assets {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         _transferToAgent(assetHubAgent, token, sender, amount);
-        if (destinationChain == assetHubParaID) {
-            payload = SubstrateTypes.SendToken(address(this), token, destinationAddress, amount);
-        } else {
-            payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
-        }
+
         extraFee = $.sendTokenFee;
+
+        if (destinationChain == assetHubParaID) {
+            payload = SubstrateTypes.SendToken(address(this), token, destinationAddress, amount, extraFee);
+        } else {
+            payload =
+                SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount, extraFee);
+        }
 
         emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
@@ -75,8 +78,10 @@ library Assets {
 
         _transferToAgent(assetHubAgent, token, sender, amount);
 
-        payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         extraFee = $.sendTokenFee;
+
+        payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount, extraFee);
+
         emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
@@ -105,8 +110,9 @@ library Assets {
             revert InvalidToken();
         }
 
-        payload = SubstrateTypes.RegisterToken(address(this), token, createTokenCallID);
         extraFee = $.registerTokenFee;
+
+        payload = SubstrateTypes.RegisterToken(address(this), token, createTokenCallID, extraFee);
 
         emit TokenRegistrationSent(token);
     }

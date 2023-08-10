@@ -7,7 +7,7 @@ use frame_support::{traits::ContainsPair, weights::Weight};
 use sp_core::{Get, RuntimeDebug, H160};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
-use sp_std::prelude::*;
+use sp_std::{cmp::min, prelude::*};
 use xcm::v3::{prelude::*, Junction::AccountKey20};
 use xcm_executor::traits::ConvertLocation;
 
@@ -27,6 +27,8 @@ pub enum VersionedMessage {
 pub struct MessageV1 {
 	/// EIP-155 chain id of the origin Ethereum network
 	pub chain_id: u64,
+	/// The fee to cover xcm buy_execution
+	pub fee: u128,
 	/// The command originating from the Gateway contract
 	pub message: Command,
 }
@@ -53,6 +55,17 @@ pub enum Command {
 		/// Amount to transfer
 		amount: u128,
 	},
+	/// call arbitrary transact in another parachain
+	Transact {
+		/// The address of the gateway
+		gateway: H160,
+		/// The payload of the transact
+		payload: Vec<u8>,
+		/// The ref_time part of weight
+		ref_time: u64,
+		/// The proof_size part of weight
+		proof_size: u64,
+	},
 }
 
 /// Destination for bridged tokens
@@ -72,22 +85,60 @@ pub enum Destination {
 
 impl From<MessageV1> for Xcm<()> {
 	fn from(val: MessageV1) -> Self {
-		val.message.convert(val.chain_id)
+		val.message.convert(val.chain_id, val.fee)
 	}
 }
 
 impl Command {
-	pub fn convert(self, chain_id: u64) -> Xcm<()> {
+	pub fn convert(self, chain_id: u64, fee: u128) -> Xcm<()> {
 		let network = NetworkId::Ethereum { chain_id };
-		// TODO (SNO-582): The fees need to be made configurable and must match the weight
-		// required by the generated XCM script when executed on the foreign chain.
-		let buy_execution_fee_amount = 2_000_000_000;
+		// Todo: Params need to change as configurable from polkadot governance
+		// Reference from https://coincodex.com/convert/ethereum/polkadot/
+		const SWAP_RATE: u128 = 367;
+		//A sanity base fee applies to all xcm calls
+		const BASE_FEE: u128 = 2_000_000_000;
+		let buy_execution_fee_amount = min(BASE_FEE, fee * SWAP_RATE / 1000000);
 		let buy_execution_fee = MultiAsset {
 			id: Concrete(MultiLocation::parent()),
 			fun: Fungible(buy_execution_fee_amount),
 		};
 
 		match self {
+			Command::Transact { gateway, payload, ref_time, proof_size } => {
+				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
+
+				let weight_limit: Weight = Weight::from_parts(ref_time, proof_size);
+
+				let instructions: Vec<Instruction<()>> = vec![
+					UniversalOrigin(GlobalConsensus(network)),
+					DescendOrigin(X1(origin_location)),
+					WithdrawAsset(buy_execution_fee.clone().into()),
+					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
+					SetAppendix(
+						vec![
+							RefundSurplus,
+							DepositAsset {
+								assets: buy_execution_fee.into(),
+								beneficiary: (
+									Parent,
+									Parent,
+									GlobalConsensus(network),
+									origin_location,
+								)
+									.into(),
+							},
+						]
+						.into(),
+					),
+					Transact {
+						origin_kind: OriginKind::Xcm,
+						require_weight_at_most: weight_limit,
+						call: payload.into(),
+					},
+					ExpectTransactStatus(MaybeErrorCode::Success),
+				];
+				instructions.into()
+			},
 			Command::RegisterToken { gateway, token, create_call_index } => {
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
 					&chain_id,

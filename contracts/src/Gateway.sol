@@ -19,6 +19,7 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
+import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 contract Gateway is IGateway, IInitializable {
     using Address for address;
@@ -408,6 +409,33 @@ contract Gateway is IGateway, IInitializable {
         }
 
         _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
+    }
+
+    /**
+     * Transacts
+     */
+
+    // Send arbitrary transact
+    function sendTransact(ParaID destinationChain, bytes calldata payload, uint256 extraFee) external payable {
+        // Todo: Default value should be big enough to cover the weight cost in destinationChain
+        // could be somehow overestimated since the surplus will be refunded
+        uint64 default_ref_time = 300_000_000_000;
+        uint64 default_proof_size = 100000;
+        bytes memory message_payload =
+            SubstrateTypes.Transact(address(this), payload, extraFee, default_ref_time, default_proof_size);
+        _submitOutbound(destinationChain, message_payload, extraFee);
+    }
+
+    // Send arbitrary transact with customize weight
+    function sendTransact(
+        ParaID destinationChain,
+        bytes calldata payload,
+        uint256 extraFee,
+        uint64 refTime,
+        uint64 proofSize
+    ) external payable {
+        bytes memory message_payload = SubstrateTypes.Transact(address(this), payload, extraFee, refTime, proofSize);
+        _submitOutbound(destinationChain, message_payload, extraFee);
     }
 
     /**
