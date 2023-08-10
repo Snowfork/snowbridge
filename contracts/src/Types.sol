@@ -73,5 +73,6 @@ enum Command {
 
 enum AgentExecuteCommand {
     TransferToken,
+    MintToken,
     RegisterToken
 }

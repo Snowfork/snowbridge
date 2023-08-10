@@ -30,6 +30,9 @@ contract AgentExecutor {
         } else if (command == AgentExecuteCommand.RegisterToken) {
             (string memory name, string memory symbol, uint8 decimals) = abi.decode(params, (string, string, uint8));
             _registerToken(name, symbol, decimals);
+        } else if (command == AgentExecuteCommand.MintToken) {
+            (address token, address recipient, uint256 amount) = abi.decode(params, (address, address, uint256));
+            ERC20(token).mint(recipient, amount);
         }
     }
 
