@@ -1,3 +1,4 @@
+use frame_support::assert_ok;
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{mock::*, *};
@@ -242,5 +243,34 @@ fn create_agent_with_small_params_yields_success() {
 			impl_code_hash: code_hash,
 			params_hash: expected_hash,
 		}));
+	});
+}
+
+#[test]
+fn create_channel_with_sibling_chain_origin_yields_success() {
+	new_test_ext().execute_with(|| {
+		new_test_ext().execute_with(|| {
+			let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
+
+			assert_ok!(EthereumControl::create_agent(origin.clone()));
+
+			assert_ok!(EthereumControl::create_channel(origin));
+		});
+	});
+}
+
+#[test]
+fn create_channel_with_sibling_chain_pallet_as_origin_yields_location_conversion_failed() {
+	new_test_ext().execute_with(|| {
+		new_test_ext().execute_with(|| {
+			let origin = RuntimeOrigin::signed(AccountId32::new([6; 32]));
+
+			assert_ok!(EthereumControl::create_agent(origin.clone()));
+
+			frame_support::assert_noop!(
+				EthereumControl::create_channel(origin),
+				Error::<Test>::LocationToParaIdConversionFailed
+			);
+		});
 	});
 }

@@ -322,8 +322,12 @@ pub mod pallet {
 				.reanchor(&relay_location, T::UniversalLocation::get())
 				.map_err(|_| Error::<T>::LocationReanchorFailed)?;
 
-			let para_id = match location.interior.first() {
-				Some(Parachain(index)) => Some((*index).into()),
+			// Only allow Parachain as origin location
+			let para_id = match location {
+				MultiLocation { parents, interior } if parents == 0 => match interior {
+					X1(Parachain(index)) => Some((index).into()),
+					_ => None,
+				},
 				_ => None,
 			};
 
