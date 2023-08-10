@@ -324,10 +324,8 @@ pub mod pallet {
 
 			// Only allow Parachain as origin location
 			let para_id = match location {
-				MultiLocation { parents, interior } if parents == 0 => match interior {
-					X1(Parachain(index)) => Some((index).into()),
-					_ => None,
-				},
+				MultiLocation { parents: 0, interior: X1(Parachain(index)) } =>
+					Some((index).into()),
 				_ => None,
 			};
 
