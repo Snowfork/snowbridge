@@ -1,9 +1,9 @@
 use crate::constants::*;
-use crate::parachains::assethub::{
-    api::runtime_types as assetHubTypes, api::runtime_types::xcm as assetHubXcm,
+use crate::parachains::template::{
+    api::runtime_types as templateTypes, api::runtime_types::xcm as templateXcm,
 };
-use assetHubTypes::sp_weights::weight_v2::Weight;
-use assetHubXcm::{
+use templateTypes::sp_weights::weight_v2::Weight;
+use templateXcm::{
     double_encoded::DoubleEncoded,
     v2::OriginKind,
     v3::{
@@ -19,16 +19,16 @@ pub fn construct_xcm_message(encoded_call: Vec<u8>) -> Box<VersionedXcm> {
     Box::new(VersionedXcm::V3(Xcm(vec![
         Instruction::UnpaidExecution {
             weight_limit: WeightLimit::Limited(Weight {
-                ref_time: ASSET_HUB_WEIGHT_REQUIRED,
-                proof_size: ASSET_HUB_PROOF_SIZE_REQUIRED,
+                ref_time: XCM_WEIGHT_REQUIRED,
+                proof_size: XCM_PROOF_SIZE_REQUIRED,
             }),
             check_origin: None,
         },
         Instruction::Transact {
             origin_kind: OriginKind::Xcm,
             require_weight_at_most: Weight {
-                ref_time: ASSET_HUB_WEIGHT_REQUIRED,
-                proof_size: ASSET_HUB_PROOF_SIZE_REQUIRED,
+                ref_time: XCM_WEIGHT_REQUIRED,
+                proof_size: XCM_PROOF_SIZE_REQUIRED,
             },
             call: DoubleEncoded {
                 encoded: encoded_call,
@@ -62,8 +62,8 @@ pub async fn construct_xcm_message_with_fee(encoded_call: Vec<u8>) -> Box<Versio
         Instruction::Transact {
             origin_kind: OriginKind::Xcm,
             require_weight_at_most: Weight {
-                ref_time: ASSET_HUB_WEIGHT_REQUIRED,
-                proof_size: ASSET_HUB_PROOF_SIZE_REQUIRED,
+                ref_time: XCM_WEIGHT_REQUIRED,
+                proof_size: XCM_PROOF_SIZE_REQUIRED,
             },
             call: DoubleEncoded {
                 encoded: encoded_call,

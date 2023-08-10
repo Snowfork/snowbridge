@@ -11,7 +11,7 @@ build_cumulus() {
     mkdir -p $output_bin_dir && cp "$cumulus_bin" "$output_bin_dir"/polkadot-parachain
 }
 
-rebuild_cumulus(){
+rebuild_cumulus() {
     pushd $root_dir/parachain
     mkdir -p $cumulus_dir
     cargo install \
@@ -22,14 +22,16 @@ rebuild_cumulus(){
     popd
 }
 
-build_cumulus_from_source(){
+build_cumulus_from_source() {
     pushd $root_dir/cumulus
     if [[ "$active_spec" == "minimal" ]]; then
-      cargo build --release --bin polkadot-parachain
+        cargo build --release --bin polkadot-parachain
     else
-      cargo build --features beacon-spec-mainnet --release --bin polkadot-parachain
+        cargo build --features beacon-spec-mainnet --release --bin polkadot-parachain
     fi
     cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
+    cargo build --release --locked --bin parachain-template-node
+    cp target/release/parachain-template-node $output_bin_dir/parachain-template-node
     popd
 }
 
@@ -41,7 +43,7 @@ build_relaychain() {
     mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
 }
 
-rebuild_relaychain(){
+rebuild_relaychain() {
     pushd $root_dir/parachain
     mkdir -p $relaychain_dir
     cargo install \
@@ -52,16 +54,14 @@ rebuild_relaychain(){
     popd
 }
 
-build_contracts()
-{
+build_contracts() {
     echo "Building contracts"
     pushd $root_dir/contracts
     forge build
     popd
 }
 
-build_relayer()
-{
+build_relayer() {
     echo "Building relayer"
     mage -d "$relay_dir" build
     cp $relay_bin "$output_bin_dir"

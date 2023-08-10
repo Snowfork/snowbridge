@@ -27,7 +27,7 @@ use subxt::{utils::AccountId32, OnlineClient, PolkadotConfig};
 
 // The deployment addresses of the following contracts are stable in our E2E env, unless we modify the order in
 // contracts are deployed in DeployScript.sol.
-const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:13144";
+const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
 const ETHEREUM_API: &str = "http://localhost:8545";
 const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
 const WETH_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");

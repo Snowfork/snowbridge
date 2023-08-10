@@ -1,12 +1,8 @@
 use crate::constants::*;
 use crate::contracts::i_gateway;
-use crate::parachains::assethub::api::runtime_types::xcm as assetHubXcm;
-use crate::parachains::assethub::{self};
 use crate::parachains::bridgehub::{self};
-use assetHubXcm::{
-    v3::{junction::Junction, junctions::Junctions, multilocation::MultiLocation},
-    VersionedMultiLocation, VersionedXcm,
-};
+use crate::parachains::template::api::runtime_types::xcm as templateXcm;
+use crate::parachains::template::{self};
 use ethers::prelude::{
     Address, EthEvent, LocalWallet, Middleware, Provider, Signer, SignerMiddleware,
     TransactionRequest, Ws, U256,
@@ -20,12 +16,16 @@ use std::time::Duration;
 use subxt::blocks::ExtrinsicEvents;
 use subxt::events::StaticEvent;
 use subxt::tx::{PairSigner, TxPayload};
-use subxt::{Config, OnlineClient, PolkadotConfig, SubstrateConfig};
+use subxt::{Config, OnlineClient, PolkadotConfig};
+use templateXcm::{
+    v3::{junction::Junction, junctions::Junctions, multilocation::MultiLocation},
+    VersionedMultiLocation, VersionedXcm,
+};
 
 /// Custom config that works with Statemint
-pub enum StatemintConfig {}
+pub enum TemplateConfig {}
 
-impl Config for StatemintConfig {
+impl Config for TemplateConfig {
     type Index = <PolkadotConfig as Config>::Index;
     type Hash = <PolkadotConfig as Config>::Hash;
     type AccountId = <PolkadotConfig as Config>::AccountId;
@@ -33,12 +33,12 @@ impl Config for StatemintConfig {
     type Signature = <PolkadotConfig as Config>::Signature;
     type Hasher = <PolkadotConfig as Config>::Hasher;
     type Header = <PolkadotConfig as Config>::Header;
-    type ExtrinsicParams = <SubstrateConfig as Config>::ExtrinsicParams;
+    type ExtrinsicParams = <PolkadotConfig as Config>::ExtrinsicParams;
 }
 
 pub struct TestClients {
     pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
-    pub asset_hub_client: Box<OnlineClient<StatemintConfig>>,
+    pub template_client: Box<OnlineClient<TemplateConfig>>,
     pub ethereum_client: Box<Arc<Provider<Ws>>>,
     pub ethereum_signed_client: Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
 }
@@ -48,9 +48,10 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
         .await
         .expect("can not connect to assethub");
 
-    let asset_hub_client: OnlineClient<StatemintConfig> = OnlineClient::from_url(ASSET_HUB_WS_URL)
-        .await
-        .expect("can not connect to assethub");
+    let template_client: OnlineClient<TemplateConfig> =
+        OnlineClient::from_url(TEMPLATE_NODE_WS_URL)
+            .await
+            .expect("can not connect to assethub");
 
     let ethereum_provider = Provider::<Ws>::connect(ETHEREUM_API)
         .await
@@ -63,7 +64,7 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 
     Ok(TestClients {
         bridge_hub_client: Box::new(bridge_hub_client),
-        asset_hub_client: Box::new(asset_hub_client),
+        template_client: Box::new(template_client),
         ethereum_client: Box::new(ethereum_client),
         ethereum_signed_client: Box::new(Arc::new(ethereum_signed_client)),
     })
@@ -136,21 +137,21 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 }
 
 pub async fn send_xcm_transact(
-    asset_hub_client: &Box<OnlineClient<StatemintConfig>>,
+    template_client: &Box<OnlineClient<TemplateConfig>>,
     message: Box<VersionedXcm>,
-) -> Result<ExtrinsicEvents<StatemintConfig>, Box<dyn std::error::Error>> {
+) -> Result<ExtrinsicEvents<TemplateConfig>, Box<dyn std::error::Error>> {
     let dest = Box::new(VersionedMultiLocation::V3(MultiLocation {
         parents: 1,
         interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
     }));
 
-    let xcm_call = assethub::api::polkadot_xcm::calls::TransactionApi.send(*dest, *message);
+    let xcm_call = template::api::polkadot_xcm::calls::TransactionApi.send(*dest, *message);
 
-    let assethub_owner: Pair = Pair::from_string("//Alice", None).expect("cannot create keypair");
+    let owner: Pair = Pair::from_string("//Alice", None).expect("cannot create keypair");
 
-    let signer: PairSigner<StatemintConfig, _> = PairSigner::new(assethub_owner);
+    let signer: PairSigner<TemplateConfig, _> = PairSigner::new(owner);
 
-    let result = asset_hub_client
+    let result = template_client
         .tx()
         .sign_and_submit_then_watch_default(&xcm_call, &signer)
         .await

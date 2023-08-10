@@ -45,7 +45,7 @@ async fn transfer_native_from_agent() {
         .expect("construct innner call."),
     );
 
-    let result = send_xcm_transact(&test_clients.asset_hub_client, message)
+    let result = send_xcm_transact(&test_clients.template_client, message)
         .await
         .expect("failed to send xcm transact.");
 
