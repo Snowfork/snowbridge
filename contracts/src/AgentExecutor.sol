@@ -46,6 +46,9 @@ contract AgentExecutor {
 
     /// @dev Call a contract at the given address, with provided bytes as payload.
     function _executeCall(address target, bytes memory payload, uint256 dynamicGas) internal {
-       target.call{gas: dynamicGas}(payload);
+        if (gasleft() < dynamicGas) {
+            revert NotEnoughGas();
+        }
+        (bool success,) = target.call{gas: dynamicGas}(payload);
     }
 }

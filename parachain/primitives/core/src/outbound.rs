@@ -241,7 +241,7 @@ impl AgentExecuteCommand {
 				Token::Bytes(ethabi::encode(&[
 					Token::Address(*target),
 					Token::Bytes(payload.clone()),
-					Token::Uint(U256::from(*dynamic_gas)),
+					Token::Uint(*dynamic_gas),
 				])),
 			]),
 		}
