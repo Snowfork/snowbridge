@@ -14,6 +14,8 @@ contract AgentExecutor {
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
 
+    error NotEnoughGas();
+
     /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
     /// the `data` parameter is constructed by the BridgeHub parachain.
     ///
