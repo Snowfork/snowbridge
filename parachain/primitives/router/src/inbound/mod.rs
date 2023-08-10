@@ -7,7 +7,7 @@ use frame_support::{traits::ContainsPair, weights::Weight};
 use sp_core::{Get, RuntimeDebug, H160};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
-use sp_std::{cmp::min, prelude::*};
+use sp_std::{cmp::max, prelude::*};
 use xcm::v3::{prelude::*, Junction::AccountKey20};
 use xcm_executor::traits::ConvertLocation;
 
@@ -95,9 +95,11 @@ impl Command {
 		// Todo: Params need to change as configurable from polkadot governance
 		// Reference from https://coincodex.com/convert/ethereum/polkadot/
 		const SWAP_RATE: u128 = 367;
-		//A sanity base fee applies to all xcm calls
+		// Sanity base fee applies to all xcm calls
 		const BASE_FEE: u128 = 2_000_000_000;
-		let buy_execution_fee_amount = min(BASE_FEE, fee * SWAP_RATE / 1000000);
+
+		let buy_execution_fee_amount = max(BASE_FEE, fee * SWAP_RATE / 1000000);
+
 		let buy_execution_fee = MultiAsset {
 			id: Concrete(MultiLocation::parent()),
 			fun: Fungible(buy_execution_fee_amount),

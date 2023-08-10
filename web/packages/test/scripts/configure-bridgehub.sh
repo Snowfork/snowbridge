@@ -21,30 +21,6 @@ config_inbound_queue()
     send_governance_transact_from_relaychain $bridgehub_para_id "$payload"
 }
 
-config_pallet_owner()
-{
-    local owner=$(echo $bridgehub_pallets_owner | cut -c3-)
-    local option="01"
-
-    # config owner of inbound queue
-    local pallet="30"
-    local callindex="03"
-    local payload="0x$pallet$callindex$option$owner"
-    send_governance_transact_from_relaychain $bridgehub_para_id "$payload"
-
-    # config owner of outbound queue
-    local pallet="31"
-    local callindex="00"
-    local payload="0x$pallet$callindex$option$owner"
-    send_governance_transact_from_relaychain $bridgehub_para_id "$payload"
-
-    # config owner of beacon client owner
-    local pallet="32"
-    local callindex="03"
-    local payload="0x$pallet$callindex$option$owner"
-    send_governance_transact_from_relaychain $bridgehub_para_id "$payload"
-}
-
 wait_beacon_chain_ready()
 {
     local initial_beacon_block=""
@@ -70,7 +46,6 @@ configure_bridgehub()
 {
     fund_accounts
     config_inbound_queue
-    config_pallet_owner
     wait_beacon_chain_ready
     config_beacon_checkpoint
 }
