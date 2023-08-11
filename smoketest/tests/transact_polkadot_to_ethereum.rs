@@ -5,6 +5,9 @@ use snowbridge_smoketest::contracts::i_gateway::InboundMessageDispatchedFilter;
 use snowbridge_smoketest::helper::*;
 use snowbridge_smoketest::parachains::bridgehub::api::ethereum_control::events::TransferNativeFromAgent;
 use snowbridge_smoketest::xcm::construct_xcm_message;
+use hex_literal::hex;
+
+const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0");
 
 #[tokio::test]
 async fn transact() {
@@ -27,7 +30,7 @@ async fn transact() {
     let message = construct_xcm_message(
         construct_transact_call(
             &test_clients.bridge_hub_client,
-            ETHEREUM_ADDRESS.into(), // TODO TARGET ARBITRARY CONTRACT
+            HELLO_WORLD_CONTRACT.into(),
             vec![], // TODO CONTRACT BYTES HERE
         )
             .await

@@ -177,7 +177,6 @@ enum XcmConverterError {
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
 	SetTopicExpected,
-	UnknownCommand
 }
 
 struct XcmConverter<'a, Call> {
@@ -313,8 +312,6 @@ impl<'a, Call> XcmConverter<'a, Call> {
 	}
 
 	fn transact_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
-		use XcmConverterError::*;
-
 		Ok(AgentExecuteCommand::Transact {
 			target: Default::default(),
 			payload: vec![],
@@ -331,7 +328,6 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use xcm::DoubleEncoded;
 	use snowbridge_core::outbound::{MessageHash, SubmitError};
 
 	use super::*;
@@ -780,7 +776,7 @@ mod tests {
 			Transact{
 				origin_kind: OriginKind::Native,
 				require_weight_at_most: Default::default(),
-				call: Default::default(),// TODO fix
+				call: vec![].into(),
 			},
 			SetTopic([0; 32]),
 		]

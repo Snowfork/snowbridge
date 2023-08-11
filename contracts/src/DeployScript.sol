@@ -15,6 +15,7 @@ import {AgentExecutor} from "./AgentExecutor.sol";
 import {ParaID, Config} from "./Types.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import {HelloWorld} from "../test/mocks/HelloWorld.sol";
 
 contract DeployScript is Script {
     using SafeNativeTransfer for address payable;
@@ -81,6 +82,7 @@ contract DeployScript is Script {
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
 
         new GatewayUpgradeMock();
+        new HelloWorld();
 
         vm.stopBroadcast();
     }
