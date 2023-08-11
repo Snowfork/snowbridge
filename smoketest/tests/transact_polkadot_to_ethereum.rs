@@ -3,7 +3,6 @@ use snowbridge_smoketest::constants::*;
 use snowbridge_smoketest::contracts::i_gateway;
 use snowbridge_smoketest::contracts::i_gateway::InboundMessageDispatchedFilter;
 use snowbridge_smoketest::helper::*;
-use snowbridge_smoketest::parachains::bridgehub::api::ethereum_control::events::TransferNativeFromAgent;
 use snowbridge_smoketest::xcm::construct_xcm_message;
 use hex_literal::hex;
 

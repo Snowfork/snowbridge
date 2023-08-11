@@ -223,7 +223,7 @@ pub async fn construct_transact_call(
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     //let call = bridgehub::api::
 
-    Ok(call)
+    Ok(vec![])
 }
 
 pub async fn construct_create_channel_call(
