@@ -15,5 +15,8 @@ rustup component add --toolchain nightly-"$SNOWBRIDGE_RUST_NIGHTLY" rustfmt
 echo "Installing sszgen"
 go install github.com/ferranbt/fastssz/sszgen@v0.1.3
 
+echo "Installing cargo fuzz"
+cargo install cargo-fuzz
+
 echo "Installing web packages"
 (cd web && pnpm install)
