@@ -49,4 +49,14 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         (uint256 d0, uint256 d1) = abi.decode(data, (uint256, uint256));
         emit Initialized(d0, d1);
     }
+
+    function sendTransact(ParaID destinationChain, bytes calldata payload) external payable {}
+
+    function sendTransact(
+        ParaID destinationChain,
+        bytes calldata payload,
+        uint256 extraFee,
+        uint64 refTime,
+        uint64 proofSize
+    ) external payable {}
 }

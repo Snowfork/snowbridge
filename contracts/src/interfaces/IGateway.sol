@@ -77,4 +77,16 @@ interface IGateway {
     function sendToken(address token, ParaID destinationChain, address destinationAddress, uint128 amount)
         external
         payable;
+
+    /// @dev Send arbitrary transact
+    function sendTransact(ParaID destinationChain, bytes calldata payload) external payable;
+
+    /// @dev Send arbitrary transact with customize weight
+    function sendTransact(
+        ParaID destinationChain,
+        bytes calldata payload,
+        uint256 extraFee,
+        uint64 refTime,
+        uint64 proofSize
+    ) external payable;
 }

@@ -3451,6 +3451,7 @@ dependencies = [
  "hex-literal",
  "parity-scale-codec",
  "sp-core 16.0.0",
+ "sp-io",
  "subxt",
  "tokio",
  "xcm",

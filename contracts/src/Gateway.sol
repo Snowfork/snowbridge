@@ -416,11 +416,13 @@ contract Gateway is IGateway, IInitializable {
      */
 
     // Send arbitrary transact
-    function sendTransact(ParaID destinationChain, bytes calldata payload, uint256 extraFee) external payable {
-        // Todo: Default value should be big enough to cover the weight cost in destinationChain
+    function sendTransact(ParaID destinationChain, bytes calldata payload) external payable {
+        // Todo: Default allow to be set by governance
+        // Default value should be big enough to cover the weight cost in destinationChain
         // could be somehow overestimated since the surplus will be refunded
-        uint64 default_ref_time = 300_000_000_000;
-        uint64 default_proof_size = 100000;
+        uint256 extraFee = 100_000_000_000_000;
+        uint64 default_ref_time = 1_000_000_000;
+        uint64 default_proof_size = 100_000;
         bytes memory message_payload =
             SubstrateTypes.Transact(address(this), payload, extraFee, default_ref_time, default_proof_size);
         _submitOutbound(destinationChain, message_payload, extraFee);
