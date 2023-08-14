@@ -1,10 +1,27 @@
+use ethers::abi::{Abi, Token};
 use ethers::prelude::Address;
 use snowbridge_smoketest::constants::*;
-use snowbridge_smoketest::contracts::i_gateway;
+use snowbridge_smoketest::contracts::{hello_world, i_gateway};
 use snowbridge_smoketest::contracts::i_gateway::InboundMessageDispatchedFilter;
 use snowbridge_smoketest::helper::*;
-use snowbridge_smoketest::xcm::construct_xcm_message;
 use hex_literal::hex;
+use snowbridge_smoketest::contracts::hello_world::HelloWorld;
+use snowbridge_smoketest::constants::*;
+use snowbridge_smoketest::parachains::template::{
+    api::runtime_types as templateTypes, api::runtime_types::xcm as templateXcm,
+};
+use templateTypes::sp_weights::weight_v2::Weight;
+use templateXcm::{
+    double_encoded::DoubleEncoded,
+    v2::OriginKind,
+    v3::{
+        junctions::Junctions,
+        multiasset::{AssetId::Concrete, Fungibility::Fungible, MultiAsset, MultiAssets},
+        multilocation::MultiLocation,
+        Instruction, WeightLimit, Xcm,
+    },
+    VersionedXcm,
+};
 
 const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0");
 
@@ -26,15 +43,35 @@ async fn transact() {
         .await
         .expect("fund account");
 
-    let message = construct_xcm_message(
-        construct_transact_call(
-            &test_clients.bridge_hub_client,
-            HELLO_WORLD_CONTRACT.into(),
-            vec![], // TODO CONTRACT BYTES HERE
-        )
-            .await
-            .expect("construct inner call."),
-    );
+    let hello_world = HelloWorld::new(HELLO_WORLD_CONTRACT, ethereum_client.clone());
+    let contract_abi: Abi = hello_world.abi().clone();
+    let function = contract_abi.function("sayHello").unwrap();
+    let mut encoded_data = function.encode_input(&[Token::String("Hello, Clara!".to_string())]).unwrap();
+    let mut call = HELLO_WORLD_CONTRACT.to_vec();
+
+    call.append(&mut encoded_data);
+
+    // TODO send ExportMessage XCM
+    // TODO use this message as inner for ExportMessage
+    let message = Box::new(VersionedXcm::V3(Xcm(vec![
+        Instruction::UnpaidExecution {
+            weight_limit: WeightLimit::Limited(Weight {
+                ref_time: XCM_WEIGHT_REQUIRED,
+                proof_size: XCM_PROOF_SIZE_REQUIRED,
+            }),
+            check_origin: None,
+        },
+        Instruction::Transact {
+            origin_kind: OriginKind::Xcm,
+            require_weight_at_most: Weight {
+                ref_time: XCM_WEIGHT_REQUIRED,
+                proof_size: XCM_PROOF_SIZE_REQUIRED,
+            },
+            call: DoubleEncoded {
+                encoded: call,
+            },
+        },
+    ])));
 
     let result = send_xcm_transact(&test_clients.template_client, message)
         .await

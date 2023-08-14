@@ -104,7 +104,7 @@ where
 			SendError::MissingArgument
 		})?;
 
-		let mut converter = XcmConverter::new(&message,  &gateway_network, &gateway_address);
+		let mut converter = XcmConverter::new(&message, &gateway_network, &gateway_address);
 		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 converting.");
 		let (agent_execute_command, max_target_fee) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
@@ -287,10 +287,10 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			if let MultiLocation {
 				parents: 0,
 				interior:
-				X2(
-					AccountKey20 { network: gateway_network, key: gateway_address },
-					AccountKey20 { network: token_network, key: token_address },
-				),
+					X2(
+						AccountKey20 { network: gateway_network, key: gateway_address },
+						AccountKey20 { network: token_network, key: token_address },
+					),
 			} = asset_location
 			{
 				if gateway_network.is_some() && gateway_network != &Some(*self.ethereum_network) {
@@ -773,14 +773,14 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			Transact{
+			Transact {
 				origin_kind: OriginKind::Native,
 				require_weight_at_most: Default::default(),
 				call: vec![].into(),
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 		let expected_payload = AgentExecuteCommand::Transact {
