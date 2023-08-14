@@ -98,7 +98,8 @@ impl Command {
 		// Sanity base fee applies to all xcm calls
 		const BASE_FEE: u128 = 2_000_000_000;
 
-		let buy_execution_fee_amount = max(BASE_FEE, fee * SWAP_RATE / 1000000);
+		let buy_execution_fee_amount =
+			max(BASE_FEE, fee.saturating_div(1000000u128.saturating_div(SWAP_RATE)));
 
 		let buy_execution_fee = MultiAsset {
 			id: Concrete(MultiLocation::parent()),
