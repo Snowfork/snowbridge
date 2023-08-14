@@ -10,6 +10,10 @@ use snowbridge_smoketest::constants::*;
 use snowbridge_smoketest::parachains::template::{
     api::runtime_types as templateTypes, api::runtime_types::xcm as templateXcm,
 };
+use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::Junction::{AccountKey20, GlobalConsensus};
+use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::NetworkId;
+use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::NetworkId::Ethereum;
+use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junctions::Junctions::{X2, X3};
 use templateTypes::sp_weights::weight_v2::Weight;
 use templateXcm::{
     double_encoded::DoubleEncoded,
@@ -47,13 +51,13 @@ async fn transact() {
     let contract_abi: Abi = hello_world.abi().clone();
     let function = contract_abi.function("sayHello").unwrap();
     let mut encoded_data = function.encode_input(&[Token::String("Hello, Clara!".to_string())]).unwrap();
-    let mut call = HELLO_WORLD_CONTRACT.to_vec();
+    //let mut call = HELLO_WORLD_CONTRACT.to_vec();
 
-    call.append(&mut encoded_data);
+   // call.append(&mut encoded_data);
 
     // TODO send ExportMessage XCM
     // TODO use this message as inner for ExportMessage
-    let message = Box::new(VersionedXcm::V3(Xcm(vec![
+    let inner_message = Box::new(Xcm(vec![
         Instruction::UnpaidExecution {
             weight_limit: WeightLimit::Limited(Weight {
                 ref_time: XCM_WEIGHT_REQUIRED,
@@ -68,11 +72,30 @@ async fn transact() {
                 proof_size: XCM_PROOF_SIZE_REQUIRED,
             },
             call: DoubleEncoded {
-                encoded: call,
+                encoded: encoded_data,
             },
         },
-    ])));
+    ]));
 
+    let destination = X2(
+            GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+            //AccountKey20 {
+             //   network: None,
+             //   key: GATEWAY_PROXY_CONTRACT.into(),
+            //},
+            AccountKey20 {
+                network: None,
+                key: HELLO_WORLD_CONTRACT.into(),
+            },
+        );
+
+    let message = Box::new(VersionedXcm::V3(Xcm(vec![
+        Instruction::ExportMessage {
+            network: Ethereum { chain_id: 15},
+            destination,
+            xcm: *inner_message,
+        }
+    ])));
     let result = send_xcm_transact(&test_clients.template_client, message)
         .await
         .expect("failed to send xcm transact.");
