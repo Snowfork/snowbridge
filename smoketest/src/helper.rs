@@ -151,7 +151,7 @@ pub async fn send_xcm_transact(
         interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
     }));
 
-    let xcm_call = template::api::template_pallet::calls::TransactionApi.send_xcm(*dest, *message);
+    let xcm_call = template::api::template_pallet::calls::TransactionApi.send_xcm_message_export(*dest, *message);
 
     let owner: Pair = Pair::from_string("//Alice", None).expect("cannot create keypair");
 

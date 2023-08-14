@@ -77,6 +77,7 @@ async fn transact() {
         },
     ]));
 
+    // TODO this is probably not right, not sure if I should include Bridge hub here?
     let destination = X2(
             GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
             //AccountKey20 {
