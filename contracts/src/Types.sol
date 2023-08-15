@@ -63,10 +63,10 @@ struct Config {
 /// @dev Messages from Polkadot take the form of these commands.
 enum Command {
     AgentExecute,
-    Upgrade,
     CreateAgent,
     CreateChannel,
     UpdateChannel,
+    Upgrade,
     SetOperatingMode,
     TransferNativeFromAgent
 }
