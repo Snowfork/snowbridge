@@ -32,7 +32,7 @@ contract AgentExecutor {
             _registerToken(name, symbol, decimals);
         } else if (command == AgentExecuteCommand.MintToken) {
             (address token, address recipient, uint256 amount) = abi.decode(params, (address, address, uint256));
-            ERC20(token).mint(recipient, amount);
+            _mintToken(token, recipient, amount);
         }
     }
 
@@ -42,6 +42,11 @@ contract AgentExecutor {
     /// NOTE: There are no authorization checks here. Since this contract is only used for its code.
     function transferNative(address payable recipient, uint256 amount) external {
         recipient.safeNativeTransfer(amount);
+    }
+
+    /// @dev Mint ERC20 `token` and transfer to `recipient`. Only callable via `execute`.
+    function _mintToken(address token, address recipient, uint256 amount) internal {
+        ERC20(token).mint(recipient, amount);
     }
 
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
