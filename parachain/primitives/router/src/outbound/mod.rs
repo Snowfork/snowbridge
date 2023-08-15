@@ -106,15 +106,15 @@ where
 
 		let mut converter = XcmConverter::new(&message, &gateway_network, &gateway_address);
 		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 converting.");
-		let (agent_execute_command, max_target_fee) = converter.convert().map_err(|err|{
+		let (agent_execute_command, _max_target_fee) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
 
-		if max_target_fee.is_some() {
-			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due not supporting max target fee.");
-			return Err(SendError::Unroutable)
-		}
+		// if max_target_fee.is_some() {
+		// 	log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due not supporting max
+		// target fee."); 	return Err(SendError::Unroutable)
+		// }
 
 		// local_sub is relative to the relaychain. No conversion needed.
 		let local_sub_location: MultiLocation = local_sub.into();
@@ -232,7 +232,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 	}
 
 	fn agent_execute_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
-		return self.native_tokens_unlock_message()
+		self.native_tokens_unlock_message()
 	}
 
 	fn native_tokens_unlock_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
@@ -311,6 +311,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(AgentExecuteCommand::TransferToken { token: asset, recipient: destination, amount })
 	}
 
+	#[allow(dead_code)]
 	fn transact_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
 		Ok(AgentExecuteCommand::Transact {
 			target: Default::default(),
