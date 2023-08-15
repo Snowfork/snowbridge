@@ -37,7 +37,7 @@ where
 
 	fn validate(
 		network: NetworkId,
-		_channel: u32,
+		channel: u32,
 		universal_source: &mut Option<InteriorMultiLocation>,
 		destination: &mut Option<InteriorMultiLocation>,
 		message: &mut Option<Xcm<()>>,
@@ -46,6 +46,9 @@ where
 		let universal_location = UniversalLocation::get();
 
 		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 validate message {:?}", message);
+		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 network {:?}", network);
+		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 universal_source {:?}", universal_source);
+		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 channel {:?}", channel);
 
 		let (gateway_network, gateway_junctions) = gateway_location.interior().split_global()
 			.map_err(|_| {
@@ -58,11 +61,8 @@ where
 			return Err(SendError::NotApplicable)
 		}
 
-		let dest = destination.take().ok_or(SendError::MissingArgument)?;
-		if dest != Here {
-			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched remote destination {dest:?}.");
-			return Err(SendError::NotApplicable)
-		}
+		log::trace!(target: "xcm::ethereum_blob_exporter", "destination {destination:?}.");
+		Self::validate_destination(destination)?;
 
 		let gateway_address = match gateway_junctions {
 			X1(AccountKey20 { network, key })
@@ -111,10 +111,10 @@ where
 			SendError::Unroutable
 		})?;
 
-		 if max_target_fee.is_some() {
-			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due not supporting max
-		 target fee."); 	return Err(SendError::Unroutable)
-		 }
+		if max_target_fee.is_some() {
+			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due not supporting max target fee.");
+			return Err(SendError::Unroutable)
+		}
 
 		// local_sub is relative to the relaychain. No conversion needed.
 		let local_sub_location: MultiLocation = local_sub.into();
@@ -157,6 +157,38 @@ where
 
 		log::info!(target: "xcm::ethereum_blob_exporter", "message delivered {message_hash:#?}.");
 		Ok(message_hash.into())
+	}
+}
+
+impl<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription>
+EthereumBlobExporter<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription>
+{
+	// TODO test this
+	fn validate_destination(destination: &mut Option<InteriorMultiLocation>) -> Result<(), SendError> {
+		let dest = destination.take().ok_or(SendError::MissingArgument)?;
+
+		if dest == Here {
+			return Ok(());
+		}
+
+		match dest.last().take() {
+			Some(AccountKey20 { network: Some(Ethereum { .. }), .. }) => {
+				log::trace!(target: "xcm::ethereum_blob_exporter", "valid destination: ethereum network.");
+				Ok(())
+			}
+			Some(AccountKey20 { network, .. }) => {
+				log::trace!(target: "xcm::ethereum_blob_exporter", "destination mismatch: expected Ethereum, got {network:?}.");
+				Err(SendError::NotApplicable)
+			}
+			Some(_) => {
+				log::trace!(target: "xcm::ethereum_blob_exporter", "junction mismatch: expected AccountKey20, got different junction.");
+				Err(SendError::NotApplicable)
+			}
+			None => {
+				log::trace!(target: "xcm::ethereum_blob_exporter", "missing junction in destination.");
+				Err(SendError::NotApplicable)
+			}
+		}
 	}
 }
 
@@ -234,9 +266,11 @@ impl<'a, Call> XcmConverter<'a, Call> {
 	}
 
 	fn is_transact(&self) -> bool {
-		for instruction in self.iter.clone() { // TODO not certain if this is OK to differentiate between TransferToken and Transact messages
+		for instruction in self.iter.clone() {
+			// TODO not certain if this is OK to differentiate between TransferToken and Transact
+			// messages
 			if let Transact { .. } = instruction {
-				return true;
+				return true
 			}
 		}
 		false
@@ -332,9 +366,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		let cmd = self.next()?;
 
 		let contract_address = if let DescendOrigin(location) = cmd {
-			if let X1(AccountKey20 { network: _token_network, key: contract_address } )
-			 = location
-			{
+			if let X1(AccountKey20 { network: _token_network, key: contract_address }) = location {
 				contract_address
 			} else {
 				return Err(DescendOriginExpected) // TODO Invalid junction error
@@ -343,7 +375,12 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			return Err(DescendOriginExpected)
 		};
 
-		let data = if let Transact { origin_kind: _origin_kind, require_weight_at_most: _require_weight_at_most, call } = self.next()? {
+		let data = if let Transact {
+			origin_kind: _origin_kind,
+			require_weight_at_most: _require_weight_at_most,
+			call,
+		} = self.next()?
+		{
 			call
 		} else {
 			return Err(TransactExpected)
@@ -1556,7 +1593,7 @@ mod tests {
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			Transact{
+			Transact {
 				origin_kind: OriginKind::Native,
 				require_weight_at_most: Default::default(),
 				call: vec![].into(),
@@ -1587,10 +1624,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
-		}].into();
+		}]
+		.into();
 
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
@@ -1604,11 +1642,11 @@ mod tests {
 					network: Some(Ethereum { chain_id: 2 }),
 					key: beneficiary_address,
 				})
-					.into(),
+				.into(),
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 
 		let converter = XcmConverter::new(&message, &network, &GATEWAY);
 
@@ -1629,15 +1667,15 @@ mod tests {
 			DescendOrigin(X1(AccountKey20 {
 				network: None,
 				key: hex!("1000000000000000000000000000000000000000"),
-    		})),
-			Transact{
+			})),
+			Transact {
 				origin_kind: OriginKind::Native,
 				require_weight_at_most: Default::default(),
 				call: vec![195, 169, 177, 197, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into(),
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 

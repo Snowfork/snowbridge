@@ -55,7 +55,7 @@ async fn transact() {
         .unwrap();
 
     let contract_location = Junctions::X1(AccountKey20 {
-        network: None, // TODO ethereum network
+        network: Some(Ethereum { chain_id: 15 }),
         key: HELLO_WORLD_CONTRACT.into(),
     });
 
