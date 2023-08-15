@@ -10,5 +10,4 @@ type Request struct {
 	Validators       []substrate.Authority
 	SignedCommitment types.SignedCommitment
 	Proof            merkle.SimplifiedMMRProof
-	IsHandover       bool
 }

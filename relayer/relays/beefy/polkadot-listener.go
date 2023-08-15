@@ -41,7 +41,7 @@ func (li *PolkadotListener) Start(
 	}
 	li.beefyAuthoritiesKey = storageKey
 
-	requests := make(chan Request, 1)
+	requests := make(chan Request)
 
 	eg.Go(func() error {
 		defer close(requests)
@@ -82,14 +82,6 @@ func (li *PolkadotListener) scanCommitments(
 			validatorSetID := result.SignedCommitment.Commitment.ValidatorSetID
 			nextValidatorSetID := uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID)
 
-			logEntry := log.WithFields(log.Fields{
-				"commitment": log.Fields{
-					"blockNumber":        committedBeefyBlock,
-					"validatorSetID":     validatorSetID,
-					"nextValidatorSetID": nextValidatorSetID,
-				},
-				"validatorSetID": currentValidatorSet,
-			})
 			if validatorSetID < currentValidatorSet || validatorSetID > currentValidatorSet+1 {
 				return fmt.Errorf("commitment has unexpected validatorSetID: blockNumber=%v validatorSetID=%v expectedValidatorSetID=%v",
 					committedBeefyBlock,
@@ -98,19 +90,27 @@ func (li *PolkadotListener) scanCommitments(
 				)
 			}
 
+			logEntry := log.WithFields(log.Fields{
+				"commitment": log.Fields{
+					"blockNumber":        committedBeefyBlock,
+					"validatorSetID":     validatorSetID,
+					"nextValidatorSetID": nextValidatorSetID,
+				},
+				"validatorSetID": currentValidatorSet,
+				"IsHandover":     validatorSetID == currentValidatorSet+1,
+			})
+
+			validators, err := li.queryBeefyAuthorities(result.BlockHash)
+			if err != nil {
+				return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
+			}
+			task := Request{
+				Validators:       validators,
+				SignedCommitment: result.SignedCommitment,
+				Proof:            result.MMRProof,
+			}
+
 			if validatorSetID == currentValidatorSet+1 && validatorSetID == nextValidatorSetID-1 {
-
-				validators, err := li.queryBeefyAuthorities(result.BlockHash)
-				if err != nil {
-					return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
-				}
-
-				task := Request{
-					Validators:       validators,
-					SignedCommitment: result.SignedCommitment,
-					Proof:            result.MMRProof,
-					IsHandover:       true,
-				}
 
 				select {
 				case <-ctx.Done():
@@ -123,18 +123,6 @@ func (li *PolkadotListener) scanCommitments(
 				if result.Depth > li.config.FastForwardDepth {
 					logEntry.Warn("Discarded commitment with depth not fast forward")
 					continue
-				}
-
-				validators, err := li.queryBeefyAuthorities(result.BlockHash)
-				if err != nil {
-					return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
-				}
-
-				task := Request{
-					Validators:       validators,
-					SignedCommitment: result.SignedCommitment,
-					Proof:            result.MMRProof,
-					IsHandover:       false,
 				}
 
 				// drop task if it can't be processed immediately
