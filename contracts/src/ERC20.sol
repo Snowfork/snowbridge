@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Axelar Network
 
 pragma solidity 0.8.20;
 
 import {IERC20} from "./interfaces/IERC20.sol";
-import {Ownable} from "openzeppelin/access/Ownable.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -30,7 +28,7 @@ import {Ownable} from "openzeppelin/access/Ownable.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract ERC20 is IERC20, Ownable {
+contract ERC20 is IERC20 {
     mapping(address => uint256) public override balanceOf;
 
     mapping(address => mapping(address => uint256)) public override allowance;
@@ -138,20 +136,6 @@ contract ERC20 is IERC20, Ownable {
     function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
         _approve(msg.sender, spender, allowance[msg.sender][spender] - subtractedValue);
         return true;
-    }
-
-    /**
-     * @dev Creates `amount` tokens and assigns them to `account`, increasing
-     * the total supply. Can only be called by the owner.
-     *
-     * Emits a {Transfer} event with `from` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `to` cannot be the zero address.
-     */
-    function mint(address account, uint256 amount) external virtual onlyOwner {
-        _mint(account, amount);
     }
 
     /**
