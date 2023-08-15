@@ -11,7 +11,7 @@ use snowbridge_smoketest::parachains::template::{
     api::runtime_types as templateTypes, api::runtime_types::xcm as templateXcm,
 };
 use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::Junction::{AccountKey20, GlobalConsensus};
-use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::NetworkId;
+use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::{Junction, NetworkId};
 use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::NetworkId::Ethereum;
 use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junctions::Junctions::{X2, X3};
 use templateTypes::sp_weights::weight_v2::Weight;
@@ -53,12 +53,12 @@ async fn transact() {
     let mut encoded_data = function
         .encode_input(&[Token::String("Hello, Clara!".to_string())])
         .unwrap();
-    //let mut call = HELLO_WORLD_CONTRACT.to_vec();
 
-    // call.append(&mut encoded_data);
+    let contract_location = Junctions::X1(AccountKey20 {
+        network: None, // TODO ethereum network
+        key: HELLO_WORLD_CONTRACT.into(),
+    });
 
-    // TODO send ExportMessage XCM
-    // TODO use this message as inner for ExportMessage
     let inner_message = Box::new(Xcm(vec![
         Instruction::UnpaidExecution {
             weight_limit: WeightLimit::Limited(Weight {
@@ -67,6 +67,7 @@ async fn transact() {
             }),
             check_origin: None,
         },
+        Instruction::DescendOrigin(contract_location), // TODO not sure if this is right, want to pass the contract address
         Instruction::Transact {
             origin_kind: OriginKind::Xcm,
             require_weight_at_most: Weight {

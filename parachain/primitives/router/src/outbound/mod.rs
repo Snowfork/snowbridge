@@ -39,7 +39,7 @@ where
 		network: NetworkId,
 		_channel: u32,
 		universal_source: &mut Option<InteriorMultiLocation>,
-		_destination: &mut Option<InteriorMultiLocation>,
+		destination: &mut Option<InteriorMultiLocation>,
 		message: &mut Option<Xcm<()>>,
 	) -> SendResult<Self::Ticket> {
 		let gateway_location = GatewayLocation::get();
@@ -58,11 +58,11 @@ where
 			return Err(SendError::NotApplicable)
 		}
 
-		// let dest = destination.take().ok_or(SendError::MissingArgument)?;
-		// if dest != Here {
-		// 	log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched remote
-		// destination {dest:?}."); 	return Err(SendError::NotApplicable)
-		// }
+		let dest = destination.take().ok_or(SendError::MissingArgument)?;
+		if dest != Here {
+			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched remote destination {dest:?}.");
+			return Err(SendError::NotApplicable)
+		}
 
 		let gateway_address = match gateway_junctions {
 			X1(AccountKey20 { network, key })
@@ -106,15 +106,15 @@ where
 
 		let mut converter = XcmConverter::new(&message, &gateway_network, &gateway_address);
 		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 converting.");
-		let (agent_execute_command, _max_target_fee) = converter.convert().map_err(|err|{
+		let (agent_execute_command, max_target_fee) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
 
-		// if max_target_fee.is_some() {
-		// 	log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due not supporting max
-		// target fee."); 	return Err(SendError::Unroutable)
-		// }
+		 if max_target_fee.is_some() {
+			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due not supporting max
+		 target fee."); 	return Err(SendError::Unroutable)
+		 }
 
 		// local_sub is relative to the relaychain. No conversion needed.
 		let local_sub_location: MultiLocation = local_sub.into();
@@ -168,6 +168,8 @@ enum XcmConverterError {
 	BuyExecutionExpected,
 	EndOfXcmMessageExpected,
 	WithdrawExpected,
+	TransactExpected,
+	DescendOriginExpected,
 	DepositExpected,
 	NoReserveAssets,
 	FilterDoesNotConsumeAllAssets,
@@ -231,8 +233,21 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(execution_fee)
 	}
 
+	fn is_transact(&self) -> bool {
+		for instruction in self.iter.clone() { // TODO not certain if this is OK to differentiate between TransferToken and Transact messages
+			if let Transact { .. } = instruction {
+				return true;
+			}
+		}
+		false
+	}
+
 	fn agent_execute_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
-		self.native_tokens_unlock_message()
+		if self.is_transact() {
+			self.transact_message()
+		} else {
+			self.native_tokens_unlock_message()
+		}
 	}
 
 	fn native_tokens_unlock_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
@@ -311,11 +326,32 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(AgentExecuteCommand::TransferToken { token: asset, recipient: destination, amount })
 	}
 
-	#[allow(dead_code)]
 	fn transact_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
+		use XcmConverterError::*;
+
+		let cmd = self.next()?;
+
+		let contract_address = if let DescendOrigin(location) = cmd {
+			if let X1(AccountKey20 { network: _token_network, key: contract_address } )
+			 = location
+			{
+				contract_address
+			} else {
+				return Err(DescendOriginExpected) // TODO Invalid junction error
+			}
+		} else {
+			return Err(DescendOriginExpected)
+		};
+
+		let data = if let Transact { origin_kind: _origin_kind, require_weight_at_most: _require_weight_at_most, call } = self.next()? {
+			call
+		} else {
+			return Err(TransactExpected)
+		};
+
 		Ok(AgentExecuteCommand::Transact {
-			target: Default::default(),
-			payload: vec![],
+			target: contract_address.into(),
+			payload: data.encode(),
 			dynamic_gas: Default::default(),
 		})
 	}
@@ -759,35 +795,6 @@ mod tests {
 			token: token_address.into(),
 			recipient: beneficiary_address.into(),
 			amount: 1000,
-		};
-		let result = converter.convert();
-		assert_eq!(result, Ok((expected_payload, Some(&fee))));
-	}
-
-	#[test]
-	fn xcm_converter_convert_success_with_transact_message() {
-		let network = BridgedNetwork::get();
-
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
-		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			Transact {
-				origin_kind: OriginKind::Native,
-				require_weight_at_most: Default::default(),
-				call: vec![].into(),
-			},
-			SetTopic([0; 32]),
-		]
-		.into();
-
-		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
-		let expected_payload = AgentExecuteCommand::Transact {
-			target: Default::default(),
-			payload: vec![],
-			dynamic_gas: Default::default(),
 		};
 		let result = converter.convert();
 		assert_eq!(result, Ok((expected_payload, Some(&fee))));
@@ -1537,5 +1544,109 @@ mod tests {
 
 		let result = converter.convert();
 		assert_eq!(result.err(), Some(XcmConverterError::BeneficiaryResolutionFailed));
+	}
+
+	#[test]
+	fn is_transact() {
+		let network = BridgedNetwork::get();
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			Transact{
+				origin_kind: OriginKind::Native,
+				require_weight_at_most: Default::default(),
+				call: vec![].into(),
+			},
+			SetTopic([0; 32]),
+		]
+		.into();
+
+		let converter = XcmConverter::new(&message, &network, &GATEWAY);
+
+		let result = converter.is_transact();
+		assert_eq!(result, true);
+	}
+
+	#[test]
+	fn is_not_transact() {
+		let network = BridgedNetwork::get();
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(
+				X2(
+					AccountKey20 { network: None, key: GATEWAY },
+					AccountKey20 { network: None, key: token_address },
+				)
+					.into(),
+			),
+			fun: Fungible(1000),
+		}].into();
+
+		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			WithdrawAsset(assets),
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 {
+					network: Some(Ethereum { chain_id: 2 }),
+					key: beneficiary_address,
+				})
+					.into(),
+			},
+			SetTopic([0; 32]),
+		]
+			.into();
+
+		let converter = XcmConverter::new(&message, &network, &GATEWAY);
+
+		let result = converter.is_transact();
+		assert_eq!(result, false);
+	}
+
+	#[test]
+	fn transact_message() {
+		let network = BridgedNetwork::get();
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(fees),
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			DescendOrigin(X1(AccountKey20 {
+				network: None,
+				key: hex!("1000000000000000000000000000000000000000"),
+    		})),
+			Transact{
+				origin_kind: OriginKind::Native,
+				require_weight_at_most: Default::default(),
+				call: vec![195, 169, 177, 197, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into(),
+			},
+			SetTopic([0; 32]),
+		]
+			.into();
+
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
+
+		let expected_payload = AgentExecuteCommand::Transact {
+			target: hex!("1000000000000000000000000000000000000000").into(),
+			payload: vec![195, 169, 177, 197, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into(),
+			dynamic_gas: Default::default(),
+		};
+		let result = converter.convert();
+		assert_eq!(result, Ok((expected_payload, None)));
 	}
 }
