@@ -61,6 +61,11 @@ contract ERC20 is IERC20 {
     /**
      * @dev See {IERC20-approve}.
      *
+     * NOTE: Prefer the {increaseAllowance} and {decreaseAllowance} methods, as
+     * they aren't vulnerable to the frontrunning attack described here:
+     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+     * See {IERC20-approve}.
+     *
      * NOTE: If `amount` is the maximum `uint256`, the allowance is not updated on
      * `transferFrom`. This is semantically equivalent to an infinite approval.
      *
