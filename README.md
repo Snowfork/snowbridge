@@ -92,6 +92,8 @@ Remove untracked files:
 git clean -idx
 ```
 
+Ensure that the current Rust toolchain is the one selected in `scripts/init.sh`.
+
 Ensure submodules are up-to-date:
 ```sh
 git submodule update
@@ -100,6 +102,10 @@ git submodule update
 Check untracked files & directories:
 ```sh
 git clean -ndx | awk '{print $3}'
+```
+After removing `node_modules` directories (eg. with `git clean above`), clear the pnpm cache:
+```sh
+pnpm store prune
 ```
 
 Check Nix config in `~/.config/nix/nix.conf`.

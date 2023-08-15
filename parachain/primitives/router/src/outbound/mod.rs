@@ -135,7 +135,8 @@ where
 
 		log::info!(target: "xcm::ethereum_blob_exporter", "message validated: location = {local_sub_location:?}, agent_id = '{agent_id:?}'");
 
-		// TODO (SNO-581): Make sure we charge fees for message delivery. Currently this is set to zero.
+		// TODO (SNO-581): Make sure we charge fees for message delivery. Currently this is set to
+		// zero.
 		Ok((ticket.encode(), MultiAssets::default()))
 	}
 
@@ -227,9 +228,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(execution_fee)
 	}
 
-	fn native_tokens_unlock_message(
-		&mut self,
-	) -> Result<AgentExecuteCommand, XcmConverterError> {
+	fn native_tokens_unlock_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
 		use XcmConverterError::*;
 		let (assets, beneficiary) = if let WithdrawAsset(reserved_assets) = self.next()? {
 			if reserved_assets.len() == 0 {

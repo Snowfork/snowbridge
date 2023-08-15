@@ -528,16 +528,10 @@ contract BeefyClient {
     }
 
     /**
-     * NOTE (SNO-427): This inclusion test is currently insecure because it
-     * not verify that the supplied merkle leaf index (proof.index) corresponds to the
-     * leaf being verified.
-     *
-     * This was a regression introduced when we merged in an optimized Merkle Proof verifier.
-     * This new verifier relies on hash pairs being sorted, whereas
-     * the previous version did not require any sorting.
-     *
      * @dev Checks if a validators address is a member of the merkle tree
-     * @param account The address of the validator to check
+     * @param vset The validator set
+     * @param account The address of the validator to check for inclusion in `vset`.
+     * @param index The leaf index of the account in the merkle tree of validator set addresses.
      * @param proof Merkle proof required for validation of the address
      * @return true if the validator is in the set
      */

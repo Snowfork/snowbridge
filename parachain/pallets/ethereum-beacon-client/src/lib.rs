@@ -9,8 +9,9 @@ pub mod impls;
 pub mod types;
 pub mod weights;
 
-#[cfg(test)]
-mod mock;
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod mock;
+
 #[cfg(all(test, not(feature = "beacon-spec-mainnet")))]
 mod tests;
 
@@ -214,7 +215,10 @@ pub mod pallet {
 		#[transactional]
 		/// Used for pallet initialization and light client resetting. Needs to be called by
 		/// the root origin.
-		pub fn force_checkpoint(origin: OriginFor<T>, update: Box<CheckpointUpdate>) -> DispatchResult {
+		pub fn force_checkpoint(
+			origin: OriginFor<T>,
+			update: Box<CheckpointUpdate>,
+		) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::process_checkpoint_update(&update)?;
 			Ok(())
