@@ -27,9 +27,6 @@ contract AgentExecutor {
         if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
             _transferToken(token, recipient, amount);
-        } else if (command == AgentExecuteCommand.RegisterToken) {
-            (string memory name, string memory symbol, uint8 decimals) = abi.decode(params, (string, string, uint8));
-            _registerToken(name, symbol, decimals);
         } else if (command == AgentExecuteCommand.MintToken) {
             (address token, address recipient, uint256 amount) = abi.decode(params, (address, address, uint256));
             _mintToken(token, recipient, amount);
@@ -44,6 +41,12 @@ contract AgentExecutor {
         recipient.safeNativeTransfer(amount);
     }
 
+    /// @dev Create a new ERC20 token with this agent as the owner.
+    function registerToken(string memory name, string memory symbol, uint8 decimals) external {
+        IERC20 token = new ERC20(name, symbol, decimals);
+        emit TokenRegistered(address(this), address(token));
+    }
+
     /// @dev Mint ERC20 `token` and transfer to `recipient`. Only callable via `execute`.
     function _mintToken(address token, address recipient, uint256 amount) internal {
         ERC20(token).mint(recipient, amount);
@@ -52,10 +55,5 @@ contract AgentExecutor {
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
     function _transferToken(address token, address recipient, uint128 amount) internal {
         IERC20(token).safeTransfer(recipient, amount);
-    }
-
-    function _registerToken(string memory name, string memory symbol, uint8 decimals) internal {
-        IERC20 token = new ERC20(name, symbol, decimals);
-        emit TokenRegistered(address(this), address(token));
     }
 }

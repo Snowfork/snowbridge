@@ -68,11 +68,11 @@ enum Command {
     UpdateChannel,
     Upgrade,
     SetOperatingMode,
-    TransferNativeFromAgent
+    TransferNativeFromAgent,
+    RegisterToken
 }
 
 enum AgentExecuteCommand {
     TransferToken,
-    MintToken,
-    RegisterToken
+    MintToken
 }

@@ -175,6 +175,11 @@ contract Gateway is IGateway, IInitializable {
             catch {
                 success = false;
             }
+        } else if (message.command == Command.RegisterToken) {
+            try Gateway(this).registerToken{gas: DISPATCH_GAS}(message.params) {}
+            catch {
+                success = false;
+            }
         }
 
         emit IGateway.InboundMessageDispatched(message.origin, message.nonce, success);
@@ -409,6 +414,35 @@ contract Gateway is IGateway, IInitializable {
         }
 
         _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
+    }
+
+    struct RegisterTokenParams {
+        /// @dev The ID of the agent to register the token for
+        bytes32 agentID;
+        /// @dev The name of the new token
+        string name;
+        /// @dev The short symbol of the new token
+        string symbol;
+        /// @dev The number of decimal places allowed
+        uint8 decimals;
+    }
+
+    // @dev Register a new fungible Polkadot token for an agent
+    function registerToken(bytes calldata data) external onlySelf {
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+
+        RegisterTokenParams memory params = abi.decode(data, (RegisterTokenParams));
+
+        address agent = $.agents[params.agentID];
+        if (agent == address(0)) {
+            revert AgentDoesNotExist();
+        }
+
+        bytes memory call = abi.encodeCall(AgentExecutor.registerToken, (params.name, params.symbol, params.decimals));
+        bytes memory response = _invokeOnAgent(agent, call);
+
+        address token = address(bytes20(response));
+        $.ownerAgentIDs[token] = params.agentID;
     }
 
     /**
