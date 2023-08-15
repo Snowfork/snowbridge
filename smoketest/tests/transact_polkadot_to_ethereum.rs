@@ -50,10 +50,12 @@ async fn transact() {
     let hello_world = HelloWorld::new(HELLO_WORLD_CONTRACT, ethereum_client.clone());
     let contract_abi: Abi = hello_world.abi().clone();
     let function = contract_abi.function("sayHello").unwrap();
-    let mut encoded_data = function.encode_input(&[Token::String("Hello, Clara!".to_string())]).unwrap();
+    let mut encoded_data = function
+        .encode_input(&[Token::String("Hello, Clara!".to_string())])
+        .unwrap();
     //let mut call = HELLO_WORLD_CONTRACT.to_vec();
 
-   // call.append(&mut encoded_data);
+    // call.append(&mut encoded_data);
 
     // TODO send ExportMessage XCM
     // TODO use this message as inner for ExportMessage
@@ -77,27 +79,8 @@ async fn transact() {
         },
     ]));
 
-    // TODO this is probably not right, not sure if I should include Bridge hub here?
-    let destination = X2(
-            GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
-            //AccountKey20 {
-             //   network: None,
-             //   key: GATEWAY_PROXY_CONTRACT.into(),
-            //},
-            AccountKey20 {
-                network: None,
-                key: HELLO_WORLD_CONTRACT.into(),
-            },
-        );
-
-    let message = Box::new(VersionedXcm::V3(Xcm(vec![
-        Instruction::ExportMessage {
-            network: Ethereum { chain_id: 15},
-            destination,
-            xcm: *inner_message,
-        }
-    ])));
-    let result = send_xcm_transact(&test_clients.template_client, message)
+    let message = Box::new(VersionedXcm::V3(*inner_message));
+    let result = send_export_message(&test_clients.template_client, message)
         .await
         .expect("failed to send xcm transact.");
 

@@ -39,13 +39,13 @@ where
 		network: NetworkId,
 		_channel: u32,
 		universal_source: &mut Option<InteriorMultiLocation>,
-		destination: &mut Option<InteriorMultiLocation>,
+		_destination: &mut Option<InteriorMultiLocation>,
 		message: &mut Option<Xcm<()>>,
 	) -> SendResult<Self::Ticket> {
 		let gateway_location = GatewayLocation::get();
 		let universal_location = UniversalLocation::get();
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 validate.");
+		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 validate message {:?}", message);
 
 		let (gateway_network, gateway_junctions) = gateway_location.interior().split_global()
 			.map_err(|_| {
@@ -58,11 +58,11 @@ where
 			return Err(SendError::NotApplicable)
 		}
 
-		let dest = destination.take().ok_or(SendError::MissingArgument)?;
-		if dest != Here {
-			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched remote destination {dest:?}.");
-			return Err(SendError::NotApplicable)
-		}
+		// let dest = destination.take().ok_or(SendError::MissingArgument)?;
+		// if dest != Here {
+		// 	log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched remote
+		// destination {dest:?}."); 	return Err(SendError::NotApplicable)
+		// }
 
 		let gateway_address = match gateway_junctions {
 			X1(AccountKey20 { network, key })

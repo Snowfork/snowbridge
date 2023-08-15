@@ -9,8 +9,7 @@ use ethers::prelude::{
 };
 use ethers::providers::Http;
 use futures::StreamExt;
-use sp_core::{sr25519::Pair, Pair as PairT, H160};
-use std::ops::Deref;
+use sp_core::{sr25519::Pair, Pair as PairT};
 use std::sync::Arc;
 use std::time::Duration;
 use subxt::blocks::ExtrinsicEvents;
@@ -22,9 +21,12 @@ use subxt::{Config, OnlineClient, PolkadotConfig, SubstrateConfig};
 pub enum StatemintConfig {}
 
 impl Config for StatemintConfig {
+use subxt::tx::PairSigner;
 use subxt::{Config, OnlineClient, PolkadotConfig};
 use templateXcm::{
-    v3::{junction::Junction, junctions::Junctions, multilocation::MultiLocation},
+    v3::{
+        junction::Junction, junction::NetworkId, junctions::Junctions, multilocation::MultiLocation,
+    },
     VersionedMultiLocation, VersionedXcm,
 };
 
