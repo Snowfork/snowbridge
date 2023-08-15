@@ -160,6 +160,11 @@ contract Gateway is IGateway, IInitializable {
             catch {
                 success = false;
             }
+        } else if (message.command == Command.Upgrade) {
+            try Gateway(this).upgrade{gas: DISPATCH_GAS}(message.params) {}
+            catch {
+                success = false;
+            }
         } else if (message.command == Command.SetOperatingMode) {
             try Gateway(this).setOperatingMode{gas: DISPATCH_GAS}(message.params) {}
             catch {
@@ -167,11 +172,6 @@ contract Gateway is IGateway, IInitializable {
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
             try Gateway(this).transferNativeFromAgent{gas: DISPATCH_GAS}(message.params) {}
-            catch {
-                success = false;
-            }
-        } else if (message.command == Command.Upgrade) {
-            try Gateway(this).upgrade{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
             }
