@@ -28,10 +28,10 @@ contract ERC20Permit is IERC20, IERC20Permit, ERC20, Ownable {
 
     mapping(address => uint256) public nonces;
 
-    constructor(string memory name) {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_, decimals_) {
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
-                DOMAIN_TYPE_SIGNATURE_HASH, keccak256(bytes(name)), keccak256(bytes("1")), block.chainid, address(this)
+                DOMAIN_TYPE_SIGNATURE_HASH, keccak256(bytes(name_)), keccak256(bytes("1")), block.chainid, address(this)
             )
         );
     }
