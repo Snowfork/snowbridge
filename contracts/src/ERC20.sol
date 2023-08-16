@@ -96,6 +96,22 @@ contract ERC20 is IERC20, IERC20Permit {
     }
 
     /**
+     * @dev Destroys `amount` tokens from `account` by transferring them to
+     * the zero address, reducing the total supply. Can only be called by
+     * the owner.
+     *
+     * Emits a {Transfer} event with `to` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `account` cannot be the zero address.
+     * - `account` must have at least `amount` tokens.
+     */
+    function burn(address account, uint256 amount) external virtual onlyOwner {
+        _burn(account, amount);
+    }
+
+    /**
      * @dev See {IERC20-transfer}.
      *
      * Requirements:

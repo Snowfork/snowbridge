@@ -47,6 +47,10 @@ contract AgentExecutor {
         emit TokenRegistered(address(this), address(token));
     }
 
+    function burnToken(address token, uint256 amount) external {
+        ERC20(token).burn(token, amount);
+    }
+
     /// @dev Mint ERC20 `token` and transfer to `recipient`. Only callable via `execute`.
     function _mintToken(address token, address recipient, uint256 amount) internal {
         ERC20(token).mint(recipient, amount);

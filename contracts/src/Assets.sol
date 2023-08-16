@@ -6,11 +6,14 @@ import {IERC20} from "./interfaces/IERC20.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 
 import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
+import {Agent} from "./Agent.sol";
+import {AgentExecutor} from "./AgentExecutor.sol";
 
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {ParaID, Config} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
+import {Call} from "./utils/Call.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library Assets {
@@ -38,7 +41,9 @@ library Assets {
 
     function sendToken(
         ParaID assetHubParaID,
-        address assetHubAgent,
+        address agent,
+        address agentExecutor,
+        bytes32 tokenOwnerAgentID,
         address token,
         address sender,
         ParaID destinationChain,
@@ -47,20 +52,26 @@ library Assets {
     ) external returns (bytes memory payload, uint256 extraFee) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        _transferToAgent(assetHubAgent, token, sender, amount);
+        if (tokenOwnerAgentID == bytes32(0)) {
+            _transferToAgent(agent, token, sender, amount);
+        } else {
+            _burn(agentExecutor, agent, token, amount);
+        }
+
         if (destinationChain == assetHubParaID) {
             payload = SubstrateTypes.SendToken(address(this), token, destinationAddress, amount);
         } else {
             payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         }
         extraFee = $.sendTokenFee;
-
         emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
     function sendToken(
         ParaID assetHubParaID,
-        address assetHubAgent,
+        address agent,
+        address agentExecutor,
+        bytes32 tokenOwnerAgentID,
         address token,
         address sender,
         ParaID destinationChain,
@@ -73,15 +84,19 @@ library Assets {
             revert InvalidDestination();
         }
 
-        _transferToAgent(assetHubAgent, token, sender, amount);
+        if (tokenOwnerAgentID == bytes32(0)) {
+            _transferToAgent(agent, token, sender, amount);
+        } else {
+            _burn(agentExecutor, agent, token, amount);
+        }
 
         payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         extraFee = $.sendTokenFee;
         emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
-    /// @dev transfer tokens from the sender to the specified
-    function _transferToAgent(address assetHubAgent, address token, address sender, uint128 amount) internal {
+    /// @dev transfer tokens from the sender to the specified agent
+    function _transferToAgent(address agent, address token, address sender, uint128 amount) internal {
         if (!token.isContract()) {
             revert InvalidToken();
         }
@@ -90,7 +105,13 @@ library Assets {
             revert InvalidAmount();
         }
 
-        IERC20(token).safeTransferFrom(sender, assetHubAgent, amount);
+        IERC20(token).safeTransferFrom(sender, agent, amount);
+    }
+
+    function _burn(address agentExecutor, address agent, address token, uint256 amount) internal {
+        bytes memory call = abi.encodeCall(AgentExecutor.burnToken, (token, amount));
+        (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(agentExecutor, call));
+        Call.verifyResult(success, returndata);
     }
 
     /// @dev Enqueues a create native token message to substrate.

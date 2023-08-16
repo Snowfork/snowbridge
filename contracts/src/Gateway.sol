@@ -462,10 +462,28 @@ contract Gateway is IGateway, IInitializable {
         payable
     {
         CoreStorage.Layout storage $ = CoreStorage.layout();
-        address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
+
+        bytes32 tokenOwnerAgentID = $.ownerAgentIDs[token];
+        address agent;
+        if (tokenOwnerAgentID == bytes32(0)) {
+            agent = $.agents[ASSET_HUB_AGENT_ID];
+        } else {
+            agent = $.agents[tokenOwnerAgentID];
+            if (agent == address(0)) {
+                revert AgentDoesNotExist();
+            }
+        }
 
         (bytes memory payload, uint256 extraFee) = Assets.sendToken(
-            ASSET_HUB_PARA_ID, assetHubAgent, token, msg.sender, destinationChain, destinationAddress, amount
+            ASSET_HUB_PARA_ID,
+            agent,
+            AGENT_EXECUTOR,
+            tokenOwnerAgentID,
+            token,
+            msg.sender,
+            destinationChain,
+            destinationAddress,
+            amount
         );
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
@@ -477,10 +495,28 @@ contract Gateway is IGateway, IInitializable {
         payable
     {
         CoreStorage.Layout storage $ = CoreStorage.layout();
-        address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
+        bytes32 tokenOwnerAgentID = $.ownerAgentIDs[token];
+
+        address agent;
+        if (tokenOwnerAgentID == bytes32(0)) {
+            agent = $.agents[ASSET_HUB_AGENT_ID];
+        } else {
+            agent = $.agents[tokenOwnerAgentID];
+            if (agent == address(0)) {
+                revert AgentDoesNotExist();
+            }
+        }
 
         (bytes memory payload, uint256 extraFee) = Assets.sendToken(
-            ASSET_HUB_PARA_ID, assetHubAgent, token, msg.sender, destinationChain, destinationAddress, amount
+            ASSET_HUB_PARA_ID,
+            agent,
+            AGENT_EXECUTOR,
+            tokenOwnerAgentID,
+            token,
+            msg.sender,
+            destinationChain,
+            destinationAddress,
+            amount
         );
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
