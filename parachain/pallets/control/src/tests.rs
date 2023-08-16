@@ -1,8 +1,7 @@
-use frame_support::assert_ok;
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{mock::*, *};
-use frame_support::traits::EnsureOrigin;
+use frame_support::{assert_ok, traits::EnsureOrigin};
 use hex_literal::hex;
 use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError::BadOrigin};
@@ -39,7 +38,7 @@ fn create_agent_with_bridgehub_origin_yields_success() {
 		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
 		assert!(Agents::<Test>::contains_key(agent_id));
 
-		println!("agent_id: {:#?}", hex::encode(agent_id.as_bytes()));
+		// println!("agent_id: {:#?}", hex::encode(agent_id.as_bytes()));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
 			location: Box::new(location),
@@ -249,28 +248,24 @@ fn create_agent_with_small_params_yields_success() {
 #[test]
 fn create_channel_with_sibling_chain_origin_yields_success() {
 	new_test_ext().execute_with(|| {
-		new_test_ext().execute_with(|| {
-			let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
+		let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
 
-			assert_ok!(EthereumControl::create_agent(origin.clone()));
+		assert_ok!(EthereumControl::create_agent(origin.clone()));
 
-			assert_ok!(EthereumControl::create_channel(origin));
-		});
+		assert_ok!(EthereumControl::create_channel(origin));
 	});
 }
 
 #[test]
 fn create_channel_with_sibling_chain_pallet_as_origin_yields_location_conversion_failed() {
 	new_test_ext().execute_with(|| {
-		new_test_ext().execute_with(|| {
-			let origin = RuntimeOrigin::signed(AccountId32::new([6; 32]));
+		let origin = RuntimeOrigin::signed(AccountId32::new([6; 32]));
 
-			assert_ok!(EthereumControl::create_agent(origin.clone()));
+		assert_ok!(EthereumControl::create_agent(origin.clone()));
 
-			frame_support::assert_noop!(
-				EthereumControl::create_channel(origin),
-				Error::<Test>::LocationToParaIdConversionFailed
-			);
-		});
+		frame_support::assert_noop!(
+			EthereumControl::create_channel(origin),
+			Error::<Test>::LocationToParaIdConversionFailed
+		);
 	});
 }

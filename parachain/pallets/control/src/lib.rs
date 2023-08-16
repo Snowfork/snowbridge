@@ -89,8 +89,8 @@ pub mod pallet {
 			fee: u128,
 			reward: u128,
 		},
-		/// An SetOperationMode message was sent to the Gateway
-		SetOperationMode { mode: OperatingMode },
+		/// An SetOperatingMode message was sent to the Gateway
+		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
 		TransferNativeFromAgent {
 			location: Box<MultiLocation>,
@@ -267,7 +267,7 @@ pub mod pallet {
 			};
 			Self::submit_outbound(message)?;
 
-			Self::deposit_event(Event::<T>::SetOperationMode { mode });
+			Self::deposit_event(Event::<T>::SetOperatingMode { mode });
 
 			Ok(())
 		}
