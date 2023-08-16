@@ -89,7 +89,7 @@ contract ERC20 is IERC20, IERC20Permit {
      *
      * Requirements:
      *
-     * - `to` cannot be the zero address.
+     * - `account` cannot be the zero address.
      */
     function mint(address account, uint256 amount) external virtual onlyOwner {
         _mint(account, amount);
@@ -260,7 +260,7 @@ contract ERC20 is IERC20, IERC20Permit {
      *
      * Requirements:
      *
-     * - `to` cannot be the zero address.
+     * - `account` cannot be the zero address.
      */
     function _mint(address account, uint256 amount) internal virtual {
         if (account == address(0)) revert InvalidAccount();
