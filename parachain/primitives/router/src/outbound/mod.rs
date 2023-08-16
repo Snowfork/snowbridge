@@ -1664,40 +1664,6 @@ mod tests {
 	}
 
 	#[test]
-	fn transact_message() {
-		let network = BridgedNetwork::get();
-
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
-		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			DescendOrigin(X1(AccountKey20 {
-				network: None,
-				key: hex!("1000000000000000000000000000000000000000"),
-			})),
-			Transact {
-				origin_kind: OriginKind::Native,
-				require_weight_at_most: Default::default(),
-				call: vec![195, 169, 177, 197, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into(),
-			},
-			SetTopic([0; 32]),
-		]
-		.into();
-
-		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
-
-		let expected_payload = AgentExecuteCommand::Transact {
-			target: hex!("1000000000000000000000000000000000000000").into(),
-			payload: vec![195, 169, 177, 197, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into(),
-			dynamic_gas: Default::default(),
-		};
-		let result = converter.convert();
-		assert_eq!(result, Ok((expected_payload, None)));
-	}
-
-	#[test]
 	fn transact_message_unpaid_execution() {
 		let network = BridgedNetwork::get();
 
@@ -1707,7 +1673,7 @@ mod tests {
 		let message: Xcm<()> = vec![
 			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 			DescendOrigin(X1(AccountKey20 {
-				network: None,
+				network: Some(NetworkId::Ethereum{ chain_id: 15 }),
 				key: hex!("1000000000000000000000000000000000000000"),
 			})),
 			Transact {
