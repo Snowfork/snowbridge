@@ -1,19 +1,15 @@
 use ethers::abi::{Abi, Token};
 use ethers::prelude::Address;
-use snowbridge_smoketest::constants::*;
-use snowbridge_smoketest::contracts::{hello_world, i_gateway};
-use snowbridge_smoketest::contracts::i_gateway::InboundMessageDispatchedFilter;
+use snowbridge_smoketest::contracts::i_gateway;
 use snowbridge_smoketest::helper::*;
 use hex_literal::hex;
-use snowbridge_smoketest::contracts::hello_world::HelloWorld;
+use snowbridge_smoketest::contracts::hello_world::{HelloWorld, SaidHelloFilter};
 use snowbridge_smoketest::constants::*;
 use snowbridge_smoketest::parachains::template::{
     api::runtime_types as templateTypes, api::runtime_types::xcm as templateXcm,
 };
-use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::Junction::{AccountKey20, GlobalConsensus};
-use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::{Junction, NetworkId};
+use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::Junction::AccountKey20;
 use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junction::NetworkId::Ethereum;
-use snowbridge_smoketest::parachains::template::api::runtime_types::xcm::v3::junctions::Junctions::{X2, X3};
 use templateTypes::sp_weights::weight_v2::Weight;
 use templateXcm::{
     double_encoded::DoubleEncoded,
@@ -22,12 +18,15 @@ use templateXcm::{
         junctions::Junctions,
         multiasset::{AssetId::Concrete, Fungibility::Fungible, MultiAsset, MultiAssets},
         multilocation::MultiLocation,
-        Instruction, WeightLimit, Xcm,
+        Instruction, WeightLimit, Xcm, WeightLimit::Unlimited
     },
     VersionedXcm,
 };
 
 const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0");
+const BRIDGE_HUB_FEE_REQUIRED: u128 = 1000000000;
+const XCM_WEIGHT_REQUIRED: u64 = 3000000000;
+const XCM_PROOF_SIZE_REQUIRED: u64 = 18000;
 
 #[tokio::test]
 async fn transact() {
@@ -60,13 +59,7 @@ async fn transact() {
     });
 
     let inner_message = Box::new(Xcm(vec![
-        Instruction::UnpaidExecution {
-            weight_limit: WeightLimit::Limited(Weight {
-                ref_time: XCM_WEIGHT_REQUIRED,
-                proof_size: XCM_PROOF_SIZE_REQUIRED,
-            }),
-            check_origin: None,
-        },
+        Instruction::UnpaidExecution { weight_limit: Unlimited, check_origin: None },// TODO update to paid
         Instruction::DescendOrigin(contract_location), // TODO not sure if this is right, want to pass the contract address
         Instruction::Transact {
             origin_kind: OriginKind::Xcm,
@@ -78,6 +71,7 @@ async fn transact() {
                 encoded: encoded_data,
             },
         },
+        Instruction::SetTopic([0; 32]),
     ]));
 
     let message = Box::new(VersionedXcm::V3(*inner_message));
@@ -91,5 +85,5 @@ async fn transact() {
         result.extrinsic_hash()
     );
 
-    //wait_for_bridgehub_event::<AgentExecute>(&test_clients.bridge_hub_client).await;
+   // wait_for_ethereum_event::<SaidHelloFilter>(&test_clients.ethereum_client, HELLO_WORLD_CONTRACT).await;
 }

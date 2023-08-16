@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::constants::*;
 use crate::contracts::i_gateway;
 use crate::parachains::bridgehub::{self};
@@ -248,4 +249,40 @@ pub async fn construct_transfer_native_from_agent_call(
         .encode_call_data(&bridge_hub_client.metadata())?;
 
     Ok(call)
+}
+
+pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Provider<Ws>>>, contract_address: [u8; 20]) {
+    let gateway_addr: Address = contract_address.into();
+    let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
+
+    let wait_for_blocks = 300;
+    let mut stream = ethereum_client
+        .subscribe_blocks()
+        .await
+        .unwrap()
+        .take(wait_for_blocks);
+
+    let mut ethereum_event_found = false;
+    while let Some(block) = stream.next().await {
+        println!(
+            "Polling ethereum block {:?} for expected event",
+            block.number.unwrap()
+        );
+        if let Ok(events) = gateway
+            .event::<Ev>()
+            .at_block_hash(block.hash.unwrap())
+            .query()
+            .await
+        {
+            for _ in events {
+                println!("Event found at ethereum block {:?}", block.number.unwrap());
+                ethereum_event_found = true;
+                break;
+            }
+        }
+        if ethereum_event_found {
+            break;
+        }
+    }
+    assert!(ethereum_event_found);
 }

@@ -163,7 +163,6 @@ where
 impl<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription>
 EthereumBlobExporter<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription>
 {
-	// TODO test this
 	fn validate_destination(destination: &mut Option<InteriorMultiLocation>) -> Result<(), SendError> {
 		let dest = destination.take().ok_or(SendError::MissingArgument)?;
 
@@ -211,6 +210,7 @@ enum XcmConverterError {
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
 	SetTopicExpected,
+	InvalidJunction,
 }
 
 struct XcmConverter<'a, Call> {
@@ -252,7 +252,9 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 	fn fee_info(&mut self) -> Result<Option<&'a MultiAsset>, XcmConverterError> {
 		use XcmConverterError::*;
-		let execution_fee = match self.next()? {
+		let execution_fee = self.next()?;
+		log::trace!(target: "xcm::ethereum_blob_exporter", "execution_fee is in fee_info is {execution_fee:?}.");
+		let execution_fee = match execution_fee {
 			WithdrawAsset(fee_asset) => match self.next()? {
 				BuyExecution { fees: execution_fee, weight_limit: Unlimited }
 					if fee_asset.len() == 1 && fee_asset.contains(execution_fee) =>
@@ -262,6 +264,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			UnpaidExecution { check_origin: None, weight_limit: Unlimited } => None,
 			_ => return Err(TargetFeeExpected),
 		};
+		log::trace!(target: "xcm::ethereum_blob_exporter", "execution_fee is {execution_fee:?}.");
 		Ok(execution_fee)
 	}
 
@@ -270,9 +273,11 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			// TODO not certain if this is OK to differentiate between TransferToken and Transact
 			// messages
 			if let Transact { .. } = instruction {
+				log::trace!(target: "xcm::ethereum_blob_exporter", "is transact message.");
 				return true
 			}
 		}
+		log::trace!(target: "xcm::ethereum_blob_exporter", "is not transact message.");
 		false
 	}
 
@@ -363,17 +368,21 @@ impl<'a, Call> XcmConverter<'a, Call> {
 	fn transact_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
 		use XcmConverterError::*;
 
+		log::trace!(target: "xcm::ethereum_blob_exporter", "before descend origin.");
+
 		let cmd = self.next()?;
 
 		let contract_address = if let DescendOrigin(location) = cmd {
 			if let X1(AccountKey20 { network: _token_network, key: contract_address }) = location {
 				contract_address
 			} else {
-				return Err(DescendOriginExpected) // TODO Invalid junction error
+				return Err(InvalidJunction)
 			}
 		} else {
 			return Err(DescendOriginExpected)
 		};
+
+		log::trace!(target: "xcm::ethereum_blob_exporter", "before transact.");
 
 		let data = if let Transact {
 			origin_kind: _origin_kind,
@@ -1676,6 +1685,39 @@ mod tests {
 			SetTopic([0; 32]),
 		]
 		.into();
+
+		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
+
+		let expected_payload = AgentExecuteCommand::Transact {
+			target: hex!("1000000000000000000000000000000000000000").into(),
+			payload: vec![195, 169, 177, 197, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into(),
+			dynamic_gas: Default::default(),
+		};
+		let result = converter.convert();
+		assert_eq!(result, Ok((expected_payload, None)));
+	}
+
+	#[test]
+	fn transact_message_unpaid_execution() {
+		let network = BridgedNetwork::get();
+
+		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
+		let fees: MultiAssets = vec![fee.clone()].into();
+
+		let message: Xcm<()> = vec![
+			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+			DescendOrigin(X1(AccountKey20 {
+				network: None,
+				key: hex!("1000000000000000000000000000000000000000"),
+			})),
+			Transact {
+				origin_kind: OriginKind::Native,
+				require_weight_at_most: Default::default(),
+				call: vec![195, 169, 177, 197, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into(),
+			},
+			SetTopic([0; 32]),
+		]
+			.into();
 
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
