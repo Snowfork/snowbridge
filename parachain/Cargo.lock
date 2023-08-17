@@ -2805,6 +2805,7 @@ dependencies = [
 name = "snowbridge-router-primitives"
 version = "0.1.1"
 dependencies = [
+ "derivative",
  "ethabi-decode",
  "frame-support",
  "frame-system",
