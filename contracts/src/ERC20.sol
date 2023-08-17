@@ -4,6 +4,7 @@
 pragma solidity 0.8.20;
 
 import {IERC20} from "./interfaces/IERC20.sol";
+import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -25,25 +26,72 @@ import {IERC20} from "./interfaces/IERC20.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract ERC20 is IERC20 {
+contract ERC20 is IERC20, IERC20Permit {
+    error PermitExpired();
+    error InvalidS();
+    error InvalidV();
+    error InvalidSignature();
+    error Unauthorized();
+
     mapping(address => uint256) public override balanceOf;
 
     mapping(address => mapping(address => uint256)) public override allowance;
 
+    mapping(address => uint256) public nonces;
+
+    bytes32 public immutable DOMAIN_SEPARATOR;
     uint256 public override totalSupply;
+
+    // keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')
+    bytes32 private constant DOMAIN_TYPE_SIGNATURE_HASH =
+        bytes32(0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f);
+
+    // keccak256('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)')
+    bytes32 private constant PERMIT_SIGNATURE_HASH =
+        bytes32(0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9);
+
+    address public immutable OWNER;
+    string private constant EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA = "\x19\x01";
+    uint8 public immutable decimals;
 
     string public name;
     string public symbol;
-
-    uint8 public immutable decimals;
 
     /**
      * @dev Sets the values for {name}, {symbol}, and {decimals}.
      */
     constructor(string memory name_, string memory symbol_, uint8 decimals_) {
+        OWNER = msg.sender;
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                DOMAIN_TYPE_SIGNATURE_HASH, keccak256(bytes(name_)), keccak256(bytes("1")), block.chainid, address(this)
+            )
+        );
+
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
+    }
+
+    modifier onlyOwner() {
+        if (msg.sender != OWNER) {
+            revert Unauthorized();
+        }
+        _;
+    }
+
+    /**
+     * @dev Creates `amount` tokens and assigns them to `account`, increasing
+     * the total supply. Can only be called by the owner.
+     *
+     * Emits a {Transfer} event with `from` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     */
+    function mint(address account, uint256 amount) external virtual onlyOwner {
+        _mint(account, amount);
     }
 
     /**
@@ -138,6 +186,31 @@ contract ERC20 is IERC20 {
     function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
         _approve(msg.sender, spender, allowance[msg.sender][spender] - subtractedValue);
         return true;
+    }
+
+    function permit(address issuer, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
+        if (block.timestamp > deadline) revert PermitExpired();
+
+        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) revert InvalidS();
+
+        if (v != 27 && v != 28) revert InvalidV();
+
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA,
+                DOMAIN_SEPARATOR,
+                keccak256(abi.encode(PERMIT_SIGNATURE_HASH, issuer, spender, value, nonces[issuer]++, deadline))
+            )
+        );
+
+        address recoveredAddress = ecrecover(digest, v, r, s);
+
+        if (recoveredAddress != issuer) revert InvalidSignature();
+
+        // _approve will revert if issuer is address(0x0)
+        _approve(issuer, spender, value);
     }
 
     /**
