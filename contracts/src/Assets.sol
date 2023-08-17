@@ -55,7 +55,7 @@ library Assets {
         if (tokenOwnerAgentID == bytes32(0)) {
             _transferToAgent(agent, token, sender, amount);
         } else {
-            _burn(agentExecutor, agent, token, amount);
+            _burn(agentExecutor, agent, token, sender, amount);
         }
 
         if (destinationChain == assetHubParaID) {
@@ -87,7 +87,7 @@ library Assets {
         if (tokenOwnerAgentID == bytes32(0)) {
             _transferToAgent(agent, token, sender, amount);
         } else {
-            _burn(agentExecutor, agent, token, amount);
+            _burn(agentExecutor, agent, token, sender, amount);
         }
 
         payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
@@ -108,8 +108,8 @@ library Assets {
         IERC20(token).safeTransferFrom(sender, agent, amount);
     }
 
-    function _burn(address agentExecutor, address agent, address token, uint256 amount) internal {
-        bytes memory call = abi.encodeCall(AgentExecutor.burnToken, (token, amount));
+    function _burn(address agentExecutor, address agent, address token, address sender, uint256 amount) internal {
+        bytes memory call = abi.encodeCall(AgentExecutor.burnToken, (token, sender, amount));
         (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(agentExecutor, call));
         Call.verifyResult(success, returndata);
     }
