@@ -78,11 +78,23 @@ interface IGateway {
         external
         payable;
 
-    /// @dev Send arbitrary transact
-    function sendTransact(ParaID destinationChain, bytes calldata payload) external payable;
+    /// @dev Send arbitrary transact with gateway as origin
+    function transactAsGateway(ParaID destinationChain, bytes calldata payload) external payable;
 
-    /// @dev Send arbitrary transact with customize weight
-    function sendTransact(
+    /// @dev Send arbitrary transact with customizable fee/weight and gateway as origin
+    function transactAsGateway(
+        ParaID destinationChain,
+        bytes calldata payload,
+        uint256 extraFee,
+        uint64 refTime,
+        uint64 proofSize
+    ) external payable;
+
+    /// @dev Send arbitrary transact
+    function transact(ParaID destinationChain, bytes calldata payload) external payable;
+
+    /// @dev Send arbitrary transact with customizable fee/weight
+    function transact(
         ParaID destinationChain,
         bytes calldata payload,
         uint256 extraFee,

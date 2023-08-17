@@ -19,6 +19,7 @@ mod test;
 
 use codec::{Decode, DecodeAll, Encode};
 use frame_support::{
+	log,
 	traits::{
 		fungible::{Inspect, Mutate},
 		GenesisBuild,
@@ -30,7 +31,7 @@ use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
-use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError};
+use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError, Xcm};
 
 use envelope::Envelope;
 use snowbridge_core::{
@@ -38,6 +39,7 @@ use snowbridge_core::{
 	ParaId,
 };
 use snowbridge_router_primitives::inbound;
+use sp_std::prelude::ToOwned;
 pub use weights::WeightInfo;
 
 type BalanceOf<T> =
@@ -207,24 +209,25 @@ pub mod pallet {
 			// succeed even if the message was not successfully decoded or dispatched.
 
 			// Attempt to decode message
-			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-				Ok(inbound::VersionedMessage::V1(message_v1)) => message_v1.into(),
-				Err(_) => {
-					Self::deposit_event(Event::MessageReceived {
-						dest: envelope.dest,
-						nonce: envelope.nonce,
-						result: MessageDispatchResult::InvalidPayload,
-					});
-					return Ok(())
-				},
-			};
+			let xcm: Xcm<()> =
+				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+					Ok(inbound::VersionedMessage::V1(message_v1)) => message_v1.into(),
+					Err(_) => {
+						Self::deposit_event(Event::MessageReceived {
+							dest: envelope.dest,
+							nonce: envelope.nonce,
+							result: MessageDispatchResult::InvalidPayload,
+						});
+						return Ok(())
+					},
+				};
 
 			// Attempt to convert to XCM
 			let sibling_para =
 				MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
 
 			// Attempt to send XCM to a sibling parachain
-			match send_xcm::<T::XcmSender>(sibling_para, xcm) {
+			match send_xcm::<T::XcmSender>(sibling_para, xcm.clone()) {
 				Ok(_) => Self::deposit_event(Event::MessageReceived {
 					dest: envelope.dest,
 					nonce: envelope.nonce,
@@ -236,6 +239,12 @@ pub mod pallet {
 					result: MessageDispatchResult::NotDispatched(err),
 				}),
 			}
+			log::info!(
+				target: &("xcm::".to_owned() + LOG_TARGET),
+				"💫 xcm {:?} sent to {:?}",
+				xcm,
+				sibling_para
+			);
 
 			Ok(())
 		}

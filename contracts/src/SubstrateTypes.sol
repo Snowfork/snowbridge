@@ -144,7 +144,7 @@ library SubstrateTypes {
      * for arbitrary transact
      */
     // solhint-disable-next-line func-name-mixedcase
-    function Transact(address gateway, bytes calldata payload, uint256 extraFee, uint64 refTime, uint64 proofSize)
+    function Transact(address sender, bytes calldata payload, uint256 extraFee, uint64 refTime, uint64 proofSize)
         internal
         view
         returns (bytes memory)
@@ -154,7 +154,7 @@ library SubstrateTypes {
             ScaleCodec.encodeU64(uint64(block.chainid)),
             ScaleCodec.encodeU128(uint128(extraFee)),
             bytes1(0x02),
-            SubstrateTypes.H160(gateway),
+            SubstrateTypes.H160(sender),
             ScaleCodec.checkedEncodeCompactU32(payload.length),
             payload,
             ScaleCodec.encodeU64(refTime),

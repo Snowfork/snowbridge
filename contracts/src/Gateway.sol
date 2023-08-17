@@ -30,6 +30,13 @@ contract Gateway is IGateway, IInitializable {
     uint256 internal immutable DISPATCH_GAS;
     address internal immutable AGENT_EXECUTOR;
 
+    // Default params for arbitrary transact
+    // should be big enough to cover most of the transact cost in destination chain
+    // could be somehow overestimated since the surplus will be refunded
+    uint256 internal constant DEFAULT_EXTRA_FEE = 100_000_000_000_000;
+    uint64 internal constant DEFAULT_REF_TIME = 1_000_000_000;
+    uint64 internal constant DEFAULT_PROOF_SIZE = 100_000;
+
     // Verification state
     address internal immutable BEEFY_CLIENT;
 
@@ -412,35 +419,6 @@ contract Gateway is IGateway, IInitializable {
     }
 
     /**
-     * Transacts
-     */
-
-    // Send arbitrary transact
-    function sendTransact(ParaID destinationChain, bytes calldata payload) external payable {
-        // Todo: Default allow to be set by governance
-        // Default value should be big enough to cover the weight cost in destinationChain
-        // could be somehow overestimated since the surplus will be refunded
-        uint256 extraFee = 100_000_000_000_000;
-        uint64 default_ref_time = 1_000_000_000;
-        uint64 default_proof_size = 100_000;
-        bytes memory message_payload =
-            SubstrateTypes.Transact(address(this), payload, extraFee, default_ref_time, default_proof_size);
-        _submitOutbound(destinationChain, message_payload, extraFee);
-    }
-
-    // Send arbitrary transact with customize weight
-    function sendTransact(
-        ParaID destinationChain,
-        bytes calldata payload,
-        uint256 extraFee,
-        uint64 refTime,
-        uint64 proofSize
-    ) external payable {
-        bytes memory message_payload = SubstrateTypes.Transact(address(this), payload, extraFee, refTime, proofSize);
-        _submitOutbound(destinationChain, message_payload, extraFee);
-    }
-
-    /**
      * Assets
      */
 
@@ -588,5 +566,47 @@ contract Gateway is IGateway, IInitializable {
         });
 
         Assets.initialize(registerTokenFee, sendTokenFee);
+    }
+
+    /**
+     * Transacts
+     */
+
+    /// @inheritdoc IGateway
+    function transactAsGateway(ParaID destinationChain, bytes calldata payload) external payable {
+        bytes memory message_payload =
+            SubstrateTypes.Transact(address(this), payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE);
+        _submitOutbound(destinationChain, message_payload, DEFAULT_EXTRA_FEE);
+    }
+
+    /// @inheritdoc IGateway
+    function transactAsGateway(
+        ParaID destinationChain,
+        bytes calldata payload,
+        uint256 extraFee,
+        uint64 refTime,
+        uint64 proofSize
+    ) external payable {
+        bytes memory message_payload = SubstrateTypes.Transact(address(this), payload, extraFee, refTime, proofSize);
+        _submitOutbound(destinationChain, message_payload, extraFee);
+    }
+
+    /// @inheritdoc IGateway
+    function transact(ParaID destinationChain, bytes calldata payload) external payable {
+        bytes memory message_payload =
+            SubstrateTypes.Transact(msg.sender, payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE);
+        _submitOutbound(destinationChain, message_payload, 0);
+    }
+
+    /// @inheritdoc IGateway
+    function transact(
+        ParaID destinationChain,
+        bytes calldata payload,
+        uint256 extraFee,
+        uint64 refTime,
+        uint64 proofSize
+    ) external payable {
+        bytes memory message_payload = SubstrateTypes.Transact(msg.sender, payload, extraFee, refTime, proofSize);
+        _submitOutbound(destinationChain, message_payload, 0);
     }
 }

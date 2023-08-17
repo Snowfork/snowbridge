@@ -3,7 +3,8 @@
 //! Converts messages from Ethereum to XCM messages
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use frame_support::{traits::ContainsPair, weights::Weight};
+use derivative::Derivative;
+use frame_support::{log, traits::ContainsPair, weights::Weight};
 use sp_core::{Get, RuntimeDebug, H160};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
@@ -12,6 +13,7 @@ use xcm::v3::{prelude::*, Junction::AccountKey20};
 use xcm_executor::traits::ConvertLocation;
 
 const MINIMUM_DEPOSIT: u128 = 1;
+pub const LOG_TARGET: &str = "xcm::snowbridge-router";
 
 /// Messages from Ethereum are versioned. This is because in future,
 /// we may want to evolve the protocol so that the ethereum side sends XCM messages directly.
@@ -33,7 +35,8 @@ pub struct MessageV1 {
 	pub message: Command,
 }
 
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
+#[derive(Derivative, Encode, Decode)]
+#[derivative(Clone(bound = ""), Debug(bound = ""))]
 pub enum Command {
 	/// Register a wrapped token on the AssetHub `ForeignAssets` pallet
 	RegisterToken {
@@ -57,8 +60,8 @@ pub enum Command {
 	},
 	/// call arbitrary transact in another parachain
 	Transact {
-		/// The address of the gateway
-		gateway: H160,
+		/// The address of the sender
+		sender: H160,
 		/// The payload of the transact
 		payload: Vec<u8>,
 		/// The ref_time part of weight
@@ -91,11 +94,11 @@ impl From<MessageV1> for Xcm<()> {
 
 impl Command {
 	pub fn convert(self, chain_id: u64, fee: u128) -> Xcm<()> {
-		let network = NetworkId::Ethereum { chain_id };
-		// Todo: Params need to change as configurable from polkadot governance
+		log::debug!(target: LOG_TARGET,"chain_id: {}, fee: {}, command: {:?},", chain_id, fee, self);
+		let network = Ethereum { chain_id };
 		// Reference from https://coincodex.com/convert/ethereum/polkadot/
 		const SWAP_RATE: u128 = 367;
-		// Sanity base fee applies to all xcm calls
+		// Sanity base fee applies to most of the xcm calls
 		const BASE_FEE: u128 = 2_000_000_000;
 
 		let buy_execution_fee_amount =
@@ -107,8 +110,10 @@ impl Command {
 		};
 
 		match self {
-			Command::Transact { gateway, payload, ref_time, proof_size } => {
-				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
+			Command::Transact { sender, payload, ref_time, proof_size } => {
+				log::debug!(target: LOG_TARGET, "transact sender {:?}, payload {:?}", sender, payload);
+
+				let origin_location = AccountKey20 { network: None, key: sender.into() };
 
 				let weight_limit: Weight = Weight::from_parts(ref_time, proof_size);
 
@@ -121,7 +126,7 @@ impl Command {
 						vec![
 							RefundSurplus,
 							DepositAsset {
-								assets: buy_execution_fee.into(),
+								assets: AllCounted(1).into(),
 								beneficiary: (
 									Parent,
 									Parent,
