@@ -47,7 +47,7 @@ bridgehub_pallets_owner="${BRIDGE_HUB_PALLETS_OWNER:-0xd43593c715fdd31c61141abd0
 export BRIDGE_HUB_PARAID="${BRIDGE_HUB_PARAID:-1013}"
 export BRIDGE_HUB_AGENT_ID="${BRIDGE_HUB_AGENT_ID:-0x05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6}"
 
-template_para_id="${BRIDGEHUB_PARA_ID:-1001}"
+template_para_id="${TEMPLATE_PARA_ID:-1001}"
 
 statemine_ws_url="${STATEMINE_WS_URL:-ws://127.0.0.1:12144}"
 statemine_para_id="${STATEMINE_PARA_ID:-1000}"

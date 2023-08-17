@@ -3,7 +3,8 @@ use ethers::prelude::Address;
 use snowbridge_smoketest::contracts::i_gateway;
 use snowbridge_smoketest::helper::*;
 use hex_literal::hex;
-use snowbridge_smoketest::contracts::hello_world::{HelloWorld, SaidHelloFilter};
+//use snowbridge_smoketest::contracts::hello_world::{HelloWorld, SaidHelloFilter};
+use snowbridge_smoketest::contracts::hello_world::HelloWorld;
 use snowbridge_smoketest::constants::*;
 use snowbridge_smoketest::parachains::template::{
     api::runtime_types as templateTypes, api::runtime_types::xcm as templateXcm,
@@ -16,15 +17,13 @@ use templateXcm::{
     v2::OriginKind,
     v3::{
         junctions::Junctions,
-        multiasset::{AssetId::Concrete, Fungibility::Fungible, MultiAsset, MultiAssets},
-        multilocation::MultiLocation,
-        Instruction, WeightLimit, Xcm, WeightLimit::Unlimited
+        Instruction, Xcm, WeightLimit::Unlimited
     },
     VersionedXcm,
 };
 
 const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0");
-const BRIDGE_HUB_FEE_REQUIRED: u128 = 1000000000;
+//const BRIDGE_HUB_FEE_REQUIRED: u128 = 1000000000;
 const XCM_WEIGHT_REQUIRED: u64 = 3000000000;
 const XCM_PROOF_SIZE_REQUIRED: u64 = 18000;
 
@@ -49,7 +48,7 @@ async fn transact() {
     let hello_world = HelloWorld::new(HELLO_WORLD_CONTRACT, ethereum_client.clone());
     let contract_abi: Abi = hello_world.abi().clone();
     let function = contract_abi.function("sayHello").unwrap();
-    let mut encoded_data = function
+    let encoded_data = function
         .encode_input(&[Token::String("Hello, Clara!".to_string())])
         .unwrap();
 

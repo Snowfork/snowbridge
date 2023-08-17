@@ -10,7 +10,7 @@ use ethers::prelude::{
 };
 use ethers::providers::Http;
 use futures::StreamExt;
-use sp_core::{sr25519::Pair, Pair as PairT};
+use sp_core::{sr25519::Pair, Pair as PairT, H160};
 use std::sync::Arc;
 use std::time::Duration;
 use subxt::blocks::ExtrinsicEvents;
@@ -26,10 +26,11 @@ use subxt::tx::PairSigner;
 use subxt::{Config, OnlineClient, PolkadotConfig};
 use templateXcm::{
     v3::{
-        junction::Junction, junction::NetworkId, junctions::Junctions, multilocation::MultiLocation,
+        junction::Junction, junctions::Junctions, multilocation::MultiLocation, junction::NetworkId,
     },
     VersionedMultiLocation, VersionedXcm,
 };
+use subxt::tx::TxPayload;
 
 /// Custom config that works with Statemint
 pub enum TemplateConfig {}
@@ -154,7 +155,41 @@ pub async fn send_xcm_transact(
         interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
     }));
 
-    let xcm_call = template::api::template_pallet::calls::TransactionApi.send_xcm_message_export(*dest, *message);
+    let xcm_call = template::api::template_pallet::calls::TransactionApi.send_export_message_xcm(*dest, *message);
+
+    let owner: Pair = Pair::from_string("//Alice", None).expect("cannot create keypair");
+
+    let signer: PairSigner<TemplateConfig, _> = PairSigner::new(owner);
+
+    let result = template_client
+        .tx()
+        .sign_and_submit_then_watch_default(&xcm_call, &signer)
+        .await
+        .expect("send through xcm call.")
+        .wait_for_finalized_success()
+        .await
+        .expect("xcm call failed");
+
+    Ok(result)
+}
+
+pub async fn send_export_message(
+    template_client: &Box<OnlineClient<TemplateConfig>>,
+    message: Box<VersionedXcm>,
+) -> Result<ExtrinsicEvents<TemplateConfig>, Box<dyn std::error::Error>> {
+    let dest = Box::new(VersionedMultiLocation::V3(MultiLocation {
+        parents: 2,
+        interior: Junctions::X2(
+            Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+            Junction::AccountKey20 {
+                network: Some(NetworkId::Ethereum { chain_id: 15 }),
+                key: hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39"),
+            },
+        ),
+    }));
+
+    let xcm_call = template::api::template_pallet::calls::TransactionApi
+        .send_export_message_xcm(*dest, *message);
 
     let owner: Pair = Pair::from_string("//Alice", None).expect("cannot create keypair");
 
@@ -219,16 +254,6 @@ pub async fn construct_create_agent_call(
     Ok(call)
 }
 
-pub async fn construct_transact_call(
-    bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
-    target: H160,
-    bytes: Vec<u8>,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    //let call = bridgehub::api::
-
-    Ok(vec![])
-}
-
 pub async fn construct_create_channel_call(
     bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -251,7 +276,7 @@ pub async fn construct_transfer_native_from_agent_call(
     Ok(call)
 }
 
-pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Provider<Ws>>>, contract_address: [u8; 20]) {
+pub async fn wait_for_ethereum_event_at_address<Ev: EthEvent>(ethereum_client: &Box<Arc<Provider<Ws>>>, contract_address: [u8; 20]) {
     let gateway_addr: Address = contract_address.into();
     let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
 

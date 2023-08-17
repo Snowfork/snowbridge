@@ -47,6 +47,8 @@ contract DeployScript is Script {
         ParaID assetHubParaID = ParaID.wrap(vm.envUint("ASSET_HUB_PARAID"));
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
 
+        ParaID templateParaId = ParaID.wrap(vm.envUint("ASSET_HUB_PARAID"));
+
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
             address(beefyClient),
