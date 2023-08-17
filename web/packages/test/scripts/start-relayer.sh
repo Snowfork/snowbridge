@@ -53,6 +53,24 @@ config_relayer(){
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay-asset-hub.json
 
+    # Configure parachain relay (parachain template)
+    jq \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg channelID $TEMPLATE_PARAID \
+        --arg eth_gas_limit $eth_gas_limit \
+    '
+      .source.contracts.Gateway = $k1
+    | .source.contracts.BeefyClient = $k2
+    | .sink.contracts.Gateway = $k1
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
+    | .source."channel-id" = $channelID
+    ' \
+    config/parachain-relay.json > $output_dir/parachain-relay-template.json
+
     # Configure beacon relay
     jq \
         --arg beacon_endpoint_http $beacon_endpoint_http \
@@ -76,6 +94,7 @@ config_relayer(){
     config/execution-relay.json > $output_dir/execution-relay.json
 }
 
+# TODO START RELAYER
 start_relayer()
 {
     echo "Starting relay services"
@@ -106,6 +125,20 @@ start_relayer()
             sleep 20
         done
     ) &
+
+      # Launch parachain relay for parachain template
+      (
+          : > "$output_dir"/parachain-relay-bridge-hub.log
+          while :
+          do
+            echo "Starting parachain-relay (parachain-template) at $(date)"
+              "${relay_bin}" run parachain \
+                  --config "$output_dir/parachain-relay-template.json" \
+                  --ethereum.private-key $parachain_relay_eth_key \
+                  >> "$output_dir"/parachain-relay-template.log 2>&1 || true
+              sleep 20
+          done
+      ) &
 
     # Launch parachain relay for statemint
     (
