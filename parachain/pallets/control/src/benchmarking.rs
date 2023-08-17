@@ -55,6 +55,9 @@ mod benchmarks {
 		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
 			RawOrigin::Signed(caller.clone()).into()
 		));
+		frame_support::assert_ok!(SnowbridgeControl::<T>::create_channel(
+			RawOrigin::Signed(caller.clone()).into()
+		));
 
 		#[extrinsic_call]
 		_(RawOrigin::Signed(caller), OperatingMode::RejectingOutboundMessages, 1, 1);

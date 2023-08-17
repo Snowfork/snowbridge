@@ -79,10 +79,9 @@ pub mod pallet {
 		/// An CreateAgent message was sent to the Gateway
 		CreateAgent { location: Box<MultiLocation>, agent_id: AgentId },
 		/// An CreateChannel message was sent to the Gateway
-		CreateChannel { location: Box<MultiLocation>, para_id: ParaId, agent_id: AgentId },
+		CreateChannel { para_id: ParaId, agent_id: AgentId },
 		/// An UpdateChannel message was sent to the Gateway
 		UpdateChannel {
-			location: Box<MultiLocation>,
 			para_id: ParaId,
 			agent_id: AgentId,
 			mode: OperatingMode,
@@ -92,12 +91,7 @@ pub mod pallet {
 		/// An SetOperatingMode message was sent to the Gateway
 		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
-		TransferNativeFromAgent {
-			location: Box<MultiLocation>,
-			agent_id: AgentId,
-			recipient: H160,
-			amount: u128,
-		},
+		TransferNativeFromAgent { agent_id: AgentId, recipient: H160, amount: u128 },
 	}
 
 	#[pallet::error]
@@ -109,10 +103,15 @@ pub mod pallet {
 		LocationToAgentIdConversionFailed,
 		AgentAlreadyCreated,
 		AgentNotExist,
+		ChannelAlreadyCreated,
+		ChannelNotExist,
 	}
 
 	#[pallet::storage]
 	pub type Agents<T: Config> = StorageMap<_, Twox64Concat, AgentId, (), OptionQuery>;
+
+	#[pallet::storage]
+	pub type Channels<T: Config> = StorageMap<_, Twox64Concat, ParaId, AgentId, OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -187,7 +186,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Sends a message to the Gateway contract to create a new Agent representing `origin`
+		/// Sends a message to the Gateway contract to create a new Channel representing `origin`
 		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(2)]
@@ -195,11 +194,15 @@ pub mod pallet {
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
 			let location: MultiLocation = T::ControlOrigin::ensure_origin(origin)?;
 
-			let (agent_id, some_para_id, location) = Self::convert_location(location)?;
+			let (agent_id, some_para_id, _) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
 			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
+
+			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
+
+			Channels::<T>::insert(para_id, agent_id);
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
@@ -207,11 +210,7 @@ pub mod pallet {
 			};
 			Self::submit_outbound(message)?;
 
-			Self::deposit_event(Event::<T>::CreateChannel {
-				location: Box::new(location),
-				para_id,
-				agent_id,
-			});
+			Self::deposit_event(Event::<T>::CreateChannel { para_id, agent_id });
 
 			Ok(())
 		}
@@ -229,11 +228,13 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::ControlOrigin::ensure_origin(origin)?;
 
-			let (agent_id, some_para_id, location) = Self::convert_location(location)?;
+			let (agent_id, some_para_id, _) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
 			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
+
+			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
@@ -241,14 +242,7 @@ pub mod pallet {
 			};
 			Self::submit_outbound(message)?;
 
-			Self::deposit_event(Event::<T>::UpdateChannel {
-				location: Box::new(location),
-				para_id,
-				agent_id,
-				mode,
-				fee,
-				reward,
-			});
+			Self::deposit_event(Event::<T>::UpdateChannel { para_id, agent_id, mode, fee, reward });
 
 			Ok(())
 		}
@@ -284,7 +278,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::ControlOrigin::ensure_origin(origin)?;
 
-			let (agent_id, _, location) = Self::convert_location(location)?;
+			let (agent_id, _, _) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
@@ -295,7 +289,6 @@ pub mod pallet {
 			Self::submit_outbound(message)?;
 
 			Self::deposit_event(Event::<T>::TransferNativeFromAgent {
-				location: Box::new(location),
 				agent_id,
 				recipient,
 				amount,

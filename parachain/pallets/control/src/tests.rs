@@ -269,3 +269,19 @@ fn create_channel_with_sibling_chain_pallet_as_origin_yields_location_conversion
 		);
 	});
 }
+
+#[test]
+fn create_channel_already_exist_yields_failed() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
+
+		assert_ok!(EthereumControl::create_agent(origin.clone()));
+
+		assert_ok!(EthereumControl::create_channel(origin.clone()));
+
+		frame_support::assert_noop!(
+			EthereumControl::create_channel(origin),
+			Error::<Test>::ChannelAlreadyCreated
+		);
+	});
+}
