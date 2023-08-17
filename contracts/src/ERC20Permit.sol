@@ -7,15 +7,17 @@ import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
 
 import {ERC20} from "./ERC20.sol";
-import {Ownable} from "openzeppelin/access/Ownable.sol";
 
-contract ERC20Permit is IERC20, IERC20Permit, ERC20, Ownable {
+contract ERC20Permit is IERC20, IERC20Permit, ERC20 {
     error PermitExpired();
     error InvalidS();
     error InvalidV();
     error InvalidSignature();
+    error Unauthorized();
 
     bytes32 public immutable DOMAIN_SEPARATOR;
+
+    address public immutable OWNER;
 
     string private constant EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA = "\x19\x01";
 
@@ -30,11 +32,19 @@ contract ERC20Permit is IERC20, IERC20Permit, ERC20, Ownable {
     mapping(address => uint256) public nonces;
 
     constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_, decimals_) {
+        OWNER = msg.sender;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 DOMAIN_TYPE_SIGNATURE_HASH, keccak256(bytes(name_)), keccak256(bytes("1")), block.chainid, address(this)
             )
         );
+    }
+
+    modifier onlyOwner() {
+        if (msg.sender != OWNER) {
+            revert Unauthorized();
+        }
+        _;
     }
 
     /**
