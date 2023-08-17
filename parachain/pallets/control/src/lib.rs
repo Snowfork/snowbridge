@@ -56,7 +56,7 @@ pub mod pallet {
 		/// Max size of params passed to initializer of the new implementation contract
 		type MaxUpgradeDataSize: Get<u32>;
 
-		/// Origin check for `create_agent`
+		/// EnsureOrigin implementation that ensures origin is an XCM location 
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
 
 		/// Converts MultiLocation to H256 in a way that is stable across multiple versions of XCM
