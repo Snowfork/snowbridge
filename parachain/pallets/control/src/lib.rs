@@ -56,7 +56,7 @@ pub mod pallet {
 		/// Max size of params passed to initializer of the new implementation contract
 		type MaxUpgradeDataSize: Get<u32>;
 
-		/// EnsureOrigin implementation that ensures origin is an XCM location 
+		/// EnsureOrigin implementation that ensures origin is an XCM location
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
 
 		/// Converts MultiLocation to H256 in a way that is stable across multiple versions of XCM
@@ -111,7 +111,7 @@ pub mod pallet {
 	pub type Agents<T: Config> = StorageMap<_, Twox64Concat, AgentId, (), OptionQuery>;
 
 	#[pallet::storage]
-	pub type Channels<T: Config> = StorageMap<_, Twox64Concat, ParaId, AgentId, OptionQuery>;
+	pub type Channels<T: Config> = StorageMap<_, Twox64Concat, ParaId, (), OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -194,15 +194,13 @@ pub mod pallet {
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
 			let location: MultiLocation = T::ControlOrigin::ensure_origin(origin)?;
 
-			let (agent_id, some_para_id, _) = Self::convert_location(location)?;
+			let (agent_id, para_id, _) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
-			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
-
 			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
 
-			Channels::<T>::insert(para_id, agent_id);
+			Channels::<T>::insert(para_id, ());
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
@@ -228,11 +226,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::ControlOrigin::ensure_origin(origin)?;
 
-			let (agent_id, some_para_id, _) = Self::convert_location(location)?;
+			let (agent_id, para_id, _) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
-
-			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
 
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
 
@@ -308,7 +304,7 @@ pub mod pallet {
 
 		pub fn convert_location(
 			mut location: MultiLocation,
-		) -> Result<(H256, Option<ParaId>, MultiLocation), DispatchError> {
+		) -> Result<(H256, ParaId, MultiLocation), DispatchError> {
 			// Normalize all locations relative to the relay chain.
 			let relay_location = T::RelayLocation::get();
 			location
@@ -320,7 +316,8 @@ pub mod pallet {
 				MultiLocation { parents: 0, interior: X1(Parachain(index)) } =>
 					Some((index).into()),
 				_ => None,
-			};
+			}
+			.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
 
 			// Hash the location to produce an agent id
 			let agent_id = T::AgentHashedDescription::convert_location(&location)
