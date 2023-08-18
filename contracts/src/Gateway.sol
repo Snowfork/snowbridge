@@ -574,8 +574,9 @@ contract Gateway is IGateway, IInitializable {
 
     /// @inheritdoc IGateway
     function transactAsGateway(ParaID destinationChain, bytes calldata payload) external payable {
-        bytes memory message_payload =
-            SubstrateTypes.Transact(address(this), payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE);
+        bytes memory message_payload = SubstrateTypes.Transact(
+            address(this), bytes1(0x03), payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE
+        );
         _submitOutbound(destinationChain, message_payload, DEFAULT_EXTRA_FEE);
     }
 
@@ -587,14 +588,16 @@ contract Gateway is IGateway, IInitializable {
         uint64 refTime,
         uint64 proofSize
     ) external payable {
-        bytes memory message_payload = SubstrateTypes.Transact(address(this), payload, extraFee, refTime, proofSize);
+        bytes memory message_payload =
+            SubstrateTypes.Transact(address(this), bytes1(0x03), payload, extraFee, refTime, proofSize);
         _submitOutbound(destinationChain, message_payload, extraFee);
     }
 
     /// @inheritdoc IGateway
     function transact(ParaID destinationChain, bytes calldata payload) external payable {
-        bytes memory message_payload =
-            SubstrateTypes.Transact(msg.sender, payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE);
+        bytes memory message_payload = SubstrateTypes.Transact(
+            msg.sender, bytes1(0x01), payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE
+        );
         _submitOutbound(destinationChain, message_payload, 0);
     }
 
@@ -606,7 +609,8 @@ contract Gateway is IGateway, IInitializable {
         uint64 refTime,
         uint64 proofSize
     ) external payable {
-        bytes memory message_payload = SubstrateTypes.Transact(msg.sender, payload, extraFee, refTime, proofSize);
+        bytes memory message_payload =
+            SubstrateTypes.Transact(msg.sender, bytes1(0x01), payload, extraFee, refTime, proofSize);
         _submitOutbound(destinationChain, message_payload, 0);
     }
 }

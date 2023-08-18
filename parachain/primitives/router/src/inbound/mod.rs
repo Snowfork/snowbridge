@@ -62,6 +62,8 @@ pub enum Command {
 	Transact {
 		/// The address of the sender
 		sender: H160,
+		/// OriginKind
+		origin_kind: OriginKind,
 		/// The payload of the transact
 		payload: Vec<u8>,
 		/// The ref_time part of weight
@@ -110,7 +112,7 @@ impl Command {
 		};
 
 		match self {
-			Command::Transact { sender, payload, ref_time, proof_size } => {
+			Command::Transact { sender, origin_kind, payload, ref_time, proof_size } => {
 				log::debug!(target: LOG_TARGET, "transact sender {:?}, payload {:?}", sender, payload);
 
 				let origin_location = AccountKey20 { network: None, key: sender.into() };
@@ -139,7 +141,7 @@ impl Command {
 						.into(),
 					),
 					Transact {
-						origin_kind: OriginKind::Xcm,
+						origin_kind,
 						require_weight_at_most: weight_limit,
 						call: payload.into(),
 					},

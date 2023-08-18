@@ -223,6 +223,9 @@ pub mod pallet {
 				};
 
 			// Attempt to convert to XCM
+			// To Remove: Workaround without creating agent/channel while waiting for #917 to get
+			// merged let sibling_para =
+			// 	MultiLocation { parents: 1, interior: X1(Parachain(1001u32.into())) };
 			let sibling_para =
 				MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
 
