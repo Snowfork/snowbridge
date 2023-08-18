@@ -18,6 +18,6 @@ pub const ETHEREUM_ADDRESS: [u8; 20] = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3d
 // GatewayProxy in local setup
 pub const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
 
-// Agent for sibling parachain
+// Agent for sibling parachain 1001
 pub const SIBLING_AGENT_ID: [u8; 32] =
-    hex!("a0a4510eb0ccc47db0cb6bdadf5db6641ddd423668c4b11fc51889d23794eb5d");
+    hex!("2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793");

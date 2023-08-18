@@ -305,7 +305,8 @@ pub mod pallet {
 		pub fn convert_location(
 			mut location: MultiLocation,
 		) -> Result<(H256, ParaId, MultiLocation), DispatchError> {
-			// Normalize all locations relative to the relay chain.
+			// Todo: Remove Normalize here with Parachain as sibling in view of BridgeHub(not
+			// as child)
 			let relay_location = T::RelayLocation::get();
 			location
 				.reanchor(&relay_location, T::UniversalLocation::get())
