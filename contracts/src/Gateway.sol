@@ -203,7 +203,7 @@ contract Gateway is IGateway, IInitializable {
         return (ch.fee, ch.reward);
     }
 
-    function agentOf(bytes32 agentID) external view returns (address) {
+    function agentOf(bytes32 agentID) external view returns (address) { // TODO get contract address
         CoreStorage.Layout storage $ = CoreStorage.layout();
         return $.agents[agentID];
     }

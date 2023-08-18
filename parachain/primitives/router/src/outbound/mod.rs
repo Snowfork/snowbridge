@@ -45,10 +45,7 @@ where
 		let gateway_location = GatewayLocation::get();
 		let universal_location = UniversalLocation::get();
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 validate message {:?}", message);
-		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 network {:?}", network);
-		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 universal_source {:?}", universal_source);
-		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 channel {:?}", channel);
+		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 validate message: {:?} network: {:?} universal_source: {:?} channel: {:?}", message, network, universal_source, channel);
 
 		let (gateway_network, gateway_junctions) = gateway_location.interior().split_global()
 			.map_err(|_| {
@@ -161,32 +158,34 @@ where
 }
 
 impl<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription>
-EthereumBlobExporter<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription>
+	EthereumBlobExporter<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription>
 {
-	fn validate_destination(destination: &mut Option<InteriorMultiLocation>) -> Result<(), SendError> {
+	fn validate_destination(
+		destination: &mut Option<InteriorMultiLocation>,
+	) -> Result<(), SendError> {
 		let dest = destination.take().ok_or(SendError::MissingArgument)?;
 
 		if dest == Here {
-			return Ok(());
+			return Ok(())
 		}
 
 		match dest.last().take() {
 			Some(AccountKey20 { network: Some(Ethereum { .. }), .. }) => {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "valid destination: ethereum network.");
 				Ok(())
-			}
+			},
 			Some(AccountKey20 { network, .. }) => {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "destination mismatch: expected Ethereum, got {network:?}.");
 				Err(SendError::NotApplicable)
-			}
+			},
 			Some(_) => {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "junction mismatch: expected AccountKey20, got different junction.");
 				Err(SendError::NotApplicable)
-			}
+			},
 			None => {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "missing junction in destination.");
 				Err(SendError::NotApplicable)
-			}
+			},
 		}
 	}
 }
@@ -395,9 +394,12 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			return Err(TransactExpected)
 		};
 
+		let mut encoded_data = data.encode();
+		encoded_data.remove(0);
+
 		Ok(AgentExecuteCommand::Transact {
 			target: contract_address.into(),
-			payload: data.encode(),
+			payload: encoded_data,
 			dynamic_gas: Default::default(),
 		})
 	}
@@ -1673,7 +1675,7 @@ mod tests {
 		let message: Xcm<()> = vec![
 			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 			DescendOrigin(X1(AccountKey20 {
-				network: Some(NetworkId::Ethereum{ chain_id: 15 }),
+				network: Some(NetworkId::Ethereum { chain_id: 15 }),
 				key: hex!("1000000000000000000000000000000000000000"),
 			})),
 			Transact {
@@ -1683,7 +1685,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 

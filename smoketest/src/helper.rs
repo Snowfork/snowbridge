@@ -31,6 +31,8 @@ use templateXcm::{
     VersionedMultiLocation, VersionedXcm,
 };
 use subxt::tx::TxPayload;
+use crate::contracts::agent_executor::{AgentExecuteFilter, TransactFailedFilter, TransactSucceededFilter};
+use crate::contracts::hello_world::HelloWorld;
 
 /// Custom config that works with Statemint
 pub enum TemplateConfig {}
@@ -277,8 +279,8 @@ pub async fn construct_transfer_native_from_agent_call(
 }
 
 pub async fn wait_for_ethereum_event_at_address<Ev: EthEvent>(ethereum_client: &Box<Arc<Provider<Ws>>>, contract_address: [u8; 20]) {
-    let gateway_addr: Address = contract_address.into();
-    let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
+    let addr: Address = contract_address.into();
+    let contract = HelloWorld::new(addr, (*ethereum_client).deref().clone());
 
     let wait_for_blocks = 300;
     let mut stream = ethereum_client
@@ -289,11 +291,7 @@ pub async fn wait_for_ethereum_event_at_address<Ev: EthEvent>(ethereum_client: &
 
     let mut ethereum_event_found = false;
     while let Some(block) = stream.next().await {
-        println!(
-            "Polling ethereum block {:?} for expected event",
-            block.number.unwrap()
-        );
-        if let Ok(events) = gateway
+        if let Ok(events) = contract
             .event::<Ev>()
             .at_block_hash(block.hash.unwrap())
             .query()
@@ -301,6 +299,70 @@ pub async fn wait_for_ethereum_event_at_address<Ev: EthEvent>(ethereum_client: &
         {
             for _ in events {
                 println!("Event found at ethereum block {:?}", block.number.unwrap());
+                ethereum_event_found = true;
+                break;
+            }
+        }
+        if ethereum_event_found {
+            break;
+        }
+    }
+    assert!(ethereum_event_found);
+}
+
+pub async fn wait_for_ethereum_failed_agentexecute(ethereum_client: &Box<Arc<Provider<Ws>>>, contract_address: [u8; 20]) {
+    let addr: Address = contract_address.into();
+    let contract = HelloWorld::new(addr, (*ethereum_client).deref().clone());
+
+    let wait_for_blocks = 300;
+    let mut stream = ethereum_client
+        .subscribe_blocks()
+        .await
+        .unwrap()
+        .take(wait_for_blocks);
+
+    let mut ethereum_event_found = false;
+    while let Some(block) = stream.next().await {
+        if let Ok(events) = contract
+            .event::<TransactSucceededFilter>()
+            .at_block_hash(block.hash.unwrap())
+            .query()
+            .await
+        {
+            for event in events {
+                println!("Event found at ethereum block {:?} reason: {:?}", block.number.unwrap(), event);
+                ethereum_event_found = true;
+                break;
+            }
+        }
+        if ethereum_event_found {
+            break;
+        }
+    }
+    assert!(ethereum_event_found);
+}
+
+pub async fn wait_for_ethereum_agentexecute(ethereum_client: &Box<Arc<Provider<Ws>>>, contract_address: [u8; 20]) {
+    let addr: Address = contract_address.into();
+    let contract = HelloWorld::new(addr, (*ethereum_client).deref().clone());
+
+    let wait_for_blocks = 300;
+    let mut stream = ethereum_client
+        .subscribe_blocks()
+        .await
+        .unwrap()
+        .take(wait_for_blocks);
+
+    let mut ethereum_event_found = false;
+    while let Some(block) = stream.next().await {
+        if let Ok(events) = contract
+            .event::<AgentExecuteFilter>()
+            .at_block_hash(block.hash.unwrap())
+            .query()
+            .await
+        {
+            for event in events {
+                println!("Event found at ethereum block {:?} reason: {:?}", block.number.unwrap(), event);
                 ethereum_event_found = true;
                 break;
             }

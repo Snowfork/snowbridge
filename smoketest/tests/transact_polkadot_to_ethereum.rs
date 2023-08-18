@@ -3,9 +3,10 @@ use ethers::prelude::Address;
 use snowbridge_smoketest::contracts::i_gateway;
 use snowbridge_smoketest::helper::*;
 use hex_literal::hex;
-//use snowbridge_smoketest::contracts::hello_world::{HelloWorld, SaidHelloFilter};
-use snowbridge_smoketest::contracts::hello_world::HelloWorld;
+use snowbridge_smoketest::contracts::hello_world::{HelloWorld, SaidHelloFilter};
 use snowbridge_smoketest::constants::*;
+use snowbridge_smoketest::contracts::agent_executor::{AgentExecuteFilter, TransactFailedFilter, TransactSucceededFilter};
+use snowbridge_smoketest::contracts::i_gateway::InboundMessageDispatchedFilter;
 use snowbridge_smoketest::parachains::template::{
     api::runtime_types as templateTypes, api::runtime_types::xcm as templateXcm,
 };
@@ -31,11 +32,13 @@ const XCM_PROOF_SIZE_REQUIRED: u64 = 18000;
 async fn transact() {
     let test_clients = initial_clients().await.expect("initialize clients");
 
+    let agent_id: [u8; 32] =
+        hex!("2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793");
     let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
     let ethereum_client = *(test_clients.ethereum_client.clone());
     let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
     let agent_address = gateway
-        .agent_of(SIBLING_AGENT_ID)
+        .agent_of(agent_id)
         .await
         .expect("find agent");
 
@@ -84,5 +87,8 @@ async fn transact() {
         result.extrinsic_hash()
     );
 
-   // wait_for_ethereum_event::<SaidHelloFilter>(&test_clients.ethereum_client, HELLO_WORLD_CONTRACT).await;
+    //wait_for_ethereum_agentexecute(&test_clients.ethereum_client, hex!("2ffA5ecdBe006d30397c7636d3e015EEE251369F").into()).await;
+    wait_for_ethereum_event_at_address::<TransactFailedFilter>(&test_clients.ethereum_client, hex!("2ffA5ecdBe006d30397c7636d3e015EEE251369F").into()).await;
+   // wait_for_ethereum_event::<InboundMessageDispatchedFilter>(&test_clients.ethereum_client).await;
+    //wait_for_ethereum_event_at_address::<SaidHelloFilter>(&test_clients.ethereum_client, HELLO_WORLD_CONTRACT).await;
 }
