@@ -60,7 +60,8 @@ async fn do_something_as_arbitrary_transact() {
 
     let receipt = gateway
         .transact_with_destination_chain_and_payload(
-            //todo: workaround change to 1001 when PR#917 get merged and require to create agent/channel before test
+            // todo: temporarily use channel of asset_hub, will change to 1001(template) when PR#917 merged
+            // require agent/channel created
             U256::from(1000),
             call.into(),
             dynamic_fee,
