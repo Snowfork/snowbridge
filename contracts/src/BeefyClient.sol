@@ -211,12 +211,14 @@ contract BeefyClient {
     function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
         external
     {
-        if (commitment.validatorSetID != currentValidatorSet.id && commitment.validatorSetID != nextValidatorSet.id) {
+        bool is_next_session = false;
+        ValidatorSet memory vset = currentValidatorSet;
+        if (commitment.validatorSetID == nextValidatorSet.id) {
+            is_next_session = true;
+            vset = nextValidatorSet;
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
-
-        bool is_next_validator_set = commitment.validatorSetID == nextValidatorSet.id;
-        ValidatorSet memory vset = is_next_validator_set ? nextValidatorSet : currentValidatorSet;
 
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
         if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index))
@@ -293,17 +295,18 @@ contract BeefyClient {
 
         Ticket storage ticket = tickets[ticketID];
 
-        if (commitment.validatorSetID != currentValidatorSet.id && commitment.validatorSetID != nextValidatorSet.id) {
+        bool is_next_session = false;
+        ValidatorSet memory vset = currentValidatorSet;
+        if (commitment.validatorSetID == nextValidatorSet.id) {
+            is_next_session = true;
+            vset = nextValidatorSet;
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
 
-        bool is_next_validator_set = commitment.validatorSetID == nextValidatorSet.id;
+        verifyCommitment(commitmentHash, bitfield, vset, ticket, proofs);
 
-        verifyCommitment(
-            commitmentHash, bitfield, is_next_validator_set ? nextValidatorSet : currentValidatorSet, ticket, proofs
-        );
-
-        if (is_next_validator_set && leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+        if (is_next_session && leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
             revert InvalidMMRLeaf();
         }
 
@@ -314,7 +317,7 @@ contract BeefyClient {
             revert InvalidMMRLeafProof();
         }
 
-        if (is_next_validator_set) {
+        if (is_next_session) {
             currentValidatorSet = nextValidatorSet;
             nextValidatorSet.id = leaf.nextAuthoritySetID;
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
