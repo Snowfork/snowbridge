@@ -42,14 +42,14 @@ beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 
 # Local substrate chain endpoints
 bridgehub_ws_url="${BRIDGE_HUB_WS_URL:-ws://127.0.0.1:11144}"
-bridgehub_para_id="${BRIDGE_HUB_PARAID:-1013}"
 bridgehub_seed="${BRIDGE_HUB_SEED:-//Alice}"
 bridgehub_pallets_owner="${BRIDGE_HUB_PALLETS_OWNER:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d}"
+export BRIDGE_HUB_PARAID="${BRIDGE_HUB_PARAID:-1013}"
 export BRIDGE_HUB_AGENT_ID="${BRIDGE_HUB_AGENT_ID:-0x05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6}"
 
 assethub_ws_url="${ASSET_HUB_WS_URL:-ws://127.0.0.1:12144}"
-assethub_para_id="${ASSET_HUB_PARAID:-1000}"
 assethub_seed="${ASSET_HUB_SEED:-//Alice}"
+export ASSET_HUB_PARAID="${ASSET_HUB_PARAID:-1000}"
 export ASSET_HUB_AGENT_ID="${ASSET_HUB_AGENT_ID:-0x72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4}"
 
 relaychain_ws_url="${RELAYCHAIN_WS_URL:-ws://127.0.0.1:9944}"

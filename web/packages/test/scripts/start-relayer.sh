@@ -22,7 +22,7 @@ config_relayer(){
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg channelID $bridgehub_para_id \
+        --arg channelID $BRIDGE_HUB_PARAID \
         --arg eth_gas_limit $eth_gas_limit \
     '
       .source.contracts.Gateway = $k1
@@ -40,7 +40,7 @@ config_relayer(){
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg channelID $assethub_para_id \
+        --arg channelID $ASSET_HUB_PARAID \
         --arg eth_gas_limit $eth_gas_limit \
     '
       .source.contracts.Gateway = $k1
@@ -67,7 +67,7 @@ config_relayer(){
     jq \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg k1 "$(address_for GatewayProxy)" \
-        --arg channelID $assethub_para_id \
+        --arg channelID $ASSET_HUB_PARAID \
     '
       .source.ethereum.endpoint = $eth_endpoint_ws
     | .source.contracts.Gateway = $k1

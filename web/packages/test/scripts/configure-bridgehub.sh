@@ -9,7 +9,7 @@ config_beacon_checkpoint()
     pushd $root_dir
     local check_point_call=$($relay_bin generate-beacon-checkpoint --spec $active_spec --url $beacon_endpoint_http)
     popd
-    send_governance_transact_from_relaychain $bridgehub_para_id "$check_point_call" 180000000000 900000
+    send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$check_point_call" 180000000000 900000
 }
 
 config_inbound_queue()
@@ -18,7 +18,7 @@ config_inbound_queue()
     local callindex="01"
     local payload="0x$pallet$callindex$(address_for GatewayProxy | tr "[:upper:]" "[:lower:]" | cut -c3-)"
 
-    send_governance_transact_from_relaychain $bridgehub_para_id "$payload"
+    send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$payload"
 }
 
 wait_beacon_chain_ready()
