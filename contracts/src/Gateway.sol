@@ -62,6 +62,7 @@ contract Gateway is IGateway, IInitializable {
     error InvalidConfig();
     error NotProxy();
     error InvalidCodeHash();
+    error TokenAlreadyRegistered();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -172,11 +173,6 @@ contract Gateway is IGateway, IInitializable {
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
             try Gateway(this).transferNativeFromAgent{gas: DISPATCH_GAS}(message.params) {}
-            catch {
-                success = false;
-            }
-        } else if (message.command == Command.RegisterToken) {
-            try Gateway(this).registerToken{gas: DISPATCH_GAS}(message.params) {}
             catch {
                 success = false;
             }
@@ -416,33 +412,15 @@ contract Gateway is IGateway, IInitializable {
         _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
     }
 
-    struct RegisterTokenParams {
-        /// @dev The ID of the agent to register the token for
-        bytes32 agentID;
-        /// @dev The name of the new token
-        string name;
-        /// @dev The short symbol of the new token
-        string symbol;
-        /// @dev The number of decimal places allowed
-        uint8 decimals;
-    }
-
     // @dev Register a new fungible Polkadot token for an agent
-    function registerToken(bytes calldata data) external onlySelf {
+    function setTokenOwnerAgentID(address token, bytes32 agentID) external {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        RegisterTokenParams memory params = abi.decode(data, (RegisterTokenParams));
-
-        address agent = $.agents[params.agentID];
-        if (agent == address(0)) {
-            revert AgentDoesNotExist();
+        if ($.ownerAgentIDs[token] != bytes32(0)) {
+            revert TokenAlreadyRegistered();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.registerToken, (params.name, params.symbol, params.decimals));
-        bytes memory response = _invokeOnAgent(agent, call);
-
-        address token = address(bytes20(response));
-        $.ownerAgentIDs[token] = params.agentID;
+        $.ownerAgentIDs[token] = agentID;
     }
 
     /**

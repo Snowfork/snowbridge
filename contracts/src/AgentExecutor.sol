@@ -5,7 +5,9 @@ pragma solidity 0.8.20;
 import {AgentExecuteCommand, ParaID} from "./Types.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
+import {Agent} from "./Agent.sol";
 import {ERC20} from "./ERC20.sol";
+import {Gateway} from "./Gateway.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 
@@ -15,7 +17,13 @@ contract AgentExecutor {
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
 
-    event TokenRegistered(address, address);
+    event TokenRegistered(address ownerAgent, address token);
+
+    // NOTE: These variables must match those in Agent.sol, in type, name & order of declaration.
+    // These storage variables allow access to the values on the agent when the methods below are invoked with
+    // delegatecall.
+    bytes32 public AGENT_ID;
+    address public GATEWAY;
 
     /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
     /// the `data` parameter is constructed by the BridgeHub parachain.
@@ -27,6 +35,9 @@ contract AgentExecutor {
         if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
             _transferToken(token, recipient, amount);
+        } else if (command == AgentExecuteCommand.RegisterToken) {
+            (string memory name, string memory symbol, uint8 decimals) = abi.decode(params, (string, string, uint8));
+            _registerToken(name, symbol, decimals);
         } else if (command == AgentExecuteCommand.MintToken) {
             (address token, address recipient, uint256 amount) = abi.decode(params, (address, address, uint256));
             _mintToken(token, recipient, amount);
@@ -41,14 +52,15 @@ contract AgentExecutor {
         recipient.safeNativeTransfer(amount);
     }
 
-    /// @dev Create a new ERC20 token with this agent as the owner.
-    function registerToken(string memory name, string memory symbol, uint8 decimals) external {
-        IERC20 token = new ERC20(name, symbol, decimals);
-        emit TokenRegistered(address(this), address(token));
-    }
-
     function burnToken(address token, address sender, uint256 amount) external {
         ERC20(token).burn(sender, amount);
+    }
+
+    /// @dev Create a new ERC20 token with this agent as the owner.
+    function _registerToken(string memory name, string memory symbol, uint8 decimals) internal {
+        IERC20 token = new ERC20(name, symbol, decimals);
+        Gateway(GATEWAY).setTokenOwnerAgentID(address(token), AGENT_ID);
+        emit TokenRegistered(address(this), address(token));
     }
 
     /// @dev Mint ERC20 `token` and transfer to `recipient`. Only callable via `execute`.

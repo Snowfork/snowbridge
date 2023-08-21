@@ -8,6 +8,8 @@ pragma solidity 0.8.20;
 contract Agent {
     error Unauthorized();
 
+    // NOTE: These variables must match those in AgentExecutor.sol, in type, name & order of declaration.
+
     /// @dev The unique ID for this agent, derived from the MultiLocation of the corresponding consensus system on Polkadot
     bytes32 public immutable AGENT_ID;
 
