@@ -12,6 +12,8 @@ library CoreStorage {
         mapping(ParaID paraID => Channel) channels;
         // Agents
         mapping(bytes32 agentID => address) agents;
+        // Token addresses
+        mapping(bytes32 tokenID => address) tokens;
         // AgentIDs of token owners
         mapping(address token => bytes32) ownerAgentIDs;
         // The default fee charged to users for submitting outbound message to Polkadot

@@ -413,13 +413,14 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // @dev Register a new fungible Polkadot token for an agent
-    function setTokenOwnerAgentID(address token, bytes32 agentID) external {
+    function registerToken(bytes32 tokenID, address token, bytes32 agentID) external {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        if ($.ownerAgentIDs[token] != bytes32(0)) {
+        if ($.tokens[tokenID] != address(0) || $.ownerAgentIDs[token] != bytes32(0)) {
             revert TokenAlreadyRegistered();
         }
 
+        $.tokens[tokenID] = token;
         $.ownerAgentIDs[token] = agentID;
     }
 
@@ -473,8 +474,8 @@ contract Gateway is IGateway, IInitializable {
         payable
     {
         CoreStorage.Layout storage $ = CoreStorage.layout();
-        bytes32 tokenOwnerAgentID = $.ownerAgentIDs[token];
 
+        bytes32 tokenOwnerAgentID = $.ownerAgentIDs[token];
         address agent;
         if (tokenOwnerAgentID == bytes32(0)) {
             agent = $.agents[ASSET_HUB_AGENT_ID];

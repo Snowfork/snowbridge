@@ -36,8 +36,9 @@ contract AgentExecutor {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
             _transferToken(token, recipient, amount);
         } else if (command == AgentExecuteCommand.RegisterToken) {
-            (string memory name, string memory symbol, uint8 decimals) = abi.decode(params, (string, string, uint8));
-            _registerToken(name, symbol, decimals);
+            (bytes32 tokenID, string memory name, string memory symbol, uint8 decimals) =
+                abi.decode(params, (bytes32, string, string, uint8));
+            _registerToken(tokenID, name, symbol, decimals);
         } else if (command == AgentExecuteCommand.MintToken) {
             (address token, address recipient, uint256 amount) = abi.decode(params, (address, address, uint256));
             _mintToken(token, recipient, amount);
@@ -57,9 +58,9 @@ contract AgentExecutor {
     }
 
     /// @dev Create a new ERC20 token with this agent as the owner.
-    function _registerToken(string memory name, string memory symbol, uint8 decimals) internal {
+    function _registerToken(bytes32 tokenID, string memory name, string memory symbol, uint8 decimals) internal {
         IERC20 token = new ERC20(name, symbol, decimals);
-        Gateway(GATEWAY).setTokenOwnerAgentID(address(token), AGENT_ID);
+        Gateway(GATEWAY).registerToken(tokenID, address(token), AGENT_ID);
         emit TokenRegistered(address(this), address(token));
     }
 
