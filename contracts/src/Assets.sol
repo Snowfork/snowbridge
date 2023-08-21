@@ -53,8 +53,10 @@ library Assets {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         if (tokenOwnerAgentID == bytes32(0)) {
+            // Ethereum-native token: transfer to agent
             _transferToAgent(agent, token, sender, amount);
         } else {
+            // Polkadot-native token: burn wrapped token
             _burn(agentExecutor, agent, token, sender, amount);
         }
 
@@ -85,8 +87,10 @@ library Assets {
         }
 
         if (tokenOwnerAgentID == bytes32(0)) {
+            // Ethereum-native token: transfer to agent
             _transferToAgent(agent, token, sender, amount);
         } else {
+            // Polkadot-native token: burn wrapped token
             _burn(agentExecutor, agent, token, sender, amount);
         }
 
