@@ -1,12 +1,14 @@
+use std::ops::Deref;
+use std::sync::Arc;
 use ethers::abi::{Abi, Token};
-use ethers::prelude::Address;
+use ethers::prelude::{
+    Address, Middleware, Provider, Ws,
+};
 use snowbridge_smoketest::contracts::i_gateway;
 use snowbridge_smoketest::helper::*;
 use hex_literal::hex;
 use snowbridge_smoketest::contracts::hello_world::{HelloWorld, SaidHelloFilter};
 use snowbridge_smoketest::constants::*;
-use snowbridge_smoketest::contracts::agent_executor::{AgentExecuteFilter, TransactFailedFilter, TransactSucceededFilter};
-use snowbridge_smoketest::contracts::i_gateway::InboundMessageDispatchedFilter;
 use snowbridge_smoketest::parachains::template::{
     api::runtime_types as templateTypes, api::runtime_types::xcm as templateXcm,
 };
@@ -22,9 +24,9 @@ use templateXcm::{
     },
     VersionedXcm,
 };
+use futures::StreamExt;
 
-const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0");
-//const BRIDGE_HUB_FEE_REQUIRED: u128 = 1000000000;
+const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("B1185EDE04202fE62D38F5db72F71e38Ff3E8305");
 const XCM_WEIGHT_REQUIRED: u64 = 3000000000;
 const XCM_PROOF_SIZE_REQUIRED: u64 = 18000;
 
@@ -54,6 +56,8 @@ async fn transact() {
     let encoded_data = function
         .encode_input(&[Token::String("Hello, Clara!".to_string())])
         .unwrap();
+
+    println!("data is {}", hex::encode(encoded_data.clone()));
 
     let contract_location = Junctions::X1(AccountKey20 {
         network: Some(Ethereum { chain_id: 15 }),
@@ -87,8 +91,38 @@ async fn transact() {
         result.extrinsic_hash()
     );
 
-    //wait_for_ethereum_agentexecute(&test_clients.ethereum_client, hex!("2ffA5ecdBe006d30397c7636d3e015EEE251369F").into()).await;
-    wait_for_ethereum_event_at_address::<TransactFailedFilter>(&test_clients.ethereum_client, hex!("2ffA5ecdBe006d30397c7636d3e015EEE251369F").into()).await;
-   // wait_for_ethereum_event::<InboundMessageDispatchedFilter>(&test_clients.ethereum_client).await;
-    //wait_for_ethereum_event_at_address::<SaidHelloFilter>(&test_clients.ethereum_client, HELLO_WORLD_CONTRACT).await;
+    wait_for_arbitrary_ethereum_contract_event(&test_clients.ethereum_client, HELLO_WORLD_CONTRACT).await;
+}
+
+
+pub async fn wait_for_arbitrary_ethereum_contract_event(ethereum_client: &Box<Arc<Provider<Ws>>>, contract_address: [u8; 20]) {
+    let addr: Address = contract_address.into();
+    let contract = HelloWorld::new(addr, (*ethereum_client).deref().clone());
+
+    let wait_for_blocks = 300;
+    let mut stream = ethereum_client
+        .subscribe_blocks()
+        .await
+        .unwrap()
+        .take(wait_for_blocks);
+
+    let mut ethereum_event_found = false;
+    while let Some(block) = stream.next().await {
+        if let Ok(events) = contract
+            .event::<SaidHelloFilter>()
+            .at_block_hash(block.hash.unwrap())
+            .query()
+            .await
+        {
+            for _ in events {
+                println!("Event found at ethereum block {:?}", block.number.unwrap());
+                ethereum_event_found = true;
+                break;
+            }
+        }
+        if ethereum_event_found {
+            break;
+        }
+    }
+    assert!(ethereum_event_found);
 }

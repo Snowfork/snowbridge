@@ -16,10 +16,8 @@ contract AgentExecutor {
 
     error NotEnoughGas();
 
-    event TransactFailed();
-    event TransactSucceeded();
-    event AgentExecute(AgentExecuteCommand command);
-    event ExecuteCall(address target);
+    event TransactFailed(address target, bytes result, bytes payload);
+    event TransactSucceeded(bytes result);
 
     /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
     /// the `data` parameter is constructed by the BridgeHub parachain.
@@ -28,7 +26,6 @@ contract AgentExecutor {
     function execute(address, bytes memory data) external {
         (AgentExecuteCommand command, bytes memory params) = abi.decode(data, (AgentExecuteCommand, bytes));
 
-        emit AgentExecute(command);
         if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
             _transferToken(token, recipient, amount);
@@ -57,11 +54,11 @@ contract AgentExecutor {
         if (gasleft() < dynamicGas) {
             revert NotEnoughGas();
         }
-        (bool success, bytes memory result) = target.call{gas: dynamicGas}(payload);
+        (bool success, bytes memory result) = target.call{gas: 200000 }(payload);
         if (success) {
-            emit TransactSucceeded();
+            emit TransactSucceeded(result);
         } else {
-            emit TransactFailed();
+            emit TransactFailed(target, result, payload);
         }
     }
 }

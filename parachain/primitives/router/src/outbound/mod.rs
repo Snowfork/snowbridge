@@ -269,8 +269,6 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 	fn is_transact(&self) -> bool {
 		for instruction in self.iter.clone() {
-			// TODO not certain if this is OK to differentiate between TransferToken and Transact
-			// messages
 			if let Transact { .. } = instruction {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "is transact message.");
 				return true
@@ -394,12 +392,12 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			return Err(TransactExpected)
 		};
 
-		let mut encoded_data = data.encode();
-		encoded_data.remove(0);
+		let encoded: Vec<u8> = data.encode(); // To get a Vec<u8> representation of the calldata
+		let decoded: Vec<u8> = Decode::decode(&mut &encoded[..]).unwrap(); // To remove the prepend length of the scale encoded bytes
 
 		Ok(AgentExecuteCommand::Transact {
 			target: contract_address.into(),
-			payload: encoded_data,
+			payload: decoded,
 			dynamic_gas: Default::default(),
 		})
 	}
@@ -1681,7 +1679,7 @@ mod tests {
 			Transact {
 				origin_kind: OriginKind::Native,
 				require_weight_at_most: Default::default(),
-				call: vec![195, 169, 177, 197, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into(),
+				call: hex!("c3a9b1c50000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000d48656c6c6f2c20436c6172612100000000000000000000000000000000000000").to_vec().into(),
 			},
 			SetTopic([0; 32]),
 		]
@@ -1691,7 +1689,7 @@ mod tests {
 
 		let expected_payload = AgentExecuteCommand::Transact {
 			target: hex!("1000000000000000000000000000000000000000").into(),
-			payload: vec![195, 169, 177, 197, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into(),
+			payload: hex!("c3a9b1c50000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000d48656c6c6f2c20436c6172612100000000000000000000000000000000000000").into(),
 			dynamic_gas: Default::default(),
 		};
 		let result = converter.convert();
