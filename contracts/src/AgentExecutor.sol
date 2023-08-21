@@ -6,7 +6,6 @@ import {AgentExecuteCommand, ParaID} from "./Types.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {ERC20} from "./ERC20.sol";
-import {ERC20Permit} from "./ERC20Permit.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 
@@ -47,7 +46,7 @@ contract AgentExecutor {
 
     /// @dev Mint ERC20 `token` and transfer to `recipient`. Only callable via `execute`.
     function _mintToken(address token, address recipient, uint256 amount) internal {
-        ERC20Permit(token).mint(recipient, amount);
+        ERC20(token).mint(recipient, amount);
     }
 
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2023 Axelar Network
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.

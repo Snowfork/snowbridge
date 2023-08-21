@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2023 Axelar Network
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
-pragma solidity ^0.8.9;
+pragma solidity 0.8.20;
 
 interface IERC20Permit {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
