@@ -206,12 +206,27 @@ pub enum AgentExecuteCommand {
 		/// The amount of tokens to transfer
 		amount: u128,
 	},
+	RegisterToken {
+		// TODO: docstrings
+		token_id: H256,
+		name: String,
+		symbol: String,
+		decimals: u8,
+	},
+	MintToken {
+		// TODO: update to token_id
+		token: H160,
+		recipient: H160,
+		amount: u128,
+	},
 }
 
 impl AgentExecuteCommand {
 	fn index(&self) -> u8 {
 		match self {
 			AgentExecuteCommand::TransferToken { .. } => 0,
+			AgentExecuteCommand::RegisterToken { .. } => 1,
+			AgentExecuteCommand::MintToken { .. } => 2,
 		}
 	}
 
@@ -219,6 +234,24 @@ impl AgentExecuteCommand {
 	pub fn abi_encode(&self) -> Vec<u8> {
 		match self {
 			AgentExecuteCommand::TransferToken { token, recipient, amount } => ethabi::encode(&[
+				Token::Uint(self.index().into()),
+				Token::Bytes(ethabi::encode(&[
+					Token::Address(*token),
+					Token::Address(*recipient),
+					Token::Uint(U256::from(*amount)),
+				])),
+			]),
+			AgentExecuteCommand::RegisterToken { token_id, name, symbol, decimals } =>
+				ethabi::encode(&[
+					Token::Uint(self.index().into()),
+					Token::Bytes(ethabi::encode(&[
+						Token::FixedBytes(token_id.as_bytes().to_owned()),
+						Token::String(name.as_bytes().to_owned()),
+						Token::String(symbol.as_bytes().to_owned()),
+						Token::Uint(U256::from(*decimals)),
+					])),
+				]),
+			AgentExecuteCommand::MintToken { token, recipient, amount } => ethabi::encode(&[
 				Token::Uint(self.index().into()),
 				Token::Bytes(ethabi::encode(&[
 					Token::Address(*token),
