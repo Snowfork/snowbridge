@@ -40,8 +40,8 @@ contract AgentExecutor {
                 abi.decode(params, (bytes32, string, string, uint8));
             _registerToken(tokenID, name, symbol, decimals);
         } else if (command == AgentExecuteCommand.MintToken) {
-            (address token, address recipient, uint256 amount) = abi.decode(params, (address, address, uint256));
-            _mintToken(token, recipient, amount);
+            (bytes32 tokenID, address recipient, uint256 amount) = abi.decode(params, (bytes32, address, uint256));
+            _mintToken(tokenID, recipient, amount);
         }
     }
 
@@ -65,7 +65,8 @@ contract AgentExecutor {
     }
 
     /// @dev Mint ERC20 `token` and transfer to `recipient`. Only callable via `execute`.
-    function _mintToken(address token, address recipient, uint256 amount) internal {
+    function _mintToken(bytes32 tokenID, address recipient, uint256 amount) internal {
+        address token = Gateway(GATEWAY).getTokenAddress(tokenID);
         ERC20(token).mint(recipient, amount);
     }
 

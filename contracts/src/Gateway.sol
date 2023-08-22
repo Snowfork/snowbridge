@@ -424,6 +424,11 @@ contract Gateway is IGateway, IInitializable {
         $.ownerAgentIDs[token] = agentID;
     }
 
+    function getTokenAddress(bytes32 tokenID) external view returns (address) {
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+        return $.tokens[tokenID];
+    }
+
     /**
      * Assets
      */
