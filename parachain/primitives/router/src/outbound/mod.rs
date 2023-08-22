@@ -103,6 +103,7 @@ where
 
 		let mut converter = XcmConverter::new(&message, &gateway_network, &gateway_address);
 		log::info!(target: "xcm::ethereum_blob_exporter", "🤩 converting.");
+
 		let (agent_execute_command, max_target_fee) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
@@ -200,6 +201,7 @@ enum XcmConverterError {
 	WithdrawExpected,
 	TransactExpected,
 	DescendOriginExpected,
+	SovereignOriginExpected,
 	DepositExpected,
 	NoReserveAssets,
 	FilterDoesNotConsumeAllAssets,
@@ -232,8 +234,14 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		// Get target fees if specified.
 		let max_target_fee = self.fee_info()?;
 
-		// Get withdraw/deposit and make native tokens create message.
-		let result = self.agent_execute_message()?;
+		let result ;
+		if self.is_transact() {
+			// Construct a message to send an arbitrary call to an Ethereum contract.
+			result = self.transact_message()?;
+		} else {
+			// Get withdraw/deposit and make native tokens create message.
+			result = self.native_tokens_unlock_message()?;
+		}
 
 		// Match last set topic. Later could use message id for replies
 		let _ = match self.next()? {
@@ -276,14 +284,6 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		}
 		log::trace!(target: "xcm::ethereum_blob_exporter", "is not transact message.");
 		false
-	}
-
-	fn agent_execute_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
-		if self.is_transact() {
-			self.transact_message()
-		} else {
-			self.native_tokens_unlock_message()
-		}
 	}
 
 	fn native_tokens_unlock_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
@@ -382,11 +382,12 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		log::trace!(target: "xcm::ethereum_blob_exporter", "before transact.");
 
 		let data = if let Transact {
-			origin_kind: _origin_kind,
+			origin_kind,
 			require_weight_at_most: _require_weight_at_most,
 			call,
 		} = self.next()?
 		{
+			//ensure!(*origin_kind == OriginKind::SovereignAccount, SovereignOriginExpected);
 			call
 		} else {
 			return Err(TransactExpected)

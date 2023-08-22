@@ -54,7 +54,7 @@ contract AgentExecutor {
         if (gasleft() < dynamicGas) {
             revert NotEnoughGas();
         }
-        (bool success, bytes memory result) = target.call{gas: 200000 }(payload);
+        (bool success, bytes memory result) = target.call{gas: 200000}(payload);
         if (success) {
             emit TransactSucceeded(result);
         } else {

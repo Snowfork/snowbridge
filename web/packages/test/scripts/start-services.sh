@@ -50,6 +50,11 @@ echo "Config bridgehub"
 source scripts/configure-bridgehub.sh
 configure_bridgehub
 
+# 7. config template parachain
+echo "Config template parachain"
+source scripts/configure-template-parachain.sh
+configure_template_parachain
+
 if [ "$skip_relayer" == "false" ]; then
     # 7. start relayer
     echo "Starting relayers"

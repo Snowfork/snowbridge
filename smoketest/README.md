@@ -31,6 +31,14 @@ Send an ethereum transaction to the Gateway to send tokens to the AssetHub parac
 cargo test --test send_token -- --nocapture
 ```
 
+## Arbitrary Contract Calls
+
+### Polkadot to Ethereum
+
+```
+cargo test --test transact_polkadot_to_ethereum -- --nocapture
+```
+
 ## Governance
 
 ### Upgrade the Gateway

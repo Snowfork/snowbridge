@@ -26,7 +26,7 @@ use templateXcm::{
 };
 use futures::StreamExt;
 
-const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("B1185EDE04202fE62D38F5db72F71e38Ff3E8305");
+const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("b1185ede04202fe62d38f5db72f71e38ff3e8305");
 const XCM_WEIGHT_REQUIRED: u64 = 3000000000;
 const XCM_PROOF_SIZE_REQUIRED: u64 = 18000;
 
@@ -43,6 +43,8 @@ async fn transact() {
         .agent_of(agent_id)
         .await
         .expect("find agent");
+
+    assert!(!agent_address.is_zero(), "agent address not found");
 
     println!("agent address {}", hex::encode(agent_address));
 
