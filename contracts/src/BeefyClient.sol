@@ -211,12 +211,12 @@ contract BeefyClient {
     function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
         external
     {
-        bool is_next_session = false;
-        ValidatorSet memory vset = currentValidatorSet;
-        if (commitment.validatorSetID == nextValidatorSet.id) {
-            is_next_session = true;
+        ValidatorSet memory vset;
+        if (commitment.validatorSetID == currentValidatorSet.id) {
+            vset = currentValidatorSet;
+        } else if (commitment.validatorSetID == nextValidatorSet.id) {
             vset = nextValidatorSet;
-        } else if (commitment.validatorSetID != currentValidatorSet.id) {
+        } else {
             revert InvalidCommitment();
         }
 
@@ -294,11 +294,13 @@ contract BeefyClient {
         (bytes32 commitmentHash, bytes32 ticketID) = validate(commitment, bitfield);
 
         bool is_next_session = false;
-        ValidatorSet memory vset = currentValidatorSet;
+        ValidatorSet memory vset;
         if (commitment.validatorSetID == nextValidatorSet.id) {
             is_next_session = true;
             vset = nextValidatorSet;
-        } else if (commitment.validatorSetID != currentValidatorSet.id) {
+        } else if (commitment.validatorSetID == currentValidatorSet.id) {
+            vset = currentValidatorSet;
+        } else {
             revert InvalidCommitment();
         }
 
