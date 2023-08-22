@@ -234,7 +234,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		// Get target fees if specified.
 		let max_target_fee = self.fee_info()?;
 
-		let result ;
+		let result;
 		if self.is_transact() {
 			// Construct a message to send an arbitrary call to an Ethereum contract.
 			result = self.transact_message()?;
@@ -387,7 +387,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			call,
 		} = self.next()?
 		{
-			//ensure!(*origin_kind == OriginKind::SovereignAccount, SovereignOriginExpected);
+			ensure!(*origin_kind == OriginKind::SovereignAccount, SovereignOriginExpected);
 			call
 		} else {
 			return Err(TransactExpected)

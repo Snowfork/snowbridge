@@ -70,7 +70,7 @@ async fn transact() {
         Instruction::UnpaidExecution { weight_limit: Unlimited, check_origin: None },// TODO update to paid
         Instruction::DescendOrigin(contract_location), // TODO not sure if this is right, want to pass the contract address
         Instruction::Transact {
-            origin_kind: OriginKind::Xcm,
+            origin_kind: OriginKind::SovereignAccount,
             require_weight_at_most: Weight {
                 ref_time: XCM_WEIGHT_REQUIRED,
                 proof_size: XCM_PROOF_SIZE_REQUIRED,
