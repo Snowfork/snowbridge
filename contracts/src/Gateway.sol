@@ -8,7 +8,7 @@ import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command} from "./Types.sol";
+import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command, AgentExecuteCommand} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -133,6 +133,9 @@ contract Gateway is IGateway, IInitializable {
         // Otherwise malicious relayers can break the bridge by allowing the message handlers below to run out gas and fail silently.
         // In this scenario case, the channel's state would have been updated to accept the message (by virtue of the nonce increment), yet the actual message
         // dispatch would have failed
+
+        uint256 gas = computeGas(message.command, message.params);
+
         if (gasleft() < DISPATCH_GAS + BUFFER_GAS) {
             revert NotEnoughGas();
         }
@@ -141,37 +144,37 @@ contract Gateway is IGateway, IInitializable {
 
         // Dispatch message to a handler
         if (message.command == Command.AgentExecute) {
-            try Gateway(this).agentExecute{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).agentExecute{gas: gas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.CreateAgent) {
-            try Gateway(this).createAgent{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).createAgent{gas: gas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.CreateChannel) {
-            try Gateway(this).createChannel{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).createChannel{gas: gas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.UpdateChannel) {
-            try Gateway(this).updateChannel{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).updateChannel{gas: gas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.SetOperatingMode) {
-            try Gateway(this).setOperatingMode{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).setOperatingMode{gas: gas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).transferNativeFromAgent{gas: gas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.Upgrade) {
-            try Gateway(this).upgrade{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).upgrade{gas: gas}(message.params) {}
             catch {
                 success = false;
             }
@@ -462,6 +465,22 @@ contract Gateway is IGateway, IInitializable {
             // for unit tests, verification is bypassed
             return true;
         }
+    }
+
+    function computeGas(Command command, bytes memory params) internal view returns (uint256) {
+        if (command != Command.AgentExecute) {
+            return DISPATCH_GAS;
+        }
+
+        (AgentExecuteCommand agentExecuteCommand, bytes memory innerParams) = abi.decode(params, (AgentExecuteCommand, bytes));
+
+        if (agentExecuteCommand != AgentExecuteCommand.Transact) {
+            return DISPATCH_GAS;
+        }
+
+        (, , uint256 dynamicGas) = abi.decode(innerParams, (address, bytes, uint256));
+
+        return DISPATCH_GAS + dynamicGas;
     }
 
     // Submit an outbound message to Polkadot

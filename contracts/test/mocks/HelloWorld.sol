@@ -3,10 +3,10 @@
 pragma solidity ^0.8.0;
 
 contract HelloWorld {
-    event SaidHello(string message);
+    event SaidHello(string indexed message);
 
     function sayHello(string memory _text) public {
-        string memory fullMessage = string(abi.encodePacked("Hello world ", _text));
+        string memory fullMessage = string(abi.encodePacked("Hello there, ", _text));
         emit SaidHello(fullMessage);
     }
 }

@@ -25,6 +25,7 @@ import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 import {AgentExecuteCommand, InboundMessage, OperatingMode, ParaID, Config, Command} from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
+import "./mocks/HelloWorld.sol";
 
 contract GatewayTest is Test {
     event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool result);
@@ -37,6 +38,7 @@ contract GatewayTest is Test {
     event AgentCreated(bytes32 agentID, address agent);
     event ChannelCreated(ParaID indexed paraID);
     event ChannelUpdated(ParaID indexed paraID);
+    event SaidHello(string indexed message);
 
     event Upgraded(address indexed implementation);
 
@@ -255,13 +257,30 @@ contract GatewayTest is Test {
      * Handlers
      */
 
-    function testAgentExecution() public {
+    function testAgentExecutionTransferToken() public {
         token.transfer(address(assetHubAgent), 1);
 
         Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
             agentID: assetHubAgentID,
             payload: abi.encode(AgentExecuteCommand.TransferToken, abi.encode(address(token), address(this), 1))
         });
+
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+    }
+
+    function testAgentExecutionTransact() public {
+        HelloWorld helloWorld = new HelloWorld();
+
+        bytes memory payload = abi.encodeWithSignature("sayHello(string)", "Clara");
+
+        Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(helloWorld), payload, 100))
+        });
+
+        // Expect the HelloWorld contract to emit `SaidHello`
+        vm.expectEmit({checkTopic1: true, checkTopic2: false, checkTopic3: false, checkData: false});
+        emit SaidHello("Hello there, Clara");
 
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
