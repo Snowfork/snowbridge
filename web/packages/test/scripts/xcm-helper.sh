@@ -6,7 +6,7 @@ source scripts/set-env.sh
 send_governance_transact_from_relaychain() {
     local para_id=$1
     local hex_encoded_data=$2
-    local require_weight_at_most_ref_time=${3:-200000000}
+    local require_weight_at_most_ref_time=${3:-2000000000}
     local require_weight_at_most_proof_size=${4:-12000}
     echo "  calling send_governance_transact:"
     echo "      relay_url: ${relaychain_ws_url}"
