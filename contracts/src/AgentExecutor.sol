@@ -32,16 +32,16 @@ contract AgentExecutor {
     function execute(address, bytes memory data) external {
         (AgentExecuteCommand command, bytes memory params) = abi.decode(data, (AgentExecuteCommand, bytes));
 
-        if (command == AgentExecuteCommand.TransferToken) {
-            (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
-            _transferToken(token, recipient, amount);
-        } else if (command == AgentExecuteCommand.RegisterToken) {
+        if (command == AgentExecuteCommand.RegisterToken) {
             (bytes32 tokenID, string memory name, string memory symbol, uint8 decimals) =
                 abi.decode(params, (bytes32, string, string, uint8));
             _registerToken(tokenID, name, symbol, decimals);
         } else if (command == AgentExecuteCommand.MintToken) {
             (bytes32 tokenID, address recipient, uint256 amount) = abi.decode(params, (bytes32, address, uint256));
             _mintToken(tokenID, recipient, amount);
+        } else if (command == AgentExecuteCommand.TransferToken) {
+            (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
+            _transferToken(token, recipient, amount);
         }
     }
 
