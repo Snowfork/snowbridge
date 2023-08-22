@@ -293,8 +293,6 @@ contract BeefyClient {
     ) external {
         (bytes32 commitmentHash, bytes32 ticketID) = validate(commitment, bitfield);
 
-        Ticket storage ticket = tickets[ticketID];
-
         bool is_next_session = false;
         ValidatorSet memory vset = currentValidatorSet;
         if (commitment.validatorSetID == nextValidatorSet.id) {
@@ -304,7 +302,7 @@ contract BeefyClient {
             revert InvalidCommitment();
         }
 
-        verifyCommitment(commitmentHash, bitfield, vset, ticket, proofs);
+        verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
 
         if (is_next_session && leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
             revert InvalidMMRLeaf();
@@ -441,11 +439,12 @@ contract BeefyClient {
      */
     function verifyCommitment(
         bytes32 commitmentHash,
+        bytes32 ticketID,
         uint256[] calldata bitfield,
         ValidatorSet memory vset,
-        Ticket storage ticket,
         ValidatorProof[] calldata proofs
     ) internal view {
+        Ticket storage ticket = tickets[ticketID];
         // Verify that enough signature proofs have been supplied
         uint256 signatureCount = minimumSignatureThreshold(vset.length);
         if (proofs.length != signatureCount) {
