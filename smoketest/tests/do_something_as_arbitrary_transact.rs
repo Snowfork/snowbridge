@@ -59,7 +59,7 @@ async fn do_something_as_arbitrary_transact() {
     let dynamic_fee = parse_units("100000000000000", "wei").unwrap().into();
 
     let receipt = gateway
-        .transact_with_destination_chain_and_payload(
+        .transact_through_signed_with_destination_chain_and_payload(
             // todo: temporarily use channel of asset_hub, will change to 1001(template) when PR#917 merged
             // require agent/channel created
             U256::from(1000),

@@ -50,9 +50,9 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         emit Initialized(d0, d1);
     }
 
-    function transact(ParaID destinationChain, bytes calldata payload) external payable {}
+    function transactThroughSigned(ParaID destinationChain, bytes calldata payload) external payable {}
 
-    function transact(
+    function transactThroughSigned(
         ParaID destinationChain,
         bytes calldata payload,
         uint256 extraFee,
@@ -60,10 +60,22 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         uint64 proofSize
     ) external payable {}
 
-    function transactAsGateway(ParaID destinationChain, bytes calldata payload) external payable {}
+    function transactThroughSovereign(ParaID destinationChain, bytes calldata payload) external payable {}
 
-    function transactAsGateway(
+    function transactThroughSovereign(
         ParaID destinationChain,
+        bytes1 originKind,
+        bytes calldata payload,
+        uint256 extraFee,
+        uint64 refTime,
+        uint64 proofSize
+    ) external payable {}
+
+    function transactThroughGateway(ParaID destinationChain, bytes calldata payload) external payable {}
+
+    function transactThroughGateway(
+        ParaID destinationChain,
+        bytes1 originKind,
         bytes calldata payload,
         uint256 extraFee,
         uint64 refTime,

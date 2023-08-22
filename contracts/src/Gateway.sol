@@ -30,6 +30,7 @@ contract Gateway is IGateway, IInitializable {
     uint256 internal immutable DISPATCH_GAS;
     address internal immutable AGENT_EXECUTOR;
 
+    // Todo: Could be a dynamic registry map set by destination chain
     // Default params for arbitrary transact
     // should be big enough to cover most of the transact cost in destination chain
     // could be somehow overestimated since the surplus will be refunded
@@ -479,6 +480,7 @@ contract Gateway is IGateway, IInitializable {
         _ensureOutboundMessagingEnabled(channel);
 
         // Ensure the user has enough funds for this message to be accepted
+        // Todo: extraFee could be charged in dest chain's native ERC20 asset which depends on https://github.com/Snowfork/snowbridge/pull/927
         if (msg.value < channel.fee + extraFee) {
             revert FeePaymentToLow();
         }
@@ -573,7 +575,7 @@ contract Gateway is IGateway, IInitializable {
      */
 
     /// @inheritdoc IGateway
-    function transactAsGateway(ParaID destinationChain, bytes calldata payload) external payable {
+    function transactThroughGateway(ParaID destinationChain, bytes calldata payload) external payable {
         bytes memory message_payload = SubstrateTypes.Transact(
             address(this), bytes1(0x03), payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE
         );
@@ -581,20 +583,46 @@ contract Gateway is IGateway, IInitializable {
     }
 
     /// @inheritdoc IGateway
-    function transactAsGateway(
+    function transactThroughGateway(
         ParaID destinationChain,
+        bytes1 originKind,
         bytes calldata payload,
         uint256 extraFee,
         uint64 refTime,
         uint64 proofSize
     ) external payable {
         bytes memory message_payload =
-            SubstrateTypes.Transact(address(this), bytes1(0x03), payload, extraFee, refTime, proofSize);
+            SubstrateTypes.Transact(address(this), originKind, payload, extraFee, refTime, proofSize);
         _submitOutbound(destinationChain, message_payload, extraFee);
     }
 
     /// @inheritdoc IGateway
-    function transact(ParaID destinationChain, bytes calldata payload) external payable {
+    function transactThroughSovereign(ParaID destinationChain, bytes calldata payload) external payable {
+        Channel storage channel = _ensureChannel(destinationChain);
+        bytes memory message_payload = SubstrateTypes.Transact(
+            address(channel.agent), bytes1(0x03), payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE
+        );
+        // Todo: For transact call, except for Ether extraFee could be charged in that chain's native ERC20 asset
+        _submitOutbound(destinationChain, message_payload, DEFAULT_EXTRA_FEE);
+    }
+
+    /// @inheritdoc IGateway
+    function transactThroughSovereign(
+        ParaID destinationChain,
+        bytes1 originKind,
+        bytes calldata payload,
+        uint256 extraFee,
+        uint64 refTime,
+        uint64 proofSize
+    ) external payable {
+        Channel storage channel = _ensureChannel(destinationChain);
+        bytes memory message_payload =
+            SubstrateTypes.Transact(address(channel.agent), originKind, payload, extraFee, refTime, proofSize);
+        _submitOutbound(destinationChain, message_payload, extraFee);
+    }
+
+    /// @inheritdoc IGateway
+    function transactThroughSigned(ParaID destinationChain, bytes calldata payload) external payable {
         bytes memory message_payload = SubstrateTypes.Transact(
             msg.sender, bytes1(0x01), payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE
         );
@@ -602,7 +630,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     /// @inheritdoc IGateway
-    function transact(
+    function transactThroughSigned(
         ParaID destinationChain,
         bytes calldata payload,
         uint256 extraFee,

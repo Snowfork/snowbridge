@@ -89,8 +89,9 @@ async fn register_token_as_arbitrary_transact() {
     let dynamic_fee = parse_units("100000000000000", "wei").unwrap().into();
 
     let receipt = gateway
-        .transact_as_gateway_with_destination_chain_and_payload(
+        .transact_through_gateway_with_destination_chain_and_origin_kind(
             U256::from(1000),
+            [3], // xcm origin
             create_call.into(),
             dynamic_fee,
             400_000_000,

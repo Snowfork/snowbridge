@@ -81,7 +81,7 @@ type VerificationProof struct {
 
 // GatewayMetaData contains all meta data concerning the Gateway contract.
 var GatewayMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"}],\"name\":\"AgentCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"AgentFundsWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"name\":\"InboundMessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"enumOperatingMode\",\"name\":\"mode\",\"type\":\"uint8\"}],\"name\":\"OperatingModeChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"destination\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"OutboundMessageAccepted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"destinationAddress\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"TokenSent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"}],\"name\":\"agentOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelFeeRewardOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelNoncesOf\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelOperatingModeOf\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"implementation\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"operatingMode\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"registerToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"destinationAddress\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"sendToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"destinationAddress\",\"type\":\"address\"},{\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"sendToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"enumCommand\",\"name\":\"command\",\"type\":\"uint8\"},{\"internalType\":\"bytes\",\"name\":\"params\",\"type\":\"bytes\"}],\"internalType\":\"structInboundMessage\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"components\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"stateRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"kind\",\"type\":\"uint256\"},{\"internalType\":\"bytes4\",\"name\":\"consensusEngineID\",\"type\":\"bytes4\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"internalType\":\"structVerification.DigestItem[]\",\"name\":\"digestItems\",\"type\":\"tuple[]\"}],\"internalType\":\"structVerification.ParachainHeader\",\"name\":\"header\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structVerification.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structVerification.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"leafProofOrder\",\"type\":\"uint256\"}],\"internalType\":\"structVerification.Proof\",\"name\":\"headerProof\",\"type\":\"tuple\"}],\"name\":\"submitInbound\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"extraFee\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"refTime\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"proofSize\",\"type\":\"uint64\"}],\"name\":\"transact\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"transact\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"transactAsGateway\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"extraFee\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"refTime\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"proofSize\",\"type\":\"uint64\"}],\"name\":\"transactAsGateway\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"}],\"name\":\"AgentCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"AgentFundsWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"name\":\"InboundMessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"enumOperatingMode\",\"name\":\"mode\",\"type\":\"uint8\"}],\"name\":\"OperatingModeChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"destination\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"OutboundMessageAccepted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"destinationAddress\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"TokenSent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"}],\"name\":\"agentOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelFeeRewardOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelNoncesOf\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelOperatingModeOf\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"implementation\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"operatingMode\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"registerToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"destinationAddress\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"sendToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"destinationAddress\",\"type\":\"address\"},{\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"sendToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"enumCommand\",\"name\":\"command\",\"type\":\"uint8\"},{\"internalType\":\"bytes\",\"name\":\"params\",\"type\":\"bytes\"}],\"internalType\":\"structInboundMessage\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"components\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"stateRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"kind\",\"type\":\"uint256\"},{\"internalType\":\"bytes4\",\"name\":\"consensusEngineID\",\"type\":\"bytes4\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"internalType\":\"structVerification.DigestItem[]\",\"name\":\"digestItems\",\"type\":\"tuple[]\"}],\"internalType\":\"structVerification.ParachainHeader\",\"name\":\"header\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structVerification.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structVerification.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"leafProofOrder\",\"type\":\"uint256\"}],\"internalType\":\"structVerification.Proof\",\"name\":\"headerProof\",\"type\":\"tuple\"}],\"name\":\"submitInbound\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"transactThroughGateway\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes1\",\"name\":\"originKind\",\"type\":\"bytes1\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"extraFee\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"refTime\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"proofSize\",\"type\":\"uint64\"}],\"name\":\"transactThroughGateway\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"extraFee\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"refTime\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"proofSize\",\"type\":\"uint64\"}],\"name\":\"transactThroughSigned\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"transactThroughSigned\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes1\",\"name\":\"originKind\",\"type\":\"bytes1\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"extraFee\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"refTime\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"proofSize\",\"type\":\"uint64\"}],\"name\":\"transactThroughSovereign\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"transactThroughSovereign\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
 }
 
 // GatewayABI is the input ABI used to generate the binding from.
@@ -502,88 +502,130 @@ func (_Gateway *GatewayTransactorSession) SubmitInbound(message InboundMessage, 
 	return _Gateway.Contract.SubmitInbound(&_Gateway.TransactOpts, message, leafProof, headerProof)
 }
 
-// Transact is a paid mutator transaction binding the contract method 0x5c5f9a0d.
+// TransactThroughGateway is a paid mutator transaction binding the contract method 0x9b0440c1.
 //
-// Solidity: function transact(uint256 destinationChain, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
-func (_Gateway *GatewayTransactor) Transact(opts *bind.TransactOpts, destinationChain *big.Int, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "transact", destinationChain, payload, extraFee, refTime, proofSize)
+// Solidity: function transactThroughGateway(uint256 destinationChain, bytes payload) payable returns()
+func (_Gateway *GatewayTransactor) TransactThroughGateway(opts *bind.TransactOpts, destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "transactThroughGateway", destinationChain, payload)
 }
 
-// Transact is a paid mutator transaction binding the contract method 0x5c5f9a0d.
+// TransactThroughGateway is a paid mutator transaction binding the contract method 0x9b0440c1.
 //
-// Solidity: function transact(uint256 destinationChain, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
-func (_Gateway *GatewaySession) Transact(destinationChain *big.Int, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
-	return _Gateway.Contract.Transact(&_Gateway.TransactOpts, destinationChain, payload, extraFee, refTime, proofSize)
+// Solidity: function transactThroughGateway(uint256 destinationChain, bytes payload) payable returns()
+func (_Gateway *GatewaySession) TransactThroughGateway(destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughGateway(&_Gateway.TransactOpts, destinationChain, payload)
 }
 
-// Transact is a paid mutator transaction binding the contract method 0x5c5f9a0d.
+// TransactThroughGateway is a paid mutator transaction binding the contract method 0x9b0440c1.
 //
-// Solidity: function transact(uint256 destinationChain, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
-func (_Gateway *GatewayTransactorSession) Transact(destinationChain *big.Int, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
-	return _Gateway.Contract.Transact(&_Gateway.TransactOpts, destinationChain, payload, extraFee, refTime, proofSize)
+// Solidity: function transactThroughGateway(uint256 destinationChain, bytes payload) payable returns()
+func (_Gateway *GatewayTransactorSession) TransactThroughGateway(destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughGateway(&_Gateway.TransactOpts, destinationChain, payload)
 }
 
-// Transact0 is a paid mutator transaction binding the contract method 0x61e24524.
+// TransactThroughGateway0 is a paid mutator transaction binding the contract method 0xd3aad57d.
 //
-// Solidity: function transact(uint256 destinationChain, bytes payload) payable returns()
-func (_Gateway *GatewayTransactor) Transact0(opts *bind.TransactOpts, destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "transact0", destinationChain, payload)
+// Solidity: function transactThroughGateway(uint256 destinationChain, bytes1 originKind, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
+func (_Gateway *GatewayTransactor) TransactThroughGateway0(opts *bind.TransactOpts, destinationChain *big.Int, originKind [1]byte, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "transactThroughGateway0", destinationChain, originKind, payload, extraFee, refTime, proofSize)
 }
 
-// Transact0 is a paid mutator transaction binding the contract method 0x61e24524.
+// TransactThroughGateway0 is a paid mutator transaction binding the contract method 0xd3aad57d.
 //
-// Solidity: function transact(uint256 destinationChain, bytes payload) payable returns()
-func (_Gateway *GatewaySession) Transact0(destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.Transact0(&_Gateway.TransactOpts, destinationChain, payload)
+// Solidity: function transactThroughGateway(uint256 destinationChain, bytes1 originKind, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
+func (_Gateway *GatewaySession) TransactThroughGateway0(destinationChain *big.Int, originKind [1]byte, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughGateway0(&_Gateway.TransactOpts, destinationChain, originKind, payload, extraFee, refTime, proofSize)
 }
 
-// Transact0 is a paid mutator transaction binding the contract method 0x61e24524.
+// TransactThroughGateway0 is a paid mutator transaction binding the contract method 0xd3aad57d.
 //
-// Solidity: function transact(uint256 destinationChain, bytes payload) payable returns()
-func (_Gateway *GatewayTransactorSession) Transact0(destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.Transact0(&_Gateway.TransactOpts, destinationChain, payload)
+// Solidity: function transactThroughGateway(uint256 destinationChain, bytes1 originKind, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
+func (_Gateway *GatewayTransactorSession) TransactThroughGateway0(destinationChain *big.Int, originKind [1]byte, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughGateway0(&_Gateway.TransactOpts, destinationChain, originKind, payload, extraFee, refTime, proofSize)
 }
 
-// TransactAsGateway is a paid mutator transaction binding the contract method 0x24bec5ce.
+// TransactThroughSigned is a paid mutator transaction binding the contract method 0x36a07049.
 //
-// Solidity: function transactAsGateway(uint256 destinationChain, bytes payload) payable returns()
-func (_Gateway *GatewayTransactor) TransactAsGateway(opts *bind.TransactOpts, destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "transactAsGateway", destinationChain, payload)
+// Solidity: function transactThroughSigned(uint256 destinationChain, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
+func (_Gateway *GatewayTransactor) TransactThroughSigned(opts *bind.TransactOpts, destinationChain *big.Int, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "transactThroughSigned", destinationChain, payload, extraFee, refTime, proofSize)
 }
 
-// TransactAsGateway is a paid mutator transaction binding the contract method 0x24bec5ce.
+// TransactThroughSigned is a paid mutator transaction binding the contract method 0x36a07049.
 //
-// Solidity: function transactAsGateway(uint256 destinationChain, bytes payload) payable returns()
-func (_Gateway *GatewaySession) TransactAsGateway(destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.TransactAsGateway(&_Gateway.TransactOpts, destinationChain, payload)
+// Solidity: function transactThroughSigned(uint256 destinationChain, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
+func (_Gateway *GatewaySession) TransactThroughSigned(destinationChain *big.Int, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughSigned(&_Gateway.TransactOpts, destinationChain, payload, extraFee, refTime, proofSize)
 }
 
-// TransactAsGateway is a paid mutator transaction binding the contract method 0x24bec5ce.
+// TransactThroughSigned is a paid mutator transaction binding the contract method 0x36a07049.
 //
-// Solidity: function transactAsGateway(uint256 destinationChain, bytes payload) payable returns()
-func (_Gateway *GatewayTransactorSession) TransactAsGateway(destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
-	return _Gateway.Contract.TransactAsGateway(&_Gateway.TransactOpts, destinationChain, payload)
+// Solidity: function transactThroughSigned(uint256 destinationChain, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
+func (_Gateway *GatewayTransactorSession) TransactThroughSigned(destinationChain *big.Int, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughSigned(&_Gateway.TransactOpts, destinationChain, payload, extraFee, refTime, proofSize)
 }
 
-// TransactAsGateway0 is a paid mutator transaction binding the contract method 0x34aa85d0.
+// TransactThroughSigned0 is a paid mutator transaction binding the contract method 0xf7dbe9ce.
 //
-// Solidity: function transactAsGateway(uint256 destinationChain, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
-func (_Gateway *GatewayTransactor) TransactAsGateway0(opts *bind.TransactOpts, destinationChain *big.Int, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "transactAsGateway0", destinationChain, payload, extraFee, refTime, proofSize)
+// Solidity: function transactThroughSigned(uint256 destinationChain, bytes payload) payable returns()
+func (_Gateway *GatewayTransactor) TransactThroughSigned0(opts *bind.TransactOpts, destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "transactThroughSigned0", destinationChain, payload)
 }
 
-// TransactAsGateway0 is a paid mutator transaction binding the contract method 0x34aa85d0.
+// TransactThroughSigned0 is a paid mutator transaction binding the contract method 0xf7dbe9ce.
 //
-// Solidity: function transactAsGateway(uint256 destinationChain, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
-func (_Gateway *GatewaySession) TransactAsGateway0(destinationChain *big.Int, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
-	return _Gateway.Contract.TransactAsGateway0(&_Gateway.TransactOpts, destinationChain, payload, extraFee, refTime, proofSize)
+// Solidity: function transactThroughSigned(uint256 destinationChain, bytes payload) payable returns()
+func (_Gateway *GatewaySession) TransactThroughSigned0(destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughSigned0(&_Gateway.TransactOpts, destinationChain, payload)
 }
 
-// TransactAsGateway0 is a paid mutator transaction binding the contract method 0x34aa85d0.
+// TransactThroughSigned0 is a paid mutator transaction binding the contract method 0xf7dbe9ce.
 //
-// Solidity: function transactAsGateway(uint256 destinationChain, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
-func (_Gateway *GatewayTransactorSession) TransactAsGateway0(destinationChain *big.Int, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
-	return _Gateway.Contract.TransactAsGateway0(&_Gateway.TransactOpts, destinationChain, payload, extraFee, refTime, proofSize)
+// Solidity: function transactThroughSigned(uint256 destinationChain, bytes payload) payable returns()
+func (_Gateway *GatewayTransactorSession) TransactThroughSigned0(destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughSigned0(&_Gateway.TransactOpts, destinationChain, payload)
+}
+
+// TransactThroughSovereign is a paid mutator transaction binding the contract method 0x1194754f.
+//
+// Solidity: function transactThroughSovereign(uint256 destinationChain, bytes1 originKind, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
+func (_Gateway *GatewayTransactor) TransactThroughSovereign(opts *bind.TransactOpts, destinationChain *big.Int, originKind [1]byte, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "transactThroughSovereign", destinationChain, originKind, payload, extraFee, refTime, proofSize)
+}
+
+// TransactThroughSovereign is a paid mutator transaction binding the contract method 0x1194754f.
+//
+// Solidity: function transactThroughSovereign(uint256 destinationChain, bytes1 originKind, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
+func (_Gateway *GatewaySession) TransactThroughSovereign(destinationChain *big.Int, originKind [1]byte, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughSovereign(&_Gateway.TransactOpts, destinationChain, originKind, payload, extraFee, refTime, proofSize)
+}
+
+// TransactThroughSovereign is a paid mutator transaction binding the contract method 0x1194754f.
+//
+// Solidity: function transactThroughSovereign(uint256 destinationChain, bytes1 originKind, bytes payload, uint256 extraFee, uint64 refTime, uint64 proofSize) payable returns()
+func (_Gateway *GatewayTransactorSession) TransactThroughSovereign(destinationChain *big.Int, originKind [1]byte, payload []byte, extraFee *big.Int, refTime uint64, proofSize uint64) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughSovereign(&_Gateway.TransactOpts, destinationChain, originKind, payload, extraFee, refTime, proofSize)
+}
+
+// TransactThroughSovereign0 is a paid mutator transaction binding the contract method 0xe159e580.
+//
+// Solidity: function transactThroughSovereign(uint256 destinationChain, bytes payload) payable returns()
+func (_Gateway *GatewayTransactor) TransactThroughSovereign0(opts *bind.TransactOpts, destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "transactThroughSovereign0", destinationChain, payload)
+}
+
+// TransactThroughSovereign0 is a paid mutator transaction binding the contract method 0xe159e580.
+//
+// Solidity: function transactThroughSovereign(uint256 destinationChain, bytes payload) payable returns()
+func (_Gateway *GatewaySession) TransactThroughSovereign0(destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughSovereign0(&_Gateway.TransactOpts, destinationChain, payload)
+}
+
+// TransactThroughSovereign0 is a paid mutator transaction binding the contract method 0xe159e580.
+//
+// Solidity: function transactThroughSovereign(uint256 destinationChain, bytes payload) payable returns()
+func (_Gateway *GatewayTransactorSession) TransactThroughSovereign0(destinationChain *big.Int, payload []byte) (*types.Transaction, error) {
+	return _Gateway.Contract.TransactThroughSovereign0(&_Gateway.TransactOpts, destinationChain, payload)
 }
 
 // GatewayAgentCreatedIterator is returned from FilterAgentCreated and is used to iterate over the raw logs and unpacked data for AgentCreated events raised by the Gateway contract.
