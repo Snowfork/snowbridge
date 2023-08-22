@@ -98,8 +98,9 @@ impl Command {
 	pub fn convert(self, chain_id: u64, fee: u128) -> Xcm<()> {
 		log::debug!(target: LOG_TARGET,"chain_id: {}, fee: {}, command: {:?},", chain_id, fee, self);
 		let network = Ethereum { chain_id };
+		// Todo: price oracle should be configurable
 		// Reference from https://coincodex.com/convert/ethereum/polkadot/
-		const SWAP_RATE: u128 = 367;
+		const SWAP_RATE: u128 = 378;
 		// Sanity base fee applies to most of the xcm calls
 		const BASE_FEE: u128 = 2_000_000_000;
 
@@ -107,6 +108,10 @@ impl Command {
 			max(BASE_FEE, fee.saturating_div(1000000u128.saturating_div(SWAP_RATE)));
 
 		let buy_execution_fee = MultiAsset {
+			// Todo: For arbitrary transact now only support DOT as fee asset,
+			// require asset_registry with some mapping storage(asset_id <-> MultiLocation) to
+			// support native ERC20(like GLMR for Moonbeam)
+			// more context in https://github.com/Snowfork/snowbridge/pull/927#discussion_r1296871194
 			id: Concrete(MultiLocation::parent()),
 			fun: Fungible(buy_execution_fee_amount),
 		};
