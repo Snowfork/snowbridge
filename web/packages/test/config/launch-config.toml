@@ -86,6 +86,22 @@ cumulus_based = true
     ws_port = 13144
     args = ["--force-authoring", "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace,runtime::assets=trace,runtime::bridge-transfer=trace"]
 
+## Template node
+[[parachains]]
+id = 1001
+chain = "template-rococo"
+cumulus_based = true
+
+    # run alice as parachain collator
+    [[parachains.collators]]
+    name = "template01"
+    validator = true
+    command = "{{output_bin_dir}}/parachain-template-node"
+    rpc_port = 8083
+    ws_port = 13144
+    args = ["--force-authoring", "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace,runtime::assets=trace,runtime::bridge-transfer=trace"]
+
+
 # Statemine -> BridgeHub
 [[hrmp_channels]]
 max_capacity = 8
@@ -100,14 +116,14 @@ max_message_size = 512
 recipient = 1000
 sender = 1013
 
-# Template -> BridgeHub
+# TemplateNode -> BridgeHub
 [[hrmp_channels]]
 max_capacity = 8
 max_message_size = 512
 recipient = 1013
 sender = 1001
 
-# BridgeHub -> Template
+# BridgeHub -> TemplateNode
 [[hrmp_channels]]
 max_capacity = 8
 max_message_size = 512

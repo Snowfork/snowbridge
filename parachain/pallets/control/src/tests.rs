@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{mock::*, *};
+use frame_support::{assert_ok, traits::EnsureOrigin};
 use hex_literal::hex;
 use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError::BadOrigin};
@@ -19,26 +20,29 @@ fn create_agent_with_bad_multi_location_yields_location_conversion_failed() {
 		let origin = RuntimeOrigin::signed(AccountId32::new([9; 32]));
 		frame_support::assert_noop!(
 			EthereumControl::create_agent(origin),
-			Error::<Test>::LocationConversionFailed
+			Error::<Test>::LocationToAgentIdConversionFailed
 		);
 	});
 }
 
 #[test]
-fn create_agent_with_relaychain_origin_yields_success() {
+fn create_agent_with_bridgehub_origin_yields_success() {
 	new_test_ext().execute_with(|| {
 		let origin = RuntimeOrigin::signed(AccountId32::new([1; 32]));
-		let expected_agent_id =
-			H256(hex!("d9380024e49afa1ac89c0127fea210bb6b431b10dafefab8061bd88ac25d17a5"));
-		let expected_multi_location = MultiLocation { parents: 1, interior: Here };
 
-		assert!(!Agents::<Test>::contains_key(expected_agent_id));
+		let location: MultiLocation =
+			<Test as Config>::AgentOrigin::ensure_origin(origin.clone()).unwrap();
+		let (agent_id, _, location) = EthereumControl::convert_location(location).unwrap();
+
+		assert!(!Agents::<Test>::contains_key(agent_id));
 		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
-		assert!(Agents::<Test>::contains_key(expected_agent_id));
+		assert!(Agents::<Test>::contains_key(agent_id));
+
+		// println!("agent_id: {:#?}", hex::encode(agent_id.as_bytes()));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: Box::new(expected_multi_location),
-			agent_id: expected_agent_id,
+			location: Box::new(location),
+			agent_id,
 		}));
 	});
 }
@@ -238,5 +242,46 @@ fn create_agent_with_small_params_yields_success() {
 			impl_code_hash: code_hash,
 			params_hash: expected_hash,
 		}));
+	});
+}
+
+#[test]
+fn create_channel_with_sibling_chain_origin_yields_success() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
+
+		assert_ok!(EthereumControl::create_agent(origin.clone()));
+
+		assert_ok!(EthereumControl::create_channel(origin));
+	});
+}
+
+#[test]
+fn create_channel_with_sibling_chain_pallet_as_origin_yields_location_conversion_failed() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::new([6; 32]));
+
+		assert_ok!(EthereumControl::create_agent(origin.clone()));
+
+		frame_support::assert_noop!(
+			EthereumControl::create_channel(origin),
+			Error::<Test>::LocationToParaIdConversionFailed
+		);
+	});
+}
+
+#[test]
+fn create_channel_already_exist_yields_failed() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
+
+		assert_ok!(EthereumControl::create_agent(origin.clone()));
+
+		assert_ok!(EthereumControl::create_channel(origin.clone()));
+
+		frame_support::assert_noop!(
+			EthereumControl::create_channel(origin),
+			Error::<Test>::ChannelAlreadyCreated
+		);
 	});
 }

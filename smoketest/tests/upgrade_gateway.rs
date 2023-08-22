@@ -46,7 +46,7 @@ const BRIDGE_HUB_PARA_ID: u32 = 1013;
 const GATEWAY_PROXY_CONTRACT: &str = "0xEDa338E4dC46038493b885327842fD3E301CaB39";
 const GATETWAY_UPGRADE_MOCK_CONTRACT: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228e73");
 const GATETWAY_UPGRADE_MOCK_CODE_HASH: [u8; 32] =
-	hex!("9ed4c5736e9322ae52d21856271c96e1c130477bce199fb4a35679866ce2a657");
+	hex!("ad2eaa7103b39aea14dac05981ce0ff31a8f51267eaf2a0e480c94159afc904f");
 
 #[tokio::test]
 async fn upgrade_gateway() {

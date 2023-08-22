@@ -394,6 +394,7 @@ contract Gateway is IGateway, IInitializable {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
         $.mode = params.mode;
+        emit OperatingModeChanged(params.mode);
     }
 
     struct TransferNativeFromAgentParams {

@@ -41,14 +41,16 @@ basic_eth_addresses="${BASIC_ETH_ADDRESSES:-0x89b4ab1ef20763630df9743acf15586560
 beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 
 # Local substrate chain endpoints
-bridgehub_ws_url="${BRIDGEHUB_WS_URL:-ws://127.0.0.1:11144}"
-bridgehub_para_id="${BRIDGEHUB_PARA_ID:-1013}"
-bridgehub_seed="${BRIDGEHUB_SEED:-//Alice}"
-bridgehub_pallets_owner="${BRIDGEHUB_PALLETS_OWNER:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d}"
+bridgehub_ws_url="${BRIDGE_HUB_WS_URL:-ws://127.0.0.1:11144}"
+bridgehub_seed="${BRIDGE_HUB_SEED:-//Alice}"
+bridgehub_pallets_owner="${BRIDGE_HUB_PALLETS_OWNER:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d}"
+export BRIDGE_HUB_PARAID="${BRIDGE_HUB_PARAID:-1013}"
+export BRIDGE_HUB_AGENT_ID="${BRIDGE_HUB_AGENT_ID:-0x05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6}"
 
-statemine_ws_url="${STATEMINE_WS_URL:-ws://127.0.0.1:12144}"
-statemine_para_id="${STATEMINE_PARA_ID:-1000}"
-statemine_seed="${STATEMINE_SEED:-//Alice}"
+assethub_ws_url="${ASSET_HUB_WS_URL:-ws://127.0.0.1:12144}"
+assethub_seed="${ASSET_HUB_SEED:-//Alice}"
+export ASSET_HUB_PARAID="${ASSET_HUB_PARAID:-1000}"
+export ASSET_HUB_AGENT_ID="${ASSET_HUB_AGENT_ID:-0x72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4}"
 
 relaychain_ws_url="${RELAYCHAIN_WS_URL:-ws://127.0.0.1:9944}"
 relaychain_sudo_seed="${RELAYCHAIN_SUDO_SEED:-//Alice}"
@@ -57,8 +59,8 @@ skip_relayer="${SKIP_RELAYER:-false}"
 
 ## Important accounts
 
-# Account for statemine (1000 5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ in testnet)
-statemine_sovereign_account="${STATEMINE_SOVEREIGN_ACCOUNT:-0x70617261e8030000000000000000000000000000000000000000000000000000}"
+# Account for assethub (1000 5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ in testnet)
+assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x70617261e8030000000000000000000000000000000000000000000000000000}"
 # Beacon relay account (//BeaconRelay 5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c in testnet)
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
 # Execution relay account (//ExecutionRelay 5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)
@@ -79,13 +81,7 @@ export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea
 export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
 export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
 
-export BRIDGE_HUB_PARAID=$bridgehub_para_id
-# TODO: update placeholder value
-export BRIDGE_HUB_AGENT_ID="0x05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6"
 
-export ASSET_HUB_PARAID=$statemine_para_id
-# TODO: update placeholder value
-export ASSET_HUB_AGENT_ID="0x72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4"
 
 export DEFAULT_FEE=1
 export DEFAULT_REWARD=1

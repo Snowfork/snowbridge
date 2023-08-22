@@ -1,5 +1,6 @@
 use codec::{Decode, Encode};
 pub use polkadot_parachain::primitives::Id as ParaId;
+use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
 use sp_std::{borrow::ToOwned, vec, vec::Vec};
 
@@ -49,7 +50,7 @@ pub struct Message {
 
 use ethabi::Token;
 
-#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
+#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum OperatingMode {
 	Normal,
 	RejectingOutboundMessages,
