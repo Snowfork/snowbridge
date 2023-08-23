@@ -198,15 +198,21 @@ impl Command {
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
 pub enum AgentExecuteCommand {
 	RegisterToken {
-		// TODO: docstrings
+		/// ID for the new token
 		token_id: H256,
+		/// Name of the token
 		name: String,
+		/// Short symbol for the token
 		symbol: String,
+		/// Number of decimal places
 		decimals: u8,
 	},
 	MintToken {
+		/// ID for the token
 		token_id: H256,
+		/// The recipient of the newly minted tokens
 		recipient: H160,
+		/// The amount of tokens to mint
 		amount: u128,
 	},
 	/// Transfer ERC20 tokens
