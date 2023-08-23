@@ -472,13 +472,14 @@ contract Gateway is IGateway, IInitializable {
             return DISPATCH_GAS;
         }
 
-        (AgentExecuteCommand agentExecuteCommand, bytes memory innerParams) = abi.decode(params, (AgentExecuteCommand, bytes));
+        (AgentExecuteCommand agentExecuteCommand, bytes memory innerParams) =
+            abi.decode(params, (AgentExecuteCommand, bytes));
 
         if (agentExecuteCommand != AgentExecuteCommand.Transact) {
             return DISPATCH_GAS;
         }
 
-        (, , uint256 dynamicGas) = abi.decode(innerParams, (address, bytes, uint256));
+        (,, uint256 dynamicGas) = abi.decode(innerParams, (address, bytes, uint256));
 
         return DISPATCH_GAS + dynamicGas;
     }
