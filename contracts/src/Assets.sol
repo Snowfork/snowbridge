@@ -31,7 +31,6 @@ library Assets {
     // This library requires state which must be initialized in the gateway's storage.
     function initialize(uint256 registerTokenFee, uint256 sendTokenFee) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        //Todo: allow to be configurable based on some price oracle like https://coincodex.com/convert/ethereum/polkadot/
         $.registerTokenFee = registerTokenFee;
         $.sendTokenFee = sendTokenFee;
     }

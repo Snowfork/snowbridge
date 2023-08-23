@@ -592,7 +592,7 @@ contract Gateway is IGateway, IInitializable {
             fee: defaultFee,
             reward: defaultReward
         });
-
+        // Todo: Should be configurable/upgradable include a on-chain price oracle SWAP_RATE from https://coincodex.com/convert/ethereum/polkadot/
         Assets.initialize(registerTokenFee, sendTokenFee);
     }
 
