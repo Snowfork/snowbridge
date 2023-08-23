@@ -205,8 +205,7 @@ pub enum AgentExecuteCommand {
 		decimals: u8,
 	},
 	MintToken {
-		// TODO: update to token_id
-		token: H160,
+		token_id: H256,
 		recipient: H160,
 		amount: u128,
 	},
@@ -243,10 +242,10 @@ impl AgentExecuteCommand {
 						Token::Uint(U256::from(*decimals)),
 					])),
 				]),
-			AgentExecuteCommand::MintToken { token, recipient, amount } => ethabi::encode(&[
+			AgentExecuteCommand::MintToken { token_id, recipient, amount } => ethabi::encode(&[
 				Token::Uint(self.index().into()),
 				Token::Bytes(ethabi::encode(&[
-					Token::Address(*token),
+					Token::FixedBytes(token_id.as_bytes().to_owned()),
 					Token::Address(*recipient),
 					Token::Uint(U256::from(*amount)),
 				])),
