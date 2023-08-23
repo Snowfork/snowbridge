@@ -26,7 +26,7 @@ start_geth() {
             --trace "$ethereum_data_dir/trace" \
             --gcmode archive \
             --syncmode=full \
-            > "$output_dir/geth.log" 2>&1 &
+            >"$output_dir/geth.log" 2>&1 &
     fi
 }
 
@@ -63,23 +63,21 @@ start_lodestar() {
             --eth1=true \
             --rest.namespace="*" \
             --jwt-secret config/jwtsecret \
-            > "$output_dir/lodestar.log" 2>&1 &
+            >"$output_dir/lodestar.log" 2>&1 &
     fi
 }
 
-hack_beacon_client()
-{
+hack_beacon_client() {
     echo "Hack lodestar for faster slot time"
     local preset_minimal_config_file="$web_dir/node_modules/.pnpm/@lodestar+config@$lodestar_version/node_modules/@lodestar/config/lib/chainConfig/presets/minimal.js"
     if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
-        gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/g" $preset_minimal_config_file
+        gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 3/g" $preset_minimal_config_file
     else
-        sed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/g" $preset_minimal_config_file
+        sed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 3/g" $preset_minimal_config_file
     fi
 }
 
-deploy_local()
-{
+deploy_local() {
     # 1. deploy execution client
     echo "Starting execution node"
     start_geth
@@ -88,7 +86,7 @@ deploy_local()
     sleep 3
 
     if [ "$eth_fast_mode" == "true" ]; then
-      hack_beacon_client
+        hack_beacon_client
     fi
 
     # 2. deploy consensus client
@@ -96,8 +94,7 @@ deploy_local()
     start_lodestar
 }
 
-deploy_ethereum()
-{
+deploy_ethereum() {
     check_tool && rm -rf "$ethereum_data_dir" && deploy_local
 }
 

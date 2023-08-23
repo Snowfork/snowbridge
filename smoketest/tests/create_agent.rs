@@ -23,7 +23,7 @@ async fn create_agent() {
         result.extrinsic_hash()
     );
 
-    wait_for_bridgehub_event::<CreateAgent>(&test_clients.bridge_hub_client).await;
+    wait_for_substrate_event::<CreateAgent>(&test_clients.bridge_hub_client).await;
 
     wait_for_ethereum_event::<AgentCreatedFilter>(&test_clients.ethereum_client).await;
 }

@@ -40,13 +40,17 @@ contract GatewayTest is Test {
 
     event Upgraded(address indexed implementation);
 
-    ParaID public bridgeHubParaID = ParaID.wrap(1001);
-    bytes32 public bridgeHubAgentID = keccak256("1001");
+    ParaID public bridgeHubParaID = ParaID.wrap(1013);
+    bytes32 public bridgeHubAgentID = keccak256("1013");
     address public bridgeHubAgent;
 
-    ParaID public assetHubParaID = ParaID.wrap(1002);
-    bytes32 public assetHubAgentID = keccak256("1002");
+    ParaID public assetHubParaID = ParaID.wrap(1000);
+    bytes32 public assetHubAgentID = keccak256("1000");
     address public assetHubAgent;
+
+    ParaID public templateParaID = ParaID.wrap(1001);
+    bytes32 public templateAgentID = keccak256("1001");
+    address public templateAgent;
 
     address public relayer;
 
@@ -78,7 +82,10 @@ contract GatewayTest is Test {
             bridgeHubAgentID,
             assetHubParaID,
             assetHubAgentID,
-            bytes2(0x3500)
+            templateParaID,
+            templateAgentID,
+            bytes2(0x3500),
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000001)
         );
         gateway = new GatewayProxy(
             address(gatewayLogic),

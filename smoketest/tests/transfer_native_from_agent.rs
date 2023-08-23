@@ -14,7 +14,7 @@ async fn transfer_native_from_agent() {
     let ethereum_client = *(test_clients.ethereum_client.clone());
     let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
     let agent_address = gateway
-        .agent_of(SIBLING_AGENT_ID)
+        .agent_of(TEMPLATE_AGENT_ID)
         .await
         .expect("find agent");
 
@@ -55,7 +55,7 @@ async fn transfer_native_from_agent() {
         result.extrinsic_hash()
     );
 
-    wait_for_bridgehub_event::<TransferNativeFromAgent>(&test_clients.bridge_hub_client).await;
+    wait_for_substrate_event::<TransferNativeFromAgent>(&test_clients.bridge_hub_client).await;
 
     wait_for_ethereum_event::<InboundMessageDispatchedFilter>(&test_clients.ethereum_client).await;
 

@@ -1,21 +1,24 @@
 use crate::constants::*;
 use crate::contracts::i_gateway;
+use crate::contracts::i_gateway::IGateway;
 use crate::parachains::bridgehub::{self};
 use crate::parachains::template::api::runtime_types::xcm as templateXcm;
 use crate::parachains::template::{self};
+use codec::Encode;
 use ethers::prelude::{
     Address, EthEvent, LocalWallet, Middleware, Provider, Signer, SignerMiddleware,
     TransactionRequest, Ws, U256,
 };
 use ethers::providers::Http;
 use futures::StreamExt;
-use sp_core::{sr25519::Pair, Pair as PairT, H160};
+use sp_core::{blake2_256, sr25519::Pair, Pair as PairT, H160};
 use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 use subxt::blocks::ExtrinsicEvents;
 use subxt::events::StaticEvent;
 use subxt::tx::{PairSigner, TxPayload};
+use subxt::utils::AccountId32;
 use subxt::{Config, OnlineClient, PolkadotConfig};
 use templateXcm::{
     v3::{junction::Junction, junctions::Junctions, multilocation::MultiLocation},
@@ -23,9 +26,9 @@ use templateXcm::{
 };
 
 /// Custom config that works with Statemint
-pub enum TemplateConfig {}
+pub enum AssetHubConfig {}
 
-impl Config for TemplateConfig {
+impl Config for AssetHubConfig {
     type Index = <PolkadotConfig as Config>::Index;
     type Hash = <PolkadotConfig as Config>::Hash;
     type AccountId = <PolkadotConfig as Config>::AccountId;
@@ -38,7 +41,7 @@ impl Config for TemplateConfig {
 
 pub struct TestClients {
     pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
-    pub template_client: Box<OnlineClient<TemplateConfig>>,
+    pub template_client: Box<OnlineClient<PolkadotConfig>>,
     pub ethereum_client: Box<Arc<Provider<Ws>>>,
     pub ethereum_signed_client: Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
 }
@@ -48,7 +51,7 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
         .await
         .expect("can not connect to assethub");
 
-    let template_client: OnlineClient<TemplateConfig> =
+    let template_client: OnlineClient<PolkadotConfig> =
         OnlineClient::from_url(TEMPLATE_NODE_WS_URL)
             .await
             .expect("can not connect to assethub");
@@ -70,15 +73,16 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
     })
 }
 
-pub async fn wait_for_bridgehub_event<Ev: StaticEvent>(
-    bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
+pub async fn wait_for_substrate_event<Ev: StaticEvent>(
+    substrate_client: &Box<OnlineClient<PolkadotConfig>>,
 ) {
-    let mut blocks = bridge_hub_client
+    let wait_for_blocks = 100;
+    let mut blocks = substrate_client
         .blocks()
         .subscribe_finalized()
         .await
         .expect("block subscription")
-        .take(5);
+        .take(wait_for_blocks);
 
     let mut substrate_event_found = false;
     while let Some(Ok(block)) = blocks.next().await {
@@ -137,9 +141,9 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 }
 
 pub async fn send_xcm_transact(
-    template_client: &Box<OnlineClient<TemplateConfig>>,
+    template_client: &Box<OnlineClient<PolkadotConfig>>,
     message: Box<VersionedXcm>,
-) -> Result<ExtrinsicEvents<TemplateConfig>, Box<dyn std::error::Error>> {
+) -> Result<ExtrinsicEvents<PolkadotConfig>, Box<dyn std::error::Error>> {
     let dest = Box::new(VersionedMultiLocation::V3(MultiLocation {
         parents: 1,
         interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
@@ -149,7 +153,7 @@ pub async fn send_xcm_transact(
 
     let owner: Pair = Pair::from_string("//Alice", None).expect("cannot create keypair");
 
-    let signer: PairSigner<TemplateConfig, _> = PairSigner::new(owner);
+    let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(owner);
 
     let result = template_client
         .tx()
@@ -230,4 +234,15 @@ pub async fn construct_transfer_native_from_agent_call(
         .encode_call_data(&bridge_hub_client.metadata())?;
 
     Ok(call)
+}
+
+pub async fn get_agent_address(
+    gateway: IGateway<SignerMiddleware<Provider<Http>, LocalWallet>>,
+    agent_id: [u8; 32],
+) -> Result<(Address, AccountId32), Box<dyn std::error::Error>> {
+    let agent_address: Address = gateway.agent_of(agent_id).await.unwrap();
+    let agent_address_encoded =
+        (b"ethereum", 15u64, agent_address.as_fixed_bytes()).using_encoded(blake2_256);
+    let agent_address_substrate = AccountId32::from(agent_address_encoded);
+    Ok((agent_address, agent_address_substrate))
 }

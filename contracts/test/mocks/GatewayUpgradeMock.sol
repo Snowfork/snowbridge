@@ -70,15 +70,4 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         uint64 refTime,
         uint64 proofSize
     ) external payable {}
-
-    function transactThroughGateway(ParaID destinationChain, bytes calldata payload) external payable {}
-
-    function transactThroughGateway(
-        ParaID destinationChain,
-        bytes1 originKind,
-        bytes calldata payload,
-        uint256 extraFee,
-        uint64 refTime,
-        uint64 proofSize
-    ) external payable {}
 }

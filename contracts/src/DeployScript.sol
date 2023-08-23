@@ -43,8 +43,14 @@ contract DeployScript is Script {
 
         ParaID bridgeHubParaID = ParaID.wrap(vm.envUint("BRIDGE_HUB_PARAID"));
         bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
+
         ParaID assetHubParaID = ParaID.wrap(vm.envUint("ASSET_HUB_PARAID"));
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
+
+        ParaID templateParaID = ParaID.wrap(vm.envUint("TEMPLATE_PARAID"));
+        bytes32 templateAgentID = vm.envBytes32("TEMPLATE_AGENT_ID");
+
+        bytes32 create2Salt = vm.envBytes32("CREATE2_SALT");
 
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
@@ -55,7 +61,10 @@ contract DeployScript is Script {
             bridgeHubAgentID,
             assetHubParaID,
             assetHubAgentID,
-            bytes2(vm.envBytes("CREATE_CALL_INDEX"))
+            templateParaID,
+            templateAgentID,
+            bytes2(vm.envBytes("CREATE_CALL_INDEX")),
+            create2Salt
         );
 
         bytes memory initParams = abi.encode(

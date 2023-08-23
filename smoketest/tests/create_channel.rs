@@ -23,7 +23,7 @@ async fn create_channel() {
         result.extrinsic_hash()
     );
 
-    wait_for_bridgehub_event::<CreateChannel>(&test_clients.bridge_hub_client).await;
+    wait_for_substrate_event::<CreateChannel>(&test_clients.bridge_hub_client).await;
 
     wait_for_ethereum_event::<ChannelCreatedFilter>(&test_clients.ethereum_client).await;
 }

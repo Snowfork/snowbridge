@@ -49,7 +49,15 @@ contract Gateway is IGateway, IInitializable {
     // AssetHub
     ParaID internal immutable ASSET_HUB_PARA_ID;
     bytes32 internal immutable ASSET_HUB_AGENT_ID;
+
+    // Template
+    ParaID internal immutable TEMPLATE_PARA_ID;
+    bytes32 internal immutable TEMPLATE_AGENT_ID;
+
+    // Call index of create token in assethub runtime
     bytes2 internal immutable CREATE_TOKEN_CALL_ID;
+    // Salt
+    bytes32 internal immutable CREATE2_SALT;
 
     error InvalidProof();
     error InvalidNonce();
@@ -88,7 +96,10 @@ contract Gateway is IGateway, IInitializable {
         bytes32 bridgeHubHubAgentID,
         ParaID assetHubParaID,
         bytes32 assetHubHubAgentID,
-        bytes2 createTokenCallID
+        ParaID templateParaID,
+        bytes32 templateAgentID,
+        bytes2 createTokenCallID,
+        bytes32 salt
     ) {
         BEEFY_CLIENT = beefyClient;
         AGENT_EXECUTOR = agentExecutor;
@@ -98,7 +109,10 @@ contract Gateway is IGateway, IInitializable {
         BRIDGE_HUB_AGENT_ID = bridgeHubHubAgentID;
         ASSET_HUB_PARA_ID = assetHubParaID;
         ASSET_HUB_AGENT_ID = assetHubHubAgentID;
+        TEMPLATE_PARA_ID = templateParaID;
+        TEMPLATE_AGENT_ID = templateAgentID;
         CREATE_TOKEN_CALL_ID = createTokenCallID;
+        CREATE2_SALT = salt;
     }
 
     /// @dev Submit a message from Polkadot for verification and dispatch
@@ -545,7 +559,7 @@ contract Gateway is IGateway, IInitializable {
         $.defaultReward = defaultReward;
 
         // Initialize an agent & channel for BridgeHub
-        address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
+        address bridgeHubAgent = address(new Agent{salt:CREATE2_SALT}(BRIDGE_HUB_AGENT_ID));
         $.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
         $.channels[BRIDGE_HUB_PARA_ID] = Channel({
             mode: OperatingMode.Normal,
@@ -557,11 +571,23 @@ contract Gateway is IGateway, IInitializable {
         });
 
         // Initialize an agent & channel for AssetHub
-        address assetHubAgent = address(new Agent(ASSET_HUB_AGENT_ID));
+        address assetHubAgent = address(new Agent{salt:CREATE2_SALT}(ASSET_HUB_AGENT_ID));
         $.agents[ASSET_HUB_AGENT_ID] = assetHubAgent;
         $.channels[ASSET_HUB_PARA_ID] = Channel({
             mode: OperatingMode.Normal,
             agent: assetHubAgent,
+            inboundNonce: 0,
+            outboundNonce: 0,
+            fee: defaultFee,
+            reward: defaultReward
+        });
+
+        // Initialize an agent & channel for Template
+        address templateAgent = address(new Agent{salt:CREATE2_SALT}(TEMPLATE_AGENT_ID));
+        $.agents[TEMPLATE_AGENT_ID] = templateAgent;
+        $.channels[TEMPLATE_PARA_ID] = Channel({
+            mode: OperatingMode.Normal,
+            agent: templateAgent,
             inboundNonce: 0,
             outboundNonce: 0,
             fee: defaultFee,
@@ -574,28 +600,6 @@ contract Gateway is IGateway, IInitializable {
     /**
      * Transacts
      */
-
-    /// @inheritdoc IGateway
-    function transactThroughGateway(ParaID destinationChain, bytes calldata payload) external payable {
-        bytes memory message_payload = SubstrateTypes.Transact(
-            address(this), bytes1(0x03), payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE
-        );
-        _submitOutbound(destinationChain, message_payload, DEFAULT_EXTRA_FEE);
-    }
-
-    /// @inheritdoc IGateway
-    function transactThroughGateway(
-        ParaID destinationChain,
-        bytes1 originKind,
-        bytes calldata payload,
-        uint256 extraFee,
-        uint64 refTime,
-        uint64 proofSize
-    ) external payable {
-        bytes memory message_payload =
-            SubstrateTypes.Transact(address(this), originKind, payload, extraFee, refTime, proofSize);
-        _submitOutbound(destinationChain, message_payload, extraFee);
-    }
 
     /// @inheritdoc IGateway
     function transactThroughSovereign(ParaID destinationChain, bytes calldata payload) external payable {

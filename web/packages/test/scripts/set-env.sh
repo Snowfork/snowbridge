@@ -52,6 +52,9 @@ assethub_seed="${ASSET_HUB_SEED:-//Alice}"
 export ASSET_HUB_PARAID="${ASSET_HUB_PARAID:-1000}"
 export ASSET_HUB_AGENT_ID="${ASSET_HUB_AGENT_ID:-0x72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4}"
 
+export TEMPLATE_PARAID="${TEMPLATE_PARAID:-1001}"
+export TEMPLATE_AGENT_ID="${TEMPLATE_AGENT_ID:-0x2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793}"
+
 relaychain_ws_url="${RELAYCHAIN_WS_URL:-ws://127.0.0.1:9944}"
 relaychain_sudo_seed="${RELAYCHAIN_SUDO_SEED:-//Alice}"
 
@@ -61,6 +64,8 @@ skip_relayer="${SKIP_RELAYER:-false}"
 
 # Account for assethub (1000 5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ in testnet)
 assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x70617261e8030000000000000000000000000000000000000000000000000000}"
+# Account for template (1001 5Ec4AhPZwkVeRmswLWBsf7rxQ3cjzMKRWuVvffJ6Uuu89s1P in testnet)
+template_sovereign_account="${TEMPLATE_SOVEREIGN_ACCOUNT:-0x70617261e9030000000000000000000000000000000000000000000000000000}"
 # Beacon relay account (//BeaconRelay 5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c in testnet)
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
 # Execution relay account (//ExecutionRelay 5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)
@@ -72,6 +77,7 @@ gateway_contract_sovereign_account="${GATEWAY_CONTRACT_SOVEREIGN_ACCOUNT:-0xc979
 
 ## Deployment key
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
+export CREATE2_SALT="${CREATE2_SALT:-0x0000000000000000000000000000000000000000000000000000000000000001}"
 
 ## BeefyClient
 # For max safety delay should be MAX_SEED_LOOKAHEAD=4 epochs=4*8*6=192s
@@ -80,8 +86,6 @@ export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea
 # for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
 export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
 export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
-
-
 
 export DEFAULT_FEE=1
 export DEFAULT_REWARD=1
@@ -95,8 +99,7 @@ export SEND_NATIVE_TOKEN_FEE=0
 ## Vault
 export BRIDGE_HUB_INITIAL_DEPOSIT=1000
 
-address_for()
-{
+address_for() {
     jq -r ".contracts.${1}.address" "$output_dir/contracts.json"
 }
 
@@ -146,8 +149,7 @@ check_tool() {
 
 wait_contract_deployed() {
     local ready=""
-    while [ -z "$ready" ]
-    do
+    while [ -z "$ready" ]; do
         if [ -f "$output_dir/contracts.json" ]; then
             ready="true"
         fi

@@ -63,7 +63,7 @@ config_relayer(){
     ' \
     config/beacon-relay.json > $output_dir/beacon-relay.json
 
-    # Configure execution relay
+    # Configure execution relay for assethub node
     jq \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg k1 "$(address_for GatewayProxy)" \
@@ -73,7 +73,19 @@ config_relayer(){
     | .source.contracts.Gateway = $k1
     | .source."channel-id" = $channelID
     ' \
-    config/execution-relay.json > $output_dir/execution-relay.json
+    config/execution-relay.json > $output_dir/execution-relay-asset-hub.json
+
+    # Configure execution relay for template node
+        jq \
+            --arg eth_endpoint_ws $eth_endpoint_ws \
+            --arg k1 "$(address_for GatewayProxy)" \
+            --arg channelID $TEMPLATE_PARAID \
+        '
+          .source.ethereum.endpoint = $eth_endpoint_ws
+        | .source.contracts.Gateway = $k1
+        | .source."channel-id" = $channelID
+        ' \
+        config/execution-relay.json > $output_dir/execution-relay-template.json
 }
 
 start_relayer()
@@ -135,16 +147,30 @@ start_relayer()
         done
     ) &
 
-    # Launch execution relay
+    # Launch execution relay for assethub
     (
         : > $output_dir/execution-relay.log
         while :
         do
-        echo "Starting execution relay at $(date)"
+        echo "Starting execution relay for assethub at $(date)"
             "${relay_bin}" run execution \
-                --config $output_dir/execution-relay.json \
+                --config $output_dir/execution-relay-asset-hub.json \
                 --substrate.private-key "//ExecutionRelay" \
-                >> "$output_dir"/execution-relay.log 2>&1 || true
+                >> "$output_dir"/execution-relay-asset-hub.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch execution relay for template
+    (
+        : > $output_dir/execution-relay.log
+        while :
+        do
+        echo "Starting execution relay for template at $(date)"
+            "${relay_bin}" run execution \
+                --config $output_dir/execution-relay-template.json \
+                --substrate.private-key "//ExecutionRelay" \
+                >> "$output_dir"/execution-relay-template.log 2>&1 || true
             sleep 20
         done
     ) &
