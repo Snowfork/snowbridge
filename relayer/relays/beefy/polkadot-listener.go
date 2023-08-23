@@ -82,7 +82,7 @@ func (li *PolkadotListener) scanCommitments(
 			validatorSetID := result.SignedCommitment.Commitment.ValidatorSetID
 			nextValidatorSetID := uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID)
 
-			if validatorSetID < currentValidatorSet || validatorSetID > currentValidatorSet+1 {
+			if validatorSetID != currentValidatorSet && validatorSetID != currentValidatorSet+1 {
 				return fmt.Errorf("commitment has unexpected validatorSetID: blockNumber=%v validatorSetID=%v expectedValidatorSetID=%v",
 					committedBeefyBlock,
 					validatorSetID,
