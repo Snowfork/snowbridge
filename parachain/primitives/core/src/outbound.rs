@@ -197,15 +197,6 @@ impl Command {
 /// A Sub-command executable within an agent
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
 pub enum AgentExecuteCommand {
-	/// Transfer ERC20 tokens
-	TransferToken {
-		/// Address of the ERC20 token
-		token: H160,
-		/// The recipient of the tokens
-		recipient: H160,
-		/// The amount of tokens to transfer
-		amount: u128,
-	},
 	RegisterToken {
 		// TODO: docstrings
 		token_id: H256,
@@ -219,28 +210,29 @@ pub enum AgentExecuteCommand {
 		recipient: H160,
 		amount: u128,
 	},
+	/// Transfer ERC20 tokens
+	TransferToken {
+		/// Address of the ERC20 token
+		token: H160,
+		/// The recipient of the tokens
+		recipient: H160,
+		/// The amount of tokens to transfer
+		amount: u128,
+	},
 }
 
 impl AgentExecuteCommand {
 	fn index(&self) -> u8 {
 		match self {
-			AgentExecuteCommand::TransferToken { .. } => 0,
-			AgentExecuteCommand::RegisterToken { .. } => 1,
-			AgentExecuteCommand::MintToken { .. } => 2,
+			AgentExecuteCommand::RegisterToken { .. } => 0,
+			AgentExecuteCommand::MintToken { .. } => 1,
+			AgentExecuteCommand::TransferToken { .. } => 2,
 		}
 	}
 
 	/// ABI-encode the sub-command
 	pub fn abi_encode(&self) -> Vec<u8> {
 		match self {
-			AgentExecuteCommand::TransferToken { token, recipient, amount } => ethabi::encode(&[
-				Token::Uint(self.index().into()),
-				Token::Bytes(ethabi::encode(&[
-					Token::Address(*token),
-					Token::Address(*recipient),
-					Token::Uint(U256::from(*amount)),
-				])),
-			]),
 			AgentExecuteCommand::RegisterToken { token_id, name, symbol, decimals } =>
 				ethabi::encode(&[
 					Token::Uint(self.index().into()),
@@ -252,6 +244,14 @@ impl AgentExecuteCommand {
 					])),
 				]),
 			AgentExecuteCommand::MintToken { token, recipient, amount } => ethabi::encode(&[
+				Token::Uint(self.index().into()),
+				Token::Bytes(ethabi::encode(&[
+					Token::Address(*token),
+					Token::Address(*recipient),
+					Token::Uint(U256::from(*amount)),
+				])),
+			]),
+			AgentExecuteCommand::TransferToken { token, recipient, amount } => ethabi::encode(&[
 				Token::Uint(self.index().into()),
 				Token::Bytes(ethabi::encode(&[
 					Token::Address(*token),
