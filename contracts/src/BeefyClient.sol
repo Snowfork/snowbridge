@@ -306,18 +306,17 @@ contract BeefyClient {
 
         verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
 
-        if (is_next_session && leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
-            revert InvalidMMRLeaf();
-        }
-
         bytes32 newMMRRoot = getFirstMMRRoot(commitment);
-        bool leafIsValid =
-            MMRProof.verifyLeafProof(newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder);
-        if (!leafIsValid) {
-            revert InvalidMMRLeafProof();
-        }
 
         if (is_next_session) {
+            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+                revert InvalidMMRLeaf();
+            }
+            bool leafIsValid =
+                MMRProof.verifyLeafProof(newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder);
+            if (!leafIsValid) {
+                revert InvalidMMRLeafProof();
+            }
             currentValidatorSet = nextValidatorSet;
             nextValidatorSet.id = leaf.nextAuthoritySetID;
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
