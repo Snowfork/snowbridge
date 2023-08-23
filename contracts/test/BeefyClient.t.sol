@@ -444,7 +444,7 @@ contract BeefyClientTest is Test {
 
         //construct nextAuthoritySetID with a wrong value
         mmrLeaf.nextAuthoritySetID = setId;
-        //submit will be reverted with InvalidCommitment
+        //submit will be reverted with InvalidMMRLeaf
         vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
     }
