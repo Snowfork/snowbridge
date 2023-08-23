@@ -495,7 +495,6 @@ contract Gateway is IGateway, IInitializable {
         _ensureOutboundMessagingEnabled(channel);
 
         // Ensure the user has enough funds for this message to be accepted
-        // Todo: extraFee could be charged in dest chain's native ERC20 asset which depends on https://github.com/Snowfork/snowbridge/pull/927
         if (msg.value < channel.fee + extraFee) {
             revert FeePaymentToLow();
         }
@@ -607,7 +606,6 @@ contract Gateway is IGateway, IInitializable {
         bytes memory message_payload = SubstrateTypes.Transact(
             address(channel.agent), bytes1(0x03), payload, DEFAULT_EXTRA_FEE, DEFAULT_REF_TIME, DEFAULT_PROOF_SIZE
         );
-        // Todo: For transact call, except for Ether extraFee could be charged in that chain's native ERC20 asset
         _submitOutbound(destinationChain, message_payload, DEFAULT_EXTRA_FEE);
     }
 
@@ -646,4 +644,12 @@ contract Gateway is IGateway, IInitializable {
             SubstrateTypes.Transact(msg.sender, bytes1(0x01), payload, extraFee, refTime, proofSize);
         _submitOutbound(destinationChain, message_payload, 0);
     }
+
+    /// Todo: transactThroughSigned and pay extraFee with foreign asset in dest chain which depends on https://github.com/Snowfork/snowbridge/pull/927
+    function transactThroughSignedPayExtraFeeWithForeignAsset(
+        ParaID destinationChain,
+        bytes calldata payload,
+        uint32 fee_asset_id,
+        uint256 fee_amount
+    ) external payable {}
 }
