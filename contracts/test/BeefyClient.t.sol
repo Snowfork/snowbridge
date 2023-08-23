@@ -463,7 +463,7 @@ contract BeefyClientTest is Test {
 
         //construct parentNumber with a wrong value
         mmrLeaf.parentNumber = 1;
-        //submit will be reverted with InvalidCommitment
+        //submit will be reverted with InvalidMMRLeafProof
         vm.expectRevert(BeefyClient.InvalidMMRLeafProof.selector);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
     }
