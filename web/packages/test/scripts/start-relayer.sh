@@ -58,7 +58,7 @@ config_relayer(){
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg channelID $TEMPLATE_PARAID \
+        --arg channelID $TEMPLATE_PARA_ID \
         --arg eth_gas_limit $eth_gas_limit \
     '
       .source.contracts.Gateway = $k1

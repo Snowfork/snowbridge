@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use crate::constants::*;
 use crate::contracts::i_gateway;
 use crate::parachains::bridgehub::{self};
@@ -11,26 +10,17 @@ use ethers::prelude::{
 use ethers::providers::Http;
 use futures::StreamExt;
 use sp_core::{sr25519::Pair, Pair as PairT, H160};
+use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 use subxt::blocks::ExtrinsicEvents;
 use subxt::events::StaticEvent;
 use subxt::tx::{PairSigner, TxPayload};
-use subxt::{Config, OnlineClient, PolkadotConfig, SubstrateConfig};
-
-/// Custom config that works with Statemint
-pub enum StatemintConfig {}
-
-impl Config for StatemintConfig {
-use subxt::tx::PairSigner;
 use subxt::{Config, OnlineClient, PolkadotConfig};
 use templateXcm::{
-    v3::{
-        junction::Junction, junctions::Junctions, multilocation::MultiLocation, junction::NetworkId,
-    },
+    v3::{junction::{Junction, NetworkId}, junctions::Junctions, multilocation::MultiLocation},
     VersionedMultiLocation, VersionedXcm,
 };
-use subxt::tx::TxPayload;
 
 /// Custom config that works with Statemint
 pub enum TemplateConfig {}

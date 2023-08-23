@@ -46,7 +46,6 @@ contract DeployScript is Script {
         bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
         ParaID assetHubParaID = ParaID.wrap(vm.envUint("ASSET_HUB_PARAID"));
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
-        bytes32 templateAgentID = vm.envBytes32("TEMPLATE_AGENT_ID");
 
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
@@ -78,11 +77,9 @@ contract DeployScript is Script {
 
         address bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         address assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
-        address templateAgent = IGateway(address(gateway)).agentOf(templateAgentID);
 
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
-        payable(templateAgent).safeNativeTransfer(initialDeposit);
 
         new GatewayUpgradeMock();
         new HelloWorld();

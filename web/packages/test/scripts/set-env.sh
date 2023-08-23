@@ -47,11 +47,7 @@ bridgehub_pallets_owner="${BRIDGE_HUB_PALLETS_OWNER:-0xd43593c715fdd31c61141abd0
 export BRIDGE_HUB_PARAID="${BRIDGE_HUB_PARAID:-1013}"
 export BRIDGE_HUB_AGENT_ID="${BRIDGE_HUB_AGENT_ID:-0x05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6}"
 
-template_para_id="${TEMPLATE_PARA_ID:-1001}"
-
-statemine_ws_url="${STATEMINE_WS_URL:-ws://127.0.0.1:12144}"
-statemine_para_id="${STATEMINE_PARA_ID:-1000}"
-statemine_seed="${STATEMINE_SEED:-//Alice}"
+export TEMPLATE_PARA_ID="${TEMPLATE_PARA_ID:-1001}"
 
 assethub_ws_url="${ASSET_HUB_WS_URL:-ws://127.0.0.1:12144}"
 assethub_seed="${ASSET_HUB_SEED:-//Alice}"
@@ -86,11 +82,6 @@ export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea
 # for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
 export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
 export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
-
-
-
-export TEMPLATE_PARAID=$template_para_id
-export TEMPLATE_AGENT_ID="0x2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793"
 
 export DEFAULT_FEE=1
 export DEFAULT_REWARD=1
