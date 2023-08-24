@@ -201,9 +201,9 @@ pub enum AgentExecuteCommand {
 		/// ID for the new token
 		token_id: H256,
 		/// Name of the token
-		name: String,
+		name: Vec<u8>,
 		/// Short symbol for the token
-		symbol: String,
+		symbol: Vec<u8>,
 		/// Number of decimal places
 		decimals: u8,
 	},
@@ -243,8 +243,8 @@ impl AgentExecuteCommand {
 					Token::Uint(self.index().into()),
 					Token::Bytes(ethabi::encode(&[
 						Token::FixedBytes(token_id.as_bytes().to_owned()),
-						Token::String(name.as_bytes().to_owned()),
-						Token::String(symbol.as_bytes().to_owned()),
+						Token::String(name.to_owned()),
+						Token::String(symbol.to_owned()),
 						Token::Uint(U256::from(*decimals)),
 					])),
 				]),
