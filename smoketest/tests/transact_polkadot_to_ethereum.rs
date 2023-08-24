@@ -25,6 +25,8 @@ use templateXcm::{
     VersionedXcm,
 };
 use futures::StreamExt;
+use tokio::time::{interval, Duration};
+
 
 const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("b1185ede04202fe62d38f5db72f71e38ff3e8305");
 const XCM_WEIGHT_REQUIRED: u64 = 3000000000;
@@ -34,17 +36,31 @@ const XCM_PROOF_SIZE_REQUIRED: u64 = 18000;
 async fn transact() {
     let test_clients = initial_clients().await.expect("initialize clients");
 
-    let agent_id: [u8; 32] =
-        hex!("2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793");
     let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
     let ethereum_client = *(test_clients.ethereum_client.clone());
     let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
-    let agent_address = gateway
-        .agent_of(agent_id)
-        .await
-        .expect("find agent");
 
-    assert!(!agent_address.is_zero(), "agent address not found");
+    let mut agent_address = None;
+    let mut elapsed_time = 0;
+    let interval_duration = Duration::from_secs(3);
+    let mut ticker = interval(interval_duration);
+
+    // Keep trying for 10 minutes (600 seconds) or until agent_address is found
+    while elapsed_time < 600 && agent_address.is_none() {
+        ticker.tick().await; // wait for the next interval
+        elapsed_time += 5; // increase elapsed_time by 3 seconds
+
+        match gateway.agent_of(SIBLING_AGENT_ID).await {
+            Ok(address) if !address.is_zero() => {
+                agent_address = Some(address);
+            }
+            _ => {
+                println!("agent address not found, retrying");
+            }// do nothing, just retry after the interval
+        }
+    }
+
+    let agent_address = agent_address.expect("agent address not found after 10 minutes");
 
     println!("agent address {}", hex::encode(agent_address));
 
@@ -66,7 +82,7 @@ async fn transact() {
         key: HELLO_WORLD_CONTRACT.into(),
     });
 
-    let inner_message = Box::new(Xcm(vec![
+    let inner_message = Box::new(Xcm(vec![ // TODO send the Ethereum gas fee here too
         Instruction::UnpaidExecution { weight_limit: Unlimited, check_origin: None },// TODO update to paid
         Instruction::DescendOrigin(contract_location), // TODO not sure if this is right, want to pass the contract address
         Instruction::Transact {

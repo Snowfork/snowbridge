@@ -134,9 +134,9 @@ contract Gateway is IGateway, IInitializable {
         // In this scenario case, the channel's state would have been updated to accept the message (by virtue of the nonce increment), yet the actual message
         // dispatch would have failed
 
-        uint256 gas = computeGas(message.command, message.params);
+        uint256 computedGas = computeGas(message.command, message.params);
 
-        if (gasleft() < DISPATCH_GAS + BUFFER_GAS) {
+        if (gasleft() < computedGas + BUFFER_GAS) {
             revert NotEnoughGas();
         }
 
@@ -144,37 +144,37 @@ contract Gateway is IGateway, IInitializable {
 
         // Dispatch message to a handler
         if (message.command == Command.AgentExecute) {
-            try Gateway(this).agentExecute{gas: gas}(message.params) {}
+            try Gateway(this).agentExecute{gas: computedGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.CreateAgent) {
-            try Gateway(this).createAgent{gas: gas}(message.params) {}
+            try Gateway(this).createAgent{gas: computedGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.CreateChannel) {
-            try Gateway(this).createChannel{gas: gas}(message.params) {}
+            try Gateway(this).createChannel{gas: computedGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.UpdateChannel) {
-            try Gateway(this).updateChannel{gas: gas}(message.params) {}
+            try Gateway(this).updateChannel{gas: computedGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.SetOperatingMode) {
-            try Gateway(this).setOperatingMode{gas: gas}(message.params) {}
+            try Gateway(this).setOperatingMode{gas: computedGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: gas}(message.params) {}
+            try Gateway(this).transferNativeFromAgent{gas: computedGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.Upgrade) {
-            try Gateway(this).upgrade{gas: gas}(message.params) {}
+            try Gateway(this).upgrade{gas: computedGas}(message.params) {}
             catch {
                 success = false;
             }
