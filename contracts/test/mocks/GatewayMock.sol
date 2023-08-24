@@ -14,8 +14,6 @@ contract GatewayMock is Gateway {
         bytes32 bridgeHubHubAgentID,
         ParaID assetHubParaID,
         bytes32 assetHubHubAgentID,
-        ParaID templateParaID,
-        bytes32 templateAgentID,
         bytes2 createTokenCallID,
         bytes32 create2Salt
     )
@@ -27,8 +25,6 @@ contract GatewayMock is Gateway {
             bridgeHubHubAgentID,
             assetHubParaID,
             assetHubHubAgentID,
-            templateParaID,
-            templateAgentID,
             createTokenCallID,
             create2Salt
         )

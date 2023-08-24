@@ -4,27 +4,27 @@ set -eu
 source scripts/set-env.sh
 
 send_governance_transact_from_relaychain() {
-    local para_id=$1
-    local hex_encoded_data=$2
-    local require_weight_at_most_ref_time=${3:-2000000000}
-    local require_weight_at_most_proof_size=${4:-12000}
-    echo "  calling send_governance_transact:"
-    echo "      relay_url: ${relaychain_ws_url}"
-    echo "      relay_chain_seed: ${relaychain_sudo_seed}"
-    echo "      para_id: ${para_id}"
-    echo "      require_weight_at_most_ref_time: ${require_weight_at_most_ref_time}"
-    echo "      require_weight_at_most_proof_size: ${require_weight_at_most_proof_size}"
-    echo "      params:"
+  local para_id=$1
+  local hex_encoded_data=$2
+  local require_weight_at_most_ref_time=${3:-2000000000}
+  local require_weight_at_most_proof_size=${4:-12000}
+  echo "  calling send_governance_transact:"
+  echo "      relay_url: ${relaychain_ws_url}"
+  echo "      relay_chain_seed: ${relaychain_sudo_seed}"
+  echo "      para_id: ${para_id}"
+  echo "      require_weight_at_most_ref_time: ${require_weight_at_most_ref_time}"
+  echo "      require_weight_at_most_proof_size: ${require_weight_at_most_proof_size}"
+  echo "      params:"
 
-    local dest=$(jq --null-input \
-                    --arg para_id "$para_id" \
-                    '{ "v3": { "parents": 0, "interior": { "x1": { "parachain": $para_id } } } }')
+  local dest=$(jq --null-input \
+    --arg para_id "$para_id" \
+    '{ "v3": { "parents": 0, "interior": { "x1": { "parachain": $para_id } } } }')
 
-    local message=$(jq --null-input \
-                       --arg hex_encoded_data "$hex_encoded_data" \
-                       --arg require_weight_at_most_ref_time "$require_weight_at_most_ref_time" \
-                       --arg require_weight_at_most_proof_size "$require_weight_at_most_proof_size" \
-                       '
+  local message=$(jq --null-input \
+    --arg hex_encoded_data "$hex_encoded_data" \
+    --arg require_weight_at_most_ref_time "$require_weight_at_most_ref_time" \
+    --arg require_weight_at_most_proof_size "$require_weight_at_most_proof_size" \
+    '
                        {
                           "v3": [
                                   {
@@ -48,40 +48,41 @@ send_governance_transact_from_relaychain() {
                         }
                         ')
 
-    echo ""
-    echo "          dest:"
-    echo "${dest}"
-    echo ""
-    echo "          message:"
-    echo "${message}"
-    echo ""
-    echo "--------------------------------------------------"
+  echo ""
+  echo "          dest:"
+  echo "${dest}"
+  echo ""
+  echo "          message:"
+  echo "${message}"
+  echo ""
+  echo "--------------------------------------------------"
 
-    npx polkadot-js-api \
-        --ws "${relaychain_ws_url?}" \
-        --seed "${relaychain_sudo_seed?}" \
-        --sudo \
-        tx.xcmPallet.send \
-            "${dest}" \
-            "${message}"
+  npx polkadot-js-api \
+    --ws "${relaychain_ws_url?}" \
+    --seed "${relaychain_sudo_seed?}" \
+    --sudo \
+    tx.xcmPallet.send \
+    "${dest}" \
+    "${message}"
 }
 
 transfer_balance() {
-    local runtime_para_endpoint=$1
-    local seed=$2
-    local para_id=$3
-    local amount=$4
-    local target_account=$5
+  local runtime_para_endpoint=$1
+  local seed=$2
+  local para_id=$3
+  local amount=$4
+  local target_account=$5
 
-    local dest=$(jq --null-input \
-                    --arg para_id "$para_id" \
-                    '{ "v3": { "parents": 0, "interior": { "x1": { "parachain": $para_id } } } }')
-    local benificiary=$(jq --null-input \
-                    --arg target_account "$target_account" \
-                    '{ "v3": { "parents": 0, "interior": { "x1": { "accountid32": { "id": $target_account } } } } }')
-    local assets=$(jq --null-input \
-                    --arg amount "$amount" \
-        '
+  local dest=$(jq --null-input \
+    --arg para_id "$para_id" \
+    '{ "v3": { "parents": 0, "interior": { "x1": { "parachain": $para_id } } } }')
+  local benificiary=$(jq --null-input \
+    --arg target_account "$target_account" \
+    '{ "v3": { "parents": 0, "interior": { "x1": { "accountid32": { "id": $target_account } } } } }')
+  local assets=$(
+    jq --null-input \
+      --arg amount "$amount" \
+      '
         {
             "V3": [
                 {
@@ -98,23 +99,94 @@ transfer_balance() {
             ]
         }
         '
-    )
-    local asset_fee_item=0
+  )
+  local asset_fee_item=0
 
-    echo "  calling transfer_balance:"
-    echo "      target_account: ${target_account}"
-    echo "      dest: ${dest}"
-    echo "      benificiary: ${benificiary}"
-    echo "      assets: ${assets}"
-    echo "      asset_fee_item: ${asset_fee_item}"
-    echo "--------------------------------------------------"
+  echo "  calling transfer_balance:"
+  echo "      target_account: ${target_account}"
+  echo "      dest: ${dest}"
+  echo "      benificiary: ${benificiary}"
+  echo "      assets: ${assets}"
+  echo "      asset_fee_item: ${asset_fee_item}"
+  echo "--------------------------------------------------"
 
-    npx polkadot-js-api \
-        --ws "${runtime_para_endpoint}" \
-        --seed "${seed?}" \
-        tx.xcmPallet.teleportAssets \
-            "${dest}" \
-            "${benificiary}" \
-            "${assets}" \
-            "${asset_fee_item}"
+  npx polkadot-js-api \
+    --ws "${runtime_para_endpoint}" \
+    --seed "${seed?}" \
+    tx.xcmPallet.teleportAssets \
+    "${dest}" \
+    "${benificiary}" \
+    "${assets}" \
+    "${asset_fee_item}"
+}
+
+send_create_call() {
+  local bridgehub_id=$1
+  local para_id=$2
+  local hex_encoded_data=$3
+  local require_weight_at_most_ref_time=${4:-3000000000}
+  local require_weight_at_most_proof_size=${5:-18000}
+  echo "  calling send_governance_transact:"
+  echo "      relay_url: ${relaychain_ws_url}"
+  echo "      relay_chain_seed: ${relaychain_sudo_seed}"
+  echo "      bridgehub_id: ${bridgehub_id}"
+  echo "      para_id: ${para_id}"
+  echo "      require_weight_at_most_ref_time: ${require_weight_at_most_ref_time}"
+  echo "      require_weight_at_most_proof_size: ${require_weight_at_most_proof_size}"
+  echo "      params:"
+
+  local dest=$(jq --null-input \
+    --arg bridgehub_id "$bridgehub_id" \
+    '{ "v3": { "parents": 0, "interior": { "x1": { "parachain": $bridgehub_id } } } }')
+
+  local message=$(jq --null-input \
+    --arg para_id "$para_id" \
+    --arg hex_encoded_data "$hex_encoded_data" \
+    --arg require_weight_at_most_ref_time "$require_weight_at_most_ref_time" \
+    --arg require_weight_at_most_proof_size "$require_weight_at_most_proof_size" \
+    '
+                       {
+                          "v3": [{
+                                    "unpaidexecution": {
+                                        "weight_limit": "unlimited"
+                                    }
+                                  },
+                                  {
+                                    "descendorigin": {
+                                       "x1": {
+                                          "parachain": $para_id
+                                        }
+                                     }
+                                  },
+                                  {
+                                    "transact": {
+                                      "origin_kind": "xcm",
+                                      "require_weight_at_most": {
+                                        "ref_time": $require_weight_at_most_ref_time,
+                                        "proof_size": $require_weight_at_most_proof_size,
+                                      },
+                                      "call": {
+                                        "encoded": $hex_encoded_data
+                                      }
+                                    }
+                                 }
+                            ]}
+                        ')
+
+  echo ""
+  echo "          dest:"
+  echo "${dest}"
+  echo ""
+  echo "          message:"
+  echo "${message}"
+  echo ""
+  echo "--------------------------------------------------"
+
+  npx polkadot-js-api \
+    --ws "${relaychain_ws_url?}" \
+    --seed "${relaychain_sudo_seed?}" \
+    --sudo \
+    tx.xcmPallet.send \
+    "${dest}" \
+    "${message}"
 }

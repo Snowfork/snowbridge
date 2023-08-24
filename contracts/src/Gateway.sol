@@ -50,10 +50,6 @@ contract Gateway is IGateway, IInitializable {
     ParaID internal immutable ASSET_HUB_PARA_ID;
     bytes32 internal immutable ASSET_HUB_AGENT_ID;
 
-    // Template
-    ParaID internal immutable TEMPLATE_PARA_ID;
-    bytes32 internal immutable TEMPLATE_AGENT_ID;
-
     // Call index of create token in assethub runtime
     bytes2 internal immutable CREATE_TOKEN_CALL_ID;
     // Salt
@@ -96,8 +92,6 @@ contract Gateway is IGateway, IInitializable {
         bytes32 bridgeHubHubAgentID,
         ParaID assetHubParaID,
         bytes32 assetHubHubAgentID,
-        ParaID templateParaID,
-        bytes32 templateAgentID,
         bytes2 createTokenCallID,
         bytes32 salt
     ) {
@@ -109,8 +103,6 @@ contract Gateway is IGateway, IInitializable {
         BRIDGE_HUB_AGENT_ID = bridgeHubHubAgentID;
         ASSET_HUB_PARA_ID = assetHubParaID;
         ASSET_HUB_AGENT_ID = assetHubHubAgentID;
-        TEMPLATE_PARA_ID = templateParaID;
-        TEMPLATE_AGENT_ID = templateAgentID;
         CREATE_TOKEN_CALL_ID = createTokenCallID;
         CREATE2_SALT = salt;
     }
@@ -283,7 +275,7 @@ contract Gateway is IGateway, IInitializable {
             revert AgentAlreadyCreated();
         }
 
-        address payable agent = payable(new Agent(params.agentID));
+        address payable agent = payable(new Agent{salt:CREATE2_SALT}(params.agentID));
         $.agents[params.agentID] = agent;
 
         emit AgentCreated(params.agentID, agent);
@@ -581,17 +573,6 @@ contract Gateway is IGateway, IInitializable {
             reward: defaultReward
         });
 
-        // Initialize an agent & channel for Template
-        address templateAgent = address(new Agent{salt:CREATE2_SALT}(TEMPLATE_AGENT_ID));
-        $.agents[TEMPLATE_AGENT_ID] = templateAgent;
-        $.channels[TEMPLATE_PARA_ID] = Channel({
-            mode: OperatingMode.Normal,
-            agent: templateAgent,
-            inboundNonce: 0,
-            outboundNonce: 0,
-            fee: defaultFee,
-            reward: defaultReward
-        });
         // Todo: Should be configurable/upgradable include a on-chain price oracle SWAP_RATE from https://coincodex.com/convert/ethereum/polkadot/
         Assets.initialize(registerTokenFee, sendTokenFee);
     }

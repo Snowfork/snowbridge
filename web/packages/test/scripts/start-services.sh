@@ -50,19 +50,24 @@ echo "Config bridgehub"
 source scripts/configure-bridgehub.sh
 configure_bridgehub
 
+# 7. config template parachain
+echo "Config template parachain"
+source scripts/configure-template-parachain.sh
+configure_template_parachain
+
 if [ "$skip_relayer" == "false" ]; then
-    # 7. start relayer
-    echo "Starting relayers"
-    source scripts/start-relayer.sh
-    deploy_relayer
+  # 8. start relayer
+  echo "Starting relayers"
+  source scripts/start-relayer.sh
+  deploy_relayer
 fi
 
 echo "Testnet has been initialized"
 
 end=$(date +%s)
-runtime=$((end-start))
-minutes=$(( (runtime % 3600) / 60 ));
-seconds=$(( (runtime % 3600) % 60 ));
+runtime=$((end - start))
+minutes=$(((runtime % 3600) / 60))
+seconds=$(((runtime % 3600) % 60))
 echo "Took $minutes minutes $seconds seconds"
 
 wait

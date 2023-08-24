@@ -48,10 +48,6 @@ contract GatewayTest is Test {
     bytes32 public assetHubAgentID = keccak256("1000");
     address public assetHubAgent;
 
-    ParaID public templateParaID = ParaID.wrap(1001);
-    bytes32 public templateAgentID = keccak256("1001");
-    address public templateAgent;
-
     address public relayer;
 
     bytes32[] public proof = [bytes32(0x2f9ee6cfdf244060dc28aa46347c5219e303fc95062dd672b4e406ca5c29764b)];
@@ -82,8 +78,6 @@ contract GatewayTest is Test {
             bridgeHubAgentID,
             assetHubParaID,
             assetHubAgentID,
-            templateParaID,
-            templateAgentID,
             bytes2(0x3500),
             bytes32(0x0000000000000000000000000000000000000000000000000000000000000001)
         );
