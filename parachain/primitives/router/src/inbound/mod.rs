@@ -271,13 +271,13 @@ mod tests {
 	use xcm::v3::prelude::*;
 	use xcm_executor::traits::ConvertLocation;
 
-	const CONTRACT_ADDRESS: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
-	const NETWORK: NetworkId = Ethereum { chain_id: 15 };
+	const CONTRACT_ADDRESS: [u8; 20] = hex!("6eE23257bc91792eDFdCC2490A7B18502fDA01b4");
+	const NETWORK: NetworkId = Ethereum { chain_id: 5 };
 	const SS58_FORMAT: u16 = 2;
 	const EXPECTED_SOVEREIGN_KEY: [u8; 32] =
-		hex!("c9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5");
+		hex!("e241a4052f403eccdadadb51fe9ad4096c625038d66950757905c3737fdf66aa");
 	const EXPECTED_SOVEREIGN_ADDRESS: &'static str =
-		"H8VBFC4LG91ByxMG6GwsCcAacjitnzGmGbqnvSEQFBywJEL";
+		"HgyqcxLM3CkU1SUYLvyPJemNm5xCH9ce4fGUAverrfTktbJ";
 
 	parameter_types! {
 		pub EthereumNetwork: NetworkId = NETWORK;
