@@ -1668,7 +1668,7 @@ mod tests {
 		let network = BridgedNetwork::get();
 
 		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
+		let _fees: MultiAssets = vec![fee.clone()].into();
 
 		let message: Xcm<()> = vec![
 			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
@@ -1677,7 +1677,7 @@ mod tests {
 				key: hex!("1000000000000000000000000000000000000000"),
 			})),
 			Transact {
-				origin_kind: OriginKind::Native,
+				origin_kind: OriginKind::SovereignAccount,
 				require_weight_at_most: Default::default(),
 				call: hex!("c3a9b1c50000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000d48656c6c6f2c20436c6172612100000000000000000000000000000000000000").to_vec().into(),
 			},
