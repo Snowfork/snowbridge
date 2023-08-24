@@ -236,10 +236,10 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 		let result = if self.is_transact() {
 			// Construct a message to send an arbitrary call to an Ethereum contract.
-			result = self.transact_message()?
+			self.transact_message()?
 		} else {
 			// Get withdraw/deposit and make native tokens create message.
-			result = self.native_tokens_unlock_message()?
+			self.native_tokens_unlock_message()?
 		};
 
 		// Match last set topic. Later could use message id for replies
