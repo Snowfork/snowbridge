@@ -19,7 +19,7 @@ use subxt::blocks::ExtrinsicEvents;
 use subxt::events::StaticEvent;
 use subxt::tx::{PairSigner, TxPayload};
 use subxt::utils::AccountId32;
-use subxt::{Config, OnlineClient, PolkadotConfig};
+use subxt::{Config, OnlineClient, PolkadotConfig, SubstrateConfig};
 use templateXcm::{
     v3::{junction::Junction, junctions::Junctions, multilocation::MultiLocation},
     VersionedMultiLocation, VersionedXcm,
@@ -36,7 +36,7 @@ impl Config for AssetHubConfig {
     type Signature = <PolkadotConfig as Config>::Signature;
     type Hasher = <PolkadotConfig as Config>::Hasher;
     type Header = <PolkadotConfig as Config>::Header;
-    type ExtrinsicParams = <PolkadotConfig as Config>::ExtrinsicParams;
+    type ExtrinsicParams = <SubstrateConfig as Config>::ExtrinsicParams;
 }
 
 pub struct TestClients {
