@@ -231,10 +231,6 @@ pub mod pallet {
 			let sibling_para =
 				MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
 
-			// Uncomment for tests before PR#917
-			// let sibling_para =
-			// 	MultiLocation { parents: 1, interior: X1(Parachain(1001u32.into())) };
-
 			// Attempt to send XCM to a sibling parachain
 			match send_xcm::<T::XcmSender>(sibling_para, xcm.clone()) {
 				Ok(_) => Self::deposit_event(Event::MessageReceived {
