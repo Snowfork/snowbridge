@@ -18,3 +18,5 @@ use sp_core::H256;
 
 /// The ID of an agent contract
 pub type AgentId = H256;
+/// The ID of a parachain token
+pub type TokenId = H256;

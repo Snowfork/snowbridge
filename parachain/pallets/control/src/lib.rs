@@ -18,8 +18,11 @@ pub mod weights;
 pub use weights::*;
 
 use snowbridge_core::{
-	outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
-	AgentId,
+	outbound::{
+		AgentExecuteCommand, Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait,
+		ParaId,
+	},
+	AgentId, TokenId,
 };
 use sp_core::{H160, H256};
 use sp_runtime::traits::Hash;
@@ -62,8 +65,14 @@ pub mod pallet {
 		/// Implementation that ensures origin is an XCM location for channel operations
 		type ChannelOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
 
+		/// Origin check for `register_token`
+		type RegisterTokenOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
+
 		/// Converts MultiLocation to H256 in a way that is stable across multiple versions of XCM
 		type AgentHashedDescription: ConvertLocation<H256>;
+
+		/// Converts MultiLocation to H256 in a way that is stable across multiple versions of XCM
+		type TokenHashedDescription: ConvertLocation<H256>;
 
 		/// The universal location
 		type UniversalLocation: Get<InteriorMultiLocation>;
@@ -81,6 +90,8 @@ pub mod pallet {
 		Upgrade { impl_address: H160, impl_code_hash: H256, params_hash: Option<H256> },
 		/// An CreateAgent message was sent to the Gateway
 		CreateAgent { location: Box<MultiLocation>, agent_id: AgentId },
+		/// An AgentExecute message was sent to the Gateway
+		AgentExecute { location: Box<MultiLocation>, agent_id: AgentId, payload: Vec<u8> },
 		/// An CreateChannel message was sent to the Gateway
 		CreateChannel { para_id: ParaId, agent_id: AgentId },
 		/// An UpdateChannel message was sent to the Gateway
@@ -104,10 +115,13 @@ pub mod pallet {
 		LocationReanchorFailed,
 		LocationToParaIdConversionFailed,
 		LocationToAgentIdConversionFailed,
+		LocationToTokenIdConversionFailed,
 		AgentAlreadyCreated,
-		AgentNotExist,
+		AgentNotFound,
 		ChannelAlreadyCreated,
 		ChannelNotExist,
+		AssetNotOwnedByOrigin,
+		TokenExists,
 	}
 
 	#[pallet::storage]
@@ -115,6 +129,9 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type Channels<T: Config> = StorageMap<_, Twox64Concat, ParaId, (), OptionQuery>;
+
+	#[pallet::storage]
+	pub type Tokens<T: Config> = StorageMap<_, Twox64Concat, TokenId, (), OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -199,7 +216,7 @@ pub mod pallet {
 
 			let (agent_id, some_para_id, _) = Self::convert_location(location)?;
 
-			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotFound);
 
 			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
 
@@ -233,7 +250,7 @@ pub mod pallet {
 
 			let (agent_id, some_para_id, _) = Self::convert_location(location)?;
 
-			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotFound);
 
 			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
 
@@ -283,7 +300,7 @@ pub mod pallet {
 
 			let (agent_id, _, _) = Self::convert_location(location)?;
 
-			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotFound);
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
@@ -297,6 +314,65 @@ pub mod pallet {
 				amount,
 			});
 
+			Ok(())
+		}
+
+		/// Sends a message to the Gateway contract to instruct a para's agent to register a new
+		/// token that represents `asset`.
+		///
+		/// - `origin`: Must be `MultiLocation`
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::register_token())]
+		pub fn register_token(
+			origin: OriginFor<T>,
+			mut asset: MultiLocation,
+			name: Vec<u8>,
+			symbol: Vec<u8>,
+			decimals: u8,
+		) -> DispatchResult {
+			let location: MultiLocation = T::RegisterTokenOrigin::ensure_origin(origin)?;
+
+			let (agent_id, _, location) = Self::convert_location(location)?;
+
+			// Normalize asset location relative to the relay chain
+			let relay_location = T::RelayLocation::get();
+			asset
+				.reanchor(&relay_location, T::UniversalLocation::get())
+				.or(Err(Error::<T>::LocationReanchorFailed))?;
+
+			// Check that the asset location is within the agent location
+			if !asset.starts_with(&location) {
+				return Err(Error::<T>::AssetNotOwnedByOrigin.into())
+			}
+
+			// Hash the asset location to produce a token id
+			let token_id = T::TokenHashedDescription::convert_location(&asset)
+				.ok_or(Error::<T>::LocationToTokenIdConversionFailed)?;
+
+			// Check that the agent exists
+			if !Agents::<T>::contains_key(agent_id) {
+				return Err(Error::<T>::AgentNotFound.into())
+			}
+
+			// Record the token id or fail if it has already been created
+			if Tokens::<T>::contains_key(token_id) {
+				return Err(Error::<T>::TokenExists.into())
+			}
+			Tokens::<T>::insert(token_id, ());
+
+			let command = AgentExecuteCommand::RegisterToken { token_id, name, symbol, decimals };
+
+			let message = Message {
+				origin: T::OwnParaId::get(),
+				command: Command::AgentExecute { agent_id, command: command.clone() },
+			};
+			Self::submit_outbound(message)?;
+
+			Self::deposit_event(Event::<T>::AgentExecute {
+				location: Box::new(location),
+				agent_id,
+				payload: command.abi_encode(),
+			});
 			Ok(())
 		}
 	}

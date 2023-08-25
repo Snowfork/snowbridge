@@ -193,9 +193,11 @@ impl snowbridge_control::Config for Test {
 	type MaxUpgradeDataSize = MaxUpgradeDataSize;
 	type AgentOrigin = EnsureOriginFromTable;
 	type ChannelOrigin = EnsureOriginFromTable;
+	type RegisterTokenOrigin = EnsureOriginFromTable;
 	type UniversalLocation = UniversalLocation;
 	type RelayLocation = RelayLocation;
 	type AgentHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
+	type TokenHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 	type WeightInfo = ();
 }
 

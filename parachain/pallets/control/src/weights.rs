@@ -41,6 +41,56 @@ pub trait WeightInfo {
 	fn update_channel() -> Weight;
 	fn set_operating_mode() -> Weight;
 	fn transfer_native_from_agent() -> Weight;
+	fn register_token() -> Weight;
+}
+
+/// Weights for pallet_template using the Substrate node and recommended hardware.
+pub struct SubstrateWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
+	fn upgrade(data_size: u32) -> Weight {
+		Weight::from_parts(30_740_411, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(Weight::from_parts(8_805, 0).saturating_mul(data_size.into()))
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(3))
+	}
+	fn create_agent() -> Weight {
+		Weight::from_parts(35_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().writes(4))
+	}
+	// TODO: update weights below with real benchmarks
+	fn create_channel() -> Weight {
+		Weight::from_parts(35_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().writes(4))
+	}
+	fn update_channel() -> Weight {
+		Weight::from_parts(35_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().writes(4))
+	}
+	fn set_operating_mode() -> Weight {
+		Weight::from_parts(35_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().writes(4))
+	}
+	fn transfer_native_from_agent() -> Weight {
+		Weight::from_parts(35_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().writes(4))
+	}
+	fn register_token() -> Weight {
+		Weight::from_parts(35_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().writes(4))
+	}
 }
 
 // For backwards compatibility and tests
@@ -58,7 +108,7 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(5))
 			.saturating_add(RocksDbWeight::get().writes(4))
 	}
-	// Todo: update with real benchmark
+	// TODO: update weights below with real benchmarks
 	fn create_channel() -> Weight {
 		Weight::from_parts(35_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 3517))
@@ -78,6 +128,12 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().writes(4))
 	}
 	fn transfer_native_from_agent() -> Weight {
+		Weight::from_parts(35_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(RocksDbWeight::get().reads(5))
+			.saturating_add(RocksDbWeight::get().writes(4))
+	}
+	fn register_token() -> Weight {
 		Weight::from_parts(35_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 3517))
 			.saturating_add(RocksDbWeight::get().reads(5))
