@@ -4,10 +4,12 @@ pragma solidity ^0.8.20;
 
 import {Gateway} from "../../src/Gateway.sol";
 import {GatewayMock} from "./GatewayMock.sol";
-import {OperatingMode} from "../../src/Types.sol";
+import {AgentExecuteCommand, OperatingMode} from "../../src/Types.sol";
 import {console} from "forge-std/console.sol";
 
 contract HelloWorld {
+    uint8 internal reenter;
+
     event SaidHello(string indexed message);
 
     function sayHello(string memory _text) public {
@@ -21,6 +23,32 @@ contract HelloWorld {
             Gateway.SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
 
         bytes memory call = abi.encodeCall(GatewayMock.setOperatingModePublic, abi.encode(params));
+
+        (bool success,) = gateway.call(call);
+
+        require(success, "Failed to reentrancy");
+
+        emit SaidHello("hacked");
+    }
+
+    function attack2(address gateway) public {
+        console.log("gateway proxy address is: %s", gateway);
+
+        reenter++;
+
+        if (reenter > 2) {
+            emit SaidHello("reenter");
+            return;
+        }
+
+        bytes memory payload = abi.encodeWithSignature("attack2(address)", address(gateway));
+
+        Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
+            agentID: keccak256("1002"),
+            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(this), payload, 100))
+        });
+
+        bytes memory call = abi.encodeCall(GatewayMock.agentExecutePublic, abi.encode(params));
 
         (bool success,) = gateway.call(call);
 

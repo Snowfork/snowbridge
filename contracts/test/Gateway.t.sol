@@ -689,4 +689,21 @@ contract GatewayTest is Test {
         OperatingMode mode = GatewayMock(address(gateway)).operatingMode();
         assertEq(uint256(mode), 1);
     }
+
+    function testAgentExecutionTransact2WithReentrancy() public {
+        HelloWorld helloWorld = new HelloWorld();
+
+        bytes memory payload = abi.encodeWithSignature("attack2(address)", address(gateway));
+
+        Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(helloWorld), payload, 100))
+        });
+
+        // Expect the HelloWorld contract to emit `SaidHello`
+        vm.expectEmit({checkTopic1: true, checkTopic2: false, checkTopic3: false, checkData: false});
+        emit SaidHello("reenter");
+
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+    }
 }
