@@ -36,6 +36,9 @@ contract BeefyClientTest is Test {
     bytes32[] mmrLeafProofs;
     BeefyClient.MMRLeaf mmrLeaf;
     uint256 leafProofOrder;
+    BeefyClient.MMRLeaf emptyLeaf;
+    bytes32[] emptyLeafProofs;
+    uint256 emptyLeafProofOrder;
     bytes2 mmrRootID = bytes2("mh");
     string beefyCommitmentFile;
     string beefyCommitmentRaw;
@@ -174,7 +177,9 @@ contract BeefyClientTest is Test {
 
         createFinalProofs();
 
-        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
+        );
 
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
         return commitment;
@@ -195,7 +200,9 @@ contract BeefyClientTest is Test {
         // make an invalid signature
         finalValidatorProofs[0].r = 0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c;
         vm.expectRevert(BeefyClient.InvalidSignature.selector);
-        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
+        );
     }
 
     function testSubmitFailValidatorNotInBitfield() public {
@@ -213,7 +220,9 @@ contract BeefyClientTest is Test {
         // make an invalid validator index
         finalValidatorProofs[0].index = 0;
         vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
-        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
+        );
     }
 
     function testSubmitFailWithStaleCommitment() public {
@@ -229,7 +238,9 @@ contract BeefyClientTest is Test {
 
         //submit again will be reverted with StaleCommitment
         vm.expectRevert(BeefyClient.StaleCommitment.selector);
-        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
+        );
     }
 
     function testSubmitFailWithInvalidBitfield() public {
@@ -246,7 +257,9 @@ contract BeefyClientTest is Test {
         // invalid bitfield here
         bitfield[0] = 0;
         vm.expectRevert(BeefyClient.InvalidBitfield.selector);
-        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
+        );
     }
 
     function testSubmitFailWithoutPrevRandao() public {
@@ -256,7 +269,9 @@ contract BeefyClientTest is Test {
 
         // reverted without commit PrevRandao
         vm.expectRevert(BeefyClient.PrevRandaoNotCaptured.selector);
-        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
+        );
     }
 
     function testSubmitFailForPrevRandaoTooEarlyOrTooLate() public {

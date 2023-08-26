@@ -111,7 +111,7 @@ func (li *PolkadotListener) scanCommitments(
 			}
 
 			if validatorSetID == currentValidatorSet+1 && validatorSetID == nextValidatorSetID-1 {
-
+				task.IsHandover = true
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
