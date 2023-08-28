@@ -77,14 +77,11 @@ async fn transact() {
 
     println!("data is {}", hex::encode(encoded_data.clone()));
 
-    let contract_location = Junctions::X1(AccountKey20 {
-        network: Some(Ethereum { chain_id: 15 }),
-        key: HELLO_WORLD_CONTRACT.into(),
-    });
+    let mut calldata = HELLO_WORLD_CONTRACT.to_vec();
+    calldata.extend(encoded_data);
 
     let inner_message = Box::new(Xcm(vec![ // TODO send the Ethereum gas fee here too
-        Instruction::UnpaidExecution { weight_limit: Unlimited, check_origin: None },// TODO update to paid
-        Instruction::DescendOrigin(contract_location), // TODO not sure if this is right, want to pass the contract address
+        Instruction::UnpaidExecution { weight_limit: Unlimited, check_origin: None },
         Instruction::Transact {
             origin_kind: OriginKind::SovereignAccount,
             require_weight_at_most: Weight {
@@ -92,7 +89,7 @@ async fn transact() {
                 proof_size: XCM_PROOF_SIZE_REQUIRED,
             },
             call: DoubleEncoded {
-                encoded: encoded_data,
+                encoded: calldata,
             },
         },
         Instruction::SetTopic([0; 32]),
