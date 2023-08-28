@@ -124,7 +124,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return err
 	}
 
-	log.WithFields(logrus.Fields{"tx": tx.Hash().Hex(), "handover": task.IsHandover, "blockNumber": task.SignedCommitment.Commitment.BlockNumber}).Debug("Transaction SubmitFinal succeeded")
+	log.WithFields(logrus.Fields{"tx": tx.Hash().Hex(), "blockNumber": task.SignedCommitment.Commitment.BlockNumber}).Debug("Transaction SubmitFinal succeeded")
 
 	return nil
 
@@ -157,26 +157,14 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	}
 
 	var tx *types.Transaction
-	if task.IsHandover {
-		tx, err = wr.contract.SubmitInitialWithHandover(
-			wr.conn.MakeTxOpts(ctx),
-			msg.Commitment,
-			msg.Bitfield,
-			msg.Proof,
-		)
-		if err != nil {
-			return nil, nil, fmt.Errorf("initial submit with handover: %w", err)
-		}
-	} else {
-		tx, err = wr.contract.SubmitInitial(
-			wr.conn.MakeTxOpts(ctx),
-			msg.Commitment,
-			msg.Bitfield,
-			msg.Proof,
-		)
-		if err != nil {
-			return nil, nil, fmt.Errorf("initial submit: %w", err)
-		}
+	tx, err = wr.contract.SubmitInitial(
+		wr.conn.MakeTxOpts(ctx),
+		msg.Commitment,
+		msg.Bitfield,
+		msg.Proof,
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("initial submit: %w", err)
 	}
 
 	commitmentHash, err := task.CommitmentHash()
@@ -189,7 +177,6 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		"Commitment":     commitmentToLog(msg.Commitment),
 		"Bitfield":       bitfieldToStrings(msg.Bitfield),
 		"Proof":          proofToLog(msg.Proof),
-		"HandOver":       task.IsHandover,
 	}).Info("Transaction submitted for initial verification")
 
 	return tx, initialBitfield, nil
@@ -217,53 +204,27 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 		return nil, err
 	}
 
-	if task.IsHandover {
-		logFields, err := wr.makeSubmitFinalHandoverLogFields(task, params)
-		if err != nil {
-			return nil, fmt.Errorf("logging params: %w", err)
-		}
-
-		// In Handover mode except for the validator proof to verify commitment signature
-		// will also add mmr leaf proof which contains nextAuthoritySet to verify against mmr root
-		// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L342-L350
-		tx, err := wr.contract.SubmitFinalWithHandover(
-			wr.conn.MakeTxOpts(ctx),
-			params.Commitment,
-			params.Bitfield,
-			params.Proofs,
-			params.Leaf,
-			params.LeafProof,
-			params.LeafProofOrder,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("final submission: %w", err)
-		}
-
-		log.WithField("txHash", tx.Hash().Hex()).
-			WithFields(logFields).
-			Info("Sent SubmitFinalWithHandover transaction")
-
-		return tx, nil
-	} else { // revive:disable-line
-		logFields, err := wr.makeSubmitFinalLogFields(task, params)
-		if err != nil {
-			return nil, fmt.Errorf("logging params: %w", err)
-		}
-
-		tx, err := wr.contract.SubmitFinal(
-			wr.conn.MakeTxOpts(ctx),
-			params.Commitment,
-			params.Bitfield,
-			params.Proofs,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("final submission: %w", err)
-		}
-
-		log.WithField("txHash", tx.Hash().Hex()).
-			WithFields(logFields).
-			Info("Sent SubmitFinal transaction")
-
-		return tx, nil
+	logFields, err := wr.makeSubmitFinalLogFields(task, params)
+	if err != nil {
+		return nil, fmt.Errorf("logging params: %w", err)
 	}
+
+	tx, err := wr.contract.SubmitFinal(
+		wr.conn.MakeTxOpts(ctx),
+		params.Commitment,
+		params.Bitfield,
+		params.Proofs,
+		params.Leaf,
+		params.LeafProof,
+		params.LeafProofOrder,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("final submission: %w", err)
+	}
+
+	log.WithField("txHash", tx.Hash().Hex()).
+		WithFields(logFields).
+		Info("Sent SubmitFinal transaction")
+
+	return tx, nil
 }

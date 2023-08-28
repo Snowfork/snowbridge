@@ -25,33 +25,6 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 	}
 	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
 
-	fields := log.Fields{
-		"params": log.Fields{
-			"commitment": commitmentToLog(params.Commitment),
-			"bitfield":   bitfieldToStrings(params.Bitfield),
-			"proof":      proofs,
-		},
-		"commitmentHash": commitmentHash,
-	}
-
-	return fields, nil
-}
-
-func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
-	task *Request,
-	params *FinalRequestParams,
-) (log.Fields, error) {
-	proofs := make([]log.Fields, len(params.Proofs))
-	for i, proof := range params.Proofs {
-		proofs[i] = proofToLog(proof)
-	}
-
-	encodedCommitment, err := gsrpcTypes.EncodeToBytes(task.SignedCommitment.Commitment)
-	if err != nil {
-		return nil, err
-	}
-	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
-
 	var leafProofItems []string
 	for _, item := range params.LeafProof {
 		leafProofItems = append(leafProofItems, Hex(item[:]))
@@ -75,6 +48,7 @@ func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
 			"leafProofOrder": params.LeafProofOrder,
 		},
 		"commitmentHash": commitmentHash,
+		"handover":       task.IsHandover,
 	}
 
 	return fields, nil
