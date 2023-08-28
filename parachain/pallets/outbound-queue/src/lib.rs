@@ -314,6 +314,8 @@ pub mod pallet {
 		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
 
 		fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
+			// Make sure the bridge not halted
+			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 			// The inner payload should not be too large
 			let (_, payload) = message.command.abi_encode();
 
@@ -338,7 +340,6 @@ pub mod pallet {
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 			T::MessageQueue::enqueue_message(
 				ticket.message.as_bounded_slice(),
 				AggregateMessageOrigin::Parachain(ticket.origin),
@@ -356,6 +357,8 @@ pub mod pallet {
 			meter: &mut frame_support::weights::WeightMeter,
 			_: &mut [u8; 32],
 		) -> Result<bool, ProcessMessageError> {
+			// Make sure the bridge not halted
+			Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
 			// Yield if we don't want to accept any more messages in the current block.
 			// There is hard limit to ensure the weight of `on_finalize` is bounded.
 			ensure!(
