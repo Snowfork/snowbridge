@@ -17,6 +17,7 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
+use frame_support::traits::fungible::{Inspect, Mutate};
 use snowbridge_core::{
 	outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
 	AgentId,
@@ -31,11 +32,21 @@ pub use pallet::*;
 
 pub const LOG_TARGET: &str = "snowbridge-control";
 
+type BalanceOf<T> =
+	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{log, pallet_prelude::*, traits::EnsureOrigin};
+	use frame_support::{
+		log,
+		pallet_prelude::*,
+		sp_runtime::traits::AccountIdConversion,
+		traits::{tokens::Preservation, EnsureOrigin},
+		PalletId,
+	};
 	use frame_system::pallet_prelude::*;
+	use snowbridge_core::outbound::ControlOperation;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -71,6 +82,9 @@ pub mod pallet {
 		/// Location of the relay chain
 		type RelayLocation: Get<MultiLocation>;
 
+		/// Token reserved for control operations
+		type Token: Mutate<Self::AccountId>;
+
 		type WeightInfo: WeightInfo;
 	}
 
@@ -78,11 +92,21 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// An Upgrade message was sent to the Gateway
-		Upgrade { impl_address: H160, impl_code_hash: H256, params_hash: Option<H256> },
+		Upgrade {
+			impl_address: H160,
+			impl_code_hash: H256,
+			params_hash: Option<H256>,
+		},
 		/// An CreateAgent message was sent to the Gateway
-		CreateAgent { location: Box<MultiLocation>, agent_id: AgentId },
+		CreateAgent {
+			location: Box<MultiLocation>,
+			agent_id: AgentId,
+		},
 		/// An CreateChannel message was sent to the Gateway
-		CreateChannel { para_id: ParaId, agent_id: AgentId },
+		CreateChannel {
+			para_id: ParaId,
+			agent_id: AgentId,
+		},
 		/// An UpdateChannel message was sent to the Gateway
 		UpdateChannel {
 			para_id: ParaId,
@@ -92,9 +116,19 @@ pub mod pallet {
 			reward: u128,
 		},
 		/// An SetOperatingMode message was sent to the Gateway
-		SetOperatingMode { mode: OperatingMode },
+		SetOperatingMode {
+			mode: OperatingMode,
+		},
 		/// An TransferNativeFromAgent message was sent to the Gateway
-		TransferNativeFromAgent { agent_id: AgentId, recipient: H160, amount: u128 },
+		TransferNativeFromAgent {
+			agent_id: AgentId,
+			recipient: H160,
+			amount: u128,
+		},
+		FeeUpdated {
+			operation: ControlOperation,
+			fee: Option<BalanceOf<T>>,
+		},
 	}
 
 	#[pallet::error]
@@ -115,6 +149,10 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type Channels<T: Config> = StorageMap<_, Twox64Concat, ParaId, (), OptionQuery>;
+
+	#[pallet::storage]
+	pub type ControlOperationFee<T: Config> =
+		StorageMap<_, Twox64Concat, ControlOperation, BalanceOf<T>, OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -160,7 +198,7 @@ pub mod pallet {
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let origin_location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, _, location) = Self::convert_location(origin_location)?;
+			let (agent_id, para_id, location) = Self::convert_location(origin_location)?;
 
 			log::debug!(
 				target: LOG_TARGET,
@@ -169,6 +207,11 @@ pub mod pallet {
 				origin_location,
 				location
 			);
+
+			Self::reserve_deposit(
+				para_id,
+				ControlOperationFee::<T>::get(ControlOperation::CreateAgent),
+			)?;
 
 			// Record the agent id or fail if it has already been created
 			ensure!(!Agents::<T>::contains_key(agent_id), Error::<T>::AgentAlreadyCreated);
@@ -197,13 +240,16 @@ pub mod pallet {
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
 			let location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
 
-			let (agent_id, some_para_id, _) = Self::convert_location(location)?;
+			let (agent_id, para_id, _) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
-			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
-
 			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
+
+			Self::reserve_deposit(
+				para_id,
+				ControlOperationFee::<T>::get(ControlOperation::CreateChannel),
+			)?;
 
 			Channels::<T>::insert(para_id, ());
 
@@ -231,13 +277,16 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
 
-			let (agent_id, some_para_id, _) = Self::convert_location(location)?;
+			let (agent_id, para_id, _) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
-			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
-
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
+
+			Self::reserve_deposit(
+				para_id,
+				ControlOperationFee::<T>::get(ControlOperation::UpdateChannel),
+			)?;
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
@@ -281,9 +330,14 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, _, _) = Self::convert_location(location)?;
+			let (agent_id, para_id, _) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
+
+			Self::reserve_deposit(
+				para_id,
+				ControlOperationFee::<T>::get(ControlOperation::TransferNativeFromAgent),
+			)?;
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
@@ -295,6 +349,27 @@ pub mod pallet {
 				agent_id,
 				recipient,
 				amount,
+			});
+
+			Ok(())
+		}
+
+		/// - `update`: (ControlOperation, Fee).
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::update_operation_fee())]
+		pub fn update_operation_fee(
+			origin: OriginFor<T>,
+			operation: ControlOperation,
+			update_fee: Option<BalanceOf<T>>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			ControlOperationFee::<T>::mutate(&operation, |fee| {
+				*fee = update_fee;
+				Self::deposit_event(Event::<T>::FeeUpdated {
+					operation: operation.clone(),
+					fee: update_fee,
+				});
 			});
 
 			Ok(())
@@ -311,25 +386,45 @@ pub mod pallet {
 
 		pub fn convert_location(
 			mut location: MultiLocation,
-		) -> Result<(H256, Option<ParaId>, MultiLocation), DispatchError> {
+		) -> Result<(H256, ParaId, MultiLocation), DispatchError> {
 			// Normalize all locations relative to the relay chain.
 			let relay_location = T::RelayLocation::get();
 			location
 				.reanchor(&relay_location, T::UniversalLocation::get())
 				.map_err(|_| Error::<T>::LocationReanchorFailed)?;
 
-			// Only allow Parachain as origin location
-			let para_id = match location {
-				MultiLocation { parents: 0, interior: X1(Parachain(index)) } =>
-					Some((index).into()),
+			let para_id = match location.interior.first() {
+				Some(Parachain(index)) => Some((*index).into()),
 				_ => None,
-			};
+			}
+			.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
 
 			// Hash the location to produce an agent id
 			let agent_id = T::AgentHashedDescription::convert_location(&location)
 				.ok_or(Error::<T>::LocationToAgentIdConversionFailed)?;
 
 			Ok((agent_id, para_id, location))
+		}
+
+		pub fn account_id() -> T::AccountId {
+			PalletId(*b"snow/ctl").into_account_truncating()
+		}
+
+		pub fn reserve_deposit(
+			para_id: ParaId,
+			reserve_deposit: Option<BalanceOf<T>>,
+		) -> DispatchResult {
+			if reserve_deposit.is_some() {
+				// Transfer reserve deposit from the sovereign account of the destination parachain
+				// to internal pallet account
+				T::Token::transfer(
+					&para_id.into_account_truncating(),
+					&Self::account_id(),
+					reserve_deposit.unwrap(),
+					Preservation::Preserve,
+				)?;
+			}
+			Ok(())
 		}
 	}
 }

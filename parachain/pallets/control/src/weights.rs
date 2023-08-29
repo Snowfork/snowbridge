@@ -41,6 +41,7 @@ pub trait WeightInfo {
 	fn update_channel() -> Weight;
 	fn set_operating_mode() -> Weight;
 	fn transfer_native_from_agent() -> Weight;
+	fn update_operation_fee() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -78,6 +79,12 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().writes(4))
 	}
 	fn transfer_native_from_agent() -> Weight {
+		Weight::from_parts(35_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(RocksDbWeight::get().reads(5))
+			.saturating_add(RocksDbWeight::get().writes(4))
+	}
+	fn update_operation_fee() -> Weight {
 		Weight::from_parts(35_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 3517))
 			.saturating_add(RocksDbWeight::get().reads(5))

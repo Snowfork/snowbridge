@@ -2638,6 +2638,7 @@ dependencies = [
  "frame-system",
  "hex",
  "hex-literal",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "snowbridge-core",

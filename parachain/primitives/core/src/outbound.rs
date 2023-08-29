@@ -1,4 +1,4 @@
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
@@ -228,4 +228,12 @@ impl AgentExecuteCommand {
 			]),
 		}
 	}
+}
+
+#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+pub enum ControlOperation {
+	CreateAgent,
+	CreateChannel,
+	UpdateChannel,
+	TransferNativeFromAgent,
 }
