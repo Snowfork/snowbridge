@@ -142,6 +142,7 @@ pub mod pallet {
 		AgentNotExist,
 		ChannelAlreadyCreated,
 		ChannelNotExist,
+		AgentIdToAccountConversionFailed,
 	}
 
 	#[pallet::storage]
@@ -198,7 +199,7 @@ pub mod pallet {
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let origin_location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, para_id, location) = Self::convert_location(origin_location)?;
+			let (agent_id, _, location) = Self::convert_location(origin_location)?;
 
 			log::debug!(
 				target: LOG_TARGET,
@@ -208,8 +209,9 @@ pub mod pallet {
 				location
 			);
 
+			let agent_owner = Self::agent_account_id(agent_id)?;
 			Self::reserve_deposit(
-				para_id,
+				agent_owner,
 				ControlOperationFee::<T>::get(ControlOperation::CreateAgent),
 			)?;
 
@@ -247,7 +249,7 @@ pub mod pallet {
 			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
 
 			Self::reserve_deposit(
-				para_id,
+				para_id.into_account_truncating(),
 				ControlOperationFee::<T>::get(ControlOperation::CreateChannel),
 			)?;
 
@@ -284,7 +286,7 @@ pub mod pallet {
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
 
 			Self::reserve_deposit(
-				para_id,
+				para_id.into_account_truncating(),
 				ControlOperationFee::<T>::get(ControlOperation::UpdateChannel),
 			)?;
 
@@ -330,12 +332,13 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, para_id, _) = Self::convert_location(location)?;
+			let (agent_id, _, _) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
+			let agent_owner = Self::agent_account_id(agent_id)?;
 			Self::reserve_deposit(
-				para_id,
+				agent_owner,
 				ControlOperationFee::<T>::get(ControlOperation::TransferNativeFromAgent),
 			)?;
 
@@ -411,20 +414,24 @@ pub mod pallet {
 		}
 
 		pub fn reserve_deposit(
-			para_id: ParaId,
+			payer: T::AccountId,
 			reserve_deposit: Option<BalanceOf<T>>,
 		) -> DispatchResult {
 			if reserve_deposit.is_some() {
-				// Transfer reserve deposit from the sovereign account of the destination parachain
-				// to internal pallet account
 				T::Token::transfer(
-					&para_id.into_account_truncating(),
+					&payer,
 					&Self::account_id(),
 					reserve_deposit.unwrap(),
 					Preservation::Preserve,
 				)?;
 			}
 			Ok(())
+		}
+
+		pub fn agent_account_id(agent_id: H256) -> Result<T::AccountId, DispatchError> {
+			let agent_owner = T::AccountId::decode(&mut &agent_id.as_fixed_bytes()[..])
+				.map_err(|_| Error::<T>::AgentIdToAccountConversionFailed)?;
+			Ok(agent_owner)
 		}
 	}
 }
