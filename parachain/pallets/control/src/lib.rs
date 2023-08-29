@@ -164,7 +164,8 @@ pub mod pallet {
 		fn submit_outbound(message: Message) -> DispatchResult {
 			let ticket =
 				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
-			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
+			T::OutboundQueue::submit_without_queue(ticket)
+				.map_err(|_| Error::<T>::SubmissionFailed)?;
 			Ok(())
 		}
 	}

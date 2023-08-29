@@ -227,9 +227,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(execution_fee)
 	}
 
-	fn native_tokens_unlock_message(
-		&mut self,
-	) -> Result<AgentExecuteCommand, XcmConverterError> {
+	fn native_tokens_unlock_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
 		use XcmConverterError::*;
 		let (assets, beneficiary) = if let WithdrawAsset(reserved_assets) = self.next()? {
 			if reserved_assets.len() == 0 {
@@ -339,6 +337,10 @@ mod tests {
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Ok(MessageHash::zero())
 		}
+
+		fn submit_without_queue(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			Ok(MessageHash::zero())
+		}
 	}
 	struct MockErrOutboundQueue;
 	impl OutboundQueueTrait for MockErrOutboundQueue {
@@ -350,6 +352,10 @@ mod tests {
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Err(SubmitError::MessageTooLarge)
+		}
+
+		fn submit_without_queue(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			Err(SubmitError::ProcessError)
 		}
 	}
 

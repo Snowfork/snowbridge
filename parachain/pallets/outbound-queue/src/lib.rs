@@ -79,7 +79,7 @@ pub struct PreparedMessage {
 }
 
 /// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
-impl From<PreparedMessage> for Token  {
+impl From<PreparedMessage> for Token {
 	fn from(x: PreparedMessage) -> Token {
 		Token::Tuple(vec![
 			Token::Uint(u32::from(x.origin).into()),
@@ -340,11 +340,24 @@ pub mod pallet {
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 			T::MessageQueue::enqueue_message(
 				ticket.message.as_bounded_slice(),
 				AggregateMessageOrigin::Parachain(ticket.origin),
 			);
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
+			Ok(ticket.id)
+		}
+
+		fn submit_without_queue(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
+			ensure!(
+				MessageLeaves::<T>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerBlock::get() as usize,
+				SubmitError::MessagesOverLimit
+			);
+			Self::do_process_message(&ticket.message.as_bounded_slice())
+				.map_err(|_| SubmitError::ProcessError)?;
 			Ok(ticket.id)
 		}
 	}

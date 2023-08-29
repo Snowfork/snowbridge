@@ -14,6 +14,9 @@ pub trait OutboundQueue {
 
 	/// Submit the message ticket for eventual delivery to Ethereum
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
+
+	/// Submit high priority message ticket without enqueue
+	fn submit_without_queue(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
 }
 
 /// Default implementation of `OutboundQueue` for tests
@@ -27,6 +30,10 @@ impl OutboundQueue for () {
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 		Ok(MessageHash::zero())
 	}
+
+	fn submit_without_queue(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+		Ok(MessageHash::zero())
+	}
 }
 
 /// Errors returned by the [`OutboundQueue`]
@@ -36,6 +43,10 @@ pub enum SubmitError {
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
 	BridgeHalted,
+	/// Messages over-limit
+	MessagesOverLimit,
+	/// Message process error
+	ProcessError,
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
