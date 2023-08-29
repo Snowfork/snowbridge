@@ -18,4 +18,5 @@
 src/parachains/bridgehub.rs
 src/parachains/assethub.rs
 src/parachains/relaychain.rs
+src/parachains/template.rs
 src/contracts

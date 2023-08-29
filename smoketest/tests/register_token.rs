@@ -66,10 +66,12 @@ async fn register_token() {
 		.unwrap()
 		.unwrap();
 
+	println!("receipt transaction hash: {:#?}", hex::encode(receipt.transaction_hash));
+
 	// Log for OutboundMessageAccepted
 	let outbound_message_accepted_log = receipt.logs.last().unwrap();
 	// RLP-encode log and print it
-	println!("receipt: {:#?}", hex::encode(outbound_message_accepted_log.rlp_bytes()));
+	println!("receipt log: {:#?}", hex::encode(outbound_message_accepted_log.rlp_bytes()));
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
