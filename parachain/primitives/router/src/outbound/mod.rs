@@ -130,7 +130,8 @@ where
 
 		log::info!(target: "xcm::ethereum_blob_exporter", "message validated: location = {local_sub_location:?}, agent_id = '{agent_id:?}'");
 
-		// TODO (SNO-581): Make sure we charge fees for message delivery. Currently this is set to zero.
+		// TODO (SNO-581): Make sure we charge fees for message delivery. Currently this is set to
+		// zero.
 		Ok((ticket.encode(), MultiAssets::default()))
 	}
 
@@ -183,9 +184,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Self { iter: message.inner().iter(), ethereum_network, gateway_address }
 	}
 
-	fn convert(
-		&mut self,
-	) -> Result<AgentExecuteCommand, XcmConverterError> {
+	fn convert(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
 		// Get target fees if specified.
 		self.check_fee_info()?;
 
@@ -209,9 +208,9 @@ impl<'a, Call> XcmConverter<'a, Call> {
 	fn check_fee_info(&mut self) -> Result<(), XcmConverterError> {
 		use XcmConverterError::*;
 		match self.next()? {
-			UnpaidExecution { check_origin: None, weight_limit: Unlimited } => return Ok(()),
-			_ => return Err(TargetFeeExpected),
-		};
+			UnpaidExecution { check_origin: None, weight_limit: Unlimited } => Ok(()),
+			_ => Err(TargetFeeExpected),
+		}
 	}
 
 	fn native_tokens_unlock_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
