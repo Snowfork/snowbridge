@@ -479,9 +479,14 @@ contract Gateway is IGateway, IInitializable {
         channel.outboundNonce = channel.outboundNonce + 1;
 
         // Deposit total fee into agent's contract
-        payable(channel.agent).safeNativeTransfer(msg.value);
+        payable(channel.agent).safeNativeTransfer(channel.fee + extraFee);
 
         emit IGateway.OutboundMessageAccepted(dest, channel.outboundNonce, payload);
+
+        // Reimburse excess fee payment
+        if (msg.value > channel.fee + extraFee) {
+            payable(msg.sender).safeNativeTransfer(msg.value - channel.fee - extraFee);
+        }
     }
 
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
