@@ -76,9 +76,9 @@ contract Gateway is IGateway, IInitializable {
         address agentExecutor,
         uint256 dispatchGas,
         ParaID bridgeHubParaID,
-        bytes32 bridgeHubHubAgentID,
+        bytes32 bridgeHubAgentID,
         ParaID assetHubParaID,
-        bytes32 assetHubHubAgentID,
+        bytes32 assetHubAgentID,
         bytes2 createTokenCallID
     ) {
         BEEFY_CLIENT = beefyClient;
@@ -86,9 +86,9 @@ contract Gateway is IGateway, IInitializable {
         DISPATCH_GAS = dispatchGas;
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
-        BRIDGE_HUB_AGENT_ID = bridgeHubHubAgentID;
+        BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         ASSET_HUB_PARA_ID = assetHubParaID;
-        ASSET_HUB_AGENT_ID = assetHubHubAgentID;
+        ASSET_HUB_AGENT_ID = assetHubAgentID;
         CREATE_TOKEN_CALL_ID = createTokenCallID;
     }
 
