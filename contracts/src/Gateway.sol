@@ -194,7 +194,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     function channelNoncesOf(ParaID paraID) external view returns (uint64, uint64) {
-        Channel storage ch = CoreStorage.layout().channels[paraID];
+        Channel storage ch = _ensureChannel(paraID);
         return (ch.inboundNonce, ch.outboundNonce);
     }
 
