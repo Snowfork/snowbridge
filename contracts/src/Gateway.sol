@@ -62,6 +62,8 @@ contract Gateway is IGateway, IInitializable {
     error InvalidConfig();
     error NotProxy();
     error InvalidCodeHash();
+    error BridgeHubAssetHubParaIDsIdentical();
+    error BridgeHubAssetHubAgentIDsIdentical();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -81,6 +83,13 @@ contract Gateway is IGateway, IInitializable {
         bytes32 assetHubAgentID,
         bytes2 createTokenCallID
     ) {
+        if (bridgeHubParaID == assetHubParaID) {
+            revert BridgeHubAssetHubParaIDsIdentical();
+        }
+        if (bridgeHubAgentID == assetHubAgentID) {
+            revert BridgeHubAssetHubAgentIDsIdentical();
+        }
+
         BEEFY_CLIENT = beefyClient;
         AGENT_EXECUTOR = agentExecutor;
         DISPATCH_GAS = dispatchGas;
