@@ -103,7 +103,7 @@ where
 		})?;
 
 		let mut converter = XcmConverter::new(&message, &gateway_network, &gateway_address);
-		let (agent_execute_command, _max_target_fee) = converter.convert().map_err(|err|{
+		let agent_execute_command = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
@@ -185,9 +185,9 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 	fn convert(
 		&mut self,
-	) -> Result<(AgentExecuteCommand, Option<&'a MultiAsset>), XcmConverterError> {
+	) -> Result<AgentExecuteCommand, XcmConverterError> {
 		// Get target fees if specified.
-		let max_target_fee = self.fee_info()?;
+		self.check_fee_info()?;
 
 		// Get withdraw/deposit and make native tokens create message.
 		let result = self.native_tokens_unlock_message()?;
@@ -203,16 +203,15 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			return Err(XcmConverterError::EndOfXcmMessageExpected)
 		}
 
-		Ok((result, max_target_fee))
+		Ok(result)
 	}
 
-	fn fee_info(&mut self) -> Result<Option<&'a MultiAsset>, XcmConverterError> {
+	fn check_fee_info(&mut self) -> Result<(), XcmConverterError> {
 		use XcmConverterError::*;
-		let execution_fee = match self.next()? {
-			UnpaidExecution { check_origin: None, weight_limit: Unlimited } => None,
+		match self.next()? {
+			UnpaidExecution { check_origin: None, weight_limit: Unlimited } => return Ok(()),
 			_ => return Err(TargetFeeExpected),
 		};
-		Ok(execution_fee)
 	}
 
 	fn native_tokens_unlock_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
@@ -727,7 +726,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok((expected_payload, None)));
+		assert_eq!(result, Ok(expected_payload));
 	}
 
 	#[test]
@@ -767,7 +766,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok((expected_payload, None)));
+		assert_eq!(result, Ok(expected_payload));
 	}
 
 	#[test]
