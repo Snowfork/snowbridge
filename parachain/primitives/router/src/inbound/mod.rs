@@ -87,6 +87,31 @@ impl Command {
 			fun: Fungible(buy_execution_fee_amount),
 		};
 
+		let create_instructions = |origin_location: Junction| -> Vec<Instruction<()>> {
+			vec![
+				UniversalOrigin(GlobalConsensus(network)),
+				DescendOrigin(X1(origin_location.clone())),
+				WithdrawAsset(buy_execution_fee.clone().into()),
+				BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
+				SetAppendix(
+					vec![
+						RefundSurplus,
+						DepositAsset {
+							assets: buy_execution_fee.into(),
+							beneficiary: (
+								Parent,
+								Parent,
+								GlobalConsensus(network),
+								origin_location.clone(),
+							)
+								.into(),
+						},
+					]
+						.into(),
+				),
+			]
+		};
+
 		match self {
 			Command::RegisterToken { gateway, token, create_call_index } => {
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
@@ -97,27 +122,9 @@ impl Command {
 				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
 
 				let asset_id = Self::convert_token_address(network, gateway, token);
-				let instructions: Vec<Instruction<()>> = vec![
-					UniversalOrigin(GlobalConsensus(network)),
-					DescendOrigin(X1(origin_location)),
-					WithdrawAsset(buy_execution_fee.clone().into()),
-					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
-					SetAppendix(
-						vec![
-							RefundSurplus,
-							DepositAsset {
-								assets: buy_execution_fee.into(),
-								beneficiary: (
-									Parent,
-									Parent,
-									GlobalConsensus(network),
-									origin_location,
-								)
-									.into(),
-							},
-						]
-						.into(),
-					),
+
+				let mut instructions = create_instructions(origin_location);
+				instructions.extend(vec![
 					Transact {
 						origin_kind: OriginKind::Xcm,
 						require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
@@ -131,7 +138,7 @@ impl Command {
 							.into(),
 					},
 					ExpectTransactStatus(MaybeErrorCode::Success),
-				];
+				]);
 				instructions.into()
 			},
 			Command::SendToken { gateway, token, destination, amount } => {
@@ -142,30 +149,11 @@ impl Command {
 
 				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
 
-				let mut instructions: Vec<Instruction<()>> = vec![
-					UniversalOrigin(GlobalConsensus(network)),
-					DescendOrigin(X1(origin_location)),
-					WithdrawAsset(buy_execution_fee.clone().into()),
-					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
-					SetAppendix(
-						vec![
-							RefundSurplus,
-							DepositAsset {
-								assets: buy_execution_fee.into(),
-								beneficiary: (
-									Parent,
-									Parent,
-									GlobalConsensus(network),
-									origin_location,
-								)
-									.into(),
-							},
-						]
-						.into(),
-					),
+				let mut instructions = create_instructions(origin_location);
+				instructions.extend(vec![
 					ReserveAssetDeposited(vec![asset.clone()].into()),
 					ClearOrigin,
-				];
+				]);
 
 				let (dest_para_id, beneficiary) = match destination {
 					Destination::AccountId32 { id } => (
