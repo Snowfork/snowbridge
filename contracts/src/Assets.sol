@@ -45,8 +45,17 @@ library Assets {
         bytes32 destinationAddress,
         uint128 amount
     ) external returns (bytes memory payload, uint256 extraFee) {
-        return _sendToken(assetHubParaID, assetHubAgent, token, sender, destinationChain, destinationAddress, address(0), amount, false);
-
+        return _sendToken(
+            assetHubParaID,
+            assetHubAgent,
+            token,
+            sender,
+            destinationChain,
+            destinationAddress,
+            address(0),
+            amount,
+            false
+        );
     }
 
     function sendToken(
@@ -58,7 +67,9 @@ library Assets {
         address destinationAddress,
         uint128 amount
     ) external returns (bytes memory payload, uint256 extraFee) {
-        return _sendToken(assetHubParaID, assetHubAgent, token, sender, destinationChain, bytes32(0), destinationAddress, amount, true);
+        return _sendToken(
+            assetHubParaID, assetHubAgent, token, sender, destinationChain, bytes32(0), destinationAddress, amount, true
+        );
     }
 
     /// @dev transfer tokens from the sender to the specified
@@ -101,7 +112,7 @@ library Assets {
             payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         } else {
             destinationBytes = abi.encodePacked(destinationBytes32);
-            if (!isAddress && destinationChain == assetHubParaID) {
+            if (destinationChain == assetHubParaID) {
                 payload = SubstrateTypes.SendToken(address(this), token, destinationBytes32, amount);
             } else {
                 payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationBytes32, amount);
