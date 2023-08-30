@@ -44,23 +44,17 @@ contract Gateway is IGateway, IInitializable {
 
     error InvalidProof();
     error InvalidNonce();
-    error InvalidAgentExecutor();
     error NotEnoughGas();
     error FeePaymentToLow();
-    error FailedPayment();
     error Unauthorized();
-    error UnknownChannel();
     error Disabled();
     error AgentAlreadyCreated();
     error AgentDoesNotExist();
     error ChannelAlreadyCreated();
     error ChannelDoesNotExist();
     error InvalidChannelUpdate();
-    error WithdrawalFailed();
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
-    error InvalidConfig();
-    error NotProxy();
     error InvalidCodeHash();
 
     // handler functions are privileged
@@ -409,6 +403,7 @@ contract Gateway is IGateway, IInitializable {
         }
 
         _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
+        emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
     }
 
     /**
