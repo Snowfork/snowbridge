@@ -292,7 +292,7 @@ contract Gateway is IGateway, IInitializable {
         }
 
         ch.mode = OperatingMode.Normal;
-        ch.agent = $.agents[params.agentID];
+        ch.agent = agent;
         ch.inboundNonce = 0;
         ch.outboundNonce = 0;
         ch.fee = $.defaultFee;
