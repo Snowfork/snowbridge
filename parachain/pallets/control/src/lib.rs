@@ -47,7 +47,6 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use snowbridge_core::outbound::ControlOperation;
-	use snowbridge_router_primitives::outbound::AgentAccountDescription;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -75,7 +74,9 @@ pub mod pallet {
 		type ChannelOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
 
 		/// Converts MultiLocation to H256 in a way that is stable across multiple versions of XCM
-		type AgentHashedDescription: ConvertLocation<H256>;
+		type AgentIdOf: ConvertLocation<H256>;
+
+		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
 
 		/// The universal location
 		type UniversalLocation: Get<InteriorMultiLocation>;
@@ -402,7 +403,7 @@ pub mod pallet {
 			.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
 
 			// Hash the location to produce an agent id
-			let agent_id = T::AgentHashedDescription::convert_location(&location)
+			let agent_id = T::AgentIdOf::convert_location(&location)
 				.ok_or(Error::<T>::LocationToAgentIdConversionFailed)?;
 
 			Ok((agent_id, para_id, location))
@@ -418,7 +419,7 @@ pub mod pallet {
 		}
 
 		pub fn agent_account_id(location: &MultiLocation) -> Result<T::AccountId, DispatchError> {
-			let agent_account = AgentAccountDescription::convert_location(location)
+			let agent_account = T::SovereignAccountOf::convert_location(location)
 				.ok_or(Error::<T>::LocationToAgentAccountConversionFailed)?;
 			Ok(agent_account)
 		}

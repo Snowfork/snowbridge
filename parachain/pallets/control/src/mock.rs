@@ -212,7 +212,8 @@ impl snowbridge_control::Config for Test {
 	type ChannelOrigin = EnsureOriginFromTable;
 	type UniversalLocation = UniversalLocation;
 	type RelayLocation = RelayLocation;
-	type AgentHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
+	type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
+	type SovereignAccountOf = HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>;
 	type Token = Balances;
 	type WeightInfo = ();
 }
