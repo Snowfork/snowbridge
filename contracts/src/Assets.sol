@@ -45,16 +45,13 @@ library Assets {
         bytes32 destinationAddress,
         uint128 amount
     ) external returns (bytes memory payload, uint256 extraFee) {
-        return _sendToken(
-            assetHubParaID,
-            assetHubAgent,
-            token,
-            sender,
-            destinationChain,
-            destinationAddress,
-            address(0),
-            amount,
-            false
+        if (destinationChain == assetHubParaID) {
+            payload = SubstrateTypes.SendToken(address(this), token, destinationAddress, amount);
+        } else {
+            payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
+        }
+        _sendToken(
+            assetHubParaID, assetHubAgent, token, sender, destinationChain, abi.encodePacked(destinationAddress), amount
         );
     }
 
@@ -67,9 +64,32 @@ library Assets {
         address destinationAddress,
         uint128 amount
     ) external returns (bytes memory payload, uint256 extraFee) {
-        return _sendToken(
-            assetHubParaID, assetHubAgent, token, sender, destinationChain, bytes32(0), destinationAddress, amount, true
+        if (destinationChain == assetHubParaID) {
+            // AssetHub parachain doesn't support Ethereum-style addresses
+            revert InvalidDestination();
+        }
+
+        payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
+
+        _sendToken(
+            assetHubParaID, assetHubAgent, token, sender, destinationChain, abi.encodePacked(destinationAddress), amount
         );
+    }
+
+    function _sendToken(
+        ParaID assetHubParaID,
+        address assetHubAgent,
+        address token,
+        address sender,
+        ParaID destinationChain,
+        bytes memory destinationAddress,
+        uint128 amount
+    ) internal returns (uint256 extraFee) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        _transferToAgent(assetHubAgent, token, sender, amount);
+
+        extraFee = $.sendTokenFee;
+        emit TokenSent(sender, token, destinationChain, destinationAddress, amount);
     }
 
     /// @dev transfer tokens from the sender to the specified
@@ -83,45 +103,6 @@ library Assets {
         }
 
         IERC20(token).safeTransferFrom(sender, assetHubAgent, amount);
-    }
-
-    /// @dev helper method to handle common logic for sending tokens
-    function _sendToken(
-        ParaID assetHubParaID,
-        address assetHubAgent,
-        address token,
-        address sender,
-        ParaID destinationChain,
-        bytes32 destinationBytes32,
-        address destinationAddress,
-        uint128 amount,
-        bool isAddress
-    ) private returns (bytes memory payload, uint256 extraFee) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-
-        if (isAddress && destinationChain == assetHubParaID) {
-            revert InvalidDestination();
-        }
-
-        _transferToAgent(assetHubAgent, token, sender, amount);
-
-        bytes memory destinationBytes;
-
-        if (isAddress) {
-            destinationBytes = abi.encodePacked(destinationAddress);
-            payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
-        } else {
-            destinationBytes = abi.encodePacked(destinationBytes32);
-            if (destinationChain == assetHubParaID) {
-                payload = SubstrateTypes.SendToken(address(this), token, destinationBytes32, amount);
-            } else {
-                payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationBytes32, amount);
-            }
-        }
-
-        extraFee = $.sendTokenFee;
-
-        emit TokenSent(sender, token, destinationChain, destinationBytes, amount);
     }
 
     /// @dev Enqueues a create native token message to substrate.
