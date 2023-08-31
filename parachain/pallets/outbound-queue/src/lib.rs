@@ -79,7 +79,7 @@ pub struct PreparedMessage {
 }
 
 /// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
-impl From<PreparedMessage> for Token  {
+impl From<PreparedMessage> for Token {
 	fn from(x: PreparedMessage) -> Token {
 		Token::Tuple(vec![
 			Token::Uint(u32::from(x.origin).into()),
@@ -314,8 +314,6 @@ pub mod pallet {
 		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
 
 		fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
-			// Make sure the bridge not halted
-			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 			// The inner payload should not be too large
 			let (_, payload) = message.command.abi_encode();
 
@@ -340,6 +338,8 @@ pub mod pallet {
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			// Make sure the bridge not halted
+			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 			T::MessageQueue::enqueue_message(
 				ticket.message.as_bounded_slice(),
 				AggregateMessageOrigin::Parachain(ticket.origin),
