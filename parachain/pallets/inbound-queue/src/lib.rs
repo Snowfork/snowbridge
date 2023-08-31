@@ -190,10 +190,10 @@ pub mod pallet {
 
 			// Verify message nonce
 			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {
-				if envelope.nonce != *nonce + 1 {
+				if envelope.nonce != nonce.saturating_add(1) {
 					Err(Error::<T>::InvalidNonce.into())
 				} else {
-					*nonce += 1;
+					*nonce = nonce.saturating_add(1);
 					Ok(())
 				}
 			})?;
