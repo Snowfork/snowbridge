@@ -183,6 +183,10 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 		Ok(MessageHash::zero())
 	}
+
+	fn submit_no_wait(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+		Ok(MessageHash::zero())
+	}
 }
 
 impl snowbridge_control::Config for Test {

@@ -338,6 +338,10 @@ mod tests {
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Ok(MessageHash::zero())
 		}
+
+		fn submit_no_wait(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			Ok(MessageHash::zero())
+		}
 	}
 	struct MockErrOutboundQueue;
 	impl OutboundQueueTrait for MockErrOutboundQueue {
@@ -349,6 +353,10 @@ mod tests {
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Err(SubmitError::MessageTooLarge)
+		}
+
+		fn submit_no_wait(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			Err(SubmitError::MessageProcessError)
 		}
 	}
 

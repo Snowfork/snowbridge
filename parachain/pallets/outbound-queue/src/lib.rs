@@ -346,6 +346,18 @@ pub mod pallet {
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
 		}
+
+		fn submit_no_wait(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
+			ensure!(
+				MessageLeaves::<T>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerBlock::get() as usize,
+				SubmitError::MessagesOverLimit
+			);
+			Self::do_process_message(&ticket.message.as_bounded_slice())
+				.map_err(|_| SubmitError::MessageProcessError)?;
+			Ok(ticket.id)
+		}
 	}
 
 	impl<T: Config> ProcessMessage for Pallet<T> {
