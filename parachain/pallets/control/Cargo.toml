@@ -21,6 +21,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", bran
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 snowbridge-core = { path = "../../primitives/core", default-features = false }
+snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
 
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
@@ -53,7 +54,8 @@ std = [
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
-	"ethabi/std"
+	"ethabi/std",
+	"snowbridge-router-primitives/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

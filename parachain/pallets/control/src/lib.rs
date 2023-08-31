@@ -41,18 +41,19 @@ pub mod pallet {
 	use frame_support::{
 		log,
 		pallet_prelude::*,
-		sp_runtime::traits::AccountIdConversion,
+		sp_runtime::{traits::AccountIdConversion, AccountId32},
 		traits::{tokens::Preservation, EnsureOrigin},
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
 	use snowbridge_core::outbound::ControlOperation;
+	use snowbridge_router_primitives::outbound::AgentAccountDescription;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config<AccountId = AccountId32> {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// General-purpose hasher
@@ -127,7 +128,7 @@ pub mod pallet {
 		},
 		FeeUpdated {
 			operation: ControlOperation,
-			fee: Option<BalanceOf<T>>,
+			fee: BalanceOf<T>,
 		},
 	}
 
@@ -142,7 +143,7 @@ pub mod pallet {
 		AgentNotExist,
 		ChannelAlreadyCreated,
 		ChannelNotExist,
-		AgentIdToAccountConversionFailed,
+		LocationToAgentAccountConversionFailed,
 	}
 
 	#[pallet::storage]
@@ -153,7 +154,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type ControlOperationFee<T: Config> =
-		StorageMap<_, Twox64Concat, ControlOperation, BalanceOf<T>, OptionQuery>;
+		StorageMap<_, Twox64Concat, ControlOperation, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -209,9 +210,8 @@ pub mod pallet {
 				location
 			);
 
-			let agent_owner = Self::agent_account_id(agent_id)?;
 			Self::reserve_deposit(
-				agent_owner,
+				Self::agent_account_id(&location)?,
 				ControlOperationFee::<T>::get(ControlOperation::CreateAgent),
 			)?;
 
@@ -242,14 +242,14 @@ pub mod pallet {
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
 			let location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
 
-			let (agent_id, para_id, _) = Self::convert_location(location)?;
+			let (agent_id, para_id, location) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
 			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
 
 			Self::reserve_deposit(
-				para_id.into_account_truncating(),
+				Self::agent_account_id(&location)?,
 				ControlOperationFee::<T>::get(ControlOperation::CreateChannel),
 			)?;
 
@@ -279,14 +279,14 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
 
-			let (agent_id, para_id, _) = Self::convert_location(location)?;
+			let (agent_id, para_id, location) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
 
 			Self::reserve_deposit(
-				para_id.into_account_truncating(),
+				Self::agent_account_id(&location)?,
 				ControlOperationFee::<T>::get(ControlOperation::UpdateChannel),
 			)?;
 
@@ -332,13 +332,12 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, _, _) = Self::convert_location(location)?;
+			let (agent_id, _, location) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
-			let agent_owner = Self::agent_account_id(agent_id)?;
 			Self::reserve_deposit(
-				agent_owner,
+				Self::agent_account_id(&location)?,
 				ControlOperationFee::<T>::get(ControlOperation::TransferNativeFromAgent),
 			)?;
 
@@ -363,7 +362,7 @@ pub mod pallet {
 		pub fn update_operation_fee(
 			origin: OriginFor<T>,
 			operation: ControlOperation,
-			update_fee: Option<BalanceOf<T>>,
+			update_fee: BalanceOf<T>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -413,25 +412,15 @@ pub mod pallet {
 			PalletId(*b"snow/ctl").into_account_truncating()
 		}
 
-		pub fn reserve_deposit(
-			payer: T::AccountId,
-			reserve_deposit: Option<BalanceOf<T>>,
-		) -> DispatchResult {
-			if reserve_deposit.is_some() {
-				T::Token::transfer(
-					&payer,
-					&Self::account_id(),
-					reserve_deposit.unwrap(),
-					Preservation::Preserve,
-				)?;
-			}
+		pub fn reserve_deposit(payer: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+			T::Token::transfer(&payer, &Self::account_id(), amount, Preservation::Preserve)?;
 			Ok(())
 		}
 
-		pub fn agent_account_id(agent_id: H256) -> Result<T::AccountId, DispatchError> {
-			let agent_owner = T::AccountId::decode(&mut &agent_id.as_fixed_bytes()[..])
-				.map_err(|_| Error::<T>::AgentIdToAccountConversionFailed)?;
-			Ok(agent_owner)
+		pub fn agent_account_id(location: &MultiLocation) -> Result<T::AccountId, DispatchError> {
+			let agent_account = AgentAccountDescription::convert_location(location)
+				.ok_or(Error::<T>::LocationToAgentAccountConversionFailed)?;
+			Ok(agent_account)
 		}
 	}
 }

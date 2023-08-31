@@ -2642,6 +2642,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "snowbridge-core",
+ "snowbridge-router-primitives",
  "sp-core",
  "sp-io",
  "sp-runtime",

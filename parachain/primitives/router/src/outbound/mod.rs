@@ -5,7 +5,7 @@ use core::slice::Iter;
 
 use codec::{Decode, Encode};
 
-use frame_support::{ensure, log, traits::Get};
+use frame_support::{ensure, log, sp_runtime::AccountId32 as Account32, traits::Get};
 use snowbridge_core::outbound::{
 	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
 };
@@ -16,6 +16,9 @@ use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 use xcm_executor::traits::{ConvertLocation, ExportXcm};
 
 pub type AgentHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
+
+pub type AgentAccountDescription =
+	HashedDescription<Account32, DescribeFamily<DescribeAllTerminal>>;
 
 pub struct EthereumBlobExporter<
 	UniversalLocation,
