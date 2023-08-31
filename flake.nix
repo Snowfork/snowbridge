@@ -3,23 +3,23 @@
 
     inputs = {
         nixpkgs.url = "nixpkgs/nixos-unstable";
-        rust-overlay.url = "github:oxalica/rust-overlay";
         flake-utils.url  = "github:numtide/flake-utils";
         foundry.url = "github:shazow/foundry.nix/monthly";
     };
 
-    outputs = { self, nixpkgs, rust-overlay, flake-utils, foundry }:
+    outputs = { self, nixpkgs, flake-utils, foundry }:
+
     let
         supportedSystems = [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" ];
-        overlays = [ (import rust-overlay) foundry.overlay ];
+        overlays = [ foundry.overlay ];
     in
+
     flake-utils.lib.eachSystem supportedSystems (system:
         let
             pkgs = import nixpkgs { inherit system overlays; };
             cwd = builtins.toString ./.;
-            rust =
-              pkgs.rust-bin.fromRustupToolchainFile "${cwd}/rust-toolchain.toml";
         in
+
         with pkgs;
         {
             devShells.default = pkgs.mkShell {
@@ -65,23 +65,26 @@
                     gcc
                     libiconv
                     protobuf
-                    rust
+                    # NOTE: when upgrading rustup, check for a command to install the version in the toolchain file:
+                    # https://github.com/rust-lang/rustup/issues/2686
+                    rustup
 
                     cowsay
                 ];
 
                 shellHook = ''
-                    # set HOME for direnv and go
-                    #
+                    # set HOME for direnv:
                     # direnv needs config, cache & data dirs (DIRENV_CONFIG, XDG_CACHE_HOME & XDG_DATA_HOME
                     # respectively) that can be automatically set when HOME is available
-                    #
-                    # relayer builds fail without GOPATH & GOCACHE set
-                    # explicitly setting HOME allows go to infer these vars
-                    #
                     export HOME=~
+
+                    export GOCACHE=$PWD/gocache
                     export GOPATH=$PWD/go
                     export PATH=$GOPATH/bin:$PATH
+
+                    export CARGO_HOME=$PWD/.cargo
+                    export RUSTUP_HOME=$PWD/.rustup
+                    export SNOWBRIDGE_RUST_NIGHTLY='2023-05-23'
 
                     eval "$(direnv hook bash)"
 

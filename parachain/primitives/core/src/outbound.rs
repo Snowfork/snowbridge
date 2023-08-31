@@ -1,5 +1,6 @@
 use codec::{Decode, Encode};
 pub use polkadot_parachain::primitives::Id as ParaId;
+use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
 use sp_std::{borrow::ToOwned, vec, vec::Vec};
 
@@ -49,7 +50,7 @@ pub struct Message {
 
 use ethabi::Token;
 
-#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug)]
+#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum OperatingMode {
 	Normal,
 	RejectingOutboundMessages,
@@ -217,11 +218,14 @@ impl AgentExecuteCommand {
 	/// ABI-encode the sub-command
 	pub fn abi_encode(&self) -> Vec<u8> {
 		match self {
-			AgentExecuteCommand::TransferToken { token, recipient, amount } =>
-				ethabi::encode(&[Token::Uint(self.index().into()),
-					Token::Bytes(ethabi::encode(&[Token::Address(*token),
-						Token::Address(*recipient),
-						Token::Uint(U256::from(*amount))]))]),
+			AgentExecuteCommand::TransferToken { token, recipient, amount } => ethabi::encode(&[
+				Token::Uint(self.index().into()),
+				Token::Bytes(ethabi::encode(&[
+					Token::Address(*token),
+					Token::Address(*recipient),
+					Token::Uint(U256::from(*amount)),
+				])),
+			]),
 		}
 	}
 }

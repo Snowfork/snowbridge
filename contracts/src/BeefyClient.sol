@@ -200,10 +200,10 @@ contract BeefyClient {
         nextValidatorSet = _nextValidatorSet;
     }
 
-    /* Public Functions */
+    /* External Functions */
 
     /**
-     * @dev Begin submission of commitment that was signed by the current validator set
+     * @dev Begin submission of commitment
      * @param commitment contains the commitment signed by the validators
      * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof a proof that a single validator from currentValidatorSet has signed the commitment
@@ -211,29 +211,15 @@ contract BeefyClient {
     function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
         external
     {
-        doSubmitInitial(currentValidatorSet, commitment, bitfield, proof);
-    }
+        ValidatorSet memory vset;
+        if (commitment.validatorSetID == currentValidatorSet.id) {
+            vset = currentValidatorSet;
+        } else if (commitment.validatorSetID == nextValidatorSet.id) {
+            vset = nextValidatorSet;
+        } else {
+            revert InvalidCommitment();
+        }
 
-    /**
-     * @dev Begin submission of commitment that was signed by the next validator set
-     * @param commitment contains the commitment signed by the validators
-     * @param bitfield a bitfield claiming which validators have signed the commitment
-     * @param proof a proof that a single validator from nextValidatorSet has signed the commitment
-     */
-    function submitInitialWithHandover(
-        Commitment calldata commitment,
-        uint256[] calldata bitfield,
-        ValidatorProof calldata proof
-    ) external {
-        doSubmitInitial(nextValidatorSet, commitment, bitfield, proof);
-    }
-
-    function doSubmitInitial(
-        ValidatorSet memory vset,
-        Commitment calldata commitment,
-        uint256[] calldata bitfield,
-        ValidatorProof calldata proof
-    ) internal {
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
         if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index))
         {
@@ -289,32 +275,6 @@ contract BeefyClient {
     }
 
     /**
-     * @dev Submit a commitment for final verification
-     * @param commitment contains the full commitment that was used for the commitmentHash
-     * @param bitfield a bitfield claiming which validators have signed the commitment
-     * @param proofs a struct containing the data needed to verify all validator signatures
-     */
-    function submitFinal(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof[] calldata proofs)
-        public
-    {
-        (bytes32 commitmentHash, bytes32 ticketID) = validate(commitment, bitfield);
-
-        Ticket storage ticket = tickets[ticketID];
-
-        if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
-        }
-        verifyCommitment(commitmentHash, bitfield, currentValidatorSet, ticket, proofs);
-
-        bytes32 newMMRRoot = getFirstMMRRoot(commitment);
-        latestMMRRoot = newMMRRoot;
-        latestBeefyBlock = commitment.blockNumber;
-
-        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
-        delete tickets[ticketID];
-    }
-
-    /**
      * @dev Submit a commitment and leaf for final verification
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param bitfield claiming which validators have signed the commitment
@@ -323,43 +283,51 @@ contract BeefyClient {
      * @param leafProof an MMR leaf proof
      * @param leafProofOrder a bitfield describing the order of each item (left vs right)
      */
-    function submitFinalWithHandover(
+    function submitFinal(
         Commitment calldata commitment,
         uint256[] calldata bitfield,
         ValidatorProof[] calldata proofs,
         MMRLeaf calldata leaf,
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
-    ) public {
+    ) external {
         (bytes32 commitmentHash, bytes32 ticketID) = validate(commitment, bitfield);
 
-        Ticket storage ticket = tickets[ticketID];
-
-        if (commitment.validatorSetID != nextValidatorSet.id) {
+        bool is_next_session = false;
+        ValidatorSet memory vset;
+        if (commitment.validatorSetID == nextValidatorSet.id) {
+            is_next_session = true;
+            vset = nextValidatorSet;
+        } else if (commitment.validatorSetID == currentValidatorSet.id) {
+            vset = currentValidatorSet;
+        } else {
             revert InvalidCommitment();
         }
-        verifyCommitment(commitmentHash, bitfield, nextValidatorSet, ticket, proofs);
 
-        if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
-            revert InvalidMMRLeaf();
-        }
+        verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
+
         bytes32 newMMRRoot = getFirstMMRRoot(commitment);
-        bool leafIsValid =
-            MMRProof.verifyLeafProof(newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder);
-        if (!leafIsValid) {
-            revert InvalidMMRLeafProof();
+
+        if (is_next_session) {
+            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+                revert InvalidMMRLeaf();
+            }
+            bool leafIsValid =
+                MMRProof.verifyLeafProof(newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder);
+            if (!leafIsValid) {
+                revert InvalidMMRLeafProof();
+            }
+            currentValidatorSet = nextValidatorSet;
+            nextValidatorSet.id = leaf.nextAuthoritySetID;
+            nextValidatorSet.length = leaf.nextAuthoritySetLen;
+            nextValidatorSet.root = leaf.nextAuthoritySetRoot;
         }
 
-        currentValidatorSet = nextValidatorSet;
-        nextValidatorSet.id = leaf.nextAuthoritySetID;
-        nextValidatorSet.length = leaf.nextAuthoritySetLen;
-        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
-
+        uint64 newBeefyBlock = commitment.blockNumber;
         latestMMRRoot = newMMRRoot;
-        latestBeefyBlock = commitment.blockNumber;
-
-        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
+        latestBeefyBlock = newBeefyBlock;
         delete tickets[ticketID];
+        emit NewMMRRoot(newMMRRoot, newBeefyBlock);
     }
 
     /**
@@ -411,7 +379,7 @@ contract BeefyClient {
         );
     }
 
-    /* Private Functions */
+    /* Internal Functions */
 
     // Creates a unique ticket ID for a new interactive prover-verifier session
     function createTicketID(address account, bytes32 commitmentHash) internal pure returns (bytes32 value) {
@@ -472,11 +440,12 @@ contract BeefyClient {
      */
     function verifyCommitment(
         bytes32 commitmentHash,
+        bytes32 ticketID,
         uint256[] calldata bitfield,
         ValidatorSet memory vset,
-        Ticket storage ticket,
         ValidatorProof[] calldata proofs
     ) internal view {
+        Ticket storage ticket = tickets[ticketID];
         // Verify that enough signature proofs have been supplied
         uint256 signatureCount = minimumSignatureThreshold(vset.length);
         if (proofs.length != signatureCount) {
@@ -562,16 +531,10 @@ contract BeefyClient {
     }
 
     /**
-     * NOTE (SNO-427): This inclusion test is currently insecure because it
-     * not verify that the supplied merkle leaf index (proof.index) corresponds to the
-     * leaf being verified.
-     *
-     * This was a regression introduced when we merged in an optimized Merkle Proof verifier.
-     * This new verifier relies on hash pairs being sorted, whereas
-     * the previous version did not require any sorting.
-     *
      * @dev Checks if a validators address is a member of the merkle tree
-     * @param account The address of the validator to check
+     * @param vset The validator set
+     * @param account The address of the validator to check for inclusion in `vset`.
+     * @param index The leaf index of the account in the merkle tree of validator set addresses.
      * @param proof Merkle proof required for validation of the address
      * @return true if the validator is in the set
      */
