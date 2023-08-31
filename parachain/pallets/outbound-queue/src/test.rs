@@ -8,6 +8,7 @@ use frame_support::{
 	weights::WeightMeter,
 };
 
+use snowbridge_core::outbound::Priority;
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
@@ -138,7 +139,7 @@ fn submit_messages_from_multiple_origins_and_commit() {
 			assert!(result.is_ok());
 			let ticket = result.unwrap();
 
-			assert_ok!(OutboundQueue::submit(ticket));
+			assert_ok!(OutboundQueue::submit(ticket, Priority::Normal));
 		}
 
 		ServiceWeight::set(Some(Weight::MAX));

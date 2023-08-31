@@ -6,6 +6,13 @@ use sp_std::{borrow::ToOwned, vec, vec::Vec};
 
 pub type MessageHash = H256;
 
+#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub enum Priority {
+	Normal,
+	High,
+	Emergency,
+}
+
 /// A trait for enqueueing messages for delivery to Ethereum
 pub trait OutboundQueue {
 	type Ticket;
@@ -14,10 +21,7 @@ pub trait OutboundQueue {
 	fn validate(message: &Message) -> Result<Self::Ticket, SubmitError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
-	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
-
-	/// Submit high priority message ticket without enqueue
-	fn submit_no_wait(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
+	fn submit(ticket: Self::Ticket, priority: Priority) -> Result<MessageHash, SubmitError>;
 }
 
 /// Default implementation of `OutboundQueue` for tests
@@ -28,11 +32,7 @@ impl OutboundQueue for () {
 		Ok(0)
 	}
 
-	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-		Ok(MessageHash::zero())
-	}
-
-	fn submit_no_wait(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+	fn submit(ticket: Self::Ticket, priority: Priority) -> Result<MessageHash, SubmitError> {
 		Ok(MessageHash::zero())
 	}
 }

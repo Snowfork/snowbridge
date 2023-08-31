@@ -111,6 +111,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
+	use snowbridge_core::outbound::Priority;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -337,25 +338,32 @@ pub mod pallet {
 			Ok(ticket)
 		}
 
-		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+		fn submit(ticket: Self::Ticket, priority: Priority) -> Result<MessageHash, SubmitError> {
 			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
-			T::MessageQueue::enqueue_message(
-				ticket.message.as_bounded_slice(),
-				AggregateMessageOrigin::Parachain(ticket.origin),
-			);
-			Self::deposit_event(Event::MessageQueued { id: ticket.id });
-			Ok(ticket.id)
-		}
+			match priority {
+				Priority::Normal => {
+					T::MessageQueue::enqueue_message(
+						ticket.message.as_bounded_slice(),
+						AggregateMessageOrigin::Parachain(ticket.origin),
+					);
+					Self::deposit_event(Event::MessageQueued { id: ticket.id });
+				},
+				// Though currently there is no difference between emergency priority and high
+				// priority, there is chance to add some custom logic for emergency cases
+				// suppose message queue pallet inherently support priority control.
+				// e.g. leverage [sweep_queue](https://github.com/paritytech/polkadot-sdk/blob/f1f793718a2410872c3d61a86594a4c2bb9bea69/substrate/frame/support/src/traits/messages.rs#L140-L141)
+				// to remove some low priority messages from the queue
+				Priority::High | Priority::Emergency => {
+					ensure!(
+						MessageLeaves::<T>::decode_len().unwrap_or(0) <
+							T::MaxMessagesPerBlock::get() as usize,
+						SubmitError::MessagesOverLimit
+					);
+					Self::do_process_message(&ticket.message.as_bounded_slice())
+						.map_err(|_| SubmitError::MessageProcessError)?;
+				},
+			}
 
-		fn submit_no_wait(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
-			ensure!(
-				MessageLeaves::<T>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerBlock::get() as usize,
-				SubmitError::MessagesOverLimit
-			);
-			Self::do_process_message(&ticket.message.as_bounded_slice())
-				.map_err(|_| SubmitError::MessageProcessError)?;
 			Ok(ticket.id)
 		}
 	}
