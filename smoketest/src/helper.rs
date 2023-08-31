@@ -39,6 +39,7 @@ impl Config for TemplateConfig {
 pub struct TestClients {
     pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
     pub template_client: Box<OnlineClient<TemplateConfig>>,
+    pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
     pub ethereum_client: Box<Arc<Provider<Ws>>>,
     pub ethereum_signed_client: Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
 }
@@ -53,6 +54,11 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
             .await
             .expect("can not connect to assethub");
 
+    let relaychain_client: OnlineClient<PolkadotConfig> =
+        OnlineClient::from_url(RELAY_CHAIN_WS_URL)
+            .await
+            .expect("can not connect to relaychain");
+
     let ethereum_provider = Provider::<Ws>::connect(ETHEREUM_API)
         .await
         .unwrap()
@@ -65,6 +71,7 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
     Ok(TestClients {
         bridge_hub_client: Box::new(bridge_hub_client),
         template_client: Box::new(template_client),
+        relaychain_client: Box::new(relaychain_client),
         ethereum_client: Box::new(ethereum_client),
         ethereum_signed_client: Box::new(Arc::new(ethereum_signed_client)),
     })

@@ -3,6 +3,7 @@ use hex_literal::hex;
 pub const ETHEREUM_API: &str = "ws://localhost:8546";
 pub const ETHEREUM_HTTP_API: &str = "http://localhost:8545";
 pub const BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
+pub const RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
 pub const BRIDGE_HUB_PARA_ID: u32 = 1013;
 
 pub const TEMPLATE_NODE_WS_URL: &str = "ws://127.0.0.1:13144";
@@ -21,3 +22,5 @@ pub const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842f
 // Agent for sibling parachain 1001
 pub const SIBLING_AGENT_ID: [u8; 32] =
     hex!("2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793");
+
+pub const DEFAULT_OPERATION_FEE: u128 = 10000000000000; //10 dot
