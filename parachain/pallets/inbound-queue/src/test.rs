@@ -170,10 +170,6 @@ fn expect_events(e: Vec<RuntimeEvent>) {
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	new_tester_with_config()
-}
-
-pub fn new_tester_with_config() -> sp_io::TestExternalities {
 	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
