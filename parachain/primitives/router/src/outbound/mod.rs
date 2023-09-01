@@ -108,11 +108,6 @@ for EthereumBlobExporter<UniversalLocation, GatewayLocation, OutboundQueue, Agen
 			SendError::Unroutable
 		})?;
 
-		if max_target_fee.is_some() {
-			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due not supporting max target fee.");
-			return Err(SendError::Unroutable)
-		}
-
 		// local_sub is relative to the relaychain. No conversion needed.
 		let local_sub_location: MultiLocation = local_sub.into();
 		let agent_id = match AgentHashedDescription::convert_location(&local_sub_location) {
@@ -135,9 +130,13 @@ for EthereumBlobExporter<UniversalLocation, GatewayLocation, OutboundQueue, Agen
 
 		log::info!(target: "xcm::ethereum_blob_exporter", "message validated: location = {local_sub_location:?}, agent_id = '{agent_id:?}'");
 
-		// TODO (SNO-581): Make sure we charge fees for message delivery. Currently this is set to
-		// zero.
-		Ok((ticket.encode(), MultiAssets::default()))
+		let mut fees = MultiAssets::new();
+		if max_target_fee.is_some() {
+			let fee = max_target_fee.unwrap();
+			fees.push((*fee).clone());
+		}
+
+		Ok((ticket.encode(), fees))
 	}
 
 	fn deliver(blob: Vec<u8>) -> Result<XcmHash, SendError> {
