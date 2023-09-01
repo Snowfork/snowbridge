@@ -62,8 +62,7 @@ contract Gateway is IGateway, IInitializable {
     error InvalidConfig();
     error NotProxy();
     error InvalidCodeHash();
-    error BridgeHubAssetHubParaIDsIdentical();
-    error BridgeHubAssetHubAgentIDsIdentical();
+    error InvalidConstructorParams();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -83,11 +82,8 @@ contract Gateway is IGateway, IInitializable {
         bytes32 assetHubAgentID,
         bytes2 createTokenCallID
     ) {
-        if (bridgeHubParaID == assetHubParaID) {
-            revert BridgeHubAssetHubParaIDsIdentical();
-        }
-        if (bridgeHubAgentID == assetHubAgentID) {
-            revert BridgeHubAssetHubAgentIDsIdentical();
+        if (bridgeHubParaID == assetHubParaID || bridgeHubAgentID == assetHubAgentID) {
+            revert InvalidConstructorParams();
         }
 
         BEEFY_CLIENT = beefyClient;
