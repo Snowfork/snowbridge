@@ -2022,7 +2022,7 @@ dependencies = [
 [[package]]
 name = "polkadot-core-primitives"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -2034,7 +2034,7 @@ dependencies = [
 [[package]]
 name = "polkadot-parachain"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "bounded-collections",
  "derive_more",
@@ -4116,7 +4116,7 @@ dependencies = [
 [[package]]
 name = "xcm"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "bounded-collections",
  "derivative",
@@ -4132,7 +4132,7 @@ dependencies = [
 [[package]]
 name = "xcm-builder"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4154,7 +4154,7 @@ dependencies = [
 [[package]]
 name = "xcm-executor"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "environmental",
  "frame-benchmarking",
@@ -4174,7 +4174,7 @@ dependencies = [
 [[package]]
 name = "xcm-procedural"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "Inflector",
  "proc-macro2",
