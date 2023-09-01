@@ -27,6 +27,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ma
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 bp-runtime = { git = "https://github.com/Snowfork/cumulus.git", branch = "snowbridge", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
@@ -40,6 +41,8 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", bran
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
 snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "master" }
+
 
 hex-literal = { version = "0.4.1" }
 rlp = { version = "0.5" }
@@ -64,6 +67,7 @@ std = [
     "ethabi/std",
     "xcm/std",
     "bp-runtime/std",
+    "xcm-builder/std",
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",
@@ -72,5 +76,6 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "hex-literal",
     "rlp",
-    "snowbridge-beacon-primitives"
+    "snowbridge-beacon-primitives",
+    "xcm-builder/runtime-benchmarks",
 ]
