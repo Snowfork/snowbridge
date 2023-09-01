@@ -19,11 +19,8 @@ mod test;
 
 use codec::{Decode, DecodeAll, Encode};
 use frame_support::{
-	traits::{
-		fungible::{Inspect, Mutate},
-		GenesisBuild,
-	},
-	CloneNoBound, DefaultNoBound, EqNoBound, PartialEqNoBound,
+	traits::fungible::{Inspect, Mutate},
+	CloneNoBound, EqNoBound, PartialEqNoBound,
 };
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
@@ -91,6 +88,9 @@ pub mod pallet {
 
 		type WeightInfo: WeightInfo;
 
+		// Gateway contract address
+		type GatewayAddress: Get<H160>;
+
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self>;
 	}
@@ -128,11 +128,6 @@ pub mod pallet {
 		BridgeModule(bp_runtime::OwnedBridgeModuleError),
 	}
 
-	/// The address of the Gateway contract on Ethereum
-	#[pallet::storage]
-	#[pallet::getter(fn gateway)]
-	pub type Gateway<T: Config> = StorageValue<_, H160, ValueQuery>;
-
 	/// The current nonce for each parachain
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
@@ -151,20 +146,6 @@ pub mod pallet {
 	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
-
-	#[pallet::genesis_config]
-	#[derive(DefaultNoBound)]
-	pub struct GenesisConfig {
-		/// The address of the Gateway contract on Ethereum
-		pub gateway: H160,
-	}
-
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {
-			Gateway::<T>::put(self.gateway);
-		}
-	}
 
 	impl<T: Config> OwnedBridgeModule<T> for Pallet<T> {
 		const LOG_TARGET: &'static str = LOG_TARGET;
@@ -188,7 +169,7 @@ pub mod pallet {
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
 			// Verify that the message was submitted from the known Gateway contract
-			ensure!(Gateway::<T>::get() == envelope.gateway, Error::<T>::InvalidGateway,);
+			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway,);
 
 			// Verify message nonce
 			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {
@@ -242,14 +223,6 @@ pub mod pallet {
 				}),
 			}
 
-			Ok(())
-		}
-
-		#[pallet::call_index(1)]
-		#[pallet::weight((T::DbWeight::get().writes(1), DispatchClass::Normal))]
-		pub fn set_gateway(origin: OriginFor<T>, gateway: H160) -> DispatchResult {
-			ensure_root(origin)?;
-			Gateway::<T>::put(gateway);
 			Ok(())
 		}
 
