@@ -468,7 +468,9 @@ contract GatewayTest is Test {
 
         vm.expectEmit(true, false, false, false);
         emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token), bytes2(0x3500))
+            assetHubParaID,
+            1,
+            SubstrateTypes.RegisterToken(address(gateway), msg.sender, address(token), bytes2(0x3500))
         );
 
         IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));

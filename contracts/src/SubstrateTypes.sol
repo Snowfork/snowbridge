@@ -56,7 +56,7 @@ library SubstrateTypes {
      * `NativeTokensMessage::Create`
      */
     // solhint-disable-next-line func-name-mixedcase
-    function RegisterToken(address gateway, address token, bytes2 createCallIndex)
+    function RegisterToken(address gateway, address owner, address token, bytes2 createCallIndex)
         internal
         view
         returns (bytes memory)
@@ -66,6 +66,7 @@ library SubstrateTypes {
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x00),
             SubstrateTypes.H160(gateway),
+            SubstrateTypes.H160(owner),
             SubstrateTypes.H160(token),
             createCallIndex
         );
