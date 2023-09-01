@@ -57,9 +57,5 @@ mod benchmarks {
 		Ok(())
 	}
 
-	impl_benchmark_test_suite!(
-		InboundQueue,
-		crate::test::new_tester(),
-		crate::test::Test
-	);
+	impl_benchmark_test_suite!(InboundQueue, crate::test::new_tester(), crate::test::Test);
 }
