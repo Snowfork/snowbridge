@@ -100,7 +100,7 @@ impl Command {
 					UniversalOrigin(GlobalConsensus(network)),
 					DescendOrigin(X1(origin_location)),
 					WithdrawAsset(buy_execution_fee.clone().into()),
-					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
+					BuyExecution { fees: buy_execution_fee, weight_limit: Unlimited },
 					SetAppendix(
 						vec![
 							RefundSurplus,
@@ -145,7 +145,7 @@ impl Command {
 					UniversalOrigin(GlobalConsensus(network)),
 					DescendOrigin(X1(origin_location)),
 					WithdrawAsset(buy_execution_fee.clone().into()),
-					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
+					BuyExecution { fees: buy_execution_fee, weight_limit: Unlimited },
 					SetAppendix(
 						vec![
 							RefundSurplus,
