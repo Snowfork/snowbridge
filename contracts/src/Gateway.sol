@@ -103,15 +103,6 @@ contract Gateway is IGateway, IInitializable {
     ) external {
         Channel storage channel = _ensureChannel(message.origin);
 
-        // Produce the commitment (message root) by applying the leaf proof to the message leaf
-        bytes32 leafHash = keccak256(abi.encode(message));
-        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
-
-        // Verify that the commitment is included in a parachain header finalized by BEEFY.
-        if (!verifyCommitment(commitment, headerProof)) {
-            revert InvalidProof();
-        }
-
         // Ensure this message is not being replayed
         if (message.nonce != channel.inboundNonce + 1) {
             revert InvalidNonce();
@@ -127,6 +118,15 @@ contract Gateway is IGateway, IInitializable {
         // In that case, the origin should top up the funds of their agent.
         if (channel.reward > 0) {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), channel.reward);
+        }
+
+        // Produce the commitment (message root) by applying the leaf proof to the message leaf
+        bytes32 leafHash = keccak256(abi.encode(message));
+        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
+
+        // Verify that the commitment is included in a parachain header finalized by BEEFY.
+        if (!verifyCommitment(commitment, headerProof)) {
+            revert InvalidProof();
         }
 
         // Ensure relayers pass enough gas for message to execute.
