@@ -52,6 +52,7 @@ pub mod pallet {
 		type OwnParaId: Get<ParaId>;
 
 		/// Max size of params passed to initializer of the new implementation contract
+		#[pallet::constant]
 		type MaxUpgradeDataSize: Get<u32>;
 
 		/// Origin check for `create_agent`
