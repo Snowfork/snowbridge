@@ -455,13 +455,13 @@ contract Gateway is IGateway, IInitializable {
     /* Internal functions */
 
     // Verify that a message commitment is considered finalized by our BEEFY light client.
-    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof) internal view returns (bool) {
-        if (BEEFY_CLIENT != address(0)) {
-            return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
-        } else {
-            // for unit tests, verification is bypassed
-            return true;
-        }
+    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
     }
 
     // Submit an outbound message to Polkadot

@@ -89,6 +89,7 @@ contract GatewayTest is Test {
                 sendNativeTokenFee
             )
         );
+        GatewayMock(address(gateway)).setCommitmentsAreVerified(true);
 
         bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
@@ -182,6 +183,20 @@ contract GatewayTest is Test {
         hoax(relayer);
         IGateway(address(gateway)).submitInbound(
             InboundMessage(ParaID.wrap(42), 1, command, ""), proof, makeMockProof()
+        );
+    }
+
+    function testSubmitFailInvalidProof() public {
+        deal(bridgeHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = makeCreateAgentCommand();
+
+        GatewayMock(address(gateway)).setCommitmentsAreVerified(false);
+        vm.expectRevert(Gateway.InvalidProof.selector);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitInbound(
+            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
         );
     }
 
