@@ -89,6 +89,7 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		// Gateway contract address
+		#[pallet::constant]
 		type GatewayAddress: Get<H160>;
 
 		#[cfg(feature = "runtime-benchmarks")]
