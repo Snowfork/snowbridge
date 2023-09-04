@@ -29,7 +29,7 @@ use hex_literal::hex;
 use sp_core::bytes::to_hex;
 use subxt::tx::TxPayload;
 use assethub::api::bridge_transfer::calls::TransactionApi;
-use snowbridge_smoketest::helper::TemplateConfig;
+use snowbridge_smoketest::helper::{AssetHubConfig, TemplateConfig};
 
 const DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 
@@ -46,15 +46,15 @@ async fn transfer_token() {
     let weth_addr: Address = WETH_CONTRACT.into();
     let weth = WETH9::new(weth_addr, ethereum_client.clone());
 
-    let assethub: OnlineClient<PolkadotConfig> =
+    let assethub: OnlineClient<AssetHubConfig> =
         OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
 
     let keypair: Pair = Pair::from_string("//Ferdie", None).expect("cannot create keypair");
 
-    let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(keypair);
+    let signer: PairSigner<AssetHubConfig, _> = PairSigner::new(keypair);
 
-    //let amount: u128 = 1_000_000_000;
-    /*let assets = VersionedMultiAssets::V3(MultiAssets(vec![MultiAsset {
+    let amount: u128 = 1_000_000_000;
+    let assets = VersionedMultiAssets::V3(MultiAssets(vec![MultiAsset {
         id: AssetId::Concrete(MultiLocation {
             parents: 2,
             interior: Junctions::X3(
@@ -65,6 +65,7 @@ async fn transfer_token() {
         }),
         fun: Fungibility::Fungible(amount),
     }]));
+    /*
     let destination = VersionedMultiLocation::V3(MultiLocation {
         parents: 1,
         interior: Junctions::X2(
@@ -73,26 +74,25 @@ async fn transfer_token() {
         ),
     });*/
 
-    /*
-    let assets = VersionedMultiAssets::V3(MultiAssets(vec![]));
     let destination = VersionedMultiLocation::V3(MultiLocation {
         parents: 1,
         interior: Junctions::X2(
             Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
-            Junction::AccountKey20 { network: None, key: DESTINATION_ADDRESS.into() },
+            //Junction::Parachain(1013),
+            Junction::AccountKey20 { network: Some(NetworkId::Ethereum { chain_id: 15 }), key: DESTINATION_ADDRESS.into() },
         ),
     });
 
-    let bridge_transfer_call = TransactionApi.transfer_asset_via_bridge();*/
+    let bridge_transfer_call = TransactionApi.transfer_asset_via_bridge(assets, destination);
 
-    let calldata = assethub::api::system::calls::TransactionApi.remark(String::from("Hello, world!").into_bytes());
+   // let calldata = assethub::api::system::calls::TransactionApi.remark(String::from("Hello, world!").into_bytes());
 
-    //let calldata = hex::encode(bridge_transfer_call.encode_call_data(&assethub.metadata()).unwrap());
-    //println!("Encoded {:?}", calldata);
+    let calldata = hex::encode(bridge_transfer_call.encode_call_data(&assethub.metadata()).unwrap());
+    println!("Encoded {:?}", calldata);
 
     let result = assethub
         .tx()
-        .sign_and_submit_then_watch_default(&calldata, &signer)
+        .sign_and_submit_then_watch_default(&bridge_transfer_call, &signer)
         .await
         .expect("send through call.")
         .wait_for_finalized_success()
