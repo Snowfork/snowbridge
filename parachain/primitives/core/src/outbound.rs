@@ -6,11 +6,14 @@ use sp_std::{borrow::ToOwned, vec, vec::Vec};
 
 pub type MessageHash = H256;
 
+/// Priority for submit the message ticket to OutboundQueue
 #[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum Priority {
+	/// Internally will submit the message to pallet_message_queue
 	Normal,
+	/// Internally will submit and process the message directly without waiting scheduled by
+	/// pallet_message_queue
 	High,
-	Emergency,
 }
 
 /// A trait for enqueueing messages for delivery to Ethereum

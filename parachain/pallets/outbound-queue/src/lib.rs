@@ -348,12 +348,7 @@ pub mod pallet {
 					);
 					Self::deposit_event(Event::MessageQueued { id: ticket.id });
 				},
-				// Though currently there is no difference between emergency priority and high
-				// priority, there is chance to add some custom logic for emergency cases
-				// suppose message queue pallet inherently support priority control.
-				// e.g. leverage [sweep_queue](https://github.com/paritytech/polkadot-sdk/blob/f1f793718a2410872c3d61a86594a4c2bb9bea69/substrate/frame/support/src/traits/messages.rs#L140-L141)
-				// to remove some low priority messages from the queue
-				Priority::High | Priority::Emergency => {
+				Priority::High => {
 					ensure!(
 						MessageLeaves::<T>::decode_len().unwrap_or(0) <
 							T::MaxMessagesPerBlock::get() as usize,
