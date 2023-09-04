@@ -371,6 +371,8 @@ pub mod pallet {
 			meter: &mut frame_support::weights::WeightMeter,
 			_: &mut [u8; 32],
 		) -> Result<bool, ProcessMessageError> {
+			// Make sure the bridge not halted
+			Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
 			// Yield if we don't want to accept any more messages in the current block.
 			// There is hard limit to ensure the weight of `on_finalize` is bounded.
 			ensure!(
