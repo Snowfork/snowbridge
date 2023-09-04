@@ -3,6 +3,7 @@ use ethers::{
     types::Address,
 };
 use std::{sync::Arc, time::Duration};
+use ethers::prelude::Middleware;
 use snowbridge_smoketest::contracts::weth9::WETH9;
 use subxt::{
     tx::{PairSigner},
@@ -29,6 +30,7 @@ use hex_literal::hex;
 use sp_core::bytes::to_hex;
 use subxt::tx::TxPayload;
 use assethub::api::bridge_transfer::calls::TransactionApi;
+use futures::StreamExt;
 use snowbridge_smoketest::helper::{AssetHubConfig, TemplateConfig};
 
 const DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
@@ -65,30 +67,16 @@ async fn transfer_token() {
         }),
         fun: Fungibility::Fungible(amount),
     }]));
-    /*
+
     let destination = VersionedMultiLocation::V3(MultiLocation {
-        parents: 1,
+        parents: 2,
         interior: Junctions::X2(
             Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
             Junction::AccountKey20 { network: None, key: DESTINATION_ADDRESS.into() },
         ),
-    });*/
-
-    let destination = VersionedMultiLocation::V3(MultiLocation {
-        parents: 1,
-        interior: Junctions::X2(
-            Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
-            //Junction::Parachain(1013),
-            Junction::AccountKey20 { network: Some(NetworkId::Ethereum { chain_id: 15 }), key: DESTINATION_ADDRESS.into() },
-        ),
     });
 
     let bridge_transfer_call = TransactionApi.transfer_asset_via_bridge(assets, destination);
-
-   // let calldata = assethub::api::system::calls::TransactionApi.remark(String::from("Hello, world!").into_bytes());
-
-    let calldata = hex::encode(bridge_transfer_call.encode_call_data(&assethub.metadata()).unwrap());
-    println!("Encoded {:?}", calldata);
 
     let result = assethub
         .tx()
@@ -100,4 +88,27 @@ async fn transfer_token() {
         .expect("call success");
 
     println!("bridge_transfer call issued at assethub block hash {:?}", result.block_hash());
+
+    let wait_for_blocks = 50;
+    let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
+
+    let mut transfer_event_found = false;
+    while let Some(block) = stream.next().await {
+        println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
+        if let Ok(transfers) =
+            weth.event::<TransferFilter>().at_block_hash(block.hash.unwrap()).query().await
+        {
+            for transfer in transfers {
+                println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
+                assert_eq!(transfer.src, DESTINATION_ADDRESS.into());
+                assert_eq!(transfer.dst, DESTINATION_ADDRESS.into());
+                assert_eq!(transfer.wad, amount.into());
+                transfer_event_found = true;
+            }
+        }
+        if transfer_event_found {
+            break;
+        }
+    }
+    assert!(transfer_event_found);
 }

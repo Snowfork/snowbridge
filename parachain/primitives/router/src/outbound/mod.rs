@@ -25,13 +25,13 @@ pub struct EthereumBlobExporter<
 >(PhantomData<(UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription)>);
 
 impl<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription> ExportXcm
-for EthereumBlobExporter<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription>
-	where
-		UniversalLocation: Get<InteriorMultiLocation>,
-		GatewayLocation: Get<MultiLocation>,
-		OutboundQueue: OutboundQueueTrait,
-		OutboundQueue::Ticket: Encode + Decode,
-		AgentHashedDescription: ConvertLocation<H256>,
+	for EthereumBlobExporter<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription>
+where
+	UniversalLocation: Get<InteriorMultiLocation>,
+	GatewayLocation: Get<MultiLocation>,
+	OutboundQueue: OutboundQueueTrait,
+	OutboundQueue::Ticket: Encode + Decode,
+	AgentHashedDescription: ConvertLocation<H256>,
 {
 	type Ticket = Vec<u8>;
 
@@ -64,7 +64,7 @@ for EthereumBlobExporter<UniversalLocation, GatewayLocation, OutboundQueue, Agen
 
 		let gateway_address = match gateway_junctions {
 			X1(AccountKey20 { network, key })
-			if network.is_none() || network == Some(gateway_network) =>
+				if network.is_none() || network == Some(gateway_network) =>
 				key,
 			_ => {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched registry contract {gateway_junctions:?}.");
@@ -217,7 +217,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		let execution_fee = match self.next()? {
 			WithdrawAsset(fee_asset) => match self.next()? {
 				BuyExecution { fees: execution_fee, weight_limit: Unlimited }
-				if fee_asset.len() == 1 && fee_asset.contains(execution_fee) =>
+					if fee_asset.len() == 1 && fee_asset.contains(execution_fee) =>
 					Some(execution_fee),
 				_ => return Err(BuyExecutionExpected),
 			},
@@ -278,10 +278,10 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			if let MultiLocation {
 				parents: 0,
 				interior:
-				X2(
-					AccountKey20 { network: gateway_network, key: gateway_address },
-					AccountKey20 { network: token_network, key: token_address },
-				),
+					X2(
+						AccountKey20 { network: gateway_network, key: gateway_address },
+						AccountKey20 { network: token_network, key: token_address },
+					),
 			} = asset_location
 			{
 				if gateway_network.is_some() && gateway_network != &Some(*self.ethereum_network) {
@@ -575,11 +575,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let mut message: Option<Xcm<()>> = Some(
@@ -593,11 +593,11 @@ mod tests {
 						network: Some(network),
 						key: beneficiary_address,
 					})
-						.into(),
+					.into(),
 				},
 				SetTopic([0; 32]),
 			]
-				.into(),
+			.into(),
 		);
 
 		let result =
@@ -656,11 +656,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let mut message: Option<Xcm<()>> = Some(
@@ -673,11 +673,11 @@ mod tests {
 						network: Some(network),
 						key: beneficiary_address,
 					})
-						.into(),
+					.into(),
 				},
 				SetTopic([0; 32]),
 			]
-				.into(),
+			.into(),
 		);
 
 		let result =
@@ -718,11 +718,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
@@ -735,7 +735,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 		let expected_payload = AgentExecuteCommand::TransferToken {
 			token: token_address.into(),
@@ -759,11 +759,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
@@ -775,7 +775,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 		let expected_payload = AgentExecuteCommand::TransferToken {
 			token: token_address.into(),
@@ -799,11 +799,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = Wild(All);
 
 		let message: Xcm<()> = vec![
@@ -815,7 +815,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 		let expected_payload = AgentExecuteCommand::TransferToken {
 			token: token_address.into(),
@@ -837,16 +837,16 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let message: Xcm<()> = vec![
 			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 			WithdrawAsset(assets),
 		]
-			.into();
+		.into();
 
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 		let result = converter.convert();
@@ -878,11 +878,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
@@ -894,7 +894,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -917,11 +917,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
@@ -934,7 +934,7 @@ mod tests {
 			},
 			ClearTopic,
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -957,11 +957,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
@@ -975,7 +975,7 @@ mod tests {
 			SetTopic([0; 32]),
 			ClearOrigin,
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -998,11 +998,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
@@ -1014,7 +1014,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1036,11 +1036,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 
 		let message: Xcm<()> = vec![
 			WithdrawAsset(fees),
@@ -1048,7 +1048,7 @@ mod tests {
 			WithdrawAsset(assets),
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1077,7 +1077,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1105,7 +1105,7 @@ mod tests {
 				fun: Fungible(500),
 			},
 		]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
@@ -1118,7 +1118,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1141,11 +1141,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(0));
 
 		let message: Xcm<()> = vec![
@@ -1158,7 +1158,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1181,11 +1181,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: NonFungible(AssetInstance::Index(0)),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1198,7 +1198,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1221,11 +1221,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(0),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1238,7 +1238,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1258,7 +1258,7 @@ mod tests {
 			id: Concrete(X3(GlobalConsensus(Polkadot), Parachain(1000), GeneralIndex(0)).into()),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1271,7 +1271,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1294,11 +1294,11 @@ mod tests {
 					AccountKey20 { network: Some(network), key: GATEWAY },
 					AccountKey20 { network: Some(Ethereum { chain_id: 2 }), key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1311,7 +1311,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1336,11 +1336,11 @@ mod tests {
 					AccountKey20 { network: Some(network), key: BAD_REGISTRY },
 					AccountKey20 { network: Some(network), key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1353,7 +1353,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1376,11 +1376,11 @@ mod tests {
 					AccountKey20 { network: Some(Ethereum { chain_id: 2 }), key: GATEWAY },
 					AccountKey20 { network: Some(network), key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1393,7 +1393,7 @@ mod tests {
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1418,11 +1418,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1436,11 +1436,11 @@ mod tests {
 					Parachain(1000),
 					AccountId32 { network: Some(Polkadot), id: beneficiary_address },
 				)
-					.into(),
+				.into(),
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
@@ -1464,11 +1464,11 @@ mod tests {
 					AccountKey20 { network: None, key: GATEWAY },
 					AccountKey20 { network: None, key: token_address },
 				)
-					.into(),
+				.into(),
 			),
 			fun: Fungible(1000),
 		}]
-			.into();
+		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
@@ -1481,11 +1481,11 @@ mod tests {
 					network: Some(Ethereum { chain_id: 2 }),
 					key: beneficiary_address,
 				})
-					.into(),
+				.into(),
 			},
 			SetTopic([0; 32]),
 		]
-			.into();
+		.into();
 		let mut converter = XcmConverter::new(&message, &network, &GATEWAY);
 
 		let result = converter.convert();
