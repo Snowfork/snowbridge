@@ -65,6 +65,7 @@ pub mod pallet {
 		type OwnParaId: Get<ParaId>;
 
 		/// Max size of params passed to initializer of the new implementation contract
+		#[pallet::constant]
 		type MaxUpgradeDataSize: Get<u32>;
 
 		/// Implementation that ensures origin is an XCM location for agent operations
