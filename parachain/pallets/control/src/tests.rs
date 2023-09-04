@@ -38,7 +38,7 @@ fn create_agent_with_bridgehub_origin_yields_success() {
 		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
 		assert!(Agents::<Test>::contains_key(agent_id));
 
-		let agent_owner = EthereumControl::agent_account_id(&location).unwrap();
+		let agent_owner = EthereumControl::sovereign_account(&location).unwrap();
 		assert_eq!(agent_id.as_bytes(), agent_owner.as_slice());
 		println!("agent_id: {:#?}", hex::encode(agent_id.as_bytes()));
 		println!(

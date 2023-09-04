@@ -5,6 +5,7 @@ use frame_support::{
 	pallet_prelude::EnsureOrigin,
 	parameter_types,
 	traits::{ConstU16, ConstU64, OriginTrait},
+	PalletId,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -202,6 +203,10 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	}
 }
 
+parameter_types! {
+	pub const ControlPalletId: PalletId = PalletId(*b"snow/ctl");
+}
+
 impl snowbridge_control::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = OwnParaId;
@@ -215,6 +220,7 @@ impl snowbridge_control::Config for Test {
 	type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 	type SovereignAccountOf = HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>;
 	type Token = Balances;
+	type ControlPalletId = ControlPalletId;
 	type WeightInfo = ();
 }
 

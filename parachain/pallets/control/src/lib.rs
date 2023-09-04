@@ -77,6 +77,7 @@ pub mod pallet {
 		/// Converts MultiLocation to H256 in a way that is stable across multiple versions of XCM
 		type AgentIdOf: ConvertLocation<H256>;
 
+		/// Converts MultiLocation to a sovereign account
 		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
 
 		/// The universal location
@@ -87,6 +88,9 @@ pub mod pallet {
 
 		/// Token reserved for control operations
 		type Token: Mutate<Self::AccountId>;
+
+		/// Local pallet Id derivative of an escrow account to collect fees
+		type ControlPalletId: Get<PalletId>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -213,7 +217,7 @@ pub mod pallet {
 			);
 
 			Self::reserve_deposit(
-				Self::agent_account_id(&location)?,
+				Self::sovereign_account(&location)?,
 				ControlOperationFee::<T>::get(ControlOperation::CreateAgent),
 			)?;
 
@@ -251,7 +255,7 @@ pub mod pallet {
 			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
 
 			Self::reserve_deposit(
-				Self::agent_account_id(&location)?,
+				Self::sovereign_account(&location)?,
 				ControlOperationFee::<T>::get(ControlOperation::CreateChannel),
 			)?;
 
@@ -288,7 +292,7 @@ pub mod pallet {
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
 
 			Self::reserve_deposit(
-				Self::agent_account_id(&location)?,
+				Self::sovereign_account(&location)?,
 				ControlOperationFee::<T>::get(ControlOperation::UpdateChannel),
 			)?;
 
@@ -339,7 +343,7 @@ pub mod pallet {
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
 			Self::reserve_deposit(
-				Self::agent_account_id(&location)?,
+				Self::sovereign_account(&location)?,
 				ControlOperationFee::<T>::get(ControlOperation::TransferNativeFromAgent),
 			)?;
 
@@ -411,7 +415,7 @@ pub mod pallet {
 		}
 
 		pub fn account_id() -> T::AccountId {
-			PalletId(*b"snow/ctl").into_account_truncating()
+			T::ControlPalletId::get().into_account_truncating()
 		}
 
 		pub fn reserve_deposit(payer: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
@@ -419,7 +423,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn agent_account_id(location: &MultiLocation) -> Result<T::AccountId, DispatchError> {
+		pub fn sovereign_account(location: &MultiLocation) -> Result<T::AccountId, DispatchError> {
 			let agent_account = T::SovereignAccountOf::convert_location(location)
 				.ok_or(Error::<T>::LocationToAgentAccountConversionFailed)?;
 			Ok(agent_account)
