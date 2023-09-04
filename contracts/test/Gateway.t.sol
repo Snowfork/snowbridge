@@ -138,6 +138,9 @@ contract GatewayTest is Test {
         });
     }
 
+    fallback() external payable {}
+    receive() external payable {}
+
     /**
      * Message Verification
      */
@@ -474,6 +477,26 @@ contract GatewayTest is Test {
         );
 
         IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
+    }
+
+    function testRegisterTokenReimbursesExcessFees() public {
+        vm.expectEmit(false, false, false, true);
+        emit TokenRegistrationSent(address(token));
+
+        vm.expectEmit(true, false, false, false);
+        emit OutboundMessageAccepted(
+            assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token), bytes2(0x3500))
+        );
+
+        uint256 totalFee = defaultFee + registerNativeTokenFee;
+        uint256 balanceBefore = address(this).balance;
+        IGateway(address(gateway)).registerToken{value: totalFee + 1 ether}(address(token));
+        uint256 balanceAfter = address(this).balance;
+
+        // Check that the balance has decreased by the amount of gas used
+        // channel.fee is defaultFee & extraFee is registerNativeTokenFee
+        uint256 etherUsed = balanceBefore - balanceAfter;
+        assert(etherUsed == totalFee);
     }
 
     function testSendTokenAddress32() public {
