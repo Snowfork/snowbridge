@@ -30,7 +30,7 @@ contract GatewayTest is Test {
     event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool result);
     event OutboundMessageAccepted(ParaID indexed dest, uint64 nonce, bytes payload);
     event NativeTokensUnlocked(address token, address recipient, uint256 amount);
-    event TokenRegistrationSent(address token);
+    event TokenRegistrationSent(address indexed token, address indexed owner, uint256 deposit);
     event TokenSent(
         address indexed sender, address indexed token, ParaID destinationChain, bytes destinationAddress, uint128 amount
     );
@@ -466,26 +466,28 @@ contract GatewayTest is Test {
      */
 
     function testRegisterToken() public {
-        vm.expectEmit(false, false, false, true);
-        emit TokenRegistrationSent(address(token));
+        vm.expectEmit(true, false, false, true);
+        emit TokenRegistrationSent(address(token), assetHubAgent, registerNativeTokenFee);
 
         vm.expectEmit(true, false, false, false);
         emit OutboundMessageAccepted(
             assetHubParaID,
             1,
-            SubstrateTypes.RegisterToken(address(gateway), msg.sender, address(token), bytes2(0x3500))
+            SubstrateTypes.RegisterToken(address(gateway), assetHubAgent, address(token), bytes2(0x3500))
         );
 
         IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
     }
 
     function testRegisterTokenReimbursesExcessFees() public {
-        vm.expectEmit(false, false, false, true);
-        emit TokenRegistrationSent(address(token));
+        vm.expectEmit(true, false, false, true);
+        emit TokenRegistrationSent(address(token), assetHubAgent, registerNativeTokenFee);
 
         vm.expectEmit(true, false, false, false);
         emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token), bytes2(0x3500))
+            assetHubParaID,
+            1,
+            SubstrateTypes.RegisterToken(address(gateway), assetHubAgent, address(token), bytes2(0x3500))
         );
 
         uint256 totalFee = defaultFee + registerNativeTokenFee;
