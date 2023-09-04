@@ -36,6 +36,8 @@ const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E3
 const WETH_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const GATEWAY_PROXY_SOVEREIGN: [u8; 32] =
     hex!("c9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5");
+const ASSET_HUB_AGENT_ID: [u8; 32] =
+    hex!("72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4");
 
 #[tokio::test]
 async fn register_token() {
@@ -108,8 +110,9 @@ async fn register_token() {
         ),
     };
     let expected_creator: AccountId32 = GATEWAY_PROXY_SOVEREIGN.into();
+    let agent_address = gateway.agent_of(ASSET_HUB_AGENT_ID).await.unwrap();
     let expected_owner = AccountId32::from(
-        (b"ethereum", 15u64, wallet.address().as_fixed_bytes()).using_encoded(blake2_256),
+        (b"ethereum", 15u64, agent_address.as_fixed_bytes()).using_encoded(blake2_256),
     );
     println!("sender address: {}", expected_owner.to_string());
 
