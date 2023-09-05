@@ -41,7 +41,7 @@ use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
 use snowbridge_core::outbound::{
-	Command, Message, MessageHash, OutboundQueue as OutboundQueueTrait, SubmitError,
+	Command, FeeProvider, Message, MessageHash, OutboundQueue as OutboundQueueTrait, SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
@@ -158,6 +158,8 @@ pub mod pallet {
 			/// number of committed messages
 			count: u64,
 		},
+		/// Set base fee
+		BaseFeeSet { amount: u128 },
 	}
 
 	#[pallet::error]
@@ -201,6 +203,10 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
+	/// The base fee to cover the cost of an no-op dispatchable on the Ethereum side
+	#[pallet::storage]
+	pub type BaseFee<T: Config> = StorageValue<_, u128, ValueQuery>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
@@ -238,6 +244,17 @@ pub mod pallet {
 			operating_mode: BasicOperatingMode,
 		) -> DispatchResult {
 			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
+		}
+
+		/// Halt or resume all pallet operations.
+		/// May only be called either by root, or by `PalletOwner`.
+		#[pallet::call_index(2)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_base_fee(origin: OriginFor<T>, amount: u128) -> DispatchResult {
+			ensure_root(origin)?;
+			BaseFee::<T>::put(amount);
+			Self::deposit_event(Event::BaseFeeSet { amount });
+			Ok(())
 		}
 	}
 
@@ -373,6 +390,12 @@ pub mod pallet {
 			}
 
 			Self::do_process_message(message)
+		}
+	}
+
+	impl<T: Config> FeeProvider<u128> for Pallet<T> {
+		fn base_fee() -> u128 {
+			BaseFee::<T>::get()
 		}
 	}
 }

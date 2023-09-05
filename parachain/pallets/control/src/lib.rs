@@ -19,7 +19,9 @@ pub use weights::*;
 
 use frame_support::traits::fungible::{Inspect, Mutate};
 use snowbridge_core::{
-	outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
+	outbound::{
+		Command, FeeProvider, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
+	},
 	AgentId,
 };
 use sp_core::{H160, H256};
@@ -32,7 +34,7 @@ pub use pallet::*;
 
 pub const LOG_TARGET: &str = "snowbridge-control";
 
-type BalanceOf<T> =
+pub type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
@@ -41,12 +43,11 @@ pub mod pallet {
 	use frame_support::{
 		log,
 		pallet_prelude::*,
-		sp_runtime::{traits::AccountIdConversion, AccountId32},
+		sp_runtime::{traits::AccountIdConversion, AccountId32, SaturatedConversion},
 		traits::{tokens::Preservation, EnsureOrigin},
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use snowbridge_core::outbound::ControlOperation;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -92,6 +93,15 @@ pub mod pallet {
 		/// Local pallet Id derivative of an escrow account to collect fees
 		type ControlPalletId: Get<PalletId>;
 
+		/// FeeProvider for get fee to cover the cost of operations on the Ethereum side
+		type FeeProvider: FeeProvider<u128>;
+
+		/// BaseFeeMultiplier for control operations
+		type CreateAgentMultiplier: Get<u128>;
+		type CreateChannelMultiplier: Get<u128>;
+		type UpdateChannelMultiplier: Get<u128>;
+		type TransferNativeFromAgentMultiplier: Get<u128>;
+
 		type WeightInfo: WeightInfo;
 	}
 
@@ -99,21 +109,11 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// An Upgrade message was sent to the Gateway
-		Upgrade {
-			impl_address: H160,
-			impl_code_hash: H256,
-			params_hash: Option<H256>,
-		},
+		Upgrade { impl_address: H160, impl_code_hash: H256, params_hash: Option<H256> },
 		/// An CreateAgent message was sent to the Gateway
-		CreateAgent {
-			location: Box<MultiLocation>,
-			agent_id: AgentId,
-		},
+		CreateAgent { location: Box<MultiLocation>, agent_id: AgentId },
 		/// An CreateChannel message was sent to the Gateway
-		CreateChannel {
-			para_id: ParaId,
-			agent_id: AgentId,
-		},
+		CreateChannel { para_id: ParaId, agent_id: AgentId },
 		/// An UpdateChannel message was sent to the Gateway
 		UpdateChannel {
 			para_id: ParaId,
@@ -123,19 +123,9 @@ pub mod pallet {
 			reward: u128,
 		},
 		/// An SetOperatingMode message was sent to the Gateway
-		SetOperatingMode {
-			mode: OperatingMode,
-		},
+		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
-		TransferNativeFromAgent {
-			agent_id: AgentId,
-			recipient: H160,
-			amount: u128,
-		},
-		FeeUpdated {
-			operation: ControlOperation,
-			fee: BalanceOf<T>,
-		},
+		TransferNativeFromAgent { agent_id: AgentId, recipient: H160, amount: u128 },
 	}
 
 	#[pallet::error]
@@ -157,10 +147,6 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type Channels<T: Config> = StorageMap<_, Twox64Concat, ParaId, (), OptionQuery>;
-
-	#[pallet::storage]
-	pub type ControlOperationFee<T: Config> =
-		StorageMap<_, Twox64Concat, ControlOperation, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -218,7 +204,9 @@ pub mod pallet {
 
 			Self::reserve_deposit(
 				Self::sovereign_account(&location)?,
-				ControlOperationFee::<T>::get(ControlOperation::CreateAgent),
+				T::FeeProvider::base_fee()
+					.saturating_mul(T::CreateAgentMultiplier::get())
+					.saturated_into::<BalanceOf<T>>(),
 			)?;
 
 			// Record the agent id or fail if it has already been created
@@ -256,7 +244,9 @@ pub mod pallet {
 
 			Self::reserve_deposit(
 				Self::sovereign_account(&location)?,
-				ControlOperationFee::<T>::get(ControlOperation::CreateChannel),
+				T::FeeProvider::base_fee()
+					.saturating_mul(T::CreateChannelMultiplier::get())
+					.saturated_into::<BalanceOf<T>>(),
 			)?;
 
 			Channels::<T>::insert(para_id, ());
@@ -293,7 +283,9 @@ pub mod pallet {
 
 			Self::reserve_deposit(
 				Self::sovereign_account(&location)?,
-				ControlOperationFee::<T>::get(ControlOperation::UpdateChannel),
+				T::FeeProvider::base_fee()
+					.saturating_mul(T::UpdateChannelMultiplier::get())
+					.saturated_into::<BalanceOf<T>>(),
 			)?;
 
 			let message = Message {
@@ -344,7 +336,9 @@ pub mod pallet {
 
 			Self::reserve_deposit(
 				Self::sovereign_account(&location)?,
-				ControlOperationFee::<T>::get(ControlOperation::TransferNativeFromAgent),
+				T::FeeProvider::base_fee()
+					.saturating_mul(T::TransferNativeFromAgentMultiplier::get())
+					.saturated_into::<BalanceOf<T>>(),
 			)?;
 
 			let message = Message {
@@ -357,27 +351,6 @@ pub mod pallet {
 				agent_id,
 				recipient,
 				amount,
-			});
-
-			Ok(())
-		}
-
-		/// - `update`: (ControlOperation, Fee).
-		#[pallet::call_index(6)]
-		#[pallet::weight(T::WeightInfo::update_operation_fee())]
-		pub fn update_operation_fee(
-			origin: OriginFor<T>,
-			operation: ControlOperation,
-			update_fee: BalanceOf<T>,
-		) -> DispatchResult {
-			ensure_root(origin)?;
-
-			ControlOperationFee::<T>::mutate(&operation, |fee| {
-				*fee = update_fee;
-				Self::deposit_event(Event::<T>::FeeUpdated {
-					operation: operation.clone(),
-					fee: update_fee,
-				});
 			});
 
 			Ok(())

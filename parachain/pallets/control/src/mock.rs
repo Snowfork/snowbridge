@@ -203,8 +203,23 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	}
 }
 
+impl snowbridge_control::FeeProvider<u128> for MockOutboundQueue {
+	fn base_fee() -> u128 {
+		0
+	}
+}
+
 parameter_types! {
 	pub const ControlPalletId: PalletId = PalletId(*b"snow/ctl");
+	// Multiplier based on gas report as follows,assume gas cost for a no-op operation is 1000
+	// | createAgent                                     | 839             | 184709 | 237187 | 237187 | 9       |
+	// | createChannel                                   | 399             | 31023  | 2829   | 75402  | 5       |
+	// | updateChannel                                   | 817             | 15121  | 3552   | 36762  | 5		 |
+	// | transferNativeFromAgent                         | 770             | 21730  | 21730  | 42691  | 2       |
+	pub const CreateAgentMultiplier: u128 = 237;
+	pub const CreateChannelMultiplier: u128 = 75;
+	pub const UpdateChannelMultiplier: u128 = 37;
+	pub const TransferNativeFromAgentMultiplier: u128 = 43;
 }
 
 impl snowbridge_control::Config for Test {
@@ -221,6 +236,11 @@ impl snowbridge_control::Config for Test {
 	type SovereignAccountOf = HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>;
 	type Token = Balances;
 	type ControlPalletId = ControlPalletId;
+	type CreateAgentMultiplier = CreateAgentMultiplier;
+	type CreateChannelMultiplier = CreateChannelMultiplier;
+	type UpdateChannelMultiplier = UpdateChannelMultiplier;
+	type TransferNativeFromAgentMultiplier = TransferNativeFromAgentMultiplier;
+	type FeeProvider = MockOutboundQueue;
 	type WeightInfo = ();
 }
 

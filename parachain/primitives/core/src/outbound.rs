@@ -1,4 +1,4 @@
-use codec::{Decode, Encode, MaxEncodedLen};
+use codec::{Decode, Encode};
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
@@ -230,10 +230,8 @@ impl AgentExecuteCommand {
 	}
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub enum ControlOperation {
-	CreateAgent,
-	CreateChannel,
-	UpdateChannel,
-	TransferNativeFromAgent,
+/// A trait for get fee to cover the cost of operations on the Ethereum side
+pub trait FeeProvider<Balance> {
+	/// get base fee to cover the cost of an no-op dispatchable
+	fn base_fee() -> Balance;
 }
