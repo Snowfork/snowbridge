@@ -45,14 +45,17 @@ library Assets {
         bytes32 destinationAddress,
         uint128 amount
     ) external returns (bytes memory payload, uint256 extraFee) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        _transferToAgent(assetHubAgent, token, sender, amount);
         if (destinationChain == assetHubParaID) {
             payload = SubstrateTypes.SendToken(address(this), token, destinationAddress, amount);
         } else {
             payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         }
-        _sendToken(
-            assetHubParaID, assetHubAgent, token, sender, destinationChain, abi.encodePacked(destinationAddress), amount
-        );
+        extraFee = $.sendTokenFee;
+
+        emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
     function sendToken(
@@ -64,32 +67,17 @@ library Assets {
         address destinationAddress,
         uint128 amount
     ) external returns (bytes memory payload, uint256 extraFee) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if (destinationChain == assetHubParaID) {
             // AssetHub parachain doesn't support Ethereum-style addresses
             revert InvalidDestination();
         }
 
-        payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
-
-        _sendToken(
-            assetHubParaID, assetHubAgent, token, sender, destinationChain, abi.encodePacked(destinationAddress), amount
-        );
-    }
-
-    function _sendToken(
-        ParaID assetHubParaID,
-        address assetHubAgent,
-        address token,
-        address sender,
-        ParaID destinationChain,
-        bytes memory destinationAddress,
-        uint128 amount
-    ) internal returns (uint256 extraFee) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
         _transferToAgent(assetHubAgent, token, sender, amount);
 
+        payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         extraFee = $.sendTokenFee;
-        emit TokenSent(sender, token, destinationChain, destinationAddress, amount);
+        emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
     /// @dev transfer tokens from the sender to the specified
