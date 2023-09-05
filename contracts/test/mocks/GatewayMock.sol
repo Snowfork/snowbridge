@@ -4,8 +4,11 @@ pragma solidity ^0.8.20;
 import {Gateway} from "../../src/Gateway.sol";
 import {ParaID, OperatingMode} from "../../src/Types.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
+import {Verification} from "../../src/Verification.sol";
 
 contract GatewayMock is Gateway {
+    bool public commitmentsAreVerified;
+
     constructor(
         address beefyClient,
         address agentExecutor,
@@ -54,6 +57,24 @@ contract GatewayMock is Gateway {
 
     function transferNativeFromAgentPublic(bytes calldata params) external {
         this.transferNativeFromAgent(params);
+    }
+
+    function setCommitmentsAreVerified(bool value) external {
+        commitmentsAreVerified = value;
+    }
+
+    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+        internal
+        view
+        override
+        returns (bool)
+    {
+        if (BEEFY_CLIENT != address(0)) {
+            return super.verifyCommitment(commitment, proof);
+        } else {
+            // for unit tests, verification is set with commitmentsAreVerified
+            return commitmentsAreVerified;
+        }
     }
 }
 
