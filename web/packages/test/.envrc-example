@@ -10,7 +10,7 @@ source_up_if_exists
 # export RELAYCHAIN_ENDPOINT=         # Relaychain endpoint, default value: ws://localhost:9944
 # export PARACHAIN_RUNTIME=           # Runtime type of parachain should be one of snowbase|snowblink|snowbridge
 # export BRIDGE_HUB_PALLETS_OWNER=     # Pubkey of bridge owner that can halt/resume the bridge pallets, default value: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d (Alice test account)
-
+# export BASE_FEE=                     # BaseFee to cover the cost of an Ethereum no-op dispatchable in DOT, default value: 0.1 DOT
 
 ## Eth config for production
 # export INFURA_PROJECT_ID=           # Your Infura project id
