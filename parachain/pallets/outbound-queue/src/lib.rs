@@ -132,6 +132,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
 
+		/// Max number of high-priority messages processed per block
+		#[pallet::constant]
+		type MaxLowPriorityMessagesPerBlock: Get<u32>;
+
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
 	}
@@ -159,6 +163,7 @@ pub mod pallet {
 			/// number of committed messages
 			count: u64,
 		},
+		#[pallet::unbounded]≥
 	}
 
 	#[pallet::error]
@@ -174,8 +179,10 @@ pub mod pallet {
 	///
 	/// Inspired by the `frame_system::Pallet::Events` storage value
 	#[pallet::storage]
-	#[pallet::unbounded]
 	pub(super) type Messages<T: Config> = StorageValue<_, Vec<PreparedMessage>, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type LowPriorityMessageCount<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	/// Hashes of the ABI-encoded messages in the [`Messages`] storage value. Used to generate a
 	/// merkle root during `on_finalize`. This storage value is killed in
@@ -209,6 +216,7 @@ pub mod pallet {
 	{
 		fn on_initialize(_: BlockNumberFor<T>) -> Weight {
 			// Remove storage from previous block
+			LowPriorityMessageCount::<T>::kill();
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
 			// Reserve some weight for the `on_finalize` handler
@@ -250,6 +258,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+
 		/// Generate a messages commitment and insert it into the header digest
 		pub(crate) fn commit_messages() {
 			let count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
@@ -292,6 +301,7 @@ pub mod pallet {
 
 			Messages::<T>::append(Box::new(message));
 			MessageLeaves::<T>::append(message_abi_encoded_hash);
+			LowPriorityMessageCount::<T>::set(LowPriorityMessageCount::<T>::get().saturating_add(1));
 			Nonce::<T>::set(enqueued_message.origin, next_nonce);
 
 			Self::deposit_event(Event::MessageAccepted {
@@ -367,7 +377,7 @@ pub mod pallet {
 		type Origin = AggregateMessageOrigin;
 		fn process_message(
 			message: &[u8],
-			_: Self::Origin,
+			origin: Self::Origin,
 			meter: &mut frame_support::weights::WeightMeter,
 			_: &mut [u8; 32],
 		) -> Result<bool, ProcessMessageError> {
@@ -376,8 +386,8 @@ pub mod pallet {
 			// Yield if we don't want to accept any more messages in the current block.
 			// There is hard limit to ensure the weight of `on_finalize` is bounded.
 			ensure!(
-				MessageLeaves::<T>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerBlock::get() as usize,
+				LowPriorityMessageCount::<T>::get() <
+					T::MaxLowPriorityMessagesPerBlock::get() as usize,
 				ProcessMessageError::Yield
 			);
 
