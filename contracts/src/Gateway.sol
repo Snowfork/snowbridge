@@ -204,10 +204,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     function agentOf(bytes32 agentID) external view returns (address) {
-        address agentAddress = CoreStorage.layout().agents[agentID];
-        if (agentAddress == address(0)) {
-            revert AgentDoesNotExist();
-        }
+        address agentAddress = _ensureAgent(agentID);
         return agentAddress;
     }
 
@@ -226,14 +223,9 @@ contract Gateway is IGateway, IInitializable {
 
     // Execute code within an agent
     function agentExecute(bytes calldata data) external onlySelf {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-
         AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
 
-        address agent = $.agents[params.agentID];
-        if (agent == address(0)) {
-            revert AgentDoesNotExist();
-        }
+        address agent = _ensureAgent(params.agentID);
 
         if (params.payload.length == 0) {
             revert InvalidAgentExecutionPayload();
@@ -283,10 +275,7 @@ contract Gateway is IGateway, IInitializable {
         CreateChannelParams memory params = abi.decode(data, (CreateChannelParams));
 
         // Ensure that specified agent actually exists
-        address agent = $.agents[params.agentID];
-        if (agent == address(0)) {
-            revert AgentDoesNotExist();
-        }
+        address agent = _ensureAgent(params.agentID);
 
         // Ensure channel has not already been created
         Channel storage ch = $.channels[params.paraID];
@@ -402,14 +391,9 @@ contract Gateway is IGateway, IInitializable {
 
     // @dev Transfer funds from an agent to a recipient account
     function transferNativeFromAgent(bytes calldata data) external onlySelf {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-
         TransferNativeFromAgentParams memory params = abi.decode(data, (TransferNativeFromAgentParams));
 
-        address agent = $.agents[params.agentID];
-        if (agent == address(0)) {
-            revert AgentDoesNotExist();
-        }
+        address agent = _ensureAgent(params.agentID);
 
         _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
     }
@@ -501,6 +485,14 @@ contract Gateway is IGateway, IInitializable {
         // A channel always has an agent specified.
         if (ch.agent == address(0)) {
             revert ChannelDoesNotExist();
+        }
+    }
+
+    /// @dev Ensure that the specified agentID has a corresponding contract
+    function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
+        agent = CoreStorage.layout().agents[agentID];
+        if (agent == address(0)) {
+            revert AgentDoesNotExist();
         }
     }
 
