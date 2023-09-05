@@ -5,6 +5,7 @@ pragma solidity 0.8.20;
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
+import {Bits} from "./utils/Bits.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
@@ -91,12 +92,14 @@ contract BeefyClient {
      * @param bitfield a bitfield signalling which validators they claim have signed
      * @param blockNumber the block number for this commitment
      * @param validatorSetLen the length of the validator set for this commitment
+     * @param signatureCountRequired the number of signatures required
      * @param bitfield a bitfield signalling which validators they claim have signed
      */
     struct Ticket {
         address account;
         uint64 blockNumber;
         uint32 validatorSetLen;
+        uint256 signatureCountRequired;
         uint256 prevRandao;
         bytes32 bitfieldHash;
     }
@@ -145,6 +148,12 @@ contract BeefyClient {
     // Currently pending tickets for commitment submission
     mapping(bytes32 => Ticket) public tickets;
 
+    // The addresses of the validators used for submitInitial calls in the current session. Used to reset
+    // signatureCounters on session handover.
+    address[] public validatorsUsedThisSession;
+    // The number of times each validator signature has been used in the current session
+    mapping(address validatorAccount => uint256 count) public signatureCounters;
+
     /* Constants */
 
     /**
@@ -152,6 +161,11 @@ contract BeefyClient {
      * https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L33
      */
     bytes2 public constant MMR_ROOT_ID = bytes2("mh");
+
+    /**
+     * @dev Minimum number of signatures required to validate a new commitment.
+     */
+    uint256 public constant BASE_SIGNATURE_COUNT = 24;
 
     /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
@@ -243,8 +257,21 @@ contract BeefyClient {
             revert NotEnoughClaims();
         }
 
-        tickets[createTicketID(msg.sender, commitmentHash)] =
-            Ticket(msg.sender, uint64(block.number), uint32(vset.length), 0, keccak256(abi.encodePacked(bitfield)));
+        // Record the validator address on the first use each session so that we can clear the mapping on handover
+        if (signatureCounters[proof.account] == uint256(0)) {
+            validatorsUsedThisSession.push(proof.account);
+        }
+        // Increment the counter and store the previous value in the ticket
+        uint256 signatureCount = signatureCounters[proof.account]++;
+
+        tickets[createTicketID(msg.sender, commitmentHash)] = Ticket(
+            msg.sender,
+            uint64(block.number),
+            uint32(vset.length),
+            minSignatures(signatureCount),
+            0,
+            keccak256(abi.encodePacked(bitfield))
+        );
     }
 
     /**
@@ -321,6 +348,10 @@ contract BeefyClient {
             nextValidatorSet.id = leaf.nextAuthoritySetID;
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+
+            for (uint256 i = 0; i < validatorsUsedThisSession.length; i++) {
+                delete signatureCounters[validatorsUsedThisSession[i]];
+            }
         }
 
         uint64 newBeefyBlock = commitment.blockNumber;
@@ -374,9 +405,7 @@ contract BeefyClient {
         if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
             revert InvalidBitfield();
         }
-        return Bitfield.subsample(
-            ticket.prevRandao, bitfield, minimumSignatureThreshold(ticket.validatorSetLen), ticket.validatorSetLen
-        );
+        return Bitfield.subsample(ticket.prevRandao, bitfield, ticket.signatureCountRequired, ticket.validatorSetLen);
     }
 
     /* Internal Functions */
@@ -390,49 +419,20 @@ contract BeefyClient {
         }
     }
 
-    /**
-     * @dev Calculate minimum number of required signatures for the current validator set.
-     *
-     * This function approximates f(x) defined below for x in [1, 21_846):
-     *
-     *  x <= 10: f(x) = x * (2/3)
-     *  x  > 10: f(x) = max(10, ceil(log2(3 * x))
-     *
-     * Research by W3F suggests that `ceil(log2(3 * x))` is a minimum number of signatures required to make an
-     * attack unfeasible. We put a further minimum bound of 10 on this value for extra security.
-     *
-     * If the session has less than 10 active validators it's definitely some sort of local testnet
-     * and we use different logic (minimum 2/3 + 1 validators must sign).
-     *
-     * One assumption is that Polkadot/Kusama will never have more than roughly 20,000 active validators in a session.
-     * As of writing this comment, Polkadot has 300 validators and Kusama has around 1000 validators,
-     * so we are well within those limits.
-     *
-     * In any case, an order of magnitude increase in validator set sizes will likely require a re-architecture
-     * of Polkadot that would make this contract obsolete well before the assumption becomes a problem.
-     *
-     * Constants generated with the help of scripts/minsigs.py
-     */
-    function minimumSignatureThreshold(uint256 validatorSetLen) internal pure returns (uint256) {
-        if (validatorSetLen <= 10) {
-            return validatorSetLen - (validatorSetLen - 1) / 3;
-        } else if (validatorSetLen < 342) {
-            return 10;
-        } else if (validatorSetLen < 683) {
-            return 11;
-        } else if (validatorSetLen < 1366) {
-            return 12;
-        } else if (validatorSetLen < 2731) {
-            return 13;
-        } else if (validatorSetLen < 5462) {
-            return 14;
-        } else if (validatorSetLen < 10923) {
-            return 15;
-        } else if (validatorSetLen < 21846) {
-            return 16;
-        } else {
-            return 17;
+    function minSignatures(uint256 signatureUseCount) internal pure returns (uint256) {
+        if (signatureUseCount == 0) {
+            return BASE_SIGNATURE_COUNT;
         }
+
+        // log_2 rounded down is the index of the highest bit
+        uint256 logSignatureUse = Bits.highestBitSet(signatureUseCount);
+        // round up by adding 1 when there is more than 1 bit set in signatureUseCount
+        if (signatureUseCount & logSignatureUse != uint256(0)) {
+            ++logSignatureUse;
+        }
+        uint256 dynamicSignatures = 1 + 2 * logSignatureUse;
+
+        return BASE_SIGNATURE_COUNT + dynamicSignatures;
     }
 
     /**
@@ -447,7 +447,7 @@ contract BeefyClient {
     ) internal view {
         Ticket storage ticket = tickets[ticketID];
         // Verify that enough signature proofs have been supplied
-        uint256 signatureCount = minimumSignatureThreshold(vset.length);
+        uint256 signatureCount = ticket.signatureCountRequired;
         if (proofs.length != signatureCount) {
             revert InvalidValidatorProof();
         }

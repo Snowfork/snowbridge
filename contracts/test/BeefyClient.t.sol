@@ -130,8 +130,7 @@ contract BeefyClientTest is Test {
         console.log("print initialBitField");
         printBitArray(bitfield);
         prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
-        finalBitfield =
-            Bitfield.subsample(prevRandao, bitfield, beefyClient.minimumSignatureThreshold_public(setSize), setSize);
+        finalBitfield = Bitfield.subsample(prevRandao, bitfield, beefyClient.BASE_SIGNATURE_COUNT(), setSize);
         console.log("print finalBitField");
         printBitArray(finalBitfield);
 
