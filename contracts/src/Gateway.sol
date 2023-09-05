@@ -82,7 +82,11 @@ contract Gateway is IGateway, IInitializable {
         bytes32 assetHubAgentID,
         bytes2 createTokenCallID
     ) {
-        if (bridgeHubParaID == assetHubParaID || bridgeHubAgentID == assetHubAgentID) {
+        if (
+            dispatchGas == 0 || bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0
+                || assetHubParaID == ParaID.wrap(0) || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID
+                || bridgeHubAgentID == assetHubAgentID
+        ) {
             revert InvalidConstructorParams();
         }
 
