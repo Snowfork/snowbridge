@@ -25,14 +25,14 @@ fn compute_merkle_root(leaf: H256, proof: &[H256], index: usize) -> H256 {
 	for (i, node) in proof.iter().enumerate() {
 		let mut data = [0u8; 64];
 		if generalized_index_bit(index, i) {
-			// left node
-			data[0..32].copy_from_slice(&value);
-			data[32..64].copy_from_slice(node.as_bytes());
-			value = sha2_256(&data);
-		} else {
 			// right node
 			data[0..32].copy_from_slice(node.as_bytes());
 			data[32..64].copy_from_slice(&value);
+			value = sha2_256(&data);
+		} else {
+			// left node
+			data[0..32].copy_from_slice(&value);
+			data[32..64].copy_from_slice(node.as_bytes());
 			value = sha2_256(&data);
 		}
 	}
@@ -40,8 +40,8 @@ fn compute_merkle_root(leaf: H256, proof: &[H256], index: usize) -> H256 {
 }
 
 /// Spec: https://github.com/ethereum/consensus-specs/blob/fe9c1a8cbf0c2da8a4f349efdcd77dd7ac8445c4/ssz/merkle-proofs.md#get_generalized_index_bit
-fn generalized_index_bit(generalized_index: usize, position: usize) -> bool {
-	generalized_index & (1 << position) == 0
+fn generalized_index_bit(index: usize, position: usize) -> bool {
+	index & (1 << position) > 0
 }
 
 /// Spec: https://github.com/ethereum/consensus-specs/blob/fe9c1a8cbf0c2da8a4f349efdcd77dd7ac8445c4/specs/altair/light-client/sync-protocol.md#get_subtree_index

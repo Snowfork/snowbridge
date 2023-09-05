@@ -9,7 +9,7 @@ require (
 	github.com/magefile/mage v1.13.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454
-	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230324140453-5bb90e7b12b7
+	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230831112246-2cf362679c74
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.1
