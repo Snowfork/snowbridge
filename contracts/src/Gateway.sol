@@ -189,8 +189,8 @@ contract Gateway is IGateway, IInitializable {
     }
 
     function channelOperatingModeOf(ParaID paraID) external view returns (OperatingMode) {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        return $.channels[paraID].mode;
+        Channel storage ch = _ensureChannel(paraID);
+        return ch.mode;
     }
 
     function channelNoncesOf(ParaID paraID) external view returns (uint64, uint64) {
@@ -199,13 +199,16 @@ contract Gateway is IGateway, IInitializable {
     }
 
     function channelFeeRewardOf(ParaID paraID) external view returns (uint256, uint256) {
-        Channel storage ch = CoreStorage.layout().channels[paraID];
+        Channel storage ch = _ensureChannel(paraID);
         return (ch.fee, ch.reward);
     }
 
     function agentOf(bytes32 agentID) external view returns (address) {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        return $.agents[agentID];
+        address agentAddress = CoreStorage.layout().agents[agentID];
+        if (agentAddress == address(0)) {
+            revert AgentDoesNotExist();
+        }
+        return agentAddress;
     }
 
     function implementation() public view returns (address) {
