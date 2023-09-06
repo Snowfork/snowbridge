@@ -16,4 +16,4 @@
 	url = https://github.com/Snowfork/canonical-weth
 [submodule "polkadot-sdk"]
 	path = polkadot-sdk
-	url = https://github.com/paritytech/polkadot-sdk.git
+	url = https://github.com/snowfork/polkadot-sdk.git
