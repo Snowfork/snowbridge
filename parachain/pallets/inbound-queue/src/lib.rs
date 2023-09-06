@@ -215,9 +215,7 @@ pub mod pallet {
 			// Decode message into XCM
 			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
 				Ok(inbound::VersionedMessage::V1(message_v1)) => message_v1.into(),
-				Err(_) => {
-					return Err(Error::<T>::InvalidPayload.into());
-				}
+				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 			};
 
 			// Attempt to send XCM to a dest parachain
