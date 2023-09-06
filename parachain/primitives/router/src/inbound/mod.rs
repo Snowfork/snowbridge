@@ -91,7 +91,10 @@ impl Command {
 
 		match self {
 			Command::RegisterToken { gateway, owner, token, create_call_index } => {
-				let owner = Self::convert_to_substrate_address(chain_id, owner);
+				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
+					&chain_id,
+					owner.as_fixed_bytes(),
+				);
 
 				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
 
@@ -223,13 +226,6 @@ impl Command {
 				AccountKey20 { network: None, key: token.into() },
 			),
 		}
-	}
-
-	fn convert_to_substrate_address(chain_id: u64, address: H160) -> [u8; 32] {
-		GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
-			&chain_id,
-			address.as_fixed_bytes(),
-		)
 	}
 }
 

@@ -21,7 +21,7 @@ library Assets {
     event TokenSent(
         address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
     );
-    event TokenRegistrationSent(address indexed token, address indexed owner, uint256 deposit);
+    event TokenRegistrationSent(address indexed token, address indexed owner, uint256 registerTokenFee);
 
     /* Errors */
     error InvalidToken();

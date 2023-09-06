@@ -30,7 +30,7 @@ contract GatewayTest is Test {
     event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool result);
     event OutboundMessageAccepted(ParaID indexed dest, uint64 nonce, bytes payload);
     event NativeTokensUnlocked(address token, address recipient, uint256 amount);
-    event TokenRegistrationSent(address indexed token, address indexed owner, uint256 deposit);
+    event TokenRegistrationSent(address indexed token, address indexed owner, uint256 registerTokenFee);
     event TokenSent(
         address indexed sender, address indexed token, ParaID destinationChain, bytes destinationAddress, uint128 amount
     );
