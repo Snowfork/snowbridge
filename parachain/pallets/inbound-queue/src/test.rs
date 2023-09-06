@@ -22,6 +22,7 @@ use snowbridge_core::inbound::{Message, Proof};
 use snowbridge_ethereum::Log;
 
 use hex_literal::hex;
+use xcm::v3::{SendXcm, MultiAssets, prelude::*};
 
 use crate::{self as inbound_queue, envelope::Envelope, Error, Event as InboundQueueEvent};
 
@@ -143,12 +144,42 @@ impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Test {
 	fn initialize_storage(_: H256, _: CompactExecutionHeader) {}
 }
 
+
+
+
+// Mock XCM sender that always succeeds
+pub struct MockXcmSender;
+
+impl SendXcm for MockXcmSender {
+	type Ticket = ();
+
+	fn validate(
+			dest: &mut Option<MultiLocation>,
+			_: &mut Option<xcm::v3::Xcm<()>>,
+		) -> xcm::v3::SendResult<Self::Ticket> {
+			match dest {
+				Some(MultiLocation { parents: _, interior }) => {
+					if let X1(Parachain(1001)) = interior {
+						return Err(XcmpSendError::NotApplicable);
+					}
+					Ok(((), MultiAssets::default()))
+				}
+				_ => Ok(((), MultiAssets::default()))
+			}
+		}
+
+	fn deliver(_: Self::Ticket) -> core::result::Result<XcmHash, XcmpSendError> {
+		Ok(H256::zero().into())
+	}
+}
+
+
 impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
 	type Token = Balances;
 	type Reward = ConstU64<100>;
-	type XcmSender = ();
+	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -192,12 +223,21 @@ fn parse_dest(message: Message) -> ParaId {
 	envelope.dest
 }
 
+// dest para is 1000
 const OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
 	"
 	f8fb94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000034000f000000000000000057a2d4ff0c3866d96556884bf09fecdd7ccd530c87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d3500000000000000000000000000
 	"
 );
 
+// dest para is 1001
+const OUTBOUND_QUEUE_EVENT_LOG_INVALID_DEST: [u8; 253] = hex!(
+	"
+	f8fb94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e9b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000034000f000000000000000057a2d4ff0c3866d96556884bf09fecdd7ccd530c87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d3500000000000000000000000000
+	"
+);
+
+// gateway in message does not match configured gateway in runtime
 const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
 	"
 	f8fb940000000000000000000000000000000000000000f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000034000f000000000000000057a2d4ff0c3866d96556884bf09fecdd7ccd530c87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d3500000000000000000000000000
@@ -205,6 +245,7 @@ const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
 );
 
 use snowbridge_core::ParaId;
+
 
 #[test]
 fn test_submit_happy_path() {
@@ -231,10 +272,37 @@ fn test_submit_happy_path() {
 		expect_events(vec![InboundQueueEvent::MessageReceived {
 			dest: dest_para,
 			nonce: 1,
-			// dummy xcm sender doesn't actually send messages
-			result: MessageDispatchResult::NotDispatched(SendError::NotApplicable),
+			xcm_hash: H256::zero().into()
 		}
 		.into()]);
+	});
+}
+
+#[test]
+fn test_submit_xcm_send_failure() {
+	new_tester().execute_with(|| {
+		let relayer: AccountId = Keyring::Bob.into();
+		let origin = RuntimeOrigin::signed(relayer);
+
+		// Deposit funds into sovereign account of parachain 1001
+		let dest_para: ParaId = 1001u32.into();
+		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		println!("account: {}", sovereign_account);
+		let _ = Balances::mint_into(&sovereign_account, 10000);
+
+		// Submit message
+		let message = Message {
+			data: OUTBOUND_QUEUE_EVENT_LOG_INVALID_DEST.into(),
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+		};
+		assert_noop!(
+			InboundQueue::submit(origin.clone(), message.clone()),
+			Error::<Test>::Send(crate::SendError::NotApplicable)
+		);
 	});
 }
 
