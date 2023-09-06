@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {AgentExecutor} from "../AgentExecutor.sol";
-import {Agent} from "../Agent.sol";
 import {Channel, OperatingMode, ParaID} from "../Types.sol";
 
 library CoreStorage {

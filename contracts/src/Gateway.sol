@@ -44,24 +44,19 @@ contract Gateway is IGateway, IInitializable {
 
     error InvalidProof();
     error InvalidNonce();
-    error InvalidAgentExecutor();
     error NotEnoughGas();
     error FeePaymentToLow();
-    error FailedPayment();
     error Unauthorized();
-    error UnknownChannel();
     error Disabled();
     error AgentAlreadyCreated();
     error AgentDoesNotExist();
     error ChannelAlreadyCreated();
     error ChannelDoesNotExist();
     error InvalidChannelUpdate();
-    error WithdrawalFailed();
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
-    error InvalidConfig();
-    error NotProxy();
     error InvalidCodeHash();
+    error InvalidConstructorParams();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -76,19 +71,27 @@ contract Gateway is IGateway, IInitializable {
         address agentExecutor,
         uint256 dispatchGas,
         ParaID bridgeHubParaID,
-        bytes32 bridgeHubHubAgentID,
+        bytes32 bridgeHubAgentID,
         ParaID assetHubParaID,
-        bytes32 assetHubHubAgentID,
+        bytes32 assetHubAgentID,
         bytes2 createTokenCallID
     ) {
+        if (
+            dispatchGas == 0 || bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0
+                || assetHubParaID == ParaID.wrap(0) || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID
+                || bridgeHubAgentID == assetHubAgentID
+        ) {
+            revert InvalidConstructorParams();
+        }
+
         BEEFY_CLIENT = beefyClient;
         AGENT_EXECUTOR = agentExecutor;
         DISPATCH_GAS = dispatchGas;
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
-        BRIDGE_HUB_AGENT_ID = bridgeHubHubAgentID;
+        BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         ASSET_HUB_PARA_ID = assetHubParaID;
-        ASSET_HUB_AGENT_ID = assetHubHubAgentID;
+        ASSET_HUB_AGENT_ID = assetHubAgentID;
         CREATE_TOKEN_CALL_ID = createTokenCallID;
     }
 
@@ -102,15 +105,6 @@ contract Gateway is IGateway, IInitializable {
         Verification.Proof calldata headerProof
     ) external {
         Channel storage channel = _ensureChannel(message.origin);
-
-        // Produce the commitment (message root) by applying the leaf proof to the message leaf
-        bytes32 leafHash = keccak256(abi.encode(message));
-        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
-
-        // Verify that the commitment is included in a parachain header finalized by BEEFY.
-        if (!verifyCommitment(commitment, headerProof)) {
-            revert InvalidProof();
-        }
 
         // Ensure this message is not being replayed
         if (message.nonce != channel.inboundNonce + 1) {
@@ -127,6 +121,15 @@ contract Gateway is IGateway, IInitializable {
         // In that case, the origin should top up the funds of their agent.
         if (channel.reward > 0) {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), channel.reward);
+        }
+
+        // Produce the commitment (message root) by applying the leaf proof to the message leaf
+        bytes32 leafHash = keccak256(abi.encode(message));
+        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
+
+        // Verify that the commitment is included in a parachain header finalized by BEEFY.
+        if (!verifyCommitment(commitment, headerProof)) {
+            revert InvalidProof();
         }
 
         // Ensure relayers pass enough gas for message to execute.
@@ -409,6 +412,7 @@ contract Gateway is IGateway, IInitializable {
         }
 
         _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
+        emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
     }
 
     /**
@@ -455,13 +459,13 @@ contract Gateway is IGateway, IInitializable {
     /* Internal functions */
 
     // Verify that a message commitment is considered finalized by our BEEFY light client.
-    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof) internal view returns (bool) {
-        if (BEEFY_CLIENT != address(0)) {
-            return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
-        } else {
-            // for unit tests, verification is bypassed
-            return true;
-        }
+    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
     }
 
     // Submit an outbound message to Polkadot

@@ -34,10 +34,6 @@ interface IGateway {
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
-    event TokenRegistered(address token);
-
-    event TokenSent(address token, ParaID destinationChain, bytes destinationAddress, uint128 amount);
-
     /**
      * Getters
      */

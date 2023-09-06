@@ -12,15 +12,6 @@ config_beacon_checkpoint()
     send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$check_point_call" 180000000000 900000
 }
 
-config_inbound_queue()
-{
-    local pallet="30"
-    local callindex="01"
-    local payload="0x$pallet$callindex$(address_for GatewayProxy | tr "[:upper:]" "[:lower:]" | cut -c3-)"
-
-    send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$payload"
-}
-
 wait_beacon_chain_ready()
 {
     local initial_beacon_block=""
@@ -45,7 +36,6 @@ fund_accounts()
 configure_bridgehub()
 {
     fund_accounts
-    config_inbound_queue
     wait_beacon_chain_ready
     config_beacon_checkpoint
 }
