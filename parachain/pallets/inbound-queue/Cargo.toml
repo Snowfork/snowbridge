@@ -10,7 +10,6 @@ repository = "https://github.com/Snowfork/snowbridge"
 targets = [ "x86_64-unknown-linux-gnu" ]
 
 [dependencies]
-serde = { version = "1.0.164", optional = true }
 codec = { version = "3.1.5", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
 scale-info = { version = "2.7.0", default-features = false, features = [ "derive" ] }
 hex-literal = { version = "0.4.1", optional = true }
@@ -26,6 +25,7 @@ sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master"
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 bp-runtime = { git = "https://github.com/Snowfork/cumulus.git", branch = "snowbridge", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
@@ -33,21 +33,16 @@ snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = f
 snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
-snowbridge-beacon-primitives = { path = "../../primitives/beacon", optional = true }
+snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false, optional = true }
 
 [dev-dependencies]
-frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
 snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
 
-hex-literal = { version = "0.4.1" }
-rlp = { version = "0.5" }
-
 [features]
 default = [ "std" ]
 std = [
-    "serde",
     "codec/std",
     "scale-info/std",
     "frame-support/std",
@@ -63,14 +58,18 @@ std = [
     "snowbridge-router-primitives/std",
     "ethabi/std",
     "xcm/std",
+    "xcm-builder/std",
     "bp-runtime/std",
 ]
 runtime-benchmarks = [
-    "snowbridge-core/runtime-benchmarks",
-    "frame-benchmarking",
+    "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "snowbridge-core/runtime-benchmarks",
     "hex-literal",
     "rlp",
-    "snowbridge-beacon-primitives"
+    "snowbridge-beacon-primitives/runtime-benchmarks",
+    "xcm-builder/runtime-benchmarks",
+    "beacon-spec-mainnet",
 ]
+beacon-spec-mainnet = []

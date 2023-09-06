@@ -2609,6 +2609,7 @@ name = "snowbridge-beacon-primitives"
 version = "0.0.1"
 dependencies = [
  "byte-slice-cast",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
@@ -2655,6 +2656,7 @@ name = "snowbridge-core"
 version = "0.1.1"
 dependencies = [
  "ethabi-decode",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -2738,7 +2740,6 @@ dependencies = [
  "parity-scale-codec",
  "rlp",
  "scale-info",
- "serde",
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-ethereum",
@@ -2750,6 +2751,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-builder",
 ]
 
 [[package]]

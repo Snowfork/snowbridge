@@ -13,6 +13,7 @@ snowbridge-ethereum = { path = "../ethereum", default-features = false }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "master", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
@@ -41,6 +42,11 @@ std = [
     "snowbridge-ethereum/std",
     "snowbridge-beacon-primitives/std",
     "xcm/std",
-    "ethabi/std"
+    "ethabi/std",
+    "frame-benchmarking/std",
 ]
-runtime-benchmarks = []
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+]
