@@ -130,8 +130,11 @@ impl Verifier for MockVerifier {
 	}
 }
 
+const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39"];
+
 parameter_types! {
-	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15};
+	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15 };
+	pub const GatewayAddress: H160 = H160(GATEWAY_ADDRESS);
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -147,6 +150,7 @@ impl inbound_queue::Config for Test {
 	type Reward = ConstU64<100>;
 	type XcmSender = ();
 	type WeightInfo = ();
+	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
 }
@@ -165,15 +169,8 @@ fn expect_events(e: Vec<RuntimeEvent>) {
 	assert_eq!(last_events(e.len()), e);
 }
 
-pub fn new_tester(gateway: H160) -> sp_io::TestExternalities {
-	new_tester_with_config(inbound_queue::GenesisConfig { gateway })
-}
-
-pub fn new_tester_with_config(config: inbound_queue::GenesisConfig) -> sp_io::TestExternalities {
-	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
-
+pub fn new_tester() -> sp_io::TestExternalities {
+	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
 	ext
@@ -195,12 +192,15 @@ fn parse_dest(message: Message) -> ParaId {
 	envelope.dest
 }
 
-// The originating channel address for the messages below
-const GATEWAY_ADDRESS: [u8; 20] = hex!["EDa338E4dC46038493b885327842fD3E301CaB39"];
-
 const OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
 	"
 	f8fb94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000034000f000000000000000057a2d4ff0c3866d96556884bf09fecdd7ccd530c87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d3500000000000000000000000000
+	"
+);
+
+const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
+	"
+	f8fb940000000000000000000000000000000000000000f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000034000f000000000000000057a2d4ff0c3866d96556884bf09fecdd7ccd530c87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d3500000000000000000000000000
 	"
 );
 
@@ -208,7 +208,7 @@ use snowbridge_core::ParaId;
 
 #[test]
 fn test_submit_happy_path() {
-	new_tester(GATEWAY_ADDRESS.into()).execute_with(|| {
+	new_tester().execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -240,7 +240,7 @@ fn test_submit_happy_path() {
 
 #[test]
 fn test_submit_with_invalid_gateway() {
-	new_tester(H160::zero()).execute_with(|| {
+	new_tester().execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -251,7 +251,7 @@ fn test_submit_with_invalid_gateway() {
 
 		// Submit message
 		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			data: BAD_OUTBOUND_QUEUE_EVENT_LOG.into(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -267,7 +267,7 @@ fn test_submit_with_invalid_gateway() {
 
 #[test]
 fn test_submit_with_invalid_nonce() {
-	new_tester(GATEWAY_ADDRESS.into()).execute_with(|| {
+	new_tester().execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -301,7 +301,7 @@ fn test_submit_with_invalid_nonce() {
 
 #[test]
 fn test_submit_no_funds_to_reward_relayers() {
-	new_tester(GATEWAY_ADDRESS.into()).execute_with(|| {
+	new_tester().execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
@@ -324,34 +324,6 @@ fn test_submit_no_funds_to_reward_relayers() {
 			// should actually be `NoFunds`. See this bug in substrate:
 			// https://github.com/paritytech/substrate/issues/13866
 			ArithmeticError::Underflow
-		);
-	});
-}
-
-#[test]
-fn test_set_gateway_with_root_succeeds() {
-	new_tester_with_config(Default::default()).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let default_gateway_address = hex!("0000000000000000000000000000000000000000").into();
-		let gateway_address = hex!("1000000000000000000000000000000000000000").into();
-
-		assert_eq!(<Gateway<Test>>::get(), default_gateway_address);
-
-		assert_ok!(InboundQueue::set_gateway(origin, gateway_address));
-
-		assert_eq!(<Gateway<Test>>::get(), gateway_address);
-	});
-}
-
-#[test]
-fn test_set_gateway_without_root_yields_bad_origin() {
-	new_tester_with_config(Default::default()).execute_with(|| {
-		let gateway_address = hex!("0000000000000000000000000000000000000000").into();
-		let relayer: AccountId = Keyring::Bob.into();
-		let origin = RuntimeOrigin::signed(relayer);
-		assert_noop!(
-			InboundQueue::set_gateway(origin, gateway_address),
-			sp_runtime::DispatchError::BadOrigin,
 		);
 	});
 }
