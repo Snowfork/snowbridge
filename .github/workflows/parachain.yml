@@ -73,28 +73,18 @@ jobs:
         run: rustup show
       # Increase stack limit for beacon light client tests
       - run: sudo prlimit --pid $$ --stack=32768
-      # Run tests for everything except the beacon light client
-      - name: Tests for everything except the beacon light client
+      # Run tests with feature benchmark
+      - name: Tests with benchmark 
         run: >
           cargo test
           --manifest-path parachain/Cargo.toml
           --workspace
           --features runtime-benchmarks
-          --exclude snowbridge-query-events
-          --exclude snowbridge-ethereum-beacon-client
-      # Run tests for beacon light client, excluding benchmark tests
-      - name: Tests for beacon light client excluding benchmark tests
+      # Run tests for beacon light client, excluding benchmark tests(specific for minimal spec)
+      - name: Tests for beacon light client for minimal spec
         run: >
           cargo test
           --manifest-path parachain/Cargo.toml
-          --package snowbridge-ethereum-beacon-client
-      # Run benchmark tests for beacon light client
-      - name: Benchmark tests for beacon light client
-        run: >
-          cargo test
-          --manifest-path parachain/Cargo.toml
-          --release
-          --features runtime-benchmarks
           --package snowbridge-ethereum-beacon-client
 
   coverage:
@@ -145,6 +135,7 @@ jobs:
           --manifest-path cumulus/Cargo.toml
           --release --verbose
           --package bridge-hub-rococo-runtime
+          --features runtime-benchmarks  
 
   beacon-fuzz:
     needs: test

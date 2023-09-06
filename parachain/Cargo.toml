@@ -10,5 +10,4 @@ members = [
     "pallets/outbound-queue/merkle-tree",
     "pallets/ethereum-beacon-client",
     "pallets/control",
-    "tools/call-index"
 ]
