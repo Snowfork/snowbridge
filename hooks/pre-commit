@@ -24,6 +24,7 @@ chronic typos .
 
 # format rust
 (cd parachain && chronic cargo +nightly-"$SNOWBRIDGE_RUST_NIGHTLY" fmt)
+(cd smoketest && chronic cargo +nightly-"$SNOWBRIDGE_RUST_NIGHTLY" fmt)
 
 check_duplicate_versions substrate
 check_duplicate_versions polkadot
