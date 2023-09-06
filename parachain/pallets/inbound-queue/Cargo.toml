@@ -40,6 +40,9 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "ma
 snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
 snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
 
+hex-literal = { version = "0.4.1" }
+rlp = { version = "0.5" }
+
 [features]
 default = [ "std" ]
 std = [
