@@ -33,12 +33,11 @@ snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = f
 snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
-snowbridge-beacon-primitives = { path = "../../primitives/beacon", optional = true }
+snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false, optional = true }
 
 [dev-dependencies]
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
-snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
 snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
 
 hex-literal = { version = "0.4.1" }

@@ -144,9 +144,6 @@ impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Test {
 	fn initialize_storage(_: H256, _: CompactExecutionHeader) {}
 }
 
-
-
-
 // Mock XCM sender that always succeeds
 pub struct MockXcmSender;
 
@@ -172,7 +169,6 @@ impl SendXcm for MockXcmSender {
 		Ok(H256::zero().into())
 	}
 }
-
 
 impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -245,7 +241,6 @@ const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
 );
 
 use snowbridge_core::ParaId;
-
 
 #[test]
 fn test_submit_happy_path() {
