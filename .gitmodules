@@ -1,7 +1,3 @@
-[submodule "cumulus"]
-	path = cumulus
-	url = https://github.com/Snowfork/cumulus
-	branch = snowbridge
 [submodule "contracts/lib/forge-std"]
 	path = contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
@@ -17,3 +13,4 @@
 [submodule "polkadot-sdk"]
 	path = polkadot-sdk
 	url = https://github.com/Snowfork/polkadot-sdk.git
+	branch = clara/sno-665

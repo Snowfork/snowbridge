@@ -17,10 +17,10 @@ parity-bytes = { version = "0.1.2", default-features = false }
 rlp = { version = "0.5", default-features = false }
 #getrandom = { version = "0.2.1", features = [ "js" ] }
 
-sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false }
+sp-std = { path = "../../../polkadot-sdk/substrate/primitives/std", default-features = false }
+sp-core = { path = "../../../polkadot-sdk/substrate/primitives/core", default-features = false }
+sp-runtime = { path = "../../../polkadot-sdk/substrate/primitives/runtime", default-features = false }
 
 ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", package = "ethabi-decode", branch="master", default-features = false }
 
