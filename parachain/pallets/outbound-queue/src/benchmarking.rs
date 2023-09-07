@@ -15,6 +15,7 @@ use crate::Pallet as OutboundQueue;
 )]
 mod benchmarks {
 	use super::*;
+	use snowbridge_core::outbound::Priority;
 
 	/// Benchmark for processing a message payload of length `x`.
 	#[benchmark]
@@ -28,7 +29,8 @@ mod benchmarks {
 
 		#[block]
 		{
-			let _ = OutboundQueue::<T>::do_process_message(&encoded_enqueued_message);
+			let _ =
+				OutboundQueue::<T>::do_process_message(&encoded_enqueued_message, Priority::Normal);
 		}
 
 		assert_eq!(MessageLeaves::<T>::decode_len().unwrap(), 1);
