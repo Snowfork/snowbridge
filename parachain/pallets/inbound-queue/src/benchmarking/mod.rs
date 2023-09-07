@@ -12,9 +12,6 @@ use frame_system::RawOrigin;
 mod benchmarks {
 	use super::*;
 	use crate::benchmarking::fixtures::make_create_message;
-	use hex_literal::hex;
-
-	const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39"];
 
 	#[benchmark]
 	fn submit() -> Result<(), BenchmarkError> {
@@ -26,8 +23,6 @@ mod benchmarks {
 			create_message.message.proof.block_hash,
 			create_message.execution_header,
 		);
-
-		<Gateway<T>>::put(H160(GATEWAY_ADDRESS));
 
 		let dest_para: ParaId = 1000u32.into();
 		let sovereign_account = dest_para.into_account_truncating();
@@ -62,9 +57,5 @@ mod benchmarks {
 		Ok(())
 	}
 
-	impl_benchmark_test_suite!(
-		InboundQueue,
-		crate::test::new_tester(crate::H160::default()),
-		crate::test::Test
-	);
+	impl_benchmark_test_suite!(InboundQueue, crate::test::new_tester(), crate::test::Test);
 }
