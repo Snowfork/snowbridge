@@ -109,6 +109,7 @@ pub mod pallet {
 		AgentNotExist,
 		ChannelAlreadyCreated,
 		ChannelNotExist,
+		Unsupported,
 	}
 
 	#[pallet::storage]
@@ -270,9 +271,12 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Sends a message to the Gateway contract to transfer asset from agent
+		/// Sends a message to the Gateway contract to transfer ether from an agent
+		/// controlled by `origin`.
 		///
 		/// - `origin`: Must be `MultiLocation`
+		/// - `recipient`: Recipient of funds
+		/// - `amount`: Amount to transfer
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::transfer_native_from_agent())]
 		pub fn transfer_native_from_agent(
@@ -300,7 +304,48 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		/// Sends a message to the Gateway contract to transfer asset from an an agent.
+		///
+		/// Privileged. Can only be called by root.
+		///
+		/// - `origin`: Must be `MultiLocation`
+		/// - `location`: Location used to resolve the agent
+		/// - `recipient`: Recipient of funds
+		/// - `amount`: Amount to transfer
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::transfer_native_from_agent())]
+		pub fn force_transfer_native_from_agent(
+			origin: OriginFor<T>,
+			location: VersionedMultiLocation,
+			recipient: H160,
+			amount: u128,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let location: MultiLocation = location.try_into()?;
+
+			let (agent_id, _, _) = Self::convert_location(location)?;
+
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
+
+			let message = Message {
+				origin: T::OwnParaId::get(),
+				command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
+			};
+			Self::submit_outbound(message)?;
+
+			Self::deposit_event(Event::<T>::TransferNativeFromAgent {
+				agent_id,
+				recipient,
+				amount,
+			});
+
+			Ok(())
+		}
 	}
+
+
 
 	impl<T: Config> Pallet<T> {
 		fn submit_outbound(message: Message) -> DispatchResult {
