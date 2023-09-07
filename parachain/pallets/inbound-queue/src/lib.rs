@@ -27,7 +27,9 @@ use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
-use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, XcmHash};
+use xcm::v3::{
+	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, XcmHash,
+};
 
 use envelope::Envelope;
 use snowbridge_core::{
@@ -143,8 +145,10 @@ pub mod pallet {
 				XcmpSendError::NotApplicable => Error::<T>::Send(SendError::NotApplicable),
 				XcmpSendError::Unroutable => Error::<T>::Send(SendError::NotRoutable),
 				XcmpSendError::Transport(_) => Error::<T>::Send(SendError::Transport),
-				XcmpSendError::DestinationUnsupported => Error::<T>::Send(SendError::DestinationUnsupported),
-				XcmpSendError::ExceedsMaxMessageSize => Error::<T>::Send(SendError::ExceedsMaxMessageSize),
+				XcmpSendError::DestinationUnsupported =>
+					Error::<T>::Send(SendError::DestinationUnsupported),
+				XcmpSendError::ExceedsMaxMessageSize =>
+					Error::<T>::Send(SendError::ExceedsMaxMessageSize),
 				XcmpSendError::MissingArgument => Error::<T>::Send(SendError::MissingArgument),
 				XcmpSendError::Fees => Error::<T>::Send(SendError::Fees),
 			}
@@ -222,12 +226,11 @@ pub mod pallet {
 			let dest = MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
 			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
 
-			Self::deposit_event(
-				Event::MessageReceived {
-					dest: envelope.dest,
-					nonce: envelope.nonce,
-					xcm_hash,
-				});
+			Self::deposit_event(Event::MessageReceived {
+				dest: envelope.dest,
+				nonce: envelope.nonce,
+				xcm_hash,
+			});
 
 			Ok(())
 		}
