@@ -268,7 +268,7 @@ contract BeefyClient {
             msg.sender,
             uint64(block.number),
             uint32(vset.length),
-            minSignatures(signatureCount),
+            minSignatures(vset.length, signatureCount),
             0,
             keccak256(abi.encodePacked(bitfield))
         );
@@ -419,7 +419,11 @@ contract BeefyClient {
         }
     }
 
-    function minSignatures(uint256 signatureUseCount) internal pure returns (uint256) {
+    function minSignatures(uint256 validatorSetLen, uint256 signatureUseCount) internal pure returns (uint256) {
+        if (validatorSetLen <= BASE_SIGNATURE_COUNT) {
+            return validatorSetLen - (validatorSetLen - 1) / 3;
+        }
+
         if (signatureUseCount == 0) {
             return BASE_SIGNATURE_COUNT;
         }
