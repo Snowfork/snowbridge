@@ -38,6 +38,7 @@ snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-featu
 [dev-dependencies]
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
 snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
 
 hex-literal = { version = "0.4.1" }
