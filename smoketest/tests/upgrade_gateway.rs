@@ -1,10 +1,9 @@
 use std::{sync::Arc, time::Duration};
 
 use ethers::{
-	abi::Token,
+	abi::{Token, Address},
 	prelude::*,
-	providers::{Provider, Ws},
-	types::Address,
+	providers::{Provider, Ws}, utils::keccak256,
 };
 use futures::StreamExt;
 use hex_literal::hex;
@@ -45,8 +44,6 @@ const BRIDGE_HUB_PARA_ID: u32 = 1013;
 
 const GATEWAY_PROXY_CONTRACT: &str = "0xEDa338E4dC46038493b885327842fD3E301CaB39";
 const GATETWAY_UPGRADE_MOCK_CONTRACT: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228e73");
-const GATETWAY_UPGRADE_MOCK_CODE_HASH: [u8; 32] =
-	hex!("ad2eaa7103b39aea14dac05981ce0ff31a8f51267eaf2a0e480c94159afc904f");
 
 #[tokio::test]
 async fn upgrade_gateway() {
@@ -80,11 +77,21 @@ async fn upgrade_gateway() {
 	let params = ethers::abi::encode(&[Token::Uint(d_0.into()), Token::Uint(d_1.into())]);
 	let params_hash = blake2_256(&params);
 
+	let code = ethereum_client
+		.get_code(
+			NameOrAddress::Address(GATETWAY_UPGRADE_MOCK_CONTRACT.into()), 
+			None
+		)
+		.await
+		.unwrap();
+	
+	let gateway_upgrade_mock_code_hash= keccak256(code);
+
 	// The upgrade call
 	let upgrade_call = ethereum_control_api
 		.upgrade(
 			GATETWAY_UPGRADE_MOCK_CONTRACT.into(),
-			GATETWAY_UPGRADE_MOCK_CODE_HASH.into(),
+			gateway_upgrade_mock_code_hash.into(),
 			Some(params),
 		)
 		.encode_call_data(&bridgehub.metadata())
@@ -138,7 +145,7 @@ async fn upgrade_gateway() {
 		for upgrade in upgrades.find::<ethereum_control::events::Upgrade>() {
 			let upgrade = upgrade.expect("expect upgrade");
 			assert_eq!(upgrade.impl_address, GATETWAY_UPGRADE_MOCK_CONTRACT.into());
-			assert_eq!(upgrade.impl_code_hash, GATETWAY_UPGRADE_MOCK_CODE_HASH.into());
+			assert_eq!(upgrade.impl_code_hash, gateway_upgrade_mock_code_hash.into());
 			assert_eq!(upgrade.params_hash, Some(params_hash.into()));
 			println!("Event found at bridgehub block {}.", block.number());
 			upgrade_event_found = true;

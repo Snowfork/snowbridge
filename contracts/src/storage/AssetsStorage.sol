@@ -2,9 +2,6 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {Agent} from "../Agent.sol";
-import {ParaID} from "../Types.sol";
-
 library AssetsStorage {
     struct Layout {
         uint256 registerTokenFee;

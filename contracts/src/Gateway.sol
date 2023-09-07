@@ -44,24 +44,19 @@ contract Gateway is IGateway, IInitializable {
 
     error InvalidProof();
     error InvalidNonce();
-    error InvalidAgentExecutor();
     error NotEnoughGas();
     error FeePaymentToLow();
-    error FailedPayment();
     error Unauthorized();
-    error UnknownChannel();
     error Disabled();
     error AgentAlreadyCreated();
     error AgentDoesNotExist();
     error ChannelAlreadyCreated();
     error ChannelDoesNotExist();
     error InvalidChannelUpdate();
-    error WithdrawalFailed();
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
-    error InvalidConfig();
-    error NotProxy();
     error InvalidCodeHash();
+    error InvalidConstructorParams();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -76,19 +71,27 @@ contract Gateway is IGateway, IInitializable {
         address agentExecutor,
         uint256 dispatchGas,
         ParaID bridgeHubParaID,
-        bytes32 bridgeHubHubAgentID,
+        bytes32 bridgeHubAgentID,
         ParaID assetHubParaID,
-        bytes32 assetHubHubAgentID,
+        bytes32 assetHubAgentID,
         bytes2 createTokenCallID
     ) {
+        if (
+            dispatchGas == 0 || bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0
+                || assetHubParaID == ParaID.wrap(0) || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID
+                || bridgeHubAgentID == assetHubAgentID
+        ) {
+            revert InvalidConstructorParams();
+        }
+
         BEEFY_CLIENT = beefyClient;
         AGENT_EXECUTOR = agentExecutor;
         DISPATCH_GAS = dispatchGas;
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
-        BRIDGE_HUB_AGENT_ID = bridgeHubHubAgentID;
+        BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         ASSET_HUB_PARA_ID = assetHubParaID;
-        ASSET_HUB_AGENT_ID = assetHubHubAgentID;
+        ASSET_HUB_AGENT_ID = assetHubAgentID;
         CREATE_TOKEN_CALL_ID = createTokenCallID;
     }
 
@@ -102,15 +105,6 @@ contract Gateway is IGateway, IInitializable {
         Verification.Proof calldata headerProof
     ) external {
         Channel storage channel = _ensureChannel(message.origin);
-
-        // Produce the commitment (message root) by applying the leaf proof to the message leaf
-        bytes32 leafHash = keccak256(abi.encode(message));
-        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
-
-        // Verify that the commitment is included in a parachain header finalized by BEEFY.
-        if (!verifyCommitment(commitment, headerProof)) {
-            revert InvalidProof();
-        }
 
         // Ensure this message is not being replayed
         if (message.nonce != channel.inboundNonce + 1) {
@@ -127,6 +121,15 @@ contract Gateway is IGateway, IInitializable {
         // In that case, the origin should top up the funds of their agent.
         if (channel.reward > 0) {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), channel.reward);
+        }
+
+        // Produce the commitment (message root) by applying the leaf proof to the message leaf
+        bytes32 leafHash = keccak256(abi.encode(message));
+        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
+
+        // Verify that the commitment is included in a parachain header finalized by BEEFY.
+        if (!verifyCommitment(commitment, headerProof)) {
+            revert InvalidProof();
         }
 
         // Ensure relayers pass enough gas for message to execute.
@@ -189,23 +192,23 @@ contract Gateway is IGateway, IInitializable {
     }
 
     function channelOperatingModeOf(ParaID paraID) external view returns (OperatingMode) {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        return $.channels[paraID].mode;
+        Channel storage ch = _ensureChannel(paraID);
+        return ch.mode;
     }
 
     function channelNoncesOf(ParaID paraID) external view returns (uint64, uint64) {
-        Channel storage ch = CoreStorage.layout().channels[paraID];
+        Channel storage ch = _ensureChannel(paraID);
         return (ch.inboundNonce, ch.outboundNonce);
     }
 
     function channelFeeRewardOf(ParaID paraID) external view returns (uint256, uint256) {
-        Channel storage ch = CoreStorage.layout().channels[paraID];
+        Channel storage ch = _ensureChannel(paraID);
         return (ch.fee, ch.reward);
     }
 
     function agentOf(bytes32 agentID) external view returns (address) {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        return $.agents[agentID];
+        address agentAddress = _ensureAgent(agentID);
+        return agentAddress;
     }
 
     function implementation() public view returns (address) {
@@ -223,14 +226,9 @@ contract Gateway is IGateway, IInitializable {
 
     // Execute code within an agent
     function agentExecute(bytes calldata data) external onlySelf {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-
         AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
 
-        address agent = $.agents[params.agentID];
-        if (agent == address(0)) {
-            revert AgentDoesNotExist();
-        }
+        address agent = _ensureAgent(params.agentID);
 
         if (params.payload.length == 0) {
             revert InvalidAgentExecutionPayload();
@@ -280,10 +278,7 @@ contract Gateway is IGateway, IInitializable {
         CreateChannelParams memory params = abi.decode(data, (CreateChannelParams));
 
         // Ensure that specified agent actually exists
-        address agent = $.agents[params.agentID];
-        if (agent == address(0)) {
-            revert AgentDoesNotExist();
-        }
+        address agent = _ensureAgent(params.agentID);
 
         // Ensure channel has not already been created
         Channel storage ch = $.channels[params.paraID];
@@ -292,7 +287,7 @@ contract Gateway is IGateway, IInitializable {
         }
 
         ch.mode = OperatingMode.Normal;
-        ch.agent = $.agents[params.agentID];
+        ch.agent = agent;
         ch.inboundNonce = 0;
         ch.outboundNonce = 0;
         ch.fee = $.defaultFee;
@@ -399,16 +394,12 @@ contract Gateway is IGateway, IInitializable {
 
     // @dev Transfer funds from an agent to a recipient account
     function transferNativeFromAgent(bytes calldata data) external onlySelf {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-
         TransferNativeFromAgentParams memory params = abi.decode(data, (TransferNativeFromAgentParams));
 
-        address agent = $.agents[params.agentID];
-        if (agent == address(0)) {
-            revert AgentDoesNotExist();
-        }
+        address agent = _ensureAgent(params.agentID);
 
         _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
+        emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
     }
 
     /**
@@ -458,13 +449,13 @@ contract Gateway is IGateway, IInitializable {
     /* Internal functions */
 
     // Verify that a message commitment is considered finalized by our BEEFY light client.
-    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof) internal view returns (bool) {
-        if (BEEFY_CLIENT != address(0)) {
-            return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
-        } else {
-            // for unit tests, verification is bypassed
-            return true;
-        }
+    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
     }
 
     // Submit an outbound message to Polkadot
@@ -506,6 +497,14 @@ contract Gateway is IGateway, IInitializable {
         // A channel always has an agent specified.
         if (ch.agent == address(0)) {
             revert ChannelDoesNotExist();
+        }
+    }
+
+    /// @dev Ensure that the specified agentID has a corresponding contract
+    function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
+        agent = CoreStorage.layout().agents[agentID];
+        if (agent == address(0)) {
+            revert AgentDoesNotExist();
         }
     }
 
