@@ -3,10 +3,11 @@
 //! Types for representing inbound messages
 
 use codec::{Decode, Encode};
-use frame_support::{dispatch::DispatchError, scale_info::TypeInfo, RuntimeDebug};
+use scale_info::TypeInfo;
 use snowbridge_ethereum::Log;
 use sp_core::H256;
 use sp_std::vec::Vec;
+use sp_runtime::{RuntimeDebug, DispatchError};
 
 /// A trait for verifying inbound messages from Ethereum.
 ///

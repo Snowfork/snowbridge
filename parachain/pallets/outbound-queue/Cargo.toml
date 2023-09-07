@@ -22,7 +22,7 @@ frame-system = { path = "../../../polkadot-sdk/substrate/frame/system", default-
 sp-core = { path = "../../../polkadot-sdk/substrate/primitives/core", default-features = false }
 sp-std = { path = "../../../polkadot-sdk/substrate/primitives/std", default-features = false }
 sp-runtime = { path = "../../../polkadot-sdk/substrate/primitives/runtime", default-features = false }
-sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false, optional = true }
+sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-outbound-queue-merkle-tree = { path = "merkle-tree", default-features = false }

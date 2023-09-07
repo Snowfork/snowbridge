@@ -21,6 +21,7 @@ frame-benchmarking = { path = "../../../polkadot-sdk/substrate/frame/benchmarkin
 frame-support = { path = "../../../polkadot-sdk/substrate/frame/support", default-features = false }
 frame-system = { path = "../../../polkadot-sdk/substrate/frame/system", default-features = false }
 snowbridge-core = { path = "../../primitives/core", default-features = false }
+log = { version = "0.4.20", default-features = false }
 
 sp-core = { path = "../../../polkadot-sdk/substrate/primitives/core", default-features = false }
 sp-std = { path = "../../../polkadot-sdk/substrate/primitives/std", default-features = false }

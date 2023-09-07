@@ -34,8 +34,9 @@ pub const LOG_TARGET: &str = "snowbridge-control";
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{log, pallet_prelude::*, traits::EnsureOrigin};
+	use frame_support::{pallet_prelude::*, traits::EnsureOrigin};
 	use frame_system::pallet_prelude::*;
+	use log::debug;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
