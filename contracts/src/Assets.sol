@@ -21,7 +21,7 @@ library Assets {
     event TokenSent(
         address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
     );
-    event TokenRegistrationSent(address indexed token, address indexed owner, uint256 registerTokenFee);
+    event TokenRegistrationSent(address indexed token);
 
     /* Errors */
     error InvalidToken();
@@ -108,6 +108,6 @@ library Assets {
         payload = SubstrateTypes.RegisterToken(address(this), owner, token, createTokenCallID);
         extraFee = $.registerTokenFee;
 
-        emit TokenRegistrationSent(token, owner, extraFee);
+        emit TokenRegistrationSent(token);
     }
 }

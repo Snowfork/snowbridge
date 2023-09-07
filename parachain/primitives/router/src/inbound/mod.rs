@@ -38,7 +38,7 @@ pub enum Command {
 		/// The address of the gateway
 		gateway: H160,
 		/// The address of the owner
-		owner: H160,
+		agent: H160,
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
 		/// The stable ID of the `ForeignAssets::create` extrinsic
@@ -90,10 +90,10 @@ impl Command {
 		};
 
 		match self {
-			Command::RegisterToken { gateway, owner, token, create_call_index } => {
+			Command::RegisterToken { gateway, agent, token, create_call_index } => {
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
 					&chain_id,
-					owner.as_fixed_bytes(),
+					agent.as_fixed_bytes(),
 				);
 
 				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
