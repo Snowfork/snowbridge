@@ -22,7 +22,7 @@ use snowbridge_core::inbound::{Message, Proof};
 use snowbridge_ethereum::Log;
 
 use hex_literal::hex;
-use xcm::v3::{SendXcm, MultiAssets, prelude::*};
+use xcm::v3::{prelude::*, MultiAssets, SendXcm};
 
 use crate::{self as inbound_queue, envelope::Envelope, Error, Event as InboundQueueEvent};
 
@@ -144,9 +144,6 @@ impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Test {
 	fn initialize_storage(_: H256, _: CompactExecutionHeader) {}
 }
 
-
-
-
 // Mock XCM sender that always succeeds
 pub struct MockXcmSender;
 
@@ -154,25 +151,24 @@ impl SendXcm for MockXcmSender {
 	type Ticket = ();
 
 	fn validate(
-			dest: &mut Option<MultiLocation>,
-			_: &mut Option<xcm::v3::Xcm<()>>,
-		) -> xcm::v3::SendResult<Self::Ticket> {
-			match dest {
-				Some(MultiLocation { parents: _, interior }) => {
-					if let X1(Parachain(1001)) = interior {
-						return Err(XcmpSendError::NotApplicable);
-					}
-					Ok(((), MultiAssets::default()))
+		dest: &mut Option<MultiLocation>,
+		_: &mut Option<xcm::v3::Xcm<()>>,
+	) -> xcm::v3::SendResult<Self::Ticket> {
+		match dest {
+			Some(MultiLocation { parents: _, interior }) => {
+				if let X1(Parachain(1001)) = interior {
+					return Err(XcmpSendError::NotApplicable)
 				}
-				_ => Ok(((), MultiAssets::default()))
-			}
+				Ok(((), MultiAssets::default()))
+			},
+			_ => Ok(((), MultiAssets::default())),
 		}
+	}
 
 	fn deliver(_: Self::Ticket) -> core::result::Result<XcmHash, XcmpSendError> {
 		Ok(H256::zero().into())
 	}
 }
-
 
 impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -246,7 +242,6 @@ const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
 
 use snowbridge_core::ParaId;
 
-
 #[test]
 fn test_submit_happy_path() {
 	new_tester().execute_with(|| {
@@ -272,7 +267,7 @@ fn test_submit_happy_path() {
 		expect_events(vec![InboundQueueEvent::MessageReceived {
 			dest: dest_para,
 			nonce: 1,
-			xcm_hash: H256::zero().into()
+			xcm_hash: H256::zero().into(),
 		}
 		.into()]);
 	});
