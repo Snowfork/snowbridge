@@ -39,8 +39,6 @@ pub enum Command {
 		gateway: H160,
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
-		/// The stable ID of the `ForeignAssets::create` extrinsic
-		create_call_index: [u8; 2],
 	},
 	/// Send a token to AssetHub or another parachain
 	SendToken {
@@ -103,7 +101,8 @@ impl Command {
 								Parent,
 								GlobalConsensus(network),
 								origin_location,
-							).into(),
+							)
+								.into(),
 						},
 					]
 					.into(),
@@ -112,7 +111,7 @@ impl Command {
 		};
 
 		match self {
-			Command::RegisterToken { gateway, token, create_call_index } => {
+			Command::RegisterToken { gateway, token } => {
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
 					&chain_id,
 					gateway.as_fixed_bytes(),
@@ -123,6 +122,8 @@ impl Command {
 				let asset_id = Self::convert_token_address(network, gateway, token);
 
 				let mut instructions = create_instructions(origin_location);
+
+				let create_call_index: [u8; 2] = [53, 0];
 				instructions.extend(vec![
 					Transact {
 						origin_kind: OriginKind::Xcm,

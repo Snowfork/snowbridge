@@ -16,8 +16,7 @@ contract GatewayMock is Gateway {
         ParaID bridgeHubParaID,
         bytes32 bridgeHubHubAgentID,
         ParaID assetHubParaID,
-        bytes32 assetHubHubAgentID,
-        bytes2 createTokenCallID
+        bytes32 assetHubHubAgentID
     )
         Gateway(
             beefyClient,
@@ -26,8 +25,7 @@ contract GatewayMock is Gateway {
             bridgeHubParaID,
             bridgeHubHubAgentID,
             assetHubParaID,
-            assetHubHubAgentID,
-            createTokenCallID
+            assetHubHubAgentID
         )
     {}
 

@@ -54,8 +54,7 @@ contract DeployScript is Script {
             bridgeHubParaID,
             bridgeHubAgentID,
             assetHubParaID,
-            assetHubAgentID,
-            bytes2(vm.envBytes("CREATE_CALL_INDEX"))
+            assetHubAgentID
         );
 
         bytes memory initParams = abi.encode(
