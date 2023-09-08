@@ -368,7 +368,7 @@ pub mod pallet {
 			);
 
 			let weight = T::WeightInfo::do_process_message();
-			if !meter.check_accrue(weight) {
+			if meter.try_consume(weight).is_err() {
 				return Err(ProcessMessageError::Overweight(weight))
 			}
 

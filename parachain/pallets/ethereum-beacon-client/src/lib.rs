@@ -19,7 +19,7 @@ mod tests;
 mod benchmarking;
 
 use frame_support::{
-	dispatch::DispatchResult, log, pallet_prelude::OptionQuery, traits::Get, transactional,
+	dispatch::DispatchResult, pallet_prelude::OptionQuery, traits::Get, transactional,
 };
 use frame_system::ensure_signed;
 use primitives::{
