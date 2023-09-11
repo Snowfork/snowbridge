@@ -29,6 +29,8 @@ jobs:
       RUSTFLAGS: -C debuginfo=1
       SKIP_WASM_BUILD: 1
     steps:
+      - name: clean submodules
+        run: git rm --cached cumulus
       - uses: actions/checkout@v2
         with:
           submodules: 'true'
