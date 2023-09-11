@@ -5,7 +5,7 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2023-07-14, STEPS: `50`, REPEAT: `20`, LOW RANGE: `[]`, HIGH RANGE: `[]`
 //! WORST CASE MAP SIZE: `1000000`
-//! HOSTNAME: `Claras-MacBook-Pro-2.local`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `macbook pro 14 m2`, CPU: `m2-arm64`
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("bridge-hub-rococo-dev"), DB CACHE: 1024
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
@@ -23,9 +23,9 @@ pub trait WeightInfo {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn submit() -> Weight {
-        Weight::from_parts(125_000_000, 0)
-            .saturating_add(Weight::from_parts(0, 4042))
-            .saturating_add(RocksDbWeight::get().reads(9))
-            .saturating_add(RocksDbWeight::get().writes(4))
+        Weight::from_parts(70_000_000, 0)
+            .saturating_add(Weight::from_parts(0, 3601))
+            .saturating_add(RocksDbWeight::get().reads(2))
+            .saturating_add(RocksDbWeight::get().writes(2))
     }
 }
