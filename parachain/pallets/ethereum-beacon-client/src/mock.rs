@@ -101,7 +101,7 @@ pub mod minimal {
 	pub fn new_tester() -> sp_io::TestExternalities {
 		let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| Timestamp::set_timestamp(30_000));
+		let _ = ext.execute_with(|| Timestamp::set(RuntimeOrigin::signed(1), 30_000));
 		ext
 	}
 
@@ -265,7 +265,7 @@ pub mod mainnet {
 	pub fn new_tester() -> sp_io::TestExternalities {
 		let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| Timestamp::set_timestamp(30_000));
+		let _ = ext.execute_with(|| Timestamp::set(RuntimeOrigin::signed(1), 30_000));
 		ext
 	}
 }
