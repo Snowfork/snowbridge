@@ -4,16 +4,14 @@ use super::*;
 
 use frame_support::{
 	assert_noop, assert_ok,
-	dispatch::DispatchError,
 	parameter_types,
 	traits::{ConstU64, Everything},
 };
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
-	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	ArithmeticError, MultiSignature,
+	ArithmeticError, MultiSignature, DispatchError
 };
 use sp_std::convert::From;
 
@@ -27,7 +25,6 @@ use xcm::v3::{SendXcm, MultiAssets, prelude::*};
 
 use crate::{self as inbound_queue, envelope::Envelope, Error, Event as InboundQueueEvent};
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
