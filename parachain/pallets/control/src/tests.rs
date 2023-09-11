@@ -5,6 +5,11 @@ use frame_support::{assert_ok, traits::EnsureOrigin};
 use hex_literal::hex;
 use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError::BadOrigin};
+use sp_core::H160;
+use xcm::prelude::AccountKey20;
+use xcm::v3::{Junction, MultiLocation};
+use xcm::v3::Junction::Parachain;
+use xcm::v3::Junctions::X2;
 
 #[test]
 fn create_agent_with_unknown_origin_yields_bad_origin() {

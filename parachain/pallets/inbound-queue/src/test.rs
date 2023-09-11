@@ -20,6 +20,7 @@ use sp_std::convert::From;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::inbound::{Message, Proof};
 use snowbridge_ethereum::Log;
+use sp_runtime::BuildStorage;
 
 use hex_literal::hex;
 use xcm::v3::{SendXcm, MultiAssets, prelude::*};
@@ -30,10 +31,7 @@ type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
+	pub enum Test
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
@@ -55,13 +53,10 @@ impl frame_system::Config for Test {
 	type BlockLength = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
@@ -74,6 +69,8 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ();
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type Nonce = u64;
+	type Block = Block;
 }
 
 impl pallet_balances::Config for Test {
@@ -197,7 +194,7 @@ fn expect_events(e: Vec<RuntimeEvent>) {
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
 	ext

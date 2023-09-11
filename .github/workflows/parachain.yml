@@ -83,7 +83,6 @@ jobs:
           --manifest-path parachain/Cargo.toml
           --workspace
           --features runtime-benchmarks
-          --exclude snowbridge-query-events
           --exclude snowbridge-ethereum-beacon-client
       # Run tests for beacon light client, excluding benchmark tests
       - name: Tests for beacon light client excluding benchmark tests
@@ -124,7 +123,6 @@ jobs:
           --engine llvm
           --out Xml
           --exclude substrate-call-index
-          --exclude snowbridge-query-events
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v3
         with:

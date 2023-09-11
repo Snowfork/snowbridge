@@ -15,15 +15,13 @@ use sp_runtime::{
 	BoundedVec, MultiSignature,
 };
 use sp_std::convert::From;
+use sp_runtime::BuildStorage;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
+	pub enum Test
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
@@ -44,13 +42,10 @@ impl frame_system::Config for Test {
 	type BlockLength = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
@@ -63,6 +58,8 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ();
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type Nonce = u64;
+	type Block = Block;
 }
 
 parameter_types! {
@@ -80,6 +77,7 @@ impl pallet_message_queue::Config for Test {
 	type HeapSize = HeapSize;
 	type MaxStale = MaxStale;
 	type ServiceWeight = ServiceWeight;
+	type QueuePausedQuery = ();
 }
 
 parameter_types! {
@@ -97,7 +95,7 @@ impl crate::Config for Test {
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
 	ext
@@ -194,7 +192,7 @@ fn process_message_yields_on_max_messages_per_block() {
 		let message = (0..100).map(|_| 1u8).collect::<Vec<u8>>();
 		let message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<Test>> = message.try_into().unwrap();
 
-		let mut meter = WeightMeter::max_limit();
+		let mut meter = WeightMeter::new();
 
 		assert_noop!(
 			OutboundQueue::process_message(
@@ -215,7 +213,7 @@ fn process_message_fails_on_overweight_message() {
 		let message = (0..100).map(|_| 1u8).collect::<Vec<u8>>();
 		let message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<Test>> = message.try_into().unwrap();
 
-		let mut meter = WeightMeter::from_limit(Weight::from_parts(1, 1));
+		let mut meter = WeightMeter::with_limit(Weight::from_parts(1, 1));
 
 		assert_noop!(
 			OutboundQueue::process_message(
