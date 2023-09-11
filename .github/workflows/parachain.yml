@@ -142,7 +142,7 @@ jobs:
       - name: check bridge-hub runtime
         run: >
           cargo check
-          --manifest-path cumulus/Cargo.toml
+          --manifest-path polkadot-sdk/Cargo.toml
           --release --verbose
           --package bridge-hub-rococo-runtime
 
