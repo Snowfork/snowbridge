@@ -30,6 +30,8 @@ jobs:
       SKIP_WASM_BUILD: 1
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
       - uses: actions/cache@v1
         with:
           path: |
