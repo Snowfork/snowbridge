@@ -6,7 +6,6 @@ use pallet_timestamp;
 use primitives::{Fork, ForkVersions};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
 
@@ -19,16 +18,12 @@ pub mod minimal {
 	use primitives::CompactExecutionHeader;
 	use snowbridge_core::inbound::{Message, Proof};
 	use std::{fs::File, path::PathBuf};
+	use sp_runtime::BuildStorage;
 
-	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
 
 	frame_support::construct_runtime!(
-		pub enum Test where
-			Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
-		{
+		pub enum Test {
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
 			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
@@ -48,13 +43,10 @@ pub mod minimal {
 		type DbWeight = ();
 		type RuntimeOrigin = RuntimeOrigin;
 		type RuntimeCall = RuntimeCall;
-		type Index = u64;
-		type BlockNumber = u64;
 		type Hash = H256;
 		type Hashing = BlakeTwo256;
 		type AccountId = u64;
 		type Lookup = IdentityLookup<Self::AccountId>;
-		type Header = Header;
 		type RuntimeEvent = RuntimeEvent;
 		type BlockHashCount = BlockHashCount;
 		type Version = ();
@@ -65,6 +57,8 @@ pub mod minimal {
 		type SystemWeightInfo = ();
 		type SS58Prefix = SS58Prefix;
 		type MaxConsumers = frame_support::traits::ConstU32<16>;
+		type Nonce = u64;
+		type Block = Block;
 	}
 
 	impl pallet_timestamp::Config for Test {
@@ -105,7 +99,7 @@ pub mod minimal {
 
 	// Build genesis storage according to the mock runtime.
 	pub fn new_tester() -> sp_io::TestExternalities {
-		let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+		let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| Timestamp::set_timestamp(30_000));
 		ext
@@ -185,8 +179,8 @@ pub mod minimal {
 pub mod mainnet {
 	use super::*;
 
-	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
+    use sp_runtime::BuildStorage;
 
 	frame_support::construct_runtime!(
 		pub enum Test where
@@ -213,13 +207,10 @@ pub mod mainnet {
 		type DbWeight = ();
 		type RuntimeOrigin = RuntimeOrigin;
 		type RuntimeCall = RuntimeCall;
-		type Index = u64;
-		type BlockNumber = u64;
 		type Hash = H256;
 		type Hashing = BlakeTwo256;
 		type AccountId = u64;
 		type Lookup = IdentityLookup<Self::AccountId>;
-		type Header = Header;
 		type RuntimeEvent = RuntimeEvent;
 		type BlockHashCount = BlockHashCount;
 		type Version = ();
@@ -230,6 +221,8 @@ pub mod mainnet {
 		type SystemWeightInfo = ();
 		type SS58Prefix = SS58Prefix;
 		type MaxConsumers = frame_support::traits::ConstU32<16>;
+		type Nonce = u64;
+		type Block = Block;
 	}
 
 	impl pallet_timestamp::Config for Test {
@@ -270,7 +263,7 @@ pub mod mainnet {
 
 	// Build genesis storage according to the mock runtime.
 	pub fn new_tester() -> sp_io::TestExternalities {
-		let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+		let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| Timestamp::set_timestamp(30_000));
 		ext
