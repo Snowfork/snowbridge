@@ -15,27 +15,29 @@ mod tests;
 mod benchmarking;
 
 pub mod weights;
-pub use weights::*;
-
-use snowbridge_core::{
-	outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
-	AgentId,
-};
-use sp_core::{H160, H256};
-use sp_runtime::traits::Hash;
-use sp_std::prelude::*;
-use xcm::prelude::*;
-use xcm_executor::traits::ConvertLocation;
-
 pub use pallet::*;
-
-pub const LOG_TARGET: &str = "snowbridge-control";
+use sp_core::{H160, H256};
 
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{pallet_prelude::*, traits::EnsureOrigin};
 	use frame_system::pallet_prelude::*;
 	use log;
+	use snowbridge_core::{
+		outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
+		AgentId,
+	};
+	use sp_core::{H160, H256};
+	use sp_runtime::traits::Hash;
+	use xcm::v3::Junction::Parachain;
+	use xcm::v3::Junctions::X1;
+	use xcm::v3::MultiLocation;
+	use xcm_executor::traits::ConvertLocation;
+	use sp_std::prelude::*;
+	use xcm::prelude::*;
+	use crate::weights::WeightInfo;
+
+	pub const LOG_TARGET: &str = "snowbridge-control";
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
