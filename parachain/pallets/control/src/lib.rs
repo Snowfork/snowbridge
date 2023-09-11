@@ -16,6 +16,7 @@ mod benchmarking;
 
 pub mod weights;
 pub use pallet::*;
+pub use crate::weights::WeightInfo;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -34,7 +35,7 @@ pub mod pallet {
 	use xcm_executor::traits::ConvertLocation;
 	use sp_std::prelude::*;
 	use xcm::prelude::*;
-	use crate::weights::WeightInfo;
+	use crate::WeightInfo;
 
 	pub const LOG_TARGET: &str = "snowbridge-control";
 
