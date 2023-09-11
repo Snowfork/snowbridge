@@ -16,7 +16,6 @@ mod benchmarking;
 
 pub mod weights;
 pub use pallet::*;
-use sp_core::{H160, H256};
 
 #[frame_support::pallet]
 pub mod pallet {
