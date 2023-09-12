@@ -287,8 +287,8 @@ pub mod pallet {
 				nonce: next_nonce,
 				command,
 				params,
-				//Todo: should be configurable by each command type
-				// For dynamic dispatch like upgrade/transact, could be an input param
+				// Todo: should be configurable by each command type
+				// For dynamic dispatch like upgrade or transact, could be an input param from UI
 				dispatch_gas: 500000,
 			};
 
