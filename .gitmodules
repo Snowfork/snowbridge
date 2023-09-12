@@ -13,4 +13,4 @@
 [submodule "polkadot-sdk"]
 	path = polkadot-sdk
 	url = https://github.com/Snowfork/polkadot-sdk.git
-	branch = clara/sno-665
+	branch = snowbridge
