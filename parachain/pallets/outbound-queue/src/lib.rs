@@ -75,7 +75,10 @@ pub struct PreparedMessage {
 	nonce: u64,
 	/// Command to execute in the Gateway contract
 	command: u8,
+	/// Params for the command
 	params: Vec<u8>,
+	/// Gas cost for the command
+	dispatch_gas: u128,
 }
 
 /// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
@@ -86,6 +89,7 @@ impl From<PreparedMessage> for Token {
 			Token::Uint(x.nonce.into()),
 			Token::Uint(x.command.into()),
 			Token::Bytes(x.params.to_vec()),
+			Token::Uint(x.dispatch_gas.into()),
 		])
 	}
 }
@@ -283,6 +287,9 @@ pub mod pallet {
 				nonce: next_nonce,
 				command,
 				params,
+				//Todo: should be configurable by each command type
+				// For dynamic dispatch like upgrade/transact, could be an input param
+				dispatch_gas: 500000,
 			};
 
 			// ABI-encode and hash the prepared message
