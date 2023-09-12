@@ -25,7 +25,7 @@ sp-std = { path = "../../../polkadot-sdk/substrate/primitives/std", default-feat
 sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-runtime = { path = "../../../polkadot-sdk/substrate/primitives/runtime", default-features = false }
 
-xcm = { package = "staging-xcm", path = "../../../polkadot-sdk/polkadot/xcm", default-features = false }
+xcm = { package = "xcm", path = "../../../polkadot-sdk/polkadot/xcm", default-features = false }
 bp-runtime = { path = "../../../polkadot-sdk/cumulus/bridges/primitives/runtime", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }

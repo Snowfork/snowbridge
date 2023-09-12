@@ -28,9 +28,9 @@ sp-std = { path = "../../../polkadot-sdk/substrate/primitives/std", default-feat
 sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-runtime = { path = "../../../polkadot-sdk/substrate/primitives/runtime", default-features = false }
 
-xcm = { package = "staging-xcm", path = "../../../polkadot-sdk/polkadot/xcm", default-features = false }
-xcm-builder = { package = "staging-xcm-builder", path = "../../../polkadot-sdk/polkadot/xcm/xcm-builder", default-features = false }
-xcm-executor = { package = "staging-xcm-executor", path = "../../../polkadot-sdk/polkadot/xcm/xcm-executor", default-features = false }
+xcm = { package = "xcm", path = "../../../polkadot-sdk/polkadot/xcm", default-features = false }
+xcm-builder = { package = "xcm-builder", path = "../../../polkadot-sdk/polkadot/xcm/xcm-builder", default-features = false }
+xcm-executor = { package = "xcm-executor", path = "../../../polkadot-sdk/polkadot/xcm/xcm-executor", default-features = false }
 
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
