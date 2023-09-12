@@ -41,6 +41,8 @@ struct InboundMessage {
     Command command;
     /// @dev The Parameters for the command
     bytes params;
+    /// @dev The gas to cover the cost of a dispatch call
+    uint256 dispatchGas;
 }
 
 enum OperatingMode {

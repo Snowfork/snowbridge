@@ -61,7 +61,7 @@ contract GatewayTest is Test {
     address public account1;
     address public account2;
 
-    uint256 public constant DISPATCH_GAS = 500_000;
+    uint256 public dispatch_gas = 500_000;
 
     uint256 public defaultFee = 1 ether;
     uint256 public defaultReward = 1 ether;
@@ -73,7 +73,6 @@ contract GatewayTest is Test {
         gatewayLogic = new GatewayMock(
             address(0),
             address(executor),
-            DISPATCH_GAS,
             bridgeHubParaID,
             bridgeHubAgentID,
             assetHubParaID,
@@ -157,7 +156,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas), proof, makeMockProof()
         );
     }
 
@@ -168,14 +167,14 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas), proof, makeMockProof()
         );
 
         // try to replay the message
         vm.expectRevert(Gateway.InvalidNonce.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas), proof, makeMockProof()
         );
     }
 
@@ -185,7 +184,7 @@ contract GatewayTest is Test {
         vm.expectRevert(Gateway.ChannelDoesNotExist.selector);
         hoax(relayer);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(ParaID.wrap(42), 1, command, ""), proof, makeMockProof()
+            InboundMessage(ParaID.wrap(42), 1, command, "", dispatch_gas), proof, makeMockProof()
         );
     }
 
@@ -199,7 +198,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas), proof, makeMockProof()
         );
     }
 
@@ -215,7 +214,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas), proof, makeMockProof()
         );
 
         assertEq(address(bridgeHubAgent).balance, 49 ether);
@@ -229,7 +228,7 @@ contract GatewayTest is Test {
         vm.expectRevert(NativeTransferFailed.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas), proof, makeMockProof()
         );
 
         assertEq(address(bridgeHubAgent).balance, 0 ether);
