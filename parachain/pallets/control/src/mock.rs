@@ -203,12 +203,6 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	}
 }
 
-impl snowbridge_control::FeeProvider<u128> for MockOutboundQueue {
-	fn base_fee() -> u128 {
-		0
-	}
-}
-
 parameter_types! {
 	pub const ControlPalletId: PalletId = PalletId(*b"snow/ctl");
 	// Multiplier based on gas report as follows,assume gas cost for a no-op operation is 1000
@@ -233,14 +227,6 @@ impl snowbridge_control::Config for Test {
 	type UniversalLocation = UniversalLocation;
 	type RelayLocation = RelayLocation;
 	type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
-	type SovereignAccountOf = HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>;
-	type Token = Balances;
-	type ControlPalletId = ControlPalletId;
-	type CreateAgentMultiplier = CreateAgentMultiplier;
-	type CreateChannelMultiplier = CreateChannelMultiplier;
-	type UpdateChannelMultiplier = UpdateChannelMultiplier;
-	type TransferNativeFromAgentMultiplier = TransferNativeFromAgentMultiplier;
-	type FeeProvider = MockOutboundQueue;
 	type WeightInfo = ();
 }
 

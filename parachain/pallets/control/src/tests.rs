@@ -3,7 +3,7 @@
 use crate::{mock::*, *};
 use frame_support::{assert_ok, traits::EnsureOrigin};
 use hex_literal::hex;
-use sp_core::{ByteArray, H256};
+use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError::BadOrigin};
 
 #[test]
@@ -37,14 +37,6 @@ fn create_agent_with_bridgehub_origin_yields_success() {
 		assert!(!Agents::<Test>::contains_key(agent_id));
 		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
 		assert!(Agents::<Test>::contains_key(agent_id));
-
-		let agent_owner = EthereumControl::sovereign_account(&location).unwrap();
-		assert_eq!(agent_id.as_bytes(), agent_owner.as_slice());
-		println!("agent_id: {:#?}", hex::encode(agent_id.as_bytes()));
-		println!(
-			"agent_owner: {:#?}",
-			hex::encode::<<mock::Test as frame_system::Config>::AccountId>(agent_owner)
-		);
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
 			location: Box::new(location),

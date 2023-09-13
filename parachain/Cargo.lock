@@ -2764,6 +2764,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "pallet-balances",
  "pallet-message-queue",
  "parity-scale-codec",
  "rlp",
@@ -2777,6 +2778,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]

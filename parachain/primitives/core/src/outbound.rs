@@ -37,6 +37,8 @@ pub enum SubmitError {
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
 	BridgeHalted,
+	/// Charge fee failed
+	ChargeFeeFailed,
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
@@ -46,9 +48,12 @@ pub struct Message {
 	pub origin: ParaId,
 	/// The stable ID for a receiving gateway contract
 	pub command: Command,
+	/// The multilocation the message comes from
+	pub location: MultiLocation,
 }
 
 use ethabi::Token;
+use xcm::prelude::MultiLocation;
 
 #[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum OperatingMode {
@@ -57,7 +62,7 @@ pub enum OperatingMode {
 }
 
 /// A command which is executable by the Gateway contract on Ethereum
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
 pub enum Command {
 	/// Execute a sub-command within an agent for a consensus system in Polkadot
 	AgentExecute {
@@ -129,11 +134,26 @@ impl Command {
 		}
 	}
 
+	/// Compute gas cost
+	/// Todo: load by trait read from configurable storage
+	pub fn dispatch_gas(&self) -> u128 {
+		match self {
+			Command::AgentExecute { .. } => 500000,
+			Command::CreateAgent { .. } => 500000,
+			Command::CreateChannel { .. } => 500000,
+			Command::UpdateChannel { .. } => 500000,
+			Command::TransferNativeFromAgent { .. } => 500000,
+			// For sudo operations set as zero do not charge fees
+			Command::SetOperatingMode { .. } => 0,
+			Command::Upgrade { .. } => 0,
+		}
+	}
+
 	/// ABI-encode the Command.
 	/// Returns a tuple of:
 	/// - Index of the command
 	/// - the ABI encoded command
-	pub fn abi_encode(&self) -> (u8, Vec<u8>) {
+	pub fn abi_encode(&self) -> (u8, Vec<u8>, u128) {
 		match self {
 			Command::AgentExecute { agent_id, command } => (
 				self.index(),
@@ -141,6 +161,7 @@ impl Command {
 					Token::FixedBytes(agent_id.as_bytes().to_owned()),
 					Token::Bytes(command.abi_encode()),
 				])]),
+				self.dispatch_gas(),
 			),
 			Command::Upgrade { impl_address, impl_code_hash, params } => (
 				self.index(),
@@ -149,12 +170,14 @@ impl Command {
 					Token::FixedBytes(impl_code_hash.as_bytes().to_owned()),
 					params.clone().map_or(Token::Bytes(vec![]), Token::Bytes),
 				])]),
+				self.dispatch_gas(),
 			),
 			Command::CreateAgent { agent_id } => (
 				self.index(),
 				ethabi::encode(&[Token::Tuple(vec![Token::FixedBytes(
 					agent_id.as_bytes().to_owned(),
 				)])]),
+				self.dispatch_gas(),
 			),
 			Command::CreateChannel { para_id, agent_id } => {
 				let para_id: u32 = (*para_id).into();
@@ -164,6 +187,7 @@ impl Command {
 						Token::Uint(U256::from(para_id)),
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 					])]),
+					self.dispatch_gas(),
 				)
 			},
 			Command::UpdateChannel { para_id, mode, fee, reward } => {
@@ -176,19 +200,22 @@ impl Command {
 						Token::Uint(U256::from(*fee)),
 						Token::Uint(U256::from(*reward)),
 					])]),
+					self.dispatch_gas(),
 				)
 			},
 			Command::SetOperatingMode { mode } => (
-				self.clone().index(),
+				self.index(),
 				ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
+				self.dispatch_gas(),
 			),
 			Command::TransferNativeFromAgent { agent_id, recipient, amount } => (
-				self.clone().index(),
+				self.index(),
 				ethabi::encode(&[Token::Tuple(vec![
 					Token::FixedBytes(agent_id.as_bytes().to_owned()),
 					Token::Address(*recipient),
 					Token::Uint(U256::from(*amount)),
 				])]),
+				self.dispatch_gas(),
 			),
 		}
 	}
@@ -228,10 +255,4 @@ impl AgentExecuteCommand {
 			]),
 		}
 	}
-}
-
-/// A trait for get fee to cover the cost of operations on the Ethereum side
-pub trait FeeProvider<Balance> {
-	/// get base fee to cover the cost of an no-op dispatchable
-	fn base_fee() -> Balance;
 }

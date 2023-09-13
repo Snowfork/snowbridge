@@ -60,6 +60,5 @@ std = [
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
-	"xcm-executor/runtime-benchmarks"
 ]
 try-runtime = ["frame-support/try-runtime"]

@@ -17,11 +17,8 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
-use frame_support::traits::fungible::{Inspect, Mutate};
 use snowbridge_core::{
-	outbound::{
-		Command, FeeProvider, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
-	},
+	outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
 	AgentId,
 };
 use sp_core::{H160, H256};
@@ -34,26 +31,17 @@ pub use pallet::*;
 
 pub const LOG_TARGET: &str = "snowbridge-control";
 
-pub type BalanceOf<T> =
-	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{
-		log,
-		pallet_prelude::*,
-		sp_runtime::{traits::AccountIdConversion, AccountId32, SaturatedConversion},
-		traits::{tokens::Preservation, EnsureOrigin},
-		PalletId,
-	};
+	use frame_support::{log, pallet_prelude::*, traits::EnsureOrigin};
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config<AccountId = AccountId32> {
+	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// General-purpose hasher
@@ -78,29 +66,11 @@ pub mod pallet {
 		/// Converts MultiLocation to H256 in a way that is stable across multiple versions of XCM
 		type AgentIdOf: ConvertLocation<H256>;
 
-		/// Converts MultiLocation to a sovereign account
-		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
-
 		/// The universal location
 		type UniversalLocation: Get<InteriorMultiLocation>;
 
 		/// Location of the relay chain
 		type RelayLocation: Get<MultiLocation>;
-
-		/// Token reserved for control operations
-		type Token: Mutate<Self::AccountId>;
-
-		/// Local pallet Id derivative of an escrow account to collect fees
-		type ControlPalletId: Get<PalletId>;
-
-		/// FeeProvider for get fee to cover the cost of operations on the Ethereum side
-		type FeeProvider: FeeProvider<u128>;
-
-		/// BaseFeeMultiplier for control operations
-		type CreateAgentMultiplier: Get<u128>;
-		type CreateChannelMultiplier: Get<u128>;
-		type UpdateChannelMultiplier: Get<u128>;
-		type TransferNativeFromAgentMultiplier: Get<u128>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -177,6 +147,7 @@ pub mod pallet {
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::Upgrade { impl_address, impl_code_hash, params },
+				location: MultiLocation::parent(),
 			};
 			Self::submit_outbound(message)?;
 
@@ -202,20 +173,16 @@ pub mod pallet {
 				location
 			);
 
-			Self::reserve_deposit(
-				Self::sovereign_account(&location)?,
-				T::FeeProvider::base_fee()
-					.saturating_mul(T::CreateAgentMultiplier::get())
-					.saturated_into::<BalanceOf<T>>(),
-			)?;
-
 			// Record the agent id or fail if it has already been created
 			ensure!(!Agents::<T>::contains_key(agent_id), Error::<T>::AgentAlreadyCreated);
 
 			Agents::<T>::insert(agent_id, ());
 
-			let message =
-				Message { origin: T::OwnParaId::get(), command: Command::CreateAgent { agent_id } };
+			let message = Message {
+				origin: T::OwnParaId::get(),
+				command: Command::CreateAgent { agent_id },
+				location,
+			};
 			Self::submit_outbound(message.clone())?;
 
 			log::debug!(
@@ -242,18 +209,12 @@ pub mod pallet {
 
 			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
 
-			Self::reserve_deposit(
-				Self::sovereign_account(&location)?,
-				T::FeeProvider::base_fee()
-					.saturating_mul(T::CreateChannelMultiplier::get())
-					.saturated_into::<BalanceOf<T>>(),
-			)?;
-
 			Channels::<T>::insert(para_id, ());
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::CreateChannel { agent_id, para_id },
+				location,
 			};
 			Self::submit_outbound(message)?;
 
@@ -281,16 +242,10 @@ pub mod pallet {
 
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
 
-			Self::reserve_deposit(
-				Self::sovereign_account(&location)?,
-				T::FeeProvider::base_fee()
-					.saturating_mul(T::UpdateChannelMultiplier::get())
-					.saturated_into::<BalanceOf<T>>(),
-			)?;
-
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::UpdateChannel { para_id, mode, fee, reward },
+				location,
 			};
 			Self::submit_outbound(message)?;
 
@@ -310,6 +265,7 @@ pub mod pallet {
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::SetOperatingMode { mode },
+				location: MultiLocation::parent(),
 			};
 			Self::submit_outbound(message)?;
 
@@ -334,16 +290,10 @@ pub mod pallet {
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
-			Self::reserve_deposit(
-				Self::sovereign_account(&location)?,
-				T::FeeProvider::base_fee()
-					.saturating_mul(T::TransferNativeFromAgentMultiplier::get())
-					.saturated_into::<BalanceOf<T>>(),
-			)?;
-
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
+				location,
 			};
 			Self::submit_outbound(message)?;
 
@@ -385,21 +335,6 @@ pub mod pallet {
 				.ok_or(Error::<T>::LocationToAgentIdConversionFailed)?;
 
 			Ok((agent_id, para_id, location))
-		}
-
-		pub fn account_id() -> T::AccountId {
-			T::ControlPalletId::get().into_account_truncating()
-		}
-
-		pub fn reserve_deposit(payer: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
-			T::Token::transfer(&payer, &Self::account_id(), amount, Preservation::Preserve)?;
-			Ok(())
-		}
-
-		pub fn sovereign_account(location: &MultiLocation) -> Result<T::AccountId, DispatchError> {
-			let agent_account = T::SovereignAccountOf::convert_location(location)
-				.ok_or(Error::<T>::LocationToAgentAccountConversionFailed)?;
-			Ok(agent_account)
 		}
 	}
 }

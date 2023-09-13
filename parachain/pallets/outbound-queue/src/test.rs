@@ -4,20 +4,23 @@ use super::*;
 
 use frame_support::{
 	assert_err, assert_noop, assert_ok, parameter_types,
-	traits::{Everything, Hooks, ProcessMessageError},
+	traits::{ConstU64, Everything, Hooks, ProcessMessageError},
 	weights::WeightMeter,
+	PalletId,
 };
 
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
-	BoundedVec, MultiSignature,
+	traits::{BlakeTwo256, IdentityLookup, Keccak256},
+	AccountId32, BoundedVec,
 };
 use sp_std::convert::From;
+use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+type AccountId = AccountId32;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -26,13 +29,11 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
 		OutboundQueue: crate::{Pallet, Storage, Event<T>},
 	}
 );
-
-pub type Signature = MultiSignature;
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -56,7 +57,7 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -87,12 +88,35 @@ parameter_types! {
 	pub const MaxMessagesPerBlock: u32 = 20;
 }
 
+impl pallet_balances::Config for Test {
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+	type Balance = u64;
+	type RuntimeEvent = RuntimeEvent;
+	type DustRemoval = ();
+	type ExistentialDeposit = ConstU64<1>;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type RuntimeHoldReason = ();
+	type MaxHolds = ();
+}
+
+parameter_types! {
+	pub const LocalPalletId: PalletId = PalletId(*b"snow/out");
+}
+
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MessageQueue = MessageQueue;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
+	type LocalPalletId = LocalPalletId;
+	type SovereignAccountOf = HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>;
+	type Token = Balances;
 	type WeightInfo = ();
 }
 
@@ -132,6 +156,7 @@ fn submit_messages_from_multiple_origins_and_commit() {
 					impl_code_hash: H256::zero(),
 					params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
 				},
+				location: MultiLocation::parent(),
 			};
 
 			let result = OutboundQueue::validate(&message);
@@ -165,6 +190,7 @@ fn submit_message_fail_too_large() {
 				impl_code_hash: H256::zero(),
 				params: Some((0..1000).map(|_| 1u8).collect::<Vec<u8>>()),
 			},
+			location: MultiLocation::default(),
 		};
 
 		assert_err!(OutboundQueue::validate(&message), SubmitError::MessageTooLarge);

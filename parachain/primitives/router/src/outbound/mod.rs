@@ -128,6 +128,7 @@ where
 		let outbound_message = Message {
 			origin: para_id.into(),
 			command: Command::AgentExecute { agent_id, command: agent_execute_command },
+			location: local_sub_location,
 		};
 
 		let ticket = OutboundQueue::validate(&outbound_message).map_err(|err| {

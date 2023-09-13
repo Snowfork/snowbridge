@@ -39,9 +39,11 @@ use snowbridge_core::ParaId;
 use sp_core::{RuntimeDebug, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
+use xcm::prelude::MultiLocation;
+use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::outbound::{
-	Command, FeeProvider, Message, MessageHash, OutboundQueue as OutboundQueueTrait, SubmitError,
+	Command, Message, MessageHash, OutboundQueue as OutboundQueueTrait, SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
@@ -108,6 +110,11 @@ pub use pallet::*;
 
 pub const LOG_TARGET: &str = "snowbridge-outbound-queue";
 
+use frame_support::traits::fungible::{Inspect, Mutate};
+
+pub type BalanceOf<T> =
+	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -116,11 +123,17 @@ pub mod pallet {
 
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 
+	use frame_support::{
+		sp_runtime::{traits::AccountIdConversion, AccountId32, SaturatedConversion},
+		traits::tokens::Preservation,
+		PalletId,
+	};
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config<AccountId = AccountId32> {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type Hashing: Hash<Output = H256>;
@@ -134,6 +147,15 @@ pub mod pallet {
 		/// Max number of messages processed per block
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
+
+		/// Token reserved for control operations
+		type Token: Mutate<Self::AccountId>;
+
+		/// Local pallet Id derivative of an escrow account to collect fees
+		type LocalPalletId: Get<PalletId>;
+
+		/// Converts MultiLocation to a sovereign account
+		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -170,6 +192,8 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// The message is too large
 		MessageTooLarge,
+		/// Location convert to sovereign account failed
+		LocationToSovereignAccountConversionFailed,
 	}
 
 	/// Messages to be committed in the current block. This storage value is killed in
@@ -250,8 +274,8 @@ pub mod pallet {
 			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
 		}
 
-		/// Halt or resume all pallet operations.
-		/// May only be called either by root, or by `PalletOwner`.
+		/// Set base fee for a no-op command on ethereum side.
+		/// May only be called either by root
 		#[pallet::call_index(2)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_base_fee(origin: OriginFor<T>, amount: u128) -> DispatchResult {
@@ -295,7 +319,7 @@ pub mod pallet {
 
 			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
 
-			let (command, params) = enqueued_message.command.abi_encode();
+			let (command, params, dispatch_gas) = enqueued_message.command.abi_encode();
 
 			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
@@ -304,9 +328,7 @@ pub mod pallet {
 				nonce: next_nonce,
 				command,
 				params,
-				// Todo: should be configurable by each command type
-				// For dynamic dispatch like upgrade or transact, could be an input param from UI
-				dispatch_gas: 500000,
+				dispatch_gas,
 			};
 
 			// ABI-encode and hash the prepared message
@@ -324,6 +346,23 @@ pub mod pallet {
 
 			Ok(true)
 		}
+
+		pub fn charge_fee(
+			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
+		) -> DispatchResult {
+			let agent_account = T::SovereignAccountOf::convert_location(&ticket.location)
+				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
+			let fee = BaseFee::<T>::get()
+				.saturating_mul(ticket.command.dispatch_gas())
+				.saturated_into::<BalanceOf<T>>();
+			T::Token::transfer(
+				&agent_account,
+				&T::LocalPalletId::get().into_account_truncating(),
+				fee,
+				Preservation::Preserve,
+			)?;
+			Ok(())
+		}
 	}
 
 	/// A message which can be accepted by the [`OutboundQueue`]
@@ -332,6 +371,8 @@ pub mod pallet {
 		id: H256,
 		origin: ParaId,
 		message: BoundedVec<u8, MaxMessageSize>,
+		command: Command,
+		location: MultiLocation,
 	}
 
 	impl<T: Config> OutboundQueueTrait for Pallet<T> {
@@ -339,7 +380,7 @@ pub mod pallet {
 
 		fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
 			// The inner payload should not be too large
-			let (_, payload) = message.command.abi_encode();
+			let (_, payload, _) = message.command.abi_encode();
 
 			// Create a message id for tracking progress in submission pipeline
 			let message_id: MessageHash = sp_io::hashing::blake2_256(&(message.encode())).into();
@@ -348,16 +389,23 @@ pub mod pallet {
 				payload.len() < T::MaxMessagePayloadSize::get() as usize,
 				SubmitError::MessageTooLarge
 			);
-			let message: EnqueuedMessage = EnqueuedMessage {
+			let command = message.command.clone();
+			let enqueued_message: EnqueuedMessage = EnqueuedMessage {
 				id: message_id,
 				origin: message.origin,
-				command: message.command.clone(),
+				command: command.clone(),
 			};
 			// The whole message should not be too large
-			let encoded = message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
+			let encoded =
+				enqueued_message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
 
-			let ticket =
-				OutboundQueueTicket { id: message.id, origin: message.origin, message: encoded };
+			let ticket = OutboundQueueTicket {
+				id: message_id,
+				origin: message.origin,
+				message: encoded,
+				location: message.location,
+				command,
+			};
 			Ok(ticket)
 		}
 
@@ -368,6 +416,7 @@ pub mod pallet {
 				ticket.message.as_bounded_slice(),
 				AggregateMessageOrigin::Parachain(ticket.origin),
 			);
+			Self::charge_fee(&ticket).map_err(|_| SubmitError::ChargeFeeFailed)?;
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
 		}
@@ -397,12 +446,6 @@ pub mod pallet {
 			}
 
 			Self::do_process_message(message)
-		}
-	}
-
-	impl<T: Config> FeeProvider<u128> for Pallet<T> {
-		fn base_fee() -> u128 {
-			BaseFee::<T>::get()
 		}
 	}
 }
