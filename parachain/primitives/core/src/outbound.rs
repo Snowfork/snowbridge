@@ -136,10 +136,11 @@ impl Command {
 
 	/// Compute gas cost
 	/// Todo: load by trait read from configurable storage,reference result from benchmark report
-	/// | createAgent        | 839             | 184709 | 237187 | 237187 | 9       |     
-	/// | createChannel      | 399 		    | 31023  | 2829   | 75402  | 5       |
-	/// | updateChannel 	| 817             | 15121  | 3552   | 36762  | 5     |     
-	/// | transferNativeFromAgent  | 770             | 21730  | 21730  | 42691  | 2       |
+/// | Function Name    | min    | avg    | median | max    | # calls |
+	/// | createAgent    | 839    | 184709 | 237187 | 237187 | 9       |     
+	/// | createChannel    | 399    | 31023  | 2829   | 75402  | 5       |
+	/// | updateChannel    | 817    | 15121  | 3552   | 36762  | 5     |     
+	/// | transferNativeFromAgent    | 770    | 21730  | 21730  | 42691  | 2       |
 	pub fn dispatch_gas(&self) -> u128 {
 		match self {
 			Command::AgentExecute { .. } => 500000,
