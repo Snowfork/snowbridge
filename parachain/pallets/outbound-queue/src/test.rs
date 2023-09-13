@@ -190,7 +190,7 @@ fn process_message_yields_on_max_messages_per_block() {
 		let message = (0..100).map(|_| 1u8).collect::<Vec<u8>>();
 		let message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<Test>> = message.try_into().unwrap();
 
-		let mut meter = WeightMeter::new();
+		let mut meter = WeightMeter::max_limit();
 
 		assert_noop!(
 			OutboundQueue::process_message(
@@ -211,7 +211,7 @@ fn process_message_fails_on_overweight_message() {
 		let message = (0..100).map(|_| 1u8).collect::<Vec<u8>>();
 		let message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<Test>> = message.try_into().unwrap();
 
-		let mut meter = WeightMeter::with_limit(Weight::from_parts(1, 1));
+		let mut meter = WeightMeter::from_limit(Weight::from_parts(1, 1));
 
 		assert_noop!(
 			OutboundQueue::process_message(
