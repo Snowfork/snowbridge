@@ -183,11 +183,7 @@ pub mod mainnet {
     use sp_runtime::BuildStorage;
 
 	frame_support::construct_runtime!(
-		pub enum Test where
-			Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
-		{
+		pub enum Test {
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
 			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
