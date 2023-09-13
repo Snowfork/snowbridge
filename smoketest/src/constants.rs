@@ -21,4 +21,7 @@ pub const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842f
 
 // Agent for sibling parachain 1001
 pub const SIBLING_AGENT_ID: [u8; 32] =
-    hex!("2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793");
+	hex!("2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793");
+
+pub const BRIDGE_HUB_AGENT_ID: [u8; 32] =
+	hex!("05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6");
