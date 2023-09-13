@@ -33,7 +33,6 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system,
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		EthereumControl: snowbridge_control,
 	}
 );
@@ -56,29 +55,13 @@ impl frame_system::Config for Test {
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
-}
-
-impl pallet_balances::Config for Test {
-	type MaxLocks = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
-	type Balance = u64;
-	type RuntimeEvent = RuntimeEvent;
-	type DustRemoval = ();
-	type ExistentialDeposit = ConstU64<1>;
-	type AccountStore = System;
-	type WeightInfo = ();
-	type FreezeIdentifier = ();
-	type MaxFreezes = ();
-	type RuntimeHoldReason = ();
-	type MaxHolds = ();
 }
 
 parameter_types! {
@@ -201,19 +184,6 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 		Ok(MessageHash::zero())
 	}
-}
-
-parameter_types! {
-	pub const ControlPalletId: PalletId = PalletId(*b"snow/ctl");
-	// Multiplier based on gas report as follows,assume gas cost for a no-op operation is 1000
-	// | createAgent                                     | 839             | 184709 | 237187 | 237187 | 9       |
-	// | createChannel                                   | 399             | 31023  | 2829   | 75402  | 5       |
-	// | updateChannel                                   | 817             | 15121  | 3552   | 36762  | 5		 |
-	// | transferNativeFromAgent                         | 770             | 21730  | 21730  | 42691  | 2       |
-	pub const CreateAgentMultiplier: u128 = 237;
-	pub const CreateChannelMultiplier: u128 = 75;
-	pub const UpdateChannelMultiplier: u128 = 37;
-	pub const TransferNativeFromAgentMultiplier: u128 = 43;
 }
 
 impl snowbridge_control::Config for Test {

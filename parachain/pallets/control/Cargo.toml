@@ -37,7 +37,6 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 [dev-dependencies]
 hex = "0.4.1"
 hex-literal = { version = "0.4.1" }
-pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 [features]
 default = ["std"]

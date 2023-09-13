@@ -135,14 +135,18 @@ impl Command {
 	}
 
 	/// Compute gas cost
-	/// Todo: load by trait read from configurable storage
+	/// Todo: load by trait read from configurable storage,reference result from benchmark report
+	/// | createAgent        | 839             | 184709 | 237187 | 237187 | 9       |     
+	/// | createChannel      | 399 		    | 31023  | 2829   | 75402  | 5       |
+	/// | updateChannel 	| 817             | 15121  | 3552   | 36762  | 5     |     
+	/// | transferNativeFromAgent  | 770             | 21730  | 21730  | 42691  | 2       |
 	pub fn dispatch_gas(&self) -> u128 {
 		match self {
 			Command::AgentExecute { .. } => 500000,
-			Command::CreateAgent { .. } => 500000,
-			Command::CreateChannel { .. } => 500000,
-			Command::UpdateChannel { .. } => 500000,
-			Command::TransferNativeFromAgent { .. } => 500000,
+			Command::CreateAgent { .. } => 250000,
+			Command::CreateChannel { .. } => 75000,
+			Command::UpdateChannel { .. } => 36000,
+			Command::TransferNativeFromAgent { .. } => 42000,
 			// For sudo operations set as zero do not charge fees
 			Command::SetOperatingMode { .. } => 0,
 			Command::Upgrade { .. } => 0,
