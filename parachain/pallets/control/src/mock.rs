@@ -5,7 +5,6 @@ use frame_support::{
 	pallet_prelude::EnsureOrigin,
 	parameter_types,
 	traits::{ConstU16, ConstU64, OriginTrait},
-	PalletId,
 };
 
 #[cfg(feature = "runtime-benchmarks")]

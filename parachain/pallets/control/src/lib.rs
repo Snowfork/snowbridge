@@ -109,7 +109,6 @@ pub mod pallet {
 		AgentNotExist,
 		ChannelAlreadyCreated,
 		ChannelNotExist,
-		LocationToAgentAccountConversionFailed,
 	}
 
 	#[pallet::storage]
