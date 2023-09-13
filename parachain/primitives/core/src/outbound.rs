@@ -135,9 +135,10 @@ impl Command {
 	}
 
 	/// Compute gas cost
-	/// Todo: load by trait read from configurable storage,reference result from benchmark report
-	/// | Function Name    | min    | avg    | median | max    | # calls |
-	/// | createAgent    | 839    | 184709 | 237187 | 237187 | 9       |     
+	/// Todo: load by trait from configurable, reference gas from benchmark report
+	/// with some extra margin
+	/// | Function Name    | min    | avg    | median | max    | #
+	/// calls | | createAgent    | 839    | 184709 | 237187 | 237187 | 9       |     
 	/// | createChannel    | 399    | 31023  | 2829   | 75402  | 5       |
 	/// | updateChannel    | 817    | 15121  | 3552   | 36762  | 5     |     
 	/// | transferNativeFromAgent    | 770    | 21730  | 21730  | 42691  | 2       |
@@ -145,20 +146,27 @@ impl Command {
 		match self {
 			Command::AgentExecute { .. } => 500000,
 			Command::CreateAgent { .. } => 250000,
-			Command::CreateChannel { .. } => 75000,
-			Command::UpdateChannel { .. } => 36000,
-			Command::TransferNativeFromAgent { .. } => 42000,
+			Command::CreateChannel { .. } => 90000,
+			Command::UpdateChannel { .. } => 50000,
+			Command::TransferNativeFromAgent { .. } => 60000,
 			// For sudo operations set as zero do not charge fees
 			Command::SetOperatingMode { .. } => 0,
 			Command::Upgrade { .. } => 0,
 		}
 	}
 
+	// Todo: configurable gas price, for now set as 20 Gwei
+	// TBC: 4/5 to relayer and 1/5 left for protocol maintenance
+	pub fn reward(&self) -> u128 {
+		let gas_price: u128 = 20_000_000_000;
+		self.dispatch_gas() * gas_price * 4 / 5
+	}
+
 	/// ABI-encode the Command.
 	/// Returns a tuple of:
 	/// - Index of the command
 	/// - the ABI encoded command
-	pub fn abi_encode(&self) -> (u8, Vec<u8>, u128) {
+	pub fn abi_encode(&self) -> (u8, Vec<u8>, u128, u128) {
 		match self {
 			Command::AgentExecute { agent_id, command } => (
 				self.index(),
@@ -167,6 +175,7 @@ impl Command {
 					Token::Bytes(command.abi_encode()),
 				])]),
 				self.dispatch_gas(),
+				self.reward(),
 			),
 			Command::Upgrade { impl_address, impl_code_hash, params } => (
 				self.index(),
@@ -176,6 +185,7 @@ impl Command {
 					params.clone().map_or(Token::Bytes(vec![]), Token::Bytes),
 				])]),
 				self.dispatch_gas(),
+				self.reward(),
 			),
 			Command::CreateAgent { agent_id } => (
 				self.index(),
@@ -183,6 +193,7 @@ impl Command {
 					agent_id.as_bytes().to_owned(),
 				)])]),
 				self.dispatch_gas(),
+				self.reward(),
 			),
 			Command::CreateChannel { para_id, agent_id } => {
 				let para_id: u32 = (*para_id).into();
@@ -193,6 +204,7 @@ impl Command {
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 					])]),
 					self.dispatch_gas(),
+					self.reward(),
 				)
 			},
 			Command::UpdateChannel { para_id, mode, fee, reward } => {
@@ -206,12 +218,14 @@ impl Command {
 						Token::Uint(U256::from(*reward)),
 					])]),
 					self.dispatch_gas(),
+					self.reward(),
 				)
 			},
 			Command::SetOperatingMode { mode } => (
 				self.index(),
 				ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
 				self.dispatch_gas(),
+				self.reward(),
 			),
 			Command::TransferNativeFromAgent { agent_id, recipient, amount } => (
 				self.index(),
@@ -221,6 +235,7 @@ impl Command {
 					Token::Uint(U256::from(*amount)),
 				])]),
 				self.dispatch_gas(),
+				self.reward(),
 			),
 		}
 	}

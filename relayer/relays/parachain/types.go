@@ -88,6 +88,7 @@ type OutboundQueueMessage struct {
 	Command     uint8
 	Params      []byte
 	DispatchGas types.U128
+	Reward      types.U128
 }
 
 func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
@@ -97,6 +98,7 @@ func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 		Command:     m.Command,
 		Params:      m.Params,
 		DispatchGas: m.DispatchGas.Int,
+		Reward:      m.Reward.Int,
 	}
 }
 

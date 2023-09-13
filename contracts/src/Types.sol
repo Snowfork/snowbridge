@@ -43,6 +43,8 @@ struct InboundMessage {
     bytes params;
     /// @dev The gas to cover the cost of a dispatch call
     uint256 dispatchGas;
+    /// @dev The reward disbursed to message relayers for submitting inbound messages
+    uint256 reward;
 }
 
 enum OperatingMode {

@@ -81,6 +81,8 @@ pub struct PreparedMessage {
 	params: Vec<u8>,
 	/// Gas cost for the command
 	dispatch_gas: u128,
+	/// Relayer's Reward
+	reward: u128,
 }
 
 /// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
@@ -92,6 +94,7 @@ impl From<PreparedMessage> for Token {
 			Token::Uint(x.command.into()),
 			Token::Bytes(x.params.to_vec()),
 			Token::Uint(x.dispatch_gas.into()),
+			Token::Uint(x.reward.into()),
 		])
 	}
 }
@@ -319,7 +322,7 @@ pub mod pallet {
 
 			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
 
-			let (command, params, dispatch_gas) = enqueued_message.command.abi_encode();
+			let (command, params, dispatch_gas, reward) = enqueued_message.command.abi_encode();
 
 			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
@@ -329,6 +332,7 @@ pub mod pallet {
 				command,
 				params,
 				dispatch_gas,
+				reward,
 			};
 
 			// ABI-encode and hash the prepared message
@@ -380,7 +384,7 @@ pub mod pallet {
 
 		fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
 			// The inner payload should not be too large
-			let (_, payload, _) = message.command.abi_encode();
+			let (_, payload, _, _) = message.command.abi_encode();
 
 			// Create a message id for tracking progress in submission pipeline
 			let message_id: MessageHash = sp_io::hashing::blake2_256(&(message.encode())).into();

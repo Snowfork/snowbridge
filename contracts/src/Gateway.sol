@@ -115,8 +115,9 @@ contract Gateway is IGateway, IInitializable {
         // Reward the relayer from the agent contract
         // Expected to revert if the agent for the message origin does not have enough funds to reward the relayer.
         // In that case, the origin should top up the funds of their agent.
-        if (channel.reward > 0) {
-            _transferNativeFromAgent(channel.agent, payable(msg.sender), channel.reward);
+        uint256 reward = (message.reward > 0 ? message.reward : channel.reward);
+        if (reward > 0) {
+            _transferNativeFromAgent(channel.agent, payable(msg.sender), reward);
         }
 
         // Produce the commitment (message root) by applying the leaf proof to the message leaf
