@@ -211,7 +211,7 @@ pub mod pallet {
 			Channels::<T>::insert(para_id, ());
 
 			let message = Message {
-				origin: T::OwnParaId::get(),
+				origin: para_id,
 				command: Command::CreateChannel { agent_id, para_id },
 				location,
 			};
@@ -242,7 +242,7 @@ pub mod pallet {
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
 
 			let message = Message {
-				origin: T::OwnParaId::get(),
+				origin: para_id,
 				command: Command::UpdateChannel { para_id, mode, fee, reward },
 				location,
 			};
@@ -285,12 +285,12 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, _, location) = Self::convert_location(location)?;
+			let (agent_id, para_id, location) = Self::convert_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
 			let message = Message {
-				origin: T::OwnParaId::get(),
+				origin: para_id,
 				command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
 				location,
 			};

@@ -234,7 +234,7 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
-	/// The base fee to cover the cost of an no-op dispatchable on the Ethereum side
+	/// The base fee to cover the cost of an outbound message
 	#[pallet::storage]
 	pub type BaseFee<T: Config> = StorageValue<_, u128, ValueQuery>;
 
@@ -356,9 +356,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let agent_account = T::SovereignAccountOf::convert_location(&ticket.location)
 				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
-			let fee = BaseFee::<T>::get()
-				.saturating_mul(ticket.command.dispatch_gas())
-				.saturated_into::<BalanceOf<T>>();
+			let fee = BaseFee::<T>::get().saturated_into::<BalanceOf<T>>();
 			T::Token::transfer(
 				&agent_account,
 				&T::LocalPalletId::get().into_account_truncating(),
