@@ -136,11 +136,14 @@ where
 			SendError::Unroutable
 		})?;
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "message validated: location = {local_sub_location:?}, agent_id = '{agent_id:?}'");
+		let fees = OutboundQueue::estimate_fee(ticket.clone()).map_err(|err| {
+			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue estimate fee failed. {err:?}");
+			SendError::Fees
+		})?;
 
-		// TODO (SNO-581): Make sure we charge fees for message delivery. Currently this is set to
-		// zero.
-		Ok((ticket.encode(), MultiAssets::default()))
+		log::info!(target: "xcm::ethereum_blob_exporter", "message validated: location = {local_sub_location:?}, agent_id = '{agent_id:?}', fees = {fees:?}");
+
+		Ok((ticket.encode(), fees))
 	}
 
 	fn deliver(blob: Vec<u8>) -> Result<XcmHash, SendError> {
@@ -341,6 +344,10 @@ mod tests {
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Ok(MessageHash::zero())
 		}
+
+		fn estimate_fee(_ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+			Ok(MultiAssets::default())
+		}
 	}
 	struct MockErrOutboundQueue;
 	impl OutboundQueueTrait for MockErrOutboundQueue {
@@ -352,6 +359,10 @@ mod tests {
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Err(SubmitError::MessageTooLarge)
+		}
+
+		fn estimate_fee(_ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+			Ok(MultiAssets::default())
 		}
 	}
 

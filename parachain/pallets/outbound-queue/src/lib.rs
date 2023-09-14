@@ -39,7 +39,7 @@ use snowbridge_core::ParaId;
 use sp_core::{RuntimeDebug, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
-use xcm::prelude::MultiLocation;
+use xcm::prelude::{MultiAsset, MultiAssets, MultiLocation};
 use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::outbound::{
@@ -238,6 +238,10 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type BaseFee<T: Config> = StorageValue<_, u128, ValueQuery>;
 
+	/// The extra fee to cover the cost of ethereum execution
+	#[pallet::storage]
+	pub type ExtraFee<T: Config> = StorageValue<_, u128, ValueQuery>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
@@ -351,18 +355,22 @@ pub mod pallet {
 			Ok(true)
 		}
 
-		pub fn charge_fee(
+		pub fn charge_extra_fee(
 			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
 		) -> DispatchResult {
-			let agent_account = T::SovereignAccountOf::convert_location(&ticket.location)
-				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
-			let fee = BaseFee::<T>::get().saturated_into::<BalanceOf<T>>();
-			T::Token::transfer(
-				&agent_account,
-				&T::LocalPalletId::get().into_account_truncating(),
-				fee,
-				Preservation::Preserve,
-			)?;
+			if ticket.command.charge_upfront() {
+				let agent_account = T::SovereignAccountOf::convert_location(&ticket.location)
+					.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
+				let fee = ExtraFee::<T>::get()
+					.saturating_mul(ticket.command.dispatch_gas())
+					.saturated_into::<BalanceOf<T>>();
+				T::Token::transfer(
+					&agent_account,
+					&T::LocalPalletId::get().into_account_truncating(),
+					fee,
+					Preservation::Preserve,
+				)?;
+			}
 			Ok(())
 		}
 	}
@@ -418,9 +426,18 @@ pub mod pallet {
 				ticket.message.as_bounded_slice(),
 				AggregateMessageOrigin::Parachain(ticket.origin),
 			);
-			Self::charge_fee(&ticket).map_err(|_| SubmitError::ChargeFeeFailed)?;
+			Self::charge_extra_fee(&ticket).map_err(|_| SubmitError::ChargeFeeFailed)?;
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
+		}
+
+		fn estimate_fee(_ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+			// Todo: could be some dynamic fee with congestion into consideration, make it simple
+			// here
+			Ok(MultiAssets::from(vec![MultiAsset::from((
+				MultiLocation::default(),
+				BaseFee::<T>::get(),
+			))]))
 		}
 	}
 

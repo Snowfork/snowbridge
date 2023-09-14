@@ -183,6 +183,10 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 		Ok(MessageHash::zero())
 	}
+
+	fn estimate_fee(_ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+		Ok(MultiAssets::default())
+	}
 }
 
 impl snowbridge_control::Config for Test {

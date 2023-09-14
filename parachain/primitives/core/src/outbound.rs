@@ -8,13 +8,16 @@ pub type MessageHash = H256;
 
 /// A trait for enqueueing messages for delivery to Ethereum
 pub trait OutboundQueue {
-	type Ticket;
+	type Ticket: Clone;
 
 	/// Validate a message
 	fn validate(message: &Message) -> Result<Self::Ticket, SubmitError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
+
+	/// Estimate fee
+	fn estimate_fee(ticket: Self::Ticket) -> Result<MultiAssets, SubmitError>;
 }
 
 /// Default implementation of `OutboundQueue` for tests
@@ -27,6 +30,10 @@ impl OutboundQueue for () {
 
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 		Ok(MessageHash::zero())
+	}
+
+	fn estimate_fee(ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+		Ok(MultiAssets::default())
 	}
 }
 
@@ -53,7 +60,7 @@ pub struct Message {
 }
 
 use ethabi::Token;
-use xcm::prelude::MultiLocation;
+use xcm::prelude::{MultiAssets, MultiLocation};
 
 #[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum OperatingMode {
@@ -135,23 +142,22 @@ impl Command {
 	}
 
 	/// Compute gas cost
-	/// Todo: load by trait from configurable, reference gas from benchmark report
-	/// with some extra margin
+	/// reference gas from benchmark report with some extra margin
 	/// | Function Name    | min    | avg    | median | max    | #
 	/// calls | | createAgent    | 839    | 184709 | 237187 | 237187 | 9       |     
 	/// | createChannel    | 399    | 31023  | 2829   | 75402  | 5       |
 	/// | updateChannel    | 817    | 15121  | 3552   | 36762  | 5     |     
 	/// | transferNativeFromAgent    | 770    | 21730  | 21730  | 42691  | 2       |
+	/// | setOperatingMode                                | 682             | 12838  | 13240  | 24190  | 4       |
 	pub fn dispatch_gas(&self) -> u128 {
 		match self {
 			Command::AgentExecute { .. } => 500000,
-			Command::CreateAgent { .. } => 250000,
-			Command::CreateChannel { .. } => 90000,
+			Command::Upgrade { .. } => 500000,
+			Command::CreateAgent { .. } => 300000,
+			Command::CreateChannel { .. } => 100000,
 			Command::UpdateChannel { .. } => 50000,
 			Command::TransferNativeFromAgent { .. } => 60000,
-			// For sudo operations set as zero do not charge fees
-			Command::SetOperatingMode { .. } => 0,
-			Command::Upgrade { .. } => 0,
+			Command::SetOperatingMode { .. } => 30000,
 		}
 	}
 
@@ -160,6 +166,18 @@ impl Command {
 	pub fn reward(&self) -> u128 {
 		let gas_price: u128 = 20_000_000_000;
 		self.dispatch_gas() * gas_price * 4 / 5
+	}
+
+	pub fn charge_upfront(&self) -> bool {
+		match self {
+			Command::CreateAgent { .. } => true,
+			Command::AgentExecute { .. } => false,
+			Command::Upgrade { .. } => false,
+			Command::CreateChannel { .. } => false,
+			Command::UpdateChannel { .. } => false,
+			Command::TransferNativeFromAgent { .. } => false,
+			Command::SetOperatingMode { .. } => false,
+		}
 	}
 
 	/// ABI-encode the Command.
