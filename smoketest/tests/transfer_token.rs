@@ -4,7 +4,7 @@ use ethers::{
 };
 use std::{sync::Arc, time::Duration};
 use ethers::prelude::Middleware;
-use snowbridge_smoketest::contracts::weth9::WETH9;
+use snowbridge_smoketest::contracts::{i_gateway::IGateway, weth9::WETH9};
 use subxt::{
     tx::{PairSigner},
     OnlineClient, PolkadotConfig,
@@ -47,6 +47,12 @@ async fn transfer_token() {
 
     let weth_addr: Address = WETH_CONTRACT.into();
     let weth = WETH9::new(weth_addr, ethereum_client.clone());
+
+    let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
+    let gateway = IGateway::new(GATEWAY_PROXY_CONTRACT, ethereum_client.clone());
+    let agent_src = gateway.agent_of(todo!())
+        .await
+        .expect("could not get agent address");
 
     let assethub: OnlineClient<AssetHubConfig> =
         OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
@@ -100,7 +106,7 @@ async fn transfer_token() {
         {
             for transfer in transfers {
                 println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
-                assert_eq!(transfer.src, DESTINATION_ADDRESS.into());
+                assert_eq!(transfer.src, agent_src.into());
                 assert_eq!(transfer.dst, DESTINATION_ADDRESS.into());
                 assert_eq!(transfer.wad, amount.into());
                 transfer_event_found = true;
