@@ -23,3 +23,6 @@ pub const WETH_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A
 // Agent for sibling parachain 1001
 pub const SIBLING_AGENT_ID: [u8; 32] =
     hex!("2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793");
+// Agent for asset hub parachain 1000
+pub const ASSET_HUB_AGENT_ID: [u8; 32] =
+    hex!("72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4");

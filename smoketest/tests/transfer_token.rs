@@ -7,9 +7,9 @@ use ethers::prelude::Middleware;
 use snowbridge_smoketest::contracts::{i_gateway::IGateway, weth9::WETH9};
 use subxt::{
     tx::{PairSigner},
-    OnlineClient, PolkadotConfig,
+    OnlineClient,
 };
-use snowbridge_smoketest::constants::{ASSET_HUB_WS_URL, ETHEREUM_API, GATEWAY_PROXY_CONTRACT, WETH_CONTRACT};
+use snowbridge_smoketest::constants::{ASSET_HUB_WS_URL, ETHEREUM_API, GATEWAY_PROXY_CONTRACT, WETH_CONTRACT, ASSET_HUB_AGENT_ID};
 use sp_core::{sr25519::Pair, Pair as PairT};
 use snowbridge_smoketest::{
     contracts::weth9::{TransferFilter},
@@ -27,11 +27,9 @@ use snowbridge_smoketest::{
     },
 };
 use hex_literal::hex;
-use sp_core::bytes::to_hex;
-use subxt::tx::TxPayload;
 use assethub::api::bridge_transfer::calls::TransactionApi;
 use futures::StreamExt;
-use snowbridge_smoketest::helper::{AssetHubConfig, TemplateConfig};
+use snowbridge_smoketest::helper::AssetHubConfig;
 
 const DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 
@@ -48,9 +46,8 @@ async fn transfer_token() {
     let weth_addr: Address = WETH_CONTRACT.into();
     let weth = WETH9::new(weth_addr, ethereum_client.clone());
 
-    let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
     let gateway = IGateway::new(GATEWAY_PROXY_CONTRACT, ethereum_client.clone());
-    let agent_src = gateway.agent_of(todo!())
+    let agent_src = gateway.agent_of(ASSET_HUB_AGENT_ID)
         .await
         .expect("could not get agent address");
 
