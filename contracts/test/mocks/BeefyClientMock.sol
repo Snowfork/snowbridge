@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {BeefyClient} from "../../src/BeefyClient.sol";
+import {Counter} from "../../src/utils/Counter.sol";
 
 contract BeefyClientMock is BeefyClient {
     constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration)
@@ -9,8 +10,8 @@ contract BeefyClientMock is BeefyClient {
             randaoCommitDelay,
             randaoCommitExpiration,
             0,
-            BeefyClient.ValidatorSet(0, 0, 0x0),
-            BeefyClient.ValidatorSet(0, 0, 0x0)
+            BeefyClient.ValidatorSet(0, 0, 0x0, Counter.createCounter(0)),
+            BeefyClient.ValidatorSet(0, 0, 0x0, Counter.createCounter(0))
         )
     {}
 

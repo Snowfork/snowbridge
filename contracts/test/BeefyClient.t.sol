@@ -10,6 +10,7 @@ import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
+import {Counter} from "../../src/utils/Counter.sol";
 
 contract BeefyClientTest is Test {
     using stdJson for string;
@@ -91,8 +92,8 @@ contract BeefyClientTest is Test {
     function initialize(uint32 _setId) public returns (BeefyClient.Commitment memory) {
         currentSetId = _setId;
         nextSetId = _setId + 1;
-        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(currentSetId, setSize, root);
-        BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(nextSetId, setSize, root);
+        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(currentSetId, setSize, root, Counter.createCounter(setSize));
+        BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(nextSetId, setSize, root, Counter.createCounter(setSize));
         beefyClient.initialize_public(0, vset, nextvset);
         BeefyClient.PayloadItem[] memory payload = new BeefyClient.PayloadItem[](1);
         payload[0] = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));

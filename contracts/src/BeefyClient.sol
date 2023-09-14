@@ -6,6 +6,7 @@ import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
 import {Bits} from "./utils/Bits.sol";
+import {Counter} from "./utils/Counter.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
@@ -134,6 +135,7 @@ contract BeefyClient {
         uint128 id;
         uint128 length;
         bytes32 root;
+        uint256[] counters;
     }
 
     /* State */
@@ -147,12 +149,6 @@ contract BeefyClient {
 
     // Currently pending tickets for commitment submission
     mapping(bytes32 => Ticket) public tickets;
-
-    // The addresses of the validators used for submitInitial calls in the current session. Used to reset
-    // signatureCounters on session handover.
-    address[] public validatorsUsedThisSession;
-    // The number of times each validator signature has been used in the current session
-    mapping(address validatorAccount => uint256 count) public signatureCounters;
 
     /* Constants */
 
@@ -257,12 +253,14 @@ contract BeefyClient {
             revert NotEnoughClaims();
         }
 
-        // Record the validator address on the first use each session so that we can clear the mapping on handover
-        if (signatureCounters[proof.account] == uint256(0)) {
-            validatorsUsedThisSession.push(proof.account);
-        }
         // Increment the counter and store the previous value in the ticket
-        uint256 signatureCount = signatureCounters[proof.account]++;
+        uint16 signatureCount = Counter.get(vset.counters, proof.index);
+        Counter.set(vset.counters, proof.index, signatureCount+1);
+        if (commitment.validatorSetID == currentValidatorSet.id) {
+            currentValidatorSet.counters = vset.counters;
+        } else if (commitment.validatorSetID == nextValidatorSet.id) {
+            nextValidatorSet.counters = vset.counters;
+        }
 
         tickets[createTicketID(msg.sender, commitmentHash)] = Ticket(
             msg.sender,
@@ -348,10 +346,7 @@ contract BeefyClient {
             nextValidatorSet.id = leaf.nextAuthoritySetID;
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
-
-            for (uint256 i = 0; i < validatorsUsedThisSession.length; i++) {
-                delete signatureCounters[validatorsUsedThisSession[i]];
-            }
+            nextValidatorSet.counters = Counter.createCounter(nextValidatorSet.length);
         }
 
         uint64 newBeefyBlock = commitment.blockNumber;
