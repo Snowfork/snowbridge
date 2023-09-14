@@ -5,9 +5,9 @@ authors = [ "Snowfork <contact@snowfork.com>" ]
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0.164", optional = true, features = [ "derive" ] }
-codec = { package = "parity-scale-codec", version = "3.1.5", default-features = false }
-scale-info = { version = "2.7.0", default-features = false, features = [ "derive" ] }
+serde = { version = "1.0.188", optional = true, features = [ "derive" ] }
+codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false }
+scale-info = { version = "2.9.0", default-features = false, features = [ "derive" ] }
 snowbridge-ethereum = { path = "../ethereum", default-features = false }
 
 polkadot-primitives = { path = "../../../polkadot-sdk/polkadot/primitives", default-features = false }
