@@ -81,7 +81,7 @@ pub struct PreparedMessage {
 	params: Vec<u8>,
 	/// Gas cost for the command
 	dispatch_gas: u128,
-	/// Relayer's Reward
+	/// Reward in ether for delivering this message
 	reward: u128,
 }
 
