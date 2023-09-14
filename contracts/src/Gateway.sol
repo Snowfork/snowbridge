@@ -26,6 +26,7 @@ contract Gateway is IGateway, IInitializable {
 
     // After message dispatch, there should be some gas left over for post dispatch logic
     uint256 internal constant BUFFER_GAS = 32_000;
+    uint256 internal immutable DISPATCH_GAS;
     address internal immutable AGENT_EXECUTOR;
 
     // Verification state
@@ -68,6 +69,7 @@ contract Gateway is IGateway, IInitializable {
     constructor(
         address beefyClient,
         address agentExecutor,
+        uint256 dispatchGas,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
         ParaID assetHubParaID,
@@ -75,14 +77,16 @@ contract Gateway is IGateway, IInitializable {
         bytes2 createTokenCallID
     ) {
         if (
-            bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0 || assetHubParaID == ParaID.wrap(0)
-                || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID || bridgeHubAgentID == assetHubAgentID
+            dispatchGas == 0 || bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0
+                || assetHubParaID == ParaID.wrap(0) || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID
+                || bridgeHubAgentID == assetHubAgentID
         ) {
             revert InvalidConstructorParams();
         }
 
         BEEFY_CLIENT = beefyClient;
         AGENT_EXECUTOR = agentExecutor;
+        DISPATCH_GAS = dispatchGas;
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
@@ -133,7 +137,8 @@ contract Gateway is IGateway, IInitializable {
         // Otherwise malicious relayers can break the bridge by allowing the message handlers below to run out gas and fail silently.
         // In this scenario case, the channel's state would have been updated to accept the message (by virtue of the nonce increment), yet the actual message
         // dispatch would have failed
-        if (gasleft() < message.dispatchGas + BUFFER_GAS) {
+        uint256 dispatchGas = (message.dispatchGas > 0 ? message.dispatchGas : DISPATCH_GAS);
+        if (gasleft() < dispatchGas + BUFFER_GAS) {
             revert NotEnoughGas();
         }
 
@@ -141,37 +146,37 @@ contract Gateway is IGateway, IInitializable {
 
         // Dispatch message to a handler
         if (message.command == Command.AgentExecute) {
-            try Gateway(this).agentExecute{gas: message.dispatchGas}(message.params) {}
+            try Gateway(this).agentExecute{gas: dispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.CreateAgent) {
-            try Gateway(this).createAgent{gas: message.dispatchGas}(message.params) {}
+            try Gateway(this).createAgent{gas: dispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.CreateChannel) {
-            try Gateway(this).createChannel{gas: message.dispatchGas}(message.params) {}
+            try Gateway(this).createChannel{gas: dispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.UpdateChannel) {
-            try Gateway(this).updateChannel{gas: message.dispatchGas}(message.params) {}
+            try Gateway(this).updateChannel{gas: dispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.SetOperatingMode) {
-            try Gateway(this).setOperatingMode{gas: message.dispatchGas}(message.params) {}
+            try Gateway(this).setOperatingMode{gas: dispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: message.dispatchGas}(message.params) {}
+            try Gateway(this).transferNativeFromAgent{gas: dispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.Upgrade) {
-            try Gateway(this).upgrade{gas: message.dispatchGas}(message.params) {}
+            try Gateway(this).upgrade{gas: dispatchGas}(message.params) {}
             catch {
                 success = false;
             }

@@ -50,6 +50,7 @@ contract DeployScript is Script {
         Gateway gatewayLogic = new Gateway(
             address(beefyClient),
             address(executor),
+            vm.envUint("DISPATCH_GAS"),
             bridgeHubParaID,
             bridgeHubAgentID,
             assetHubParaID,

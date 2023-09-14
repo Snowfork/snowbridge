@@ -12,6 +12,7 @@ contract GatewayMock is Gateway {
     constructor(
         address beefyClient,
         address agentExecutor,
+        uint256 dispatchGas,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubHubAgentID,
         ParaID assetHubParaID,
@@ -21,6 +22,7 @@ contract GatewayMock is Gateway {
         Gateway(
             beefyClient,
             agentExecutor,
+            dispatchGas,
             bridgeHubParaID,
             bridgeHubHubAgentID,
             assetHubParaID,

@@ -73,6 +73,7 @@ contract GatewayTest is Test {
         gatewayLogic = new GatewayMock(
             address(0),
             address(executor),
+            dispatch_gas,
             bridgeHubParaID,
             bridgeHubAgentID,
             assetHubParaID,
