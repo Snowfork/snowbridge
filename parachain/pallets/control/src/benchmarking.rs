@@ -8,8 +8,7 @@ use crate::Pallet as SnowbridgeControl;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 use snowbridge_core::outbound::OperatingMode;
-use sp_core::Get;
-use sp_core::{H160, H256};
+use sp_core::{Get, H160, H256};
 
 #[benchmarks]
 mod benchmarks {

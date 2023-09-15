@@ -3,13 +3,17 @@
 use crate::{mock::*, *};
 use frame_support::{assert_ok, traits::EnsureOrigin};
 use hex_literal::hex;
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_runtime::{AccountId32, DispatchError::BadOrigin};
-use sp_core::H160;
-use xcm::prelude::AccountKey20;
-use xcm::v3::{Junction, MultiLocation};
-use xcm::v3::Junction::{Parachain, PalletInstance};
-use xcm::v3::Junctions::{X1, X2};
+use xcm::{
+	prelude::AccountKey20,
+	v3::{
+		Junction,
+		Junction::{PalletInstance, Parachain},
+		Junctions::{X1, X2},
+		MultiLocation,
+	},
+};
 
 #[test]
 fn create_agent_with_unknown_origin_yields_bad_origin() {

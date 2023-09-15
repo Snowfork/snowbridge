@@ -6,8 +6,8 @@ use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use snowbridge_ethereum::Log;
 use sp_core::H256;
+use sp_runtime::{DispatchError, RuntimeDebug};
 use sp_std::vec::Vec;
-use sp_runtime::{RuntimeDebug, DispatchError};
 
 /// A trait for verifying inbound messages from Ethereum.
 ///

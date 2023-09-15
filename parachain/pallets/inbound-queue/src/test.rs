@@ -3,15 +3,14 @@
 use super::*;
 
 use frame_support::{
-	assert_noop, assert_ok,
-	parameter_types,
+	assert_noop, assert_ok, parameter_types,
 	traits::{ConstU64, Everything},
 };
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	ArithmeticError, MultiSignature, DispatchError
+	ArithmeticError, DispatchError, MultiSignature,
 };
 use sp_std::convert::From;
 
@@ -21,7 +20,7 @@ use snowbridge_ethereum::Log;
 use sp_runtime::BuildStorage;
 
 use hex_literal::hex;
-use xcm::v3::{SendXcm, MultiAssets, prelude::*};
+use xcm::v3::{prelude::*, MultiAssets, SendXcm};
 
 use crate::{self as inbound_queue, envelope::Envelope, Error, Event as InboundQueueEvent};
 
@@ -145,19 +144,19 @@ impl SendXcm for MockXcmSender {
 	type Ticket = ();
 
 	fn validate(
-			dest: &mut Option<MultiLocation>,
-			_: &mut Option<xcm::v3::Xcm<()>>,
-		) -> xcm::v3::SendResult<Self::Ticket> {
-			match dest {
-				Some(MultiLocation { parents: _, interior }) => {
-					if let X1(Parachain(1001)) = interior {
-						return Err(XcmpSendError::NotApplicable);
-					}
-					Ok(((), MultiAssets::default()))
+		dest: &mut Option<MultiLocation>,
+		_: &mut Option<xcm::v3::Xcm<()>>,
+	) -> xcm::v3::SendResult<Self::Ticket> {
+		match dest {
+			Some(MultiLocation { parents: _, interior }) => {
+				if let X1(Parachain(1001)) = interior {
+					return Err(XcmpSendError::NotApplicable)
 				}
-				_ => Ok(((), MultiAssets::default()))
-			}
+				Ok(((), MultiAssets::default()))
+			},
+			_ => Ok(((), MultiAssets::default())),
 		}
+	}
 
 	fn deliver(_: Self::Ticket) -> core::result::Result<XcmHash, XcmpSendError> {
 		Ok(H256::zero().into())
@@ -261,7 +260,7 @@ fn test_submit_happy_path() {
 		expect_events(vec![InboundQueueEvent::MessageReceived {
 			dest: dest_para,
 			nonce: 1,
-			xcm_hash: H256::zero().into()
+			xcm_hash: H256::zero().into(),
 		}
 		.into()]);
 	});

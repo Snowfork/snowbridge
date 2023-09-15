@@ -15,11 +15,12 @@ mod tests;
 mod benchmarking;
 
 pub mod weights;
-pub use pallet::*;
 pub use crate::weights::WeightInfo;
+pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use crate::WeightInfo;
 	use frame_support::{pallet_prelude::*, traits::EnsureOrigin};
 	use frame_system::pallet_prelude::*;
 	use log;
@@ -29,13 +30,12 @@ pub mod pallet {
 	};
 	use sp_core::{H160, H256};
 	use sp_runtime::traits::Hash;
-	use xcm::v3::Junction::Parachain;
-	use xcm::v3::Junctions::X1;
-	use xcm::v3::MultiLocation;
-	use xcm_executor::traits::ConvertLocation;
 	use sp_std::prelude::*;
-	use xcm::prelude::*;
-	use crate::WeightInfo;
+	use xcm::{
+		prelude::*,
+		v3::{Junction::Parachain, Junctions::X1, MultiLocation},
+	};
+	use xcm_executor::traits::ConvertLocation;
 
 	pub const LOG_TARGET: &str = "snowbridge-control";
 

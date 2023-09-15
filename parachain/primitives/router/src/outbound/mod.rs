@@ -6,6 +6,7 @@ use core::slice::Iter;
 use codec::{Decode, Encode};
 
 use frame_support::{ensure, traits::Get};
+use log;
 use snowbridge_core::outbound::{
 	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
 };
@@ -14,7 +15,6 @@ use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
 use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 use xcm_executor::traits::{ConvertLocation, ExportXcm};
-use log;
 
 pub type AgentHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 

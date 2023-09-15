@@ -5,9 +5,7 @@ use frame_support::parameter_types;
 use pallet_timestamp;
 use primitives::{Fork, ForkVersions};
 use sp_core::H256;
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup},
-};
+use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 
 #[cfg(not(feature = "beacon-spec-mainnet"))]
 pub mod minimal {
@@ -17,8 +15,8 @@ pub mod minimal {
 	use hex_literal::hex;
 	use primitives::CompactExecutionHeader;
 	use snowbridge_core::inbound::{Message, Proof};
-	use std::{fs::File, path::PathBuf};
 	use sp_runtime::BuildStorage;
+	use std::{fs::File, path::PathBuf};
 
 	type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -180,7 +178,7 @@ pub mod mainnet {
 	use super::*;
 
 	type Block = frame_system::mocking::MockBlock<Test>;
-    use sp_runtime::BuildStorage;
+	use sp_runtime::BuildStorage;
 
 	frame_support::construct_runtime!(
 		pub enum Test {

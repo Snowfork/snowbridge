@@ -11,10 +11,9 @@ use frame_support::{
 use sp_core::{H160, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
-	BoundedVec, MultiSignature,
+	BoundedVec, BuildStorage, MultiSignature,
 };
 use sp_std::convert::From;
-use sp_runtime::BuildStorage;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
