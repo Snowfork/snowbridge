@@ -41,6 +41,8 @@ build_relaychain() {
         rebuild_relaychain
     fi
     mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
+    mkdir -p $output_bin_dir && cp "$relaychain_dir/release/polkadot-execute-worker" "$output_bin_dir"/polkadot-execute-worker
+    mkdir -p $output_bin_dir && cp "$relaychain_dir/release/polkadot-prepare-worker" "$output_bin_dir"/polkadot-prepare-worker
 }
 
 build_relaychain_from_source() {
@@ -48,7 +50,8 @@ build_relaychain_from_source() {
 
     ./scripts/init.sh
     cargo build --release
-    #mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
+    mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
+    mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
     popd
 }
 
