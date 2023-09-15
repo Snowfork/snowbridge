@@ -26,7 +26,6 @@ contract Gateway is IGateway, IInitializable {
 
     // After message dispatch, there should be some gas left over for post dispatch logic
     uint256 internal constant BUFFER_GAS = 32_000;
-    uint256 internal immutable DISPATCH_GAS;
     address internal immutable AGENT_EXECUTOR;
 
     // Verification state
@@ -69,7 +68,6 @@ contract Gateway is IGateway, IInitializable {
     constructor(
         address beefyClient,
         address agentExecutor,
-        uint256 dispatchGas,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
         ParaID assetHubParaID,
@@ -77,16 +75,14 @@ contract Gateway is IGateway, IInitializable {
         bytes2 createTokenCallID
     ) {
         if (
-            dispatchGas == 0 || bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0
-                || assetHubParaID == ParaID.wrap(0) || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID
-                || bridgeHubAgentID == assetHubAgentID
+            bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0 || assetHubParaID == ParaID.wrap(0)
+                || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID || bridgeHubAgentID == assetHubAgentID
         ) {
             revert InvalidConstructorParams();
         }
 
         BEEFY_CLIENT = beefyClient;
         AGENT_EXECUTOR = agentExecutor;
-        DISPATCH_GAS = dispatchGas;
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
@@ -119,9 +115,8 @@ contract Gateway is IGateway, IInitializable {
         // Reward the relayer from the agent contract
         // Expected to revert if the agent for the message origin does not have enough funds to reward the relayer.
         // In that case, the origin should top up the funds of their agent.
-        uint256 reward = (message.reward > 0 ? message.reward : channel.reward);
-        if (reward > 0) {
-            _transferNativeFromAgent(channel.agent, payable(msg.sender), reward);
+        if (message.reward > 0) {
+            _transferNativeFromAgent(channel.agent, payable(msg.sender), message.reward);
         }
 
         // Produce the commitment (message root) by applying the leaf proof to the message leaf
@@ -137,7 +132,7 @@ contract Gateway is IGateway, IInitializable {
         // Otherwise malicious relayers can break the bridge by allowing the message handlers below to run out gas and fail silently.
         // In this scenario case, the channel's state would have been updated to accept the message (by virtue of the nonce increment), yet the actual message
         // dispatch would have failed
-        uint256 dispatchGas = (message.dispatchGas > 0 ? message.dispatchGas : DISPATCH_GAS);
+        uint256 dispatchGas = message.dispatchGas;
         if (gasleft() < dispatchGas + BUFFER_GAS) {
             revert NotEnoughGas();
         }
@@ -203,9 +198,9 @@ contract Gateway is IGateway, IInitializable {
         return (ch.inboundNonce, ch.outboundNonce);
     }
 
-    function channelFeeRewardOf(ParaID paraID) external view returns (uint256, uint256) {
+    function channelFeeOf(ParaID paraID) external view returns (uint256) {
         Channel storage ch = _ensureChannel(paraID);
-        return (ch.fee, ch.reward);
+        return ch.fee;
     }
 
     function agentOf(bytes32 agentID) external view returns (address) {
@@ -293,7 +288,6 @@ contract Gateway is IGateway, IInitializable {
         ch.inboundNonce = 0;
         ch.outboundNonce = 0;
         ch.fee = $.defaultFee;
-        ch.reward = $.defaultReward;
 
         emit ChannelCreated(params.paraID);
     }
@@ -326,7 +320,6 @@ contract Gateway is IGateway, IInitializable {
 
         ch.mode = params.mode;
         ch.fee = params.fee;
-        ch.reward = params.reward;
 
         emit ChannelUpdated(params.paraID);
     }
@@ -531,14 +524,13 @@ contract Gateway is IGateway, IInitializable {
             revert Unauthorized();
         }
 
-        (uint256 defaultFee, uint256 defaultReward, uint256 registerTokenFee, uint256 sendTokenFee) =
-            abi.decode(data, (uint256, uint256, uint256, uint256));
+        (uint256 defaultFee, uint256 registerTokenFee, uint256 sendTokenFee) =
+            abi.decode(data, (uint256, uint256, uint256));
 
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
         $.mode = OperatingMode.Normal;
         $.defaultFee = defaultFee;
-        $.defaultReward = defaultReward;
 
         // Initialize an agent & channel for BridgeHub
         address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
@@ -548,8 +540,7 @@ contract Gateway is IGateway, IInitializable {
             agent: bridgeHubAgent,
             inboundNonce: 0,
             outboundNonce: 0,
-            fee: defaultFee,
-            reward: defaultReward
+            fee: defaultFee
         });
 
         // Initialize an agent & channel for AssetHub
@@ -560,8 +551,7 @@ contract Gateway is IGateway, IInitializable {
             agent: assetHubAgent,
             inboundNonce: 0,
             outboundNonce: 0,
-            fee: defaultFee,
-            reward: defaultReward
+            fee: defaultFee
         });
 
         Assets.initialize(registerTokenFee, sendTokenFee);

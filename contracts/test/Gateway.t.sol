@@ -73,7 +73,6 @@ contract GatewayTest is Test {
         gatewayLogic = new GatewayMock(
             address(0),
             address(executor),
-            dispatch_gas,
             bridgeHubParaID,
             bridgeHubAgentID,
             assetHubParaID,
@@ -84,7 +83,6 @@ contract GatewayTest is Test {
             address(gatewayLogic),
             abi.encode(
                 defaultFee,
-                defaultReward,
                 registerNativeTokenFee,
                 sendNativeTokenFee
             )
@@ -372,9 +370,8 @@ contract GatewayTest is Test {
         emit ChannelUpdated(assetHubParaID);
         GatewayMock(address(gateway)).updateChannelPublic(params);
 
-        (uint256 fee, uint256 reward) = IGateway(address(gateway)).channelFeeRewardOf(assetHubParaID);
+        (uint256 fee) = IGateway(address(gateway)).channelFeeOf(assetHubParaID);
         assertEq(fee, 2 ether);
-        assertEq(reward, 2 ether);
     }
 
     function testUpdateChannelFailDoesNotExist() public {
@@ -674,9 +671,8 @@ contract GatewayTest is Test {
         OperatingMode channelMode = gw.channelOperatingModeOf(bridgeHubParaID);
         assertEq(uint256(channelMode), 0);
 
-        (uint256 fee, uint256 reward) = gw.channelFeeRewardOf(bridgeHubParaID);
+        (uint256 fee) = gw.channelFeeOf(bridgeHubParaID);
         assertEq(fee, 1 ether);
-        assertEq(reward, 1 ether);
 
         (uint64 inbound, uint64 outbound) = gw.channelNoncesOf(bridgeHubParaID);
         assertEq(inbound, 0);
