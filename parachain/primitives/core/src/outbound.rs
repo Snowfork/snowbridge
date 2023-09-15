@@ -161,7 +161,19 @@ impl Command {
 		}
 	}
 
-	pub fn upfront_charge_required(&self) -> bool {
+	pub fn base_fee_required(&self) -> bool {
+		match self {
+			Command::CreateAgent { .. } => true,
+			Command::CreateChannel { .. } => true,
+			Command::AgentExecute { .. } => true,
+			Command::UpdateChannel { .. } => true,
+			Command::TransferNativeFromAgent { .. } => true,
+			Command::Upgrade { .. } => false,
+			Command::SetOperatingMode { .. } => false,
+		}
+	}
+
+	pub fn extra_fee_required(&self) -> bool {
 		match self {
 			Command::CreateAgent { .. } => true,
 			Command::CreateChannel { .. } => true,
