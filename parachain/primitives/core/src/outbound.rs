@@ -164,9 +164,9 @@ impl Command {
 	pub fn upfront_charge_required(&self) -> bool {
 		match self {
 			Command::CreateAgent { .. } => true,
+			Command::CreateChannel { .. } => true,
 			Command::AgentExecute { .. } => false,
 			Command::Upgrade { .. } => false,
-			Command::CreateChannel { .. } => false,
 			Command::UpdateChannel { .. } => false,
 			Command::TransferNativeFromAgent { .. } => false,
 			Command::SetOperatingMode { .. } => false,

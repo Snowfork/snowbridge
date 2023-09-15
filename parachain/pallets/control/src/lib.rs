@@ -211,7 +211,7 @@ pub mod pallet {
 			Channels::<T>::insert(para_id, ());
 
 			let message = Message {
-				origin: para_id,
+				origin: T::OwnParaId::get(),
 				command: Command::CreateChannel { agent_id, para_id },
 				location,
 			};
