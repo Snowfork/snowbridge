@@ -148,7 +148,7 @@ impl Command {
 	/// | createChannel    | 399    | 31023  | 2829   | 75402  | 5       |
 	/// | updateChannel    | 817    | 15121  | 3552   | 36762  | 5     |     
 	/// | transferNativeFromAgent    | 770    | 21730  | 21730  | 42691  | 2       |
-	/// | setOperatingMode                                | 682             | 12838  | 13240  | 24190  | 4       |
+	/// | setOperatingMode    | 682    | 12838  | 13240  |  24190  | 4       |
 	pub fn dispatch_gas(&self) -> u128 {
 		match self {
 			Command::AgentExecute { .. } => 500000,
