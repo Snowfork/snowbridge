@@ -23,13 +23,13 @@ rebuild_cumulus() {
 }
 
 build_cumulus_from_source() {
-    pushd $root_dir/cumulus
+    pushd $root_dir/polkadot-sdk/cumulus
     if [[ "$active_spec" == "minimal" ]]; then
         cargo build --release --bin polkadot-parachain
     else
         cargo build --features beacon-spec-mainnet --release --bin polkadot-parachain
     fi
-    cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
+    cp ../target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
     cargo build --release --locked --bin parachain-template-node
     cp target/release/parachain-template-node $output_bin_dir/parachain-template-node
     popd
@@ -41,6 +41,15 @@ build_relaychain() {
         rebuild_relaychain
     fi
     mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
+}
+
+build_relaychain_from_source() {
+    pushd $root_dir/polkadot-sdk/polkadot
+
+    ./scripts/init.sh
+    cargo build --release
+    #mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
+    popd
 }
 
 rebuild_relaychain() {
@@ -71,7 +80,7 @@ install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
     build_cumulus_from_source
-    build_relaychain
+    build_relaychain_from_source
     build_contracts
     build_relayer
 }
