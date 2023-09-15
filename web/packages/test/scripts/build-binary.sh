@@ -31,7 +31,7 @@ build_cumulus_from_source() {
     fi
     cp ../target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
     cargo build --release --locked --bin parachain-template-node
-    cp target/release/parachain-template-node $output_bin_dir/parachain-template-node
+    cp ../target/release/parachain-template-node $output_bin_dir/parachain-template-node
     popd
 }
 
