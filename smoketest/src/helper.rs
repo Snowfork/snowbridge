@@ -47,7 +47,7 @@ use subxt::{
 	blocks::ExtrinsicEvents,
 	events::StaticEvent,
 	tx::{PairSigner, TxPayload},
-	Config, OnlineClient, PolkadotConfig,
+	Config, OnlineClient, PolkadotConfig, SubstrateConfig,
 };
 use templateXcm::{
 	v3::{junction::Junction, junctions::Junctions, multilocation::MultiLocation},
@@ -66,6 +66,20 @@ impl Config for TemplateConfig {
 	type Hasher = <PolkadotConfig as Config>::Hasher;
 	type Header = <PolkadotConfig as Config>::Header;
 	type ExtrinsicParams = <PolkadotConfig as Config>::ExtrinsicParams;
+}
+
+/// Custom config that works with Statemint
+pub enum AssetHubConfig {}
+
+impl Config for AssetHubConfig {
+	type Index = <PolkadotConfig as Config>::Index;
+	type Hash = <PolkadotConfig as Config>::Hash;
+	type AccountId = <PolkadotConfig as Config>::AccountId;
+	type Address = <PolkadotConfig as Config>::Address;
+	type Signature = <PolkadotConfig as Config>::Signature;
+	type Hasher = <PolkadotConfig as Config>::Hasher;
+	type Header = <PolkadotConfig as Config>::Header;
+	type ExtrinsicParams = <SubstrateConfig as Config>::ExtrinsicParams;
 }
 
 pub struct TestClients {
