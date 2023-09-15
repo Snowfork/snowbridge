@@ -7,7 +7,7 @@ extend-exclude = [
     "**/*ffi*.js",
     "**/*mock*.rs",
     "**/*data*.rs",
-    "cumulus/**",
+    "polkadot-sdk/**",
     "smoketest/src/parachains",
     "smoketest/src/contracts",
 ]
