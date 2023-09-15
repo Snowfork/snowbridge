@@ -189,6 +189,10 @@ pub mod pallet {
 		},
 		/// Set base fee
 		BaseFeeSet { amount: u128 },
+		/// Set swap ratio
+		SwapRatioSet { ratio: u128 },
+		/// Set gas price
+		GasPriceSet { price: u128 },
 	}
 
 	#[pallet::error]
@@ -234,13 +238,32 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
-	/// The base fee to cover the cost of an outbound message
+	/// The base fee to cover the cost of submitting an outbound message
+	/// default 0.1 DOT
+	#[pallet::type_value]
+	pub fn DefaultBaseFee() -> u128 {
+		1_000_000_000
+	}
 	#[pallet::storage]
-	pub type BaseFee<T: Config> = StorageValue<_, u128, ValueQuery>;
+	pub type BaseFee<T: Config> = StorageValue<_, u128, ValueQuery, DefaultBaseFee>;
 
-	/// The extra fee to cover the cost of ethereum execution
+	/// The swap ratio from Ether->DOT from https://www.coingecko.com/en/coins/polkadot/eth
+	/// default 1:400
+	#[pallet::type_value]
+	pub fn DefaultSwapRatio() -> u128 {
+		400
+	}
 	#[pallet::storage]
-	pub type ExtraFee<T: Config> = StorageValue<_, u128, ValueQuery>;
+	pub type SwapRatio<T: Config> = StorageValue<_, u128, ValueQuery, DefaultSwapRatio>;
+
+	/// The gas price to calculate the reward in Ether from https://etherscan.io/gastracker
+	/// default 15 gwei
+	#[pallet::type_value]
+	pub fn DefaultGasPrice() -> u128 {
+		15_000_000_000
+	}
+	#[pallet::storage]
+	pub type GasPrice<T: Config> = StorageValue<_, u128, ValueQuery, DefaultGasPrice>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
@@ -281,14 +304,36 @@ pub mod pallet {
 			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
 		}
 
-		/// Set base fee for a no-op command on ethereum side.
-		/// May only be called either by root
+		/// Set base fee for submitting a message.
+		/// May only be called by root
 		#[pallet::call_index(2)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_base_fee(origin: OriginFor<T>, amount: u128) -> DispatchResult {
 			ensure_root(origin)?;
 			BaseFee::<T>::put(amount);
 			Self::deposit_event(Event::BaseFeeSet { amount });
+			Ok(())
+		}
+
+		/// Set swap ratio from Ether to DOT.
+		/// May only be called by root
+		#[pallet::call_index(3)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_swap_ratio(origin: OriginFor<T>, ratio: u128) -> DispatchResult {
+			ensure_root(origin)?;
+			SwapRatio::<T>::put(ratio);
+			Self::deposit_event(Event::SwapRatioSet { ratio });
+			Ok(())
+		}
+
+		/// Set gas price.
+		/// May only be called by root
+		#[pallet::call_index(4)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_gas_price(origin: OriginFor<T>, price: u128) -> DispatchResult {
+			ensure_root(origin)?;
+			GasPrice::<T>::put(price);
+			Self::deposit_event(Event::GasPriceSet { price });
 			Ok(())
 		}
 	}
@@ -326,7 +371,10 @@ pub mod pallet {
 
 			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
 
-			let (command, params, dispatch_gas, reward) = enqueued_message.command.abi_encode();
+			let (command, params, dispatch_gas) = enqueued_message.command.abi_encode();
+
+			// TBC: 4/5 to relayer and 1/5 left for protocol maintenance
+			let reward = dispatch_gas * GasPrice::<T>::get() * 4 / 5;
 
 			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
@@ -355,22 +403,40 @@ pub mod pallet {
 			Ok(true)
 		}
 
-		pub fn charge_extra_fee(
+		pub fn estimate_extra_fee(
+			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
+		) -> Option<u128> {
+			match ticket.command.upfront_charge_required() {
+				true => Some(
+					ticket
+						.command
+						.dispatch_gas()
+						.saturating_mul(GasPrice::<T>::get())
+						// Div by precision(decimal 10 for DOT and 18 for Ether)
+						.saturating_div(100_000_000)
+						.saturating_mul(SwapRatio::<T>::get()),
+				),
+				false => None,
+			}
+		}
+
+		pub fn charge_fees(
 			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
 		) -> DispatchResult {
-			if ticket.command.charge_upfront() {
-				let agent_account = T::SovereignAccountOf::convert_location(&ticket.location)
-					.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
-				let fee = ExtraFee::<T>::get()
-					.saturating_mul(ticket.command.dispatch_gas())
-					.saturated_into::<BalanceOf<T>>();
-				T::Token::transfer(
-					&agent_account,
-					&T::LocalPalletId::get().into_account_truncating(),
-					fee,
-					Preservation::Preserve,
-				)?;
-			}
+			let agent_account = T::SovereignAccountOf::convert_location(&ticket.location)
+				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
+			// charge base fee here before https://github.com/paritytech/polkadot-sdk/pull/1234
+			// There is nuance difference between `xcm-fees-manager` because we charge from the
+			// agent account while they charge from the parachain account
+			let base_fee = BaseFee::<T>::get();
+			let extra_fee = Self::estimate_extra_fee(ticket).unwrap_or_default();
+			let total_fee = base_fee.saturating_add(extra_fee).saturated_into::<BalanceOf<T>>();
+			T::Token::transfer(
+				&agent_account,
+				&T::LocalPalletId::get().into_account_truncating(),
+				total_fee,
+				Preservation::Preserve,
+			)?;
 			Ok(())
 		}
 	}
@@ -390,7 +456,7 @@ pub mod pallet {
 
 		fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
 			// The inner payload should not be too large
-			let (_, payload, _, _) = message.command.abi_encode();
+			let (_, payload, _) = message.command.abi_encode();
 
 			// Create a message id for tracking progress in submission pipeline
 			let message_id: MessageHash = sp_io::hashing::blake2_256(&(message.encode())).into();
@@ -426,17 +492,20 @@ pub mod pallet {
 				ticket.message.as_bounded_slice(),
 				AggregateMessageOrigin::Parachain(ticket.origin),
 			);
-			Self::charge_extra_fee(&ticket).map_err(|_| SubmitError::ChargeFeeFailed)?;
+			Self::charge_fees(&ticket).map_err(|_| SubmitError::ChargeFeeFailed)?;
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
 		}
 
-		fn estimate_fee(_ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
-			// Todo: could be some dynamic fee with congestion into consideration, make it simple
-			// here
+		fn estimate_fee(ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+			// base fee to cover the submit cost could also be some dynamic value with congestion
+			// into consideration so we load from configurable storage
+			// extra fee to cover the gas cost on Ethereum side
+			let base_fee = BaseFee::<T>::get();
+			let extra_fee = Self::estimate_extra_fee(&ticket).unwrap_or_default();
 			Ok(MultiAssets::from(vec![MultiAsset::from((
-				MultiLocation::default(),
-				BaseFee::<T>::get(),
+				MultiLocation::parent(),
+				base_fee.saturating_add(extra_fee),
 			))]))
 		}
 	}

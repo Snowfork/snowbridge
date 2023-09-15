@@ -4,7 +4,7 @@ use super::*;
 
 use frame_support::{
 	assert_err, assert_noop, assert_ok, parameter_types,
-	traits::{ConstU64, Everything, Hooks, ProcessMessageError},
+	traits::{ConstU64, Currency, Everything, Hooks, ProcessMessageError},
 	weights::WeightMeter,
 	PalletId,
 };
@@ -120,10 +120,18 @@ impl crate::Config for Test {
 	type WeightInfo = ();
 }
 
+fn setup() {
+	System::set_block_number(1);
+	let agent_account =
+		<Test as pallet::Config>::SovereignAccountOf::convert_location(&MultiLocation::parent())
+			.unwrap();
+	Balances::make_free_balance_be(&agent_account, 1_000_000_000_000);
+}
+
 pub fn new_tester() -> sp_io::TestExternalities {
 	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| System::set_block_number(1));
+	ext.execute_with(|| setup());
 	ext
 }
 
@@ -166,12 +174,26 @@ fn submit_messages_from_multiple_origins_and_commit() {
 			assert_ok!(OutboundQueue::submit(ticket));
 		}
 
+		for para_id in 1000..1004 {
+			let message = Message {
+				origin: para_id.into(),
+				command: Command::CreateAgent { agent_id: Default::default() },
+				location: MultiLocation::parent(),
+			};
+
+			let result = OutboundQueue::validate(&message);
+			assert!(result.is_ok());
+			let ticket = result.unwrap();
+
+			assert_ok!(OutboundQueue::submit(ticket));
+		}
+
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
 
 		for para_id in 1000..1004 {
 			let origin: ParaId = (para_id as u32).into();
-			assert_eq!(Nonce::<Test>::get(origin), 1);
+			assert_eq!(Nonce::<Test>::get(origin), 2);
 		}
 
 		let digest = System::digest();

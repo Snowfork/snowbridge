@@ -161,14 +161,7 @@ impl Command {
 		}
 	}
 
-	// Todo: configurable gas price, for now set as 20 Gwei
-	// TBC: 4/5 to relayer and 1/5 left for protocol maintenance
-	pub fn reward(&self) -> u128 {
-		let gas_price: u128 = 20_000_000_000;
-		self.dispatch_gas() * gas_price * 4 / 5
-	}
-
-	pub fn charge_upfront(&self) -> bool {
+	pub fn upfront_charge_required(&self) -> bool {
 		match self {
 			Command::CreateAgent { .. } => true,
 			Command::AgentExecute { .. } => false,
@@ -184,7 +177,7 @@ impl Command {
 	/// Returns a tuple of:
 	/// - Index of the command
 	/// - the ABI encoded command
-	pub fn abi_encode(&self) -> (u8, Vec<u8>, u128, u128) {
+	pub fn abi_encode(&self) -> (u8, Vec<u8>, u128) {
 		match self {
 			Command::AgentExecute { agent_id, command } => (
 				self.index(),
@@ -193,7 +186,6 @@ impl Command {
 					Token::Bytes(command.abi_encode()),
 				])]),
 				self.dispatch_gas(),
-				self.reward(),
 			),
 			Command::Upgrade { impl_address, impl_code_hash, params } => (
 				self.index(),
@@ -203,7 +195,6 @@ impl Command {
 					params.clone().map_or(Token::Bytes(vec![]), Token::Bytes),
 				])]),
 				self.dispatch_gas(),
-				self.reward(),
 			),
 			Command::CreateAgent { agent_id } => (
 				self.index(),
@@ -211,7 +202,6 @@ impl Command {
 					agent_id.as_bytes().to_owned(),
 				)])]),
 				self.dispatch_gas(),
-				self.reward(),
 			),
 			Command::CreateChannel { para_id, agent_id } => {
 				let para_id: u32 = (*para_id).into();
@@ -222,7 +212,6 @@ impl Command {
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 					])]),
 					self.dispatch_gas(),
-					self.reward(),
 				)
 			},
 			Command::UpdateChannel { para_id, mode, fee, reward } => {
@@ -236,14 +225,12 @@ impl Command {
 						Token::Uint(U256::from(*reward)),
 					])]),
 					self.dispatch_gas(),
-					self.reward(),
 				)
 			},
 			Command::SetOperatingMode { mode } => (
 				self.index(),
 				ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
 				self.dispatch_gas(),
-				self.reward(),
 			),
 			Command::TransferNativeFromAgent { agent_id, recipient, amount } => (
 				self.index(),
@@ -253,7 +240,6 @@ impl Command {
 					Token::Uint(U256::from(*amount)),
 				])]),
 				self.dispatch_gas(),
-				self.reward(),
 			),
 		}
 	}
