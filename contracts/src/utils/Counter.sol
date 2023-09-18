@@ -14,7 +14,7 @@ library Counter {
         return uint16((self[element] >> (16 * inside)) & 0xFFFF);
     }
 
-    function set( uint256[] memory self, uint256 index, uint16 value) internal pure {
+    function set(uint256[] memory self, uint256 index, uint16 value) internal pure {
         uint256 element = index >> 4;
         uint8 inside = uint8(index) & 0x0F;
         uint256 zero = uint256(0xFFFF) << (16 * inside);

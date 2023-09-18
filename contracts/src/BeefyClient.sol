@@ -255,7 +255,7 @@ contract BeefyClient {
 
         // Increment the counter and store the previous value in the ticket
         uint16 signatureCount = Counter.get(vset.counters, proof.index);
-        Counter.set(vset.counters, proof.index, signatureCount+1);
+        Counter.set(vset.counters, proof.index, signatureCount + 1);
         if (commitment.validatorSetID == currentValidatorSet.id) {
             currentValidatorSet.counters = vset.counters;
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
