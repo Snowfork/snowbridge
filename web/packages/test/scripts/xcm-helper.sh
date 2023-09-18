@@ -76,7 +76,7 @@ transfer_balance() {
     local dest=$(jq --null-input \
                     --arg para_id "$para_id" \
                     '{ "v3": { "parents": 0, "interior": { "x1": { "parachain": $para_id } } } }')
-    local benificiary=$(jq --null-input \
+    local beneficiary=$(jq --null-input \
                     --arg target_account "$target_account" \
                     '{ "v3": { "parents": 0, "interior": { "x1": { "accountid32": { "id": $target_account } } } } }')
     local assets=$(jq --null-input \
@@ -104,7 +104,7 @@ transfer_balance() {
     echo "  calling transfer_balance:"
     echo "      target_account: ${target_account}"
     echo "      dest: ${dest}"
-    echo "      benificiary: ${benificiary}"
+    echo "      beneficiary: ${beneficiary}"
     echo "      assets: ${assets}"
     echo "      asset_fee_item: ${asset_fee_item}"
     echo "--------------------------------------------------"
@@ -114,7 +114,7 @@ transfer_balance() {
         --seed "${seed?}" \
         tx.xcmPallet.teleportAssets \
             "${dest}" \
-            "${benificiary}" \
+            "${beneficiary}" \
             "${assets}" \
             "${asset_fee_item}"
 }

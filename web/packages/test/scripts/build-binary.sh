@@ -35,7 +35,7 @@ build_cumulus_from_source() {
     popd
 }
 
-build_relaychain() {
+build_relaychain_from_source() {
     if [ ! -f "$relaychain_bin" ]; then
         echo "Building polkadot binary as $relaychain_bin"
         rebuild_relaychain
@@ -45,24 +45,14 @@ build_relaychain() {
     mkdir -p $output_bin_dir && cp "$relaychain_dir/release/polkadot-prepare-worker" "$output_bin_dir"/polkadot-prepare-worker
 }
 
-build_relaychain_from_source() {
+rebuild_relaychain() {
+    echo "Building polkadot binary as $relaychain_bin"
     pushd $root_dir/polkadot-sdk/polkadot
 
     ./scripts/init.sh
     cargo build --release
     mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
     mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
-    popd
-}
-
-rebuild_relaychain() {
-    pushd $root_dir/parachain
-    mkdir -p $relaychain_dir
-    cargo install \
-        --git https://github.com/paritytech/polkadot \
-        --tag "$relaychain_version" polkadot \
-        --locked \
-        --root $relaychain_dir #add version path to root to avoid recompiling when switch between versions
     popd
 }
 

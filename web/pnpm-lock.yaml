@@ -211,6 +211,12 @@ importers:
       '@polkadot/types':
         specifier: ^10.9.1
         version: 10.9.1
+      '@polkadot/types-augment':
+        specifier: ^10.9.1
+        version: 10.9.1
+      '@polkadot/types-codec':
+        specifier: ^10.9.1
+        version: 10.9.1
       '@snowbridge/contract-types':
         specifier: workspace:*
         version: link:../contract-types
