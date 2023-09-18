@@ -1,7 +1,7 @@
 # Table of contents
 
 * [Introduction](README.md)
-* [Concepts](overview.md)
+* [Concepts](concepts.md)
 
 ## Architecture
 
