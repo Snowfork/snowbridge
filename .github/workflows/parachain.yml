@@ -113,14 +113,12 @@ jobs:
         run: rustup show
       - name: run coverage test
         run: >
-          cargo install cargo-tarpaulin &&
+          cargo install cargo-tarpaulin@0.27.0 &&
           cargo tarpaulin
           --manifest-path parachain/Cargo.toml
           --workspace
           --engine llvm
-          --out Xml
-          --exclude substrate-call-index
-          --exclude snowbridge-query-events
+          --out xml
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v3
         with:
@@ -133,7 +131,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          submodules: 'true'
+          submodules: "true"
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
