@@ -22,16 +22,21 @@ build_cumulus_from_source() {
 }
 
 build_relaychain_from_source() {
-    echo "Building polkadot binary"
-    pushd $root_dir/polkadot-sdk
+    if [ ! -f "$output_bin_dir/polkadot" ]; then
+        echo "Building polkadot binary"
+        pushd $root_dir/polkadot-sdk
 
-    cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker 
-    mkdir -p $output_bin_dir
+        cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker 
+        mkdir -p $output_bin_dir
 
-    cp target/release/polkadot $output_bin_dir/polkadot
-    cp target/release/polkadot-execute-worker $output_bin_dir/polkadot-execute-worker
-    cp target/release/polkadot-prepare-worker $output_bin_dir/polkadot-prepare-worker
-    popd
+        cp target/release/polkadot $output_bin_dir/polkadot
+        cp target/release/polkadot-execute-worker $output_bin_dir/polkadot-execute-worker
+        cp target/release/polkadot-prepare-worker $output_bin_dir/polkadot-prepare-worker
+
+        popd
+    else
+        echo "SKIPPING polkadot build."
+    fi
 }
 
 build_contracts() {
