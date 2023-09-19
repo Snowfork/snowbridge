@@ -138,6 +138,10 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		}
 	}
 	validatorCount := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
+	log.WithFields(logrus.Fields{
+		"validatorCount":   validatorCount,
+		"signedValidators": signedValidators,
+	}).Info("Creating initial bitfield")
 	initialBitfield, err := wr.contract.CreateInitialBitfield(
 		&bind.CallOpts{
 			Pending: true,
