@@ -87,6 +87,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type GatewayAddress: Get<H160>;
 
+		#[pallet::constant]
+		type RegisterCallIndex: Get<[u8; 2]>;
+
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self>;
 	}
@@ -217,7 +220,9 @@ pub mod pallet {
 			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
 
 			// Decode message into XCM
-			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+			let xcm = match inbound::VersionedMessage::<T::RegisterCallIndex>::decode_all(
+				&mut envelope.payload.as_ref(),
+			) {
 				Ok(inbound::VersionedMessage::V1(message_v1)) => message_v1.into(),
 				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 			};

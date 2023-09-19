@@ -17,28 +17,30 @@ const MINIMUM_DEPOSIT: u128 = 1;
 /// we may want to evolve the protocol so that the ethereum side sends XCM messages directly.
 /// Instead having BridgeHub transcode the messages into XCM.
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum VersionedMessage {
-	V1(MessageV1),
+pub enum VersionedMessage<G> {
+	V1(MessageV1<G>),
 }
 
 /// For V1, the ethereum side sends messages which are transcoded into XCM. These messages are
 /// self-contained, in that they can be transcoded using only information in the message.
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub struct MessageV1 {
+pub struct MessageV1<G> {
 	/// EIP-155 chain id of the origin Ethereum network
 	pub chain_id: u64,
 	/// The command originating from the Gateway contract
-	pub message: Command,
+	pub message: Command<G>,
+	_phantom: PhantomData<G>,
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum Command {
+pub enum Command<G> {
 	/// Register a wrapped token on the AssetHub `ForeignAssets` pallet
 	RegisterToken {
 		/// The address of the gateway
 		gateway: H160,
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
+		_phantom: PhantomData<G>,
 	},
 	/// Send a token to AssetHub or another parachain
 	SendToken {
@@ -68,13 +70,13 @@ pub enum Destination {
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-impl From<MessageV1> for Xcm<()> {
-	fn from(val: MessageV1) -> Self {
+impl<G: Get<[u8; 2]>> From<MessageV1<G>> for Xcm<()> {
+	fn from(val: MessageV1<G>) -> Self {
 		val.message.convert(val.chain_id)
 	}
 }
 
-impl Command {
+impl<G: Get<[u8; 2]>> Command<G> {
 	pub fn convert(self, chain_id: u64) -> Xcm<()> {
 		let network = NetworkId::Ethereum { chain_id };
 		// TODO (SNO-582): The fees need to be made configurable and must match the weight
@@ -111,7 +113,7 @@ impl Command {
 		};
 
 		match self {
-			Command::RegisterToken { gateway, token } => {
+			Command::RegisterToken { gateway, token, .. } => {
 				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
 					&chain_id,
 					gateway.as_fixed_bytes(),
@@ -123,7 +125,7 @@ impl Command {
 
 				let mut instructions = create_instructions(origin_location);
 
-				let create_call_index: [u8; 2] = [53, 0];
+				let create_call_index: [u8; 2] = G::get();
 				instructions.extend(vec![
 					Transact {
 						origin_kind: OriginKind::Xcm,

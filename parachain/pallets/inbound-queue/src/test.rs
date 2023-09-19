@@ -136,6 +136,7 @@ const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39
 parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15 };
 	pub const GatewayAddress: H160 = H160(GATEWAY_ADDRESS);
+	pub const RegisterCallIndex: [u8;2] = [53, 0];
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -155,7 +156,7 @@ impl SendXcm for MockXcmSender {
 		_: &mut Option<xcm::v3::Xcm<()>>,
 	) -> xcm::v3::SendResult<Self::Ticket> {
 		match dest {
-			Some(MultiLocation { parents: _, interior }) => {
+			Some(MultiLocation { interior, .. }) => {
 				if let X1(Parachain(1001)) = interior {
 					return Err(XcmpSendError::NotApplicable)
 				}
@@ -178,6 +179,7 @@ impl inbound_queue::Config for Test {
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
+	type RegisterCallIndex = RegisterCallIndex;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
 }
