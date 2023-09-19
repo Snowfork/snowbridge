@@ -307,12 +307,12 @@ fn find_absent_keys() {
 	new_tester().execute_with(|| {
 		let pubkeys = EthereumBeaconClient::find_pubkeys(
 			&participation,
-			(*sync_committee_prepared.pubkeys).as_ref(),
+			(*sync_committee_prepared.pubkeys_prepared).as_ref(),
 			false,
 		);
 		assert_eq!(pubkeys.len(), 2);
-		assert_eq!(pubkeys[0], sync_committee_prepared.pubkeys[0]);
-		assert_eq!(pubkeys[1], sync_committee_prepared.pubkeys[7]);
+		assert_eq!(pubkeys[0], sync_committee_prepared.pubkeys_prepared[0]);
+		assert_eq!(pubkeys[1], sync_committee_prepared.pubkeys_prepared[7]);
 	});
 }
 
@@ -331,14 +331,14 @@ fn find_present_keys() {
 	new_tester().execute_with(|| {
 		let pubkeys = EthereumBeaconClient::find_pubkeys(
 			&participation,
-			(*sync_committee_prepared.pubkeys).as_ref(),
+			(*sync_committee_prepared.pubkeys_prepared).as_ref(),
 			true,
 		);
 		assert_eq!(pubkeys.len(), 4);
-		assert_eq!(pubkeys[0], sync_committee_prepared.pubkeys[1]);
-		assert_eq!(pubkeys[1], sync_committee_prepared.pubkeys[8]);
-		assert_eq!(pubkeys[2], sync_committee_prepared.pubkeys[26]);
-		assert_eq!(pubkeys[3], sync_committee_prepared.pubkeys[30]);
+		assert_eq!(pubkeys[0], sync_committee_prepared.pubkeys_prepared[1]);
+		assert_eq!(pubkeys[1], sync_committee_prepared.pubkeys_prepared[8]);
+		assert_eq!(pubkeys[2], sync_committee_prepared.pubkeys_prepared[26]);
+		assert_eq!(pubkeys[3], sync_committee_prepared.pubkeys_prepared[30]);
 	});
 }
 

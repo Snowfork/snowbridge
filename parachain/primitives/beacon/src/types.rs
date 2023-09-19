@@ -8,6 +8,7 @@ use sp_runtime::RuntimeDebug;
 use sp_std::{boxed::Box, prelude::*};
 
 use crate::config::{PUBKEY_SIZE, SIGNATURE_SIZE};
+use frame_support::PalletError;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -23,7 +24,7 @@ use ssz_rs::SimpleSerializeError;
 
 pub use crate::bits::decompress_sync_committee_bits;
 
-use crate::bls::{prepare_g1_pubkeys, prepare_milagro_pubkey, BlsError};
+use crate::bls::{prepare_g1_pubkeys, prepare_milagro_pubkey};
 use milagro_bls::PublicKey as PublicKeyPrepared;
 
 pub type ValidatorIndex = u64;
@@ -180,19 +181,23 @@ impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
 }
 
 /// Prepared G1 public key of sync committee as it is stored in the runtime storage.
-#[derive(Clone, PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
 	pub root: H256,
-	pub pubkeys: Box<[PublicKeyPrepared; COMMITTEE_SIZE]>,
-	pub aggregate_pubkey: PublicKeyPrepared,
+	pub pubkeys: Box<[PublicKey; COMMITTEE_SIZE]>,
+	pub aggregate_pubkey: PublicKey,
+	pub pubkeys_prepared: Box<[PublicKeyPrepared; COMMITTEE_SIZE]>,
+	pub aggregate_pubkey_prepared: PublicKeyPrepared,
 }
 
 impl<const COMMITTEE_SIZE: usize> Default for SyncCommitteePrepared<COMMITTEE_SIZE> {
 	fn default() -> Self {
 		SyncCommitteePrepared {
 			root: H256::default(),
-			pubkeys: Box::new([PublicKeyPrepared::default(); COMMITTEE_SIZE]),
-			aggregate_pubkey: PublicKeyPrepared::default(),
+			pubkeys_prepared: Box::new([PublicKeyPrepared::default(); COMMITTEE_SIZE]),
+			aggregate_pubkey_prepared: PublicKeyPrepared::default(),
+			pubkeys: Box::new([PublicKey::default(); COMMITTEE_SIZE]),
+			aggregate_pubkey: PublicKey::default(),
 		}
 	}
 }
@@ -207,8 +212,10 @@ impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
 		let sync_committee_root = sync_committee.hash_tree_root().expect("checked statically; qed");
 
 		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
-			pubkeys: g1_pubkeys.try_into().expect("checked statically; qed"),
-			aggregate_pubkey: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
+			pubkeys: Box::from(sync_committee.pubkeys),
+			aggregate_pubkey: sync_committee.aggregate_pubkey,
+			pubkeys_prepared: g1_pubkeys.try_into().expect("checked statically; qed"),
+			aggregate_pubkey_prepared: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
 			root: sync_committee_root,
 		})
 	}
@@ -510,4 +517,19 @@ mod tests {
 pub enum Mode {
 	Active,
 	Blocked,
+}
+
+#[derive(Copy, Clone, Encode, Decode, Eq, PartialEq, TypeInfo, RuntimeDebug, PalletError)]
+pub enum BlsError {
+	InvalidSignature,
+	InvalidPublicKey,
+	InvalidAggregatePublicKeys,
+	SignatureVerificationFailed,
+	HashToCurveFailed,
+}
+
+#[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum BlsAlgorithmType {
+	Milagro,
+	Ark,
 }

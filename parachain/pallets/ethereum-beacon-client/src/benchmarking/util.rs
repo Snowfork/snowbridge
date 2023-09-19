@@ -7,7 +7,23 @@ use crate::{
 use primitives::PublicKeyPrepared;
 use sp_core::H256;
 
-pub fn participant_pubkeys<T: Config>(
+pub fn paritcipant_pubkeys<T: Config>(update: &Update) -> Result<Vec<Vec<u8>>, &'static str> {
+	let sync_committee_bits =
+		decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
+	let current_sync_committee = <CurrentSyncCommittee<T>>::get();
+	let mut pubkeys: Vec<Vec<u8>> = Vec::new();
+	for (bit, pubkey) in sync_committee_bits
+		.iter()
+		.zip((*current_sync_committee.pubkeys).as_ref().iter())
+	{
+		if *bit == 1 {
+			pubkeys.push(pubkey.0.to_vec());
+		}
+	}
+	Ok(pubkeys)
+}
+
+pub fn participant_pubkeys_prepared<T: Config>(
 	update: &Update,
 ) -> Result<Vec<PublicKeyPrepared>, &'static str> {
 	let sync_committee_bits =
@@ -15,19 +31,21 @@ pub fn participant_pubkeys<T: Config>(
 	let current_sync_committee = <CurrentSyncCommittee<T>>::get();
 	let pubkeys = EthereumBeaconClient::<T>::find_pubkeys(
 		&sync_committee_bits,
-		(*current_sync_committee.pubkeys).as_ref(),
+		(*current_sync_committee.pubkeys_prepared).as_ref(),
 		true,
 	);
 	Ok(pubkeys)
 }
 
-pub fn absent_pubkeys<T: Config>(update: &Update) -> Result<Vec<PublicKeyPrepared>, &'static str> {
+pub fn absent_pubkeys_prepared<T: Config>(
+	update: &Update,
+) -> Result<Vec<PublicKeyPrepared>, &'static str> {
 	let sync_committee_bits =
 		decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
 	let current_sync_committee = <CurrentSyncCommittee<T>>::get();
 	let pubkeys = EthereumBeaconClient::<T>::find_pubkeys(
 		&sync_committee_bits,
-		(*current_sync_committee.pubkeys).as_ref(),
+		(*current_sync_committee.pubkeys_prepared).as_ref(),
 		false,
 	);
 	Ok(pubkeys)

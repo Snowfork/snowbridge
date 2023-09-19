@@ -23,9 +23,9 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use primitives::{
-	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
-	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, ForkData, ForkVersion,
-	ForkVersions, PublicKeyPrepared, SigningData,
+	ark_fast_aggregate_verify, fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof,
+	BeaconHeader, BlsAlgorithmType, BlsError, CompactBeaconState, CompactExecutionHeader,
+	ExecutionHeaderState, ForkData, ForkVersion, ForkVersions, PublicKeyPrepared, SigningData,
 };
 use snowbridge_core::{
 	inbound::{Message, Proof, Verifier},
@@ -46,7 +46,7 @@ use types::{
 
 pub use pallet::*;
 
-pub use config::SLOTS_PER_HISTORICAL_ROOT;
+use config::{SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SIZE};
 
 pub const LOG_TARGET: &str = "ethereum-beacon-client";
 
@@ -84,6 +84,9 @@ pub mod pallet {
 		/// Maximum number of execution headers to keep
 		#[pallet::constant]
 		type MaxExecutionHeadersToKeep: Get<u32>;
+		/// Type of bls algorithm
+		#[pallet::constant]
+		type BlsAlgorithm: Get<BlsAlgorithmType>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -464,8 +467,21 @@ pub mod pallet {
 			} else {
 				<NextSyncCommittee<T>>::get()
 			};
-			let absent_pubkeys =
-				Self::find_pubkeys(&participation, (*sync_committee.pubkeys).as_ref(), false);
+			match T::BlsAlgorithm::get() {
+				BlsAlgorithmType::Milagro =>
+					Self::verify_signing_root(update, &participation, &sync_committee)?,
+				BlsAlgorithmType::Ark =>
+					Self::ark_verify_signing_root(update, &participation, &sync_committee)?,
+			}
+
+			Ok(())
+		}
+
+		pub fn verify_signing_root(
+			update: &Update,
+			participation: &[u8; SYNC_COMMITTEE_SIZE],
+			sync_committee: &SyncCommitteePrepared,
+		) -> DispatchResult {
 			let signing_root = Self::signing_root(
 				&update.attested_header,
 				Self::validators_root(),
@@ -474,11 +490,42 @@ pub mod pallet {
 			// Improvement here per https://eth2book.info/capella/part2/building_blocks/signatures/#sync-aggregates
 			// suggested start from the full set aggregate_pubkey then subtracting the absolute
 			// minority that did not participate.
+			let absent_pubkeys = Self::find_pubkeys(
+				participation,
+				(*sync_committee.pubkeys_prepared).as_ref(),
+				false,
+			);
 			fast_aggregate_verify(
-				&sync_committee.aggregate_pubkey,
+				&sync_committee.aggregate_pubkey_prepared,
 				&absent_pubkeys,
 				signing_root,
 				&update.sync_aggregate.sync_committee_signature,
+			)
+			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
+			Ok(())
+		}
+
+		pub fn ark_verify_signing_root(
+			update: &Update,
+			participation: &[u8; SYNC_COMMITTEE_SIZE],
+			sync_committee: &SyncCommitteePrepared,
+		) -> DispatchResult {
+			let signing_root = Self::signing_root(
+				&update.attested_header,
+				Self::validators_root(),
+				update.signature_slot,
+			)?;
+			let mut pubkeys: Vec<Vec<u8>> = Vec::new();
+			for (bit, pubkey) in participation.iter().zip(sync_committee.pubkeys.iter()) {
+				if *bit == 1 {
+					pubkeys.push(pubkey.0.to_vec());
+				}
+			}
+
+			ark_fast_aggregate_verify(
+				pubkeys,
+				signing_root.to_fixed_bytes().to_vec(),
+				update.sync_aggregate.sync_committee_signature.0.to_vec(),
 			)
 			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 

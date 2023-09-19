@@ -1,24 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use crate::{PublicKey, Signature};
-use codec::{Decode, Encode};
-use frame_support::{ensure, PalletError};
+use crate::{types::BlsError, PublicKey, Signature};
+use frame_support::ensure;
 pub use milagro_bls::{
 	AggregatePublicKey, AggregateSignature, PublicKey as PublicKeyPrepared,
 	Signature as SignaturePrepared,
 };
-use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-
-#[derive(Copy, Clone, Encode, Decode, Eq, PartialEq, TypeInfo, RuntimeDebug, PalletError)]
-pub enum BlsError {
-	InvalidSignature,
-	InvalidPublicKey,
-	InvalidAggregatePublicKeys,
-	SignatureVerificationFailed,
-}
 
 /// fast_aggregate_verify optimized with aggregate key subtracting absent ones.
 pub fn fast_aggregate_verify(

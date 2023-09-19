@@ -92,7 +92,7 @@ mod benchmarks {
 	fn bls_fast_aggregate_verify_pre_aggregated() -> Result<(), BenchmarkError> {
 		EthereumBeaconClient::<T>::process_checkpoint_update(&make_checkpoint())?;
 		let update = make_sync_committee_update();
-		let participant_pubkeys = participant_pubkeys::<T>(&update)?;
+		let participant_pubkeys = participant_pubkeys_prepared::<T>(&update)?;
 		let signing_root = signing_root::<T>(&update)?;
 		let agg_sig =
 			prepare_aggregate_signature(&update.sync_aggregate.sync_committee_signature).unwrap();
@@ -111,16 +111,37 @@ mod benchmarks {
 		EthereumBeaconClient::<T>::process_checkpoint_update(&make_checkpoint())?;
 		let update = make_sync_committee_update();
 		let current_sync_committee = <CurrentSyncCommittee<T>>::get();
-		let absent_pubkeys = absent_pubkeys::<T>(&update)?;
+		let absent_pubkeys = absent_pubkeys_prepared::<T>(&update)?;
 		let signing_root = signing_root::<T>(&update)?;
 
 		#[block]
 		{
 			fast_aggregate_verify(
-				&current_sync_committee.aggregate_pubkey,
+				&current_sync_committee.aggregate_pubkey_prepared,
 				&absent_pubkeys,
 				signing_root,
 				&update.sync_aggregate.sync_committee_signature,
+			)
+			.unwrap();
+		}
+
+		Ok(())
+	}
+
+	#[benchmark(extra)]
+	fn ark_bls_fast_aggregate_verify() -> Result<(), BenchmarkError> {
+		EthereumBeaconClient::<T>::process_checkpoint_update(&make_checkpoint())?;
+		let update = make_sync_committee_update();
+		let signing_root = signing_root::<T>(&update)?;
+
+		let pubkeys = paritcipant_pubkeys::<T>(&update)?;
+
+		#[block]
+		{
+			ark_fast_aggregate_verify(
+				pubkeys,
+				signing_root.to_fixed_bytes().to_vec(),
+				update.sync_aggregate.sync_committee_signature.0.to_vec(),
 			)
 			.unwrap();
 		}

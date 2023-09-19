@@ -17,7 +17,7 @@ use sp_runtime::{
 };
 use sp_std::convert::From;
 
-use snowbridge_beacon_primitives::{Fork, ForkVersions};
+use snowbridge_beacon_primitives::{BlsAlgorithmType, Fork, ForkVersions};
 use snowbridge_core::inbound::{Message, Proof};
 use snowbridge_ethereum::Log;
 
@@ -112,12 +112,14 @@ parameter_types! {
 			epoch: 0,
 		},
 	};
+	pub const BlsAlgorithm: BlsAlgorithmType = BlsAlgorithmType::Ark;
 }
 
 impl snowbridge_ethereum_beacon_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
 	type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
+	type BlsAlgorithm = BlsAlgorithm;
 	type WeightInfo = ();
 }
 

@@ -3,7 +3,7 @@
 use crate as ethereum_beacon_client;
 use frame_support::parameter_types;
 use pallet_timestamp;
-use primitives::{Fork, ForkVersions};
+use primitives::{BlsAlgorithmType, Fork, ForkVersions};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -94,12 +94,14 @@ pub mod minimal {
 				epoch: 0,
 			},
 		};
+		pub const BlsAlgorithm: BlsAlgorithmType = BlsAlgorithmType::Ark;
 	}
 
 	impl ethereum_beacon_client::Config for Test {
 		type RuntimeEvent = RuntimeEvent;
 		type ForkVersions = ChainForkVersions;
 		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
+		type BlsAlgorithm = BlsAlgorithm;
 		type WeightInfo = ();
 	}
 
@@ -259,12 +261,14 @@ pub mod mainnet {
 			},
 		};
 		pub const ExecutionHeadersPruneThreshold: u32 = 10;
+		pub const BlsAlgorithm: BlsAlgorithmType = BlsAlgorithmType::Milagro;
 	}
 
 	impl ethereum_beacon_client::Config for Test {
 		type RuntimeEvent = RuntimeEvent;
 		type ForkVersions = ChainForkVersions;
 		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
+		type BlsAlgorithm = BlsAlgorithm;
 		type WeightInfo = ();
 	}
 
