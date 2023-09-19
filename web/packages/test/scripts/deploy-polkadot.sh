@@ -2,7 +2,6 @@
 set -eu
 
 source scripts/set-env.sh
-source scripts/build-binary.sh
 
 zombienet_launch() {
     npx zombienet spawn config/launch-config.toml --provider=native --dir="$zombienet_data_dir" 2>&1 &
@@ -10,7 +9,7 @@ zombienet_launch() {
 }
 
 deploy_polkadot() {
-    check_tool && build_relaychain_from_source && build_cumulus_from_source && rm -rf $zombienet_data_dir && zombienet_launch
+    check_tool && rm -rf $zombienet_data_dir && zombienet_launch
 }
 
 if [ -z "${from_start_services:-}" ]; then
