@@ -1,6 +1,7 @@
 package beefy
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -200,7 +201,7 @@ func commitmentToLog(commitment contracts.BeefyClientCommitment) logrus.Fields {
 	for i, payloadItem := range commitment.Payload {
 		payloadFields[i] = logrus.Fields{
 			"PayloadID": string(rune(payloadItem.PayloadID[0])) + string(rune(payloadItem.PayloadID[1])),
-			"Data":      payloadItem.Data,
+			"Data":      "0x" + hex.EncodeToString(payloadItem.Data),
 		}
 	}
 
