@@ -13,7 +13,7 @@ use snowbridge_smoketest::{
 	contracts::{i_gateway, weth9},
 	parachains::assethub::api::{
 		foreign_assets::events::Created,
-		runtime_types::xcm::v3::{
+		runtime_types::staging_xcm::v3::{
 			junction::{
 				Junction::{AccountKey20, GlobalConsensus},
 				NetworkId,

@@ -19,7 +19,7 @@ use snowbridge_smoketest::{
 			pallet_xcm::pallet::Call,
 			rococo_runtime::RuntimeCall,
 			sp_weights::weight_v2::Weight,
-			xcm::{
+			staging_xcm::{
 				double_encoded::DoubleEncoded,
 				v2::OriginKind,
 				v3::{
