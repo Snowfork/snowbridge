@@ -1,6 +1,6 @@
 use crate::constants::*;
 use crate::parachains::template::{
-    api::runtime_types as templateTypes, api::runtime_types::xcm as templateXcm,
+    api::runtime_types as templateTypes, api::runtime_types::staging_xcm as templateXcm,
 };
 use templateTypes::sp_weights::weight_v2::Weight;
 use templateXcm::{

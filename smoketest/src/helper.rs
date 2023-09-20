@@ -1,7 +1,7 @@
 use crate::constants::*;
 use crate::contracts::i_gateway;
 use crate::parachains::bridgehub::{self};
-use crate::parachains::template::api::runtime_types::xcm as templateXcm;
+use crate::parachains::template::api::runtime_types::staging_xcm as templateXcm;
 use crate::parachains::template::{self};
 use ethers::prelude::{
     Address, EthEvent, LocalWallet, Middleware, Provider, Signer, SignerMiddleware,
