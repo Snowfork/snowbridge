@@ -14,12 +14,12 @@ use sp_core::{sr25519::Pair, Pair as PairT};
 use snowbridge_smoketest::{
     contracts::weth9::{TransferFilter},
     parachains::{
-        assethub::api::runtime_types::xcm::{
+        assethub::api::runtime_types::staging_xcm::{
             v3::{
                 junction::{Junction, NetworkId},
                 junctions::Junctions,
                 multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
-                multilocation::MultiLocation,
+                multilocation::MultiLocation, WeightLimit
             },
             VersionedMultiAssets, VersionedMultiLocation,
         },
@@ -27,7 +27,7 @@ use snowbridge_smoketest::{
     },
 };
 use hex_literal::hex;
-use assethub::api::bridge_transfer::calls::TransactionApi;
+use assethub::api::polkadot_xcm::calls::TransactionApi;
 use futures::StreamExt;
 use snowbridge_smoketest::helper::AssetHubConfig;
 
@@ -79,7 +79,15 @@ async fn transfer_token() {
         ),
     });
 
-    let bridge_transfer_call = TransactionApi.transfer_asset_via_bridge(assets, destination);
+    let beneficiary = VersionedMultiLocation::V3(MultiLocation {
+        parents: 2,
+        interior: Junctions::X2(
+            Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+            Junction::AccountKey20 { network: None, key: DESTINATION_ADDRESS.into() },
+        ),
+    });
+
+    let bridge_transfer_call = TransactionApi.limited_reserve_transfer_assets(destination, beneficiary, assets, 0, WeightLimit::Unlimited);
 
     let result = assethub
         .tx()
