@@ -56,19 +56,19 @@ cumulus_based = true
     args = ["--enable-offchain-indexing=true", "--pruning=archive", "--force-authoring", "-lparachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace,runtime::bridge-hub=trace,runtime::bridge=trace,runtime::bridge-dispatch=trace,bridge=trace,runtime::bridge-messages=trace,runtime=debug"]
 
 ## Statemine
-#[[parachains]]
-#id = 1000
-#chain = "asset-hub-kusama-local"
-#cumulus_based = true
-#
-#    # run alice as parachain collator
-#    [[parachains.collators]]
-#    name = "statemine01"
-#    validator = true
-#    command = "{{output_bin_dir}}/polkadot-parachain"
-#    rpc_port = 8082
-#    ws_port = 12144
-#    args = ["--force-authoring", "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace,runtime::assets=trace,runtime::bridge-transfer=trace"]
+[[parachains]]
+id = 1000
+chain = "asset-hub-kusama-local"
+cumulus_based = true
+
+    # run alice as parachain collator
+    [[parachains.collators]]
+    name = "statemine01"
+    validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
+    rpc_port = 8082
+    ws_port = 12144
+    args = ["--force-authoring", "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace,runtime::assets=trace,runtime::bridge-transfer=trace"]
 
 ## Template node
 [[parachains]]
@@ -85,30 +85,30 @@ cumulus_based = true
     ws_port = 13144
     args = ["--force-authoring", "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace,runtime::assets=trace,runtime::bridge-transfer=trace"]
 
-## Statemine -> BridgeHub
-#[[hrmp_channels]]
-#max_capacity = 8
-#max_message_size = 512
-#recipient = 1013
-#sender = 1000
-#
-## BridgeHub -> Statemine
-#[[hrmp_channels]]
-#max_capacity = 8
-#max_message_size = 512
-#recipient = 1000
-#sender = 1013
-#
-## TemplateNode -> BridgeHub
-#[[hrmp_channels]]
-#max_capacity = 8
-#max_message_size = 512
-#recipient = 1013
-#sender = 1001
-#
-## BridgeHub -> TemplateNode
-#[[hrmp_channels]]
-#max_capacity = 8
-#max_message_size = 512
-#recipient = 1001
-#sender = 1013
+# Statemine -> BridgeHub
+[[hrmp_channels]]
+max_capacity = 8
+max_message_size = 512
+recipient = 1013
+sender = 1000
+
+# BridgeHub -> Statemine
+[[hrmp_channels]]
+max_capacity = 8
+max_message_size = 512
+recipient = 1000
+sender = 1013
+
+# TemplateNode -> BridgeHub
+[[hrmp_channels]]
+max_capacity = 8
+max_message_size = 512
+recipient = 1013
+sender = 1001
+
+# BridgeHub -> TemplateNode
+[[hrmp_channels]]
+max_capacity = 8
+max_message_size = 512
+recipient = 1001
+sender = 1013
