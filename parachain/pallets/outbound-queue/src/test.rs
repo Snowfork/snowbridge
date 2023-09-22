@@ -276,3 +276,22 @@ fn process_message_fails_on_overweight_message() {
 		);
 	})
 }
+
+#[test]
+fn validate_exits_for_invalid_fee_config() {
+	new_tester().execute_with(|| {
+		let message = Message {
+			origin: 1000.into(),
+			command: Command::CreateAgent { agent_id: Default::default() },
+			agent_location: MultiLocation::parent(),
+		};
+		// Todo: test for arbitrary transact
+		// let message = Message {
+		// 	origin: 1000.into(),
+		// 	command: Command::Transact { agent_id: Default::default(), dispatch_gas: 1000 },
+		// 	agent_location: MultiLocation::parent(),
+		// };
+		let result = OutboundQueue::validate(&message);
+		assert!(result.is_ok());
+	});
+}

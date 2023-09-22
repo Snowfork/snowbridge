@@ -684,4 +684,20 @@ contract GatewayTest is Test {
         address implementation = gw.implementation();
         assertEq(implementation, address(gatewayLogic));
     }
+
+    function testCreateAgentWithGasNotEnough() public {
+        deal(bridgeHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = makeCreateAgentCommand();
+
+        hoax(relayer, 1 ether);
+
+        vm.expectEmit(true, false, false, true);
+        // Expect dispatch result as false for `OutOfGas`
+        emit InboundMessageDispatched(bridgeHubParaID, 1, false);
+        // dispatch_gas as 1 for `create_agent` is definitely not enough
+        IGateway(address(gateway)).submitInbound(
+            InboundMessage(bridgeHubParaID, 1, command, params, 1, defaultReward), proof, makeMockProof()
+        );
+    }
 }

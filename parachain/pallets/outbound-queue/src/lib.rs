@@ -30,7 +30,7 @@ use ethabi::{self, Token};
 use frame_support::{
 	ensure,
 	storage::StorageStreamIter,
-	traits::{EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
+	traits::{ConstU32, EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
 	weights::Weight,
 	CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
@@ -49,7 +49,7 @@ use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
 use frame_support::traits::fungible::{Inspect, Mutate};
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
-use sp_runtime::{FixedU128, Percent, Saturating};
+use sp_runtime::{BoundedBTreeMap, FixedU128, Percent, Saturating};
 pub use weights::WeightInfo;
 
 /// Aggregate message origin for the `MessageQueue` pallet.
@@ -111,8 +111,14 @@ impl From<u32> for AggregateMessageOrigin {
 pub type MaxEnqueuedMessageSizeOf<T> =
 	<<T as Config>::MessageQueue as EnqueueMessage<AggregateMessageOrigin>>::MaxMessageLen;
 
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
+pub struct DispatchGasRange {
+	pub min: u128,
+	pub max: u128,
+}
+
 /// The fee config for outbound message
-#[derive(Encode, Decode, Clone, RuntimeDebug, TypeInfo, PartialEq, MaxEncodedLen)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
 pub struct OutboundFeeConfig {
 	/// base fee to cover the processing costs on BridgeHub in DOT
 	pub base_fee: u128,
@@ -122,6 +128,10 @@ pub struct OutboundFeeConfig {
 	pub swap_ratio: FixedU128,
 	/// ratio from extra_fee as reward for message relay
 	pub reward_ratio: Percent,
+	/// gas cost for each command
+	pub dispatch_gas: Option<BoundedBTreeMap<u8, u128, ConstU32<255>>>,
+	/// gas range applies for all commands
+	pub dispatch_gas_range: DispatchGasRange,
 }
 
 impl Default for OutboundFeeConfig {
@@ -131,6 +141,8 @@ impl Default for OutboundFeeConfig {
 			gas_price: 15_000_000_000,
 			swap_ratio: FixedU128::from_rational(400, 100_000_000),
 			reward_ratio: Percent::from_percent(75),
+			dispatch_gas: None,
+			dispatch_gas_range: DispatchGasRange { min: 20000, max: 5000000 },
 		}
 	}
 }
@@ -394,8 +406,13 @@ pub mod pallet {
 			let fee_config = FeeConfig::<T>::get();
 			match ticket.command.extra_fee_required() {
 				true => {
-					let gas_cost_in_wei =
-						ticket.command.dispatch_gas().saturating_mul(fee_config.gas_price);
+					let dispatch_gas: u128 = match fee_config.dispatch_gas {
+						Some(dispatch_gas_map) => *dispatch_gas_map
+							.get(&ticket.command.index())
+							.unwrap_or(&ticket.command.dispatch_gas()),
+						None => ticket.command.dispatch_gas(),
+					};
+					let gas_cost_in_wei = dispatch_gas.saturating_mul(fee_config.gas_price);
 					let gas_cost_in_native = FixedU128::from_inner(gas_cost_in_wei)
 						.saturating_mul(fee_config.swap_ratio);
 					Some(gas_cost_in_native.into_inner())
@@ -431,6 +448,25 @@ pub mod pallet {
 				total_fee,
 				Preservation::Preserve,
 			)?;
+			Ok(())
+		}
+
+		pub fn validate_ticket(
+			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
+		) -> Result<(), SubmitError> {
+			let fee_config = FeeConfig::<T>::get();
+			// Todo: for arbitrary transact dispatch_gas should be dynamic value from input
+			let dispatch_gas: u128 = match fee_config.dispatch_gas {
+				Some(dispatch_gas_map) => *dispatch_gas_map
+					.get(&ticket.command.index())
+					.unwrap_or(&ticket.command.dispatch_gas()),
+				None => ticket.command.dispatch_gas(),
+			};
+			ensure!(
+				dispatch_gas >= fee_config.dispatch_gas_range.min &&
+					dispatch_gas <= fee_config.dispatch_gas_range.max,
+				SubmitError::InvalidGas(dispatch_gas)
+			);
 			Ok(())
 		}
 	}
@@ -476,6 +512,7 @@ pub mod pallet {
 				location: message.agent_location,
 				command,
 			};
+			Self::validate_ticket(&ticket)?;
 			Ok(ticket)
 		}
 

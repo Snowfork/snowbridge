@@ -44,6 +44,10 @@ pub enum SubmitError {
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
 	BridgeHalted,
+	/// Gas config invalid
+	InvalidGas(u128),
+	/// Estimate fee failed
+	EstimateFeeFailed,
 	/// Charge fee failed
 	ChargeFeeFailed,
 }
