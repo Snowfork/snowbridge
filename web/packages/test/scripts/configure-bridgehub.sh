@@ -11,8 +11,7 @@ config_beacon_checkpoint() {
     send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$check_point_call" 180000000000 900000
 }
 
-wait_beacon_chain_ready()
-{
+wait_beacon_chain_ready() {
     local initial_beacon_block=""
     while [ -z "$initial_beacon_block" ] || [ "$initial_beacon_block" == "0x0000000000000000000000000000000000000000000000000000000000000000" ]; do
         echo "Waiting for beacon chain to finalize to get initial block..."
@@ -26,6 +25,7 @@ fund_accounts() {
     echo "Funding substrate accounts"
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $assethub_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $TEMPLATE_AGENT_ID
+    transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $template_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $beacon_relayer_pub_key
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_pub_key
     transfer_balance $relaychain_ws_url "//Charlie" 1000 1000000000000000 $gateway_contract_sovereign_account
