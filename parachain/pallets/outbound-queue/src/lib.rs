@@ -398,7 +398,7 @@ pub mod pallet {
 						ticket.command.dispatch_gas().saturating_mul(fee_config.gas_price);
 					let gas_cost_in_native = FixedU128::from_inner(gas_cost_in_wei)
 						.saturating_mul(fee_config.swap_ratio);
-					return Some(gas_cost_in_native.into_inner())
+					Some(gas_cost_in_native.into_inner())
 				},
 				false => None,
 			}
