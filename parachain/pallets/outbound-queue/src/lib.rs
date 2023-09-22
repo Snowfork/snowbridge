@@ -30,7 +30,7 @@ use ethabi::{self, Token};
 use frame_support::{
 	ensure,
 	storage::StorageStreamIter,
-	traits::{ConstU32, EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
+	traits::{EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
 	weights::Weight,
 	CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
@@ -40,16 +40,15 @@ use sp_core::{RuntimeDebug, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 use xcm::prelude::{MultiAsset, MultiAssets, MultiLocation};
-use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::outbound::{
-	Command, Message, MessageHash, OutboundQueue as OutboundQueueTrait, SubmitError,
+	Command, Message, MessageHash, OutboundFeeConfig, OutboundQueue as OutboundQueueTrait,
+	OutboundQueueTicket, SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
-use frame_support::traits::fungible::{Inspect, Mutate};
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
-use sp_runtime::{BoundedBTreeMap, FixedU128, Percent, Saturating};
+use sp_runtime::{FixedU128, Saturating};
 pub use weights::WeightInfo;
 
 /// Aggregate message origin for the `MessageQueue` pallet.
@@ -111,48 +110,9 @@ impl From<u32> for AggregateMessageOrigin {
 pub type MaxEnqueuedMessageSizeOf<T> =
 	<<T as Config>::MessageQueue as EnqueueMessage<AggregateMessageOrigin>>::MaxMessageLen;
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
-pub struct DispatchGasRange {
-	pub min: u128,
-	pub max: u128,
-}
-
-/// The fee config for outbound message
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
-pub struct OutboundFeeConfig {
-	/// base fee to cover the processing costs on BridgeHub in DOT
-	pub base_fee: u128,
-	/// gas price in Wei from https://etherscan.io/gastracker
-	pub gas_price: u128,
-	/// swap ratio for Ether->DOT from https://www.coingecko.com/en/coins/polkadot/eth with difference of precision
-	pub swap_ratio: FixedU128,
-	/// ratio from extra_fee as reward for message relay
-	pub reward_ratio: Percent,
-	/// gas cost for each command
-	pub dispatch_gas: Option<BoundedBTreeMap<u8, u128, ConstU32<255>>>,
-	/// gas range applies for all commands
-	pub dispatch_gas_range: DispatchGasRange,
-}
-
-impl Default for OutboundFeeConfig {
-	fn default() -> Self {
-		OutboundFeeConfig {
-			base_fee: 1_000_000_000,
-			gas_price: 15_000_000_000,
-			swap_ratio: FixedU128::from_rational(400, 100_000_000),
-			reward_ratio: Percent::from_percent(75),
-			dispatch_gas: None,
-			dispatch_gas_range: DispatchGasRange { min: 20000, max: 5000000 },
-		}
-	}
-}
-
 pub use pallet::*;
 
 pub const LOG_TARGET: &str = "snowbridge-outbound-queue";
-
-pub type BalanceOf<T> =
-	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -162,17 +122,11 @@ pub mod pallet {
 
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 
-	use frame_support::{
-		sp_runtime::{traits::AccountIdConversion, AccountId32, SaturatedConversion},
-		traits::tokens::Preservation,
-		PalletId,
-	};
-
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config<AccountId = AccountId32> {
+	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type Hashing: Hash<Output = H256>;
@@ -186,15 +140,6 @@ pub mod pallet {
 		/// Max number of messages processed per block
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
-
-		/// Token reserved for control operations
-		type Token: Mutate<Self::AccountId>;
-
-		/// Local pallet Id derivative of an escrow account to collect fees
-		type LocalPalletId: Get<PalletId>;
-
-		/// Converts MultiLocation to a sovereign account
-		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -231,8 +176,6 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// The message is too large
 		MessageTooLarge,
-		/// Location convert to sovereign account failed
-		LocationToSovereignAccountConversionFailed,
 	}
 
 	/// Messages to be committed in the current block. This storage value is killed in
@@ -431,26 +374,6 @@ pub mod pallet {
 			}
 		}
 
-		pub fn charge_fees(
-			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
-		) -> DispatchResult {
-			let agent_account = T::SovereignAccountOf::convert_location(&ticket.location)
-				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
-			// charge base fee here before https://github.com/paritytech/polkadot-sdk/pull/1234
-			// There is nuance difference between `xcm-fees-manager` because we charge from the
-			// agent account while they charge from the parachain account
-			let base_fee = Self::estimate_base_fee(ticket).unwrap_or_default();
-			let extra_fee = Self::estimate_extra_fee(ticket).unwrap_or_default();
-			let total_fee = base_fee.saturating_add(extra_fee).saturated_into::<BalanceOf<T>>();
-			T::Token::transfer(
-				&agent_account,
-				&T::LocalPalletId::get().into_account_truncating(),
-				total_fee,
-				Preservation::Preserve,
-			)?;
-			Ok(())
-		}
-
 		pub fn validate_ticket(
 			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
 		) -> Result<(), SubmitError> {
@@ -469,16 +392,6 @@ pub mod pallet {
 			);
 			Ok(())
 		}
-	}
-
-	/// A message which can be accepted by the [`OutboundQueue`]
-	#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
-	pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
-		id: H256,
-		origin: ParaId,
-		message: BoundedVec<u8, MaxMessageSize>,
-		command: Command,
-		location: MultiLocation,
 	}
 
 	impl<T: Config> OutboundQueueTrait for Pallet<T> {
@@ -509,7 +422,6 @@ pub mod pallet {
 				id: message_id,
 				origin: message.origin,
 				message: encoded,
-				location: message.agent_location,
 				command,
 			};
 			Self::validate_ticket(&ticket)?;
@@ -523,12 +435,11 @@ pub mod pallet {
 				ticket.message.as_bounded_slice(),
 				AggregateMessageOrigin::Parachain(ticket.origin),
 			);
-			Self::charge_fees(&ticket).map_err(|_| SubmitError::ChargeFeeFailed)?;
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
 		}
 
-		fn estimate_fee(ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+		fn estimate_fee(ticket: &Self::Ticket) -> Result<MultiAssets, SubmitError> {
 			// base fee to cover the submit cost could also be some dynamic value with congestion
 			// into consideration so we load from configurable storage
 			// extra fee to cover the gas cost on Ethereum side

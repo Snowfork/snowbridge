@@ -4,9 +4,8 @@ use super::*;
 
 use frame_support::{
 	assert_err, assert_noop, assert_ok, parameter_types,
-	traits::{ConstU64, Currency, Everything, Hooks, ProcessMessageError},
+	traits::{Everything, Hooks, ProcessMessageError},
 	weights::WeightMeter,
-	PalletId,
 };
 
 use sp_core::{H160, H256};
@@ -16,7 +15,6 @@ use sp_runtime::{
 	AccountId32, BoundedVec,
 };
 use sp_std::convert::From;
-use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -29,7 +27,6 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
 		OutboundQueue: crate::{Pallet, Storage, Event<T>},
 	}
@@ -57,7 +54,7 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -88,44 +85,17 @@ parameter_types! {
 	pub const MaxMessagesPerBlock: u32 = 20;
 }
 
-impl pallet_balances::Config for Test {
-	type MaxLocks = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
-	type Balance = u64;
-	type RuntimeEvent = RuntimeEvent;
-	type DustRemoval = ();
-	type ExistentialDeposit = ConstU64<1>;
-	type AccountStore = System;
-	type WeightInfo = ();
-	type FreezeIdentifier = ();
-	type MaxFreezes = ();
-	type RuntimeHoldReason = ();
-	type MaxHolds = ();
-}
-
-parameter_types! {
-	pub const LocalPalletId: PalletId = PalletId(*b"snow/out");
-}
-
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MessageQueue = MessageQueue;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
-	type LocalPalletId = LocalPalletId;
-	type SovereignAccountOf = HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>;
-	type Token = Balances;
 	type WeightInfo = ();
 }
 
 fn setup() {
 	System::set_block_number(1);
-	let agent_account =
-		<Test as pallet::Config>::SovereignAccountOf::convert_location(&MultiLocation::parent())
-			.unwrap();
-	Balances::make_free_balance_be(&agent_account, 1_000_000_000_000);
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
@@ -164,7 +134,6 @@ fn submit_messages_from_multiple_origins_and_commit() {
 					impl_code_hash: H256::zero(),
 					params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
 				},
-				agent_location: MultiLocation::parent(),
 			};
 
 			let result = OutboundQueue::validate(&message);
@@ -178,7 +147,6 @@ fn submit_messages_from_multiple_origins_and_commit() {
 			let message = Message {
 				origin: para_id.into(),
 				command: Command::CreateAgent { agent_id: Default::default() },
-				agent_location: MultiLocation::parent(),
 			};
 
 			let result = OutboundQueue::validate(&message);
@@ -212,7 +180,6 @@ fn submit_message_fail_too_large() {
 				impl_code_hash: H256::zero(),
 				params: Some((0..1000).map(|_| 1u8).collect::<Vec<u8>>()),
 			},
-			agent_location: MultiLocation::default(),
 		};
 
 		assert_err!(OutboundQueue::validate(&message), SubmitError::MessageTooLarge);
@@ -275,23 +242,4 @@ fn process_message_fails_on_overweight_message() {
 			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
 		);
 	})
-}
-
-#[test]
-fn validate_exits_for_invalid_fee_config() {
-	new_tester().execute_with(|| {
-		let message = Message {
-			origin: 1000.into(),
-			command: Command::CreateAgent { agent_id: Default::default() },
-			agent_location: MultiLocation::parent(),
-		};
-		// Todo: test for arbitrary transact
-		// let message = Message {
-		// 	origin: 1000.into(),
-		// 	command: Command::Transact { agent_id: Default::default(), dispatch_gas: 1000 },
-		// 	agent_location: MultiLocation::parent(),
-		// };
-		let result = OutboundQueue::validate(&message);
-		assert!(result.is_ok());
-	});
 }

@@ -39,7 +39,6 @@ pallet-message-queue = { git = "https://github.com/paritytech/substrate.git", br
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 hex-literal = { version = "0.4.1" }
 rlp = { version = "0.5" }
-pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 
 [features]
 default = [ "std" ]

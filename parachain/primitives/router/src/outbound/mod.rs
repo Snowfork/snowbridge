@@ -128,7 +128,6 @@ where
 		let outbound_message = Message {
 			origin: para_id.into(),
 			command: Command::AgentExecute { agent_id, command: agent_execute_command },
-			agent_location: local_sub_location,
 		};
 
 		let ticket = OutboundQueue::validate(&outbound_message).map_err(|err| {
@@ -136,7 +135,7 @@ where
 			SendError::Unroutable
 		})?;
 
-		let fees = OutboundQueue::estimate_fee(ticket.clone()).map_err(|err| {
+		let fees = OutboundQueue::estimate_fee(&ticket).map_err(|err| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue estimate fee failed. {err:?}");
 			SendError::Fees
 		})?;
@@ -345,7 +344,7 @@ mod tests {
 			Ok(MessageHash::zero())
 		}
 
-		fn estimate_fee(_ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+		fn estimate_fee(_ticket: &Self::Ticket) -> Result<MultiAssets, SubmitError> {
 			Ok(MultiAssets::default())
 		}
 	}
@@ -361,7 +360,7 @@ mod tests {
 			Err(SubmitError::MessageTooLarge)
 		}
 
-		fn estimate_fee(_ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+		fn estimate_fee(_ticket: &Self::Ticket) -> Result<MultiAssets, SubmitError> {
 			Ok(MultiAssets::default())
 		}
 	}

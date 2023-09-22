@@ -17,31 +17,43 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
+use frame_support::{
+	traits::fungible::{Inspect, Mutate},
+	PalletId,
+};
 use snowbridge_core::{
 	outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
 	AgentId,
 };
-use sp_core::{H160, H256};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
 
 pub use pallet::*;
+use sp_core::{H160, H256};
 
 pub const LOG_TARGET: &str = "snowbridge-control";
+
+pub type BalanceOf<T> =
+	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{log, pallet_prelude::*, traits::EnsureOrigin};
+	use frame_support::{
+		log,
+		pallet_prelude::*,
+		sp_runtime::{traits::AccountIdConversion, AccountId32, SaturatedConversion},
+		traits::{tokens::Preservation, EnsureOrigin},
+	};
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config<AccountId = AccountId32> {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// General-purpose hasher
@@ -71,6 +83,15 @@ pub mod pallet {
 
 		/// Location of the relay chain
 		type RelayLocation: Get<MultiLocation>;
+
+		/// Token reserved for control operations
+		type Token: Mutate<Self::AccountId>;
+
+		/// Local pallet Id derivative of an escrow account to collect fees
+		type LocalPalletId: Get<PalletId>;
+
+		/// Converts MultiLocation to a sovereign account
+		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -109,6 +130,9 @@ pub mod pallet {
 		AgentNotExist,
 		ChannelAlreadyCreated,
 		ChannelNotExist,
+		LocationToSovereignAccountConversionFailed,
+		EstimateFeeFailed,
+		ChargeFeeFailed,
 	}
 
 	#[pallet::storage]
@@ -146,9 +170,8 @@ pub mod pallet {
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::Upgrade { impl_address, impl_code_hash, params },
-				agent_location: MultiLocation::parent(),
 			};
-			Self::submit_outbound(message)?;
+			Self::submit_outbound(message, MultiLocation::parent())?;
 
 			Self::deposit_event(Event::<T>::Upgrade { impl_address, impl_code_hash, params_hash });
 			Ok(())
@@ -169,7 +192,7 @@ pub mod pallet {
 				"💫 Create Agent request with agent_id {:?}, origin_location at {:?}, location at {:?}",
 				agent_id,
 				origin_location,
-				location
+				location.clone()
 			);
 
 			// Record the agent id or fail if it has already been created
@@ -177,12 +200,9 @@ pub mod pallet {
 
 			Agents::<T>::insert(agent_id, ());
 
-			let message = Message {
-				origin: T::OwnParaId::get(),
-				command: Command::CreateAgent { agent_id },
-				agent_location: location,
-			};
-			Self::submit_outbound(message.clone())?;
+			let message =
+				Message { origin: T::OwnParaId::get(), command: Command::CreateAgent { agent_id } };
+			Self::submit_outbound(message.clone(), location)?;
 
 			log::debug!(
 				target: LOG_TARGET,
@@ -213,9 +233,8 @@ pub mod pallet {
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::CreateChannel { agent_id, para_id },
-				agent_location: location,
 			};
-			Self::submit_outbound(message)?;
+			Self::submit_outbound(message, location)?;
 
 			Self::deposit_event(Event::<T>::CreateChannel { para_id, agent_id });
 
@@ -244,9 +263,8 @@ pub mod pallet {
 			let message = Message {
 				origin: para_id,
 				command: Command::UpdateChannel { para_id, mode, fee, reward },
-				agent_location: location,
 			};
-			Self::submit_outbound(message)?;
+			Self::submit_outbound(message, location)?;
 
 			Self::deposit_event(Event::<T>::UpdateChannel { para_id, agent_id, mode, fee, reward });
 
@@ -264,9 +282,8 @@ pub mod pallet {
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::SetOperatingMode { mode },
-				agent_location: MultiLocation::parent(),
 			};
-			Self::submit_outbound(message)?;
+			Self::submit_outbound(message, MultiLocation::parent())?;
 
 			Self::deposit_event(Event::<T>::SetOperatingMode { mode });
 
@@ -292,9 +309,8 @@ pub mod pallet {
 			let message = Message {
 				origin: para_id,
 				command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
-				agent_location: location,
 			};
-			Self::submit_outbound(message)?;
+			Self::submit_outbound(message, location)?;
 
 			Self::deposit_event(Event::<T>::TransferNativeFromAgent {
 				agent_id,
@@ -307,9 +323,10 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn submit_outbound(message: Message) -> DispatchResult {
+		fn submit_outbound(message: Message, agent_location: MultiLocation) -> DispatchResult {
 			let ticket =
 				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
+			Self::charge_fees(&ticket, agent_location)?;
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 			Ok(())
 		}
@@ -334,6 +351,34 @@ pub mod pallet {
 				.ok_or(Error::<T>::LocationToAgentIdConversionFailed)?;
 
 			Ok((agent_id, para_id, location))
+		}
+
+		pub fn charge_fees(
+			ticket: &<<T as pallet::Config>::OutboundQueue as OutboundQueueTrait>::Ticket,
+			agent_location: MultiLocation,
+		) -> DispatchResult {
+			let agent_account = T::SovereignAccountOf::convert_location(&agent_location)
+				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
+
+			let fees = T::OutboundQueue::estimate_fee(ticket)
+				.map_err(|_| Error::<T>::EstimateFeeFailed)?;
+			let fee = fees.get(0);
+			let fee_amount: u128 = match fee {
+				Some(&MultiAsset { fun: Fungible(amount), .. }) => amount,
+				_ => 0,
+			};
+
+			if fee_amount > 0 {
+				T::Token::transfer(
+					&agent_account,
+					&T::LocalPalletId::get().into_account_truncating(),
+					fee_amount.saturated_into::<BalanceOf<T>>(),
+					Preservation::Preserve,
+				)
+				.map_err(|_| Error::<T>::ChargeFeeFailed)?;
+			}
+
+			Ok(())
 		}
 	}
 }

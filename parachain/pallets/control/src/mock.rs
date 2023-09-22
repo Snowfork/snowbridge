@@ -4,8 +4,10 @@ use crate as snowbridge_control;
 use frame_support::{
 	pallet_prelude::EnsureOrigin,
 	parameter_types,
-	traits::{ConstU16, ConstU64, OriginTrait},
+	traits::{ConstU16, ConstU64, Currency, OriginTrait},
+	PalletId,
 };
+use xcm_executor::traits::ConvertLocation;
 
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::v2::whitelisted_caller;
@@ -32,6 +34,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		EthereumControl: snowbridge_control,
 	}
 );
@@ -54,13 +57,29 @@ impl frame_system::Config for Test {
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+}
+
+impl pallet_balances::Config for Test {
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+	type Balance = u64;
+	type RuntimeEvent = RuntimeEvent;
+	type DustRemoval = ();
+	type ExistentialDeposit = ConstU64<1>;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type RuntimeHoldReason = ();
+	type MaxHolds = ();
 }
 
 parameter_types! {
@@ -184,12 +203,16 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 		Ok(MessageHash::zero())
 	}
 
-	fn estimate_fee(_ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+	fn estimate_fee(_ticket: &Self::Ticket) -> Result<MultiAssets, SubmitError> {
 		Ok(MultiAssets::default())
 	}
 }
 
-impl snowbridge_control::Config for Test {
+parameter_types! {
+	pub const LocalPalletId: PalletId = PalletId(*b"snow/out");
+}
+
+impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = MockOutboundQueue;
@@ -200,13 +223,27 @@ impl snowbridge_control::Config for Test {
 	type UniversalLocation = UniversalLocation;
 	type RelayLocation = RelayLocation;
 	type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
+	type LocalPalletId = LocalPalletId;
+	type SovereignAccountOf = HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>;
+	type Token = Balances;
 	type WeightInfo = ();
+}
+
+fn setup() {
+	System::set_block_number(1);
+	Balances::make_free_balance_be(
+		&<Test as super::pallet::Config>::SovereignAccountOf::convert_location(
+			&MultiLocation::parent(),
+		)
+		.unwrap(),
+		1_000_000_000_000,
+	);
 }
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| System::set_block_number(1));
+	ext.execute_with(|| setup());
 	ext
 }

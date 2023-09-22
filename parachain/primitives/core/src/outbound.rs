@@ -1,8 +1,15 @@
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
+use ethabi::Token;
+use frame_support::{
+	traits::{ConstU32, Get},
+	BoundedBTreeMap, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+};
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
+use sp_runtime::{FixedU128, Percent};
 use sp_std::{borrow::ToOwned, vec, vec::Vec};
+use xcm::prelude::MultiAssets;
 
 pub type MessageHash = H256;
 
@@ -17,7 +24,7 @@ pub trait OutboundQueue {
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
 
 	/// Estimate fee
-	fn estimate_fee(ticket: Self::Ticket) -> Result<MultiAssets, SubmitError>;
+	fn estimate_fee(ticket: &Self::Ticket) -> Result<MultiAssets, SubmitError>;
 }
 
 /// Default implementation of `OutboundQueue` for tests
@@ -32,7 +39,7 @@ impl OutboundQueue for () {
 		Ok(MessageHash::zero())
 	}
 
-	fn estimate_fee(ticket: Self::Ticket) -> Result<MultiAssets, SubmitError> {
+	fn estimate_fee(ticket: &Self::Ticket) -> Result<MultiAssets, SubmitError> {
 		Ok(MultiAssets::default())
 	}
 }
@@ -48,8 +55,6 @@ pub enum SubmitError {
 	InvalidGas(u128),
 	/// Estimate fee failed
 	EstimateFeeFailed,
-	/// Charge fee failed
-	ChargeFeeFailed,
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
@@ -59,12 +64,7 @@ pub struct Message {
 	pub origin: ParaId,
 	/// The stable ID for a receiving gateway contract
 	pub command: Command,
-	/// The multilocation the message comes from
-	pub agent_location: MultiLocation,
 }
-
-use ethabi::Token;
-use xcm::prelude::{MultiAssets, MultiLocation};
 
 #[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum OperatingMode {
@@ -298,6 +298,51 @@ impl AgentExecuteCommand {
 					Token::Uint(U256::from(*amount)),
 				])),
 			]),
+		}
+	}
+}
+
+/// A message which can be accepted by the [`OutboundQueue`]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
+pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
+	pub id: H256,
+	pub origin: ParaId,
+	pub message: BoundedVec<u8, MaxMessageSize>,
+	pub command: Command,
+}
+
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
+pub struct DispatchGasRange {
+	pub min: u128,
+	pub max: u128,
+}
+
+/// The fee config for outbound message
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
+pub struct OutboundFeeConfig {
+	/// base fee to cover the processing costs on BridgeHub in DOT
+	pub base_fee: u128,
+	/// gas price in Wei from https://etherscan.io/gastracker
+	pub gas_price: u128,
+	/// swap ratio for Ether->DOT from https://www.coingecko.com/en/coins/polkadot/eth with difference of precision
+	pub swap_ratio: FixedU128,
+	/// ratio from extra_fee as reward for message relay
+	pub reward_ratio: Percent,
+	/// gas cost for each command
+	pub dispatch_gas: Option<BoundedBTreeMap<u8, u128, ConstU32<255>>>,
+	/// gas range applies for all commands
+	pub dispatch_gas_range: DispatchGasRange,
+}
+
+impl Default for OutboundFeeConfig {
+	fn default() -> Self {
+		OutboundFeeConfig {
+			base_fee: 1_000_000_000,
+			gas_price: 15_000_000_000,
+			swap_ratio: FixedU128::from_rational(400, 100_000_000),
+			reward_ratio: Percent::from_percent(75),
+			dispatch_gas: None,
+			dispatch_gas_range: DispatchGasRange { min: 20000, max: 5000000 },
 		}
 	}
 }
