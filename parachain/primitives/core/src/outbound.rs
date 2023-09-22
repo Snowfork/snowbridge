@@ -12,6 +12,9 @@ use sp_std::{borrow::ToOwned, vec, vec::Vec};
 use xcm::prelude::MultiAssets;
 
 pub type MessageHash = H256;
+pub type FeeAmount = u128;
+pub type GasAmount = u128;
+pub type GasPriceInWei = u128;
 
 /// A trait for enqueueing messages for delivery to Ethereum
 pub trait OutboundQueue {
@@ -24,7 +27,7 @@ pub trait OutboundQueue {
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
 
 	/// Estimate fee
-	fn estimate_fee(ticket: &Self::Ticket) -> Result<MultiAssets, SubmitError>;
+	fn estimate_fee(message: &Message) -> Result<MultiAssets, SubmitError>;
 }
 
 /// Default implementation of `OutboundQueue` for tests
@@ -39,7 +42,7 @@ impl OutboundQueue for () {
 		Ok(MessageHash::zero())
 	}
 
-	fn estimate_fee(ticket: &Self::Ticket) -> Result<MultiAssets, SubmitError> {
+	fn estimate_fee(message: &Message) -> Result<MultiAssets, SubmitError> {
 		Ok(MultiAssets::default())
 	}
 }
@@ -313,23 +316,23 @@ pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
 pub struct DispatchGasRange {
-	pub min: u128,
-	pub max: u128,
+	pub min: GasAmount,
+	pub max: GasAmount,
 }
 
 /// The fee config for outbound message
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
 pub struct OutboundFeeConfig {
 	/// base fee to cover the processing costs on BridgeHub in DOT
-	pub base_fee: u128,
+	pub base_fee: FeeAmount,
 	/// gas price in Wei from https://etherscan.io/gastracker
-	pub gas_price: u128,
+	pub gas_price: GasPriceInWei,
 	/// swap ratio for Ether->DOT from https://www.coingecko.com/en/coins/polkadot/eth with difference of precision
 	pub swap_ratio: FixedU128,
 	/// ratio from extra_fee as reward for message relay
 	pub reward_ratio: Percent,
 	/// gas cost for each command
-	pub dispatch_gas: Option<BoundedBTreeMap<u8, u128, ConstU32<255>>>,
+	pub dispatch_gas: Option<BoundedBTreeMap<u8, GasAmount, ConstU32<255>>>,
 	/// gas range applies for all commands
 	pub dispatch_gas_range: DispatchGasRange,
 }

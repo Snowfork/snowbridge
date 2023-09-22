@@ -326,7 +326,7 @@ pub mod pallet {
 		fn submit_outbound(message: Message, agent_location: MultiLocation) -> DispatchResult {
 			let ticket =
 				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
-			Self::charge_fees(&ticket, agent_location)?;
+			Self::charge_fees(&message, &agent_location)?;
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 			Ok(())
 		}
@@ -353,14 +353,11 @@ pub mod pallet {
 			Ok((agent_id, para_id, location))
 		}
 
-		pub fn charge_fees(
-			ticket: &<<T as pallet::Config>::OutboundQueue as OutboundQueueTrait>::Ticket,
-			agent_location: MultiLocation,
-		) -> DispatchResult {
-			let agent_account = T::SovereignAccountOf::convert_location(&agent_location)
+		pub fn charge_fees(message: &Message, agent_location: &MultiLocation) -> DispatchResult {
+			let agent_account = T::SovereignAccountOf::convert_location(agent_location)
 				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
 
-			let fees = T::OutboundQueue::estimate_fee(ticket)
+			let fees = T::OutboundQueue::estimate_fee(message)
 				.map_err(|_| Error::<T>::EstimateFeeFailed)?;
 			let fee = fees.get(0);
 			let fee_amount: u128 = match fee {

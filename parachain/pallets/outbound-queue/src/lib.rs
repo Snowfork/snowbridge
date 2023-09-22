@@ -42,8 +42,8 @@ use sp_std::prelude::*;
 use xcm::prelude::{MultiAsset, MultiAssets, MultiLocation};
 
 use snowbridge_core::outbound::{
-	Command, Message, MessageHash, OutboundFeeConfig, OutboundQueue as OutboundQueueTrait,
-	OutboundQueueTicket, SubmitError,
+	Command, FeeAmount, GasAmount, Message, MessageHash, OutboundFeeConfig,
+	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
@@ -343,54 +343,47 @@ pub mod pallet {
 			Ok(true)
 		}
 
-		pub fn estimate_extra_fee(
-			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
-		) -> Option<u128> {
+		// Todo: for arbitrary transact dispatch_gas should be dynamic retrieved from input
+		pub fn get_dispatch_gas(message: &Message) -> Result<GasAmount, SubmitError> {
 			let fee_config = FeeConfig::<T>::get();
-			match ticket.command.extra_fee_required() {
-				true => {
-					let dispatch_gas: u128 = match fee_config.dispatch_gas {
-						Some(dispatch_gas_map) => *dispatch_gas_map
-							.get(&ticket.command.index())
-							.unwrap_or(&ticket.command.dispatch_gas()),
-						None => ticket.command.dispatch_gas(),
-					};
-					let gas_cost_in_wei = dispatch_gas.saturating_mul(fee_config.gas_price);
-					let gas_cost_in_native = FixedU128::from_inner(gas_cost_in_wei)
-						.saturating_mul(fee_config.swap_ratio);
-					Some(gas_cost_in_native.into_inner())
-				},
-				false => None,
-			}
-		}
-
-		pub fn estimate_base_fee(
-			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
-		) -> Option<u128> {
-			let fee_config = FeeConfig::<T>::get();
-			match ticket.command.base_fee_required() {
-				true => Some(fee_config.base_fee),
-				false => None,
-			}
-		}
-
-		pub fn validate_ticket(
-			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
-		) -> Result<(), SubmitError> {
-			let fee_config = FeeConfig::<T>::get();
-			// Todo: for arbitrary transact dispatch_gas should be dynamic value from input
-			let dispatch_gas: u128 = match fee_config.dispatch_gas {
+			let dispatch_gas = match fee_config.dispatch_gas {
 				Some(dispatch_gas_map) => *dispatch_gas_map
-					.get(&ticket.command.index())
-					.unwrap_or(&ticket.command.dispatch_gas()),
-				None => ticket.command.dispatch_gas(),
+					.get(&message.command.index())
+					.unwrap_or(&message.command.dispatch_gas()),
+				None => message.command.dispatch_gas(),
 			};
 			ensure!(
 				dispatch_gas >= fee_config.dispatch_gas_range.min &&
 					dispatch_gas <= fee_config.dispatch_gas_range.max,
 				SubmitError::InvalidGas(dispatch_gas)
 			);
-			Ok(())
+			Ok(dispatch_gas)
+		}
+
+		pub fn estimate_extra_fee(message: &Message) -> Result<FeeAmount, SubmitError> {
+			let fee_config = FeeConfig::<T>::get();
+			let extra_fee = match message.command.extra_fee_required() {
+				true => {
+					let dispatch_gas = Self::get_dispatch_gas(message)?;
+					let gas_cost_in_wei = dispatch_gas.saturating_mul(fee_config.gas_price);
+					let gas_cost_in_native = FixedU128::from_inner(gas_cost_in_wei)
+						.saturating_mul(fee_config.swap_ratio);
+					gas_cost_in_native.into_inner()
+				},
+				false => FeeAmount::default(),
+			};
+			Ok(extra_fee)
+		}
+
+		/// base fee to cover the cost in bridgeHub assuming with congestion into consideration it's
+		/// not a static value so load from storage configurable
+		pub fn estimate_base_fee(message: &Message) -> Result<FeeAmount, SubmitError> {
+			let fee_config = FeeConfig::<T>::get();
+			let base_fee = match message.command.base_fee_required() {
+				true => fee_config.base_fee,
+				false => FeeAmount::default(),
+			};
+			Ok(base_fee)
 		}
 	}
 
@@ -424,7 +417,6 @@ pub mod pallet {
 				message: encoded,
 				command,
 			};
-			Self::validate_ticket(&ticket)?;
 			Ok(ticket)
 		}
 
@@ -439,12 +431,9 @@ pub mod pallet {
 			Ok(ticket.id)
 		}
 
-		fn estimate_fee(ticket: &Self::Ticket) -> Result<MultiAssets, SubmitError> {
-			// base fee to cover the submit cost could also be some dynamic value with congestion
-			// into consideration so we load from configurable storage
-			// extra fee to cover the gas cost on Ethereum side
-			let base_fee = Self::estimate_base_fee(ticket).unwrap_or_default();
-			let extra_fee = Self::estimate_extra_fee(ticket).unwrap_or_default();
+		fn estimate_fee(message: &Message) -> Result<MultiAssets, SubmitError> {
+			let base_fee = Self::estimate_base_fee(message)?;
+			let extra_fee = Self::estimate_extra_fee(message)?;
 			Ok(MultiAssets::from(vec![MultiAsset::from((
 				MultiLocation::parent(),
 				base_fee.saturating_add(extra_fee),
