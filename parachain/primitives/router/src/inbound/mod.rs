@@ -103,8 +103,7 @@ impl Command {
 								Parent,
 								GlobalConsensus(network),
 								origin_location,
-							)
-								.into(),
+							).into(),
 						},
 					]
 					.into(),
