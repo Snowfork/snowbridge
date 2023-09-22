@@ -11,6 +11,7 @@ use snowbridge_core::outbound::OperatingMode;
 use sp_core::{Get, H160, H256};
 use sp_std::vec;
 use sp_std::vec::Vec;
+use frame_support::traits::EnsureOrigin;
 
 #[benchmarks]
 mod benchmarks {
@@ -30,39 +31,39 @@ mod benchmarks {
 
 	#[benchmark]
 	fn create_agent() -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
+		let origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller));
+		_(origin as T::RuntimeOrigin);
 
 		Ok(())
 	}
 
 	#[benchmark]
 	fn create_channel() -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
-		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
-			RawOrigin::Signed(caller.clone()).into()
-		));
+		let origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+
+		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(origin.clone() as T::RuntimeOrigin));
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller));
+		_(origin as T::RuntimeOrigin);
 
 		Ok(())
 	}
 
 	#[benchmark]
 	fn update_channel() -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
+		let origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+
 		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
-			RawOrigin::Signed(caller.clone()).into()
+			origin.clone() as T::RuntimeOrigin
 		));
 		frame_support::assert_ok!(SnowbridgeControl::<T>::create_channel(
-			RawOrigin::Signed(caller.clone()).into()
+			origin.clone() as T::RuntimeOrigin
 		));
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), OperatingMode::RejectingOutboundMessages, 1, 1);
+		_(origin as T::RuntimeOrigin, OperatingMode::RejectingOutboundMessages, 1, 1);
 
 		Ok(())
 	}
