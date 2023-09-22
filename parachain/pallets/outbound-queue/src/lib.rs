@@ -443,8 +443,8 @@ pub mod pallet {
 			// base fee to cover the submit cost could also be some dynamic value with congestion
 			// into consideration so we load from configurable storage
 			// extra fee to cover the gas cost on Ethereum side
-			let base_fee = Self::estimate_base_fee(&ticket).unwrap_or_default();
-			let extra_fee = Self::estimate_extra_fee(&ticket).unwrap_or_default();
+			let base_fee = Self::estimate_base_fee(ticket).unwrap_or_default();
+			let extra_fee = Self::estimate_extra_fee(ticket).unwrap_or_default();
 			Ok(MultiAssets::from(vec![MultiAsset::from((
 				MultiLocation::parent(),
 				base_fee.saturating_add(extra_fee),
