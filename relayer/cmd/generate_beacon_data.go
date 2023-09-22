@@ -188,7 +188,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		}).Info("created initial sync file")
 
 		// generate FinalizedUpdate for next epoch
-		log.Info("waiting for a new finalized_update in next epoch and in current sync period,several seconds required...")
+		log.Info("waiting for a new finalized_update in next epoch and in current sync period. This may take a while...")
 		elapseEpochs := uint64(1)
 		waitIntervalForNextEpoch := elapseEpochs * specSettings.SlotsInEpoch
 		time.Sleep(time.Duration(waitIntervalForNextEpoch) * SlotTimeDuration)
@@ -215,13 +215,20 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		}).Info("created finalized header update file")
 
 		// generate SyncCommitteeUpdate same as InitialUpdate for filling NextSyncCommittee
-		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod)
-		if err != nil {
-			return fmt.Errorf("get sync committee update: %w", err)
+		syncCommitteeUpdate := beaconjson.Update{}
+		for {
+			syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod)
+			if err != syncer.ErrBeaconStateAvailableYet {
+				syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
+				writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("sync-committee-update.%s.json", activeSpec.ToString()))
+				log.Info("created sync committee update file")
+
+				break
+			}
+
+			fmt.Println("beacon state no available yet, retrying in 15 seconds...")
+			time.Sleep(15 * time.Second)
 		}
-		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("sync-committee-update.%s.json", activeSpec.ToString()))
-		log.Info("created sync committee update file")
 
 		// generate executionUpdate
 		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot - 2)
