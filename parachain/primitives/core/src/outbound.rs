@@ -56,7 +56,7 @@ pub struct Message {
 	/// The stable ID for a receiving gateway contract
 	pub command: Command,
 	/// The multilocation the message comes from
-	pub location: MultiLocation,
+	pub agent_location: MultiLocation,
 }
 
 use ethabi::Token;

@@ -146,7 +146,7 @@ pub mod pallet {
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::Upgrade { impl_address, impl_code_hash, params },
-				location: MultiLocation::parent(),
+				agent_location: MultiLocation::parent(),
 			};
 			Self::submit_outbound(message)?;
 
@@ -180,7 +180,7 @@ pub mod pallet {
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::CreateAgent { agent_id },
-				location,
+				agent_location: location,
 			};
 			Self::submit_outbound(message.clone())?;
 
@@ -213,7 +213,7 @@ pub mod pallet {
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::CreateChannel { agent_id, para_id },
-				location,
+				agent_location: location,
 			};
 			Self::submit_outbound(message)?;
 
@@ -244,7 +244,7 @@ pub mod pallet {
 			let message = Message {
 				origin: para_id,
 				command: Command::UpdateChannel { para_id, mode, fee, reward },
-				location,
+				agent_location: location,
 			};
 			Self::submit_outbound(message)?;
 
@@ -264,7 +264,7 @@ pub mod pallet {
 			let message = Message {
 				origin: T::OwnParaId::get(),
 				command: Command::SetOperatingMode { mode },
-				location: MultiLocation::parent(),
+				agent_location: MultiLocation::parent(),
 			};
 			Self::submit_outbound(message)?;
 
@@ -292,7 +292,7 @@ pub mod pallet {
 			let message = Message {
 				origin: para_id,
 				command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
-				location,
+				agent_location: location,
 			};
 			Self::submit_outbound(message)?;
 

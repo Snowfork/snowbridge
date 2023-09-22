@@ -473,7 +473,7 @@ pub mod pallet {
 				id: message_id,
 				origin: message.origin,
 				message: encoded,
-				location: message.location,
+				location: message.agent_location,
 				command,
 			};
 			Ok(ticket)

@@ -164,7 +164,7 @@ fn submit_messages_from_multiple_origins_and_commit() {
 					impl_code_hash: H256::zero(),
 					params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
 				},
-				location: MultiLocation::parent(),
+				agent_location: MultiLocation::parent(),
 			};
 
 			let result = OutboundQueue::validate(&message);
@@ -178,7 +178,7 @@ fn submit_messages_from_multiple_origins_and_commit() {
 			let message = Message {
 				origin: para_id.into(),
 				command: Command::CreateAgent { agent_id: Default::default() },
-				location: MultiLocation::parent(),
+				agent_location: MultiLocation::parent(),
 			};
 
 			let result = OutboundQueue::validate(&message);
@@ -212,7 +212,7 @@ fn submit_message_fail_too_large() {
 				impl_code_hash: H256::zero(),
 				params: Some((0..1000).map(|_| 1u8).collect::<Vec<u8>>()),
 			},
-			location: MultiLocation::default(),
+			agent_location: MultiLocation::default(),
 		};
 
 		assert_err!(OutboundQueue::validate(&message), SubmitError::MessageTooLarge);
