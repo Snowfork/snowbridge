@@ -47,7 +47,9 @@ use snowbridge_core::outbound::{
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
+use frame_support::traits::fungible::{Inspect, Mutate};
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
+use sp_runtime::{FixedU128, Percent, Saturating};
 pub use weights::WeightInfo;
 
 /// Aggregate message origin for the `MessageQueue` pallet.
@@ -109,11 +111,33 @@ impl From<u32> for AggregateMessageOrigin {
 pub type MaxEnqueuedMessageSizeOf<T> =
 	<<T as Config>::MessageQueue as EnqueueMessage<AggregateMessageOrigin>>::MaxMessageLen;
 
+/// The fee config for outbound message
+#[derive(Encode, Decode, Clone, RuntimeDebug, TypeInfo, PartialEq, MaxEncodedLen)]
+pub struct OutboundFeeConfig {
+	/// base fee to cover the processing costs on BridgeHub in DOT
+	pub base_fee: u128,
+	/// gas price in Wei from https://etherscan.io/gastracker
+	pub gas_price: u128,
+	/// swap ratio for Ether->DOT from https://www.coingecko.com/en/coins/polkadot/eth with difference of precision
+	pub swap_ratio: FixedU128,
+	/// ratio from extra_fee as reward for message relay
+	pub reward_ratio: Percent,
+}
+
+impl Default for OutboundFeeConfig {
+	fn default() -> Self {
+		OutboundFeeConfig {
+			base_fee: 1_000_000_000,
+			gas_price: 15_000_000_000,
+			swap_ratio: FixedU128::from_rational(400, 100_000_000),
+			reward_ratio: Percent::from_percent(75),
+		}
+	}
+}
+
 pub use pallet::*;
 
 pub const LOG_TARGET: &str = "snowbridge-outbound-queue";
-
-use frame_support::traits::fungible::{Inspect, Mutate};
 
 pub type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
@@ -187,12 +211,8 @@ pub mod pallet {
 			/// number of committed messages
 			count: u64,
 		},
-		/// Set base fee
-		BaseFeeSet { amount: u128 },
-		/// Set swap ratio
-		SwapRatioSet { ratio: u128 },
-		/// Set gas price
-		GasPriceSet { price: u128 },
+		/// Set outbound fee config
+		OutboundFeeConfigSet { config: OutboundFeeConfig },
 	}
 
 	#[pallet::error]
@@ -238,32 +258,15 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
-	/// The base fee to cover the cost of submitting an outbound message
-	/// default 0.1 DOT
+	/// Fee config for outbound message
 	#[pallet::type_value]
-	pub fn DefaultBaseFee() -> u128 {
-		1_000_000_000
+	pub fn DefaultFeeConfig() -> OutboundFeeConfig {
+		OutboundFeeConfig::default()
 	}
-	#[pallet::storage]
-	pub type BaseFee<T: Config> = StorageValue<_, u128, ValueQuery, DefaultBaseFee>;
 
-	/// The swap ratio from Ether->DOT from https://www.coingecko.com/en/coins/polkadot/eth
-	/// default 1:400
-	#[pallet::type_value]
-	pub fn DefaultSwapRatio() -> u128 {
-		400
-	}
 	#[pallet::storage]
-	pub type SwapRatio<T: Config> = StorageValue<_, u128, ValueQuery, DefaultSwapRatio>;
-
-	/// The gas price to calculate the reward in Ether from https://etherscan.io/gastracker
-	/// default 15 gwei
-	#[pallet::type_value]
-	pub fn DefaultGasPrice() -> u128 {
-		15_000_000_000
-	}
-	#[pallet::storage]
-	pub type GasPrice<T: Config> = StorageValue<_, u128, ValueQuery, DefaultGasPrice>;
+	pub type FeeConfig<T: Config> =
+		StorageValue<_, OutboundFeeConfig, ValueQuery, DefaultFeeConfig>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
@@ -304,36 +307,17 @@ pub mod pallet {
 			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
 		}
 
-		/// Set base fee for submitting a message.
+		/// Set fee config for outbound message.
 		/// May only be called by root
 		#[pallet::call_index(2)]
-		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
-		pub fn set_base_fee(origin: OriginFor<T>, amount: u128) -> DispatchResult {
+		#[pallet::weight((T::DbWeight::get().reads_writes(2, 3), DispatchClass::Operational))]
+		pub fn set_outbound_fee_config(
+			origin: OriginFor<T>,
+			config: OutboundFeeConfig,
+		) -> DispatchResult {
 			ensure_root(origin)?;
-			BaseFee::<T>::put(amount);
-			Self::deposit_event(Event::BaseFeeSet { amount });
-			Ok(())
-		}
-
-		/// Set swap ratio from Ether to DOT.
-		/// May only be called by root
-		#[pallet::call_index(3)]
-		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
-		pub fn set_swap_ratio(origin: OriginFor<T>, ratio: u128) -> DispatchResult {
-			ensure_root(origin)?;
-			SwapRatio::<T>::put(ratio);
-			Self::deposit_event(Event::SwapRatioSet { ratio });
-			Ok(())
-		}
-
-		/// Set gas price.
-		/// May only be called by root
-		#[pallet::call_index(4)]
-		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
-		pub fn set_gas_price(origin: OriginFor<T>, price: u128) -> DispatchResult {
-			ensure_root(origin)?;
-			GasPrice::<T>::put(price);
-			Self::deposit_event(Event::GasPriceSet { price });
+			FeeConfig::<T>::put(config.clone());
+			Self::deposit_event(Event::OutboundFeeConfigSet { config });
 			Ok(())
 		}
 	}
@@ -373,8 +357,9 @@ pub mod pallet {
 
 			let (command, params, dispatch_gas) = enqueued_message.command.abi_encode();
 
-			// TBC: 4/5 to relayer and 1/5 left for protocol maintenance
-			let reward = dispatch_gas * GasPrice::<T>::get() * 4 / 5;
+			let fee_config = FeeConfig::<T>::get();
+
+			let reward = fee_config.reward_ratio * dispatch_gas * fee_config.gas_price;
 
 			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
@@ -406,16 +391,15 @@ pub mod pallet {
 		pub fn estimate_extra_fee(
 			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
 		) -> Option<u128> {
+			let fee_config = FeeConfig::<T>::get();
 			match ticket.command.extra_fee_required() {
-				true => Some(
-					ticket
-						.command
-						.dispatch_gas()
-						.saturating_mul(GasPrice::<T>::get())
-						// Div by precision(decimal 10 for DOT and 18 for Ether)
-						.saturating_div(100_000_000)
-						.saturating_mul(SwapRatio::<T>::get()),
-				),
+				true => {
+					let gas_cost_in_wei =
+						ticket.command.dispatch_gas().saturating_mul(fee_config.gas_price);
+					let gas_cost_in_native = FixedU128::from_inner(gas_cost_in_wei)
+						.saturating_mul(fee_config.swap_ratio);
+					return Some(gas_cost_in_native.into_inner())
+				},
 				false => None,
 			}
 		}
@@ -423,8 +407,9 @@ pub mod pallet {
 		pub fn estimate_base_fee(
 			ticket: &OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>,
 		) -> Option<u128> {
+			let fee_config = FeeConfig::<T>::get();
 			match ticket.command.base_fee_required() {
-				true => Some(BaseFee::<T>::get()),
+				true => Some(fee_config.base_fee),
 				false => None,
 			}
 		}
