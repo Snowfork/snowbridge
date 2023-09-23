@@ -271,8 +271,27 @@ pub mod pallet {
 			config: OutboundFeeConfig,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			FeeConfig::<T>::put(config.clone());
-			Self::deposit_event(Event::OutboundFeeConfigSet { config });
+			let mut current = FeeConfig::<T>::get();
+			if config.base_fee.is_some() {
+				current.base_fee = config.base_fee;
+			}
+			if config.command_gas_map.is_some() {
+				current.command_gas_map = config.command_gas_map;
+			}
+			if config.gas_range.is_some() {
+				current.gas_range = config.gas_range;
+			}
+			if config.gas_price.is_some() {
+				current.gas_price = config.gas_price;
+			}
+			if config.swap_ratio.is_some() {
+				current.swap_ratio = config.swap_ratio;
+			}
+			if config.reward_ratio.is_some() {
+				current.reward_ratio = config.reward_ratio;
+			}
+			FeeConfig::<T>::put(current.clone());
+			Self::deposit_event(Event::OutboundFeeConfigSet { config: current });
 			Ok(())
 		}
 	}
@@ -314,7 +333,12 @@ pub mod pallet {
 
 			let fee_config = FeeConfig::<T>::get();
 
-			let reward = fee_config.reward_ratio * dispatch_gas * fee_config.gas_price;
+			let reward = fee_config
+				.reward_ratio
+				.and_then(|ratio| {
+					Some(ratio * dispatch_gas * fee_config.gas_price.unwrap_or_default())
+				})
+				.unwrap_or_default();
 
 			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
@@ -346,42 +370,45 @@ pub mod pallet {
 		// Todo: for arbitrary transact dispatch_gas should be dynamic retrieved from input
 		pub fn get_dispatch_gas(message: &Message) -> Result<GasAmount, SubmitError> {
 			let fee_config = FeeConfig::<T>::get();
-			let dispatch_gas = match fee_config.dispatch_gas {
-				Some(dispatch_gas_map) => *dispatch_gas_map
+			let dispatch_gas = match fee_config.command_gas_map {
+				Some(command_gas_map) => *command_gas_map
 					.get(&message.command.index())
 					.unwrap_or(&message.command.dispatch_gas()),
 				None => message.command.dispatch_gas(),
 			};
-			ensure!(
-				dispatch_gas >= fee_config.dispatch_gas_range.min &&
-					dispatch_gas <= fee_config.dispatch_gas_range.max,
-				SubmitError::InvalidGas(dispatch_gas)
-			);
+			if fee_config.gas_range.is_some() {
+				ensure!(
+					dispatch_gas >= fee_config.gas_range.clone().unwrap_or_default().min &&
+						dispatch_gas <= fee_config.gas_range.clone().unwrap_or_default().max,
+					SubmitError::InvalidGas(dispatch_gas)
+				);
+			}
 			Ok(dispatch_gas)
 		}
 
-		pub fn estimate_extra_fee(message: &Message) -> Result<FeeAmount, SubmitError> {
+		pub fn estimate_extra_fee(message: &Message) -> Result<Option<FeeAmount>, SubmitError> {
 			let fee_config = FeeConfig::<T>::get();
 			let extra_fee = match message.command.extra_fee_required() {
 				true => {
 					let dispatch_gas = Self::get_dispatch_gas(message)?;
-					let gas_cost_in_wei = dispatch_gas.saturating_mul(fee_config.gas_price);
+					let gas_cost_in_wei =
+						dispatch_gas.saturating_mul(fee_config.gas_price.unwrap_or_default());
 					let gas_cost_in_native = FixedU128::from_inner(gas_cost_in_wei)
-						.saturating_mul(fee_config.swap_ratio);
-					gas_cost_in_native.into_inner()
+						.saturating_mul(fee_config.swap_ratio.unwrap_or_default());
+					Some(gas_cost_in_native.into_inner())
 				},
-				false => FeeAmount::default(),
+				false => None,
 			};
 			Ok(extra_fee)
 		}
 
 		/// base fee to cover the cost in bridgeHub assuming with congestion into consideration it's
 		/// not a static value so load from storage configurable
-		pub fn estimate_base_fee(message: &Message) -> Result<FeeAmount, SubmitError> {
+		pub fn estimate_base_fee(message: &Message) -> Result<Option<FeeAmount>, SubmitError> {
 			let fee_config = FeeConfig::<T>::get();
 			let base_fee = match message.command.base_fee_required() {
-				true => fee_config.base_fee,
-				false => FeeAmount::default(),
+				true => Some(fee_config.base_fee.unwrap_or_default()),
+				false => None,
 			};
 			Ok(base_fee)
 		}
@@ -432,8 +459,8 @@ pub mod pallet {
 		}
 
 		fn estimate_fee(message: &Message) -> Result<MultiAssets, SubmitError> {
-			let base_fee = Self::estimate_base_fee(message)?;
-			let extra_fee = Self::estimate_extra_fee(message)?;
+			let base_fee = Self::estimate_base_fee(message)?.unwrap_or(FeeAmount::default());
+			let extra_fee = Self::estimate_extra_fee(message)?.unwrap_or(FeeAmount::default());
 			Ok(MultiAssets::from(vec![MultiAsset::from((
 				MultiLocation::parent(),
 				base_fee.saturating_add(extra_fee),

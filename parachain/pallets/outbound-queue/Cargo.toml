@@ -29,8 +29,6 @@ snowbridge-outbound-queue-merkle-tree = { path = "merkle-tree", default-features
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
-xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
-xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 bp-runtime = { git = "https://github.com/Snowfork/cumulus.git", branch = "snowbridge", default-features = false }
 
 [dev-dependencies]
@@ -57,8 +55,6 @@ std = [
     "snowbridge-outbound-queue-merkle-tree/std",
     "ethabi/std",
     "xcm/std",
-    "xcm-builder/std",
-    "xcm-executor/std",
     "bp-runtime/std",
 ]
 runtime-benchmarks = [
@@ -67,7 +63,5 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "hex-literal",
-    "rlp",
-    "xcm-builder/runtime-benchmarks",
-    "xcm-executor/runtime-benchmarks"
+    "rlp"
 ]

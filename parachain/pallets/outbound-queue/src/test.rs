@@ -15,6 +15,7 @@ use sp_runtime::{
 	AccountId32, BoundedVec,
 };
 use sp_std::convert::From;
+use xcm::prelude::Fungible;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -242,4 +243,20 @@ fn process_message_fails_on_overweight_message() {
 			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
 		);
 	})
+}
+
+#[test]
+fn estimate_fee_should_work() {
+	new_tester().execute_with(|| {
+		let message = Message {
+			origin: 1001.into(),
+			command: Command::CreateAgent { agent_id: Default::default() },
+		};
+		let fees = OutboundQueue::estimate_fee(&message).unwrap();
+		let fee_amount: u128 = match fees.get(0) {
+			Some(&MultiAsset { fun: Fungible(amount), .. }) => amount,
+			_ => 0,
+		};
+		assert_eq!(fee_amount, 19000000000);
+	});
 }

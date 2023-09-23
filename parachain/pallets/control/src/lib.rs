@@ -359,8 +359,8 @@ pub mod pallet {
 
 			let fees = T::OutboundQueue::estimate_fee(message)
 				.map_err(|_| Error::<T>::EstimateFeeFailed)?;
-			let fee = fees.get(0);
-			let fee_amount: u128 = match fee {
+
+			let fee_amount: u128 = match fees.get(0) {
 				Some(&MultiAsset { fun: Fungible(amount), .. }) => amount,
 				_ => 0,
 			};

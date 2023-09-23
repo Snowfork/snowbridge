@@ -12,6 +12,7 @@ use sp_std::{borrow::ToOwned, vec, vec::Vec};
 use xcm::prelude::MultiAssets;
 
 pub type MessageHash = H256;
+pub type CommandIndex = u8;
 pub type FeeAmount = u128;
 pub type GasAmount = u128;
 pub type GasPriceInWei = u128;
@@ -314,7 +315,9 @@ pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
 	pub command: Command,
 }
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, Clone, Default, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen,
+)]
 pub struct DispatchGasRange {
 	pub min: GasAmount,
 	pub max: GasAmount,
@@ -324,28 +327,30 @@ pub struct DispatchGasRange {
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
 pub struct OutboundFeeConfig {
 	/// base fee to cover the processing costs on BridgeHub in DOT
-	pub base_fee: FeeAmount,
-	/// gas price in Wei from https://etherscan.io/gastracker
-	pub gas_price: GasPriceInWei,
-	/// swap ratio for Ether->DOT from https://www.coingecko.com/en/coins/polkadot/eth with difference of precision
-	pub swap_ratio: FixedU128,
-	/// ratio from extra_fee as reward for message relay
-	pub reward_ratio: Percent,
+	pub base_fee: Option<FeeAmount>,
 	/// gas cost for each command
-	pub dispatch_gas: Option<BoundedBTreeMap<u8, GasAmount, ConstU32<255>>>,
+	pub command_gas_map: Option<
+		BoundedBTreeMap<CommandIndex, GasAmount, ConstU32<{ CommandIndex::max_value() as u32 }>>,
+	>,
 	/// gas range applies for all commands
-	pub dispatch_gas_range: DispatchGasRange,
+	pub gas_range: Option<DispatchGasRange>,
+	/// gas price in Wei from https://etherscan.io/gastracker
+	pub gas_price: Option<GasPriceInWei>,
+	/// swap ratio for Ether->DOT from https://www.coingecko.com/en/coins/polkadot/eth with precision difference between Ether->DOT(18->10)
+	pub swap_ratio: Option<FixedU128>,
+	/// ratio from extra_fee as reward for message relay
+	pub reward_ratio: Option<Percent>,
 }
 
 impl Default for OutboundFeeConfig {
 	fn default() -> Self {
 		OutboundFeeConfig {
-			base_fee: 1_000_000_000,
-			gas_price: 15_000_000_000,
-			swap_ratio: FixedU128::from_rational(400, 100_000_000),
-			reward_ratio: Percent::from_percent(75),
-			dispatch_gas: None,
-			dispatch_gas_range: DispatchGasRange { min: 20000, max: 5000000 },
+			base_fee: Some(1_000_000_000),
+			gas_price: Some(15_000_000_000),
+			swap_ratio: Some(FixedU128::from_rational(400, 100_000_000)),
+			reward_ratio: Some(Percent::from_percent(75)),
+			command_gas_map: None,
+			gas_range: Some(DispatchGasRange { min: 20000, max: 5000000 }),
 		}
 	}
 }
