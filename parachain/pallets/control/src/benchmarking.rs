@@ -6,12 +6,11 @@ use super::*;
 #[allow(unused)]
 use crate::Pallet as SnowbridgeControl;
 use frame_benchmarking::v2::*;
+use frame_support::traits::EnsureOrigin;
 use frame_system::RawOrigin;
 use snowbridge_core::outbound::OperatingMode;
 use sp_core::{Get, H160, H256};
-use sp_std::vec;
-use sp_std::vec::Vec;
-use frame_support::traits::EnsureOrigin;
+use sp_std::{vec, vec::Vec};
 
 #[benchmarks]
 mod benchmarks {
@@ -31,7 +30,8 @@ mod benchmarks {
 
 	#[benchmark]
 	fn create_agent() -> Result<(), BenchmarkError> {
-		let origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let origin =
+			T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
 		#[extrinsic_call]
 		_(origin as T::RuntimeOrigin);
@@ -41,10 +41,14 @@ mod benchmarks {
 
 	#[benchmark]
 	fn create_channel() -> Result<(), BenchmarkError> {
-		let agent_origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let channel_origin = T::ChannelOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let agent_origin =
+			T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let channel_origin =
+			T::ChannelOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
-		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(agent_origin as T::RuntimeOrigin));
+		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
+			agent_origin as T::RuntimeOrigin
+		));
 
 		#[extrinsic_call]
 		_(channel_origin as T::RuntimeOrigin);
@@ -54,8 +58,10 @@ mod benchmarks {
 
 	#[benchmark]
 	fn update_channel() -> Result<(), BenchmarkError> {
-		let agent_origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let channel_origin = T::ChannelOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let agent_origin =
+			T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let channel_origin =
+			T::ChannelOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
 		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
 			agent_origin as T::RuntimeOrigin
@@ -80,7 +86,8 @@ mod benchmarks {
 
 	#[benchmark]
 	fn transfer_native_from_agent() -> Result<(), BenchmarkError> {
-		let origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let origin =
+			T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
 			origin.clone() as T::RuntimeOrigin
 		));
