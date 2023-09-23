@@ -41,29 +41,31 @@ mod benchmarks {
 
 	#[benchmark]
 	fn create_channel() -> Result<(), BenchmarkError> {
-		let origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let agent_origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let channel_origin = T::ChannelOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
-		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(origin.clone() as T::RuntimeOrigin));
+		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(agent_origin as T::RuntimeOrigin));
 
 		#[extrinsic_call]
-		_(origin as T::RuntimeOrigin);
+		_(channel_origin as T::RuntimeOrigin);
 
 		Ok(())
 	}
 
 	#[benchmark]
 	fn update_channel() -> Result<(), BenchmarkError> {
-		let origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let agent_origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let channel_origin = T::ChannelOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
 		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
-			origin.clone() as T::RuntimeOrigin
+			agent_origin as T::RuntimeOrigin
 		));
 		frame_support::assert_ok!(SnowbridgeControl::<T>::create_channel(
-			origin.clone() as T::RuntimeOrigin
+			channel_origin.clone() as T::RuntimeOrigin
 		));
 
 		#[extrinsic_call]
-		_(origin as T::RuntimeOrigin, OperatingMode::RejectingOutboundMessages, 1, 1);
+		_(channel_origin as T::RuntimeOrigin, OperatingMode::RejectingOutboundMessages, 1, 1);
 
 		Ok(())
 	}
@@ -78,13 +80,13 @@ mod benchmarks {
 
 	#[benchmark]
 	fn transfer_native_from_agent() -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
+		let origin = T::AgentOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
-			RawOrigin::Signed(caller.clone()).into()
+			origin.clone() as T::RuntimeOrigin
 		));
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), H160::default(), 1);
+		_(origin as T::RuntimeOrigin, H160::default(), 1);
 
 		Ok(())
 	}
