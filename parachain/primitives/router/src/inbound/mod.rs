@@ -68,21 +68,42 @@ pub enum Destination {
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-pub struct VersionedMessageToXcmConverter<G> {
-	_phantom: PhantomData<G>,
+pub struct VersionedMessageToXcmConverter<G, F> {
+	_phantom: PhantomData<(G, F)>,
 }
 
-impl<G: Get<[u8; 2]>> sp_runtime::traits::TryConvert<VersionedMessage, Xcm<()>>
-	for VersionedMessageToXcmConverter<G>
+pub trait XcmFeeGetter {
+	// Measures the maximum amount of gas a command will require
+	fn fee(command: &Command) -> u128;
+}
+
+/// A meter that assigns a constant amount of gas for the execution of a command
+pub struct ConstantFeeForInboundMessage;
+
+impl XcmFeeGetter for ConstantFeeForInboundMessage {
+	fn fee(command: &Command) -> u128 {
+		match command {
+			Command::RegisterToken { .. } => 2_000_000_000,
+			Command::SendToken { .. } => 1_000_000_000,
+		}
+	}
+}
+
+impl XcmFeeGetter for () {
+	fn fee(_: &Command) -> u128 {
+		0
+	}
+}
+
+impl<G: Get<[u8; 2]>, F: XcmFeeGetter> sp_runtime::traits::TryConvert<VersionedMessage, Xcm<()>>
+	for VersionedMessageToXcmConverter<G, F>
 {
 	fn try_convert(message: VersionedMessage) -> Result<Xcm<()>, VersionedMessage> {
 		match message {
 			VersionedMessage::V1(val) => {
 				let chain_id = val.chain_id;
 				let network = Ethereum { chain_id };
-				// TODO (SNO-582): The fees need to be made configurable and must match the weight
-				// required by the generated XCM script when executed on the foreign chain.
-				let buy_execution_fee_amount = 2_000_000_000;
+				let buy_execution_fee_amount = F::fee(&val.message);
 				let buy_execution_fee = MultiAsset {
 					id: Concrete(MultiLocation::parent()),
 					fun: Fungible(buy_execution_fee_amount),
@@ -212,7 +233,7 @@ impl<G: Get<[u8; 2]>> sp_runtime::traits::TryConvert<VersionedMessage, Xcm<()>>
 	}
 }
 
-impl<G: Get<[u8; 2]>> VersionedMessageToXcmConverter<G> {
+impl<G: Get<[u8; 2]>, F: XcmFeeGetter> VersionedMessageToXcmConverter<G, F> {
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
 	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {
 		MultiLocation {

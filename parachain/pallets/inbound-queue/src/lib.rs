@@ -223,11 +223,11 @@ pub mod pallet {
 
 			// Decode message into XCM
 			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-				Ok(message) =>
-					inbound::VersionedMessageToXcmConverter::<T::RegisterCallIndex>::try_convert(
-						message,
-					)
-					.map_err(|_| Error::<T>::ConvertError)?,
+				Ok(message) => inbound::VersionedMessageToXcmConverter::<
+					T::RegisterCallIndex,
+					inbound::ConstantFeeForInboundMessage,
+				>::try_convert(message)
+				.map_err(|_| Error::<T>::ConvertError)?,
 				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 			};
 
