@@ -76,7 +76,7 @@ impl<G: Get<[u8; 2]>> sp_runtime::traits::TryConvert<VersionedMessage, Xcm<()>>
 	for VersionedMessageToXcmConverter<G>
 {
 	fn try_convert(message: VersionedMessage) -> Result<Xcm<()>, VersionedMessage> {
-		match message.clone() {
+		match message {
 			VersionedMessage::V1(val) => {
 				let chain_id = val.chain_id;
 				let network = Ethereum { chain_id };
