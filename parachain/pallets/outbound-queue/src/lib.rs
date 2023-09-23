@@ -335,9 +335,7 @@ pub mod pallet {
 
 			let reward = fee_config
 				.reward_ratio
-				.and_then(|ratio| {
-					Some(ratio * dispatch_gas * fee_config.gas_price.unwrap_or_default())
-				})
+				.map(|ratio| ratio * dispatch_gas * fee_config.gas_price.unwrap_or_default())
 				.unwrap_or_default();
 
 			// Construct a prepared message, which when ABI-encoded is what the
