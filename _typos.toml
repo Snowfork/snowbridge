@@ -10,4 +10,5 @@ extend-exclude = [
     "cumulus/**",
     "smoketest/src/parachains",
     "smoketest/src/contracts",
+    "polkadot-sdk",
 ]

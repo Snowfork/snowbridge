@@ -17,30 +17,28 @@ const MINIMUM_DEPOSIT: u128 = 1;
 /// we may want to evolve the protocol so that the ethereum side sends XCM messages directly.
 /// Instead having BridgeHub transcode the messages into XCM.
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum VersionedMessage<G> {
-	V1(MessageV1<G>),
+pub enum VersionedMessage {
+	V1(MessageV1),
 }
 
 /// For V1, the ethereum side sends messages which are transcoded into XCM. These messages are
 /// self-contained, in that they can be transcoded using only information in the message.
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub struct MessageV1<G> {
+pub struct MessageV1 {
 	/// EIP-155 chain id of the origin Ethereum network
 	pub chain_id: u64,
 	/// The command originating from the Gateway contract
-	pub message: Command<G>,
-	_phantom: PhantomData<G>,
+	pub message: Command,
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum Command<G> {
+pub enum Command {
 	/// Register a wrapped token on the AssetHub `ForeignAssets` pallet
 	RegisterToken {
 		/// The address of the gateway
 		gateway: H160,
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
-		_phantom: PhantomData<G>,
 	},
 	/// Send a token to AssetHub or another parachain
 	SendToken {
@@ -70,138 +68,151 @@ pub enum Destination {
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-impl<G: Get<[u8; 2]>> From<MessageV1<G>> for Xcm<()> {
-	fn from(val: MessageV1<G>) -> Self {
-		val.message.convert(val.chain_id)
-	}
+pub struct VersionedMessageToXcmConverter<G> {
+	_phantom: PhantomData<G>,
 }
 
-impl<G: Get<[u8; 2]>> Command<G> {
-	pub fn convert(self, chain_id: u64) -> Xcm<()> {
-		let network = NetworkId::Ethereum { chain_id };
-		// TODO (SNO-582): The fees need to be made configurable and must match the weight
-		// required by the generated XCM script when executed on the foreign chain.
-		let buy_execution_fee_amount = 2_000_000_000;
-		let buy_execution_fee = MultiAsset {
-			id: Concrete(MultiLocation::parent()),
-			fun: Fungible(buy_execution_fee_amount),
-		};
+impl<G: Get<[u8; 2]>> sp_runtime::traits::TryConvert<VersionedMessage, Xcm<()>>
+	for VersionedMessageToXcmConverter<G>
+{
+	fn try_convert(message: VersionedMessage) -> Result<Xcm<()>, VersionedMessage> {
+		match message.clone() {
+			VersionedMessage::V1(val) => {
+				let chain_id = val.chain_id;
+				let network = Ethereum { chain_id };
+				// TODO (SNO-582): The fees need to be made configurable and must match the weight
+				// required by the generated XCM script when executed on the foreign chain.
+				let buy_execution_fee_amount = 2_000_000_000;
+				let buy_execution_fee = MultiAsset {
+					id: Concrete(MultiLocation::parent()),
+					fun: Fungible(buy_execution_fee_amount),
+				};
 
-		let create_instructions = |origin_location: Junction| -> Vec<Instruction<()>> {
-			vec![
-				UniversalOrigin(GlobalConsensus(network)),
-				DescendOrigin(X1(origin_location)),
-				WithdrawAsset(buy_execution_fee.clone().into()),
-				BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
-				SetAppendix(
+				let create_instructions = |origin_location: Junction| -> Vec<Instruction<()>> {
 					vec![
-						RefundSurplus,
-						DepositAsset {
-							assets: buy_execution_fee.into(),
-							beneficiary: (
-								Parent,
-								Parent,
-								GlobalConsensus(network),
-								origin_location,
-							)
-								.into(),
-						},
-					]
-					.into(),
-				),
-			]
-		};
-
-		match self {
-			Command::RegisterToken { gateway, token, .. } => {
-				let owner = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
-					&chain_id,
-					gateway.as_fixed_bytes(),
-				);
-
-				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
-
-				let asset_id = Self::convert_token_address(network, gateway, token);
-
-				let mut instructions = create_instructions(origin_location);
-
-				let create_call_index: [u8; 2] = G::get();
-				instructions.extend(vec![
-					Transact {
-						origin_kind: OriginKind::Xcm,
-						require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
-						call: (
-							create_call_index,
-							asset_id,
-							MultiAddress::<[u8; 32], ()>::Id(owner),
-							MINIMUM_DEPOSIT,
-						)
-							.encode()
+						UniversalOrigin(GlobalConsensus(network)),
+						DescendOrigin(X1(origin_location)),
+						WithdrawAsset(buy_execution_fee.clone().into()),
+						BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
+						SetAppendix(
+							vec![
+								RefundSurplus,
+								DepositAsset {
+									assets: buy_execution_fee.into(),
+									beneficiary: (
+										Parent,
+										Parent,
+										GlobalConsensus(network),
+										origin_location,
+									)
+										.into(),
+								},
+							]
 							.into(),
-					},
-					ExpectTransactStatus(MaybeErrorCode::Success),
-				]);
-				instructions.into()
-			},
-			Command::SendToken { gateway, token, destination, amount } => {
-				let asset = MultiAsset::from((
-					Self::convert_token_address(network, gateway, token),
-					amount,
-				));
-
-				let origin_location = Junction::AccountKey20 { network: None, key: gateway.into() };
-
-				let mut instructions = create_instructions(origin_location);
-				instructions
-					.extend(vec![ReserveAssetDeposited(vec![asset.clone()].into()), ClearOrigin]);
-
-				let (dest_para_id, beneficiary) = match destination {
-					Destination::AccountId32 { id } => (
-						None,
-						MultiLocation {
-							parents: 0,
-							interior: X1(AccountId32 { network: None, id }),
-						},
-					),
-					Destination::ForeignAccountId32 { para_id, id } => (
-						Some(para_id),
-						MultiLocation {
-							parents: 0,
-							interior: X1(AccountId32 { network: None, id }),
-						},
-					),
-					Destination::ForeignAccountId20 { para_id, id } => (
-						Some(para_id),
-						MultiLocation {
-							parents: 0,
-							interior: X1(AccountKey20 { network: None, key: id }),
-						},
-					),
+						),
+					]
 				};
 
-				let assets = MultiAssetFilter::Definite(vec![asset].into());
+				let xcm = match val.message {
+					Command::RegisterToken { gateway, token, .. } => {
+						let owner =
+							GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
+								&chain_id,
+								gateway.as_fixed_bytes(),
+							);
 
-				let mut fragment: Vec<Instruction<()>> = match dest_para_id {
-					Some(dest_para_id) => {
-						vec![DepositReserveAsset {
-							assets: assets.clone(),
-							dest: MultiLocation {
-								parents: 1,
-								interior: X1(Parachain(dest_para_id)),
+						let origin_location =
+							Junction::AccountKey20 { network: None, key: gateway.into() };
+
+						let asset_id = Self::convert_token_address(network, gateway, token);
+
+						let mut instructions = create_instructions(origin_location);
+
+						let create_call_index: [u8; 2] = G::get();
+						instructions.extend(vec![
+							Transact {
+								origin_kind: OriginKind::Xcm,
+								require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
+								call: (
+									create_call_index,
+									asset_id,
+									MultiAddress::<[u8; 32], ()>::Id(owner),
+									MINIMUM_DEPOSIT,
+								)
+									.encode()
+									.into(),
 							},
-							xcm: vec![DepositAsset { assets, beneficiary }].into(),
-						}]
+							ExpectTransactStatus(MaybeErrorCode::Success),
+						]);
+						instructions.into()
 					},
-					None => {
-						vec![DepositAsset { assets, beneficiary }]
+					Command::SendToken { gateway, token, destination, amount } => {
+						let asset = MultiAsset::from((
+							Self::convert_token_address(network, gateway, token),
+							amount,
+						));
+
+						let origin_location =
+							Junction::AccountKey20 { network: None, key: gateway.into() };
+
+						let mut instructions = create_instructions(origin_location);
+						instructions.extend(vec![
+							ReserveAssetDeposited(vec![asset.clone()].into()),
+							ClearOrigin,
+						]);
+
+						let (dest_para_id, beneficiary) = match destination {
+							Destination::AccountId32 { id } => (
+								None,
+								MultiLocation {
+									parents: 0,
+									interior: X1(AccountId32 { network: None, id }),
+								},
+							),
+							Destination::ForeignAccountId32 { para_id, id } => (
+								Some(para_id),
+								MultiLocation {
+									parents: 0,
+									interior: X1(AccountId32 { network: None, id }),
+								},
+							),
+							Destination::ForeignAccountId20 { para_id, id } => (
+								Some(para_id),
+								MultiLocation {
+									parents: 0,
+									interior: X1(AccountKey20 { network: None, key: id }),
+								},
+							),
+						};
+
+						let assets = MultiAssetFilter::Definite(vec![asset].into());
+
+						let mut fragment: Vec<Instruction<()>> = match dest_para_id {
+							Some(dest_para_id) => {
+								vec![DepositReserveAsset {
+									assets: assets.clone(),
+									dest: MultiLocation {
+										parents: 1,
+										interior: X1(Parachain(dest_para_id)),
+									},
+									xcm: vec![DepositAsset { assets, beneficiary }].into(),
+								}]
+							},
+							None => {
+								vec![DepositAsset { assets, beneficiary }]
+							},
+						};
+						instructions.append(&mut fragment);
+						instructions.into()
 					},
 				};
-				instructions.append(&mut fragment);
-				instructions.into()
+				Ok(xcm)
 			},
 		}
 	}
+}
 
+impl<G: Get<[u8; 2]>> VersionedMessageToXcmConverter<G> {
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
 	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {
 		MultiLocation {

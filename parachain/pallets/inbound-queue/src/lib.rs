@@ -51,11 +51,11 @@ pub mod pallet {
 
 	use super::*;
 
+	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
+	use sp_runtime::traits::TryConvert;
 	use xcm::v3::SendXcm;
-
-	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -129,6 +129,8 @@ pub mod pallet {
 		Send(SendError),
 		/// Operational mode errors
 		OperationalMode(bp_runtime::OwnedBridgeModuleError),
+		/// Convert error
+		ConvertError,
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, PalletError)]
@@ -220,10 +222,12 @@ pub mod pallet {
 			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
 
 			// Decode message into XCM
-			let xcm = match inbound::VersionedMessage::<T::RegisterCallIndex>::decode_all(
-				&mut envelope.payload.as_ref(),
-			) {
-				Ok(inbound::VersionedMessage::V1(message_v1)) => message_v1.into(),
+			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+				Ok(message) =>
+					inbound::VersionedMessageToXcmConverter::<T::RegisterCallIndex>::try_convert(
+						message,
+					)
+					.map_err(|_| Error::<T>::ConvertError)?,
 				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 			};
 
