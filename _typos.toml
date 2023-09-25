@@ -11,4 +11,7 @@ extend-exclude = [
     "smoketest/src/parachains",
     "smoketest/src/contracts",
     "polkadot-sdk",
+    "lodestar",
+    "go-ethereum",
+    "go.work.sum",
 ]
