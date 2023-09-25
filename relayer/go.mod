@@ -9,7 +9,7 @@ require (
 	github.com/magefile/mage v1.15.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454
-	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230831112246-2cf362679c74
+	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230921163942-4a1eb53d821e
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
@@ -110,10 +110,6 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => /Users/yangrong/Projects/go-ethereum
+replace github.com/tranvictor/ethutils => github.com/Snowfork/ethutils v0.0.0-20230921170028-1bbb0deb387a
 
-replace github.com/tranvictor/ethutils => /Users/yangrong/Projects/ethutils
-
-replace github.com/snowfork/ethashproof => /Users/yangrong/Projects/ethashproof
-
-replace github.com/snowfork/go-substrate-rpc-client/v4 => /Users/yangrong/Projects/go-substrate-rpc-client
+replace github.com/snowfork/ethashproof => github.com/yrong/ethashproof v0.0.0-20230921171223-a2f025a37d9c

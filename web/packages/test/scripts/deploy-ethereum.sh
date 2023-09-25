@@ -46,7 +46,9 @@ start_lodestar() {
             timestamp=$(date -d'+10second' +%s)
         fi
 
-        npx lodestar dev \
+        local config_dir="$web_dir/packages/test/config"
+        pushd $root_dir/lodestar
+        node packages/cli/bin/lodestar.js dev \
             --genesisValidators 8 \
             --genesisTime $timestamp \
             --startValidators "0..7" \
@@ -62,18 +64,10 @@ start_lodestar() {
             --params.CAPELLA_FORK_EPOCH 0 \
             --eth1=true \
             --rest.namespace="*" \
-            --jwt-secret config/jwtsecret \
+            --jwt-secret $config_dir/jwtsecret \
+            --chain.archiveStateEpochFrequency 1 \
             >"$output_dir/lodestar.log" 2>&1 &
-    fi
-}
-
-hack_beacon_client() {
-    echo "Hack lodestar for faster slot time"
-    local preset_minimal_config_file="$web_dir/node_modules/.pnpm/@lodestar+config@$lodestar_version/node_modules/@lodestar/config/lib/chainConfig/presets/minimal.js"
-    if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
-        gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
-    else
-        sed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
+        popd
     fi
 }
 
@@ -84,10 +78,6 @@ deploy_local() {
 
     echo "Waiting for geth API to be ready"
     sleep 3
-
-    if [ "$eth_fast_mode" == "true" ]; then
-        hack_beacon_client
-    fi
 
     # 2. deploy consensus client
     echo "Starting beacon node"

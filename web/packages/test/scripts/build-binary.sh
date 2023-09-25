@@ -67,11 +67,39 @@ build_relayer() {
     cp $relay_bin "$output_bin_dir"
 }
 
+hack_beacon_client() {
+    echo "Hack lodestar for faster slot time"
+    local preset_minimal_config_file="$root_dir/lodestar/packages/config/src/chainConfig/presets/minimal.ts"
+    if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
+        gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
+    else
+        sed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
+    fi
+}
+
+build_lodestar() {
+    pushd $root_dir/lodestar
+    if [ "$eth_fast_mode" == "true" ]; then
+        hack_beacon_client
+    fi
+    yarn install && yarn build
+    popd
+}
+
+build_geth() {
+    pushd $root_dir/go-ethereum
+    make geth
+    cp build/bin/geth "$output_bin_dir"
+    popd
+}
+
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
     build_cumulus_from_source
     build_relaychain
+    build_lodestar
+    build_geth
     build_contracts
     build_relayer
 }

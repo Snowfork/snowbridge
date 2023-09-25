@@ -1,3 +1,6 @@
-go 1.20
+go 1.21
 
-use ./relayer
+use (
+	./go-ethereum
+	./relayer
+)
