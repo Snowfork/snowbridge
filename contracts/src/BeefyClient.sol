@@ -31,6 +31,7 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
  *
  */
 contract BeefyClient {
+    using Counter for uint256[];
     /* Events */
 
     /**
@@ -222,9 +223,14 @@ contract BeefyClient {
         external
     {
         ValidatorSet memory vset;
+        uint16 signatureCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {
+            signatureCount = currentValidatorSet.counters.get(proof.index);
+            currentValidatorSet.counters.set(proof.index, signatureCount + 1);
             vset = currentValidatorSet;
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
+            signatureCount = nextValidatorSet.counters.get(proof.index);
+            nextValidatorSet.counters.set(proof.index, signatureCount + 1);
             vset = nextValidatorSet;
         } else {
             revert InvalidCommitment();
@@ -251,15 +257,6 @@ contract BeefyClient {
         // two thirds of the validator set have sign the commitment
         if (Bitfield.countSetBits(bitfield) < vset.length - (vset.length - 1) / 3) {
             revert NotEnoughClaims();
-        }
-
-        // Increment the counter and store the previous value in the ticket
-        uint16 signatureCount = Counter.get(vset.counters, proof.index);
-        Counter.set(vset.counters, proof.index, signatureCount + 1);
-        if (commitment.validatorSetID == currentValidatorSet.id) {
-            currentValidatorSet.counters = vset.counters;
-        } else if (commitment.validatorSetID == nextValidatorSet.id) {
-            nextValidatorSet.counters = vset.counters;
         }
 
         tickets[createTicketID(msg.sender, commitmentHash)] = Ticket(
