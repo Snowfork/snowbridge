@@ -48,13 +48,12 @@ contract BeefyClientTest is Test {
     string beefyValidatorProofFile;
     string beefyValidatorProofRaw;
     string beefyFinalBitFieldFile;
+    uint256[] counter;
 
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
         randaoCommitExpiration = uint8(vm.envOr("RANDAO_COMMIT_EXP", uint256(8)));
         prevRandao = uint32(vm.envOr("PREV_RANDAO", uint256(377)));
-
-        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration);
 
         beefyCommitmentFile = string.concat(vm.projectRoot(), "/test/data/beefy-commitment.json");
         beefyCommitmentRaw = vm.readFile(beefyCommitmentFile);
@@ -82,6 +81,9 @@ contract BeefyClientTest is Test {
         mmrLeafProofs = beefyCommitmentRaw.readBytes32Array(".params.leafProof");
         leafProofOrder = beefyCommitmentRaw.readUint(".params.leafProofOrder");
         decodeMMRLeaf();
+
+        counter = Counter.createCounter(setSize);
+        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration, counter);
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
         absentBitfield = beefyClient.createInitialBitfield(absentBitSetArray, setSize);
@@ -111,7 +113,6 @@ contract BeefyClientTest is Test {
     function loadFinalProofs() internal {
         bytes memory proofRaw = beefyValidatorProofRaw.readBytes(".finalValidatorsProofRaw");
         BeefyClient.ValidatorProof[] memory proofs = abi.decode(proofRaw, (BeefyClient.ValidatorProof[]));
-        console.log("final proof length:", proofs.length);
         for (uint256 i = 0; i < proofs.length; i++) {
             finalValidatorProofs.push(proofs[i]);
         }
@@ -497,5 +498,23 @@ contract BeefyClientTest is Test {
 
     function testRegenerateBitField() public {
         regenerateBitField();
+    }
+
+    function testMinSignatures() public {
+        // Test using signature counts 8 to 13
+        assertEq(beefyClient.minSignatures_public(setSize, 8), 31);
+        assertEq(beefyClient.minSignatures_public(setSize, 9), 31);
+        assertEq(beefyClient.minSignatures_public(setSize, 10), 31);
+        assertEq(beefyClient.minSignatures_public(setSize, 11), 31);
+        assertEq(beefyClient.minSignatures_public(setSize, 12), 31);
+        assertEq(beefyClient.minSignatures_public(setSize, 13), 31);
+
+        // Test using signature counts 70 to 75
+        assertEq(beefyClient.minSignatures_public(setSize, 70), 37);
+        assertEq(beefyClient.minSignatures_public(setSize, 71), 37);
+        assertEq(beefyClient.minSignatures_public(setSize, 72), 37);
+        assertEq(beefyClient.minSignatures_public(setSize, 73), 37);
+        assertEq(beefyClient.minSignatures_public(setSize, 74), 37);
+        assertEq(beefyClient.minSignatures_public(setSize, 75), 37);
     }
 }

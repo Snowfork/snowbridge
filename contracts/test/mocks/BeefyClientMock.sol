@@ -5,13 +5,13 @@ import {BeefyClient} from "../../src/BeefyClient.sol";
 import {Counter} from "../../src/utils/Counter.sol";
 
 contract BeefyClientMock is BeefyClient {
-    constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration)
+    constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration, uint256[] memory counter)
         BeefyClient(
             randaoCommitDelay,
             randaoCommitExpiration,
             0,
-            BeefyClient.ValidatorSet(0, 0, 0x0, Counter.createCounter(0)),
-            BeefyClient.ValidatorSet(0, 0, 0x0, Counter.createCounter(0))
+            BeefyClient.ValidatorSet(0, 0, 0x0, counter),
+            BeefyClient.ValidatorSet(0, 0, 0x0, counter)
         )
     {}
 
@@ -35,5 +35,9 @@ contract BeefyClientMock is BeefyClient {
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
         nextValidatorSet = _nextValidatorSet;
+    }
+
+    function minSignatures_public(uint256 validatorSetLen, uint256 signatureUseCount) public pure returns (uint256) {
+        return minSignatures(validatorSetLen, signatureUseCount);
     }
 }

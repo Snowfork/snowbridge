@@ -8,6 +8,7 @@ import "forge-std/console.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {Verification, VerificationWrapper} from "./mocks/VerificationWrapper.sol";
+import {Counter} from "../src/utils/Counter.sol";
 
 contract VerificationTest is Test {
     BeefyClientMock public beefyClient;
@@ -16,8 +17,11 @@ contract VerificationTest is Test {
     uint32 public constant BRIDGE_HUB_PARA_ID = 1013;
     bytes4 public encodedParachainID;
 
+    uint256[] counter;
+
     function setUp() public {
-        beefyClient = new BeefyClientMock(3, 8);
+        counter = Counter.createCounter(300);
+        beefyClient = new BeefyClientMock(3, 8, counter);
         encodedParachainID = ScaleCodec.encodeU32(BRIDGE_HUB_PARA_ID);
         v = new VerificationWrapper();
     }
