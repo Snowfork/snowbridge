@@ -35,18 +35,19 @@ contract DeployScript is Script {
         string memory beefyCheckpointRaw = vm.readFile(beefyCheckpointFile);
         uint64 startBlock = uint64(beefyCheckpointRaw.readUint(".startBlock"));
 
-        uint256[] memory counters = Counter.createCounter(beefyCheckpointRaw.readUint(".current.length"));
+        uint256[] memory currCounters = Counter.createCounter(beefyCheckpointRaw.readUint(".current.length"));
         BeefyClient.ValidatorSet memory current = BeefyClient.ValidatorSet(
             uint128(beefyCheckpointRaw.readUint(".current.id")),
             uint128(beefyCheckpointRaw.readUint(".current.length")),
             beefyCheckpointRaw.readBytes32(".current.root"),
-            counters
+            currCounters
         );
+        uint256[] memory nextCounters = Counter.createCounter(beefyCheckpointRaw.readUint(".next.length"));
         BeefyClient.ValidatorSet memory next = BeefyClient.ValidatorSet(
             uint128(beefyCheckpointRaw.readUint(".next.id")),
             uint128(beefyCheckpointRaw.readUint(".next.length")),
             beefyCheckpointRaw.readBytes32(".next.root"),
-            counters
+            nextCounters
         );
 
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
