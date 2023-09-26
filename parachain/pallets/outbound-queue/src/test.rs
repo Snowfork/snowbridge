@@ -8,6 +8,7 @@ use frame_support::{
 	weights::WeightMeter,
 };
 
+use snowbridge_core::outbound::Command;
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,

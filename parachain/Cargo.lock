@@ -2797,10 +2797,12 @@ name = "snowbridge-outbound-queue-runtime-api"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
+ "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",
  "sp-api",
  "sp-core",
  "sp-std",
+ "xcm",
 ]
 
 [[package]]

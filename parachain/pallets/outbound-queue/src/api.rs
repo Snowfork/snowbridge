@@ -3,9 +3,12 @@
 //! Helpers for implementing runtime api
 
 use frame_support::storage::StorageStreamIter;
+use snowbridge_core::outbound::{Message, SubmitError};
 use snowbridge_outbound_queue_merkle_tree::{merkle_proof, MerkleProof};
+use xcm::prelude::MultiAssets;
 
-use crate::{Config, MessageLeaves};
+use crate::{Config, MessageLeaves, Pallet};
+use snowbridge_core::outbound::OutboundQueue;
 
 pub fn prove_message<Runtime>(leaf_index: u64) -> Option<MerkleProof>
 where
@@ -19,4 +22,11 @@ where
 		leaf_index,
 	);
 	Some(proof)
+}
+
+pub fn estimate_fee<Runtime>(message: &Message) -> Result<MultiAssets, SubmitError>
+where
+	Runtime: Config,
+{
+	Pallet::<Runtime>::estimate_fee(message)
 }

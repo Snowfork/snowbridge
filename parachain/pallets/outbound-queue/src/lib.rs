@@ -25,86 +25,30 @@ mod benchmarking;
 #[cfg(test)]
 mod test;
 
-use codec::{Decode, Encode, MaxEncodedLen};
-use ethabi::{self, Token};
+use codec::{Decode, Encode};
+use ethabi::{self};
 use frame_support::{
 	ensure,
 	storage::StorageStreamIter,
 	traits::{EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
 	weights::Weight,
-	CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
-use scale_info::TypeInfo;
 use snowbridge_core::ParaId;
-use sp_core::{RuntimeDebug, H256};
+use sp_core::H256;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 use xcm::prelude::{MultiAsset, MultiAssets, MultiLocation};
 
 use snowbridge_core::outbound::{
-	Command, FeeAmount, GasAmount, Message, MessageHash, OutboundFeeConfig,
-	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, SubmitError,
+	AggregateMessageOrigin, EnqueuedMessage, FeeAmount, GasAmount, Message, MessageHash,
+	OutboundFeeConfig, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
+	SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 use sp_runtime::{FixedU128, Saturating};
 pub use weights::WeightInfo;
-
-/// Aggregate message origin for the `MessageQueue` pallet.
-#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum AggregateMessageOrigin {
-	#[codec(index = 0)]
-	Parachain(ParaId),
-}
-
-/// Message which is awaiting processing in the MessageQueue pallet
-#[derive(Encode, Decode, Clone, RuntimeDebug)]
-pub struct EnqueuedMessage {
-	/// Message ID (usually hash of message)
-	pub id: H256,
-	/// ID of source parachain
-	pub origin: ParaId,
-	/// Command to execute in the Gateway contract
-	pub command: Command,
-}
-
-/// Message which has been assigned a nonce and will be committed at the end of a block
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-pub struct PreparedMessage {
-	/// ID of source parachain
-	origin: ParaId,
-	/// Unique nonce to prevent replaying messages
-	nonce: u64,
-	/// Command to execute in the Gateway contract
-	command: u8,
-	/// Params for the command
-	params: Vec<u8>,
-	/// Maximum gas allowed for message dispatch
-	dispatch_gas: u128,
-	/// Reward in ether for delivering this message
-	reward: u128,
-}
-
-/// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
-impl From<PreparedMessage> for Token {
-	fn from(x: PreparedMessage) -> Token {
-		Token::Tuple(vec![
-			Token::Uint(u32::from(x.origin).into()),
-			Token::Uint(x.nonce.into()),
-			Token::Uint(x.command.into()),
-			Token::Bytes(x.params.to_vec()),
-			Token::Uint(x.dispatch_gas.into()),
-			Token::Uint(x.reward.into()),
-		])
-	}
-}
-
-impl From<u32> for AggregateMessageOrigin {
-	fn from(value: u32) -> Self {
-		AggregateMessageOrigin::Parachain(value.into())
-	}
-}
 
 /// The maximal length of an enqueued message, as determined by the MessageQueue pallet
 pub type MaxEnqueuedMessageSizeOf<T> =

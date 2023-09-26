@@ -49,7 +49,7 @@ impl OutboundQueue for () {
 }
 
 /// Errors returned by the [`OutboundQueue`]
-#[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum SubmitError {
 	/// Message is too large to be safely executed on Ethereum
 	MessageTooLarge,
@@ -62,7 +62,7 @@ pub enum SubmitError {
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 pub struct Message {
 	/// The parachain from which the message originated
 	pub origin: ParaId,
@@ -77,7 +77,7 @@ pub enum OperatingMode {
 }
 
 /// A command which is executable by the Gateway contract on Ethereum
-#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 pub enum Command {
 	/// Execute a sub-command within an agent for a consensus system in Polkadot
 	AgentExecute {
@@ -271,7 +271,7 @@ impl Command {
 }
 
 /// A Sub-command executable within an agent
-#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 pub enum AgentExecuteCommand {
 	/// Transfer ERC20 tokens
 	TransferToken {
@@ -312,6 +312,61 @@ pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
 	pub id: H256,
 	pub origin: ParaId,
 	pub message: BoundedVec<u8, MaxMessageSize>,
+}
+
+/// Aggregate message origin for the `MessageQueue` pallet.
+#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum AggregateMessageOrigin {
+	#[codec(index = 0)]
+	Parachain(ParaId),
+}
+
+/// Message which is awaiting processing in the MessageQueue pallet
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+pub struct EnqueuedMessage {
+	/// Message ID (usually hash of message)
+	pub id: H256,
+	/// ID of source parachain
+	pub origin: ParaId,
+	/// Command to execute in the Gateway contract
+	pub command: Command,
+}
+
+/// Message which has been assigned a nonce and will be committed at the end of a block
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+pub struct PreparedMessage {
+	/// ID of source parachain
+	pub origin: ParaId,
+	/// Unique nonce to prevent replaying messages
+	pub nonce: u64,
+	/// Command to execute in the Gateway contract
+	pub command: u8,
+	/// Params for the command
+	pub params: Vec<u8>,
+	/// Maximum gas allowed for message dispatch
+	pub dispatch_gas: u128,
+	/// Reward in ether for delivering this message
+	pub reward: u128,
+}
+
+/// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
+impl From<PreparedMessage> for Token {
+	fn from(x: PreparedMessage) -> Token {
+		Token::Tuple(vec![
+			Token::Uint(u32::from(x.origin).into()),
+			Token::Uint(x.nonce.into()),
+			Token::Uint(x.command.into()),
+			Token::Bytes(x.params.to_vec()),
+			Token::Uint(x.dispatch_gas.into()),
+			Token::Uint(x.reward.into()),
+		])
+	}
+}
+
+impl From<u32> for AggregateMessageOrigin {
+	fn from(value: u32) -> Self {
+		AggregateMessageOrigin::Parachain(value.into())
+	}
 }
 
 #[derive(

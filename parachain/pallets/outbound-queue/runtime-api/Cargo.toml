@@ -13,8 +13,9 @@ codec = { version = "3.1.5", package = "parity-scale-codec", features = [ "deriv
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false}
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false}
 sp-api = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false}
+xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 snowbridge-outbound-queue-merkle-tree = { path = "../merkle-tree", default-features = false}
-
+snowbridge-core = { path = "../../../primitives/core", default-features = false }
 
 [features]
 default = ["std"]
@@ -23,5 +24,7 @@ std = [
     "sp-core/std",
 	"sp-api/std",
 	"sp-std/std",
-	"snowbridge-outbound-queue-merkle-tree/std"
+	"xcm/std",
+	"snowbridge-outbound-queue-merkle-tree/std",
+	"snowbridge-core/std",
 ]
