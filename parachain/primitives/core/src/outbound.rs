@@ -312,7 +312,6 @@ pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
 	pub id: H256,
 	pub origin: ParaId,
 	pub message: BoundedVec<u8, MaxMessageSize>,
-	pub command: Command,
 }
 
 #[derive(

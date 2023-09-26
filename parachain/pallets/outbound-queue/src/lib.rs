@@ -375,9 +375,9 @@ pub mod pallet {
 				None => message.command.dispatch_gas(),
 			};
 			if fee_config.gas_range.is_some() {
+				let gas_range = fee_config.gas_range.clone().unwrap_or_default();
 				ensure!(
-					dispatch_gas >= fee_config.gas_range.clone().unwrap_or_default().min &&
-						dispatch_gas <= fee_config.gas_range.clone().unwrap_or_default().max,
+					dispatch_gas >= gas_range.min && dispatch_gas <= gas_range.max,
 					SubmitError::InvalidGas(dispatch_gas)
 				);
 			}
@@ -427,21 +427,14 @@ pub mod pallet {
 				SubmitError::MessageTooLarge
 			);
 			let command = message.command.clone();
-			let enqueued_message: EnqueuedMessage = EnqueuedMessage {
-				id: message_id,
-				origin: message.origin,
-				command: command.clone(),
-			};
+			let enqueued_message: EnqueuedMessage =
+				EnqueuedMessage { id: message_id, origin: message.origin, command };
 			// The whole message should not be too large
 			let encoded =
 				enqueued_message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
 
-			let ticket = OutboundQueueTicket {
-				id: message_id,
-				origin: message.origin,
-				message: encoded,
-				command,
-			};
+			let ticket =
+				OutboundQueueTicket { id: message_id, origin: message.origin, message: encoded };
 			Ok(ticket)
 		}
 
