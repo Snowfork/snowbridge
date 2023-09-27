@@ -427,7 +427,7 @@ contract BeefyClient {
         // greater than the signatureUseCount is larger than its most significant bit. If it is larger then
         // we need to round up by incrementing the log2SignatureUse.
         if (signatureUseCount > (1 << log2SignatureUse)) {
-             ++log2SignatureUse;
+            ++log2SignatureUse;
         }
         uint256 dynamicSignatures = 1 + 2 * log2SignatureUse;
 
