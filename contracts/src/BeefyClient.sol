@@ -420,14 +420,16 @@ contract BeefyClient {
             return BASE_SIGNATURE_COUNT;
         }
 
-        // log_2 rounded down is the index of the highest bit
-        uint256 logSignatureUse = Bits.highestBitSet(signatureUseCount);
-        // TBC: Is the round up here necessary?
-        // round up by adding 1 when there is more than 1 bit set in signatureUseCount
-        // if (signatureUseCount & logSignatureUse != uint256(0)) {
-        //     ++logSignatureUse;
-        // }
-        uint256 dynamicSignatures = 1 + 2 * logSignatureUse;
+        // log2 rounded down is the index of the highest bit
+        uint256 log2SignatureUse = Bits.highestBitSet(signatureUseCount);
+
+        // We need to get the value of log2 rounded up. To do this we can compare if signatureUseCount is
+        // greater than the signatureUseCount is larger than its most significant bit. If it is larger then
+        // we need to round up by incrementing the log2SignatureUse.
+        if (signatureUseCount > (1 << log2SignatureUse)) {
+             ++log2SignatureUse;
+        }
+        uint256 dynamicSignatures = 1 + 2 * log2SignatureUse;
 
         return BASE_SIGNATURE_COUNT + dynamicSignatures;
     }
