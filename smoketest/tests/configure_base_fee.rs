@@ -3,7 +3,7 @@ use snowbridge_smoketest::{
 		governance_bridgehub_call_from_relay_chain, initial_clients, wait_for_bridgehub_event,
 	},
 	parachains::bridgehub::api::{
-		ethereum_outbound_queue::events::OutboundFeeConfigSet, runtime_types,
+		ethereum_outbound_queue::events::OutboundFeeConfigUpdated, runtime_types,
 		runtime_types::bridge_hub_rococo_runtime::RuntimeCall as BHRuntimeCall,
 	},
 };
@@ -38,5 +38,5 @@ async fn configure_base_fee() {
 		.await
 		.expect("governance call from relaychain by xcm");
 
-	wait_for_bridgehub_event::<OutboundFeeConfigSet>(&test_clients.bridge_hub_client).await;
+	wait_for_bridgehub_event::<OutboundFeeConfigUpdated>(&test_clients.bridge_hub_client).await;
 }

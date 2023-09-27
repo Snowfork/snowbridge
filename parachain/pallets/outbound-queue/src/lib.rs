@@ -114,7 +114,7 @@ pub mod pallet {
 			count: u64,
 		},
 		/// Set outbound fee config
-		OutboundFeeConfigSet { config: OutboundFeeConfig },
+		OutboundFeeConfigUpdated { config: OutboundFeeConfig },
 	}
 
 	#[pallet::error]
@@ -236,7 +236,7 @@ pub mod pallet {
 				current.reward_ratio = config.reward_ratio;
 			}
 			FeeConfig::<T>::put(current.clone());
-			Self::deposit_event(Event::OutboundFeeConfigSet { config: current });
+			Self::deposit_event(Event::OutboundFeeConfigUpdated { config: current });
 			Ok(())
 		}
 	}
