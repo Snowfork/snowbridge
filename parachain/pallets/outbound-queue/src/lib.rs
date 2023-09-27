@@ -310,9 +310,9 @@ pub mod pallet {
 			Ok(true)
 		}
 
-		// Todo: for arbitrary transact dispatch_gas should be dynamic retrieved from input
 		pub fn get_dispatch_gas(message: &Message) -> Result<GasAmount, SubmitError> {
 			let fee_config = FeeConfig::<T>::get();
+			// For arbitrary transact, dispatch_gas should be dynamic retrieved from input.
 			let dispatch_gas = match fee_config.command_gas_map {
 				Some(command_gas_map) => *command_gas_map
 					.get(&message.command.index())
