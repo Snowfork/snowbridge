@@ -222,7 +222,7 @@ contract BeefyClient {
     function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
         external
     {
-        ValidatorSet memory vset;
+        ValidatorSet storage vset;
         uint16 signatureCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {
             signatureCount = currentValidatorSet.counters.get(proof.index);
@@ -316,7 +316,7 @@ contract BeefyClient {
         (bytes32 commitmentHash, bytes32 ticketID) = validate(commitment, bitfield);
 
         bool is_next_session = false;
-        ValidatorSet memory vset;
+        ValidatorSet storage vset;
         if (commitment.validatorSetID == nextValidatorSet.id) {
             is_next_session = true;
             vset = nextValidatorSet;
