@@ -707,7 +707,7 @@ contract GatewayTest is Test {
         assertEq(implementation, address(gatewayLogic));
     }
 
-    function testCreateAgentWithGasNotEnough() public {
+    function testCreateAgentWithNotEnoughGas() public {
         deal(bridgeHubAgent, 50 ether);
 
         (Command command, bytes memory params) = makeCreateAgentCommand();
