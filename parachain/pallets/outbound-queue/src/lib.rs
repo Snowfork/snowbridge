@@ -66,6 +66,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
+	use snowbridge_core::outbound::Command;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -276,12 +277,8 @@ pub mod pallet {
 
 			let (command, params, dispatch_gas) = enqueued_message.command.abi_encode();
 
-			let fee_config = FeeConfig::<T>::get();
-
-			let reward = fee_config
-				.reward_ratio
-				.map(|ratio| ratio * dispatch_gas * fee_config.gas_price.unwrap_or_default())
-				.unwrap_or_default();
+			let reward = Self::estimate_reward(&enqueued_message.command)
+				.map_err(|_| ProcessMessageError::Corrupt)?;
 
 			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
@@ -310,14 +307,15 @@ pub mod pallet {
 			Ok(true)
 		}
 
-		pub fn get_dispatch_gas(message: &Message) -> Result<GasAmount, SubmitError> {
-			let fee_config = FeeConfig::<T>::get();
+		pub fn get_dispatch_gas(
+			command: &Command,
+			fee_config: &OutboundFeeConfig,
+		) -> Result<GasAmount, SubmitError> {
 			// For arbitrary transact, dispatch_gas should be dynamic retrieved from input.
-			let dispatch_gas = match fee_config.command_gas_map {
-				Some(command_gas_map) => *command_gas_map
-					.get(&message.command.index())
-					.unwrap_or(&message.command.dispatch_gas()),
-				None => message.command.dispatch_gas(),
+			let dispatch_gas = match fee_config.clone().command_gas_map {
+				Some(command_gas_map) =>
+					*command_gas_map.get(&command.index()).unwrap_or(&command.dispatch_gas()),
+				None => command.dispatch_gas(),
 			};
 			if fee_config.gas_range.is_some() {
 				let gas_range = fee_config.gas_range.clone().unwrap_or_default();
@@ -329,31 +327,52 @@ pub mod pallet {
 			Ok(dispatch_gas)
 		}
 
-		pub fn estimate_extra_fee(message: &Message) -> Result<Option<FeeAmount>, SubmitError> {
+		pub fn estimate_extra_fee(command: &Command) -> Result<FeeAmount, SubmitError> {
 			let fee_config = FeeConfig::<T>::get();
-			let extra_fee = match message.command.extra_fee_required() {
+			let extra_fee = match command.extra_fee_required() {
 				true => {
-					let dispatch_gas = Self::get_dispatch_gas(message)?;
+					let dispatch_gas = Self::get_dispatch_gas(command, &fee_config)?;
 					let gas_cost_in_wei =
 						dispatch_gas.saturating_mul(fee_config.gas_price.unwrap_or_default());
 					let gas_cost_in_native = FixedU128::from_inner(gas_cost_in_wei)
 						.saturating_mul(fee_config.swap_ratio.unwrap_or_default());
-					Some(gas_cost_in_native.into_inner())
+					gas_cost_in_native.into_inner()
 				},
-				false => None,
+				false => FeeAmount::default(),
 			};
 			Ok(extra_fee)
 		}
 
 		/// base fee to cover the cost in bridgeHub assuming with congestion into consideration it's
 		/// not a static value so load from storage configurable
-		pub fn estimate_base_fee(message: &Message) -> Result<Option<FeeAmount>, SubmitError> {
+		pub fn estimate_base_fee(command: &Command) -> Result<FeeAmount, SubmitError> {
 			let fee_config = FeeConfig::<T>::get();
-			let base_fee = match message.command.base_fee_required() {
-				true => Some(fee_config.base_fee.unwrap_or_default()),
-				false => None,
+			let base_fee = match command.base_fee_required() {
+				true => fee_config.base_fee.unwrap_or_default(),
+				false => FeeAmount::default(),
 			};
 			Ok(base_fee)
+		}
+
+		pub fn estimate_reward(command: &Command) -> Result<FeeAmount, SubmitError> {
+			let fee_config = FeeConfig::<T>::get();
+			let dispatch_gas = Self::get_dispatch_gas(command, &fee_config)?;
+			let reward = fee_config
+				.reward_ratio
+				.map(|ratio| ratio * dispatch_gas * fee_config.gas_price.unwrap_or_default())
+				.unwrap_or_default();
+			Ok(reward)
+		}
+
+		pub fn compute_fee_reward(
+			command: &Command,
+		) -> Result<(FeeAmount, FeeAmount), SubmitError> {
+			log::trace!(target: LOG_TARGET, "command: {command:?}.");
+			let base_fee = Self::estimate_base_fee(command)?;
+			let extra_fee = Self::estimate_extra_fee(command)?;
+			let reward = Self::estimate_reward(command)?;
+			log::trace!(target: LOG_TARGET, "base_fee: {base_fee:?}, extra_fee: {extra_fee:?}, reward: {reward:?}");
+			Ok((base_fee.saturating_add(extra_fee), reward))
 		}
 	}
 
@@ -395,15 +414,8 @@ pub mod pallet {
 		}
 
 		fn estimate_fee(message: &Message) -> Result<MultiAssets, SubmitError> {
-			log::trace!(target: LOG_TARGET, "message: {message:?}.");
-			let base_fee = Self::estimate_base_fee(message)?.unwrap_or(FeeAmount::default());
-			log::trace!(target: LOG_TARGET, "base_fee: {base_fee:?}.");
-			let extra_fee = Self::estimate_extra_fee(message)?.unwrap_or(FeeAmount::default());
-			log::trace!(target: LOG_TARGET, "extra_fee: {extra_fee:?}.");
-			Ok(MultiAssets::from(vec![MultiAsset::from((
-				MultiLocation::parent(),
-				base_fee.saturating_add(extra_fee),
-			))]))
+			let fee_reward = Self::compute_fee_reward(&message.command)?;
+			Ok(MultiAssets::from(vec![MultiAsset::from((MultiLocation::parent(), fee_reward.0))]))
 		}
 	}
 

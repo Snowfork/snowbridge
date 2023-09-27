@@ -1,9 +1,12 @@
 use codec::{Decode, Encode};
 
-use snowbridge_smoketest::{
-	helper::initial_clients,
-	parachains::bridgehub::api::runtime_types::xcm::v3::multiasset::{Fungibility, MultiAssets},
-};
+use snowbridge_smoketest::helper::initial_clients;
+
+#[derive(Decode, Encode, Debug)]
+pub struct FeeReward {
+	pub fee: u128,
+	pub reward: u128,
+}
 
 #[tokio::test]
 async fn estimate_fee() {
@@ -11,15 +14,16 @@ async fn estimate_fee() {
 	let raw = test_clients
 		.bridge_hub_client
 		.rpc()
-		.state_call("OutboundQueueApi_estimate_fee_by_command_index", Some(&2_u8.encode()), None)
+		.state_call(
+			"OutboundQueueApi_compute_fee_reward_by_command_index",
+			Some(&2_u8.encode()),
+			None,
+		)
 		.await
 		.unwrap()
 		.to_vec();
-	let assets = MultiAssets::decode(&mut &raw[1..]).unwrap();
-	println!("{:?}", assets);
-	let amount: u128 = match assets.0[0].fun {
-		Fungibility::Fungible(amount) => amount,
-		_ => 0,
-	};
-	assert_eq!(amount, 19000000000);
+	let fee_reward = FeeReward::decode(&mut &raw[1..]).unwrap();
+	println!("{:?}", fee_reward);
+	assert_eq!(fee_reward.fee, 19000000000);
+	assert_eq!(fee_reward.reward, 3375000000000000);
 }

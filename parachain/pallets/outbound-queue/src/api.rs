@@ -2,13 +2,10 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 //! Helpers for implementing runtime api
 
-use frame_support::storage::StorageStreamIter;
-use snowbridge_core::outbound::{Message, SubmitError};
-use snowbridge_outbound_queue_merkle_tree::{merkle_proof, MerkleProof};
-use xcm::prelude::MultiAssets;
-
 use crate::{Config, MessageLeaves, Pallet};
-use snowbridge_core::outbound::OutboundQueue;
+use frame_support::storage::StorageStreamIter;
+use snowbridge_core::outbound::{FeeAmount, Message, SubmitError};
+use snowbridge_outbound_queue_merkle_tree::{merkle_proof, MerkleProof};
 
 pub fn prove_message<Runtime>(leaf_index: u64) -> Option<MerkleProof>
 where
@@ -24,18 +21,21 @@ where
 	Some(proof)
 }
 
-pub fn estimate_fee<Runtime>(message: &Message) -> Result<MultiAssets, SubmitError>
+pub fn compute_fee_reward_by_command_index<Runtime>(
+	command_index: u8,
+) -> Result<(FeeAmount, FeeAmount), SubmitError>
 where
 	Runtime: Config,
 {
-	Pallet::<Runtime>::estimate_fee(message)
+	let command = command_index.try_into().map_err(|_| SubmitError::EstimateFeeFailed)?;
+	let fee_reward = Pallet::<Runtime>::compute_fee_reward(&command)?;
+	Ok(fee_reward)
 }
 
-pub fn estimate_fee_by_command_index<Runtime>(command_index: u8) -> Result<MultiAssets, SubmitError>
+pub fn compute_fee_reward<Runtime>(message: &Message) -> Result<(FeeAmount, FeeAmount), SubmitError>
 where
 	Runtime: Config,
 {
-	let message = command_index.try_into().map_err(|_| SubmitError::EstimateFeeFailed)?;
-	let fees = Pallet::<Runtime>::estimate_fee(&message)?;
-	Ok(fees)
+	let fee_reward = Pallet::<Runtime>::compute_fee_reward(&message.command)?;
+	Ok(fee_reward)
 }
