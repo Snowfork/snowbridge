@@ -10,7 +10,7 @@ use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
 use sp_runtime::{FixedU128, Percent};
 use sp_std::{borrow::ToOwned, vec, vec::Vec};
-use xcm::prelude::MultiAssets;
+use xcm::prelude::{MultiAssets, MultiLocation};
 
 pub type MessageHash = H256;
 pub type CommandIndex = u8;
@@ -462,4 +462,11 @@ impl TryFrom<CommandIndex> for Message {
 		let message = Message { origin: Default::default(), command };
 		Ok(message)
 	}
+}
+
+#[derive(Copy, Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct OriginInfo {
+	pub agent_id: H256,
+	pub para_id: ParaId,
+	pub location: MultiLocation,
 }

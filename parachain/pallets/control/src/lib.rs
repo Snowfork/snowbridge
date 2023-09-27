@@ -22,7 +22,9 @@ use frame_support::{
 	PalletId,
 };
 use snowbridge_core::{
-	outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
+	outbound::{
+		Command, Message, OperatingMode, OriginInfo, OutboundQueue as OutboundQueueTrait, ParaId,
+	},
 	AgentId,
 };
 use sp_runtime::traits::Hash;
@@ -185,7 +187,8 @@ pub mod pallet {
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let origin_location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, _, location) = Self::convert_location(origin_location)?;
+			let OriginInfo { agent_id, location, .. } =
+				Self::process_origin_location(origin_location)?;
 
 			log::debug!(
 				target: LOG_TARGET,
@@ -222,7 +225,8 @@ pub mod pallet {
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
 			let location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
 
-			let (agent_id, para_id, location) = Self::convert_location(location)?;
+			let OriginInfo { agent_id, para_id, location } =
+				Self::process_origin_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
@@ -254,7 +258,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
 
-			let (agent_id, para_id, location) = Self::convert_location(location)?;
+			let OriginInfo { agent_id, para_id, location } =
+				Self::process_origin_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
@@ -302,7 +307,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, para_id, location) = Self::convert_location(location)?;
+			let OriginInfo { agent_id, para_id, location } =
+				Self::process_origin_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
@@ -323,17 +329,17 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn submit_outbound(message: Message, agent_location: MultiLocation) -> DispatchResult {
+		fn submit_outbound(message: Message, origin_location: MultiLocation) -> DispatchResult {
 			let ticket =
 				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
-			Self::charge_fees(&message, &agent_location)?;
+			Self::charge_fees(&message, &origin_location)?;
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 			Ok(())
 		}
 
-		pub fn convert_location(
+		pub fn process_origin_location(
 			mut location: MultiLocation,
-		) -> Result<(H256, ParaId, MultiLocation), DispatchError> {
+		) -> Result<OriginInfo, DispatchError> {
 			// Normalize all locations relative to the relay chain.
 			let relay_location = T::RelayLocation::get();
 			location
@@ -350,11 +356,11 @@ pub mod pallet {
 			let agent_id = T::AgentIdOf::convert_location(&location)
 				.ok_or(Error::<T>::LocationToAgentIdConversionFailed)?;
 
-			Ok((agent_id, para_id, location))
+			Ok(OriginInfo { agent_id, para_id, location })
 		}
 
-		pub fn charge_fees(message: &Message, agent_location: &MultiLocation) -> DispatchResult {
-			let agent_account = T::SovereignAccountOf::convert_location(agent_location)
+		pub fn charge_fees(message: &Message, origin_location: &MultiLocation) -> DispatchResult {
+			let agent_account = T::SovereignAccountOf::convert_location(origin_location)
 				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
 
 			let fees = T::OutboundQueue::estimate_fee(message)

@@ -32,7 +32,8 @@ fn create_agent_with_bridgehub_origin_yields_success() {
 
 		let location: MultiLocation =
 			<Test as Config>::AgentOrigin::ensure_origin(origin.clone()).unwrap();
-		let (agent_id, _, location) = EthereumControl::convert_location(location).unwrap();
+		let OriginInfo { agent_id, location, .. } =
+			EthereumControl::process_origin_location(location).unwrap();
 
 		assert!(!Agents::<Test>::contains_key(agent_id));
 		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
