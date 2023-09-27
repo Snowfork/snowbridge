@@ -25,6 +25,7 @@ import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 import {AgentExecuteCommand, InboundMessage, OperatingMode, ParaID, Config, Command} from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
+import "./mocks/GatewayUpgradeMock.sol";
 
 contract GatewayTest is Test {
     event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool result);
@@ -39,6 +40,7 @@ contract GatewayTest is Test {
     event ChannelUpdated(ParaID indexed paraID);
 
     event Upgraded(address indexed implementation);
+    event Initialized(uint256 d0, uint256 d1);
 
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
     bytes32 public bridgeHubAgentID = keccak256("1001");
@@ -420,6 +422,26 @@ contract GatewayTest is Test {
 
         // Verify that the GatewayV2.setup was called
         assertEq(GatewayV2(address(gateway)).getValue(), 42);
+    }
+
+    function testUpgradeGatewayMock() public {
+        GatewayUpgradeMock newLogic = new GatewayUpgradeMock();
+        uint256 d0 = 99;
+        uint256 d1 = 66;
+        bytes memory initParams = abi.encode(d0, d1);
+        console.logBytes(initParams);
+
+        Gateway.UpgradeParams memory params = Gateway.UpgradeParams({
+            impl: address(newLogic),
+            implCodeHash: address(newLogic).codehash,
+            initParams: initParams
+        });
+
+        // Expect the gateway to emit `Initialized`
+        vm.expectEmit(true, false, false, true);
+        emit Initialized(d0, d1);
+
+        GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
     }
 
     function testUpgradeFailOnInitializationFailure() public {

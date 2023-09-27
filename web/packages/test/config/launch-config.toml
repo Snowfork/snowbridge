@@ -14,14 +14,14 @@ default_args = [
     "--pruning", "archive",
 ]
 
-    [relaychain.genesis.runtime]
-    session_length_in_blocks = 20
+    # [relaychain.genesis.runtime]
+    # session_length_in_blocks = 20
 
-        [relaychain.genesis.runtime.runtime_genesis_config.configuration.config]
-        max_validators_per_core = 2
-        needed_approvals = 1
-        validation_upgrade_cooldown = 2
-        validation_upgrade_delay = 2
+    #     [relaychain.genesis.runtime.runtime_genesis_config.configuration.config]
+    #     max_validators_per_core = 2
+    #     needed_approvals = 1
+    #     validation_upgrade_cooldown = 2
+    #     validation_upgrade_delay = 2
 
     [[relaychain.nodes]]
     name = "rococo01"

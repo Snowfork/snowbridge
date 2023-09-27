@@ -158,12 +158,29 @@ fn submit_messages_from_multiple_origins_and_commit() {
 			assert_ok!(OutboundQueue::submit(ticket));
 		}
 
+		for para_id in 1000..1004 {
+			let message = Message {
+				origin: para_id.into(),
+				command: Command::Upgrade {
+					impl_address: Default::default(),
+					impl_code_hash: Default::default(),
+					params: None,
+				},
+			};
+
+			let result = OutboundQueue::validate(&message);
+			assert!(result.is_ok());
+			let ticket = result.unwrap();
+
+			assert_ok!(OutboundQueue::submit(ticket));
+		}
+
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
 
 		for para_id in 1000..1004 {
 			let origin: ParaId = (para_id as u32).into();
-			assert_eq!(Nonce::<Test>::get(origin), 2);
+			assert_eq!(Nonce::<Test>::get(origin), 3);
 		}
 
 		let digest = System::digest();
