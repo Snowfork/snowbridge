@@ -30,3 +30,12 @@ where
 {
 	Pallet::<Runtime>::estimate_fee(message)
 }
+
+pub fn estimate_fee_by_command_index<Runtime>(command_index: u8) -> Result<MultiAssets, SubmitError>
+where
+	Runtime: Config,
+{
+	let message = command_index.try_into().map_err(|_| SubmitError::EstimateFeeFailed)?;
+	let fees = Pallet::<Runtime>::estimate_fee(&message)?;
+	Ok(fees)
+}

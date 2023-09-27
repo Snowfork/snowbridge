@@ -2655,6 +2655,7 @@ dependencies = [
 name = "snowbridge-core"
 version = "0.1.1"
 dependencies = [
+ "derivative",
  "ethabi-decode",
  "frame-support",
  "frame-system",

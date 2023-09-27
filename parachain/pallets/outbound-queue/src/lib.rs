@@ -46,6 +46,7 @@ use snowbridge_core::outbound::{
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
+use frame_support::log;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 use sp_runtime::{FixedU128, Saturating};
 pub use weights::WeightInfo;
@@ -394,8 +395,11 @@ pub mod pallet {
 		}
 
 		fn estimate_fee(message: &Message) -> Result<MultiAssets, SubmitError> {
+			log::trace!(target: LOG_TARGET, "message: {message:?}.");
 			let base_fee = Self::estimate_base_fee(message)?.unwrap_or(FeeAmount::default());
+			log::trace!(target: LOG_TARGET, "base_fee: {base_fee:?}.");
 			let extra_fee = Self::estimate_extra_fee(message)?.unwrap_or(FeeAmount::default());
+			log::trace!(target: LOG_TARGET, "extra_fee: {extra_fee:?}.");
 			Ok(MultiAssets::from(vec![MultiAsset::from((
 				MultiLocation::parent(),
 				base_fee.saturating_add(extra_fee),

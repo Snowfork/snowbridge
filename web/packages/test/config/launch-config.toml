@@ -54,7 +54,7 @@ cumulus_based = true
     command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8081
     ws_port = 11144
-    args = ["--enable-offchain-indexing=true", "--pruning=archive", "--force-authoring", "-lparachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace,runtime::bridge-hub=trace,runtime::bridge=trace,runtime::bridge-dispatch=trace,bridge=trace,runtime::bridge-messages=trace,runtime=debug"]
+    args = ["--enable-offchain-indexing=true", "--pruning=archive", "--force-authoring", "-lparachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace,snowbridge-outbound-queue=trace,snowbridge-inbound-queue=trace,runtime=debug"]
 
 ## Statemine
 [[parachains]]

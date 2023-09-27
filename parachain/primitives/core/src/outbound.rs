@@ -1,4 +1,5 @@
 use codec::{Decode, Encode, MaxEncodedLen};
+use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
 	traits::{ConstU32, Get},
@@ -48,8 +49,11 @@ impl OutboundQueue for () {
 	}
 }
 
-/// Errors returned by the [`OutboundQueue`]
-#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+/// SubmitError returned
+#[derive(Derivative, Encode, Decode, TypeInfo)]
+#[derivative(Clone(bound = ""), Eq(bound = ""), PartialEq(bound = ""), Debug(bound = ""))]
+#[codec(encode_bound())]
+#[codec(decode_bound())]
 pub enum SubmitError {
 	/// Message is too large to be safely executed on Ethereum
 	MessageTooLarge,
@@ -62,7 +66,10 @@ pub enum SubmitError {
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+#[derive(Derivative, Encode, Decode, TypeInfo)]
+#[derivative(Clone(bound = ""), Eq(bound = ""), PartialEq(bound = ""), Debug(bound = ""))]
+#[codec(encode_bound())]
+#[codec(decode_bound())]
 pub struct Message {
 	/// The parachain from which the message originated
 	pub origin: ParaId,
@@ -77,7 +84,10 @@ pub enum OperatingMode {
 }
 
 /// A command which is executable by the Gateway contract on Ethereum
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+#[derive(Derivative, Encode, Decode, TypeInfo)]
+#[derivative(Clone(bound = ""), Eq(bound = ""), PartialEq(bound = ""), Debug(bound = ""))]
+#[codec(encode_bound())]
+#[codec(decode_bound())]
 pub enum Command {
 	/// Execute a sub-command within an agent for a consensus system in Polkadot
 	AgentExecute {
@@ -138,15 +148,7 @@ pub enum Command {
 impl Command {
 	/// Compute the enum variant index
 	pub fn index(&self) -> u8 {
-		match self {
-			Command::AgentExecute { .. } => 0,
-			Command::Upgrade { .. } => 1,
-			Command::CreateAgent { .. } => 2,
-			Command::CreateChannel { .. } => 3,
-			Command::UpdateChannel { .. } => 4,
-			Command::SetOperatingMode { .. } => 5,
-			Command::TransferNativeFromAgent { .. } => 6,
-		}
+		self.clone().into()
 	}
 
 	/// Compute gas cost
@@ -406,5 +408,58 @@ impl Default for OutboundFeeConfig {
 			command_gas_map: None,
 			gas_range: Some(DispatchGasRange { min: 20000, max: 5000000 }),
 		}
+	}
+}
+
+#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub enum CommandConvertError {
+	/// Unsupported
+	Unsupported,
+}
+
+impl From<Command> for CommandIndex {
+	fn from(command: Command) -> Self {
+		match command {
+			Command::AgentExecute { .. } => 0,
+			Command::Upgrade { .. } => 1,
+			Command::CreateAgent { .. } => 2,
+			Command::CreateChannel { .. } => 3,
+			Command::UpdateChannel { .. } => 4,
+			Command::SetOperatingMode { .. } => 5,
+			Command::TransferNativeFromAgent { .. } => 6,
+		}
+	}
+}
+
+impl TryFrom<CommandIndex> for Command {
+	type Error = CommandConvertError;
+
+	fn try_from(value: CommandIndex) -> Result<Self, Self::Error> {
+		match value {
+			0 => Ok(Command::AgentExecute {
+				agent_id: Default::default(),
+				command: AgentExecuteCommand::TransferToken {
+					token: Default::default(),
+					recipient: Default::default(),
+					amount: 0,
+				},
+			}),
+			2 => Ok(Command::CreateAgent { agent_id: Default::default() }),
+			3 => Ok(Command::CreateChannel {
+				para_id: Default::default(),
+				agent_id: Default::default(),
+			}),
+			_ => Err(CommandConvertError::Unsupported),
+		}
+	}
+}
+
+impl TryFrom<CommandIndex> for Message {
+	type Error = CommandConvertError;
+
+	fn try_from(command_index: CommandIndex) -> Result<Self, Self::Error> {
+		let command = TryFrom::try_from(command_index)?;
+		let message = Message { origin: Default::default(), command };
+		Ok(message)
 	}
 }
