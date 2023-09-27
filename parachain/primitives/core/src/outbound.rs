@@ -3,7 +3,8 @@ use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
 	traits::{ConstU32, Get},
-	BoundedBTreeMap, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+	BoundedBTreeMap, BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound,
+	RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
@@ -50,10 +51,7 @@ impl OutboundQueue for () {
 }
 
 /// SubmitError returned
-#[derive(Derivative, Encode, Decode, TypeInfo)]
-#[derivative(Clone(bound = ""), Eq(bound = ""), PartialEq(bound = ""), Debug(bound = ""))]
-#[codec(encode_bound())]
-#[codec(decode_bound())]
+#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum SubmitError {
 	/// Message is too large to be safely executed on Ethereum
 	MessageTooLarge,
@@ -66,10 +64,9 @@ pub enum SubmitError {
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
-#[derive(Derivative, Encode, Decode, TypeInfo)]
-#[derivative(Clone(bound = ""), Eq(bound = ""), PartialEq(bound = ""), Debug(bound = ""))]
-#[codec(encode_bound())]
-#[codec(decode_bound())]
+#[derive(
+	Derivative, Encode, Decode, TypeInfo, PartialEqNoBound, EqNoBound, CloneNoBound, DebugNoBound,
+)]
 pub struct Message {
 	/// The parachain from which the message originated
 	pub origin: ParaId,
@@ -84,10 +81,9 @@ pub enum OperatingMode {
 }
 
 /// A command which is executable by the Gateway contract on Ethereum
-#[derive(Derivative, Encode, Decode, TypeInfo)]
-#[derivative(Clone(bound = ""), Eq(bound = ""), PartialEq(bound = ""), Debug(bound = ""))]
-#[codec(encode_bound())]
-#[codec(decode_bound())]
+#[derive(
+	Derivative, Encode, Decode, TypeInfo, PartialEqNoBound, EqNoBound, CloneNoBound, DebugNoBound,
+)]
 pub enum Command {
 	/// Execute a sub-command within an agent for a consensus system in Polkadot
 	AgentExecute {
