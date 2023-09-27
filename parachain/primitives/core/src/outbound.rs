@@ -168,7 +168,7 @@ impl Command {
 				AgentExecuteCommand::TransferToken { .. } => 30000,
 			},
 			// leave enough space for upgrade with arbitrary initialize logic
-			Command::Upgrade { .. } => 300000,
+			Command::Upgrade { .. } => 500000,
 		}
 	}
 
