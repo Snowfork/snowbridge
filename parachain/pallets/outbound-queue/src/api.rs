@@ -21,17 +21,6 @@ where
 	Some(proof)
 }
 
-pub fn compute_fee_reward_by_command_index<Runtime>(
-	command_index: u8,
-) -> Result<(FeeAmount, FeeAmount), SubmitError>
-where
-	Runtime: Config,
-{
-	let command = command_index.try_into().map_err(|_| SubmitError::EstimateFeeFailed)?;
-	let fee_reward = Pallet::<Runtime>::compute_fee_reward(&command)?;
-	Ok(fee_reward)
-}
-
 pub fn compute_fee_reward<Runtime>(message: &Message) -> Result<(FeeAmount, FeeAmount), SubmitError>
 where
 	Runtime: Config,

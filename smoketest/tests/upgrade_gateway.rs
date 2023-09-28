@@ -142,9 +142,6 @@ async fn upgrade_gateway() {
 		let upgrades = block.events().await.expect("read block events");
 		for upgrade in upgrades.find::<ethereum_control::events::Upgrade>() {
 			let _upgrade = upgrade.expect("expect upgrade");
-			// assert_eq!(upgrade.impl_address, GATETWAY_UPGRADE_MOCK_CONTRACT.into());
-			// assert_eq!(upgrade.impl_code_hash, gateway_upgrade_mock_code_hash.into());
-			// assert_eq!(upgrade.params_hash, Some(params_hash.into()));
 			println!("Event found at bridgehub block {}.", block.number());
 			upgrade_event_found = true;
 		}
@@ -169,7 +166,6 @@ async fn upgrade_gateway() {
 		{
 			for _upgrade in upgrades {
 				println!("Upgrade event found at ethereum block {:?}", block.number.unwrap());
-				// assert_eq!(upgrade.implementation, GATETWAY_UPGRADE_MOCK_CONTRACT.into());
 				upgrade_event_found = true;
 			}
 			if upgrade_event_found {

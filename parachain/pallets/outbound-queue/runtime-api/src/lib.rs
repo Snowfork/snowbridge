@@ -10,8 +10,6 @@ sp_api::decl_runtime_apis! {
 	{
 		fn prove_message(leaf_index: u64) -> Option<MerkleProof>;
 
-		fn compute_fee_reward_by_command_index(command_index: u8) -> Result<(FeeAmount, FeeAmount), SubmitError>;
-
 		fn compute_fee_reward(_message: &Message) -> Result<(FeeAmount, FeeAmount), SubmitError>;
 	}
 }
