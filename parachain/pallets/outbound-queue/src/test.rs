@@ -4,11 +4,12 @@ use super::*;
 
 use frame_support::{
 	assert_err, assert_noop, assert_ok, parameter_types,
-	traits::{Everything, Hooks, ProcessMessageError},
+	traits::{ConstU32, Everything, Hooks, ProcessMessageError},
 	weights::WeightMeter,
+	BoundedBTreeMap,
 };
 
-use snowbridge_core::outbound::Command;
+use snowbridge_core::outbound::{Command, CommandIndex};
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
@@ -276,5 +277,36 @@ fn estimate_fee_should_work() {
 			_ => 0,
 		};
 		assert_eq!(fee_amount, 19000000000);
+	});
+}
+
+#[test]
+fn set_outbound_fee_config_should_work() {
+	new_tester().execute_with(|| {
+		// estimate fee before reset command gas
+		let message = Message {
+			origin: 1001.into(),
+			command: Command::CreateAgent { agent_id: Default::default() },
+		};
+		let fees = OutboundQueue::compute_fee_reward(&message.command).unwrap();
+		assert_eq!(fees.0, 19000000000);
+		assert_eq!(fees.1, 3375000000000000);
+
+		let mut command_gas_map = BoundedBTreeMap::<
+			CommandIndex,
+			GasAmount,
+			ConstU32<{ CommandIndex::max_value() as u32 }>,
+		>::new();
+		// 2 is the command index of create_agent
+		command_gas_map.try_insert(2_u8, 500000).unwrap();
+		let mut config = OutboundFeeConfig::default();
+		config.command_gas_map = Some(command_gas_map);
+		let origin = RuntimeOrigin::root();
+		assert_ok!(OutboundQueue::set_outbound_fee_config(origin, config));
+
+		// estimate fee after reset command gas
+		let fees = OutboundQueue::compute_fee_reward(&message.command).unwrap();
+		assert_eq!(fees.0, 31000000000);
+		assert_eq!(fees.1, 5625000000000000);
 	});
 }
