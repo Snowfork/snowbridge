@@ -16,7 +16,7 @@ use snowbridge_core::outbound::{Message, MessageHash, ParaId, SubmitError};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	AccountId32,
 };
 use xcm::prelude::*;
@@ -209,7 +209,7 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 }
 
 parameter_types! {
-	pub const LocalPalletId: PalletId = PalletId(*b"snow/out");
+	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
 }
 
 impl crate::Config for Test {
@@ -223,7 +223,7 @@ impl crate::Config for Test {
 	type UniversalLocation = UniversalLocation;
 	type RelayLocation = RelayLocation;
 	type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
-	type LocalPalletId = LocalPalletId;
+	type TreasuryAccount = TreasuryAccount;
 	type SovereignAccountOf = HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>;
 	type Token = Balances;
 	type WeightInfo = ();

@@ -17,10 +17,7 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
-use frame_support::{
-	traits::fungible::{Inspect, Mutate},
-	PalletId,
-};
+use frame_support::traits::fungible::{Inspect, Mutate};
 use snowbridge_core::{
 	outbound::{
 		Command, Message, OperatingMode, OriginInfo, OutboundQueue as OutboundQueueTrait, ParaId,
@@ -46,7 +43,7 @@ pub mod pallet {
 	use frame_support::{
 		log,
 		pallet_prelude::*,
-		sp_runtime::{traits::AccountIdConversion, AccountId32, SaturatedConversion},
+		sp_runtime::{AccountId32, SaturatedConversion},
 		traits::{tokens::Preservation, EnsureOrigin},
 	};
 	use frame_system::pallet_prelude::*;
@@ -89,8 +86,8 @@ pub mod pallet {
 		/// Token reserved for control operations
 		type Token: Mutate<Self::AccountId>;
 
-		/// Local pallet Id derivative of an escrow account to collect fees
-		type LocalPalletId: Get<PalletId>;
+		/// TreasuryAccount to collect fees
+		type TreasuryAccount: Get<Self::AccountId>;
 
 		/// Converts MultiLocation to a sovereign account
 		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
@@ -374,7 +371,7 @@ pub mod pallet {
 			if fee_amount > 0 {
 				T::Token::transfer(
 					&agent_account,
-					&T::LocalPalletId::get().into_account_truncating(),
+					&T::TreasuryAccount::get(),
 					fee_amount.saturated_into::<BalanceOf<T>>(),
 					Preservation::Preserve,
 				)
