@@ -9,7 +9,7 @@ use frame_support::{
 	BoundedBTreeMap,
 };
 
-use snowbridge_core::outbound::{Command, CommandIndex};
+use snowbridge_core::outbound::{AgentExecuteCommand, Command, CommandIndex};
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
@@ -277,6 +277,43 @@ fn estimate_fee_should_work() {
 			_ => 0,
 		};
 		assert_eq!(fee_amount, 19000000000);
+	});
+}
+
+#[test]
+fn compute_fee_reward_for_transfer_token() {
+	new_tester().execute_with(|| {
+		let message = Message {
+			origin: 1001.into(),
+			command: Command::AgentExecute {
+				agent_id: Default::default(),
+				command: AgentExecuteCommand::TransferToken {
+					token: Default::default(),
+					recipient: Default::default(),
+					amount: 100,
+				},
+			},
+		};
+		let fees = OutboundQueue::compute_fee_reward(&message.command).unwrap();
+		assert_eq!(fees.0, 1000000000);
+		assert_eq!(fees.1, 337500000000000);
+	});
+}
+
+#[test]
+fn compute_fee_reward_for_upgrade() {
+	new_tester().execute_with(|| {
+		let message = Message {
+			origin: 1001.into(),
+			command: Command::Upgrade {
+				impl_address: Default::default(),
+				impl_code_hash: Default::default(),
+				params: None,
+			},
+		};
+		let fees = OutboundQueue::compute_fee_reward(&message.command).unwrap();
+		assert_eq!(fees.0, 0);
+		assert_eq!(fees.1, 5625000000000000);
 	});
 }
 
