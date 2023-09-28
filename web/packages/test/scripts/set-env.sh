@@ -95,7 +95,7 @@ export SEND_NATIVE_TOKEN_FEE="${ETH_SEND_NATIVE_TOKEN_FEE:-0}"
 ## Vault
 export BRIDGE_HUB_INITIAL_DEPOSIT="${ETH_BRIDGE_HUB_INITIAL_DEPOSIT:-10000000000000000000}"
 
-## BaseFee to cover the cost of an Ethereum no-op dispatchable in DOT, default 0.1 DOT
+## BaseFee to cover the cost of submit outbound message in bridgeHub, default 0.1 DOT
 export BASE_FEE="${BASE_FEE:-100000000000}"
 
 export GATEWAY_PROXY_CONTRACT="${GATEWAY_PROXY_CONTRACT:-0xEDa338E4dC46038493b885327842fD3E301CaB39}"
