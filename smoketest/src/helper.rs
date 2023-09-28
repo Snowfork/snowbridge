@@ -93,12 +93,12 @@ pub struct TestClients {
 pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>> {
 	let bridge_hub_client: OnlineClient<PolkadotConfig> = OnlineClient::from_url(BRIDGE_HUB_WS_URL)
 		.await
-		.expect("can not connect to assethub");
+		.expect("can not connect to bridgehub");
 
 	let template_client: OnlineClient<TemplateConfig> =
 		OnlineClient::from_url(TEMPLATE_NODE_WS_URL)
 			.await
-			.expect("can not connect to assethub");
+			.expect("can not connect to template parachain");
 
 	let relaychain_client: OnlineClient<PolkadotConfig> =
 		OnlineClient::from_url(RELAY_CHAIN_WS_URL)
