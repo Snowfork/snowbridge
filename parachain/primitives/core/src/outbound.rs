@@ -1,8 +1,10 @@
+use core::marker::PhantomData;
+
 use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
-	traits::{ConstU32, Get},
+	traits::{ConstU32, Get, tokens::Balance},
 	BoundedBTreeMap, BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound,
 	RuntimeDebugNoBound,
 };
@@ -11,10 +13,9 @@ use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
 use sp_runtime::{FixedU128, Percent};
 use sp_std::{borrow::ToOwned, vec, vec::Vec};
-use xcm::prelude::{MultiAssets, MultiLocation};
+use xcm::prelude::MultiLocation;
 
 pub type MessageHash = H256;
-pub type CommandIndex = u8;
 pub type FeeAmount = u128;
 pub type GasAmount = u128;
 pub type GasPriceInWei = u128;
@@ -22,31 +23,26 @@ pub type GasPriceInWei = u128;
 /// A trait for enqueueing messages for delivery to Ethereum
 pub trait OutboundQueue {
 	type Ticket: Clone;
+	type Balance: Balance;
 
 	/// Validate a message
-	fn validate(message: &Message) -> Result<Self::Ticket, SubmitError>;
+	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
-
-	/// Estimate fee
-	fn estimate_fee(message: &Message) -> Result<MultiAssets, SubmitError>;
 }
 
 /// Default implementation of `OutboundQueue` for tests
 impl OutboundQueue for () {
 	type Ticket = u64;
+	type Balance = u64;
 
-	fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
-		Ok(0)
+	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
+		Ok((0, 0))
 	}
 
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 		Ok(MessageHash::zero())
-	}
-
-	fn estimate_fee(message: &Message) -> Result<MultiAssets, SubmitError> {
-		Ok(MultiAssets::default())
 	}
 }
 
@@ -98,8 +94,8 @@ pub enum Command {
 		impl_address: H160,
 		/// Codehash of the implementation contract
 		impl_code_hash: H256,
-		/// Optional list of parameters to pass to initializer in the implementation contract
-		params: Option<Vec<u8>>,
+		/// Optionally invoke an initializer in the implementation contract
+		initializer: Option<Initializer>,
 	},
 	/// Create an agent representing a consensus system on Polkadot
 	CreateAgent {
@@ -141,129 +137,103 @@ pub enum Command {
 	},
 }
 
+#[derive(
+	Encode, Decode, TypeInfo, PartialEqNoBound, EqNoBound, CloneNoBound, DebugNoBound,
+)]
+pub struct Initializer {
+	/// List of parameters to pass to initializer in the implementation contract
+	params: Vec<u8>,
+	/// Maximum required gas for the initializer in the implementation contract
+	maximum_required_gas: u64,
+}
+
 impl Command {
 	/// Compute the enum variant index
 	pub fn index(&self) -> u8 {
-		self.clone().into()
-	}
-
-	/// Compute gas cost
-	/// reference gas from benchmark report with some extra margin for incentive
-	/// | Function Name    | min    | avg    | median | max    | # calls |
-	/// | agentExecute    | 487    | 5320   | 3361   | 14074  | 4       |
-	/// | createAgent    | 839    | 184709 | 237187 | 237187 | 9       |     
-	/// | createChannel    | 399    | 31023  | 2829   | 75402  | 5       |
-	/// | updateChannel    | 817    | 15121  | 3552   | 36762  | 5     |     
-	/// | transferNativeFromAgent    | 770    | 21730  | 21730  | 42691  | 2       |
-	/// | setOperatingMode    | 682    | 12838  | 13240  |  24190  | 4       |
-	/// | upgrade    | 443    | 9270   | 3816   | 29004  | 4       |
-	pub fn dispatch_gas(&self) -> u128 {
 		match self {
-			Command::CreateAgent { .. } => 300000,
-			Command::CreateChannel { .. } => 100000,
-			Command::UpdateChannel { .. } => 50000,
-			Command::TransferNativeFromAgent { .. } => 60000,
-			Command::SetOperatingMode { .. } => 40000,
-			Command::AgentExecute { command, .. } => match command {
-				AgentExecuteCommand::TransferToken { .. } => 30000,
-			},
-			// leave enough space for upgrade with arbitrary initialize logic
-			Command::Upgrade { .. } => 500000,
-		}
-	}
-
-	pub fn base_fee_required(&self) -> bool {
-		match self {
-			Command::CreateAgent { .. } => true,
-			Command::CreateChannel { .. } => true,
-			Command::AgentExecute { .. } => true,
-			Command::UpdateChannel { .. } => true,
-			Command::TransferNativeFromAgent { .. } => true,
-			Command::Upgrade { .. } => false,
-			Command::SetOperatingMode { .. } => false,
-		}
-	}
-
-	pub fn extra_fee_required(&self) -> bool {
-		match self {
-			Command::CreateAgent { .. } => true,
-			Command::CreateChannel { .. } => true,
-			Command::AgentExecute { .. } => false,
-			Command::Upgrade { .. } => false,
-			Command::UpdateChannel { .. } => false,
-			Command::TransferNativeFromAgent { .. } => false,
-			Command::SetOperatingMode { .. } => false,
+			Command::AgentExecute { .. } => 0,
+			Command::Upgrade { .. } => 1,
+			Command::CreateAgent { .. } => 2,
+			Command::CreateChannel { .. } => 3,
+			Command::UpdateChannel { .. } => 4,
+			Command::SetOperatingMode { .. } => 5,
+			Command::TransferNativeFromAgent { .. } => 6,
 		}
 	}
 
 	/// ABI-encode the Command.
-	/// Returns a tuple of:
-	/// - Index of the command
-	/// - the ABI encoded command
-	pub fn abi_encode(&self) -> (u8, Vec<u8>, u128) {
+	pub fn abi_encode(&self) -> Vec<u8> {
 		match self {
-			Command::AgentExecute { agent_id, command } => (
-				self.index(),
+			Command::AgentExecute { agent_id, command } =>
 				ethabi::encode(&[Token::Tuple(vec![
 					Token::FixedBytes(agent_id.as_bytes().to_owned()),
 					Token::Bytes(command.abi_encode()),
 				])]),
-				self.dispatch_gas(),
-			),
-			Command::Upgrade { impl_address, impl_code_hash, params } => (
-				self.index(),
+			Command::Upgrade { impl_address, impl_code_hash, initializer, .. } =>
 				ethabi::encode(&[Token::Tuple(vec![
 					Token::Address(*impl_address),
 					Token::FixedBytes(impl_code_hash.as_bytes().to_owned()),
-					params.clone().map_or(Token::Bytes(vec![]), Token::Bytes),
+					initializer.clone().map_or(Token::Bytes(vec![]), |i| Token::Bytes(i.params)),
 				])]),
-				self.dispatch_gas(),
-			),
-			Command::CreateAgent { agent_id } => (
-				self.index(),
+			Command::CreateAgent { agent_id } =>
 				ethabi::encode(&[Token::Tuple(vec![Token::FixedBytes(
 					agent_id.as_bytes().to_owned(),
 				)])]),
-				self.dispatch_gas(),
-			),
 			Command::CreateChannel { para_id, agent_id } => {
 				let para_id: u32 = (*para_id).into();
-				(
-					self.index(),
-					ethabi::encode(&[Token::Tuple(vec![
-						Token::Uint(U256::from(para_id)),
-						Token::FixedBytes(agent_id.as_bytes().to_owned()),
-					])]),
-					self.dispatch_gas(),
-				)
+				ethabi::encode(&[Token::Tuple(vec![
+					Token::Uint(U256::from(para_id)),
+					Token::FixedBytes(agent_id.as_bytes().to_owned()),
+				])])
 			},
 			Command::UpdateChannel { para_id, mode, fee, reward } => {
 				let para_id: u32 = (*para_id).into();
-				(
-					self.index(),
-					ethabi::encode(&[Token::Tuple(vec![
-						Token::Uint(U256::from(para_id)),
-						Token::Uint(U256::from((*mode) as u64)),
-						Token::Uint(U256::from(*fee)),
-						Token::Uint(U256::from(*reward)),
-					])]),
-					self.dispatch_gas(),
-				)
+				ethabi::encode(&[Token::Tuple(vec![
+					Token::Uint(U256::from(para_id)),
+					Token::Uint(U256::from((*mode) as u64)),
+					Token::Uint(U256::from(*fee)),
+					Token::Uint(U256::from(*reward)),
+				])])
 			},
-			Command::SetOperatingMode { mode } => (
-				self.index(),
+			Command::SetOperatingMode { mode } =>
 				ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
-				self.dispatch_gas(),
-			),
-			Command::TransferNativeFromAgent { agent_id, recipient, amount } => (
-				self.index(),
+			Command::TransferNativeFromAgent { agent_id, recipient, amount } =>
 				ethabi::encode(&[Token::Tuple(vec![
 					Token::FixedBytes(agent_id.as_bytes().to_owned()),
 					Token::Address(*recipient),
 					Token::Uint(U256::from(*amount)),
 				])]),
-				self.dispatch_gas(),
-			),
+		}
+	}
+}
+
+
+pub trait GasMeter {
+	// Measures the maximum amount of gas a command will require
+	fn measure_maximum_required_gas(command: &Command) -> u64;
+}
+
+/// A meter that assigns a constant amount of gas for the execution of a command
+pub struct ConstantGasMeter;
+
+impl GasMeter for ConstantGasMeter {
+	fn measure_maximum_required_gas(command: &Command) -> u64 {
+		match command {
+			Command::CreateAgent { .. } => 300_000,
+			Command::CreateChannel { .. } => 10_0000,
+			Command::UpdateChannel { .. } => 50_000,
+			Command::TransferNativeFromAgent { .. } => 60_000,
+			Command::SetOperatingMode { .. } => 40_000,
+			Command::AgentExecute { command, .. } => match command {
+				AgentExecuteCommand::TransferToken { .. } => 30_000,
+			},
+			Command::Upgrade { initializer, .. } => {
+				let maximum_required_gas = match *initializer {
+					Some(Initializer { maximum_required_gas, .. }) => maximum_required_gas,
+					None => 0,
+				};
+				100_000 + maximum_required_gas
+			}
 		}
 	}
 }
@@ -367,102 +337,13 @@ impl From<u32> for AggregateMessageOrigin {
 	}
 }
 
-#[derive(
-	Encode, Decode, Clone, Default, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen,
-)]
-pub struct DispatchGasRange {
-	pub min: GasAmount,
-	pub max: GasAmount,
-}
-
-/// The fee config for outbound message
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEqNoBound, TypeInfo, MaxEncodedLen)]
-pub struct OutboundFeeConfig {
-	/// base fee to cover the processing costs on BridgeHub in DOT
-	pub base_fee: Option<FeeAmount>,
-	/// gas cost for each command
-	pub command_gas_map: Option<
-		BoundedBTreeMap<CommandIndex, GasAmount, ConstU32<{ CommandIndex::max_value() as u32 }>>,
-	>,
-	/// gas range applies for all commands
-	pub gas_range: Option<DispatchGasRange>,
-	/// gas price in Wei from https://etherscan.io/gastracker
-	pub gas_price: Option<GasPriceInWei>,
-	/// swap ratio for Ether->DOT from https://www.coingecko.com/en/coins/polkadot/eth with precision difference between Ether->DOT(18->10)
-	pub swap_ratio: Option<FixedU128>,
-	/// ratio from extra_fee as reward for message relay
-	pub reward_ratio: Option<Percent>,
-}
-
-impl Default for OutboundFeeConfig {
-	fn default() -> Self {
-		OutboundFeeConfig {
-			base_fee: Some(1_000_000_000),
-			gas_price: Some(15_000_000_000),
-			swap_ratio: Some(FixedU128::from_rational(400, 100_000_000)),
-			reward_ratio: Some(Percent::from_percent(75)),
-			command_gas_map: None,
-			gas_range: Some(DispatchGasRange { min: 20000, max: 5000000 }),
-		}
-	}
-}
-
-#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub enum CommandConvertError {
-	/// Unsupported
-	Unsupported,
-}
-
-impl From<Command> for CommandIndex {
-	fn from(command: Command) -> Self {
-		match command {
-			Command::AgentExecute { .. } => 0,
-			Command::Upgrade { .. } => 1,
-			Command::CreateAgent { .. } => 2,
-			Command::CreateChannel { .. } => 3,
-			Command::UpdateChannel { .. } => 4,
-			Command::SetOperatingMode { .. } => 5,
-			Command::TransferNativeFromAgent { .. } => 6,
-		}
-	}
-}
-
-impl TryFrom<CommandIndex> for Command {
-	type Error = CommandConvertError;
-
-	fn try_from(value: CommandIndex) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Command::AgentExecute {
-				agent_id: Default::default(),
-				command: AgentExecuteCommand::TransferToken {
-					token: Default::default(),
-					recipient: Default::default(),
-					amount: 0,
-				},
-			}),
-			2 => Ok(Command::CreateAgent { agent_id: Default::default() }),
-			3 => Ok(Command::CreateChannel {
-				para_id: Default::default(),
-				agent_id: Default::default(),
-			}),
-			_ => Err(CommandConvertError::Unsupported),
-		}
-	}
-}
-
-impl TryFrom<CommandIndex> for Message {
-	type Error = CommandConvertError;
-
-	fn try_from(command_index: CommandIndex) -> Result<Self, Self::Error> {
-		let command = TryFrom::try_from(command_index)?;
-		let message = Message { origin: Default::default(), command };
-		Ok(message)
-	}
-}
 
 #[derive(Copy, Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct OriginInfo {
-	pub agent_id: H256,
-	pub para_id: ParaId,
+	/// The location of this origin
 	pub location: MultiLocation,
+	/// The parachain hosting this origin
+	pub para_id: ParaId,
+	/// The deterministic ID of the agent for this origin
+	pub agent_id: H256,
 }

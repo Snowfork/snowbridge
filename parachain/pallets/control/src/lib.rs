@@ -20,11 +20,11 @@ pub use weights::*;
 use frame_support::traits::fungible::{Inspect, Mutate};
 use snowbridge_core::{
 	outbound::{
-		Command, Message, OperatingMode, OriginInfo, OutboundQueue as OutboundQueueTrait, ParaId,
+		Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
 	},
 	AgentId,
 };
-use sp_runtime::traits::Hash;
+use sp_runtime::{RuntimeDebug, traits::Hash};
 use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
@@ -37,13 +37,23 @@ pub const LOG_TARGET: &str = "snowbridge-control";
 pub type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
+#[derive(Copy, Clone, PartialEq, RuntimeDebug)]
+pub struct OriginInfo {
+	/// The location of this origin
+	pub location: MultiLocation,
+	/// The parachain hosting this origin
+	pub para_id: ParaId,
+	/// The deterministic ID of the agent for this origin
+	pub agent_id: H256,
+}
+
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 	use frame_support::{
 		log,
 		pallet_prelude::*,
-		sp_runtime::{AccountId32, SaturatedConversion},
 		traits::{tokens::Preservation, EnsureOrigin},
 	};
 	use frame_system::pallet_prelude::*;
@@ -52,7 +62,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config<AccountId = AccountId32> {
+	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// General-purpose hasher
@@ -91,6 +101,9 @@ pub mod pallet {
 
 		/// Converts MultiLocation to a sovereign account
 		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
+
+		type CreateAgentDeposit: Get<BalanceOf<T>>;
+		type CreateChannelDeposit: Get<BalanceOf<T>>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -149,6 +162,9 @@ pub mod pallet {
 		/// - `impl_code_hash`: The codehash of `impl_address`.
 		/// - `params`: An optional list of ABI-encoded parameters for the implementation contract's
 		///   `initialize(bytes) function. If `None`, the initialization function is not called.
+		/// - `maximum_required_gas`: Maximum amount of gas required by the Gateway.upgrade() handler
+		///   to execute this upgrade. This also includes the gas consumed by the `initialize(bytes)` handler of the new
+		///   implementation contract.
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::upgrade(params.clone().map_or(0, |d| d.len() as u32)))]
 		pub fn upgrade(
@@ -156,6 +172,7 @@ pub mod pallet {
 			impl_address: H160,
 			impl_code_hash: H256,
 			params: Option<Vec<u8>>,
+			maximum_required_gas: u64,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -168,7 +185,7 @@ pub mod pallet {
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
-				command: Command::Upgrade { impl_address, impl_code_hash, params },
+				command: Command::Upgrade { impl_address, impl_code_hash, params, maximum_required_gas },
 			};
 			Self::submit_outbound(message, MultiLocation::parent())?;
 
@@ -184,7 +201,9 @@ pub mod pallet {
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let origin_location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let OriginInfo { agent_id, location, .. } =
+			Self::charge_deposit(&origin_location, T::CreateAgentDeposit::get());
+
+			let OriginInfo { agent_id, .. } =
 				Self::process_origin_location(origin_location)?;
 
 			log::debug!(
@@ -222,11 +241,12 @@ pub mod pallet {
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
 			let location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
 
-			let OriginInfo { agent_id, para_id, location } =
+			Self::charge_deposit(origin_location, T::CreateChannelDeposit::get());
+
+			let OriginInfo { para_id, agent_id, .. } =
 				Self::process_origin_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
-
 			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
 
 			Channels::<T>::insert(para_id, ());
@@ -236,7 +256,6 @@ pub mod pallet {
 				command: Command::CreateChannel { agent_id, para_id },
 			};
 			Self::submit_outbound(message, location)?;
-
 			Self::deposit_event(Event::<T>::CreateChannel { para_id, agent_id });
 
 			Ok(())
@@ -259,7 +278,6 @@ pub mod pallet {
 				Self::process_origin_location(location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
-
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
 
 			let message = Message {
@@ -267,7 +285,6 @@ pub mod pallet {
 				command: Command::UpdateChannel { para_id, mode, fee, reward },
 			};
 			Self::submit_outbound(message, location)?;
-
 			Self::deposit_event(Event::<T>::UpdateChannel { para_id, agent_id, mode, fee, reward });
 
 			Ok(())
@@ -353,32 +370,23 @@ pub mod pallet {
 			let agent_id = T::AgentIdOf::convert_location(&location)
 				.ok_or(Error::<T>::LocationToAgentIdConversionFailed)?;
 
-			Ok(OriginInfo { agent_id, para_id, location })
+			Ok(OriginInfo { location, para_id, agent_id, })
 		}
 
-		pub fn charge_fees(message: &Message, origin_location: &MultiLocation) -> DispatchResult {
-			let agent_account = T::SovereignAccountOf::convert_location(origin_location)
-				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
-
-			let fees = T::OutboundQueue::estimate_fee(message)
-				.map_err(|_| Error::<T>::EstimateFeeFailed)?;
-
-			let fee_amount: u128 = match fees.get(0) {
-				Some(&MultiAsset { fun: Fungible(amount), .. }) => amount,
-				_ => 0,
-			};
-
-			if fee_amount > 0 {
-				T::Token::transfer(
-					&agent_account,
-					&T::TreasuryAccount::get(),
-					fee_amount.saturated_into::<BalanceOf<T>>(),
-					Preservation::Preserve,
-				)
-				.map_err(|_| Error::<T>::ChargeFeeFailed)?;
+		pub fn charge_deposit(origin_location: &MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
+			if amount == 0 {
+				return Ok(());
 			}
 
-			Ok(())
+			let origin_sovereign_account = T::SovereignAccountOf::convert_location(origin_location)
+				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
+
+			T::Token::transfer(
+				&origin_sovereign_account,
+				&T::TreasuryAccount::get(),
+				amount,
+				Preservation::Preserve,
+			)
 		}
 	}
 }

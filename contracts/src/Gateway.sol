@@ -41,6 +41,10 @@ contract Gateway is IGateway, IInitializable {
     bytes32 internal immutable ASSET_HUB_AGENT_ID;
     bytes2 internal immutable CREATE_TOKEN_CALL_ID;
 
+    uint256 BASE_GAS_USED = 31000;
+    uint256 MAX_BASE_FEE = 300 gwei;
+    uint256 MAX_PRIORITY_FEE = 4 gwei;
+
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
@@ -56,6 +60,7 @@ contract Gateway is IGateway, IInitializable {
     error InvalidAgentExecutionPayload();
     error InvalidCodeHash();
     error InvalidConstructorParams();
+
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -100,6 +105,8 @@ contract Gateway is IGateway, IInitializable {
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
     ) external {
+        uint256 startGas = gasleft();
+
         Channel storage channel = _ensureChannel(message.origin);
 
         // Ensure this message is not being replayed
@@ -111,13 +118,6 @@ contract Gateway is IGateway, IInitializable {
         // This also prevents the re-entrancy case in which a malicious party tries to re-enter by calling `submitInbound`
         // again with the same (message, leafProof, headerProof) arguments.
         channel.inboundNonce++;
-
-        // Reward the relayer from the agent contract
-        // Expected to revert if the agent for the message origin does not have enough funds to reward the relayer.
-        // In that case, the origin should top up the funds of their agent.
-        if (message.reward > 0) {
-            _transferNativeFromAgent(channel.agent, payable(msg.sender), message.reward);
-        }
 
         // Produce the commitment (message root) by applying the leaf proof to the message leaf
         bytes32 leafHash = keccak256(abi.encode(message));
@@ -177,7 +177,22 @@ contract Gateway is IGateway, IInitializable {
             }
         }
 
+        // Calculate the refund amount. There are constraints on the maximum possible refund
+        // to discourage MEV exploitation.
+        uint256 basefee = _min(block.basefee, MAX_BASE_FEE);
+        uint256 gasPrice = _min(tx.gasprice, basefee + MAX_PRIORITY_FEE);
+        uint256 gasUsed = startGas - gasleft() + BASE_GAS_USED;
+        uint256 refund = gasPrice * gasUsed;
+        uint256 amount = _min(refund + message.reward, channel.agent.balance);
+        if (amount > 0) {
+            _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
+        }
+
         emit IGateway.InboundMessageDispatched(message.origin, message.nonce, success);
+    }
+
+    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
     }
 
     /**

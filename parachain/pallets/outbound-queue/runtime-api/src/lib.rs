@@ -9,7 +9,5 @@ sp_api::decl_runtime_apis! {
 	pub trait OutboundQueueApi
 	{
 		fn prove_message(leaf_index: u64) -> Option<MerkleProof>;
-
-		fn compute_fee_reward(_message: &Message) -> Result<(FeeAmount, FeeAmount), SubmitError>;
 	}
 }

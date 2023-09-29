@@ -30,25 +30,22 @@ use ethabi::{self};
 use frame_support::{
 	ensure,
 	storage::StorageStreamIter,
-	traits::{EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
+	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
 	weights::Weight,
 };
 use snowbridge_core::ParaId;
 use sp_core::H256;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
-use xcm::prelude::{MultiAsset, MultiAssets, MultiLocation};
 
 use snowbridge_core::outbound::{
-	AggregateMessageOrigin, EnqueuedMessage, FeeAmount, GasAmount, Message, MessageHash,
-	OutboundFeeConfig, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
-	SubmitError,
+	AggregateMessageOrigin, EnqueuedMessage, Message, MessageHash,
+	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
+	SubmitError, GasMeter,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
-use frame_support::log;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
-use sp_runtime::{FixedU128, Saturating};
 pub use weights::WeightInfo;
 
 /// The maximal length of an enqueued message, as determined by the MessageQueue pallet
@@ -66,7 +63,6 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
-	use snowbridge_core::outbound::Command;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -86,6 +82,16 @@ pub mod pallet {
 		/// Max number of messages processed per block
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
+
+		type GasMeter: GasMeter;
+
+		type Balance: Balance;
+
+		/// The fee charged locally for accepting a message.
+		type Fee: Get<Self::Balance>;
+
+		/// The reward in ether paid to relayers for sending a message to Ethereum
+		type Reward: Get<u128>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -114,8 +120,6 @@ pub mod pallet {
 			/// number of committed messages
 			count: u64,
 		},
-		/// Set outbound fee config
-		OutboundFeeConfigUpdated { config: OutboundFeeConfig },
 	}
 
 	#[pallet::error]
@@ -159,16 +163,6 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
-	/// Fee config for outbound message
-	#[pallet::type_value]
-	pub fn DefaultFeeConfig() -> OutboundFeeConfig {
-		OutboundFeeConfig::default()
-	}
-
-	#[pallet::storage]
-	pub type FeeConfig<T: Config> =
-		StorageValue<_, OutboundFeeConfig, ValueQuery, DefaultFeeConfig>;
-
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
@@ -207,39 +201,6 @@ pub mod pallet {
 		) -> DispatchResult {
 			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
 		}
-
-		/// Set fee config for outbound message.
-		/// May only be called by root
-		#[pallet::call_index(2)]
-		#[pallet::weight((T::DbWeight::get().reads_writes(2, 3), DispatchClass::Operational))]
-		pub fn set_outbound_fee_config(
-			origin: OriginFor<T>,
-			config: OutboundFeeConfig,
-		) -> DispatchResult {
-			ensure_root(origin)?;
-			let mut current = FeeConfig::<T>::get();
-			if config.base_fee.is_some() {
-				current.base_fee = config.base_fee;
-			}
-			if config.command_gas_map.is_some() {
-				current.command_gas_map = config.command_gas_map;
-			}
-			if config.gas_range.is_some() {
-				current.gas_range = config.gas_range;
-			}
-			if config.gas_price.is_some() {
-				current.gas_price = config.gas_price;
-			}
-			if config.swap_ratio.is_some() {
-				current.swap_ratio = config.swap_ratio;
-			}
-			if config.reward_ratio.is_some() {
-				current.reward_ratio = config.reward_ratio;
-			}
-			FeeConfig::<T>::put(current.clone());
-			Self::deposit_event(Event::OutboundFeeConfigUpdated { config: current });
-			Ok(())
-		}
 	}
 
 	impl<T: Config> OwnedBridgeModule<T> for Pallet<T> {
@@ -275,10 +236,10 @@ pub mod pallet {
 
 			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
 
-			let (command, params, dispatch_gas) = enqueued_message.command.abi_encode();
-
-			let reward = Self::estimate_reward(&enqueued_message.command)
-				.map_err(|_| ProcessMessageError::Corrupt)?;
+			let command = enqueued_message.command.index();
+			let params = enqueued_message.command.abi_encode();
+			let dispatch_gas = T::GasMeter::measure_maximum_required_gas(&enqueued_message.command) as u128;
+			let reward = T::Reward::get();
 
 			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
@@ -306,82 +267,15 @@ pub mod pallet {
 
 			Ok(true)
 		}
-
-		pub fn get_dispatch_gas(
-			command: &Command,
-			fee_config: &OutboundFeeConfig,
-		) -> Result<GasAmount, SubmitError> {
-			// For arbitrary transact, dispatch_gas should be dynamic retrieved from input.
-			let dispatch_gas = match fee_config.clone().command_gas_map {
-				Some(command_gas_map) =>
-					*command_gas_map.get(&command.index()).unwrap_or(&command.dispatch_gas()),
-				None => command.dispatch_gas(),
-			};
-			if fee_config.gas_range.is_some() {
-				let gas_range = fee_config.gas_range.clone().unwrap_or_default();
-				ensure!(
-					dispatch_gas >= gas_range.min && dispatch_gas <= gas_range.max,
-					SubmitError::InvalidGas(dispatch_gas)
-				);
-			}
-			Ok(dispatch_gas)
-		}
-
-		pub fn estimate_extra_fee(command: &Command) -> Result<FeeAmount, SubmitError> {
-			let fee_config = FeeConfig::<T>::get();
-			let extra_fee = match command.extra_fee_required() {
-				true => {
-					let dispatch_gas = Self::get_dispatch_gas(command, &fee_config)?;
-					let gas_cost_in_wei =
-						dispatch_gas.saturating_mul(fee_config.gas_price.unwrap_or_default());
-					let gas_cost_in_native = FixedU128::from_inner(gas_cost_in_wei)
-						.saturating_mul(fee_config.swap_ratio.unwrap_or_default());
-					gas_cost_in_native.into_inner()
-				},
-				false => FeeAmount::default(),
-			};
-			Ok(extra_fee)
-		}
-
-		/// base fee to cover the cost in bridgeHub assuming with congestion into consideration it's
-		/// not a static value so load from storage configurable
-		pub fn estimate_base_fee(command: &Command) -> Result<FeeAmount, SubmitError> {
-			let fee_config = FeeConfig::<T>::get();
-			let base_fee = match command.base_fee_required() {
-				true => fee_config.base_fee.unwrap_or_default(),
-				false => FeeAmount::default(),
-			};
-			Ok(base_fee)
-		}
-
-		pub fn estimate_reward(command: &Command) -> Result<FeeAmount, SubmitError> {
-			let fee_config = FeeConfig::<T>::get();
-			let dispatch_gas = Self::get_dispatch_gas(command, &fee_config)?;
-			let reward = fee_config
-				.reward_ratio
-				.map(|ratio| ratio * dispatch_gas * fee_config.gas_price.unwrap_or_default())
-				.unwrap_or_default();
-			Ok(reward)
-		}
-
-		pub fn compute_fee_reward(
-			command: &Command,
-		) -> Result<(FeeAmount, FeeAmount), SubmitError> {
-			log::trace!(target: LOG_TARGET, "command: {command:?}.");
-			let base_fee = Self::estimate_base_fee(command)?;
-			let extra_fee = Self::estimate_extra_fee(command)?;
-			let reward = Self::estimate_reward(command)?;
-			log::trace!(target: LOG_TARGET, "base_fee: {base_fee:?}, extra_fee: {extra_fee:?}, reward: {reward:?}");
-			Ok((base_fee.saturating_add(extra_fee), reward))
-		}
 	}
 
 	impl<T: Config> OutboundQueueTrait for Pallet<T> {
 		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
+		type Balance = T::Balance;
 
-		fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
+		fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
 			// The inner payload should not be too large
-			let (_, payload, _) = message.command.abi_encode();
+			let payload = message.command.abi_encode();
 
 			// Create a message id for tracking progress in submission pipeline
 			let message_id: MessageHash = sp_io::hashing::blake2_256(&(message.encode())).into();
@@ -399,7 +293,7 @@ pub mod pallet {
 
 			let ticket =
 				OutboundQueueTicket { id: message_id, origin: message.origin, message: encoded };
-			Ok(ticket)
+			Ok((ticket, T::Fee::get()))
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
@@ -411,11 +305,6 @@ pub mod pallet {
 			);
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
-		}
-
-		fn estimate_fee(message: &Message) -> Result<MultiAssets, SubmitError> {
-			let fee_reward = Self::compute_fee_reward(&message.command)?;
-			Ok(MultiAssets::from(vec![MultiAsset::from((MultiLocation::parent(), fee_reward.0))]))
 		}
 	}
 

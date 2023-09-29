@@ -2771,6 +2771,7 @@ dependencies = [
  "serde",
  "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",
+ "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-keyring",
