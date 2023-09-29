@@ -332,7 +332,7 @@ fn set_outbound_fee_config_should_work() {
 		let mut command_gas_map = BoundedBTreeMap::<
 			CommandIndex,
 			GasAmount,
-			ConstU32<{ CommandIndex::max_value() as u32 }>,
+			ConstU32<{ CommandIndex::MAX as u32 }>,
 		>::new();
 		// 2 is the command index of create_agent
 		command_gas_map.try_insert(2_u8, 500000).unwrap();
