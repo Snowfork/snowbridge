@@ -5,19 +5,22 @@ source scripts/set-env.sh
 
 build_cumulus_from_source() {
     echo "Building polkadot-parachain binary"
-    pushd $root_dir/polkadot-sdk/cumulus
+    pushd $root_dir/polkadot-sdk/cumulus/polkadot-parachain
 
     local features=''
     if [[ "$active_spec" != "minimal" ]]; then
-        features=--features beacon-spec-mainnet 
+        features=--features beacon-spec-mainnet
     fi
 
-    cargo build --release --locked --bin polkadot-parachain $features
-    cp ../target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
-
     echo "Building polkadot-parachain binary"
+    cargo build --release --locked --bin polkadot-parachain $features
+    cp ../../target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
+    popd
+
+    echo "Building parachain template node"
+    pushd $root_dir/polkadot-sdk/cumulus/parachain-template/runtime
     cargo build --release --locked --bin parachain-template-node
-    cp ../target/release/parachain-template-node $output_bin_dir/parachain-template-node
+    cp ../../../target/release/parachain-template-node $output_bin_dir/parachain-template-node
     popd
 }
 
@@ -25,7 +28,7 @@ build_relaychain_from_source() {
     echo "Building polkadot binary"
     pushd $root_dir/polkadot-sdk
 
-    cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker 
+    cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker
     mkdir -p $output_bin_dir
 
     cp target/release/polkadot $output_bin_dir/polkadot
