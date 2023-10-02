@@ -12,11 +12,11 @@ build_cumulus_from_source() {
     fi
 
     echo "Building polkadot-parachain binary"
-    cargo build --release --locked -p polkadot-parachain-bin $features
+    cargo build --release --workspace --locked --bin polkadot-parachain $features
     cp ../target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
 
     echo "Building parachain template node"
-    cargo build --release --locked -p parachain-template-node
+    cargo build --release --workspace --locked --bin parachain-template-node
     cp ../target/release/parachain-template-node $output_bin_dir/parachain-template-node
     popd
 }
