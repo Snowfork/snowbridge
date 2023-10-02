@@ -2,22 +2,20 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate as snowbridge_control;
 use frame_support::{
-	pallet_prelude::EnsureOrigin,
 	parameter_types,
-	traits::{ConstU16, ConstU64, Currency, OriginTrait},
+	traits::{ConstU16, ConstU64, Currency, Contains},
 	PalletId,
 };
+use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::v2::whitelisted_caller;
 
 use snowbridge_core::outbound::{Message, MessageHash, ParaId, SubmitError};
-use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-	AccountId32,
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup}, AccountId32,
 };
 use xcm::prelude::*;
 use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
@@ -25,6 +23,78 @@ use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 pub type AccountId = AccountId32;
+
+// A stripped-down version of pallet-xcm that only inserts an XCM origin into the runtime
+#[frame_support::pallet]
+mod pallet_xcm_origin {
+	use frame_support::pallet_prelude::*;
+	use frame_support::traits::{OriginTrait, Contains};
+	use xcm::latest::prelude::*;
+
+	#[pallet::pallet]
+	pub struct Pallet<T>(_);
+
+	#[pallet::config]
+	pub trait Config: frame_system::Config + crate::Config {
+		type RuntimeOrigin: From<Origin> + From<<Self as frame_system::Config>::RuntimeOrigin>;
+	}
+
+	// Insert this custom Origin into the aggregate RuntimeOrigin
+	#[pallet::origin]
+	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	pub struct Origin(pub MultiLocation);
+
+	impl From<MultiLocation> for Origin {
+		fn from(location: MultiLocation) -> Origin {
+			Origin(location)
+		}
+	}
+
+	/// `EnsureOrigin` implementation succeeding with a `MultiLocation` value to recognize and filter
+	/// the contained location
+	pub struct EnsureXcm<F>(PhantomData<F>);
+	impl<O: OriginTrait + From<Origin>, F: Contains<MultiLocation>> EnsureOrigin<O> for EnsureXcm<F>
+	where
+		O::PalletsOrigin: From<Origin> + TryInto<Origin, Error = O::PalletsOrigin>,
+	{
+		type Success = MultiLocation;
+
+		fn try_origin(outer: O) -> Result<Self::Success, O> {
+			outer.try_with_caller(|caller| {
+				caller.try_into().and_then(|o| match o {
+					Origin(location) if F::contains(&location) => Ok(location),
+					o => Err(o.into()),
+				})
+			})
+		}
+
+		#[cfg(feature = "runtime-benchmarks")]
+		fn try_successful_origin() -> Result<O, ()> {
+			Ok(O::from(Origin(Here.into())))
+		}
+	}
+}
+
+pub struct AllowSiblingsOnly;
+impl Contains<MultiLocation> for AllowSiblingsOnly {
+	fn contains(l: &MultiLocation) -> bool {
+		match l.split_first_interior() {
+			(MultiLocation { parents: 1, .. }, Some(Parachain(_))) => true,
+			_ => false,
+
+		}
+	}
+}
+
+pub struct AllowSiblingsTopLevelOnly;
+impl Contains<MultiLocation> for AllowSiblingsTopLevelOnly {
+	fn contains(l: &MultiLocation) -> bool {
+		match l {
+			MultiLocation { parents: 1, interior: X1(Parachain(_)) } => true,
+			_ => false,
+		}
+	}
+}
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -35,6 +105,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		XcmOrigin: pallet_xcm_origin::{Pallet, Origin},
 		EthereumControl: snowbridge_control,
 	}
 );
@@ -82,6 +153,10 @@ impl pallet_balances::Config for Test {
 	type MaxHolds = ();
 }
 
+impl pallet_xcm_origin::Config for Test {
+	type RuntimeOrigin = RuntimeOrigin;
+}
+
 parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
 	pub const SS58Prefix: u8 = 42;
@@ -90,104 +165,6 @@ parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub UniversalLocation: InteriorMultiLocation =
 		X2(GlobalConsensus(RelayNetwork::get().unwrap()), Parachain(1013));
-}
-
-static ORIGIN_TABLE: &[([u8; 32], MultiLocation)] = &[
-	// Case 1: Bridge hub
-	([1; 32], MultiLocation { parents: 0, interior: Here }),
-	// Case 2: Local AccountId32
-	(
-		[2; 32],
-		MultiLocation {
-			parents: 0,
-			interior: X1(Junction::AccountId32 { network: None, id: [0; 32] }),
-		},
-	),
-	// Case 3: Local AccountKey20
-	(
-		[3; 32],
-		MultiLocation {
-			parents: 0,
-			interior: X1(Junction::AccountKey20 { network: None, key: [0; 20] }),
-		},
-	),
-	// Case 4: Local Pallet
-	([4; 32], MultiLocation { parents: 0, interior: X1(Junction::PalletInstance(1)) }),
-	// Case 5: Sibling Chain
-	([5; 32], MultiLocation { parents: 1, interior: X1(Junction::Parachain(1000)) }),
-	// Case 6: Sibling Chain Pallet
-	(
-		[6; 32],
-		MultiLocation {
-			parents: 1,
-			interior: X2(Junction::Parachain(1000), Junction::PalletInstance(1)),
-		},
-	),
-	// Case 7: Sibling Chain AccountId32
-	(
-		[7; 32],
-		MultiLocation {
-			parents: 1,
-			interior: X2(
-				Junction::Parachain(1000),
-				Junction::AccountId32 { network: None, id: [0; 32] },
-			),
-		},
-	),
-	// Case 8: Sibling Chain AccountKey20
-	(
-		[8; 32],
-		MultiLocation {
-			parents: 1,
-			interior: X2(
-				Junction::Parachain(1000),
-				Junction::AccountKey20 { network: None, key: [0; 20] },
-			),
-		},
-	),
-	// Case 9: Bad Multi Locations
-	(
-		[9; 32],
-		MultiLocation {
-			parents: 1,
-			interior: X2(Junction::Parachain(1000), Junction::Parachain(1000)),
-		},
-	),
-	// Case 10: Bad Validate Message
-	([10; 32], MultiLocation { parents: 1, interior: X1(Junction::Parachain(1001)) }),
-	// Case 11: Bad Submit Message
-	([11; 32], MultiLocation { parents: 1, interior: X1(Junction::Parachain(1002)) }),
-];
-
-pub struct EnsureOriginFromTable;
-impl EnsureOrigin<RuntimeOrigin> for EnsureOriginFromTable {
-	type Success = MultiLocation;
-
-	fn try_origin(outer: RuntimeOrigin) -> Result<Self::Success, RuntimeOrigin> {
-		let account = outer.clone().into_signer().ok_or(outer.clone())?;
-
-		// Benchmarking
-		#[cfg(feature = "runtime-benchmarks")]
-		{
-			if account == whitelisted_caller() {
-				return Ok(MultiLocation::new(0, Here))
-			}
-		}
-
-		// test cases
-		let key: [u8; 32] = account.into();
-		for entry in ORIGIN_TABLE {
-			if entry.0 == key {
-				return Ok(entry.1)
-			}
-		}
-		Err(outer)
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
-		Ok(RuntimeOrigin::signed([0u8; 32].into()))
-	}
 }
 
 pub struct MockOutboundQueue;
@@ -207,6 +184,7 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 parameter_types! {
 	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
 	pub Deposit: u64 = 1000;
+	pub const RococoNetwork: NetworkId = NetworkId::Rococo;
 }
 
 impl crate::Config for Test {
@@ -214,8 +192,8 @@ impl crate::Config for Test {
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = MockOutboundQueue;
 	type MessageHasher = BlakeTwo256;
-	type AgentOrigin = EnsureOriginFromTable;
-	type ChannelOrigin = EnsureOriginFromTable;
+	type AgentOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
+	type ChannelOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsTopLevelOnly>;
 	type UniversalLocation = UniversalLocation;
 	type RelayLocation = RelayLocation;
 	type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
@@ -243,4 +221,19 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| setup());
 	ext
+}
+
+// Test helpers
+
+pub fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
+	pallet_xcm_origin::Origin(location).into()
+}
+
+pub fn agent_id_of(location: &MultiLocation) -> Option<H256> {
+	let reanchored_location = EthereumControl::reanchor_origin_location(location).unwrap();
+	HashedDescription::<H256, DescribeFamily<DescribeAllTerminal>>::convert_location(&reanchored_location)
+}
+
+pub fn sovereign_account_of(location: &MultiLocation) -> Option<AccountId> {
+	HashedDescription::<AccountId, DescribeFamily<DescribeAllTerminal>>::convert_location(location)
 }

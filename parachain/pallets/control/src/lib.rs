@@ -47,7 +47,6 @@ pub struct OriginInfo {
 	pub agent_id: H256,
 }
 
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
