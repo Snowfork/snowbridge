@@ -228,7 +228,7 @@ dependencies = [
 [[package]]
 name = "ark-secret-scalar"
 version = "0.0.2"
-source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
+source = "git+https://github.com/w3f/ring-vrf?rev=f4fe253#f4fe2534ccc6d916cd10d9c16891e673728ec8b4"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -276,7 +276,7 @@ dependencies = [
 [[package]]
 name = "ark-transcript"
 version = "0.0.2"
-source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
+source = "git+https://github.com/w3f/ring-vrf?rev=f4fe253#f4fe2534ccc6d916cd10d9c16891e673728ec8b4"
 dependencies = [
  "ark-ff",
  "ark-serialize",
@@ -362,13 +362,12 @@ dependencies = [
 [[package]]
 name = "bandersnatch_vrfs"
 version = "0.0.1"
-source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
+source = "git+https://github.com/w3f/ring-vrf?rev=f4fe253#f4fe2534ccc6d916cd10d9c16891e673728ec8b4"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
  "ark-ed-on-bls12-381-bandersnatch",
  "ark-ff",
- "ark-scale",
  "ark-serialize",
  "ark-std",
  "dleq_vrf",
@@ -572,9 +571,9 @@ checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
 
 [[package]]
 name = "cfg-expr"
-version = "0.15.4"
+version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b40ccee03b5175c18cde8f37e7d2a33bcef6f8ec8f7cc0d81090d1bb380949c9"
+checksum = "03915af431787e6ffdcc74c645077518c6b6e01f80b761e0fbbfa288536311b3"
 dependencies = [
  "smallvec",
 ]
@@ -610,7 +609,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/w3f/ring-proof?rev=0e948f3#0e948f3c28cbacecdd3020403c4841c0eb339213"
+source = "git+https://github.com/w3f/ring-proof?rev=8657210#86572101f4210647984ab4efedba6b3fcc890895"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -619,6 +618,7 @@ dependencies = [
  "ark-std",
  "fflonk",
  "merlin 3.0.0",
+ "rand_chacha 0.3.1",
 ]
 
 [[package]]
@@ -817,7 +817,7 @@ checksum = "83fdaf97f4804dcebfa5862639bc9ce4121e82140bec2a987ac5140294865b5b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -941,7 +941,7 @@ dependencies = [
 [[package]]
 name = "dleq_vrf"
 version = "0.0.2"
-source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
+source = "git+https://github.com/w3f/ring-vrf?rev=f4fe253#f4fe2534ccc6d916cd10d9c16891e673728ec8b4"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -957,18 +957,18 @@ dependencies = [
 
 [[package]]
 name = "docify"
-version = "0.2.1"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "029de870d175d11969524d91a3fb2cbf6d488b853bff99d41cf65e533ac7d9d2"
+checksum = "76ee528c501ddd15d5181997e9518e59024844eac44fd1e40cb20ddb2a8562fa"
 dependencies = [
  "docify_macros",
 ]
 
 [[package]]
 name = "docify_macros"
-version = "0.2.1"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cac43324656a1b05eb0186deb51f27d2d891c704c37f34de281ef6297ba193e5"
+checksum = "0ca01728ab2679c464242eca99f94e2ce0514b52ac9ad950e2ed03fca991231c"
 dependencies = [
  "common-path",
  "derive-syn-parse",
@@ -976,7 +976,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "syn 2.0.31",
+ "syn 2.0.37",
  "termcolor",
  "toml",
  "walkdir",
@@ -1176,7 +1176,7 @@ dependencies = [
  "fs-err",
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -1330,7 +1330,7 @@ dependencies = [
  "proc-macro-warning",
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -1341,7 +1341,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -1350,7 +1350,7 @@ version = "3.0.0"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -1440,7 +1440,7 @@ checksum = "89ca545a94061b6365f2c7355b4b32bd20df3ff95f02da9329b34ccc3bd6ee72"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -1960,7 +1960,7 @@ dependencies = [
  "macro_magic_core",
  "macro_magic_macros",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -1974,7 +1974,7 @@ dependencies = [
  "macro_magic_core_macros",
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -1985,7 +1985,7 @@ checksum = "c12469fc165526520dff2807c2975310ab47cf7190a45b99b49a7dc8befab17b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -1996,7 +1996,7 @@ checksum = "b8fb85ec1620619edf2984a7693497d4ec88a9665d8b87e942856884c92dbf2a"
 dependencies = [
  "macro_magic_core",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -2265,6 +2265,7 @@ dependencies = [
 name = "pallet-timestamp"
 version = "4.0.0-dev"
 dependencies = [
+ "docify",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -2534,14 +2535,14 @@ checksum = "3d1eaa7fa0aa1929ffdf7eeb6eac234dde6268914a14ad44d23521ab6a9b258e"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.66"
+version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18fb31db3f9bddb2ea821cde30a9f70117e3f119938b5ee630b7403aa6e2ead9"
+checksum = "3d433d9f1a3e8c1263d9456598b16fec66f4acc9a74dacffd35c7bb09b3a1328"
 dependencies = [
  "unicode-ident",
 ]
@@ -2715,13 +2716,14 @@ dependencies = [
 [[package]]
 name = "ring"
 version = "0.1.0"
-source = "git+https://github.com/w3f/ring-proof?rev=0e948f3#0e948f3c28cbacecdd3020403c4841c0eb339213"
+source = "git+https://github.com/w3f/ring-proof?rev=8657210#86572101f4210647984ab4efedba6b3fcc890895"
 dependencies = [
  "ark-ec",
  "ark-ff",
  "ark-poly",
  "ark-serialize",
  "ark-std",
+ "blake2",
  "common",
  "fflonk",
  "merlin 3.0.0",
@@ -2954,14 +2956,14 @@ checksum = "4eca7ac642d82aa35b60049a6eccb4be6be75e599bd2e9adb5f875a737654af2"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
 name = "serde_json"
-version = "1.0.96"
+version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "057d394a50403bcac12672b2b18fb387ab6d289d957dab67dd201875391e52f1"
+checksum = "6b420ce6e3d8bd882e9b243c6eed35dbc9a6110c9769e74b584e0d68d1f20c65"
 dependencies = [
  "itoa",
  "ryu",
@@ -3323,7 +3325,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -3379,7 +3381,6 @@ name = "sp-core"
 version = "21.0.0"
 dependencies = [
  "array-bytes 6.1.0",
- "arrayvec 0.7.2",
  "bandersnatch_vrfs",
  "bitflags",
  "blake2",
@@ -3438,7 +3439,7 @@ version = "9.0.0"
 dependencies = [
  "quote",
  "sp-core-hashing",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -3447,7 +3448,7 @@ version = "8.0.0"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -3592,7 +3593,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -3712,7 +3713,7 @@ dependencies = [
  "parity-scale-codec",
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -3919,9 +3920,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.31"
+version = "2.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "718fa2415bcb8d8bd775917a1bf12a7931b6dfa890753378538118181e0cb398"
+checksum = "7303ef2c05cd654186cb250d29049a24840ca25d2747c25c0381c8d9e2f582e8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3978,7 +3979,7 @@ checksum = "49922ecae66cc8a249b77e68d1d0623c1b2c514f0060c27cdc68bd62a1219d35"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -4155,9 +4156,9 @@ dependencies = [
 
 [[package]]
 name = "trie-db"
-version = "0.27.1"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "767abe6ffed88a1889671a102c2861ae742726f52e0a5a425b92c9fbfa7e9c85"
+checksum = "ff28e0f815c2fea41ebddf148e008b077d2faddb026c9555b29696114d602642"
 dependencies = [
  "hash-db",
  "hashbrown 0.13.2",
@@ -4664,7 +4665,7 @@ dependencies = [
  "Inflector",
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.37",
 ]
 
 [[package]]

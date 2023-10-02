@@ -4,8 +4,7 @@ set -eu
 source scripts/set-env.sh
 
 build_cumulus_from_source() {
-    echo "Building polkadot-parachain binary"
-    pushd $root_dir/polkadot-sdk/cumulus/polkadot-parachain
+    pushd $root_dir/polkadot-sdk/cumulus
 
     local features=''
     if [[ "$active_spec" != "minimal" ]]; then
@@ -13,14 +12,12 @@ build_cumulus_from_source() {
     fi
 
     echo "Building polkadot-parachain binary"
-    cargo build --release --locked --bin polkadot-parachain $features
-    cp ../../target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
-    popd
+    cargo build --release --locked -p polkadot-parachain-bin $features
+    cp ../target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
 
     echo "Building parachain template node"
-    pushd $root_dir/polkadot-sdk/cumulus/parachain-template/runtime
-    cargo build --release --locked --bin parachain-template-node
-    cp ../../../target/release/parachain-template-node $output_bin_dir/parachain-template-node
+    cargo build --release --locked -p parachain-template-node
+    cp ../target/release/parachain-template-node $output_bin_dir/parachain-template-node
     popd
 }
 

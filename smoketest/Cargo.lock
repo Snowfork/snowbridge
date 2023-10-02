@@ -216,7 +216,7 @@ dependencies = [
 [[package]]
 name = "ark-secret-scalar"
 version = "0.0.2"
-source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
+source = "git+https://github.com/w3f/ring-vrf?rev=f4fe253#f4fe2534ccc6d916cd10d9c16891e673728ec8b4"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -264,7 +264,7 @@ dependencies = [
 [[package]]
 name = "ark-transcript"
 version = "0.0.2"
-source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
+source = "git+https://github.com/w3f/ring-vrf?rev=f4fe253#f4fe2534ccc6d916cd10d9c16891e673728ec8b4"
 dependencies = [
  "ark-ff",
  "ark-serialize",
@@ -330,7 +330,7 @@ checksum = "b9ccdd8f2a161be9bd5c023df56f1b2a0bd1d83872ae53b71a84a12c9bf6e842"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -380,13 +380,12 @@ dependencies = [
 [[package]]
 name = "bandersnatch_vrfs"
 version = "0.0.1"
-source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
+source = "git+https://github.com/w3f/ring-vrf?rev=f4fe253#f4fe2534ccc6d916cd10d9c16891e673728ec8b4"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
  "ark-ed-on-bls12-381-bandersnatch",
  "ark-ff",
- "ark-scale",
  "ark-serialize",
  "ark-std",
  "dleq_vrf",
@@ -738,7 +737,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/w3f/ring-proof?rev=0e948f3#0e948f3c28cbacecdd3020403c4841c0eb339213"
+source = "git+https://github.com/w3f/ring-proof?rev=8657210#86572101f4210647984ab4efedba6b3fcc890895"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -747,6 +746,7 @@ dependencies = [
  "ark-std",
  "fflonk",
  "merlin 3.0.0",
+ "rand_chacha 0.3.1",
 ]
 
 [[package]]
@@ -929,7 +929,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "scratch",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -946,7 +946,7 @@ checksum = "2345488264226bf682893e25de0769f3360aac9957980ec49361b083ddaa5bc5"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -1054,7 +1054,7 @@ dependencies = [
 [[package]]
 name = "dleq_vrf"
 version = "0.0.2"
-source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
+source = "git+https://github.com/w3f/ring-vrf?rev=f4fe253#f4fe2534ccc6d916cd10d9c16891e673728ec8b4"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -1375,7 +1375,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "syn 2.0.32",
+ "syn 2.0.37",
  "toml",
  "walkdir",
 ]
@@ -1392,7 +1392,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serde_json",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -1417,7 +1417,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum",
- "syn 2.0.32",
+ "syn 2.0.37",
  "tempfile",
  "thiserror",
  "tiny-keccak",
@@ -1690,7 +1690,7 @@ checksum = "89ca545a94061b6365f2c7355b4b32bd20df3ff95f02da9329b34ccc3bd6ee72"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -2641,7 +2641,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -2840,7 +2840,7 @@ checksum = "ec2e072ecce94ec471b13398d5402c188e76ac03cf74dd1a975161b23a3f6d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -2878,7 +2878,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9825a04601d60621feed79c4e6b56d65db77cdca55cef43b46b0de1096d1c282"
 dependencies = [
  "proc-macro2",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -2931,9 +2931,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.66"
+version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18fb31db3f9bddb2ea821cde30a9f70117e3f119938b5ee630b7403aa6e2ead9"
+checksum = "3d433d9f1a3e8c1263d9456598b16fec66f4acc9a74dacffd35c7bb09b3a1328"
 dependencies = [
  "unicode-ident",
 ]
@@ -3074,7 +3074,7 @@ checksum = "8d2275aab483050ab2a7364c1a46604865ee7d6906684e08db0f090acf74f9e7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -3168,13 +3168,14 @@ dependencies = [
 [[package]]
 name = "ring"
 version = "0.1.0"
-source = "git+https://github.com/w3f/ring-proof?rev=0e948f3#0e948f3c28cbacecdd3020403c4841c0eb339213"
+source = "git+https://github.com/w3f/ring-proof?rev=8657210#86572101f4210647984ab4efedba6b3fcc890895"
 dependencies = [
  "ark-ec",
  "ark-ff",
  "ark-poly",
  "ark-serialize",
  "ark-std",
+ "blake2",
  "common",
  "fflonk",
  "merlin 3.0.0",
@@ -3595,7 +3596,7 @@ checksum = "4eca7ac642d82aa35b60049a6eccb4be6be75e599bd2e9adb5f875a737654af2"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -3880,7 +3881,6 @@ name = "sp-core"
 version = "21.0.0"
 dependencies = [
  "array-bytes 6.1.0",
- "arrayvec 0.7.2",
  "bandersnatch_vrfs",
  "bitflags",
  "blake2",
@@ -3965,7 +3965,7 @@ version = "8.0.0"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -4124,7 +4124,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -4373,7 +4373,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustversion",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -4482,9 +4482,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.32"
+version = "2.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "239814284fd6f1a4ffe4ca893952cdd93c224b6a1571c9a9eadd670295c0c9e2"
+checksum = "7303ef2c05cd654186cb250d29049a24840ca25d2747c25c0381c8d9e2f582e8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4542,7 +4542,7 @@ checksum = "49922ecae66cc8a249b77e68d1d0623c1b2c514f0060c27cdc68bd62a1219d35"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -4623,7 +4623,7 @@ checksum = "630bdcf245f78637c13ec01ffae6187cca34625e8c63150d424b59e55af2675e"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -5629,7 +5629,7 @@ dependencies = [
  "Inflector",
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -5655,5 +5655,5 @@ checksum = "25588073e5216b50bca71d61cb8595cdb9745e87032a58c199730def2862c934"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.37",
 ]
