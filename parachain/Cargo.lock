@@ -2644,6 +2644,7 @@ dependencies = [
  "snowbridge-core",
  "sp-core",
  "sp-io",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
  "xcm",

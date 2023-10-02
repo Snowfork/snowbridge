@@ -31,7 +31,7 @@ impl<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription> 
 where
 	UniversalLocation: Get<InteriorMultiLocation>,
 	GatewayLocation: Get<MultiLocation>,
-	OutboundQueue: OutboundQueueTrait,
+	OutboundQueue: OutboundQueueTrait<Balance = u128>,
 	OutboundQueue::Ticket: Encode + Decode,
 	AgentHashedDescription: ConvertLocation<H256>,
 {
@@ -130,17 +130,16 @@ where
 			command: Command::AgentExecute { agent_id, command: agent_execute_command },
 		};
 
-		let fees = OutboundQueue::estimate_fee(&outbound_message).map_err(|err| {
-			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue estimate fee failed. {err:?}");
-			SendError::Fees
-		})?;
-		log::info!(target: "xcm::ethereum_blob_exporter", "message validated: location = {local_sub_location:?}, agent_id = '{agent_id:?}', fees = {fees:?}");
-
-		let ticket = OutboundQueue::validate(&outbound_message).map_err(|err| {
+		// validate the message
+		let (ticket, fee) = OutboundQueue::validate(&outbound_message).map_err(|err| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
 			SendError::Unroutable
 		})?;
-		Ok((ticket.encode(), fees))
+
+		// convert fee to MultiAsset
+		let fee = MultiAsset::from((MultiLocation::parent(), fee)).into();
+
+		Ok((ticket.encode(), fee))
 	}
 
 	fn deliver(blob: Vec<u8>) -> Result<XcmHash, SendError> {
@@ -333,33 +332,27 @@ mod tests {
 	struct MockOkOutboundQueue;
 	impl OutboundQueueTrait for MockOkOutboundQueue {
 		type Ticket = ();
+		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<(), SubmitError> {
-			Ok(())
+		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
+			Ok(((), 0))
 		}
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Ok(MessageHash::zero())
 		}
-
-		fn estimate_fee(_: &Message) -> Result<MultiAssets, SubmitError> {
-			Ok(MultiAssets::default())
-		}
 	}
 	struct MockErrOutboundQueue;
 	impl OutboundQueueTrait for MockErrOutboundQueue {
 		type Ticket = ();
+		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<(), SubmitError> {
+		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Err(SubmitError::MessageTooLarge)
-		}
-
-		fn estimate_fee(_: &Message) -> Result<MultiAssets, SubmitError> {
-			Ok(MultiAssets::default())
 		}
 	}
 

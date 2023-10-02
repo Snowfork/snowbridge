@@ -324,11 +324,10 @@ contract Gateway is IGateway, IInitializable {
 
         Channel storage ch = _ensureChannel(params.paraID);
 
-        // Extra sanity checks when updating the BridgeHub channel. For example, a huge reward could
-        // effectively brick the bridge permanently.
+        // Extra sanity checks when updating the BridgeHub channel, which should never be paused.
         if (
             params.paraID == BRIDGE_HUB_PARA_ID
-                && (params.mode != OperatingMode.Normal || params.fee > 1 ether || params.reward > 1 ether)
+                && (params.mode != OperatingMode.Normal || params.fee > 1 ether)
         ) {
             revert InvalidChannelUpdate();
         }

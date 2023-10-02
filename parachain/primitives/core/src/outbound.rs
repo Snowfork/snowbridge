@@ -1,17 +1,14 @@
-use core::marker::PhantomData;
-
 use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
-	traits::{ConstU32, Get, tokens::Balance},
-	BoundedBTreeMap, BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound,
+	traits::{Get, tokens::Balance},
+	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound,
 	RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
-use sp_runtime::{FixedU128, Percent};
 use sp_std::{borrow::ToOwned, vec, vec::Vec};
 use xcm::prelude::MultiLocation;
 
@@ -118,8 +115,6 @@ pub enum Command {
 		mode: OperatingMode,
 		/// The new fee to charge users for outbound messaging to Polkadot
 		fee: u128,
-		/// The new reward to give to relayers for submitting inbound messages from Polkadot
-		reward: u128,
 	},
 	/// Set the global operating mode of the Gateway contract
 	SetOperatingMode {
@@ -135,16 +130,6 @@ pub enum Command {
 		/// The amount to transfer
 		amount: u128,
 	},
-}
-
-#[derive(
-	Encode, Decode, TypeInfo, PartialEqNoBound, EqNoBound, CloneNoBound, DebugNoBound,
-)]
-pub struct Initializer {
-	/// List of parameters to pass to initializer in the implementation contract
-	params: Vec<u8>,
-	/// Maximum required gas for the initializer in the implementation contract
-	maximum_required_gas: u64,
 }
 
 impl Command {
@@ -186,13 +171,12 @@ impl Command {
 					Token::FixedBytes(agent_id.as_bytes().to_owned()),
 				])])
 			},
-			Command::UpdateChannel { para_id, mode, fee, reward } => {
+			Command::UpdateChannel { para_id, mode, fee } => {
 				let para_id: u32 = (*para_id).into();
 				ethabi::encode(&[Token::Tuple(vec![
 					Token::Uint(U256::from(para_id)),
 					Token::Uint(U256::from((*mode) as u64)),
 					Token::Uint(U256::from(*fee)),
-					Token::Uint(U256::from(*reward)),
 				])])
 			},
 			Command::SetOperatingMode { mode } =>
@@ -207,6 +191,17 @@ impl Command {
 	}
 }
 
+/// Representation of a call to the initializer of the implementation contract:
+/// ABI signature: initialize(bytes)
+#[derive(
+	Encode, Decode, TypeInfo, PartialEqNoBound, EqNoBound, CloneNoBound, DebugNoBound,
+)]
+pub struct Initializer {
+	/// ABI-encoded params to pass to initializer
+	pub params: Vec<u8>,
+	/// Maximum required gas for the initializer in the implementation contract
+	pub maximum_required_gas: u64,
+}
 
 pub trait GasMeter {
 	// Measures the maximum amount of gas a command will require
@@ -232,9 +227,17 @@ impl GasMeter for ConstantGasMeter {
 					Some(Initializer { maximum_required_gas, .. }) => maximum_required_gas,
 					None => 0,
 				};
+				// total maximum gas must also include the gas used for updating the proxy before the
+				// the initializer is called.
 				100_000 + maximum_required_gas
 			}
 		}
+	}
+}
+
+impl GasMeter for () {
+	fn measure_maximum_required_gas(_: &Command) -> u64 {
+		0
 	}
 }
 
@@ -313,7 +316,7 @@ pub struct PreparedMessage {
 	pub params: Vec<u8>,
 	/// Maximum gas allowed for message dispatch
 	pub dispatch_gas: u128,
-	/// Reward in ether for delivering this message
+	/// Reward in ether for delivering this message, in addition to a gas refund
 	pub reward: u128,
 }
 

@@ -24,7 +24,7 @@ use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-type AccountId = AccountId32;
+pub type AccountId = AccountId32;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -84,7 +84,6 @@ impl pallet_balances::Config for Test {
 
 parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
-	pub const MaxUpgradeDataSize: u32 = 1024;
 	pub const SS58Prefix: u8 = 42;
 	pub const AnyNetwork: Option<NetworkId> = None;
 	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Kusama);
@@ -194,22 +193,20 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureOriginFromTable {
 pub struct MockOutboundQueue;
 impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	type Ticket = Message;
+	type Balance = u128;
 
-	fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
-		Ok(message.clone())
+	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
+		Ok((message.clone(), 0))
 	}
 
 	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 		Ok(MessageHash::zero())
 	}
-
-	fn estimate_fee(_message: &Message) -> Result<MultiAssets, SubmitError> {
-		Ok(MultiAssets::default())
-	}
 }
 
 parameter_types! {
 	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
+	pub Deposit: u64 = 1000;
 }
 
 impl crate::Config for Test {
@@ -217,7 +214,6 @@ impl crate::Config for Test {
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = MockOutboundQueue;
 	type MessageHasher = BlakeTwo256;
-	type MaxUpgradeDataSize = MaxUpgradeDataSize;
 	type AgentOrigin = EnsureOriginFromTable;
 	type ChannelOrigin = EnsureOriginFromTable;
 	type UniversalLocation = UniversalLocation;
@@ -226,6 +222,7 @@ impl crate::Config for Test {
 	type TreasuryAccount = TreasuryAccount;
 	type SovereignAccountOf = HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>;
 	type Token = Balances;
+	type Deposit = Deposit;
 	type WeightInfo = ();
 }
 

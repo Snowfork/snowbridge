@@ -94,6 +94,7 @@ impl crate::Config for Test {
 	type MessageQueue = MessageQueue;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
+	type GasMeter = ();
 	type WeightInfo = ();
 }
 
