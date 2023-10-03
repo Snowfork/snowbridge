@@ -25,7 +25,7 @@ contract Gateway is IGateway, IInitializable {
     using SafeNativeTransfer for address payable;
 
     // After message dispatch, there should be some gas left over for post dispatch logic
-    uint256 internal constant BUFFER_GAS = 32_000;
+    uint256 internal constant BUFFER_GAS = 48_000;
     address internal immutable AGENT_EXECUTOR;
 
     // Verification state
@@ -41,9 +41,11 @@ contract Gateway is IGateway, IInitializable {
     bytes32 internal immutable ASSET_HUB_AGENT_ID;
     bytes2 internal immutable CREATE_TOKEN_CALL_ID;
 
+    // Fixed amount of gas used outside the gas metering in submitInbound
     uint256 BASE_GAS_USED = 31000;
-    uint256 MAX_BASE_FEE = 300 gwei;
-    uint256 MAX_PRIORITY_FEE = 4 gwei;
+
+    // minimum amount of gas required to transfer eth
+    uint256 MINIMUM_THRESHOLD_GAS = 21000;
 
     error InvalidProof();
     error InvalidNonce();
@@ -132,8 +134,8 @@ contract Gateway is IGateway, IInitializable {
         // Otherwise malicious relayers can break the bridge by allowing the message handlers below to run out gas and fail silently.
         // In this scenario case, the channel's state would have been updated to accept the message (by virtue of the nonce increment), yet the actual message
         // dispatch would have failed
-        uint256 dispatchGas = message.dispatchGas;
-        if (gasleft() < dispatchGas + BUFFER_GAS) {
+        uint256 maxDispatchGas = message.maxDispatchGas;
+        if (gasleft() < maxDispatchGas + BUFFER_GAS) {
             revert NotEnoughGas();
         }
 
@@ -141,49 +143,57 @@ contract Gateway is IGateway, IInitializable {
 
         // Dispatch message to a handler
         if (message.command == Command.AgentExecute) {
-            try Gateway(this).agentExecute{gas: dispatchGas}(message.params) {}
+            try Gateway(this).agentExecute{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.CreateAgent) {
-            try Gateway(this).createAgent{gas: dispatchGas}(message.params) {}
+            try Gateway(this).createAgent{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.CreateChannel) {
-            try Gateway(this).createChannel{gas: dispatchGas}(message.params) {}
+            try Gateway(this).createChannel{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.UpdateChannel) {
-            try Gateway(this).updateChannel{gas: dispatchGas}(message.params) {}
+            try Gateway(this).updateChannel{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.SetOperatingMode) {
-            try Gateway(this).setOperatingMode{gas: dispatchGas}(message.params) {}
+            try Gateway(this).setOperatingMode{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: dispatchGas}(message.params) {}
+            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.Upgrade) {
-            try Gateway(this).upgrade{gas: dispatchGas}(message.params) {}
+            try Gateway(this).upgrade{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         }
 
-        // Calculate the refund amount. There are constraints on the maximum possible refund
-        // to discourage MEV exploitation.
-        uint256 basefee = _min(block.basefee, MAX_BASE_FEE);
-        uint256 gasPrice = _min(tx.gasprice, basefee + MAX_PRIORITY_FEE);
+        // Calculate the remaining funds in the channel agent contract
+        uint256 agentBalance = channel.agent.balance;
+        if (channel.agent.balance <= MINIMUM_THRESHOLD_GAS * tx.gasprice) {
+            agentBalance = 0;
+        }
+
+        // Calculate the gas refund
         uint256 gasUsed = startGas - gasleft() + BASE_GAS_USED;
-        uint256 refund = gasPrice * gasUsed;
-        uint256 amount = _min(refund + message.reward, channel.agent.balance);
+        uint256 refund = gasUsed * tx.gasprice;
+
+        // Add the reward to the refund amount. If the sum is more than the funds available
+        // in the channel agent, then reduce the total amount
+        uint256 amount = _min(refund + message.reward, agentBalance);
+
+        // Do the payment if there funds available in the agent
         if (amount > 0) {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
         }
@@ -193,6 +203,10 @@ contract Gateway is IGateway, IInitializable {
 
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
+    }
+
+    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? b : a;
     }
 
     /**

@@ -209,24 +209,28 @@ contract GatewayTest is Test {
 
     // Message relayer should be rewarded from the agent for a channel
     function testRelayerRewardedFromAgent() public {
-        deal(bridgeHubAgent, 50 ether);
-
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
+        vm.txGasPrice(10 gwei);
         hoax(relayer, 1 ether);
+        deal(bridgeHubAgent, 50 ether);
+
+        uint256 relayerBalanceBefore = address(relayer).balance;
+        uint256 agentBalanceBefore = address(bridgeHubAgent).balance;
+
         IGateway(address(gateway)).submitInbound(
             InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas, defaultReward), proof, makeMockProof()
         );
 
-        assertEq(address(bridgeHubAgent).balance, 49 ether);
-        assertEq(relayer.balance, 2 ether);
+        // Check that agent balance decreased and relayer balance increases
+        assertLt(address(bridgeHubAgent).balance, agentBalanceBefore);
+        assertGt(relayer.balance, relayerBalanceBefore);
     }
 
     // In this case, the agent has no funds to reward the relayer
     function testRelayerNotRewarded() public {
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
-        vm.expectRevert(NativeTransferFailed.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
             InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas, defaultReward), proof, makeMockProof()

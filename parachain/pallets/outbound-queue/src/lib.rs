@@ -238,7 +238,7 @@ pub mod pallet {
 
 			let command = enqueued_message.command.index();
 			let params = enqueued_message.command.abi_encode();
-			let dispatch_gas = T::GasMeter::measure_maximum_required_gas(&enqueued_message.command) as u128;
+			let max_dispatch_gas = T::GasMeter::measure_maximum_required_gas(&enqueued_message.command) as u128;
 			let reward = T::Reward::get();
 
 			// Construct a prepared message, which when ABI-encoded is what the
@@ -248,7 +248,7 @@ pub mod pallet {
 				nonce: next_nonce,
 				command,
 				params,
-				dispatch_gas,
+				max_dispatch_gas,
 				reward,
 			};
 

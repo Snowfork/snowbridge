@@ -40,7 +40,7 @@ struct InboundMessage {
     /// @dev The Parameters for the command
     bytes params;
     /// @dev The maximum gas allowed for message dispatch
-    uint256 dispatchGas;
+    uint256 maxDispatchGas;
     /// @dev The reward in ether for delivering this message
     uint256 reward;
 }

@@ -4,20 +4,18 @@ use super::*;
 
 use frame_support::{
 	assert_err, assert_noop, assert_ok, parameter_types,
-	traits::{ConstU32, Everything, Hooks, ProcessMessageError},
+	traits::{Everything, Hooks, ProcessMessageError},
 	weights::WeightMeter,
-	BoundedBTreeMap,
 };
 
-use snowbridge_core::outbound::{AgentExecuteCommand, Command, CommandIndex};
-use sp_core::{H160, H256};
+use snowbridge_core::outbound::{Command, Initializer};
+use sp_core::{H160, H256, ConstU128};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
 	AccountId32, BoundedVec,
 };
 use sp_std::convert::From;
-use xcm::prelude::Fungible;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -95,6 +93,9 @@ impl crate::Config for Test {
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
 	type GasMeter = ();
+	type Balance = u128;
+	type Fee = ConstU128<10>;
+	type Reward = ConstU128<10>;
 	type WeightInfo = ();
 }
 
@@ -136,14 +137,11 @@ fn submit_messages_from_multiple_origins_and_commit() {
 				command: Command::Upgrade {
 					impl_address: H160::zero(),
 					impl_code_hash: H256::zero(),
-					params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
+					initializer: None,
 				},
 			};
 
-			let result = OutboundQueue::validate(&message);
-			assert!(result.is_ok());
-			let ticket = result.unwrap();
-
+			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
 			assert_ok!(OutboundQueue::submit(ticket));
 		}
 
@@ -153,10 +151,7 @@ fn submit_messages_from_multiple_origins_and_commit() {
 				command: Command::CreateAgent { agent_id: Default::default() },
 			};
 
-			let result = OutboundQueue::validate(&message);
-			assert!(result.is_ok());
-			let ticket = result.unwrap();
-
+			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
 			assert_ok!(OutboundQueue::submit(ticket));
 		}
 
@@ -166,13 +161,11 @@ fn submit_messages_from_multiple_origins_and_commit() {
 				command: Command::Upgrade {
 					impl_address: Default::default(),
 					impl_code_hash: Default::default(),
-					params: None,
+					initializer: None,
 				},
 			};
 
-			let result = OutboundQueue::validate(&message);
-			assert!(result.is_ok());
-			let ticket = result.unwrap();
+			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
 
 			assert_ok!(OutboundQueue::submit(ticket));
 		}
@@ -199,7 +192,12 @@ fn submit_message_fail_too_large() {
 			command: Command::Upgrade {
 				impl_address: H160::zero(),
 				impl_code_hash: H256::zero(),
-				params: Some((0..1000).map(|_| 1u8).collect::<Vec<u8>>()),
+				initializer: Some(
+					Initializer {
+						params: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
+						maximum_required_gas: 0
+					}
+				),
 			},
 		};
 
@@ -263,88 +261,4 @@ fn process_message_fails_on_overweight_message() {
 			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
 		);
 	})
-}
-
-#[test]
-fn estimate_fee_should_work() {
-	new_tester().execute_with(|| {
-		let message = Message {
-			origin: 1001.into(),
-			command: Command::CreateAgent { agent_id: Default::default() },
-		};
-		let fees = OutboundQueue::estimate_fee(&message).unwrap();
-		let fee_amount: u128 = match fees.get(0) {
-			Some(&MultiAsset { fun: Fungible(amount), .. }) => amount,
-			_ => 0,
-		};
-		assert_eq!(fee_amount, 19000000000);
-	});
-}
-
-#[test]
-fn compute_fee_reward_for_transfer_token() {
-	new_tester().execute_with(|| {
-		let message = Message {
-			origin: 1001.into(),
-			command: Command::AgentExecute {
-				agent_id: Default::default(),
-				command: AgentExecuteCommand::TransferToken {
-					token: Default::default(),
-					recipient: Default::default(),
-					amount: 100,
-				},
-			},
-		};
-		let fees = OutboundQueue::compute_fee_reward(&message.command).unwrap();
-		assert_eq!(fees.0, 1000000000);
-		assert_eq!(fees.1, 337500000000000);
-	});
-}
-
-#[test]
-fn compute_fee_reward_for_upgrade() {
-	new_tester().execute_with(|| {
-		let message = Message {
-			origin: 1001.into(),
-			command: Command::Upgrade {
-				impl_address: Default::default(),
-				impl_code_hash: Default::default(),
-				params: None,
-			},
-		};
-		let fees = OutboundQueue::compute_fee_reward(&message.command).unwrap();
-		assert_eq!(fees.0, 0);
-		assert_eq!(fees.1, 5625000000000000);
-	});
-}
-
-#[test]
-fn set_outbound_fee_config_should_work() {
-	new_tester().execute_with(|| {
-		// estimate fee before reset command gas
-		let message = Message {
-			origin: 1001.into(),
-			command: Command::CreateAgent { agent_id: Default::default() },
-		};
-		let fees = OutboundQueue::compute_fee_reward(&message.command).unwrap();
-		assert_eq!(fees.0, 19000000000);
-		assert_eq!(fees.1, 3375000000000000);
-
-		let mut command_gas_map = BoundedBTreeMap::<
-			CommandIndex,
-			GasAmount,
-			ConstU32<{ CommandIndex::max_value() as u32 }>,
-		>::new();
-		// 2 is the command index of create_agent
-		command_gas_map.try_insert(2_u8, 500000).unwrap();
-		let mut config = OutboundFeeConfig::default();
-		config.command_gas_map = Some(command_gas_map);
-		let origin = RuntimeOrigin::root();
-		assert_ok!(OutboundQueue::set_outbound_fee_config(origin, config));
-
-		// estimate fee after reset command gas
-		let fees = OutboundQueue::compute_fee_reward(&message.command).unwrap();
-		assert_eq!(fees.0, 31000000000);
-		assert_eq!(fees.1, 5625000000000000);
-	});
 }

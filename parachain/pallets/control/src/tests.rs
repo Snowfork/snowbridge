@@ -85,12 +85,16 @@ fn upgrade_with_params_yields_success() {
 }
 
 #[test]
-fn create_channel_with_sibling_chain_origin_yields_success() {
+fn create_channel_success() {
 	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
+		let sovereign_account = sovereign_account_of(&origin_location).unwrap();
+		let origin = make_xcm_origin(origin_location);
+
+		// fund sovereign account of origin
+		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		assert_ok!(EthereumControl::create_agent(origin.clone()));
-
 		assert_ok!(EthereumControl::create_channel(origin));
 	});
 }
@@ -98,10 +102,14 @@ fn create_channel_with_sibling_chain_origin_yields_success() {
 #[test]
 fn create_channel_already_exist_yields_failed() {
 	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
+		let sovereign_account = sovereign_account_of(&origin_location).unwrap();
+		let origin = make_xcm_origin(origin_location);
+
+		// fund sovereign account of origin
+		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		assert_ok!(EthereumControl::create_agent(origin.clone()));
-
 		assert_ok!(EthereumControl::create_channel(origin.clone()));
 
 		frame_support::assert_noop!(

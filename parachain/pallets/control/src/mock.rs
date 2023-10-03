@@ -18,13 +18,15 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup}, AccountId32,
 };
 use xcm::prelude::*;
-use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
+use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription, ParentIsPreset, SiblingParachainConvertsVia, AccountId32Aliases};
+use polkadot_parachain::primitives::Sibling;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 pub type AccountId = AccountId32;
 
 // A stripped-down version of pallet-xcm that only inserts an XCM origin into the runtime
+#[allow(dead_code)]
 #[frame_support::pallet]
 mod pallet_xcm_origin {
 	use frame_support::pallet_prelude::*;
@@ -75,8 +77,8 @@ mod pallet_xcm_origin {
 	}
 }
 
-pub struct AllowSiblingsOnly;
-impl Contains<MultiLocation> for AllowSiblingsOnly {
+pub struct AllowSiblingsChildrenOnly;
+impl Contains<MultiLocation> for AllowSiblingsChildrenOnly {
 	fn contains(l: &MultiLocation) -> bool {
 		match l.split_first_interior() {
 			(MultiLocation { parents: 1, .. }, Some(Parachain(_))) => true,
@@ -86,8 +88,8 @@ impl Contains<MultiLocation> for AllowSiblingsOnly {
 	}
 }
 
-pub struct AllowSiblingsTopLevelOnly;
-impl Contains<MultiLocation> for AllowSiblingsTopLevelOnly {
+pub struct AllowSiblingsOnly;
+impl Contains<MultiLocation> for AllowSiblingsOnly {
 	fn contains(l: &MultiLocation) -> bool {
 		match l {
 			MultiLocation { parents: 1, interior: X1(Parachain(_)) } => true,
@@ -183,24 +185,37 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 
 parameter_types! {
 	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
-	pub Deposit: u64 = 1000;
+	pub Fee: u64 = 1000;
 	pub const RococoNetwork: NetworkId = NetworkId::Rococo;
 }
+
+/// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
+/// when determining sovereign accounts for asset transacting.
+pub type LocationToAccountId = (
+	// The parent (Relay-chain) origin converts to the parent `AccountId`.
+	ParentIsPreset<AccountId>,
+	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
+	AccountId32Aliases<RelayNetwork, AccountId>,
+	// Other nested consensus systems on sibling parachains or relay chain.
+	HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>
+);
 
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = MockOutboundQueue;
 	type MessageHasher = BlakeTwo256;
-	type AgentOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
-	type ChannelOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsTopLevelOnly>;
+	type AgentOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsChildrenOnly>;
+	type ChannelOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
 	type UniversalLocation = UniversalLocation;
 	type RelayLocation = RelayLocation;
 	type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 	type TreasuryAccount = TreasuryAccount;
-	type SovereignAccountOf = HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>;
+	type SovereignAccountOf = LocationToAccountId;
 	type Token = Balances;
-	type Deposit = Deposit;
+	type Fee = Fee;
 	type WeightInfo = ();
 }
 
@@ -235,5 +250,5 @@ pub fn agent_id_of(location: &MultiLocation) -> Option<H256> {
 }
 
 pub fn sovereign_account_of(location: &MultiLocation) -> Option<AccountId> {
-	HashedDescription::<AccountId, DescribeFamily<DescribeAllTerminal>>::convert_location(location)
+	LocationToAccountId::convert_location(location)
 }

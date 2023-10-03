@@ -38,7 +38,7 @@ hex = "0.4.1"
 hex-literal = { version = "0.4.1" }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master"}
-
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "master" }
 
 [features]
 default = ["std"]

@@ -96,8 +96,8 @@ pub mod pallet {
 		/// Converts MultiLocation to a sovereign account
 		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
 
-		/// Permissionless operations require a deposit
-		type Deposit: Get<BalanceOf<Self>>;
+		/// Permissionless operations require an upfront fee to prevent spamming
+		type Fee: Get<BalanceOf<Self>>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -133,7 +133,7 @@ pub mod pallet {
 		AgentNotExist,
 		ChannelAlreadyCreated,
 		ChannelNotExist,
-		LocationToSovereignAccountConversionFailed,
+		LocationToAccountConversionFailed,
 		EstimateFeeFailed,
 		ChargeFeeFailed,
 	}
@@ -186,7 +186,7 @@ pub mod pallet {
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let origin_location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			Self::charge_deposit(&origin_location, T::Deposit::get())?;
+			Self::charge_fee(&origin_location)?;
 
 			let OriginInfo { reanchored_location, agent_id, .. } =
 				Self::process_origin_location(&origin_location)?;
@@ -206,13 +206,18 @@ pub mod pallet {
 
 		/// Sends a message to the Gateway contract to create a new Channel representing `origin`
 		///
+		/// This extrinsic is permissionless, so a fee is charged to prevent spamming and pay
+		/// for execution costs on the remote side.
+		///
+		/// The message is sent over the bridge on BridgeHub's own channel to the Gateway.
+		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::create_channel())]
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
 			let origin_location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
 
-			Self::charge_deposit(&origin_location, T::Deposit::get())?;
+			Self::charge_fee(&origin_location)?;
 
 			let OriginInfo { para_id, agent_id, .. } =
 				Self::process_origin_location(&origin_location)?;
@@ -232,7 +237,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Sends a message to the Gateway contract to update channel
+		/// Sends a message to the Gateway contract to update a channel configuration
+		///
+		/// The origin must already have a channel initialized, as this message is sent over it.
 		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(3)]
@@ -360,14 +367,15 @@ pub mod pallet {
 			Ok(OriginInfo { reanchored_location, para_id, agent_id, })
 		}
 
-		pub fn charge_deposit(origin_location: &MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
-			let origin_sovereign_account = T::SovereignAccountOf::convert_location(origin_location)
-				.ok_or(Error::<T>::LocationToSovereignAccountConversionFailed)?;
+		/// Charge a flat fee from the sovereign account of the origin location
+		fn charge_fee(origin_location: &MultiLocation) -> DispatchResult {
+			let sovereign_account = T::SovereignAccountOf::convert_location(origin_location)
+				.ok_or(Error::<T>::LocationToAccountConversionFailed)?;
 
 			T::Token::transfer(
-				&origin_sovereign_account,
+				&sovereign_account,
 				&T::TreasuryAccount::get(),
-				amount,
+				T::Fee::get(),
 				Preservation::Preserve,
 			)?;
 

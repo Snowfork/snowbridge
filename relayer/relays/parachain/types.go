@@ -87,7 +87,7 @@ type OutboundQueueMessage struct {
 	Nonce       uint64
 	Command     uint8
 	Params      []byte
-	DispatchGas types.U128
+	MaxDispatchGas types.U128
 	Reward      types.U128
 }
 
@@ -97,7 +97,7 @@ func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 		Nonce:       m.Nonce,
 		Command:     m.Command,
 		Params:      m.Params,
-		DispatchGas: m.DispatchGas.Int,
+		MaxDispatchGas: m.MaxDispatchGas.Int,
 		Reward:      m.Reward.Int,
 	}
 }

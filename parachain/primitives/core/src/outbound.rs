@@ -315,7 +315,7 @@ pub struct PreparedMessage {
 	/// Params for the command
 	pub params: Vec<u8>,
 	/// Maximum gas allowed for message dispatch
-	pub dispatch_gas: u128,
+	pub max_dispatch_gas: u128,
 	/// Reward in ether for delivering this message, in addition to a gas refund
 	pub reward: u128,
 }
@@ -328,7 +328,7 @@ impl From<PreparedMessage> for Token {
 			Token::Uint(x.nonce.into()),
 			Token::Uint(x.command.into()),
 			Token::Bytes(x.params.to_vec()),
-			Token::Uint(x.dispatch_gas.into()),
+			Token::Uint(x.max_dispatch_gas.into()),
 			Token::Uint(x.reward.into()),
 		])
 	}

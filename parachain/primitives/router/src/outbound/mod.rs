@@ -335,7 +335,7 @@ mod tests {
 		type Balance = u128;
 
 		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
-			Ok(((), 0))
+			Ok(((), 1))
 		}
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
