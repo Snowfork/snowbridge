@@ -21,7 +21,7 @@ contract CounterTest is Test {
         counters = Counter.createCounter(33);
         assertEq(counters, expected);
     }
-    
+
     function testCounterCreatedAsZeroed() public {
         uint256[] memory expected = new uint256[](2);
         counters = Counter.createCounter(32);
@@ -54,7 +54,7 @@ contract CounterTest is Test {
 
     function testCounterGetAndSetAlongEntireRange() public {
         counters = Counter.createCounter(32);
-        for(uint16 index = 0; index < 32; index++) {
+        for (uint16 index = 0; index < 32; index++) {
             // Should be zero as the initial value.
             uint16 value = counters.get(index);
             assertEq(value, 0);
