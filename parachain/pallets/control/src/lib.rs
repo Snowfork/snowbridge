@@ -157,7 +157,7 @@ pub mod pallet {
 		///   to execute this upgrade. This also includes the gas consumed by the `initialize(bytes)` handler of the new
 		///   implementation contract.
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::upgrade(initializer.clone().map_or(0, |i| i.params.len() as u32)))]
+		#[pallet::weight(T::WeightInfo::upgrade())]
 		pub fn upgrade(
 			origin: OriginFor<T>,
 			impl_address: H160,

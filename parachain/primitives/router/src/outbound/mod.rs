@@ -5,19 +5,14 @@ use core::slice::Iter;
 
 use codec::{Decode, Encode};
 
-use frame_support::{ensure, log, sp_runtime::AccountId32 as Account32, traits::Get};
+use frame_support::{ensure, log, traits::Get};
 use snowbridge_core::outbound::{
 	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
 };
 use sp_core::H256;
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
-use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 use xcm_executor::traits::{ConvertLocation, ExportXcm};
-
-pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
-
-pub type SovereignAccountOf = HashedDescription<Account32, DescribeFamily<DescribeAllTerminal>>;
 
 pub struct EthereumBlobExporter<
 	UniversalLocation,
@@ -315,6 +310,9 @@ mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
 	use snowbridge_core::outbound::{MessageHash, SubmitError};
+	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
+
+	pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 
 	use super::*;
 

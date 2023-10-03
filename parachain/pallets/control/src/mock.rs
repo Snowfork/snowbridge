@@ -9,9 +9,6 @@ use frame_support::{
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
-#[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::v2::whitelisted_caller;
-
 use snowbridge_core::outbound::{Message, MessageHash, ParaId, SubmitError};
 use sp_runtime::{
 	testing::Header,
@@ -37,7 +34,7 @@ mod pallet_xcm_origin {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + crate::Config {
+	pub trait Config: frame_system::Config {
 		type RuntimeOrigin: From<Origin> + From<<Self as frame_system::Config>::RuntimeOrigin>;
 	}
 
@@ -72,7 +69,7 @@ mod pallet_xcm_origin {
 
 		#[cfg(feature = "runtime-benchmarks")]
 		fn try_successful_origin() -> Result<O, ()> {
-			Ok(O::from(Origin(Here.into())))
+			Ok(O::from(Origin(MultiLocation {parents: 1, interior: X1(Parachain(2000))})))
 		}
 	}
 }
