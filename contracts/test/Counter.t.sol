@@ -61,14 +61,14 @@ contract CounterTest is Test {
 
             if (index > 1) {
                 value = counters.get(index - 1);
-                assertEq(value, index - 1, "check previous set before");
+                assertEq(value, index - 1, "check the counter previously set before update");
             }
             counters.set(index, index);
             value = counters.get(index);
-            assertEq(value, index, "check current set");
+            assertEq(value, index, "check counter set now");
             if (index > 1) {
                 value = counters.get(index - 1);
-                assertEq(value, index - 1, "check previous set after");
+                assertEq(value, index - 1, "check previous previous counter after the current set");
             }
         }
         for (uint16 index = 0; index < 32; index++) {
@@ -78,12 +78,12 @@ contract CounterTest is Test {
 
             if (index > 1) {
                 value = counters.get(index - 1);
-                assertEq(value, index, "check previous set after second iteration");
+                assertEq(value, index, "check previous counter set after second set");
             }
         }
     }
 
-    function testCounterGetAndSetNotMatch() public {
+    function testCounterGetAndSetWithTwoIterations() public {
         counters = Counter.createCounter(300);
         uint256 index = 0;
         uint16 value = 11;
