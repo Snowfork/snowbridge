@@ -198,7 +198,7 @@ pub mod pallet {
 
 			let message =
 				Message { origin: T::OwnParaId::get(), command: Command::CreateAgent { agent_id } };
-			Self::submit_outbound(message.clone())?;
+			Self::submit_outbound(message)?;
 
 			Self::deposit_event(Event::<T>::CreateAgent { location: Box::new(reanchored_location), agent_id });
 			Ok(())
@@ -316,11 +316,12 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::transfer_native_from_agent())]
 		pub fn force_transfer_native_from_agent(
 				origin: OriginFor<T>,
-				location: VersionedMultiLocation,
+				location: Box<VersionedMultiLocation>,
 				recipient: H160,
 				amount: u128,
 		) -> DispatchResult {
 			ensure_root(origin)?;
+			let location = *location;
 			let location: MultiLocation = location.try_into().map_err(|_| Error::<T>::LocationConversionFailed)?;
 			let OriginInfo { agent_id, .. } =
 				Self::process_origin_location(&location)?;
@@ -341,7 +342,7 @@ pub mod pallet {
 		pub fn reanchor_origin_location(location: &MultiLocation) -> Result<MultiLocation, DispatchError> {
 			let relay_location = T::RelayLocation::get();
 
-			let mut reanchored_location = location.clone();
+			let mut reanchored_location = *location;
 			reanchored_location
 				.reanchor(&relay_location, T::UniversalLocation::get())
 				.map_err(|_| Error::<T>::LocationReanchorFailed)?;
