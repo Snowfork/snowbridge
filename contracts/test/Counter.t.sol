@@ -57,11 +57,45 @@ contract CounterTest is Test {
         for (uint16 index = 0; index < 32; index++) {
             // Should be zero as the initial value.
             uint16 value = counters.get(index);
-            assertEq(value, 0);
+            assertEq(value, 0, "initially zeroed.");
 
+            if (index > 1) {
+                value = counters.get(index - 1);
+                assertEq(value, index - 1, "check previous set before");
+            }
             counters.set(index, index);
             value = counters.get(index);
-            assertEq(value, index);
+            assertEq(value, index, "check current set");
+            if (index > 1) {
+                value = counters.get(index - 1);
+                assertEq(value, index - 1, "check previous set after");
+            }
         }
+        for (uint16 index = 0; index < 32; index++) {
+            // Should be zero as the initial value.
+            uint16 value = counters.get(index) + 1;
+            counters.set(index, value);
+            assertEq(value, index + 1, "one added.");
+
+            if (index > 1) {
+                value = counters.get(index - 1);
+                assertEq(value, index, "check previous set after second iteration");
+            }
+        }
+    }
+
+    function testCounterGetAndSetNotMatch() public {
+        counters = Counter.createCounter(300);
+        uint256 index = 0;
+        uint16 value = 11;
+        counters.set(index, value);
+        uint16 new_value = counters.get(index);
+        console.log("round1:index at %d set %d and get %d", index, value, new_value);
+        assertEq(value, new_value);
+        value = value + 1;
+        counters.set(index, value);
+        new_value = counters.get(index);
+        console.log("round2:index at %d set %d and get %d", index, value, new_value);
+        assertEq(value, new_value);
     }
 }

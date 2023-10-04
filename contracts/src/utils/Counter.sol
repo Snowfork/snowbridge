@@ -17,7 +17,7 @@ library Counter {
     function set(uint256[] storage self, uint256 index, uint16 value) internal {
         uint256 element = index >> 4;
         uint8 inside = uint8(index) & 0x0F;
-        uint256 zero = uint256(0xFFFF) << (16 * inside);
+        uint256 zero = ~(uint256(0xFFFF) << (16 * inside));
         uint256 shiftedValue = uint256(value) << (16 * inside);
         self[element] = self[element] & zero | shiftedValue;
     }
