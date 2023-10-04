@@ -72,7 +72,6 @@ contract CounterTest is Test {
             }
         }
         for (uint16 index = 0; index < 32; index++) {
-            // Should be zero as the initial value.
             uint16 value = counters.get(index) + 1;
             counters.set(index, value);
             assertEq(value, index + 1, "one added.");
