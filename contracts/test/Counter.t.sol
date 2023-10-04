@@ -68,7 +68,7 @@ contract CounterTest is Test {
             assertEq(value, index, "check counter set now");
             if (index > 1) {
                 value = counters.get(index - 1);
-                assertEq(value, index - 1, "check previous previous counter after the current set");
+                assertEq(value, index - 1, "check previous counter after the current set");
             }
         }
         for (uint16 index = 0; index < 32; index++) {
@@ -78,7 +78,7 @@ contract CounterTest is Test {
 
             if (index > 1) {
                 value = counters.get(index - 1);
-                assertEq(value, index, "check previous counter set after second set");
+                assertEq(value, index, "check previous counter set after second iteration of set");
             }
         }
     }
