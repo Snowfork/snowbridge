@@ -119,7 +119,7 @@ impl<G: Get<[u8; 2]>, F: XcmFeeGetter> sp_runtime::traits::TryConvert<VersionedM
 							vec![
 								RefundSurplus,
 								DepositAsset {
-									assets: buy_execution_fee.into(),
+									assets: Wild(AllCounted(1)),
 									beneficiary: (
 										Parent,
 										Parent,
