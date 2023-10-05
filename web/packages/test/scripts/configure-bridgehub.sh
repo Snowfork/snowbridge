@@ -24,7 +24,6 @@ wait_beacon_chain_ready() {
 fund_accounts() {
     echo "Funding substrate accounts"
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $assethub_sovereign_account
-    transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $TEMPLATE_AGENT_ID
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $template_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $beacon_relayer_pub_key
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_pub_key

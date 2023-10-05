@@ -63,8 +63,8 @@ skip_relayer="${SKIP_RELAYER:-false}"
 
 # Account for assethub (1000 5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ in testnet)
 assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x70617261e8030000000000000000000000000000000000000000000000000000}"
-# Account for template (1001 5Ec4AhPZwkVeRmswLWBsf7rxQ3cjzMKRWuVvffJ6Uuu89s1P in testnet)
-template_sovereign_account="${TEMPLATE_SOVEREIGN_ACCOUNT:-0x70617261e9030000000000000000000000000000000000000000000000000000}"
+# Account for template (Sibling 1001)
+template_sovereign_account="${TEMPLATE_SOVEREIGN_ACCOUNT:-0x7369626ce9030000000000000000000000000000000000000000000000000000}"
 # Beacon relay account (//BeaconRelay 5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c in testnet)
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
 # Execution relay account (//ExecutionRelay 5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)

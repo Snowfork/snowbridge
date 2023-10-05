@@ -1,15 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{mock::*, *};
-use frame_support::{assert_ok, assert_noop};
-use sp_core::H256;
+use frame_support::{assert_noop, assert_ok};
+use hex_literal::hex;
+use sp_core::{ByteArray, H256};
 use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
 
 #[test]
 fn create_agent_bad_origin() {
 	new_test_ext().execute_with(|| {
-		frame_support::assert_noop!(EthereumControl::create_agent(RuntimeOrigin::signed([0; 32].into())), BadOrigin);
-		frame_support::assert_noop!(EthereumControl::create_agent(RuntimeOrigin::none()), BadOrigin);
+		frame_support::assert_noop!(
+			EthereumControl::create_agent(RuntimeOrigin::signed([0; 32].into())),
+			BadOrigin
+		);
+		frame_support::assert_noop!(
+			EthereumControl::create_agent(RuntimeOrigin::none()),
+			BadOrigin
+		);
 	});
 }
 
@@ -79,8 +86,14 @@ fn upgrade_with_params_yields_success() {
 		let origin = RuntimeOrigin::root();
 		let address: H160 = Default::default();
 		let code_hash: H256 = Default::default();
-		let initializer: Option<Initializer> = Some(Initializer{params: [0; 256].into(), maximum_required_gas: 10000});
-		frame_support::assert_ok!(EthereumControl::upgrade(origin, address, code_hash, initializer));
+		let initializer: Option<Initializer> =
+			Some(Initializer { params: [0; 256].into(), maximum_required_gas: 10000 });
+		frame_support::assert_ok!(EthereumControl::upgrade(
+			origin,
+			address,
+			code_hash,
+			initializer
+		));
 	});
 }
 
@@ -115,6 +128,69 @@ fn create_channel_already_exist_yields_failed() {
 		frame_support::assert_noop!(
 			EthereumControl::create_channel(origin),
 			Error::<Test>::ChannelAlreadyCreated
+		);
+	});
+}
+
+#[test]
+fn test_derive_from_template_parachain() {
+	new_test_ext().execute_with(|| {
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(1001)) };
+		let agent_id = agent_id_of(&origin_location).unwrap();
+		let expected_agent_id =
+			H256(hex!("2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793"));
+		assert_eq!(agent_id, expected_agent_id);
+		//print for smoke tests
+		let sovereign_account = sovereign_account_of(&origin_location).unwrap();
+		println!(
+			"sovereign_account from parachain 1001: {:#?}",
+			hex::encode(sovereign_account.as_slice())
+		);
+		let expected_sovereign_account = AccountId::from(hex!(
+			"7369626ce9030000000000000000000000000000000000000000000000000000"
+		));
+		assert_eq!(sovereign_account, expected_sovereign_account)
+	});
+}
+
+#[test]
+fn test_derive_from_relaychain() {
+	new_test_ext().execute_with(|| {
+		let origin_location = MultiLocation { parents: 1, interior: Here };
+		let sovereign_account = sovereign_account_of(&origin_location).unwrap();
+		println!(
+			"sovereign_account for relay chain: {:#?}",
+			hex::encode(sovereign_account.as_slice())
+		);
+	});
+}
+
+#[test]
+fn test_derive_from_account_32() {
+	new_test_ext().execute_with(|| {
+		let origin_location = MultiLocation {
+			parents: 1,
+			interior: X2(Parachain(1001), Junction::AccountId32 { network: None, id: [1; 32] }),
+		};
+		let sovereign_account = sovereign_account_of(&origin_location).unwrap();
+		println!(
+			"sovereign_account for account 32: {:#?}",
+			hex::encode(sovereign_account.as_slice())
+		);
+	});
+}
+
+#[test]
+fn test_derive_from_account_20() {
+	new_test_ext().execute_with(|| {
+		let origin_location = MultiLocation {
+			parents: 1,
+			interior: X2(Parachain(1001), Junction::AccountKey20 { network: None, key: [1; 20] }),
+		};
+		let sovereign_account = sovereign_account_of(&origin_location).unwrap();
+		println!(
+			"sovereign_account for account 20: {:#?}",
+			hex::encode(sovereign_account.as_slice())
 		);
 	});
 }

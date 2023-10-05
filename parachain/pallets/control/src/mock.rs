@@ -3,20 +3,24 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{ConstU16, ConstU64, Currency, Contains},
+	traits::{ConstU16, ConstU64, Contains, Currency},
 	PalletId,
 };
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
+use polkadot_parachain::primitives::Sibling;
 use snowbridge_core::outbound::{Message, MessageHash, ParaId, SubmitError};
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup}, AccountId32,
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+	AccountId32,
 };
 use xcm::prelude::*;
-use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription, ParentIsPreset, SiblingParachainConvertsVia, AccountId32Aliases};
-use polkadot_parachain::primitives::Sibling;
+use xcm_builder::{
+	AccountId32Aliases, DescribeAllTerminal, DescribeFamily, HashedDescription, ParentIsPreset,
+	SiblingParachainConvertsVia,
+};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -26,8 +30,10 @@ pub type AccountId = AccountId32;
 #[allow(dead_code)]
 #[frame_support::pallet]
 mod pallet_xcm_origin {
-	use frame_support::pallet_prelude::*;
-	use frame_support::traits::{OriginTrait, Contains};
+	use frame_support::{
+		pallet_prelude::*,
+		traits::{Contains, OriginTrait},
+	};
 	use xcm::latest::prelude::*;
 
 	#[pallet::pallet]
@@ -49,8 +55,8 @@ mod pallet_xcm_origin {
 		}
 	}
 
-	/// `EnsureOrigin` implementation succeeding with a `MultiLocation` value to recognize and filter
-	/// the contained location
+	/// `EnsureOrigin` implementation succeeding with a `MultiLocation` value to recognize and
+	/// filter the contained location
 	pub struct EnsureXcm<F>(PhantomData<F>);
 	impl<O: OriginTrait + From<Origin>, F: Contains<MultiLocation>> EnsureOrigin<O> for EnsureXcm<F>
 	where
@@ -69,7 +75,7 @@ mod pallet_xcm_origin {
 
 		#[cfg(feature = "runtime-benchmarks")]
 		fn try_successful_origin() -> Result<O, ()> {
-			Ok(O::from(Origin(MultiLocation {parents: 1, interior: X1(Parachain(2000))})))
+			Ok(O::from(Origin(MultiLocation { parents: 1, interior: X1(Parachain(2000)) })))
 		}
 	}
 }
@@ -80,7 +86,6 @@ impl Contains<MultiLocation> for AllowSiblingsChildrenOnly {
 		match l.split_first_interior() {
 			(MultiLocation { parents: 1, .. }, Some(Parachain(_))) => true,
 			_ => false,
-
 		}
 	}
 }
@@ -196,7 +201,7 @@ pub type LocationToAccountId = (
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
 	// Other nested consensus systems on sibling parachains or relay chain.
-	HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>
+	HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>,
 );
 
 impl crate::Config for Test {
@@ -243,7 +248,9 @@ pub fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
 
 pub fn agent_id_of(location: &MultiLocation) -> Option<H256> {
 	let reanchored_location = EthereumControl::reanchor_origin_location(location).unwrap();
-	HashedDescription::<H256, DescribeFamily<DescribeAllTerminal>>::convert_location(&reanchored_location)
+	HashedDescription::<H256, DescribeFamily<DescribeAllTerminal>>::convert_location(
+		&reanchored_location,
+	)
 }
 
 pub fn sovereign_account_of(location: &MultiLocation) -> Option<AccountId> {
