@@ -63,7 +63,6 @@ contract Gateway is IGateway, IInitializable {
     error InvalidCodeHash();
     error InvalidConstructorParams();
 
-
     // handler functions are privileged
     modifier onlySelf() {
         if (msg.sender != address(this)) {
@@ -339,10 +338,7 @@ contract Gateway is IGateway, IInitializable {
         Channel storage ch = _ensureChannel(params.paraID);
 
         // Extra sanity checks when updating the BridgeHub channel, which should never be paused.
-        if (
-            params.paraID == BRIDGE_HUB_PARA_ID
-                && (params.mode != OperatingMode.Normal || params.fee > 1 ether)
-        ) {
+        if (params.paraID == BRIDGE_HUB_PARA_ID && (params.mode != OperatingMode.Normal || params.fee > 1 ether)) {
             revert InvalidChannelUpdate();
         }
 
