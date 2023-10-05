@@ -25,76 +25,28 @@ mod benchmarking;
 #[cfg(test)]
 mod test;
 
-use codec::{Decode, Encode, MaxEncodedLen};
-use ethabi::{self, Token};
+use codec::{Decode, Encode};
+use ethabi::{self};
 use frame_support::{
 	ensure,
 	storage::StorageStreamIter,
-	traits::{EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
+	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
 	weights::Weight,
-	CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
-use scale_info::TypeInfo;
 use snowbridge_core::ParaId;
-use sp_core::{RuntimeDebug, H256};
+use sp_core::H256;
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
 use snowbridge_core::outbound::{
-	Command, Message, MessageHash, OutboundQueue as OutboundQueueTrait, SubmitError,
+	AggregateMessageOrigin, EnqueuedMessage, Message, MessageHash,
+	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
+	SubmitError, GasMeter,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 pub use weights::WeightInfo;
-
-/// Aggregate message origin for the `MessageQueue` pallet.
-#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum AggregateMessageOrigin {
-	#[codec(index = 0)]
-	Parachain(ParaId),
-}
-
-/// Message which is awaiting processing in the MessageQueue pallet
-#[derive(Encode, Decode, Clone, RuntimeDebug)]
-pub struct EnqueuedMessage {
-	/// Message ID (usually hash of message)
-	pub id: H256,
-	/// ID of source parachain
-	pub origin: ParaId,
-	/// Command to execute in the Gateway contract
-	pub command: Command,
-}
-
-/// Message which has been assigned a nonce and will be committed at the end of a block
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-pub struct PreparedMessage {
-	/// ID of source parachain
-	origin: ParaId,
-	/// Unique nonce to prevent replaying messages
-	nonce: u64,
-	/// Command to execute in the Gateway contract
-	command: u8,
-	params: Vec<u8>,
-}
-
-/// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
-impl From<PreparedMessage> for Token {
-	fn from(x: PreparedMessage) -> Token {
-		Token::Tuple(vec![
-			Token::Uint(u32::from(x.origin).into()),
-			Token::Uint(x.nonce.into()),
-			Token::Uint(x.command.into()),
-			Token::Bytes(x.params.to_vec()),
-		])
-	}
-}
-
-impl From<u32> for AggregateMessageOrigin {
-	fn from(value: u32) -> Self {
-		AggregateMessageOrigin::Parachain(value.into())
-	}
-}
 
 /// The maximal length of an enqueued message, as determined by the MessageQueue pallet
 pub type MaxEnqueuedMessageSizeOf<T> =
@@ -130,6 +82,16 @@ pub mod pallet {
 		/// Max number of messages processed per block
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
+
+		type GasMeter: GasMeter;
+
+		type Balance: Balance;
+
+		/// The fee charged locally for accepting a message.
+		type Fee: Get<Self::Balance>;
+
+		/// The reward in ether paid to relayers for sending a message to Ethereum
+		type Reward: Get<u128>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -274,7 +236,10 @@ pub mod pallet {
 
 			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
 
-			let (command, params) = enqueued_message.command.abi_encode();
+			let command = enqueued_message.command.index();
+			let params = enqueued_message.command.abi_encode();
+			let max_dispatch_gas = T::GasMeter::measure_maximum_required_gas(&enqueued_message.command) as u128;
+			let reward = T::Reward::get();
 
 			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
@@ -283,6 +248,8 @@ pub mod pallet {
 				nonce: next_nonce,
 				command,
 				params,
+				max_dispatch_gas,
+				reward,
 			};
 
 			// ABI-encode and hash the prepared message
@@ -302,20 +269,13 @@ pub mod pallet {
 		}
 	}
 
-	/// A message which can be accepted by the [`OutboundQueue`]
-	#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
-	pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
-		id: H256,
-		origin: ParaId,
-		message: BoundedVec<u8, MaxMessageSize>,
-	}
-
 	impl<T: Config> OutboundQueueTrait for Pallet<T> {
 		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
+		type Balance = T::Balance;
 
-		fn validate(message: &Message) -> Result<Self::Ticket, SubmitError> {
+		fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
 			// The inner payload should not be too large
-			let (_, payload) = message.command.abi_encode();
+			let payload = message.command.abi_encode();
 
 			// Create a message id for tracking progress in submission pipeline
 			let message_id: MessageHash = sp_io::hashing::blake2_256(&(message.encode())).into();
@@ -324,17 +284,16 @@ pub mod pallet {
 				payload.len() < T::MaxMessagePayloadSize::get() as usize,
 				SubmitError::MessageTooLarge
 			);
-			let message: EnqueuedMessage = EnqueuedMessage {
-				id: message_id,
-				origin: message.origin,
-				command: message.command.clone(),
-			};
+			let command = message.command.clone();
+			let enqueued_message: EnqueuedMessage =
+				EnqueuedMessage { id: message_id, origin: message.origin, command };
 			// The whole message should not be too large
-			let encoded = message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
+			let encoded =
+				enqueued_message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
 
 			let ticket =
-				OutboundQueueTicket { id: message.id, origin: message.origin, message: encoded };
-			Ok(ticket)
+				OutboundQueueTicket { id: message_id, origin: message.origin, message: encoded };
+			Ok((ticket, T::Fee::get()))
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {

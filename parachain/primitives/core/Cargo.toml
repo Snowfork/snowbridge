@@ -5,12 +5,13 @@ authors = [ "Snowfork <contact@snowfork.com>" ]
 edition = "2021"
 
 [dependencies]
+derivative = { version = "2.2.0", default-features = false, features = [ "use_core" ] }
 serde = { version = "1.0.164", optional = true, features = [ "derive" ] }
 codec = { package = "parity-scale-codec", version = "3.1.5", default-features = false }
 scale-info = { version = "2.7.0", default-features = false, features = [ "derive" ] }
 snowbridge-ethereum = { path = "../ethereum", default-features = false }
 
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "master", default-features = false }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }

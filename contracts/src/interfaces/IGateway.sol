@@ -40,7 +40,7 @@ interface IGateway {
 
     function operatingMode() external view returns (OperatingMode);
     function channelOperatingModeOf(ParaID paraID) external view returns (OperatingMode);
-    function channelFeeRewardOf(ParaID paraID) external view returns (uint256, uint256);
+    function channelFeeOf(ParaID paraID) external view returns (uint256);
     function channelNoncesOf(ParaID paraID) external view returns (uint64, uint64);
     function agentOf(bytes32 agentID) external view returns (address);
     function implementation() external view returns (address);

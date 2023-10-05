@@ -2022,7 +2022,7 @@ dependencies = [
 [[package]]
 name = "polkadot-core-primitives"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -2034,7 +2034,7 @@ dependencies = [
 [[package]]
 name = "polkadot-parachain"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "bounded-collections",
  "derive_more",
@@ -2638,11 +2638,14 @@ dependencies = [
  "frame-system",
  "hex",
  "hex-literal",
+ "pallet-balances",
  "parity-scale-codec",
+ "polkadot-parachain",
  "scale-info",
  "snowbridge-core",
  "sp-core",
  "sp-io",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
  "xcm",
@@ -2654,6 +2657,7 @@ dependencies = [
 name = "snowbridge-core"
 version = "0.1.1"
 dependencies = [
+ "derivative",
  "ethabi-decode",
  "frame-support",
  "frame-system",
@@ -2770,6 +2774,7 @@ dependencies = [
  "serde",
  "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",
+ "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-keyring",
@@ -2797,10 +2802,12 @@ name = "snowbridge-outbound-queue-runtime-api"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
+ "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",
  "sp-api",
  "sp-core",
  "sp-std",
+ "xcm",
 ]
 
 [[package]]
@@ -4117,7 +4124,7 @@ dependencies = [
 [[package]]
 name = "xcm"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "bounded-collections",
  "derivative",
@@ -4133,7 +4140,7 @@ dependencies = [
 [[package]]
 name = "xcm-builder"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4155,7 +4162,7 @@ dependencies = [
 [[package]]
 name = "xcm-executor"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "environmental",
  "frame-benchmarking",
@@ -4175,7 +4182,7 @@ dependencies = [
 [[package]]
 name = "xcm-procedural"
 version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
+source = "git+https://github.com/paritytech/polkadot.git?branch=master#b6b74fdf546c14bf9ac93c03916abda9ee33a52f"
 dependencies = [
  "Inflector",
  "proc-macro2",

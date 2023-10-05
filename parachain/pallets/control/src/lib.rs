@@ -17,24 +17,43 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
+use frame_support::traits::fungible::{Inspect, Mutate};
 use snowbridge_core::{
-	outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
+	outbound::{
+		Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId, Initializer
+	},
 	AgentId,
 };
-use sp_core::{H160, H256};
-use sp_runtime::traits::Hash;
+use sp_runtime::{RuntimeDebug, traits::Hash};
 use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
 
 pub use pallet::*;
+use sp_core::{H160, H256};
 
 pub const LOG_TARGET: &str = "snowbridge-control";
+
+pub type BalanceOf<T> =
+	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+
+#[derive(Copy, Clone, PartialEq, RuntimeDebug)]
+pub struct OriginInfo {
+	/// The location of this origin, reanchored to be relative to the relay chain
+	pub reanchored_location: MultiLocation,
+	/// The parachain hosting this origin
+	pub para_id: ParaId,
+	/// The deterministic ID of the agent for this origin
+	pub agent_id: H256,
+}
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{log, pallet_prelude::*, traits::EnsureOrigin};
+	use frame_support::{
+		pallet_prelude::*,
+		traits::{tokens::Preservation, EnsureOrigin},
+	};
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
@@ -53,10 +72,6 @@ pub mod pallet {
 		/// The ID of this parachain
 		type OwnParaId: Get<ParaId>;
 
-		/// Max size of params passed to initializer of the new implementation contract
-		#[pallet::constant]
-		type MaxUpgradeDataSize: Get<u32>;
-
 		/// Implementation that ensures origin is an XCM location for agent operations
 		type AgentOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
 
@@ -64,13 +79,25 @@ pub mod pallet {
 		type ChannelOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
 
 		/// Converts MultiLocation to H256 in a way that is stable across multiple versions of XCM
-		type AgentHashedDescription: ConvertLocation<H256>;
+		type AgentIdOf: ConvertLocation<H256>;
 
 		/// The universal location
 		type UniversalLocation: Get<InteriorMultiLocation>;
 
 		/// Location of the relay chain
 		type RelayLocation: Get<MultiLocation>;
+
+		/// Token reserved for control operations
+		type Token: Mutate<Self::AccountId>;
+
+		/// TreasuryAccount to collect fees
+		type TreasuryAccount: Get<Self::AccountId>;
+
+		/// Converts MultiLocation to a sovereign account
+		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
+
+		/// Permissionless operations require an upfront fee to prevent spamming
+		type Fee: Get<BalanceOf<Self>>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -87,10 +114,8 @@ pub mod pallet {
 		/// An UpdateChannel message was sent to the Gateway
 		UpdateChannel {
 			para_id: ParaId,
-			agent_id: AgentId,
 			mode: OperatingMode,
 			fee: u128,
-			reward: u128,
 		},
 		/// An SetOperatingMode message was sent to the Gateway
 		SetOperatingMode { mode: OperatingMode },
@@ -103,12 +128,14 @@ pub mod pallet {
 		UpgradeDataTooLarge,
 		SubmissionFailed,
 		LocationReanchorFailed,
-		LocationToParaIdConversionFailed,
-		LocationToAgentIdConversionFailed,
+		LocationConversionFailed,
 		AgentAlreadyCreated,
 		AgentNotExist,
 		ChannelAlreadyCreated,
 		ChannelNotExist,
+		LocationToAccountConversionFailed,
+		EstimateFeeFailed,
+		ChargeFeeFailed,
 	}
 
 	#[pallet::storage]
@@ -126,26 +153,24 @@ pub mod pallet {
 		/// - `impl_code_hash`: The codehash of `impl_address`.
 		/// - `params`: An optional list of ABI-encoded parameters for the implementation contract's
 		///   `initialize(bytes) function. If `None`, the initialization function is not called.
+		/// - `maximum_required_gas`: Maximum amount of gas required by the Gateway.upgrade() handler
+		///   to execute this upgrade. This also includes the gas consumed by the `initialize(bytes)` handler of the new
+		///   implementation contract.
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::upgrade(params.clone().map_or(0, |d| d.len() as u32)))]
+		#[pallet::weight(T::WeightInfo::upgrade())]
 		pub fn upgrade(
 			origin: OriginFor<T>,
 			impl_address: H160,
 			impl_code_hash: H256,
-			params: Option<Vec<u8>>,
+			initializer: Option<Initializer>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			ensure!(
-				params.clone().map_or(0, |d| d.len() as u32) < T::MaxUpgradeDataSize::get(),
-				Error::<T>::UpgradeDataTooLarge
-			);
-
-			let params_hash = params.as_ref().map(|p| T::MessageHasher::hash(p));
+			let params_hash = initializer.as_ref().map(|i| T::MessageHasher::hash(i.params.as_ref()));
 
 			let message = Message {
 				origin: T::OwnParaId::get(),
-				command: Command::Upgrade { impl_address, impl_code_hash, params },
+				command: Command::Upgrade { impl_address, impl_code_hash, initializer },
 			};
 			Self::submit_outbound(message)?;
 
@@ -161,15 +186,10 @@ pub mod pallet {
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let origin_location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, _, location) = Self::convert_location(origin_location)?;
+			Self::charge_fee(&origin_location)?;
 
-			log::debug!(
-				target: LOG_TARGET,
-				"💫 Create Agent request with agent_id {:?}, origin_location at {:?}, location at {:?}",
-				agent_id,
-				origin_location,
-				location
-			);
+			let OriginInfo { reanchored_location, agent_id, .. } =
+				Self::process_origin_location(&origin_location)?;
 
 			// Record the agent id or fail if it has already been created
 			ensure!(!Agents::<T>::contains_key(agent_id), Error::<T>::AgentAlreadyCreated);
@@ -178,32 +198,31 @@ pub mod pallet {
 
 			let message =
 				Message { origin: T::OwnParaId::get(), command: Command::CreateAgent { agent_id } };
-			Self::submit_outbound(message.clone())?;
+			Self::submit_outbound(message)?;
 
-			log::debug!(
-				target: LOG_TARGET,
-				"💫 Create Agent request processed with outbound message {:?}",
-				message
-			);
-
-			Self::deposit_event(Event::<T>::CreateAgent { location: Box::new(location), agent_id });
+			Self::deposit_event(Event::<T>::CreateAgent { location: Box::new(reanchored_location), agent_id });
 			Ok(())
 		}
 
 		/// Sends a message to the Gateway contract to create a new Channel representing `origin`
 		///
+		/// This extrinsic is permissionless, so a fee is charged to prevent spamming and pay
+		/// for execution costs on the remote side.
+		///
+		/// The message is sent over the bridge on BridgeHub's own channel to the Gateway.
+		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::create_channel())]
 		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
-			let location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
+			let origin_location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
 
-			let (agent_id, some_para_id, _) = Self::convert_location(location)?;
+			Self::charge_fee(&origin_location)?;
+
+			let OriginInfo { para_id, agent_id, .. } =
+				Self::process_origin_location(&origin_location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
-
-			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
-
 			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
 
 			Channels::<T>::insert(para_id, ());
@@ -213,13 +232,14 @@ pub mod pallet {
 				command: Command::CreateChannel { agent_id, para_id },
 			};
 			Self::submit_outbound(message)?;
-
 			Self::deposit_event(Event::<T>::CreateChannel { para_id, agent_id });
 
 			Ok(())
 		}
 
-		/// Sends a message to the Gateway contract to update channel
+		/// Sends a message to the Gateway contract to update a channel configuration
+		///
+		/// The origin must already have a channel initialized, as this message is sent over it.
 		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(3)]
@@ -228,25 +248,21 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			mode: OperatingMode,
 			fee: u128,
-			reward: u128,
 		) -> DispatchResult {
-			let location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
+			let origin_location: MultiLocation = T::ChannelOrigin::ensure_origin(origin)?;
 
-			let (agent_id, some_para_id, _) = Self::convert_location(location)?;
+			let OriginInfo { agent_id, para_id, .. } =
+				Self::process_origin_location(&origin_location)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
-
-			let para_id = some_para_id.ok_or(Error::<T>::LocationToParaIdConversionFailed)?;
-
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
 
 			let message = Message {
-				origin: T::OwnParaId::get(),
-				command: Command::UpdateChannel { para_id, mode, fee, reward },
+				origin: para_id,
+				command: Command::UpdateChannel { para_id, mode, fee },
 			};
 			Self::submit_outbound(message)?;
-
-			Self::deposit_event(Event::<T>::UpdateChannel { para_id, agent_id, mode, fee, reward });
+			Self::deposit_event(Event::<T>::UpdateChannel { para_id, mode, fee });
 
 			Ok(())
 		}
@@ -280,14 +296,98 @@ pub mod pallet {
 			recipient: H160,
 			amount: u128,
 		) -> DispatchResult {
-			let location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
+			let origin_location: MultiLocation = T::AgentOrigin::ensure_origin(origin)?;
 
-			let (agent_id, _, _) = Self::convert_location(location)?;
+			let OriginInfo { agent_id, para_id, .. } =
+				Self::process_origin_location(&origin_location)?;
 
+				Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount)
+		}
+
+		/// Sends a message to the Gateway contract to transfer asset from an an agent.
+		///
+		/// Privileged. Can only be called by root.
+		///
+		/// - `origin`: Must be `MultiLocation`
+		/// - `location`: Location used to resolve the agent
+		/// - `recipient`: Recipient of funds
+		/// - `amount`: Amount to transfer
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::transfer_native_from_agent())]
+		pub fn force_transfer_native_from_agent(
+				origin: OriginFor<T>,
+				location: Box<VersionedMultiLocation>,
+				recipient: H160,
+				amount: u128,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			let location = *location;
+			let location: MultiLocation = location.try_into().map_err(|_| Error::<T>::LocationConversionFailed)?;
+			let OriginInfo { agent_id, .. } =
+				Self::process_origin_location(&location)?;
+
+			Self::do_transfer_native_from_agent(agent_id, T::OwnParaId::get(), recipient, amount)
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		fn submit_outbound(message: Message) -> DispatchResult {
+			let (ticket, _) =
+				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
+			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
+			Ok(())
+		}
+
+		// Normalize origin locations relative to the relay chain.
+		pub fn reanchor_origin_location(location: &MultiLocation) -> Result<MultiLocation, DispatchError> {
+			let relay_location = T::RelayLocation::get();
+
+			let mut reanchored_location = *location;
+			reanchored_location
+				.reanchor(&relay_location, T::UniversalLocation::get())
+				.map_err(|_| Error::<T>::LocationReanchorFailed)?;
+
+			Ok(reanchored_location)
+		}
+
+		pub fn process_origin_location(
+			location: &MultiLocation,
+		) -> Result<OriginInfo, DispatchError> {
+			let reanchored_location = Self::reanchor_origin_location(location)?;
+
+			let para_id = match reanchored_location.interior.first() {
+				Some(Parachain(index)) => Some((*index).into()),
+				_ => None,
+			}
+			.ok_or(Error::<T>::LocationConversionFailed)?;
+
+			// Hash the location to produce an agent id
+			let agent_id = T::AgentIdOf::convert_location(&reanchored_location)
+				.ok_or(Error::<T>::LocationConversionFailed)?;
+
+			Ok(OriginInfo { reanchored_location, para_id, agent_id, })
+		}
+
+		/// Charge a flat fee from the sovereign account of the origin location
+		fn charge_fee(origin_location: &MultiLocation) -> DispatchResult {
+			let sovereign_account = T::SovereignAccountOf::convert_location(origin_location)
+				.ok_or(Error::<T>::LocationToAccountConversionFailed)?;
+
+			T::Token::transfer(
+				&sovereign_account,
+				&T::TreasuryAccount::get(),
+				T::Fee::get(),
+				Preservation::Preserve,
+			)?;
+
+			Ok(())
+		}
+
+		pub fn do_transfer_native_from_agent(agent_id: H256, para_id: ParaId, recipient: H160, amount: u128) -> DispatchResult {
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 
 			let message = Message {
-				origin: T::OwnParaId::get(),
+				origin: para_id,
 				command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
 			};
 			Self::submit_outbound(message)?;
@@ -299,38 +399,6 @@ pub mod pallet {
 			});
 
 			Ok(())
-		}
-	}
-
-	impl<T: Config> Pallet<T> {
-		fn submit_outbound(message: Message) -> DispatchResult {
-			let ticket =
-				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
-			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
-			Ok(())
-		}
-
-		pub fn convert_location(
-			mut location: MultiLocation,
-		) -> Result<(H256, Option<ParaId>, MultiLocation), DispatchError> {
-			// Normalize all locations relative to the relay chain.
-			let relay_location = T::RelayLocation::get();
-			location
-				.reanchor(&relay_location, T::UniversalLocation::get())
-				.map_err(|_| Error::<T>::LocationReanchorFailed)?;
-
-			// Only allow Parachain as origin location
-			let para_id = match location {
-				MultiLocation { parents: 0, interior: X1(Parachain(index)) } =>
-					Some((index).into()),
-				_ => None,
-			};
-
-			// Hash the location to produce an agent id
-			let agent_id = T::AgentHashedDescription::convert_location(&location)
-				.ok_or(Error::<T>::LocationToAgentIdConversionFailed)?;
-
-			Ok((agent_id, para_id, location))
 		}
 	}
 }

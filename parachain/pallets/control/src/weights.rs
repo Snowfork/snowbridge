@@ -35,7 +35,7 @@ use core::marker::PhantomData;
 
 /// Weight functions needed for pallet_template.
 pub trait WeightInfo {
-	fn upgrade(data_size: u32) -> Weight;
+	fn upgrade() -> Weight;
 	fn create_agent() -> Weight;
 	fn create_channel() -> Weight;
 	fn update_channel() -> Weight;
@@ -45,10 +45,10 @@ pub trait WeightInfo {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn upgrade(data_size: u32) -> Weight {
+	fn upgrade() -> Weight {
 		Weight::from_parts(30_740_411, 0)
 			.saturating_add(Weight::from_parts(0, 3517))
-			.saturating_add(Weight::from_parts(8_805, 0).saturating_mul(data_size.into()))
+			.saturating_add(Weight::from_parts(8_805, 0).saturating_mul(256))
 			.saturating_add(RocksDbWeight::get().reads(4))
 			.saturating_add(RocksDbWeight::get().writes(3))
 	}

@@ -50,7 +50,6 @@ contract DeployScript is Script {
         Gateway gatewayLogic = new Gateway(
             address(beefyClient),
             address(executor),
-            vm.envUint("DISPATCH_GAS"),
             bridgeHubParaID,
             bridgeHubAgentID,
             assetHubParaID,
@@ -58,10 +57,7 @@ contract DeployScript is Script {
         );
 
         bytes memory initParams = abi.encode(
-            vm.envUint("DEFAULT_FEE"),
-            vm.envUint("DEFAULT_REWARD"),
-            vm.envUint("REGISTER_NATIVE_TOKEN_FEE"),
-            vm.envUint("SEND_NATIVE_TOKEN_FEE")
+            vm.envUint("DEFAULT_FEE"), vm.envUint("REGISTER_NATIVE_TOKEN_FEE"), vm.envUint("SEND_NATIVE_TOKEN_FEE")
         );
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), initParams);

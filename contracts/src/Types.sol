@@ -27,8 +27,6 @@ struct Channel {
     address agent;
     /// @dev The fee charged to users for submitting outbound messages
     uint256 fee;
-    /// @dev The reward disbursed to message relayers for submitting inbound messages
-    uint256 reward;
 }
 
 /// @dev Inbound message from a Polkadot parachain (via BridgeHub)
@@ -41,6 +39,10 @@ struct InboundMessage {
     Command command;
     /// @dev The Parameters for the command
     bytes params;
+    /// @dev The maximum gas allowed for message dispatch
+    uint256 maxDispatchGas;
+    /// @dev The reward in ether for delivering this message
+    uint256 reward;
 }
 
 enum OperatingMode {

@@ -10,7 +10,7 @@ use templateXcm::{
         junctions::Junctions,
         multiasset::{AssetId::Concrete, Fungibility::Fungible, MultiAsset, MultiAssets},
         multilocation::MultiLocation,
-        Instruction, WeightLimit, Xcm,
+        Instruction, MaybeErrorCode, WeightLimit, Xcm,
     },
     VersionedXcm,
 };
@@ -34,6 +34,7 @@ pub fn construct_xcm_message(encoded_call: Vec<u8>) -> Box<VersionedXcm> {
                 encoded: encoded_call,
             },
         },
+        Instruction::ExpectTransactStatus(MaybeErrorCode::Success),
     ])))
 }
 
