@@ -3,14 +3,14 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{ConstU16, ConstU64, Contains, Currency},
+	traits::{ConstU16, ConstU64, Contains, Currency, Everything},
 	PalletId,
 };
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
 use polkadot_parachain::primitives::Sibling;
-use snowbridge_core::outbound::{Message, MessageHash, ParaId, SubmitError};
+use snowbridge_core::{outbound::{Message, MessageHash, ParaId, SubmitError}, AgentId};
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
@@ -209,13 +209,11 @@ impl crate::Config for Test {
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = MockOutboundQueue;
 	type MessageHasher = BlakeTwo256;
-	type AgentOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsChildrenOnly>;
-	type ChannelOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
-	type UniversalLocation = UniversalLocation;
-	type RelayLocation = RelayLocation;
+	type AgentOwnerOrigin = pallet_xcm_origin::EnsureXcm<Everything>;
+	type ChannelOwnerOrigin = pallet_xcm_origin::EnsureXcm<Everything>;
 	type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
-	type TreasuryAccount = TreasuryAccount;
 	type SovereignAccountOf = LocationToAccountId;
+	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
 	type Fee = Fee;
 	type WeightInfo = ();
@@ -246,13 +244,12 @@ pub fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
 	pallet_xcm_origin::Origin(location).into()
 }
 
-pub fn agent_id_of(location: &MultiLocation) -> Option<H256> {
-	let reanchored_location = EthereumControl::reanchor_origin_location(location).unwrap();
-	HashedDescription::<H256, DescribeFamily<DescribeAllTerminal>>::convert_location(
-		&reanchored_location,
-	)
+pub fn make_agent_id(location: MultiLocation) -> AgentId {
+	HashedDescription::<AgentId, DescribeFamily<DescribeAllTerminal>>::convert_location(
+		&location,
+	).expect("convert location")
 }
 
-pub fn sovereign_account_of(location: &MultiLocation) -> Option<AccountId> {
-	LocationToAccountId::convert_location(location)
+pub fn make_sovereign_account(location: MultiLocation) -> AccountId {
+	LocationToAccountId::convert_location(&location).expect("convert location")
 }
