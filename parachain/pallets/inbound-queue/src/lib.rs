@@ -27,8 +27,9 @@ use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
-use xcm::v3::{
-	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, XcmHash,
+use xcm::prelude::{
+	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, SendXcm,
+	XcmHash,
 };
 
 use envelope::Envelope;
@@ -36,7 +37,10 @@ use snowbridge_core::{
 	inbound::{Message, Verifier},
 	ParaId,
 };
-use snowbridge_router_primitives::inbound;
+use snowbridge_router_primitives::{
+	inbound,
+	inbound::{ConvertMessage, ConvertMessageError},
+};
 pub use weights::WeightInfo;
 
 type BalanceOf<T> =
@@ -54,8 +58,6 @@ pub mod pallet {
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::TryConvert;
-	use xcm::v3::SendXcm;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -87,8 +89,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type GatewayAddress: Get<H160>;
 
-		#[pallet::constant]
-		type RegisterCallIndex: Get<[u8; 2]>;
+		type MessageConverter: ConvertMessage;
 
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self>;
@@ -130,7 +131,7 @@ pub mod pallet {
 		/// Operational mode errors
 		OperationalMode(bp_runtime::OwnedBridgeModuleError),
 		/// Convert error
-		ConvertError,
+		ConvertError(ConvertMessageError),
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, PalletError)]
@@ -223,11 +224,8 @@ pub mod pallet {
 
 			// Decode message into XCM
 			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-				Ok(message) => inbound::VersionedMessageToXcmConverter::<
-					T::RegisterCallIndex,
-					inbound::ConstantFeeForInboundMessage,
-				>::try_convert(message)
-				.map_err(|_| Error::<T>::ConvertError)?,
+				Ok(message) => T::MessageConverter::convert(message)
+					.map_err(|e| Error::<T>::ConvertError(e))?,
 				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 			};
 

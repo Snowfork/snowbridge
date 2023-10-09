@@ -3,12 +3,13 @@
 //! Converts messages from Ethereum to XCM messages
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use frame_support::{traits::ContainsPair, weights::Weight};
+use frame_support::{traits::ContainsPair, weights::Weight, PalletError};
+use scale_info::TypeInfo;
 use sp_core::{Get, RuntimeDebug, H160};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use sp_std::prelude::*;
-use xcm::v3::{prelude::*, Junction::AccountKey20};
+use xcm::prelude::{Junction::AccountKey20, *};
 use xcm_executor::traits::ConvertLocation;
 
 const MINIMUM_DEPOSIT: u128 = 1;
@@ -68,42 +69,28 @@ pub enum Destination {
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-pub struct VersionedMessageToXcmConverter<G, F> {
-	_phantom: PhantomData<(G, F)>,
+pub struct VersionedMessageToXcmConverter<G> {
+	_phantom: PhantomData<G>,
 }
 
-pub trait XcmFeeGetter {
-	// Measures the maximum amount of gas a command will require
-	fn fee(command: &Command) -> u128;
+#[derive(TypeInfo, PalletError, Encode, Decode)]
+pub enum ConvertMessageError {
+	UnsupportedVersion,
 }
 
-/// A meter that assigns a constant amount of gas for the execution of a command
-pub struct ConstantFeeForInboundMessage;
-
-impl XcmFeeGetter for ConstantFeeForInboundMessage {
-	fn fee(command: &Command) -> u128 {
-		match command {
-			Command::RegisterToken { .. } => 2_000_000_000,
-			Command::SendToken { .. } => 1_000_000_000,
-		}
-	}
+pub trait ConvertMessage {
+	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError>;
 }
 
-impl XcmFeeGetter for () {
-	fn fee(_: &Command) -> u128 {
-		0
-	}
-}
+pub type CallIndex = [u8; 2];
 
-impl<G: Get<[u8; 2]>, F: XcmFeeGetter> sp_runtime::traits::TryConvert<VersionedMessage, Xcm<()>>
-	for VersionedMessageToXcmConverter<G, F>
-{
-	fn try_convert(message: VersionedMessage) -> Result<Xcm<()>, VersionedMessage> {
+impl<G: Get<CallIndex>> ConvertMessage for VersionedMessageToXcmConverter<G> {
+	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError> {
 		match message {
 			VersionedMessage::V1(val) => {
 				let chain_id = val.chain_id;
 				let network = Ethereum { chain_id };
-				let buy_execution_fee_amount = F::fee(&val.message);
+				let buy_execution_fee_amount = 2_000_000_000;
 				let buy_execution_fee = MultiAsset {
 					id: Concrete(MultiLocation::parent()),
 					fun: Fungible(buy_execution_fee_amount),
@@ -206,7 +193,7 @@ impl<G: Get<[u8; 2]>, F: XcmFeeGetter> sp_runtime::traits::TryConvert<VersionedM
 							),
 						};
 
-						let assets = MultiAssetFilter::Definite(vec![asset].into());
+						let assets = Definite(vec![asset].into());
 
 						let mut fragment: Vec<Instruction<()>> = match dest_para_id {
 							Some(dest_para_id) => {
@@ -233,7 +220,7 @@ impl<G: Get<[u8; 2]>, F: XcmFeeGetter> sp_runtime::traits::TryConvert<VersionedM
 	}
 }
 
-impl<G: Get<[u8; 2]>, F: XcmFeeGetter> VersionedMessageToXcmConverter<G, F> {
+impl<G: Get<CallIndex>> VersionedMessageToXcmConverter<G> {
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
 	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {
 		MultiLocation {
