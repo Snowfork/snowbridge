@@ -2654,6 +2654,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowbridge-control-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "snowbridge-core",
+ "sp-api",
+ "sp-core",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "snowbridge-core"
 version = "0.1.1"
 dependencies = [
