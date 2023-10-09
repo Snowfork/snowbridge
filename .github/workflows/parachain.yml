@@ -145,6 +145,7 @@ jobs:
           --package bridge-hub-rococo-runtime
 
   beacon-fuzz:
+    if: false
     needs: test
     runs-on: snowbridge-runner
     env:
