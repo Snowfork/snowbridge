@@ -29,4 +29,4 @@ pub const ASSET_HUB_AGENT_ID: [u8; 32] =
 	hex!("72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4");
 // Agent for template parachain 1001
 pub const SIBLING_AGENT_ID: [u8; 32] =
-	hex!("2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793");
+	hex!("e01018a3378502770faff44fbef3910d120a0353d18be653625b8daa88a86453");
