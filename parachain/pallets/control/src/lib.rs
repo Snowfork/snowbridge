@@ -159,15 +159,11 @@ pub mod pallet {
 	pub enum Error<T> {
 		UpgradeDataTooLarge,
 		SubmissionFailed,
-		LocationReanchorFailed,
 		LocationConversionFailed,
 		AgentAlreadyCreated,
 		AgentNotExist,
 		ChannelAlreadyCreated,
 		ChannelNotExist,
-		LocationToAccountConversionFailed,
-		EstimateFeeFailed,
-		ChargeFeeFailed,
 		UnsupportedLocationVersion,
 		InvalidLocation,
 	}
