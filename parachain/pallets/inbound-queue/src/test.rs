@@ -179,7 +179,8 @@ impl inbound_queue::Config for Test {
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
-	type MessageConverter = VersionedMessageToXcmConverter<RegisterCallIndex>;
+	type MessageConverter =
+		VersionedMessageToXcmConverter<RegisterCallIndex, ConstantFeeForInboundMessage>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
 }
@@ -243,7 +244,9 @@ const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
 );
 
 use snowbridge_core::ParaId;
-use snowbridge_router_primitives::inbound::VersionedMessageToXcmConverter;
+use snowbridge_router_primitives::inbound::{
+	ConstantFeeForInboundMessage, VersionedMessageToXcmConverter,
+};
 
 #[test]
 fn test_submit_happy_path() {

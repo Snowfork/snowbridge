@@ -69,8 +69,8 @@ pub enum Destination {
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-pub struct VersionedMessageToXcmConverter<G> {
-	_phantom: PhantomData<G>,
+pub struct VersionedMessageToXcmConverter<G, F> {
+	_phantom: PhantomData<(G, F)>,
 }
 
 #[derive(TypeInfo, PalletError, Encode, Decode)]
@@ -84,13 +84,30 @@ pub trait ConvertMessage {
 
 pub type CallIndex = [u8; 2];
 
-impl<G: Get<CallIndex>> ConvertMessage for VersionedMessageToXcmConverter<G> {
+pub trait XcmFeeGetter {
+	// Measures the maximum amount of gas a command will require
+	fn fee(command: &Command) -> u128;
+}
+
+/// A meter that assigns a constant amount of gas for the execution of a command
+pub struct ConstantFeeForInboundMessage;
+
+impl XcmFeeGetter for ConstantFeeForInboundMessage {
+	fn fee(command: &Command) -> u128 {
+		match command {
+			Command::RegisterToken { .. } => 2_000_000_000,
+			Command::SendToken { .. } => 1_000_000_000,
+		}
+	}
+}
+
+impl<G: Get<CallIndex>, F: XcmFeeGetter> ConvertMessage for VersionedMessageToXcmConverter<G, F> {
 	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError> {
 		match message {
 			VersionedMessage::V1(val) => {
 				let chain_id = val.chain_id;
 				let network = Ethereum { chain_id };
-				let buy_execution_fee_amount = 2_000_000_000;
+				let buy_execution_fee_amount = F::fee(&val.message);
 				let buy_execution_fee = MultiAsset {
 					id: Concrete(MultiLocation::parent()),
 					fun: Fungible(buy_execution_fee_amount),
@@ -220,7 +237,7 @@ impl<G: Get<CallIndex>> ConvertMessage for VersionedMessageToXcmConverter<G> {
 	}
 }
 
-impl<G: Get<CallIndex>> VersionedMessageToXcmConverter<G> {
+impl<G: Get<CallIndex>, F: XcmFeeGetter> VersionedMessageToXcmConverter<G, F> {
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
 	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {
 		MultiLocation {
