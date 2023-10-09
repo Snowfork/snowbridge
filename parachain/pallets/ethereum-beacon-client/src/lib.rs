@@ -29,7 +29,7 @@ use primitives::{
 };
 use snowbridge_core::{
 	inbound::{Message, Proof, Verifier},
-	RingBufferMap,
+	BasicOperatingMode, BridgeModule, BridgeModuleError, RingBufferMap,
 };
 use sp_core::H256;
 use sp_std::prelude::*;
@@ -56,8 +56,6 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-
-	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 
 	#[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
 	#[codec(mel_bound(T: Config))]
@@ -125,7 +123,7 @@ pub mod pallet {
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedBlock,
-		BridgeModule(bp_runtime::OwnedBridgeModuleError),
+		BridgeModule(BridgeModuleError),
 	}
 
 	/// Latest imported checkpoint root
@@ -186,24 +184,14 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type ExecutionHeaderMapping<T: Config> = StorageMap<_, Identity, u32, H256, ValueQuery>;
 
-	/// Optional pallet owner.
-	///
-	/// Pallet owner has a right to halt all pallet operations and then resume them. If it is
-	/// `None`, then there are no direct ways to halt/resume pallet operations, but other
-	/// runtime methods may still be used to do that (i.e. democracy::referendum to update halt
-	/// flag directly or call the `halt_operations`).
-	#[pallet::storage]
-	pub type PalletOwner<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
-
 	/// The current operating mode of the pallet.
 	///
 	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
-	impl<T: Config> OwnedBridgeModule<T> for Pallet<T> {
+	impl<T: Config> BridgeModule<T> for Pallet<T> {
 		const LOG_TARGET: &'static str = LOG_TARGET;
-		type OwnerStorage = PalletOwner<T>;
 		type OperatingMode = BasicOperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
 	}
@@ -256,23 +244,15 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Change `PalletOwner`.
-		/// May only be called either by root, or by `PalletOwner`.
-		#[pallet::call_index(3)]
-		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
-		pub fn set_owner(origin: OriginFor<T>, new_owner: Option<T::AccountId>) -> DispatchResult {
-			<Self as OwnedBridgeModule<_>>::set_owner(origin, new_owner)
-		}
-
 		/// Halt or resume all pallet operations.
 		/// May only be called either by root, or by `PalletOwner`.
-		#[pallet::call_index(4)]
+		#[pallet::call_index(3)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_operating_mode(
 			origin: OriginFor<T>,
 			operating_mode: BasicOperatingMode,
 		) -> DispatchResult {
-			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
+			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)
 		}
 	}
 

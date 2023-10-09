@@ -27,12 +27,14 @@ use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
-use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, XcmHash};
+use xcm::v3::{
+	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, XcmHash,
+};
 
 use envelope::Envelope;
 use snowbridge_core::{
 	inbound::{Message, Verifier},
-	ParaId,
+	BasicOperatingMode, BridgeModule, BridgeModuleError, ParaId,
 };
 use snowbridge_router_primitives::inbound;
 pub use weights::WeightInfo;
@@ -52,8 +54,6 @@ pub mod pallet {
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
 	use xcm::v3::SendXcm;
-
-	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -123,7 +123,7 @@ pub mod pallet {
 		/// XCMP send failure
 		Send(SendError),
 		/// Operational mode errors
-		OperationalMode(bp_runtime::OwnedBridgeModuleError),
+		OperationalMode(BridgeModuleError),
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, PalletError)]
@@ -143,8 +143,10 @@ pub mod pallet {
 				XcmpSendError::NotApplicable => Error::<T>::Send(SendError::NotApplicable),
 				XcmpSendError::Unroutable => Error::<T>::Send(SendError::NotRoutable),
 				XcmpSendError::Transport(_) => Error::<T>::Send(SendError::Transport),
-				XcmpSendError::DestinationUnsupported => Error::<T>::Send(SendError::DestinationUnsupported),
-				XcmpSendError::ExceedsMaxMessageSize => Error::<T>::Send(SendError::ExceedsMaxMessageSize),
+				XcmpSendError::DestinationUnsupported =>
+					Error::<T>::Send(SendError::DestinationUnsupported),
+				XcmpSendError::ExceedsMaxMessageSize =>
+					Error::<T>::Send(SendError::ExceedsMaxMessageSize),
 				XcmpSendError::MissingArgument => Error::<T>::Send(SendError::MissingArgument),
 				XcmpSendError::Fees => Error::<T>::Send(SendError::Fees),
 			}
@@ -155,24 +157,14 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
-	/// Optional pallet owner.
-	///
-	/// Pallet owner has a right to halt all pallet operations and then resume them. If it is
-	/// `None`, then there are no direct ways to halt/resume pallet operations, but other
-	/// runtime methods may still be used to do that (i.e. democracy::referendum to update halt
-	/// flag directly or call the `halt_operations`).
-	#[pallet::storage]
-	pub type PalletOwner<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
-
 	/// The current operating mode of the pallet.
 	///
 	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
-	impl<T: Config> OwnedBridgeModule<T> for Pallet<T> {
+	impl<T: Config> BridgeModule<T> for Pallet<T> {
 		const LOG_TARGET: &'static str = LOG_TARGET;
-		type OwnerStorage = PalletOwner<T>;
 		type OperatingMode = BasicOperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
 	}
@@ -222,33 +214,24 @@ pub mod pallet {
 			let dest = MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
 			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
 
-			Self::deposit_event(
-				Event::MessageReceived {
-					dest: envelope.dest,
-					nonce: envelope.nonce,
-					xcm_hash,
-				});
+			Self::deposit_event(Event::MessageReceived {
+				dest: envelope.dest,
+				nonce: envelope.nonce,
+				xcm_hash,
+			});
 
 			Ok(())
 		}
 
-		/// Change `PalletOwner`.
-		/// May only be called either by root, or by `PalletOwner`.
-		#[pallet::call_index(3)]
-		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
-		pub fn set_owner(origin: OriginFor<T>, new_owner: Option<T::AccountId>) -> DispatchResult {
-			<Self as OwnedBridgeModule<_>>::set_owner(origin, new_owner)
-		}
-
 		/// Halt or resume all pallet operations.
 		/// May only be called either by root, or by `PalletOwner`.
-		#[pallet::call_index(4)]
+		#[pallet::call_index(1)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_operating_mode(
 			origin: OriginFor<T>,
 			operating_mode: BasicOperatingMode,
 		) -> DispatchResult {
-			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
+			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)
 		}
 	}
 }
