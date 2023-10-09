@@ -55,11 +55,11 @@ where
 {
 	match location.split_first_interior() {
 		(MultiLocation { parents: 1, interior: Here }, Some(Parachain(para_id))) => {
-			let agent_id = agent_id_of::<T>(&location)?;
+			let agent_id = agent_id_of::<T>(location)?;
 			Ok((para_id.into(), agent_id, RelativeAncestry::Sibling))
 		},
 		(MultiLocation { parents: 1, .. }, Some(Parachain(para_id))) => {
-			let agent_id = agent_id_of::<T>(&location)?;
+			let agent_id = agent_id_of::<T>(location)?;
 			Ok((para_id.into(), agent_id, RelativeAncestry::SiblingChild))
 		},
 		_ => Err(BadOrigin.into()),
@@ -73,7 +73,7 @@ fn ensure_sibling<T>(location: &MultiLocation) -> Result<(ParaId, H256), Dispatc
 {
 	match location {
 		MultiLocation { parents: 1, interior: X1(Parachain(para_id)) } => {
-			let agent_id = agent_id_of::<T>(&location)?;
+			let agent_id = agent_id_of::<T>(location)?;
 			Ok(((*para_id).into(), agent_id))
 		},
 		_ => Err(BadOrigin.into()),
@@ -404,7 +404,7 @@ pub mod pallet {
 
 		/// Charge a fee from the sovereign account of the origin location
 		fn charge_fee(origin_location: &MultiLocation) -> DispatchResult {
-			let sovereign_account = T::SovereignAccountOf::convert_location(&origin_location)
+			let sovereign_account = T::SovereignAccountOf::convert_location(origin_location)
 				.ok_or(Error::<T>::LocationConversionFailed)?;
 
 			T::Token::transfer(
@@ -435,7 +435,7 @@ pub mod pallet {
 		/// Send a `CreateAgent` command for a sibling over BridgeHub's own channel. Charge a fee from
 		/// the sovereign account of the origin.
 		pub fn do_create_agent_for_sibling(origin_location: &MultiLocation, agent_id: H256) -> DispatchResult {
-			Self::charge_fee(&origin_location)?;
+			Self::charge_fee(origin_location)?;
 			Agents::<T>::insert(agent_id, ());
 
 			let command = Command::CreateAgent { agent_id };
