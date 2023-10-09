@@ -53,6 +53,23 @@ config_relayer() {
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-asset-hub.json
 
+    # Configure parachain relay (parachain template)
+    jq \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg channelID $TEMPLATE_PARA_ID \
+        --arg eth_gas_limit $eth_gas_limit \
+        '
+      .source.contracts.Gateway = $k1
+    | .source.contracts.BeefyClient = $k2
+    | .sink.contracts.Gateway = $k1
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
+    | .source."channel-id" = $channelID
+    ' \
+        config/parachain-relay.json >$output_dir/parachain-relay-template.json
 
     # Configure beacon relay
     jq \
@@ -76,6 +93,17 @@ config_relayer() {
     ' \
         config/execution-relay.json >$output_dir/execution-relay-asset-hub.json
 
+    # Configure execution relay for template node
+    jq \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg channelID $TEMPLATE_PARA_ID \
+        '
+              .source.ethereum.endpoint = $eth_endpoint_ws
+            | .source.contracts.Gateway = $k1
+            | .source."channel-id" = $channelID
+            ' \
+        config/execution-relay.json >$output_dir/execution-relay-template.json
 }
 
 start_relayer() {
@@ -119,6 +147,19 @@ start_relayer() {
         done
     ) &
 
+    # Launch parachain relay for parachain template
+    (
+        : >"$output_dir"/parachain-relay-template.log
+        while :; do
+            echo "Starting parachain-relay (parachain-template) at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay-template.json" \
+                --ethereum.private-key $parachain_relay_eth_key \
+                >>"$output_dir"/parachain-relay-template.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
     # Launch beacon relay
     (
         : >"$output_dir"/beacon-relay.log
@@ -141,6 +182,19 @@ start_relayer() {
                 --config $output_dir/execution-relay-asset-hub.json \
                 --substrate.private-key "//ExecutionRelay" \
                 >>"$output_dir"/execution-relay.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch execution relay for template
+    (
+        : >$output_dir/execution-relay-template.log
+        while :; do
+            echo "Starting execution relay template at $(date)"
+            "${relay_bin}" run execution \
+                --config $output_dir/execution-relay-template.json \
+                --substrate.private-key "//ExecutionRelay" \
+                >>"$output_dir"/execution-relay-template.log 2>&1 || true
             sleep 20
         done
     ) &
