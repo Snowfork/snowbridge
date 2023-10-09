@@ -121,7 +121,7 @@ pub enum Command {
 		/// The new operating mode
 		mode: OperatingMode,
 	},
-	/// Transfer ether from an agent
+	/// Transfer ether from an agent contract to a recipient account
 	TransferNativeFromAgent {
 		/// The agent ID
 		agent_id: H256,
@@ -191,15 +191,15 @@ impl Command {
 	}
 }
 
-/// Representation of a call to the initializer of the implementation contract:
-/// ABI signature: initialize(bytes)
+/// Representation of a call to the initializer of an implementation contract.
+/// The initializer has the following ABI signature: `initialize(bytes)`.
 #[derive(
 	Encode, Decode, TypeInfo, PartialEqNoBound, EqNoBound, CloneNoBound, DebugNoBound,
 )]
 pub struct Initializer {
-	/// ABI-encoded params to pass to initializer
+	/// ABI-encoded params of type `bytes` to pass to the initializer
 	pub params: Vec<u8>,
-	/// Maximum required gas for the initializer in the implementation contract
+	/// The initializer is allowed to consume this much gas at most.
 	pub maximum_required_gas: u64,
 }
 
