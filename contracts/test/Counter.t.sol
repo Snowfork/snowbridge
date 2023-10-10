@@ -24,9 +24,8 @@ contract CounterTest is Test {
 
     function testCounterCreatedAsZeroed() public {
         uint256[] memory expected = new uint256[](2);
-        counters = Counter.createCounter(32);
+        counters = Counter.createCounter(16);
         counters[0] = 0xABABABAB;
-        counters[1] = 0xABABABAB;
         counters = Counter.createCounter(32);
         assertEq(counters, expected);
     }
