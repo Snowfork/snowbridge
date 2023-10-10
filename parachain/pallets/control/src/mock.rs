@@ -3,13 +3,12 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{ConstU16, ConstU64, Contains, Currency, Everything},
+	traits::{ConstU16, ConstU64, Everything, tokens::fungible::Mutate},
 	PalletId,
 };
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
-use polkadot_parachain::primitives::Sibling;
 use snowbridge_core::{outbound::{Message, MessageHash, ParaId, SubmitError}, AgentId};
 use sp_runtime::{
 	testing::Header,
@@ -18,9 +17,11 @@ use sp_runtime::{
 };
 use xcm::prelude::*;
 use xcm_builder::{
-	AccountId32Aliases, DescribeAllTerminal, DescribeFamily, HashedDescription, ParentIsPreset,
-	SiblingParachainConvertsVia,
+	DescribeAllTerminal, DescribeFamily, HashedDescription,
 };
+
+#[cfg(feature = "runtime-benchmarks")]
+use crate::BenchmarkHelper;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -80,25 +81,6 @@ mod pallet_xcm_origin {
 	}
 }
 
-pub struct AllowSiblingsChildrenOnly;
-impl Contains<MultiLocation> for AllowSiblingsChildrenOnly {
-	fn contains(l: &MultiLocation) -> bool {
-		match l.split_first_interior() {
-			(MultiLocation { parents: 1, .. }, Some(Parachain(_))) => true,
-			_ => false,
-		}
-	}
-}
-
-pub struct AllowSiblingsOnly;
-impl Contains<MultiLocation> for AllowSiblingsOnly {
-	fn contains(l: &MultiLocation) -> bool {
-		match l {
-			MultiLocation { parents: 1, interior: X1(Parachain(_)) } => true,
-			_ => false,
-		}
-	}
-}
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -191,18 +173,12 @@ parameter_types! {
 	pub const RococoNetwork: NetworkId = NetworkId::Rococo;
 }
 
-/// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
-/// when determining sovereign accounts for asset transacting.
-pub type LocationToAccountId = (
-	// The parent (Relay-chain) origin converts to the parent `AccountId`.
-	ParentIsPreset<AccountId>,
-	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
-	SiblingParachainConvertsVia<Sibling, AccountId>,
-	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
-	AccountId32Aliases<RelayNetwork, AccountId>,
-	// Other nested consensus systems on sibling parachains or relay chain.
-	HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>,
-);
+#[cfg(feature = "runtime-benchmarks")]
+impl BenchmarkHelper<RuntimeOrigin> for () {
+	fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
+		RuntimeOrigin::from(pallet_xcm_origin::Origin(location))
+	}
+}
 
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -211,30 +187,26 @@ impl crate::Config for Test {
 	type MessageHasher = BlakeTwo256;
 	type AgentOwnerOrigin = pallet_xcm_origin::EnsureXcm<Everything>;
 	type ChannelOwnerOrigin = pallet_xcm_origin::EnsureXcm<Everything>;
-	type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
-	type SovereignAccountOf = LocationToAccountId;
+	type AgentIdOf = HashedDescription<AgentId, DescribeFamily<DescribeAllTerminal>>;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
 	type Fee = Fee;
 	type WeightInfo = ();
-}
-
-fn setup() {
-	System::set_block_number(1);
-	Balances::make_free_balance_be(
-		&<Test as super::pallet::Config>::SovereignAccountOf::convert_location(
-			&MultiLocation::parent(),
-		)
-		.unwrap(),
-		1_000_000_000_000,
-	);
+	#[cfg(feature = "runtime-benchmarks")]
+	type Helper = ();
 }
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| setup());
+	ext.execute_with(|| {
+		System::set_block_number(1);
+		let _ = Balances::mint_into(
+			&AccountId32::from([0; 32]),
+			1_000_000_000_000,
+		);
+	});
 	ext
 }
 
@@ -248,8 +220,4 @@ pub fn make_agent_id(location: MultiLocation) -> AgentId {
 	HashedDescription::<AgentId, DescribeFamily<DescribeAllTerminal>>::convert_location(
 		&location,
 	).expect("convert location")
-}
-
-pub fn make_sovereign_account(location: MultiLocation) -> AccountId {
-	LocationToAccountId::convert_location(&location).expect("convert location")
 }

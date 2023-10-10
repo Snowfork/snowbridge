@@ -2,22 +2,22 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
-use hex_literal::hex;
-use sp_core::{ByteArray, H256};
-use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
+use sp_core::H256;
+use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError, traits::AccountIdConversion};
 
 #[test]
 fn create_agent_for_sibling() {
 	new_test_ext().execute_with(|| {
+		let origin_para_id = 2000;
 		let origin_location = MultiLocation {
 			parents: 1,
-			interior: X1(Parachain(2000)),
+			interior: X1(Parachain(origin_para_id)),
 		};
 		let agent_id = make_agent_id(origin_location);
-		let sovereign_account = make_sovereign_account(origin_location);
+		let sovereign_account = ParaId::from(origin_para_id).into_account_truncating();
 
 		// fund sovereign account of origin
-		let _ = Balances::mint_into(&sovereign_account, 2000);
+		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		assert!(!Agents::<Test>::contains_key(agent_id));
 
@@ -169,8 +169,9 @@ fn upgrade_with_params() {
 #[test]
 fn create_channel() {
 	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
-		let sovereign_account = make_sovereign_account(origin_location);
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
+		let sovereign_account = ParaId::from(origin_para_id).into_account_truncating();
 		let origin = make_xcm_origin(origin_location);
 
 		// fund sovereign account of origin
@@ -184,8 +185,9 @@ fn create_channel() {
 #[test]
 fn create_channel_fail_already_exists() {
 	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
-		let sovereign_account = make_sovereign_account(origin_location);
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
+		let sovereign_account = ParaId::from(origin_para_id).into_account_truncating();
 		let origin = make_xcm_origin(origin_location);
 
 		// fund sovereign account of origin
@@ -260,8 +262,9 @@ fn create_channel_bad_origin() {
 #[test]
 fn update_channel() {
 	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
-		let sovereign_account = make_sovereign_account(origin_location);
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
+		let sovereign_account = ParaId::from(origin_para_id).into_account_truncating();
 		let origin = make_xcm_origin(origin_location);
 
 		// First create the channel
@@ -363,8 +366,9 @@ fn update_channel_fails_not_exist() {
 #[test]
 fn force_update_channel() {
 	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
-		let sovereign_account = make_sovereign_account(origin_location);
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
+		let sovereign_account = ParaId::from(origin_para_id).into_account_truncating();
 		let origin = make_xcm_origin(origin_location);
 
 		// First create the channel
@@ -573,67 +577,15 @@ fn force_transfer_native_from_agent_bad_origin() {
 
 #[ignore]
 #[test]
-fn convert_sibling() {
+fn sibling_sovereign_account() {
 	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(1001)) };
-		let agent_id = make_agent_id(origin_location);
-		let expected_agent_id =
-			H256(hex!("2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793"));
-		assert_eq!(agent_id, expected_agent_id);
-		//print for smoke tests
-		let sovereign_account = make_sovereign_account(origin_location);
+		let para_id = 1001;
+		let sovereign_account: AccountId32 = ParaId::from(para_id).into_account_truncating();
 		println!(
-			"sovereign_account from parachain 1001: {:#?}",
-			hex::encode(sovereign_account.as_slice())
+			"Sovereign account for parachain {}: {:#?}",
+			para_id,
+			hex::encode(sovereign_account)
 		);
-		let expected_sovereign_account = AccountId::from(hex!(
-			"7369626ce9030000000000000000000000000000000000000000000000000000"
-		));
-		assert_eq!(sovereign_account, expected_sovereign_account)
-	});
-}
 
-#[ignore]
-#[test]
-fn convert_location_parent() {
-	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation { parents: 1, interior: Here };
-		let sovereign_account = make_sovereign_account(origin_location);
-		println!(
-			"sovereign_account for relay chain: {:#?}",
-			hex::encode(sovereign_account.as_slice())
-		);
-	});
-}
-
-#[ignore]
-#[test]
-fn convert_location_account32() {
-	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation {
-			parents: 1,
-			interior: X2(Parachain(1001), Junction::AccountId32 { network: None, id: [1; 32] }),
-		};
-		let sovereign_account = make_sovereign_account(origin_location);
-		println!(
-			"sovereign_account for account 32: {:#?}",
-			hex::encode(sovereign_account.as_slice())
-		);
-	});
-}
-
-#[ignore]
-#[test]
-fn convert_location_account20() {
-	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation {
-			parents: 1,
-			interior: X2(Parachain(1001), Junction::AccountKey20 { network: None, key: [1; 20] }),
-		};
-		let sovereign_account = make_sovereign_account(origin_location);
-		println!(
-			"sovereign_account for account 20: {:#?}",
-			hex::encode(sovereign_account.as_slice())
-		);
 	});
 }
