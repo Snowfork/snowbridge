@@ -25,8 +25,7 @@ contract Gateway is IGateway, IInitializable {
     using SafeNativeTransfer for address payable;
 
     // After message dispatch, there should be some gas left over for post dispatch logic
-    uint256 internal constant BUFFER_GAS = 32_000;
-    uint256 internal immutable DISPATCH_GAS;
+    uint256 internal constant BUFFER_GAS = 48_000;
     address internal immutable AGENT_EXECUTOR;
 
     // Verification state
@@ -41,6 +40,12 @@ contract Gateway is IGateway, IInitializable {
     ParaID internal immutable ASSET_HUB_PARA_ID;
     bytes32 internal immutable ASSET_HUB_AGENT_ID;
     bytes2 internal immutable CREATE_TOKEN_CALL_ID;
+
+    // Fixed amount of gas used outside the gas metering in submitInbound
+    uint256 BASE_GAS_USED = 31000;
+
+    // minimum amount of gas required to transfer eth
+    uint256 MINIMUM_THRESHOLD_GAS = 21000;
 
     error InvalidProof();
     error InvalidNonce();
@@ -69,7 +74,6 @@ contract Gateway is IGateway, IInitializable {
     constructor(
         address beefyClient,
         address agentExecutor,
-        uint256 dispatchGas,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
         ParaID assetHubParaID,
@@ -77,16 +81,14 @@ contract Gateway is IGateway, IInitializable {
         bytes2 createTokenCallID
     ) {
         if (
-            dispatchGas == 0 || bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0
-                || assetHubParaID == ParaID.wrap(0) || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID
-                || bridgeHubAgentID == assetHubAgentID
+            bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0 || assetHubParaID == ParaID.wrap(0)
+                || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID || bridgeHubAgentID == assetHubAgentID
         ) {
             revert InvalidConstructorParams();
         }
 
         BEEFY_CLIENT = beefyClient;
         AGENT_EXECUTOR = agentExecutor;
-        DISPATCH_GAS = dispatchGas;
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
@@ -104,6 +106,8 @@ contract Gateway is IGateway, IInitializable {
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
     ) external {
+        uint256 startGas = gasleft();
+
         Channel storage channel = _ensureChannel(message.origin);
 
         // Ensure this message is not being replayed
@@ -115,13 +119,6 @@ contract Gateway is IGateway, IInitializable {
         // This also prevents the re-entrancy case in which a malicious party tries to re-enter by calling `submitInbound`
         // again with the same (message, leafProof, headerProof) arguments.
         channel.inboundNonce++;
-
-        // Reward the relayer from the agent contract
-        // Expected to revert if the agent for the message origin does not have enough funds to reward the relayer.
-        // In that case, the origin should top up the funds of their agent.
-        if (channel.reward > 0) {
-            _transferNativeFromAgent(channel.agent, payable(msg.sender), channel.reward);
-        }
 
         // Produce the commitment (message root) by applying the leaf proof to the message leaf
         bytes32 leafHash = keccak256(abi.encode(message));
@@ -136,7 +133,8 @@ contract Gateway is IGateway, IInitializable {
         // Otherwise malicious relayers can break the bridge by allowing the message handlers below to run out gas and fail silently.
         // In this scenario case, the channel's state would have been updated to accept the message (by virtue of the nonce increment), yet the actual message
         // dispatch would have failed
-        if (gasleft() < DISPATCH_GAS + BUFFER_GAS) {
+        uint256 maxDispatchGas = message.maxDispatchGas;
+        if (gasleft() < maxDispatchGas + BUFFER_GAS) {
             revert NotEnoughGas();
         }
 
@@ -144,43 +142,70 @@ contract Gateway is IGateway, IInitializable {
 
         // Dispatch message to a handler
         if (message.command == Command.AgentExecute) {
-            try Gateway(this).agentExecute{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).agentExecute{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.CreateAgent) {
-            try Gateway(this).createAgent{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).createAgent{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.CreateChannel) {
-            try Gateway(this).createChannel{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).createChannel{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.UpdateChannel) {
-            try Gateway(this).updateChannel{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).updateChannel{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.SetOperatingMode) {
-            try Gateway(this).setOperatingMode{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).setOperatingMode{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == Command.Upgrade) {
-            try Gateway(this).upgrade{gas: DISPATCH_GAS}(message.params) {}
+            try Gateway(this).upgrade{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         }
 
+        // Calculate the remaining funds in the channel agent contract
+        uint256 agentBalance = channel.agent.balance;
+        if (channel.agent.balance <= MINIMUM_THRESHOLD_GAS * tx.gasprice) {
+            agentBalance = 0;
+        }
+
+        // Calculate the gas refund
+        uint256 gasUsed = startGas - gasleft() + BASE_GAS_USED;
+        uint256 refund = gasUsed * tx.gasprice;
+
+        // Add the reward to the refund amount. If the sum is more than the funds available
+        // in the channel agent, then reduce the total amount
+        uint256 amount = _min(refund + message.reward, agentBalance);
+
+        // Do the payment if there funds available in the agent
+        if (amount > 0) {
+            _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
+        }
+
         emit IGateway.InboundMessageDispatched(message.origin, message.nonce, success);
+    }
+
+    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
+    }
+
+    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? b : a;
     }
 
     /**
@@ -201,9 +226,9 @@ contract Gateway is IGateway, IInitializable {
         return (ch.inboundNonce, ch.outboundNonce);
     }
 
-    function channelFeeRewardOf(ParaID paraID) external view returns (uint256, uint256) {
+    function channelFeeOf(ParaID paraID) external view returns (uint256) {
         Channel storage ch = _ensureChannel(paraID);
-        return (ch.fee, ch.reward);
+        return ch.fee;
     }
 
     function agentOf(bytes32 agentID) external view returns (address) {
@@ -291,7 +316,6 @@ contract Gateway is IGateway, IInitializable {
         ch.inboundNonce = 0;
         ch.outboundNonce = 0;
         ch.fee = $.defaultFee;
-        ch.reward = $.defaultReward;
 
         emit ChannelCreated(params.paraID);
     }
@@ -313,18 +337,13 @@ contract Gateway is IGateway, IInitializable {
 
         Channel storage ch = _ensureChannel(params.paraID);
 
-        // Extra sanity checks when updating the BridgeHub channel. For example, a huge reward could
-        // effectively brick the bridge permanently.
-        if (
-            params.paraID == BRIDGE_HUB_PARA_ID
-                && (params.mode != OperatingMode.Normal || params.fee > 1 ether || params.reward > 1 ether)
-        ) {
+        // Extra sanity checks when updating the BridgeHub channel, which should never be paused.
+        if (params.paraID == BRIDGE_HUB_PARA_ID && (params.mode != OperatingMode.Normal || params.fee > 1 ether)) {
             revert InvalidChannelUpdate();
         }
 
         ch.mode = params.mode;
         ch.fee = params.fee;
-        ch.reward = params.reward;
 
         emit ChannelUpdated(params.paraID);
     }
@@ -529,14 +548,13 @@ contract Gateway is IGateway, IInitializable {
             revert Unauthorized();
         }
 
-        (uint256 defaultFee, uint256 defaultReward, uint256 registerTokenFee, uint256 sendTokenFee) =
-            abi.decode(data, (uint256, uint256, uint256, uint256));
+        (uint256 defaultFee, uint256 registerTokenFee, uint256 sendTokenFee) =
+            abi.decode(data, (uint256, uint256, uint256));
 
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
         $.mode = OperatingMode.Normal;
         $.defaultFee = defaultFee;
-        $.defaultReward = defaultReward;
 
         // Initialize an agent & channel for BridgeHub
         address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
@@ -546,8 +564,7 @@ contract Gateway is IGateway, IInitializable {
             agent: bridgeHubAgent,
             inboundNonce: 0,
             outboundNonce: 0,
-            fee: defaultFee,
-            reward: defaultReward
+            fee: defaultFee
         });
 
         // Initialize an agent & channel for AssetHub
@@ -558,8 +575,7 @@ contract Gateway is IGateway, IInitializable {
             agent: assetHubAgent,
             inboundNonce: 0,
             outboundNonce: 0,
-            fee: defaultFee,
-            reward: defaultReward
+            fee: defaultFee
         });
 
         Assets.initialize(registerTokenFee, sendTokenFee);

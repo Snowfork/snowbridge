@@ -14,8 +14,6 @@ library CoreStorage {
         mapping(bytes32 agentID => address) agents;
         // The default fee charged to users for submitting outbound message to Polkadot
         uint256 defaultFee;
-        // The default reward given to relayers for submitting inbound messages from Polkadot
-        uint256 defaultReward;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.core");

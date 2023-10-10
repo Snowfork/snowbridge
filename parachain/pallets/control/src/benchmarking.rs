@@ -7,60 +7,94 @@ use super::*;
 use crate::Pallet as SnowbridgeControl;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
-use snowbridge_core::outbound::OperatingMode;
+use sp_runtime::traits::AccountIdConversion;
 use sp_core::Get;
+use snowbridge_core::outbound::OperatingMode;
+use xcm::prelude::*;
+
+fn fund_sovereign_account<T: Config>(para_id: ParaId) -> Result<(), BenchmarkError> {
+	let foo = T::Fee::get() + T::Fee::get() + T::Fee::get();
+	T::Token::mint_into(
+		&para_id.into_account_truncating(),
+		foo,
+	).map_err(|_| BenchmarkError::Weightless)?;
+	Ok(())
+}
 
 #[benchmarks]
 mod benchmarks {
 	use super::*;
 
 	#[benchmark]
-	fn upgrade(x: Linear<0, { T::MaxUpgradeDataSize::get() - 1 }>) -> Result<(), BenchmarkError> {
+	fn upgrade() -> Result<(), BenchmarkError> {
 		let impl_address = H160::repeat_byte(1);
 		let impl_code_hash = H256::repeat_byte(1);
-		let params: Vec<u8> = (0..x).map(|_| 1u8).collect();
+
+		// Assume 256 bytes passed to initializer
+		let params: Vec<u8> = (0..256).map(|_| 1u8).collect();
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, impl_address, impl_code_hash, Some(params));
+		_(RawOrigin::Root, impl_address, impl_code_hash, Some(Initializer { params, maximum_required_gas: 100000}));
 
 		Ok(())
 	}
 
 	#[benchmark]
 	fn create_agent() -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin = T::Helper::make_xcm_origin(origin_location);
+		fund_sovereign_account::<T>(origin_para_id.into())?;
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller));
+		_(origin as T::RuntimeOrigin);
 
 		Ok(())
 	}
 
 	#[benchmark]
 	fn create_channel() -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
-		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
-			RawOrigin::Signed(caller.clone()).into()
-		));
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin = T::Helper::make_xcm_origin(origin_location);
+		fund_sovereign_account::<T>(origin_para_id.into())?;
+
+		SnowbridgeControl::<T>::create_agent(origin.clone()).map_err(|_| BenchmarkError::Weightless)?;
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller));
+		_(origin as T::RuntimeOrigin);
 
 		Ok(())
 	}
 
 	#[benchmark]
 	fn update_channel() -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
-		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
-			RawOrigin::Signed(caller.clone()).into()
-		));
-		frame_support::assert_ok!(SnowbridgeControl::<T>::create_channel(
-			RawOrigin::Signed(caller.clone()).into()
-		));
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin = T::Helper::make_xcm_origin(origin_location);
+		fund_sovereign_account::<T>(origin_para_id.into())?;
+		SnowbridgeControl::<T>::create_agent(origin.clone()).map_err(|_| BenchmarkError::Weightless)?;
+		SnowbridgeControl::<T>::create_channel(origin.clone()).map_err(|_| BenchmarkError::Weightless)?;
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), OperatingMode::RejectingOutboundMessages, 1, 1);
+		_(origin as T::RuntimeOrigin, OperatingMode::RejectingOutboundMessages, 1);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn force_update_channel() -> Result<(), BenchmarkError> {
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin = T::Helper::make_xcm_origin(origin_location);
+		fund_sovereign_account::<T>(origin_para_id.into())?;
+		SnowbridgeControl::<T>::create_agent(origin.clone()).map_err(|_| BenchmarkError::Weightless)?;
+		SnowbridgeControl::<T>::create_channel(origin.clone()).map_err(|_| BenchmarkError::Weightless)?;
+
+		let versioned_location: VersionedMultiLocation = origin_location.into();
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, Box::new(versioned_location), OperatingMode::RejectingOutboundMessages, 1);
 
 		Ok(())
 	}
@@ -75,13 +109,31 @@ mod benchmarks {
 
 	#[benchmark]
 	fn transfer_native_from_agent() -> Result<(), BenchmarkError> {
-		let caller: T::AccountId = whitelisted_caller();
-		frame_support::assert_ok!(SnowbridgeControl::<T>::create_agent(
-			RawOrigin::Signed(caller.clone()).into()
-		));
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin = T::Helper::make_xcm_origin(origin_location);
+		fund_sovereign_account::<T>(origin_para_id.into())?;
+		SnowbridgeControl::<T>::create_agent(origin.clone()).map_err(|_| BenchmarkError::Weightless)?;
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), H160::default(), 1);
+		_(origin as T::RuntimeOrigin, H160::default(), 1);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn force_transfer_native_from_agent() -> Result<(), BenchmarkError> {
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin = T::Helper::make_xcm_origin(origin_location);
+		fund_sovereign_account::<T>(origin_para_id.into())?;
+		SnowbridgeControl::<T>::create_agent(origin.clone()).map_err(|_| BenchmarkError::Weightless)?;
+
+		let versioned_location: VersionedMultiLocation = origin_location.into();
+
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, Box::new(versioned_location), H160::default(), 1);
 
 		Ok(())
 	}
