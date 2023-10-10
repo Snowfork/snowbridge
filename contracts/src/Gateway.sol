@@ -15,6 +15,7 @@ import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
+import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -44,7 +45,8 @@ contract Gateway is IGateway, IInitializable {
     // Fixed amount of gas used outside the gas metering in submitInbound
     uint256 BASE_GAS_USED = 31000;
 
-    // minimum amount of gas required to transfer eth
+    // Minimum amount of gas required to transfer ether
+    // from an agent to a relayer.
     uint256 MINIMUM_THRESHOLD_GAS = 21000;
 
     error InvalidProof();
@@ -178,7 +180,9 @@ contract Gateway is IGateway, IInitializable {
             }
         }
 
-        // Calculate the remaining funds in the channel agent contract
+        // Calculate the funds available in the channel agent contract. If the amount
+        // is less than the cost to actually transfer the funds to the relayer, then
+        // bypass the transfer.
         uint256 agentBalance = channel.agent.balance;
         if (channel.agent.balance <= MINIMUM_THRESHOLD_GAS * tx.gasprice) {
             agentBalance = 0;
@@ -190,7 +194,7 @@ contract Gateway is IGateway, IInitializable {
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        uint256 amount = _min(refund + message.reward, agentBalance);
+        uint256 amount = Math.min(refund + message.reward, agentBalance);
 
         // Do the payment if there funds available in the agent
         if (amount > 0) {
@@ -198,14 +202,6 @@ contract Gateway is IGateway, IInitializable {
         }
 
         emit IGateway.InboundMessageDispatched(message.origin, message.nonce, success);
-    }
-
-    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
-    }
-
-    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? b : a;
     }
 
     /**
