@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"math/rand"
 
 	"golang.org/x/sync/errgroup"
 
@@ -138,10 +139,16 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		}
 	}
 	validatorCount := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
+	// Pick a random validator who signs beefy commitment
+
+	chosenValidator := signedValidators[rand.Intn(len(signedValidators))].Int64()
+
 	log.WithFields(logrus.Fields{
 		"validatorCount":   validatorCount,
 		"signedValidators": signedValidators,
+		"chosenValidator":  chosenValidator,
 	}).Info("Creating initial bitfield")
+
 	initialBitfield, err := wr.contract.CreateInitialBitfield(
 		&bind.CallOpts{
 			Pending: true,
@@ -153,8 +160,6 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		return nil, nil, fmt.Errorf("create initial bitfield: %w", err)
 	}
 
-	// Pick first validator who signs beefy commitment
-	chosenValidator := signedValidators[0].Int64()
 	msg, err := task.MakeSubmitInitialParams(chosenValidator, initialBitfield)
 	if err != nil {
 		return nil, nil, err
