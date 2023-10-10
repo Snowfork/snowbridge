@@ -3,9 +3,9 @@
 pragma solidity 0.8.20;
 
 library Counter {
-    function createCounter(uint256 length) internal pure returns (uint256[] memory counter) {
+    function createCounter(uint256 length) internal pure returns (uint256[] memory) {
         uint256 counterLength = length / 16 + (length % 16 == 0 ? 0 : 1);
-        counter = new uint256[](counterLength);
+        return new uint256[](counterLength);
     }
 
     function get(uint256[] storage self, uint256 index) internal view returns (uint16) {
