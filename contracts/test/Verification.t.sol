@@ -21,7 +21,7 @@ contract VerificationTest is Test {
 
     function setUp() public {
         counter = Counter.createCounter(300);
-        beefyClient = new BeefyClientMock(3, 8, counter);
+        beefyClient = new BeefyClientMock(3, 8, 24, counter);
         encodedParachainID = ScaleCodec.encodeU32(BRIDGE_HUB_PARA_ID);
         v = new VerificationWrapper();
     }

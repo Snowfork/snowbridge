@@ -162,7 +162,7 @@ contract BeefyClient {
     /**
      * @dev Minimum number of signatures required to validate a new commitment.
      */
-    uint256 public constant BASE_SIGNATURE_COUNT = 24;
+    uint256 public immutable minimumSignatures;
 
     /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
@@ -200,12 +200,14 @@ contract BeefyClient {
     constructor(
         uint256 _randaoCommitDelay,
         uint256 _randaoCommitExpiration,
+        uint256 _minimumSignatures,
         uint64 _initialBeefyBlock,
         ValidatorSet memory _initialValidatorSet,
         ValidatorSet memory _nextValidatorSet
     ) {
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
+        minimumSignatures = _minimumSignatures;
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
         nextValidatorSet = _nextValidatorSet;
@@ -411,13 +413,13 @@ contract BeefyClient {
         }
     }
 
-    function minSignatures(uint256 validatorSetLen, uint256 signatureUseCount) internal pure returns (uint256) {
-        if (validatorSetLen <= BASE_SIGNATURE_COUNT) {
+    function minSignatures(uint256 validatorSetLen, uint256 signatureUseCount) internal view returns (uint256) {
+        if (validatorSetLen <= minimumSignatures) {
             return validatorSetLen - (validatorSetLen - 1) / 3;
         }
 
         if (signatureUseCount == 0) {
-            return BASE_SIGNATURE_COUNT;
+            return minimumSignatures;
         }
 
         // log2 rounded down is the index of the highest bit
@@ -431,7 +433,7 @@ contract BeefyClient {
         }
         uint256 dynamicSignatures = 1 + 2 * log2SignatureUse;
 
-        return BASE_SIGNATURE_COUNT + dynamicSignatures;
+        return minimumSignatures + dynamicSignatures;
     }
 
     /**

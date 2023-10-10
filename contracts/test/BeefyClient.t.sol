@@ -18,6 +18,7 @@ contract BeefyClientTest is Test {
     BeefyClientMock beefyClient;
     uint8 randaoCommitDelay;
     uint8 randaoCommitExpiration;
+    uint256 minimumSignatures;
     uint32 blockNumber;
     uint32 prevRandao;
     uint32 setSize;
@@ -53,6 +54,7 @@ contract BeefyClientTest is Test {
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
         randaoCommitExpiration = uint8(vm.envOr("RANDAO_COMMIT_EXP", uint256(8)));
+        minimumSignatures = uint8(vm.envOr("BEEFY_MINIMUM_SIGNATURES", uint256(24)));
         prevRandao = uint32(vm.envOr("PREV_RANDAO", uint256(377)));
 
         beefyCommitmentFile = string.concat(vm.projectRoot(), "/test/data/beefy-commitment.json");
@@ -83,7 +85,7 @@ contract BeefyClientTest is Test {
         decodeMMRLeaf();
 
         counter = Counter.createCounter(setSize);
-        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration, counter);
+        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration, minimumSignatures, counter);
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
         absentBitfield = beefyClient.createInitialBitfield(absentBitSetArray, setSize);
@@ -135,7 +137,7 @@ contract BeefyClientTest is Test {
         console.log("print initialBitField");
         printBitArray(bitfield);
         prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
-        finalBitfield = Bitfield.subsample(prevRandao, bitfield, beefyClient.BASE_SIGNATURE_COUNT(), setSize);
+        finalBitfield = Bitfield.subsample(prevRandao, bitfield, beefyClient.minimumSignatures(), setSize);
         console.log("print finalBitField");
         printBitArray(finalBitfield);
 

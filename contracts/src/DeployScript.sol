@@ -52,7 +52,9 @@ contract DeployScript is Script {
 
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
-        BeefyClient beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration, startBlock, current, next);
+        uint256 minimumSignatures = vm.envUint("BEEFY_MINIMUM_SIGNATURES");
+        BeefyClient beefyClient =
+            new BeefyClient(randaoCommitDelay, randaoCommitExpiration, minimumSignatures, startBlock, current, next);
 
         ParaID bridgeHubParaID = ParaID.wrap(vm.envUint("BRIDGE_HUB_PARAID"));
         bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
