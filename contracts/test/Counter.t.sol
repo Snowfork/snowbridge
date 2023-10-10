@@ -22,6 +22,16 @@ contract CounterTest is Test {
         assertEq(counters, expected);
     }
 
+    function testCounterWithLengthNotMultipleOf16() public {
+        // 33 uint16s will require 3 uint256s
+        uint256[] memory expected = new uint256[](3);
+        expected[2] = 1;
+
+        counters = Counter.createCounter(33);
+        counters.set(32, counters.get(32) + 1);
+        assertEq(counters, expected);
+    }
+
     function testCounterCreatedAsZeroed() public {
         uint256[] memory expected = new uint256[](2);
         counters = Counter.createCounter(16);
