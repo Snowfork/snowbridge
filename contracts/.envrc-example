@@ -5,7 +5,7 @@ source_up_if_exists
 ## BeefyClient
 export RANDAO_COMMIT_DELAY=3
 export RANDAO_COMMIT_EXP=8
-export BEEFY_MINIMUM_SIGNATURES=24
+export BEEFY_MINIMUM_SIGNATURE_SAMPLES=24
 export PREV_RANDAO=377
 export ValidatorSetSize=300
 

@@ -164,7 +164,7 @@ contract BeefyClient {
     /**
      * @dev Minimum number of signatures required to validate a new commitment.
      */
-    uint256 public immutable minimumSignatures;
+    uint256 public immutable minimumSignatureSamples;
 
     /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
@@ -202,14 +202,14 @@ contract BeefyClient {
     constructor(
         uint256 _randaoCommitDelay,
         uint256 _randaoCommitExpiration,
-        uint256 _minimumSignatures,
+        uint256 _minimumSignatureSamples,
         uint64 _initialBeefyBlock,
         ValidatorSet memory _initialValidatorSet,
         ValidatorSet memory _nextValidatorSet
     ) {
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
-        minimumSignatures = _minimumSignatures;
+        minimumSignatureSamples = _minimumSignatureSamples;
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
         currentValidatorSetCounters = Counter.createCounter(currentValidatorSet.length);
@@ -269,7 +269,7 @@ contract BeefyClient {
             msg.sender,
             uint64(block.number),
             uint32(vset.length),
-            minSignatures(vset.length, signatureCount),
+            signatureSamples(vset.length, signatureCount),
             0,
             keccak256(abi.encodePacked(bitfield))
         );
@@ -417,13 +417,13 @@ contract BeefyClient {
         }
     }
 
-    function minSignatures(uint256 validatorSetLen, uint256 signatureUseCount) internal view returns (uint256) {
-        if (validatorSetLen <= minimumSignatures) {
+    function signatureSamples(uint256 validatorSetLen, uint256 signatureUseCount) internal view returns (uint256) {
+        if (validatorSetLen <= minimumSignatureSamples) {
             return validatorSetLen - (validatorSetLen - 1) / 3;
         }
 
         if (signatureUseCount == 0) {
-            return minimumSignatures;
+            return minimumSignatureSamples;
         }
 
         // log2 rounded down is the index of the highest bit
@@ -437,7 +437,7 @@ contract BeefyClient {
         }
         uint256 dynamicSignatures = 1 + 2 * log2SignatureUse;
 
-        return minimumSignatures + dynamicSignatures;
+        return minimumSignatureSamples + dynamicSignatures;
     }
 
     /**

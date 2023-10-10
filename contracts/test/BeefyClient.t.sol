@@ -17,7 +17,7 @@ contract BeefyClientTest is Test {
     BeefyClientMock beefyClient;
     uint8 randaoCommitDelay;
     uint8 randaoCommitExpiration;
-    uint256 minimumSignatures;
+    uint256 minimumSignatureSamples;
     uint32 blockNumber;
     uint32 prevRandao;
     uint32 setSize;
@@ -52,7 +52,7 @@ contract BeefyClientTest is Test {
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
         randaoCommitExpiration = uint8(vm.envOr("RANDAO_COMMIT_EXP", uint256(8)));
-        minimumSignatures = uint8(vm.envOr("BEEFY_MINIMUM_SIGNATURES", uint256(24)));
+        minimumSignatureSamples = uint8(vm.envOr("BEEFY_MINIMUM_SIGNATURE_SAMPLES", uint256(24)));
         prevRandao = uint32(vm.envOr("PREV_RANDAO", uint256(377)));
 
         beefyCommitmentFile = string.concat(vm.projectRoot(), "/test/data/beefy-commitment.json");
@@ -82,7 +82,7 @@ contract BeefyClientTest is Test {
         leafProofOrder = beefyCommitmentRaw.readUint(".params.leafProofOrder");
         decodeMMRLeaf();
 
-        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration, minimumSignatures);
+        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration, minimumSignatureSamples);
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
         absentBitfield = beefyClient.createInitialBitfield(absentBitSetArray, setSize);
@@ -132,7 +132,7 @@ contract BeefyClientTest is Test {
         console.log("print initialBitField");
         printBitArray(bitfield);
         prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
-        finalBitfield = Bitfield.subsample(prevRandao, bitfield, beefyClient.minimumSignatures(), setSize);
+        finalBitfield = Bitfield.subsample(prevRandao, bitfield, beefyClient.minimumSignatureSamples(), setSize);
         console.log("print finalBitField");
         printBitArray(finalBitfield);
 
@@ -498,52 +498,52 @@ contract BeefyClientTest is Test {
     }
 
     function testMinSignatures() public {
-        assertEq(24, beefyClient.minSignatures_public(setSize, 0), "dynamicSignatures incorrect.");
-        assertEq(25, beefyClient.minSignatures_public(setSize, 1), "dynamicSignatures incorrect.");
-        assertEq(27, beefyClient.minSignatures_public(setSize, 2), "dynamicSignatures incorrect.");
-        assertEq(29, beefyClient.minSignatures_public(setSize, 3), "dynamicSignatures incorrect.");
-        assertEq(29, beefyClient.minSignatures_public(setSize, 4), "dynamicSignatures incorrect.");
-        assertEq(31, beefyClient.minSignatures_public(setSize, 5), "dynamicSignatures incorrect.");
-        assertEq(31, beefyClient.minSignatures_public(setSize, 6), "dynamicSignatures incorrect.");
-        assertEq(31, beefyClient.minSignatures_public(setSize, 8), "dynamicSignatures incorrect.");
-        assertEq(33, beefyClient.minSignatures_public(setSize, 9), "dynamicSignatures incorrect.");
-        assertEq(33, beefyClient.minSignatures_public(setSize, 12), "dynamicSignatures incorrect.");
-        assertEq(33, beefyClient.minSignatures_public(setSize, 16), "dynamicSignatures incorrect.");
-        assertEq(35, beefyClient.minSignatures_public(setSize, 17), "dynamicSignatures incorrect.");
-        assertEq(35, beefyClient.minSignatures_public(setSize, 24), "dynamicSignatures incorrect.");
-        assertEq(35, beefyClient.minSignatures_public(setSize, 32), "dynamicSignatures incorrect.");
-        assertEq(37, beefyClient.minSignatures_public(setSize, 33), "dynamicSignatures incorrect.");
-        assertEq(37, beefyClient.minSignatures_public(setSize, 48), "dynamicSignatures incorrect.");
-        assertEq(37, beefyClient.minSignatures_public(setSize, 64), "dynamicSignatures incorrect.");
-        assertEq(39, beefyClient.minSignatures_public(setSize, 65), "dynamicSignatures incorrect.");
-        assertEq(39, beefyClient.minSignatures_public(setSize, 96), "dynamicSignatures incorrect.");
-        assertEq(39, beefyClient.minSignatures_public(setSize, 128), "dynamicSignatures incorrect.");
-        assertEq(41, beefyClient.minSignatures_public(setSize, 129), "dynamicSignatures incorrect.");
-        assertEq(41, beefyClient.minSignatures_public(setSize, 192), "dynamicSignatures incorrect.");
-        assertEq(41, beefyClient.minSignatures_public(setSize, 256), "dynamicSignatures incorrect.");
-        assertEq(43, beefyClient.minSignatures_public(setSize, 257), "dynamicSignatures incorrect.");
-        assertEq(43, beefyClient.minSignatures_public(setSize, 384), "dynamicSignatures incorrect.");
-        assertEq(43, beefyClient.minSignatures_public(setSize, 512), "dynamicSignatures incorrect.");
-        assertEq(45, beefyClient.minSignatures_public(setSize, 513), "dynamicSignatures incorrect.");
-        assertEq(45, beefyClient.minSignatures_public(setSize, 768), "dynamicSignatures incorrect.");
-        assertEq(45, beefyClient.minSignatures_public(setSize, 1024), "dynamicSignatures incorrect.");
-        assertEq(47, beefyClient.minSignatures_public(setSize, 1025), "dynamicSignatures incorrect.");
-        assertEq(47, beefyClient.minSignatures_public(setSize, 1536), "dynamicSignatures incorrect.");
-        assertEq(47, beefyClient.minSignatures_public(setSize, 2048), "dynamicSignatures incorrect.");
-        assertEq(49, beefyClient.minSignatures_public(setSize, 2049), "dynamicSignatures incorrect.");
-        assertEq(49, beefyClient.minSignatures_public(setSize, 3072), "dynamicSignatures incorrect.");
-        assertEq(49, beefyClient.minSignatures_public(setSize, 4096), "dynamicSignatures incorrect.");
-        assertEq(51, beefyClient.minSignatures_public(setSize, 4097), "dynamicSignatures incorrect.");
-        assertEq(51, beefyClient.minSignatures_public(setSize, 6144), "dynamicSignatures incorrect.");
-        assertEq(51, beefyClient.minSignatures_public(setSize, 8192), "dynamicSignatures incorrect.");
-        assertEq(53, beefyClient.minSignatures_public(setSize, 8193), "dynamicSignatures incorrect.");
-        assertEq(53, beefyClient.minSignatures_public(setSize, 12288), "dynamicSignatures incorrect.");
-        assertEq(53, beefyClient.minSignatures_public(setSize, 16384), "dynamicSignatures incorrect.");
-        assertEq(55, beefyClient.minSignatures_public(setSize, 16385), "dynamicSignatures incorrect.");
-        assertEq(55, beefyClient.minSignatures_public(setSize, 24576), "dynamicSignatures incorrect.");
-        assertEq(55, beefyClient.minSignatures_public(setSize, 32768), "dynamicSignatures incorrect.");
-        assertEq(57, beefyClient.minSignatures_public(setSize, 32769), "dynamicSignatures incorrect.");
-        assertEq(57, beefyClient.minSignatures_public(setSize, 49152), "dynamicSignatures incorrect.");
-        assertEq(57, beefyClient.minSignatures_public(setSize, 65535), "dynamicSignatures incorrect.");
+        assertEq(24, beefyClient.signatureSamples_public(setSize, 0), "dynamicSignatures incorrect.");
+        assertEq(25, beefyClient.signatureSamples_public(setSize, 1), "dynamicSignatures incorrect.");
+        assertEq(27, beefyClient.signatureSamples_public(setSize, 2), "dynamicSignatures incorrect.");
+        assertEq(29, beefyClient.signatureSamples_public(setSize, 3), "dynamicSignatures incorrect.");
+        assertEq(29, beefyClient.signatureSamples_public(setSize, 4), "dynamicSignatures incorrect.");
+        assertEq(31, beefyClient.signatureSamples_public(setSize, 5), "dynamicSignatures incorrect.");
+        assertEq(31, beefyClient.signatureSamples_public(setSize, 6), "dynamicSignatures incorrect.");
+        assertEq(31, beefyClient.signatureSamples_public(setSize, 8), "dynamicSignatures incorrect.");
+        assertEq(33, beefyClient.signatureSamples_public(setSize, 9), "dynamicSignatures incorrect.");
+        assertEq(33, beefyClient.signatureSamples_public(setSize, 12), "dynamicSignatures incorrect.");
+        assertEq(33, beefyClient.signatureSamples_public(setSize, 16), "dynamicSignatures incorrect.");
+        assertEq(35, beefyClient.signatureSamples_public(setSize, 17), "dynamicSignatures incorrect.");
+        assertEq(35, beefyClient.signatureSamples_public(setSize, 24), "dynamicSignatures incorrect.");
+        assertEq(35, beefyClient.signatureSamples_public(setSize, 32), "dynamicSignatures incorrect.");
+        assertEq(37, beefyClient.signatureSamples_public(setSize, 33), "dynamicSignatures incorrect.");
+        assertEq(37, beefyClient.signatureSamples_public(setSize, 48), "dynamicSignatures incorrect.");
+        assertEq(37, beefyClient.signatureSamples_public(setSize, 64), "dynamicSignatures incorrect.");
+        assertEq(39, beefyClient.signatureSamples_public(setSize, 65), "dynamicSignatures incorrect.");
+        assertEq(39, beefyClient.signatureSamples_public(setSize, 96), "dynamicSignatures incorrect.");
+        assertEq(39, beefyClient.signatureSamples_public(setSize, 128), "dynamicSignatures incorrect.");
+        assertEq(41, beefyClient.signatureSamples_public(setSize, 129), "dynamicSignatures incorrect.");
+        assertEq(41, beefyClient.signatureSamples_public(setSize, 192), "dynamicSignatures incorrect.");
+        assertEq(41, beefyClient.signatureSamples_public(setSize, 256), "dynamicSignatures incorrect.");
+        assertEq(43, beefyClient.signatureSamples_public(setSize, 257), "dynamicSignatures incorrect.");
+        assertEq(43, beefyClient.signatureSamples_public(setSize, 384), "dynamicSignatures incorrect.");
+        assertEq(43, beefyClient.signatureSamples_public(setSize, 512), "dynamicSignatures incorrect.");
+        assertEq(45, beefyClient.signatureSamples_public(setSize, 513), "dynamicSignatures incorrect.");
+        assertEq(45, beefyClient.signatureSamples_public(setSize, 768), "dynamicSignatures incorrect.");
+        assertEq(45, beefyClient.signatureSamples_public(setSize, 1024), "dynamicSignatures incorrect.");
+        assertEq(47, beefyClient.signatureSamples_public(setSize, 1025), "dynamicSignatures incorrect.");
+        assertEq(47, beefyClient.signatureSamples_public(setSize, 1536), "dynamicSignatures incorrect.");
+        assertEq(47, beefyClient.signatureSamples_public(setSize, 2048), "dynamicSignatures incorrect.");
+        assertEq(49, beefyClient.signatureSamples_public(setSize, 2049), "dynamicSignatures incorrect.");
+        assertEq(49, beefyClient.signatureSamples_public(setSize, 3072), "dynamicSignatures incorrect.");
+        assertEq(49, beefyClient.signatureSamples_public(setSize, 4096), "dynamicSignatures incorrect.");
+        assertEq(51, beefyClient.signatureSamples_public(setSize, 4097), "dynamicSignatures incorrect.");
+        assertEq(51, beefyClient.signatureSamples_public(setSize, 6144), "dynamicSignatures incorrect.");
+        assertEq(51, beefyClient.signatureSamples_public(setSize, 8192), "dynamicSignatures incorrect.");
+        assertEq(53, beefyClient.signatureSamples_public(setSize, 8193), "dynamicSignatures incorrect.");
+        assertEq(53, beefyClient.signatureSamples_public(setSize, 12288), "dynamicSignatures incorrect.");
+        assertEq(53, beefyClient.signatureSamples_public(setSize, 16384), "dynamicSignatures incorrect.");
+        assertEq(55, beefyClient.signatureSamples_public(setSize, 16385), "dynamicSignatures incorrect.");
+        assertEq(55, beefyClient.signatureSamples_public(setSize, 24576), "dynamicSignatures incorrect.");
+        assertEq(55, beefyClient.signatureSamples_public(setSize, 32768), "dynamicSignatures incorrect.");
+        assertEq(57, beefyClient.signatureSamples_public(setSize, 32769), "dynamicSignatures incorrect.");
+        assertEq(57, beefyClient.signatureSamples_public(setSize, 49152), "dynamicSignatures incorrect.");
+        assertEq(57, beefyClient.signatureSamples_public(setSize, 65535), "dynamicSignatures incorrect.");
     }
 }

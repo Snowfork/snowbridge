@@ -47,7 +47,7 @@ contract DeployScript is Script {
 
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
-        uint256 minimumSignatures = vm.envUint("BEEFY_MINIMUM_SIGNATURES");
+        uint256 minimumSignatures = vm.envUint("BEEFY_MINIMUM_SIGNATURE_SAMPLES");
         BeefyClient beefyClient =
             new BeefyClient(randaoCommitDelay, randaoCommitExpiration, minimumSignatures, startBlock, current, next);
 
