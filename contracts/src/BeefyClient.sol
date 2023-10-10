@@ -418,26 +418,36 @@ contract BeefyClient {
     }
 
     function signatureSamples(uint256 validatorSetLen, uint256 signatureUseCount) internal view returns (uint256) {
+        // There are less validators than the minimum signatures so validate 2/3 majority.
         if (validatorSetLen <= minimumSignatureSamples) {
             return validatorSetLen - (validatorSetLen - 1) / 3;
         }
 
-        if (signatureUseCount == 0) {
-            return minimumSignatureSamples;
+        uint256 samples = minimumSignatureSamples;
+
+        // Using highest bit set to yield floor(log2(x))
+        uint256 validatorsLog2 = Bits.highestBitSet(validatorSetLen);
+        // We require ceil(log2(x)) so we round up if there were any extra bits set.
+        if (validatorSetLen > (1 << validatorsLog2)) {
+            validatorsLog2++;
         }
 
-        // log2 rounded down is the index of the highest bit
-        uint256 log2SignatureUse = Bits.highestBitSet(signatureUseCount);
+        samples += validatorsLog2;
 
-        // We need to get the value of log2 rounded up. To do this we can compare if signatureUseCount
-        // is greater than the signatureUseCount is larger than its most significant bit.
-        // If it is larger then we need to round up by incrementing the log2SignatureUse.
+        // No signatures use count. Just return samples.
+        if (signatureUseCount == 0) {
+            return samples;
+        }
+
+        // Using highest bit set to yield floor(log2(x))
+        uint256 log2SignatureUse = Bits.highestBitSet(signatureUseCount);
+        // We require ceil(log2(x)) so we round up if there were any extra bits set.
         if (signatureUseCount > (1 << log2SignatureUse)) {
             ++log2SignatureUse;
         }
-        uint256 dynamicSignatures = 1 + 2 * log2SignatureUse;
+        samples += 1 + 2 * log2SignatureUse;
 
-        return minimumSignatureSamples + dynamicSignatures;
+        return samples;
     }
 
     /**
