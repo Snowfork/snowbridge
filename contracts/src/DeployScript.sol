@@ -15,7 +15,6 @@ import {AgentExecutor} from "./AgentExecutor.sol";
 import {ParaID, Config} from "./Types.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {Counter} from "./utils/Counter.sol";
 
 contract DeployScript is Script {
     using SafeNativeTransfer for address payable;
@@ -35,19 +34,15 @@ contract DeployScript is Script {
         string memory beefyCheckpointRaw = vm.readFile(beefyCheckpointFile);
         uint64 startBlock = uint64(beefyCheckpointRaw.readUint(".startBlock"));
 
-        uint256[] memory currCounters = Counter.createCounter(beefyCheckpointRaw.readUint(".current.length"));
         BeefyClient.ValidatorSet memory current = BeefyClient.ValidatorSet(
             uint128(beefyCheckpointRaw.readUint(".current.id")),
             uint128(beefyCheckpointRaw.readUint(".current.length")),
-            beefyCheckpointRaw.readBytes32(".current.root"),
-            currCounters
+            beefyCheckpointRaw.readBytes32(".current.root")
         );
-        uint256[] memory nextCounters = Counter.createCounter(beefyCheckpointRaw.readUint(".next.length"));
         BeefyClient.ValidatorSet memory next = BeefyClient.ValidatorSet(
             uint128(beefyCheckpointRaw.readUint(".next.id")),
             uint128(beefyCheckpointRaw.readUint(".next.length")),
-            beefyCheckpointRaw.readBytes32(".next.root"),
-            nextCounters
+            beefyCheckpointRaw.readBytes32(".next.root")
         );
 
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");

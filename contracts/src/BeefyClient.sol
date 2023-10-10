@@ -136,7 +136,6 @@ contract BeefyClient {
         uint128 id;
         uint128 length;
         bytes32 root;
-        uint256[] counters;
     }
 
     /* State */
@@ -147,6 +146,9 @@ contract BeefyClient {
 
     ValidatorSet public currentValidatorSet;
     ValidatorSet public nextValidatorSet;
+
+    uint256[] currentValidatorSetCounters;
+    uint256[] nextValidatorSetCounters;
 
     // Currently pending tickets for commitment submission
     mapping(bytes32 => Ticket) public tickets;
@@ -210,7 +212,9 @@ contract BeefyClient {
         minimumSignatures = _minimumSignatures;
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
+        currentValidatorSetCounters = Counter.createCounter(currentValidatorSet.length);
         nextValidatorSet = _nextValidatorSet;
+        nextValidatorSetCounters = Counter.createCounter(nextValidatorSet.length);
     }
 
     /* External Functions */
@@ -227,12 +231,12 @@ contract BeefyClient {
         ValidatorSet memory vset;
         uint16 signatureCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {
-            signatureCount = currentValidatorSet.counters.get(proof.index);
-            currentValidatorSet.counters.set(proof.index, signatureCount + 1);
+            signatureCount = currentValidatorSetCounters.get(proof.index);
+            currentValidatorSetCounters.set(proof.index, signatureCount + 1);
             vset = currentValidatorSet;
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
-            signatureCount = nextValidatorSet.counters.get(proof.index);
-            nextValidatorSet.counters.set(proof.index, signatureCount + 1);
+            signatureCount = nextValidatorSetCounters.get(proof.index);
+            nextValidatorSetCounters.set(proof.index, signatureCount + 1);
             vset = nextValidatorSet;
         } else {
             revert InvalidCommitment();
@@ -345,7 +349,7 @@ contract BeefyClient {
             nextValidatorSet.id = leaf.nextAuthoritySetID;
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
-            nextValidatorSet.counters = Counter.createCounter(leaf.nextAuthoritySetLen);
+            nextValidatorSetCounters = Counter.createCounter(leaf.nextAuthoritySetLen);
         }
 
         uint64 newBeefyBlock = commitment.blockNumber;

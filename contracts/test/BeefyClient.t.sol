@@ -10,7 +10,6 @@ import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
-import {Counter} from "../src/utils/Counter.sol";
 
 contract BeefyClientTest is Test {
     using stdJson for string;
@@ -49,7 +48,6 @@ contract BeefyClientTest is Test {
     string beefyValidatorProofFile;
     string beefyValidatorProofRaw;
     string beefyFinalBitFieldFile;
-    uint256[] counter;
 
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
@@ -84,8 +82,7 @@ contract BeefyClientTest is Test {
         leafProofOrder = beefyCommitmentRaw.readUint(".params.leafProofOrder");
         decodeMMRLeaf();
 
-        counter = Counter.createCounter(setSize);
-        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration, minimumSignatures, counter);
+        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration, minimumSignatures);
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
         absentBitfield = beefyClient.createInitialBitfield(absentBitSetArray, setSize);
@@ -96,10 +93,8 @@ contract BeefyClientTest is Test {
     function initialize(uint32 _setId) public returns (BeefyClient.Commitment memory) {
         currentSetId = _setId;
         nextSetId = _setId + 1;
-        BeefyClient.ValidatorSet memory vset =
-            BeefyClient.ValidatorSet(currentSetId, setSize, root, Counter.createCounter(setSize));
-        BeefyClient.ValidatorSet memory nextvset =
-            BeefyClient.ValidatorSet(nextSetId, setSize, root, Counter.createCounter(setSize));
+        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(currentSetId, setSize, root);
+        BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(nextSetId, setSize, root);
         beefyClient.initialize_public(0, vset, nextvset);
         BeefyClient.PayloadItem[] memory payload = new BeefyClient.PayloadItem[](1);
         payload[0] = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
