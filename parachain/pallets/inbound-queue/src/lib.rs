@@ -132,7 +132,7 @@ pub mod pallet {
 		/// Operational mode errors
 		OperationalMode(bp_runtime::OwnedBridgeModuleError),
 		/// Message conversion error
-		ConvertError(ConvertMessageError),
+		ConvertMessage(ConvertMessageError),
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, PalletError)]
@@ -226,7 +226,7 @@ pub mod pallet {
 			// Decode message into XCM
 			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
 				Ok(message) => T::MessageConverter::convert(message)
-					.map_err(|e| Error::<T>::ConvertError(e))?,
+					.map_err(|e| Error::<T>::ConvertMessage(e))?,
 				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 			};
 

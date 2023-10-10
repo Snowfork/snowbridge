@@ -87,7 +87,10 @@ pub trait ConvertMessage {
 
 pub type CallIndex = [u8; 2];
 
-impl<CreateAssetCall: Get<CallIndex>> ConvertMessage for MessageToXcm<CreateAssetCall> {
+impl<CreateAssetCall> ConvertMessage for MessageToXcm<CreateAssetCall>
+where
+	CreateAssetCall: Get<CallIndex>,
+{
 	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError> {
 		match message {
 			VersionedMessage::V1(MessageV1 { chain_id, message }) => {
