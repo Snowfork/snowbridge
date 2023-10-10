@@ -69,26 +69,28 @@ pub enum Destination {
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-pub struct VersionedMessageToXcmConverter<G> {
-	_phantom: PhantomData<G>,
+pub struct MessageToXcm<CreateAssetCall> {
+	_phantom: PhantomData<CreateAssetCall>,
 }
 
-#[derive(TypeInfo, PalletError, Encode, Decode)]
+/// Reason why a message conversion failed.
+#[derive(Copy, Clone, TypeInfo, PalletError, Encode, Decode, RuntimeDebug)]
 pub enum ConvertMessageError {
+	/// The message version is not supported for conversion.
 	UnsupportedVersion,
 }
 
+/// convert the inbound message to xcm which will be forwarded to the destination chain
 pub trait ConvertMessage {
 	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError>;
 }
 
 pub type CallIndex = [u8; 2];
 
-impl<G: Get<CallIndex>> ConvertMessage for VersionedMessageToXcmConverter<G> {
+impl<CreateAssetCall: Get<CallIndex>> ConvertMessage for MessageToXcm<CreateAssetCall> {
 	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError> {
 		match message {
-			VersionedMessage::V1(val) => {
-				let chain_id = val.chain_id;
+			VersionedMessage::V1(MessageV1 { chain_id, message }) => {
 				let network = Ethereum { chain_id };
 				let buy_execution_fee_amount = 2_000_000_000;
 				let buy_execution_fee = MultiAsset {
@@ -121,7 +123,7 @@ impl<G: Get<CallIndex>> ConvertMessage for VersionedMessageToXcmConverter<G> {
 					]
 				};
 
-				let xcm = match val.message {
+				let xcm = match message {
 					Command::RegisterToken { gateway, token, .. } => {
 						let owner =
 							GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
@@ -136,7 +138,7 @@ impl<G: Get<CallIndex>> ConvertMessage for VersionedMessageToXcmConverter<G> {
 
 						let mut instructions = create_instructions(origin_location);
 
-						let create_call_index: [u8; 2] = G::get();
+						let create_call_index: [u8; 2] = CreateAssetCall::get();
 						instructions.extend(vec![
 							Transact {
 								origin_kind: OriginKind::Xcm,
@@ -220,7 +222,7 @@ impl<G: Get<CallIndex>> ConvertMessage for VersionedMessageToXcmConverter<G> {
 	}
 }
 
-impl<G: Get<CallIndex>> VersionedMessageToXcmConverter<G> {
+impl<CreateAssetCall: Get<CallIndex>> MessageToXcm<CreateAssetCall> {
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
 	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {
 		MultiLocation {

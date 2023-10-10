@@ -18,8 +18,12 @@ use sp_runtime::{
 use sp_std::convert::From;
 
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
-use snowbridge_core::inbound::{Message, Proof};
+use snowbridge_core::{
+	inbound::{Message, Proof},
+	ParaId,
+};
 use snowbridge_ethereum::Log;
+use snowbridge_router_primitives::inbound::MessageToXcm;
 
 use hex_literal::hex;
 use xcm::v3::{prelude::*, MultiAssets, SendXcm};
@@ -136,7 +140,7 @@ const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39
 parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15 };
 	pub const GatewayAddress: H160 = H160(GATEWAY_ADDRESS);
-	pub const RegisterCallIndex: [u8;2] = [53, 0];
+	pub const CreateAssetCall: [u8;2] = [53, 0];
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -179,7 +183,7 @@ impl inbound_queue::Config for Test {
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
-	type MessageConverter = VersionedMessageToXcmConverter<RegisterCallIndex>;
+	type MessageConverter = MessageToXcm<CreateAssetCall>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
 }
@@ -241,9 +245,6 @@ const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
 	f8fb940000000000000000000000000000000000000000f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e9b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000032000f0000000000000000eda338e4dc46038493b885327842fd3e301cab3987d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000000000000000000000000000
 	"
 );
-
-use snowbridge_core::ParaId;
-use snowbridge_router_primitives::inbound::VersionedMessageToXcmConverter;
 
 #[test]
 fn test_submit_happy_path() {

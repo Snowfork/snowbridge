@@ -89,6 +89,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type GatewayAddress: Get<H160>;
 
+		/// Convert inbound message to XCM
 		type MessageConverter: ConvertMessage;
 
 		#[cfg(feature = "runtime-benchmarks")]
@@ -130,7 +131,7 @@ pub mod pallet {
 		Send(SendError),
 		/// Operational mode errors
 		OperationalMode(bp_runtime::OwnedBridgeModuleError),
-		/// Convert error
+		/// Message conversion error
 		ConvertError(ConvertMessageError),
 	}
 
