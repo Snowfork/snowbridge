@@ -89,6 +89,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type GatewayAddress: Get<H160>;
 
+		/// Convert inbound message to XCM
 		type MessageConverter: ConvertMessage;
 
 		#[cfg(feature = "runtime-benchmarks")]
@@ -130,8 +131,8 @@ pub mod pallet {
 		Send(SendError),
 		/// Operational mode errors
 		OperationalMode(bp_runtime::OwnedBridgeModuleError),
-		/// Convert error
-		ConvertError(ConvertMessageError),
+		/// Message conversion error
+		ConvertMessage(ConvertMessageError),
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, PalletError)]
@@ -225,7 +226,7 @@ pub mod pallet {
 			// Decode message into XCM
 			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
 				Ok(message) => T::MessageConverter::convert(message)
-					.map_err(|e| Error::<T>::ConvertError(e))?,
+					.map_err(|e| Error::<T>::ConvertMessage(e))?,
 				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 			};
 

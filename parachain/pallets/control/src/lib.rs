@@ -14,25 +14,28 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod api;
 pub mod weights;
 pub use weights::*;
 
 use frame_support::traits::fungible::{Inspect, Mutate};
+use sp_runtime::{DispatchError, traits::{AccountIdConversion, Hash, BadOrigin}};
+use sp_std::prelude::*;
+use sp_core::{H160, H256};
+use xcm::prelude::*;
+use xcm_executor::traits::ConvertLocation;
+
 use snowbridge_core::{
 	outbound::{
 		Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId, Initializer
 	},
 	AgentId,
 };
-use sp_runtime::{DispatchError, traits::{Hash, BadOrigin}};
-use sp_std::prelude::*;
-use xcm::prelude::*;
-use xcm_executor::traits::ConvertLocation;
+
+#[cfg(feature = "runtime-benchmarks")]
+use frame_support::traits::OriginTrait;
 
 pub use pallet::*;
-use sp_core::{H160, H256};
-
-pub const LOG_TARGET: &str = "snowbridge-control";
 
 pub type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
@@ -85,6 +88,14 @@ fn agent_id_of<T: Config>(location: &MultiLocation) -> Result<H256, DispatchErro
 	T::AgentIdOf::convert_location(location).ok_or(Error::<T>::LocationConversionFailed.into())
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub trait BenchmarkHelper<O>
+where
+	O: OriginTrait
+{
+	fn make_xcm_origin(location: MultiLocation) -> O;
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -119,9 +130,6 @@ pub mod pallet {
 		/// Converts MultiLocation to AgentId
 		type AgentIdOf: ConvertLocation<AgentId>;
 
-		/// Converts MultiLocation to a sovereign account
-		type SovereignAccountOf: ConvertLocation<Self::AccountId>;
-
 		/// Token reserved for control operations
 		type Token: Mutate<Self::AccountId>;
 
@@ -132,6 +140,9 @@ pub mod pallet {
 		type Fee: Get<BalanceOf<Self>>;
 
 		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type Helper: BenchmarkHelper<Self::RuntimeOrigin>;
 	}
 
 	#[pallet::event]
@@ -232,7 +243,7 @@ pub mod pallet {
 			ensure!(!Agents::<T>::contains_key(agent_id), Error::<T>::AgentAlreadyCreated);
 
 			match ancestry {
-				RelativeAncestry::Sibling => Self::do_create_agent_for_sibling(&origin_location, agent_id)?,
+				RelativeAncestry::Sibling => Self::do_create_agent_for_sibling(para_id, agent_id)?,
 				RelativeAncestry::SiblingChild => Self::do_create_agent_for_sibling_child(para_id, agent_id)?,
 			}
 
@@ -256,7 +267,7 @@ pub mod pallet {
 			// Ensure that origin location is a sibling parachain
 			let (para_id, agent_id) = ensure_sibling::<T>(&origin_location)?;
 
-			Self::charge_fee(&origin_location)?;
+			Self::charge_fee(para_id)?;
 
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
 			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
@@ -302,7 +313,7 @@ pub mod pallet {
 		///
 		/// - `origin`: Must be root
 		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::update_channel())]
+		#[pallet::weight(T::WeightInfo::force_update_channel())]
 		pub fn force_update_channel(
 			origin: OriginFor<T>,
 			location: Box<VersionedMultiLocation>,
@@ -368,7 +379,7 @@ pub mod pallet {
 		/// - `recipient`: Recipient of funds
 		/// - `amount`: Amount to transfer
 		#[pallet::call_index(7)]
-		#[pallet::weight(T::WeightInfo::transfer_native_from_agent())]
+		#[pallet::weight(T::WeightInfo::force_transfer_native_from_agent())]
 		pub fn force_transfer_native_from_agent(
 				origin: OriginFor<T>,
 				location: Box<VersionedMultiLocation>,
@@ -399,10 +410,8 @@ pub mod pallet {
 		}
 
 		/// Charge a fee from the sovereign account of the origin location
-		fn charge_fee(origin_location: &MultiLocation) -> DispatchResult {
-			let sovereign_account = T::SovereignAccountOf::convert_location(origin_location)
-				.ok_or(Error::<T>::LocationConversionFailed)?;
-
+		fn charge_fee(para_id: ParaId) -> DispatchResult {
+			let sovereign_account = para_id.into_account_truncating();
 			T::Token::transfer(
 				&sovereign_account,
 				&T::TreasuryAccount::get(),
@@ -430,8 +439,8 @@ pub mod pallet {
 
 		/// Send a `CreateAgent` command for a sibling over BridgeHub's own channel. Charge a fee from
 		/// the sovereign account of the origin.
-		pub fn do_create_agent_for_sibling(origin_location: &MultiLocation, agent_id: H256) -> DispatchResult {
-			Self::charge_fee(origin_location)?;
+		pub fn do_create_agent_for_sibling(para_id: ParaId, agent_id: H256) -> DispatchResult {
+			Self::charge_fee(para_id)?;
 			Agents::<T>::insert(agent_id, ());
 
 			let command = Command::CreateAgent { agent_id };
