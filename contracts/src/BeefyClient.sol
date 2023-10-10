@@ -424,7 +424,7 @@ contract BeefyClient {
         uint256 log2SignatureUse = Bits.highestBitSet(signatureUseCount);
 
         // We need to get the value of log2 rounded up. To do this we can compare if signatureUseCount
-        // is greater than the signatureUseCount is larger than its most significant bit. 
+        // is greater than the signatureUseCount is larger than its most significant bit.
         // If it is larger then we need to round up by incrementing the log2SignatureUse.
         if (signatureUseCount > (1 << log2SignatureUse)) {
             ++log2SignatureUse;
