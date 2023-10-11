@@ -88,9 +88,21 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		BeaconHeaderImported { block_hash: H256, slot: u64 },
-		ExecutionHeaderImported { block_hash: H256, block_number: u64 },
-		SyncCommitteeUpdated { period: u64 },
+		BeaconHeaderImported {
+			block_hash: H256,
+			slot: u64,
+		},
+		ExecutionHeaderImported {
+			block_hash: H256,
+			block_number: u64,
+		},
+		SyncCommitteeUpdated {
+			period: u64,
+		},
+		/// Set OperatingMode
+		OperatingModeSet {
+			operating_mode: BasicOperatingMode,
+		},
 	}
 
 	#[pallet::error]
@@ -191,7 +203,6 @@ pub mod pallet {
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
 	impl<T: Config> BridgeModule<T> for Pallet<T> {
-		const LOG_TARGET: &'static str = LOG_TARGET;
 		type OperatingMode = BasicOperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
 	}
@@ -252,7 +263,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			operating_mode: BasicOperatingMode,
 		) -> DispatchResult {
-			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)
+			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)?;
+			Self::deposit_event(Event::OperatingModeSet { operating_mode });
+			Ok(())
 		}
 	}
 

@@ -55,9 +55,6 @@ impl OperatingMode for BasicOperatingMode {
 
 /// Bridge module with operating mode
 pub trait BridgeModule<T: frame_system::Config> {
-	/// The target that will be used when publishing logs related to this module.
-	const LOG_TARGET: &'static str;
-
 	type OperatingMode: OperatingMode;
 	type OperatingModeStorage: StorageValue<Self::OperatingMode, Query = Self::OperatingMode>;
 
@@ -89,7 +86,6 @@ pub trait BridgeModule<T: frame_system::Config> {
 	) -> DispatchResult {
 		Self::ensure_root(origin)?;
 		Self::OperatingModeStorage::put(operating_mode);
-		log::info!(target: Self::LOG_TARGET, "Setting operating mode to {:?}.", operating_mode);
 		Ok(())
 	}
 }

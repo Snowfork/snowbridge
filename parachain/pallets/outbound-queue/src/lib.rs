@@ -120,6 +120,8 @@ pub mod pallet {
 			/// number of committed messages
 			count: u64,
 		},
+		/// Set OperatingMode
+		OperatingModeSet { operating_mode: BasicOperatingMode },
 	}
 
 	#[pallet::error]
@@ -183,12 +185,13 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			operating_mode: BasicOperatingMode,
 		) -> DispatchResult {
-			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)
+			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)?;
+			Self::deposit_event(Event::OperatingModeSet { operating_mode });
+			Ok(())
 		}
 	}
 
 	impl<T: Config> BridgeModule<T> for Pallet<T> {
-		const LOG_TARGET: &'static str = LOG_TARGET;
 		type OperatingMode = BasicOperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
 	}
