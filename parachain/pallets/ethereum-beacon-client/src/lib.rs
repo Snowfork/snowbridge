@@ -21,7 +21,7 @@ mod benchmarking;
 use frame_support::{
 	dispatch::DispatchResult, log, pallet_prelude::OptionQuery, traits::Get, transactional,
 };
-use frame_system::ensure_signed;
+use frame_system::{ensure_signed, EnsureRoot};
 use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
 	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, ForkData, ForkVersion,
@@ -205,6 +205,7 @@ pub mod pallet {
 	impl<T: Config> BridgeModule<T> for Pallet<T> {
 		type OperatingMode = BasicOperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
+		type AllowedHaltOrigin = EnsureRoot<T::AccountId>;
 	}
 
 	#[pallet::call]

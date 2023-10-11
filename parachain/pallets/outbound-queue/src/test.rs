@@ -9,11 +9,11 @@ use frame_support::{
 };
 
 use snowbridge_core::outbound::{Command, Initializer};
-use sp_core::{H160, H256, ConstU128};
+use sp_core::{ConstU128, H160, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
-	AccountId32, BoundedVec,
+	AccountId32, BoundedVec, DispatchError,
 };
 use sp_std::convert::From;
 
@@ -192,12 +192,10 @@ fn submit_message_fail_too_large() {
 			command: Command::Upgrade {
 				impl_address: H160::zero(),
 				impl_code_hash: H256::zero(),
-				initializer: Some(
-					Initializer {
-						params: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
-						maximum_required_gas: 0
-					}
-				),
+				initializer: Some(Initializer {
+					params: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
+					maximum_required_gas: 0,
+				}),
 			},
 		};
 
@@ -259,6 +257,17 @@ fn process_message_fails_on_overweight_message() {
 				&mut [0u8; 32]
 			),
 			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
+		);
+	})
+}
+
+#[test]
+fn submit_message_fail_invalid_origin() {
+	new_tester().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
+		assert_noop!(
+			OutboundQueue::set_operating_mode(origin, BasicOperatingMode::Halted),
+			DispatchError::BadOrigin,
 		);
 	})
 }

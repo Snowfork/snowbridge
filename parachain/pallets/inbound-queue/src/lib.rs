@@ -22,7 +22,7 @@ use frame_support::{
 	traits::fungible::{Inspect, Mutate},
 	PalletError,
 };
-use frame_system::ensure_signed;
+use frame_system::{ensure_signed, EnsureRoot};
 use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
@@ -168,6 +168,7 @@ pub mod pallet {
 	impl<T: Config> BridgeModule<T> for Pallet<T> {
 		type OperatingMode = BasicOperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
+		type AllowedHaltOrigin = EnsureRoot<T::AccountId>;
 	}
 
 	#[pallet::call]

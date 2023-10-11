@@ -33,6 +33,7 @@ use frame_support::{
 	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
 	weights::Weight,
 };
+use frame_system::EnsureRoot;
 use snowbridge_core::ParaId;
 use sp_core::H256;
 use sp_runtime::traits::Hash;
@@ -194,6 +195,7 @@ pub mod pallet {
 	impl<T: Config> BridgeModule<T> for Pallet<T> {
 		type OperatingMode = BasicOperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
+		type AllowedHaltOrigin = EnsureRoot<T::AccountId>;
 	}
 
 	impl<T: Config> Pallet<T> {
