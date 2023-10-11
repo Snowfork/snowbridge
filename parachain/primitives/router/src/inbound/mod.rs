@@ -115,9 +115,9 @@ where
 {
 	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError> {
 		match message {
-			VersionedMessage::V1(MessageV1 { chain_id, message }) => {
+			VersionedMessage::V1(MessageV1 { chain_id, message: command }) => {
 				let network = Ethereum { chain_id };
-				let buy_execution_fee_amount = FeeGetter::fee(&message);
+				let buy_execution_fee_amount = FeeGetter::fee(&command);
 				let buy_execution_fee = MultiAsset {
 					id: Concrete(MultiLocation::parent()),
 					fun: Fungible(buy_execution_fee_amount),
@@ -148,7 +148,7 @@ where
 					]
 				};
 
-				let xcm = match message {
+				let xcm = match command {
 					Command::RegisterToken { gateway, token, .. } => {
 						let owner =
 							GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
@@ -247,8 +247,10 @@ where
 	}
 }
 
-impl<CreateAssetCall: Get<CallIndex>, FeeGetter: XcmFeeGetter>
-	MessageToXcm<CreateAssetCall, FeeGetter>
+impl<CreateAssetCall, FeeGetter> MessageToXcm<CreateAssetCall, FeeGetter>
+where
+	CreateAssetCall: Get<CallIndex>,
+	FeeGetter: XcmFeeGetter,
 {
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
 	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {
