@@ -1,7 +1,7 @@
 use codec::{Decode, Encode, FullCodec, MaxEncodedLen};
 use frame_support::{
 	dispatch::{DispatchResult, RawOrigin},
-	log, PalletError, RuntimeDebug, StorageValue,
+	PalletError, RuntimeDebug, StorageValue,
 };
 use scale_info::TypeInfo;
 use sp_runtime::traits::BadOrigin;
