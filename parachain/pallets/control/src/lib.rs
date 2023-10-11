@@ -134,9 +134,11 @@ pub mod pallet {
 		type Token: Mutate<Self::AccountId>;
 
 		/// TreasuryAccount to collect fees
+		#[pallet::constant]
 		type TreasuryAccount: Get<Self::AccountId>;
 
 		/// Permissionless operations require an upfront fee to prevent spamming
+		#[pallet::constant]
 		type Fee: Get<BalanceOf<Self>>;
 
 		type WeightInfo: WeightInfo;

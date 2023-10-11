@@ -30,9 +30,7 @@ contract FundAgent is Script {
         uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
         address gatewayAddress = vm.envAddress("GATEWAY_PROXY_CONTRACT");
 
-        ParaID bridgeHubParaID = ParaID.wrap(vm.envUint("BRIDGE_HUB_PARAID"));
         bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
-        ParaID assetHubParaID = ParaID.wrap(vm.envUint("ASSET_HUB_PARAID"));
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
 
         address bridgeHubAgent = IGateway(gatewayAddress).agentOf(bridgeHubAgentID);
