@@ -19,15 +19,18 @@ pub mod weights;
 pub use weights::*;
 
 use frame_support::traits::fungible::{Inspect, Mutate};
-use sp_runtime::{DispatchError, traits::{AccountIdConversion, Hash, BadOrigin}};
-use sp_std::prelude::*;
 use sp_core::{H160, H256};
+use sp_runtime::{
+	traits::{AccountIdConversion, BadOrigin, Hash},
+	DispatchError,
+};
+use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::{
 	outbound::{
-		Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId, Initializer
+		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
 	},
 	AgentId,
 };
@@ -44,7 +47,7 @@ pub type BalanceOf<T> =
 /// Information about the ancestry of the origin location
 enum RelativeAncestry {
 	Sibling,
-	SiblingChild
+	SiblingChild,
 }
 
 /// Ensure origin location is a sibling or a child within a sibling
@@ -52,9 +55,11 @@ enum RelativeAncestry {
 /// * The parachain id of the sibling
 /// * The agent id of the sibling or its child
 /// * Information about the relative ancestry
-fn ensure_sibling_or_sibling_child<T>(location: &MultiLocation) -> Result<(ParaId, H256, RelativeAncestry), DispatchError>
+fn ensure_sibling_or_sibling_child<T>(
+	location: &MultiLocation,
+) -> Result<(ParaId, H256, RelativeAncestry), DispatchError>
 where
-	T: Config
+	T: Config,
 {
 	match location.split_first_interior() {
 		(MultiLocation { parents: 1, interior: Here }, Some(Parachain(para_id))) => {
@@ -71,8 +76,8 @@ where
 
 /// Ensure origin location is a sibling
 fn ensure_sibling<T>(location: &MultiLocation) -> Result<(ParaId, H256), DispatchError>
-	where
-		T: Config
+where
+	T: Config,
 {
 	match location {
 		MultiLocation { parents: 1, interior: X1(Parachain(para_id)) } => {
@@ -91,7 +96,7 @@ fn agent_id_of<T: Config>(location: &MultiLocation) -> Result<H256, DispatchErro
 #[cfg(feature = "runtime-benchmarks")]
 pub trait BenchmarkHelper<O>
 where
-	O: OriginTrait
+	O: OriginTrait,
 {
 	fn make_xcm_origin(location: MultiLocation) -> O;
 }
@@ -157,11 +162,7 @@ pub mod pallet {
 		/// An CreateChannel message was sent to the Gateway
 		CreateChannel { para_id: ParaId, agent_id: AgentId },
 		/// An UpdateChannel message was sent to the Gateway
-		UpdateChannel {
-			para_id: ParaId,
-			mode: OperatingMode,
-			fee: u128,
-		},
+		UpdateChannel { para_id: ParaId, mode: OperatingMode, fee: u128 },
 		/// An SetOperatingMode message was sent to the Gateway
 		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
@@ -170,13 +171,12 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		UpgradeDataTooLarge,
 		SubmissionFailed,
 		LocationConversionFailed,
 		AgentAlreadyCreated,
-		AgentNotExist,
+		NoAgent,
 		ChannelAlreadyCreated,
-		ChannelNotExist,
+		NoChannel,
 		UnsupportedLocationVersion,
 		InvalidLocation,
 	}
@@ -193,7 +193,8 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Sends command to the Gateway contract to upgrade itself with a new implementation contract
+		/// Sends command to the Gateway contract to upgrade itself with a new implementation
+		/// contract
 		///
 		/// - `origin`: Must be `Root`.
 		/// - `impl_address`: The address of the implementation contract.
@@ -209,47 +210,56 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			let initializer_params_hash = initializer.as_ref().map(|i| T::MessageHasher::hash(i.params.as_ref()));
-			let command = Command::Upgrade {
-				impl_address,
-				impl_code_hash,
-				initializer
-			};
+			let initializer_params_hash =
+				initializer.as_ref().map(|i| T::MessageHasher::hash(i.params.as_ref()));
+			let command = Command::Upgrade { impl_address, impl_code_hash, initializer };
 			Self::send(T::OwnParaId::get(), command)?;
 
-			Self::deposit_event(Event::<T>::Upgrade { impl_address, impl_code_hash, initializer_params_hash });
+			Self::deposit_event(Event::<T>::Upgrade {
+				impl_address,
+				impl_code_hash,
+				initializer_params_hash,
+			});
 			Ok(())
 		}
 
-		/// Sends a command to the Gateway contract to instantiate a new agent contract representing `origin`.
+		/// Sends a command to the Gateway contract to instantiate a new agent contract representing
+		/// `origin`.
 		///
 		/// There are two modes of operation, depending on the relative ancestry of the origin:
 		///
-		/// If the origin is a sibling parachain, the command will be sent over the BridgeHub's own channel
-		/// to the Gateway. The sibling will also be charged an upfront fee `T::Fee`, which will cover the
-		/// cost of execution on Ethereum.
+		/// If the origin is a sibling parachain, the command will be sent over the BridgeHub's own
+		/// channel to the Gateway. The sibling will also be charged an upfront fee `T::Fee`, which
+		/// will cover the cost of execution on Ethereum.
 		///
-		/// If the origin is a child of a sibling parachain, then the command will be sent over channel of
-		/// the sibling containing the child. The sibling will assume the cost of execution on Ethereum.
+		/// If the origin is a child of a sibling parachain, then the command will be sent over
+		/// channel of the sibling containing the child. The sibling will assume the cost of
+		/// execution on Ethereum.
 		///
-		/// - `origin`: Must be `MultiLocation` of a sibling parachain or a child of a sibling parachain
+		/// - `origin`: Must be `MultiLocation` of a sibling parachain or a child of a sibling
+		///   parachain
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::create_agent())]
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let origin_location: MultiLocation = T::AgentOwnerOrigin::ensure_origin(origin)?;
 
 			// Ensure that origin location is some consensus system on a sibling parachain
-			let (para_id, agent_id, ancestry) = ensure_sibling_or_sibling_child::<T>(&origin_location)?;
+			let (para_id, agent_id, ancestry) =
+				ensure_sibling_or_sibling_child::<T>(&origin_location)?;
 
 			// Record the agent id or fail if it has already been created
 			ensure!(!Agents::<T>::contains_key(agent_id), Error::<T>::AgentAlreadyCreated);
 
 			match ancestry {
 				RelativeAncestry::Sibling => Self::do_create_agent_for_sibling(para_id, agent_id)?,
-				RelativeAncestry::SiblingChild => Self::do_create_agent_for_sibling_child(para_id, agent_id)?,
+				RelativeAncestry::SiblingChild =>
+					Self::do_create_agent_for_sibling_child(para_id, agent_id)?,
 			}
 
-			Self::deposit_event(Event::<T>::CreateAgent { location: Box::new(origin_location), agent_id });
+			Self::deposit_event(Event::<T>::CreateAgent {
+				location: Box::new(origin_location),
+				agent_id,
+			});
 			Ok(())
 		}
 
@@ -271,7 +281,7 @@ pub mod pallet {
 
 			Self::charge_fee(para_id)?;
 
-			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
 			ensure!(!Channels::<T>::contains_key(para_id), Error::<T>::ChannelAlreadyCreated);
 
 			Channels::<T>::insert(para_id, ());
@@ -300,7 +310,7 @@ pub mod pallet {
 			// Ensure that origin location is a sibling parachain
 			let (para_id, _) = ensure_sibling::<T>(&origin_location)?;
 
-			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
+			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::NoChannel);
 
 			let command = Command::UpdateChannel { para_id, mode, fee };
 			Self::send(para_id, command)?;
@@ -325,12 +335,12 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			// Ensure that location is a sibling parachain
-			let location: MultiLocation = (*location).try_into()
-				.map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
-			let (para_id, _) = ensure_sibling::<T>(&location)
-				.map_err(|_| Error::<T>::InvalidLocation)?;
+			let location: MultiLocation =
+				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
+			let (para_id, _) =
+				ensure_sibling::<T>(&location).map_err(|_| Error::<T>::InvalidLocation)?;
 
-			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
+			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::NoChannel);
 
 			let command = Command::UpdateChannel { para_id, mode, fee };
 			Self::send(para_id, command)?;
@@ -383,15 +393,16 @@ pub mod pallet {
 		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::force_transfer_native_from_agent())]
 		pub fn force_transfer_native_from_agent(
-				origin: OriginFor<T>,
-				location: Box<VersionedMultiLocation>,
-				recipient: H160,
-				amount: u128,
+			origin: OriginFor<T>,
+			location: Box<VersionedMultiLocation>,
+			recipient: H160,
+			amount: u128,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
 			// Ensure that location is some consensus system on a sibling parachain
-			let location: MultiLocation = (*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
+			let location: MultiLocation =
+				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 			let (para_id, agent_id, _) = ensure_sibling_or_sibling_child::<T>(&location)
 				.map_err(|_| Error::<T>::InvalidLocation)?;
 
@@ -402,9 +413,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Send `command` to the Gateway on the channel identified by `origin`.
 		fn send(origin: ParaId, command: Command) -> DispatchResult {
-			let message = Message {
-				origin, command
-			};
+			let message = Message { origin, command };
 			let (ticket, _) =
 				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
 			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
@@ -424,9 +433,15 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Issue a `Command::TransferNativeFromAgent` command. The command will be sent on the channel owned by `para_id`.
-		pub fn do_transfer_native_from_agent(agent_id: H256, para_id: ParaId, recipient: H160, amount: u128) -> DispatchResult {
-			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::AgentNotExist);
+		/// Issue a `Command::TransferNativeFromAgent` command. The command will be sent on the
+		/// channel owned by `para_id`.
+		pub fn do_transfer_native_from_agent(
+			agent_id: H256,
+			para_id: ParaId,
+			recipient: H160,
+			amount: u128,
+		) -> DispatchResult {
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
 
 			let command = Command::TransferNativeFromAgent { agent_id, recipient, amount };
 			Self::send(para_id, command)?;
@@ -439,8 +454,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Send a `CreateAgent` command for a sibling over BridgeHub's own channel. Charge a fee from
-		/// the sovereign account of the origin.
+		/// Send a `CreateAgent` command for a sibling over BridgeHub's own channel. Charge a fee
+		/// from the sovereign account of the origin.
 		pub fn do_create_agent_for_sibling(para_id: ParaId, agent_id: H256) -> DispatchResult {
 			Self::charge_fee(para_id)?;
 			Agents::<T>::insert(agent_id, ());
@@ -452,8 +467,11 @@ pub mod pallet {
 		}
 
 		/// Send a `CreateAgent` command for a sibling child over the sibling's channel
-		pub fn do_create_agent_for_sibling_child(para_id: ParaId, agent_id: H256) -> DispatchResult {
-			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::ChannelNotExist);
+		pub fn do_create_agent_for_sibling_child(
+			para_id: ParaId,
+			agent_id: H256,
+		) -> DispatchResult {
+			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::NoChannel);
 			Agents::<T>::insert(agent_id, ());
 
 			let command = Command::CreateAgent { agent_id };

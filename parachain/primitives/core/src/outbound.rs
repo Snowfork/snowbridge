@@ -2,9 +2,8 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
-	traits::{Get, tokens::Balance},
-	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound,
-	RuntimeDebugNoBound,
+	traits::{tokens::Balance, Get},
+	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
@@ -50,10 +49,6 @@ pub enum SubmitError {
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
 	BridgeHalted,
-	/// Gas config invalid
-	InvalidGas(u128),
-	/// Estimate fee failed
-	EstimateFeeFailed,
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
@@ -149,11 +144,10 @@ impl Command {
 	/// ABI-encode the Command.
 	pub fn abi_encode(&self) -> Vec<u8> {
 		match self {
-			Command::AgentExecute { agent_id, command } =>
-				ethabi::encode(&[Token::Tuple(vec![
-					Token::FixedBytes(agent_id.as_bytes().to_owned()),
-					Token::Bytes(command.abi_encode()),
-				])]),
+			Command::AgentExecute { agent_id, command } => ethabi::encode(&[Token::Tuple(vec![
+				Token::FixedBytes(agent_id.as_bytes().to_owned()),
+				Token::Bytes(command.abi_encode()),
+			])]),
 			Command::Upgrade { impl_address, impl_code_hash, initializer, .. } =>
 				ethabi::encode(&[Token::Tuple(vec![
 					Token::Address(*impl_address),
@@ -193,9 +187,7 @@ impl Command {
 
 /// Representation of a call to the initializer of an implementation contract.
 /// The initializer has the following ABI signature: `initialize(bytes)`.
-#[derive(
-	Encode, Decode, TypeInfo, PartialEqNoBound, EqNoBound, CloneNoBound, DebugNoBound,
-)]
+#[derive(Encode, Decode, TypeInfo, PartialEqNoBound, EqNoBound, CloneNoBound, DebugNoBound)]
 pub struct Initializer {
 	/// ABI-encoded params of type `bytes` to pass to the initializer
 	pub params: Vec<u8>,
@@ -227,10 +219,10 @@ impl GasMeter for ConstantGasMeter {
 					Some(Initializer { maximum_required_gas, .. }) => maximum_required_gas,
 					None => 0,
 				};
-				// total maximum gas must also include the gas used for updating the proxy before the
-				// the initializer is called.
+				// total maximum gas must also include the gas used for updating the proxy before
+				// the the initializer is called.
 				100_000 + maximum_required_gas
-			}
+			},
 		}
 	}
 }
@@ -339,7 +331,6 @@ impl From<u32> for AggregateMessageOrigin {
 		AggregateMessageOrigin::Parachain(value.into())
 	}
 }
-
 
 #[derive(Copy, Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct OriginInfo {

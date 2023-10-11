@@ -376,7 +376,7 @@ contract GatewayTest is Test {
         emit ChannelUpdated(assetHubParaID);
         GatewayMock(address(gateway)).updateChannelPublic(params);
 
-        (uint256 fee) = IGateway(address(gateway)).channelFeeOf(assetHubParaID);
+        uint256 fee = IGateway(address(gateway)).channelFeeOf(assetHubParaID);
         assertEq(fee, 2 ether);
     }
 

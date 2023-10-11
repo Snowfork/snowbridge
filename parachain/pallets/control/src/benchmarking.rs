@@ -13,10 +13,10 @@ use snowbridge_core::outbound::OperatingMode;
 use xcm::prelude::*;
 
 fn fund_sovereign_account<T: Config>(para_id: ParaId) -> Result<(), BenchmarkError> {
-	let foo = T::Fee::get() + T::Fee::get() + T::Fee::get();
+	let amount = T::Fee::get() + T::Fee::get() + T::Fee::get();
 	T::Token::mint_into(
 		&para_id.into_account_truncating(),
-		foo,
+		amount,
 	).map_err(|_| BenchmarkError::Weightless)?;
 	Ok(())
 }
