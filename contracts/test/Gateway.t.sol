@@ -63,10 +63,10 @@ contract GatewayTest is Test {
     address public account1;
     address public account2;
 
-    uint256 public dispatch_gas = 500_000;
+    uint256 public maxDispatchGas = 500_000;
 
-    uint256 public defaultFee = 1 ether;
-    uint256 public defaultReward = 1 ether;
+    uint256 public baseFee = 1 ether;
+    uint256 public reward = 1 ether;
     uint256 public registerNativeTokenFee = 1 ether;
     uint256 public sendNativeTokenFee = 1 ether;
 
@@ -83,7 +83,7 @@ contract GatewayTest is Test {
         gateway = new GatewayProxy(
             address(gatewayLogic),
             abi.encode(
-                defaultFee,
+                baseFee,
                 registerNativeTokenFee,
                 sendNativeTokenFee
             )
@@ -156,7 +156,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas, defaultReward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, reward), proof, makeMockProof()
         );
     }
 
@@ -167,14 +167,14 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas, defaultReward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, reward), proof, makeMockProof()
         );
 
         // try to replay the message
         vm.expectRevert(Gateway.InvalidNonce.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas, defaultReward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, reward), proof, makeMockProof()
         );
     }
 
@@ -184,7 +184,7 @@ contract GatewayTest is Test {
         vm.expectRevert(Gateway.ChannelDoesNotExist.selector);
         hoax(relayer);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(ParaID.wrap(42), 1, command, "", dispatch_gas, defaultReward), proof, makeMockProof()
+            InboundMessage(ParaID.wrap(42), 1, command, "", maxDispatchGas, reward), proof, makeMockProof()
         );
     }
 
@@ -198,7 +198,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas, defaultReward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, reward), proof, makeMockProof()
         );
     }
 
@@ -218,7 +218,7 @@ contract GatewayTest is Test {
         uint256 agentBalanceBefore = address(bridgeHubAgent).balance;
 
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas, defaultReward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, reward), proof, makeMockProof()
         );
 
         // Check that agent balance decreased and relayer balance increases
@@ -232,7 +232,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, dispatch_gas, defaultReward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, reward), proof, makeMockProof()
         );
 
         assertEq(address(bridgeHubAgent).balance, 0 ether);
@@ -519,13 +519,13 @@ contract GatewayTest is Test {
         vm.expectEmit(true, false, false, false);
         emit OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token)));
 
-        uint256 totalFee = defaultFee + registerNativeTokenFee;
+        uint256 totalFee = baseFee + registerNativeTokenFee;
         uint256 balanceBefore = address(this).balance;
         IGateway(address(gateway)).registerToken{value: totalFee + 1 ether}(address(token));
         uint256 balanceAfter = address(this).balance;
 
         // Check that the balance has decreased by the amount of gas used
-        // channel.fee is defaultFee & extraFee is registerNativeTokenFee
+        // channel.fee is baseFee & extraFee is registerNativeTokenFee
         uint256 etherUsed = balanceBefore - balanceAfter;
         assert(etherUsed == totalFee);
     }
@@ -716,9 +716,9 @@ contract GatewayTest is Test {
         vm.expectEmit(true, false, false, true);
         // Expect dispatch result as false for `OutOfGas`
         emit InboundMessageDispatched(bridgeHubParaID, 1, false);
-        // dispatch_gas as 1 for `create_agent` is definitely not enough
+        // maxDispatchGas as 1 for `create_agent` is definitely not enough
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, 1, defaultReward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, 1, reward), proof, makeMockProof()
         );
     }
 }
