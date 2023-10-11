@@ -1,12 +1,13 @@
 # Table of contents
 
 * [Introduction](README.md)
-* [Concepts](overview.md)
+* [Concepts](concepts.md)
 
 ## Architecture
 
 * [Overview](architecture/overview.md)
 * [Components](architecture/components.md)
+* [Fees and Channels](architecture/fees-and-channels.md)
 * [Verification](architecture/verification/README.md)
   * [Ethereum](architecture/verification/ethereum.md)
   * [Polkadot](architecture/verification/polkadot/README.md)
