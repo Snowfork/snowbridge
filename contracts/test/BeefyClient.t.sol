@@ -82,12 +82,12 @@ contract BeefyClientTest is Test {
         string memory finalProofFile0SignatureCount =
             string.concat(vm.projectRoot(), "/test/data/beefy-final-proof-0.json");
         string memory finalProofRaw0SignatureCount = vm.readFile(finalProofFile0SignatureCount);
-        finalValidatorProofs = loadFinalProofs(finalProofRaw0SignatureCount);
+        loadFinalProofs(finalProofRaw0SignatureCount, finalValidatorProofs);
 
         string memory finalProofFile3SignatureCount =
             string.concat(vm.projectRoot(), "/test/data/beefy-final-proof-3.json");
         string memory finalProofRaw3SignatureCount = vm.readFile(finalProofFile3SignatureCount);
-        finalValidatorProofs3SignatureCount = loadFinalProofs(finalProofRaw3SignatureCount);
+        loadFinalProofs(finalProofRaw3SignatureCount, finalValidatorProofs3SignatureCount);
     }
 
     function initialize(uint32 _setId) public returns (BeefyClient.Commitment memory) {
@@ -107,10 +107,12 @@ contract BeefyClientTest is Test {
         }
     }
 
-    function loadFinalProofs(string memory finalProofRaw) internal returns (BeefyClient.ValidatorProof[] memory) {
+    function loadFinalProofs(string memory finalProofRaw, BeefyClient.ValidatorProof[] storage finalProofs) internal {
         bytes memory proofRaw = finalProofRaw.readBytes(".finalValidatorsProofRaw");
         BeefyClient.ValidatorProof[] memory proofs = abi.decode(proofRaw, (BeefyClient.ValidatorProof[]));
-        return proofs;
+        for (uint256 i = 0; i < proofs.length; i++) {
+            finalProofs.push(proofs[i]);
+        }
     }
 
     // Ideally should also update `finalValidatorProofs` with another round of ffi based on the `finalBitfield` here
