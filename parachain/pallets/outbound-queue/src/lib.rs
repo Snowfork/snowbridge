@@ -177,9 +177,6 @@ pub mod pallet {
 	#[pallet::unbounded]
 	pub(super) type Messages<T: Config> = StorageValue<_, Vec<PreparedMessage>, ValueQuery>;
 
-	#[pallet::storage]
-	pub(super) type LowPriorityMessageCount<T: Config> = StorageValue<_, u32, ValueQuery>;
-
 	/// Hashes of the ABI-encoded messages in the [`Messages`] storage value. Used to generate a
 	/// merkle root during `on_finalize`. This storage value is killed in
 	/// `on_initialize`, so should never go into block PoV.
@@ -205,6 +202,21 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
+	/// Raw messages enqueued
+	#[pallet::storage]
+	#[pallet::unbounded]
+	pub(super) type RawMessages<T: Config> = StorageValue<_, Vec<Vec<u8>>, ValueQuery>;
+
+	/// Indexes of high priority messages enqueued
+	#[pallet::storage]
+	#[pallet::unbounded]
+	pub(super) type HighPriorityMessageIndexes<T: Config> = StorageValue<_, Vec<u16>, ValueQuery>;
+
+	/// Indexes of low priority messages enqueued
+	#[pallet::storage]
+	#[pallet::unbounded]
+	pub(super) type LowPriorityMessageIndexes<T: Config> = StorageValue<_, Vec<u16>, ValueQuery>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
@@ -212,9 +224,11 @@ pub mod pallet {
 	{
 		fn on_initialize(_: BlockNumberFor<T>) -> Weight {
 			// Remove storage from previous block
-			LowPriorityMessageCount::<T>::kill();
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
+			RawMessages::<T>::kill();
+			HighPriorityMessageIndexes::<T>::kill();
+			LowPriorityMessageIndexes::<T>::kill();
 			// Reserve some weight for the `on_finalize` handler
 			T::WeightInfo::on_finalize()
 		}
@@ -272,11 +286,92 @@ pub mod pallet {
 			Self::deposit_event(Event::MessagesCommitted { root, count });
 		}
 
-		/// Process a message delivered by the MessageQueue pallet
+		/// Process a low priority message delivered by the MessageQueue pallet or a high priority
+		/// message directly.
+		/// To ensure that high priority messages always get serviced first the policy is:
+		/// a. swap the latest low priority message with the high priority one when hard limit of
+		/// `MaxMessagesPerBlock` reached
+		/// b. re-enqueue the swapped low priority message for processing in the next block
 		pub(crate) fn do_process_message(
 			mut message: &[u8],
 			priority: Priority,
 		) -> Result<bool, ProcessMessageError> {
+			let messages_count = MessageLeaves::<T>::decode_len().unwrap_or(0);
+			let messages_hard_limit = T::MaxMessagesPerBlock::get() as usize;
+			if messages_count == messages_hard_limit && priority == Priority::High {
+				LowPriorityMessageIndexes::<T>::try_mutate(
+					|indexes| -> Result<(), ProcessMessageError> {
+						// Ensure at least 1 item left in low priority list
+						ensure!(indexes.len() > 0, ProcessMessageError::Unsupported);
+
+						// Pop the latest from LowPriorityMessageIndexes
+						let swap_index = indexes.pop().unwrap() as usize;
+
+						Messages::<T>::try_mutate(
+							|prepared_messages| -> Result<(), ProcessMessageError> {
+								// Ensure message at the swap index exist
+								let prepared_message = (*prepared_messages)
+									.get_mut(swap_index)
+									.ok_or(ProcessMessageError::Unsupported)?;
+
+								// 1. Swap the message
+								let current_message: EnqueuedMessage =
+									EnqueuedMessage::decode(&mut message)
+										.map_err(|_| ProcessMessageError::Corrupt)?;
+								let (command, params) = current_message.command.abi_encode();
+								prepared_message.origin = current_message.origin;
+								prepared_message.command = command;
+								prepared_message.params = params;
+
+								// 2. Swap the hash of the message
+								MessageLeaves::<T>::try_mutate(
+									|message_leaves| -> Result<(), ProcessMessageError> {
+										let message_leaf = (*message_leaves)
+											.get_mut(swap_index)
+											.ok_or(ProcessMessageError::Unsupported)?;
+
+										let message_abi_encoded =
+											ethabi::encode(&[prepared_message.clone().into()]);
+										let message_abi_encoded_hash =
+											<T as Config>::Hashing::hash(&message_abi_encoded);
+										*message_leaf = message_abi_encoded_hash;
+										Ok(())
+									},
+								)?;
+
+								// 3. Add the raw message back to message queue
+								let raw_messages = RawMessages::<T>::get();
+								let raw_message = raw_messages
+									.get(swap_index)
+									.ok_or(ProcessMessageError::Unsupported)?;
+								let encoded: BoundedVec<u8, MaxEnqueuedMessageSizeOf<T>> =
+									raw_message
+										.clone()
+										.try_into()
+										.map_err(|_| ProcessMessageError::Corrupt)?;
+								T::MessageQueue::enqueue_message(
+									encoded.as_bounded_slice(),
+									AggregateMessageOrigin::Parachain(prepared_message.origin),
+								);
+
+								// 4. Add the index into HighPriorityMessageIndexes
+								HighPriorityMessageIndexes::<T>::append(swap_index as u16);
+
+								Ok(())
+							},
+						)?;
+						Ok(())
+					},
+				)?;
+				return Ok(true)
+			}
+
+			RawMessages::<T>::append(message.clone());
+			match priority {
+				Priority::Normal => LowPriorityMessageIndexes::<T>::append(messages_count as u16),
+				Priority::High => HighPriorityMessageIndexes::<T>::append(messages_count as u16),
+			}
+
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
 
@@ -300,12 +395,6 @@ pub mod pallet {
 			Messages::<T>::append(Box::new(message));
 			MessageLeaves::<T>::append(message_abi_encoded_hash);
 			Nonce::<T>::set(enqueued_message.origin, next_nonce);
-
-			if priority == Priority::Normal {
-				LowPriorityMessageCount::<T>::set(
-					LowPriorityMessageCount::<T>::get().saturating_add(1),
-				);
-			}
 
 			Self::deposit_event(Event::MessageAccepted {
 				id: enqueued_message.id,
@@ -363,7 +452,7 @@ pub mod pallet {
 				},
 				Priority::High => {
 					ensure!(
-						MessageLeaves::<T>::decode_len().unwrap_or(0) <
+						HighPriorityMessageIndexes::<T>::decode_len().unwrap_or(0) <
 							T::MaxMessagesPerBlock::get() as usize,
 						SubmitError::MessagesOverLimit
 					);
@@ -388,20 +477,9 @@ pub mod pallet {
 			Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
 			// Yield if we don't want to accept any more messages in the current block.
 			// There is hard limit to ensure the weight of `on_finalize` is bounded.
-
-			let total_messages_count = MessageLeaves::<T>::decode_len().unwrap_or(0);
-			let low_priority_messages_count = LowPriorityMessageCount::<T>::get();
-			let messages_hard_limit = T::MaxMessagesPerBlock::get() as usize;
-			let low_priority_messages_hard_limit =
-				// reserve space only when there exist high priority message
-				if total_messages_count > low_priority_messages_count as usize {
-					T::MaxMessagesPerBlock::get() * 4 / 5
-				} else {
-					T::MaxMessagesPerBlock::get()
-				};
 			ensure!(
-				LowPriorityMessageCount::<T>::get() < low_priority_messages_hard_limit &&
-					total_messages_count < messages_hard_limit,
+				MessageLeaves::<T>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerBlock::get() as usize,
 				ProcessMessageError::Yield
 			);
 

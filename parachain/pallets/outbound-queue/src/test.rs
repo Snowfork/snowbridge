@@ -229,3 +229,93 @@ fn process_message_fails_on_overweight_message() {
 		);
 	})
 }
+
+#[test]
+fn process_high_priority_message_even_when_max_messages_per_block_reached() {
+	new_tester().execute_with(|| {
+		// fill low priority messages until hard limit of max_messages_per_block reached
+		for index in 0..<Test as Config>::MaxMessagesPerBlock::get() {
+			Messages::<Test>::append(PreparedMessage {
+				origin: Default::default(),
+				nonce: 0,
+				command: 0,
+				params: vec![],
+			});
+			MessageLeaves::<Test>::append(H256::zero());
+			LowPriorityMessageIndexes::<Test>::append(index as u16);
+			RawMessages::<Test>::append(vec![1]);
+		}
+
+		// submit high priority message will success even when reach the hard limit
+		for index in 0..<Test as Config>::MaxMessagesPerBlock::get() {
+			let message = Message {
+				origin: 1000.into(),
+				command: Command::Upgrade {
+					impl_address: H160::zero(),
+					impl_code_hash: H256::zero(),
+					params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
+				},
+			};
+			let ticket = OutboundQueue::validate(&message).unwrap();
+			assert_ok!(OutboundQueue::submit(ticket, Priority::High));
+
+			// in this case low priority message will be swapped out with the high priority one
+			assert_eq!(
+				HighPriorityMessageIndexes::<Test>::decode_len().unwrap_or_default(),
+				(index + 1) as usize
+			);
+			assert_eq!(
+				LowPriorityMessageIndexes::<Test>::decode_len().unwrap_or_default(),
+				(<Test as Config>::MaxMessagesPerBlock::get() - (index + 1)) as usize
+			);
+
+			// but the total size of committed messages does not change
+			assert_eq!(
+				MessageLeaves::<Test>::decode_len().unwrap_or_default(),
+				(<Test as Config>::MaxMessagesPerBlock::get()) as usize
+			);
+		}
+
+		// submit another high priority message will fail because HighPriorityMessageIndexes reach
+		// the hard limit
+		let message = Message {
+			origin: 1000.into(),
+			command: Command::Upgrade {
+				impl_address: H160::zero(),
+				impl_code_hash: H256::zero(),
+				params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
+			},
+		};
+		let ticket = OutboundQueue::validate(&message).unwrap();
+		assert_noop!(OutboundQueue::submit(ticket, Priority::High), SubmitError::MessagesOverLimit);
+
+		// submit low priority message will also fail(yield) since the total size of commit
+		// messages reach the hard limit
+		let origin = AggregateMessageOrigin::Parachain(1000.into());
+		let message = (0..100).map(|_| 1u8).collect::<Vec<u8>>();
+		let message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<Test>> = message.try_into().unwrap();
+		assert_noop!(
+			OutboundQueue::process_message(
+				&message.as_bounded_slice(),
+				origin,
+				&mut WeightMeter::max_limit(),
+				&mut [0u8; 32]
+			),
+			ProcessMessageError::Yield
+		);
+
+		// Ensure that low priority messages still cached in the MessageQueue waiting to be
+		// processed
+		let origin = AggregateMessageOrigin::Parachain(1000.into());
+		let mut foot_print = MessageQueue::footprint(origin.clone());
+		println!("{:?}", foot_print);
+		assert_eq!(foot_print.count, MaxMessagesPerBlock::get() as u64);
+
+		// Advance to the next block and then all left messages have been processed
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+		foot_print = MessageQueue::footprint(origin);
+		println!("{:?}", foot_print);
+		assert_eq!(foot_print.count, 0);
+	})
+}
