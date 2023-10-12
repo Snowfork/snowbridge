@@ -608,6 +608,23 @@ contract BeefyClientTest is Test {
         regenerateBitField(bitFieldFile3SignatureCount, samples);
     }
 
+    function testSignatureSampleWithUseMajorityIfVsetIsSmallerThanMinSignatures() public {
+        assertEq(7, beefyClient.signatureSamples_public(9, 0), "dynamicSignatures incorrect.");
+        assertEq(11, beefyClient.signatureSamples_public(16, 0), "dynamicSignatures incorrect.");
+        assertEq(16, beefyClient.signatureSamples_public(17, 0), "dynamicSignatures incorrect.");
+    }
+
+    function testSignatureSampleNeverYieldsASampleGreaterThanTheValidatorSetLength() public {
+        assertEq(17, beefyClient.signatureSamples_public(18, 0), "dynamicSignatures incorrect.");
+        assertEq(18, beefyClient.signatureSamples_public(19, 0), "dynamicSignatures incorrect.");
+        assertEq(18, beefyClient.signatureSamples_public(20, 0), "dynamicSignatures incorrect.");
+        assertEq(19, beefyClient.signatureSamples_public(21, 0), "dynamicSignatures incorrect.");
+        assertEq(20, beefyClient.signatureSamples_public(30, 0), "dynamicSignatures incorrect.");
+
+        assertEq(29, beefyClient.signatureSamples_public(30, 10), "dynamicSignatures incorrect.");
+        assertEq(30, beefyClient.signatureSamples_public(30, 17), "dynamicSignatures incorrect.");
+    }
+
     function testSignatureSamplingRanges() public {
         assertEq(25, beefyClient.signatureSamples_public(setSize, 0), "dynamicSignatures incorrect.");
         assertEq(26, beefyClient.signatureSamples_public(setSize, 1), "dynamicSignatures incorrect.");

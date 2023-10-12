@@ -423,12 +423,16 @@ contract BeefyClient {
             return validatorSetLen - (validatorSetLen - 1) / 3;
         }
 
+        // Start with the minimum number of signatures.
         uint256 samples = minimumSignatureSamples;
 
+        // We must substrate minimumSignatures from the number of validators or we might end up
+        // requiring more signatures than there are validators.
+        uint256 extraValidators = validatorSetLen - minimumSignatureSamples;
         // Using highest bit set to yield floor(log2(x))
-        uint256 validatorsLog2 = Bits.highestBitSet(validatorSetLen);
+        uint256 validatorsLog2 = Bits.highestBitSet(extraValidators);
         // We require ceil(log2(x)) so we round up if there were any extra bits set.
-        if (validatorSetLen > (1 << validatorsLog2)) {
+        if (extraValidators > (1 << validatorsLog2)) {
             validatorsLog2++;
         }
 
@@ -446,6 +450,11 @@ contract BeefyClient {
             ++log2SignatureUse;
         }
         samples += 1 + 2 * log2SignatureUse;
+
+        // Make sure the samples are bounded by the validatorSetLength
+        if (samples > validatorSetLen) {
+            samples = validatorSetLen;
+        }
 
         return samples;
     }
