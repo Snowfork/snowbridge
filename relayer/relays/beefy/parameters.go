@@ -200,15 +200,15 @@ func commitmentToLog(commitment contracts.BeefyClientCommitment) logrus.Fields {
 	payloadFields := make([]logrus.Fields, len(commitment.Payload))
 	for i, payloadItem := range commitment.Payload {
 		payloadFields[i] = logrus.Fields{
-			"PayloadID": string(rune(payloadItem.PayloadID[0])) + string(rune(payloadItem.PayloadID[1])),
-			"Data":      "0x" + hex.EncodeToString(payloadItem.Data),
+			"payloadID": string(rune(payloadItem.PayloadID[0])) + string(rune(payloadItem.PayloadID[1])),
+			"data":      "0x" + hex.EncodeToString(payloadItem.Data),
 		}
 	}
 
 	return logrus.Fields{
-		"BlockNumber":    commitment.BlockNumber,
-		"ValidatorSetID": commitment.ValidatorSetID,
-		"Payload":        payloadFields,
+		"blockNumber":    commitment.BlockNumber,
+		"validatorSetID": commitment.ValidatorSetID,
+		"payload":        payloadFields,
 	}
 }
 
