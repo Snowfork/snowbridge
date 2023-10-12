@@ -94,8 +94,9 @@ impl crate::Config for Test {
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
 	type GasMeter = ();
 	type Balance = u128;
-	type Fee = ConstU128<10>;
-	type Reward = ConstU128<10>;
+	type DeliveryFeePerGas = ConstU128<1>;
+	type DeliveryRefundPerGas = ConstU128<1>;
+	type DeliveryReward = ConstU128<1>;
 	type WeightInfo = ();
 }
 

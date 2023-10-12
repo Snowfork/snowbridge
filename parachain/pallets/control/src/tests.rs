@@ -6,7 +6,7 @@ use sp_core::H256;
 use sp_runtime::{traits::AccountIdConversion, AccountId32, DispatchError::BadOrigin, TokenError};
 
 #[test]
-fn create_agent_for_sibling() {
+fn create_agent() {
 	new_test_ext().execute_with(|| {
 		let origin_para_id = 2000;
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
@@ -26,46 +26,12 @@ fn create_agent_for_sibling() {
 }
 
 #[test]
-fn create_agent_for_sibling_fails_on_funds_unavailable() {
+fn create_agent_fails_on_funds_unavailable() {
 	new_test_ext().execute_with(|| {
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
 
 		let origin = make_xcm_origin(origin_location);
 		assert_noop!(EthereumControl::create_agent(origin), TokenError::FundsUnavailable);
-	});
-}
-
-#[test]
-fn create_agent_for_sibling_child() {
-	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation {
-			parents: 1,
-			interior: X2(Parachain(2000), Junction::AccountId32 { network: None, id: [67u8; 32] }),
-		};
-		let agent_id = make_agent_id(origin_location);
-
-		// Create channel for sibling parachain
-		Channels::<Test>::insert(ParaId::from(2000), ());
-
-		assert!(!Agents::<Test>::contains_key(agent_id));
-
-		let origin = make_xcm_origin(origin_location);
-		assert_ok!(EthereumControl::create_agent(origin));
-
-		assert!(Agents::<Test>::contains_key(agent_id));
-	});
-}
-
-#[test]
-fn create_agent_for_sibling_child_fails_no_channel() {
-	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation {
-			parents: 1,
-			interior: X2(Parachain(2000), Junction::AccountId32 { network: None, id: [67u8; 32] }),
-		};
-
-		let origin = make_xcm_origin(origin_location);
-		assert_noop!(EthereumControl::create_agent(origin), Error::<Test>::NoChannel);
 	});
 }
 
@@ -448,7 +414,7 @@ fn transfer_native_from_agent() {
 	new_test_ext().execute_with(|| {
 		let origin_location = MultiLocation {
 			parents: 1,
-			interior: X2(Parachain(2000), Junction::AccountId32 { network: None, id: [67u8; 32] }),
+			interior: X1(Parachain(2000)),
 		};
 		let recipient: H160 = [27u8; 20].into();
 		let amount = 103435;
@@ -475,7 +441,7 @@ fn force_transfer_native_from_agent() {
 		let origin = RuntimeOrigin::root();
 		let location = MultiLocation {
 			parents: 1,
-			interior: X2(Parachain(2000), Junction::AccountId32 { network: None, id: [67u8; 32] }),
+			interior: X1(Parachain(2000)),
 		};
 		let versioned_location: Box<VersionedMultiLocation> = Box::new(location.into());
 		let recipient: H160 = [27u8; 20].into();

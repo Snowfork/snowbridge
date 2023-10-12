@@ -88,6 +88,7 @@ type OutboundQueueMessage struct {
 	Command        uint8
 	Params         []byte
 	MaxDispatchGas types.U128
+	MaxRefund      types.U128
 	Reward         types.U128
 }
 
@@ -98,6 +99,7 @@ func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 		Command:        m.Command,
 		Params:         m.Params,
 		MaxDispatchGas: m.MaxDispatchGas.Int,
+		MaxRefund:      m.MaxRefund.Int,
 		Reward:         m.Reward.Int,
 	}
 }
