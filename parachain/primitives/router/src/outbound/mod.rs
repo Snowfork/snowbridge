@@ -7,7 +7,7 @@ use codec::{Decode, Encode};
 
 use frame_support::{ensure, log, traits::Get};
 use snowbridge_core::outbound::{
-	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait, Priority,
+	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
 };
 use sp_core::H256;
 use sp_std::{marker::PhantomData, prelude::*};
@@ -147,7 +147,7 @@ where
 				SendError::NotApplicable
 			})?;
 
-		let message_hash = OutboundQueue::submit(ticket, Priority::Normal).map_err(|_| {
+		let message_hash = OutboundQueue::submit(ticket).map_err(|_| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue submit of message failed");
 			SendError::Transport("other transport error")
 		})?;
@@ -312,7 +312,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::outbound::{MessageHash, Priority, SubmitError};
+	use snowbridge_core::outbound::{MessageHash, SubmitError};
 
 	use super::*;
 
@@ -335,7 +335,7 @@ mod tests {
 			Ok(())
 		}
 
-		fn submit(_: Self::Ticket, _: Priority) -> Result<MessageHash, SubmitError> {
+		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Ok(MessageHash::zero())
 		}
 	}
@@ -347,7 +347,7 @@ mod tests {
 			Err(SubmitError::MessageTooLarge)
 		}
 
-		fn submit(_: Self::Ticket, _: Priority) -> Result<MessageHash, SubmitError> {
+		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 	}

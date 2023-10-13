@@ -6,16 +6,6 @@ use sp_std::{borrow::ToOwned, vec, vec::Vec};
 
 pub type MessageHash = H256;
 
-/// Priority for submit the message ticket to OutboundQueue
-#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub enum Priority {
-	/// Internally will submit the message to pallet_message_queue
-	Normal,
-	/// Internally will submit and process the message directly without waiting scheduled by
-	/// pallet_message_queue
-	High,
-}
-
 /// A trait for enqueueing messages for delivery to Ethereum
 pub trait OutboundQueue {
 	type Ticket;
@@ -24,7 +14,7 @@ pub trait OutboundQueue {
 	fn validate(message: &Message) -> Result<Self::Ticket, SubmitError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
-	fn submit(ticket: Self::Ticket, priority: Priority) -> Result<MessageHash, SubmitError>;
+	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
 }
 
 /// Default implementation of `OutboundQueue` for tests
@@ -35,7 +25,7 @@ impl OutboundQueue for () {
 		Ok(0)
 	}
 
-	fn submit(ticket: Self::Ticket, priority: Priority) -> Result<MessageHash, SubmitError> {
+	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 		Ok(MessageHash::zero())
 	}
 }

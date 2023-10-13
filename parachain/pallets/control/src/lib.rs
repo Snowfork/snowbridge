@@ -18,9 +18,7 @@ pub mod weights;
 pub use weights::*;
 
 use snowbridge_core::{
-	outbound::{
-		Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId, Priority,
-	},
+	outbound::{Command, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId},
 	AgentId,
 };
 use sp_core::{H160, H256};
@@ -308,8 +306,7 @@ pub mod pallet {
 		fn submit_outbound(message: Message) -> DispatchResult {
 			let ticket =
 				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
-			T::OutboundQueue::submit(ticket, Priority::High)
-				.map_err(|_| Error::<T>::SubmissionFailed)?;
+			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
 			Ok(())
 		}
 

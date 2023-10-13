@@ -10,7 +10,7 @@ use frame_support::{
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::v2::whitelisted_caller;
 
-use snowbridge_core::outbound::{Message, MessageHash, ParaId, Priority, SubmitError};
+use snowbridge_core::outbound::{Message, MessageHash, ParaId, SubmitError};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -180,7 +180,7 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 		Ok(message.clone())
 	}
 
-	fn submit(_ticket: Self::Ticket, _: Priority) -> Result<MessageHash, SubmitError> {
+	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 		Ok(MessageHash::zero())
 	}
 }

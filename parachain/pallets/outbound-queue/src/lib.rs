@@ -111,7 +111,6 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
-	use snowbridge_core::outbound::Priority;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -131,6 +130,10 @@ pub mod pallet {
 		/// Max number of messages processed per block
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
+
+		/// The ID of this parachain
+		#[pallet::constant]
+		type OwnParaId: Get<ParaId>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -178,7 +181,7 @@ pub mod pallet {
 	pub(super) type Messages<T: Config> = StorageValue<_, Vec<PreparedMessage>, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LowPriorityMessageCount<T: Config> = StorageValue<_, u32, ValueQuery>;
+	pub(super) type PendingHighPriorityMessageCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Hashes of the ABI-encoded messages in the [`Messages`] storage value. Used to generate a
 	/// merkle root during `on_finalize`. This storage value is killed in
@@ -212,7 +215,6 @@ pub mod pallet {
 	{
 		fn on_initialize(_: BlockNumberFor<T>) -> Weight {
 			// Remove storage from previous block
-			LowPriorityMessageCount::<T>::kill();
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
 			// Reserve some weight for the `on_finalize` handler
@@ -273,12 +275,25 @@ pub mod pallet {
 		}
 
 		/// Process a message delivered by the MessageQueue pallet
-		pub(crate) fn do_process_message(
-			mut message: &[u8],
-			priority: Priority,
-		) -> Result<bool, ProcessMessageError> {
+		pub(crate) fn do_process_message(mut message: &[u8]) -> Result<bool, ProcessMessageError> {
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
+
+			let halt_check_required = !matches!(
+				enqueued_message.command,
+				Command::Upgrade { .. } | Command::SetOperatingMode { .. }
+			);
+			if halt_check_required {
+				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
+			}
+
+			// Yield low priority message if there was pending high priority message
+			let high_priority = enqueued_message.origin == T::OwnParaId::get();
+			if high_priority {
+				PendingHighPriorityMessageCount::<T>::mutate(|count| {
+					*count = count.saturating_sub(1)
+				});
+			}
 
 			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
 
@@ -300,12 +315,6 @@ pub mod pallet {
 			Messages::<T>::append(Box::new(message));
 			MessageLeaves::<T>::append(message_abi_encoded_hash);
 			Nonce::<T>::set(enqueued_message.origin, next_nonce);
-
-			if priority == Priority::Normal {
-				LowPriorityMessageCount::<T>::set(
-					LowPriorityMessageCount::<T>::get().saturating_add(1),
-				);
-			}
 
 			Self::deposit_event(Event::MessageAccepted {
 				id: enqueued_message.id,
@@ -351,66 +360,57 @@ pub mod pallet {
 			Ok(ticket)
 		}
 
-		fn submit(ticket: Self::Ticket, priority: Priority) -> Result<MessageHash, SubmitError> {
-			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
-			match priority {
-				Priority::Normal => {
-					T::MessageQueue::enqueue_message(
-						ticket.message.as_bounded_slice(),
-						AggregateMessageOrigin::Parachain(ticket.origin),
-					);
-					Self::deposit_event(Event::MessageQueued { id: ticket.id });
-				},
-				Priority::High => {
-					ensure!(
-						MessageLeaves::<T>::decode_len().unwrap_or(0) <
-							T::MaxMessagesPerBlock::get() as usize,
-						SubmitError::MessagesOverLimit
-					);
-					Self::do_process_message(&ticket.message.as_bounded_slice(), priority)
-						.map_err(|_| SubmitError::MessageProcessError)?;
-				},
+		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			// The assumption here is that message from bridgeHub is always high priority and
+			// message from other sibling chain is low priority
+			let high_priority = ticket.origin == T::OwnParaId::get();
+			if high_priority {
+				PendingHighPriorityMessageCount::<T>::mutate(|count| {
+					*count = count.saturating_add(1)
+				});
+			} else {
+				Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 			}
-
+			T::MessageQueue::enqueue_message(
+				ticket.message.as_bounded_slice(),
+				AggregateMessageOrigin::Parachain(ticket.origin),
+			);
+			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
 		}
 	}
 
 	impl<T: Config> ProcessMessage for Pallet<T> {
 		type Origin = AggregateMessageOrigin;
+		#[allow(clippy::clone_double_ref)]
 		fn process_message(
 			message: &[u8],
-			_origin: Self::Origin,
+			origin: Self::Origin,
 			meter: &mut frame_support::weights::WeightMeter,
 			_: &mut [u8; 32],
 		) -> Result<bool, ProcessMessageError> {
-			// Make sure the bridge not halted
-			Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
-			// Yield if we don't want to accept any more messages in the current block.
-			// There is hard limit to ensure the weight of `on_finalize` is bounded.
-
-			let total_messages_count = MessageLeaves::<T>::decode_len().unwrap_or(0);
-			let low_priority_messages_count = LowPriorityMessageCount::<T>::get();
-			let messages_hard_limit = T::MaxMessagesPerBlock::get() as usize;
-			let low_priority_messages_hard_limit =
-				// reserve space only when there exist high priority message
-				if total_messages_count > low_priority_messages_count as usize {
-					T::MaxMessagesPerBlock::get() * 4 / 5
-				} else {
-					T::MaxMessagesPerBlock::get()
-				};
+			// Yield for hard limit to ensure the weight of `on_finalize` is bounded.
 			ensure!(
-				LowPriorityMessageCount::<T>::get() < low_priority_messages_hard_limit &&
-					total_messages_count < messages_hard_limit,
+				MessageLeaves::<T>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerBlock::get() as usize,
 				ProcessMessageError::Yield
 			);
+
+			// Yield low priority message if there was pending high priority message
+			let high_priority = origin == AggregateMessageOrigin::Parachain(T::OwnParaId::get());
+			if !high_priority {
+				ensure!(
+					PendingHighPriorityMessageCount::<T>::get() == 0,
+					ProcessMessageError::Yield
+				);
+			}
 
 			let weight = T::WeightInfo::do_process_message();
 			if !meter.check_accrue(weight) {
 				return Err(ProcessMessageError::Overweight(weight))
 			}
 
-			Self::do_process_message(message, Priority::Normal)
+			Self::do_process_message(message)
 		}
 	}
 }
