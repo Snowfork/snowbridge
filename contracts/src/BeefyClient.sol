@@ -417,6 +417,12 @@ contract BeefyClient {
         }
     }
 
+    // Calculates the number of signature samples required by validator set lenght and the number of times a validator
+    // was used.
+    //
+    // ceil(log2(validatorSetLen)) + 1 * 2 ceil(log2(signatureUseCount))
+    //
+    // See https://hackmd.io/9OedC7icR5m-in_moUZ_WQ for full analysis.
     function signatureSamples(uint256 validatorSetLen, uint256 signatureUseCount) internal view returns (uint256) {
         // There are less validators than the minimum signatures so validate 2/3 majority.
         if (validatorSetLen <= minimumSignatureSamples) {
