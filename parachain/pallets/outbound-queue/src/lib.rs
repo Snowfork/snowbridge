@@ -48,10 +48,19 @@ use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 pub use weights::WeightInfo;
 
+/// Priority
+#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum Priority {
+	Low,
+	High,
+}
+
 /// Aggregate message origin for the `MessageQueue` pallet.
 #[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum AggregateMessageOrigin {
 	#[codec(index = 0)]
+	SelfChain(Priority),
+	#[codec(index = 1)]
 	Parachain(ParaId),
 }
 
@@ -279,17 +288,11 @@ pub mod pallet {
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
 
-			// Skp halt check for Upgrade and SetOperatingMode
-			let halt_check_required = !matches!(
+			// Decrease PendingHighPriorityMessageCount for high priority message
+			let high_priority = matches!(
 				enqueued_message.command,
 				Command::Upgrade { .. } | Command::SetOperatingMode { .. }
 			);
-			if halt_check_required {
-				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
-			}
-
-			// Decrease PendingHighPriorityMessageCount for high priority message
-			let high_priority = enqueued_message.origin == T::OwnParaId::get();
 			if high_priority {
 				PendingHighPriorityMessageCount::<T>::mutate(|count| {
 					*count = count.saturating_sub(1)
@@ -332,6 +335,7 @@ pub mod pallet {
 		id: H256,
 		origin: ParaId,
 		message: BoundedVec<u8, MaxMessageSize>,
+		priority: Priority,
 	}
 
 	impl<T: Config> OutboundQueueTrait for Pallet<T> {
@@ -356,27 +360,42 @@ pub mod pallet {
 			// The whole message should not be too large
 			let encoded = message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
 
-			let ticket =
-				OutboundQueueTicket { id: message.id, origin: message.origin, message: encoded };
+			let priority = match message.command {
+				Command::Upgrade { .. } | Command::SetOperatingMode { .. } => Priority::High,
+				_ => Priority::Low,
+			};
+
+			let ticket = OutboundQueueTicket {
+				id: message.id,
+				origin: message.origin,
+				message: encoded,
+				priority,
+			};
+
 			Ok(ticket)
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			// The assumption here is that message from bridgeHub is always high priority and
 			// message from other sibling chain is low priority
-			let high_priority = ticket.origin == T::OwnParaId::get();
-			if high_priority {
-				// Increase PendingHighPriorityMessageCount for high priority message
-				PendingHighPriorityMessageCount::<T>::mutate(|count| {
-					*count = count.saturating_add(1)
-				});
+			let self_chain = ticket.origin == T::OwnParaId::get();
+			let origin: AggregateMessageOrigin;
+			if self_chain {
+				if ticket.priority == Priority::High {
+					origin = AggregateMessageOrigin::SelfChain(Priority::High);
+					// Increase PendingHighPriorityMessageCount for high priority message
+					PendingHighPriorityMessageCount::<T>::mutate(|count| {
+						*count = count.saturating_add(1)
+					});
+				} else {
+					origin = AggregateMessageOrigin::SelfChain(Priority::Low);
+					Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
+				}
 			} else {
+				origin = AggregateMessageOrigin::Parachain(ticket.origin);
 				Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 			}
-			T::MessageQueue::enqueue_message(
-				ticket.message.as_bounded_slice(),
-				AggregateMessageOrigin::Parachain(ticket.origin),
-			);
+			T::MessageQueue::enqueue_message(ticket.message.as_bounded_slice(), origin);
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
 		}
@@ -398,9 +417,10 @@ pub mod pallet {
 				ProcessMessageError::Yield
 			);
 
-			// Yield for low priority message if there was pending high priority message
-			let high_priority = origin == AggregateMessageOrigin::Parachain(T::OwnParaId::get());
-			if !high_priority {
+			// Skip halt check for high priority messages from bridge hub and yield for low priority
+			// message if there was pending high priority message
+			if origin != AggregateMessageOrigin::SelfChain(Priority::High) {
+				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
 				ensure!(
 					PendingHighPriorityMessageCount::<T>::get() == 0,
 					ProcessMessageError::Yield
