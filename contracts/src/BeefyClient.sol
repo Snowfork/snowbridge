@@ -417,8 +417,8 @@ contract BeefyClient {
         }
     }
 
-    // Calculates the number of signature samples required by validator set lenght and the number of times a validator
-    // was used.
+    // Calculates the number of signature samples required by validator set length and the number of times a validator
+    // signature was used.
     //
     // ceil(log2(validatorSetLen)) + 1 * 2 ceil(log2(signatureUseCount))
     //
