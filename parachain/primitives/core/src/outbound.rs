@@ -37,10 +37,6 @@ pub enum SubmitError {
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
 	BridgeHalted,
-	/// Messages in temp storage over-limit
-	MessagesOverLimit,
-	/// Message process error
-	MessageProcessError,
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]

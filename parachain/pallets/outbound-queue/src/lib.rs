@@ -279,6 +279,7 @@ pub mod pallet {
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
 
+			// Skp halt check for Upgrade and SetOperatingMode
 			let halt_check_required = !matches!(
 				enqueued_message.command,
 				Command::Upgrade { .. } | Command::SetOperatingMode { .. }
@@ -287,7 +288,7 @@ pub mod pallet {
 				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
 			}
 
-			// Yield low priority message if there was pending high priority message
+			// Decrease PendingHighPriorityMessageCount for high priority message
 			let high_priority = enqueued_message.origin == T::OwnParaId::get();
 			if high_priority {
 				PendingHighPriorityMessageCount::<T>::mutate(|count| {
@@ -365,6 +366,7 @@ pub mod pallet {
 			// message from other sibling chain is low priority
 			let high_priority = ticket.origin == T::OwnParaId::get();
 			if high_priority {
+				// Increase PendingHighPriorityMessageCount for high priority message
 				PendingHighPriorityMessageCount::<T>::mutate(|count| {
 					*count = count.saturating_add(1)
 				});
@@ -396,7 +398,7 @@ pub mod pallet {
 				ProcessMessageError::Yield
 			);
 
-			// Yield low priority message if there was pending high priority message
+			// Yield for low priority message if there was pending high priority message
 			let high_priority = origin == AggregateMessageOrigin::Parachain(T::OwnParaId::get());
 			if !high_priority {
 				ensure!(
