@@ -288,7 +288,7 @@ pub mod pallet {
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
 
-			// Decrease PendingHighPriorityMessageCount for high priority message
+			// Decrease PendingHighPriorityMessageCount by one
 			let high_priority = matches!(
 				enqueued_message.command,
 				Command::Upgrade { .. } | Command::SetOperatingMode { .. }
@@ -376,14 +376,12 @@ pub mod pallet {
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-			// The assumption here is that message from bridgeHub is always high priority and
-			// message from other sibling chain is low priority
-			let self_chain = ticket.origin == T::OwnParaId::get();
+			let from_self = ticket.origin == T::OwnParaId::get();
 			let origin: AggregateMessageOrigin;
-			if self_chain {
+			if from_self {
 				if ticket.priority == Priority::High {
 					origin = AggregateMessageOrigin::SelfChain(Priority::High);
-					// Increase PendingHighPriorityMessageCount for high priority message
+					// Increase PendingHighPriorityMessageCount by one
 					PendingHighPriorityMessageCount::<T>::mutate(|count| {
 						*count = count.saturating_add(1)
 					});
@@ -417,8 +415,7 @@ pub mod pallet {
 				ProcessMessageError::Yield
 			);
 
-			// Skip halt check for high priority messages from bridge hub and yield for low priority
-			// message if there was pending high priority message
+			// Yield for halt check or if there is pending high priority message
 			if origin != AggregateMessageOrigin::SelfChain(Priority::High) {
 				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
 				ensure!(
