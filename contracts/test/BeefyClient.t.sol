@@ -183,6 +183,8 @@ contract BeefyClientTest is Test {
         );
 
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 0);
         return commitment;
     }
 
@@ -381,6 +383,8 @@ contract BeefyClientTest is Test {
 
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 0);
     }
 
     function testSubmitWithHandoverCountersAreCopiedCorrectly() public {
