@@ -349,6 +349,7 @@ contract BeefyClient {
             nextValidatorSet.id = leaf.nextAuthoritySetID;
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+            currentValidatorSetCounters = nextValidatorSetCounters;
             nextValidatorSetCounters = Counter.createCounter(leaf.nextAuthoritySetLen);
         }
 

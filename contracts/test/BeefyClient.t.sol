@@ -373,6 +373,33 @@ contract BeefyClientTest is Test {
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
     }
 
+    function testSubmitWithHandoverCountersAreCopiedCorrectly() public {
+        //initialize with previous set
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+
+        // submit with the first validator
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[1]);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[1].index), 0);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[1].index), 1);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 1);
+
+        vm.roll(block.number + randaoCommitDelay);
+
+        commitPrevRandao();
+
+        createFinalProofs();
+
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
+        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 0);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[1].index), 1);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[1].index), 0);
+    }
+
     function testSubmitWithHandoverAnd3SignatureCount() public {
         //initialize with previous set
         BeefyClient.Commitment memory commitment = initialize(setId - 1);

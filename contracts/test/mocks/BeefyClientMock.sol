@@ -5,6 +5,8 @@ import {BeefyClient} from "../../src/BeefyClient.sol";
 import {Counter} from "../../src/utils/Counter.sol";
 
 contract BeefyClientMock is BeefyClient {
+    using Counter for uint256[];
+
     constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration, uint256 minimumSignatureSamples)
         BeefyClient(
             randaoCommitDelay,
@@ -38,6 +40,13 @@ contract BeefyClientMock is BeefyClient {
         currentValidatorSetCounters = Counter.createCounter(currentValidatorSet.length);
         nextValidatorSet = _nextValidatorSet;
         nextValidatorSetCounters = Counter.createCounter(nextValidatorSet.length);
+    }
+
+    function getValidatorCounter(bool next, uint256 index) public view returns (uint16) {
+        if (next) {
+            return nextValidatorSetCounters.get(index);
+        }
+        return currentValidatorSetCounters.get(index);
     }
 
     function signatureSamples_public(uint256 validatorSetLen, uint256 signatureUseCount)
