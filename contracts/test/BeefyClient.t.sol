@@ -14,6 +14,12 @@ import {Bitfield} from "../src/utils/Bitfield.sol";
 contract BeefyClientTest is Test {
     using stdJson for string;
 
+    struct SignatureSampleTest {
+        uint256 result;
+        uint256 validatorsLen;
+        uint16 signatureUseCount;
+    }
+
     BeefyClientMock beefyClient;
     uint8 randaoCommitDelay;
     uint8 randaoCommitExpiration;
@@ -668,69 +674,83 @@ contract BeefyClientTest is Test {
     }
 
     function testSignatureSampleWithUseMajorityIfVsetIsSmallerThanMinSignatures() public {
-        assertEq(7, beefyClient.signatureSamples_public(9, 0));
-        assertEq(11, beefyClient.signatureSamples_public(16, 0));
-        assertEq(16, beefyClient.signatureSamples_public(17, 0));
+        SignatureSampleTest[3] memory tests =
+            [SignatureSampleTest(7, 9, 0), SignatureSampleTest(11, 16, 0), SignatureSampleTest(16, 17, 0)];
+        for (uint256 i = 0; i < tests.length; ++i) {
+            SignatureSampleTest memory test = tests[i];
+            assertEq(test.result, beefyClient.signatureSamples_public(test.validatorsLen, test.signatureUseCount));
+        }
     }
 
     function testSignatureSampleNeverYieldsASampleGreaterThanTheValidatorSetLength() public {
-        assertEq(17, beefyClient.signatureSamples_public(18, 0));
-        assertEq(18, beefyClient.signatureSamples_public(19, 0));
-        assertEq(18, beefyClient.signatureSamples_public(20, 0));
-        assertEq(19, beefyClient.signatureSamples_public(21, 0));
-        assertEq(20, beefyClient.signatureSamples_public(30, 0));
-
-        assertEq(29, beefyClient.signatureSamples_public(30, 10));
-        assertEq(30, beefyClient.signatureSamples_public(30, 17));
+        SignatureSampleTest[7] memory tests = [
+            SignatureSampleTest(17, 18, 0),
+            SignatureSampleTest(18, 19, 0),
+            SignatureSampleTest(18, 20, 0),
+            SignatureSampleTest(19, 21, 0),
+            SignatureSampleTest(20, 30, 0),
+            SignatureSampleTest(29, 30, 10),
+            SignatureSampleTest(30, 30, 17)
+        ];
+        for (uint256 i = 0; i < tests.length; ++i) {
+            SignatureSampleTest memory test = tests[i];
+            assertEq(test.result, beefyClient.signatureSamples_public(test.validatorsLen, test.signatureUseCount));
+        }
     }
 
     function testSignatureSamplingRanges() public {
-        assertEq(25, beefyClient.signatureSamples_public(setSize, 0));
-        assertEq(26, beefyClient.signatureSamples_public(setSize, 1));
-        assertEq(28, beefyClient.signatureSamples_public(setSize, 2));
-        assertEq(30, beefyClient.signatureSamples_public(setSize, 3));
-        assertEq(30, beefyClient.signatureSamples_public(setSize, 4));
-        assertEq(32, beefyClient.signatureSamples_public(setSize, 5));
-        assertEq(32, beefyClient.signatureSamples_public(setSize, 6));
-        assertEq(32, beefyClient.signatureSamples_public(setSize, 8));
-        assertEq(34, beefyClient.signatureSamples_public(setSize, 9));
-        assertEq(34, beefyClient.signatureSamples_public(setSize, 12));
-        assertEq(34, beefyClient.signatureSamples_public(setSize, 16));
-        assertEq(36, beefyClient.signatureSamples_public(setSize, 17));
-        assertEq(36, beefyClient.signatureSamples_public(setSize, 24));
-        assertEq(36, beefyClient.signatureSamples_public(setSize, 32));
-        assertEq(38, beefyClient.signatureSamples_public(setSize, 33));
-        assertEq(38, beefyClient.signatureSamples_public(setSize, 48));
-        assertEq(38, beefyClient.signatureSamples_public(setSize, 64));
-        assertEq(40, beefyClient.signatureSamples_public(setSize, 65));
-        assertEq(40, beefyClient.signatureSamples_public(setSize, 96));
-        assertEq(40, beefyClient.signatureSamples_public(setSize, 128));
-        assertEq(42, beefyClient.signatureSamples_public(setSize, 129));
-        assertEq(42, beefyClient.signatureSamples_public(setSize, 192));
-        assertEq(42, beefyClient.signatureSamples_public(setSize, 256));
-        assertEq(44, beefyClient.signatureSamples_public(setSize, 257));
-        assertEq(44, beefyClient.signatureSamples_public(setSize, 384));
-        assertEq(44, beefyClient.signatureSamples_public(setSize, 512));
-        assertEq(46, beefyClient.signatureSamples_public(setSize, 513));
-        assertEq(46, beefyClient.signatureSamples_public(setSize, 768));
-        assertEq(46, beefyClient.signatureSamples_public(setSize, 1024));
-        assertEq(48, beefyClient.signatureSamples_public(setSize, 1025));
-        assertEq(48, beefyClient.signatureSamples_public(setSize, 1536));
-        assertEq(48, beefyClient.signatureSamples_public(setSize, 2048));
-        assertEq(50, beefyClient.signatureSamples_public(setSize, 2049));
-        assertEq(50, beefyClient.signatureSamples_public(setSize, 3072));
-        assertEq(50, beefyClient.signatureSamples_public(setSize, 4096));
-        assertEq(52, beefyClient.signatureSamples_public(setSize, 4097));
-        assertEq(52, beefyClient.signatureSamples_public(setSize, 6144));
-        assertEq(52, beefyClient.signatureSamples_public(setSize, 8192));
-        assertEq(54, beefyClient.signatureSamples_public(setSize, 8193));
-        assertEq(54, beefyClient.signatureSamples_public(setSize, 12288));
-        assertEq(54, beefyClient.signatureSamples_public(setSize, 16384));
-        assertEq(56, beefyClient.signatureSamples_public(setSize, 16385));
-        assertEq(56, beefyClient.signatureSamples_public(setSize, 24576));
-        assertEq(56, beefyClient.signatureSamples_public(setSize, 32768));
-        assertEq(58, beefyClient.signatureSamples_public(setSize, 32769));
-        assertEq(58, beefyClient.signatureSamples_public(setSize, 49152));
-        assertEq(58, beefyClient.signatureSamples_public(setSize, 65535));
+        SignatureSampleTest[47] memory tests = [
+            SignatureSampleTest(25, setSize, 0),
+            SignatureSampleTest(26, setSize, 1),
+            SignatureSampleTest(28, setSize, 2),
+            SignatureSampleTest(30, setSize, 3),
+            SignatureSampleTest(30, setSize, 4),
+            SignatureSampleTest(32, setSize, 5),
+            SignatureSampleTest(32, setSize, 6),
+            SignatureSampleTest(32, setSize, 8),
+            SignatureSampleTest(34, setSize, 9),
+            SignatureSampleTest(34, setSize, 12),
+            SignatureSampleTest(34, setSize, 16),
+            SignatureSampleTest(36, setSize, 17),
+            SignatureSampleTest(36, setSize, 24),
+            SignatureSampleTest(36, setSize, 32),
+            SignatureSampleTest(38, setSize, 33),
+            SignatureSampleTest(38, setSize, 48),
+            SignatureSampleTest(38, setSize, 64),
+            SignatureSampleTest(40, setSize, 65),
+            SignatureSampleTest(40, setSize, 96),
+            SignatureSampleTest(40, setSize, 128),
+            SignatureSampleTest(42, setSize, 129),
+            SignatureSampleTest(42, setSize, 192),
+            SignatureSampleTest(42, setSize, 256),
+            SignatureSampleTest(44, setSize, 257),
+            SignatureSampleTest(44, setSize, 384),
+            SignatureSampleTest(44, setSize, 512),
+            SignatureSampleTest(46, setSize, 513),
+            SignatureSampleTest(46, setSize, 768),
+            SignatureSampleTest(46, setSize, 1024),
+            SignatureSampleTest(48, setSize, 1025),
+            SignatureSampleTest(48, setSize, 1536),
+            SignatureSampleTest(48, setSize, 2048),
+            SignatureSampleTest(50, setSize, 2049),
+            SignatureSampleTest(50, setSize, 3072),
+            SignatureSampleTest(50, setSize, 4096),
+            SignatureSampleTest(52, setSize, 4097),
+            SignatureSampleTest(52, setSize, 6144),
+            SignatureSampleTest(52, setSize, 8192),
+            SignatureSampleTest(54, setSize, 8193),
+            SignatureSampleTest(54, setSize, 12288),
+            SignatureSampleTest(54, setSize, 16384),
+            SignatureSampleTest(56, setSize, 16385),
+            SignatureSampleTest(56, setSize, 24576),
+            SignatureSampleTest(56, setSize, 32768),
+            SignatureSampleTest(58, setSize, 32769),
+            SignatureSampleTest(58, setSize, 49152),
+            SignatureSampleTest(58, setSize, 65535)
+        ];
+        for (uint256 i = 0; i < tests.length; ++i) {
+            SignatureSampleTest memory test = tests[i];
+            assertEq(test.result, beefyClient.signatureSamples_public(test.validatorsLen, test.signatureUseCount));
+        }
     }
 }
