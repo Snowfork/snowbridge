@@ -5,7 +5,6 @@ pragma solidity 0.8.20;
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
-import {Bits} from "./utils/Bits.sol";
 import {Counter} from "./utils/Counter.sol";
 import {Math} from "./utils/Math.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
@@ -436,35 +435,18 @@ contract BeefyClient {
 
         // We must substrate minimumSignatures from the number of validators or we might end up
         // requiring more signatures than there are validators.
-        uint256 extraValidators = validatorSetLen - minimumSignatureSamples;
-        // Using highest bit set to yield floor(log2(x))
-        uint256 validatorsLog2 = Bits.highestBitSet(extraValidators);
-        // We require ceil(log2(x)) so we round up if there were any extra bits set.
-        if (extraValidators > (1 << validatorsLog2)) {
-            validatorsLog2++;
-        }
-        samples += validatorsLog2;
-
-        // No signatures use count. Just return samples.
-        if (signatureUseCount == 0) {
-            return samples;
-        }
+        samples += Math.ceilingOfLog2(validatorSetLen - minimumSignatureSamples);
 
         // To address the concurrency issue specified in the link below:
         // https://hackmd.io/wsVcL0tZQA-Ks3b5KJilFQ?view#Solution-2-Signature-Checks-dynamically-depend-on-the-No-of-initial-Claims-per-session
         // It must be harder for a mallicious relayer to spam submitInitial to bias the RANDAO.
         // If we detect that a signature is used many times (spam), we increase the number of signature samples required on submitFinal.
-
-        // Using highest bit set to yield floor(log2(x))
-        uint256 log2SignatureUse = Bits.highestBitSet(signatureUseCount);
-        // We require ceil(log2(x)) so we round up if there were any extra bits set.
-        if (signatureUseCount > (1 << log2SignatureUse)) {
-            ++log2SignatureUse;
+        if (signatureUseCount > 0) {
+            // Based on formula provided here: https://hackmd.io/9OedC7icR5m-in_moUZ_WQ
+            samples += 1 + 2 * Math.ceilingOfLog2(signatureUseCount);
         }
-        // Based on formula provided here: https://hackmd.io/9OedC7icR5m-in_moUZ_WQ
-        samples += 1 + 2 * log2SignatureUse;
 
-        return Math.min(validatorSetLen, samples);
+        return Math.min(samples, validatorSetLen);
     }
 
     /**
