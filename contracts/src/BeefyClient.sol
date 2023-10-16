@@ -439,7 +439,7 @@ contract BeefyClient {
 
         // We must substrate minimumSignatures from the number of validators or we might end up
         // requiring more signatures than there are validators.
-        samples += Math.ceilingOfLog2(validatorSetLen - minimumSignatureSamples);
+        samples += Math.log2(validatorSetLen - minimumSignatureSamples, Math.Rounding.Ceil);
 
         // To address the concurrency issue specified in the link below:
         // https://hackmd.io/wsVcL0tZQA-Ks3b5KJilFQ?view#Solution-2-Signature-Checks-dynamically-depend-on-the-No-of-initial-Claims-per-session
@@ -447,7 +447,7 @@ contract BeefyClient {
         // If we detect that a signature is used many times (spam), we increase the number of signature samples required on submitFinal.
         if (signatureUseCount > 0) {
             // Based on formula provided here: https://hackmd.io/9OedC7icR5m-in_moUZ_WQ
-            samples += 1 + 2 * Math.ceilingOfLog2(signatureUseCount);
+            samples += 1 + 2 * Math.log2(signatureUseCount, Math.Rounding.Ceil);
         }
 
         return Math.min(samples, validatorSetLen);
