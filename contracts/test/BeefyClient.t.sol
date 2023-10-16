@@ -169,7 +169,9 @@ contract BeefyClientTest is Test {
     function testSubmit() public returns (BeefyClient.Commitment memory) {
         BeefyClient.Commitment memory commitment = initialize(setId);
 
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
 
         // mine random delay blocks
         vm.roll(block.number + randaoCommitDelay);
@@ -373,7 +375,11 @@ contract BeefyClientTest is Test {
         //initialize with previous set
         BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 0);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 1);
 
         vm.roll(block.number + randaoCommitDelay);
 
