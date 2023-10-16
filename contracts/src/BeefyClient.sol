@@ -265,14 +265,14 @@ contract BeefyClient {
             revert NotEnoughClaims();
         }
 
-        tickets[createTicketID(msg.sender, commitmentHash)] = Ticket(
-            msg.sender,
-            uint64(block.number),
-            uint32(vset.length),
-            signatureSamples(vset.length, signatureCount),
-            0,
-            keccak256(abi.encodePacked(bitfield))
-        );
+        tickets[createTicketID(msg.sender, commitmentHash)] = Ticket({
+            account: msg.sender,
+            blockNumber: uint64(block.number),
+            validatorSetLen: uint32(vset.length),
+            signatureCountRequired: signatureSamples(vset.length, signatureCount),
+            prevRandao: 0,
+            bitfieldHash: keccak256(abi.encodePacked(bitfield))
+        });
     }
 
     /**
