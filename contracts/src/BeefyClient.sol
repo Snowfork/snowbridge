@@ -147,6 +147,7 @@ contract BeefyClient {
     ValidatorSet public currentValidatorSet;
     ValidatorSet public nextValidatorSet;
 
+    // The validator signature counters for the current and next validator sets.
     uint256[] currentValidatorSetCounters;
     uint256[] nextValidatorSetCounters;
 
@@ -419,7 +420,7 @@ contract BeefyClient {
     }
 
     // Calculates the number of signature samples required by validator set length and the number of times a validator
-    // signature was used.
+    // signature was with a call to `submitInitial`.
     //
     // ceil(log2(validatorSetLen)) + 1 * 2 ceil(log2(signatureUseCount))
     //
