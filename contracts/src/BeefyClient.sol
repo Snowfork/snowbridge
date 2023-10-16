@@ -419,12 +419,15 @@ contract BeefyClient {
         }
     }
 
-    // Calculates the number of signature samples required by validator set length and the number of times a validator
-    // signature was with a call to `submitInitial`.
-    //
-    // ceil(log2(validatorSetLen)) + 1 * 2 ceil(log2(signatureUseCount))
-    //
-    // See https://hackmd.io/9OedC7icR5m-in_moUZ_WQ for full analysis.
+    /**
+     * @dev Calculates the number of signature samples required for `submitFinal`.
+     * @param validatorSetLen The validator set length.
+     * @param signatureUseCount The count of how many times a validators signature was previously used in a call to `submitInitial`.
+     *
+     *  ceil(log2(validatorSetLen)) + 1 * 2 ceil(log2(signatureUseCount))
+     *
+     * See https://hackmd.io/9OedC7icR5m-in_moUZ_WQ for full analysis.
+     */
     function signatureSamples(uint256 validatorSetLen, uint256 signatureUseCount) internal view returns (uint256) {
         // There are less validators than the minimum signatures so validate 2/3 majority.
         if (validatorSetLen <= minimumSignatureSamples) {
@@ -440,7 +443,7 @@ contract BeefyClient {
 
         // To address the concurrency issue specified in the link below:
         // https://hackmd.io/wsVcL0tZQA-Ks3b5KJilFQ?view#Solution-2-Signature-Checks-dynamically-depend-on-the-No-of-initial-Claims-per-session
-        // It must be harder for a mallicious relayer to spam submitInitial to bias the RANDAO.
+        // It must be harder for a malicious relayer to spam submitInitial to bias the RANDAO.
         // If we detect that a signature is used many times (spam), we increase the number of signature samples required on submitFinal.
         if (signatureUseCount > 0) {
             // Based on formula provided here: https://hackmd.io/9OedC7icR5m-in_moUZ_WQ
