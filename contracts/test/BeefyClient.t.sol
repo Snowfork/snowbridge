@@ -190,18 +190,24 @@ contract BeefyClientTest is Test {
         BeefyClient.Commitment memory commitment = initialize(setId);
 
         // Signature count is 0 for the first submitInitial.
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
         // Signature count is now 1 after a second submitInitial.
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
         // Signature count is still 1 because we use another validator.
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[1].index), 0);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[1]);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[1].index), 1);
 
         // Signature count is now 2 after a third submitInitial.
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 2);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
         // Signature count is now 3 after a forth submitInitial.
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 3);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
         // mine random delay blocks
@@ -216,6 +222,10 @@ contract BeefyClientTest is Test {
         );
 
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 4);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 0);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[1].index), 1);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[1].index), 0);
         return commitment;
     }
 
@@ -405,18 +415,24 @@ contract BeefyClientTest is Test {
         BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
         // Signature count is 0 for the first submitInitial.
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 0);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
         // Signature count is now 1 after a second submitInitial.
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 1);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
         // Signature count is still 1 because we use another validator.
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[1].index), 0);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[1]);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[1].index), 1);
 
         // Signature count is now 2 after a third submitInitial.
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 2);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
         // Signature count is now 3 after a forth submitInitial.
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 3);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
         vm.roll(block.number + randaoCommitDelay);
@@ -429,6 +445,10 @@ contract BeefyClientTest is Test {
             commitment, bitfield, finalValidatorProofs3SignatureCount, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 4);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 0);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[1].index), 1);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[1].index), 0);
     }
 
     function testSubmitWithHandoverFailWithInvalidValidatorProofWhenNotProvidingSignatureCount() public {
