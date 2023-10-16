@@ -7,6 +7,7 @@ import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
 import {Bits} from "./utils/Bits.sol";
 import {Counter} from "./utils/Counter.sol";
+import {Math} from "./utils/Math.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
@@ -463,12 +464,7 @@ contract BeefyClient {
         // Based on formula provided here: https://hackmd.io/9OedC7icR5m-in_moUZ_WQ
         samples += 1 + 2 * log2SignatureUse;
 
-        // Make sure that samples are bounded by the validatorSetLength
-        if (samples > validatorSetLen) {
-            samples = validatorSetLen;
-        }
-
-        return samples;
+        return Math.min(validatorSetLen, samples);
     }
 
     /**
