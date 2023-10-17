@@ -45,10 +45,6 @@ contract Gateway is IGateway, IInitializable {
     // Fixed amount of gas used outside the gas metering in submitInbound
     uint256 BASE_GAS_USED = 31000;
 
-    // Minimum amount of gas required to transfer ether
-    // from an agent to a relayer.
-    uint256 MINIMUM_THRESHOLD_GAS = 21000;
-
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
@@ -180,24 +176,23 @@ contract Gateway is IGateway, IInitializable {
             }
         }
 
-        // Calculate the funds available in the channel agent contract. If the amount
-        // is less than the cost to actually transfer the funds to the relayer, then
-        // bypass the transfer.
-        uint256 agentBalance = channel.agent.balance;
-        if (channel.agent.balance <= MINIMUM_THRESHOLD_GAS * tx.gasprice) {
-            agentBalance = 0;
-        }
-
-        // Calculate the gas refund
+        // Calculate the actual cost of executing this message
         uint256 gasUsed = startGas - gasleft() + BASE_GAS_USED;
-        uint256 refund = gasUsed * tx.gasprice;
+        uint256 calculatedRefund = gasUsed * tx.gasprice;
+
+        // If the actual refund amount is less than the estimated maximum refund, then
+        // reduce the amount paid out accordingly
+        uint256 amount = message.maxRefund;
+        if (message.maxRefund > calculatedRefund) {
+            amount = calculatedRefund;
+        }
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, agentBalance);
+        amount = Math.min(amount + message.reward, address(channel.agent).balance);
 
         // Do the payment if there funds available in the agent
-        if (amount > 0) {
+        if (amount > dustThreshold()) {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
         }
 
@@ -530,6 +525,11 @@ contract Gateway is IGateway, IInitializable {
     function _transferNativeFromAgent(address agent, address payable recipient, uint256 amount) internal {
         bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
         _invokeOnAgent(agent, call);
+    }
+
+    /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
+    function dustThreshold() internal view returns (uint256) {
+        return 21000 * tx.gasprice;
     }
 
     /**

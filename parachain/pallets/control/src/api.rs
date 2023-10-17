@@ -3,12 +3,9 @@
 //! Helpers for implementing runtime api
 
 use snowbridge_core::AgentId;
-use xcm::{
-	prelude::*,
-	VersionedMultiLocation,
-};
+use xcm::{prelude::*, VersionedMultiLocation};
 
-use crate::{Config, agent_id_of};
+use crate::{agent_id_of, Config};
 
 pub fn agent_id<Runtime>(location: VersionedMultiLocation) -> Option<AgentId>
 where
