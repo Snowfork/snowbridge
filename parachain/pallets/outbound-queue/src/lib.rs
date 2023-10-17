@@ -338,7 +338,7 @@ pub mod pallet {
 
 			let priority = match message.command {
 				Command::Upgrade { .. } | Command::SetOperatingMode { .. } => Priority::High,
-				_ => Priority::Low,
+				_ => Priority::Normal,
 			};
 
 			let ticket = OutboundQueueTicket {
@@ -362,7 +362,7 @@ pub mod pallet {
 						*count = count.saturating_add(1)
 					});
 				} else {
-					origin = AggregateMessageOrigin::SelfChain(Priority::Low);
+					origin = AggregateMessageOrigin::SelfChain(Priority::Normal);
 					Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
 				}
 			} else {

@@ -353,7 +353,7 @@ pub struct OriginInfo {
 /// Priority
 #[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum Priority {
-	Low,
+	Normal,
 	High,
 }
 
