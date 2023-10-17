@@ -35,13 +35,12 @@ use frame_support::{
 };
 use snowbridge_core::ParaId;
 use sp_core::H256;
-use sp_runtime::traits::{Saturating, Hash};
+use sp_runtime::traits::{Hash, Saturating};
 use sp_std::prelude::*;
 
 use snowbridge_core::outbound::{
-	AggregateMessageOrigin, EnqueuedMessage, Message, MessageHash,
-	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
-	SubmitError, GasMeter, Command,
+	AggregateMessageOrigin, Command, EnqueuedMessage, GasMeter, Message, MessageHash,
+	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage, SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 

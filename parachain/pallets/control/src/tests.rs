@@ -412,10 +412,7 @@ fn set_operating_mode_as_signed_fails() {
 #[test]
 fn transfer_native_from_agent() {
 	new_test_ext().execute_with(|| {
-		let origin_location = MultiLocation {
-			parents: 1,
-			interior: X1(Parachain(2000)),
-		};
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
 		let recipient: H160 = [27u8; 20].into();
 		let amount = 103435;
 
@@ -439,10 +436,7 @@ fn transfer_native_from_agent() {
 fn force_transfer_native_from_agent() {
 	new_test_ext().execute_with(|| {
 		let origin = RuntimeOrigin::root();
-		let location = MultiLocation {
-			parents: 1,
-			interior: X1(Parachain(2000)),
-		};
+		let location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
 		let versioned_location: Box<VersionedMultiLocation> = Box::new(location.into());
 		let recipient: H160 = [27u8; 20].into();
 		let amount = 103435;

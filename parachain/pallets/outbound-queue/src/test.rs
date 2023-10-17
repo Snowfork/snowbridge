@@ -9,7 +9,7 @@ use frame_support::{
 };
 
 use snowbridge_core::outbound::{Command, Initializer};
-use sp_core::{H160, H256, ConstU128};
+use sp_core::{ConstU128, H160, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
@@ -193,12 +193,10 @@ fn submit_message_fail_too_large() {
 			command: Command::Upgrade {
 				impl_address: H160::zero(),
 				impl_code_hash: H256::zero(),
-				initializer: Some(
-					Initializer {
-						params: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
-						maximum_required_gas: 0
-					}
-				),
+				initializer: Some(Initializer {
+					params: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
+					maximum_required_gas: 0,
+				}),
 			},
 		};
 

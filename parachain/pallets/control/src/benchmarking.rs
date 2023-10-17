@@ -7,16 +7,13 @@ use super::*;
 use crate::Pallet as SnowbridgeControl;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
-use sp_runtime::traits::AccountIdConversion;
 use snowbridge_core::outbound::OperatingMode;
+use sp_runtime::traits::AccountIdConversion;
 use xcm::prelude::*;
 
 fn fund_sovereign_account<T: Config>(para_id: ParaId) -> Result<(), BenchmarkError> {
 	let amount: BalanceOf<T> = u16::MAX.into();
-	T::Token::mint_into(
-		&para_id.into_account_truncating(),
-		amount,
-	)?;
+	T::Token::mint_into(&para_id.into_account_truncating(), amount)?;
 	Ok(())
 }
 
@@ -33,7 +30,12 @@ mod benchmarks {
 		let params: Vec<u8> = (0..256).map(|_| 1u8).collect();
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, impl_address, impl_code_hash, Some(Initializer { params, maximum_required_gas: 100000}));
+		_(
+			RawOrigin::Root,
+			impl_address,
+			impl_code_hash,
+			Some(Initializer { params, maximum_required_gas: 100000 }),
+		);
 
 		Ok(())
 	}
@@ -41,7 +43,7 @@ mod benchmarks {
 	#[benchmark]
 	fn create_agent() -> Result<(), BenchmarkError> {
 		let origin_para_id = 2000;
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 
@@ -54,7 +56,7 @@ mod benchmarks {
 	#[benchmark]
 	fn create_channel() -> Result<(), BenchmarkError> {
 		let origin_para_id = 2000;
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 
@@ -69,7 +71,7 @@ mod benchmarks {
 	#[benchmark]
 	fn update_channel() -> Result<(), BenchmarkError> {
 		let origin_para_id = 2000;
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
@@ -84,7 +86,7 @@ mod benchmarks {
 	#[benchmark]
 	fn force_update_channel() -> Result<(), BenchmarkError> {
 		let origin_para_id = 2000;
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
@@ -93,7 +95,12 @@ mod benchmarks {
 		let versioned_location: VersionedMultiLocation = origin_location.into();
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, Box::new(versioned_location), OperatingMode::RejectingOutboundMessages, 1);
+		_(
+			RawOrigin::Root,
+			Box::new(versioned_location),
+			OperatingMode::RejectingOutboundMessages,
+			1,
+		);
 
 		Ok(())
 	}
@@ -109,7 +116,7 @@ mod benchmarks {
 	#[benchmark]
 	fn transfer_native_from_agent() -> Result<(), BenchmarkError> {
 		let origin_para_id = 2000;
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
@@ -123,13 +130,12 @@ mod benchmarks {
 	#[benchmark]
 	fn force_transfer_native_from_agent() -> Result<(), BenchmarkError> {
 		let origin_para_id = 2000;
-		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id))};
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
 
 		let versioned_location: VersionedMultiLocation = origin_location.into();
-
 
 		#[extrinsic_call]
 		_(RawOrigin::Root, Box::new(versioned_location), H160::default(), 1);

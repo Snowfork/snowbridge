@@ -28,7 +28,7 @@ pub mod weights;
 pub use weights::*;
 
 use frame_support::traits::fungible::{Inspect, Mutate};
-use sp_core::{H160, H256, RuntimeDebug};
+use sp_core::{RuntimeDebug, H160, H256};
 use sp_runtime::{
 	traits::{AccountIdConversion, BadOrigin, Hash},
 	DispatchError,
@@ -51,8 +51,7 @@ pub use pallet::*;
 
 pub type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
-pub type AccountIdOf<T> =
-	<T as frame_system::Config>::AccountId;
+pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 /// Ensure origin location is a sibling
 fn ensure_sibling<T>(location: &MultiLocation) -> Result<(ParaId, H256), DispatchError>
@@ -85,10 +84,10 @@ where
 #[derive(Clone, PartialEq, RuntimeDebug)]
 enum PaysFee<T>
 where
-	T: Config
+	T: Config,
 {
 	Yes(AccountIdOf<T>),
-	No
+	No,
 }
 
 #[frame_support::pallet]
@@ -383,8 +382,8 @@ pub mod pallet {
 			// Ensure that location is some consensus system on a sibling parachain
 			let location: MultiLocation =
 				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
-			let (para_id, agent_id) = ensure_sibling::<T>(&location)
-				.map_err(|_| Error::<T>::InvalidLocation)?;
+			let (para_id, agent_id) =
+				ensure_sibling::<T>(&location).map_err(|_| Error::<T>::InvalidLocation)?;
 
 			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount)
 		}
@@ -394,8 +393,8 @@ pub mod pallet {
 		/// Send `command` to the Gateway on the channel identified by `origin`.
 		fn send(origin: ParaId, command: Command, pays_fee: PaysFee<T>) -> DispatchResult {
 			let message = Message { origin, command };
-			let (ticket, delivery_fee) = T::OutboundQueue::validate(&message)
-				.map_err(|_| Error::<T>::SubmissionFailed)?;
+			let (ticket, delivery_fee) =
+				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
 
 			if let PaysFee::Yes(sovereign_account) = pays_fee {
 				T::Token::transfer(

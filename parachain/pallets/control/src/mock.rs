@@ -3,22 +3,23 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{ConstU16, ConstU64, ConstU128, Contains, tokens::fungible::Mutate},
+	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, Contains},
 	PalletId,
 };
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
-use snowbridge_core::{outbound::{Message, MessageHash, ParaId, SubmitError}, AgentId};
+use snowbridge_core::{
+	outbound::{Message, MessageHash, ParaId, SubmitError},
+	AgentId,
+};
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	AccountId32,
 };
 use xcm::prelude::*;
-use xcm_builder::{
-	DescribeAllTerminal, DescribeFamily, HashedDescription,
-};
+use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::BenchmarkHelper;
@@ -82,7 +83,6 @@ mod pallet_xcm_origin {
 		}
 	}
 }
-
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -213,10 +213,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| {
 		System::set_block_number(1);
-		let _ = Balances::mint_into(
-			&AccountId32::from([0; 32]),
-			1_000_000_000_000,
-		);
+		let _ = Balances::mint_into(&AccountId32::from([0; 32]), 1_000_000_000_000);
 	});
 	ext
 }
@@ -228,7 +225,6 @@ pub fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
 }
 
 pub fn make_agent_id(location: MultiLocation) -> AgentId {
-	HashedDescription::<AgentId, DescribeFamily<DescribeAllTerminal>>::convert_location(
-		&location,
-	).expect("convert location")
+	HashedDescription::<AgentId, DescribeFamily<DescribeAllTerminal>>::convert_location(&location)
+		.expect("convert location")
 }
