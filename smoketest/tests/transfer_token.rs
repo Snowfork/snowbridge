@@ -19,7 +19,7 @@ use snowbridge_smoketest::{
                 junction::{Junction, NetworkId},
                 junctions::Junctions,
                 multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
-                multilocation::MultiLocation, WeightLimit
+                multilocation::MultiLocation
             },
             VersionedMultiAssets, VersionedMultiLocation,
         },
@@ -87,7 +87,7 @@ async fn transfer_token() {
         ),
     });
 
-    let bridge_transfer_call = TransactionApi.limited_reserve_transfer_assets(destination, beneficiary, assets, 0, WeightLimit::Unlimited);
+    let bridge_transfer_call = TransactionApi.reserve_transfer_assets(destination, beneficiary, assets, 0);
 
     let result = assethub
         .tx()
