@@ -111,7 +111,7 @@ where
 							vec![
 								RefundSurplus,
 								DepositAsset {
-									assets: Wild(AllCounted(1)),
+									assets: buy_execution_fee.into(),
 									beneficiary: (
 										Parent,
 										Parent,

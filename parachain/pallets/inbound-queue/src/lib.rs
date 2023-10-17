@@ -27,7 +27,7 @@ use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
-use xcm::prelude::{
+use xcm::v3::{
 	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, SendXcm,
 	XcmHash,
 };

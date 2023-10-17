@@ -9,8 +9,8 @@ echo "Setting up git hooks"
 git config --local core.hooksPath hooks/
 
 echo "Installing Rust nightly toolchain"
-rustup install --profile minimal nightly-"$SNOWBRIDGE_RUST_NIGHTLY"
-rustup component add --toolchain nightly-"$SNOWBRIDGE_RUST_NIGHTLY" rustfmt
+rustup install --profile minimal $RUST_NIGHTLY_VERSION
+rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
 
 echo "Installing sszgen"
 go install github.com/ferranbt/fastssz/sszgen@v0.1.3

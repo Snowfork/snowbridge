@@ -3,28 +3,31 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{ConstU16, ConstU64, Everything, tokens::fungible::Mutate},
+	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, Contains},
 	PalletId,
 };
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
-use snowbridge_core::{outbound::{Message, MessageHash, ParaId, SubmitError}, AgentId};
+use snowbridge_core::{
+	outbound::{Message, MessageHash, ParaId, SubmitError},
+	AgentId,
+};
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	AccountId32,
 };
 use xcm::prelude::*;
-use xcm_builder::{
-	DescribeAllTerminal, DescribeFamily, HashedDescription,
-};
+use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::BenchmarkHelper;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+type Balance = u128;
+
 pub type AccountId = AccountId32;
 
 // A stripped-down version of pallet-xcm that only inserts an XCM origin into the runtime
@@ -81,7 +84,6 @@ mod pallet_xcm_origin {
 	}
 }
 
-
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -114,7 +116,7 @@ impl frame_system::Config for Test {
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -127,10 +129,10 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
-	type Balance = u64;
+	type Balance = Balance;
 	type RuntimeEvent = RuntimeEvent;
 	type DustRemoval = ();
-	type ExistentialDeposit = ConstU64<1>;
+	type ExistentialDeposit = ConstU128<1>;
 	type AccountStore = System;
 	type WeightInfo = ();
 	type FreezeIdentifier = ();
@@ -156,10 +158,10 @@ parameter_types! {
 pub struct MockOutboundQueue;
 impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	type Ticket = Message;
-	type Balance = u128;
+	type Balance = Balance;
 
 	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
-		Ok((message.clone(), 0))
+		Ok((message.clone(), 10))
 	}
 
 	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
@@ -180,17 +182,26 @@ impl BenchmarkHelper<RuntimeOrigin> for () {
 	}
 }
 
+pub struct AllowSiblingsOnly;
+impl Contains<MultiLocation> for AllowSiblingsOnly {
+	fn contains(location: &MultiLocation) -> bool {
+		if let MultiLocation { parents: 1, interior: X1(Parachain(_)) } = location {
+			true
+		} else {
+			false
+		}
+	}
+}
+
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = MockOutboundQueue;
 	type MessageHasher = BlakeTwo256;
-	type AgentOwnerOrigin = pallet_xcm_origin::EnsureXcm<Everything>;
-	type ChannelOwnerOrigin = pallet_xcm_origin::EnsureXcm<Everything>;
+	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = HashedDescription<AgentId, DescribeFamily<DescribeAllTerminal>>;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
-	type Fee = Fee;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
@@ -202,10 +213,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| {
 		System::set_block_number(1);
-		let _ = Balances::mint_into(
-			&AccountId32::from([0; 32]),
-			1_000_000_000_000,
-		);
+		let _ = Balances::mint_into(&AccountId32::from([0; 32]), 1_000_000_000_000);
 	});
 	ext
 }
@@ -217,7 +225,6 @@ pub fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
 }
 
 pub fn make_agent_id(location: MultiLocation) -> AgentId {
-	HashedDescription::<AgentId, DescribeFamily<DescribeAllTerminal>>::convert_location(
-		&location,
-	).expect("convert location")
+	HashedDescription::<AgentId, DescribeFamily<DescribeAllTerminal>>::convert_location(&location)
+		.expect("convert location")
 }
