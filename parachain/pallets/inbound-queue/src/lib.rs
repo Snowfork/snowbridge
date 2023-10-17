@@ -35,7 +35,7 @@ use xcm::v3::{
 use envelope::Envelope;
 use snowbridge_core::{
 	inbound::{Message, Verifier},
-	ParaId,
+	ParaId, SiblingParaId
 };
 use snowbridge_router_primitives::{
 	inbound,
@@ -218,9 +218,12 @@ pub mod pallet {
 				}
 			})?;
 
+			// Convert to a sibling parachain ID (uses bytes "sibl" instead of "para" to derive
+			// the sovereign account ID, to match how Assethub derives the account ID).
+			let sibling_para_id: SiblingParaId = envelope.dest.into();
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
-			let sovereign_account = envelope.dest.into_account_truncating();
+			let sovereign_account = sibling_para_id.into_account_truncating();
 			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
 
 			// Decode message into XCM

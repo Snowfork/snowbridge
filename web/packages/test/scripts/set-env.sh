@@ -61,8 +61,8 @@ skip_relayer="${SKIP_RELAYER:-false}"
 
 ## Important accounts
 
-# Account for assethub (1000 5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ in testnet)
-assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x70617261e8030000000000000000000000000000000000000000000000000000}"
+# Account for assethub (1000 sibling parachain 5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV in testnet)
+assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x7369626ce8030000000000000000000000000000000000000000000000000000}"
 # Account for template (Para 1001)
 template_sovereign_account="${TEMPLATE_SOVEREIGN_ACCOUNT:-0x70617261e9030000000000000000000000000000000000000000000000000000}"
 # Beacon relay account (//BeaconRelay 5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c in testnet)

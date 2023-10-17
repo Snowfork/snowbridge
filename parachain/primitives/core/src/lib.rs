@@ -12,7 +12,7 @@ pub mod inbound;
 pub mod outbound;
 pub mod ringbuffer;
 
-pub use polkadot_parachain::primitives::{Id as ParaId, IsSystem};
+pub use polkadot_parachain::primitives::{Id as ParaId, Sibling as SiblingParaId, IsSystem};
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 use sp_core::H256;
 
