@@ -20,8 +20,8 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return OperatingMode.Normal;
     }
 
-    function channelFeeRewardOf(ParaID) external pure returns (uint256, uint256) {
-        return (0, 0);
+    function channelFeeOf(ParaID) external pure returns (uint256) {
+        return 0;
     }
 
     function channelNoncesOf(ParaID) external pure returns (uint64, uint64) {

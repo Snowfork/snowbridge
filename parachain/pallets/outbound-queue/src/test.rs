@@ -9,17 +9,17 @@ use frame_support::{
 	weights::WeightMeter,
 };
 
-use snowbridge_core::outbound::AgentExecuteCommand;
-use sp_core::{H160, H256};
+use snowbridge_core::outbound::{AgentExecuteCommand, Command, Initializer};
+use sp_core::{ConstU128, H160, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
-	MultiSignature,
+	traits::{BlakeTwo256, IdentityLookup, Keccak256},
+	AccountId32,
 };
-use sp_std::convert::From;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+type AccountId = AccountId32;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -32,9 +32,6 @@ frame_support::construct_runtime!(
 		OutboundQueue: crate::{Pallet, Storage, Event<T>},
 	}
 );
-
-pub type Signature = MultiSignature;
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -97,13 +94,22 @@ impl crate::Config for Test {
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
 	type OwnParaId = OwnParaId;
+	type GasMeter = ();
+	type Balance = u128;
+	type DeliveryFeePerGas = ConstU128<1>;
+	type DeliveryRefundPerGas = ConstU128<1>;
+	type DeliveryReward = ConstU128<1>;
 	type WeightInfo = ();
+}
+
+fn setup() {
+	System::set_block_number(1);
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
 	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| System::set_block_number(1));
+	ext.execute_with(|| setup());
 	ext
 }
 
@@ -134,13 +140,35 @@ fn submit_messages_from_multiple_origins_and_commit() {
 				command: Command::Upgrade {
 					impl_address: H160::zero(),
 					impl_code_hash: H256::zero(),
-					params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
+					initializer: None,
 				},
 			};
 
-			let result = OutboundQueue::validate(&message);
-			assert!(result.is_ok());
-			let ticket = result.unwrap();
+			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+			assert_ok!(OutboundQueue::submit(ticket));
+		}
+
+		for para_id in 1000..1004 {
+			let message = Message {
+				origin: para_id.into(),
+				command: Command::CreateAgent { agent_id: Default::default() },
+			};
+
+			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+			assert_ok!(OutboundQueue::submit(ticket));
+		}
+
+		for para_id in 1000..1004 {
+			let message = Message {
+				origin: para_id.into(),
+				command: Command::Upgrade {
+					impl_address: Default::default(),
+					impl_code_hash: Default::default(),
+					initializer: None,
+				},
+			};
+
+			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
 
 			assert_ok!(OutboundQueue::submit(ticket));
 		}
@@ -150,7 +178,7 @@ fn submit_messages_from_multiple_origins_and_commit() {
 
 		for para_id in 1000..1004 {
 			let origin: ParaId = (para_id as u32).into();
-			assert_eq!(Nonce::<Test>::get(origin), 1);
+			assert_eq!(Nonce::<Test>::get(origin), 3);
 		}
 
 		let digest = System::digest();
@@ -167,7 +195,10 @@ fn submit_message_fail_too_large() {
 			command: Command::Upgrade {
 				impl_address: H160::zero(),
 				impl_code_hash: H256::zero(),
-				params: Some((0..1000).map(|_| 1u8).collect::<Vec<u8>>()),
+				initializer: Some(Initializer {
+					params: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
+					maximum_required_gas: 0,
+				}),
 			},
 		};
 
@@ -201,7 +232,7 @@ fn process_message_yields_on_max_messages_per_block() {
 			command: Command::Upgrade {
 				impl_address: Default::default(),
 				impl_code_hash: Default::default(),
-				params: None,
+				initializer: None,
 			},
 		}
 		.encode();
@@ -226,7 +257,7 @@ fn process_message_fails_on_overweight_message() {
 			command: Command::Upgrade {
 				impl_address: Default::default(),
 				impl_code_hash: Default::default(),
-				params: None,
+				initializer: None,
 			},
 		}
 		.encode();
@@ -258,7 +289,7 @@ fn submit_low_priority_messages_yield_when_there_is_high_priority_message() {
 		let result = OutboundQueue::validate(&message);
 		assert!(result.is_ok());
 		let ticket = result.unwrap();
-		assert_ok!(OutboundQueue::submit(ticket));
+		assert_ok!(OutboundQueue::submit(ticket.0));
 
 		// then submit a high priority message from bridge_hub
 		let message = Message {
@@ -266,13 +297,13 @@ fn submit_low_priority_messages_yield_when_there_is_high_priority_message() {
 			command: Command::Upgrade {
 				impl_address: H160::zero(),
 				impl_code_hash: H256::zero(),
-				params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
+				initializer: None,
 			},
 		};
 		let result = OutboundQueue::validate(&message);
 		assert!(result.is_ok());
 		let ticket = result.unwrap();
-		assert_ok!(OutboundQueue::submit(ticket));
+		assert_ok!(OutboundQueue::submit(ticket.0));
 		let mut footprint =
 			MessageQueue::footprint(AggregateMessageOrigin::SelfChain(Priority::High));
 		println!("{:?}", footprint);
@@ -333,7 +364,7 @@ fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_ge
 			let result = OutboundQueue::validate(&message);
 			assert!(result.is_ok());
 			let ticket = result.unwrap();
-			assert_ok!(OutboundQueue::submit(ticket));
+			assert_ok!(OutboundQueue::submit(ticket.0));
 		}
 
 		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Parachain(1000.into()));
@@ -345,13 +376,13 @@ fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_ge
 			command: Command::Upgrade {
 				impl_address: H160::zero(),
 				impl_code_hash: H256::zero(),
-				params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
+				initializer: None,
 			},
 		};
 		let result = OutboundQueue::validate(&message);
 		assert!(result.is_ok());
 		let ticket = result.unwrap();
-		assert_ok!(OutboundQueue::submit(ticket));
+		assert_ok!(OutboundQueue::submit(ticket.0));
 		let footprint = MessageQueue::footprint(AggregateMessageOrigin::SelfChain(Priority::High));
 		println!("{:?}", footprint);
 		assert_eq!(footprint.count, 1);
@@ -403,13 +434,13 @@ fn submit_upgrade_message_success_when_queue_halted() {
 			command: Command::Upgrade {
 				impl_address: H160::zero(),
 				impl_code_hash: H256::zero(),
-				params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
+				initializer: None,
 			},
 		};
 		let result = OutboundQueue::validate(&message);
 		assert!(result.is_ok());
 		let ticket = result.unwrap();
-		assert_ok!(OutboundQueue::submit(ticket));
+		assert_ok!(OutboundQueue::submit(ticket.0));
 
 		// submit a low priority message from asset_hub will fail
 		let message = Message {
@@ -426,6 +457,6 @@ fn submit_upgrade_message_success_when_queue_halted() {
 		let result = OutboundQueue::validate(&message);
 		assert!(result.is_ok());
 		let ticket = result.unwrap();
-		assert_noop!(OutboundQueue::submit(ticket), SubmitError::BridgeHalted);
+		assert_noop!(OutboundQueue::submit(ticket.0), SubmitError::BridgeHalted);
 	});
 }

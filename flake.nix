@@ -84,7 +84,8 @@
 
                     export CARGO_HOME=$PWD/.cargo
                     export RUSTUP_HOME=$PWD/.rustup
-                    export SNOWBRIDGE_RUST_NIGHTLY='2023-05-23'
+                    export RUST_NIGHTLY_VERSION=nightly-2023-05-23
+                    export PATH=$CARGO_HOME/bin:$PATH
 
                     eval "$(direnv hook bash)"
 
