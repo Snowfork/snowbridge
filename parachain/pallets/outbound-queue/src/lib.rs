@@ -248,17 +248,6 @@ pub mod pallet {
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
 
-			// Decrease PendingHighPriorityMessageCount by one
-			let high_priority = matches!(
-				enqueued_message.command,
-				Command::Upgrade { .. } | Command::SetOperatingMode { .. }
-			);
-			if high_priority {
-				PendingHighPriorityMessageCount::<T>::mutate(|count| {
-					*count = count.saturating_sub(1)
-				});
-			}
-
 			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
 
 			let command = enqueued_message.command.index();
@@ -395,12 +384,20 @@ pub mod pallet {
 			);
 
 			// Yield for halt check or if there is pending high priority message
-			if origin != AggregateMessageOrigin::SelfChain(Priority::High) {
-				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
-				ensure!(
-					PendingHighPriorityMessageCount::<T>::get() == 0,
-					ProcessMessageError::Yield
-				);
+			match origin {
+				AggregateMessageOrigin::SelfChain(Priority::High) => {
+					// Decrease PendingHighPriorityMessageCount by one
+					PendingHighPriorityMessageCount::<T>::mutate(|count| {
+						*count = count.saturating_sub(1)
+					});
+				},
+				_ => {
+					Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
+					ensure!(
+						PendingHighPriorityMessageCount::<T>::get() == 0,
+						ProcessMessageError::Yield
+					);
+				},
 			}
 
 			let weight = T::WeightInfo::do_process_message();
