@@ -63,6 +63,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
+	use frame_support::traits::Contains;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -103,6 +104,8 @@ pub mod pallet {
 		/// The reward in ETH (wei)
 		#[pallet::constant]
 		type DeliveryReward: Get<u128>;
+
+		type HighPriorityCommands: Contains<Command>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -325,8 +328,8 @@ pub mod pallet {
 			let encoded =
 				enqueued_message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
 
-			let priority = match message.command {
-				Command::Upgrade { .. } | Command::SetOperatingMode { .. } => Priority::High,
+			let priority = match T::HighPriorityCommands::contains(&message.command) {
+				true => Priority::High,
 				_ => Priority::Normal,
 			};
 

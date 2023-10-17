@@ -2,7 +2,7 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
-	traits::{tokens::Balance, Get},
+	traits::{tokens::Balance, Contains, Get},
 	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
@@ -364,4 +364,14 @@ pub enum AggregateMessageOrigin {
 	SelfChain(Priority),
 	#[codec(index = 1)]
 	Parachain(ParaId),
+}
+
+pub struct HighPriorityCommands;
+impl Contains<Command> for HighPriorityCommands {
+	fn contains(command: &Command) -> bool {
+		match command {
+			Command::Upgrade { .. } | Command::SetOperatingMode { .. } => true,
+			_ => false,
+		}
+	}
 }

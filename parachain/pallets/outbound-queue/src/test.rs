@@ -9,7 +9,7 @@ use frame_support::{
 	weights::WeightMeter,
 };
 
-use snowbridge_core::outbound::{AgentExecuteCommand, Command, Initializer};
+use snowbridge_core::outbound::{AgentExecuteCommand, Command, HighPriorityCommands, Initializer};
 use sp_core::{ConstU128, H160, H256};
 use sp_runtime::{
 	testing::Header,
@@ -99,6 +99,7 @@ impl crate::Config for Test {
 	type DeliveryFeePerGas = ConstU128<1>;
 	type DeliveryRefundPerGas = ConstU128<1>;
 	type DeliveryReward = ConstU128<1>;
+	type HighPriorityCommands = HighPriorityCommands;
 	type WeightInfo = ();
 }
 
