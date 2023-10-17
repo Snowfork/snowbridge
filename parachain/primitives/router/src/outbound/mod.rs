@@ -12,10 +12,7 @@ use snowbridge_core::outbound::{
 use sp_core::H256;
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
-use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 use xcm_executor::traits::{ConvertLocation, ExportXcm};
-
-pub type AgentHashedDescription = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 
 pub struct EthereumBlobExporter<
 	UniversalLocation,
@@ -29,7 +26,7 @@ impl<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription> 
 where
 	UniversalLocation: Get<InteriorMultiLocation>,
 	GatewayLocation: Get<MultiLocation>,
-	OutboundQueue: OutboundQueueTrait,
+	OutboundQueue: OutboundQueueTrait<Balance = u128>,
 	OutboundQueue::Ticket: Encode + Decode,
 	AgentHashedDescription: ConvertLocation<H256>,
 {
@@ -128,16 +125,16 @@ where
 			command: Command::AgentExecute { agent_id, command: agent_execute_command },
 		};
 
-		let ticket = OutboundQueue::validate(&outbound_message).map_err(|err| {
+		// validate the message
+		let (ticket, fee) = OutboundQueue::validate(&outbound_message).map_err(|err| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
 			SendError::Unroutable
 		})?;
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "message validated: location = {local_sub_location:?}, agent_id = '{agent_id:?}'");
+		// convert fee to MultiAsset
+		let fee = MultiAsset::from((MultiLocation::parent(), fee)).into();
 
-		// TODO (SNO-581): Make sure we charge fees for message delivery. Currently this is set to
-		// zero.
-		Ok((ticket.encode(), MultiAssets::default()))
+		Ok((ticket.encode(), fee))
 	}
 
 	fn deliver(blob: Vec<u8>) -> Result<XcmHash, SendError> {
@@ -313,6 +310,9 @@ mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
 	use snowbridge_core::outbound::{MessageHash, SubmitError};
+	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
+
+	pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 
 	use super::*;
 
@@ -330,9 +330,10 @@ mod tests {
 	struct MockOkOutboundQueue;
 	impl OutboundQueueTrait for MockOkOutboundQueue {
 		type Ticket = ();
+		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<(), SubmitError> {
-			Ok(())
+		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
+			Ok(((), 1))
 		}
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
@@ -342,8 +343,9 @@ mod tests {
 	struct MockErrOutboundQueue;
 	impl OutboundQueueTrait for MockErrOutboundQueue {
 		type Ticket = ();
+		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<(), SubmitError> {
+		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 
@@ -365,7 +367,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -383,7 +385,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
@@ -403,7 +405,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -421,7 +423,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
@@ -439,7 +441,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::Unroutable));
 	}
@@ -457,7 +459,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocationWithoutGlobalConsensus,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -475,7 +477,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocationWithoutRegistry,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -494,7 +496,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::NotApplicable));
 	}
@@ -513,7 +515,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
@@ -532,7 +534,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
@@ -551,7 +553,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 		assert_eq!(result, Err(SendError::MissingArgument));
 	}
@@ -606,7 +608,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
 		assert_eq!(result, Err(SendError::Unroutable));
@@ -633,7 +635,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
 		assert_eq!(result, Err(SendError::Unroutable));
@@ -686,7 +688,7 @@ mod tests {
 				UniversalLocation,
 				BridgedLocation,
 				MockOkOutboundQueue,
-				AgentHashedDescription,
+				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
 		assert!(result.is_ok());
@@ -698,7 +700,7 @@ mod tests {
 			UniversalLocation,
 			BridgedLocation,
 			MockErrOutboundQueue,
-			AgentHashedDescription,
+			AgentIdOf,
 		>::deliver(hex!("deadbeef").to_vec());
 		assert_eq!(result, Err(SendError::Transport("other transport error")))
 	}

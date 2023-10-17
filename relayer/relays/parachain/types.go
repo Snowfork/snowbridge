@@ -83,18 +83,24 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 }
 
 type OutboundQueueMessage struct {
-	Origin  uint32
-	Nonce   uint64
-	Command uint8
-	Params  []byte
+	Origin         uint32
+	Nonce          uint64
+	Command        uint8
+	Params         []byte
+	MaxDispatchGas types.U128
+	MaxRefund      types.U128
+	Reward         types.U128
 }
 
 func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 	return contracts.InboundMessage{
-		Origin:  big.NewInt(int64(m.Origin)),
-		Nonce:   m.Nonce,
-		Command: m.Command,
-		Params:  m.Params,
+		Origin:         big.NewInt(int64(m.Origin)),
+		Nonce:          m.Nonce,
+		Command:        m.Command,
+		Params:         m.Params,
+		MaxDispatchGas: m.MaxDispatchGas.Int,
+		MaxRefund:      m.MaxRefund.Int,
+		Reward:         m.Reward.Int,
 	}
 }
 
