@@ -35,13 +35,12 @@ use frame_support::{
 };
 use snowbridge_core::ParaId;
 use sp_core::H256;
-use sp_runtime::traits::Hash;
+use sp_runtime::traits::{Hash, Saturating};
 use sp_std::prelude::*;
 
 use snowbridge_core::outbound::{
-	AggregateMessageOrigin, EnqueuedMessage, Message, MessageHash,
-	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
-	SubmitError, GasMeter,
+	AggregateMessageOrigin, Command, EnqueuedMessage, GasMeter, Message, MessageHash,
+	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage, SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
@@ -75,6 +74,11 @@ pub mod pallet {
 
 		type MessageQueue: EnqueueMessage<AggregateMessageOrigin>;
 
+		/// Measures the maximum gas used to execute a command on Ethereum
+		type GasMeter: GasMeter;
+
+		type Balance: Balance + From<u64>;
+
 		/// Max bytes in a message payload
 		#[pallet::constant]
 		type MaxMessagePayloadSize: Get<u32>;
@@ -83,15 +87,17 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
 
-		type GasMeter: GasMeter;
+		/// The delivery fee in DOT per unit of gas
+		#[pallet::constant]
+		type DeliveryFeePerGas: Get<Self::Balance>;
 
-		type Balance: Balance;
+		/// The refund in ETH (wei) per unit of gas
+		#[pallet::constant]
+		type DeliveryRefundPerGas: Get<u128>;
 
-		/// The fee charged locally for accepting a message.
-		type Fee: Get<Self::Balance>;
-
-		/// The reward in ether paid to relayers for sending a message to Ethereum
-		type Reward: Get<u128>;
+		/// The reward in ETH (wei)
+		#[pallet::constant]
+		type DeliveryReward: Get<u128>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -238,8 +244,9 @@ pub mod pallet {
 
 			let command = enqueued_message.command.index();
 			let params = enqueued_message.command.abi_encode();
-			let max_dispatch_gas = T::GasMeter::measure_maximum_required_gas(&enqueued_message.command) as u128;
-			let reward = T::Reward::get();
+			let max_dispatch_gas = T::GasMeter::maximum_required(&enqueued_message.command) as u128;
+			let max_refund = Self::maximum_refund(&enqueued_message.command);
+			let reward = T::DeliveryReward::get();
 
 			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
@@ -249,6 +256,7 @@ pub mod pallet {
 				command,
 				params,
 				max_dispatch_gas,
+				max_refund,
 				reward,
 			};
 
@@ -267,6 +275,23 @@ pub mod pallet {
 
 			Ok(true)
 		}
+
+		/// Maximum overall gas required for delivering a message
+		pub(crate) fn maximum_overall_required_gas(command: &Command) -> u64 {
+			T::GasMeter::MAXIMUM_BASE_GAS + T::GasMeter::maximum_required(command)
+		}
+
+		/// Fee in DOT for delivering a message.
+		pub(crate) fn delivery_fee(command: &Command) -> T::Balance {
+			let max_gas_used = Self::maximum_overall_required_gas(command);
+			T::DeliveryFeePerGas::get().saturating_mul(max_gas_used.into())
+		}
+
+		/// Maximum refund in Ether for delivering a message
+		pub(crate) fn maximum_refund(command: &Command) -> u128 {
+			let max_gas_used = Self::maximum_overall_required_gas(command);
+			T::DeliveryRefundPerGas::get().saturating_mul(max_gas_used as u128)
+		}
 	}
 
 	impl<T: Config> OutboundQueueTrait for Pallet<T> {
@@ -284,6 +309,7 @@ pub mod pallet {
 				payload.len() < T::MaxMessagePayloadSize::get() as usize,
 				SubmitError::MessageTooLarge
 			);
+			let delivery_fee = Self::delivery_fee(&message.command);
 			let command = message.command.clone();
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage { id: message_id, origin: message.origin, command };
@@ -293,7 +319,8 @@ pub mod pallet {
 
 			let ticket =
 				OutboundQueueTicket { id: message_id, origin: message.origin, message: encoded };
-			Ok((ticket, T::Fee::get()))
+
+			Ok((ticket, delivery_fee))
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {

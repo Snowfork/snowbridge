@@ -2,9 +2,8 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
-	traits::{Get, tokens::Balance},
-	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound,
-	RuntimeDebugNoBound,
+	traits::{tokens::Balance, Get},
+	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
@@ -22,7 +21,9 @@ pub trait OutboundQueue {
 	type Ticket: Clone;
 	type Balance: Balance;
 
-	/// Validate a message
+	/// Validate an outbound message and return a tuple:
+	/// 1. A ticket for submitting the message
+	/// 2. The delivery fee in DOT which covers the cost of execution on Ethereum
 	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
@@ -50,10 +51,6 @@ pub enum SubmitError {
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
 	BridgeHalted,
-	/// Gas config invalid
-	InvalidGas(u128),
-	/// Estimate fee failed
-	EstimateFeeFailed,
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
@@ -149,11 +146,10 @@ impl Command {
 	/// ABI-encode the Command.
 	pub fn abi_encode(&self) -> Vec<u8> {
 		match self {
-			Command::AgentExecute { agent_id, command } =>
-				ethabi::encode(&[Token::Tuple(vec![
-					Token::FixedBytes(agent_id.as_bytes().to_owned()),
-					Token::Bytes(command.abi_encode()),
-				])]),
+			Command::AgentExecute { agent_id, command } => ethabi::encode(&[Token::Tuple(vec![
+				Token::FixedBytes(agent_id.as_bytes().to_owned()),
+				Token::Bytes(command.abi_encode()),
+			])]),
 			Command::Upgrade { impl_address, impl_code_hash, initializer, .. } =>
 				ethabi::encode(&[Token::Tuple(vec![
 					Token::Address(*impl_address),
@@ -193,9 +189,7 @@ impl Command {
 
 /// Representation of a call to the initializer of an implementation contract.
 /// The initializer has the following ABI signature: `initialize(bytes)`.
-#[derive(
-	Encode, Decode, TypeInfo, PartialEqNoBound, EqNoBound, CloneNoBound, DebugNoBound,
-)]
+#[derive(Encode, Decode, TypeInfo, PartialEqNoBound, EqNoBound, CloneNoBound, DebugNoBound)]
 pub struct Initializer {
 	/// ABI-encoded params of type `bytes` to pass to the initializer
 	pub params: Vec<u8>,
@@ -204,15 +198,22 @@ pub struct Initializer {
 }
 
 pub trait GasMeter {
-	// Measures the maximum amount of gas a command will require
-	fn measure_maximum_required_gas(command: &Command) -> u64;
+	/// The maximum base amount of gas used in submitting and verifying a message, before the
+	/// message payload is dispatched
+	const MAXIMUM_BASE_GAS: u64;
+
+	/// Measures the maximum amount of gas a command will require to dispatch. Does not include the
+	/// base cost of message submission.
+	fn maximum_required(command: &Command) -> u64;
 }
 
 /// A meter that assigns a constant amount of gas for the execution of a command
 pub struct ConstantGasMeter;
 
 impl GasMeter for ConstantGasMeter {
-	fn measure_maximum_required_gas(command: &Command) -> u64 {
+	const MAXIMUM_BASE_GAS: u64 = 125_000;
+
+	fn maximum_required(command: &Command) -> u64 {
 		match command {
 			Command::CreateAgent { .. } => 300_000,
 			Command::CreateChannel { .. } => 10_0000,
@@ -220,23 +221,25 @@ impl GasMeter for ConstantGasMeter {
 			Command::TransferNativeFromAgent { .. } => 60_000,
 			Command::SetOperatingMode { .. } => 40_000,
 			Command::AgentExecute { command, .. } => match command {
-				AgentExecuteCommand::TransferToken { .. } => 30_000,
+				AgentExecuteCommand::TransferToken { .. } => 60_000,
 			},
 			Command::Upgrade { initializer, .. } => {
 				let maximum_required_gas = match *initializer {
 					Some(Initializer { maximum_required_gas, .. }) => maximum_required_gas,
 					None => 0,
 				};
-				// total maximum gas must also include the gas used for updating the proxy before the
-				// the initializer is called.
+				// total maximum gas must also include the gas used for updating the proxy before
+				// the the initializer is called.
 				100_000 + maximum_required_gas
-			}
+			},
 		}
 	}
 }
 
 impl GasMeter for () {
-	fn measure_maximum_required_gas(_: &Command) -> u64 {
+	const MAXIMUM_BASE_GAS: u64 = 0;
+
+	fn maximum_required(_: &Command) -> u64 {
 		0
 	}
 }
@@ -316,7 +319,9 @@ pub struct PreparedMessage {
 	pub params: Vec<u8>,
 	/// Maximum gas allowed for message dispatch
 	pub max_dispatch_gas: u128,
-	/// Reward in ether for delivering this message, in addition to a gas refund
+	/// Maximum gas refund for message relayer
+	pub max_refund: u128,
+	/// Reward in ether for delivering this message, in addition to the gas refund
 	pub reward: u128,
 }
 
@@ -329,6 +334,7 @@ impl From<PreparedMessage> for Token {
 			Token::Uint(x.command.into()),
 			Token::Bytes(x.params.to_vec()),
 			Token::Uint(x.max_dispatch_gas.into()),
+			Token::Uint(x.max_refund.into()),
 			Token::Uint(x.reward.into()),
 		])
 	}
@@ -339,7 +345,6 @@ impl From<u32> for AggregateMessageOrigin {
 		AggregateMessageOrigin::Parachain(value.into())
 	}
 }
-
 
 #[derive(Copy, Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct OriginInfo {
