@@ -372,7 +372,6 @@ pub mod pallet {
 
 	impl<T: Config> ProcessMessage for Pallet<T> {
 		type Origin = AggregateMessageOrigin;
-		#[allow(clippy::clone_double_ref)]
 		fn process_message(
 			message: &[u8],
 			origin: Self::Origin,

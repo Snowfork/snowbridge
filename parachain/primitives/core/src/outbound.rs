@@ -369,9 +369,6 @@ pub enum AggregateMessageOrigin {
 pub struct HighPriorityCommands;
 impl Contains<Command> for HighPriorityCommands {
 	fn contains(command: &Command) -> bool {
-		match command {
-			Command::Upgrade { .. } | Command::SetOperatingMode { .. } => true,
-			_ => false,
-		}
+		matches!(command, Command::Upgrade { .. } | Command::SetOperatingMode { .. })
 	}
 }
