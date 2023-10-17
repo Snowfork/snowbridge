@@ -23,7 +23,7 @@ chronic typos .
 (cd relayer && chronic gofmt -l .)
 
 # check format of rust
-(cd parachain && chronic cargo +$RUST_NIGHTLY_VERSION fmt)
+(cd parachain && chronic cargo +$RUST_NIGHTLY_VERSION fmt --check)
 
 check_duplicate_versions substrate
 check_duplicate_versions polkadot
