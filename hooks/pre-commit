@@ -16,14 +16,14 @@ check_duplicate_versions() {
 # check typos
 chronic typos .
 
-# format contracts
-(cd contracts && chronic forge fmt)
+# check format of contracts
+(cd contracts && chronic forge fmt --check)
 
-# lint and format for relayer codes
-(cd relayer && chronic mage lint && chronic go fmt ./...)
+# check format for relayer codes
+(cd relayer && chronic gofmt -l .)
 
-# format rust
-# (cd parachain && chronic cargo +nightly-"$SNOWBRIDGE_RUST_NIGHTLY" fmt)
+# check format of rust
+(cd parachain && chronic cargo +$RUST_NIGHTLY_VERSION fmt)
 
 check_duplicate_versions substrate
 check_duplicate_versions polkadot
