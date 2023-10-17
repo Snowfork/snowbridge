@@ -352,23 +352,26 @@ pub mod pallet {
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-			let from_self = ticket.origin == T::OwnParaId::get();
-			let origin: AggregateMessageOrigin;
-			if from_self {
-				if ticket.priority == Priority::High {
-					origin = AggregateMessageOrigin::SelfChain(Priority::High);
+			let origin = match (ticket.origin, ticket.priority) {
+				(origin, Priority::High) if origin == T::OwnParaId::get() =>
+					AggregateMessageOrigin::SelfChain(Priority::High),
+				(origin, Priority::Normal) if origin == T::OwnParaId::get() =>
+					AggregateMessageOrigin::SelfChain(Priority::Normal),
+				(origin, _) => AggregateMessageOrigin::Parachain(origin),
+			};
+
+			match origin {
+				AggregateMessageOrigin::SelfChain(Priority::High) => {
 					// Increase PendingHighPriorityMessageCount by one
 					PendingHighPriorityMessageCount::<T>::mutate(|count| {
 						*count = count.saturating_add(1)
 					});
-				} else {
-					origin = AggregateMessageOrigin::SelfChain(Priority::Normal);
+				},
+				_ => {
 					Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
-				}
-			} else {
-				origin = AggregateMessageOrigin::Parachain(ticket.origin);
-				Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
-			}
+				},
+			};
+
 			T::MessageQueue::enqueue_message(ticket.message.as_bounded_slice(), origin);
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
