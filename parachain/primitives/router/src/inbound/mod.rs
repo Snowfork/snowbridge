@@ -111,7 +111,7 @@ where
 							vec![
 								RefundSurplus,
 								DepositAsset {
-									assets: buy_execution_fee.into(),
+									assets: Wild(AllCounted(1)),
 									beneficiary: (
 										Parent,
 										Parent,
@@ -134,8 +134,7 @@ where
 								gateway.as_fixed_bytes(),
 							);
 
-						let origin_location =
-							Junction::AccountKey20 { network: None, key: gateway.into() };
+						let origin_location = AccountKey20 { network: None, key: gateway.into() };
 
 						let asset_id = Self::convert_token_address(network, gateway, token);
 
@@ -165,8 +164,7 @@ where
 							amount,
 						));
 
-						let origin_location =
-							Junction::AccountKey20 { network: None, key: gateway.into() };
+						let origin_location = AccountKey20 { network: None, key: gateway.into() };
 
 						let mut instructions = create_instructions(origin_location);
 						instructions.extend(vec![
