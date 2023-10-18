@@ -350,7 +350,7 @@ pub struct OriginInfo {
 	pub agent_id: H256,
 }
 
-/// Priority
+/// Priority for an outbound message
 #[derive(Copy, Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum Priority {
 	Normal,

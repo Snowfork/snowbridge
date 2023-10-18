@@ -105,6 +105,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type DeliveryReward: Get<u128>;
 
+		/// Determines whether a command is high priority
 		type HighPriorityCommands: Contains<Command>;
 
 		/// Weight information for extrinsics in this pallet
@@ -152,6 +153,7 @@ pub mod pallet {
 	#[pallet::unbounded]
 	pub(super) type Messages<T: Config> = StorageValue<_, Vec<PreparedMessage>, ValueQuery>;
 
+	/// Number of high priority messages that are waiting to be processed
 	#[pallet::storage]
 	pub(super) type PendingHighPriorityMessageCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
