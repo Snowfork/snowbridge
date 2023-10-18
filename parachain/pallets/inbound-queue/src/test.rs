@@ -259,8 +259,6 @@ const XCM_HASH: [u8; 32] = [
 ];
 const ASSET_HUB_PARAID: u32 = 1000u32;
 
-use snowbridge_core::ParaId;
-
 #[test]
 fn test_submit_happy_path() {
 	new_tester().execute_with(|| {
@@ -442,8 +440,7 @@ fn test_submit_with_invalid_payload_unsupported_version() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		// Submit message
