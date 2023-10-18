@@ -69,12 +69,13 @@ pub enum Destination {
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-pub struct MessageToXcm<CreateAssetCall, FeeGetter>
+pub struct MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>
 where
 	CreateAssetCall: Get<CallIndex>,
-	FeeGetter: XcmFeeGetter,
+	CreateAssetExecutionFee: Get<u128>,
+	SendTokenExecutionFee: Get<u128>,
 {
-	_phantom: PhantomData<(CreateAssetCall, FeeGetter)>,
+	_phantom: PhantomData<(CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee)>,
 }
 
 /// Reason why a message conversion failed.
@@ -91,33 +92,21 @@ pub trait ConvertMessage {
 
 pub type CallIndex = [u8; 2];
 
-pub trait XcmFeeGetter {
-	// Measures the maximum amount of gas a command will require
-	fn fee(command: &Command) -> u128;
-}
-
-/// A meter that assigns a constant amount of gas for the execution of a command
-pub struct ConstantFeeForInboundMessage;
-
-impl XcmFeeGetter for ConstantFeeForInboundMessage {
-	fn fee(command: &Command) -> u128 {
-		match command {
-			Command::RegisterToken { .. } => 2_000_000_000,
-			Command::SendToken { .. } => 1_000_000_000,
-		}
-	}
-}
-
-impl<CreateAssetCall, FeeGetter> ConvertMessage for MessageToXcm<CreateAssetCall, FeeGetter>
+impl<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee> ConvertMessage
+	for MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>
 where
 	CreateAssetCall: Get<CallIndex>,
-	FeeGetter: XcmFeeGetter,
+	CreateAssetExecutionFee: Get<u128>,
+	SendTokenExecutionFee: Get<u128>,
 {
 	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError> {
 		match message {
 			VersionedMessage::V1(MessageV1 { chain_id, message: command }) => {
 				let network = Ethereum { chain_id };
-				let buy_execution_fee_amount = FeeGetter::fee(&command);
+				let buy_execution_fee_amount = match command {
+					Command::RegisterToken { .. } => CreateAssetExecutionFee::get(),
+					Command::SendToken { .. } => SendTokenExecutionFee::get(),
+				};
 				let buy_execution_fee = MultiAsset {
 					id: Concrete(MultiLocation::parent()),
 					fun: Fungible(buy_execution_fee_amount),
@@ -245,10 +234,12 @@ where
 	}
 }
 
-impl<CreateAssetCall, FeeGetter> MessageToXcm<CreateAssetCall, FeeGetter>
+impl<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>
+	MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>
 where
 	CreateAssetCall: Get<CallIndex>,
-	FeeGetter: XcmFeeGetter,
+	CreateAssetExecutionFee: Get<u128>,
+	SendTokenExecutionFee: Get<u128>,
 {
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
 	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {

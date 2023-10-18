@@ -23,7 +23,7 @@ use snowbridge_core::{
 	ParaId,
 };
 use snowbridge_ethereum::Log;
-use snowbridge_router_primitives::inbound::{ConstantFeeForInboundMessage, MessageToXcm};
+use snowbridge_router_primitives::inbound::MessageToXcm;
 
 use hex_literal::hex;
 use xcm::v3::{prelude::*, MultiAssets, SendXcm};
@@ -141,6 +141,8 @@ parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15 };
 	pub const GatewayAddress: H160 = H160(GATEWAY_ADDRESS);
 	pub const CreateAssetCall: [u8;2] = [53, 0];
+	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
+	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -184,7 +186,8 @@ impl inbound_queue::Config for Test {
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
-	type MessageConverter = MessageToXcm<CreateAssetCall, ConstantFeeForInboundMessage>;
+	type MessageConverter =
+		MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
 }
