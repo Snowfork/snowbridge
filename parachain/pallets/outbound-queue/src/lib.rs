@@ -105,6 +105,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type DeliveryReward: Get<u128>;
 
+		/// Determines whether a command is high priority
 		type HighPriorityCommands: Contains<Command>;
 
 		/// Weight information for extrinsics in this pallet
