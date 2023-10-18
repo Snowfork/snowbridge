@@ -41,7 +41,7 @@ use snowbridge_core::{
 	outbound::{
 		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
 	},
-	AgentId,
+	AgentId, SiblingParaId,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -226,7 +226,8 @@ pub mod pallet {
 			Agents::<T>::insert(agent_id, ());
 
 			let command = Command::CreateAgent { agent_id };
-			let pays_fee = PaysFee::<T>::Yes(para_id.into_account_truncating());
+			let sibling_para_id: SiblingParaId = para_id.into();
+			let pays_fee = PaysFee::<T>::Yes(sibling_para_id.into_account_truncating());
 			Self::send(T::OwnParaId::get(), command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::CreateAgent {
@@ -260,7 +261,8 @@ pub mod pallet {
 			Channels::<T>::insert(para_id, ());
 
 			let command = Command::CreateChannel { para_id, agent_id };
-			let pays_fee = PaysFee::<T>::Yes(para_id.into_account_truncating());
+			let sibling_para_id: SiblingParaId = para_id.into();
+			let pays_fee = PaysFee::<T>::Yes(sibling_para_id.into_account_truncating());
 			Self::send(T::OwnParaId::get(), command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::CreateChannel { para_id, agent_id });

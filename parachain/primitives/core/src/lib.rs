@@ -18,3 +18,4 @@ use sp_core::H256;
 
 /// The ID of an agent contract
 pub type AgentId = H256;
+
