@@ -101,7 +101,7 @@ pub mod pallet {
 		},
 		/// Set OperatingMode
 		OperatingModeChanged {
-			operating_mode: OperatingMode,
+			mode: OperatingMode,
 		},
 	}
 
@@ -260,12 +260,9 @@ pub mod pallet {
 		/// May only be called either by root, or by `PalletOwner`.
 		#[pallet::call_index(3)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
-		pub fn set_operating_mode(
-			origin: OriginFor<T>,
-			operating_mode: OperatingMode,
-		) -> DispatchResult {
-			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)?;
-			Self::deposit_event(Event::OperatingModeChanged { operating_mode });
+		pub fn set_operating_mode(origin: OriginFor<T>, mode: OperatingMode) -> DispatchResult {
+			<Self as BridgeModule<_>>::set_operating_mode(origin, mode)?;
+			Self::deposit_event(Event::OperatingModeChanged { mode });
 			Ok(())
 		}
 	}
