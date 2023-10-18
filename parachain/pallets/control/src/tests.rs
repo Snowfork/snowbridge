@@ -3,7 +3,7 @@
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 use sp_core::H256;
-use sp_runtime::{traits::AccountIdConversion, AccountId32, DispatchError::BadOrigin, TokenError};
+use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
 
 #[test]
 fn create_agent() {
@@ -11,7 +11,7 @@ fn create_agent() {
 		let origin_para_id = 2000;
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
 		let agent_id = make_agent_id(origin_location);
-		let sovereign_account = SiblingParaId::from(origin_para_id).into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(origin_para_id.into());
 
 		// fund sovereign account of origin
 		let _ = Balances::mint_into(&sovereign_account, 10000);
@@ -112,7 +112,7 @@ fn create_channel() {
 	new_test_ext().execute_with(|| {
 		let origin_para_id = 2000;
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
-		let sovereign_account = SiblingParaId::from(origin_para_id).into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(origin_para_id.into());
 		let origin = make_xcm_origin(origin_location);
 
 		// fund sovereign account of origin
@@ -128,7 +128,7 @@ fn create_channel_fail_already_exists() {
 	new_test_ext().execute_with(|| {
 		let origin_para_id = 2000;
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
-		let sovereign_account = SiblingParaId::from(origin_para_id).into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(origin_para_id.into());
 		let origin = make_xcm_origin(origin_location);
 
 		// fund sovereign account of origin
@@ -190,7 +190,7 @@ fn update_channel() {
 	new_test_ext().execute_with(|| {
 		let origin_para_id = 2000;
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
-		let sovereign_account = SiblingParaId::from(origin_para_id).into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(origin_para_id.into());
 		let origin = make_xcm_origin(origin_location);
 
 		// First create the channel
@@ -284,7 +284,7 @@ fn force_update_channel() {
 	new_test_ext().execute_with(|| {
 		let origin_para_id = 2000;
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
-		let sovereign_account = SiblingParaId::from(origin_para_id).into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(origin_para_id.into());
 		let origin = make_xcm_origin(origin_location);
 
 		// First create the channel
@@ -495,10 +495,10 @@ fn force_transfer_native_from_agent_bad_origin() {
 
 #[ignore]
 #[test]
-fn sibling_sovereign_account() {
+fn check_sibling_sovereign_account() {
 	new_test_ext().execute_with(|| {
 		let para_id = 1001;
-		let sovereign_account: AccountId32 = SiblingParaId::from(para_id).into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(para_id.into());
 		println!(
 			"Sovereign account for parachain {}: {:#?}",
 			para_id,
