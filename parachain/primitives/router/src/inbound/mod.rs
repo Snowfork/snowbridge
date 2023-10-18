@@ -29,7 +29,7 @@ pub struct MessageV1 {
 	/// EIP-155 chain id of the origin Ethereum network
 	pub chain_id: u64,
 	/// The command originating from the Gateway contract
-	pub message: Command,
+	pub command: Command,
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
@@ -69,8 +69,13 @@ pub enum Destination {
 	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
 }
 
-pub struct MessageToXcm<CreateAssetCall> {
-	_phantom: PhantomData<CreateAssetCall>,
+pub struct MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>
+where
+	CreateAssetCall: Get<CallIndex>,
+	CreateAssetExecutionFee: Get<u128>,
+	SendTokenExecutionFee: Get<u128>,
+{
+	_phantom: PhantomData<(CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee)>,
 }
 
 /// Reason why a message conversion failed.
@@ -87,15 +92,21 @@ pub trait ConvertMessage {
 
 pub type CallIndex = [u8; 2];
 
-impl<CreateAssetCall> ConvertMessage for MessageToXcm<CreateAssetCall>
+impl<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee> ConvertMessage
+	for MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>
 where
 	CreateAssetCall: Get<CallIndex>,
+	CreateAssetExecutionFee: Get<u128>,
+	SendTokenExecutionFee: Get<u128>,
 {
 	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError> {
 		match message {
-			VersionedMessage::V1(MessageV1 { chain_id, message }) => {
+			VersionedMessage::V1(MessageV1 { chain_id, command }) => {
 				let network = Ethereum { chain_id };
-				let buy_execution_fee_amount = 2_000_000_000;
+				let buy_execution_fee_amount = match command {
+					Command::RegisterToken { .. } => CreateAssetExecutionFee::get(),
+					Command::SendToken { .. } => SendTokenExecutionFee::get(),
+				};
 				let buy_execution_fee = MultiAsset {
 					id: Concrete(MultiLocation::parent()),
 					fun: Fungible(buy_execution_fee_amount),
@@ -126,7 +137,7 @@ where
 					]
 				};
 
-				let xcm = match message {
+				let xcm = match command {
 					Command::RegisterToken { gateway, token, .. } => {
 						let owner =
 							GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
@@ -223,7 +234,13 @@ where
 	}
 }
 
-impl<CreateAssetCall: Get<CallIndex>> MessageToXcm<CreateAssetCall> {
+impl<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>
+	MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>
+where
+	CreateAssetCall: Get<CallIndex>,
+	CreateAssetExecutionFee: Get<u128>,
+	SendTokenExecutionFee: Get<u128>,
+{
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
 	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {
 		MultiLocation {
