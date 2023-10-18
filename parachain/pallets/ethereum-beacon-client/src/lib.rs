@@ -100,7 +100,7 @@ pub mod pallet {
 			period: u64,
 		},
 		/// Set OperatingMode
-		OperatingModeSet {
+		OperatingModeChanged {
 			operating_mode: BasicOperatingMode,
 		},
 	}
@@ -265,7 +265,7 @@ pub mod pallet {
 			operating_mode: BasicOperatingMode,
 		) -> DispatchResult {
 			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)?;
-			Self::deposit_event(Event::OperatingModeSet { operating_mode });
+			Self::deposit_event(Event::OperatingModeChanged { operating_mode });
 			Ok(())
 		}
 	}
