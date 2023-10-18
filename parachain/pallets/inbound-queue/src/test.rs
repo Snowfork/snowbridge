@@ -265,7 +265,7 @@ fn test_submit_happy_path() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
+		let dest_para: SiblingParaId = 1000u32.into();
 		let sovereign_account: AccountId = dest_para.into_account_truncating();
 		println!("account: {}", sovereign_account);
 		let _ = Balances::mint_into(&sovereign_account, 10000);
@@ -281,7 +281,7 @@ fn test_submit_happy_path() {
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 		expect_events(vec![InboundQueueEvent::MessageReceived {
-			dest: dest_para,
+			dest: dest_para.into(),
 			nonce: 1,
 			xcm_hash: XCM_HASH,
 		}
@@ -296,7 +296,7 @@ fn test_submit_xcm_send_failure() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of parachain 1001
-		let dest_para: ParaId = 1001u32.into();
+		let dest_para: SiblingParaId = 1001u32.into();
 		let sovereign_account: AccountId = dest_para.into_account_truncating();
 		println!("account: {}", sovereign_account);
 		let _ = Balances::mint_into(&sovereign_account, 10000);
@@ -351,7 +351,7 @@ fn test_submit_with_invalid_nonce() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
+		let dest_para: SiblingParaId = 1000u32.into();
 		let sovereign_account: AccountId = dest_para.into_account_truncating();
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 

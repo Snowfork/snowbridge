@@ -80,7 +80,6 @@ jobs:
           --manifest-path parachain/Cargo.toml
           --workspace
           --features runtime-benchmarks
-          --exclude snowbridge-query-events
           --exclude snowbridge-ethereum-beacon-client
       # Run tests for beacon light client, excluding benchmark tests
       - name: Tests for beacon light client excluding benchmark tests

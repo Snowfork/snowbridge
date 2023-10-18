@@ -24,7 +24,7 @@ mod benchmarks {
 			create_message.execution_header,
 		);
 
-		let dest_para: ParaId = 1000u32.into();
+		let dest_para: SiblingParaId = 1000u32.into();
 		let sovereign_account = dest_para.into_account_truncating();
 
 		let minimum_balance = T::Token::minimum_balance();
