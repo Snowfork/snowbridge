@@ -346,14 +346,14 @@ pub mod pallet {
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			let origin = match (ticket.origin, ticket.priority) {
 				(origin, Priority::High) if origin == T::OwnParaId::get() =>
-					AggregateMessageOrigin::SelfChain(Priority::High),
+					AggregateMessageOrigin::BridgeHub(Priority::High),
 				(origin, Priority::Normal) if origin == T::OwnParaId::get() =>
-					AggregateMessageOrigin::SelfChain(Priority::Normal),
+					AggregateMessageOrigin::BridgeHub(Priority::Normal),
 				(origin, _) => AggregateMessageOrigin::Parachain(origin),
 			};
 
 			match origin {
-				AggregateMessageOrigin::SelfChain(Priority::High) => {
+				AggregateMessageOrigin::BridgeHub(Priority::High) => {
 					// Increase PendingHighPriorityMessageCount by one
 					PendingHighPriorityMessageCount::<T>::mutate(|count| {
 						*count = count.saturating_add(1)
@@ -387,7 +387,7 @@ pub mod pallet {
 
 			// Yield for halt check or if there is pending high priority message
 			match origin {
-				AggregateMessageOrigin::SelfChain(Priority::High) => {
+				AggregateMessageOrigin::BridgeHub(Priority::High) => {
 					// Decrease PendingHighPriorityMessageCount by one
 					PendingHighPriorityMessageCount::<T>::mutate(|count| {
 						*count = count.saturating_sub(1)

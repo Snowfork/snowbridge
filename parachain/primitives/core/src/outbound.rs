@@ -361,7 +361,7 @@ pub enum Priority {
 #[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum AggregateMessageOrigin {
 	#[codec(index = 0)]
-	SelfChain(Priority),
+	BridgeHub(Priority),
 	#[codec(index = 1)]
 	Parachain(ParaId),
 }

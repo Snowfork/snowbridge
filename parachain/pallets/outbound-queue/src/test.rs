@@ -306,7 +306,7 @@ fn submit_low_priority_messages_yield_when_there_is_high_priority_message() {
 		let ticket = result.unwrap();
 		assert_ok!(OutboundQueue::submit(ticket.0));
 		let mut footprint =
-			MessageQueue::footprint(AggregateMessageOrigin::SelfChain(Priority::High));
+			MessageQueue::footprint(AggregateMessageOrigin::BridgeHub(Priority::High));
 		println!("{:?}", footprint);
 		assert_eq!(footprint.count, 1);
 
@@ -384,7 +384,7 @@ fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_ge
 		assert!(result.is_ok());
 		let ticket = result.unwrap();
 		assert_ok!(OutboundQueue::submit(ticket.0));
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::SelfChain(Priority::High));
+		let footprint = MessageQueue::footprint(AggregateMessageOrigin::BridgeHub(Priority::High));
 		println!("{:?}", footprint);
 		assert_eq!(footprint.count, 1);
 
@@ -397,7 +397,7 @@ fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_ge
 		assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
 		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Parachain(1000.into()));
 		assert_eq!(footprint.count, 41);
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::SelfChain(Priority::High));
+		let footprint = MessageQueue::footprint(AggregateMessageOrigin::BridgeHub(Priority::High));
 		assert_eq!(footprint.count, 0);
 
 		// move to the next block, some low priority messages get executed
