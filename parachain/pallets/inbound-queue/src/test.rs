@@ -141,6 +141,8 @@ parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15 };
 	pub const GatewayAddress: H160 = H160(GATEWAY_ADDRESS);
 	pub const CreateAssetCall: [u8;2] = [53, 0];
+	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
+	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -153,25 +155,26 @@ impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Test {
 pub struct MockXcmSender;
 
 impl SendXcm for MockXcmSender {
-	type Ticket = ();
+	type Ticket = Xcm<()>;
 
 	fn validate(
 		dest: &mut Option<MultiLocation>,
-		_: &mut Option<xcm::v3::Xcm<()>>,
-	) -> xcm::v3::SendResult<Self::Ticket> {
+		xcm: &mut Option<xcm::v3::Xcm<()>>,
+	) -> SendResult<Self::Ticket> {
 		match dest {
 			Some(MultiLocation { interior, .. }) => {
 				if let X1(Parachain(1001)) = interior {
 					return Err(XcmpSendError::NotApplicable)
 				}
-				Ok(((), MultiAssets::default()))
+				Ok((xcm.clone().unwrap(), MultiAssets::default()))
 			},
-			_ => Ok(((), MultiAssets::default())),
+			_ => Ok((xcm.clone().unwrap(), MultiAssets::default())),
 		}
 	}
 
-	fn deliver(_: Self::Ticket) -> core::result::Result<XcmHash, XcmpSendError> {
-		Ok(H256::zero().into())
+	fn deliver(xcm: Self::Ticket) -> core::result::Result<XcmHash, XcmpSendError> {
+		let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
+		Ok(hash)
 	}
 }
 
@@ -183,7 +186,8 @@ impl inbound_queue::Config for Test {
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
-	type MessageConverter = MessageToXcm<CreateAssetCall>;
+	type MessageConverter =
+		MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
 }
@@ -246,6 +250,14 @@ const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
 	"
 );
 
+// invalid payload with unsupported version
+const BAD_OUTBOUND_QUEUE_LOG_UNSUPPORTED_VERSION: [u8; 253] = hex!("f8fb94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000032010f0000000000000000eda338e4dc46038493b885327842fd3e301cab3987d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000000000000000000000000000");
+
+const XCM_HASH: [u8; 32] = [
+	232, 213, 62, 94, 48, 47, 152, 37, 168, 162, 89, 100, 6, 74, 63, 95, 211, 11, 222, 210, 1, 209,
+	126, 44, 164, 122, 166, 156, 208, 228, 209, 9,
+];
+
 #[test]
 fn test_submit_happy_path() {
 	new_tester().execute_with(|| {
@@ -271,7 +283,7 @@ fn test_submit_happy_path() {
 		expect_events(vec![InboundQueueEvent::MessageReceived {
 			dest: dest_para,
 			nonce: 1,
-			xcm_hash: H256::zero().into(),
+			xcm_hash: XCM_HASH,
 		}
 		.into()]);
 	});
@@ -391,6 +403,63 @@ fn test_submit_no_funds_to_reward_relayers() {
 			// should actually be `NoFunds`. See this bug in substrate:
 			// https://github.com/paritytech/substrate/issues/13866
 			ArithmeticError::Underflow
+		);
+	});
+}
+
+#[test]
+fn test_convert_xcm_message() {
+	new_tester().execute_with(|| {
+		// Submit message
+		let message = Message {
+			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+		};
+		let log = <Test as pallet::Config>::Verifier::verify(&message).unwrap();
+
+		// Decode log into an Envelope
+		let envelope = Envelope::try_from(log).map_err(|_| Error::<Test>::InvalidEnvelope).unwrap();
+
+		let message =
+			inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()).unwrap();
+
+		let xcm = <Test as pallet::Config>::MessageConverter::convert(message).unwrap();
+
+		println!("xcm: {:?}", xcm);
+
+		let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
+
+		assert_eq!(hash, XCM_HASH);
+	})
+}
+
+#[test]
+fn test_submit_with_invalid_payload_unsupported_version() {
+	new_tester().execute_with(|| {
+		let relayer: AccountId = Keyring::Bob.into();
+		let origin = RuntimeOrigin::signed(relayer);
+
+		// Deposit funds into sovereign account of Asset Hub (Statemint)
+		let dest_para: ParaId = 1000u32.into();
+		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let _ = Balances::mint_into(&sovereign_account, 10000);
+
+		// Submit message
+		let message = Message {
+			data: BAD_OUTBOUND_QUEUE_LOG_UNSUPPORTED_VERSION.into(),
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+		};
+		assert_noop!(
+			InboundQueue::submit(origin.clone(), message.clone()),
+			Error::<Test>::InvalidPayload
 		);
 	});
 }
