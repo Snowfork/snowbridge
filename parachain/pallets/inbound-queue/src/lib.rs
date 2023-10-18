@@ -35,7 +35,7 @@ use xcm::v3::{
 use envelope::Envelope;
 use snowbridge_core::{
 	inbound::{Message, Verifier},
-	BridgeModule, BridgeModuleError, OperatingMode, ParaId,
+	BridgeModule, OperatingMode, OperatingModeError, ParaId,
 };
 use snowbridge_router_primitives::{
 	inbound,
@@ -131,7 +131,7 @@ pub mod pallet {
 		/// XCMP send failure
 		Send(SendError),
 		/// Operational mode errors
-		OperationalMode(BridgeModuleError),
+		OperationalMode(OperatingModeError),
 		/// Message conversion error
 		ConvertMessage(ConvertMessageError),
 	}

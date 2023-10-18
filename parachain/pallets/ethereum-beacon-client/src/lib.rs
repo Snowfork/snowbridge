@@ -29,7 +29,7 @@ use primitives::{
 };
 use snowbridge_core::{
 	inbound::{Message, Proof, Verifier},
-	BridgeModule, BridgeModuleError, OperatingMode, RingBufferMap,
+	BridgeModule, OperatingMode, OperatingModeError, RingBufferMap,
 };
 use sp_core::H256;
 use sp_std::prelude::*;
@@ -135,7 +135,7 @@ pub mod pallet {
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedBlock,
-		BridgeModule(BridgeModuleError),
+		BridgeModule(OperatingModeError),
 	}
 
 	/// Latest imported checkpoint root
