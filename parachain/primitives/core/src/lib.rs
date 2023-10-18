@@ -19,4 +19,4 @@ use sp_core::H256;
 
 /// The ID of an agent contract
 pub type AgentId = H256;
-pub use operating_mode::{BasicOperatingMode, BridgeModule, BridgeModuleError};
+pub use operating_mode::{BridgeModule, BridgeModuleError, OperatingMode};

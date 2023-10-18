@@ -268,7 +268,7 @@ fn submit_message_fail_invalid_origin() {
 	new_tester().execute_with(|| {
 		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
 		assert_noop!(
-			OutboundQueue::set_operating_mode(origin, BasicOperatingMode::Halted),
+			OutboundQueue::set_operating_mode(origin, OperatingMode::Halted),
 			DispatchError::BadOrigin,
 		);
 	})

@@ -29,7 +29,7 @@ use primitives::{
 };
 use snowbridge_core::{
 	inbound::{Message, Proof, Verifier},
-	BasicOperatingMode, BridgeModule, BridgeModuleError, RingBufferMap,
+	BridgeModule, BridgeModuleError, OperatingMode, RingBufferMap,
 };
 use sp_core::H256;
 use sp_std::prelude::*;
@@ -101,7 +101,7 @@ pub mod pallet {
 		},
 		/// Set OperatingMode
 		OperatingModeChanged {
-			operating_mode: BasicOperatingMode,
+			operating_mode: OperatingMode,
 		},
 	}
 
@@ -200,10 +200,10 @@ pub mod pallet {
 	///
 	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
-	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
+	pub type PalletOperatingMode<T: Config> = StorageValue<_, OperatingMode, ValueQuery>;
 
 	impl<T: Config> BridgeModule<T> for Pallet<T> {
-		type OperatingMode = BasicOperatingMode;
+		type OperatingMode = OperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
 		type AllowedHaltOrigin = EnsureRoot<T::AccountId>;
 	}
@@ -262,7 +262,7 @@ pub mod pallet {
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_operating_mode(
 			origin: OriginFor<T>,
-			operating_mode: BasicOperatingMode,
+			operating_mode: OperatingMode,
 		) -> DispatchResult {
 			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)?;
 			Self::deposit_event(Event::OperatingModeChanged { operating_mode });

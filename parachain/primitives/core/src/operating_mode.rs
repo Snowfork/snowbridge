@@ -13,7 +13,7 @@ pub enum BridgeModuleError {
 }
 
 /// Operating mode for a bridge module.
-pub trait OperatingMode: Send + Copy + Debug + FullCodec {
+pub trait OperatingModeTrait: Send + Copy + Debug + FullCodec {
 	// Returns true if the bridge module is halted.
 	fn is_halted(&self) -> bool;
 }
@@ -32,28 +32,28 @@ pub trait OperatingMode: Send + Copy + Debug + FullCodec {
 	serde::Serialize,
 	serde::Deserialize,
 )]
-pub enum BasicOperatingMode {
+pub enum OperatingMode {
 	/// Normal mode, when all operations are allowed.
 	Normal,
 	/// The pallet is halted. All operations (except operating mode change) are prohibited.
 	Halted,
 }
 
-impl Default for BasicOperatingMode {
+impl Default for OperatingMode {
 	fn default() -> Self {
 		Self::Normal
 	}
 }
 
-impl OperatingMode for BasicOperatingMode {
+impl OperatingModeTrait for OperatingMode {
 	fn is_halted(&self) -> bool {
-		*self == BasicOperatingMode::Halted
+		*self == OperatingMode::Halted
 	}
 }
 
 /// Bridge module with operating mode
 pub trait BridgeModule<T: frame_system::Config> {
-	type OperatingMode: OperatingMode;
+	type OperatingMode: OperatingModeTrait;
 	type OperatingModeStorage: StorageValue<Self::OperatingMode, Query = Self::OperatingMode>;
 	type AllowedHaltOrigin: EnsureOrigin<T::RuntimeOrigin>;
 

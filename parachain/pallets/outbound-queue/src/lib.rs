@@ -43,7 +43,7 @@ use snowbridge_core::{
 		AggregateMessageOrigin, Command, EnqueuedMessage, GasMeter, Message, MessageHash,
 		OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage, SubmitError,
 	},
-	BasicOperatingMode, BridgeModule,
+	BridgeModule, OperatingMode,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
@@ -129,7 +129,7 @@ pub mod pallet {
 			count: u64,
 		},
 		/// Set OperatingMode
-		OperatingModeChanged { operating_mode: BasicOperatingMode },
+		OperatingModeChanged { operating_mode: OperatingMode },
 	}
 
 	#[pallet::error]
@@ -163,7 +163,7 @@ pub mod pallet {
 	/// The current operating mode of the pallet.
 	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
-	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
+	pub type PalletOperatingMode<T: Config> = StorageValue<_, OperatingMode, ValueQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
@@ -191,7 +191,7 @@ pub mod pallet {
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_operating_mode(
 			origin: OriginFor<T>,
-			operating_mode: BasicOperatingMode,
+			operating_mode: OperatingMode,
 		) -> DispatchResult {
 			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)?;
 			Self::deposit_event(Event::OperatingModeChanged { operating_mode });
@@ -200,7 +200,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> BridgeModule<T> for Pallet<T> {
-		type OperatingMode = BasicOperatingMode;
+		type OperatingMode = OperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
 		type AllowedHaltOrigin = EnsureRoot<T::AccountId>;
 	}

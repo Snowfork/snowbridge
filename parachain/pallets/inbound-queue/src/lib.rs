@@ -35,7 +35,7 @@ use xcm::v3::{
 use envelope::Envelope;
 use snowbridge_core::{
 	inbound::{Message, Verifier},
-	BasicOperatingMode, BridgeModule, BridgeModuleError, ParaId,
+	BridgeModule, BridgeModuleError, OperatingMode, ParaId,
 };
 use snowbridge_router_primitives::{
 	inbound,
@@ -111,7 +111,7 @@ pub mod pallet {
 			xcm_hash: XcmHash,
 		},
 		/// Set OperatingMode
-		OperatingModeChanged { operating_mode: BasicOperatingMode },
+		OperatingModeChanged { operating_mode: OperatingMode },
 	}
 
 	#[pallet::error]
@@ -171,10 +171,10 @@ pub mod pallet {
 	///
 	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
-	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
+	pub type PalletOperatingMode<T: Config> = StorageValue<_, OperatingMode, ValueQuery>;
 
 	impl<T: Config> BridgeModule<T> for Pallet<T> {
-		type OperatingMode = BasicOperatingMode;
+		type OperatingMode = OperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
 		type AllowedHaltOrigin = EnsureRoot<T::AccountId>;
 	}
@@ -240,7 +240,7 @@ pub mod pallet {
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_operating_mode(
 			origin: OriginFor<T>,
-			operating_mode: BasicOperatingMode,
+			operating_mode: OperatingMode,
 		) -> DispatchResult {
 			<Self as BridgeModule<_>>::set_operating_mode(origin, operating_mode)?;
 			Self::deposit_event(Event::OperatingModeChanged { operating_mode });
