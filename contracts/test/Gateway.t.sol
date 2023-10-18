@@ -79,8 +79,7 @@ contract GatewayTest is Test {
             bridgeHubParaID,
             bridgeHubAgentID,
             assetHubParaID,
-            assetHubAgentID,
-            bytes2(0x3500)
+            assetHubAgentID
         );
         gateway = new GatewayProxy(
             address(gatewayLogic),
@@ -537,9 +536,7 @@ contract GatewayTest is Test {
         emit TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token), bytes2(0x3500))
-        );
+        emit OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token)));
 
         IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
     }
@@ -549,9 +546,7 @@ contract GatewayTest is Test {
         emit TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token), bytes2(0x3500))
-        );
+        emit OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token)));
 
         uint256 totalFee = baseFee + registerNativeTokenFee;
         uint256 balanceBefore = address(this).balance;

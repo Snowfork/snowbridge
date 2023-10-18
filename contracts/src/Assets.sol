@@ -95,17 +95,14 @@ library Assets {
 
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
-    function registerToken(address token, bytes2 createTokenCallID)
-        external
-        returns (bytes memory payload, uint256 extraFee)
-    {
+    function registerToken(address token) external returns (bytes memory payload, uint256 extraFee) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         if (!token.isContract()) {
             revert InvalidToken();
         }
 
-        payload = SubstrateTypes.RegisterToken(address(this), token, createTokenCallID);
+        payload = SubstrateTypes.RegisterToken(address(this), token);
         extraFee = $.registerTokenFee;
 
         emit TokenRegistrationSent(token);

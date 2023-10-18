@@ -40,7 +40,6 @@ contract Gateway is IGateway, IInitializable {
     // AssetHub
     ParaID internal immutable ASSET_HUB_PARA_ID;
     bytes32 internal immutable ASSET_HUB_AGENT_ID;
-    bytes2 internal immutable CREATE_TOKEN_CALL_ID;
 
     // Fixed amount of gas used outside the gas metering in submitInbound
     uint256 BASE_GAS_USED = 31000;
@@ -75,8 +74,7 @@ contract Gateway is IGateway, IInitializable {
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
         ParaID assetHubParaID,
-        bytes32 assetHubAgentID,
-        bytes2 createTokenCallID
+        bytes32 assetHubAgentID
     ) {
         if (
             bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0 || assetHubParaID == ParaID.wrap(0)
@@ -92,7 +90,6 @@ contract Gateway is IGateway, IInitializable {
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         ASSET_HUB_PARA_ID = assetHubParaID;
         ASSET_HUB_AGENT_ID = assetHubAgentID;
-        CREATE_TOKEN_CALL_ID = createTokenCallID;
     }
 
     /// @dev Submit a message from Polkadot for verification and dispatch
@@ -418,7 +415,7 @@ contract Gateway is IGateway, IInitializable {
 
     // Register a token on AssetHub
     function registerToken(address token) external payable {
-        (bytes memory payload, uint256 extraFee) = Assets.registerToken(token, CREATE_TOKEN_CALL_ID);
+        (bytes memory payload, uint256 extraFee) = Assets.registerToken(token);
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
     }
