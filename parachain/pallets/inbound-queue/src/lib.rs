@@ -28,7 +28,8 @@ use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
 use xcm::v3::{
-	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, XcmHash,
+	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, SendXcm,
+	XcmHash,
 };
 
 use envelope::Envelope;
@@ -36,7 +37,10 @@ use snowbridge_core::{
 	inbound::{Message, Verifier},
 	ParaId,
 };
-use snowbridge_router_primitives::inbound;
+use snowbridge_router_primitives::{
+	inbound,
+	inbound::{ConvertMessage, ConvertMessageError},
+};
 pub use weights::WeightInfo;
 
 type BalanceOf<T> =
@@ -51,11 +55,9 @@ pub mod pallet {
 
 	use super::*;
 
+	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
 	use frame_system::pallet_prelude::*;
-	use xcm::v3::SendXcm;
-
-	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -86,6 +88,9 @@ pub mod pallet {
 		// Gateway contract address
 		#[pallet::constant]
 		type GatewayAddress: Get<H160>;
+
+		/// Convert inbound message to XCM
+		type MessageConverter: ConvertMessage;
 
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self>;
@@ -126,6 +131,8 @@ pub mod pallet {
 		Send(SendError),
 		/// Operational mode errors
 		OperationalMode(bp_runtime::OwnedBridgeModuleError),
+		/// Message conversion error
+		ConvertMessage(ConvertMessageError),
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, PalletError)]
@@ -218,7 +225,8 @@ pub mod pallet {
 
 			// Decode message into XCM
 			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-				Ok(inbound::VersionedMessage::V1(message_v1)) => message_v1.into(),
+				Ok(message) => T::MessageConverter::convert(message)
+					.map_err(|e| Error::<T>::ConvertMessage(e))?,
 				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 			};
 

@@ -240,6 +240,11 @@ pub mod pallet {
 		///
 		/// Fee required: Yes
 		///
+		/// This extrinsic is permissionless, so a fee is charged to prevent spamming and pay
+		/// for execution costs on the remote side.
+		///
+		/// The message is sent over the bridge on BridgeHub's own channel to the Gateway.
+		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::create_channel())]

@@ -26,6 +26,7 @@ sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master"
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 bp-runtime = { git = "https://github.com/Snowfork/cumulus.git", branch = "snowbridge", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
@@ -63,6 +64,7 @@ std = [
     "snowbridge-router-primitives/std",
     "ethabi/std",
     "xcm/std",
+    "xcm-builder/std",
     "bp-runtime/std",
 ]
 runtime-benchmarks = [
@@ -72,5 +74,6 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "hex-literal",
     "rlp",
-    "snowbridge-beacon-primitives"
+    "snowbridge-beacon-primitives",
+    "xcm-builder/runtime-benchmarks",
 ]

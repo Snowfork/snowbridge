@@ -79,8 +79,7 @@ contract GatewayTest is Test {
             bridgeHubParaID,
             bridgeHubAgentID,
             assetHubParaID,
-            assetHubAgentID,
-            bytes2(0x3500)
+            assetHubAgentID
         );
         gateway = new GatewayProxy(
             address(gatewayLogic),
@@ -158,7 +157,9 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            proof,
+            makeMockProof()
         );
     }
 
@@ -169,14 +170,18 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            proof,
+            makeMockProof()
         );
 
         // try to replay the message
         vm.expectRevert(Gateway.InvalidNonce.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            proof,
+            makeMockProof()
         );
     }
 
@@ -200,7 +205,9 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            proof,
+            makeMockProof()
         );
     }
 
@@ -221,7 +228,9 @@ contract GatewayTest is Test {
 
         uint256 startGas = gasleft();
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            proof,
+            makeMockProof()
         );
         uint256 endGas = gasleft();
         uint256 estimatedActualRefundAmount = (startGas - endGas) * tx.gasprice;
@@ -245,7 +254,9 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            proof,
+            makeMockProof()
         );
 
         assertEq(address(bridgeHubAgent).balance, 0 ether);
@@ -525,9 +536,7 @@ contract GatewayTest is Test {
         emit TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token), bytes2(0x3500))
-        );
+        emit OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token)));
 
         IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
     }
@@ -537,9 +546,7 @@ contract GatewayTest is Test {
         emit TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token), bytes2(0x3500))
-        );
+        emit OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token)));
 
         uint256 totalFee = baseFee + registerNativeTokenFee;
         uint256 balanceBefore = address(this).balance;
