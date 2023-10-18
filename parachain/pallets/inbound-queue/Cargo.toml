@@ -11,15 +11,10 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 serde = { version = "1.0.164", optional = true }
-codec = { version = "3.1.5", package = "parity-scale-codec", default-features = false, features = [
-    "derive",
-] }
-scale-info = { version = "2.7.0", default-features = false, features = [
-    "derive",
-] }
+codec = { version = "3.1.5", package = "parity-scale-codec", default-features = false, features = ["derive"] }
+scale-info = { version = "2.7.0", default-features = false, features = ["derive"] }
 hex-literal = { version = "0.4.1", optional = true }
 rlp = { version = "0.5", default-features = false, optional = true }
-
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
@@ -28,7 +23,6 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "maste
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
-
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
@@ -36,7 +30,6 @@ snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
-
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false, optional = true }
 
 [dev-dependencies]
