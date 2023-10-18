@@ -29,7 +29,7 @@ pub struct MessageV1 {
 	/// EIP-155 chain id of the origin Ethereum network
 	pub chain_id: u64,
 	/// The command originating from the Gateway contract
-	pub message: Command,
+	pub command: Command,
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug)]
@@ -101,7 +101,7 @@ where
 {
 	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError> {
 		match message {
-			VersionedMessage::V1(MessageV1 { chain_id, message: command }) => {
+			VersionedMessage::V1(MessageV1 { chain_id, command }) => {
 				let network = Ethereum { chain_id };
 				let buy_execution_fee_amount = match command {
 					Command::RegisterToken { .. } => CreateAssetExecutionFee::get(),
