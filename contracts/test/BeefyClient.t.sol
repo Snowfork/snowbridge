@@ -53,7 +53,7 @@ contract BeefyClientTest is Test {
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
         randaoCommitExpiration = uint8(vm.envOr("RANDAO_COMMIT_EXP", uint256(8)));
-        minimumSignatureSamples = uint8(vm.envOr("BEEFY_MINIMUM_SIGNATURE_SAMPLES", uint256(16)));
+        minimumSignatureSamples = uint8(vm.envOr("MINIMUM_REQUIRED_SIGNATURES", uint256(16)));
         prevRandao = uint32(vm.envOr("PREV_RANDAO", uint256(377)));
 
         string memory beefyCommitmentFile = string.concat(vm.projectRoot(), "/test/data/beefy-commitment.json");
