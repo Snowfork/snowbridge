@@ -47,7 +47,6 @@ use snowbridge_core::{
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
-use frame_system::EnsureRoot;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 pub use weights::WeightInfo;
 
@@ -199,7 +198,6 @@ pub mod pallet {
 	impl<T: Config> BridgeModule<T> for Pallet<T> {
 		type OperatingMode = OperatingMode;
 		type OperatingModeStorage = PalletOperatingMode<T>;
-		type AllowedHaltOrigin = EnsureRoot<T::AccountId>;
 	}
 
 	impl<T: Config> Pallet<T> {
