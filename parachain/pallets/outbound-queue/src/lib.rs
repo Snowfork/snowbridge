@@ -39,11 +39,10 @@ use sp_runtime::traits::{Hash, Saturating};
 use sp_std::prelude::*;
 
 use snowbridge_core::outbound::{
-	AggregateMessageOrigin, Command, EnqueuedMessage, GasMeter, Message, MessageHash,
+	AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, GasMeter, Message, MessageHash,
 	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage, SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
-
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 pub use weights::WeightInfo;
 
@@ -62,7 +61,6 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
-	use snowbridge_core::outbound::ExportOrigin;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -333,23 +331,20 @@ pub mod pallet {
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-			let origin = match ticket.origin {
-				origin if origin == T::OwnParaId::get() =>
-					AggregateMessageOrigin::Export(ExportOrigin::Here),
-				origin => AggregateMessageOrigin::Export(ExportOrigin::Sibling(origin)),
+			let origin = if ticket.origin == T::OwnParaId::get() {
+				AggregateMessageOrigin::Export(ExportOrigin::Here)
+			} else {
+				AggregateMessageOrigin::Export(ExportOrigin::Sibling(ticket.origin))
 			};
 
-			match origin {
-				AggregateMessageOrigin::Export(ExportOrigin::Here) => {
-					// Increase PendingHighPriorityMessageCount by one
-					PendingHighPriorityMessageCount::<T>::mutate(|count| {
-						*count = count.saturating_add(1)
-					});
-				},
-				_ => {
-					Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
-				},
-			};
+			if let AggregateMessageOrigin::Export(ExportOrigin::Here) = origin {
+				// Increase PendingHighPriorityMessageCount by one
+				PendingHighPriorityMessageCount::<T>::mutate(|count| {
+					*count = count.saturating_add(1)
+				});
+			} else {
+				Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
+			}
 
 			T::MessageQueue::enqueue_message(ticket.message.as_bounded_slice(), origin);
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
@@ -373,20 +368,17 @@ pub mod pallet {
 			);
 
 			// Yield for halt check or if there is pending high priority message
-			match origin {
-				AggregateMessageOrigin::Export(ExportOrigin::Here) => {
-					// Decrease PendingHighPriorityMessageCount by one
-					PendingHighPriorityMessageCount::<T>::mutate(|count| {
-						*count = count.saturating_sub(1)
-					});
-				},
-				_ => {
-					Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
-					ensure!(
-						PendingHighPriorityMessageCount::<T>::get() == 0,
-						ProcessMessageError::Yield
-					);
-				},
+			if let AggregateMessageOrigin::Export(ExportOrigin::Here) = origin {
+				// Decrease PendingHighPriorityMessageCount by one
+				PendingHighPriorityMessageCount::<T>::mutate(|count| {
+					*count = count.saturating_sub(1)
+				});
+			} else {
+				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
+				ensure!(
+					PendingHighPriorityMessageCount::<T>::get() == 0,
+					ProcessMessageError::Yield
+				);
 			}
 
 			let weight = T::WeightInfo::do_process_message();
