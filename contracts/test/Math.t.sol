@@ -86,4 +86,9 @@ contract MathTest is Test {
         assertEq(65535, Math.saturatingAdd(65535, 1));
         assertEq(65535, Math.saturatingAdd(32769, 32769));
     }
+
+    function testSaturatingSub() public {
+        assertEq(3, Math.saturatingSub(6, 3));
+        assertEq(0, Math.saturatingSub(100, 150));
+    }
 }

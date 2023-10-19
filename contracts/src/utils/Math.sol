@@ -90,13 +90,23 @@ library Math {
     }
 
     /**
-     * @dev Safely adds to unsigned 16-bit integers, preventing overflow by saturating to max uint16.
+     * @dev Safely adds two unsigned 16-bit integers, preventing overflow by saturating to max uint16.
      */
     function saturatingAdd(uint16 a, uint16 b) internal pure returns (uint16) {
-        uint256 result = uint256(a) + uint256(b);
-        if (result > 0xFFFF) {
-            result = 0xFFFF;
+        unchecked {
+            uint16 c = a + b;
+            if (c < a) return 0xFFFF;
+            return c;
         }
-        return uint16(result);
+    }
+
+    /**
+     * @dev Safely subtracts two unsigned 256-bit integers, preventing overflow by saturating to min uint256.
+     */
+    function saturatingSub(uint256 a, uint256 b) internal pure returns (uint256) {
+        unchecked {
+            if (b > a) return 0;
+            return a - b;
+        }
     }
 }

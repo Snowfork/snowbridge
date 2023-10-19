@@ -33,6 +33,7 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
 contract BeefyClient {
     using Counter for uint256[];
     using Math for uint16;
+    using Math for uint256;
 
     /* Events */
 
@@ -435,17 +436,15 @@ contract BeefyClient {
         view
         returns (uint256)
     {
-        // There are less validators than the minimum signatures so validate 2/3 majority.
-        if (validatorSetLen <= minNumRequiredSignatures) {
-            return validatorSetLen - (validatorSetLen - 1) / 3;
-        }
-
         // Start with the minimum number of signatures.
         uint256 numRequiredSignatures = minNumRequiredSignatures;
 
         // We must substrate minimumSignatures from the number of validators or we might end up
         // requiring more signatures than there are validators.
-        numRequiredSignatures += Math.log2(validatorSetLen - minNumRequiredSignatures, Math.Rounding.Ceil);
+        uint256 extraValidatorsLen = validatorSetLen.saturatingSub(minNumRequiredSignatures);
+        if (extraValidatorsLen > 0) {
+            numRequiredSignatures += Math.log2(extraValidatorsLen, Math.Rounding.Ceil);
+        }
 
         // To address the concurrency issue specified in the link below:
         // https://hackmd.io/wsVcL0tZQA-Ks3b5KJilFQ?view#Solution-2-Signature-Checks-dynamically-depend-on-the-No-of-initial-Claims-per-session

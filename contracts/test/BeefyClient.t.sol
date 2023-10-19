@@ -674,8 +674,12 @@ contract BeefyClientTest is Test {
     }
 
     function testSignatureSampleWithUseMajorityIfVsetIsSmallerThanMinSignatures() public {
-        SignatureSampleTest[3] memory tests =
-            [SignatureSampleTest(7, 9, 0), SignatureSampleTest(11, 16, 0), SignatureSampleTest(16, 17, 0)];
+        SignatureSampleTest[4] memory tests = [
+            SignatureSampleTest(9, 9, 0),
+            SignatureSampleTest(16, 16, 0),
+            SignatureSampleTest(16, 17, 0),
+            SignatureSampleTest(17, 17, 1)
+        ];
         for (uint256 i = 0; i < tests.length; ++i) {
             SignatureSampleTest memory test = tests[i];
             assertEq(
