@@ -40,8 +40,7 @@ use sp_std::prelude::*;
 
 use snowbridge_core::outbound::{
 	AggregateMessageOrigin, Command, EnqueuedMessage, GasMeter, Message, MessageHash,
-	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage, Priority,
-	SubmitError,
+	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage, SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 
@@ -63,7 +62,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
-	use frame_support::traits::Contains;
+	use snowbridge_core::outbound::ExportOrigin;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -104,9 +103,6 @@ pub mod pallet {
 		/// The reward in ETH (wei)
 		#[pallet::constant]
 		type DeliveryReward: Get<u128>;
-
-		/// Determines whether a command is high priority
-		type HighPriorityCommands: Contains<Command>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -330,32 +326,21 @@ pub mod pallet {
 			let encoded =
 				enqueued_message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
 
-			let priority = match T::HighPriorityCommands::contains(&message.command) {
-				true => Priority::High,
-				_ => Priority::Normal,
-			};
-
-			let ticket = OutboundQueueTicket {
-				id: message_id,
-				origin: message.origin,
-				message: encoded,
-				priority,
-			};
+			let ticket =
+				OutboundQueueTicket { id: message_id, origin: message.origin, message: encoded };
 
 			Ok((ticket, delivery_fee))
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-			let origin = match (ticket.origin, ticket.priority) {
-				(origin, Priority::High) if origin == T::OwnParaId::get() =>
-					AggregateMessageOrigin::BridgeHub(Priority::High),
-				(origin, Priority::Normal) if origin == T::OwnParaId::get() =>
-					AggregateMessageOrigin::BridgeHub(Priority::Normal),
-				(origin, _) => AggregateMessageOrigin::Parachain(origin),
+			let origin = match ticket.origin {
+				origin if origin == T::OwnParaId::get() =>
+					AggregateMessageOrigin::Export(ExportOrigin::Here),
+				origin => AggregateMessageOrigin::Export(ExportOrigin::Sibling(origin)),
 			};
 
 			match origin {
-				AggregateMessageOrigin::BridgeHub(Priority::High) => {
+				AggregateMessageOrigin::Export(ExportOrigin::Here) => {
 					// Increase PendingHighPriorityMessageCount by one
 					PendingHighPriorityMessageCount::<T>::mutate(|count| {
 						*count = count.saturating_add(1)
@@ -381,15 +366,15 @@ pub mod pallet {
 			_: &mut [u8; 32],
 		) -> Result<bool, ProcessMessageError> {
 			// Yield for hard limit to ensure the weight of `on_finalize` is bounded.
+			let current_size = MessageLeaves::<T>::decode_len().unwrap_or(0);
 			ensure!(
-				MessageLeaves::<T>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerBlock::get() as usize,
+				current_size < T::MaxMessagesPerBlock::get() as usize,
 				ProcessMessageError::Yield
 			);
 
 			// Yield for halt check or if there is pending high priority message
 			match origin {
-				AggregateMessageOrigin::BridgeHub(Priority::High) => {
+				AggregateMessageOrigin::Export(ExportOrigin::Here) => {
 					// Decrease PendingHighPriorityMessageCount by one
 					PendingHighPriorityMessageCount::<T>::mutate(|count| {
 						*count = count.saturating_sub(1)

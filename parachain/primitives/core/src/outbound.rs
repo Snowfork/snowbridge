@@ -2,7 +2,7 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
-	traits::{tokens::Balance, Contains, Get},
+	traits::{tokens::Balance, Get},
 	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
@@ -286,7 +286,6 @@ pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
 	pub id: H256,
 	pub origin: ParaId,
 	pub message: BoundedVec<u8, MaxMessageSize>,
-	pub priority: Priority,
 }
 
 /// Message which is awaiting processing in the MessageQueue pallet
@@ -336,7 +335,7 @@ impl From<PreparedMessage> for Token {
 
 impl From<u32> for AggregateMessageOrigin {
 	fn from(value: u32) -> Self {
-		AggregateMessageOrigin::Parachain(value.into())
+		AggregateMessageOrigin::Export(ExportOrigin::Sibling(value.into()))
 	}
 }
 
@@ -350,25 +349,15 @@ pub struct OriginInfo {
 	pub agent_id: H256,
 }
 
-/// Priority for an outbound message
-#[derive(Copy, Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum Priority {
-	Normal,
-	High,
+#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum ExportOrigin {
+	Here,
+	Sibling(ParaId),
 }
 
 /// Aggregate message origin for the `MessageQueue` pallet.
 #[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum AggregateMessageOrigin {
-	#[codec(index = 0)]
-	BridgeHub(Priority),
-	#[codec(index = 1)]
-	Parachain(ParaId),
-}
-
-pub struct HighPriorityCommands;
-impl Contains<Command> for HighPriorityCommands {
-	fn contains(command: &Command) -> bool {
-		matches!(command, Command::Upgrade { .. } | Command::SetOperatingMode { .. })
-	}
+	/// Message is to be exported via a bridge
+	Export(ExportOrigin),
 }

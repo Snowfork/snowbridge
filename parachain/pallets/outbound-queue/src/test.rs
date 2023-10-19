@@ -9,7 +9,7 @@ use frame_support::{
 	weights::WeightMeter,
 };
 
-use snowbridge_core::outbound::{AgentExecuteCommand, Command, HighPriorityCommands, Initializer};
+use snowbridge_core::outbound::{AgentExecuteCommand, Command, ExportOrigin, Initializer};
 use sp_core::{ConstU128, H160, H256};
 use sp_runtime::{
 	testing::Header,
@@ -99,7 +99,6 @@ impl crate::Config for Test {
 	type DeliveryFeePerGas = ConstU128<1>;
 	type DeliveryRefundPerGas = ConstU128<1>;
 	type DeliveryReward = ConstU128<1>;
-	type HighPriorityCommands = HighPriorityCommands;
 	type WeightInfo = ();
 }
 
@@ -226,7 +225,7 @@ fn process_message_yields_on_max_messages_per_block() {
 			MessageLeaves::<Test>::append(H256::zero())
 		}
 
-		let origin = AggregateMessageOrigin::Parachain(1000.into());
+		let origin = AggregateMessageOrigin::Export(ExportOrigin::Sibling(1000.into()));
 		let message = EnqueuedMessage {
 			id: Default::default(),
 			origin: 1000.into(),
@@ -250,7 +249,7 @@ fn process_message_yields_on_max_messages_per_block() {
 #[test]
 fn process_message_fails_on_overweight_message() {
 	new_tester().execute_with(|| {
-		let origin = AggregateMessageOrigin::Parachain(1000.into());
+		let origin = AggregateMessageOrigin::Export(ExportOrigin::Sibling(1000.into()));
 
 		let message = EnqueuedMessage {
 			id: Default::default(),
@@ -306,12 +305,12 @@ fn submit_low_priority_messages_yield_when_there_is_high_priority_message() {
 		let ticket = result.unwrap();
 		assert_ok!(OutboundQueue::submit(ticket.0));
 		let mut footprint =
-			MessageQueue::footprint(AggregateMessageOrigin::BridgeHub(Priority::High));
+			MessageQueue::footprint(AggregateMessageOrigin::Export(ExportOrigin::Here));
 		println!("{:?}", footprint);
 		assert_eq!(footprint.count, 1);
 
 		// process a low priority message from asset_hub will yield
-		let origin = AggregateMessageOrigin::Parachain(1000.into());
+		let origin = AggregateMessageOrigin::Export(ExportOrigin::Sibling(1000.into()));
 		let message = EnqueuedMessage {
 			id: Default::default(),
 			origin: 1000.into(),
@@ -339,7 +338,7 @@ fn submit_low_priority_messages_yield_when_there_is_high_priority_message() {
 		let digest = System::digest();
 		let digest_items = digest.logs();
 		assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
-		footprint = MessageQueue::footprint(AggregateMessageOrigin::Parachain(1013.into()));
+		footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(ExportOrigin::Here));
 		assert_eq!(footprint.count, 0);
 	});
 }
@@ -368,7 +367,9 @@ fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_ge
 			assert_ok!(OutboundQueue::submit(ticket.0));
 		}
 
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Parachain(1000.into()));
+		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(
+			ExportOrigin::Sibling(1000.into()),
+		));
 		assert_eq!(footprint.count, (max_messages) as u64);
 
 		// submit high priority message from bridge_hub
@@ -384,7 +385,7 @@ fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_ge
 		assert!(result.is_ok());
 		let ticket = result.unwrap();
 		assert_ok!(OutboundQueue::submit(ticket.0));
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::BridgeHub(Priority::High));
+		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(ExportOrigin::Here));
 		println!("{:?}", footprint);
 		assert_eq!(footprint.count, 1);
 
@@ -395,27 +396,35 @@ fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_ge
 		let digest = System::digest();
 		let digest_items = digest.logs();
 		assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Parachain(1000.into()));
+		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(
+			ExportOrigin::Sibling(1000.into()),
+		));
 		assert_eq!(footprint.count, 41);
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::BridgeHub(Priority::High));
+		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(ExportOrigin::Here));
 		assert_eq!(footprint.count, 0);
 
 		// move to the next block, some low priority messages get executed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Parachain(1000.into()));
+		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(
+			ExportOrigin::Sibling(1000.into()),
+		));
 		assert_eq!(footprint.count, 21);
 
 		// move to the next block, some low priority messages get executed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Parachain(1000.into()));
+		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(
+			ExportOrigin::Sibling(1000.into()),
+		));
 		assert_eq!(footprint.count, 1);
 
 		// move to the next block, the last low priority messages get executed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Parachain(1000.into()));
+		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(
+			ExportOrigin::Sibling(1000.into()),
+		));
 		assert_eq!(footprint.count, 0);
 	});
 }
