@@ -31,7 +31,7 @@ where
 	OutboundQueue::Ticket: Encode + Decode,
 	AgentHashedDescription: ConvertLocation<H256>,
 {
-	type Ticket = Vec<u8>;
+	type Ticket = (Vec<u8>, XcmHash);
 
 	fn validate(
 		network: NetworkId,
@@ -137,11 +137,11 @@ where
 		// convert fee to MultiAsset
 		let fee = MultiAsset::from((MultiLocation::parent(), fee)).into();
 
-		Ok((ticket.encode(), fee))
+		Ok(((ticket.encode(), XcmHash::default()), fee))
 	}
 
-	fn deliver(blob: Vec<u8>) -> Result<XcmHash, SendError> {
-		let ticket: OutboundQueue::Ticket = OutboundQueue::Ticket::decode(&mut blob.as_ref())
+	fn deliver(blob: (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {
+		let ticket: OutboundQueue::Ticket = OutboundQueue::Ticket::decode(&mut blob.0.as_ref())
 			.map_err(|_| {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "undeliverable due to decoding error");
 				SendError::NotApplicable
