@@ -151,12 +151,10 @@ pub mod pallet {
 				XcmpSendError::NotApplicable => Error::<T>::Send(SendError::NotApplicable),
 				XcmpSendError::Unroutable => Error::<T>::Send(SendError::NotRoutable),
 				XcmpSendError::Transport(_) => Error::<T>::Send(SendError::Transport),
-				XcmpSendError::DestinationUnsupported => {
-					Error::<T>::Send(SendError::DestinationUnsupported)
-				},
-				XcmpSendError::ExceedsMaxMessageSize => {
-					Error::<T>::Send(SendError::ExceedsMaxMessageSize)
-				},
+				XcmpSendError::DestinationUnsupported =>
+					Error::<T>::Send(SendError::DestinationUnsupported),
+				XcmpSendError::ExceedsMaxMessageSize =>
+					Error::<T>::Send(SendError::ExceedsMaxMessageSize),
 				XcmpSendError::MissingArgument => Error::<T>::Send(SendError::MissingArgument),
 				XcmpSendError::Fees => Error::<T>::Send(SendError::Fees),
 			}
@@ -209,7 +207,7 @@ pub mod pallet {
 			// Verify message nonce
 			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {
 				if *nonce == u64::MAX {
-					return Err(Error::<T>::MaxNonceReached.into());
+					return Err(Error::<T>::MaxNonceReached.into())
 				}
 				if envelope.nonce != nonce.saturating_add(1) {
 					Err(Error::<T>::InvalidNonce.into())
