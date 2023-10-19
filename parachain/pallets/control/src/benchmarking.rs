@@ -6,7 +6,6 @@ use super::*;
 #[allow(unused)]
 use crate::Pallet as SnowbridgeControl;
 use frame_benchmarking::v2::*;
-use frame_support::traits::EnsureOrigin;
 use frame_system::RawOrigin;
 use snowbridge_core::outbound::OperatingMode;
 use xcm::prelude::*;

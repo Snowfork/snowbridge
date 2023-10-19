@@ -10,8 +10,8 @@ use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::{
-	outbound::{Message, MessageHash, ParaId, SubmitError},
-	AgentId,
+	outbound::{Message, MessageHash, SubmitError},
+	AgentId, ParaId,
 };
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},

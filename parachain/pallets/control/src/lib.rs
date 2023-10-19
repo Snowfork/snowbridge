@@ -38,10 +38,8 @@ use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::{
-	outbound::{
-		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
-	},
-	sibling_sovereign_account, AgentId,
+	outbound::{Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait},
+	sibling_sovereign_account, AgentId, ParaId,
 };
 
 #[cfg(feature = "runtime-benchmarks")]

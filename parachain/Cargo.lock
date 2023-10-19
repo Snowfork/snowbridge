@@ -3146,7 +3146,6 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "polkadot-parachain-primitives",
- "polkadot-primitives",
  "rustc-hex",
  "scale-info",
  "serde",
