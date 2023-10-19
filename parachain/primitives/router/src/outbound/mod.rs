@@ -5,7 +5,8 @@ use core::slice::Iter;
 
 use codec::{Decode, Encode};
 
-use frame_support::{ensure, log, traits::Get};
+use frame_support::{ensure, traits::Get};
+use log;
 use snowbridge_core::outbound::{
 	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
 };
@@ -50,22 +51,24 @@ where
 
 		if network != gateway_network {
 			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched bridge network {network:?}.");
-			return Err(SendError::NotApplicable)
+			return Err(SendError::NotApplicable);
 		}
 
 		let dest = destination.take().ok_or(SendError::MissingArgument)?;
 		if dest != Here {
 			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched remote destination {dest:?}.");
-			return Err(SendError::NotApplicable)
+			return Err(SendError::NotApplicable);
 		}
 
 		let gateway_address = match gateway_junctions {
 			X1(AccountKey20 { network, key })
 				if network.is_none() || network == Some(gateway_network) =>
-				key,
+			{
+				key
+			},
 			_ => {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched registry contract {gateway_junctions:?}.");
-				return Err(SendError::NotApplicable)
+				return Err(SendError::NotApplicable);
 			},
 		};
 
@@ -83,14 +86,14 @@ where
 
 		if Ok(local_net) != universal_location.global_consensus() {
 			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched relay network {local_net:?}.");
-			return Err(SendError::NotApplicable)
+			return Err(SendError::NotApplicable);
 		}
 
 		let para_id = match local_sub {
 			X1(Parachain(para_id)) => para_id,
 			_ => {
 				log::error!(target: "xcm::ethereum_blob_exporter", "could not get parachain id from universal source '{local_sub:?}'.");
-				return Err(SendError::MissingArgument)
+				return Err(SendError::MissingArgument);
 			},
 		};
 
@@ -107,7 +110,7 @@ where
 
 		if max_target_fee.is_some() {
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due not supporting max target fee.");
-			return Err(SendError::Unroutable)
+			return Err(SendError::Unroutable);
 		}
 
 		// local_sub is relative to the relaychain. No conversion needed.
@@ -116,7 +119,7 @@ where
 			Some(id) => id,
 			None => {
 				log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to not being able to create agent id. '{local_sub_location:?}'");
-				return Err(SendError::Unroutable)
+				return Err(SendError::Unroutable);
 			},
 		};
 
@@ -204,7 +207,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 		// All xcm instructions must be consumed before exit.
 		if self.next().is_ok() {
-			return Err(XcmConverterError::EndOfXcmMessageExpected)
+			return Err(XcmConverterError::EndOfXcmMessageExpected);
 		}
 
 		Ok((result, max_target_fee))
@@ -216,7 +219,9 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			WithdrawAsset(fee_asset) => match self.next()? {
 				BuyExecution { fees: execution_fee, weight_limit: Unlimited }
 					if fee_asset.len() == 1 && fee_asset.contains(execution_fee) =>
-					Some(execution_fee),
+				{
+					Some(execution_fee)
+				},
 				_ => return Err(BuyExecutionExpected),
 			},
 			UnpaidExecution { check_origin: None, weight_limit: Unlimited } => None,
@@ -229,18 +234,18 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		use XcmConverterError::*;
 		let (assets, beneficiary) = if let WithdrawAsset(reserved_assets) = self.next()? {
 			if reserved_assets.len() == 0 {
-				return Err(NoReserveAssets)
+				return Err(NoReserveAssets);
 			}
 			if let DepositAsset { assets, beneficiary } = self.next()? {
 				if reserved_assets.inner().iter().any(|asset| !assets.matches(asset)) {
-					return Err(FilterDoesNotConsumeAllAssets)
+					return Err(FilterDoesNotConsumeAllAssets);
 				}
 				(reserved_assets, beneficiary)
 			} else {
-				return Err(DepositExpected)
+				return Err(DepositExpected);
 			}
 		} else {
-			return Err(WithdrawExpected)
+			return Err(WithdrawExpected);
 		};
 
 		// assert that the beneficiary is AccountKey20
@@ -249,11 +254,11 @@ impl<'a, Call> XcmConverter<'a, Call> {
 				beneficiary
 			{
 				if network.is_some() && network != &Some(*self.ethereum_network) {
-					return Err(BeneficiaryResolutionFailed)
+					return Err(BeneficiaryResolutionFailed);
 				}
 				key.into()
 			} else {
-				return Err(BeneficiaryResolutionFailed)
+				return Err(BeneficiaryResolutionFailed);
 			}
 		};
 
@@ -267,7 +272,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 				if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = asset {
 					(location, amount)
 				} else {
-					return Err(AssetNotConcreteFungible)
+					return Err(AssetNotConcreteFungible);
 				};
 
 			ensure!(*amount > 0, ZeroAssetTransfer);
@@ -283,17 +288,17 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			} = asset_location
 			{
 				if gateway_network.is_some() && gateway_network != &Some(*self.ethereum_network) {
-					return Err(AssetResolutionFailed)
+					return Err(AssetResolutionFailed);
 				}
 				if gateway_address != self.gateway_address {
-					return Err(AssetResolutionFailed)
+					return Err(AssetResolutionFailed);
 				}
 				if token_network.is_some() && token_network != &Some(*self.ethereum_network) {
-					return Err(AssetResolutionFailed)
+					return Err(AssetResolutionFailed);
 				}
 				(token_address.into(), *amount)
 			} else {
-				return Err(AssetResolutionFailed)
+				return Err(AssetResolutionFailed);
 			}
 		};
 
