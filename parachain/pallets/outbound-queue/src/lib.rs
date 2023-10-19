@@ -50,6 +50,8 @@ pub use weights::WeightInfo;
 pub type MaxEnqueuedMessageSizeOf<T> =
 	<<T as Config>::MessageQueue as EnqueueMessage<AggregateMessageOrigin>>::MaxMessageLen;
 
+pub type ProcessMessageOriginOf<T> = <Pallet<T> as ProcessMessage>::Origin;
+
 pub use pallet::*;
 
 pub const LOG_TARGET: &str = "snowbridge-outbound-queue";
@@ -243,7 +245,31 @@ pub mod pallet {
 		}
 
 		/// Process a message delivered by the MessageQueue pallet
-		pub(crate) fn do_process_message(mut message: &[u8]) -> Result<bool, ProcessMessageError> {
+		pub(crate) fn do_process_message(
+			origin: ProcessMessageOriginOf<T>,
+			mut message: &[u8],
+		) -> Result<bool, ProcessMessageError> {
+			// Yield for hard limit to ensure the weight of `on_finalize` is bounded.
+			ensure!(
+				MessageLeaves::<T>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerBlock::get() as usize,
+				ProcessMessageError::Yield
+			);
+
+			// Yield for halt check or if there is pending high priority message
+			if let AggregateMessageOrigin::Export(ExportOrigin::Here) = origin {
+				// Decrease PendingHighPriorityMessageCount by one
+				PendingHighPriorityMessageCount::<T>::mutate(|count| {
+					*count = count.saturating_sub(1)
+				});
+			} else {
+				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
+				ensure!(
+					PendingHighPriorityMessageCount::<T>::get() == 0,
+					ProcessMessageError::Yield
+				);
+			}
+
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
 
@@ -360,33 +386,12 @@ pub mod pallet {
 			meter: &mut frame_support::weights::WeightMeter,
 			_: &mut [u8; 32],
 		) -> Result<bool, ProcessMessageError> {
-			// Yield for hard limit to ensure the weight of `on_finalize` is bounded.
-			let current_size = MessageLeaves::<T>::decode_len().unwrap_or(0);
-			ensure!(
-				current_size < T::MaxMessagesPerBlock::get() as usize,
-				ProcessMessageError::Yield
-			);
-
-			// Yield for halt check or if there is pending high priority message
-			if let AggregateMessageOrigin::Export(ExportOrigin::Here) = origin {
-				// Decrease PendingHighPriorityMessageCount by one
-				PendingHighPriorityMessageCount::<T>::mutate(|count| {
-					*count = count.saturating_sub(1)
-				});
-			} else {
-				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
-				ensure!(
-					PendingHighPriorityMessageCount::<T>::get() == 0,
-					ProcessMessageError::Yield
-				);
-			}
-
 			let weight = T::WeightInfo::do_process_message();
 			if !meter.check_accrue(weight) {
 				return Err(ProcessMessageError::Overweight(weight))
 			}
 
-			Self::do_process_message(message)
+			Self::do_process_message(origin, message)
 		}
 	}
 }
