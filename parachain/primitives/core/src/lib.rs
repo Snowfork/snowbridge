@@ -13,8 +13,9 @@ pub mod operating_mode;
 pub mod outbound;
 pub mod ringbuffer;
 
-pub use polkadot_parachain_primitives::primitives::IsSystem;
-pub use polkadot_primitives::{Id as ParaId, Sibling as SiblingParaId};
+pub use polkadot_parachain_primitives::primitives::{
+	Id as ParaId, IsSystem, Sibling as SiblingParaId,
+};
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
