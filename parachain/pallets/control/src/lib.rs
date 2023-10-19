@@ -41,7 +41,7 @@ use snowbridge_core::{
 	outbound::{
 		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
 	},
-	AgentId, sibling_sovereign_account
+	sibling_sovereign_account, AgentId,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
