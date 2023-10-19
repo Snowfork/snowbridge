@@ -5,7 +5,7 @@ use frame_support::{
 	traits::{tokens::Balance, Get},
 	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
-pub use polkadot_parachain::primitives::Id as ParaId;
+pub use polkadot_primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
 use sp_std::{borrow::ToOwned, vec, vec::Vec};
