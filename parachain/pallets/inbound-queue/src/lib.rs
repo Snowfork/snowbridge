@@ -34,7 +34,7 @@ use xcm::v3::{
 use envelope::Envelope;
 use snowbridge_core::{
 	inbound::{Message, Verifier},
-	ParaId, sibling_sovereign_account
+	sibling_sovereign_account, ParaId,
 };
 use snowbridge_router_primitives::{
 	inbound,
