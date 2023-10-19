@@ -94,14 +94,14 @@ contract BeefyClient {
      * @param bitfield a bitfield signalling which validators they claim have signed
      * @param blockNumber the block number for this commitment
      * @param validatorSetLen the length of the validator set for this commitment
-     * @param signatureCountRequired the number of signatures required
+     * @param numRequiredSignatures the number of signatures required
      * @param bitfield a bitfield signalling which validators they claim have signed
      */
     struct Ticket {
         address account;
         uint64 blockNumber;
         uint32 validatorSetLen;
-        uint256 signatureCountRequired;
+        uint256 numRequiredSignatures;
         uint256 prevRandao;
         bytes32 bitfieldHash;
     }
@@ -165,7 +165,7 @@ contract BeefyClient {
     /**
      * @dev Minimum number of signatures required to validate a new commitment.
      */
-    uint256 public immutable minimumSignatureSamples;
+    uint256 public immutable minNumRequiredSignatures;
 
     /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
@@ -203,14 +203,14 @@ contract BeefyClient {
     constructor(
         uint256 _randaoCommitDelay,
         uint256 _randaoCommitExpiration,
-        uint256 _minimumSignatureSamples,
+        uint256 _minNumRequiredSignatures,
         uint64 _initialBeefyBlock,
         ValidatorSet memory _initialValidatorSet,
         ValidatorSet memory _nextValidatorSet
     ) {
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
-        minimumSignatureSamples = _minimumSignatureSamples;
+        minNumRequiredSignatures = _minNumRequiredSignatures;
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
         currentValidatorSetCounters = Counter.createCounter(currentValidatorSet.length);
@@ -230,14 +230,14 @@ contract BeefyClient {
         external
     {
         ValidatorSet memory vset;
-        uint16 signatureCount;
+        uint16 numRequiredSignatures;
         if (commitment.validatorSetID == currentValidatorSet.id) {
-            signatureCount = currentValidatorSetCounters.get(proof.index);
-            currentValidatorSetCounters.set(proof.index, signatureCount + 1);
+            numRequiredSignatures = currentValidatorSetCounters.get(proof.index);
+            currentValidatorSetCounters.set(proof.index, numRequiredSignatures + 1);
             vset = currentValidatorSet;
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
-            signatureCount = nextValidatorSetCounters.get(proof.index);
-            nextValidatorSetCounters.set(proof.index, signatureCount + 1);
+            numRequiredSignatures = nextValidatorSetCounters.get(proof.index);
+            nextValidatorSetCounters.set(proof.index, numRequiredSignatures + 1);
             vset = nextValidatorSet;
         } else {
             revert InvalidCommitment();
@@ -270,7 +270,7 @@ contract BeefyClient {
             account: msg.sender,
             blockNumber: uint64(block.number),
             validatorSetLen: uint32(vset.length),
-            signatureCountRequired: signatureSamples(vset.length, signatureCount),
+            numRequiredSignatures: computeNumRequiredSignatures(vset.length, numRequiredSignatures),
             prevRandao: 0,
             bitfieldHash: keccak256(abi.encodePacked(bitfield))
         });
@@ -405,7 +405,7 @@ contract BeefyClient {
         if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
             revert InvalidBitfield();
         }
-        return Bitfield.subsample(ticket.prevRandao, bitfield, ticket.signatureCountRequired, ticket.validatorSetLen);
+        return Bitfield.subsample(ticket.prevRandao, bitfield, ticket.numRequiredSignatures, ticket.validatorSetLen);
     }
 
     /* Internal Functions */
@@ -422,35 +422,39 @@ contract BeefyClient {
     /**
      * @dev Calculates the number of signature samples required for `submitFinal`.
      * @param validatorSetLen The validator set length.
-     * @param signatureUseCount The count of how many times a validators signature was previously used in a call to `submitInitial`.
+     * @param signatureUsageCount The count of how many times a validators signature was previously used in a call to `submitInitial`.
      *
-     *  ceil(log2(validatorSetLen)) + 1 * 2 ceil(log2(signatureUseCount))
+     *  ceil(log2(validatorSetLen)) + 1 * 2 ceil(log2(signatureUsageCount))
      *
      * See https://hackmd.io/9OedC7icR5m-in_moUZ_WQ for full analysis.
      */
-    function signatureSamples(uint256 validatorSetLen, uint256 signatureUseCount) internal view returns (uint256) {
+    function computeNumRequiredSignatures(uint256 validatorSetLen, uint256 signatureUsageCount)
+        internal
+        view
+        returns (uint256)
+    {
         // There are less validators than the minimum signatures so validate 2/3 majority.
-        if (validatorSetLen <= minimumSignatureSamples) {
+        if (validatorSetLen <= minNumRequiredSignatures) {
             return validatorSetLen - (validatorSetLen - 1) / 3;
         }
 
         // Start with the minimum number of signatures.
-        uint256 samples = minimumSignatureSamples;
+        uint256 numRequiredSignatures = minNumRequiredSignatures;
 
         // We must substrate minimumSignatures from the number of validators or we might end up
         // requiring more signatures than there are validators.
-        samples += Math.log2(validatorSetLen - minimumSignatureSamples, Math.Rounding.Ceil);
+        numRequiredSignatures += Math.log2(validatorSetLen - minNumRequiredSignatures, Math.Rounding.Ceil);
 
         // To address the concurrency issue specified in the link below:
         // https://hackmd.io/wsVcL0tZQA-Ks3b5KJilFQ?view#Solution-2-Signature-Checks-dynamically-depend-on-the-No-of-initial-Claims-per-session
         // It must be harder for a malicious relayer to spam submitInitial to bias the RANDAO.
         // If we detect that a signature is used many times (spam), we increase the number of signature samples required on submitFinal.
-        if (signatureUseCount > 0) {
+        if (signatureUsageCount > 0) {
             // Based on formula provided here: https://hackmd.io/9OedC7icR5m-in_moUZ_WQ
-            samples += 1 + 2 * Math.log2(signatureUseCount, Math.Rounding.Ceil);
+            numRequiredSignatures += 1 + 2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil);
         }
 
-        return Math.min(samples, validatorSetLen);
+        return Math.min(numRequiredSignatures, validatorSetLen);
     }
 
     /**
@@ -465,13 +469,14 @@ contract BeefyClient {
     ) internal view {
         Ticket storage ticket = tickets[ticketID];
         // Verify that enough signature proofs have been supplied
-        uint256 signatureCount = ticket.signatureCountRequired;
-        if (proofs.length != signatureCount) {
+        uint256 numRequiredSignatures = ticket.numRequiredSignatures;
+        if (proofs.length != numRequiredSignatures) {
             revert InvalidValidatorProof();
         }
 
         // Generate final bitfield indicating which validators need to be included in the proofs.
-        uint256[] memory finalbitfield = Bitfield.subsample(ticket.prevRandao, bitfield, signatureCount, vset.length);
+        uint256[] memory finalbitfield =
+            Bitfield.subsample(ticket.prevRandao, bitfield, numRequiredSignatures, vset.length);
 
         for (uint256 i = 0; i < proofs.length;) {
             ValidatorProof calldata proof = proofs[i];

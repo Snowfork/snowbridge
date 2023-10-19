@@ -17,13 +17,13 @@ contract BeefyClientTest is Test {
     struct SignatureSampleTest {
         uint256 result;
         uint256 validatorsLen;
-        uint16 signatureUseCount;
+        uint16 signatureUsageCount;
     }
 
     BeefyClientMock beefyClient;
     uint8 randaoCommitDelay;
     uint8 randaoCommitExpiration;
-    uint256 minimumSignatureSamples;
+    uint256 minNumRequiredSignatures;
     uint32 blockNumber;
     uint32 prevRandao;
     uint32 setSize;
@@ -53,7 +53,7 @@ contract BeefyClientTest is Test {
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
         randaoCommitExpiration = uint8(vm.envOr("RANDAO_COMMIT_EXP", uint256(8)));
-        minimumSignatureSamples = uint8(vm.envOr("MINIMUM_REQUIRED_SIGNATURES", uint256(16)));
+        minNumRequiredSignatures = uint8(vm.envOr("MINIMUM_REQUIRED_SIGNATURES", uint256(16)));
         prevRandao = uint32(vm.envOr("PREV_RANDAO", uint256(377)));
 
         string memory beefyCommitmentFile = string.concat(vm.projectRoot(), "/test/data/beefy-commitment.json");
@@ -80,7 +80,7 @@ contract BeefyClientTest is Test {
 
         console.log("current validator's merkle root is: %s", Strings.toHexString(uint256(root), 32));
 
-        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration, minimumSignatureSamples);
+        beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration, minNumRequiredSignatures);
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
         absentBitfield = beefyClient.createInitialBitfield(absentBitSetArray, setSize);
@@ -134,11 +134,11 @@ contract BeefyClientTest is Test {
     }
 
     // Regenerate bitField file
-    function regenerateBitField(string memory bitfieldFile, uint256 samples) internal {
+    function regenerateBitField(string memory bitfieldFile, uint256 numRequiredSignatures) internal {
         console.log("print initialBitField");
         printBitArray(bitfield);
         prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
-        finalBitfield = Bitfield.subsample(prevRandao, bitfield, samples, setSize);
+        finalBitfield = Bitfield.subsample(prevRandao, bitfield, numRequiredSignatures, setSize);
         console.log("print finalBitField");
         printBitArray(finalBitfield);
 
@@ -666,11 +666,11 @@ contract BeefyClientTest is Test {
 
     function testRegenerateBitField() public {
         // Generate a bitfield for signature count 0.
-        uint256 samples = beefyClient.signatureSamples_public(setSize, 0);
-        regenerateBitField(bitFieldFile0SignatureCount, samples);
+        uint256 numRequiredSignatures = beefyClient.computeNumRequiredSignatures_public(setSize, 0);
+        regenerateBitField(bitFieldFile0SignatureCount, numRequiredSignatures);
         // Generate a bitfield for signature count 3.
-        samples = beefyClient.signatureSamples_public(setSize, 3);
-        regenerateBitField(bitFieldFile3SignatureCount, samples);
+        numRequiredSignatures = beefyClient.computeNumRequiredSignatures_public(setSize, 3);
+        regenerateBitField(bitFieldFile3SignatureCount, numRequiredSignatures);
     }
 
     function testSignatureSampleWithUseMajorityIfVsetIsSmallerThanMinSignatures() public {
@@ -678,7 +678,10 @@ contract BeefyClientTest is Test {
             [SignatureSampleTest(7, 9, 0), SignatureSampleTest(11, 16, 0), SignatureSampleTest(16, 17, 0)];
         for (uint256 i = 0; i < tests.length; ++i) {
             SignatureSampleTest memory test = tests[i];
-            assertEq(test.result, beefyClient.signatureSamples_public(test.validatorsLen, test.signatureUseCount));
+            assertEq(
+                test.result,
+                beefyClient.computeNumRequiredSignatures_public(test.validatorsLen, test.signatureUsageCount)
+            );
         }
     }
 
@@ -694,7 +697,10 @@ contract BeefyClientTest is Test {
         ];
         for (uint256 i = 0; i < tests.length; ++i) {
             SignatureSampleTest memory test = tests[i];
-            assertEq(test.result, beefyClient.signatureSamples_public(test.validatorsLen, test.signatureUseCount));
+            assertEq(
+                test.result,
+                beefyClient.computeNumRequiredSignatures_public(test.validatorsLen, test.signatureUsageCount)
+            );
         }
     }
 
@@ -750,7 +756,10 @@ contract BeefyClientTest is Test {
         ];
         for (uint256 i = 0; i < tests.length; ++i) {
             SignatureSampleTest memory test = tests[i];
-            assertEq(test.result, beefyClient.signatureSamples_public(test.validatorsLen, test.signatureUseCount));
+            assertEq(
+                test.result,
+                beefyClient.computeNumRequiredSignatures_public(test.validatorsLen, test.signatureUsageCount)
+            );
         }
     }
 }
