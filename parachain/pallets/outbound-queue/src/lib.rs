@@ -184,13 +184,11 @@ pub mod pallet {
 		T::AccountId: AsRef<[u8]>,
 	{
 		fn on_initialize(_: BlockNumberFor<T>) -> Weight {
-			if !Initialized::<T>::get() {
-				// Remove storage from previous block
-				Messages::<T>::kill();
-				MessageLeaves::<T>::kill();
-				// Reserve some weight for the `on_finalize` handler
-				T::WeightInfo::on_finalize()
-			}
+			// Remove storage from previous block
+			Messages::<T>::kill();
+			MessageLeaves::<T>::kill();
+			// Reserve some weight for the `on_finalize` handler
+			T::WeightInfo::on_finalize()
 		}
 
 		fn on_finalize(_: BlockNumberFor<T>) {
