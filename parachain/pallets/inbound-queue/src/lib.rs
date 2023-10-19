@@ -25,7 +25,6 @@ use frame_support::{
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
 use sp_core::H160;
-use sp_runtime::traits::AccountIdConversion;
 use sp_std::convert::TryFrom;
 use xcm::v3::{
 	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, SendXcm,
@@ -35,7 +34,7 @@ use xcm::v3::{
 use envelope::Envelope;
 use snowbridge_core::{
 	inbound::{Message, Verifier},
-	ParaId,
+	ParaId, sibling_sovereign_account
 };
 use snowbridge_router_primitives::{
 	inbound,
@@ -220,7 +219,7 @@ pub mod pallet {
 
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
-			let sovereign_account = envelope.dest.into_account_truncating();
+			let sovereign_account = sibling_sovereign_account::<T>(envelope.dest);
 			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
 
 			// Decode message into XCM

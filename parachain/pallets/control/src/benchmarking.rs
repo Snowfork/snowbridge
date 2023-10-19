@@ -8,12 +8,12 @@ use crate::Pallet as SnowbridgeControl;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 use snowbridge_core::outbound::OperatingMode;
-use sp_runtime::traits::AccountIdConversion;
 use xcm::prelude::*;
 
 fn fund_sovereign_account<T: Config>(para_id: ParaId) -> Result<(), BenchmarkError> {
 	let amount: BalanceOf<T> = u16::MAX.into();
-	T::Token::mint_into(&para_id.into_account_truncating(), amount)?;
+	let sovereign_account = sibling_sovereign_account::<T>(para_id);
+	T::Token::mint_into(&sovereign_account, amount)?;
 	Ok(())
 }
 

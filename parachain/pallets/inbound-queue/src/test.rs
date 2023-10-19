@@ -257,6 +257,7 @@ const XCM_HASH: [u8; 32] = [
 	232, 213, 62, 94, 48, 47, 152, 37, 168, 162, 89, 100, 6, 74, 63, 95, 211, 11, 222, 210, 1, 209,
 	126, 44, 164, 122, 166, 156, 208, 228, 209, 9,
 ];
+const ASSET_HUB_PARAID: u32 = 1000u32;
 
 #[test]
 fn test_submit_happy_path() {
@@ -265,8 +266,7 @@ fn test_submit_happy_path() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		println!("account: {}", sovereign_account);
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
@@ -281,7 +281,7 @@ fn test_submit_happy_path() {
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 		expect_events(vec![InboundQueueEvent::MessageReceived {
-			dest: dest_para,
+			dest: ASSET_HUB_PARAID.into(),
 			nonce: 1,
 			xcm_hash: XCM_HASH,
 		}
@@ -296,8 +296,7 @@ fn test_submit_xcm_send_failure() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of parachain 1001
-		let dest_para: ParaId = 1001u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(1001u32.into());
 		println!("account: {}", sovereign_account);
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
@@ -324,8 +323,7 @@ fn test_submit_with_invalid_gateway() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		// Submit message
@@ -351,8 +349,7 @@ fn test_submit_with_invalid_nonce() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		// Submit message
@@ -385,8 +382,7 @@ fn test_submit_no_funds_to_reward_relayers() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Create sovereign account for Asset Hub (Statemint), but with no funds to cover rewards
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		assert_ok!(Balances::mint_into(&sovereign_account, 2));
 
 		// Submit message
@@ -444,8 +440,7 @@ fn test_submit_with_invalid_payload_unsupported_version() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		// Submit message
