@@ -164,7 +164,7 @@ impl SendXcm for MockXcmSender {
 		match dest {
 			Some(MultiLocation { interior, .. }) => {
 				if let X1(Parachain(1001)) = interior {
-					return Err(XcmpSendError::NotApplicable);
+					return Err(XcmpSendError::NotApplicable)
 				}
 				Ok((xcm.clone().unwrap(), MultiAssets::default()))
 			},
