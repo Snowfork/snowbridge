@@ -30,7 +30,7 @@ pub use weights::*;
 use frame_support::traits::fungible::{Inspect, Mutate};
 use sp_core::{RuntimeDebug, H160, H256};
 use sp_runtime::{
-	traits::{AccountIdConversion, BadOrigin, Hash},
+	traits::{BadOrigin, Hash},
 	DispatchError,
 };
 use sp_std::prelude::*;
@@ -41,7 +41,7 @@ use snowbridge_core::{
 	outbound::{
 		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
 	},
-	AgentId,
+	sibling_sovereign_account, AgentId,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -226,7 +226,7 @@ pub mod pallet {
 			Agents::<T>::insert(agent_id, ());
 
 			let command = Command::CreateAgent { agent_id };
-			let pays_fee = PaysFee::<T>::Yes(para_id.into_account_truncating());
+			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
 			Self::send(T::OwnParaId::get(), command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::CreateAgent {
@@ -260,7 +260,7 @@ pub mod pallet {
 			Channels::<T>::insert(para_id, ());
 
 			let command = Command::CreateChannel { para_id, agent_id };
-			let pays_fee = PaysFee::<T>::Yes(para_id.into_account_truncating());
+			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
 			Self::send(T::OwnParaId::get(), command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::CreateChannel { para_id, agent_id });
