@@ -32,6 +32,8 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
  */
 contract BeefyClient {
     using Counter for uint256[];
+    using Math for uint16;
+
     /* Events */
 
     /**
@@ -233,11 +235,11 @@ contract BeefyClient {
         uint16 numRequiredSignatures;
         if (commitment.validatorSetID == currentValidatorSet.id) {
             numRequiredSignatures = currentValidatorSetCounters.get(proof.index);
-            currentValidatorSetCounters.set(proof.index, numRequiredSignatures + 1);
+            currentValidatorSetCounters.set(proof.index, numRequiredSignatures.saturatingAdd(1));
             vset = currentValidatorSet;
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
             numRequiredSignatures = nextValidatorSetCounters.get(proof.index);
-            nextValidatorSetCounters.set(proof.index, numRequiredSignatures + 1);
+            nextValidatorSetCounters.set(proof.index, numRequiredSignatures.saturatingAdd(1));
             vset = nextValidatorSet;
         } else {
             revert InvalidCommitment();

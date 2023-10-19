@@ -88,4 +88,15 @@ library Math {
     function unsignedRoundsUp(Rounding rounding) internal pure returns (bool) {
         return uint8(rounding) % 2 == 1;
     }
+
+    /**
+     * @dev Safely adds to unsigned 16-bit integers, preventing overflow by saturating to max uint16.
+     */
+    function saturatingAdd(uint16 a, uint16 b) internal pure returns (uint16) {
+        uint256 result = uint256(a) + uint256(b);
+        if (result > 0xFFFF) {
+            result = 0xFFFF;
+        }
+        return uint16(result);
+    }
 }

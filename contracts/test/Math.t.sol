@@ -70,4 +70,20 @@ contract MathTest is Test {
             assertEq(tests[t].result, Math.log2(tests[t].input, Math.Rounding.Ceil));
         }
     }
+
+    function testMin() public {
+        assertEq(12, Math.min(12, 24));
+        assertEq(12, Math.min(24, 12));
+    }
+
+    function testMax() public {
+        assertEq(24, Math.max(12, 24));
+        assertEq(24, Math.max(24, 12));
+    }
+
+    function testSaturatingAdd() public {
+        assertEq(3, Math.saturatingAdd(1, 2));
+        assertEq(65535, Math.saturatingAdd(65535, 1));
+        assertEq(65535, Math.saturatingAdd(32769, 32769));
+    }
 }
