@@ -673,31 +673,19 @@ contract BeefyClientTest is Test {
         regenerateBitField(bitFieldFile3SignatureCount, numRequiredSignatures);
     }
 
-    function testSignatureSampleWithUseMajorityIfVsetIsSmallerThanMinSignatures() public {
-        SignatureSampleTest[4] memory tests = [
-            SignatureSampleTest(9, 9, 0),
-            SignatureSampleTest(16, 16, 0),
-            SignatureSampleTest(16, 17, 0),
-            SignatureSampleTest(17, 17, 1)
-        ];
-        for (uint256 i = 0; i < tests.length; ++i) {
-            SignatureSampleTest memory test = tests[i];
-            assertEq(
-                test.result,
-                beefyClient.computeNumRequiredSignatures_public(test.validatorsLen, test.signatureUsageCount)
-            );
-        }
-    }
-
-    function testSignatureSampleNeverYieldsASampleGreaterThanTheValidatorSetLength() public {
-        SignatureSampleTest[7] memory tests = [
-            SignatureSampleTest(17, 18, 0),
-            SignatureSampleTest(18, 19, 0),
-            SignatureSampleTest(18, 20, 0),
-            SignatureSampleTest(19, 21, 0),
+    function testSignatureSampleNeverYieldsASampleGreaterThanTwoThirdsMajority() public {
+        SignatureSampleTest[11] memory tests = [
+            SignatureSampleTest(7, 9, 0),
+            SignatureSampleTest(11, 16, 0),
+            SignatureSampleTest(12, 17, 0),
+            SignatureSampleTest(12, 17, 1),
+            SignatureSampleTest(13, 18, 0),
+            SignatureSampleTest(13, 19, 0),
+            SignatureSampleTest(14, 20, 0),
+            SignatureSampleTest(15, 21, 0),
             SignatureSampleTest(20, 30, 0),
-            SignatureSampleTest(29, 30, 10),
-            SignatureSampleTest(30, 30, 17)
+            SignatureSampleTest(21, 30, 10),
+            SignatureSampleTest(21, 30, 17)
         ];
         for (uint256 i = 0; i < tests.length; ++i) {
             SignatureSampleTest memory test = tests[i];

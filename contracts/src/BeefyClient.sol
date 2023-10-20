@@ -455,7 +455,9 @@ contract BeefyClient {
             numRequiredSignatures += 1 + 2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil);
         }
 
-        return Math.min(numRequiredSignatures, validatorSetLen);
+        // Never require more signatures than 2/3 majority.
+        uint256 validatorSetMajority = validatorSetLen - (validatorSetLen - 1) / 3;
+        return Math.min(numRequiredSignatures, validatorSetMajority);
     }
 
     /**
