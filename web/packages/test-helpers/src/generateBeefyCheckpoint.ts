@@ -9,6 +9,15 @@ import type {
 } from "@polkadot/types/interfaces/beefy/types"
 import fs from "fs"
 import path from "path"
+import {u32, u64} from "@polkadot/types-codec";
+import {H256} from "@polkadot/types/interfaces";
+import {Codec} from "@polkadot/types-codec/types";
+
+interface NextAuthoritySet extends Codec{
+    id: u64;
+    len: u32;
+    keysetCommitment: H256;
+}
 
 async function generateBeefyCheckpoint() {
     const endpoint = process.env.RELAYCHAIN_ENDPOINT || "ws://127.0.0.1:9944"
@@ -51,7 +60,7 @@ async function generateBeefyCheckpoint() {
 
     const tree = createMerkleTree(addrs)
 
-    const nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<BeefyNextAuthoritySet>()
+    const nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<NextAuthoritySet>()
 
     const beefyCheckpoint = {
         startBlock: beefyStartBlock,
@@ -62,7 +71,7 @@ async function generateBeefyCheckpoint() {
         },
         next: {
             id: nextAuthorities.id.toNumber(),
-            root: nextAuthorities.root.toHex(),
+            root: nextAuthorities.keysetCommitment.toHex(),
             length: nextAuthorities.len.toNumber(),
         },
     }

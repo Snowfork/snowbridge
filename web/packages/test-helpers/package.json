@@ -30,6 +30,7 @@
     "@ethersproject/abi": "^5.0.0",
     "@polkadot/api": "^10.9.1",
     "@polkadot/types": "^10.9.1",
+    "@polkadot/types-codec": "^10.9.1",
     "@typechain/ethers-v5": "^10.1.1",
     "@types/keccak": "^3.0.1",
     "@types/lodash": "^4.14.186",
