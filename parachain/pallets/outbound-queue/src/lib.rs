@@ -15,6 +15,16 @@
 //!
 //! On the Ethereum side, the message root is ultimately the thing being
 //! by the Polkadot light client.
+//!
+//! Within the message submission pipeline, messages have different priorities,
+//! which results in differing processing behavior.
+//!
+//! All outgoing messages are buffered in the `MessageQueue` pallet, however
+//! Governance commands are always processed before lower priority commands
+//!
+//! The processing of governance commands can never be halted. This effectively
+//! allows us to pause processing of normal user messages while still allowing
+//! governance commands to be sent to Ethereum.
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod api;
 pub mod weights;
@@ -149,7 +159,9 @@ pub mod pallet {
 	#[pallet::unbounded]
 	pub(super) type Messages<T: Config> = StorageValue<_, Vec<PreparedMessage>, ValueQuery>;
 
-	/// Number of high priority messages that are waiting to be processed
+	/// Number of high priority messages that are waiting to be processed.
+	/// While this number is greater than zero, processing of lower priority
+	/// messages is paused.
 	#[pallet::storage]
 	pub(super) type PendingHighPriorityMessageCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
@@ -249,14 +261,14 @@ pub mod pallet {
 			origin: ProcessMessageOriginOf<T>,
 			mut message: &[u8],
 		) -> Result<bool, ProcessMessageError> {
-			// Yield for hard limit to ensure the weight of `on_finalize` is bounded.
+			// Yield if the maximum number of messages has been processed this block.
+			// This ensures that the weight of `on_finalize` has a known maximum bound.
 			ensure!(
 				MessageLeaves::<T>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerBlock::get() as usize,
 				ProcessMessageError::Yield
 			);
 
-			// Yield for halt check or if there is pending high priority message
 			if let AggregateMessageOrigin::Export(ExportOrigin::Here) = origin {
 				// Decrease PendingHighPriorityMessageCount by one
 				PendingHighPriorityMessageCount::<T>::mutate(|count| {
@@ -357,6 +369,9 @@ pub mod pallet {
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+			// Assign an `AggregateMessageOrigin` to track the message within the MessageQueue
+			// pallet. Governance commands are assigned origin `ExportOrigin::Here`. In other words
+			// emitted from BridgeHub itself.
 			let origin = if ticket.origin == T::OwnParaId::get() {
 				AggregateMessageOrigin::Export(ExportOrigin::Here)
 			} else {
@@ -390,7 +405,6 @@ pub mod pallet {
 			if !meter.check_accrue(weight) {
 				return Err(ProcessMessageError::Overweight(weight))
 			}
-
 			Self::do_process_message(origin, message)
 		}
 	}
