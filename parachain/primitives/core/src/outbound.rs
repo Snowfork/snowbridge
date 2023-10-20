@@ -288,13 +288,6 @@ pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
 	pub message: BoundedVec<u8, MaxMessageSize>,
 }
 
-/// Aggregate message origin for the `MessageQueue` pallet.
-#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum AggregateMessageOrigin {
-	#[codec(index = 0)]
-	Parachain(ParaId),
-}
-
 /// Message which is awaiting processing in the MessageQueue pallet
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 pub struct EnqueuedMessage {
@@ -342,7 +335,7 @@ impl From<PreparedMessage> for Token {
 
 impl From<u32> for AggregateMessageOrigin {
 	fn from(value: u32) -> Self {
-		AggregateMessageOrigin::Parachain(value.into())
+		AggregateMessageOrigin::Export(ExportOrigin::Sibling(value.into()))
 	}
 }
 
@@ -354,4 +347,17 @@ pub struct OriginInfo {
 	pub para_id: ParaId,
 	/// The deterministic ID of the agent for this origin
 	pub agent_id: H256,
+}
+
+#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum ExportOrigin {
+	Here,
+	Sibling(ParaId),
+}
+
+/// Aggregate message origin for the `MessageQueue` pallet.
+#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum AggregateMessageOrigin {
+	/// Message is to be exported via a bridge
+	Export(ExportOrigin),
 }

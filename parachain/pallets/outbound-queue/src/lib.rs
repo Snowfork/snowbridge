@@ -15,6 +15,16 @@
 //!
 //! On the Ethereum side, the message root is ultimately the thing being
 //! by the Polkadot light client.
+//!
+//! Within the message submission pipeline, messages have different priorities,
+//! which results in differing processing behavior.
+//!
+//! All outgoing messages are buffered in the `MessageQueue` pallet, however
+//! Governance commands are always processed before lower priority commands
+//!
+//! The processing of governance commands can never be halted. This effectively
+//! allows us to pause processing of normal user messages while still allowing
+//! governance commands to be sent to Ethereum.
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod api;
 pub mod weights;
@@ -40,19 +50,21 @@ use sp_std::prelude::*;
 
 use snowbridge_core::{
 	outbound::{
-		AggregateMessageOrigin, Command, EnqueuedMessage, GasMeter, Message, MessageHash,
-		OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage, SubmitError,
+		AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, GasMeter, Message,
+		MessageHash, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
+		SubmitError,
 	},
 	BridgeModule, OperatingMode,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
-
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 pub use weights::WeightInfo;
 
 /// The maximal length of an enqueued message, as determined by the MessageQueue pallet
 pub type MaxEnqueuedMessageSizeOf<T> =
 	<<T as Config>::MessageQueue as EnqueueMessage<AggregateMessageOrigin>>::MaxMessageLen;
+
+pub type ProcessMessageOriginOf<T> = <Pallet<T> as ProcessMessage>::Origin;
 
 pub use pallet::*;
 
@@ -87,6 +99,10 @@ pub mod pallet {
 		/// Max number of messages processed per block
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
+
+		/// The ID of this parachain
+		#[pallet::constant]
+		type OwnParaId: Get<ParaId>;
 
 		/// The delivery fee in DOT per unit of gas
 		#[pallet::constant]
@@ -146,6 +162,12 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::unbounded]
 	pub(super) type Messages<T: Config> = StorageValue<_, Vec<PreparedMessage>, ValueQuery>;
+
+	/// Number of high priority messages that are waiting to be processed.
+	/// While this number is greater than zero, processing of lower priority
+	/// messages is paused.
+	#[pallet::storage]
+	pub(super) type PendingHighPriorityMessageCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Hashes of the ABI-encoded messages in the [`Messages`] storage value. Used to generate a
 	/// merkle root during `on_finalize`. This storage value is killed in
@@ -220,7 +242,31 @@ pub mod pallet {
 		}
 
 		/// Process a message delivered by the MessageQueue pallet
-		pub(crate) fn do_process_message(mut message: &[u8]) -> Result<bool, ProcessMessageError> {
+		pub(crate) fn do_process_message(
+			origin: ProcessMessageOriginOf<T>,
+			mut message: &[u8],
+		) -> Result<bool, ProcessMessageError> {
+			// Yield if the maximum number of messages has been processed this block.
+			// This ensures that the weight of `on_finalize` has a known maximum bound.
+			ensure!(
+				MessageLeaves::<T>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerBlock::get() as usize,
+				ProcessMessageError::Yield
+			);
+
+			if let AggregateMessageOrigin::Export(ExportOrigin::Here) = origin {
+				// Decrease PendingHighPriorityMessageCount by one
+				PendingHighPriorityMessageCount::<T>::mutate(|count| {
+					*count = count.saturating_sub(1)
+				});
+			} else {
+				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
+				ensure!(
+					PendingHighPriorityMessageCount::<T>::get() == 0,
+					ProcessMessageError::Yield
+				);
+			}
+
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
 
@@ -308,12 +354,25 @@ pub mod pallet {
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-			// Make sure the bridge not halted
-			Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
-			T::MessageQueue::enqueue_message(
-				ticket.message.as_bounded_slice(),
-				AggregateMessageOrigin::Parachain(ticket.origin),
-			);
+			// Assign an `AggregateMessageOrigin` to track the message within the MessageQueue
+			// pallet. Governance commands are assigned origin `ExportOrigin::Here`. In other words
+			// emitted from BridgeHub itself.
+			let origin = if ticket.origin == T::OwnParaId::get() {
+				AggregateMessageOrigin::Export(ExportOrigin::Here)
+			} else {
+				AggregateMessageOrigin::Export(ExportOrigin::Sibling(ticket.origin))
+			};
+
+			if let AggregateMessageOrigin::Export(ExportOrigin::Here) = origin {
+				// Increase PendingHighPriorityMessageCount by one
+				PendingHighPriorityMessageCount::<T>::mutate(|count| {
+					*count = count.saturating_add(1)
+				});
+			} else {
+				Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
+			}
+
+			T::MessageQueue::enqueue_message(ticket.message.as_bounded_slice(), origin);
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
 		}
@@ -323,26 +382,15 @@ pub mod pallet {
 		type Origin = AggregateMessageOrigin;
 		fn process_message(
 			message: &[u8],
-			_: Self::Origin,
+			origin: Self::Origin,
 			meter: &mut frame_support::weights::WeightMeter,
 			_: &mut [u8; 32],
 		) -> Result<bool, ProcessMessageError> {
-			// Make sure the bridge not halted
-			Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
-			// Yield if we don't want to accept any more messages in the current block.
-			// There is hard limit to ensure the weight of `on_finalize` is bounded.
-			ensure!(
-				MessageLeaves::<T>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerBlock::get() as usize,
-				ProcessMessageError::Yield
-			);
-
 			let weight = T::WeightInfo::do_process_message();
 			if !meter.check_accrue(weight) {
 				return Err(ProcessMessageError::Overweight(weight))
 			}
-
-			Self::do_process_message(message)
+			Self::do_process_message(origin, message)
 		}
 	}
 }
