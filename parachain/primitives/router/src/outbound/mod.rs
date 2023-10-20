@@ -707,7 +707,7 @@ mod tests {
 			BridgedLocation,
 			MockErrOutboundQueue,
 			AgentIdOf,
-		>::deliver(hex!("deadbeef").to_vec());
+		>::deliver((hex!("deadbeef").to_vec(), XcmHash::default()));
 		assert_eq!(result, Err(XcmSendError::Transport("other transport error")))
 	}
 
