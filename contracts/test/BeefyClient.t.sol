@@ -675,6 +675,27 @@ contract BeefyClientTest is Test {
         regenerateBitField(bitFieldFile3SignatureCount, numRequiredSignatures);
     }
 
+    function testSignatureSampleValidatorSetQorum() public {
+        SignatureSampleTest[7] memory tests = [
+            SignatureSampleTest(21, 30, 0, 30),
+            SignatureSampleTest(201, 300, 0, 300),
+            SignatureSampleTest(67, 100, 0, 100),
+            SignatureSampleTest(667, 1000, 0, 1000),
+            SignatureSampleTest(51, 75, 0, 75),
+            SignatureSampleTest(3, 4, 0, 4),
+            SignatureSampleTest(9, 12, 0, 12)
+        ];
+        for (uint256 i = 0; i < tests.length; ++i) {
+            SignatureSampleTest memory test = tests[i];
+            assertEq(
+                test.result,
+                beefyClient.computeNumRequiredSignatures_public(
+                    test.validatorsLen, test.signatureUsageCount, test.minSignatures
+                )
+            );
+        }
+    }
+
     function testSignatureSampleNeverYieldsASampleGreaterThanTwoThirdsMajority() public {
         SignatureSampleTest[21] memory tests = [
             // Local Testnet cases
