@@ -273,7 +273,9 @@ contract BeefyClient {
             account: msg.sender,
             blockNumber: uint64(block.number),
             validatorSetLen: uint32(vset.length),
-            numRequiredSignatures: computeNumRequiredSignatures(vset.length, numRequiredSignatures),
+            numRequiredSignatures: computeNumRequiredSignatures(
+                vset.length, numRequiredSignatures, minNumRequiredSignatures
+                ),
             prevRandao: 0,
             bitfieldHash: keccak256(abi.encodePacked(bitfield))
         });
@@ -426,22 +428,23 @@ contract BeefyClient {
      * @dev Calculates the number of signature samples required for `submitFinal`.
      * @param validatorSetLen The validator set length.
      * @param signatureUsageCount The count of how many times a validators signature was previously used in a call to `submitInitial`.
+     * @param minRequiredSignatures The minimum amount of signatures to verify.
      *
      *  ceil(log2(validatorSetLen)) + 1 * 2 ceil(log2(signatureUsageCount))
      *
      * See https://hackmd.io/9OedC7icR5m-in_moUZ_WQ for full analysis.
      */
-    function computeNumRequiredSignatures(uint256 validatorSetLen, uint256 signatureUsageCount)
-        internal
-        view
-        returns (uint256)
-    {
+    function computeNumRequiredSignatures(
+        uint256 validatorSetLen,
+        uint256 signatureUsageCount,
+        uint256 minRequiredSignatures
+    ) internal pure returns (uint256) {
         // Start with the minimum number of signatures.
-        uint256 numRequiredSignatures = minNumRequiredSignatures;
+        uint256 numRequiredSignatures = minRequiredSignatures;
 
         // We must substrate minimumSignatures from the number of validators or we might end up
         // requiring more signatures than there are validators.
-        uint256 extraValidatorsLen = validatorSetLen.saturatingSub(minNumRequiredSignatures);
+        uint256 extraValidatorsLen = validatorSetLen.saturatingSub(minRequiredSignatures);
         if (extraValidatorsLen > 0) {
             numRequiredSignatures += Math.log2(extraValidatorsLen, Math.Rounding.Ceil);
         }

@@ -49,11 +49,11 @@ contract BeefyClientMock is BeefyClient {
         return currentValidatorSetCounters.get(index);
     }
 
-    function computeNumRequiredSignatures_public(uint256 validatorSetLen, uint256 signatureUsageCount)
-        public
-        view
-        returns (uint256)
-    {
-        return computeNumRequiredSignatures(validatorSetLen, signatureUsageCount);
+    function computeNumRequiredSignatures_public(
+        uint256 validatorSetLen,
+        uint256 signatureUsageCount,
+        uint256 minSignatures
+    ) public pure returns (uint256) {
+        return computeNumRequiredSignatures(validatorSetLen, signatureUsageCount, minSignatures);
     }
 }
