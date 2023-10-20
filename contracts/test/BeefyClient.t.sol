@@ -677,6 +677,7 @@ contract BeefyClientTest is Test {
 
     function testSignatureSampleNeverYieldsASampleGreaterThanTwoThirdsMajority() public {
         SignatureSampleTest[21] memory tests = [
+            // Local Testnet cases
             SignatureSampleTest(3, 4, 0, 16),
             SignatureSampleTest(3, 4, 1, 16),
             SignatureSampleTest(3, 4, 2, 16),
@@ -688,14 +689,14 @@ contract BeefyClientTest is Test {
             SignatureSampleTest(13, 19, 0, 16),
             SignatureSampleTest(14, 20, 0, 16),
             SignatureSampleTest(15, 21, 0, 16),
-            SignatureSampleTest(20, 30, 0, 16),
-            SignatureSampleTest(21, 30, 1, 16),
-            SignatureSampleTest(21, 30, 2, 16),
-            SignatureSampleTest(21, 30, 4, 16),
-            SignatureSampleTest(21, 30, 8, 16),
-            SignatureSampleTest(21, 30, 16, 16),
-            SignatureSampleTest(21, 30, 17, 16),
-            SignatureSampleTest(21, 30, 17, 16),
+            SignatureSampleTest(9, 30, 0, 4),
+            SignatureSampleTest(10, 30, 1, 4),
+            SignatureSampleTest(12, 30, 2, 4),
+            SignatureSampleTest(14, 30, 4, 4),
+            SignatureSampleTest(16, 30, 8, 4),
+            SignatureSampleTest(18, 30, 16, 4),
+            SignatureSampleTest(20, 30, 17, 4),
+            SignatureSampleTest(21, 30, 65535, 4),
             SignatureSampleTest(22, 75, 0, 16),
             SignatureSampleTest(51, 75, 65535, 16)
         ];
