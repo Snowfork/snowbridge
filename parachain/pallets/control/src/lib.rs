@@ -31,18 +31,24 @@ use frame_support::traits::fungible::{Inspect, Mutate};
 use sp_core::{RuntimeDebug, H160, H256};
 use sp_runtime::{
 	traits::{BadOrigin, Hash},
-	DispatchError,
+	DispatchError, SaturatedConversion,
 };
 use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
 
+use frame_support::{
+	pallet_prelude::*,
+	traits::{tokens::Preservation, EnsureOrigin},
+};
+use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	outbound::{
 		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
 	},
 	sibling_sovereign_account, AgentId,
 };
+use sp_runtime::Saturating;
 
 #[cfg(feature = "runtime-benchmarks")]
 use frame_support::traits::OriginTrait;
@@ -82,22 +88,18 @@ where
 
 /// Whether a fee should be withdrawn to an account for sending an outbound message
 #[derive(Clone, PartialEq, RuntimeDebug)]
-enum PaysFee<T>
+pub enum PaysFee<T>
 where
 	T: Config,
 {
 	Yes(AccountIdOf<T>),
+	Partial(AccountIdOf<T>),
 	No,
 }
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{
-		pallet_prelude::*,
-		traits::{tokens::Preservation, EnsureOrigin},
-	};
-	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -149,6 +151,8 @@ pub mod pallet {
 		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
 		TransferNativeFromAgent { agent_id: AgentId, recipient: H160, amount: u128 },
+		/// Redeem from treasury to channel origin
+		RedeemFromTreasury { para_id: ParaId, recipient: AccountIdOf<T>, amount: BalanceOf<T> },
 	}
 
 	#[pallet::error]
@@ -289,7 +293,8 @@ pub mod pallet {
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::NoChannel);
 
 			let command = Command::UpdateChannel { para_id, mode, fee };
-			Self::send(para_id, command, PaysFee::<T>::No)?;
+			let pays_fee = PaysFee::<T>::Partial(sibling_sovereign_account::<T>(para_id));
+			Self::send(para_id, command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::UpdateChannel { para_id, mode, fee });
 			Ok(())
@@ -361,7 +366,9 @@ pub mod pallet {
 			// Ensure that origin location is some consensus system on a sibling parachain
 			let (para_id, agent_id) = ensure_sibling::<T>(&origin_location)?;
 
-			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount)
+			let pays_fee = PaysFee::<T>::Partial(sibling_sovereign_account::<T>(para_id));
+
+			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount, pays_fee)
 		}
 
 		/// Sends a message to the Gateway contract to transfer ether from an agent to `recipient`.
@@ -390,7 +397,25 @@ pub mod pallet {
 			let (para_id, agent_id) =
 				ensure_sibling::<T>(&location).map_err(|_| Error::<T>::InvalidLocation)?;
 
-			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount)
+			let pays_fee = PaysFee::<T>::No;
+
+			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount, pays_fee)
+		}
+
+		/// Sends a message to the Gateway contract to transfer ether from an agent to `recipient`.
+		///
+		/// Fee required: No
+		///
+		/// - `origin`: Must be `MultiLocation`
+		#[pallet::call_index(8)]
+		#[pallet::weight(T::WeightInfo::redeem())]
+		pub fn redeem(origin: OriginFor<T>, recipient: AccountIdOf<T>) -> DispatchResult {
+			let origin_location: MultiLocation = T::SiblingOrigin::ensure_origin(origin)?;
+
+			// Ensure that origin location is some consensus system on a sibling parachain
+			let (para_id, _) = ensure_sibling::<T>(&origin_location)?;
+
+			Self::do_redeem(para_id, recipient)
 		}
 	}
 
@@ -398,14 +423,21 @@ pub mod pallet {
 		/// Send `command` to the Gateway on the channel identified by `origin`.
 		fn send(origin: ParaId, command: Command, pays_fee: PaysFee<T>) -> DispatchResult {
 			let message = Message { origin, command };
-			let (ticket, delivery_fee) =
+			let (ticket, fee) =
 				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
 
-			if let PaysFee::Yes(sovereign_account) = pays_fee {
+			let payment = match pays_fee {
+				PaysFee::Yes(account) =>
+					Some((account, fee.base_fee.saturating_add(fee.delivery_fee))),
+				PaysFee::Partial(account) => Some((account, fee.base_fee)),
+				PaysFee::No => None,
+			};
+
+			if let Some((payer, fee)) = payment {
 				T::Token::transfer(
-					&sovereign_account,
+					&payer,
 					&T::TreasuryAccount::get(),
-					delivery_fee,
+					fee,
 					Preservation::Preserve,
 				)?;
 			}
@@ -421,17 +453,40 @@ pub mod pallet {
 			para_id: ParaId,
 			recipient: H160,
 			amount: u128,
+			pays_fee: PaysFee<T>,
 		) -> DispatchResult {
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
 
 			let command = Command::TransferNativeFromAgent { agent_id, recipient, amount };
-			Self::send(para_id, command, PaysFee::<T>::No)?;
+			Self::send(para_id, command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::TransferNativeFromAgent {
 				agent_id,
 				recipient,
 				amount,
 			});
+			Ok(())
+		}
+
+		/// Issue a `Command::TransferNativeFromAgent` command. The command will be sent on the
+		/// channel owned by `para_id`.
+		pub fn do_redeem(para_id: ParaId, recipient: T::AccountId) -> DispatchResult {
+			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::NoChannel);
+			T::OutboundQueue::redeem(para_id, |amount| -> DispatchResult {
+				let redeem_amount = (*amount).saturated_into::<u64>().saturated_into();
+				T::Token::transfer(
+					&T::TreasuryAccount::get(),
+					&recipient,
+					redeem_amount,
+					Preservation::Preserve,
+				)?;
+				Self::deposit_event(Event::<T>::RedeemFromTreasury {
+					para_id,
+					recipient,
+					amount: redeem_amount,
+				});
+				Ok(())
+			})?;
 			Ok(())
 		}
 	}

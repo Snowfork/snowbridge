@@ -132,7 +132,11 @@ where
 		})?;
 
 		// convert fee to MultiAsset
-		let fee = MultiAsset::from((MultiLocation::parent(), fee)).into();
+		let fee = MultiAsset::from((
+			MultiLocation::parent(),
+			fee.base_fee.saturating_add(fee.delivery_fee),
+		))
+		.into();
 
 		Ok((ticket.encode(), fee))
 	}
@@ -307,9 +311,12 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 #[cfg(test)]
 mod tests {
-	use frame_support::parameter_types;
+	use frame_support::{dispatch::DispatchResult, parameter_types};
 	use hex_literal::hex;
-	use snowbridge_core::outbound::{MessageHash, SubmitError};
+	use snowbridge_core::{
+		outbound::{MessageHash, OutboundFee, SubmitError},
+		ParaId,
+	};
 	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 	pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
@@ -332,12 +339,19 @@ mod tests {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
-			Ok(((), 1))
+		fn validate(_: &Message) -> Result<((), OutboundFee<Self::Balance>), SubmitError> {
+			Ok(((), OutboundFee { base_fee: 1, delivery_fee: 1, voucher_required: false }))
 		}
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Ok(MessageHash::zero())
+		}
+
+		fn redeem(
+			_: ParaId,
+			_: impl FnOnce(&mut Self::Balance) -> DispatchResult,
+		) -> DispatchResult {
+			Ok(())
 		}
 	}
 	struct MockErrOutboundQueue;
@@ -345,12 +359,19 @@ mod tests {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
+		fn validate(_: &Message) -> Result<((), OutboundFee<Self::Balance>), SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Err(SubmitError::MessageTooLarge)
+		}
+
+		fn redeem(
+			_: ParaId,
+			_: impl FnOnce(&mut Self::Balance) -> DispatchResult,
+		) -> DispatchResult {
+			Ok(())
 		}
 	}
 

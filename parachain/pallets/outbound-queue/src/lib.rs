@@ -50,7 +50,8 @@ use sp_std::prelude::*;
 
 use snowbridge_core::outbound::{
 	AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, GasMeter, Message, MessageHash,
-	OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage, SubmitError,
+	OutboundFee, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
+	SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
@@ -192,6 +193,10 @@ pub mod pallet {
 	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
+
+	/// Vounchers for the delivery_fee as reimbursement for each origin
+	#[pallet::storage]
+	pub type Vouchers<T: Config> = StorageMap<_, Blake2_128Concat, ParaId, T::Balance, ValueQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
@@ -343,10 +348,12 @@ pub mod pallet {
 	}
 
 	impl<T: Config> OutboundQueueTrait for Pallet<T> {
-		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
+		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>, T::Balance>;
 		type Balance = T::Balance;
 
-		fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
+		fn validate(
+			message: &Message,
+		) -> Result<(Self::Ticket, OutboundFee<Self::Balance>), SubmitError> {
 			// The inner payload should not be too large
 			let payload = message.command.abi_encode();
 
@@ -365,17 +372,25 @@ pub mod pallet {
 				),
 			);
 			let delivery_fee = Self::delivery_fee(&message.command);
+
 			let command = message.command.clone();
+			let voucher_required = matches!(command, Command::AgentExecute { .. });
+			let fee = OutboundFee { base_fee, delivery_fee, voucher_required };
+
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage { id: message_id, origin: message.origin, command };
 			// The whole message should not be too large
 			let encoded =
 				enqueued_message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
 
-			let ticket =
-				OutboundQueueTicket { id: message_id, origin: message.origin, message: encoded };
+			let ticket = OutboundQueueTicket {
+				id: message_id,
+				origin: message.origin,
+				message: encoded,
+				fee,
+			};
 
-			Ok((ticket, base_fee.saturating_add(delivery_fee)))
+			Ok((ticket, fee))
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
@@ -398,8 +413,29 @@ pub mod pallet {
 			}
 
 			T::MessageQueue::enqueue_message(ticket.message.as_bounded_slice(), origin);
+			if ticket.fee.voucher_required {
+				Vouchers::<T>::try_mutate(ticket.origin, |amount| -> Result<(), SubmitError> {
+					*amount = amount.saturating_add(ticket.fee.delivery_fee);
+					Ok(())
+				})?;
+			}
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
+		}
+
+		fn redeem(
+			para_id: ParaId,
+			exec: impl FnOnce(&mut Self::Balance) -> DispatchResult,
+		) -> DispatchResult {
+			Vouchers::<T>::try_mutate(para_id, |amount| -> Result<(), DispatchError> {
+				let zero = Self::Balance::from(0_u32);
+				if *amount > zero {
+					exec(amount)?;
+					*amount = zero;
+				}
+				Ok(())
+			})?;
+			Ok(())
 		}
 	}
 

@@ -2,7 +2,8 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
-	traits::{tokens::Balance, Get},
+	dispatch::DispatchResult,
+	traits::{tokens::Balance as BalanceT, Get},
 	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
@@ -16,32 +17,37 @@ pub type FeeAmount = u128;
 pub type GasAmount = u128;
 pub type GasPriceInWei = u128;
 
+/// OutboundFee which covers the cost of execution on both BridgeHub and Ethereum
+#[derive(Copy, Clone, Default, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct OutboundFee<Balance: BalanceT> {
+	/// Cover the cost on BridgeHub
+	pub base_fee: Balance,
+	/// Cover the cost on Ethereum
+	pub delivery_fee: Balance,
+	/// Require voucher or not
+	pub voucher_required: bool,
+}
+
 /// A trait for enqueueing messages for delivery to Ethereum
 pub trait OutboundQueue {
-	type Ticket: Clone;
-	type Balance: Balance;
+	type Ticket: Clone + Encode + Decode;
+	type Balance: BalanceT;
 
 	/// Validate an outbound message and return a tuple:
 	/// 1. A ticket for submitting the message
-	/// 2. The delivery fee in DOT which covers the cost of execution on Ethereum
-	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError>;
+	/// 2. The OutboundFee
+	fn validate(
+		message: &Message,
+	) -> Result<(Self::Ticket, OutboundFee<Self::Balance>), SubmitError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
-}
 
-/// Default implementation of `OutboundQueue` for tests
-impl OutboundQueue for () {
-	type Ticket = u64;
-	type Balance = u64;
-
-	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
-		Ok((0, 0))
-	}
-
-	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-		Ok(MessageHash::zero())
-	}
+	/// Redeem voucher from a Parachain
+	fn redeem(
+		para_id: ParaId,
+		exec: impl FnOnce(&mut Self::Balance) -> DispatchResult,
+	) -> DispatchResult;
 }
 
 /// SubmitError returned
@@ -282,10 +288,11 @@ impl AgentExecuteCommand {
 
 /// A message which can be accepted by the [`OutboundQueue`]
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
-pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
+pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>, Balance: BalanceT> {
 	pub id: H256,
 	pub origin: ParaId,
 	pub message: BoundedVec<u8, MaxMessageSize>,
+	pub fee: OutboundFee<Balance>,
 }
 
 /// Message which is awaiting processing in the MessageQueue pallet

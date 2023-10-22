@@ -40,6 +40,7 @@ pub trait WeightInfo {
 	fn set_operating_mode() -> Weight;
 	fn transfer_native_from_agent() -> Weight;
 	fn force_transfer_native_from_agent() -> Weight;
+	fn redeem() -> Weight;
 }
 
 // For backwards compatibility and tests.
@@ -203,5 +204,16 @@ impl WeightInfo for () {
 		Weight::from_parts(42_000_000, 6044)
 			.saturating_add(RocksDbWeight::get().reads(5_u64))
 			.saturating_add(RocksDbWeight::get().writes(3_u64))
+	}
+	
+	// Require benchmark
+	fn redeem() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `252`
+		//  Estimated: `6044`
+		// Minimum execution time: 50_000_000 picoseconds.
+		Weight::from_parts(50_000_000, 6044)
+			.saturating_add(RocksDbWeight::get().reads(5_u64))
+			.saturating_add(RocksDbWeight::get().writes(6_u64))
 	}
 }
