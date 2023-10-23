@@ -47,7 +47,7 @@ mod benchmarks {
 
 	/// Benchmark for producing final messages commitment
 	#[benchmark]
-	fn on_finalize() -> Result<(), BenchmarkError> {
+	fn do_commit_messages() -> Result<(), BenchmarkError> {
 		// Assume worst case, where `MaxMessagesPerBlock` messages need to be committed.
 		for i in 0..T::MaxMessagesPerBlock::get() {
 			let leaf_data: [u8; 1] = [i as u8];
@@ -57,7 +57,21 @@ mod benchmarks {
 
 		#[block]
 		{
-			OutboundQueue::<T>::commit_messages();
+			OutboundQueue::<T>::do_commit_messages();
+		}
+
+		Ok(())
+	}
+
+	/// Benchmark for producing commitment for a single message
+	#[benchmark]
+	fn do_commit_one_message() -> Result<(), BenchmarkError> {
+		let leaf = <T as Config>::Hashing::hash(&[100; 1]);
+		MessageLeaves::<T>::append(leaf);
+
+		#[block]
+		{
+			OutboundQueue::<T>::do_commit_messages();
 		}
 
 		Ok(())

@@ -529,11 +529,11 @@ fn charge_and_redeem() {
 		assert_ok!(EthereumControl::transfer_native_from_agent(origin.clone(), recipient, amount));
 
 		let sovereign_balance = Balances::balance(&sovereign_account);
-		assert_eq!(sovereign_balance, 998355650000);
+		assert_eq!(sovereign_balance, 997905350000);
 
 		// and treasury_balance increased by 5 * base_fee
 		let treasury_balance = Balances::balance(&TreasuryAccount::get());
-		assert_eq!(treasury_balance, 1001644350000);
+		assert_eq!(treasury_balance, 1002094650000);
 
 		assert_eq!(sovereign_balance + treasury_balance, (InitialFunding::get() * 2) as u128);
 
