@@ -675,20 +675,18 @@ contract BeefyClientTest is Test {
         regenerateBitField(bitFieldFile3SignatureCount, numRequiredSignatures);
     }
 
-    function testComputeValidatorSetQorum() public {
-        SignatureSampleTest[7] memory tests = [
-            SignatureSampleTest(21, 30, 0, 0),
-            SignatureSampleTest(201, 300, 0, 0),
-            SignatureSampleTest(67, 100, 0, 0),
-            SignatureSampleTest(667, 1000, 0, 0),
-            SignatureSampleTest(51, 75, 0, 0),
-            SignatureSampleTest(3, 4, 0, 0),
-            SignatureSampleTest(9, 12, 0, 0)
-        ];
-        for (uint256 i = 0; i < tests.length; ++i) {
-            SignatureSampleTest memory test = tests[i];
-            assertEq(test.result, beefyClient.computeQuorum_public(test.validatorsLen));
-        }
+    function testFuzz_ComputeValidatorSetQuorum(uint128 validatorSetLen) public {
+        // There must be atleast 1 validator.
+        vm.assume(validatorSetLen > 0);
+        // Calculator 2/3 with flooring due to integer division.
+        uint256 twoThirdsMajority = uint256(validatorSetLen) * 2 / 3;
+        uint256 result = beefyClient.computeQuorum_public(validatorSetLen);
+        // Assert that the result is greater than floored integer division.
+        assertGt(result, twoThirdsMajority);
+        // Assert that the result is always less than or equal to the validator set length.
+        assertLe(result, validatorSetLen);
+        // Assert that the result is always greater than 0.
+        assertGt(result, 0);
     }
 
     function testSignatureSampleNeverYieldsASampleGreaterThanTwoThirdsMajority() public {
