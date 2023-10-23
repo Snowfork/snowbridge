@@ -71,24 +71,29 @@ contract MathTest is Test {
         }
     }
 
-    function testMin() public {
-        assertEq(12, Math.min(12, 24));
-        assertEq(12, Math.min(24, 12));
+    function testFuzzMin(uint256 a, uint256 b) public {
+        vm.assume(a < b);
+        assertEq(a, Math.min(a, b));
     }
 
-    function testMax() public {
-        assertEq(24, Math.max(12, 24));
-        assertEq(24, Math.max(24, 12));
+    function testFuzzMax(uint256 a, uint256 b) public {
+        vm.assume(a > b);
+        assertEq(a, Math.max(a, b));
     }
 
-    function testSaturatingAdd() public {
-        assertEq(3, Math.saturatingAdd(1, 2));
-        assertEq(65535, Math.saturatingAdd(65535, 1));
-        assertEq(65535, Math.saturatingAdd(32769, 32769));
+    function testFuzzSaturatingAdd(uint16 a, uint16 b) public {
+        uint256 result = uint256(a) + uint256(b);
+        if (result > 0xFFFF) {
+            result = 0xFFFF;
+        }
+        assertEq(result, Math.saturatingAdd(a, b));
     }
 
-    function testSaturatingSub() public {
-        assertEq(3, Math.saturatingSub(6, 3));
-        assertEq(0, Math.saturatingSub(100, 150));
+    function testFuzzSaturatingSub(uint256 a, uint256 b) public {
+        uint256 result = 0;
+        if (a > b) {
+            result = a - b;
+        }
+        assertEq(result, Math.saturatingSub(a, b));
     }
 }

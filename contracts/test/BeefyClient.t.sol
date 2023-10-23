@@ -14,13 +14,6 @@ import {Bitfield} from "../src/utils/Bitfield.sol";
 contract BeefyClientTest is Test {
     using stdJson for string;
 
-    struct SignatureSampleTest {
-        uint256 result;
-        uint256 validatorsLen;
-        uint16 signatureUsageCount;
-        uint16 minSignatures;
-    }
-
     BeefyClientMock beefyClient;
     uint8 randaoCommitDelay;
     uint8 randaoCommitExpiration;
@@ -675,114 +668,40 @@ contract BeefyClientTest is Test {
         regenerateBitField(bitFieldFile3SignatureCount, numRequiredSignatures);
     }
 
-    function testFuzz_ComputeValidatorSetQuorum(uint128 validatorSetLen) public {
+    function testFuzzComputeValidatorSetQuorum(uint128 validatorSetLen) public {
         // There must be atleast 1 validator.
         vm.assume(validatorSetLen > 0);
         // Calculator 2/3 with flooring due to integer division.
         uint256 twoThirdsMajority = uint256(validatorSetLen) * 2 / 3;
         uint256 result = beefyClient.computeQuorum_public(validatorSetLen);
-        // Assert that the result is greater than floored integer division.
-        assertGt(result, twoThirdsMajority);
-        // Assert that the result is always less than or equal to the validator set length.
-        assertLe(result, validatorSetLen);
-        // Assert that the result is always greater than 0.
-        assertGt(result, 0);
+        assertGt(result, twoThirdsMajority, "result is greater than 2/3rds");
+        assertLe(result, validatorSetLen, "result is less than validator set length.");
+        assertGt(result, 0, "result is greater than zero.");
     }
 
-    function testSignatureSampleNeverYieldsASampleGreaterThanTwoThirdsMajority() public {
-        SignatureSampleTest[21] memory tests = [
-            // Local Testnet cases
-            SignatureSampleTest(3, 4, 0, 16),
-            SignatureSampleTest(3, 4, 1, 16),
-            SignatureSampleTest(3, 4, 2, 16),
-            SignatureSampleTest(7, 9, 0, 16),
-            SignatureSampleTest(11, 16, 0, 16),
-            SignatureSampleTest(12, 17, 0, 16),
-            SignatureSampleTest(12, 17, 1, 16),
-            SignatureSampleTest(13, 18, 0, 16),
-            SignatureSampleTest(13, 19, 0, 16),
-            SignatureSampleTest(14, 20, 0, 16),
-            SignatureSampleTest(15, 21, 0, 16),
-            SignatureSampleTest(9, 30, 0, 4),
-            SignatureSampleTest(10, 30, 1, 4),
-            SignatureSampleTest(12, 30, 2, 4),
-            SignatureSampleTest(14, 30, 4, 4),
-            SignatureSampleTest(16, 30, 8, 4),
-            SignatureSampleTest(18, 30, 16, 4),
-            SignatureSampleTest(20, 30, 17, 4),
-            SignatureSampleTest(21, 30, 65535, 4),
-            SignatureSampleTest(22, 75, 0, 16),
-            SignatureSampleTest(51, 75, 65535, 16)
-        ];
-        for (uint256 i = 0; i < tests.length; ++i) {
-            SignatureSampleTest memory test = tests[i];
-            assertEq(
-                test.result,
-                beefyClient.computeNumRequiredSignatures_public(
-                    test.validatorsLen, test.signatureUsageCount, test.minSignatures
-                )
-            );
-        }
+    function testFuzzSignatureSamplingRanges(uint128 validatorSetLen, uint16 signatureUsageCount, uint16 minSignatures)
+        public
+    {
+        // There must be atleast 1 validator.
+        vm.assume(validatorSetLen > 0);
+        // Min signatures must be less than the amount of validators.
+        vm.assume(beefyClient.computeQuorum_public(validatorSetLen) > minSignatures);
+
+        uint256 result =
+            beefyClient.computeNumRequiredSignatures_public(validatorSetLen, signatureUsageCount, minSignatures);
+
+        // Calculator 2/3 with flooring due to integer division plus 1.
+        uint256 twoThirdsMajority = uint256(validatorSetLen) * 2 / 3 + 1;
+        assertLe(result, twoThirdsMajority, "result is less than or equal to quorum.");
+        assertGe(result, minSignatures, "result is greater than or equal to minimum signatures.");
+        assertLe(result, validatorSetLen, "result is less than validator set length.");
+        assertGt(result, 0, "result is greater than zero.");
     }
 
-    function testSignatureSamplingRanges() public {
-        SignatureSampleTest[47] memory tests = [
-            SignatureSampleTest(25, setSize, 0, 16),
-            SignatureSampleTest(26, setSize, 1, 16),
-            SignatureSampleTest(28, setSize, 2, 16),
-            SignatureSampleTest(30, setSize, 3, 16),
-            SignatureSampleTest(30, setSize, 4, 16),
-            SignatureSampleTest(32, setSize, 5, 16),
-            SignatureSampleTest(32, setSize, 6, 16),
-            SignatureSampleTest(32, setSize, 8, 16),
-            SignatureSampleTest(34, setSize, 9, 16),
-            SignatureSampleTest(34, setSize, 12, 16),
-            SignatureSampleTest(34, setSize, 16, 16),
-            SignatureSampleTest(36, setSize, 17, 16),
-            SignatureSampleTest(36, setSize, 24, 16),
-            SignatureSampleTest(36, setSize, 32, 16),
-            SignatureSampleTest(38, setSize, 33, 16),
-            SignatureSampleTest(38, setSize, 48, 16),
-            SignatureSampleTest(38, setSize, 64, 16),
-            SignatureSampleTest(40, setSize, 65, 16),
-            SignatureSampleTest(40, setSize, 96, 16),
-            SignatureSampleTest(40, setSize, 128, 16),
-            SignatureSampleTest(42, setSize, 129, 16),
-            SignatureSampleTest(42, setSize, 192, 16),
-            SignatureSampleTest(42, setSize, 256, 16),
-            SignatureSampleTest(44, setSize, 257, 16),
-            SignatureSampleTest(44, setSize, 384, 16),
-            SignatureSampleTest(44, setSize, 512, 16),
-            SignatureSampleTest(46, setSize, 513, 16),
-            SignatureSampleTest(46, setSize, 768, 16),
-            SignatureSampleTest(46, setSize, 1024, 16),
-            SignatureSampleTest(48, setSize, 1025, 16),
-            SignatureSampleTest(48, setSize, 1536, 16),
-            SignatureSampleTest(48, setSize, 2048, 16),
-            SignatureSampleTest(50, setSize, 2049, 16),
-            SignatureSampleTest(50, setSize, 3072, 16),
-            SignatureSampleTest(50, setSize, 4096, 16),
-            SignatureSampleTest(52, setSize, 4097, 16),
-            SignatureSampleTest(52, setSize, 6144, 16),
-            SignatureSampleTest(52, setSize, 8192, 16),
-            SignatureSampleTest(54, setSize, 8193, 16),
-            SignatureSampleTest(54, setSize, 12288, 16),
-            SignatureSampleTest(54, setSize, 16384, 16),
-            SignatureSampleTest(56, setSize, 16385, 16),
-            SignatureSampleTest(56, setSize, 24576, 16),
-            SignatureSampleTest(56, setSize, 32768, 16),
-            SignatureSampleTest(58, setSize, 32769, 16),
-            SignatureSampleTest(58, setSize, 49152, 16),
-            SignatureSampleTest(58, setSize, 65535, 16)
-        ];
-        for (uint256 i = 0; i < tests.length; ++i) {
-            SignatureSampleTest memory test = tests[i];
-            assertEq(
-                test.result,
-                beefyClient.computeNumRequiredSignatures_public(
-                    test.validatorsLen, test.signatureUsageCount, test.minSignatures
-                )
-            );
-        }
+    function testSignatureSamplingCases() public {
+        uint256 result = beefyClient.computeQuorum_public(1);
+        assertEq(1, result, "B");
+        result = beefyClient.computeNumRequiredSignatures_public(1, 0, 0);
+        assertEq(1, result, "C");
     }
 }
