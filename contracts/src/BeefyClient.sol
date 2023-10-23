@@ -101,10 +101,9 @@ contract BeefyClient {
      * @param bitfield a bitfield signalling which validators they claim have signed
      */
     struct Ticket {
-        address account;
         uint64 blockNumber;
         uint32 validatorSetLen;
-        uint256 numRequiredSignatures;
+        uint32 numRequiredSignatures;
         uint256 prevRandao;
         bytes32 bitfieldHash;
     }
@@ -270,10 +269,11 @@ contract BeefyClient {
         }
 
         tickets[createTicketID(msg.sender, commitmentHash)] = Ticket({
-            account: msg.sender,
             blockNumber: uint64(block.number),
             validatorSetLen: uint32(vset.length),
-            numRequiredSignatures: computeNumRequiredSignatures(vset.length, signatureUsageCount, minNumRequiredSignatures),
+            numRequiredSignatures: uint32(
+                computeNumRequiredSignatures(vset.length, signatureUsageCount, minNumRequiredSignatures)
+                ),
             prevRandao: 0,
             bitfieldHash: keccak256(abi.encodePacked(bitfield))
         });
