@@ -30,13 +30,6 @@ fund_accounts() {
     transfer_balance $relaychain_ws_url "//Charlie" 1000 1000000000000000 $gateway_contract_sovereign_account
 }
 
-configure_bridgehub() {
-    fund_accounts
-    wait_beacon_chain_ready
-    config_beacon_checkpoint
-    open_hrmp_channels
-}
-
 open_hrmp_channel()
 {
     local relay_url=$1
@@ -69,10 +62,17 @@ open_hrmp_channel()
 open_hrmp_channels()
 {
     echo "Opening HRMP channels"
-    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1000 1013 8 512 # Statemine -> BridgeHub
-    open_hrmp_channel "${relaychain_ws_url}"  "${relaychain_sudo_seed}" 1013 1000 8 512 # BridgeHub -> Statemine
+    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1000 1013 8 512 # Assethub -> BridgeHub
+    open_hrmp_channel "${relaychain_ws_url}"  "${relaychain_sudo_seed}" 1013 1000 8 512 # BridgeHub -> Assethub
     open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1001 1013 8 512 # TemplateNode -> BridgeHub
     open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1013 1001 8 512 # BridgeHub -> TemplateNode
+}
+
+configure_bridgehub() {
+    fund_accounts
+    wait_beacon_chain_ready
+    config_beacon_checkpoint
+    open_hrmp_channels
 }
 
 if [ -z "${from_start_services:-}" ]; then
