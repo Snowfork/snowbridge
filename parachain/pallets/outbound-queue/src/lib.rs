@@ -194,10 +194,6 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
-	/// Vounchers for the delivery_fee as reimbursement for each origin
-	#[pallet::storage]
-	pub type Vouchers<T: Config> = StorageMap<_, Blake2_128Concat, ParaId, T::Balance, ValueQuery>;
-
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
@@ -372,8 +368,7 @@ pub mod pallet {
 			let delivery_fee = Self::delivery_fee(&message.command);
 
 			let command = message.command.clone();
-			let voucher_required = matches!(command, Command::AgentExecute { .. });
-			let fee = OutboundFee { base_fee, delivery_fee, voucher_required };
+			let fee = OutboundFee { base_fee, delivery_fee };
 
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage { id: message_id, origin: message.origin, command };
@@ -411,29 +406,8 @@ pub mod pallet {
 			}
 
 			T::MessageQueue::enqueue_message(ticket.message.as_bounded_slice(), origin);
-			if ticket.fee.voucher_required {
-				Vouchers::<T>::try_mutate(ticket.origin, |amount| -> Result<(), SubmitError> {
-					*amount = amount.saturating_add(ticket.fee.delivery_fee);
-					Ok(())
-				})?;
-			}
 			Self::deposit_event(Event::MessageQueued { id: ticket.id });
 			Ok(ticket.id)
-		}
-
-		fn redeem(
-			para_id: ParaId,
-			exec: impl FnOnce(&mut Self::Balance) -> DispatchResult,
-		) -> DispatchResult {
-			Vouchers::<T>::try_mutate(para_id, |amount| -> Result<(), DispatchError> {
-				let zero = Self::Balance::from(0_u32);
-				if *amount > zero {
-					exec(amount)?;
-					*amount = zero;
-				}
-				Ok(())
-			})?;
-			Ok(())
 		}
 	}
 

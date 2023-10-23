@@ -2,7 +2,6 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
-	dispatch::DispatchResult,
 	traits::{tokens::Balance as BalanceT, Get},
 	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
@@ -24,8 +23,6 @@ pub struct OutboundFee<Balance: BalanceT> {
 	pub base_fee: Balance,
 	/// Cover the cost on Ethereum
 	pub delivery_fee: Balance,
-	/// Require voucher or not
-	pub voucher_required: bool,
 }
 
 /// A trait for enqueueing messages for delivery to Ethereum
@@ -42,12 +39,6 @@ pub trait OutboundQueue {
 
 	/// Submit the message ticket for eventual delivery to Ethereum
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
-
-	/// Redeem voucher from a Parachain
-	fn redeem(
-		para_id: ParaId,
-		exec: impl FnOnce(&mut Self::Balance) -> DispatchResult,
-	) -> DispatchResult;
 }
 
 /// SubmitError returned

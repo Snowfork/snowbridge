@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
-use snowbridge_core::outbound::AgentExecuteCommand;
 use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
 
@@ -511,7 +510,7 @@ fn check_sibling_sovereign_account() {
 }
 
 #[test]
-fn charge_and_redeem() {
+fn charge_fee() {
 	new_test_ext().execute_with(|| {
 		let para_id: u32 = TestParaId::get();
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(para_id)) };
@@ -538,39 +537,5 @@ fn charge_and_redeem() {
 
 		// (sovereign_balance + treasury_balance) keeps the same
 		assert_eq!(sovereign_balance + treasury_balance, (InitialFunding::get() * 2) as u128);
-
-		// since there is no voucher for control operations redeem from treasury will do
-		// nothing and treasury_balance does not change
-		assert_ok!(EthereumControl::redeem(origin.clone(), sovereign_account.clone()));
-		let treasury_balance_after = Balances::balance(&TreasuryAccount::get());
-		assert_eq!(treasury_balance, treasury_balance_after);
-
-		// then submit `AgentExecute` will get the voucher
-		let message = Message {
-			origin: para_id.into(),
-			command: Command::AgentExecute {
-				agent_id: Default::default(),
-				command: AgentExecuteCommand::TransferToken {
-					token: Default::default(),
-					recipient: Default::default(),
-					amount: 0,
-				},
-			},
-		};
-		let ticket = OutboundQueue::validate(&message).unwrap();
-		assert_ok!(OutboundQueue::submit(ticket.0));
-		let treasury_balance_after = Balances::balance(&TreasuryAccount::get());
-		// treasury_balance will not change until https://github.com/paritytech/polkadot-sdk/pull/1234 get merged
-		assert_eq!(treasury_balance, treasury_balance_after);
-
-		// but we can redeem the compensation from treasury this time
-		assert_ok!(EthereumControl::redeem(origin.clone(), sovereign_account.clone()));
-		let treasury_balance_after = Balances::balance(&TreasuryAccount::get());
-		assert_eq!(treasury_balance > treasury_balance_after, true);
-		System::assert_last_event(RuntimeEvent::EthereumControl(Event::RedeemFromTreasury {
-			para_id: para_id.into(),
-			recipient: sovereign_account,
-			amount: 185000,
-		}));
 	});
 }

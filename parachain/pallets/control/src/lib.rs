@@ -151,8 +151,6 @@ pub mod pallet {
 		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
 		TransferNativeFromAgent { agent_id: AgentId, recipient: H160, amount: u128 },
-		/// Redeem voucher for the Parachain from the treasury to `recipient`.
-		RedeemFromTreasury { para_id: ParaId, recipient: AccountIdOf<T>, amount: BalanceOf<T> },
 	}
 
 	#[pallet::error]
@@ -401,21 +399,6 @@ pub mod pallet {
 
 			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount, pays_fee)
 		}
-
-		/// Redeem voucher for the Parachain from the treasury to `recipient`.
-		///
-		/// - `origin`: Must be `MultiLocation`
-		/// - `recipient`: Recipient of funds
-		#[pallet::call_index(8)]
-		#[pallet::weight(T::WeightInfo::redeem())]
-		pub fn redeem(origin: OriginFor<T>, recipient: AccountIdOf<T>) -> DispatchResult {
-			let origin_location: MultiLocation = T::SiblingOrigin::ensure_origin(origin)?;
-
-			// Ensure that origin location is some consensus system on a sibling parachain
-			let (para_id, _) = ensure_sibling::<T>(&origin_location)?;
-
-			Self::do_redeem(para_id, recipient)
-		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -464,27 +447,6 @@ pub mod pallet {
 				recipient,
 				amount,
 			});
-			Ok(())
-		}
-
-		/// Redeem voucher for the Parachain from the treasury to `recipient`.
-		pub fn do_redeem(para_id: ParaId, recipient: T::AccountId) -> DispatchResult {
-			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::NoChannel);
-			T::OutboundQueue::redeem(para_id, |amount| -> DispatchResult {
-				let redeem_amount = (*amount).saturated_into::<u128>().saturated_into();
-				T::Token::transfer(
-					&T::TreasuryAccount::get(),
-					&recipient,
-					redeem_amount,
-					Preservation::Preserve,
-				)?;
-				Self::deposit_event(Event::<T>::RedeemFromTreasury {
-					para_id,
-					recipient,
-					amount: redeem_amount,
-				});
-				Ok(())
-			})?;
 			Ok(())
 		}
 	}

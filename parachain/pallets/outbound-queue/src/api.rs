@@ -30,6 +30,5 @@ where
 	Some(OutboundFee::<u128> {
 		base_fee: fee.base_fee.saturated_into::<u128>(),
 		delivery_fee: fee.delivery_fee.saturated_into::<u128>(),
-		voucher_required: fee.voucher_required,
 	})
 }
