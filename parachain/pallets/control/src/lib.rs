@@ -473,7 +473,7 @@ pub mod pallet {
 		pub fn do_redeem(para_id: ParaId, recipient: T::AccountId) -> DispatchResult {
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::NoChannel);
 			T::OutboundQueue::redeem(para_id, |amount| -> DispatchResult {
-				let redeem_amount = (*amount).saturated_into::<u64>().saturated_into();
+				let redeem_amount = (*amount).saturated_into::<u128>().saturated_into();
 				T::Token::transfer(
 					&T::TreasuryAccount::get(),
 					&recipient,
