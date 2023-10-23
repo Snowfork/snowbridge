@@ -38,19 +38,19 @@ id = 1013
 chain = "bridge-hub-rococo-local"
 cumulus_based = true
 
-# run alice as parachain collator
-[[parachains.collators]]
-name = "bridgehub01"
-validator = true
-command = "{{output_bin_dir}}/polkadot-parachain"
-rpc_port = 8081
-ws_port = 11144
-args = [
-    "--enable-offchain-indexing=true",
-    "--pruning=archive",
-    "--force-authoring",
-    "-lparachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace,snowbridge-outbound-queue=trace,snowbridge-inbound-queue=trace,runtime=debug",
-]
+    # run alice as parachain collator
+    [[parachains.collators]]
+    name = "bridgehub01"
+    validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain"
+    rpc_port = 8081
+    ws_port = 11144
+    args = [
+        "--enable-offchain-indexing=true",
+        "--pruning=archive",
+        "--force-authoring",
+        "-lparachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace,snowbridge-outbound-queue=trace,snowbridge-inbound-queue=trace,runtime=debug",
+    ]
 
 ## Statemine
 [[parachains]]
@@ -58,17 +58,17 @@ id = 1000
 chain = "asset-hub-rococo-local"
 cumulus_based = true
 
-# run alice as parachain collator
-[[parachains.collators]]
-name = "statemine01"
-validator = true
-command = "{{output_bin_dir}}/polkadot-parachain"
-rpc_port = 8082
-ws_port = 12144
-args = [
-    "--force-authoring",
-    "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace,runtime::assets=trace,runtime::bridge-transfer=trace",
-]
+    # run alice as parachain collator
+    [[parachains.collators]]
+    name = "assethub01"
+    #validator = true
+    command = "{{output_bin_dir}}/polkadot-parachain-asset-hub"
+    rpc_port = 8082
+    ws_port = 12144
+    args = [
+        "--force-authoring",
+        "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace,runtime::assets=trace,runtime::bridge-transfer=trace",
+    ]
 
 
 ## Template node
@@ -77,14 +77,14 @@ id = 1001
 chain = "template-rococo"
 cumulus_based = true
 
-# run alice as parachain collator
-[[parachains.collators]]
-name = "template01"
-validator = true
-command = "{{output_bin_dir}}/parachain-template-node"
-rpc_port = 8083
-ws_port = 13144
-args = [
-    "--force-authoring",
-    "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace,runtime::assets=trace,runtime::bridge-transfer=trace",
-]
+    # run alice as parachain collator
+    [[parachains.collators]]
+    name = "template01"
+    validator = true
+    command = "{{output_bin_dir}}/parachain-template-node"
+    rpc_port = 8083
+    ws_port = 13144
+    args = [
+        "--force-authoring",
+        "-lparachain=debug,xcm=trace,runtime::bridge-assets-transfer=trace,runtime::assets=trace,runtime::bridge-transfer=trace",
+    ]
