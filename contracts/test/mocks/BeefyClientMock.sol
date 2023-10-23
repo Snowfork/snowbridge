@@ -56,4 +56,8 @@ contract BeefyClientMock is BeefyClient {
     ) public pure returns (uint256) {
         return computeNumRequiredSignatures(validatorSetLen, signatureUsageCount, minSignatures);
     }
+
+    function computeQuorum_public(uint256 numValidators) public pure returns (uint256) {
+        return computeQuorum(numValidators);
+    }
 }
