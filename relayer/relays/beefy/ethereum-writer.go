@@ -139,8 +139,8 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		}
 	}
 	validatorCount := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
-	// Pick a random validator who signs beefy commitment
 
+	// Pick a random validator who signs beefy commitment
 	chosenValidator := signedValidators[rand.Intn(len(signedValidators))].Int64()
 
 	log.WithFields(logrus.Fields{
