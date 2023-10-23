@@ -265,7 +265,7 @@ contract BeefyClient {
 
         // For the initial submission, the supplied bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
-        if (Bitfield.countSetBits(bitfield) < vset.length - (vset.length - 1) / 3) {
+        if (Bitfield.countSetBits(bitfield) < computeQuorum(vset.length)) {
             revert NotEnoughClaims();
         }
 
@@ -457,8 +457,16 @@ contract BeefyClient {
         }
 
         // Never require more signatures than 2/3 majority.
-        uint256 validatorSetQuorum = validatorSetLen - (validatorSetLen - 1) / 3;
+        uint256 validatorSetQuorum = computeQuorum(validatorSetLen);
         return Math.min(numRequiredSignatures, validatorSetQuorum);
+    }
+    /**
+     * @dev Calculates 2/3 majority required for quorum for a given number of validators.
+     * @param numValidators The number of validators in the validator set.
+     */
+
+    function computeQuorum(uint256 numValidators) internal pure returns (uint256) {
+        return numValidators - (numValidators - 1) / 3;
     }
 
     /**
