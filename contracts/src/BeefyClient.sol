@@ -233,14 +233,14 @@ contract BeefyClient {
         external
     {
         ValidatorSet memory vset;
-        uint16 numRequiredSignatures;
+        uint16 signatureUsageCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {
-            numRequiredSignatures = currentValidatorSetCounters.get(proof.index);
-            currentValidatorSetCounters.set(proof.index, numRequiredSignatures.saturatingAdd(1));
+            signatureUsageCount = currentValidatorSetCounters.get(proof.index);
+            currentValidatorSetCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = currentValidatorSet;
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
-            numRequiredSignatures = nextValidatorSetCounters.get(proof.index);
-            nextValidatorSetCounters.set(proof.index, numRequiredSignatures.saturatingAdd(1));
+            signatureUsageCount = nextValidatorSetCounters.get(proof.index);
+            nextValidatorSetCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = nextValidatorSet;
         } else {
             revert InvalidCommitment();
@@ -273,9 +273,7 @@ contract BeefyClient {
             account: msg.sender,
             blockNumber: uint64(block.number),
             validatorSetLen: uint32(vset.length),
-            numRequiredSignatures: computeNumRequiredSignatures(
-                vset.length, numRequiredSignatures, minNumRequiredSignatures
-                ),
+            numRequiredSignatures: computeNumRequiredSignatures(vset.length, signatureUsageCount, minNumRequiredSignatures),
             prevRandao: 0,
             bitfieldHash: keccak256(abi.encodePacked(bitfield))
         });
