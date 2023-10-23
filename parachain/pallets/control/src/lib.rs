@@ -151,7 +151,7 @@ pub mod pallet {
 		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
 		TransferNativeFromAgent { agent_id: AgentId, recipient: H160, amount: u128 },
-		/// Redeem from treasury to channel origin
+		/// Redeem voucher for the Parachain from the treasury to `recipient`.
 		RedeemFromTreasury { para_id: ParaId, recipient: AccountIdOf<T>, amount: BalanceOf<T> },
 	}
 
@@ -402,11 +402,10 @@ pub mod pallet {
 			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount, pays_fee)
 		}
 
-		/// Sends a message to the Gateway contract to transfer ether from an agent to `recipient`.
-		///
-		/// Fee required: No
+		/// Redeem voucher for the Parachain from the treasury to `recipient`.
 		///
 		/// - `origin`: Must be `MultiLocation`
+		/// - `recipient`: Recipient of funds
 		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(origin: OriginFor<T>, recipient: AccountIdOf<T>) -> DispatchResult {
@@ -468,8 +467,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Issue a `Command::TransferNativeFromAgent` command. The command will be sent on the
-		/// channel owned by `para_id`.
+		/// Redeem voucher for the Parachain from the treasury to `recipient`.
 		pub fn do_redeem(para_id: ParaId, recipient: T::AccountId) -> DispatchResult {
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::NoChannel);
 			T::OutboundQueue::redeem(para_id, |amount| -> DispatchResult {

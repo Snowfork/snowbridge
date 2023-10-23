@@ -528,22 +528,24 @@ fn charge_and_redeem() {
 		// transfer_native_from_agent partially charged only the base_fee
 		assert_ok!(EthereumControl::transfer_native_from_agent(origin.clone(), recipient, amount));
 
+		// sovereign_balance decreased
 		let sovereign_balance = Balances::balance(&sovereign_account);
 		assert_eq!(sovereign_balance, 997905350000);
 
-		// and treasury_balance increased by 5 * base_fee
+		// and treasury_balance increased
 		let treasury_balance = Balances::balance(&TreasuryAccount::get());
 		assert_eq!(treasury_balance, 1002094650000);
 
+		// (sovereign_balance + treasury_balance) keeps the same
 		assert_eq!(sovereign_balance + treasury_balance, (InitialFunding::get() * 2) as u128);
 
-		// since there is no compensation for control operations redeem from treasury will do
+		// since there is no voucher for control operations redeem from treasury will do
 		// nothing and treasury_balance does not change
 		assert_ok!(EthereumControl::redeem(origin.clone(), sovereign_account.clone()));
 		let treasury_balance_after = Balances::balance(&TreasuryAccount::get());
 		assert_eq!(treasury_balance, treasury_balance_after);
 
-		// then submit `AgentExecute` will receive the compensation
+		// then submit `AgentExecute` will get the voucher
 		let message = Message {
 			origin: para_id.into(),
 			command: Command::AgentExecute {
