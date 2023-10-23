@@ -17,7 +17,7 @@ contract VerificationTest is Test {
     bytes4 public encodedParachainID;
 
     function setUp() public {
-        beefyClient = new BeefyClientMock(3, 8, 24);
+        beefyClient = new BeefyClientMock(3, 8, 16);
         encodedParachainID = ScaleCodec.encodeU32(BRIDGE_HUB_PARA_ID);
         v = new VerificationWrapper();
     }
