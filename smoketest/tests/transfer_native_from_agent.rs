@@ -42,7 +42,7 @@ async fn transfer_native_from_agent() {
             TRANSFER_AMOUNT,
         )
         .await
-        .expect("construct innner call."),
+        .expect("construct inner call."),
     );
 
     let result = send_xcm_transact(&test_clients.template_client, message)

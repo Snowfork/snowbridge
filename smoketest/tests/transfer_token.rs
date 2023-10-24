@@ -1,4 +1,4 @@
-use assethub::api::bridge_transfer::calls::TransactionApi;
+use assethub::api::polkadot_xcm::calls::TransactionApi;
 use ethers::prelude::Middleware;
 use ethers::{
     providers::{Provider, Ws},
@@ -14,12 +14,12 @@ use snowbridge_smoketest::helper::AssetHubConfig;
 use snowbridge_smoketest::{
     contracts::weth9::TransferFilter,
     parachains::{
-        assethub::api::runtime_types::staging_xcm::{
+        assethub::api::runtime_types::staging_xcm::v3::multilocation::MultiLocation,
+        assethub::api::runtime_types::xcm::{
             v3::{
                 junction::{Junction, NetworkId},
                 junctions::Junctions,
                 multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
-                multilocation::MultiLocation,
             },
             VersionedMultiAssets, VersionedMultiLocation,
         },
@@ -87,7 +87,19 @@ async fn transfer_token() {
         ),
     });
 
-    let bridge_transfer_call = TransactionApi.transfer_asset_via_bridge(assets, destination);
+    let beneficiary = VersionedMultiLocation::V3(MultiLocation {
+        parents: 2,
+        interior: Junctions::X2(
+            Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+            Junction::AccountKey20 {
+                network: None,
+                key: DESTINATION_ADDRESS.into(),
+            },
+        ),
+    });
+
+    let bridge_transfer_call =
+        TransactionApi.reserve_transfer_assets(destination, beneficiary, assets, 0);
 
     let result = assethub
         .tx()
