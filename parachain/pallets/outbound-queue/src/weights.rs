@@ -34,6 +34,7 @@ pub trait WeightInfo {
 	fn do_process_message() -> Weight;
 	fn do_commit_messages() -> Weight;
 	fn do_commit_one_message() -> Weight;
+	fn do_submit_message() -> Weight;
 }
 
 // For backwards compatibility and tests.
@@ -74,8 +75,19 @@ impl WeightInfo for () {
 		//  Measured:  `1094`
 		//  Estimated: `2579`
 		// Minimum execution time: 9_000_000 picoseconds.
-		Weight::from_parts(9_000_000, 2579)
+		Weight::from_parts(9_000_000, 1586)
 			.saturating_add(RocksDbWeight::get().reads(2_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
+	
+	fn do_submit_message() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `1094`
+		//  Estimated: `2579`
+		// Minimum execution time: 14_000_000 picoseconds.
+		Weight::from_parts(14_000_000, 3520)
+			.saturating_add(RocksDbWeight::get().reads(4_u64))
+			.saturating_add(RocksDbWeight::get().writes(4_u64))
+	}
+	
 }

@@ -362,7 +362,8 @@ pub mod pallet {
 			);
 
 			let base_fee = T::WeightToFee::weight_to_fee(
-				&T::WeightInfo::do_process_message()
+				&T::WeightInfo::do_submit_message()
+					.saturating_add(T::WeightInfo::do_process_message())
 					.saturating_add(T::WeightInfo::do_commit_one_message()),
 			);
 			let delivery_fee = Self::delivery_fee(&message.command);

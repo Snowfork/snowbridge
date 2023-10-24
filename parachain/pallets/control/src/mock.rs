@@ -200,7 +200,7 @@ parameter_types! {
 	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
 	pub Fee: u64 = 1000;
 	pub const RococoNetwork: NetworkId = NetworkId::Rococo;
-	pub const InitialFunding: u64 = 1_000_000_000_000;
+	pub const InitialFunding: u128 = 1_000_000_000_000;
 	pub TestParaId: u32 = 2000;
 }
 

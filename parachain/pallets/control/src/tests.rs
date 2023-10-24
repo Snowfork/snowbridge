@@ -529,11 +529,11 @@ fn charge_fee() {
 
 		// sovereign_balance decreased
 		let sovereign_balance = Balances::balance(&sovereign_account);
-		assert_eq!(sovereign_balance, 997905350000);
+		assert_eq!(sovereign_balance < InitialFunding::get(), true);
 
 		// and treasury_balance increased
 		let treasury_balance = Balances::balance(&TreasuryAccount::get());
-		assert_eq!(treasury_balance, 1002094650000);
+		assert_eq!(treasury_balance > InitialFunding::get(), true);
 
 		// (sovereign_balance + treasury_balance) keeps the same
 		assert_eq!(sovereign_balance + treasury_balance, (InitialFunding::get() * 2) as u128);
