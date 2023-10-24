@@ -62,7 +62,7 @@ cumulus_based = true
     [[parachains.collators]]
     name = "assethub01"
     #validator = true
-    command = "{{output_bin_dir}}/polkadot-parachain-asset-hub"
+    command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8082
     ws_port = 12144
     args = [

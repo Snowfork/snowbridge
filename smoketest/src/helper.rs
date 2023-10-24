@@ -13,13 +13,13 @@ use crate::{
             pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
             rococo_runtime::RuntimeCall as RelaychainRuntimeCall,
             sp_weights::weight_v2::Weight as RelaychainWeight,
-            staging_xcm::{
+            staging_xcm::v3::multilocation::MultiLocation as RelaychainMultiLocation,
+            xcm::{
                 double_encoded::DoubleEncoded as RelaychainDoubleEncoded,
                 v2::OriginKind as RelaychainOriginKind,
                 v3::{
                     junction::Junction as RelaychainJunction,
                     junctions::Junctions as RelaychainJunctions,
-                    multilocation::MultiLocation as RelaychainMultiLocation,
                     Instruction as RelaychainInstruction, WeightLimit as RelaychainWeightLimit,
                     Xcm as RelaychainXcm,
                 },
@@ -28,7 +28,7 @@ use crate::{
             },
         },
         template::{
-            api::runtime_types::staging_xcm as templateXcm,
+            api::runtime_types as templateTypes,
             {self},
         },
     },
@@ -49,8 +49,9 @@ use subxt::{
     tx::{PairSigner, TxPayload},
     Config, OnlineClient, PolkadotConfig, SubstrateConfig,
 };
-use templateXcm::{
-    v3::{junction::Junction, junctions::Junctions, multilocation::MultiLocation},
+use templateTypes::staging_xcm::v3::multilocation::MultiLocation;
+use templateTypes::xcm::{
+    v3::{junction::Junction, junctions::Junctions},
     VersionedMultiLocation, VersionedXcm,
 };
 
