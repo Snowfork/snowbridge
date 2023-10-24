@@ -3,13 +3,14 @@ use crate::parachains::template::{
     api::runtime_types as templateTypes, api::runtime_types::staging_xcm as templateXcm,
 };
 use templateTypes::sp_weights::weight_v2::Weight;
-use templateXcm::{
+use templateXcm::v3::multilocation::MultiLocation;
+
+use templateTypes::xcm::{
     double_encoded::DoubleEncoded,
     v2::OriginKind,
     v3::{
         junctions::Junctions,
         multiasset::{AssetId::Concrete, Fungibility::Fungible, MultiAsset, MultiAssets},
-        multilocation::MultiLocation,
         Instruction, MaybeErrorCode, WeightLimit, Xcm,
     },
     VersionedXcm,
@@ -42,7 +43,7 @@ pub fn construct_xcm_message(encoded_call: Vec<u8>) -> Box<VersionedXcm> {
 pub async fn construct_xcm_message_with_fee(encoded_call: Vec<u8>) -> Box<VersionedXcm> {
     let buy_execution_fee = MultiAsset {
         id: Concrete(MultiLocation {
-            parents: 0,
+            parents: 1,
             interior: Junctions::Here,
         }),
         fun: Fungible(BRIDGE_HUB_FEE_REQUIRED),
@@ -53,7 +54,7 @@ pub async fn construct_xcm_message_with_fee(encoded_call: Vec<u8>) -> Box<Versio
         Instruction::BuyExecution {
             fees: MultiAsset {
                 id: Concrete(MultiLocation {
-                    parents: 0,
+                    parents: 1,
                     interior: Junctions::Here,
                 }),
                 fun: Fungible(BRIDGE_HUB_FEE_REQUIRED),
