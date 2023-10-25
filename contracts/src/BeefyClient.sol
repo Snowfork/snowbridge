@@ -165,11 +165,6 @@ contract BeefyClient {
     bytes2 public constant MMR_ROOT_ID = bytes2("mh");
 
     /**
-     * @dev Minimum number of signatures required to validate a new commitment.
-     */
-    uint256 public immutable minNumRequiredSignatures;
-
-    /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
      * submitInitial and commitPrevRandao. In production this should be set to MAX_SEED_LOOKAHEAD:
      * https://eth2book.info/altair/part3/config/preset#max_seed_lookahead
@@ -183,6 +178,13 @@ contract BeefyClient {
      * they desire.
      */
     uint256 public immutable randaoCommitExpiration;
+
+    /**
+     * @dev Minimum number of signatures required to validate a new commitment. This parameter
+     * is calculated based on `randaoCommitExpiration`. See ~/scripts/beefy_signature_sampling.py
+     * for the calculation.
+     */
+    uint256 public immutable minNumRequiredSignatures;
 
     /* Errors */
     error InvalidBitfield();
