@@ -237,13 +237,13 @@ impl GasMeter for ConstantGasMeter {
 				AgentExecuteCommand::TransferToken { .. } => 100_000,
 			},
 			Command::Upgrade { initializer, .. } => {
-				let maximum_required_gas = match *initializer {
+				let initializer_max_gas = match *initializer {
 					Some(Initializer { maximum_required_gas, .. }) => maximum_required_gas,
 					None => 0,
 				};
 				// total maximum gas must also include the gas used for updating the proxy before
 				// the the initializer is called.
-				50_000 + maximum_required_gas
+				50_000 + initializer_max_gas
 			},
 		}
 	}

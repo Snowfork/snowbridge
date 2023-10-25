@@ -309,29 +309,25 @@ contract GatewayTest is Test {
         });
 
         bytes memory encodedParams = abi.encode(params);
-        uint256 startGas = gasleft();
         GatewayMock(address(gateway)).agentExecutePublic(encodedParams);
-        uint256 endGas = gasleft();
-
-        console.log("gas used B: %s", startGas - endGas);
     }
 
-    // function testAgentExecutionBadOrigin() public {
-    //     Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
-    //         agentID: bytes32(0),
-    //         payload: abi.encode(keccak256("transferNativeToken"), abi.encode(address(token), address(this), 1))
-    //     });
+    function testAgentExecutionBadOrigin() public {
+        Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
+            agentID: bytes32(0),
+            payload: abi.encode(keccak256("transferNativeToken"), abi.encode(address(token), address(this), 1))
+        });
 
-    //     vm.expectRevert(Gateway.AgentDoesNotExist.selector);
-    //     GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
-    // }
+        vm.expectRevert(Gateway.AgentDoesNotExist.selector);
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+    }
 
-    // function testAgentExecutionBadPayload() public {
-    //     Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({agentID: assetHubAgentID, payload: ""});
+    function testAgentExecutionBadPayload() public {
+        Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({agentID: assetHubAgentID, payload: ""});
 
-    //     vm.expectRevert(Gateway.InvalidAgentExecutionPayload.selector);
-    //     GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
-    // }
+        vm.expectRevert(Gateway.InvalidAgentExecutionPayload.selector);
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+    }
 
     function testCreateAgent() public {
         bytes32 agentID = keccak256("123");
