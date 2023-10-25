@@ -32,6 +32,7 @@ use snowbridge_smoketest::{
 		},
 	},
 };
+use snowbridge_smoketest::parachains::bridgehub::api::runtime_types::snowbridge_core::outbound::Initializer;
 use sp_core::{blake2_256, sr25519::Pair, Pair as PairT};
 use subxt::{
 	tx::{PairSigner, TxPayload},
@@ -90,7 +91,10 @@ async fn upgrade_gateway() {
 		.upgrade(
 			GATETWAY_UPGRADE_MOCK_CONTRACT.into(),
 			gateway_upgrade_mock_code_hash.into(),
-			Some(params),
+			Some(Initializer {
+				params,
+				maximum_required_gas: 100_000,
+			})
 		)
 		.encode_call_data(&bridgehub.metadata())
 		.expect("encoded call");
