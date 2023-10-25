@@ -210,7 +210,11 @@ contract Gateway is IGateway, IInitializable {
     }
 
     function channelNoncesOf(ParaID paraID) external view returns (uint64, uint64) {
-        Channel storage ch = _ensureChannel(paraID);
+        Channel storage ch = CoreStorage.layout().channels[paraID];
+        // The agent will not exist at first and needs to be created.
+        if (ch.agent == address(0)) {
+            return (0, 0);
+        }
         return (ch.inboundNonce, ch.outboundNonce);
     }
 
@@ -220,8 +224,8 @@ contract Gateway is IGateway, IInitializable {
     }
 
     function agentOf(bytes32 agentID) external view returns (address) {
-        address agentAddress = _ensureAgent(agentID);
-        return agentAddress;
+        // No error checking here, because the agent will not exist at first and needs to be created.
+       return CoreStorage.layout().agents[agentID];
     }
 
     function implementation() public view returns (address) {
