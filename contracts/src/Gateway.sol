@@ -25,8 +25,6 @@ contract Gateway is IGateway, IInitializable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
-    // After message dispatch, there should be some gas left over for post dispatch logic
-    uint256 internal constant BUFFER_GAS = 48_000;
     address internal immutable AGENT_EXECUTOR;
 
     // Verification state
@@ -41,8 +39,14 @@ contract Gateway is IGateway, IInitializable {
     ParaID internal immutable ASSET_HUB_PARA_ID;
     bytes32 internal immutable ASSET_HUB_AGENT_ID;
 
-    // Fixed amount of gas used outside the gas metering in submitInbound
-    uint256 BASE_GAS_USED = 31000;
+    // Fixed amount of gas used outside the block of code
+    // that is measured in submitInbound
+    uint256 BASE_GAS_USED = 31_000;
+
+    // Gas used for:
+    // 1. Mapping a command id to an implementation function
+    // 2. Calling implementation function
+    uint256 DISPATCH_OVERHEAD_GAS = 10_000;
 
     error InvalidProof();
     error InvalidNonce();
@@ -124,12 +128,10 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidProof();
         }
 
-        // Ensure relayers pass enough gas for message to execute.
-        // Otherwise malicious relayers can break the bridge by allowing the message handlers below to run out gas and fail silently.
-        // In this scenario case, the channel's state would have been updated to accept the message (by virtue of the nonce increment), yet the actual message
-        // dispatch would have failed
+        // Make sure relayers provide enough gas so that message dispatch
+        // does not run out of gas.
         uint256 maxDispatchGas = message.maxDispatchGas;
-        if (gasleft() < maxDispatchGas + BUFFER_GAS) {
+        if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS) {
             revert NotEnoughGas();
         }
 

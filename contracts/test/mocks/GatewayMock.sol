@@ -5,6 +5,7 @@ import {Gateway} from "../../src/Gateway.sol";
 import {ParaID, OperatingMode} from "../../src/Types.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 import {Verification} from "../../src/Verification.sol";
+import "forge-std/console.sol";
 
 contract GatewayMock is Gateway {
     bool public commitmentsAreVerified;

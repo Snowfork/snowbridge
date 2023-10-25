@@ -198,8 +198,8 @@ pub struct Initializer {
 }
 
 pub trait GasMeter {
-	/// The maximum base amount of gas used in submitting and verifying a message, before the
-	/// message payload is dispatched
+	/// All the gas used for submitting a message to Ethereum, minus the cost of dispatching
+	/// the command within the message
 	const MAXIMUM_BASE_GAS: u64;
 
 	/// Measures the maximum amount of gas a command will require to dispatch. Does not include the
@@ -208,6 +208,13 @@ pub trait GasMeter {
 }
 
 /// A meter that assigns a constant amount of gas for the execution of a command
+///
+/// The gas figures are extracted from this report:
+/// > forge test --match-path test/Gateway.t.sol --gas-report
+///
+/// A healthy buffer is added on top of these figures to account for:
+/// * The EIP-150 63/64 rule
+/// * Future EVM upgrades that may increase gas cost
 pub struct ConstantGasMeter;
 
 impl GasMeter for ConstantGasMeter {
@@ -215,13 +222,19 @@ impl GasMeter for ConstantGasMeter {
 
 	fn maximum_required(command: &Command) -> u64 {
 		match command {
-			Command::CreateAgent { .. } => 300_000,
-			Command::CreateChannel { .. } => 10_0000,
+			Command::CreateAgent { .. } => 275_000,
+			Command::CreateChannel { .. } => 100_000,
 			Command::UpdateChannel { .. } => 50_000,
 			Command::TransferNativeFromAgent { .. } => 60_000,
 			Command::SetOperatingMode { .. } => 40_000,
 			Command::AgentExecute { command, .. } => match command {
-				AgentExecuteCommand::TransferToken { .. } => 60_000,
+				// Execute IERC20.transferFrom
+				//
+				// Worst-case assumptions are important:
+				// * No gas refund for clearing storage slot of source account in ERC20 contract
+				// * Assume dest account in ERC20 contract does not yet have a storage slot
+				// * ERC20.transferFrom possibly does other business logic besides updating balances
+				AgentExecuteCommand::TransferToken { .. } => 100_000,
 			},
 			Command::Upgrade { initializer, .. } => {
 				let maximum_required_gas = match *initializer {
@@ -230,7 +243,7 @@ impl GasMeter for ConstantGasMeter {
 				};
 				// total maximum gas must also include the gas used for updating the proxy before
 				// the the initializer is called.
-				100_000 + maximum_required_gas
+				50_000 + maximum_required_gas
 			},
 		}
 	}
