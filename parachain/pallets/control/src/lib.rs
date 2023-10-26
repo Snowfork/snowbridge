@@ -92,8 +92,11 @@ pub enum PaysFee<T>
 where
 	T: Config,
 {
+	/// Fully charge includes (base_fee + delivery_fee)
 	Yes(AccountIdOf<T>),
+	/// Partially charge includes base_fee only
 	Partial(AccountIdOf<T>),
+	/// No charge
 	No,
 }
 
