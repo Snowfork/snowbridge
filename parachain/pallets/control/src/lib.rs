@@ -412,9 +412,8 @@ pub mod pallet {
 				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
 
 			let payment = match pays_fee {
-				PaysFee::Yes(account) =>
-					Some((account, fee.base_fee.saturating_add(fee.delivery_fee))),
-				PaysFee::Partial(account) => Some((account, fee.base_fee)),
+				PaysFee::Yes(account) => Some((account, fee.base.saturating_add(fee.delivery))),
+				PaysFee::Partial(account) => Some((account, fee.base)),
 				PaysFee::No => None,
 			};
 

@@ -309,7 +309,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::outbound::{MessageHash, OutboundFee, SubmitError};
+	use snowbridge_core::outbound::{Fees, MessageHash, SubmitError};
 	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 	pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
@@ -332,8 +332,8 @@ mod tests {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), OutboundFee<Self::Balance>), SubmitError> {
-			Ok(((), OutboundFee { base_fee: 1, delivery_fee: 1 }))
+		fn validate(_: &Message) -> Result<((), Fees<Self::Balance>), SubmitError> {
+			Ok(((), Fees { base: 1, delivery: 1 }))
 		}
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
@@ -345,7 +345,7 @@ mod tests {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), OutboundFee<Self::Balance>), SubmitError> {
+		fn validate(_: &Message) -> Result<((), Fees<Self::Balance>), SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 

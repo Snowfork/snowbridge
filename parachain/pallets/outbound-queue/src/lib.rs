@@ -49,8 +49,8 @@ use sp_runtime::traits::{Hash, Saturating};
 use sp_std::prelude::*;
 
 use snowbridge_core::outbound::{
-	AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, GasMeter, Message, MessageHash,
-	OutboundFee, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
+	AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, Fees, GasMeter, Message,
+	MessageHash, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
 	SubmitError,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
@@ -347,9 +347,7 @@ pub mod pallet {
 		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>, T::Balance>;
 		type Balance = T::Balance;
 
-		fn validate(
-			message: &Message,
-		) -> Result<(Self::Ticket, OutboundFee<Self::Balance>), SubmitError> {
+		fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SubmitError> {
 			// The inner payload should not be too large
 			let payload = message.command.abi_encode();
 
@@ -368,7 +366,7 @@ pub mod pallet {
 			let delivery_fee = Self::delivery_fee(&message.command);
 
 			let command = message.command.clone();
-			let fee = OutboundFee { base_fee, delivery_fee };
+			let fee = Fees { base: base_fee, delivery: delivery_fee };
 
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage { id: message_id, origin: message.origin, command };

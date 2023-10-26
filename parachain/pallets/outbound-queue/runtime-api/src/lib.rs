@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use snowbridge_core::outbound::{Message, OutboundFee};
+use snowbridge_core::outbound::{Fees, Message};
 use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 
 sp_api::decl_runtime_apis! {
@@ -10,6 +10,6 @@ sp_api::decl_runtime_apis! {
 	{
 		fn prove_message(leaf_index: u64) -> Option<MerkleProof>;
 
-		fn calculate_fee(message: Message) -> Option<OutboundFee<u128>>;
+		fn calculate_fee(message: Message) -> Option<Fees<u128>>;
 	}
 }

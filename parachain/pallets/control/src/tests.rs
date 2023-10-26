@@ -524,7 +524,7 @@ fn charge_fee_for_create_agent() {
 			Message { origin: para_id.into(), command: Command::CreateAgent { agent_id } };
 		let (_, fee) = OutboundQueue::validate(&message).unwrap();
 		let sovereign_balance = Balances::balance(&sovereign_account);
-		assert_eq!(sovereign_balance + fee.base_fee + fee.delivery_fee, InitialFunding::get());
+		assert_eq!(sovereign_balance + fee.base + fee.delivery, InitialFunding::get());
 
 		// and treasury_balance increased
 		let treasury_balance = Balances::balance(&TreasuryAccount::get());
@@ -560,7 +560,7 @@ fn charge_fee_for_transfer_native_from_agent() {
 		};
 		let (_, fee) = OutboundQueue::validate(&message).unwrap();
 		let sovereign_balance_after = Balances::balance(&sovereign_account);
-		assert_eq!(sovereign_balance_after + fee.base_fee, sovereign_balance_before);
+		assert_eq!(sovereign_balance_after + fee.base, sovereign_balance_before);
 	});
 }
 

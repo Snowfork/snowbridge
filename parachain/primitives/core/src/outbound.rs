@@ -18,16 +18,16 @@ pub type GasPriceInWei = u128;
 
 /// OutboundFee which covers the cost of execution on both BridgeHub and Ethereum
 #[derive(Copy, Clone, Default, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct OutboundFee<Balance: BalanceT> {
+pub struct Fees<Balance: BalanceT> {
 	/// Fee for processing the message locally
-	pub base_fee: Balance,
+	pub base: Balance,
 	/// Fee for processing the message remotely
-	pub delivery_fee: Balance,
+	pub delivery: Balance,
 }
 
-impl<Balance: BalanceT> OutboundFee<Balance> {
+impl<Balance: BalanceT> Fees<Balance> {
 	pub fn total(&self) -> Balance {
-		self.base_fee.saturating_add(self.delivery_fee)
+		self.base.saturating_add(self.delivery)
 	}
 }
 
@@ -39,9 +39,7 @@ pub trait OutboundQueue {
 	/// Validate an outbound message and return a tuple:
 	/// 1. A ticket for submitting the message
 	/// 2. The OutboundFee
-	fn validate(
-		message: &Message,
-	) -> Result<(Self::Ticket, OutboundFee<Self::Balance>), SubmitError>;
+	fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SubmitError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
@@ -289,7 +287,7 @@ pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>, Balance: BalanceT> {
 	pub id: H256,
 	pub origin: ParaId,
 	pub message: BoundedVec<u8, MaxMessageSize>,
-	pub fee: OutboundFee<Balance>,
+	pub fee: Fees<Balance>,
 }
 
 /// Message which is awaiting processing in the MessageQueue pallet

@@ -4,7 +4,7 @@
 
 use crate::{Config, MessageLeaves};
 use frame_support::storage::StorageStreamIter;
-use snowbridge_core::outbound::{Message, OutboundFee, OutboundQueue};
+use snowbridge_core::outbound::{Fees, Message, OutboundQueue};
 use snowbridge_outbound_queue_merkle_tree::{merkle_proof, MerkleProof};
 use sp_arithmetic::traits::SaturatedConversion;
 
@@ -22,13 +22,13 @@ where
 	Some(proof)
 }
 
-pub fn calculate_fee<Runtime>(message: Message) -> Option<OutboundFee<u128>>
+pub fn calculate_fee<Runtime>(message: Message) -> Option<Fees<u128>>
 where
 	Runtime: Config,
 {
 	let fee = crate::Pallet::<Runtime>::validate(&message).ok()?.1;
-	Some(OutboundFee::<u128> {
-		base_fee: fee.base_fee.saturated_into::<u128>(),
-		delivery_fee: fee.delivery_fee.saturated_into::<u128>(),
+	Some(Fees::<u128> {
+		base: fee.base.saturated_into::<u128>(),
+		delivery: fee.delivery.saturated_into::<u128>(),
 	})
 }
