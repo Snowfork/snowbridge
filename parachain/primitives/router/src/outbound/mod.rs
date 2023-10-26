@@ -132,11 +132,7 @@ where
 		})?;
 
 		// convert fee to MultiAsset
-		let fee = MultiAsset::from((
-			MultiLocation::parent(),
-			fee.base_fee.saturating_add(fee.delivery_fee),
-		))
-		.into();
+		let fee = MultiAsset::from((MultiLocation::parent(), fee.total())).into();
 
 		Ok((ticket.encode(), fee))
 	}

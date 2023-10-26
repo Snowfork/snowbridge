@@ -25,6 +25,12 @@ pub struct OutboundFee<Balance: BalanceT> {
 	pub delivery_fee: Balance,
 }
 
+impl<Balance: BalanceT> OutboundFee<Balance> {
+	pub fn total(&self) -> Balance {
+		self.base_fee.saturating_add(self.delivery_fee)
+	}
+}
+
 /// A trait for enqueueing messages for delivery to Ethereum
 pub trait OutboundQueue {
 	type Ticket: Clone + Encode + Decode;
