@@ -4,7 +4,7 @@ use snowbridge_smoketest::contracts::i_gateway;
 use snowbridge_smoketest::contracts::i_gateway::InboundMessageDispatchedFilter;
 use snowbridge_smoketest::helper::*;
 use snowbridge_smoketest::parachains::bridgehub::api::ethereum_control::events::TransferNativeFromAgent;
-use snowbridge_smoketest::xcm::construct_xcm_message;
+use snowbridge_smoketest::xcm::construct_xcm_message_with_fee;
 
 #[tokio::test]
 async fn transfer_native_from_agent() {
@@ -35,7 +35,7 @@ async fn transfer_native_from_agent() {
 
     const TRANSFER_AMOUNT: u128 = 1000000000;
 
-    let message = construct_xcm_message(
+    let message = construct_xcm_message_with_fee(
         construct_transfer_native_from_agent_call(
             &test_clients.bridge_hub_client,
             ETHEREUM_ADDRESS.into(),
@@ -43,7 +43,7 @@ async fn transfer_native_from_agent() {
         )
         .await
         .expect("construct inner call."),
-    );
+    ).await;
 
     let result = send_xcm_transact(&test_clients.template_client, message)
         .await
