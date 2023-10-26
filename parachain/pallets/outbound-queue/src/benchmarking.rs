@@ -57,7 +57,7 @@ mod benchmarks {
 
 		#[block]
 		{
-			OutboundQueue::<T>::do_commit_messages();
+			OutboundQueue::<T>::commit_messages();
 		}
 
 		Ok(())
@@ -71,7 +71,7 @@ mod benchmarks {
 
 		#[block]
 		{
-			OutboundQueue::<T>::do_commit_messages();
+			OutboundQueue::<T>::commit_messages();
 		}
 
 		Ok(())

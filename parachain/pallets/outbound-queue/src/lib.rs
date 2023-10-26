@@ -204,11 +204,11 @@ pub mod pallet {
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
 			// Reserve some weight for the `on_finalize` handler
-			T::WeightInfo::do_commit_messages()
+			T::WeightInfo::commit_messages()
 		}
 
 		fn on_finalize(_: BlockNumberFor<T>) {
-			Self::do_commit_messages();
+			Self::commit_messages();
 		}
 	}
 
@@ -243,7 +243,7 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		/// Generate a messages commitment and insert it into the header digest
-		pub(crate) fn do_commit_messages() {
+		pub(crate) fn commit_messages() {
 			let count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
 			if count == 0 {
 				return
@@ -361,7 +361,7 @@ pub mod pallet {
 
 			let base_fee = T::WeightToFee::weight_to_fee(
 				&T::WeightInfo::do_process_message()
-					.saturating_add(T::WeightInfo::do_commit_one_message()),
+					.saturating_add(T::WeightInfo::commit_one_message()),
 			);
 			let delivery_fee = Self::delivery_fee(&message.command);
 

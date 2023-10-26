@@ -32,8 +32,8 @@ use core::marker::PhantomData;
 /// Weight functions needed for `snowbridge_outbound_queue`.
 pub trait WeightInfo {
 	fn do_process_message() -> Weight;
-	fn do_commit_messages() -> Weight;
-	fn do_commit_one_message() -> Weight;
+	fn commit_messages() -> Weight;
+	fn commit_one_message() -> Weight;
 }
 
 // For backwards compatibility and tests.
@@ -59,7 +59,7 @@ impl WeightInfo for () {
 	/// Proof Skipped: EthereumOutboundQueue MessageLeaves (max_values: Some(1), max_size: None, mode: Measured)
 	/// Storage: System Digest (r:1 w:1)
 	/// Proof Skipped: System Digest (max_values: Some(1), max_size: None, mode: Measured)
-	fn do_commit_messages() -> Weight {
+	fn commit_messages() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `1094`
 		//  Estimated: `2579`
@@ -69,7 +69,7 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 
-	fn do_commit_one_message() -> Weight {
+	fn commit_one_message() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `1094`
 		//  Estimated: `2579`
