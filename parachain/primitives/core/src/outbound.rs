@@ -19,9 +19,9 @@ pub type GasPriceInWei = u128;
 /// OutboundFee which covers the cost of execution on both BridgeHub and Ethereum
 #[derive(Copy, Clone, Default, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct OutboundFee<Balance: BalanceT> {
-	/// Cover the cost on BridgeHub
+	/// Fee for processing the message locally
 	pub base_fee: Balance,
-	/// Cover the cost on Ethereum
+	/// Fee for processing the message remotely
 	pub delivery_fee: Balance,
 }
 
