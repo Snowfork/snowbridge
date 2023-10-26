@@ -311,9 +311,12 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 #[cfg(test)]
 mod tests {
-	use frame_support::parameter_types;
+	use frame_support::{dispatch::DispatchResult, parameter_types};
 	use hex_literal::hex;
-	use snowbridge_core::outbound::{MessageHash, OutboundFee, SubmitError};
+	use snowbridge_core::{
+		outbound::{MessageHash, OutboundFee, SubmitError},
+		ParaId,
+	};
 	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 	pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
@@ -337,11 +340,18 @@ mod tests {
 		type Balance = u128;
 
 		fn validate(_: &Message) -> Result<((), OutboundFee<Self::Balance>), SubmitError> {
-			Ok(((), OutboundFee { base_fee: 1, delivery_fee: 1 }))
+			Ok(((), OutboundFee { base_fee: 1, delivery_fee: 1, voucher_required: false }))
 		}
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Ok(MessageHash::zero())
+		}
+
+		fn redeem(
+			_: ParaId,
+			_: impl FnOnce(&mut Self::Balance) -> DispatchResult,
+		) -> DispatchResult {
+			Ok(())
 		}
 	}
 	struct MockErrOutboundQueue;
@@ -355,6 +365,13 @@ mod tests {
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
 			Err(SubmitError::MessageTooLarge)
+		}
+
+		fn redeem(
+			_: ParaId,
+			_: impl FnOnce(&mut Self::Balance) -> DispatchResult,
+		) -> DispatchResult {
+			Ok(())
 		}
 	}
 
