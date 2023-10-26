@@ -22,7 +22,7 @@ where
 	Some(proof)
 }
 
-pub fn estimate_fee<Runtime>(message: Message) -> Option<OutboundFee<u128>>
+pub fn calculate_fee<Runtime>(message: Message) -> Option<OutboundFee<u128>>
 where
 	Runtime: Config,
 {

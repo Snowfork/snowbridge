@@ -10,6 +10,6 @@ sp_api::decl_runtime_apis! {
 	{
 		fn prove_message(leaf_index: u64) -> Option<MerkleProof>;
 
-		fn estimate_fee(message: Message) -> Option<OutboundFee<u128>>;
+		fn calculate_fee(message: Message) -> Option<OutboundFee<u128>>;
 	}
 }
