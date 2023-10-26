@@ -13,7 +13,7 @@ use snowbridge_core::outbound::{AgentExecuteCommand, Command, ExportOrigin, Init
 use sp_core::{ConstU128, H160, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
-	AccountId32, BoundedVec, BuildStorage,
+	AccountId32, BuildStorage,
 };
 
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -320,7 +320,7 @@ fn submit_low_priority_messages_yield_when_there_is_high_priority_message() {
 		}
 		.encode();
 
-		let mut meter = WeightMeter::max_limit();
+		let mut meter = WeightMeter::new();
 
 		assert_noop!(
 			OutboundQueue::process_message(&message.as_slice(), origin, &mut meter, &mut [0u8; 32]),
