@@ -31,7 +31,7 @@ use snowbridge_smoketest::{
         },
     },
 };
-use sp_core::{blake2_256, sr25519::Pair, Pair as PairT};
+use sp_core::{sr25519::Pair, Pair as PairT};
 use subxt::{
     tx::{PairSigner, TxPayload},
     OnlineClient, PolkadotConfig,
@@ -75,7 +75,6 @@ async fn upgrade_gateway() {
     let d_0 = 99;
     let d_1 = 66;
     let params = ethers::abi::encode(&[Token::Uint(d_0.into()), Token::Uint(d_1.into())]);
-    let params_hash = blake2_256(&params);
 
     let code = ethereum_client
         .get_code(
@@ -109,10 +108,7 @@ async fn upgrade_gateway() {
     }));
     let message = Box::new(VersionedXcm::V3(Xcm(vec![
         Instruction::UnpaidExecution {
-            weight_limit: WeightLimit::Limited(Weight {
-                ref_time: weight,
-                proof_size,
-            }),
+            weight_limit: WeightLimit::Unlimited,
             check_origin: None,
         },
         Instruction::Transact {
