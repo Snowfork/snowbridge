@@ -77,29 +77,5 @@ mod benchmarks {
 		Ok(())
 	}
 
-	/// Benchmark for submit a single message
-	#[benchmark]
-	fn do_submit_message() -> Result<(), BenchmarkError> {
-		let message = Message {
-			origin: 1013.into(),
-			command: Command::Upgrade {
-				impl_address: H160::zero(),
-				impl_code_hash: H256::zero(),
-				initializer: Some(Initializer {
-					params: [7u8; 256].into_iter().collect(),
-					maximum_required_gas: 200_000,
-				}),
-			},
-		};
-		let ticket = OutboundQueue::<T>::validate(&message).unwrap().0;
-
-		#[block]
-		{
-			OutboundQueue::<T>::submit(ticket).unwrap();
-		}
-
-		Ok(())
-	}
-
 	impl_benchmark_test_suite!(OutboundQueue, crate::test::new_tester(), crate::test::Test,);
 }
