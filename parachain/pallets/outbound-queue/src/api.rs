@@ -4,7 +4,7 @@
 
 use crate::{Config, MessageLeaves};
 use frame_support::storage::StorageStreamIter;
-use snowbridge_core::outbound::{Fees, Message, OutboundQueue, SubmitError};
+use snowbridge_core::outbound::{Message, OutboundQueue};
 use snowbridge_outbound_queue_merkle_tree::{merkle_proof, MerkleProof};
 
 pub fn prove_message<T>(leaf_index: u64) -> Option<MerkleProof>
@@ -19,9 +19,12 @@ where
 	Some(proof)
 }
 
-pub fn calculate_fee<T>(message: Message) -> Result<Fees<T::Balance>, SubmitError>
+pub fn calculate_fee<T>(message: Message) -> Option<T::Balance>
 where
 	T: Config,
 {
-	Ok(crate::Pallet::<T>::validate(&message)?.1)
+	match crate::Pallet::<T>::validate(&message) {
+		Ok((_, fees)) => Some(fees.total()),
+		_ => None,
+	}
 }

@@ -9,6 +9,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod inbound;
+pub mod operating_mode;
 pub mod outbound;
 pub mod ringbuffer;
 
@@ -19,6 +20,7 @@ use sp_runtime::traits::AccountIdConversion;
 
 /// The ID of an agent contract
 pub type AgentId = H256;
+pub use operating_mode::BasicOperatingMode;
 
 pub fn sibling_sovereign_account<T>(para_id: ParaId) -> T::AccountId
 where

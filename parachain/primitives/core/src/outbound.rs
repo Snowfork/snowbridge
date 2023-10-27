@@ -3,7 +3,8 @@ use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
 	traits::{tokens::Balance as BalanceT, Get},
-	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PalletError, PartialEqNoBound,
+	RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
@@ -39,19 +40,19 @@ pub trait OutboundQueue {
 	/// Validate an outbound message and return a tuple:
 	/// 1. A ticket for submitting the message
 	/// 2. The OutboundFee
-	fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SubmitError>;
+	fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SendError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
-	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
+	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SendError>;
 }
 
-/// SubmitError returned
-#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub enum SubmitError {
+/// Reasons why sending to Ethereum could not be initiated
+#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, PalletError, TypeInfo)]
+pub enum SendError {
 	/// Message is too large to be safely executed on Ethereum
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
-	BridgeHalted,
+	Halted,
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]

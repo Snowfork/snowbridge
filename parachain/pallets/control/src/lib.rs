@@ -45,10 +45,10 @@ use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	outbound::{
 		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
+		SendError,
 	},
 	sibling_sovereign_account, AgentId,
 };
-use sp_runtime::Saturating;
 
 #[cfg(feature = "runtime-benchmarks")]
 use frame_support::traits::OriginTrait;
@@ -158,7 +158,6 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		SubmissionFailed,
 		LocationConversionFailed,
 		AgentAlreadyCreated,
 		NoAgent,
@@ -166,6 +165,7 @@ pub mod pallet {
 		NoChannel,
 		UnsupportedLocationVersion,
 		InvalidLocation,
+		Send(SendError),
 	}
 
 	/// The set of registered agents
@@ -409,10 +409,10 @@ pub mod pallet {
 		fn send(origin: ParaId, command: Command, pays_fee: PaysFee<T>) -> DispatchResult {
 			let message = Message { origin, command };
 			let (ticket, fee) =
-				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
+				T::OutboundQueue::validate(&message).map_err(|err| Error::<T>::Send(err))?;
 
 			let payment = match pays_fee {
-				PaysFee::Yes(account) => Some((account, fee.base.saturating_add(fee.delivery))),
+				PaysFee::Yes(account) => Some((account, fee.total())),
 				PaysFee::Partial(account) => Some((account, fee.base)),
 				PaysFee::No => None,
 			};
@@ -426,7 +426,7 @@ pub mod pallet {
 				)?;
 			}
 
-			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
+			T::OutboundQueue::submit(ticket).map_err(|err| Error::<T>::Send(err))?;
 			Ok(())
 		}
 

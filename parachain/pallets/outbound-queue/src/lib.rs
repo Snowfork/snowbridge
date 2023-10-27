@@ -48,10 +48,13 @@ use sp_core::H256;
 use sp_runtime::traits::{Hash, Saturating};
 use sp_std::prelude::*;
 
-use snowbridge_core::outbound::{
-	AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, Fees, GasMeter, Message,
-	MessageHash, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
-	SubmitError,
+use snowbridge_core::{
+	outbound::{
+		AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, Fees, GasMeter, Message,
+		MessageHash, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
+		SendError,
+	},
+	BasicOperatingMode,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
@@ -72,8 +75,6 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-
-	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -145,12 +146,16 @@ pub mod pallet {
 			/// number of committed messages
 			count: u64,
 		},
+		/// Set OperatingMode
+		OperatingModeChanged { mode: BasicOperatingMode },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		/// The message is too large
 		MessageTooLarge,
+		/// The pallet is halted
+		Halted,
 	}
 
 	/// Messages to be committed in the current block. This storage value is killed in
@@ -181,18 +186,10 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
 
-	/// Optional pallet owner.
-	/// Pallet owner has a right to halt all pallet operations and then resume them. If it is
-	/// `None`, then there are no direct ways to halt/resume pallet operations, but other
-	/// runtime methods may still be used to do that (i.e. democracy::referendum to update halt
-	/// flag directly or call the `halt_operations`).
-	#[pallet::storage]
-	pub type PalletOwner<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
-
 	/// The current operating mode of the pallet.
-	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
-	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
+	#[pallet::getter(fn operating_mode)]
+	pub type OperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
@@ -214,31 +211,18 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Change `PalletOwner`.
-		/// May only be called either by root, or by `PalletOwner`.
+		/// Halt or resume all pallet operations. May only be called by root.
 		#[pallet::call_index(0)]
-		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
-		pub fn set_owner(origin: OriginFor<T>, new_owner: Option<T::AccountId>) -> DispatchResult {
-			<Self as OwnedBridgeModule<_>>::set_owner(origin, new_owner)
-		}
-
-		/// Halt or resume all pallet operations.
-		/// May only be called either by root, or by `PalletOwner`.
-		#[pallet::call_index(1)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_operating_mode(
 			origin: OriginFor<T>,
-			operating_mode: BasicOperatingMode,
+			mode: BasicOperatingMode,
 		) -> DispatchResult {
-			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
+			ensure_root(origin)?;
+			OperatingMode::<T>::set(mode);
+			Self::deposit_event(Event::OperatingModeChanged { mode });
+			Ok(())
 		}
-	}
-
-	impl<T: Config> OwnedBridgeModule<T> for Pallet<T> {
-		const LOG_TARGET: &'static str = LOG_TARGET;
-		type OwnerStorage = PalletOwner<T>;
-		type OperatingMode = BasicOperatingMode;
-		type OperatingModeStorage = PalletOperatingMode<T>;
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -279,7 +263,7 @@ pub mod pallet {
 					*count = count.saturating_sub(1)
 				});
 			} else {
-				Self::ensure_not_halted().map_err(|_| ProcessMessageError::Yield)?;
+				ensure!(!Self::operating_mode().is_halted(), ProcessMessageError::Yield);
 				ensure!(
 					PendingHighPriorityMessageCount::<T>::get() == 0,
 					ProcessMessageError::Yield
@@ -347,7 +331,7 @@ pub mod pallet {
 		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
 		type Balance = T::Balance;
 
-		fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SubmitError> {
+		fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SendError> {
 			// The inner payload should not be too large
 			let payload = message.command.abi_encode();
 
@@ -356,7 +340,7 @@ pub mod pallet {
 
 			ensure!(
 				payload.len() < T::MaxMessagePayloadSize::get() as usize,
-				SubmitError::MessageTooLarge
+				SendError::MessageTooLarge
 			);
 
 			let base_fee = T::WeightToFee::weight_to_fee(
@@ -372,7 +356,7 @@ pub mod pallet {
 				EnqueuedMessage { id: message_id, origin: message.origin, command };
 			// The whole message should not be too large
 			let encoded =
-				enqueued_message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
+				enqueued_message.encode().try_into().map_err(|_| SendError::MessageTooLarge)?;
 
 			let ticket =
 				OutboundQueueTicket { id: message_id, origin: message.origin, message: encoded };
@@ -380,7 +364,7 @@ pub mod pallet {
 			Ok((ticket, fee))
 		}
 
-		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SendError> {
 			// Assign an `AggregateMessageOrigin` to track the message within the MessageQueue
 			// pallet. Governance commands are assigned origin `ExportOrigin::Here`. In other words
 			// emitted from BridgeHub itself.
@@ -396,7 +380,7 @@ pub mod pallet {
 					*count = count.saturating_add(1)
 				});
 			} else {
-				Self::ensure_not_halted().map_err(|_| SubmitError::BridgeHalted)?;
+				ensure!(!Self::operating_mode().is_halted(), SendError::Halted);
 			}
 
 			T::MessageQueue::enqueue_message(ticket.message.as_bounded_slice(), origin);
