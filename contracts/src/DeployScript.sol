@@ -33,13 +33,23 @@ contract DeployScript is Script {
         string memory beefyCheckpointFile = string.concat(root, "/beefy-state.json");
         string memory beefyCheckpointRaw = vm.readFile(beefyCheckpointFile);
         uint64 startBlock = uint64(beefyCheckpointRaw.readUint(".startBlock"));
-        bytes memory currentRaw = beefyCheckpointRaw.parseRaw(".current");
-        BeefyClient.ValidatorSet memory current = abi.decode(currentRaw, (BeefyClient.ValidatorSet));
-        bytes memory nextRaw = beefyCheckpointRaw.parseRaw(".next");
-        BeefyClient.ValidatorSet memory next = abi.decode(nextRaw, (BeefyClient.ValidatorSet));
+
+        BeefyClient.ValidatorSet memory current = BeefyClient.ValidatorSet(
+            uint128(beefyCheckpointRaw.readUint(".current.id")),
+            uint128(beefyCheckpointRaw.readUint(".current.length")),
+            beefyCheckpointRaw.readBytes32(".current.root")
+        );
+        BeefyClient.ValidatorSet memory next = BeefyClient.ValidatorSet(
+            uint128(beefyCheckpointRaw.readUint(".next.id")),
+            uint128(beefyCheckpointRaw.readUint(".next.length")),
+            beefyCheckpointRaw.readBytes32(".next.root")
+        );
+
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
-        BeefyClient beefyClient = new BeefyClient(randaoCommitDelay, randaoCommitExpiration, startBlock, current, next);
+        uint256 minimumSignatures = vm.envUint("MINIMUM_REQUIRED_SIGNATURES");
+        BeefyClient beefyClient =
+            new BeefyClient(randaoCommitDelay, randaoCommitExpiration, minimumSignatures, startBlock, current, next);
 
         ParaID bridgeHubParaID = ParaID.wrap(vm.envUint("BRIDGE_HUB_PARAID"));
         bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
