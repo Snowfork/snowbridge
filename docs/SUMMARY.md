@@ -11,7 +11,6 @@
 * [Verification](architecture/verification/README.md)
   * [Ethereum](architecture/verification/ethereum.md)
   * [Polkadot](architecture/verification/polkadot/README.md)
-    * [Interactive Update Protocol](architecture/verification/polkadot/interactive-update-protocol.md)
     * [Operational Costs](architecture/verification/polkadot/operational-costs.md)
 * [Governance](architecture/governance.md)
 * [Upgrades](architecture/upgrades.md)
