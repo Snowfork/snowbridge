@@ -11,6 +11,6 @@ sp_api::decl_runtime_apis! {
 	{
 		fn prove_message(leaf_index: u64) -> Option<MerkleProof>;
 
-		fn calculate_fee(message: Message) -> Result<Fees<Balance>,SubmitError>;
+		fn calculate_fee(message: Message) -> Result<Fees<Balance>, SubmitError>;
 	}
 }
