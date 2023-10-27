@@ -5,6 +5,8 @@ pragma solidity 0.8.20;
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
+import {Counter} from "./utils/Counter.sol";
+import {Math} from "./utils/Math.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
@@ -29,6 +31,10 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
  *
  */
 contract BeefyClient {
+    using Counter for uint256[];
+    using Math for uint16;
+    using Math for uint256;
+
     /* Events */
 
     /**
@@ -91,12 +97,13 @@ contract BeefyClient {
      * @param bitfield a bitfield signalling which validators they claim have signed
      * @param blockNumber the block number for this commitment
      * @param validatorSetLen the length of the validator set for this commitment
+     * @param numRequiredSignatures the number of signatures required
      * @param bitfield a bitfield signalling which validators they claim have signed
      */
     struct Ticket {
-        address account;
         uint64 blockNumber;
         uint32 validatorSetLen;
+        uint32 numRequiredSignatures;
         uint256 prevRandao;
         bytes32 bitfieldHash;
     }
@@ -142,6 +149,10 @@ contract BeefyClient {
     ValidatorSet public currentValidatorSet;
     ValidatorSet public nextValidatorSet;
 
+    // The validator signature counters for the current and next validator sets.
+    uint256[] currentValidatorSetCounters;
+    uint256[] nextValidatorSetCounters;
+
     // Currently pending tickets for commitment submission
     mapping(bytes32 => Ticket) public tickets;
 
@@ -168,6 +179,13 @@ contract BeefyClient {
      */
     uint256 public immutable randaoCommitExpiration;
 
+    /**
+     * @dev Minimum number of signatures required to validate a new commitment. This parameter
+     * is calculated based on `randaoCommitExpiration`. See ~/scripts/beefy_signature_sampling.py
+     * for the calculation.
+     */
+    uint256 public immutable minNumRequiredSignatures;
+
     /* Errors */
     error InvalidBitfield();
     error InvalidBitfieldLength();
@@ -189,15 +207,19 @@ contract BeefyClient {
     constructor(
         uint256 _randaoCommitDelay,
         uint256 _randaoCommitExpiration,
+        uint256 _minNumRequiredSignatures,
         uint64 _initialBeefyBlock,
         ValidatorSet memory _initialValidatorSet,
         ValidatorSet memory _nextValidatorSet
     ) {
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
+        minNumRequiredSignatures = _minNumRequiredSignatures;
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
+        currentValidatorSetCounters = Counter.createCounter(currentValidatorSet.length);
         nextValidatorSet = _nextValidatorSet;
+        nextValidatorSetCounters = Counter.createCounter(nextValidatorSet.length);
     }
 
     /* External Functions */
@@ -212,9 +234,14 @@ contract BeefyClient {
         external
     {
         ValidatorSet memory vset;
+        uint16 signatureUsageCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {
+            signatureUsageCount = currentValidatorSetCounters.get(proof.index);
+            currentValidatorSetCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = currentValidatorSet;
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
+            signatureUsageCount = nextValidatorSetCounters.get(proof.index);
+            nextValidatorSetCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = nextValidatorSet;
         } else {
             revert InvalidCommitment();
@@ -239,12 +266,19 @@ contract BeefyClient {
 
         // For the initial submission, the supplied bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
-        if (Bitfield.countSetBits(bitfield) < vset.length - (vset.length - 1) / 3) {
+        if (Bitfield.countSetBits(bitfield) < computeQuorum(vset.length)) {
             revert NotEnoughClaims();
         }
 
-        tickets[createTicketID(msg.sender, commitmentHash)] =
-            Ticket(msg.sender, uint64(block.number), uint32(vset.length), 0, keccak256(abi.encodePacked(bitfield)));
+        tickets[createTicketID(msg.sender, commitmentHash)] = Ticket({
+            blockNumber: uint64(block.number),
+            validatorSetLen: uint32(vset.length),
+            numRequiredSignatures: uint32(
+                computeNumRequiredSignatures(vset.length, signatureUsageCount, minNumRequiredSignatures)
+                ),
+            prevRandao: 0,
+            bitfieldHash: keccak256(abi.encodePacked(bitfield))
+        });
     }
 
     /**
@@ -321,6 +355,8 @@ contract BeefyClient {
             nextValidatorSet.id = leaf.nextAuthoritySetID;
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+            currentValidatorSetCounters = nextValidatorSetCounters;
+            nextValidatorSetCounters = Counter.createCounter(leaf.nextAuthoritySetLen);
         }
 
         uint64 newBeefyBlock = commitment.blockNumber;
@@ -374,9 +410,7 @@ contract BeefyClient {
         if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
             revert InvalidBitfield();
         }
-        return Bitfield.subsample(
-            ticket.prevRandao, bitfield, minimumSignatureThreshold(ticket.validatorSetLen), ticket.validatorSetLen
-        );
+        return Bitfield.subsample(ticket.prevRandao, bitfield, ticket.numRequiredSignatures, ticket.validatorSetLen);
     }
 
     /* Internal Functions */
@@ -391,48 +425,54 @@ contract BeefyClient {
     }
 
     /**
-     * @dev Calculate minimum number of required signatures for the current validator set.
+     * @dev Calculates the number of signature samples required for `submitFinal`.
+     * @param validatorSetLen The validator set length.
+     * @param signatureUsageCount The count of how many times a validators signature was previously used in a call to `submitInitial`.
+     * @param minRequiredSignatures The minimum amount of signatures to verify.
      *
-     * This function approximates f(x) defined below for x in [1, 21_846):
+     *  ceil(log2(validatorSetLen)) + 1 * 2 ceil(log2(signatureUsageCount))
      *
-     *  x <= 10: f(x) = x * (2/3)
-     *  x  > 10: f(x) = max(10, ceil(log2(3 * x))
-     *
-     * Research by W3F suggests that `ceil(log2(3 * x))` is a minimum number of signatures required to make an
-     * attack unfeasible. We put a further minimum bound of 10 on this value for extra security.
-     *
-     * If the session has less than 10 active validators it's definitely some sort of local testnet
-     * and we use different logic (minimum 2/3 + 1 validators must sign).
-     *
-     * One assumption is that Polkadot/Kusama will never have more than roughly 20,000 active validators in a session.
-     * As of writing this comment, Polkadot has 300 validators and Kusama has around 1000 validators,
-     * so we are well within those limits.
-     *
-     * In any case, an order of magnitude increase in validator set sizes will likely require a re-architecture
-     * of Polkadot that would make this contract obsolete well before the assumption becomes a problem.
-     *
-     * Constants generated with the help of scripts/minsigs.py
+     * See https://hackmd.io/9OedC7icR5m-in_moUZ_WQ for full analysis.
      */
-    function minimumSignatureThreshold(uint256 validatorSetLen) internal pure returns (uint256) {
-        if (validatorSetLen <= 10) {
-            return validatorSetLen - (validatorSetLen - 1) / 3;
-        } else if (validatorSetLen < 342) {
-            return 10;
-        } else if (validatorSetLen < 683) {
-            return 11;
-        } else if (validatorSetLen < 1366) {
-            return 12;
-        } else if (validatorSetLen < 2731) {
-            return 13;
-        } else if (validatorSetLen < 5462) {
-            return 14;
-        } else if (validatorSetLen < 10923) {
-            return 15;
-        } else if (validatorSetLen < 21846) {
-            return 16;
-        } else {
-            return 17;
+    function computeNumRequiredSignatures(
+        uint256 validatorSetLen,
+        uint256 signatureUsageCount,
+        uint256 minRequiredSignatures
+    ) internal pure returns (uint256) {
+        // Start with the minimum number of signatures.
+        uint256 numRequiredSignatures = minRequiredSignatures;
+
+        // We must substrate minimumSignatures from the number of validators or we might end up
+        // requiring more signatures than there are validators.
+        uint256 extraValidatorsLen = validatorSetLen.saturatingSub(minRequiredSignatures);
+        if (extraValidatorsLen > 1) {
+            numRequiredSignatures += Math.log2(extraValidatorsLen, Math.Rounding.Ceil);
+        } else if (extraValidatorsLen == 1) {
+            // log2 returns 0 when there is one validator so when this case is hit the single
+            // validator needs to be verified.
+            numRequiredSignatures += 1;
         }
+
+        // To address the concurrency issue specified in the link below:
+        // https://hackmd.io/wsVcL0tZQA-Ks3b5KJilFQ?view#Solution-2-Signature-Checks-dynamically-depend-on-the-No-of-initial-Claims-per-session
+        // It must be harder for a malicious relayer to spam submitInitial to bias the RANDAO.
+        // If we detect that a signature is used many times (spam), we increase the number of signature samples required on submitFinal.
+        if (signatureUsageCount > 0) {
+            // Based on formula provided here: https://hackmd.io/9OedC7icR5m-in_moUZ_WQ
+            numRequiredSignatures += 1 + 2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil);
+        }
+
+        // Never require more signatures than 2/3 majority.
+        uint256 validatorSetQuorum = computeQuorum(validatorSetLen);
+        return Math.min(numRequiredSignatures, validatorSetQuorum);
+    }
+    /**
+     * @dev Calculates 2/3 majority required for quorum for a given number of validators.
+     * @param numValidators The number of validators in the validator set.
+     */
+
+    function computeQuorum(uint256 numValidators) internal pure returns (uint256) {
+        return numValidators - (numValidators - 1) / 3;
     }
 
     /**
@@ -447,13 +487,14 @@ contract BeefyClient {
     ) internal view {
         Ticket storage ticket = tickets[ticketID];
         // Verify that enough signature proofs have been supplied
-        uint256 signatureCount = minimumSignatureThreshold(vset.length);
-        if (proofs.length != signatureCount) {
+        uint256 numRequiredSignatures = ticket.numRequiredSignatures;
+        if (proofs.length != numRequiredSignatures) {
             revert InvalidValidatorProof();
         }
 
         // Generate final bitfield indicating which validators need to be included in the proofs.
-        uint256[] memory finalbitfield = Bitfield.subsample(ticket.prevRandao, bitfield, signatureCount, vset.length);
+        uint256[] memory finalbitfield =
+            Bitfield.subsample(ticket.prevRandao, bitfield, numRequiredSignatures, vset.length);
 
         for (uint256 i = 0; i < proofs.length;) {
             ValidatorProof calldata proof = proofs[i];

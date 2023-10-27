@@ -2,12 +2,16 @@
 pragma solidity ^0.8.20;
 
 import {BeefyClient} from "../../src/BeefyClient.sol";
+import {Counter} from "../../src/utils/Counter.sol";
 
 contract BeefyClientMock is BeefyClient {
-    constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration)
+    using Counter for uint256[];
+
+    constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration, uint256 minNumRequiredSignatures)
         BeefyClient(
             randaoCommitDelay,
             randaoCommitExpiration,
+            minNumRequiredSignatures,
             0,
             BeefyClient.ValidatorSet(0, 0, 0x0),
             BeefyClient.ValidatorSet(0, 0, 0x0)
@@ -16,10 +20,6 @@ contract BeefyClientMock is BeefyClient {
 
     function encodeCommitment_public(Commitment calldata commitment) external pure returns (bytes memory) {
         return encodeCommitment(commitment);
-    }
-
-    function minimumSignatureThreshold_public(uint256 validatorSetLen) external pure returns (uint256) {
-        return minimumSignatureThreshold(validatorSetLen);
     }
 
     function setTicketValidatorSetLen(bytes32 commitmentHash, uint32 validatorSetLen) external {
@@ -37,6 +37,27 @@ contract BeefyClientMock is BeefyClient {
     ) external {
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
+        currentValidatorSetCounters = Counter.createCounter(currentValidatorSet.length);
         nextValidatorSet = _nextValidatorSet;
+        nextValidatorSetCounters = Counter.createCounter(nextValidatorSet.length);
+    }
+
+    function getValidatorCounter(bool next, uint256 index) public view returns (uint16) {
+        if (next) {
+            return nextValidatorSetCounters.get(index);
+        }
+        return currentValidatorSetCounters.get(index);
+    }
+
+    function computeNumRequiredSignatures_public(
+        uint256 validatorSetLen,
+        uint256 signatureUsageCount,
+        uint256 minSignatures
+    ) public pure returns (uint256) {
+        return computeNumRequiredSignatures(validatorSetLen, signatureUsageCount, minSignatures);
+    }
+
+    function computeQuorum_public(uint256 numValidators) public pure returns (uint256) {
+        return computeQuorum(numValidators);
     }
 }
