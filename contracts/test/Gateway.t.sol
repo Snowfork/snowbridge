@@ -301,19 +301,15 @@ contract GatewayTest is Test {
      */
 
     function testAgentExecution() public {
-        token.transfer(address(assetHubAgent), 1);
+        token.transfer(address(assetHubAgent), 200);
 
         Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.TransferToken, abi.encode(address(token), address(this), 1))
+            payload: abi.encode(AgentExecuteCommand.TransferToken, abi.encode(address(token), address(account2), 10))
         });
 
         bytes memory encodedParams = abi.encode(params);
-        uint256 startGas = gasleft();
         GatewayMock(address(gateway)).agentExecutePublic(encodedParams);
-        uint256 endGas = gasleft();
-
-        console.log("gas used: %s", startGas - endGas);
     }
 
     function testAgentExecutionBadOrigin() public {
