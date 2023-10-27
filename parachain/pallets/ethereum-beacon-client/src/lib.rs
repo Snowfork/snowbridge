@@ -29,7 +29,7 @@ use primitives::{
 };
 use snowbridge_core::{
 	inbound::{Message, Proof, Verifier},
-	BridgeModule, OperatingMode, OperatingModeError, RingBufferMap,
+	BasicOperatingMode, RingBufferMap,
 };
 use sp_core::H256;
 use sp_std::prelude::*;
@@ -101,7 +101,7 @@ pub mod pallet {
 		},
 		/// Set OperatingMode
 		OperatingModeChanged {
-			mode: OperatingMode,
+			mode: BasicOperatingMode,
 		},
 	}
 
@@ -135,7 +135,7 @@ pub mod pallet {
 		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedBlock,
-		BridgeModule(OperatingModeError),
+		Halted,
 	}
 
 	/// Latest imported checkpoint root
@@ -197,15 +197,9 @@ pub mod pallet {
 	pub type ExecutionHeaderMapping<T: Config> = StorageMap<_, Identity, u32, H256, ValueQuery>;
 
 	/// The current operating mode of the pallet.
-	///
-	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
-	pub type PalletOperatingMode<T: Config> = StorageValue<_, OperatingMode, ValueQuery>;
-
-	impl<T: Config> BridgeModule<T> for Pallet<T> {
-		type OperatingMode = OperatingMode;
-		type OperatingModeStorage = PalletOperatingMode<T>;
-	}
+	#[pallet::getter(fn operating_mode)]
+	pub type OperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -234,8 +228,8 @@ pub mod pallet {
 		/// Submits a new finalized beacon header update. The update may contain the next
 		/// sync committee.
 		pub fn submit(origin: OriginFor<T>, update: Box<Update>) -> DispatchResult {
-			Self::ensure_not_halted().map_err(Error::<T>::BridgeModule)?;
 			ensure_signed(origin)?;
+			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 			Self::process_update(&update)?;
 			Ok(())
 		}
@@ -249,18 +243,21 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			update: Box<ExecutionHeaderUpdate>,
 		) -> DispatchResult {
-			Self::ensure_not_halted().map_err(Error::<T>::BridgeModule)?;
 			ensure_signed(origin)?;
+			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 			Self::process_execution_header_update(&update)?;
 			Ok(())
 		}
 
-		/// Halt or resume all pallet operations.
-		/// May only be called either by root, or by `PalletOwner`.
+		/// Halt or resume all pallet operations. May only be called by root.
 		#[pallet::call_index(3)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
-		pub fn set_operating_mode(origin: OriginFor<T>, mode: OperatingMode) -> DispatchResult {
-			<Self as BridgeModule<_>>::set_operating_mode(origin, mode)?;
+		pub fn set_operating_mode(
+			origin: OriginFor<T>,
+			mode: BasicOperatingMode,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			OperatingMode::<T>::set(mode);
 			Self::deposit_event(Event::OperatingModeChanged { mode });
 			Ok(())
 		}

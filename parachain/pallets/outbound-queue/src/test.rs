@@ -201,7 +201,7 @@ fn submit_message_fail_too_large() {
 			},
 		};
 
-		assert_err!(OutboundQueue::validate(&message), SubmitError::MessageTooLarge);
+		assert_err!(OutboundQueue::validate(&message), SendError::MessageTooLarge);
 	});
 }
 
@@ -271,11 +271,11 @@ fn process_message_fails_on_overweight_message() {
 }
 
 #[test]
-fn submit_message_fail_invalid_origin() {
+fn set_operating_mode_bad_origin() {
 	new_tester().execute_with(|| {
 		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
 		assert_noop!(
-			OutboundQueue::set_operating_mode(origin, OperatingMode::Halted),
+			OutboundQueue::set_operating_mode(origin, BasicOperatingMode::Halted),
 			DispatchError::BadOrigin,
 		);
 	})
@@ -443,7 +443,10 @@ fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_ge
 fn submit_upgrade_message_success_when_queue_halted() {
 	new_tester().execute_with(|| {
 		// halt the outbound queue
-		assert_ok!(OutboundQueue::set_operating_mode(RuntimeOrigin::root(), OperatingMode::Halted));
+		assert_ok!(OutboundQueue::set_operating_mode(
+			RuntimeOrigin::root(),
+			BasicOperatingMode::Halted
+		));
 
 		// submit a high priority message from bridge_hub should success
 		let message = Message {
@@ -474,6 +477,6 @@ fn submit_upgrade_message_success_when_queue_halted() {
 		let result = OutboundQueue::validate(&message);
 		assert!(result.is_ok());
 		let ticket = result.unwrap();
-		assert_noop!(OutboundQueue::submit(ticket.0), SubmitError::BridgeHalted);
+		assert_noop!(OutboundQueue::submit(ticket.0), SendError::Halted);
 	});
 }

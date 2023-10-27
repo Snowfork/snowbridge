@@ -3,7 +3,8 @@ use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
 	traits::{tokens::Balance, Get},
-	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PalletError, PartialEqNoBound,
+	RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
@@ -24,10 +25,10 @@ pub trait OutboundQueue {
 	/// Validate an outbound message and return a tuple:
 	/// 1. A ticket for submitting the message
 	/// 2. The delivery fee in DOT which covers the cost of execution on Ethereum
-	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError>;
+	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SendError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
-	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
+	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SendError>;
 }
 
 /// Default implementation of `OutboundQueue` for tests
@@ -35,22 +36,22 @@ impl OutboundQueue for () {
 	type Ticket = u64;
 	type Balance = u64;
 
-	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
+	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SendError> {
 		Ok((0, 0))
 	}
 
-	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SendError> {
 		Ok(MessageHash::zero())
 	}
 }
 
-/// SubmitError returned
-#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub enum SubmitError {
+/// Errors sending message to Ethereum
+#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, PalletError, TypeInfo)]
+pub enum SendError {
 	/// Message is too large to be safely executed on Ethereum
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
-	BridgeHalted,
+	Halted,
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]

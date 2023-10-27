@@ -10,7 +10,7 @@ use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::{
-	outbound::{Message, MessageHash, ParaId, SubmitError},
+	outbound::{Message, MessageHash, ParaId, SendError},
 	AgentId,
 };
 use sp_runtime::{
@@ -160,11 +160,11 @@ impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
 	type Ticket = Message;
 	type Balance = Balance;
 
-	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
+	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SendError> {
 		Ok((message.clone(), 10))
 	}
 
-	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
+	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SendError> {
 		Ok(MessageHash::zero())
 	}
 }

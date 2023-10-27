@@ -40,6 +40,7 @@ use xcm_executor::traits::ConvertLocation;
 use snowbridge_core::{
 	outbound::{
 		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
+		SendError,
 	},
 	sibling_sovereign_account, AgentId,
 };
@@ -153,7 +154,6 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		SubmissionFailed,
 		LocationConversionFailed,
 		AgentAlreadyCreated,
 		NoAgent,
@@ -161,6 +161,7 @@ pub mod pallet {
 		NoChannel,
 		UnsupportedLocationVersion,
 		InvalidLocation,
+		Send(SendError),
 	}
 
 	/// The set of registered agents
@@ -399,7 +400,7 @@ pub mod pallet {
 		fn send(origin: ParaId, command: Command, pays_fee: PaysFee<T>) -> DispatchResult {
 			let message = Message { origin, command };
 			let (ticket, delivery_fee) =
-				T::OutboundQueue::validate(&message).map_err(|_| Error::<T>::SubmissionFailed)?;
+				T::OutboundQueue::validate(&message).map_err(|err| Error::<T>::Send(err))?;
 
 			if let PaysFee::Yes(sovereign_account) = pays_fee {
 				T::Token::transfer(
@@ -410,7 +411,7 @@ pub mod pallet {
 				)?;
 			}
 
-			T::OutboundQueue::submit(ticket).map_err(|_| Error::<T>::SubmissionFailed)?;
+			T::OutboundQueue::submit(ticket).map_err(|err| Error::<T>::Send(err))?;
 			Ok(())
 		}
 

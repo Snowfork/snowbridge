@@ -309,7 +309,8 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::outbound::{MessageHash, SubmitError};
+	use snowbridge_core::outbound::{MessageHash, SendError};
+	use xcm::v3::prelude::SendError as XcmSendError;
 	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 	pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
@@ -332,11 +333,11 @@ mod tests {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
+		fn validate(_: &Message) -> Result<((), Self::Balance), SendError> {
 			Ok(((), 1))
 		}
 
-		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
+		fn submit(_: Self::Ticket) -> Result<MessageHash, SendError> {
 			Ok(MessageHash::zero())
 		}
 	}
@@ -345,12 +346,12 @@ mod tests {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
-			Err(SubmitError::MessageTooLarge)
+		fn validate(_: &Message) -> Result<((), Self::Balance), SendError> {
+			Err(SendError::MessageTooLarge)
 		}
 
-		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
-			Err(SubmitError::MessageTooLarge)
+		fn submit(_: Self::Ticket) -> Result<MessageHash, SendError> {
+			Err(SendError::MessageTooLarge)
 		}
 	}
 
@@ -369,7 +370,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::NotApplicable));
+		assert_eq!(result, Err(XcmSendError::NotApplicable));
 	}
 
 	#[test]
@@ -387,7 +388,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::MissingArgument));
+		assert_eq!(result, Err(XcmSendError::MissingArgument));
 	}
 
 	#[test]
@@ -407,7 +408,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::NotApplicable));
+		assert_eq!(result, Err(XcmSendError::NotApplicable));
 	}
 
 	#[test]
@@ -425,7 +426,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::MissingArgument));
+		assert_eq!(result, Err(XcmSendError::MissingArgument));
 	}
 
 	#[test]
@@ -443,7 +444,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::Unroutable));
+		assert_eq!(result, Err(XcmSendError::Unroutable));
 	}
 
 	#[test]
@@ -461,7 +462,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::NotApplicable));
+		assert_eq!(result, Err(XcmSendError::NotApplicable));
 	}
 
 	#[test]
@@ -479,7 +480,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::NotApplicable));
+		assert_eq!(result, Err(XcmSendError::NotApplicable));
 	}
 
 	#[test]
@@ -498,7 +499,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::NotApplicable));
+		assert_eq!(result, Err(XcmSendError::NotApplicable));
 	}
 
 	#[test]
@@ -517,7 +518,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::MissingArgument));
+		assert_eq!(result, Err(XcmSendError::MissingArgument));
 	}
 
 	#[test]
@@ -536,7 +537,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::MissingArgument));
+		assert_eq!(result, Err(XcmSendError::MissingArgument));
 	}
 
 	#[test]
@@ -555,7 +556,7 @@ mod tests {
 				MockOkOutboundQueue,
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-		assert_eq!(result, Err(SendError::MissingArgument));
+		assert_eq!(result, Err(XcmSendError::MissingArgument));
 	}
 
 	#[test]
@@ -611,7 +612,7 @@ mod tests {
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
-		assert_eq!(result, Err(SendError::Unroutable));
+		assert_eq!(result, Err(XcmSendError::Unroutable));
 	}
 
 	#[test]
@@ -638,7 +639,7 @@ mod tests {
 				AgentIdOf,
 			>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
-		assert_eq!(result, Err(SendError::Unroutable));
+		assert_eq!(result, Err(XcmSendError::Unroutable));
 	}
 
 	#[test]
@@ -702,7 +703,7 @@ mod tests {
 			MockErrOutboundQueue,
 			AgentIdOf,
 		>::deliver(hex!("deadbeef").to_vec());
-		assert_eq!(result, Err(SendError::Transport("other transport error")))
+		assert_eq!(result, Err(XcmSendError::Transport("other transport error")))
 	}
 
 	#[test]
