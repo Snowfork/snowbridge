@@ -7,25 +7,21 @@ use frame_support::storage::StorageStreamIter;
 use snowbridge_core::outbound::{Fees, Message, OutboundQueue, SubmitError};
 use snowbridge_outbound_queue_merkle_tree::{merkle_proof, MerkleProof};
 
-pub fn prove_message<Runtime>(leaf_index: u64) -> Option<MerkleProof>
+pub fn prove_message<T>(leaf_index: u64) -> Option<MerkleProof>
 where
-	Runtime: Config,
+	T: Config,
 {
-	if !MessageLeaves::<Runtime>::exists() {
+	if !MessageLeaves::<T>::exists() {
 		return None
 	}
-	let proof = merkle_proof::<<Runtime as Config>::Hashing, _>(
-		MessageLeaves::<Runtime>::stream_iter(),
-		leaf_index,
-	);
+	let proof =
+		merkle_proof::<<T as Config>::Hashing, _>(MessageLeaves::<T>::stream_iter(), leaf_index);
 	Some(proof)
 }
 
-pub fn calculate_fee<Runtime>(
-	message: Message,
-) -> Result<Fees<<Runtime as Config>::Balance>, SubmitError>
+pub fn calculate_fee<T>(message: Message) -> Result<Fees<T::Balance>, SubmitError>
 where
-	Runtime: Config,
+	T: Config,
 {
-	Ok(crate::Pallet::<Runtime>::validate(&message)?.1)
+	Ok(crate::Pallet::<T>::validate(&message)?.1)
 }
