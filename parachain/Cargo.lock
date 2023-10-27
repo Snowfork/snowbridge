@@ -285,28 +285,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bp-runtime"
-version = "0.1.0"
-source = "git+https://github.com/Snowfork/cumulus.git?branch=snowbridge#1a8a815c224fa51a5df00a92eb28235b42defda6"
-dependencies = [
- "frame-support",
- "frame-system",
- "hash-db",
- "impl-trait-for-tuples",
- "num-traits",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-state-machine",
- "sp-std",
- "sp-trie",
- "trie-db",
-]
-
-[[package]]
 name = "bs58"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1858,6 +1836,7 @@ name = "pallet-message-queue"
 version = "7.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=master#e976964644d951a1eefaaa85f1d7c7d58211ddf7"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -2639,10 +2618,12 @@ dependencies = [
  "hex",
  "hex-literal",
  "pallet-balances",
+ "pallet-message-queue",
  "parity-scale-codec",
  "polkadot-parachain",
  "scale-info",
  "snowbridge-core",
+ "snowbridge-outbound-queue",
  "sp-core",
  "sp-io",
  "sp-keyring",
@@ -2714,7 +2695,6 @@ dependencies = [
 name = "snowbridge-ethereum-beacon-client"
 version = "0.0.1"
 dependencies = [
- "bp-runtime",
  "byte-slice-cast",
  "frame-benchmarking",
  "frame-support",
@@ -2744,7 +2724,6 @@ dependencies = [
 name = "snowbridge-inbound-queue"
 version = "0.1.1"
 dependencies = [
- "bp-runtime",
  "ethabi-decode",
  "frame-benchmarking",
  "frame-support",
@@ -2773,7 +2752,6 @@ dependencies = [
 name = "snowbridge-outbound-queue"
 version = "0.1.1"
 dependencies = [
- "bp-runtime",
  "ethabi-decode",
  "frame-benchmarking",
  "frame-support",
@@ -2813,6 +2791,7 @@ dependencies = [
 name = "snowbridge-outbound-queue-runtime-api"
 version = "0.1.0"
 dependencies = [
+ "frame-support",
  "parity-scale-codec",
  "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",

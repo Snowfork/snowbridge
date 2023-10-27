@@ -32,7 +32,6 @@ snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 primitives = { package = "snowbridge-beacon-primitives", path = "../../primitives/beacon", default-features = false }
 static_assertions = { version = "1.1.0" }
-bp-runtime = { git = "https://github.com/Snowfork/cumulus.git", branch = "snowbridge", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "master", optional = true }
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "master", optional = true }
 
@@ -69,7 +68,6 @@ std = [
     "primitives/std",
     "ssz_rs/std",
     "byte-slice-cast/std",
-    "bp-runtime/std",
 ]
 runtime-benchmarks = [
     "beacon-spec-mainnet",

@@ -37,8 +37,10 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 hex = "0.4.1"
 hex-literal = { version = "0.4.1" }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "master" }
+pallet-message-queue = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+snowbridge-outbound-queue = { path = "../outbound-queue" }
 
 [features]
 default = ["std"]
@@ -60,6 +62,6 @@ std = [
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
-	"xcm-executor/runtime-benchmarks"
+	"xcm-executor/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]

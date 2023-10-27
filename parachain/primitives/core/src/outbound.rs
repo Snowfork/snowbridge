@@ -2,8 +2,9 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
-	traits::{tokens::Balance, Get},
-	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+	traits::{tokens::Balance as BalanceT, Get},
+	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PalletError, PartialEqNoBound,
+	RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
@@ -16,41 +17,42 @@ pub type FeeAmount = u128;
 pub type GasAmount = u128;
 pub type GasPriceInWei = u128;
 
+/// OutboundFee which covers the cost of execution on both BridgeHub and Ethereum
+#[derive(Copy, Clone, Default, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct Fees<Balance: BalanceT> {
+	/// Fee for processing the message locally
+	pub base: Balance,
+	/// Fee for processing the message remotely
+	pub delivery: Balance,
+}
+
+impl<Balance: BalanceT> Fees<Balance> {
+	pub fn total(&self) -> Balance {
+		self.base.saturating_add(self.delivery)
+	}
+}
+
 /// A trait for enqueueing messages for delivery to Ethereum
 pub trait OutboundQueue {
-	type Ticket: Clone;
-	type Balance: Balance;
+	type Ticket: Clone + Encode + Decode;
+	type Balance: BalanceT;
 
 	/// Validate an outbound message and return a tuple:
 	/// 1. A ticket for submitting the message
-	/// 2. The delivery fee in DOT which covers the cost of execution on Ethereum
-	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError>;
+	/// 2. The OutboundFee
+	fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SendError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
-	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
+	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SendError>;
 }
 
-/// Default implementation of `OutboundQueue` for tests
-impl OutboundQueue for () {
-	type Ticket = u64;
-	type Balance = u64;
-
-	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
-		Ok((0, 0))
-	}
-
-	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-		Ok(MessageHash::zero())
-	}
-}
-
-/// SubmitError returned
-#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub enum SubmitError {
+/// Reasons why sending to Ethereum could not be initiated
+#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, PalletError, TypeInfo)]
+pub enum SendError {
 	/// Message is too large to be safely executed on Ethereum
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
-	BridgeHalted,
+	Halted,
 }
 
 /// A message which can be accepted by the [`OutboundQueue`]
@@ -301,13 +303,6 @@ pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
 	pub message: BoundedVec<u8, MaxMessageSize>,
 }
 
-/// Aggregate message origin for the `MessageQueue` pallet.
-#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum AggregateMessageOrigin {
-	#[codec(index = 0)]
-	Parachain(ParaId),
-}
-
 /// Message which is awaiting processing in the MessageQueue pallet
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 pub struct EnqueuedMessage {
@@ -355,7 +350,7 @@ impl From<PreparedMessage> for Token {
 
 impl From<u32> for AggregateMessageOrigin {
 	fn from(value: u32) -> Self {
-		AggregateMessageOrigin::Parachain(value.into())
+		AggregateMessageOrigin::Export(ExportOrigin::Sibling(value.into()))
 	}
 }
 
@@ -367,4 +362,17 @@ pub struct OriginInfo {
 	pub para_id: ParaId,
 	/// The deterministic ID of the agent for this origin
 	pub agent_id: H256,
+}
+
+#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum ExportOrigin {
+	Here,
+	Sibling(ParaId),
+}
+
+/// Aggregate message origin for the `MessageQueue` pallet.
+#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum AggregateMessageOrigin {
+	/// Message is to be exported via a bridge
+	Export(ExportOrigin),
 }

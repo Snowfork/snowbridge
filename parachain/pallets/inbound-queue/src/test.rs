@@ -458,3 +458,39 @@ fn test_submit_with_invalid_payload_unsupported_version() {
 		);
 	});
 }
+
+#[test]
+fn test_set_operating_mode() {
+	new_tester().execute_with(|| {
+		let relayer: AccountId = Keyring::Bob.into();
+		let origin = RuntimeOrigin::signed(relayer);
+		let message = Message {
+			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+		};
+
+		assert_ok!(InboundQueue::set_operating_mode(
+			RuntimeOrigin::root(),
+			snowbridge_core::BasicOperatingMode::Halted
+		));
+
+		assert_noop!(InboundQueue::submit(origin, message), Error::<Test>::Halted);
+	});
+}
+
+#[test]
+fn test_set_operating_mode_root_only() {
+	new_tester().execute_with(|| {
+		assert_noop!(
+			InboundQueue::set_operating_mode(
+				RuntimeOrigin::signed(Keyring::Bob.into()),
+				snowbridge_core::BasicOperatingMode::Halted
+			),
+			DispatchError::BadOrigin
+		);
+	});
+}

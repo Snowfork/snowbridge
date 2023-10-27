@@ -29,8 +29,10 @@ fn create_agent() {
 fn create_agent_fails_on_funds_unavailable() {
 	new_test_ext().execute_with(|| {
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
-
 		let origin = make_xcm_origin(origin_location);
+		// Reset balance of sovereign_account to zero so to trigger the FundsUnavailable error
+		let sovereign_account = sibling_sovereign_account::<Test>(2000.into());
+		Balances::set_balance(&sovereign_account, 0);
 		assert_noop!(EthereumControl::create_agent(origin), TokenError::FundsUnavailable);
 	});
 }
@@ -504,5 +506,78 @@ fn check_sibling_sovereign_account() {
 			para_id,
 			hex::encode(sovereign_account)
 		);
+	});
+}
+
+#[test]
+fn charge_fee_for_create_agent() {
+	new_test_ext().execute_with(|| {
+		let para_id: u32 = TestParaId::get();
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(para_id)) };
+		let origin = make_xcm_origin(origin_location);
+		let sovereign_account = sibling_sovereign_account::<Test>(para_id.into());
+		let (_, agent_id) = ensure_sibling::<Test>(&origin_location).unwrap();
+
+		assert_ok!(EthereumControl::create_agent(origin.clone()));
+		// assert sovereign_balance decreased by (fee.base_fee + fee.delivery_fee)
+		let message =
+			Message { origin: para_id.into(), command: Command::CreateAgent { agent_id } };
+		let (_, fee) = OutboundQueue::validate(&message).unwrap();
+		let sovereign_balance = Balances::balance(&sovereign_account);
+		assert_eq!(sovereign_balance + fee.base + fee.delivery, InitialFunding::get());
+
+		// and treasury_balance increased
+		let treasury_balance = Balances::balance(&TreasuryAccount::get());
+		assert_eq!(treasury_balance > InitialFunding::get(), true);
+
+		// (sovereign_balance + treasury_balance) keeps the same
+		assert_eq!(sovereign_balance + treasury_balance, (InitialFunding::get() * 2) as u128);
+	});
+}
+
+#[test]
+fn charge_fee_for_transfer_native_from_agent() {
+	new_test_ext().execute_with(|| {
+		let para_id: u32 = TestParaId::get();
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(para_id)) };
+		let recipient: H160 = [27u8; 20].into();
+		let amount = 103435;
+		let origin = make_xcm_origin(origin_location);
+		let (_, agent_id) = ensure_sibling::<Test>(&origin_location).unwrap();
+
+		let sovereign_account = sibling_sovereign_account::<Test>(para_id.into());
+
+		// create_agent & create_channel first
+		assert_ok!(EthereumControl::create_agent(origin.clone()));
+		assert_ok!(EthereumControl::create_channel(origin.clone()));
+
+		// assert sovereign_balance decreased by only the base_fee
+		let sovereign_balance_before = Balances::balance(&sovereign_account);
+		assert_ok!(EthereumControl::transfer_native_from_agent(origin.clone(), recipient, amount));
+		let message = Message {
+			origin: para_id.into(),
+			command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
+		};
+		let (_, fee) = OutboundQueue::validate(&message).unwrap();
+		let sovereign_balance_after = Balances::balance(&sovereign_account);
+		assert_eq!(sovereign_balance_after + fee.base, sovereign_balance_before);
+	});
+}
+
+#[test]
+fn charge_fee_for_upgrade() {
+	new_test_ext().execute_with(|| {
+		let para_id: u32 = TestParaId::get();
+		let origin = RuntimeOrigin::root();
+		let address: H160 = Default::default();
+		let code_hash: H256 = Default::default();
+		let initializer: Option<Initializer> =
+			Some(Initializer { params: [0; 256].into(), maximum_required_gas: 10000 });
+		assert_ok!(EthereumControl::upgrade(origin, address, code_hash, initializer.clone()));
+
+		// assert sovereign_balance does not change as we do not charge for sudo operations
+		let sovereign_account = sibling_sovereign_account::<Test>(para_id.into());
+		let sovereign_balance = Balances::balance(&sovereign_account);
+		assert_eq!(sovereign_balance, InitialFunding::get());
 	});
 }
