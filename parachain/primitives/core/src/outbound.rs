@@ -2,7 +2,7 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
 use frame_support::{
-	traits::{tokens::Balance, Get},
+	traits::{tokens::Balance as BalanceT, Get},
 	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 pub use polkadot_parachain::primitives::Id as ParaId;
@@ -16,32 +16,33 @@ pub type FeeAmount = u128;
 pub type GasAmount = u128;
 pub type GasPriceInWei = u128;
 
+/// OutboundFee which covers the cost of execution on both BridgeHub and Ethereum
+#[derive(Copy, Clone, Default, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct Fees<Balance: BalanceT> {
+	/// Fee for processing the message locally
+	pub base: Balance,
+	/// Fee for processing the message remotely
+	pub delivery: Balance,
+}
+
+impl<Balance: BalanceT> Fees<Balance> {
+	pub fn total(&self) -> Balance {
+		self.base.saturating_add(self.delivery)
+	}
+}
+
 /// A trait for enqueueing messages for delivery to Ethereum
 pub trait OutboundQueue {
-	type Ticket: Clone;
-	type Balance: Balance;
+	type Ticket: Clone + Encode + Decode;
+	type Balance: BalanceT;
 
 	/// Validate an outbound message and return a tuple:
 	/// 1. A ticket for submitting the message
-	/// 2. The delivery fee in DOT which covers the cost of execution on Ethereum
-	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError>;
+	/// 2. The OutboundFee
+	fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SubmitError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
 	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError>;
-}
-
-/// Default implementation of `OutboundQueue` for tests
-impl OutboundQueue for () {
-	type Ticket = u64;
-	type Balance = u64;
-
-	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
-		Ok((0, 0))
-	}
-
-	fn submit(ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-		Ok(MessageHash::zero())
-	}
 }
 
 /// SubmitError returned

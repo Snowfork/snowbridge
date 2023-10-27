@@ -126,13 +126,13 @@ where
 		};
 
 		// validate the message
-		let (ticket, fee) = OutboundQueue::validate(&outbound_message).map_err(|err| {
+		let (ticket, fees) = OutboundQueue::validate(&outbound_message).map_err(|err| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
 			SendError::Unroutable
 		})?;
 
 		// convert fee to MultiAsset
-		let fee = MultiAsset::from((MultiLocation::parent(), fee)).into();
+		let fee = MultiAsset::from((MultiLocation::parent(), fees.total())).into();
 
 		Ok((ticket.encode(), fee))
 	}
@@ -309,7 +309,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::outbound::{MessageHash, SubmitError};
+	use snowbridge_core::outbound::{Fees, MessageHash, SubmitError};
 	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 	pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
@@ -332,8 +332,8 @@ mod tests {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
-			Ok(((), 1))
+		fn validate(_: &Message) -> Result<((), Fees<Self::Balance>), SubmitError> {
+			Ok(((), Fees { base: 1, delivery: 1 }))
 		}
 
 		fn submit(_: Self::Ticket) -> Result<MessageHash, SubmitError> {
@@ -345,7 +345,7 @@ mod tests {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Self::Balance), SubmitError> {
+		fn validate(_: &Message) -> Result<((), Fees<Self::Balance>), SubmitError> {
 			Err(SubmitError::MessageTooLarge)
 		}
 

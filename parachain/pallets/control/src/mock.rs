@@ -4,18 +4,19 @@ use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
 	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, Contains},
+	weights::IdentityFee,
 	PalletId,
 };
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::{
-	outbound::{Message, MessageHash, ParaId, SubmitError},
-	AgentId,
+	outbound::{ConstantGasMeter, ParaId},
+	sibling_sovereign_account, AgentId,
 };
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
 	AccountId32,
 };
 use xcm::prelude::*;
@@ -94,7 +95,9 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		XcmOrigin: pallet_xcm_origin::{Pallet, Origin},
+		OutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>},
 		EthereumControl: snowbridge_control,
+		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>}
 	}
 );
 
@@ -146,7 +149,45 @@ impl pallet_xcm_origin::Config for Test {
 }
 
 parameter_types! {
+	pub const HeapSize: u32 = 32 * 1024;
+	pub const MaxStale: u32 = 32;
+	pub static ServiceWeight: Option<Weight> = Some(Weight::from_parts(100, 100));
+}
+
+impl pallet_message_queue::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type MessageProcessor = OutboundQueue;
+	type Size = u32;
+	type QueueChangeHandler = ();
+	type HeapSize = HeapSize;
+	type MaxStale = MaxStale;
+	type ServiceWeight = ServiceWeight;
+}
+
+parameter_types! {
+	pub const MaxMessagePayloadSize: u32 = 1024;
+	pub const MaxMessagesPerBlock: u32 = 20;
 	pub const OwnParaId: ParaId = ParaId::new(1013);
+}
+
+impl snowbridge_outbound_queue::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Hashing = Keccak256;
+	type MessageQueue = MessageQueue;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
+	type MaxMessagesPerBlock = MaxMessagesPerBlock;
+	type OwnParaId = OwnParaId;
+	type GasMeter = ConstantGasMeter;
+	type Balance = u128;
+	type DeliveryFeePerGas = ConstU128<1>;
+	type DeliveryRefundPerGas = ConstU128<1>;
+	type DeliveryReward = ConstU128<1>;
+	type WeightToFee = IdentityFee<u128>;
+	type WeightInfo = ();
+}
+
+parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 	pub const AnyNetwork: Option<NetworkId> = None;
 	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Kusama);
@@ -155,24 +196,12 @@ parameter_types! {
 		X2(GlobalConsensus(RelayNetwork::get().unwrap()), Parachain(1013));
 }
 
-pub struct MockOutboundQueue;
-impl snowbridge_control::OutboundQueueTrait for MockOutboundQueue {
-	type Ticket = Message;
-	type Balance = Balance;
-
-	fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SubmitError> {
-		Ok((message.clone(), 10))
-	}
-
-	fn submit(_ticket: Self::Ticket) -> Result<MessageHash, SubmitError> {
-		Ok(MessageHash::zero())
-	}
-}
-
 parameter_types! {
 	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
 	pub Fee: u64 = 1000;
 	pub const RococoNetwork: NetworkId = NetworkId::Rococo;
+	pub const InitialFunding: u128 = 1_000_000_000_000;
+	pub TestParaId: u32 = 2000;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -196,7 +225,7 @@ impl Contains<MultiLocation> for AllowSiblingsOnly {
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = OwnParaId;
-	type OutboundQueue = MockOutboundQueue;
+	type OutboundQueue = OutboundQueue;
 	type MessageHasher = BlakeTwo256;
 	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = HashedDescription<AgentId, DescribeFamily<DescribeAllTerminal>>;
@@ -211,9 +240,15 @@ impl crate::Config for Test {
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
+	let initial_amount = InitialFunding::get().into();
+	let test_para_id = TestParaId::get();
+	let sovereign_account = sibling_sovereign_account::<Test>(test_para_id.into());
+	let treasury_account = TreasuryAccount::get();
 	ext.execute_with(|| {
 		System::set_block_number(1);
-		let _ = Balances::mint_into(&AccountId32::from([0; 32]), 1_000_000_000_000);
+		Balances::mint_into(&AccountId32::from([0; 32]), initial_amount).unwrap();
+		Balances::mint_into(&sovereign_account, initial_amount).unwrap();
+		Balances::mint_into(&treasury_account, initial_amount).unwrap();
 	});
 	ext
 }
