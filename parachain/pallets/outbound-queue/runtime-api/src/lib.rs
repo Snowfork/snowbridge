@@ -3,7 +3,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::traits::tokens::Balance as BalanceT;
-use snowbridge_core::outbound::{Fees, Message, SendError};
+use snowbridge_core::outbound::Message;
 use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 
 sp_api::decl_runtime_apis! {
@@ -11,6 +11,6 @@ sp_api::decl_runtime_apis! {
 	{
 		fn prove_message(leaf_index: u64) -> Option<MerkleProof>;
 
-		fn calculate_fee(message: Message) -> Result<Fees<Balance>, SendError>;
+		fn calculate_fee(message: Message) -> Option<Balance>;
 	}
 }
