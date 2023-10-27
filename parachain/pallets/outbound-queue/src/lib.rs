@@ -344,7 +344,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> OutboundQueueTrait for Pallet<T> {
-		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>, T::Balance>;
+		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
 		type Balance = T::Balance;
 
 		fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SubmitError> {
@@ -374,12 +374,8 @@ pub mod pallet {
 			let encoded =
 				enqueued_message.encode().try_into().map_err(|_| SubmitError::MessageTooLarge)?;
 
-			let ticket = OutboundQueueTicket {
-				id: message_id,
-				origin: message.origin,
-				message: encoded,
-				fee,
-			};
+			let ticket =
+				OutboundQueueTicket { id: message_id, origin: message.origin, message: encoded };
 
 			Ok((ticket, fee))
 		}

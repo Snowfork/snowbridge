@@ -283,11 +283,10 @@ impl AgentExecuteCommand {
 
 /// A message which can be accepted by the [`OutboundQueue`]
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
-pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>, Balance: BalanceT> {
+pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
 	pub id: H256,
 	pub origin: ParaId,
 	pub message: BoundedVec<u8, MaxMessageSize>,
-	pub fee: Fees<Balance>,
 }
 
 /// Message which is awaiting processing in the MessageQueue pallet
