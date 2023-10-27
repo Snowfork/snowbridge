@@ -230,7 +230,7 @@ pub mod pallet {
 		pub(crate) fn commit_messages() {
 			let count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
 			if count == 0 {
-				return;
+				return
 			}
 
 			// Create merkle root of messages
@@ -252,8 +252,8 @@ pub mod pallet {
 			// Yield if the maximum number of messages has been processed this block.
 			// This ensures that the weight of `on_finalize` has a known maximum bound.
 			ensure!(
-				MessageLeaves::<T>::decode_len().unwrap_or(0)
-					< T::MaxMessagesPerBlock::get() as usize,
+				MessageLeaves::<T>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerBlock::get() as usize,
 				ProcessMessageError::Yield
 			);
 
@@ -399,7 +399,7 @@ pub mod pallet {
 		) -> Result<bool, ProcessMessageError> {
 			let weight = T::WeightInfo::do_process_message();
 			if meter.try_consume(weight).is_err() {
-				return Err(ProcessMessageError::Overweight(weight));
+				return Err(ProcessMessageError::Overweight(weight))
 			}
 			Self::do_process_message(origin, message)
 		}

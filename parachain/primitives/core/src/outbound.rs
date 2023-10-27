@@ -1,3 +1,4 @@
+use crate::ParaId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use derivative::Derivative;
 use ethabi::Token;
@@ -6,7 +7,6 @@ use frame_support::{
 	BoundedVec, CloneNoBound, DebugNoBound, EqNoBound, PalletError, PartialEqNoBound,
 	RuntimeDebugNoBound,
 };
-use crate::ParaId;
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
 use sp_std::{borrow::ToOwned, vec, vec::Vec};
