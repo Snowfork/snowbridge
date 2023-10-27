@@ -10,7 +10,7 @@ use crate::{
 	NextSyncCommittee, SyncCommitteePrepared,
 };
 
-use frame_support::{assert_err, assert_ok};
+use frame_support::{assert_err, assert_noop, assert_ok, dispatch::DispatchError};
 use hex_literal::hex;
 use primitives::{
 	CompactExecutionHeader, ExecutionHeaderState, Fork, ForkVersions, NextSyncCommitteeUpdate,
@@ -974,5 +974,47 @@ fn verify_message_receipt_does_not_contain_log() {
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
 		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::InvalidProof);
+	});
+}
+
+#[test]
+fn set_operating_mode() {
+	let checkpoint = load_checkpoint_update_fixture();
+	let update = load_finalized_header_update_fixture();
+	let execution_header_update = load_execution_header_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+
+		assert_ok!(EthereumBeaconClient::set_operating_mode(
+			RuntimeOrigin::root(),
+			snowbridge_core::BasicOperatingMode::Halted
+		));
+
+		assert_noop!(
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(update)),
+			Error::<Test>::Halted
+		);
+
+		assert_noop!(
+			EthereumBeaconClient::submit_execution_header(
+				RuntimeOrigin::signed(1),
+				Box::new(execution_header_update)
+			),
+			Error::<Test>::Halted
+		);
+	});
+}
+
+#[test]
+fn set_operating_mode_root_only() {
+	new_tester().execute_with(|| {
+		assert_noop!(
+			EthereumBeaconClient::set_operating_mode(
+				RuntimeOrigin::signed(1),
+				snowbridge_core::BasicOperatingMode::Halted
+			),
+			DispatchError::BadOrigin
+		);
 	});
 }

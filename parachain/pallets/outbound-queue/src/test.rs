@@ -271,7 +271,7 @@ fn process_message_fails_on_overweight_message() {
 }
 
 #[test]
-fn set_operating_mode_bad_origin() {
+fn set_operating_mode_root_only() {
 	new_tester().execute_with(|| {
 		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
 		assert_noop!(
@@ -439,6 +439,8 @@ fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_ge
 	});
 }
 
+// Governance messages should be able to bypass a halted operating mode
+// Other message sends should fail when halted
 #[test]
 fn submit_upgrade_message_success_when_queue_halted() {
 	new_tester().execute_with(|| {
