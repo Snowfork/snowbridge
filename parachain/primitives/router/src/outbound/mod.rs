@@ -126,13 +126,13 @@ where
 		};
 
 		// validate the message
-		let (ticket, fee) = OutboundQueue::validate(&outbound_message).map_err(|err| {
+		let (ticket, fees) = OutboundQueue::validate(&outbound_message).map_err(|err| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
 			SendError::Unroutable
 		})?;
 
 		// convert fee to MultiAsset
-		let fee = MultiAsset::from((MultiLocation::parent(), fee.total())).into();
+		let fee = MultiAsset::from((MultiLocation::parent(), fees.total())).into();
 
 		Ok((ticket.encode(), fee))
 	}
