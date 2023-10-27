@@ -41,7 +41,7 @@ use frame_support::{
 	ensure,
 	storage::StorageStreamIter,
 	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
-	weights::Weight,
+	weights::{Weight, WeightToFee},
 };
 use snowbridge_core::ParaId;
 use sp_core::H256;
@@ -50,7 +50,7 @@ use sp_std::prelude::*;
 
 use snowbridge_core::{
 	outbound::{
-		AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, GasMeter, Message,
+		AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, Fees, GasMeter, Message,
 		MessageHash, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
 		SendError,
 	},
@@ -115,6 +115,9 @@ pub mod pallet {
 		/// The reward in ETH (wei)
 		#[pallet::constant]
 		type DeliveryReward: Get<u128>;
+
+		/// Convert a weight value into a deductible fee based.
+		type WeightToFee: WeightToFee<Balance = Self::Balance>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -198,7 +201,7 @@ pub mod pallet {
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
 			// Reserve some weight for the `on_finalize` handler
-			T::WeightInfo::on_finalize()
+			T::WeightInfo::commit_messages()
 		}
 
 		fn on_finalize(_: BlockNumberFor<T>) {
@@ -328,7 +331,7 @@ pub mod pallet {
 		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
 		type Balance = T::Balance;
 
-		fn validate(message: &Message) -> Result<(Self::Ticket, Self::Balance), SendError> {
+		fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SendError> {
 			// The inner payload should not be too large
 			let payload = message.command.abi_encode();
 
@@ -339,8 +342,16 @@ pub mod pallet {
 				payload.len() < T::MaxMessagePayloadSize::get() as usize,
 				SendError::MessageTooLarge
 			);
+
+			let base_fee = T::WeightToFee::weight_to_fee(
+				&T::WeightInfo::do_process_message()
+					.saturating_add(T::WeightInfo::commit_one_message()),
+			);
 			let delivery_fee = Self::delivery_fee(&message.command);
+
 			let command = message.command.clone();
+			let fee = Fees { base: base_fee, delivery: delivery_fee };
+
 			let enqueued_message: EnqueuedMessage =
 				EnqueuedMessage { id: message_id, origin: message.origin, command };
 			// The whole message should not be too large
@@ -350,7 +361,7 @@ pub mod pallet {
 			let ticket =
 				OutboundQueueTicket { id: message_id, origin: message.origin, message: encoded };
 
-			Ok((ticket, delivery_fee))
+			Ok((ticket, fee))
 		}
 
 		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SendError> {

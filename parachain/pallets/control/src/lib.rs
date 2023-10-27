@@ -37,6 +37,11 @@ use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
 
+use frame_support::{
+	pallet_prelude::*,
+	traits::{tokens::Preservation, EnsureOrigin},
+};
+use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	outbound::{
 		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
@@ -83,22 +88,21 @@ where
 
 /// Whether a fee should be withdrawn to an account for sending an outbound message
 #[derive(Clone, PartialEq, RuntimeDebug)]
-enum PaysFee<T>
+pub enum PaysFee<T>
 where
 	T: Config,
 {
+	/// Fully charge includes (base_fee + delivery_fee)
 	Yes(AccountIdOf<T>),
+	/// Partially charge includes base_fee only
+	Partial(AccountIdOf<T>),
+	/// No charge
 	No,
 }
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{
-		pallet_prelude::*,
-		traits::{tokens::Preservation, EnsureOrigin},
-	};
-	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -290,7 +294,8 @@ pub mod pallet {
 			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::NoChannel);
 
 			let command = Command::UpdateChannel { para_id, mode, fee };
-			Self::send(para_id, command, PaysFee::<T>::No)?;
+			let pays_fee = PaysFee::<T>::Partial(sibling_sovereign_account::<T>(para_id));
+			Self::send(para_id, command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::UpdateChannel { para_id, mode, fee });
 			Ok(())
@@ -362,7 +367,9 @@ pub mod pallet {
 			// Ensure that origin location is some consensus system on a sibling parachain
 			let (para_id, agent_id) = ensure_sibling::<T>(&origin_location)?;
 
-			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount)
+			let pays_fee = PaysFee::<T>::Partial(sibling_sovereign_account::<T>(para_id));
+
+			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount, pays_fee)
 		}
 
 		/// Sends a message to the Gateway contract to transfer ether from an agent to `recipient`.
@@ -391,7 +398,9 @@ pub mod pallet {
 			let (para_id, agent_id) =
 				ensure_sibling::<T>(&location).map_err(|_| Error::<T>::InvalidLocation)?;
 
-			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount)
+			let pays_fee = PaysFee::<T>::No;
+
+			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount, pays_fee)
 		}
 	}
 
@@ -399,14 +408,20 @@ pub mod pallet {
 		/// Send `command` to the Gateway on the channel identified by `origin`.
 		fn send(origin: ParaId, command: Command, pays_fee: PaysFee<T>) -> DispatchResult {
 			let message = Message { origin, command };
-			let (ticket, delivery_fee) =
+			let (ticket, fee) =
 				T::OutboundQueue::validate(&message).map_err(|err| Error::<T>::Send(err))?;
 
-			if let PaysFee::Yes(sovereign_account) = pays_fee {
+			let payment = match pays_fee {
+				PaysFee::Yes(account) => Some((account, fee.total())),
+				PaysFee::Partial(account) => Some((account, fee.base)),
+				PaysFee::No => None,
+			};
+
+			if let Some((payer, fee)) = payment {
 				T::Token::transfer(
-					&sovereign_account,
+					&payer,
 					&T::TreasuryAccount::get(),
-					delivery_fee,
+					fee,
 					Preservation::Preserve,
 				)?;
 			}
@@ -422,11 +437,12 @@ pub mod pallet {
 			para_id: ParaId,
 			recipient: H160,
 			amount: u128,
+			pays_fee: PaysFee<T>,
 		) -> DispatchResult {
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
 
 			let command = Command::TransferNativeFromAgent { agent_id, recipient, amount };
-			Self::send(para_id, command, PaysFee::<T>::No)?;
+			Self::send(para_id, command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::TransferNativeFromAgent {
 				agent_id,

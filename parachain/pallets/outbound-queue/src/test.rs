@@ -5,7 +5,7 @@ use super::*;
 use frame_support::{
 	assert_err, assert_noop, assert_ok, parameter_types,
 	traits::{Everything, Hooks, ProcessMessageError},
-	weights::WeightMeter,
+	weights::{IdentityFee, WeightMeter},
 };
 
 use snowbridge_core::outbound::{AgentExecuteCommand, Command, ExportOrigin, Initializer};
@@ -98,6 +98,7 @@ impl crate::Config for Test {
 	type DeliveryFeePerGas = ConstU128<1>;
 	type DeliveryRefundPerGas = ConstU128<1>;
 	type DeliveryReward = ConstU128<1>;
+	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }
 

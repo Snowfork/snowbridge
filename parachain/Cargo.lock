@@ -1836,6 +1836,7 @@ name = "pallet-message-queue"
 version = "7.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=master#e976964644d951a1eefaaa85f1d7c7d58211ddf7"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -2617,10 +2618,12 @@ dependencies = [
  "hex",
  "hex-literal",
  "pallet-balances",
+ "pallet-message-queue",
  "parity-scale-codec",
  "polkadot-parachain",
  "scale-info",
  "snowbridge-core",
+ "snowbridge-outbound-queue",
  "sp-core",
  "sp-io",
  "sp-keyring",
@@ -2788,6 +2791,7 @@ dependencies = [
 name = "snowbridge-outbound-queue-runtime-api"
 version = "0.1.0"
 dependencies = [
+ "frame-support",
  "parity-scale-codec",
  "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",
