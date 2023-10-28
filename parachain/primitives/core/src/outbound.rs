@@ -321,10 +321,10 @@ impl GasMeter for ConstantGasMeter {
 }
 
 impl GasMeter for () {
-	const MAXIMUM_BASE_GAS: u64 = 0;
+	const MAXIMUM_BASE_GAS: u64 = 1;
 
 	fn maximum_required(_: &Command) -> u64 {
-		0
+		1
 	}
 }
 

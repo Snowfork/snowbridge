@@ -4,16 +4,16 @@ use super::*;
 
 use frame_support::{
 	assert_err, assert_noop, assert_ok, parameter_types,
-	traits::{Everything, Hooks, ProcessMessageError},
+	traits::{Everything, GenesisBuild, Hooks, ProcessMessageError},
 	weights::{IdentityFee, WeightMeter},
 };
 
 use snowbridge_core::outbound::{AgentExecuteCommand, Command, ExportOrigin, Initializer};
-use sp_core::{ConstU128, H160, H256};
+use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
-	AccountId32, DispatchError,
+	AccountId32, DispatchError, FixedU128,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -28,7 +28,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
-		OutboundQueue: crate::{Pallet, Storage, Event<T>},
+		OutboundQueue: crate::{Pallet, Call, Storage, Config<T>, Event<T>},
 	}
 );
 
@@ -84,6 +84,7 @@ parameter_types! {
 	pub const MaxMessagePayloadSize: u32 = 1024;
 	pub const MaxMessagesPerBlock: u32 = 20;
 	pub const OwnParaId: ParaId = ParaId::new(1013);
+	pub const EtherDotRate: FixedU128 = FixedU128::from_rational(10, 3);
 }
 
 impl crate::Config for Test {
@@ -95,9 +96,6 @@ impl crate::Config for Test {
 	type OwnParaId = OwnParaId;
 	type GasMeter = ();
 	type Balance = u128;
-	type DeliveryFeePerGas = ConstU128<1>;
-	type DeliveryRefundPerGas = ConstU128<1>;
-	type DeliveryReward = ConstU128<1>;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }
@@ -107,7 +105,16 @@ fn setup() {
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	crate::GenesisConfig::<Test> {
+		phantom: Default::default(),
+		exchange_rate: (10, 1).into(),
+		operating_mode: Default::default(),
+		fee_per_gas: 1,
+		reward: 1,
+	}
+	.assimilate_storage(&mut storage)
+	.unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| setup());
 	ext
@@ -207,6 +214,23 @@ fn submit_message_fail_too_large() {
 }
 
 #[test]
+fn delivery_fees() {
+	new_tester().execute_with(|| {
+		let command = Command::Upgrade {
+			impl_address: H160::zero(),
+			impl_code_hash: H256::zero(),
+			initializer: Some(Initializer {
+				params: (0..256).map(|_| 1u8).collect::<Vec<u8>>(),
+				maximum_required_gas: 0,
+			}),
+		};
+
+		// ((gas(2) * fee_per_gas(1)) + reward(2)) * xrate(10/1) = 20
+		assert_eq!(OutboundQueue::calculate_delivery_fee(&command), 30);
+	});
+}
+
+#[test]
 fn commit_exits_early_if_no_processed_messages() {
 	new_tester().execute_with(|| {
 		// on_finalize should do nothing, nor should it panic
@@ -278,6 +302,72 @@ fn set_operating_mode_root_only() {
 		assert_noop!(
 			OutboundQueue::set_operating_mode(origin, BasicOperatingMode::Halted),
 			DispatchError::BadOrigin,
+		);
+	})
+}
+
+#[test]
+fn set_exchange_rate_root_only() {
+	new_tester().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
+		assert_noop!(
+			OutboundQueue::set_exchange_rate(origin, Default::default()),
+			DispatchError::BadOrigin,
+		);
+	})
+}
+
+#[test]
+fn set_exchange_rate_invalid() {
+	new_tester().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		assert_noop!(
+			OutboundQueue::set_exchange_rate(origin, crate::MAX_EXCHANGE_RATE + 1.into()),
+			Error::<Test>::InvalidFeeParam
+		);
+	})
+}
+
+#[test]
+fn set_fee_per_gas_root_only() {
+	new_tester().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
+		assert_noop!(
+			OutboundQueue::set_fee_per_gas(origin, Default::default()),
+			DispatchError::BadOrigin,
+		);
+	})
+}
+
+#[test]
+fn set_fee_per_gas_invalid() {
+	new_tester().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		assert_noop!(
+			OutboundQueue::set_fee_per_gas(origin, crate::MAX_FEE_PER_GAS + 1),
+			Error::<Test>::InvalidFeeParam
+		);
+	})
+}
+
+#[test]
+fn set_reward_root_only() {
+	new_tester().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
+		assert_noop!(
+			OutboundQueue::set_reward(origin, Default::default()),
+			DispatchError::BadOrigin,
+		);
+	})
+}
+
+#[test]
+fn set_reward_invalid() {
+	new_tester().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		assert_noop!(
+			OutboundQueue::set_reward(origin, crate::MAX_REWARD + 1),
+			Error::<Test>::InvalidFeeParam
 		);
 	})
 }

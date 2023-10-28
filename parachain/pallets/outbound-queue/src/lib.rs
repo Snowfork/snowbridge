@@ -46,8 +46,10 @@ use frame_support::{
 };
 use scale_info::TypeInfo;
 use snowbridge_core::ParaId;
+use sp_arithmetic::FixedU128;
 use sp_core::{bounded_vec::BoundedVec, H256};
-use sp_runtime::traits::{Hash, Saturating};
+use sp_runtime::{traits::Hash, FixedPointNumber};
+
 use sp_std::prelude::*;
 
 use snowbridge_core::{
@@ -113,11 +115,19 @@ impl From<PreparedMessage> for Token {
 	}
 }
 
+pub const GWEI: u128 = 1_000_000_000;
+pub const ETH: u128 = 1_000_000_000_000_000_000;
+
+pub const MAX_FEE_PER_GAS: u128 = 300 * GWEI;
+pub const MAX_REWARD: u128 = 1 * ETH;
+pub const MAX_EXCHANGE_RATE: FixedU128 = FixedU128::from_rational(1000, 1);
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use sp_arithmetic::FixedU128;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -133,7 +143,7 @@ pub mod pallet {
 		/// Measures the maximum gas used to execute a command on Ethereum
 		type GasMeter: GasMeter;
 
-		type Balance: Balance + From<u64>;
+		type Balance: Balance + From<u128>;
 
 		/// Max bytes in a message payload
 		#[pallet::constant]
@@ -146,18 +156,6 @@ pub mod pallet {
 		/// The ID of this parachain
 		#[pallet::constant]
 		type OwnParaId: Get<ParaId>;
-
-		/// The delivery fee in DOT per unit of gas
-		#[pallet::constant]
-		type DeliveryFeePerGas: Get<Self::Balance>;
-
-		/// The refund in ETH (wei) per unit of gas
-		#[pallet::constant]
-		type DeliveryRefundPerGas: Get<u128>;
-
-		/// The reward in ETH (wei)
-		#[pallet::constant]
-		type DeliveryReward: Get<u128>;
 
 		/// Convert a weight value into a deductible fee based.
 		type WeightToFee: WeightToFee<Balance = Self::Balance>;
@@ -191,6 +189,18 @@ pub mod pallet {
 		},
 		/// Set OperatingMode
 		OperatingModeChanged { mode: BasicOperatingMode },
+		ExchangeRateChanged {
+			/// ETH/DOT exchange rate
+			exchange_rate: FixedU128,
+		},
+		FeePerGasChanged {
+			/// Ether fee per unit of gas consumed on Ethereum
+			fee_per_gas: u128,
+		},
+		RewardChanged {
+			/// Ether reward paid to relayers for delivering a message to Ethereum
+			reward: u128,
+		},
 	}
 
 	#[pallet::error]
@@ -199,6 +209,8 @@ pub mod pallet {
 		MessageTooLarge,
 		/// The pallet is halted
 		Halted,
+		/// Invalid fee param
+		InvalidFeeParam,
 	}
 
 	/// Messages to be committed in the current block. This storage value is killed in
@@ -234,6 +246,42 @@ pub mod pallet {
 	#[pallet::getter(fn operating_mode)]
 	pub type OperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
+	/// ETH/DOT exchange rate
+	#[pallet::storage]
+	#[pallet::getter(fn exchange_rate)]
+	pub type ExchangeRate<T: Config> = StorageValue<_, FixedU128, ValueQuery>;
+
+	/// Ether fee per unit of gas consumed on Ethereum
+	#[pallet::storage]
+	#[pallet::getter(fn fee_per_gas)]
+	pub type FeePerGas<T: Config> = StorageValue<_, u128, ValueQuery>;
+
+	/// Ether reward for delivering message to Ethereum
+	#[pallet::storage]
+	#[pallet::getter(fn reward)]
+	pub type Reward<T: Config> = StorageValue<_, u128, ValueQuery>;
+
+	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
+	pub struct GenesisConfig<T: Config> {
+		#[serde(skip)]
+		pub phantom: PhantomData<T>,
+		pub operating_mode: BasicOperatingMode,
+		pub exchange_rate: FixedU128,
+		pub fee_per_gas: u128,
+		pub reward: u128,
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			OperatingMode::<T>::put(self.operating_mode);
+			ExchangeRate::<T>::put(self.exchange_rate);
+			FeePerGas::<T>::put(self.fee_per_gas);
+			Reward::<T>::put(self.reward);
+		}
+	}
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
@@ -262,8 +310,50 @@ pub mod pallet {
 			mode: BasicOperatingMode,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			OperatingMode::<T>::set(mode);
+			OperatingMode::<T>::put(mode);
 			Self::deposit_event(Event::OperatingModeChanged { mode });
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_exchange_rate(origin: OriginFor<T>, exchange_rate: FixedU128) -> DispatchResult {
+			ensure_root(origin)?;
+			// An extra sanity check to ensure that governance doesn't brick the bridge
+			// by mistakenly configuring a huge fee
+			if exchange_rate > MAX_EXCHANGE_RATE {
+				return Err(Error::<T>::InvalidFeeParam.into())
+			}
+			ExchangeRate::<T>::put(exchange_rate);
+			Self::deposit_event(Event::ExchangeRateChanged { exchange_rate });
+			Ok(())
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_fee_per_gas(origin: OriginFor<T>, fee_per_gas: u128) -> DispatchResult {
+			ensure_root(origin)?;
+			// An extra sanity check to ensure that governance doesn't brick the bridge
+			// by mistakenly configuring a huge fee
+			if fee_per_gas > MAX_FEE_PER_GAS {
+				return Err(Error::<T>::InvalidFeeParam.into())
+			}
+			FeePerGas::<T>::put(fee_per_gas);
+			Self::deposit_event(Event::FeePerGasChanged { fee_per_gas });
+			Ok(())
+		}
+
+		#[pallet::call_index(3)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_reward(origin: OriginFor<T>, reward: u128) -> DispatchResult {
+			ensure_root(origin)?;
+			// An extra sanity check to ensure that governance doesn't brick the bridge
+			// by mistakenly configuring a huge fee
+			if reward > MAX_REWARD {
+				return Err(Error::<T>::InvalidFeeParam.into())
+			}
+			Reward::<T>::put(reward);
+			Self::deposit_event(Event::RewardChanged { reward });
 			Ok(())
 		}
 	}
@@ -329,7 +419,7 @@ pub mod pallet {
 			let params = enqueued_message.command.abi_encode();
 			let max_dispatch_gas = T::GasMeter::maximum_required(&enqueued_message.command) as u128;
 			let max_refund = Self::maximum_refund(&enqueued_message.command);
-			let reward = T::DeliveryReward::get();
+			let reward = Self::reward();
 
 			// Construct a prepared message, which when ABI-encoded is what the
 			// other side of the bridge will verify.
@@ -365,15 +455,27 @@ pub mod pallet {
 		}
 
 		/// Fee in DOT for delivering a message.
-		pub(crate) fn delivery_fee(command: &Command) -> T::Balance {
-			let max_gas_used = Self::maximum_overall_required_gas(command);
-			T::DeliveryFeePerGas::get().saturating_mul(max_gas_used.into())
+		pub(crate) fn calculate_delivery_fee(command: &Command) -> T::Balance {
+			// Calculate maximum gas that can be consumed by a message
+			let max_gas = Self::maximum_overall_required_gas(command);
+
+			// Calculate fee in Ether (gas cost + additional delivery reward)
+			let fee = Self::fee_per_gas()
+				.saturating_mul(max_gas.into())
+				.saturating_add(Self::reward());
+
+			// Convert to native token (DOT or KSM)
+			(Self::exchange_rate() * fee.into())
+				.into_inner()
+				.checked_div(FixedU128::accuracy())
+				.expect("checked in prep, qed")
+				.into()
 		}
 
 		/// Maximum refund in Ether for delivering a message
 		pub(crate) fn maximum_refund(command: &Command) -> u128 {
-			let max_gas_used = Self::maximum_overall_required_gas(command);
-			T::DeliveryRefundPerGas::get().saturating_mul(max_gas_used as u128)
+			let max_gas = Self::maximum_overall_required_gas(command);
+			Self::fee_per_gas().saturating_mul(max_gas.into())
 		}
 	}
 
@@ -393,13 +495,13 @@ pub mod pallet {
 				SendError::MessageTooLarge
 			);
 
-			// calculate processing fees
+			// calculate processing fees which include a local and remote component
 			let fee = Fees {
 				base: T::WeightToFee::weight_to_fee(
 					&T::WeightInfo::do_process_message()
 						.saturating_add(T::WeightInfo::commit_one_message()),
 				),
-				delivery: Self::delivery_fee(&message.command),
+				delivery: Self::calculate_delivery_fee(&message.command),
 			};
 
 			let enqueued_message: VersionedEnqueuedMessage = EnqueuedMessage {

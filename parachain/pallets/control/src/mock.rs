@@ -3,7 +3,7 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, Contains},
+	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, Contains, GenesisBuild},
 	weights::IdentityFee,
 	PalletId,
 };
@@ -95,7 +95,7 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		XcmOrigin: pallet_xcm_origin::{Pallet, Origin},
-		OutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>},
+		OutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Config<T>, Event<T>},
 		EthereumControl: snowbridge_control,
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>}
 	}
@@ -180,9 +180,6 @@ impl snowbridge_outbound_queue::Config for Test {
 	type OwnParaId = OwnParaId;
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
-	type DeliveryFeePerGas = ConstU128<1>;
-	type DeliveryRefundPerGas = ConstU128<1>;
-	type DeliveryReward = ConstU128<1>;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }
@@ -238,7 +235,18 @@ impl crate::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+	snowbridge_outbound_queue::GenesisConfig::<Test> {
+		phantom: Default::default(),
+		exchange_rate: (10, 1).into(),
+		operating_mode: Default::default(),
+		fee_per_gas: 1,
+		reward: 1,
+	}
+	.assimilate_storage(&mut storage)
+	.unwrap();
+
 	let mut ext: sp_io::TestExternalities = storage.into();
 	let initial_amount = InitialFunding::get().into();
 	let test_para_id = TestParaId::get();
