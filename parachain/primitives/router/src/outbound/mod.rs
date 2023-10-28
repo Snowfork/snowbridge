@@ -309,7 +309,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::outbound::{Fees, MessageHash, SendError};
+	use snowbridge_core::outbound::{Fees, SendError};
 	use xcm::v3::prelude::SendError as XcmSendError;
 	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
@@ -337,8 +337,8 @@ mod tests {
 			Ok(((), Fees { base: 1, delivery: 1 }))
 		}
 
-		fn submit(_: Self::Ticket) -> Result<MessageHash, SendError> {
-			Ok(MessageHash::zero())
+		fn submit(_: Self::Ticket) -> Result<H256, SendError> {
+			Ok(H256::zero())
 		}
 	}
 	struct MockErrOutboundQueue;
@@ -350,7 +350,7 @@ mod tests {
 			Err(SendError::MessageTooLarge)
 		}
 
-		fn submit(_: Self::Ticket) -> Result<MessageHash, SendError> {
+		fn submit(_: Self::Ticket) -> Result<H256, SendError> {
 			Err(SendError::MessageTooLarge)
 		}
 	}

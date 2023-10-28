@@ -36,23 +36,24 @@ mod benchmarking;
 mod test;
 
 use codec::{Decode, Encode};
-use ethabi::{self};
+use ethabi::Token;
 use frame_support::{
 	ensure,
 	storage::StorageStreamIter,
 	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
 	weights::{Weight, WeightToFee},
+	CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
+use scale_info::TypeInfo;
 use snowbridge_core::ParaId;
-use sp_core::H256;
+use sp_core::{bounded_vec::BoundedVec, H256};
 use sp_runtime::traits::{Hash, Saturating};
 use sp_std::prelude::*;
 
 use snowbridge_core::{
 	outbound::{
 		AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, Fees, GasMeter, Message,
-		MessageHash, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
-		SendError,
+		OutboundQueue as OutboundQueueTrait, SendError, VersionedEnqueuedMessage,
 	},
 	BasicOperatingMode,
 };
@@ -69,6 +70,48 @@ pub type ProcessMessageOriginOf<T> = <Pallet<T> as ProcessMessage>::Origin;
 pub use pallet::*;
 
 pub const LOG_TARGET: &str = "snowbridge-outbound-queue";
+
+/// A message which can be accepted by the [`OutboundQueue`]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
+pub struct OutboundQueueTicket<MaxMessageSize: Get<u32>> {
+	pub id: H256,
+	pub origin: ParaId,
+	pub message: BoundedVec<u8, MaxMessageSize>,
+}
+
+/// Message which has been assigned a nonce and will be committed at the end of a block
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+pub struct PreparedMessage {
+	/// ID of source parachain
+	pub origin: ParaId,
+	/// Unique nonce to prevent replaying messages
+	pub nonce: u64,
+	/// Command to execute in the Gateway contract
+	pub command: u8,
+	/// Params for the command
+	pub params: Vec<u8>,
+	/// Maximum gas allowed for message dispatch
+	pub max_dispatch_gas: u128,
+	/// Maximum gas refund for message relayer
+	pub max_refund: u128,
+	/// Reward in ether for delivering this message, in addition to the gas refund
+	pub reward: u128,
+}
+
+/// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
+impl From<PreparedMessage> for Token {
+	fn from(x: PreparedMessage) -> Token {
+		Token::Tuple(vec![
+			Token::Uint(u32::from(x.origin).into()),
+			Token::Uint(x.nonce.into()),
+			Token::Uint(x.command.into()),
+			Token::Bytes(x.params.to_vec()),
+			Token::Uint(x.max_dispatch_gas.into()),
+			Token::Uint(x.max_refund.into()),
+			Token::Uint(x.reward.into()),
+		])
+	}
+}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -270,8 +313,15 @@ pub mod pallet {
 				);
 			}
 
-			let enqueued_message: EnqueuedMessage =
-				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
+			// Decode bytes into versioned message
+			let versioned_enqueued_message: VersionedEnqueuedMessage =
+				VersionedEnqueuedMessage::decode(&mut message)
+					.map_err(|_| ProcessMessageError::Corrupt)?;
+
+			// Convert versioned message into latest supported message version
+			let enqueued_message: EnqueuedMessage = versioned_enqueued_message
+				.try_into()
+				.map_err(|_| ProcessMessageError::Unsupported)?;
 
 			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
 
@@ -336,24 +386,28 @@ pub mod pallet {
 			let payload = message.command.abi_encode();
 
 			// Create a message id for tracking progress in submission pipeline
-			let message_id: MessageHash = sp_io::hashing::blake2_256(&(message.encode())).into();
+			let message_id: H256 = sp_io::hashing::blake2_256(&(message.encode())).into();
 
 			ensure!(
 				payload.len() < T::MaxMessagePayloadSize::get() as usize,
 				SendError::MessageTooLarge
 			);
 
-			let base_fee = T::WeightToFee::weight_to_fee(
-				&T::WeightInfo::do_process_message()
-					.saturating_add(T::WeightInfo::commit_one_message()),
-			);
-			let delivery_fee = Self::delivery_fee(&message.command);
+			// calculate processing fees
+			let fee = Fees {
+				base: T::WeightToFee::weight_to_fee(
+					&T::WeightInfo::do_process_message()
+						.saturating_add(T::WeightInfo::commit_one_message()),
+				),
+				delivery: Self::delivery_fee(&message.command),
+			};
 
-			let command = message.command.clone();
-			let fee = Fees { base: base_fee, delivery: delivery_fee };
-
-			let enqueued_message: EnqueuedMessage =
-				EnqueuedMessage { id: message_id, origin: message.origin, command };
+			let enqueued_message: VersionedEnqueuedMessage = EnqueuedMessage {
+				id: message_id,
+				origin: message.origin,
+				command: message.command.clone(),
+			}
+			.into();
 			// The whole message should not be too large
 			let encoded =
 				enqueued_message.encode().try_into().map_err(|_| SendError::MessageTooLarge)?;
@@ -364,7 +418,7 @@ pub mod pallet {
 			Ok((ticket, fee))
 		}
 
-		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SendError> {
+		fn submit(ticket: Self::Ticket) -> Result<H256, SendError> {
 			// Assign an `AggregateMessageOrigin` to track the message within the MessageQueue
 			// pallet. Governance commands are assigned origin `ExportOrigin::Here`. In other words
 			// emitted from BridgeHub itself.
