@@ -3,9 +3,6 @@
 //! # Core
 //!
 //! Common traits and types
-
-#![allow(dead_code)]
-#![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod inbound;
@@ -30,3 +27,6 @@ where
 {
 	SiblingParaId::from(para_id).into_account_truncating()
 }
+
+pub const GWEI: u128 = 1_000_000_000;
+pub const ETH: u128 = 1_000_000_000_000_000_000;
