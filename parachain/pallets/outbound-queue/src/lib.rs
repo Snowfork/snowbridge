@@ -393,8 +393,8 @@ pub mod pallet {
 				Self::fee_config().reward,
 			);
 			let remote_fee =
-				FixedU128::from(remote_fee).checked_div(&Self::fee_config().exchange_rate)?;
-			let remote_fee = remote_fee
+				FixedU128::from(remote_fee)
+				.checked_div(&Self::fee_config().exchange_rate)?
 				.into_inner()
 				.checked_div(FixedU128::accuracy())
 				.expect("accuracy is not zero; qed")
