@@ -1,31 +1,33 @@
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{traits::tokens::Balance as BalanceT, PalletError};
+use frame_support::PalletError;
 pub use polkadot_parachain::primitives::Id as ParaId;
 use scale_info::TypeInfo;
+use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 use sp_core::{RuntimeDebug, H256};
 
-pub use v1::{AgentExecuteCommand, Command, EnqueuedMessage, Initializer, Message, OperatingMode};
+pub use v1::{AgentExecuteCommand, Command, QueuedMessage, Initializer, Message, OperatingMode};
 
 /// Enqueued outbound messages need to be versioned to prevent data corruption
 /// or loss after forkless runtime upgrades
-#[derive(Encode, Decode, TypeInfo, PartialEq, Clone, RuntimeDebug)]
-pub enum VersionedEnqueuedMessage {
-	V1(EnqueuedMessage),
+#[derive(Encode, Decode, TypeInfo, Clone, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(PartialEq))]
+pub enum VersionedQueuedMessage {
+	V1(QueuedMessage),
 }
 
-impl TryFrom<VersionedEnqueuedMessage> for EnqueuedMessage {
+impl TryFrom<VersionedQueuedMessage> for QueuedMessage {
 	type Error = ();
-	fn try_from(x: VersionedEnqueuedMessage) -> Result<Self, Self::Error> {
-		use VersionedEnqueuedMessage::*;
+	fn try_from(x: VersionedQueuedMessage) -> Result<Self, Self::Error> {
+		use VersionedQueuedMessage::*;
 		match x {
 			V1(x) => Ok(x),
 		}
 	}
 }
 
-impl<T: Into<EnqueuedMessage>> From<T> for VersionedEnqueuedMessage {
+impl<T: Into<QueuedMessage>> From<T> for VersionedQueuedMessage {
 	fn from(x: T) -> Self {
-		VersionedEnqueuedMessage::V1(x.into())
+		VersionedQueuedMessage::V1(x.into())
 	}
 }
 
@@ -39,7 +41,8 @@ mod v1 {
 	use sp_std::{borrow::ToOwned, vec, vec::Vec};
 
 	/// A message which can be accepted by the [`OutboundQueue`]
-	#[derive(Encode, Decode, TypeInfo, PartialEq, Clone, RuntimeDebug)]
+	#[derive(Encode, Decode, TypeInfo, Clone, RuntimeDebug)]
+	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub struct Message {
 		/// The parachain from which the message originated
 		pub origin: ParaId,
@@ -54,7 +57,8 @@ mod v1 {
 	}
 
 	/// A command which is executable by the Gateway contract on Ethereum
-	#[derive(Encode, Decode, TypeInfo, PartialEq, Clone, RuntimeDebug)]
+	#[derive(Encode, Decode, TypeInfo, Clone, RuntimeDebug)]
+	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub enum Command {
 		/// Execute a sub-command within an agent for a consensus system in Polkadot
 		AgentExecute {
@@ -219,8 +223,9 @@ mod v1 {
 	}
 
 	/// Message which is awaiting processing in the MessageQueue pallet
-	#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
-	pub struct EnqueuedMessage {
+	#[derive(Encode, Decode, Clone, RuntimeDebug, TypeInfo)]
+	#[cfg_attr(feature = "std", derive(PartialEq))]
+	pub struct QueuedMessage {
 		/// Message ID (usually hash of message)
 		pub id: H256,
 		/// ID of source parachain
@@ -230,33 +235,48 @@ mod v1 {
 	}
 }
 
-/// OutboundFee which covers the cost of execution on both BridgeHub and Ethereum
-#[derive(Copy, Clone, Default, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct Fees<Balance: BalanceT> {
-	/// Fee for processing the message locally
-	pub base: Balance,
-	/// Fee for processing the message remotely
-	pub delivery: Balance,
+#[cfg_attr(feature = "std", derive(PartialEq, Debug))]
+/// Fee for delivering message
+pub struct Fee<Balance>
+where
+	Balance: BaseArithmetic + Unsigned + Copy,
+{
+	/// Fee to cover cost of processing the message locally
+	pub local: Balance,
+	/// Fee to cover cost processing the message remotely
+	pub remote: Balance,
 }
 
-impl<Balance: BalanceT> Fees<Balance> {
+impl<Balance> Fee<Balance>
+where
+	Balance: BaseArithmetic + Unsigned + Copy,
+{
 	pub fn total(&self) -> Balance {
-		self.base.saturating_add(self.delivery)
+		self.local.saturating_add(self.remote)
 	}
 }
 
-/// A trait for enqueueing messages for delivery to Ethereum
-pub trait OutboundQueue {
+impl<Balance> From<(Balance, Balance)> for Fee<Balance>
+where
+	Balance: BaseArithmetic + Unsigned + Copy,
+{
+	fn from((local, remote): (Balance, Balance)) -> Self {
+		Self { local, remote }
+	}
+}
+
+/// A trait for sending messages to Ethereum
+pub trait SendMessage {
 	type Ticket: Clone + Encode + Decode;
-	type Balance: BalanceT;
+	type Balance: BaseArithmetic + Unsigned + Copy;
 
 	/// Validate an outbound message and return a tuple:
-	/// 1. A ticket for submitting the message
-	/// 2. The fees for local processing and final delivery to Ethereum
-	fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SendError>;
+	/// 1. Ticket for submitting the message
+	/// 2. Delivery fee
+	fn validate(message: &Message) -> Result<(Self::Ticket, Fee<Self::Balance>), SendError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
-	fn submit(ticket: Self::Ticket) -> Result<H256, SendError>;
+	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError>;
 }
 
 /// Reasons why sending to Ethereum could not be initiated
@@ -266,6 +286,10 @@ pub enum SendError {
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
 	Halted,
+	/// An arithmetic error occurred while calculating fees
+	Overflow,
+	/// Too many enqueued messages
+	QueueFull,
 }
 
 pub trait GasMeter {
@@ -334,14 +358,14 @@ impl From<u32> for AggregateMessageOrigin {
 	}
 }
 
-#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, Copy, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum ExportOrigin {
 	Here,
 	Sibling(ParaId),
 }
 
 /// Aggregate message origin for the `MessageQueue` pallet.
-#[derive(Encode, Decode, Clone, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, Copy, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum AggregateMessageOrigin {
 	/// Message is to be exported via a bridge
 	Export(ExportOrigin),

@@ -20,7 +20,7 @@ mod benchmarks {
 	/// Benchmark for processing a message.
 	#[benchmark]
 	fn do_process_message() -> Result<(), BenchmarkError> {
-		let enqueued_message = EnqueuedMessage {
+		let enqueued_message = QueuedMessage {
 			id: H256::zero().into(),
 			origin: 1000.into(),
 			command: Command::Upgrade {
@@ -47,7 +47,7 @@ mod benchmarks {
 
 	/// Benchmark for producing final messages commitment
 	#[benchmark]
-	fn do_commit_messages() -> Result<(), BenchmarkError> {
+	fn commit() -> Result<(), BenchmarkError> {
 		// Assume worst case, where `MaxMessagesPerBlock` messages need to be committed.
 		for i in 0..T::MaxMessagesPerBlock::get() {
 			let leaf_data: [u8; 1] = [i as u8];
@@ -57,7 +57,7 @@ mod benchmarks {
 
 		#[block]
 		{
-			OutboundQueue::<T>::commit_messages();
+			OutboundQueue::<T>::commit();
 		}
 
 		Ok(())
@@ -65,13 +65,13 @@ mod benchmarks {
 
 	/// Benchmark for producing commitment for a single message
 	#[benchmark]
-	fn do_commit_one_message() -> Result<(), BenchmarkError> {
+	fn commit_single() -> Result<(), BenchmarkError> {
 		let leaf = <T as Config>::Hashing::hash(&[100; 1]);
 		MessageLeaves::<T>::append(leaf);
 
 		#[block]
 		{
-			OutboundQueue::<T>::commit_messages();
+			OutboundQueue::<T>::commit();
 		}
 
 		Ok(())

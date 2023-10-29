@@ -95,7 +95,7 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		XcmOrigin: pallet_xcm_origin::{Pallet, Origin},
-		OutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Config<T>, Event<T>},
+		OutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Config, Event<T>},
 		EthereumControl: snowbridge_control,
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>}
 	}
@@ -237,15 +237,12 @@ impl crate::Config for Test {
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	snowbridge_outbound_queue::GenesisConfig::<Test> {
-		phantom: Default::default(),
-		exchange_rate: (10, 1).into(),
+	let config = snowbridge_outbound_queue::GenesisConfig {
 		operating_mode: Default::default(),
-		fee_per_gas: 1,
-		reward: 1,
-	}
-	.assimilate_storage(&mut storage)
-	.unwrap();
+		fee_config: Default::default(),
+	};
+
+	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	let initial_amount = InitialFunding::get().into();

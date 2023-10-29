@@ -5,8 +5,7 @@ authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2021"
 
 [dependencies]
-derivative = { version = "2.2.0", default-features = false, features = ["use_core"] }
-serde = { version = "1.0.164", optional = true, features = [ "derive" ] }
+serde = { version = "1.0.164", optional = true, features = [ "derive", "alloc" ], default-features = false }
 codec = { package = "parity-scale-codec", version = "3.1.5", default-features = false }
 scale-info = { version = "2.7.0", default-features = false, features = ["derive"] }
 snowbridge-ethereum = { path = "../ethereum", default-features = false }
@@ -19,6 +18,8 @@ frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
+
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
 
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
@@ -30,7 +31,7 @@ hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 [features]
 default = ["std"]
 std = [
-    "serde",
+    "serde/std",
     "codec/std",
     "scale-info/std",
     "frame-support/std",
@@ -44,4 +45,5 @@ std = [
     "xcm/std",
     "ethabi/std",
 ]
+serde = ["dep:serde", "scale-info/serde"]
 runtime-benchmarks = []

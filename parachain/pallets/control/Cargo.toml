@@ -20,7 +20,6 @@ scale-info = { version = "2.6.0", default-features = false, features = ["derive"
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
-snowbridge-core = { path = "../../primitives/core", default-features = false }
 
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "master", default-features = false }
@@ -32,6 +31,7 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "ma
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "master", default-features = false }
 
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
+snowbridge-core = { path = "../../primitives/core", default-features = false }
 
 [dev-dependencies]
 hex = "0.4.1"
@@ -58,6 +58,7 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"ethabi/std",
+	"snowbridge-core/std"
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

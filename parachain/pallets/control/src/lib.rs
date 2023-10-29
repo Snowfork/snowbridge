@@ -43,10 +43,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use snowbridge_core::{
-	outbound::{
-		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait, ParaId,
-		SendError,
-	},
+	outbound::{Command, Initializer, Message, OperatingMode, ParaId, SendError, SendMessage},
 	sibling_sovereign_account, AgentId,
 };
 
@@ -92,9 +89,9 @@ pub enum PaysFee<T>
 where
 	T: Config,
 {
-	/// Fully charge includes (base_fee + delivery_fee)
+	/// Fully charge includes (local + remote fee)
 	Yes(AccountIdOf<T>),
-	/// Partially charge includes base_fee only
+	/// Partially charge includes local only
 	Partial(AccountIdOf<T>),
 	/// No charge
 	No,
@@ -115,7 +112,7 @@ pub mod pallet {
 		type MessageHasher: Hash<Output = H256>;
 
 		/// Send messages to Ethereum
-		type OutboundQueue: OutboundQueueTrait<Balance = BalanceOf<Self>>;
+		type OutboundQueue: SendMessage<Balance = BalanceOf<Self>>;
 
 		/// The ID of this parachain
 		type OwnParaId: Get<ParaId>;
@@ -413,7 +410,7 @@ pub mod pallet {
 
 			let payment = match pays_fee {
 				PaysFee::Yes(account) => Some((account, fee.total())),
-				PaysFee::Partial(account) => Some((account, fee.base)),
+				PaysFee::Partial(account) => Some((account, fee.local)),
 				PaysFee::No => None,
 			};
 
@@ -426,7 +423,7 @@ pub mod pallet {
 				)?;
 			}
 
-			T::OutboundQueue::submit(ticket).map_err(|err| Error::<T>::Send(err))?;
+			T::OutboundQueue::deliver(ticket).map_err(|err| Error::<T>::Send(err))?;
 			Ok(())
 		}
 
