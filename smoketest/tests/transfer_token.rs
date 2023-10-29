@@ -22,6 +22,7 @@ use snowbridge_smoketest::{
 				v3::{
 					junction::{Junction, NetworkId},
 					junctions::Junctions,
+					junctions::Junctions::Here,
 					multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
 				},
 				VersionedMultiAssets, VersionedMultiLocation,
@@ -59,18 +60,25 @@ async fn transfer_token() {
 
 	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new(keypair);
 
+	let fee: u128 = 1000_800_566_581;
 	let amount: u128 = 1_000_000_000;
-	let assets = VersionedMultiAssets::V3(MultiAssets(vec![MultiAsset {
-		id: AssetId::Concrete(MultiLocation {
-			parents: 2,
-			interior: Junctions::X3(
-				Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
-				Junction::AccountKey20 { network: None, key: GATEWAY_PROXY_CONTRACT.into() },
-				Junction::AccountKey20 { network: None, key: WETH_CONTRACT.into() },
-			),
-		}),
-		fun: Fungibility::Fungible(amount),
-	}]));
+	let assets = VersionedMultiAssets::V3(MultiAssets(vec![
+		MultiAsset {
+			id: AssetId::Concrete(MultiLocation { parents: 1, interior: Here }),
+			fun: Fungibility::Fungible(fee),
+		},
+		MultiAsset {
+			id: AssetId::Concrete(MultiLocation {
+				parents: 2,
+				interior: Junctions::X3(
+					Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+					Junction::AccountKey20 { network: None, key: GATEWAY_PROXY_CONTRACT.into() },
+					Junction::AccountKey20 { network: None, key: WETH_CONTRACT.into() },
+				),
+			}),
+			fun: Fungibility::Fungible(amount),
+		},
+	]));
 
 	let destination = VersionedMultiLocation::V3(MultiLocation {
 		parents: 2,
@@ -100,7 +108,10 @@ async fn transfer_token() {
 		.await
 		.expect("call success");
 
-	println!("bridge_transfer call issued at assethub block hash {:?}", result.block_hash());
+	println!(
+		"reserve_transfer_assets call issued at assethub block hash {:?}",
+		result.block_hash()
+	);
 
 	let wait_for_blocks = 50;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
@@ -120,7 +131,7 @@ async fn transfer_token() {
 			}
 		}
 		if transfer_event_found {
-			break
+			break;
 		}
 	}
 	assert!(transfer_event_found);
