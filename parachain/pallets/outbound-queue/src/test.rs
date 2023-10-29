@@ -12,7 +12,7 @@ use snowbridge_core::outbound::{AgentExecuteCommand, Command, ExportOrigin, Init
 use sp_core::{ConstU128, H160, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
-	AccountId32, BoundedVec, BuildStorage, DispatchError,
+	AccountId32, BuildStorage, DispatchError,
 };
 
 type Block = frame_system::mocking::MockBlock<Test>;

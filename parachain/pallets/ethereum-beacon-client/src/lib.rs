@@ -338,9 +338,9 @@ pub mod pallet {
 			// committee period.
 			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
 			ensure!(
-				latest_execution_state.beacon_slot == 0 ||
-					latest_finalized_state.slot <
-						latest_execution_state.beacon_slot + max_latency as u64,
+				latest_execution_state.beacon_slot == 0
+					|| latest_finalized_state.slot
+						< latest_execution_state.beacon_slot + max_latency as u64,
 				Error::<T>::ExecutionHeaderTooFarBehind
 			);
 			Ok(())
@@ -358,8 +358,8 @@ pub mod pallet {
 
 			// Verify update does not skip a sync committee period.
 			ensure!(
-				update.signature_slot > update.attested_header.slot &&
-					update.attested_header.slot >= update.finalized_header.slot,
+				update.signature_slot > update.attested_header.slot
+					&& update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidUpdateSlot
 			);
 			// Retrieve latest finalized state.
@@ -379,12 +379,12 @@ pub mod pallet {
 
 			// Verify update is relevant.
 			let update_attested_period = compute_period(update.attested_header.slot);
-			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
-				(update.next_sync_committee_update.is_some() &&
-					update_attested_period == store_period);
+			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists()
+				&& (update.next_sync_committee_update.is_some()
+					&& update_attested_period == store_period);
 			ensure!(
-				update.attested_header.slot > latest_finalized_state.slot ||
-					update_has_next_sync_committee,
+				update.attested_header.slot > latest_finalized_state.slot
+					|| update_has_next_sync_committee,
 				Error::<T>::IrrelevantUpdate
 			);
 
@@ -541,9 +541,9 @@ pub mod pallet {
 			// Checks that we don't skip execution headers, they need to be imported sequentially.
 			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
 			ensure!(
-				latest_execution_state.block_number == 0 ||
-					update.execution_header.block_number ==
-						latest_execution_state.block_number + 1,
+				latest_execution_state.block_number == 0
+					|| update.execution_header.block_number
+						== latest_execution_state.block_number + 1,
 				Error::<T>::ExecutionHeaderSkippedBlock
 			);
 
@@ -587,7 +587,7 @@ pub mod pallet {
 					let state = <FinalizedBeaconState<T>>::get(block_root)
 						.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
 					if update.header.slot != state.slot {
-						return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
+						return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into());
 					}
 				},
 			}
@@ -777,13 +777,13 @@ pub mod pallet {
 		/// Returns the fork version based on the current epoch.
 		pub(super) fn select_fork_version(fork_versions: &ForkVersions, epoch: u64) -> ForkVersion {
 			if epoch >= fork_versions.capella.epoch {
-				return fork_versions.capella.version
+				return fork_versions.capella.version;
 			}
 			if epoch >= fork_versions.bellatrix.epoch {
-				return fork_versions.bellatrix.version
+				return fork_versions.bellatrix.version;
 			}
 			if epoch >= fork_versions.altair.epoch {
-				return fork_versions.altair.version
+				return fork_versions.altair.version;
 			}
 
 			fork_versions.genesis.version

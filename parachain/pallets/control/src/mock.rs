@@ -10,10 +10,7 @@ use frame_support::{
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
-use snowbridge_core::{
-	outbound::{ConstantGasMeter, ParaId},
-	sibling_sovereign_account, AgentId,
-};
+use snowbridge_core::{outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, ParaId};
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
 	AccountId32, BuildStorage,
@@ -157,6 +154,7 @@ impl pallet_message_queue::Config for Test {
 	type HeapSize = HeapSize;
 	type MaxStale = MaxStale;
 	type ServiceWeight = ServiceWeight;
+	type QueuePausedQuery = ();
 }
 
 parameter_types! {

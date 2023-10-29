@@ -40,7 +40,7 @@ hex-literal = { version = "0.4.1" }
 pallet-balances = { path = "../../../polkadot-sdk/substrate/frame/balances" }
 sp-keyring = { path = "../../../polkadot-sdk/substrate/primitives/keyring" }
 polkadot-primitives = { path = "../../../polkadot-sdk/polkadot/primitives" }
-pallet-message-queue = { path = "../../../substrate/frame/message-queue" }
+pallet-message-queue = { path = "../../../polkadot-sdk/substrate/frame/message-queue" }
 snowbridge-outbound-queue = { path = "../outbound-queue" }
 
 [features]

@@ -44,10 +44,10 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	outbound::{
-		sibling_sovereign_account, AgentId, Command, Initializer, Message, OperatingMode,
-		OutboundQueue as OutboundQueueTrait, ParaId, SendError,
+		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait,
+		SendError,
 	},
-	sibling_sovereign_account, AgentId,
+	sibling_sovereign_account, AgentId, ParaId,
 };
 
 #[cfg(feature = "runtime-benchmarks")]

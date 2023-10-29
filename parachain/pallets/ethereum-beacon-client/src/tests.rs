@@ -10,7 +10,7 @@ use crate::{
 	NextSyncCommittee, SyncCommitteePrepared,
 };
 
-use frame_support::{assert_err, assert_noop, assert_ok, dispatch::DispatchError};
+use frame_support::{assert_err, assert_noop, assert_ok};
 use hex_literal::hex;
 use primitives::{
 	CompactExecutionHeader, ExecutionHeaderState, Fork, ForkVersions, NextSyncCommitteeUpdate,
@@ -18,6 +18,7 @@ use primitives::{
 use rand::{thread_rng, Rng};
 use snowbridge_core::{inbound::Verifier, RingBufferMap};
 use sp_core::H256;
+use sp_runtime::DispatchError;
 
 /// Arbitrary hash used for tests and invalid hashes.
 const TEST_HASH: [u8; 32] =
@@ -623,8 +624,8 @@ fn submit_update_execution_headers_too_far_behind() {
 	let next_update = load_next_sync_committee_update_fixture();
 
 	new_tester().execute_with(|| {
-		let far_ahead_finalized_header_slot = finalized_header_update.finalized_header.slot +
-			(EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH * 2) as u64;
+		let far_ahead_finalized_header_slot = finalized_header_update.finalized_header.slot
+			+ (EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH * 2) as u64;
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 		assert_ok!(EthereumBeaconClient::submit(
 			RuntimeOrigin::signed(1),
