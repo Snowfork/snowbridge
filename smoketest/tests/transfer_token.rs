@@ -21,8 +21,7 @@ use snowbridge_smoketest::{
 			xcm::{
 				v3::{
 					junction::{Junction, NetworkId},
-					junctions::Junctions,
-					junctions::Junctions::Here,
+					junctions::{Junctions, Junctions::Here},
 					multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
 				},
 				VersionedMultiAssets, VersionedMultiLocation,
@@ -131,7 +130,7 @@ async fn transfer_token() {
 			}
 		}
 		if transfer_event_found {
-			break;
+			break
 		}
 	}
 	assert!(transfer_event_found);

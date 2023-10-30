@@ -624,8 +624,8 @@ fn submit_update_execution_headers_too_far_behind() {
 	let next_update = load_next_sync_committee_update_fixture();
 
 	new_tester().execute_with(|| {
-		let far_ahead_finalized_header_slot = finalized_header_update.finalized_header.slot
-			+ (EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH * 2) as u64;
+		let far_ahead_finalized_header_slot = finalized_header_update.finalized_header.slot +
+			(EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH * 2) as u64;
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 		assert_ok!(EthereumBeaconClient::submit(
 			RuntimeOrigin::signed(1),
