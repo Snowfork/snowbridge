@@ -1,7 +1,6 @@
-use crate::ParaId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::PalletError;
-pub use polkadot_parachain::primitives::Id as ParaId;
+pub use polkadot_parachain_primitives::primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 use sp_core::{RuntimeDebug, H256};
@@ -35,10 +34,9 @@ impl<T: Into<QueuedMessage>> From<T> for VersionedQueuedMessage {
 mod v1 {
 	use codec::{Decode, Encode};
 	use ethabi::Token;
-	use frame_support::RuntimeDebug;
-	pub use polkadot_parachain::primitives::Id as ParaId;
+	use polkadot_parachain_primitives::primitives::Id as ParaId;
 	use scale_info::TypeInfo;
-	use sp_core::{H160, H256, U256};
+	use sp_core::{RuntimeDebug, H160, H256, U256};
 	use sp_std::{borrow::ToOwned, vec, vec::Vec};
 
 	/// A message which can be accepted by the [`OutboundQueue`]

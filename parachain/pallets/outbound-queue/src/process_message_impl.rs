@@ -16,7 +16,7 @@ impl<T: Config> ProcessMessage for Pallet<T> {
 		_: &mut [u8; 32],
 	) -> Result<bool, ProcessMessageError> {
 		let weight = T::WeightInfo::do_process_message();
-		if !meter.check_accrue(weight) {
+		if meter.try_consume(weight).is_err() {
 			return Err(ProcessMessageError::Overweight(weight))
 		}
 		Self::do_process_message(origin, message)

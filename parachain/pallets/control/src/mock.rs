@@ -3,7 +3,7 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, Contains, GenesisBuild},
+	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, Contains},
 	weights::IdentityFee,
 	PalletId,
 };
@@ -87,7 +87,7 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		XcmOrigin: pallet_xcm_origin::{Pallet, Origin},
-		OutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Config, Event<T>},
+		OutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Config<T>, Event<T>},
 		EthereumControl: snowbridge_control,
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>}
 	}
@@ -227,14 +227,15 @@ impl crate::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
-	let config = snowbridge_outbound_queue::GenesisConfig {
+	snowbridge_outbound_queue::GenesisConfig::<Test> {
 		operating_mode: Default::default(),
 		fee_config: Default::default(),
-	};
-
-	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
+		_config: Default::default(),
+	}
+	.assimilate_storage(&mut storage)
+	.unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	let initial_amount = InitialFunding::get().into();

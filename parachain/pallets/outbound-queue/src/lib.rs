@@ -91,6 +91,7 @@ use frame_support::{
 	storage::StorageStreamIter,
 	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessageError},
 	weights::{Weight, WeightToFee},
+	DefaultNoBound,
 };
 use snowbridge_core::{
 	outbound::{
@@ -234,14 +235,16 @@ pub mod pallet {
 	pub type FeeConfig<T: Config> = StorageValue<_, FeeConfigRecord, ValueQuery>;
 
 	#[pallet::genesis_config]
-	#[derive(Default)]
-	pub struct GenesisConfig {
+	#[derive(DefaultNoBound)]
+	pub struct GenesisConfig<T: Config> {
 		pub operating_mode: BasicOperatingMode,
 		pub fee_config: FeeConfigRecord,
+		#[serde(skip)]
+		pub _config: sp_std::marker::PhantomData<T>,
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			self.fee_config.validate().expect("invalid fee configuration");
 			OperatingMode::<T>::put(self.operating_mode);

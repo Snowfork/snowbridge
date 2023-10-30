@@ -4,15 +4,14 @@ use super::*;
 
 use frame_support::{
 	parameter_types,
-	traits::{Everything, GenesisBuild, Hooks},
+	traits::{Everything, Hooks},
 	weights::IdentityFee,
 };
 
 use sp_core::{ConstU32, H256};
 use sp_runtime::{
-	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
-	AccountId32,
+	AccountId32, BuildStorage,
 };
 
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -23,7 +22,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
-		OutboundQueue: crate::{Pallet, Storage, Config, Event<T>},
+		OutboundQueue: crate::{Pallet, Storage, Config<T>, Event<T>},
 	}
 );
 
@@ -97,14 +96,15 @@ fn setup() {
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
-	let config = crate::GenesisConfig {
+	crate::GenesisConfig::<Test> {
 		operating_mode: Default::default(),
 		fee_config: FeeConfigRecord { exchange_rate: (1, 10).into(), fee_per_gas: 1, reward: 1 },
-	};
-
-	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
+		_config: Default::default(),
+	}
+	.assimilate_storage(&mut storage)
+	.unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| setup());

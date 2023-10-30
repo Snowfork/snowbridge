@@ -5,7 +5,7 @@ use core::slice::Iter;
 
 use codec::{Decode, Encode};
 
-use frame_support::{ensure, log, traits::Get};
+use frame_support::{ensure, traits::Get};
 use snowbridge_core::outbound::{AgentExecuteCommand, Command, Message, SendMessage};
 use sp_core::H256;
 use sp_std::{marker::PhantomData, prelude::*};
