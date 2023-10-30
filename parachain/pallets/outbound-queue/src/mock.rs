@@ -8,7 +8,8 @@ use frame_support::{
 	weights::IdentityFee,
 };
 
-use sp_core::{ConstU32, H256};
+use snowbridge_core::outbound::*;
+use sp_core::{ConstU32, H160, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
 	AccountId32, BuildStorage,
@@ -71,7 +72,7 @@ impl pallet_message_queue::Config for Test {
 	type HeapSize = HeapSize;
 	type MaxStale = MaxStale;
 	type ServiceWeight = ServiceWeight;
-	type QueuePausedQuery = ();
+	type QueuePausedQuery = OutboundQueue;
 }
 
 parameter_types! {
@@ -125,4 +126,52 @@ pub fn run_to_end_of_next_block() {
 	MessageQueue::on_finalize(System::block_number());
 	OutboundQueue::on_finalize(System::block_number());
 	System::on_finalize(System::block_number());
+}
+
+pub type OwnParaIdOf<T> = <T as Config>::OwnParaId;
+
+pub fn mock_governance_message<T>() -> Message
+where
+	T: Config,
+{
+	Message {
+		origin: OwnParaIdOf::<T>::get(),
+		command: Command::Upgrade {
+			impl_address: H160::zero(),
+			impl_code_hash: H256::zero(),
+			initializer: None,
+		},
+	}
+}
+
+// Message should fail validation as it is too large
+pub fn mock_invalid_governance_message<T>() -> Message
+where
+	T: Config,
+{
+	Message {
+		origin: OwnParaIdOf::<T>::get(),
+		command: Command::Upgrade {
+			impl_address: H160::zero(),
+			impl_code_hash: H256::zero(),
+			initializer: Some(Initializer {
+				params: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
+				maximum_required_gas: 0,
+			}),
+		},
+	}
+}
+
+pub fn mock_message(sibling_para_id: u32) -> Message {
+	Message {
+		origin: sibling_para_id.into(),
+		command: Command::AgentExecute {
+			agent_id: Default::default(),
+			command: AgentExecuteCommand::TransferToken {
+				token: Default::default(),
+				recipient: Default::default(),
+				amount: 0,
+			},
+		},
+	}
 }

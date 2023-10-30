@@ -72,6 +72,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod api;
 pub mod process_message_impl;
+pub mod queue_paused_query_impl;
 pub mod send_message_impl;
 pub mod types;
 pub mod weights;
@@ -87,7 +88,6 @@ mod test;
 
 use codec::Decode;
 use frame_support::{
-	ensure,
 	storage::StorageStreamIter,
 	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessageError},
 	weights::{Weight, WeightToFee},
@@ -332,13 +332,11 @@ pub mod pallet {
 				Yield
 			);
 
+			// If this is a high priority message, mark it as processed
 			if let Export(Here) = origin {
 				PendingHighPriorityMessageCount::<T>::mutate(|count| {
 					*count = count.saturating_sub(1)
 				});
-			} else {
-				ensure!(!Self::operating_mode().is_halted(), Yield);
-				ensure!(PendingHighPriorityMessageCount::<T>::get() == 0, Yield);
 			}
 
 			// Decode bytes into versioned message
