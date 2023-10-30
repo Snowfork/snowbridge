@@ -5,7 +5,8 @@ use core::slice::Iter;
 
 use codec::{Decode, Encode};
 
-use frame_support::{ensure, log, traits::Get};
+use frame_support::{ensure, traits::Get};
+use log;
 use snowbridge_core::outbound::{
 	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
 };
@@ -30,7 +31,7 @@ where
 	OutboundQueue::Ticket: Encode + Decode,
 	AgentHashedDescription: ConvertLocation<H256>,
 {
-	type Ticket = Vec<u8>;
+	type Ticket = (Vec<u8>, XcmHash);
 
 	fn validate(
 		network: NetworkId,
@@ -134,11 +135,11 @@ where
 		// convert fee to MultiAsset
 		let fee = MultiAsset::from((MultiLocation::parent(), fees.total())).into();
 
-		Ok((ticket.encode(), fee))
+		Ok(((ticket.encode(), XcmHash::default()), fee))
 	}
 
-	fn deliver(blob: Vec<u8>) -> Result<XcmHash, SendError> {
-		let ticket: OutboundQueue::Ticket = OutboundQueue::Ticket::decode(&mut blob.as_ref())
+	fn deliver(blob: (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {
+		let ticket: OutboundQueue::Ticket = OutboundQueue::Ticket::decode(&mut blob.0.as_ref())
 			.map_err(|_| {
 				log::trace!(target: "xcm::ethereum_blob_exporter", "undeliverable due to decoding error");
 				SendError::NotApplicable
@@ -702,7 +703,7 @@ mod tests {
 			BridgedLocation,
 			MockErrOutboundQueue,
 			AgentIdOf,
-		>::deliver(hex!("deadbeef").to_vec());
+		>::deliver((hex!("deadbeef").to_vec(), XcmHash::default()));
 		assert_eq!(result, Err(XcmSendError::Transport("other transport error")))
 	}
 

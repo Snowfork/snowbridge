@@ -10,7 +10,7 @@ use crate::{
 	NextSyncCommittee, SyncCommitteePrepared,
 };
 
-use frame_support::{assert_err, assert_noop, assert_ok, dispatch::DispatchError};
+use frame_support::{assert_err, assert_noop, assert_ok};
 use hex_literal::hex;
 use primitives::{
 	CompactExecutionHeader, ExecutionHeaderState, Fork, ForkVersions, NextSyncCommitteeUpdate,
@@ -18,6 +18,7 @@ use primitives::{
 use rand::{thread_rng, Rng};
 use snowbridge_core::{inbound::Verifier, RingBufferMap};
 use sp_core::H256;
+use sp_runtime::DispatchError;
 
 /// Arbitrary hash used for tests and invalid hashes.
 const TEST_HASH: [u8; 32] =

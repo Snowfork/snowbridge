@@ -14,26 +14,26 @@ use snowbridge_smoketest::{
 		i_gateway::{self, UpgradedFilter},
 	},
 	parachains::{
-		bridgehub::{self, api::ethereum_control},
+		bridgehub::{
+			self,
+			api::{ethereum_control, runtime_types::snowbridge_core::outbound::Initializer},
+		},
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call,
 			rococo_runtime::RuntimeCall,
 			sp_weights::weight_v2::Weight,
+			staging_xcm::v3::multilocation::MultiLocation,
 			xcm::{
 				double_encoded::DoubleEncoded,
 				v2::OriginKind,
-				v3::{
-					junction::Junction, junctions::Junctions, multilocation::MultiLocation,
-					Instruction, WeightLimit, Xcm,
-				},
+				v3::{junction::Junction, junctions::Junctions, Instruction, WeightLimit, Xcm},
 				VersionedMultiLocation, VersionedXcm,
 			},
 		},
 	},
 };
-use snowbridge_smoketest::parachains::bridgehub::api::runtime_types::snowbridge_core::outbound::Initializer;
-use sp_core::{blake2_256, sr25519::Pair, Pair as PairT};
+use sp_core::{sr25519::Pair, Pair as PairT};
 use subxt::{
 	tx::{PairSigner, TxPayload},
 	OnlineClient, PolkadotConfig,
@@ -77,7 +77,6 @@ async fn upgrade_gateway() {
 	let d_0 = 99;
 	let d_1 = 66;
 	let params = ethers::abi::encode(&[Token::Uint(d_0.into()), Token::Uint(d_1.into())]);
-	let params_hash = blake2_256(&params);
 
 	let code = ethereum_client
 		.get_code(NameOrAddress::Address(GATETWAY_UPGRADE_MOCK_CONTRACT.into()), None)
@@ -91,10 +90,7 @@ async fn upgrade_gateway() {
 		.upgrade(
 			GATETWAY_UPGRADE_MOCK_CONTRACT.into(),
 			gateway_upgrade_mock_code_hash.into(),
-			Some(Initializer {
-				params,
-				maximum_required_gas: 100_000,
-			})
+			Some(Initializer { params, maximum_required_gas: 100_000 }),
 		)
 		.encode_call_data(&bridgehub.metadata())
 		.expect("encoded call");
@@ -107,10 +103,7 @@ async fn upgrade_gateway() {
 		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
 	}));
 	let message = Box::new(VersionedXcm::V3(Xcm(vec![
-		Instruction::UnpaidExecution {
-			weight_limit: WeightLimit::Limited(Weight { ref_time: weight, proof_size }),
-			check_origin: None,
-		},
+		Instruction::UnpaidExecution { weight_limit: WeightLimit::Unlimited, check_origin: None },
 		Instruction::Transact {
 			origin_kind: OriginKind::Superuser,
 			require_weight_at_most: Weight { ref_time: weight, proof_size },

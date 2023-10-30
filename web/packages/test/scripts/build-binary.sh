@@ -3,54 +3,25 @@ set -eu
 
 source scripts/set-env.sh
 
-build_cumulus() {
-    if [ ! -f "$cumulus_bin" ]; then
-        echo "Building cumulus binary as $cumulus_bin"
-        rebuild_cumulus
-    fi
-    mkdir -p $output_bin_dir && cp "$cumulus_bin" "$output_bin_dir"/polkadot-parachain
-}
+build_binaries() {
+    pushd $root_dir/polkadot-sdk
 
-rebuild_cumulus() {
-    pushd $root_dir/parachain
-    mkdir -p $cumulus_dir
-    cargo install \
-        --git https://github.com/Snowfork/cumulus \
-        --branch "$cumulus_version" polkadot-parachain-bin \
-        --locked \
-        --root $cumulus_dir #add version path to root to avoid recompiling when switch between versions
-    popd
-}
-
-build_cumulus_from_source() {
-    pushd $root_dir/cumulus
-    if [[ "$active_spec" == "minimal" ]]; then
-        cargo build --release --bin polkadot-parachain
-    else
-        cargo build --features beacon-spec-mainnet --release --bin polkadot-parachain
+    local features=''
+    if [[ "$active_spec" != "minimal" ]]; then
+        features=--features beacon-spec-mainnet
     fi
-    cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
-    cargo build --release --locked --bin parachain-template-node
+
+    echo "Building polkadot binary and parachain template node"
+    cargo build --release --workspace --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker --bin parachain-template-node
+    cp target/release/polkadot $output_bin_dir/polkadot
+    cp target/release/polkadot-execute-worker $output_bin_dir/polkadot-execute-worker
+    cp target/release/polkadot-prepare-worker $output_bin_dir/polkadot-prepare-worker
     cp target/release/parachain-template-node $output_bin_dir/parachain-template-node
-    popd
-}
 
-build_relaychain() {
-    if [ ! -f "$relaychain_bin" ]; then
-        echo "Building polkadot binary as $relaychain_bin"
-        rebuild_relaychain
-    fi
-    mkdir -p $output_bin_dir && cp "$relaychain_bin" "$output_bin_dir"/polkadot
-}
+    echo "Building polkadot-parachain binary"
+    cargo build --release --workspace --locked --bin polkadot-parachain $features
+    cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
 
-rebuild_relaychain() {
-    pushd $root_dir/parachain
-    mkdir -p $relaychain_dir
-    cargo install \
-        --git https://github.com/paritytech/polkadot \
-        --tag "$relaychain_version" polkadot \
-        --locked \
-        --root $relaychain_dir #add version path to root to avoid recompiling when switch between versions
     popd
 }
 
@@ -70,8 +41,7 @@ build_relayer() {
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
-    build_cumulus_from_source
-    build_relaychain
+    build_binaries
     build_contracts
     build_relayer
 }

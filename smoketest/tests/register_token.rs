@@ -4,8 +4,7 @@ use ethers::{
 	middleware::SignerMiddleware,
 	providers::{Http, Provider},
 	signers::{LocalWallet, Signer},
-	utils::parse_units,
-	utils::rlp::Encodable,
+	utils::{parse_units, rlp::Encodable},
 };
 use futures::StreamExt;
 use hex_literal::hex;
@@ -13,21 +12,23 @@ use snowbridge_smoketest::{
 	contracts::{i_gateway, weth9},
 	parachains::assethub::api::{
 		foreign_assets::events::Created,
-		runtime_types::xcm::v3::{
-			junction::{
-				Junction::{AccountKey20, GlobalConsensus},
-				NetworkId,
+		runtime_types::{
+			staging_xcm::v3::multilocation::MultiLocation,
+			xcm::v3::{
+				junction::{
+					Junction::{AccountKey20, GlobalConsensus},
+					NetworkId,
+				},
+				junctions::Junctions::X3,
 			},
-			junctions::Junctions::X3,
-			multilocation::MultiLocation,
 		},
 	},
 };
 use std::{sync::Arc, time::Duration};
 use subxt::{utils::AccountId32, OnlineClient, PolkadotConfig};
 
-// The deployment addresses of the following contracts are stable in our E2E env, unless we modify the order in
-// contracts are deployed in DeployScript.sol.
+// The deployment addresses of the following contracts are stable in our E2E env, unless we modify
+// the order in contracts are deployed in DeployScript.sol.
 const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
 const ETHEREUM_API: &str = "http://localhost:8545";
 const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
@@ -108,7 +109,7 @@ async fn register_token() {
 			created_event_found = true;
 		}
 		if created_event_found {
-			break;
+			break
 		}
 	}
 	assert!(created_event_found)

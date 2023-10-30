@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use super::*;
 
-use frame_support::dispatch::DispatchError;
 use snowbridge_ethereum::{Log, Receipt};
+use sp_runtime::DispatchError;
 
 impl<T: Config> Verifier for Pallet<T> {
 	/// Verify a message by verifying the existence of the corresponding

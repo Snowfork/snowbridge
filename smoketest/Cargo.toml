@@ -16,4 +16,4 @@ ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = fals
 sp-core = "16.0.0"
 
 [dev-dependencies]
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
+xcm = { path = "../polkadot-sdk/polkadot/xcm", package="staging-xcm"}
