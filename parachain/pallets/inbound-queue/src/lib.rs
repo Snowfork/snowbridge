@@ -261,4 +261,17 @@ pub mod pallet {
 			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
 		}
 	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn do_convert_and_send_xcm(
+			message: inbound::VersionedMessage,
+			dest: ParaId,
+		) -> DispatchResult {
+			let xcm =
+				T::MessageConverter::convert(message).map_err(|e| Error::<T>::ConvertMessage(e))?;
+			let dest = MultiLocation { parents: 1, interior: X1(Parachain(dest.into())) };
+			send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
+			Ok(())
+		}
+	}
 }
