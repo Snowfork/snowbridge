@@ -65,7 +65,7 @@
 //! ## Fee Computation Function
 //!
 //! ```text
-//! LocalFee(Message) = ProcessingWeight(Message)
+//! LocalFee(Message) = WeightToFee(ProcessMessageWeight(Message))
 //! RemoteFee(Message) = MaxGasRequired(Message) * FeePerGas + Reward
 //! Fee(Message) = LocalFee(Message) + (RemoteFee(Message) / Ratio("ETH/DOT"))
 //! ```
