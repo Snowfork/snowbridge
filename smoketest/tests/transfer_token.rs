@@ -96,12 +96,12 @@ async fn transfer_token() {
 		),
 	});
 
-	let bridge_transfer_call =
+	let token_transfer_call =
 		TransactionApi.reserve_transfer_assets(destination, beneficiary, assets, 0);
 
 	let result = assethub
 		.tx()
-		.sign_and_submit_then_watch_default(&bridge_transfer_call, &signer)
+		.sign_and_submit_then_watch_default(&token_transfer_call, &signer)
 		.await
 		.expect("send through call.")
 		.wait_for_finalized_success()
