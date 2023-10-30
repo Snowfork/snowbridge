@@ -4,6 +4,12 @@
 //!
 //! # Overview
 //!
+//! Messages come either from sibling parachains via XCM, or BridgeHub itself
+//! via the `snowbridge-control` pallet:
+//!
+//! 1. `snowbridge_router_primitives::outbound::EthereumBlobExporter::deliver`
+//! 2. `snowbridge_control::Pallet::send`
+//!
 //! The message submission pipeline works like this:
 //! 1. The message is first validated via the implementation for
 //!    [`snowbridge_core::outbound::SendMessage::validate`]
@@ -18,8 +24,10 @@
 //! 6. At the end of the block, a merkle root is constructed from all the
 //!    leaves in `MessageLeaves`.
 //! 7. This merkle root is inserted into the parachain header as a digest item
-//! 8. Offchain relayers can read the committed message from the `Messages`
-//!    storage item.
+//! 8. Offchain relayers are able to relay the message to Ethereum after:
+//!    a. Generating a merkle proof for the committed message using the `prove_message`
+//!       runtime API
+//!    b. Reading the actual message content from the `Messages` vector in storage
 //!
 //! On the Ethereum side, the message root is ultimately the thing being
 //! by the Polkadot light client.
@@ -62,13 +70,15 @@
 //! Fee(Message) = LocalFee(Message) + (RemoteFee(Message) / Ratio("ETH/DOT"))
 //! ```
 //!
-//! # Message Types
+//! # Extrinsics
 //!
-//! The naming of message types indicates their processing state:
+//! * [`Call::set_operating_mode`]: Set the operating mode
+//! * [`Call::set_fee_config`]: Set configuration for calculating fees
 //!
-//! 1. `Message`: Message initially received
-//! 2. `QueuedMessage`: Message queued for eventual commitment
-//! 3. `CommittedMessage`: Message has been committed for delivery
+//! # Runtime API
+//!
+//! * `prove_message`: Generate a merkle proof for a committed message
+//! * `calculate_fee`: Calculate the delivery fee for a message
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod api;
 pub mod process_message_impl;
