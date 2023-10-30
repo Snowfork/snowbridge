@@ -51,7 +51,7 @@ impl From<CommittedMessage> for Token {
 }
 
 pub const MAX_FEE_PER_GAS: u128 = 300 * GWEI;
-pub const MAX_REWARD: u128 = 1 * ETH;
+pub const MAX_REWARD: u128 = ETH;
 pub const MAX_EXCHANGE_RATE: FixedU128 = FixedU128::from_rational(1, 10_000);
 
 /// Configuration for fee calculations
@@ -82,16 +82,19 @@ impl Default for FeeConfigRecord {
 	}
 }
 
+#[derive(RuntimeDebug)]
+pub struct InvalidFeeConfig;
+
 impl FeeConfigRecord {
-	pub fn validate(&self) -> Result<(), ()> {
+	pub fn validate(&self) -> Result<(), InvalidFeeConfig> {
 		if self.exchange_rate < MAX_EXCHANGE_RATE {
-			return Err(())
+			return Err(InvalidFeeConfig)
 		}
 		if self.fee_per_gas == 0 || self.fee_per_gas > MAX_FEE_PER_GAS {
-			return Err(())
+			return Err(InvalidFeeConfig)
 		}
 		if self.reward > MAX_REWARD {
-			return Err(())
+			return Err(InvalidFeeConfig)
 		}
 		Ok(())
 	}
