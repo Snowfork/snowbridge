@@ -30,7 +30,7 @@
 //!    b. Reading the actual message content from the `Messages` vector in storage
 //!
 //! On the Ethereum side, the message root is ultimately the thing being
-//! by the Polkadot light client.
+//! verified by the Polkadot light client.
 //!
 //! # Message Priorities
 //!
