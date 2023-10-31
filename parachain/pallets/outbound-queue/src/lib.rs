@@ -252,6 +252,7 @@ pub mod pallet {
 		FeeConfigRecord {
 			exchange_rate: FixedU128::saturating_from_rational(1, 400),
 			fee_per_gas: 30 * GWEI,
+			#[allow(clippy::identity_op)]
 			reward: 1 * METH,
 		}
 	}
@@ -398,24 +399,22 @@ pub mod pallet {
 		/// Calculate fee in native currency for delivering a message.
 		pub(crate) fn calculate_fee(command: &Command) -> Fee<T::Balance> {
 			let max_gas = Self::maximum_overall_required_gas(command);
-			let remote_fee = Self::calculate_remote_fee(
+			let remote = Self::calculate_remote_fee(
 				max_gas,
 				Self::fee_config().fee_per_gas,
 				Self::fee_config().reward,
 			);
 
-			let remote_fee = FixedU128::from(remote_fee)
+			let remote = FixedU128::from(remote)
 				.checked_div(&Self::fee_config().exchange_rate)
 				.expect("exchange rate is not zero; qed")
 				.into_inner()
 				.checked_div(FixedU128::accuracy())
-				.expect("accuracy is not zero; qed")
-				.into();
+				.expect("accuracy is not zero; qed");
 
-			let remote_fee = Self::convert_from_ether_decimals(remote_fee);
+			let remote = Self::convert_from_ether_decimals(remote);
 
-			let local_fee = Self::calculate_local_fee();
-			Fee::from((local_fee, remote_fee))
+			Fee::from((Self::calculate_local_fee(), remote))
 		}
 
 		/// Calculate fee in remote currency for dispatching a message on Ethereum
