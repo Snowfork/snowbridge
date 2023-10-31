@@ -29,4 +29,5 @@ where
 }
 
 pub const GWEI: u128 = 1_000_000_000;
+pub const METH: u128 = 1_000_000_000_000_000;
 pub const ETH: u128 = 1_000_000_000_000_000_000;

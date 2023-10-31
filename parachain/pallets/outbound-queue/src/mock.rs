@@ -9,7 +9,7 @@ use frame_support::{
 };
 
 use snowbridge_core::outbound::*;
-use sp_core::{ConstU32, H160, H256};
+use sp_core::{ConstU32, ConstU8, H160, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
 	AccountId32, BuildStorage,
@@ -23,7 +23,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
-		OutboundQueue: crate::{Pallet, Storage, Config<T>, Event<T>},
+		OutboundQueue: crate::{Pallet, Storage, Event<T>},
 	}
 );
 
@@ -83,10 +83,11 @@ impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MessageQueue = MessageQueue;
+	type Decimals = ConstU8<10>;
 	type MaxMessagePayloadSize = ConstU32<1024>;
 	type MaxMessagesPerBlock = ConstU32<20>;
 	type OwnParaId = OwnParaId;
-	type GasMeter = ();
+	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
@@ -97,16 +98,7 @@ fn setup() {
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let mut storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-
-	crate::GenesisConfig::<Test> {
-		operating_mode: Default::default(),
-		fee_config: FeeConfigRecord { exchange_rate: (1, 10).into(), fee_per_gas: 1, reward: 1 },
-		_config: Default::default(),
-	}
-	.assimilate_storage(&mut storage)
-	.unwrap();
-
+	let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| setup());
 	ext

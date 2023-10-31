@@ -7,7 +7,7 @@ use frame_support::{
 	CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 use snowbridge_core::outbound::{
-	AggregateMessageOrigin, QueuedMessage, ExportOrigin, Fee, Message, SendError, SendMessage,
+	AggregateMessageOrigin, ExportOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
 	VersionedQueuedMessage,
 };
 use sp_core::H256;
@@ -40,7 +40,7 @@ impl<T: Config> SendMessage for Pallet<T> {
 			SendError::MessageTooLarge
 		);
 
-		let fee = Self::calculate_fee(&message.command).ok_or(SendError::Overflow)?;
+		let fee = Self::calculate_fee(&message.command);
 
 		let queued_message: VersionedQueuedMessage = QueuedMessage {
 			id: message_id,
@@ -49,9 +49,7 @@ impl<T: Config> SendMessage for Pallet<T> {
 		}
 		.into();
 		// The whole message should not be too large
-		let encoded = queued_message.encode()
-			.try_into()
-			.map_err(|_| SendError::MessageTooLarge)?;
+		let encoded = queued_message.encode().try_into().map_err(|_| SendError::MessageTooLarge)?;
 
 		let ticket = Ticket { id: message_id, origin: message.origin, message: encoded };
 

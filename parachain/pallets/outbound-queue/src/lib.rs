@@ -101,14 +101,13 @@ use frame_support::{
 	storage::StorageStreamIter,
 	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessageError},
 	weights::{Weight, WeightToFee},
-	DefaultNoBound,
 };
 use snowbridge_core::{
 	outbound::{
 		AggregateMessageOrigin, Command, ExportOrigin, Fee, GasMeter, QueuedMessage,
-		VersionedQueuedMessage,
+		VersionedQueuedMessage, ETHER_DECIMALS,
 	},
-	BasicOperatingMode, ParaId,
+	BasicOperatingMode, ParaId, GWEI, METH,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
@@ -145,6 +144,10 @@ pub mod pallet {
 		type GasMeter: GasMeter;
 
 		type Balance: Balance + From<u128>;
+
+		/// Number of decimal places in native currency
+		#[pallet::constant]
+		type Decimals: Get<u8>;
 
 		/// Max bytes in a message payload
 		#[pallet::constant]
@@ -242,23 +245,14 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn fee_config)]
-	pub type FeeConfig<T: Config> = StorageValue<_, FeeConfigRecord, ValueQuery>;
+	pub type FeeConfig<T: Config> = StorageValue<_, FeeConfigRecord, ValueQuery, DefaultFeeConfig>;
 
-	#[pallet::genesis_config]
-	#[derive(DefaultNoBound)]
-	pub struct GenesisConfig<T: Config> {
-		pub operating_mode: BasicOperatingMode,
-		pub fee_config: FeeConfigRecord,
-		#[serde(skip)]
-		pub _config: sp_std::marker::PhantomData<T>,
-	}
-
-	#[pallet::genesis_build]
-	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
-		fn build(&self) {
-			self.fee_config.validate().expect("invalid fee configuration");
-			OperatingMode::<T>::put(self.operating_mode);
-			FeeConfig::<T>::put(self.fee_config);
+	#[pallet::type_value]
+	pub fn DefaultFeeConfig() -> FeeConfigRecord {
+		FeeConfigRecord {
+			exchange_rate: FixedU128::saturating_from_rational(1, 400),
+			fee_per_gas: 30 * GWEI,
+			reward: 1 * METH,
 		}
 	}
 
@@ -277,6 +271,10 @@ pub mod pallet {
 
 		fn on_finalize(_: BlockNumberFor<T>) {
 			Self::commit();
+		}
+
+		fn integrity_test() {
+			assert!(T::Decimals::get() > 0, "Decimals should usually be 10 or 12");
 		}
 	}
 
@@ -398,23 +396,26 @@ pub mod pallet {
 		}
 
 		/// Calculate fee in native currency for delivering a message.
-		pub(crate) fn calculate_fee(command: &Command) -> Option<Fee<T::Balance>> {
+		pub(crate) fn calculate_fee(command: &Command) -> Fee<T::Balance> {
 			let max_gas = Self::maximum_overall_required_gas(command);
 			let remote_fee = Self::calculate_remote_fee(
 				max_gas,
 				Self::fee_config().fee_per_gas,
 				Self::fee_config().reward,
 			);
+
 			let remote_fee = FixedU128::from(remote_fee)
-				.checked_div(&Self::fee_config().exchange_rate)?
+				.checked_div(&Self::fee_config().exchange_rate)
+				.expect("exchange rate is not zero; qed")
 				.into_inner()
 				.checked_div(FixedU128::accuracy())
 				.expect("accuracy is not zero; qed")
 				.into();
-			let local_fee = Self::calculate_local_fee();
-			let fee = Fee::from((local_fee, remote_fee));
 
-			Some(fee)
+			let remote_fee = Self::convert_from_ether_decimals(remote_fee);
+
+			let local_fee = Self::calculate_local_fee();
+			Fee::from((local_fee, remote_fee))
 		}
 
 		/// Calculate fee in remote currency for dispatching a message on Ethereum
@@ -437,6 +438,15 @@ pub mod pallet {
 		pub(crate) fn calculate_maximum_gas_refund(command: &Command) -> u128 {
 			let max_gas = Self::maximum_overall_required_gas(command);
 			Self::fee_config().fee_per_gas.saturating_mul(max_gas.into())
+		}
+
+		// 1 DOT has 10 digits of precision
+		// 1 KSM has 12 digits of precision
+		// 1 ETH has 18 digits of precision
+		pub(crate) fn convert_from_ether_decimals(value: u128) -> T::Balance {
+			let decimals = ETHER_DECIMALS.saturating_sub(T::Decimals::get()) as u32;
+			let denom = 10u128.saturating_pow(decimals);
+			value.checked_div(denom).expect("divisor is non-zero; qed").into()
 		}
 	}
 }

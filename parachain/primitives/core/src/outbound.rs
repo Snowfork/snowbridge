@@ -285,10 +285,6 @@ pub enum SendError {
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
 	Halted,
-	/// An arithmetic error occurred while calculating fees
-	Overflow,
-	/// Too many enqueued messages
-	QueueFull,
 }
 
 pub trait GasMeter {
@@ -369,3 +365,5 @@ pub enum AggregateMessageOrigin {
 	/// Message is to be exported via a bridge
 	Export(ExportOrigin),
 }
+
+pub const ETHER_DECIMALS: u8 = 18;

@@ -4,12 +4,12 @@ use frame_support::traits::ProcessMessage;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_arithmetic::FixedU128;
-use sp_runtime::{FixedPointNumber, RuntimeDebug};
+use sp_runtime::{traits::Zero, RuntimeDebug};
 use sp_std::prelude::*;
 
 use super::Pallet;
 
-use snowbridge_core::{ParaId, ETH, GWEI};
+use snowbridge_core::ParaId;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 
 pub type ProcessMessageOriginOf<T> = <Pallet<T> as ProcessMessage>::Origin;
@@ -50,10 +50,6 @@ impl From<CommittedMessage> for Token {
 	}
 }
 
-pub const MAX_FEE_PER_GAS: u128 = 300 * GWEI;
-pub const MAX_REWARD: u128 = ETH;
-pub const MAX_EXCHANGE_RATE: FixedU128 = FixedU128::from_rational(1, 10_000);
-
 /// Configuration for fee calculations
 #[derive(
 	Encode,
@@ -64,6 +60,7 @@ pub const MAX_EXCHANGE_RATE: FixedU128 = FixedU128::from_rational(1, 10_000);
 	RuntimeDebug,
 	MaxEncodedLen,
 	TypeInfo,
+	Default,
 	Serialize,
 	Deserialize,
 )]
@@ -76,24 +73,18 @@ pub struct FeeConfigRecord {
 	pub reward: u128,
 }
 
-impl Default for FeeConfigRecord {
-	fn default() -> Self {
-		Self { exchange_rate: FixedU128::saturating_from_rational(1, 1), fee_per_gas: 1, reward: 0 }
-	}
-}
-
 #[derive(RuntimeDebug)]
 pub struct InvalidFeeConfig;
 
 impl FeeConfigRecord {
 	pub fn validate(&self) -> Result<(), InvalidFeeConfig> {
-		if self.exchange_rate < MAX_EXCHANGE_RATE {
+		if self.exchange_rate == FixedU128::zero() {
 			return Err(InvalidFeeConfig)
 		}
-		if self.fee_per_gas == 0 || self.fee_per_gas > MAX_FEE_PER_GAS {
+		if self.fee_per_gas == 0 {
 			return Err(InvalidFeeConfig)
 		}
-		if self.reward > MAX_REWARD {
+		if self.reward == 0 {
 			return Err(InvalidFeeConfig)
 		}
 		Ok(())
