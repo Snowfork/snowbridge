@@ -295,7 +295,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(4)]
+		#[pallet::call_index(1)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_fee_config(origin: OriginFor<T>, fee_config: FeeConfigRecord) -> DispatchResult {
 			ensure_root(origin)?;
