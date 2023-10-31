@@ -275,7 +275,8 @@ pub mod pallet {
 		}
 
 		fn integrity_test() {
-			assert!(T::Decimals::get() > 0, "Decimals should usually be 10 or 12");
+			let decimals = T::Decimals::get();
+			assert!(decimals == 10 || decimals == 12, "Decimals should be 10 or 12");
 		}
 	}
 
