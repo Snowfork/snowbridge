@@ -134,7 +134,7 @@ fn set_fee_config_root_only() {
 	new_tester().execute_with(|| {
 		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
 		assert_noop!(
-			OutboundQueue::set_fee_config(origin, Default::default()),
+			OutboundQueue::set_fee_config(origin, DefaultFeeConfig::get()),
 			DispatchError::BadOrigin,
 		);
 	})

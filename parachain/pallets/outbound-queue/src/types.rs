@@ -60,7 +60,6 @@ impl From<CommittedMessage> for Token {
 	RuntimeDebug,
 	MaxEncodedLen,
 	TypeInfo,
-	Default,
 	Serialize,
 	Deserialize,
 )]
