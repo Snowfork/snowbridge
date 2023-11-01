@@ -40,6 +40,11 @@ use snowbridge_router_primitives::{
 	inbound,
 	inbound::{ConvertMessage, ConvertMessageError},
 };
+
+use sp_runtime::traits::Saturating;
+
+use frame_support::{traits::tokens::Preservation, weights::WeightToFee};
+
 pub use weights::WeightInfo;
 
 type BalanceOf<T> =
@@ -54,7 +59,7 @@ pub mod pallet {
 
 	use super::*;
 
-	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
@@ -92,6 +97,9 @@ pub mod pallet {
 
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self>;
+
+		/// Convert a weight value into balance type.
+		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
 	}
 
 	#[pallet::hooks]
@@ -205,7 +213,13 @@ pub mod pallet {
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
 			let sovereign_account = sibling_sovereign_account::<T>(envelope.dest);
-			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
+			let refund = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
+			T::Token::transfer(
+				&sovereign_account,
+				&who,
+				refund.saturating_add(T::Reward::get()),
+				Preservation::Preserve,
+			)?;
 
 			// Decode message into XCM
 			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {

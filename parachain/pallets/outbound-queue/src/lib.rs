@@ -90,7 +90,7 @@ pub mod pallet {
 		/// Measures the maximum gas used to execute a command on Ethereum
 		type GasMeter: GasMeter;
 
-		type Balance: Balance + From<u64>;
+		type Balance: Balance + From<u128> + From<u64>;
 
 		/// Max bytes in a message payload
 		#[pallet::constant]
