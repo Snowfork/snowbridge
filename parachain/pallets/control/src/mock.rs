@@ -3,7 +3,7 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, ConstU8, Contains},
+	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, ConstU8},
 	weights::IdentityFee,
 	PalletId,
 };
@@ -132,6 +132,7 @@ impl pallet_balances::Config for Test {
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type MaxHolds = ();
 }
 
@@ -201,23 +202,12 @@ impl BenchmarkHelper<RuntimeOrigin> for () {
 	}
 }
 
-pub struct AllowSiblingsOnly;
-impl Contains<MultiLocation> for AllowSiblingsOnly {
-	fn contains(location: &MultiLocation) -> bool {
-		if let MultiLocation { parents: 1, interior: X1(Parachain(_)) } = location {
-			true
-		} else {
-			false
-		}
-	}
-}
-
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = OutboundQueue;
 	type MessageHasher = BlakeTwo256;
-	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
+	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<snowbridge_control::AllowSiblingsOnly>;
 	type AgentIdOf = HashedDescription<AgentId, DescribeFamily<DescribeAllTerminal>>;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
