@@ -209,7 +209,7 @@ impl crate::Config for Test {
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = OutboundQueue;
 	type MessageHasher = BlakeTwo256;
-	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
+	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<snowbridge_control::AllowSiblingsOnly>;
 	type AgentIdOf = HashedDescription<AgentId, DescribeFamily<DescribeAllTerminal>>;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
