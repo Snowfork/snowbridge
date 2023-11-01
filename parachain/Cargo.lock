@@ -3135,7 +3135,6 @@ dependencies = [
 name = "snowbridge-core"
 version = "0.1.1"
 dependencies = [
- "derivative",
  "ethabi-decode",
  "frame-support",
  "frame-system",
@@ -3146,6 +3145,7 @@ dependencies = [
  "serde",
  "snowbridge-beacon-primitives",
  "snowbridge-ethereum",
+ "sp-arithmetic",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -3246,7 +3246,6 @@ dependencies = [
  "hex-literal",
  "pallet-message-queue",
  "parity-scale-codec",
- "rlp",
  "scale-info",
  "serde",
  "snowbridge-core",

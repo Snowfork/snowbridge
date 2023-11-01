@@ -2,14 +2,39 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 //! Governance API for controlling the Ethereum side of the bridge
 //!
-//! * upgrade: Upgrade the gateway contract (permissioned)
-//! * set_operating_mode: Update the operating mode of the gateway contract (permissioned)
-//! * create_agent: Create agent for a sibling (permissionless)
-//! * create_channel: Create channel for a sibling (permissionless)
-//! * update_channel: Update a channel for a sibling (permissionless)
-//! * force_update_channel: Allow root to update a channel for a sibling (permissioned)
-//! * transfer_native_from_agent: Withdraw ether from an agent (permissionless)
-//! * force_transfer_native_from_agent: Allow root to withdraw ether from an agent (permissionless)
+//! # Extrinsics
+//!
+//! ## Agents
+//!
+//! Agents are smart contracts on Ethereum that act as proxies for consensus systems on Polkadot
+//! networks.
+//!
+//! * [`Call::create_agent`]: Create agent for a sibling parachain
+//! * [`Call::transfer_native_from_agent`]: Withdraw ether from an agent
+//!
+//! The `create_agent` extrinsic should be called via an XCM `Transact` instruction from the sibling
+//! parachain.
+//!
+//! ## Channels
+//!
+//! Each sibling parachain has its own dedicated messaging channel for sending and receiving
+//! messages. As a prerequisite to creating a channel, the sibling should have already created
+//! an agent using the `create_agent` extrinsic.
+//!
+//! * [`Call::create_channel`]: Create channel for a sibling
+//! * [`Call::update_channel`]: Update a channel for a sibling
+//!
+//! ## Governance
+//!
+//! Only Polkadot governance itself can call these extrinsics. Delivery fees are waived.
+//!
+//! * [`Call::upgrade`]`: Upgrade the gateway contract
+//! * [`Call::set_operating_mode`]: Update the operating mode of the gateway contract
+//! * [`Call::force_update_channel`]: Allow root to update a channel for a sibling
+//! * [`Call::force_transfer_native_from_agent`]: Allow root to withdraw ether from an agent
+//!
+//! Typically, Polkadot governance will use the `force_transfer_native_from_agent` and
+//! `force_update_channel` and extrinsics to manage agents and channels for system parachains.
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -43,11 +68,8 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use snowbridge_core::{
-	outbound::{
-		Command, Initializer, Message, OperatingMode, OutboundQueue as OutboundQueueTrait,
-		SendError,
-	},
-	sibling_sovereign_account, AgentId, ParaId,
+	outbound::{Command, Initializer, Message, OperatingMode, ParaId, SendError, SendMessage},
+	sibling_sovereign_account, AgentId,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -92,9 +114,9 @@ pub enum PaysFee<T>
 where
 	T: Config,
 {
-	/// Fully charge includes (base_fee + delivery_fee)
+	/// Fully charge includes (local + remote fee)
 	Yes(AccountIdOf<T>),
-	/// Partially charge includes base_fee only
+	/// Partially charge includes local only
 	Partial(AccountIdOf<T>),
 	/// No charge
 	No,
@@ -115,7 +137,7 @@ pub mod pallet {
 		type MessageHasher: Hash<Output = H256>;
 
 		/// Send messages to Ethereum
-		type OutboundQueue: OutboundQueueTrait<Balance = BalanceOf<Self>>;
+		type OutboundQueue: SendMessage<Balance = BalanceOf<Self>>;
 
 		/// The ID of this parachain
 		type OwnParaId: Get<ParaId>;
@@ -413,7 +435,7 @@ pub mod pallet {
 
 			let payment = match pays_fee {
 				PaysFee::Yes(account) => Some((account, fee.total())),
-				PaysFee::Partial(account) => Some((account, fee.base)),
+				PaysFee::Partial(account) => Some((account, fee.local)),
 				PaysFee::No => None,
 			};
 
@@ -426,7 +448,7 @@ pub mod pallet {
 				)?;
 			}
 
-			T::OutboundQueue::submit(ticket).map_err(|err| Error::<T>::Send(err))?;
+			T::OutboundQueue::deliver(ticket).map_err(|err| Error::<T>::Send(err))?;
 			Ok(())
 		}
 
