@@ -3,7 +3,7 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, Contains},
+	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, ConstU8, Contains},
 	weights::IdentityFee,
 	PalletId,
 };
@@ -167,14 +167,12 @@ impl snowbridge_outbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MessageQueue = MessageQueue;
+	type Decimals = ConstU8<10>;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
 	type OwnParaId = OwnParaId;
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
-	type DeliveryFeePerGas = ConstU128<1>;
-	type DeliveryRefundPerGas = ConstU128<1>;
-	type DeliveryReward = ConstU128<1>;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }
@@ -231,6 +229,7 @@ impl crate::Config for Test {
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+
 	let mut ext: sp_io::TestExternalities = storage.into();
 	let initial_amount = InitialFunding::get().into();
 	let test_para_id = TestParaId::get();

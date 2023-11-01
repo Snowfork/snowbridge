@@ -1,5 +1,26 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+//! Inbound Queue
+//!
+//! # Overview
+//!
+//! Receives messages emitted by the Gateway contract on Ethereum, whereupon they are verified,
+//! translated to XCM, and finally sent to their final destination parachain.
+//!
+//! The message relayers are rewarded using native currency from the sovereign account of the
+//! destination parachain.
+//!
+//! # Extrinsics
+//!
+//! ## Governance
+//!
+//! * [`Call::set_operating_mode`]: Set the operating mode of the pallet. Can be used to disable
+//!   processing of inbound messages.
+//!
+//! ## Message Submission
+//!
+//! * [`Call::submit`]: Submit a message for verification and dispatch the final destination
+//!   parachain.
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod envelope;
@@ -81,19 +102,20 @@ pub mod pallet {
 		type Token: Mutate<Self::AccountId>;
 
 		/// The amount to reward message relayers
+		#[pallet::constant]
 		type Reward: Get<BalanceOf<Self>>;
 
 		/// XCM message sender
 		type XcmSender: SendXcm;
 
-		type WeightInfo: WeightInfo;
-
-		// Gateway contract address
+		// Address of the Gateway contract
 		#[pallet::constant]
 		type GatewayAddress: Get<H160>;
 
 		/// Convert inbound message to XCM
 		type MessageConverter: ConvertMessage;
+
+		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self>;

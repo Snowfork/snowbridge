@@ -1,171 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use super::*;
+use crate::{mock::*, *};
 
 use frame_support::{
-	assert_err, assert_noop, assert_ok, parameter_types,
-	traits::{Everything, Hooks, ProcessMessageError},
-	weights::{IdentityFee, WeightMeter},
+	assert_err, assert_noop, assert_ok,
+	traits::{Hooks, ProcessMessage, ProcessMessageError},
+	weights::WeightMeter,
 };
 
-use snowbridge_core::outbound::{AgentExecuteCommand, Command, ExportOrigin, Initializer};
-use sp_core::{ConstU128, H160, H256};
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, Keccak256},
-	AccountId32, BuildStorage, DispatchError,
-};
-
-type Block = frame_system::mocking::MockBlock<Test>;
-type AccountId = AccountId32;
-
-frame_support::construct_runtime!(
-	pub enum Test
-	{
-		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
-		OutboundQueue: crate::{Pallet, Storage, Event<T>},
-	}
-);
-
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-}
-
-impl frame_system::Config for Test {
-	type BaseCallFilter = Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type DbWeight = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
-	type Nonce = u64;
-	type Block = Block;
-}
-
-parameter_types! {
-	pub const HeapSize: u32 = 32 * 1024;
-	pub const MaxStale: u32 = 32;
-	pub static ServiceWeight: Option<Weight> = Some(Weight::from_parts(100, 100));
-}
-
-impl pallet_message_queue::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
-	type MessageProcessor = OutboundQueue;
-	type Size = u32;
-	type QueueChangeHandler = ();
-	type HeapSize = HeapSize;
-	type MaxStale = MaxStale;
-	type ServiceWeight = ServiceWeight;
-	type QueuePausedQuery = ();
-}
-
-parameter_types! {
-	pub const MaxMessagePayloadSize: u32 = 1024;
-	pub const MaxMessagesPerBlock: u32 = 20;
-	pub const OwnParaId: ParaId = ParaId::new(1013);
-}
-
-impl crate::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type Hashing = Keccak256;
-	type MessageQueue = MessageQueue;
-	type MaxMessagePayloadSize = MaxMessagePayloadSize;
-	type MaxMessagesPerBlock = MaxMessagesPerBlock;
-	type OwnParaId = OwnParaId;
-	type GasMeter = ();
-	type Balance = u128;
-	type DeliveryFeePerGas = ConstU128<1>;
-	type DeliveryRefundPerGas = ConstU128<1>;
-	type DeliveryReward = ConstU128<1>;
-	type WeightToFee = IdentityFee<u128>;
-	type WeightInfo = ();
-}
-
-fn setup() {
-	System::set_block_number(1);
-}
-
-pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| setup());
-	ext
-}
-
-fn run_to_end_of_next_block() {
-	// finish current block
-	MessageQueue::on_finalize(System::block_number());
-	OutboundQueue::on_finalize(System::block_number());
-	System::on_finalize(System::block_number());
-	// start next block
-	System::set_block_number(System::block_number() + 1);
-	System::on_initialize(System::block_number());
-	OutboundQueue::on_initialize(System::block_number());
-	MessageQueue::on_initialize(System::block_number());
-	// finish next block
-	MessageQueue::on_finalize(System::block_number());
-	OutboundQueue::on_finalize(System::block_number());
-	System::on_finalize(System::block_number());
-}
+use codec::Encode;
+use snowbridge_core::outbound::{Command, ExportOrigin, SendError, SendMessage};
+use sp_core::H256;
+use sp_runtime::{AccountId32, DispatchError};
 
 #[test]
-fn submit_messages_from_multiple_origins_and_commit() {
+fn submit_messages_and_commit() {
 	new_tester().execute_with(|| {
-		//next_block();
-
 		for para_id in 1000..1004 {
-			let message = Message {
-				origin: para_id.into(),
-				command: Command::Upgrade {
-					impl_address: H160::zero(),
-					impl_code_hash: H256::zero(),
-					initializer: None,
-				},
-			};
-
+			let message = mock_message(para_id);
 			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
-			assert_ok!(OutboundQueue::submit(ticket));
-		}
-
-		for para_id in 1000..1004 {
-			let message = Message {
-				origin: para_id.into(),
-				command: Command::CreateAgent { agent_id: Default::default() },
-			};
-
-			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
-			assert_ok!(OutboundQueue::submit(ticket));
-		}
-
-		for para_id in 1000..1004 {
-			let message = Message {
-				origin: para_id.into(),
-				command: Command::Upgrade {
-					impl_address: Default::default(),
-					impl_code_hash: Default::default(),
-					initializer: None,
-				},
-			};
-
-			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
-
-			assert_ok!(OutboundQueue::submit(ticket));
+			assert_ok!(OutboundQueue::deliver(ticket));
 		}
 
 		ServiceWeight::set(Some(Weight::MAX));
@@ -173,32 +27,41 @@ fn submit_messages_from_multiple_origins_and_commit() {
 
 		for para_id in 1000..1004 {
 			let origin: ParaId = (para_id as u32).into();
-			assert_eq!(Nonce::<Test>::get(origin), 3);
+			assert_eq!(Nonce::<Test>::get(origin), 1);
 		}
 
 		let digest = System::digest();
 		let digest_items = digest.logs();
 		assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
+		assert_eq!(Messages::<Test>::decode_len(), Some(4));
 	});
 }
 
 #[test]
 fn submit_message_fail_too_large() {
 	new_tester().execute_with(|| {
-		let message = Message {
-			origin: 1000.into(),
-			command: Command::Upgrade {
-				impl_address: H160::zero(),
-				impl_code_hash: H256::zero(),
-				initializer: Some(Initializer {
-					params: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
-					maximum_required_gas: 0,
-				}),
-			},
-		};
-
+		let message = mock_invalid_governance_message::<Test>();
 		assert_err!(OutboundQueue::validate(&message), SendError::MessageTooLarge);
 	});
+}
+
+#[test]
+fn calculate_fees() {
+	new_tester().execute_with(|| {
+		let command = mock_message(1000).command;
+		let fee = OutboundQueue::calculate_fee(&command);
+		assert_eq!(fee.remote, 31000000000);
+
+		println!("Total fee: {}", fee.total())
+	});
+}
+
+#[test]
+fn convert_from_ether_decimals() {
+	assert_eq!(
+		OutboundQueue::convert_from_ether_decimals(1_000_000_000_000_000_000),
+		1_000_000_000_0
+	);
 }
 
 #[test]
@@ -221,7 +84,7 @@ fn process_message_yields_on_max_messages_per_block() {
 		}
 
 		let origin = AggregateMessageOrigin::Export(ExportOrigin::Sibling(1000.into()));
-		let message = EnqueuedMessage {
+		let message = QueuedMessage {
 			id: Default::default(),
 			origin: 1000.into(),
 			command: Command::Upgrade {
@@ -244,21 +107,10 @@ fn process_message_yields_on_max_messages_per_block() {
 #[test]
 fn process_message_fails_on_overweight_message() {
 	new_tester().execute_with(|| {
-		let origin = AggregateMessageOrigin::Export(ExportOrigin::Sibling(1000.into()));
-
-		let message = EnqueuedMessage {
-			id: Default::default(),
-			origin: 1000.into(),
-			command: Command::Upgrade {
-				impl_address: Default::default(),
-				impl_code_hash: Default::default(),
-				initializer: None,
-			},
-		}
-		.encode();
-
+		let sibling_id = 1000;
+		let origin = AggregateMessageOrigin::Export(ExportOrigin::Sibling(sibling_id.into()));
+		let message = mock_message(sibling_id).encode();
 		let mut meter = WeightMeter::with_limit(Weight::from_parts(1, 1));
-
 		assert_noop!(
 			OutboundQueue::process_message(&message.as_slice(), origin, &mut meter, &mut [0u8; 32]),
 			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
@@ -278,159 +130,91 @@ fn set_operating_mode_root_only() {
 }
 
 #[test]
-fn submit_low_priority_messages_yield_when_there_is_high_priority_message() {
+fn set_fee_config_root_only() {
 	new_tester().execute_with(|| {
-		// submit a low priority message from asset_hub first
-		let message = Message {
-			origin: 1000.into(),
-			command: Command::AgentExecute {
-				agent_id: Default::default(),
-				command: AgentExecuteCommand::TransferToken {
-					token: Default::default(),
-					recipient: Default::default(),
-					amount: 0,
-				},
-			},
-		};
-		let result = OutboundQueue::validate(&message);
-		assert!(result.is_ok());
-		let ticket = result.unwrap();
-		assert_ok!(OutboundQueue::submit(ticket.0));
-
-		// then submit a high priority message from bridge_hub
-		let message = Message {
-			origin: 1013.into(),
-			command: Command::Upgrade {
-				impl_address: H160::zero(),
-				impl_code_hash: H256::zero(),
-				initializer: None,
-			},
-		};
-		let result = OutboundQueue::validate(&message);
-		assert!(result.is_ok());
-		let ticket = result.unwrap();
-		assert_ok!(OutboundQueue::submit(ticket.0));
-		let mut footprint =
-			MessageQueue::footprint(AggregateMessageOrigin::Export(ExportOrigin::Here));
-		println!("{:?}", footprint);
-		assert_eq!(footprint.count, 1);
-
-		// process a low priority message from asset_hub will yield
-		let origin = AggregateMessageOrigin::Export(ExportOrigin::Sibling(1000.into()));
-		let message = EnqueuedMessage {
-			id: Default::default(),
-			origin: 1000.into(),
-			command: Command::AgentExecute {
-				agent_id: Default::default(),
-				command: AgentExecuteCommand::TransferToken {
-					token: Default::default(),
-					recipient: Default::default(),
-					amount: 0,
-				},
-			},
-		}
-		.encode();
-
-		let mut meter = WeightMeter::new();
-
+		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
 		assert_noop!(
-			OutboundQueue::process_message(&message.as_slice(), origin, &mut meter, &mut [0u8; 32]),
-			ProcessMessageError::Yield
+			OutboundQueue::set_fee_config(origin, DefaultFeeConfig::get()),
+			DispatchError::BadOrigin,
 		);
-
-		// run to next block and ensure high priority message processed
-		ServiceWeight::set(Some(Weight::MAX));
-		run_to_end_of_next_block();
-		let digest = System::digest();
-		let digest_items = digest.logs();
-		assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
-		footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(ExportOrigin::Here));
-		assert_eq!(footprint.count, 0);
-	});
+	})
 }
 
 #[test]
-fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_get_spammed() {
+fn set_fee_config_invalid() {
 	new_tester().execute_with(|| {
-		// submit a lot of low priority messages from asset_hub which will need multiple blocks to
+		let origin = RuntimeOrigin::root();
+		assert_noop!(
+			OutboundQueue::set_fee_config(
+				origin,
+				FeeConfigRecord { exchange_rate: (1, 1).into(), reward: 0, fee_per_gas: 0 }
+			),
+			Error::<Test>::InvalidFeeConfig
+		);
+	})
+}
+
+#[test]
+fn low_priority_messages_are_processed_last() {
+	use AggregateMessageOrigin::*;
+	use ExportOrigin::*;
+
+	let sibling_id = 1000;
+	let high_priority_queue = Export(Here);
+	let low_priority_queue = Export(Sibling(sibling_id.into()));
+
+	new_tester().execute_with(|| {
+		// submit a lot of high priority messages from asset_hub which will need multiple blocks to
 		// execute(60 for 3 blocks)
 		let max_messages = 60;
 		for _ in 0..max_messages {
-			let message = Message {
-				origin: 1000.into(),
-				command: Command::AgentExecute {
-					agent_id: Default::default(),
-					command: AgentExecuteCommand::TransferToken {
-						token: Default::default(),
-						recipient: Default::default(),
-						amount: 0,
-					},
-				},
-			};
-			let result = OutboundQueue::validate(&message);
-			assert!(result.is_ok());
-			let ticket = result.unwrap();
-			assert_ok!(OutboundQueue::submit(ticket.0));
+			let message = mock_governance_message::<Test>();
+			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+			OutboundQueue::deliver(ticket).unwrap();
 		}
-
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(
-			ExportOrigin::Sibling(1000.into()),
-		));
+		let footprint = MessageQueue::footprint(high_priority_queue);
 		assert_eq!(footprint.count, (max_messages) as u64);
 
-		// submit high priority message from bridge_hub
-		let message = Message {
-			origin: 1013.into(),
-			command: Command::Upgrade {
-				impl_address: H160::zero(),
-				impl_code_hash: H256::zero(),
-				initializer: None,
-			},
-		};
-		let result = OutboundQueue::validate(&message);
-		assert!(result.is_ok());
-		let ticket = result.unwrap();
-		assert_ok!(OutboundQueue::submit(ticket.0));
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(ExportOrigin::Here));
-		println!("{:?}", footprint);
+		// submit low priority message
+		let message = mock_message(sibling_id);
+		let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+		OutboundQueue::deliver(ticket).unwrap();
+		let footprint = MessageQueue::footprint(low_priority_queue);
 		assert_eq!(footprint.count, 1);
 
-		// run to next block high priority message and some of the low priority messages get
-		// executed
+		// run to next block; only high priority messages should have been processed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
-		let digest = System::digest();
-		let digest_items = digest.logs();
-		assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(
-			ExportOrigin::Sibling(1000.into()),
-		));
-		assert_eq!(footprint.count, 41);
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(ExportOrigin::Here));
+		let footprint = MessageQueue::footprint(high_priority_queue);
+		assert_eq!(footprint.count, 40);
+
+		let footprint = MessageQueue::footprint(low_priority_queue);
+		assert_eq!(footprint.count, 1);
+
+		// move to the next block, some high priority messages get executed
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+		let footprint = MessageQueue::footprint(high_priority_queue);
+		assert_eq!(footprint.count, 20);
+
+		let footprint = MessageQueue::footprint(low_priority_queue);
+		assert_eq!(footprint.count, 1);
+
+		// move to the next block, some high priority messages get executed
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+		let footprint = MessageQueue::footprint(high_priority_queue);
 		assert_eq!(footprint.count, 0);
 
-		// move to the next block, some low priority messages get executed
-		ServiceWeight::set(Some(Weight::MAX));
-		run_to_end_of_next_block();
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(
-			ExportOrigin::Sibling(1000.into()),
-		));
-		assert_eq!(footprint.count, 21);
-
-		// move to the next block, some low priority messages get executed
-		ServiceWeight::set(Some(Weight::MAX));
-		run_to_end_of_next_block();
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(
-			ExportOrigin::Sibling(1000.into()),
-		));
+		let footprint = MessageQueue::footprint(low_priority_queue);
 		assert_eq!(footprint.count, 1);
 
-		// move to the next block, the last low priority messages get executed
+		// move to the next block, the last remaining pending message,
+		// a lower priority one, is processed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
-		let footprint = MessageQueue::footprint(AggregateMessageOrigin::Export(
-			ExportOrigin::Sibling(1000.into()),
-		));
+
+		let footprint = MessageQueue::footprint(low_priority_queue);
 		assert_eq!(footprint.count, 0);
 	});
 }
@@ -441,40 +225,17 @@ fn submit_high_priority_message_will_not_blocked_even_when_low_priority_queue_ge
 fn submit_upgrade_message_success_when_queue_halted() {
 	new_tester().execute_with(|| {
 		// halt the outbound queue
-		assert_ok!(OutboundQueue::set_operating_mode(
-			RuntimeOrigin::root(),
-			BasicOperatingMode::Halted
-		));
+		OutboundQueue::set_operating_mode(RuntimeOrigin::root(), BasicOperatingMode::Halted)
+			.unwrap();
 
 		// submit a high priority message from bridge_hub should success
-		let message = Message {
-			origin: 1013.into(),
-			command: Command::Upgrade {
-				impl_address: H160::zero(),
-				impl_code_hash: H256::zero(),
-				initializer: None,
-			},
-		};
-		let result = OutboundQueue::validate(&message);
-		assert!(result.is_ok());
-		let ticket = result.unwrap();
-		assert_ok!(OutboundQueue::submit(ticket.0));
+		let message = mock_governance_message::<Test>();
+		let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+		assert_ok!(OutboundQueue::deliver(ticket));
 
-		// submit a low priority message from asset_hub will fail
-		let message = Message {
-			origin: 1000.into(),
-			command: Command::AgentExecute {
-				agent_id: Default::default(),
-				command: AgentExecuteCommand::TransferToken {
-					token: Default::default(),
-					recipient: Default::default(),
-					amount: 0,
-				},
-			},
-		};
-		let result = OutboundQueue::validate(&message);
-		assert!(result.is_ok());
-		let ticket = result.unwrap();
-		assert_noop!(OutboundQueue::submit(ticket.0), SendError::Halted);
+		// submit a low priority message from asset_hub will fail as pallet is halted
+		let message = mock_message(1000);
+		let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+		assert_noop!(OutboundQueue::deliver(ticket), SendError::Halted);
 	});
 }

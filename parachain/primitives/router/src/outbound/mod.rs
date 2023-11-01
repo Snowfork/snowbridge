@@ -6,10 +6,7 @@ use core::slice::Iter;
 use codec::{Decode, Encode};
 
 use frame_support::{ensure, traits::Get};
-use log;
-use snowbridge_core::outbound::{
-	AgentExecuteCommand, Command, Message, OutboundQueue as OutboundQueueTrait,
-};
+use snowbridge_core::outbound::{AgentExecuteCommand, Command, Message, SendMessage};
 use sp_core::H256;
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
@@ -27,7 +24,7 @@ impl<UniversalLocation, GatewayLocation, OutboundQueue, AgentHashedDescription> 
 where
 	UniversalLocation: Get<InteriorMultiLocation>,
 	GatewayLocation: Get<MultiLocation>,
-	OutboundQueue: OutboundQueueTrait<Balance = u128>,
+	OutboundQueue: SendMessage<Balance = u128>,
 	OutboundQueue::Ticket: Encode + Decode,
 	AgentHashedDescription: ConvertLocation<H256>,
 {
@@ -127,13 +124,13 @@ where
 		};
 
 		// validate the message
-		let (ticket, fees) = OutboundQueue::validate(&outbound_message).map_err(|err| {
+		let (ticket, fee) = OutboundQueue::validate(&outbound_message).map_err(|err| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
 			SendError::Unroutable
 		})?;
 
 		// convert fee to MultiAsset
-		let fee = MultiAsset::from((MultiLocation::parent(), fees.total())).into();
+		let fee = MultiAsset::from((MultiLocation::parent(), fee.total())).into();
 
 		Ok(((ticket.encode(), XcmHash::default()), fee))
 	}
@@ -145,7 +142,7 @@ where
 				SendError::NotApplicable
 			})?;
 
-		let message_hash = OutboundQueue::submit(ticket).map_err(|_| {
+		let message_hash = OutboundQueue::deliver(ticket).map_err(|_| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue submit of message failed");
 			SendError::Transport("other transport error")
 		})?;
@@ -310,7 +307,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::outbound::{Fees, MessageHash, SendError};
+	use snowbridge_core::outbound::{Fee, SendError};
 	use xcm::v3::prelude::SendError as XcmSendError;
 	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
@@ -330,28 +327,28 @@ mod tests {
 	const GATEWAY: [u8; 20] = hex!("D184c103F7acc340847eEE82a0B909E3358bc28d");
 
 	struct MockOkOutboundQueue;
-	impl OutboundQueueTrait for MockOkOutboundQueue {
+	impl SendMessage for MockOkOutboundQueue {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Fees<Self::Balance>), SendError> {
-			Ok(((), Fees { base: 1, delivery: 1 }))
+		fn validate(_: &Message) -> Result<((), Fee<Self::Balance>), SendError> {
+			Ok(((), Fee { local: 1, remote: 1 }))
 		}
 
-		fn submit(_: Self::Ticket) -> Result<MessageHash, SendError> {
-			Ok(MessageHash::zero())
+		fn deliver(_: Self::Ticket) -> Result<H256, SendError> {
+			Ok(H256::zero())
 		}
 	}
 	struct MockErrOutboundQueue;
-	impl OutboundQueueTrait for MockErrOutboundQueue {
+	impl SendMessage for MockErrOutboundQueue {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Fees<Self::Balance>), SendError> {
+		fn validate(_: &Message) -> Result<((), Fee<Self::Balance>), SendError> {
 			Err(SendError::MessageTooLarge)
 		}
 
-		fn submit(_: Self::Ticket) -> Result<MessageHash, SendError> {
+		fn deliver(_: Self::Ticket) -> Result<H256, SendError> {
 			Err(SendError::MessageTooLarge)
 		}
 	}

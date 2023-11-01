@@ -1,6 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 //! Ethereum Beacon Client
+//!
+//! A light client that verifies consensus updates signed by the sync committee of the beacon chain.
+//!
+//! # Extrinsics
+//!
+//! ## Governance
+//!
+//! * [`Call::force_checkpoint`]: Set the initial trusted consensus checkpoint.
+//! * [`Call::set_operating_mode`]: Set the operating mode of the pallet. Can be used to disable
+//!   processing of conensus updates.
+//!
+//! ## Consensus Updates
+//!
+//! * [`Call::submit`]: Submit a finalized beacon header with an optional sync committee update
+//! * [`Call::submit_execution_header`]: Submit an execution header together with an ancestry proof
+//!   that can be verified against an already imported finalized beacon header.
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod config;
