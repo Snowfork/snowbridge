@@ -64,7 +64,7 @@ use xcm_executor::traits::ConvertLocation;
 
 use frame_support::{
 	pallet_prelude::*,
-	traits::{tokens::Preservation, EnsureOrigin},
+	traits::{tokens::Preservation, Contains, EnsureOrigin},
 };
 use frame_system::pallet_prelude::*;
 use snowbridge_core::{
@@ -120,6 +120,17 @@ where
 	Partial(AccountIdOf<T>),
 	/// No charge
 	No,
+}
+
+pub struct AllowSiblingsOnly;
+impl Contains<MultiLocation> for AllowSiblingsOnly {
+	fn contains(location: &MultiLocation) -> bool {
+		if let MultiLocation { parents: 1, interior: X1(Parachain(_)) } = location {
+			true
+		} else {
+			false
+		}
+	}
 }
 
 #[frame_support::pallet]
