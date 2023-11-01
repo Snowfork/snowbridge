@@ -1,15 +1,13 @@
 use codec::Encode;
 use ethers::{
 	core::types::Address,
-	middleware::SignerMiddleware,
-	providers::{Http, Provider},
-	signers::{LocalWallet, Signer},
 	utils::{parse_units, rlp::Encodable},
 };
 use futures::StreamExt;
-use hex_literal::hex;
 use snowbridge_smoketest::{
+	constants::{GATEWAY_PROXY_CONTRACT, SNOWBRIDGE_SOVEREIGN, WETH_CONTRACT},
 	contracts::{i_gateway, weth9},
+	helper::initial_clients,
 	parachains::assethub::api::{
 		foreign_assets::events::Created,
 		runtime_types::{
@@ -19,41 +17,24 @@ use snowbridge_smoketest::{
 					Junction::{AccountKey20, GlobalConsensus},
 					NetworkId,
 				},
-				junctions::Junctions::X3,
+				junctions::Junctions::X2,
 			},
 		},
 	},
 };
-use std::{sync::Arc, time::Duration};
-use subxt::{utils::AccountId32, OnlineClient, PolkadotConfig};
-
-// The deployment addresses of the following contracts are stable in our E2E env, unless we modify
-// the order in contracts are deployed in DeployScript.sol.
-const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
-const ETHEREUM_API: &str = "http://localhost:8545";
-const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
-const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
-const WETH_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
-const GATEWAY_PROXY_SOVEREIGN: [u8; 32] =
-	hex!("c9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5");
+use subxt::utils::AccountId32;
 
 #[tokio::test]
 async fn register_token() {
-	let provider = Provider::<Http>::try_from(ETHEREUM_API)
-		.unwrap()
-		.interval(Duration::from_millis(10u64));
-	let wallet: LocalWallet = ETHEREUM_KEY.parse::<LocalWallet>().unwrap().with_chain_id(15u64);
-	let client = SignerMiddleware::new(provider, wallet);
-	let client = Arc::new(client);
+	let test_clients = initial_clients().await.expect("initialize clients");
+	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
+	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
-	let gateway = i_gateway::IGateway::new(gateway_addr, client.clone());
+	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 
 	let weth_addr: Address = WETH_CONTRACT.into();
-	let weth = weth9::WETH9::new(weth_addr, client.clone());
-
-	let assethub: OnlineClient<PolkadotConfig> =
-		OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
+	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	let fee = parse_units(2, "ether").unwrap();
 
@@ -86,14 +67,13 @@ async fn register_token() {
 
 	let expected_asset_id: MultiLocation = MultiLocation {
 		parents: 2,
-		interior: X3(
+		interior: X2(
 			GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
-			AccountKey20 { network: None, key: GATEWAY_PROXY_CONTRACT.into() },
 			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
 		),
 	};
-	let expected_creator: AccountId32 = GATEWAY_PROXY_SOVEREIGN.into();
-	let expected_owner: AccountId32 = GATEWAY_PROXY_SOVEREIGN.into();
+	let expected_creator: AccountId32 = SNOWBRIDGE_SOVEREIGN.into();
+	let expected_owner: AccountId32 = SNOWBRIDGE_SOVEREIGN.into();
 
 	let mut created_event_found = false;
 	while let Some(Ok(block)) = blocks.next().await {

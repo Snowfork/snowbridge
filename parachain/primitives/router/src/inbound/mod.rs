@@ -36,15 +36,11 @@ pub struct MessageV1 {
 pub enum Command {
 	/// Register a wrapped token on the AssetHub `ForeignAssets` pallet
 	RegisterToken {
-		/// The address of the gateway
-		gateway: H160,
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
 	},
 	/// Send a token to AssetHub or another parachain
 	SendToken {
-		/// The address of the gateway
-		gateway: H160,
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
 		/// The destination for the transfer
@@ -112,10 +108,9 @@ where
 					fun: Fungible(buy_execution_fee_amount),
 				};
 
-				let create_instructions = |origin_location: Junction| -> Vec<Instruction<()>> {
+				let create_instructions = || -> Vec<Instruction<()>> {
 					vec![
 						UniversalOrigin(GlobalConsensus(network)),
-						DescendOrigin(X1(origin_location)),
 						WithdrawAsset(buy_execution_fee.clone().into()),
 						BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
 						SetAppendix(
@@ -123,13 +118,7 @@ where
 								RefundSurplus,
 								DepositAsset {
 									assets: Wild(AllCounted(1)),
-									beneficiary: (
-										Parent,
-										Parent,
-										GlobalConsensus(network),
-										origin_location,
-									)
-										.into(),
+									beneficiary: (Parent, Parent, GlobalConsensus(network)).into(),
 								},
 							]
 							.into(),
@@ -138,18 +127,13 @@ where
 				};
 
 				let xcm = match command {
-					Command::RegisterToken { gateway, token, .. } => {
+					Command::RegisterToken { token, .. } => {
 						let owner =
-							GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::from_params(
-								&chain_id,
-								gateway.as_fixed_bytes(),
-							);
+							GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_params(&chain_id);
 
-						let origin_location = AccountKey20 { network: None, key: gateway.into() };
+						let asset_id = Self::convert_token_address(network, token);
 
-						let asset_id = Self::convert_token_address(network, gateway, token);
-
-						let mut instructions = create_instructions(origin_location);
+						let mut instructions = create_instructions();
 
 						let create_call_index: [u8; 2] = CreateAssetCall::get();
 						instructions.extend(vec![
@@ -169,15 +153,11 @@ where
 						]);
 						instructions.into()
 					},
-					Command::SendToken { gateway, token, destination, amount } => {
-						let asset = MultiAsset::from((
-							Self::convert_token_address(network, gateway, token),
-							amount,
-						));
+					Command::SendToken { token, destination, amount, .. } => {
+						let asset =
+							MultiAsset::from((Self::convert_token_address(network, token), amount));
 
-						let origin_location = AccountKey20 { network: None, key: gateway.into() };
-
-						let mut instructions = create_instructions(origin_location);
+						let mut instructions = create_instructions();
 						instructions.extend(vec![
 							ReserveAssetDeposited(vec![asset.clone()].into()),
 							ClearOrigin,
@@ -242,12 +222,11 @@ where
 	SendTokenExecutionFee: Get<u128>,
 {
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
-	fn convert_token_address(network: NetworkId, origin: H160, token: H160) -> MultiLocation {
+	fn convert_token_address(network: NetworkId, token: H160) -> MultiLocation {
 		MultiLocation {
 			parents: 2,
-			interior: X3(
+			interior: X2(
 				GlobalConsensus(network),
-				AccountKey20 { network: None, key: origin.into() },
 				AccountKey20 { network: None, key: token.into() },
 			),
 		}
@@ -265,66 +244,56 @@ where
 	}
 }
 
-pub struct GlobalConsensusEthereumAccountConvertsFor<AccountId>(PhantomData<AccountId>);
-impl<AccountId> ConvertLocation<AccountId> for GlobalConsensusEthereumAccountConvertsFor<AccountId>
+pub struct GlobalConsensusEthereumConvertsFor<AccountId>(PhantomData<AccountId>);
+impl<AccountId> ConvertLocation<AccountId> for GlobalConsensusEthereumConvertsFor<AccountId>
 where
 	AccountId: From<[u8; 32]> + Clone,
 {
 	fn convert_location(location: &MultiLocation) -> Option<AccountId> {
-		if let MultiLocation {
-			interior: X2(GlobalConsensus(Ethereum { chain_id }), AccountKey20 { key, .. }),
-			..
-		} = location
+		if let MultiLocation { interior: X1(GlobalConsensus(Ethereum { chain_id })), .. } = location
 		{
-			Some(Self::from_params(chain_id, key).into())
+			Some(Self::from_params(chain_id).into())
 		} else {
 			None
 		}
 	}
 }
 
-impl<AccountId> GlobalConsensusEthereumAccountConvertsFor<AccountId> {
-	fn from_params(chain_id: &u64, key: &[u8; 20]) -> [u8; 32] {
-		(b"ethereum", chain_id, key).using_encoded(blake2_256)
+impl<AccountId> GlobalConsensusEthereumConvertsFor<AccountId> {
+	fn from_params(chain_id: &u64) -> [u8; 32] {
+		(b"ethereum-chain", chain_id).using_encoded(blake2_256)
 	}
 }
 
 #[cfg(test)]
 mod tests {
-	use super::{FromEthereumGlobalConsensus, GlobalConsensusEthereumAccountConvertsFor};
+	use super::{FromEthereumGlobalConsensus, GlobalConsensusEthereumConvertsFor};
 	use frame_support::{parameter_types, traits::ContainsPair};
 	use hex_literal::hex;
 	use sp_core::crypto::Ss58Codec;
 	use xcm::v3::prelude::*;
 	use xcm_executor::traits::ConvertLocation;
 
-	const CONTRACT_ADDRESS: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
 	const NETWORK: NetworkId = Ethereum { chain_id: 15 };
 	const SS58_FORMAT: u16 = 2;
 	const EXPECTED_SOVEREIGN_KEY: [u8; 32] =
-		hex!("c9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5");
+		hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5");
 	const EXPECTED_SOVEREIGN_ADDRESS: &'static str =
-		"H8VBFC4LG91ByxMG6GwsCcAacjitnzGmGbqnvSEQFBywJEL";
+		"HWYx2xgcdpSjJQicUUZFRR1EJNPVEQoUDSUB29rfxF617nv";
 
 	parameter_types! {
 		pub EthereumNetwork: NetworkId = NETWORK;
-		pub EthereumLocation: MultiLocation = MultiLocation::new(2, X2(GlobalConsensus(EthereumNetwork::get()), AccountKey20 { network: None, key: CONTRACT_ADDRESS }));
+		pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
 	}
 
 	#[test]
 	fn test_contract_location_without_network_converts_successfully() {
-		let contract_location = MultiLocation {
-			parents: 2,
-			interior: X2(
-				GlobalConsensus(NETWORK),
-				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
-			),
-		};
+		let contract_location =
+			MultiLocation { parents: 2, interior: X1(GlobalConsensus(NETWORK)) };
 
-		let account = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(
-			&contract_location,
-		)
-		.unwrap();
+		let account =
+			GlobalConsensusEthereumConvertsFor::<[u8; 32]>::convert_location(&contract_location)
+				.unwrap();
 		let address = frame_support::sp_runtime::AccountId32::new(account)
 			.to_ss58check_with_version(SS58_FORMAT.into());
 
@@ -336,18 +305,12 @@ mod tests {
 
 	#[test]
 	fn test_contract_location_with_network_converts_successfully() {
-		let contract_location = MultiLocation {
-			parents: 2,
-			interior: X2(
-				GlobalConsensus(NETWORK),
-				AccountKey20 { network: Some(NETWORK), key: CONTRACT_ADDRESS },
-			),
-		};
+		let contract_location =
+			MultiLocation { parents: 2, interior: X1(GlobalConsensus(NETWORK)) };
 
-		let account = GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(
-			&contract_location,
-		)
-		.unwrap();
+		let account =
+			GlobalConsensusEthereumConvertsFor::<[u8; 32]>::convert_location(&contract_location)
+				.unwrap();
 		let address = frame_support::sp_runtime::AccountId32::new(account)
 			.to_ss58check_with_version(SS58_FORMAT.into());
 		assert_eq!(account, EXPECTED_SOVEREIGN_KEY);
@@ -362,42 +325,24 @@ mod tests {
 			MultiLocation { parents: 2, interior: X2(GlobalConsensus(Polkadot), Parachain(1000)) };
 
 		assert_eq!(
-			GlobalConsensusEthereumAccountConvertsFor::<[u8; 32]>::convert_location(
-				&contract_location
-			),
+			GlobalConsensusEthereumConvertsFor::<[u8; 32]>::convert_location(&contract_location),
 			None,
 		);
 	}
 
 	#[test]
 	fn test_from_ethereum_global_consensus_with_containing_asset_yields_true() {
-		let origin = MultiLocation {
-			parents: 2,
-			interior: X2(
-				GlobalConsensus(NETWORK),
-				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
-			),
-		};
+		let origin = MultiLocation { parents: 2, interior: X1(GlobalConsensus(NETWORK)) };
 		let asset = MultiLocation {
 			parents: 2,
-			interior: X3(
-				GlobalConsensus(NETWORK),
-				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
-				AccountKey20 { network: None, key: [0; 20] },
-			),
+			interior: X2(GlobalConsensus(NETWORK), AccountKey20 { network: None, key: [0; 20] }),
 		};
 		assert!(FromEthereumGlobalConsensus::<EthereumLocation>::contains(&asset, &origin));
 	}
 
 	#[test]
 	fn test_from_ethereum_global_consensus_without_containing_asset_yields_false() {
-		let origin = MultiLocation {
-			parents: 2,
-			interior: X2(
-				GlobalConsensus(NETWORK),
-				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
-			),
-		};
+		let origin = MultiLocation { parents: 2, interior: X1(GlobalConsensus(NETWORK)) };
 		let asset =
 			MultiLocation { parents: 2, interior: X2(GlobalConsensus(Polkadot), Parachain(1000)) };
 		assert!(!FromEthereumGlobalConsensus::<EthereumLocation>::contains(&asset, &origin));
@@ -409,11 +354,7 @@ mod tests {
 			MultiLocation { parents: 2, interior: X2(GlobalConsensus(Polkadot), Parachain(1000)) };
 		let asset = MultiLocation {
 			parents: 2,
-			interior: X3(
-				GlobalConsensus(NETWORK),
-				AccountKey20 { network: None, key: CONTRACT_ADDRESS },
-				AccountKey20 { network: None, key: [0; 20] },
-			),
+			interior: X2(GlobalConsensus(NETWORK), AccountKey20 { network: None, key: [0; 20] }),
 		};
 		assert!(!FromEthereumGlobalConsensus::<EthereumLocation>::contains(&asset, &origin));
 	}
