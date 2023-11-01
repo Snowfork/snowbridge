@@ -146,6 +146,7 @@ jobs:
           --manifest-path polkadot-sdk/Cargo.toml
           --release --verbose
           --package bridge-hub-rococo-runtime
+          --features runtime-benchmarks
 
   beacon-fuzz:
     if: false
