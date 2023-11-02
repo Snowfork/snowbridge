@@ -24,7 +24,6 @@ use snowbridge_smoketest::{
 use sp_core::Encode;
 use subxt::utils::AccountId32;
 
-// TODO: test sendNativeToken
 #[tokio::test]
 async fn send_token() {
 	let test_clients = initial_clients().await.expect("initialize clients");
