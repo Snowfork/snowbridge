@@ -108,23 +108,21 @@ where
 					fun: Fungible(buy_execution_fee_amount),
 				};
 
-				let create_instructions = || -> Vec<Instruction<()>> {
-					vec![
-						UniversalOrigin(GlobalConsensus(network)),
-						WithdrawAsset(buy_execution_fee.clone().into()),
-						BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
-						SetAppendix(
-							vec![
-								RefundSurplus,
-								DepositAsset {
-									assets: Wild(AllCounted(1)),
-									beneficiary: (Parent, Parent, GlobalConsensus(network)).into(),
-								},
-							]
-							.into(),
-						),
-					]
-				};
+				let mut create_instructions = vec![
+					UniversalOrigin(GlobalConsensus(network)),
+					WithdrawAsset(buy_execution_fee.clone().into()),
+					BuyExecution { fees: buy_execution_fee.clone(), weight_limit: Unlimited },
+					SetAppendix(
+						vec![
+							RefundSurplus,
+							DepositAsset {
+								assets: Wild(AllCounted(1)),
+								beneficiary: (Parent, Parent, GlobalConsensus(network)).into(),
+							},
+						]
+						.into(),
+					),
+				];
 
 				let xcm = match command {
 					Command::RegisterToken { token, .. } => {
@@ -133,10 +131,8 @@ where
 
 						let asset_id = Self::convert_token_address(network, token);
 
-						let mut instructions = create_instructions();
-
 						let create_call_index: [u8; 2] = CreateAssetCall::get();
-						instructions.extend(vec![
+						create_instructions.extend(vec![
 							Transact {
 								origin_kind: OriginKind::Xcm,
 								require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
@@ -151,14 +147,13 @@ where
 							},
 							ExpectTransactStatus(MaybeErrorCode::Success),
 						]);
-						instructions.into()
+						create_instructions.into()
 					},
 					Command::SendToken { token, destination, amount, .. } => {
 						let asset =
 							MultiAsset::from((Self::convert_token_address(network, token), amount));
 
-						let mut instructions = create_instructions();
-						instructions.extend(vec![
+						create_instructions.extend(vec![
 							ReserveAssetDeposited(vec![asset.clone()].into()),
 							ClearOrigin,
 						]);
@@ -204,8 +199,8 @@ where
 								vec![DepositAsset { assets, beneficiary }]
 							},
 						};
-						instructions.append(&mut fragment);
-						instructions.into()
+						create_instructions.append(&mut fragment);
+						create_instructions.into()
 					},
 				};
 				Ok(xcm)
