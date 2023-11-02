@@ -10,7 +10,9 @@ use frame_support::{
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
-use snowbridge_core::{outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, ParaId};
+use snowbridge_core::{
+	outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly, ParaId,
+};
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
 	AccountId32, BuildStorage,
@@ -207,7 +209,7 @@ impl crate::Config for Test {
 	type OwnParaId = OwnParaId;
 	type OutboundQueue = OutboundQueue;
 	type MessageHasher = BlakeTwo256;
-	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<snowbridge_control::AllowSiblingsOnly>;
+	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = HashedDescription<AgentId, DescribeFamily<DescribeAllTerminal>>;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
