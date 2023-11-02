@@ -47,8 +47,8 @@ use frame_system::ensure_signed;
 use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_std::convert::TryFrom;
-use xcm::v3::{
-	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, SendXcm,
+use xcm::prelude::{
+	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, SendXcm, Xcm,
 	XcmHash,
 };
 
@@ -130,8 +130,8 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T> {
-		/// A message was received from Ethereum
-		MessageReceived {
+		/// Xcm message sent to dest chain
+		MessageSent {
 			/// The destination parachain
 			dest: ParaId,
 			/// The message nonce
@@ -245,16 +245,14 @@ pub mod pallet {
 
 			// Decode message into XCM
 			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-				Ok(message) => T::MessageConverter::convert(message)
-					.map_err(|e| Error::<T>::ConvertMessage(e))?,
+				Ok(message) => Self::do_convert(message)?,
 				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 			};
 
 			// Attempt to send XCM to a dest parachain
-			let dest = MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
-			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
+			let xcm_hash = Self::send_xcm(xcm, envelope.dest)?;
 
-			Self::deposit_event(Event::MessageReceived {
+			Self::deposit_event(Event::MessageSent {
 				dest: envelope.dest,
 				nonce: envelope.nonce,
 				xcm_hash,
@@ -274,6 +272,20 @@ pub mod pallet {
 			OperatingMode::<T>::set(mode);
 			Self::deposit_event(Event::OperatingModeChanged { mode });
 			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn do_convert(message: inbound::VersionedMessage) -> Result<Xcm<()>, Error<T>> {
+			let xcm =
+				T::MessageConverter::convert(message).map_err(|e| Error::<T>::ConvertMessage(e))?;
+			Ok(xcm)
+		}
+
+		pub fn send_xcm(xcm: Xcm<()>, dest: ParaId) -> Result<XcmHash, Error<T>> {
+			let dest = MultiLocation { parents: 1, interior: X1(Parachain(dest.into())) };
+			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
+			Ok(xcm_hash)
 		}
 	}
 }
