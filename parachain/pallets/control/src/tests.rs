@@ -581,3 +581,13 @@ fn charge_fee_for_upgrade() {
 		assert_eq!(sovereign_balance, InitialFunding::get());
 	});
 }
+
+#[test]
+fn allow_siblings_predicate_only_allows_siblings() {
+	new_test_ext().execute_with(|| {
+		let sibling = MultiLocation::new(1, X1(Parachain(1000)));
+		let child = MultiLocation::new(0, X1(Parachain(1000)));
+		assert!(AllowSiblingsOnly::contains(&sibling), "Sibling returns true.");
+		assert!(!AllowSiblingsOnly::contains(&child), "Child returns false.");
+	});
+}

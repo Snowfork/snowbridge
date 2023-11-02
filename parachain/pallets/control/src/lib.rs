@@ -125,11 +125,7 @@ where
 pub struct AllowSiblingsOnly;
 impl Contains<MultiLocation> for AllowSiblingsOnly {
 	fn contains(location: &MultiLocation) -> bool {
-		if let MultiLocation { parents: 1, interior: X1(Parachain(_)) } = location {
-			true
-		} else {
-			false
-		}
+		matches!(location, MultiLocation { parents: 1, interior: X1(Parachain(_)) })
 	}
 }
 
