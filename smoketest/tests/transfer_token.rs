@@ -63,15 +63,10 @@ async fn transfer_token() {
 	let amount: u128 = 1_000_000_000;
 	let assets = VersionedMultiAssets::V3(MultiAssets(vec![
 		MultiAsset {
-			id: AssetId::Concrete(MultiLocation { parents: 1, interior: Here }),
-			fun: Fungibility::Fungible(fee),
-		},
-		MultiAsset {
 			id: AssetId::Concrete(MultiLocation {
 				parents: 2,
-				interior: Junctions::X3(
+				interior: Junctions::X2(
 					Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
-					Junction::AccountKey20 { network: None, key: GATEWAY_PROXY_CONTRACT.into() },
 					Junction::AccountKey20 { network: None, key: WETH_CONTRACT.into() },
 				),
 			}),

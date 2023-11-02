@@ -108,7 +108,7 @@ where
 					fun: Fungible(buy_execution_fee_amount),
 				};
 
-				let mut create_instructions = vec![
+				let mut instructions = vec![
 					UniversalOrigin(GlobalConsensus(network)),
 					WithdrawAsset(buy_execution_fee.clone().into()),
 					BuyExecution { fees: buy_execution_fee, weight_limit: Unlimited },
@@ -132,7 +132,7 @@ where
 						let asset_id = Self::convert_token_address(network, token);
 
 						let create_call_index: [u8; 2] = CreateAssetCall::get();
-						create_instructions.extend(vec![
+						instructions.extend(vec![
 							Transact {
 								origin_kind: OriginKind::Xcm,
 								require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
@@ -147,13 +147,13 @@ where
 							},
 							ExpectTransactStatus(MaybeErrorCode::Success),
 						]);
-						create_instructions.into()
+						instructions.into()
 					},
 					Command::SendToken { token, destination, amount, .. } => {
 						let asset =
 							MultiAsset::from((Self::convert_token_address(network, token), amount));
 
-						create_instructions.extend(vec![
+						instructions.extend(vec![
 							ReserveAssetDeposited(vec![asset.clone()].into()),
 							ClearOrigin,
 						]);
@@ -199,8 +199,8 @@ where
 								vec![DepositAsset { assets, beneficiary }]
 							},
 						};
-						create_instructions.append(&mut fragment);
-						create_instructions.into()
+						instructions.append(&mut fragment);
+						instructions.into()
 					},
 				};
 				Ok(xcm)
