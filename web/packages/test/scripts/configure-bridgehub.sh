@@ -3,6 +3,7 @@ set -eu
 
 source scripts/set-env.sh
 source scripts/xcm-helper.sh
+source scripts/set_operating_mode.sh
 
 config_beacon_checkpoint() {
     pushd $root_dir
@@ -73,6 +74,7 @@ configure_bridgehub() {
     wait_beacon_chain_ready
     config_beacon_checkpoint
     open_hrmp_channels
+    enable_gateway
 }
 
 if [ -z "${from_start_services:-}" ]; then

@@ -14,10 +14,12 @@ disable_gateway() {
     send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$transact_call"
 }
 
-read -p "Enable gateway? (Y/N): " confirm
+if [ -z "${from_start_services:-}" ]; then
+    read -p "Enable gateway? (Y/N): " confirm
 
-if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
-    enable_gateway
-else
-    disable_gateway
+    if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+        enable_gateway
+    else
+        disable_gateway
+    fi
 fi
