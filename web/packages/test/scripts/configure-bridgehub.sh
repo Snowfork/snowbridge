@@ -3,6 +3,7 @@ set -eu
 
 source scripts/set-env.sh
 source scripts/xcm-helper.sh
+source scripts/set_operating_mode.sh
 
 config_beacon_checkpoint() {
     pushd $root_dir
@@ -27,7 +28,7 @@ fund_accounts() {
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $template_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $beacon_relayer_pub_key
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_pub_key
-    transfer_balance $relaychain_ws_url "//Charlie" 1000 1000000000000000 $gateway_contract_sovereign_account
+    transfer_balance $relaychain_ws_url "//Charlie" 1000 1000000000000000 $snowbridge_sovereign_account
 }
 
 open_hrmp_channel()
@@ -73,6 +74,7 @@ configure_bridgehub() {
     wait_beacon_chain_ready
     config_beacon_checkpoint
     open_hrmp_channels
+    enable_gateway
 }
 
 if [ -z "${from_start_services:-}" ]; then
