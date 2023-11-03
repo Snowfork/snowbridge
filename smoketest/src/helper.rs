@@ -295,10 +295,7 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 	}));
 	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
 		RelaychainInstruction::UnpaidExecution {
-			weight_limit: RelaychainWeightLimit::Limited(RelaychainWeight {
-				ref_time: weight,
-				proof_size,
-			}),
+			weight_limit: RelaychainWeightLimit::Unlimited,
 			check_origin: None,
 		},
 		RelaychainInstruction::Transact {
