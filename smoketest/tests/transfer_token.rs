@@ -21,7 +21,7 @@ use snowbridge_smoketest::{
 			xcm::{
 				v3::{
 					junction::{Junction, NetworkId},
-					junctions::{Junctions, Junctions::Here},
+					junctions::Junctions,
 					multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
 				},
 				VersionedMultiAssets, VersionedMultiLocation,
@@ -59,9 +59,13 @@ async fn transfer_token() {
 
 	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new(keypair);
 
-	let fee: u128 = 1000_800_566_581;
+	let _fee: u128 = 1_000_800_566_581;
 	let amount: u128 = 1_000_000_000;
 	let assets = VersionedMultiAssets::V3(MultiAssets(vec![
+		//MultiAsset {
+		//	id: AssetId::Concrete(MultiLocation { parents: 1, interior: Junctions::Here }),
+		//	fun: Fungibility::Fungible(fee),
+		//},
 		MultiAsset {
 			id: AssetId::Concrete(MultiLocation {
 				parents: 2,
@@ -76,16 +80,14 @@ async fn transfer_token() {
 
 	let destination = VersionedMultiLocation::V3(MultiLocation {
 		parents: 2,
-		interior: Junctions::X2(
+		interior: Junctions::X1(
 			Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
-			Junction::AccountKey20 { network: None, key: DESTINATION_ADDRESS.into() },
 		),
 	});
 
 	let beneficiary = VersionedMultiLocation::V3(MultiLocation {
-		parents: 2,
-		interior: Junctions::X2(
-			Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+		parents: 0,
+		interior: Junctions::X1(
 			Junction::AccountKey20 { network: None, key: DESTINATION_ADDRESS.into() },
 		),
 	});
