@@ -8,7 +8,7 @@ import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command} from "./Types.sol";
+import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command, AssetFees} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -173,6 +173,11 @@ contract Gateway is IGateway, IInitializable {
             catch {
                 success = false;
             }
+        } else if (message.command == Command.UpdateFees) {
+            try Gateway(this).updateFees{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
         }
 
         // Calculate the actual cost of executing this message
@@ -228,6 +233,13 @@ contract Gateway is IGateway, IInitializable {
 
     function implementation() public view returns (address) {
         return ERC1967.load();
+    }
+
+    function assetFees() external view returns (AssetFees memory fees) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        fees.register = $.registerTokenFee;
+        fees.send = $.sendTokenFee;
+        return fees;
     }
 
     /**
@@ -409,6 +421,15 @@ contract Gateway is IGateway, IInitializable {
 
         _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
         emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
+    }
+
+    // @dev Set the operating mode of the gateway
+    function updateFees(bytes calldata data) external onlySelf {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        AssetFees memory params = abi.decode(data, (AssetFees));
+        $.registerTokenFee = params.register;
+        $.sendTokenFee = params.send;
+        emit FeeUpdated(params.register, params.send);
     }
 
     /**

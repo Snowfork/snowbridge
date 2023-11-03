@@ -63,6 +63,10 @@ contract GatewayMock is Gateway {
             return commitmentsAreVerified;
         }
     }
+
+    function updateFeesPublic(bytes calldata params) external {
+        this.updateFees(params);
+    }
 }
 
 library AdditionalStorage {

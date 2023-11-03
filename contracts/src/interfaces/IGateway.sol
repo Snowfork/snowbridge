@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {OperatingMode, InboundMessage, ParaID} from "../Types.sol";
+import {OperatingMode, InboundMessage, ParaID, AssetFees} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 
 interface IGateway {
@@ -34,6 +34,9 @@ interface IGateway {
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
+    // Emitted when the fees updated
+    event FeeUpdated(uint256 register, uint256 send);
+
     /**
      * Getters
      */
@@ -44,6 +47,7 @@ interface IGateway {
     function channelNoncesOf(ParaID paraID) external view returns (uint64, uint64);
     function agentOf(bytes32 agentID) external view returns (address);
     function implementation() external view returns (address);
+    function assetFees() external view returns (AssetFees memory);
 
     /**
      * Messaging

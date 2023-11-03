@@ -72,7 +72,15 @@ enum Command {
     CreateChannel,
     UpdateChannel,
     SetOperatingMode,
-    TransferNativeFromAgent
+    TransferNativeFromAgent,
+    UpdateFees
 }
 
 enum AgentExecuteCommand {TransferToken}
+
+struct AssetFees {
+    /// @dev register token
+    uint256 register;
+    /// @dev send token to parachain
+    uint256 send;
+}
