@@ -177,7 +177,7 @@ start_relayer() {
     (
         : >$output_dir/execution-relay-asset-hub.log
         while :; do
-            echo "Starting execution relay asset-hub at $(date)"
+            echo "Starting execution relay (asset-hub) at $(date)"
             "${relay_bin}" run execution \
                 --config $output_dir/execution-relay-asset-hub.json \
                 --substrate.private-key "//ExecutionRelay" \
@@ -190,7 +190,7 @@ start_relayer() {
     (
         : >$output_dir/execution-relay-template.log
         while :; do
-            echo "Starting execution relay template at $(date)"
+            echo "Starting execution relay (parachain-template) at $(date)"
             "${relay_bin}" run execution \
                 --config $output_dir/execution-relay-template.json \
                 --substrate.private-key "//ExecutionRelay" \

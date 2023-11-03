@@ -93,6 +93,9 @@ contract GatewayTest is Test {
         );
         GatewayMock(address(gateway)).setCommitmentsAreVerified(true);
 
+        Gateway.SetOperatingModeParams memory params = Gateway.SetOperatingModeParams({mode: OperatingMode.Normal});
+        GatewayMock(address(gateway)).setOperatingModePublic(abi.encode(params));
+
         bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
 

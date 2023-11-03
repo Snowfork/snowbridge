@@ -569,7 +569,7 @@ contract Gateway is IGateway, IInitializable {
 
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        $.mode = OperatingMode.Normal;
+        $.mode = OperatingMode.RejectingOutboundMessages;
         $.defaultFee = defaultFee;
 
         // Initialize an agent & channel for BridgeHub

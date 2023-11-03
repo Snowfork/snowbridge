@@ -16,7 +16,7 @@ use snowbridge_smoketest::{
 	parachains::{
 		bridgehub::{
 			self,
-			api::{ethereum_control, runtime_types::snowbridge_core::outbound::Initializer},
+			api::{ethereum_control, runtime_types::snowbridge_core::outbound::v1::Initializer},
 		},
 		relaychain,
 		relaychain::api::runtime_types::{

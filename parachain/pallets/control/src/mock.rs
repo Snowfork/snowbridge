@@ -3,14 +3,16 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, ConstU8, Contains},
+	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, ConstU8},
 	weights::IdentityFee,
 	PalletId,
 };
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
-use snowbridge_core::{outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, ParaId};
+use snowbridge_core::{
+	outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly, ParaId,
+};
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
 	AccountId32, BuildStorage,
@@ -132,6 +134,7 @@ impl pallet_balances::Config for Test {
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type MaxHolds = ();
 }
 
@@ -198,17 +201,6 @@ parameter_types! {
 impl BenchmarkHelper<RuntimeOrigin> for () {
 	fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
 		RuntimeOrigin::from(pallet_xcm_origin::Origin(location))
-	}
-}
-
-pub struct AllowSiblingsOnly;
-impl Contains<MultiLocation> for AllowSiblingsOnly {
-	fn contains(location: &MultiLocation) -> bool {
-		if let MultiLocation { parents: 1, interior: X1(Parachain(_)) } = location {
-			true
-		} else {
-			false
-		}
 	}
 }
 
