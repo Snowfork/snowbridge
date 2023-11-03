@@ -59,13 +59,8 @@ async fn transfer_token() {
 
 	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new(keypair);
 
-	let _fee: u128 = 1_000_800_566_581;
 	let amount: u128 = 1_000_000_000;
 	let assets = VersionedMultiAssets::V3(MultiAssets(vec![
-		//MultiAsset {
-		//	id: AssetId::Concrete(MultiLocation { parents: 1, interior: Junctions::Here }),
-		//	fun: Fungibility::Fungible(fee),
-		//},
 		MultiAsset {
 			id: AssetId::Concrete(MultiLocation {
 				parents: 2,
