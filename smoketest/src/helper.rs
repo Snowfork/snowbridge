@@ -86,6 +86,7 @@ impl Config for AssetHubConfig {
 }
 
 pub struct TestClients {
+	pub asset_hub_client: Box<OnlineClient<PolkadotConfig>>,
 	pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
 	pub template_client: Box<OnlineClient<TemplateConfig>>,
 	pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
@@ -95,6 +96,10 @@ pub struct TestClients {
 
 pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>> {
 	let bridge_hub_client: OnlineClient<PolkadotConfig> = OnlineClient::from_url(BRIDGE_HUB_WS_URL)
+		.await
+		.expect("can not connect to bridgehub");
+
+	let asset_hub_client: OnlineClient<PolkadotConfig> = OnlineClient::from_url(ASSET_HUB_WS_URL)
 		.await
 		.expect("can not connect to bridgehub");
 
@@ -118,6 +123,7 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 	let ethereum_signed_client = initialize_wallet().await.expect("initialize wallet");
 
 	Ok(TestClients {
+		asset_hub_client: Box::new(asset_hub_client),
 		bridge_hub_client: Box::new(bridge_hub_client),
 		template_client: Box::new(template_client),
 		relaychain_client: Box::new(relaychain_client),

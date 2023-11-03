@@ -537,7 +537,7 @@ contract GatewayTest is Test {
         emit TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token)));
+        emit OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(token)));
 
         IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
     }
@@ -547,7 +547,7 @@ contract GatewayTest is Test {
         emit TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token)));
+        emit OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(token)));
 
         uint256 totalFee = baseFee + registerNativeTokenFee;
         uint256 balanceBefore = address(this).balance;
@@ -574,7 +574,7 @@ contract GatewayTest is Test {
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
         emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.SendToken(address(gateway), address(token), destPara, destAddress, 1)
+            assetHubParaID, 1, SubstrateTypes.SendToken(address(token), destPara, destAddress, 1)
         );
 
         IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
@@ -593,9 +593,7 @@ contract GatewayTest is Test {
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.SendToken(address(gateway), address(token), destAddress, 1)
-        );
+        emit OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.SendToken(address(token), destAddress, 1));
 
         IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
     }
