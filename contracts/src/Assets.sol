@@ -17,12 +17,6 @@ library Assets {
     using Address for address;
     using SafeTokenTransferFrom for IERC20;
 
-    /// @dev Emitted once the funds are locked and a message is successfully queued.
-    event TokenSent(
-        address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
-    );
-    event TokenRegistrationSent(address token);
-
     /* Errors */
     error InvalidToken();
     error InvalidAmount();
@@ -55,7 +49,7 @@ library Assets {
         }
         extraFee = $.sendTokenFee;
 
-        emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
+        emit IGateway.TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
     function sendToken(
@@ -77,7 +71,7 @@ library Assets {
 
         payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         extraFee = $.sendTokenFee;
-        emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
+        emit IGateway.TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
     /// @dev transfer tokens from the sender to the specified
@@ -105,6 +99,6 @@ library Assets {
         payload = SubstrateTypes.RegisterToken(token);
         extraFee = $.registerTokenFee;
 
-        emit TokenRegistrationSent(token);
+        emit IGateway.TokenRegistrationSent(token);
     }
 }
