@@ -3,9 +3,6 @@
 //! # Core
 //!
 //! Common traits and types
-
-#![allow(dead_code)]
-#![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod inbound;
@@ -17,8 +14,11 @@ pub use polkadot_parachain_primitives::primitives::{
 	Id as ParaId, IsSystem, Sibling as SiblingParaId,
 };
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
+
+use frame_support::traits::Contains;
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
+use xcm::prelude::{Junction::Parachain, Junctions::X1, MultiLocation};
 
 /// The ID of an agent contract
 pub type AgentId = H256;
@@ -30,3 +30,14 @@ where
 {
 	SiblingParaId::from(para_id).into_account_truncating()
 }
+
+pub struct AllowSiblingsOnly;
+impl Contains<MultiLocation> for AllowSiblingsOnly {
+	fn contains(location: &MultiLocation) -> bool {
+		matches!(location, MultiLocation { parents: 1, interior: X1(Parachain(_)) })
+	}
+}
+
+pub const GWEI: u128 = 1_000_000_000;
+pub const METH: u128 = 1_000_000_000_000_000;
+pub const ETH: u128 = 1_000_000_000_000_000_000;

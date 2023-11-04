@@ -49,9 +49,9 @@ library Assets {
 
         _transferToAgent(assetHubAgent, token, sender, amount);
         if (destinationChain == assetHubParaID) {
-            payload = SubstrateTypes.SendToken(address(this), token, destinationAddress, amount);
+            payload = SubstrateTypes.SendToken(token, destinationAddress, amount);
         } else {
-            payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
+            payload = SubstrateTypes.SendToken(token, destinationChain, destinationAddress, amount);
         }
         extraFee = $.sendTokenFee;
 
@@ -102,7 +102,7 @@ library Assets {
             revert InvalidToken();
         }
 
-        payload = SubstrateTypes.RegisterToken(address(this), token);
+        payload = SubstrateTypes.RegisterToken(token);
         extraFee = $.registerTokenFee;
 
         emit TokenRegistrationSent(token);

@@ -1,5 +1,26 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+//! Inbound Queue
+//!
+//! # Overview
+//!
+//! Receives messages emitted by the Gateway contract on Ethereum, whereupon they are verified,
+//! translated to XCM, and finally sent to their final destination parachain.
+//!
+//! The message relayers are rewarded using native currency from the sovereign account of the
+//! destination parachain.
+//!
+//! # Extrinsics
+//!
+//! ## Governance
+//!
+//! * [`Call::set_operating_mode`]: Set the operating mode of the pallet. Can be used to disable
+//!   processing of inbound messages.
+//!
+//! ## Message Submission
+//!
+//! * [`Call::submit`]: Submit a message for verification and dispatch the final destination
+//!   parachain.
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod envelope;
@@ -40,6 +61,11 @@ use snowbridge_router_primitives::{
 	inbound,
 	inbound::{ConvertMessage, ConvertMessageError},
 };
+
+use sp_runtime::traits::Saturating;
+
+use frame_support::{traits::tokens::Preservation, weights::WeightToFee};
+
 pub use weights::WeightInfo;
 
 type BalanceOf<T> =
@@ -54,7 +80,7 @@ pub mod pallet {
 
 	use super::*;
 
-	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
@@ -76,22 +102,26 @@ pub mod pallet {
 		type Token: Mutate<Self::AccountId>;
 
 		/// The amount to reward message relayers
+		#[pallet::constant]
 		type Reward: Get<BalanceOf<Self>>;
 
 		/// XCM message sender
 		type XcmSender: SendXcm;
 
-		type WeightInfo: WeightInfo;
-
-		// Gateway contract address
+		// Address of the Gateway contract
 		#[pallet::constant]
 		type GatewayAddress: Get<H160>;
 
 		/// Convert inbound message to XCM
 		type MessageConverter: ConvertMessage;
 
+		type WeightInfo: WeightInfo;
+
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self>;
+
+		/// Convert a weight value into balance type.
+		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
 	}
 
 	#[pallet::hooks]
@@ -205,7 +235,13 @@ pub mod pallet {
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
 			let sovereign_account = sibling_sovereign_account::<T>(envelope.dest);
-			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
+			let refund = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
+			T::Token::transfer(
+				&sovereign_account,
+				&who,
+				refund.saturating_add(T::Reward::get()),
+				Preservation::Preserve,
+			)?;
 
 			// Decode message into XCM
 			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {

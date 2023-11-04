@@ -60,8 +60,8 @@ template_sovereign_account="${TEMPLATE_SOVEREIGN_ACCOUNT:-0x7369626ce90300000000
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
 # Execution relay account (//ExecutionRelay 5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)
 execution_relayer_pub_key="${EXECUTION_RELAYER_PUB_KEY:-0x08228efd065c58a043da95c8bf177659fc587643e71e7ed1534666177730196f}"
-# Gateway contract account (H8VBFC4LG91ByxMG6GwsCcAacjitnzGmGbqnvSEQFBywJEL in testnet)
-gateway_contract_sovereign_account="${GATEWAY_CONTRACT_SOVEREIGN_ACCOUNT:-0xc9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5}"
+# Snowbridge account (HWYx2xgcdpSjJQicUUZFRR1EJNPVEQoUDSUB29rfxF617nv in testnet)
+snowbridge_sovereign_account="${SNOWBRIDGE_SOVEREIGN_ACCOUNT:-0xda4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5}"
 
 # Config for deploying contracts
 

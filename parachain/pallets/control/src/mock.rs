@@ -3,14 +3,16 @@
 use crate as snowbridge_control;
 use frame_support::{
 	parameter_types,
-	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, Contains},
+	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, ConstU8},
 	weights::IdentityFee,
 	PalletId,
 };
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
-use snowbridge_core::{outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, ParaId};
+use snowbridge_core::{
+	outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly, ParaId,
+};
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
 	AccountId32, BuildStorage,
@@ -132,6 +134,7 @@ impl pallet_balances::Config for Test {
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type MaxHolds = ();
 }
 
@@ -167,14 +170,12 @@ impl snowbridge_outbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MessageQueue = MessageQueue;
+	type Decimals = ConstU8<10>;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
 	type OwnParaId = OwnParaId;
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
-	type DeliveryFeePerGas = ConstU128<1>;
-	type DeliveryRefundPerGas = ConstU128<1>;
-	type DeliveryReward = ConstU128<1>;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }
@@ -203,17 +204,6 @@ impl BenchmarkHelper<RuntimeOrigin> for () {
 	}
 }
 
-pub struct AllowSiblingsOnly;
-impl Contains<MultiLocation> for AllowSiblingsOnly {
-	fn contains(location: &MultiLocation) -> bool {
-		if let MultiLocation { parents: 1, interior: X1(Parachain(_)) } = location {
-			true
-		} else {
-			false
-		}
-	}
-}
-
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = OwnParaId;
@@ -231,6 +221,7 @@ impl crate::Config for Test {
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+
 	let mut ext: sp_io::TestExternalities = storage.into();
 	let initial_amount = InitialFunding::get().into();
 	let test_para_id = TestParaId::get();

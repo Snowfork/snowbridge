@@ -4,16 +4,10 @@ use super::*;
 
 use frame_support::{
 	assert_noop, assert_ok, parameter_types,
-	traits::{ConstU64, Everything},
+	traits::{ConstU128, Everything},
+	weights::IdentityFee,
 };
-use sp_core::{H160, H256};
-use sp_keyring::AccountKeyring as Keyring;
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	ArithmeticError, MultiSignature,
-};
-use sp_std::convert::From;
-
+use hex_literal::hex;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::{
 	inbound::{Message, Proof},
@@ -21,9 +15,13 @@ use snowbridge_core::{
 };
 use snowbridge_ethereum::Log;
 use snowbridge_router_primitives::inbound::MessageToXcm;
-use sp_runtime::{BuildStorage, DispatchError};
-
-use hex_literal::hex;
+use sp_core::{H160, H256};
+use sp_keyring::AccountKeyring as Keyring;
+use sp_runtime::{
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	BuildStorage, DispatchError, MultiSignature, TokenError,
+};
+use sp_std::convert::From;
 use xcm::v3::{prelude::*, MultiAssets, SendXcm};
 
 use crate::{self as inbound_queue, envelope::Envelope, Error, Event as InboundQueueEvent};
@@ -62,7 +60,7 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountData = pallet_balances::AccountData<u128>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -77,15 +75,16 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
-	type Balance = u64;
+	type Balance = u128;
 	type RuntimeEvent = RuntimeEvent;
 	type DustRemoval = ();
-	type ExistentialDeposit = ConstU64<1>;
+	type ExistentialDeposit = ConstU128<1>;
 	type AccountStore = System;
 	type WeightInfo = ();
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type MaxHolds = ();
 }
 
@@ -136,6 +135,7 @@ parameter_types! {
 	pub const CreateAssetCall: [u8;2] = [53, 0];
 	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
 	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
+	pub const InitialFund: u128 = 1_000_000_000_000;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -175,7 +175,7 @@ impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
 	type Token = Balances;
-	type Reward = ConstU64<100>;
+	type Reward = ConstU128<100>;
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
@@ -183,6 +183,7 @@ impl inbound_queue::Config for Test {
 		MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
+	type WeightToFee = IdentityFee<u128>;
 }
 
 fn last_events(n: usize) -> Vec<RuntimeEvent> {
@@ -199,10 +200,24 @@ fn expect_events(e: Vec<RuntimeEvent>) {
 	assert_eq!(last_events(e.len()), e);
 }
 
+fn setup() {
+	System::set_block_number(1);
+	Balances::mint_into(
+		&sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into()),
+		InitialFund::get(),
+	)
+	.unwrap();
+	Balances::mint_into(
+		&sibling_sovereign_account::<Test>(TEMPLATE_PARAID.into()),
+		InitialFund::get(),
+	)
+	.unwrap();
+}
+
 pub fn new_tester() -> sp_io::TestExternalities {
 	let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| System::set_block_number(1));
+	ext.execute_with(|| setup());
 	ext
 }
 
@@ -223,34 +238,39 @@ fn parse_dest(message: Message) -> ParaId {
 }
 
 // dest para is 1000
-const OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
+const OUTBOUND_QUEUE_EVENT_LOG: [u8; 221] = hex!(
 	"
-	f8fb94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000032000f0000000000000000eda338e4dc46038493b885327842fd3e301cab3987d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000000000000000000000000000
+	f8db94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b88000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000
 	"
 );
 
 // dest para is 1001
-const OUTBOUND_QUEUE_EVENT_LOG_INVALID_DEST: [u8; 253] = hex!(
+const OUTBOUND_QUEUE_EVENT_LOG_INVALID_DEST: [u8; 221] = hex!(
 	"
-	f8fb94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e9b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000032000f0000000000000000eda338e4dc46038493b885327842fd3e301cab3987d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000000000000000000000000000
+	f8db94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e9b88000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000
 	"
 );
 
 // gateway in message does not match configured gateway in runtime
-const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
+const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 221] = hex!(
 	"
-	f8fb940000000000000000000000000000000000000000f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e9b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000032000f0000000000000000eda338e4dc46038493b885327842fd3e301cab3987d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000000000000000000000000000
+	f8db940000000000000000000000000000000000000000f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b88000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000
 	"
 );
 
 // invalid payload with unsupported version
-const BAD_OUTBOUND_QUEUE_LOG_UNSUPPORTED_VERSION: [u8; 253] = hex!("f8fb94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000032010f0000000000000000eda338e4dc46038493b885327842fd3e301cab3987d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000000000000000000000000000");
+const BAD_OUTBOUND_QUEUE_LOG_UNSUPPORTED_VERSION: [u8; 221] = hex!(
+	"
+	f8db94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b88000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e010f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000
+	"
+);
 
 const XCM_HASH: [u8; 32] = [
-	232, 213, 62, 94, 48, 47, 152, 37, 168, 162, 89, 100, 6, 74, 63, 95, 211, 11, 222, 210, 1, 209,
-	126, 44, 164, 122, 166, 156, 208, 228, 209, 9,
+	186, 27, 67, 39, 117, 164, 224, 191, 202, 232, 218, 108, 34, 65, 36, 199, 247, 19, 150, 198,
+	182, 180, 39, 112, 150, 64, 84, 15, 174, 213, 183, 207,
 ];
 const ASSET_HUB_PARAID: u32 = 1000u32;
+const TEMPLATE_PARAID: u32 = 1001u32;
 
 #[test]
 fn test_submit_happy_path() {
@@ -374,9 +394,9 @@ fn test_submit_no_funds_to_reward_relayers() {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
-		// Create sovereign account for Asset Hub (Statemint), but with no funds to cover rewards
+		// Reset balance of sovereign_account to zero so to trigger the FundsUnavailable error
 		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
-		assert_ok!(Balances::mint_into(&sovereign_account, 2));
+		Balances::set_balance(&sovereign_account, 0);
 
 		// Submit message
 		let message = Message {
@@ -389,9 +409,7 @@ fn test_submit_no_funds_to_reward_relayers() {
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
-			// should actually be `NoFunds`. See this bug in substrate:
-			// https://github.com/paritytech/substrate/issues/13866
-			ArithmeticError::Underflow
+			TokenError::FundsUnavailable
 		);
 	});
 }

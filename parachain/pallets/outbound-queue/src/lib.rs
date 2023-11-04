@@ -1,20 +1,38 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-
 //! Pallet for committing outbound messages for delivery to Ethereum
 //!
+//! # Overview
+//!
+//! Messages come either from sibling parachains via XCM, or BridgeHub itself
+//! via the `snowbridge-control` pallet:
+//!
+//! 1. `snowbridge_router_primitives::outbound::EthereumBlobExporter::deliver`
+//! 2. `snowbridge_control::Pallet::send`
+//!
 //! The message submission pipeline works like this:
-//! 1. The message is first validated via [`OutboundQueue::validate`]
-//! 2. The message is then enqueued for processing via [`OutboundQueue::submit`]
-//! 3. The message queue is maintained by the external [`MessageQueue`] pallet
-//! 4. [`MessageQueue`] delivers messages back to this pallet via `ProcessMessage::process_message`
-//! 5. The message is processed in `do_process_message` a. Assigned a nonce b. ABI-encoded, hashed,
-//!    and stored in the `Leaves` vector
-//! 6. At the end of the block, a merkle root is constructed from all the leaves in `Leaves`.
+//! 1. The message is first validated via the implementation for
+//!    [`snowbridge_core::outbound::SendMessage::validate`]
+//! 2. The message is then enqueued for later processing via the implementation
+//!    for [`snowbridge_core::outbound::SendMessage::deliver`]
+//! 3. The underlying message queue is implemented by [`Config::MessageQueue`]
+//! 4. The message queue delivers messages back to this pallet via
+//!    the implementation for [`frame_support::traits::ProcessMessage::process_message`]
+//! 5. The message is processed in `Pallet::do_process_message`:
+//!    a. Assigned a nonce
+//!    b. ABI-encoded, hashed, and stored in the `MessageLeaves` vector
+//! 6. At the end of the block, a merkle root is constructed from all the
+//!    leaves in `MessageLeaves`.
 //! 7. This merkle root is inserted into the parachain header as a digest item
+//! 8. Offchain relayers are able to relay the message to Ethereum after:
+//!    a. Generating a merkle proof for the committed message using the `prove_message`
+//!       runtime API
+//!    b. Reading the actual message content from the `Messages` vector in storage
 //!
 //! On the Ethereum side, the message root is ultimately the thing being
-//! by the Polkadot light client.
+//! verified by the Polkadot light client.
+//!
+//! # Message Priorities
 //!
 //! Within the message submission pipeline, messages have different priorities,
 //! which results in differing processing behavior.
@@ -25,56 +43,91 @@
 //! The processing of governance commands can never be halted. This effectively
 //! allows us to pause processing of normal user messages while still allowing
 //! governance commands to be sent to Ethereum.
+//!
+//! # Fees
+//!
+//! An upfront fee must be paid for delivering a message. This fee covers several
+//! components:
+//! 1. The weight of processing the message locally
+//! 2. The gas refund paid out to relayers for message submission
+//! 3. An additional reward paid out to relayers for message submission
+//!
+//! Messages are weighed to determine the maximum amount of gas they could
+//! consume on Ethereum. Using this upper bound, a final fee can be calculated.
+//!
+//! The fee calculation also requires the following parameters:
+//! * ETH/DOT exchange rate
+//! * Ether fee per unit of gas
+//!
+//! By design, it is expected that governance should manually update these
+//! parameters every few weeks using the [`Call::set_fee_config`] extrinsic.
+//!
+//! ## Fee Computation Function
+//!
+//! ```text
+//! LocalFee(Message) = WeightToFee(ProcessMessageWeight(Message))
+//! RemoteFee(Message) = MaxGasRequired(Message) * FeePerGas + Reward
+//! Fee(Message) = LocalFee(Message) + (RemoteFee(Message) / Ratio("ETH/DOT"))
+//! ```
+//!
+//! # Extrinsics
+//!
+//! * [`Call::set_operating_mode`]: Set the operating mode
+//! * [`Call::set_fee_config`]: Set configuration for calculating fees
+//!
+//! # Runtime API
+//!
+//! * `prove_message`: Generate a merkle proof for a committed message
+//! * `calculate_fee`: Calculate the delivery fee for a message
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod api;
+pub mod process_message_impl;
+pub mod queue_paused_query_impl;
+pub mod send_message_impl;
+pub mod types;
 pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
 #[cfg(test)]
+mod mock;
+
+#[cfg(test)]
 mod test;
 
-use codec::{Decode, Encode};
-use ethabi::{self};
+use codec::Decode;
 use frame_support::{
-	ensure,
 	storage::StorageStreamIter,
-	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessage, ProcessMessageError},
+	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessageError},
 	weights::{Weight, WeightToFee},
 };
-use snowbridge_core::ParaId;
-use sp_core::H256;
-use sp_runtime::traits::{Hash, Saturating};
-use sp_std::prelude::*;
-
 use snowbridge_core::{
 	outbound::{
-		AggregateMessageOrigin, Command, EnqueuedMessage, ExportOrigin, Fees, GasMeter, Message,
-		MessageHash, OutboundQueue as OutboundQueueTrait, OutboundQueueTicket, PreparedMessage,
-		SendError,
+		AggregateMessageOrigin, Command, ExportOrigin, Fee, GasMeter, QueuedMessage,
+		VersionedQueuedMessage, ETHER_DECIMALS,
 	},
-	BasicOperatingMode,
+	BasicOperatingMode, ParaId, GWEI, METH,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
+use sp_core::H256;
+use sp_runtime::{
+	traits::{CheckedDiv, Hash},
+	FixedPointNumber,
+};
+use sp_std::prelude::*;
+pub use types::{CommittedMessage, FeeConfigRecord, ProcessMessageOriginOf};
 pub use weights::WeightInfo;
 
-/// The maximal length of an enqueued message, as determined by the MessageQueue pallet
-pub type MaxEnqueuedMessageSizeOf<T> =
-	<<T as Config>::MessageQueue as EnqueueMessage<AggregateMessageOrigin>>::MaxMessageLen;
-
-pub type ProcessMessageOriginOf<T> = <Pallet<T> as ProcessMessage>::Origin;
-
 pub use pallet::*;
-
-pub const LOG_TARGET: &str = "snowbridge-outbound-queue";
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use sp_arithmetic::FixedU128;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -90,7 +143,11 @@ pub mod pallet {
 		/// Measures the maximum gas used to execute a command on Ethereum
 		type GasMeter: GasMeter;
 
-		type Balance: Balance + From<u64>;
+		type Balance: Balance + From<u128>;
+
+		/// Number of decimal places in native currency
+		#[pallet::constant]
+		type Decimals: Get<u8>;
 
 		/// Max bytes in a message payload
 		#[pallet::constant]
@@ -103,18 +160,6 @@ pub mod pallet {
 		/// The ID of this parachain
 		#[pallet::constant]
 		type OwnParaId: Get<ParaId>;
-
-		/// The delivery fee in DOT per unit of gas
-		#[pallet::constant]
-		type DeliveryFeePerGas: Get<Self::Balance>;
-
-		/// The refund in ETH (wei) per unit of gas
-		#[pallet::constant]
-		type DeliveryRefundPerGas: Get<u128>;
-
-		/// The reward in ETH (wei)
-		#[pallet::constant]
-		type DeliveryReward: Get<u128>;
 
 		/// Convert a weight value into a deductible fee based.
 		type WeightToFee: WeightToFee<Balance = Self::Balance>;
@@ -147,7 +192,12 @@ pub mod pallet {
 			count: u64,
 		},
 		/// Set OperatingMode
-		OperatingModeChanged { mode: BasicOperatingMode },
+		OperatingModeChanged {
+			mode: BasicOperatingMode,
+		},
+		FeeConfigChanged {
+			fee_config: FeeConfigRecord,
+		},
 	}
 
 	#[pallet::error]
@@ -156,6 +206,8 @@ pub mod pallet {
 		MessageTooLarge,
 		/// The pallet is halted
 		Halted,
+		// Invalid fee config
+		InvalidFeeConfig,
 	}
 
 	/// Messages to be committed in the current block. This storage value is killed in
@@ -166,7 +218,7 @@ pub mod pallet {
 	/// Inspired by the `frame_system::Pallet::Events` storage value
 	#[pallet::storage]
 	#[pallet::unbounded]
-	pub(super) type Messages<T: Config> = StorageValue<_, Vec<PreparedMessage>, ValueQuery>;
+	pub(super) type Messages<T: Config> = StorageValue<_, Vec<CommittedMessage>, ValueQuery>;
 
 	/// Number of high priority messages that are waiting to be processed.
 	/// While this number is greater than zero, processing of lower priority
@@ -191,6 +243,20 @@ pub mod pallet {
 	#[pallet::getter(fn operating_mode)]
 	pub type OperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn fee_config)]
+	pub type FeeConfig<T: Config> = StorageValue<_, FeeConfigRecord, ValueQuery, DefaultFeeConfig>;
+
+	#[pallet::type_value]
+	pub fn DefaultFeeConfig() -> FeeConfigRecord {
+		FeeConfigRecord {
+			exchange_rate: FixedU128::saturating_from_rational(1, 400),
+			fee_per_gas: 30 * GWEI,
+			#[allow(clippy::identity_op)]
+			reward: 1 * METH,
+		}
+	}
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
@@ -201,11 +267,16 @@ pub mod pallet {
 			Messages::<T>::kill();
 			MessageLeaves::<T>::kill();
 			// Reserve some weight for the `on_finalize` handler
-			T::WeightInfo::commit_messages()
+			T::WeightInfo::commit()
 		}
 
 		fn on_finalize(_: BlockNumberFor<T>) {
-			Self::commit_messages();
+			Self::commit();
+		}
+
+		fn integrity_test() {
+			let decimals = T::Decimals::get();
+			assert!(decimals == 10 || decimals == 12, "Decimals should be 10 or 12");
 		}
 	}
 
@@ -219,15 +290,25 @@ pub mod pallet {
 			mode: BasicOperatingMode,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			OperatingMode::<T>::set(mode);
+			OperatingMode::<T>::put(mode);
 			Self::deposit_event(Event::OperatingModeChanged { mode });
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		pub fn set_fee_config(origin: OriginFor<T>, fee_config: FeeConfigRecord) -> DispatchResult {
+			ensure_root(origin)?;
+			fee_config.validate().map_err(|_| Error::<T>::InvalidFeeConfig)?;
+			FeeConfig::<T>::put(fee_config);
+			Self::deposit_event(Event::FeeConfigChanged { fee_config });
 			Ok(())
 		}
 	}
 
 	impl<T: Config> Pallet<T> {
 		/// Generate a messages commitment and insert it into the header digest
-		pub(crate) fn commit_messages() {
+		pub(crate) fn commit() {
 			let count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
 			if count == 0 {
 				return
@@ -249,41 +330,43 @@ pub mod pallet {
 			origin: ProcessMessageOriginOf<T>,
 			mut message: &[u8],
 		) -> Result<bool, ProcessMessageError> {
+			use AggregateMessageOrigin::*;
+			use ExportOrigin::*;
+			use ProcessMessageError::*;
+
 			// Yield if the maximum number of messages has been processed this block.
 			// This ensures that the weight of `on_finalize` has a known maximum bound.
 			ensure!(
 				MessageLeaves::<T>::decode_len().unwrap_or(0) <
 					T::MaxMessagesPerBlock::get() as usize,
-				ProcessMessageError::Yield
+				Yield
 			);
 
-			if let AggregateMessageOrigin::Export(ExportOrigin::Here) = origin {
-				// Decrease PendingHighPriorityMessageCount by one
+			// If this is a high priority message, mark it as processed
+			if let Export(Here) = origin {
 				PendingHighPriorityMessageCount::<T>::mutate(|count| {
 					*count = count.saturating_sub(1)
 				});
-			} else {
-				ensure!(!Self::operating_mode().is_halted(), ProcessMessageError::Yield);
-				ensure!(
-					PendingHighPriorityMessageCount::<T>::get() == 0,
-					ProcessMessageError::Yield
-				);
 			}
 
-			let enqueued_message: EnqueuedMessage =
-				EnqueuedMessage::decode(&mut message).map_err(|_| ProcessMessageError::Corrupt)?;
+			// Decode bytes into versioned message
+			let versioned_enqueued_message: VersionedQueuedMessage =
+				VersionedQueuedMessage::decode(&mut message).map_err(|_| Corrupt)?;
+
+			// Convert versioned message into latest supported message version
+			let enqueued_message: QueuedMessage =
+				versioned_enqueued_message.try_into().map_err(|_| Unsupported)?;
 
 			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
 
 			let command = enqueued_message.command.index();
 			let params = enqueued_message.command.abi_encode();
 			let max_dispatch_gas = T::GasMeter::maximum_required(&enqueued_message.command) as u128;
-			let max_refund = Self::maximum_refund(&enqueued_message.command);
-			let reward = T::DeliveryReward::get();
+			let max_refund = Self::calculate_maximum_gas_refund(&enqueued_message.command);
+			let reward = Self::fee_config().reward;
 
-			// Construct a prepared message, which when ABI-encoded is what the
-			// other side of the bridge will verify.
-			let message: PreparedMessage = PreparedMessage {
+			// Construct the final committed message
+			let message = CommittedMessage {
 				origin: enqueued_message.origin,
 				nonce: next_nonce,
 				command,
@@ -314,94 +397,56 @@ pub mod pallet {
 			T::GasMeter::MAXIMUM_BASE_GAS + T::GasMeter::maximum_required(command)
 		}
 
-		/// Fee in DOT for delivering a message.
-		pub(crate) fn delivery_fee(command: &Command) -> T::Balance {
-			let max_gas_used = Self::maximum_overall_required_gas(command);
-			T::DeliveryFeePerGas::get().saturating_mul(max_gas_used.into())
+		/// Calculate fee in native currency for delivering a message.
+		pub(crate) fn calculate_fee(command: &Command) -> Fee<T::Balance> {
+			let max_gas = Self::maximum_overall_required_gas(command);
+			let remote = Self::calculate_remote_fee(
+				max_gas,
+				Self::fee_config().fee_per_gas,
+				Self::fee_config().reward,
+			);
+
+			let remote = FixedU128::from(remote)
+				.checked_div(&Self::fee_config().exchange_rate)
+				.expect("exchange rate is not zero; qed")
+				.into_inner()
+				.checked_div(FixedU128::accuracy())
+				.expect("accuracy is not zero; qed");
+
+			let remote = Self::convert_from_ether_decimals(remote);
+
+			Fee::from((Self::calculate_local_fee(), remote))
+		}
+
+		/// Calculate fee in remote currency for dispatching a message on Ethereum
+		pub(crate) fn calculate_remote_fee(
+			max_gas_required: u64,
+			fee_per_gas: u128,
+			reward: u128,
+		) -> u128 {
+			fee_per_gas.saturating_mul(max_gas_required.into()).saturating_add(reward)
+		}
+
+		/// Calculate fee in native currency for processing a message locally
+		pub(crate) fn calculate_local_fee() -> T::Balance {
+			T::WeightToFee::weight_to_fee(
+				&T::WeightInfo::do_process_message().saturating_add(T::WeightInfo::commit_single()),
+			)
 		}
 
 		/// Maximum refund in Ether for delivering a message
-		pub(crate) fn maximum_refund(command: &Command) -> u128 {
-			let max_gas_used = Self::maximum_overall_required_gas(command);
-			T::DeliveryRefundPerGas::get().saturating_mul(max_gas_used as u128)
-		}
-	}
-
-	impl<T: Config> OutboundQueueTrait for Pallet<T> {
-		type Ticket = OutboundQueueTicket<MaxEnqueuedMessageSizeOf<T>>;
-		type Balance = T::Balance;
-
-		fn validate(message: &Message) -> Result<(Self::Ticket, Fees<Self::Balance>), SendError> {
-			// The inner payload should not be too large
-			let payload = message.command.abi_encode();
-
-			// Create a message id for tracking progress in submission pipeline
-			let message_id: MessageHash = sp_io::hashing::blake2_256(&(message.encode())).into();
-
-			ensure!(
-				payload.len() < T::MaxMessagePayloadSize::get() as usize,
-				SendError::MessageTooLarge
-			);
-
-			let base_fee = T::WeightToFee::weight_to_fee(
-				&T::WeightInfo::do_process_message()
-					.saturating_add(T::WeightInfo::commit_one_message()),
-			);
-			let delivery_fee = Self::delivery_fee(&message.command);
-
-			let command = message.command.clone();
-			let fee = Fees { base: base_fee, delivery: delivery_fee };
-
-			let enqueued_message: EnqueuedMessage =
-				EnqueuedMessage { id: message_id, origin: message.origin, command };
-			// The whole message should not be too large
-			let encoded =
-				enqueued_message.encode().try_into().map_err(|_| SendError::MessageTooLarge)?;
-
-			let ticket =
-				OutboundQueueTicket { id: message_id, origin: message.origin, message: encoded };
-
-			Ok((ticket, fee))
+		pub(crate) fn calculate_maximum_gas_refund(command: &Command) -> u128 {
+			let max_gas = Self::maximum_overall_required_gas(command);
+			Self::fee_config().fee_per_gas.saturating_mul(max_gas.into())
 		}
 
-		fn submit(ticket: Self::Ticket) -> Result<MessageHash, SendError> {
-			// Assign an `AggregateMessageOrigin` to track the message within the MessageQueue
-			// pallet. Governance commands are assigned origin `ExportOrigin::Here`. In other words
-			// emitted from BridgeHub itself.
-			let origin = if ticket.origin == T::OwnParaId::get() {
-				AggregateMessageOrigin::Export(ExportOrigin::Here)
-			} else {
-				AggregateMessageOrigin::Export(ExportOrigin::Sibling(ticket.origin))
-			};
-
-			if let AggregateMessageOrigin::Export(ExportOrigin::Here) = origin {
-				// Increase PendingHighPriorityMessageCount by one
-				PendingHighPriorityMessageCount::<T>::mutate(|count| {
-					*count = count.saturating_add(1)
-				});
-			} else {
-				ensure!(!Self::operating_mode().is_halted(), SendError::Halted);
-			}
-
-			T::MessageQueue::enqueue_message(ticket.message.as_bounded_slice(), origin);
-			Self::deposit_event(Event::MessageQueued { id: ticket.id });
-			Ok(ticket.id)
-		}
-	}
-
-	impl<T: Config> ProcessMessage for Pallet<T> {
-		type Origin = AggregateMessageOrigin;
-		fn process_message(
-			message: &[u8],
-			origin: Self::Origin,
-			meter: &mut frame_support::weights::WeightMeter,
-			_: &mut [u8; 32],
-		) -> Result<bool, ProcessMessageError> {
-			let weight = T::WeightInfo::do_process_message();
-			if meter.try_consume(weight).is_err() {
-				return Err(ProcessMessageError::Overweight(weight))
-			}
-			Self::do_process_message(origin, message)
+		// 1 DOT has 10 digits of precision
+		// 1 KSM has 12 digits of precision
+		// 1 ETH has 18 digits of precision
+		pub(crate) fn convert_from_ether_decimals(value: u128) -> T::Balance {
+			let decimals = ETHER_DECIMALS.saturating_sub(T::Decimals::get()) as u32;
+			let denom = 10u128.saturating_pow(decimals);
+			value.checked_div(denom).expect("divisor is non-zero; qed").into()
 		}
 	}
 }

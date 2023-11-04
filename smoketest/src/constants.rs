@@ -30,3 +30,12 @@ pub const ASSET_HUB_AGENT_ID: [u8; 32] =
 // Agent for template parachain 1001
 pub const SIBLING_AGENT_ID: [u8; 32] =
 	hex!("e01018a3378502770faff44fbef3910d120a0353d18be653625b8daa88a86453");
+
+// The deployment addresses of the following contracts are stable in our E2E env, unless we modify
+// the order in contracts are deployed in DeployScript.sol.
+pub const SNOWBRIDGE_SOVEREIGN: [u8; 32] =
+	hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5");
+
+// SS58: DE14BzQ1bDXWPKeLoAqdLAm1GpyAWaWF1knF74cEZeomTBM
+pub const FERDIE: [u8; 32] =
+	hex!("1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c");
