@@ -46,7 +46,7 @@ library Uint16Array {
 
     /**
      * @dev Gets the counter at the logical index
-     * @param self The counter array.
+     * @param self The array.
      * @param index The logical index.
      */
     function get(Array storage self, uint256 index) internal view returns (uint16) {
@@ -61,7 +61,7 @@ library Uint16Array {
 
     /**
      * @dev Sets the counter at the logical index.
-     * @param self The counter array.
+     * @param self The array.
      * @param index The logical index of the counter in the array.
      * @param value The value to set the counter to.
      */

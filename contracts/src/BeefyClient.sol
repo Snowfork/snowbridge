@@ -437,14 +437,13 @@ contract BeefyClient {
     }
 
     /**
-     * @dev Calculates the number of signature samples required for `submitFinal`.
-     * @param validatorSetLen The validator set length.
-     * @param signatureUsageCount The count of how many times a validators signature was previously used in a call to `submitInitial`.
-     * @param minRequiredSignatures The minimum amount of signatures to verify.
-     *
-     *  ceil(log2(validatorSetLen)) + 1 * 2 ceil(log2(signatureUsageCount))
-     *
-     * See https://hackmd.io/9OedC7icR5m-in_moUZ_WQ for full analysis.
+     * @dev Calculates the number of required signatures for `submitFinal`.
+     * For more details on the calculation, read the following:
+     * 1. https://docs.snowbridge.network/architecture/verification/polkadot#signature-sampling
+     * 2. https://hackmd.io/9OedC7icR5m-in_moUZ_WQ
+     * @param validatorSetLen The length of the validator set
+     * @param signatureUsageCount A counter of the number of times the validator signature was previously used in a call to `submitInitial` within the session.
+     * @param minRequiredSignatures The minimum amount of signatures to verify
      */
     function computeNumRequiredSignatures(
         uint256 validatorSetLen,
@@ -454,7 +453,7 @@ contract BeefyClient {
         // Start with the minimum number of signatures.
         uint256 numRequiredSignatures = minRequiredSignatures;
 
-        // We must substrate minimumSignatures from the number of validators or we might end up
+        // We must substract minimumSignatures from the number of validators or we might end up
         // requiring more signatures than there are validators.
         uint256 extraValidatorsLen = validatorSetLen.saturatingSub(minRequiredSignatures);
         if (extraValidatorsLen > 1) {
@@ -465,24 +464,18 @@ contract BeefyClient {
             numRequiredSignatures += 1;
         }
 
-        // To address the concurrency issue specified in the link below:
-        // https://hackmd.io/wsVcL0tZQA-Ks3b5KJilFQ?view#Solution-2-Signature-Checks-dynamically-depend-on-the-No-of-initial-Claims-per-session
-        // It must be harder for a malicious relayer to spam submitInitial to bias the RANDAO.
-        // If we detect that a signature is used many times (spam), we increase the number of signature samples required on submitFinal.
         if (signatureUsageCount > 0) {
-            // Based on formula provided here: https://hackmd.io/9OedC7icR5m-in_moUZ_WQ
             numRequiredSignatures += 1 + 2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil);
         }
 
-        // Never require more signatures than 2/3 majority.
-        uint256 validatorSetQuorum = computeQuorum(validatorSetLen);
-        return Math.min(numRequiredSignatures, validatorSetQuorum);
+        // Never require more signatures than a 2/3 majority
+        return Math.min(numRequiredSignatures, computeQuorum(validatorSetLen));
     }
+
     /**
      * @dev Calculates 2/3 majority required for quorum for a given number of validators.
      * @param numValidators The number of validators in the validator set.
      */
-
     function computeQuorum(uint256 numValidators) internal pure returns (uint256) {
         return numValidators - (numValidators - 1) / 3;
     }
@@ -508,7 +501,7 @@ contract BeefyClient {
         uint256[] memory finalbitfield =
             Bitfield.subsample(ticket.prevRandao, bitfield, numRequiredSignatures, vset.length);
 
-        for (uint256 i = 0; i < proofs.length;) {
+        for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
 
             // Check that validator is in bitfield
@@ -528,10 +521,6 @@ contract BeefyClient {
 
             // Ensure no validator can appear more than once in bitfield
             Bitfield.unset(finalbitfield, proof.index);
-
-            unchecked {
-                i++;
-            }
         }
     }
 

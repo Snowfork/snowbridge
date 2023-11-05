@@ -48,6 +48,24 @@ contract BeefyClientMock is BeefyClient {
         console.log(currentValidatorSet.usageCounters.data.length);
     }
 
+    // Used to verify integrity of storage to storage copies
+    function copyCounters() external {
+        currentValidatorSet.usageCounters = Uint16Array.create(1000);
+        for (uint256 i = 0; i < 1000; i++) {
+            currentValidatorSet.usageCounters.set(i, 5);
+        }
+        nextValidatorSet.usageCounters = Uint16Array.create(800);
+        for (uint256 i = 0; i < 800; i++) {
+            nextValidatorSet.usageCounters.set(i, 7);
+        }
+
+        // Perform the copy
+        currentValidatorSet = nextValidatorSet;
+
+        assert(currentValidatorSet.usageCounters.data.length == nextValidatorSet.usageCounters.data.length);
+        assert(currentValidatorSet.usageCounters.get(799) == 7);
+    }
+
     function getValidatorCounter(bool next, uint256 index) public view returns (uint16) {
         if (next) {
             return nextValidatorSet.usageCounters.get(index);
