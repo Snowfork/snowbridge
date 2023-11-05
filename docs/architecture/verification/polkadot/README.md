@@ -18,11 +18,11 @@ In collaboration with W3F, we have designed a protocol where the light client ne
 
 In the EVM there is no cryptographically secure source of randomness. Instead, we make our update protocol crypto-economically secure through an interactive update protocol. In this protocol, a candidate commitment is verified over 3 transactions. At a high level it works like this:
 
-1. `submitInitial` - In the [first transaction](../../../../contracts/src/BeefyClient.sol#L233), the relayer submits the commitment, a randomly selected validator signature, and an initial bitfield claiming which validators have signed the commitment.
+1. `submitInitial` - In the first transaction, the relayer submits the commitment, a randomly selected validator signature, and an initial bitfield claiming which validators have signed the commitment.
 2. The relayer must then wait [MAX\_SEED\_LOOKAHEAD](https://eth2book.info/bellatrix/part3/config/preset/#max\_seed\_lookahead) blocks.
-3. `commitPrevRandao` - The relayer submits a [second transaction](../../../../contracts/src/BeefyClient.sol#L288) to reveal and commit to a random seed, derived from Ethereum's [RANDAO](https://eips.ethereum.org/EIPS/eip-4399).
-4. The relayer [requests](../../../../contracts/src/BeefyClient.sol#L404) from the light client a bitfield with $$N$$randomly chosen validators sampled from the initial bitfield.​
-5. `submitFinal` - The relayer sends a [third transaction](../../../../contracts/src/BeefyClient.sol#L320) with signatures for all the validators specified in the final bitfield
+3. `commitPrevRandao` - The relayer submits a second transaction to reveal and commit to a random seed, derived from Ethereum's [RANDAO](https://eips.ethereum.org/EIPS/eip-4399).
+4. The relayer requests from the light client a bitfield with $$N$$randomly chosen validators sampled from the initial bitfield.​
+5. `submitFinal` - The relayer sends a third and final transaction with signatures for all the validators specified in the final bitfield
 6. The light client verifies all validator signatures in the third transaction to ensure:
    1. The provided validators are in the current validator set
    2. The provided validators are in the final bitfield
@@ -48,8 +48,8 @@ $$
 
 From the list above 1 and 2 are known in the light client and can be calculated on-chain. Variables 3, 4.1, and 4.2 are not known by the light client and are instead calculated off-chain and set as a minimum number of required signatures during the initialization of the light client. This minimum is immutable for the life time of the light client.
 
-* [Minimum required signatures.](../../../../contracts/src/BeefyClient.sol#L182-L187)
-* [Dynamic signature calculation.](../../../../contracts/src/BeefyClient.sol#L437)
+* [Minimum required signatures.](../../../../contracts/src/BeefyClient.sol#L185-L190)
+* [Dynamic signature calculation.](../../../../contracts/src/BeefyClient.sol#L444)
 * [Python implementation of required signatures.](../../../../scripts/beefy\_signature\_sampling.py#L9)
 
 ## Message Verification
