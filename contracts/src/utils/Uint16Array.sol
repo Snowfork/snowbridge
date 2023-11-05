@@ -29,16 +29,19 @@ pragma solidity 0.8.22;
  * above table counter XX is at logical index 22. It will convert to a physical index of 1 in the array and
  * then to bit-index 128 to 143 of uint256[1].
  */
-library Counter {
+library Uint16Array {
+    struct Array {
+        uint256[] data;
+    }
     /**
      * @dev Creates a new counter which can store at least `length` counters.
      * @param length The amount of counters.
      */
-    function createCounter(uint256 length) internal pure returns (uint256[] memory) {
-        // create space for length counters and round up if needed.
-        uint256 counterLength = length / 16 + (length % 16 == 0 ? 0 : 1);
-        // Counters are returned zeroed.
-        return new uint256[](counterLength);
+
+    function create(uint256 length) internal pure returns (Array memory) {
+        // create space for `length` elements and round up if needed.
+        uint256 bufferLength = length / 16 + (length % 16 == 0 ? 0 : 1);
+        return Array({data: new uint256[](bufferLength)});
     }
 
     /**
@@ -46,14 +49,14 @@ library Counter {
      * @param self The counter array.
      * @param index The logical index.
      */
-    function get(uint256[] storage self, uint256 index) internal view returns (uint16) {
+    function get(Array storage self, uint256 index) internal view returns (uint16) {
         // Right-shift the index by 4. This truncates the first 4 bits (bit-index) leaving us with the index
         // into the array.
         uint256 element = index >> 4;
         // Mask out the first 4 bytes of the logical index to give us the bit-index.
         uint8 inside = uint8(index) & 0x0F;
         // find the element in the array, shift until its bit index and mask to only take the first 16 bits.
-        return uint16((self[element] >> (16 * inside)) & 0xFFFF);
+        return uint16((self.data[element] >> (16 * inside)) & 0xFFFF);
     }
 
     /**
@@ -62,7 +65,7 @@ library Counter {
      * @param index The logical index of the counter in the array.
      * @param value The value to set the counter to.
      */
-    function set(uint256[] storage self, uint256 index, uint16 value) internal {
+    function set(Array storage self, uint256 index, uint16 value) internal {
         // Right-shift the index by 4. This truncates the first 4 bits (bit-index) leaving us with the index
         // into the array.
         uint256 element = index >> 4;
@@ -73,6 +76,6 @@ library Counter {
         // Shift the value to the bit index.
         uint256 shiftedValue = uint256(value) << (16 * inside);
         // Take the element, apply the zero mask to clear the existing value, and then apply the shifted value with bitwise or.
-        self[element] = self[element] & zero | shiftedValue;
+        self.data[element] = self.data[element] & zero | shiftedValue;
     }
 }

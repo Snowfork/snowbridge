@@ -5,7 +5,7 @@ pragma solidity 0.8.22;
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
-import {Counter} from "./utils/Counter.sol";
+import {Uint16Array} from "./utils/Uint16Array.sol";
 import {Math} from "./utils/Math.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
@@ -31,7 +31,7 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
  *
  */
 contract BeefyClient {
-    using Counter for uint256[];
+    using Uint16Array for Uint16Array.Array;
     using Math for uint16;
     using Math for uint256;
 
@@ -140,18 +140,27 @@ contract BeefyClient {
         bytes32 root;
     }
 
+    /**
+     * @dev The ValidatorSet describes a BEEFY validator set
+     * @param id identifier for the set
+     * @param length number of validators in the set
+     * @param root Merkle root of BEEFY validator addresses
+     */
+    struct ValidatorSetState {
+        uint128 id;
+        uint128 length;
+        bytes32 root;
+        Uint16Array.Array usageCounters;
+    }
+
     /* State */
 
     // The latest verified MMRRoot and corresponding BlockNumber from the Polkadot relay chain
     bytes32 public latestMMRRoot;
     uint64 public latestBeefyBlock;
 
-    ValidatorSet public currentValidatorSet;
-    ValidatorSet public nextValidatorSet;
-
-    // The validator signature counters for the current and next validator sets.
-    uint256[] currentValidatorSetCounters;
-    uint256[] nextValidatorSetCounters;
+    ValidatorSetState public currentValidatorSet;
+    ValidatorSetState public nextValidatorSet;
 
     // Currently pending tickets for commitment submission
     mapping(bytes32 => Ticket) public tickets;
@@ -216,10 +225,14 @@ contract BeefyClient {
         randaoCommitExpiration = _randaoCommitExpiration;
         minNumRequiredSignatures = _minNumRequiredSignatures;
         latestBeefyBlock = _initialBeefyBlock;
-        currentValidatorSet = _initialValidatorSet;
-        currentValidatorSetCounters = Counter.createCounter(currentValidatorSet.length);
-        nextValidatorSet = _nextValidatorSet;
-        nextValidatorSetCounters = Counter.createCounter(nextValidatorSet.length);
+        currentValidatorSet.id = _initialValidatorSet.id;
+        currentValidatorSet.length = _initialValidatorSet.length;
+        currentValidatorSet.root = _initialValidatorSet.root;
+        currentValidatorSet.usageCounters = Uint16Array.create(currentValidatorSet.length);
+        nextValidatorSet.id = _nextValidatorSet.id;
+        nextValidatorSet.length = _nextValidatorSet.length;
+        nextValidatorSet.root = _nextValidatorSet.root;
+        nextValidatorSet.usageCounters = Uint16Array.create(nextValidatorSet.length);
     }
 
     /* External Functions */
@@ -233,15 +246,15 @@ contract BeefyClient {
     function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
         external
     {
-        ValidatorSet memory vset;
+        ValidatorSetState storage vset;
         uint16 signatureUsageCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {
-            signatureUsageCount = currentValidatorSetCounters.get(proof.index);
-            currentValidatorSetCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
+            signatureUsageCount = currentValidatorSet.usageCounters.get(proof.index);
+            currentValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = currentValidatorSet;
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
-            signatureUsageCount = nextValidatorSetCounters.get(proof.index);
-            nextValidatorSetCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
+            signatureUsageCount = nextValidatorSet.usageCounters.get(proof.index);
+            nextValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = nextValidatorSet;
         } else {
             revert InvalidCommitment();
@@ -328,7 +341,7 @@ contract BeefyClient {
         (bytes32 commitmentHash, bytes32 ticketID) = validate(commitment, bitfield);
 
         bool is_next_session = false;
-        ValidatorSet memory vset;
+        ValidatorSetState storage vset;
         if (commitment.validatorSetID == nextValidatorSet.id) {
             is_next_session = true;
             vset = nextValidatorSet;
@@ -340,7 +353,7 @@ contract BeefyClient {
 
         verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
 
-        bytes32 newMMRRoot = getFirstMMRRoot(commitment);
+        bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         if (is_next_session) {
             if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
@@ -355,8 +368,7 @@ contract BeefyClient {
             nextValidatorSet.id = leaf.nextAuthoritySetID;
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
-            currentValidatorSetCounters = nextValidatorSetCounters;
-            nextValidatorSetCounters = Counter.createCounter(leaf.nextAuthoritySetLen);
+            nextValidatorSet.usageCounters = Uint16Array.create(leaf.nextAuthoritySetLen);
         }
 
         uint64 newBeefyBlock = commitment.blockNumber;
@@ -482,7 +494,7 @@ contract BeefyClient {
         bytes32 commitmentHash,
         bytes32 ticketID,
         uint256[] calldata bitfield,
-        ValidatorSet memory vset,
+        ValidatorSetState storage vset,
         ValidatorProof[] calldata proofs
     ) internal view {
         Ticket storage ticket = tickets[ticketID];
@@ -523,7 +535,7 @@ contract BeefyClient {
         }
     }
 
-    function getFirstMMRRoot(Commitment calldata commitment) internal pure returns (bytes32) {
+    function ensureProvidesMMRRoot(Commitment calldata commitment) internal pure returns (bytes32) {
         for (uint256 i = 0; i < commitment.payload.length; i++) {
             if (commitment.payload[i].payloadID == MMR_ROOT_ID) {
                 if (commitment.payload[i].data.length != 32) {
@@ -579,9 +591,9 @@ contract BeefyClient {
      * @param proof Merkle proof required for validation of the address
      * @return true if the validator is in the set
      */
-    function isValidatorInSet(ValidatorSet memory vset, address account, uint256 index, bytes32[] calldata proof)
+    function isValidatorInSet(ValidatorSetState storage vset, address account, uint256 index, bytes32[] calldata proof)
         internal
-        pure
+        view
         returns (bool)
     {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(account));
