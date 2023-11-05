@@ -704,4 +704,8 @@ contract BeefyClientTest is Test {
         result = beefyClient.computeNumRequiredSignatures_public(1, 0, 0);
         assertEq(1, result, "C");
     }
+
+    function testStorageToStorageCopies() public {
+        beefyClient.copyCounters();
+    }
 }

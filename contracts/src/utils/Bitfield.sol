@@ -74,11 +74,8 @@ library Bitfield {
 
         bitfield = new uint256[](arrayLength);
 
-        for (uint256 i = 0; i < bitsToSet.length;) {
+        for (uint256 i = 0; i < bitsToSet.length; i++) {
             set(bitfield, bitsToSet[i]);
-            unchecked {
-                ++i;
-            }
         }
 
         return bitfield;
