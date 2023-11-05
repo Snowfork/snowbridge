@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command} from "../../src/Types.sol";
 import {IGateway} from "../../src/interfaces/IGateway.sol";
