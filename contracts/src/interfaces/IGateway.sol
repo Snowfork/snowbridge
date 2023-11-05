@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import {OperatingMode, InboundMessage, ParaID} from "../Types.sol";
 import {Verification} from "../Verification.sol";
@@ -33,6 +33,12 @@ interface IGateway {
 
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
+
+    /// @dev Emitted once the funds are locked and a message is successfully queued.
+    event TokenSent(
+        address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
+    );
+    event TokenRegistrationSent(address token);
 
     /**
      * Getters
