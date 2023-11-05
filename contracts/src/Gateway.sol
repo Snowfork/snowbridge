@@ -8,7 +8,7 @@ import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command, AssetFees} from "./Types.sol";
+import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -173,8 +173,8 @@ contract Gateway is IGateway, IInitializable {
             catch {
                 success = false;
             }
-        } else if (message.command == Command.UpdateFees) {
-            try Gateway(this).updateFees{gas: maxDispatchGas}(message.params) {}
+        } else if (message.command == Command.SetTokenTransferFees) {
+            try Gateway(this).setTokenTransferFees{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
@@ -235,11 +235,9 @@ contract Gateway is IGateway, IInitializable {
         return ERC1967.load();
     }
 
-    function assetFees() external view returns (AssetFees memory fees) {
+    function tokenTransferFees() external view returns (uint256, uint256) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        fees.register = $.registerTokenFee;
-        fees.send = $.sendTokenFee;
-        return fees;
+        return ($.registerTokenFee, $.sendTokenFee);
     }
 
     /**
@@ -423,13 +421,20 @@ contract Gateway is IGateway, IInitializable {
         emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
     }
 
+    struct SetTokenTransferFeesParams {
+        /// @dev The fee for register token
+        uint256 register;
+        /// @dev The fee for send token from ethereum to polkadot
+        uint256 send;
+    }
+
     // @dev Set the operating mode of the gateway
-    function updateFees(bytes calldata data) external onlySelf {
+    function setTokenTransferFees(bytes calldata data) external onlySelf {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        AssetFees memory params = abi.decode(data, (AssetFees));
+        SetTokenTransferFeesParams memory params = abi.decode(data, (SetTokenTransferFeesParams));
         $.registerTokenFee = params.register;
         $.sendTokenFee = params.send;
-        emit FeeUpdated(params.register, params.send);
+        emit SetTokenTransferFees(params.register, params.send);
     }
 
     /**

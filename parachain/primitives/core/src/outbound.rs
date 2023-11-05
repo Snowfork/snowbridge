@@ -112,7 +112,7 @@ mod v1 {
 			amount: u128,
 		},
 		/// Set token fees of the Gateway contract
-		SetTokenFee {
+		SetTokenTransferFees {
 			/// The fee for register token
 			register: u128,
 			/// The fee for send token to para chain
@@ -131,7 +131,7 @@ mod v1 {
 				Command::UpdateChannel { .. } => 4,
 				Command::SetOperatingMode { .. } => 5,
 				Command::TransferNativeFromAgent { .. } => 6,
-				Command::SetTokenFee { .. } => 7,
+				Command::SetTokenTransferFees { .. } => 7,
 			}
 		}
 
@@ -178,10 +178,11 @@ mod v1 {
 						Token::Address(*recipient),
 						Token::Uint(U256::from(*amount)),
 					])]),
-				Command::SetTokenFee { register, send } => ethabi::encode(&[Token::Tuple(vec![
-					Token::Uint(U256::from(*register)),
-					Token::Uint(U256::from(*send)),
-				])]),
+				Command::SetTokenTransferFees { register, send } =>
+					ethabi::encode(&[Token::Tuple(vec![
+						Token::Uint(U256::from(*register)),
+						Token::Uint(U256::from(*send)),
+					])]),
 			}
 		}
 	}
@@ -347,7 +348,7 @@ impl GasMeter for ConstantGasMeter {
 				// the the initializer is called.
 				50_000 + initializer_max_gas
 			},
-			Command::SetTokenFee { .. } => 60_000,
+			Command::SetTokenTransferFees { .. } => 60_000,
 		}
 	}
 }
@@ -380,12 +381,3 @@ pub enum AggregateMessageOrigin {
 }
 
 pub const ETHER_DECIMALS: u8 = 18;
-
-#[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct TokenFees<Balance>
-where
-	Balance: BaseArithmetic + Unsigned + Copy,
-{
-	pub register: Balance,
-	pub send: Balance,
-}

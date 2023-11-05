@@ -40,7 +40,7 @@ pub trait WeightInfo {
 	fn set_operating_mode() -> Weight;
 	fn transfer_native_from_agent() -> Weight;
 	fn force_transfer_native_from_agent() -> Weight;
-	fn update_fees() -> Weight;
+	fn set_token_transfer_fees() -> Weight;
 }
 
 // For backwards compatibility and tests.
@@ -216,7 +216,7 @@ impl WeightInfo for () {
 	/// Proof: MessageQueue ServiceHead (max_values: Some(1), max_size: Some(5), added: 500, mode: MaxEncodedLen)
 	/// Storage: MessageQueue Pages (r:0 w:1)
 	/// Proof: MessageQueue Pages (max_values: None, max_size: Some(65585), added: 68060, mode: MaxEncodedLen)
-	fn update_fees() -> Weight {
+	fn set_token_transfer_fees() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `80`
 		//  Estimated: `3517`

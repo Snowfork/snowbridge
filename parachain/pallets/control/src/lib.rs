@@ -68,12 +68,9 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use snowbridge_core::{
-	outbound::{
-		Command, Initializer, Message, OperatingMode, ParaId, SendError, SendMessage, TokenFees,
-	},
+	outbound::{Command, Initializer, Message, OperatingMode, ParaId, SendError, SendMessage},
 	sibling_sovereign_account, AgentId,
 };
-use sp_runtime::SaturatedConversion;
 
 #[cfg(feature = "runtime-benchmarks")]
 use frame_support::traits::OriginTrait;
@@ -179,8 +176,8 @@ pub mod pallet {
 		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
 		TransferNativeFromAgent { agent_id: AgentId, recipient: H160, amount: u128 },
-		/// An UpdateFees message was sent to the Gateway
-		UpdateFees { register: u128, send: u128 },
+		/// An SetTokenTransferFees message was sent to the Gateway
+		SetTokenTransferFees { register: u128, send: u128 },
 	}
 
 	#[pallet::error]
@@ -441,17 +438,18 @@ pub mod pallet {
 		/// - `recipient`: Recipient of funds
 		/// - `amount`: Amount to transfer
 		#[pallet::call_index(8)]
-		#[pallet::weight(T::WeightInfo::update_fees())]
-		pub fn update_fees(origin: OriginFor<T>, fees: TokenFees<BalanceOf<T>>) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::set_token_transfer_fees())]
+		pub fn set_token_transfer_fees(
+			origin: OriginFor<T>,
+			register: u128,
+			send: u128,
+		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			let (register, send) =
-				(fees.register.saturated_into::<u128>(), fees.send.saturated_into::<u128>());
-
-			let command = Command::SetTokenFee { register, send };
+			let command = Command::SetTokenTransferFees { register, send };
 			Self::send(T::OwnParaId::get(), command, PaysFee::<T>::No)?;
 
-			Self::deposit_event(Event::<T>::UpdateFees { register, send });
+			Self::deposit_event(Event::<T>::SetTokenTransferFees { register, send });
 			Ok(())
 		}
 	}

@@ -22,9 +22,7 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 
-import {
-    AgentExecuteCommand, InboundMessage, OperatingMode, ParaID, Config, Command, AssetFees
-} from "../src/Types.sol";
+import {AgentExecuteCommand, InboundMessage, OperatingMode, ParaID, Config, Command} from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import "./mocks/GatewayUpgradeMock.sol";
@@ -750,10 +748,12 @@ contract GatewayTest is Test {
         );
     }
 
-    function testSetFees() public {
-        GatewayMock(address(gateway)).updateFeesPublic(abi.encode(AssetFees({register: 1, send: 1})));
-        AssetFees memory fees = IGateway(address(gateway)).assetFees();
-        assertEq(fees.register, 1);
-        assertEq(fees.send, 1);
+    function testSetTokenFees() public {
+        GatewayMock(address(gateway)).setTokenTransferFeesPublic(
+            abi.encode(Gateway.SetTokenTransferFeesParams({register: 1, send: 1}))
+        );
+        (uint256 register, uint256 send) = IGateway(address(gateway)).tokenTransferFees();
+        assertEq(register, 1);
+        assertEq(send, 1);
     }
 }

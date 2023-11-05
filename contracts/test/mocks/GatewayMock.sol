@@ -64,8 +64,8 @@ contract GatewayMock is Gateway {
         }
     }
 
-    function updateFeesPublic(bytes calldata params) external {
-        this.updateFees(params);
+    function setTokenTransferFeesPublic(bytes calldata params) external {
+        this.setTokenTransferFees(params);
     }
 }
 

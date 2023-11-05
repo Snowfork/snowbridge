@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.20;
 
-import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command, AssetFees} from "../../src/Types.sol";
+import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command} from "../../src/Types.sol";
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 import {Verification} from "../../src/Verification.sol";
@@ -32,8 +32,8 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return address(0);
     }
 
-    function assetFees() external pure returns (AssetFees memory) {
-        return AssetFees({register: 1, send: 1});
+    function tokenTransferFees() external pure returns (uint256, uint256) {
+        return (1, 1);
     }
 
     function implementation() external pure returns (address) {
