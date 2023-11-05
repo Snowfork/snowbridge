@@ -3796,6 +3796,7 @@ dependencies = [
  "hex",
  "hex-literal",
  "parity-scale-codec",
+ "serde",
  "sp-core 16.0.0",
  "staging-xcm",
  "subxt",
