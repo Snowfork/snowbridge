@@ -48,9 +48,9 @@ $$
 
 From the list above 1 and 2 are known in the light client and can be calculated on-chain. Variables 3, 4.1, and 4.2 are not known by the light client and are instead calculated off-chain and set as a minimum number of required signatures during the initialization of the light client. This minimum is immutable for the life time of the light client.
 
-* [Minimum required signatures.](../../../../contracts/src/BeefyClient.sol#L185-L190)
-* [Dynamic signature calculation.](../../../../contracts/src/BeefyClient.sol#L444)
-* [Python implementation of required signatures.](../../../../scripts/beefy\_signature\_sampling.py#L9)
+* [Minimum required signatures](../../../../contracts/src/BeefyClient.sol#L185-L190)
+* [Dynamic signature calculation](../../../../contracts/src/BeefyClient.sol#L444)
+* [Python implementation of required signatures](../../../../scripts/beefy\_signature\_sampling.py#L9)
 
 ## Message Verification
 
