@@ -334,28 +334,7 @@ contract BeefyClient {
     ) external {
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
-        Ticket storage ticket = tickets[ticketID];
-
-        if (ticket.blockNumber == 0) {
-            // submitInitial hasn't been called yet
-            revert InvalidTicket();
-        }
-
-        if (ticket.prevRandao == 0) {
-            // commitPrevRandao hasn't been called yet
-            revert PrevRandaoNotCaptured();
-        }
-
-        if (commitment.blockNumber <= latestBeefyBlock) {
-            // ticket is obsolete
-            revert StaleCommitment();
-        }
-
-        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
-            // The provided claims bitfield isn't the same one that was
-            // passed to submitInitial
-            revert InvalidBitfield();
-        }
+        validateTicket(ticketID, commitment, bitfield);
 
         bool is_next_session = false;
         ValidatorSetState storage vset;
@@ -388,11 +367,11 @@ contract BeefyClient {
             nextValidatorSet.usageCounters = Uint16Array.create(leaf.nextAuthoritySetLen);
         }
 
-        uint64 newBeefyBlock = commitment.blockNumber;
         latestMMRRoot = newMMRRoot;
-        latestBeefyBlock = newBeefyBlock;
+        latestBeefyBlock = commitment.blockNumber;
         delete tickets[ticketID];
-        emit NewMMRRoot(newMMRRoot, newBeefyBlock);
+
+        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
     }
 
     /**
@@ -604,5 +583,36 @@ contract BeefyClient {
     {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(account));
         return SubstrateMerkleProof.verify(vset.root, hashedLeaf, index, vset.length, proof);
+    }
+
+    /**
+     * @dev Basic validation of a ticket for submitFinal
+     */
+    function validateTicket(bytes32 ticketID, Commitment calldata commitment, uint256[] calldata bitfield)
+        internal
+        view
+    {
+        Ticket storage ticket = tickets[ticketID];
+
+        if (ticket.blockNumber == 0) {
+            // submitInitial hasn't been called yet
+            revert InvalidTicket();
+        }
+
+        if (ticket.prevRandao == 0) {
+            // commitPrevRandao hasn't been called yet
+            revert PrevRandaoNotCaptured();
+        }
+
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            // ticket is obsolete
+            revert StaleCommitment();
+        }
+
+        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
+            // The provided claims bitfield isn't the same one that was
+            // passed to submitInitial
+            revert InvalidBitfield();
+        }
     }
 }
