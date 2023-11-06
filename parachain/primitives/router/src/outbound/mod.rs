@@ -7,7 +7,7 @@ use codec::{Decode, Encode};
 
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::outbound::{AgentExecuteCommand, Command, Message, SendMessage};
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
 use xcm_executor::traits::{ConvertLocation, ExportXcm};
@@ -82,15 +82,10 @@ where
 		})?;
 
 		let mut converter = XcmConverter::new(&message, &gateway_network);
-		let (agent_execute_command, max_target_fee) = converter.convert().map_err(|err|{
+		let agent_execute_command = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
-
-		if max_target_fee.is_some() {
-			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due not supporting max target fee.");
-			return Err(SendError::Unroutable)
-		}
 
 		// local_sub is relative to the relaychain. No conversion needed.
 		let local_sub_location: MultiLocation = local_sub.into();
@@ -140,19 +135,27 @@ where
 #[derive(PartialEq, Debug)]
 enum XcmConverterError {
 	UnexpectedEndOfXcm,
-	TargetFeeExpected,
 	BuyExecutionExpected,
 	EndOfXcmMessageExpected,
 	WithdrawExpected,
-	DepositExpected,
+	DepositAssetExpected,
 	NoReserveAssets,
+	ClearOriginExpected,
 	FilterDoesNotConsumeAllAssets,
 	TooManyAssets,
-	AssetNotConcreteFungible,
 	ZeroAssetTransfer,
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
 	SetTopicExpected,
+}
+
+macro_rules! match_expression {
+	($expression:expr, $(|)? $( $pattern:pat_param )|+ $( if $guard: expr )?, $value:expr $(,)?) => {
+		match $expression {
+			$( $pattern )|+ $( if $guard )? => Some($value),
+			_ => None,
+		}
+	};
 }
 
 struct XcmConverter<'a, Call> {
@@ -164,18 +167,13 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Self { iter: message.inner().iter(), ethereum_network }
 	}
 
-	fn convert(
-		&mut self,
-	) -> Result<(AgentExecuteCommand, Option<&'a MultiAsset>), XcmConverterError> {
-		// Get target fees if specified.
-		let max_target_fee = self.fee_info()?;
-
+	fn convert(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
 		// Get withdraw/deposit and make native tokens create message.
 		let result = self.native_tokens_unlock_message()?;
 
 		// Match last set topic. Later could use message id for replies
 		let _ = match self.next()? {
-			SetTopic(id) => id,
+			SetTopic(id) => Some(id),
 			_ => return Err(XcmConverterError::SetTopicExpected),
 		};
 
@@ -184,91 +182,78 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			return Err(XcmConverterError::EndOfXcmMessageExpected)
 		}
 
-		Ok((result, max_target_fee))
-	}
-
-	fn fee_info(&mut self) -> Result<Option<&'a MultiAsset>, XcmConverterError> {
-		use XcmConverterError::*;
-		let execution_fee = match self.next()? {
-			WithdrawAsset(fee_asset) => match self.next()? {
-				BuyExecution { fees: execution_fee, weight_limit: Unlimited }
-					if fee_asset.len() == 1 && fee_asset.contains(execution_fee) =>
-					Some(execution_fee),
-				_ => return Err(BuyExecutionExpected),
-			},
-			UnpaidExecution { check_origin: None, weight_limit: Unlimited } => None,
-			_ => return Err(TargetFeeExpected),
-		};
-		Ok(execution_fee)
+		Ok(result)
 	}
 
 	fn native_tokens_unlock_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
 		use XcmConverterError::*;
-		let (assets, beneficiary) = if let WithdrawAsset(reserved_assets) = self.next()? {
-			if reserved_assets.len() == 0 {
-				return Err(NoReserveAssets)
-			}
-			if let DepositAsset { assets, beneficiary } = self.next()? {
-				if reserved_assets.inner().iter().any(|asset| !assets.matches(asset)) {
-					return Err(FilterDoesNotConsumeAllAssets)
-				}
-				(reserved_assets, beneficiary)
-			} else {
-				return Err(DepositExpected)
-			}
-		} else {
-			return Err(WithdrawExpected)
-		};
+
+		// Get the reserve assets from WithdrawAsset.
+		let reserve_assets =
+			match_expression!(self.next()?, WithdrawAsset(reserve_assets), reserve_assets)
+				.ok_or(WithdrawExpected)?;
+
+		// Check origin is cleared.
+		let _ = match_expression!(self.next()?, ClearOrigin, ()).ok_or(ClearOriginExpected)?;
+
+		// Get the fee asset from BuyExecution
+		let _fee_asset = match_expression!(self.next()?, BuyExecution { fees, .. }, fees)
+			.ok_or(BuyExecutionExpected)?;
+
+		let (deposit_assets, beneficiary) = match_expression!(
+			self.next()?,
+			DepositAsset { assets, beneficiary },
+			(assets, beneficiary)
+		)
+		.ok_or(DepositAssetExpected)?;
+
+		if reserve_assets.len() == 0 {
+			return Err(NoReserveAssets)
+		}
+
+		if reserve_assets.inner().iter().any(|asset| !deposit_assets.matches(asset)) {
+			return Err(FilterDoesNotConsumeAllAssets)
+		}
 
 		// assert that the beneficiary is AccountKey20
-		let destination = {
-			if let MultiLocation { parents: 0, interior: X1(AccountKey20 { network, key }) } =
-				beneficiary
-			{
-				if network.is_some() && network != &Some(*self.ethereum_network) {
-					return Err(BeneficiaryResolutionFailed)
-				}
-				key.into()
-			} else {
-				return Err(BeneficiaryResolutionFailed)
-			}
-		};
+		let destination = match_expression!(
+			beneficiary,
+			MultiLocation { parents: 0, interior: X1(AccountKey20 { network, key }) }
+				if self.network_matches(network),
+			H160(*key)
+		)
+		.ok_or(BeneficiaryResolutionFailed)?;
 
-		let (asset, amount) = {
-			// We only support a single asset at a time.
-			ensure!(assets.len() == 1, TooManyAssets);
+		// We only support a single asset at a time.
+		ensure!(reserve_assets.len() == 1, TooManyAssets);
+		let asset = reserve_assets.get(0).ok_or(AssetResolutionFailed)?;
+		// assert that the beneficiary is AccountKey20
 
-			// Ensure asset is concrete and fungible.
-			let asset = assets.get(0).ok_or(AssetResolutionFailed)?;
-			let (asset_location, amount) =
-				if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = asset {
-					(location, amount)
-				} else {
-					return Err(AssetNotConcreteFungible)
-				};
+		let (asset, amount) = match_expression!(
+			asset,
+			MultiAsset {
+				id: Concrete(MultiLocation { parents: 0, interior: X1(AccountKey20 { network , key })}),
+				fun: Fungible(amount)
+			} if self.network_matches(network),
+			(H160(*key), *amount)
+		)
+		.ok_or(AssetResolutionFailed)?;
 
-			ensure!(*amount > 0, ZeroAssetTransfer);
-
-			// extract ERC20 contract address
-			if let MultiLocation {
-				parents: 0,
-				interior: X1(AccountKey20 { network: token_network, key: token_address }),
-			} = asset_location
-			{
-				if token_network.is_some() && token_network != &Some(*self.ethereum_network) {
-					return Err(AssetResolutionFailed)
-				}
-				(token_address.into(), *amount)
-			} else {
-				return Err(AssetResolutionFailed)
-			}
-		};
+		ensure!(amount > 0, ZeroAssetTransfer);
 
 		Ok(AgentExecuteCommand::TransferToken { token: asset, recipient: destination, amount })
 	}
 
 	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {
 		self.iter.next().ok_or(XcmConverterError::UnexpectedEndOfXcm)
+	}
+
+	fn network_matches(&self, network: &Option<NetworkId>) -> bool {
+		if let Some(network) = network {
+			network == self.ethereum_network
+		} else {
+			true
+		}
 	}
 }
 
@@ -610,19 +595,18 @@ mod tests {
 			fun: Fungible(1000),
 		}]
 		.into();
+		let fee = assets.clone().get(0).unwrap().clone();
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let mut message: Option<Xcm<()>> = Some(
 			vec![
-				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-				WithdrawAsset(assets),
+				WithdrawAsset(assets.clone()),
+				ClearOrigin,
+				BuyExecution { fees: fee, weight_limit: Unlimited },
 				DepositAsset {
 					assets: filter,
-					beneficiary: X1(AccountKey20 {
-						network: Some(network),
-						key: beneficiary_address,
-					})
-					.into(),
+					beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address })
+						.into(),
 				},
 				SetTopic([0; 32]),
 			]
@@ -653,11 +637,8 @@ mod tests {
 	}
 
 	#[test]
-	fn xcm_converter_convert_success_with_max_target_fee() {
+	fn xcm_converter_convert_success() {
 		let network = BridgedNetwork::get();
-
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
@@ -670,9 +651,9 @@ mod tests {
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -687,41 +668,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok((expected_payload, Some(&fee))));
-	}
-
-	#[test]
-	fn xcm_converter_convert_success_without_max_target_fee() {
-		let network = BridgedNetwork::get();
-
-		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
-		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
-
-		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
-			fun: Fungible(1000),
-		}]
-		.into();
-		let filter: MultiAssetFilter = assets.clone().into();
-
-		let message: Xcm<()> = vec![
-			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-			WithdrawAsset(assets),
-			DepositAsset {
-				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
-			},
-			SetTopic([0; 32]),
-		]
-		.into();
-		let mut converter = XcmConverter::new(&message, &network);
-		let expected_payload = AgentExecuteCommand::TransferToken {
-			token: token_address.into(),
-			recipient: beneficiary_address.into(),
-			amount: 1000,
-		};
-		let result = converter.convert();
-		assert_eq!(result, Ok((expected_payload, None)));
+		assert_eq!(result, Ok(expected_payload));
 	}
 
 	#[test]
@@ -739,8 +686,9 @@ mod tests {
 		let filter: MultiAssetFilter = Wild(All);
 
 		let message: Xcm<()> = vec![
-			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -755,7 +703,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok((expected_payload, None)));
+		assert_eq!(result, Ok(expected_payload));
 	}
 
 	#[test]
@@ -768,11 +716,7 @@ mod tests {
 			fun: Fungible(1000),
 		}]
 		.into();
-		let message: Xcm<()> = vec![
-			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-			WithdrawAsset(assets),
-		]
-		.into();
+		let message: Xcm<()> = vec![WithdrawAsset(assets)].into();
 
 		let mut converter = XcmConverter::new(&message, &network);
 		let result = converter.convert();
@@ -792,45 +736,12 @@ mod tests {
 	}
 
 	#[test]
-	fn xcm_converter_convert_without_max_target_fee_yields_target_fee_expected() {
-		let network = BridgedNetwork::get();
-
-		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
-		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
-
-		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
-			fun: Fungible(1000),
-		}]
-		.into();
-		let filter: MultiAssetFilter = assets.clone().into();
-
-		let message: Xcm<()> = vec![
-			ClearTopic,
-			WithdrawAsset(assets),
-			DepositAsset {
-				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
-			},
-			SetTopic([0; 32]),
-		]
-		.into();
-		let mut converter = XcmConverter::new(&message, &network);
-
-		let result = converter.convert();
-		assert_eq!(result.err(), Some(XcmConverterError::TargetFeeExpected));
-	}
-
-	#[test]
 	fn xcm_converter_convert_without_set_topic_suffix_yields_set_topic_expected() {
 		let network = BridgedNetwork::get();
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
@@ -839,9 +750,9 @@ mod tests {
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -862,9 +773,6 @@ mod tests {
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
@@ -873,15 +781,15 @@ mod tests {
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([0; 32]),
-			ClearOrigin,
+			ClearError,
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -897,9 +805,6 @@ mod tests {
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
@@ -908,8 +813,8 @@ mod tests {
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -929,9 +834,6 @@ mod tests {
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
@@ -939,34 +841,38 @@ mod tests {
 		.into();
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
-		assert_eq!(result.err(), Some(XcmConverterError::DepositExpected));
+		assert_eq!(result.err(), Some(XcmConverterError::DepositAssetExpected));
 	}
 
 	#[test]
 	fn xcm_converter_convert_without_assets_yields_no_reserve_assets() {
 		let network = BridgedNetwork::get();
 
-		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 		let assets: MultiAssets = vec![].into();
 		let filter: MultiAssetFilter = assets.clone().into();
 
+		let fee = MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
+			fun: Fungible(1000),
+		};
+
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: fee, weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -988,9 +894,6 @@ mod tests {
 		let token_address_2: [u8; 20] = hex!("1100000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![
 			MultiAsset {
 				id: Concrete(X1(AccountKey20 { network: None, key: token_address_1 }).into()),
@@ -1005,9 +908,9 @@ mod tests {
 		let filter: MultiAssetFilter = assets.clone().into();
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -1028,9 +931,6 @@ mod tests {
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
@@ -1039,9 +939,9 @@ mod tests {
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(0));
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -1056,48 +956,11 @@ mod tests {
 	}
 
 	#[test]
-	fn xcm_converter_convert_with_non_fungible_asset_yields_asset_not_concrete_fungible() {
-		let network = BridgedNetwork::get();
-
-		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
-		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
-
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
-		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
-			fun: NonFungible(AssetInstance::Index(0)),
-		}]
-		.into();
-		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
-
-		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
-			DepositAsset {
-				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
-			},
-			SetTopic([0; 32]),
-		]
-		.into();
-		let mut converter = XcmConverter::new(&message, &network);
-
-		let result = converter.convert();
-		assert_eq!(result.err(), Some(XcmConverterError::AssetNotConcreteFungible));
-	}
-
-	#[test]
 	fn xcm_converter_convert_with_zero_amount_asset_yields_zero_asset_transfer() {
 		let network = BridgedNetwork::get();
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
-
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
 
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
@@ -1107,9 +970,9 @@ mod tests {
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -1129,9 +992,6 @@ mod tests {
 
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X3(GlobalConsensus(Polkadot), Parachain(1000), GeneralIndex(0)).into()),
 			fun: Fungible(1000),
@@ -1140,9 +1000,9 @@ mod tests {
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -1163,9 +1023,6 @@ mod tests {
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X1(AccountKey20 { network: Some(Ethereum { chain_id: 2 }), key: token_address })
@@ -1177,9 +1034,9 @@ mod tests {
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -1200,9 +1057,6 @@ mod tests {
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(
 				X1(AccountKey20 { network: Some(NonBridgedNetwork::get()), key: token_address })
@@ -1214,9 +1068,9 @@ mod tests {
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
@@ -1239,20 +1093,16 @@ mod tests {
 		let beneficiary_address: [u8; 32] =
 			hex!("2000000000000000000000000000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
 		}]
 		.into();
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
-
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X3(
@@ -1279,9 +1129,6 @@ mod tests {
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
 		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
-		let fee = MultiAsset { id: Concrete(Here.into()), fun: Fungible(1000) };
-		let fees: MultiAssets = vec![fee.clone()].into();
-
 		let assets: MultiAssets = vec![MultiAsset {
 			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
 			fun: Fungible(1000),
@@ -1290,9 +1137,9 @@ mod tests {
 		let filter: MultiAssetFilter = Wild(WildMultiAsset::AllCounted(1));
 
 		let message: Xcm<()> = vec![
-			WithdrawAsset(fees),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
-			WithdrawAsset(assets),
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: filter,
 				beneficiary: X1(AccountKey20 {
