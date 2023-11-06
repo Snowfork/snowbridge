@@ -195,7 +195,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 				.ok_or(WithdrawExpected)?;
 
 		// Check origin is cleared.
-		let _ = match_expression!(self.next()?, ClearOrigin, ()).ok_or(ClearOriginExpected)?;
+		match_expression!(self.next()?, ClearOrigin, ()).ok_or(ClearOriginExpected)?;
 
 		// Get the fee asset from BuyExecution.
 		let fee_asset = match_expression!(self.next()?, BuyExecution { fees, .. }, fees)
