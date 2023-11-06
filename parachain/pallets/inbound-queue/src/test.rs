@@ -288,7 +288,7 @@ fn test_submit_happy_path() {
 			},
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
-		expect_events(vec![InboundQueueEvent::MessageSent {
+		expect_events(vec![InboundQueueEvent::MessageReceived {
 			dest: ASSET_HUB_PARAID.into(),
 			nonce: 1,
 			xcm_hash: XCM_HASH,

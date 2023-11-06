@@ -130,8 +130,8 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T> {
-		/// Xcm message sent to dest chain
-		MessageSent {
+		/// A message was received from Ethereum
+		MessageReceived {
 			/// The destination parachain
 			dest: ParaId,
 			/// The message nonce
@@ -252,7 +252,7 @@ pub mod pallet {
 			// Attempt to send XCM to a dest parachain
 			let xcm_hash = Self::send_xcm(xcm, envelope.dest)?;
 
-			Self::deposit_event(Event::MessageSent {
+			Self::deposit_event(Event::MessageReceived {
 				dest: envelope.dest,
 				nonce: envelope.nonce,
 				xcm_hash,
