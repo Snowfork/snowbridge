@@ -724,6 +724,35 @@ mod tests {
 	}
 
 	#[test]
+	fn xcm_converter_convert_without_clear_origin_fails() {
+		let network = BridgedNetwork::get();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
+			fun: Fungible(1000),
+		}]
+		.into();
+		let filter: MultiAssetFilter = assets.clone().into();
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(assets.clone()),
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+			},
+			SetTopic([0; 32]),
+		]
+		.into();
+		let mut converter = XcmConverter::new(&message, &network);
+		let result = converter.convert();
+		assert_eq!(result.err(), Some(XcmConverterError::ClearOriginExpected));
+	}
+
+	#[test]
 	fn xcm_converter_convert_with_empty_xcm_yields_unexpected_end_of_xcm() {
 		let network = BridgedNetwork::get();
 
