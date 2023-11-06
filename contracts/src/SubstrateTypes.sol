@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {ParaID} from "./Types.sol";
@@ -56,13 +56,9 @@ library SubstrateTypes {
      * `NativeTokensMessage::Create`
      */
     // solhint-disable-next-line func-name-mixedcase
-    function RegisterToken(address gateway, address token) internal view returns (bytes memory) {
+    function RegisterToken(address token) internal view returns (bytes memory) {
         return bytes.concat(
-            bytes1(0x00),
-            ScaleCodec.encodeU64(uint64(block.chainid)),
-            bytes1(0x00),
-            SubstrateTypes.H160(gateway),
-            SubstrateTypes.H160(token)
+            bytes1(0x00), ScaleCodec.encodeU64(uint64(block.chainid)), bytes1(0x00), SubstrateTypes.H160(token)
         );
     }
 
@@ -71,16 +67,11 @@ library SubstrateTypes {
      * `NativeTokensMessage::Mint`
      */
     // solhint-disable-next-line func-name-mixedcase
-    function SendToken(address gateway, address token, bytes32 recipient, uint128 amount)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function SendToken(address token, bytes32 recipient, uint128 amount) internal view returns (bytes memory) {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x01),
-            SubstrateTypes.H160(gateway),
             SubstrateTypes.H160(token),
             bytes1(0x00),
             recipient,
@@ -88,7 +79,7 @@ library SubstrateTypes {
         );
     }
 
-    function SendToken(address gateway, address token, ParaID paraID, bytes32 recipient, uint128 amount)
+    function SendToken(address token, ParaID paraID, bytes32 recipient, uint128 amount)
         internal
         view
         returns (bytes memory)
@@ -97,7 +88,6 @@ library SubstrateTypes {
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x01),
-            SubstrateTypes.H160(gateway),
             SubstrateTypes.H160(token),
             bytes1(0x01),
             ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),

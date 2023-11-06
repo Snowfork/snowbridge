@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.20;
+pragma solidity 0.8.22;
 
 import {Strings} from "openzeppelin/utils/Strings.sol";
 import {Test} from "forge-std/Test.sol";
@@ -703,5 +703,9 @@ contract BeefyClientTest is Test {
         assertEq(1, result, "B");
         result = beefyClient.computeNumRequiredSignatures_public(1, 0, 0);
         assertEq(1, result, "C");
+    }
+
+    function testStorageToStorageCopies() public {
+        beefyClient.copyCounters();
     }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
@@ -16,12 +16,6 @@ import {Address} from "./utils/Address.sol";
 library Assets {
     using Address for address;
     using SafeTokenTransferFrom for IERC20;
-
-    /// @dev Emitted once the funds are locked and a message is successfully queued.
-    event TokenSent(
-        address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
-    );
-    event TokenRegistrationSent(address token);
 
     /* Errors */
     error InvalidToken();
@@ -49,13 +43,13 @@ library Assets {
 
         _transferToAgent(assetHubAgent, token, sender, amount);
         if (destinationChain == assetHubParaID) {
-            payload = SubstrateTypes.SendToken(address(this), token, destinationAddress, amount);
+            payload = SubstrateTypes.SendToken(token, destinationAddress, amount);
         } else {
-            payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
+            payload = SubstrateTypes.SendToken(token, destinationChain, destinationAddress, amount);
         }
         extraFee = $.sendTokenFee;
 
-        emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
+        emit IGateway.TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
     function sendToken(
@@ -77,7 +71,7 @@ library Assets {
 
         payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         extraFee = $.sendTokenFee;
-        emit TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
+        emit IGateway.TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 
     /// @dev transfer tokens from the sender to the specified
@@ -102,9 +96,9 @@ library Assets {
             revert InvalidToken();
         }
 
-        payload = SubstrateTypes.RegisterToken(address(this), token);
+        payload = SubstrateTypes.RegisterToken(token);
         extraFee = $.registerTokenFee;
 
-        emit TokenRegistrationSent(token);
+        emit IGateway.TokenRegistrationSent(token);
     }
 }

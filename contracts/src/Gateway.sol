@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
@@ -548,7 +548,7 @@ contract Gateway is IGateway, IInitializable {
 
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        $.mode = OperatingMode.Normal;
+        $.mode = OperatingMode.RejectingOutboundMessages;
         $.defaultFee = defaultFee;
 
         // Initialize an agent & channel for BridgeHub
