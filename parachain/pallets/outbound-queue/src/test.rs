@@ -50,7 +50,7 @@ fn calculate_fees() {
 	new_tester().execute_with(|| {
 		let command = mock_message(1000).command;
 		let fee = OutboundQueue::calculate_fee(&command);
-		assert_eq!(fee.remote, 31000000000);
+		assert_eq!(fee.remote, 22000000000);
 
 		println!("Total fee: {}", fee.total())
 	});

@@ -249,9 +249,11 @@ pub mod pallet {
 
 	#[pallet::type_value]
 	pub fn DefaultFeeConfig() -> FeeConfigRecord {
+		// When the FeeConfigRecord is updated, so should this fee constant on asset hub:
+		// polkadot-sdk/cumulus/parachains/common/src/snowbridge_config.rs
 		FeeConfigRecord {
 			exchange_rate: FixedU128::saturating_from_rational(1, 400),
-			fee_per_gas: 30 * GWEI,
+			fee_per_gas: 20 * GWEI,
 			#[allow(clippy::identity_op)]
 			reward: 1 * METH,
 		}
