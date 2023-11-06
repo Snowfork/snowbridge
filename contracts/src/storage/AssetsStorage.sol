@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 
 library AssetsStorage {
     struct Layout {
+        mapping(address tokenAddress => bool) registeredNativeTokens;
         uint256 registerTokenFee;
         uint256 sendTokenFee;
     }

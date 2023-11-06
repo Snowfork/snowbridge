@@ -41,6 +41,10 @@ library Assets {
     ) external returns (bytes memory payload, uint256 extraFee) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
+        if (!$.registeredNativeTokens[token]) {
+            revert IGateway.TokenNotRegistered(token);
+        }
+
         _transferToAgent(assetHubAgent, token, sender, amount);
         if (destinationChain == assetHubParaID) {
             payload = SubstrateTypes.SendToken(token, destinationAddress, amount);
@@ -65,6 +69,10 @@ library Assets {
         if (destinationChain == assetHubParaID) {
             // AssetHub parachain doesn't support Ethereum-style addresses
             revert InvalidDestination();
+        }
+
+        if (!$.registeredNativeTokens[token]) {
+            revert IGateway.TokenNotRegistered(token);
         }
 
         _transferToAgent(assetHubAgent, token, sender, amount);
@@ -95,6 +103,11 @@ library Assets {
         if (!token.isContract()) {
             revert InvalidToken();
         }
+
+        if ($.registeredNativeTokens[token]) {
+            revert IGateway.TokenAlreadyRegistered(token);
+        }
+        $.registeredNativeTokens[token] = true;
 
         payload = SubstrateTypes.RegisterToken(token);
         extraFee = $.registerTokenFee;

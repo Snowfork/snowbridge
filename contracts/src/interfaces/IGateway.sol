@@ -66,6 +66,9 @@ interface IGateway {
      * Token Transfers
      */
 
+    error TokenAlreadyRegistered(address token);
+    error TokenNotRegistered(address token);
+
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset
     ///      in the `ForeignAssets` pallet.
     function registerToken(address token) external payable;

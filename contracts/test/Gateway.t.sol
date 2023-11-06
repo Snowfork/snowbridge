@@ -270,14 +270,9 @@ contract GatewayTest is Test {
     function testUserPaysFees() public {
         // Create a mock user
         address user = makeAddr("user");
-        deal(address(token), user, 1);
-
-        // Let gateway lock up to 1 tokens
-        hoax(user);
-        token.approve(address(gateway), 1);
 
         hoax(user, 2 ether);
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
 
         assertEq(user.balance, 0 ether);
     }
@@ -286,15 +281,10 @@ contract GatewayTest is Test {
     function testUserDoesNotProvideEnoughFees() public {
         // Create a mock user
         address user = makeAddr("user");
-        deal(address(token), user, 1);
-
-        // Let gateway lock up to 1 tokens
-        hoax(user);
-        token.approve(address(gateway), 1);
 
         vm.expectRevert(Gateway.FeePaymentToLow.selector);
         hoax(user, 2 ether);
-        IGateway(address(gateway)).sendToken{value: 0.5 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).registerToken{value: 0.5 ether}(address(token));
 
         assertEq(user.balance, 2 ether);
     }
@@ -559,6 +549,9 @@ contract GatewayTest is Test {
     }
 
     function testSendTokenAddress32() public {
+        // first register the token
+        IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
+
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
@@ -579,6 +572,9 @@ contract GatewayTest is Test {
     }
 
     function testSendTokenAddress32ToAssetHub() public {
+        // first register the token
+        IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
+
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
@@ -599,6 +595,9 @@ contract GatewayTest is Test {
     }
 
     function testSendTokenAddress20() public {
+        // first register the token
+        IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
+
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
@@ -617,6 +616,9 @@ contract GatewayTest is Test {
     }
 
     function testSendTokenAddress20FailsInvalidDestination() public {
+        // first register the token
+        IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
+
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
@@ -668,10 +670,36 @@ contract GatewayTest is Test {
         // Now all outbound messaging should be disabled
 
         vm.expectRevert(Gateway.Disabled.selector);
-        IGateway(address(gateway)).registerToken{value: 1 ether}(address(token));
+        IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
+    }
+
+    function testDisableOutboundMessagingForChannel2() public {
+        IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
+
+        // Let gateway lock up to 1 tokens
+        token.approve(address(gateway), 1);
+
+        GatewayMock(address(gateway)).setOperatingModePublic(
+            abi.encode(Gateway.SetOperatingModeParams({mode: OperatingMode.Normal}))
+        );
+
+        bytes memory params = abi.encode(
+            Gateway.UpdateChannelParams({
+                paraID: assetHubParaID,
+                mode: OperatingMode.RejectingOutboundMessages,
+                fee: 1 ether,
+                reward: 1 ether
+            })
+        );
+        GatewayMock(address(gateway)).updateChannelPublic(params);
+
+        OperatingMode mode = IGateway(address(gateway)).channelOperatingModeOf(assetHubParaID);
+        assertEq(uint256(mode), 1);
+
+        // Now all outbound messaging should be disabled
 
         vm.expectRevert(Gateway.Disabled.selector);
-        IGateway(address(gateway)).sendToken{value: 1 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), ParaID.wrap(0), "", 1);
     }
 
     /**
