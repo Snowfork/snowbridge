@@ -172,12 +172,6 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		// Get withdraw/deposit and make native tokens create message.
 		let result = self.native_tokens_unlock_message()?;
 
-		// Match last set topic. Later could use message id for replies
-		let _ = match self.next()? {
-			SetTopic(id) => Some(id),
-			_ => return Err(XcmConverterError::SetTopicExpected),
-		};
-
 		// All xcm instructions must be consumed before exit.
 		if self.next().is_ok() {
 			return Err(XcmConverterError::EndOfXcmMessageExpected)
@@ -248,6 +242,13 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 		// transfer amount must be greater than 0.
 		ensure!(amount > 0, ZeroAssetTransfer);
+
+		// If there is another instruction ensure its SetTopic, else return.
+		let next_instruction = self.next();
+		if next_instruction.is_ok() {
+			match_expression!(next_instruction, Ok(SetTopic(id)), id)
+				.ok_or(XcmConverterError::SetTopicExpected)?;
+		}
 
 		Ok(AgentExecuteCommand::TransferToken { token, recipient, amount })
 	}
@@ -667,6 +668,40 @@ mod tests {
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
 			SetTopic([0; 32]),
+		]
+		.into();
+		let mut converter = XcmConverter::new(&message, &network);
+		let expected_payload = AgentExecuteCommand::TransferToken {
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
+			amount: 1000,
+		};
+		let result = converter.convert();
+		assert_eq!(result, Ok(expected_payload));
+	}
+
+	#[test]
+	fn xcm_converter_convert_without_set_topic_yields_success() {
+		let network = BridgedNetwork::get();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
+			fun: Fungible(1000),
+		}]
+		.into();
+		let filter: MultiAssetFilter = assets.clone().into();
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+			},
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
