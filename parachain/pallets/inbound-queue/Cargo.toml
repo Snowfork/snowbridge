@@ -16,6 +16,8 @@ scale-info = { version = "2.9.0", default-features = false, features = [ "derive
 hex-literal = { version = "0.4.1", optional = true }
 rlp = { version = "0.5.2", default-features = false, optional = true }
 log = { version = "0.4.20", default-features = false }
+alloy-sol-types = { version = "0.4.2", default-features = false }
+num-traits = { version = "0.2.16", default-features = false }
 
 frame-benchmarking = { path = "../../../polkadot-sdk/substrate/frame/benchmarking", default-features = false, optional = true }
 frame-support = { path = "../../../polkadot-sdk/substrate/frame/support", default-features = false }
@@ -32,7 +34,6 @@ xcm-builder = { package = "staging-xcm-builder", path = "../../../polkadot-sdk/p
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
-ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false, optional = true }
 
 [dev-dependencies]
@@ -51,6 +52,7 @@ std = [
     "log/std",
     "codec/std",
     "scale-info/std",
+    "alloy-sol-types/std",
     "frame-support/std",
     "frame-system/std",
     "pallet-balances/std",
@@ -59,10 +61,10 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     "sp-io/std",
+    "num-traits/std",
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
     "snowbridge-router-primitives/std",
-    "ethabi/std",
     "xcm/std",
     "xcm-builder/std",
 ]

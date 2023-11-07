@@ -28,20 +28,6 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import "./mocks/GatewayUpgradeMock.sol";
 
 contract GatewayTest is Test {
-    event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool result);
-    event OutboundMessageAccepted(ParaID indexed dest, uint64 nonce, bytes payload);
-    event NativeTokensUnlocked(address token, address recipient, uint256 amount);
-    event TokenRegistrationSent(address token);
-    event TokenSent(
-        address indexed sender, address indexed token, ParaID destinationChain, bytes destinationAddress, uint128 amount
-    );
-    event AgentCreated(bytes32 agentID, address agent);
-    event ChannelCreated(ParaID indexed paraID);
-    event ChannelUpdated(ParaID indexed paraID);
-
-    event Upgraded(address indexed implementation);
-    event Initialized(uint256 d0, uint256 d1);
-
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
     bytes32 public bridgeHubAgentID = keccak256("1001");
     address public bridgeHubAgent;
@@ -536,7 +522,7 @@ contract GatewayTest is Test {
 
     function testRegisterToken() public {
         vm.expectEmit(false, false, false, true);
-        emit TokenRegistrationSent(address(token));
+        emit IGateway.TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID, 1, messageID, bytes(""));

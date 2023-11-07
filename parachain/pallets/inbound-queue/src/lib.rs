@@ -58,7 +58,7 @@ use snowbridge_router_primitives::{
 };
 use sp_core::H160;
 use sp_runtime::traits::Saturating;
-use sp_std::convert::TryFrom;
+use sp_std::{convert::TryFrom, vec};
 pub use weights::WeightInfo;
 use xcm::v3::{
 	send_xcm, Instruction::SetTopic, Junction::*, Junctions::*, MultiLocation,
@@ -207,13 +207,13 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
-			log::info!(target: "snowbridge-inbound-queue", "WOOP");
+			log::info!(target: "ethereum-beacon-client", "WOOP");
 
 			// submit message to verifier for verification
 			let logf = T::Verifier::verify(&message)?;
 
-			log::info!(target: "snowbridge-inbound-queue", "BAR: {:?} {:?}", logf.data.len(), logf.topics.len());
-			log::info!(target: "snowbridge-inbound-queue", "BOOZ: {:?}", logf.topics.get(0).unwrap());
+			log::info!(target: "ethereum-beacon-client", "BAR: {:?} {:?}", logf.data.len(), logf.topics.len());
+			log::info!(target: "ethereum-beacon-client", "BOOZ: {:?}", logf.topics.get(0).unwrap());
 
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(logf).map_err(|_| Error::<T>::InvalidEnvelope)?;
