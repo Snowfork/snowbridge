@@ -449,7 +449,7 @@ contract BeefyClient {
         // Start with the minimum number of signatures.
         uint256 numRequiredSignatures = minRequiredSignatures;
 
-        // We must substract minimumSignatures from the number of validators or we might end up
+        // We must subtract minimumSignatures from the number of validators or we might end up
         // requiring more signatures than there are validators.
         uint256 extraValidatorsLen = validatorSetLen.saturatingSub(minRequiredSignatures);
         if (extraValidatorsLen > 1) {
