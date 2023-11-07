@@ -145,6 +145,7 @@ enum XcmConverterError {
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
 	InvalidFeeAsset,
+	SetTopicExpected,
 }
 
 macro_rules! match_expression {
@@ -248,9 +249,8 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		ensure!(amount > 0, ZeroAssetTransfer);
 
 		// Check if there is a SetTopic and skip over it if found.
-		if match_expression!(self.peek(), Ok(SetTopic(id)), id).is_some() {
-			let _ = self.next();
-		}
+		let _topic_id =
+			match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
 		Ok(AgentExecuteCommand::TransferToken { token, recipient, amount })
 	}
@@ -687,73 +687,6 @@ mod tests {
 	}
 
 	#[test]
-	fn xcm_converter_convert_without_clear_origin_yields_success() {
-		let network = BridgedNetwork::get();
-
-		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
-		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
-
-		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
-			fun: Fungible(1000),
-		}]
-		.into();
-		let filter: MultiAssetFilter = assets.clone().into();
-
-		let message: Xcm<()> = vec![
-			WithdrawAsset(assets.clone()),
-			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
-			DepositAsset {
-				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
-			},
-		]
-		.into();
-		let mut converter = XcmConverter::new(&message, &network);
-		let expected_payload = AgentExecuteCommand::TransferToken {
-			token: token_address.into(),
-			recipient: beneficiary_address.into(),
-			amount: 1000,
-		};
-		let result = converter.convert();
-		assert_eq!(result, Ok(expected_payload));
-	}
-
-	#[test]
-	fn xcm_converter_convert_without_set_topic_yields_success() {
-		let network = BridgedNetwork::get();
-
-		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
-		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
-
-		let assets: MultiAssets = vec![MultiAsset {
-			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
-			fun: Fungible(1000),
-		}]
-		.into();
-		let filter: MultiAssetFilter = assets.clone().into();
-
-		let message: Xcm<()> = vec![
-			WithdrawAsset(assets.clone()),
-			ClearOrigin,
-			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
-			DepositAsset {
-				assets: filter,
-				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
-			},
-		]
-		.into();
-		let mut converter = XcmConverter::new(&message, &network);
-		let expected_payload = AgentExecuteCommand::TransferToken {
-			token: token_address.into(),
-			recipient: beneficiary_address.into(),
-			amount: 1000,
-		};
-		let result = converter.convert();
-		assert_eq!(result, Ok(expected_payload));
-	}
-
-	#[test]
 	fn xcm_converter_convert_without_buy_execution_yields_success() {
 		let network = BridgedNetwork::get();
 
@@ -773,6 +706,7 @@ mod tests {
 				assets: filter,
 				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
 			},
+			SetTopic([0; 32]),
 		]
 		.into();
 		let mut converter = XcmConverter::new(&message, &network);
@@ -854,6 +788,35 @@ mod tests {
 		};
 		let result = converter.convert();
 		assert_eq!(result, Ok(expected_payload));
+	}
+
+	#[test]
+	fn xcm_converter_convert_without_set_topic_yields_set_topic_expected() {
+		let network = BridgedNetwork::get();
+
+		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+		let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+		let assets: MultiAssets = vec![MultiAsset {
+			id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
+			fun: Fungible(1000),
+		}]
+		.into();
+		let filter: MultiAssetFilter = assets.clone().into();
+
+		let message: Xcm<()> = vec![
+			WithdrawAsset(assets.clone()),
+			BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+			},
+			ClearTopic,
+		]
+		.into();
+		let mut converter = XcmConverter::new(&message, &network);
+		let result = converter.convert();
+		assert_eq!(result.err(), Some(XcmConverterError::SetTopicExpected));
 	}
 
 	#[test]
