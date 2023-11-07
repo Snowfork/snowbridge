@@ -148,6 +148,24 @@ jobs:
           --package bridge-hub-rococo-runtime
           --features runtime-benchmarks
 
+  integration-tests:
+    needs: test
+    runs-on: snowbridge-runner
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: "true"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: setup rust toolchain
+        run: rustup show
+      - name: snowbridge integration
+        run: >
+          cargo test 
+          --manifest-path polkadot-sdk/Cargo.toml
+          -p bridge-hub-rococo-integration-tests
+
   beacon-fuzz:
     if: false
     needs: test
