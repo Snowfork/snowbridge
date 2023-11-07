@@ -37,10 +37,10 @@ where
 		destination: &mut Option<InteriorMultiLocation>,
 		message: &mut Option<Xcm<()>>,
 	) -> SendResult<Self::Ticket> {
-		let gateway_network = EthereumNetwork::get();
+		let expected_network = EthereumNetwork::get();
 		let universal_location = UniversalLocation::get();
 
-		if network != gateway_network {
+		if network != expected_network {
 			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched bridge network {network:?}.");
 			return Err(SendError::NotApplicable)
 		}
@@ -81,7 +81,7 @@ where
 			SendError::MissingArgument
 		})?;
 
-		let mut converter = XcmConverter::new(&message, &gateway_network);
+		let mut converter = XcmConverter::new(&message, &expected_network);
 		let agent_execute_command = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
