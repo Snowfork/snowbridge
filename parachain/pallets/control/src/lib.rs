@@ -176,7 +176,7 @@ pub mod pallet {
 		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
 		TransferNativeFromAgent { agent_id: AgentId, recipient: H160, amount: u128 },
-		/// An SetTokenTransferFees message was sent to the Gateway
+		/// A SetTokenTransferFees message was sent to the Gateway
 		SetTokenTransferFees { register: u128, send: u128 },
 	}
 
