@@ -434,7 +434,7 @@ contract Gateway is IGateway, IInitializable {
         SetTokenTransferFeesParams memory params = abi.decode(data, (SetTokenTransferFeesParams));
         $.registerTokenFee = params.register;
         $.sendTokenFee = params.send;
-        emit SetTokenTransferFees(params.register, params.send);
+        emit TokenTransferFeesChanged(params.register, params.send);
     }
 
     /**

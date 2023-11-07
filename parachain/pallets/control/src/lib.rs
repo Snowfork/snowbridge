@@ -190,6 +190,7 @@ pub mod pallet {
 		UnsupportedLocationVersion,
 		InvalidLocation,
 		Send(SendError),
+		InvalidTokenFees,
 	}
 
 	/// The set of registered agents
@@ -427,16 +428,15 @@ pub mod pallet {
 			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount, pays_fee)
 		}
 
-		/// Sends a message to the Gateway contract to update fees
+		/// Sends a message to the Gateway contract to set token transfer fees
 		///
 		/// Privileged. Can only be called by root.
 		///
 		/// Fee required: No
 		///
 		/// - `origin`: Must be root
-		/// - `location`: Location used to resolve the agent
-		/// - `recipient`: Recipient of funds
-		/// - `amount`: Amount to transfer
+		/// - `register`: The fee for register token
+		/// - `send`: The fee for send token to para chain
 		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::set_token_transfer_fees())]
 		pub fn set_token_transfer_fees(
@@ -445,6 +445,8 @@ pub mod pallet {
 			send: u128,
 		) -> DispatchResult {
 			ensure_root(origin)?;
+
+			ensure!(register > 0 && send > 0, Error::<T>::InvalidTokenFees);
 
 			let command = Command::SetTokenTransferFees { register, send };
 			Self::send(T::OwnParaId::get(), command, PaysFee::<T>::No)?;
