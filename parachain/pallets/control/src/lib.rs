@@ -190,7 +190,7 @@ pub mod pallet {
 		UnsupportedLocationVersion,
 		InvalidLocation,
 		Send(SendError),
-		InvalidTokenFees,
+		InvalidTokenTransferFees,
 	}
 
 	/// The set of registered agents
@@ -446,7 +446,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			ensure!(register > 0 && send > 0, Error::<T>::InvalidTokenFees);
+			ensure!(register > 0 && send > 0, Error::<T>::InvalidTokenTransferFees);
 
 			let command = Command::SetTokenTransferFees { register, send };
 			Self::send(T::OwnParaId::get(), command, PaysFee::<T>::No)?;
