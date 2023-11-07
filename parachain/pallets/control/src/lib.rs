@@ -176,7 +176,7 @@ pub mod pallet {
 		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
 		TransferNativeFromAgent { agent_id: AgentId, recipient: H160, amount: u128 },
-		/// An SetTokenTransferFees message was sent to the Gateway
+		/// A SetTokenTransferFees message was sent to the Gateway
 		SetTokenTransferFees { register: u128, send: u128 },
 	}
 
@@ -436,7 +436,7 @@ pub mod pallet {
 		///
 		/// - `origin`: Must be root
 		/// - `register`: The fee for register token
-		/// - `send`: The fee for send token to para chain
+		/// - `send`: The fee for send token to parachain
 		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::set_token_transfer_fees())]
 		pub fn set_token_transfer_fees(
