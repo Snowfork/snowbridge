@@ -195,7 +195,7 @@ contract Gateway is IGateway, IInitializable {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
         }
 
-        emit IGateway.InboundMessageDispatched(message.origin, message.nonce, success);
+        emit IGateway.InboundMessageDispatched(message.origin, message.nonce, message.id, success);
     }
 
     /**
@@ -486,7 +486,10 @@ contract Gateway is IGateway, IInitializable {
             payable(msg.sender).safeNativeTransfer(msg.value - channel.fee - extraFee);
         }
 
-        emit IGateway.OutboundMessageAccepted(dest, channel.outboundNonce, payload);
+        // Generate a unique ID for this message
+        bytes32 messageID = keccak256(abi.encodePacked(dest, channel.outboundNonce));
+
+        emit IGateway.OutboundMessageAccepted(dest, channel.outboundNonce, messageID, payload);
     }
 
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
@@ -543,12 +546,12 @@ contract Gateway is IGateway, IInitializable {
             revert Unauthorized();
         }
 
-        (uint256 defaultFee, uint256 registerTokenFee, uint256 sendTokenFee) =
-            abi.decode(data, (uint256, uint256, uint256));
+        (OperatingMode defaultMode, uint256 defaultFee, uint256 registerTokenFee, uint256 sendTokenFee) =
+            abi.decode(data, (OperatingMode, uint256, uint256, uint256));
 
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        $.mode = OperatingMode.RejectingOutboundMessages;
+        $.mode = defaultMode;
         $.defaultFee = defaultFee;
 
         // Initialize an agent & channel for BridgeHub

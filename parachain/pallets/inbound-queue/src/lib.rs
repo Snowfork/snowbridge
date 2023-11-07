@@ -29,9 +29,7 @@ mod envelope;
 mod benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
-use snowbridge_beacon_primitives::CompactExecutionHeader;
-#[cfg(feature = "runtime-benchmarks")]
-use snowbridge_ethereum::H256;
+use {snowbridge_beacon_primitives::CompactExecutionHeader, sp_core::H256};
 
 pub mod weights;
 
@@ -39,20 +37,17 @@ pub mod weights;
 mod test;
 
 use codec::{Decode, DecodeAll, Encode};
+use envelope::Envelope;
 use frame_support::{
-	traits::fungible::{Inspect, Mutate},
+	traits::{
+		fungible::{Inspect, Mutate},
+		tokens::Preservation,
+	},
+	weights::WeightToFee,
 	PalletError,
 };
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
-use sp_core::H160;
-use sp_std::convert::TryFrom;
-use xcm::v3::{
-	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, SendXcm,
-	XcmHash,
-};
-
-use envelope::Envelope;
 use snowbridge_core::{
 	inbound::{Message, Verifier},
 	sibling_sovereign_account, BasicOperatingMode, ParaId,
@@ -61,12 +56,14 @@ use snowbridge_router_primitives::{
 	inbound,
 	inbound::{ConvertMessage, ConvertMessageError},
 };
-
+use sp_core::H160;
 use sp_runtime::traits::Saturating;
-
-use frame_support::{traits::tokens::Preservation, weights::WeightToFee};
-
+use sp_std::convert::TryFrom;
 pub use weights::WeightInfo;
+use xcm::v3::{
+	send_xcm, Instruction::SetTopic, Junction::*, Junctions::*, MultiLocation,
+	SendError as XcmpSendError, SendXcm,
+};
 
 type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
@@ -136,8 +133,8 @@ pub mod pallet {
 			dest: ParaId,
 			/// The message nonce
 			nonce: u64,
-			/// XCM hash
-			xcm_hash: XcmHash,
+			/// ID of the XCM message which was forwarded to the final destination parachain
+			message_id: [u8; 32],
 		},
 		/// Set OperatingMode
 		OperatingModeChanged { mode: BasicOperatingMode },
@@ -210,11 +207,16 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
+			log::info!(target: "snowbridge-inbound-queue", "WOOP");
+
 			// submit message to verifier for verification
-			let log = T::Verifier::verify(&message)?;
+			let logf = T::Verifier::verify(&message)?;
+
+			log::info!(target: "snowbridge-inbound-queue", "BAR: {:?} {:?}", logf.data.len(), logf.topics.len());
+			log::info!(target: "snowbridge-inbound-queue", "BOOZ: {:?}", logf.topics.get(0).unwrap());
 
 			// Decode log into an Envelope
-			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
+			let envelope = Envelope::try_from(logf).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
 			// Verify that the message was submitted from the known Gateway contract
 			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway,);
@@ -244,20 +246,24 @@ pub mod pallet {
 			)?;
 
 			// Decode message into XCM
-			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-				Ok(message) => T::MessageConverter::convert(message)
-					.map_err(|e| Error::<T>::ConvertMessage(e))?,
-				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
-			};
+			let mut xcm =
+				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+					Ok(message) => T::MessageConverter::convert(message)
+						.map_err(|e| Error::<T>::ConvertMessage(e))?,
+					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
+				};
+
+			// Append the message id as an XCM topic
+			xcm.inner_mut().extend(vec![SetTopic(envelope.message_id.into())]);
 
 			// Attempt to send XCM to a dest parachain
 			let dest = MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
-			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
+			let (message_id, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
 
 			Self::deposit_event(Event::MessageReceived {
 				dest: envelope.dest,
 				nonce: envelope.nonce,
-				xcm_hash,
+				message_id,
 			});
 
 			Ok(())

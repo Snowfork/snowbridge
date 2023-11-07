@@ -8,7 +8,7 @@ use frame_support::{
 };
 use snowbridge_core::outbound::{
 	AggregateMessageOrigin, ExportOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
-	VersionedQueuedMessage,
+	Ticket as TicketTrait, VersionedQueuedMessage,
 };
 use sp_core::H256;
 use sp_runtime::BoundedVec;
@@ -18,22 +18,34 @@ pub type MaxEnqueuedMessageSizeOf<T> =
 	<<T as Config>::MessageQueue as EnqueueMessage<AggregateMessageOrigin>>::MaxMessageLen;
 
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
-pub struct Ticket<MaxMessageSize: Get<u32>> {
-	pub id: H256,
+pub struct Ticket<T>
+where
+	T: Config,
+{
+	pub message_id: H256,
 	pub origin: ParaId,
-	pub message: BoundedVec<u8, MaxMessageSize>,
+	pub message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<T>>,
 }
 
-impl<T: Config> SendMessage for Pallet<T> {
-	type Ticket = Ticket<MaxEnqueuedMessageSizeOf<T>>;
+impl<T> TicketTrait for Ticket<T>
+where
+	T: Config,
+{
+	fn message_id(&self) -> H256 {
+		self.message_id
+	}
+}
+
+impl<T> SendMessage for Pallet<T>
+where
+	T: Config,
+{
+	type Ticket = Ticket<T>;
 	type Balance = T::Balance;
 
 	fn validate(message: &Message) -> Result<(Self::Ticket, Fee<Self::Balance>), SendError> {
 		// The inner payload should not be too large
 		let payload = message.command.abi_encode();
-
-		// Create a message id for tracking progress in submission pipeline
-		let message_id: H256 = sp_io::hashing::blake2_256(&(message.encode())).into();
 
 		ensure!(
 			payload.len() < T::MaxMessagePayloadSize::get() as usize,
@@ -43,7 +55,7 @@ impl<T: Config> SendMessage for Pallet<T> {
 		let fee = Self::calculate_fee(&message.command);
 
 		let queued_message: VersionedQueuedMessage = QueuedMessage {
-			id: message_id,
+			id: message.id,
 			origin: message.origin,
 			command: message.command.clone(),
 		}
@@ -51,7 +63,7 @@ impl<T: Config> SendMessage for Pallet<T> {
 		// The whole message should not be too large
 		let encoded = queued_message.encode().try_into().map_err(|_| SendError::MessageTooLarge)?;
 
-		let ticket = Ticket { id: message_id, origin: message.origin, message: encoded };
+		let ticket = Ticket { message_id: message.id, origin: message.origin, message: encoded };
 
 		Ok((ticket, fee))
 	}
@@ -79,7 +91,7 @@ impl<T: Config> SendMessage for Pallet<T> {
 		let message = ticket.message.as_bounded_slice();
 
 		T::MessageQueue::enqueue_message(message, origin);
-		Self::deposit_event(Event::MessageQueued { id: ticket.id });
-		Ok(ticket.id)
+		Self::deposit_event(Event::MessageQueued { id: ticket.message_id });
+		Ok(ticket.message_id)
 	}
 }

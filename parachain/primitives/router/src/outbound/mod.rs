@@ -25,7 +25,6 @@ where
 	UniversalLocation: Get<InteriorMultiLocation>,
 	GatewayLocation: Get<MultiLocation>,
 	OutboundQueue: SendMessage<Balance = u128>,
-	OutboundQueue::Ticket: Encode + Decode,
 	AgentHashedDescription: ConvertLocation<H256>,
 {
 	type Ticket = (Vec<u8>, XcmHash);
@@ -98,7 +97,7 @@ where
 		})?;
 
 		let mut converter = XcmConverter::new(&message, &gateway_network, &gateway_address);
-		let (agent_execute_command, max_target_fee) = converter.convert().map_err(|err|{
+		let (agent_execute_command, max_target_fee, topic_id) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
@@ -119,6 +118,7 @@ where
 		};
 
 		let outbound_message = Message {
+			id: topic_id.into(),
 			origin: para_id.into(),
 			command: Command::AgentExecute { agent_id, command: agent_execute_command },
 		};
@@ -132,7 +132,7 @@ where
 		// convert fee to MultiAsset
 		let fee = MultiAsset::from((MultiLocation::parent(), fee.total())).into();
 
-		Ok(((ticket.encode(), XcmHash::default()), fee))
+		Ok(((ticket.encode(), topic_id.into()), fee))
 	}
 
 	fn deliver(blob: (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {
@@ -142,13 +142,13 @@ where
 				SendError::NotApplicable
 			})?;
 
-		let message_hash = OutboundQueue::deliver(ticket).map_err(|_| {
+		let message_id = OutboundQueue::deliver(ticket).map_err(|_| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue submit of message failed");
 			SendError::Transport("other transport error")
 		})?;
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "message delivered {message_hash:#?}.");
-		Ok(message_hash.into())
+		log::info!(target: "xcm::ethereum_blob_exporter", "message delivered {message_id:#?}.");
+		Ok(message_id.into())
 	}
 }
 
@@ -187,7 +187,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 	fn convert(
 		&mut self,
-	) -> Result<(AgentExecuteCommand, Option<&'a MultiAsset>), XcmConverterError> {
+	) -> Result<(AgentExecuteCommand, Option<&'a MultiAsset>, [u8; 32]), XcmConverterError> {
 		// Get target fees if specified.
 		let max_target_fee = self.fee_info()?;
 
@@ -195,7 +195,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		let result = self.native_tokens_unlock_message()?;
 
 		// Match last set topic. Later could use message id for replies
-		let _ = match self.next()? {
+		let topic_id = match self.next()? {
 			SetTopic(id) => id,
 			_ => return Err(XcmConverterError::SetTopicExpected),
 		};
@@ -205,7 +205,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			return Err(XcmConverterError::EndOfXcmMessageExpected)
 		}
 
-		Ok((result, max_target_fee))
+		Ok((result, max_target_fee, *topic_id))
 	}
 
 	fn fee_info(&mut self) -> Result<Option<&'a MultiAsset>, XcmConverterError> {
@@ -307,7 +307,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::outbound::{Fee, SendError};
+	use snowbridge_core::outbound::{Fee, SendError, Ticket as TicketTrait};
 	use xcm::v3::prelude::SendError as XcmSendError;
 	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
@@ -316,6 +316,7 @@ mod tests {
 	use super::*;
 
 	parameter_types! {
+		const MaxMessageSize: u32 = u32::MAX;
 		const RelayNetwork: NetworkId = Polkadot;
 		const UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(1013));
 		const BridgedNetwork: NetworkId =  Ethereum{ chain_id: 1 };
@@ -326,13 +327,22 @@ mod tests {
 
 	const GATEWAY: [u8; 20] = hex!("D184c103F7acc340847eEE82a0B909E3358bc28d");
 
+	#[derive(Encode, Decode, Clone)]
+	struct MockTicket();
+
+	impl TicketTrait for MockTicket {
+		fn message_id(&self) -> H256 {
+			H256::zero()
+		}
+	}
+
 	struct MockOkOutboundQueue;
 	impl SendMessage for MockOkOutboundQueue {
-		type Ticket = ();
+		type Ticket = MockTicket;
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Fee<Self::Balance>), SendError> {
-			Ok(((), Fee { local: 1, remote: 1 }))
+		fn validate(_: &Message) -> Result<(Self::Ticket, Fee<Self::Balance>), SendError> {
+			Ok((MockTicket(), Fee { local: 1, remote: 1 }))
 		}
 
 		fn deliver(_: Self::Ticket) -> Result<H256, SendError> {
@@ -341,10 +351,10 @@ mod tests {
 	}
 	struct MockErrOutboundQueue;
 	impl SendMessage for MockErrOutboundQueue {
-		type Ticket = ();
+		type Ticket = MockTicket;
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Fee<Self::Balance>), SendError> {
+		fn validate(_: &Message) -> Result<(Self::Ticket, Fee<Self::Balance>), SendError> {
 			Err(SendError::MessageTooLarge)
 		}
 
@@ -745,7 +755,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok((expected_payload, Some(&fee))));
+		assert_eq!(result, Ok((expected_payload, Some(&fee), [0; 32])));
 	}
 
 	#[test]
@@ -785,7 +795,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok((expected_payload, None)));
+		assert_eq!(result, Ok((expected_payload, None, [0; 32])));
 	}
 
 	#[test]
@@ -825,7 +835,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok((expected_payload, None)));
+		assert_eq!(result, Ok((expected_payload, None, [0; 32])));
 	}
 
 	#[test]

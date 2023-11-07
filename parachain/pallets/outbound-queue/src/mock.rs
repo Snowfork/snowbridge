@@ -127,6 +127,7 @@ where
 	T: Config,
 {
 	Message {
+		id: H256::zero(),
 		origin: OwnParaIdOf::<T>::get(),
 		command: Command::Upgrade {
 			impl_address: H160::zero(),
@@ -142,6 +143,7 @@ where
 	T: Config,
 {
 	Message {
+		id: H256::zero(),
 		origin: OwnParaIdOf::<T>::get(),
 		command: Command::Upgrade {
 			impl_address: H160::zero(),
@@ -156,6 +158,7 @@ where
 
 pub fn mock_message(sibling_para_id: u32) -> Message {
 	Message {
+		id: H256::zero(),
 		origin: sibling_para_id.into(),
 		command: Command::AgentExecute {
 			agent_id: Default::default(),

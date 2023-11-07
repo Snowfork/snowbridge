@@ -14,7 +14,8 @@ serde = { version = "1.0.188", optional = true }
 codec = { version = "3.6.1", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
 scale-info = { version = "2.9.0", default-features = false, features = [ "derive" ] }
 hex-literal = { version = "0.4.1", optional = true }
-rlp = { version = "0.5", default-features = false, optional = true }
+rlp = { version = "0.5.2", default-features = false, optional = true }
+log = { version = "0.4.20", default-features = false }
 
 frame-benchmarking = { path = "../../../polkadot-sdk/substrate/frame/benchmarking", default-features = false, optional = true }
 frame-support = { path = "../../../polkadot-sdk/substrate/frame/support", default-features = false }
@@ -41,12 +42,13 @@ snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
 snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
 
 hex-literal = { version = "0.4.1" }
-rlp = { version = "0.5" }
+rlp = { version = "0.5.2" }
 
 [features]
 default = ["std"]
 std = [
     "serde",
+    "log/std",
     "codec/std",
     "scale-info/std",
     "frame-support/std",

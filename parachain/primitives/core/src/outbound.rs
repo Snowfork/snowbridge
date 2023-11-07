@@ -4,7 +4,6 @@ pub use polkadot_parachain_primitives::primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 use sp_core::{RuntimeDebug, H256};
-
 pub use v1::{AgentExecuteCommand, Command, Initializer, Message, OperatingMode, QueuedMessage};
 
 /// Enqueued outbound messages need to be versioned to prevent data corruption
@@ -43,6 +42,8 @@ mod v1 {
 	#[derive(Encode, Decode, TypeInfo, Clone, RuntimeDebug)]
 	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub struct Message {
+		/// ID for this message. One will be automatically generated if not provided
+		pub id: H256,
 		/// The parachain from which the message originated
 		pub origin: ParaId,
 		/// The stable ID for a receiving gateway contract
@@ -225,7 +226,7 @@ mod v1 {
 	#[derive(Encode, Decode, Clone, RuntimeDebug, TypeInfo)]
 	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub struct QueuedMessage {
-		/// Message ID (usually hash of message)
+		/// Message ID
 		pub id: H256,
 		/// ID of source parachain
 		pub origin: ParaId,
@@ -266,7 +267,7 @@ where
 
 /// A trait for sending messages to Ethereum
 pub trait SendMessage {
-	type Ticket: Clone + Encode + Decode;
+	type Ticket: Ticket;
 	type Balance: BaseArithmetic + Unsigned + Copy;
 
 	/// Validate an outbound message and return a tuple:
@@ -276,6 +277,10 @@ pub trait SendMessage {
 
 	/// Submit the message ticket for eventual delivery to Ethereum
 	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError>;
+}
+
+pub trait Ticket: Encode + Decode + Clone {
+	fn message_id(&self) -> H256;
 }
 
 /// Reasons why sending to Ethereum could not be initiated
