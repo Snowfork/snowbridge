@@ -136,7 +136,7 @@ where
 enum XcmConverterError {
 	UnexpectedEndOfXcm,
 	EndOfXcmMessageExpected,
-	WithdrawExpected,
+	WithdrawAssetExpected,
 	DepositAssetExpected,
 	NoReserveAssets,
 	FilterDoesNotConsumeAllAssets,
@@ -183,7 +183,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		// Get the reserve assets from WithdrawAsset.
 		let reserve_assets =
 			match_expression!(self.next()?, WithdrawAsset(reserve_assets), reserve_assets)
-				.ok_or(WithdrawExpected)?;
+				.ok_or(WithdrawAssetExpected)?;
 
 		// Check if clear origin exists and skip over it.
 		if match_expression!(self.peek(), Ok(ClearOrigin), ()).is_some() {
@@ -1009,7 +1009,7 @@ mod tests {
 		let mut converter = XcmConverter::new(&message, &network);
 
 		let result = converter.convert();
-		assert_eq!(result.err(), Some(XcmConverterError::WithdrawExpected));
+		assert_eq!(result.err(), Some(XcmConverterError::WithdrawAssetExpected));
 	}
 
 	#[test]
