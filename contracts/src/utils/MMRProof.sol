@@ -25,11 +25,8 @@ library MMRProof {
         }
 
         bytes32 acc = leafHash;
-        for (uint256 i = 0; i < proof.length;) {
+        for (uint256 i = 0; i < proof.length; i++) {
             acc = hashPairs(acc, proof[i], (proofOrder >> i) & 1);
-            unchecked {
-                i++;
-            }
         }
         return root == acc;
     }

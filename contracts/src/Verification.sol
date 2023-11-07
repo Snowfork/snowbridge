@@ -11,11 +11,11 @@ library Verification {
     /// @dev Merkle proof for parachain header finalized by BEEFY
     /// Reference: https://github.com/paritytech/polkadot/blob/09b61286da11921a3dda0a8e4015ceb9ef9cffca/runtime/rococo/src/lib.rs#L1312
     struct HeadProof {
-        /// @dev The leaf index of the parachain being proven
+        // The leaf index of the parachain being proven
         uint256 pos;
-        /// @dev The number of leaves in the merkle tree
+        // The number of leaves in the merkle tree
         uint256 width;
-        /// @dev The proof items
+        // The proof items
         bytes32[] proof;
     }
 
@@ -54,15 +54,15 @@ library Verification {
 
     /// @dev A chain of proofs
     struct Proof {
-        /// @dev The parachain header containing the message commitment as a digest item
+        // The parachain header containing the message commitment as a digest item
         ParachainHeader header;
-        /// @dev The proof used to generate a merkle root of parachain heads
+        // The proof used to generate a merkle root of parachain heads
         HeadProof headProof;
-        /// @dev The MMR leaf to be proven
+        // The MMR leaf to be proven
         MMRLeafPartial leafPartial;
-        /// @dev The MMR leaf prove
+        // The MMR leaf prove
         bytes32[] leafProof;
-        /// @dev The order in which proof items should be combined
+        // The order in which proof items should be combined
         uint256 leafProofOrder;
     }
 

@@ -2,10 +2,11 @@
 pragma solidity 0.8.22;
 
 import {BeefyClient} from "../../src/BeefyClient.sol";
-import {Counter} from "../../src/utils/Counter.sol";
+import {Uint16Array} from "../../src/utils/Uint16Array.sol";
+import "forge-std/console.sol";
 
 contract BeefyClientMock is BeefyClient {
-    using Counter for uint256[];
+    using Uint16Array for Uint16Array.Array;
 
     constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration, uint256 minNumRequiredSignatures)
         BeefyClient(
@@ -36,17 +37,40 @@ contract BeefyClientMock is BeefyClient {
         ValidatorSet calldata _nextValidatorSet
     ) external {
         latestBeefyBlock = _initialBeefyBlock;
-        currentValidatorSet = _initialValidatorSet;
-        currentValidatorSetCounters = Counter.createCounter(currentValidatorSet.length);
-        nextValidatorSet = _nextValidatorSet;
-        nextValidatorSetCounters = Counter.createCounter(nextValidatorSet.length);
+        currentValidatorSet.id = _initialValidatorSet.id;
+        currentValidatorSet.length = _initialValidatorSet.length;
+        currentValidatorSet.root = _initialValidatorSet.root;
+        currentValidatorSet.usageCounters = Uint16Array.create(currentValidatorSet.length);
+        nextValidatorSet.id = _nextValidatorSet.id;
+        nextValidatorSet.length = _nextValidatorSet.length;
+        nextValidatorSet.root = _nextValidatorSet.root;
+        nextValidatorSet.usageCounters = Uint16Array.create(nextValidatorSet.length);
+        console.log(currentValidatorSet.usageCounters.data.length);
+    }
+
+    // Used to verify integrity of storage to storage copies
+    function copyCounters() external {
+        currentValidatorSet.usageCounters = Uint16Array.create(1000);
+        for (uint256 i = 0; i < 1000; i++) {
+            currentValidatorSet.usageCounters.set(i, 5);
+        }
+        nextValidatorSet.usageCounters = Uint16Array.create(800);
+        for (uint256 i = 0; i < 800; i++) {
+            nextValidatorSet.usageCounters.set(i, 7);
+        }
+
+        // Perform the copy
+        currentValidatorSet = nextValidatorSet;
+
+        assert(currentValidatorSet.usageCounters.data.length == nextValidatorSet.usageCounters.data.length);
+        assert(currentValidatorSet.usageCounters.get(799) == 7);
     }
 
     function getValidatorCounter(bool next, uint256 index) public view returns (uint16) {
         if (next) {
-            return nextValidatorSetCounters.get(index);
+            return nextValidatorSet.usageCounters.get(index);
         }
-        return currentValidatorSetCounters.get(index);
+        return currentValidatorSet.usageCounters.get(index);
     }
 
     function computeNumRequiredSignatures_public(
