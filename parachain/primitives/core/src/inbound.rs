@@ -30,8 +30,7 @@ pub enum VerificationError {
 pub type MessageNonce = u64;
 
 /// A bridge message from the Gateway contract on Ethereum
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(PartialEq))]
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Message {
 	/// RLP-encoded event log
 	pub data: Vec<u8>,
@@ -40,8 +39,7 @@ pub struct Message {
 }
 
 /// Inclusion proof for a transaction receipt
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(PartialEq))]
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Proof {
 	// The block hash of the block in which the receipt was included.
 	pub block_hash: H256,

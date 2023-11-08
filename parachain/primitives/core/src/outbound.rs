@@ -182,8 +182,7 @@ mod v1 {
 
 	/// Representation of a call to the initializer of an implementation contract.
 	/// The initializer has the following ABI signature: `initialize(bytes)`.
-	#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-	#[cfg_attr(feature = "std", derive(PartialEq))]
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 	pub struct Initializer {
 		/// ABI-encoded params of type `bytes` to pass to the initializer
 		pub params: Vec<u8>,
@@ -230,7 +229,7 @@ mod v1 {
 	}
 
 	/// Message which is awaiting processing in the MessageQueue pallet
-	#[derive(Encode, Decode, Clone, RuntimeDebug, TypeInfo)]
+	#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub struct QueuedMessage {
 		/// Message ID
