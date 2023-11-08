@@ -118,7 +118,7 @@ where
 		};
 
 		let outbound_message = Message {
-			id: topic_id.into(),
+			id: Some(topic_id.into()),
 			origin: para_id.into(),
 			command: Command::AgentExecute { agent_id, command: agent_execute_command },
 		};

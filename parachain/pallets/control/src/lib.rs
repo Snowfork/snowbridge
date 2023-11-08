@@ -200,10 +200,6 @@ pub mod pallet {
 	#[pallet::getter(fn channels)]
 	pub type Channels<T: Config> = StorageMap<_, Twox64Concat, ParaId, (), OptionQuery>;
 
-	/// Generator for a unique message ID
-	#[pallet::storage]
-	pub type NextMessageId<T: Config> = StorageValue<_, u64, ValueQuery>;
-
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Sends command to the Gateway contract to upgrade itself with a new implementation
@@ -433,7 +429,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Send `command` to the Gateway on the channel identified by `origin`.
 		fn send(origin: ParaId, command: Command, pays_fee: PaysFee<T>) -> DispatchResult {
-			let message = Message { id: Self::alloc_message_id(), origin, command };
+			let message = Message { id: None, origin, command };
 			let (ticket, fee) =
 				T::OutboundQueue::validate(&message).map_err(|err| Error::<T>::Send(err))?;
 
@@ -476,15 +472,6 @@ pub mod pallet {
 				amount,
 			});
 			Ok(())
-		}
-
-		// Allocate a unique id for a message. Used in the implementation of SendMessage,.
-		pub(crate) fn alloc_message_id() -> H256 {
-			NextMessageId::<T>::mutate(|next_message_id| {
-				*next_message_id = next_message_id.saturating_add(1)
-			});
-			let next_message_id = NextMessageId::<T>::get();
-			sp_io::hashing::blake2_256(&(next_message_id.encode())).into()
 		}
 	}
 }

@@ -6,6 +6,7 @@ use frame_support::{
 	traits::{EnqueueMessage, Get},
 	CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
+use frame_system::unique;
 use snowbridge_core::outbound::{
 	AggregateMessageOrigin, ExportOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
 	Ticket as TicketTrait, VersionedQueuedMessage,
@@ -52,10 +53,14 @@ where
 			SendError::MessageTooLarge
 		);
 
+		// Generate a unique message id unless one is provided
+		let message_id: H256 =
+			message.id.unwrap_or_else(|| unique((message.origin, &message.command)).into());
+
 		let fee = Self::calculate_fee(&message.command);
 
 		let queued_message: VersionedQueuedMessage = QueuedMessage {
-			id: message.id,
+			id: message_id,
 			origin: message.origin,
 			command: message.command.clone(),
 		}
@@ -63,7 +68,7 @@ where
 		// The whole message should not be too large
 		let encoded = queued_message.encode().try_into().map_err(|_| SendError::MessageTooLarge)?;
 
-		let ticket = Ticket { message_id: message.id, origin: message.origin, message: encoded };
+		let ticket = Ticket { message_id, origin: message.origin, message: encoded };
 
 		Ok((ticket, fee))
 	}
