@@ -20,7 +20,7 @@ pub enum VerificationError {
 	/// Execution header is missing
 	HeaderNotFound,
 	/// Log was not found in the verified transaction receipt
-	NotFound,
+	LogNotFound,
 	/// Data payload does not decode into a valid Log
 	InvalidLog,
 	/// Unable to verify the transaction receipt with the provided proof

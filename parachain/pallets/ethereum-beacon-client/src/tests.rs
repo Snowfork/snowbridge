@@ -977,7 +977,7 @@ fn verify_message_receipt_does_not_contain_log() {
 
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
-		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::NotFound);
+		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::LogNotFound);
 	});
 }
 
