@@ -14,9 +14,10 @@ serde = { version = "1.0.188", optional = true }
 codec = { version = "3.6.1", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
 scale-info = { version = "2.9.0", default-features = false, features = [ "derive" ] }
 hex-literal = { version = "0.4.1", optional = true }
-rlp = { version = "0.5.2", default-features = false, optional = true }
 log = { version = "0.4.20", default-features = false }
+alloy-primitives = { version = "0.4.2", default-features = false, features = ["rlp"] }
 alloy-sol-types = { version = "0.4.2", default-features = false }
+alloy-rlp = { version = "0.3.3", default-features = false, features = ["derive"] }
 num-traits = { version = "0.2.16", default-features = false }
 
 frame-benchmarking = { path = "../../../polkadot-sdk/substrate/frame/benchmarking", default-features = false, optional = true }
@@ -41,9 +42,7 @@ frame-benchmarking = { path = "../../../polkadot-sdk/substrate/frame/benchmarkin
 sp-keyring = { path = "../../../polkadot-sdk/substrate/primitives/keyring" }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
 snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
-
 hex-literal = { version = "0.4.1" }
-rlp = { version = "0.5.2" }
 
 [features]
 default = ["std"]
@@ -52,7 +51,9 @@ std = [
     "log/std",
     "codec/std",
     "scale-info/std",
+    "alloy-primitives/std",
     "alloy-sol-types/std",
+    "alloy-rlp/std",
     "frame-support/std",
     "frame-system/std",
     "pallet-balances/std",
@@ -74,7 +75,6 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "hex-literal",
-    "rlp",
     "snowbridge-beacon-primitives",
     "xcm-builder/runtime-benchmarks",
 ]

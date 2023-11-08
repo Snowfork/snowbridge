@@ -85,9 +85,21 @@ version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc0fac0fc16baf1f63f78b47c3d24718f3619b0714076f6a02957d808d52cbef"
 dependencies = [
+ "alloy-rlp-derive",
  "arrayvec 0.7.2",
  "bytes",
  "smol_str",
+]
+
+[[package]]
+name = "alloy-rlp-derive"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0391754c09fab4eae3404d19d0d297aa1c670c1775ab51d8a5312afeca23157"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.38",
 ]
 
 [[package]]
@@ -3606,6 +3618,8 @@ dependencies = [
 name = "snowbridge-inbound-queue"
 version = "0.1.1"
 dependencies = [
+ "alloy-primitives",
+ "alloy-rlp",
  "alloy-sol-types",
  "frame-benchmarking",
  "frame-support",
@@ -3615,7 +3629,6 @@ dependencies = [
  "num-traits",
  "pallet-balances",
  "parity-scale-codec",
- "rlp",
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",

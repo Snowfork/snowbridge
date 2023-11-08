@@ -3,36 +3,45 @@
 //! Types for representing inbound messages
 
 use codec::{Decode, Encode};
+use frame_support::PalletError;
 use scale_info::TypeInfo;
-use snowbridge_ethereum::Log;
 use sp_core::H256;
-use sp_runtime::{DispatchError, RuntimeDebug};
+use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
 /// A trait for verifying inbound messages from Ethereum.
-///
-/// This trait should be implemented by runtime modules that wish to provide message verification
-/// functionality.
 pub trait Verifier {
-	fn verify(message: &Message) -> Result<Log, DispatchError>;
+	fn verify(message: &Message) -> Result<(), VerificationError>;
+}
+
+#[derive(Clone, Encode, Decode, RuntimeDebug, PalletError, TypeInfo)]
+#[cfg_attr(feature = "std", derive(PartialEq))]
+pub enum VerificationError {
+	/// Execution header is missing
+	HeaderNotFound,
+	/// Log was not found in the verified transaction receipt
+	NotFound,
+	/// Data payload does not decode into a valid Log
+	InvalidLog,
+	/// Unable to verify the transaction receipt with the provided proof
+	InvalidProof,
 }
 
 pub type MessageNonce = u64;
 
-/// A message relayed from Ethereum.
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+/// A bridge message from the Gateway contract on Ethereum
+#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(PartialEq))]
 pub struct Message {
-	/// The raw RLP-encoded message data.
+	/// RLP-encoded event log
 	pub data: Vec<u8>,
-	/// Input to the message verifier
+	/// Inclusion proof for a transaction receipt containing the event log
 	pub proof: Proof,
 }
 
-/// Verification input for the message verifier.
-///
-/// This data type allows us to support multiple verification schemes. In the near future,
-/// A light-client scheme will be added too.
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+/// Inclusion proof for a transaction receipt
+#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(PartialEq))]
 pub struct Proof {
 	// The block hash of the block in which the receipt was included.
 	pub block_hash: H256,

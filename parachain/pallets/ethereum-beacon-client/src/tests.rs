@@ -16,7 +16,10 @@ use primitives::{
 	CompactExecutionHeader, ExecutionHeaderState, Fork, ForkVersions, NextSyncCommitteeUpdate,
 };
 use rand::{thread_rng, Rng};
-use snowbridge_core::{inbound::Verifier, RingBufferMap};
+use snowbridge_core::{
+	inbound::{VerificationError, Verifier},
+	RingBufferMap,
+};
 use sp_core::H256;
 use sp_runtime::DispatchError;
 
@@ -922,7 +925,7 @@ fn verify_message_missing_header() {
 	let message = get_message_verification_payload();
 
 	new_tester().execute_with(|| {
-		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::MissingHeader);
+		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::HeaderNotFound);
 	});
 }
 
@@ -935,7 +938,7 @@ fn verify_message_invalid_proof() {
 
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
-		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::InvalidProof);
+		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::InvalidProof);
 	});
 }
 
@@ -948,7 +951,7 @@ fn verify_message_invalid_receipts_root() {
 
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
-		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::InvalidProof);
+		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::InvalidProof);
 	});
 }
 
@@ -961,7 +964,7 @@ fn verify_message_invalid_message_data() {
 
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
-		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::DecodeFailed);
+		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::InvalidLog);
 	});
 }
 
@@ -974,7 +977,7 @@ fn verify_message_receipt_does_not_contain_log() {
 
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
-		assert_err!(EthereumBeaconClient::verify(&message), Error::<Test>::InvalidProof);
+		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::NotFound);
 	});
 }
 

@@ -36,8 +36,9 @@ pub mod weights;
 #[cfg(test)]
 mod test;
 
+use alloy_rlp::Decodable as RlpDecodable;
 use codec::{Decode, DecodeAll, Encode};
-use envelope::Envelope;
+use envelope::{Envelope, Log};
 use frame_support::{
 	traits::{
 		fungible::{Inspect, Mutate},
@@ -49,7 +50,7 @@ use frame_support::{
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
 use snowbridge_core::{
-	inbound::{Message, Verifier},
+	inbound::{Message, VerificationError, Verifier},
 	sibling_sovereign_account, BasicOperatingMode, ParaId,
 };
 use snowbridge_router_primitives::{
@@ -156,6 +157,8 @@ pub mod pallet {
 		InvalidAccountConversion,
 		/// Pallet is halted
 		Halted,
+		/// Message verification error,
+		Verification(VerificationError),
 		/// XCMP send failure
 		Send(SendError),
 		/// Message conversion error
@@ -207,16 +210,14 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
-			log::info!(target: "ethereum-beacon-client", "WOOP");
-
 			// submit message to verifier for verification
-			let logf = T::Verifier::verify(&message)?;
+			T::Verifier::verify(&message).map_err(|e| Error::<T>::Verification(e))?;
 
-			log::info!(target: "ethereum-beacon-client", "BAR: {:?} {:?}", logf.data.len(), logf.topics.len());
-			log::info!(target: "ethereum-beacon-client", "BOOZ: {:?}", logf.topics.get(0).unwrap());
+			let log = Log::decode(&mut message.data.as_slice())
+				.map_err(|_| Error::<T>::InvalidEnvelope)?;
 
 			// Decode log into an Envelope
-			let envelope = Envelope::try_from(logf).map_err(|_| Error::<T>::InvalidEnvelope)?;
+			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
 			// Verify that the message was submitted from the known Gateway contract
 			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway,);

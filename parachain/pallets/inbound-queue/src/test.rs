@@ -10,10 +10,9 @@ use frame_support::{
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::{
-	inbound::{Message, Proof},
+	inbound::{Message, Proof, VerificationError},
 	ParaId,
 };
-use snowbridge_ethereum::Log;
 use snowbridge_router_primitives::inbound::MessageToXcm;
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
@@ -24,7 +23,7 @@ use sp_runtime::{
 use sp_std::convert::From;
 use xcm::v3::{prelude::*, MultiAssets, SendXcm};
 
-use crate::{self as inbound_queue, envelope::Envelope, Error, Event as InboundQueueEvent};
+use crate::{self as inbound_queue, Error, Event as InboundQueueEvent};
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -121,9 +120,8 @@ impl snowbridge_ethereum_beacon_client::Config for Test {
 pub struct MockVerifier;
 
 impl Verifier for MockVerifier {
-	fn verify(message: &Message) -> Result<Log, DispatchError> {
-		let log: Log = rlp::decode(&message.data).unwrap();
-		Ok(log)
+	fn verify(_: &Message) -> Result<(), VerificationError> {
+		Ok(())
 	}
 }
 
@@ -219,22 +217,6 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| setup());
 	ext
-}
-
-fn parse_dest(message: Message) -> ParaId {
-	let log = MockVerifier::verify(&message)
-		.map_err(|err| {
-			println!("mock verify: {:?}", err);
-			err
-		})
-		.unwrap();
-	let envelope = Envelope::try_from(log)
-		.map_err(|err| {
-			println!("envelope: {:?}", err);
-			err
-		})
-		.unwrap();
-	envelope.dest
 }
 
 // dest para is 1000
@@ -369,8 +351,7 @@ fn test_submit_with_invalid_nonce() {
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 
-		let event_dest = parse_dest(message.clone());
-		let nonce: u64 = <Nonce<Test>>::get(event_dest);
+		let nonce: u64 = <Nonce<Test>>::get(ParaId::from(1000));
 		assert_eq!(nonce, 1);
 
 		// Submit the same again

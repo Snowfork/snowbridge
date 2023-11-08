@@ -1,12 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use snowbridge_core::ParaId;
-use snowbridge_ethereum::{log::Log, H160};
 
-use sp_core::{RuntimeDebug, H256};
+use sp_core::{RuntimeDebug, H160, H256};
 use sp_std::{convert::TryFrom, prelude::*};
 
-use alloy_sol_types::{abi::token::WordToken, sol, SolEvent};
+use alloy_primitives::{Address, Bytes, B256};
+use alloy_rlp::RlpDecodable;
+use alloy_sol_types::{sol, SolEvent};
+
+#[derive(RlpDecodable, RuntimeDebug)]
+pub struct Log {
+	pub address: Address,
+	pub topics: Vec<B256>,
+	pub data: Bytes,
+}
 
 sol! {
 	event OutboundMessageAccepted(uint256 indexed destination, uint64 nonce, bytes32 indexed messageID, bytes payload);
@@ -27,30 +35,22 @@ pub struct Envelope {
 	pub payload: Vec<u8>,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Copy, Clone, RuntimeDebug)]
 pub struct EnvelopeDecodeError;
 
 impl TryFrom<Log> for Envelope {
 	type Error = EnvelopeDecodeError;
 
 	fn try_from(log: Log) -> Result<Self, Self::Error> {
-		let topics: Vec<WordToken> = log
-			.clone()
-			.topics
-			.iter()
-			.map(|t| WordToken::from(*t.as_fixed_bytes()))
-			.collect();
+		let event = OutboundMessageAccepted::decode_log(log.topics, &log.data, true)
+			.map_err(|_| EnvelopeDecodeError)?;
 
-		let event = OutboundMessageAccepted::decode_log(topics, &log.data, true).map_err(|e| {
-			log::error!(target: "ethereum-beacon-client","FOO {:?}", e);
-			EnvelopeDecodeError
-		})?;
-
-		let dest: ParaId = event.destination.saturating_to::<u32>().into();
-		let nonce = event.nonce;
-		let message_id = H256::from(event.messageID.as_ref());
-		let payload = event.payload;
-
-		Ok(Self { gateway: log.address, dest, nonce, message_id, payload })
+		Ok(Self {
+			gateway: H160::from(log.address.as_ref()),
+			dest: event.destination.saturating_to::<u32>().into(),
+			nonce: event.nonce,
+			message_id: H256::from(event.messageID.as_ref()),
+			payload: event.payload,
+		})
 	}
 }
