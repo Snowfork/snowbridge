@@ -5,13 +5,13 @@
 use codec::{Decode, Encode};
 use frame_support::PalletError;
 use scale_info::TypeInfo;
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
 /// A trait for verifying inbound messages from Ethereum.
 pub trait Verifier {
-	fn verify(message: &Message) -> Result<(), VerificationError>;
+	fn verify(event: &Log, proof: &Proof) -> Result<(), VerificationError>;
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug, PalletError, TypeInfo)]
@@ -33,10 +33,19 @@ pub type MessageNonce = u64;
 #[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(PartialEq))]
 pub struct Message {
-	/// RLP-encoded event log
-	pub data: Vec<u8>,
+	/// Event log
+	pub data: Log,
 	/// Inclusion proof for a transaction receipt containing the event log
 	pub proof: Proof,
+}
+
+/// Event log
+#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(PartialEq))]
+pub struct Log {
+	pub address: H160,
+	pub topics: Vec<H256>,
+	pub data: Vec<u8>,
 }
 
 /// Inclusion proof for a transaction receipt
