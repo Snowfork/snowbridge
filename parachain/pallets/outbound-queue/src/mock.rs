@@ -83,7 +83,7 @@ impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MessageQueue = MessageQueue;
-	type Decimals = ConstU8<10>;
+	type Decimals = ConstU8<12>;
 	type MaxMessagePayloadSize = ConstU32<1024>;
 	type MaxMessagesPerBlock = ConstU32<20>;
 	type OwnParaId = OwnParaId;
