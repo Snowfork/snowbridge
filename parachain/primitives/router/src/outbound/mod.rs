@@ -791,7 +791,7 @@ mod tests {
 	}
 
 	#[test]
-	fn xcm_converter_convert_without_clear_origin_yields_set_topic_expected() {
+	fn xcm_converter_convert_without_set_topic_yields_set_topic_expected() {
 		let network = BridgedNetwork::get();
 
 		let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
