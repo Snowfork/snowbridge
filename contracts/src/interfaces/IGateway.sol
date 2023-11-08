@@ -16,9 +16,6 @@ interface IGateway {
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
     event OutboundMessageAccepted(ParaID indexed destination, uint64 nonce, bytes32 indexed messageID, bytes payload);
 
-    // Emitted when an dispatched inbound message or an accepted outbound message are associated with one or more topic IDs
-    event Topic(bytes32 topicID);
-
     // Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);
 
