@@ -9,7 +9,7 @@ use frame_support::{
 use frame_system::unique;
 use snowbridge_core::outbound::{
 	AggregateMessageOrigin, ExportOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
-	Ticket as TicketTrait, VersionedQueuedMessage,
+	VersionedQueuedMessage,
 };
 use sp_core::H256;
 use sp_runtime::BoundedVec;
@@ -26,15 +26,6 @@ where
 	pub message_id: H256,
 	pub origin: ParaId,
 	pub message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<T>>,
-}
-
-impl<T> TicketTrait for Ticket<T>
-where
-	T: Config,
-{
-	fn message_id(&self) -> H256 {
-		self.message_id
-	}
 }
 
 impl<T> SendMessage for Pallet<T>

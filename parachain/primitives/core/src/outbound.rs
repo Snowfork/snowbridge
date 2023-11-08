@@ -274,7 +274,7 @@ where
 
 /// A trait for sending messages to Ethereum
 pub trait SendMessage {
-	type Ticket: Ticket;
+	type Ticket: Clone + Encode + Decode;
 	type Balance: BaseArithmetic + Unsigned + Copy;
 
 	/// Validate an outbound message and return a tuple:

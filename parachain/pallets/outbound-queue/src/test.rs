@@ -50,7 +50,7 @@ fn calculate_fees() {
 	new_tester().execute_with(|| {
 		let command = mock_message(1000).command;
 		let fee = OutboundQueue::calculate_fee(&command);
-		assert_eq!(fee.remote, 22000000000);
+		assert_eq!(fee.remote, 2200000000000);
 
 		println!("Total fee: {}", fee.total())
 	});
@@ -60,7 +60,7 @@ fn calculate_fees() {
 fn convert_from_ether_decimals() {
 	assert_eq!(
 		OutboundQueue::convert_from_ether_decimals(1_000_000_000_000_000_000),
-		1_000_000_000_0
+		100_000_000_000_0
 	);
 }
 
