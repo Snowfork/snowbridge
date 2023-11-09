@@ -9,7 +9,7 @@ use frame_support::{
 };
 
 use codec::Encode;
-use snowbridge_core::outbound::{Command, ExportOrigin, SendError, SendMessage};
+use snowbridge_core::outbound::{Command, SendError, SendMessage, SnowbridgeMessageOrigin};
 use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError};
 
@@ -83,7 +83,8 @@ fn process_message_yields_on_max_messages_per_block() {
 			MessageLeaves::<Test>::append(H256::zero())
 		}
 
-		let origin = AggregateMessageOrigin::Export(ExportOrigin::Sibling(1000.into()));
+		let origin =
+			AggregateMessageOrigin::Snowbridge(SnowbridgeMessageOrigin::Sibling(1000.into()));
 		let message = QueuedMessage {
 			id: Default::default(),
 			origin: 1000.into(),
@@ -108,7 +109,8 @@ fn process_message_yields_on_max_messages_per_block() {
 fn process_message_fails_on_overweight_message() {
 	new_tester().execute_with(|| {
 		let sibling_id = 1000;
-		let origin = AggregateMessageOrigin::Export(ExportOrigin::Sibling(sibling_id.into()));
+		let origin =
+			AggregateMessageOrigin::Snowbridge(SnowbridgeMessageOrigin::Sibling(sibling_id.into()));
 		let message = mock_message(sibling_id).encode();
 		let mut meter = WeightMeter::with_limit(Weight::from_parts(1, 1));
 		assert_noop!(
@@ -157,11 +159,11 @@ fn set_fee_config_invalid() {
 #[test]
 fn low_priority_messages_are_processed_last() {
 	use AggregateMessageOrigin::*;
-	use ExportOrigin::*;
+	use SnowbridgeMessageOrigin::*;
 
 	let sibling_id = 1000;
-	let high_priority_queue = Export(Here);
-	let low_priority_queue = Export(Sibling(sibling_id.into()));
+	let high_priority_queue = Snowbridge(Here);
+	let low_priority_queue = Snowbridge(Sibling(sibling_id.into()));
 
 	new_tester().execute_with(|| {
 		// submit a lot of high priority messages from asset_hub which will need multiple blocks to

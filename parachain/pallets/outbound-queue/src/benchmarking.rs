@@ -4,7 +4,9 @@ use super::*;
 
 use codec::Encode;
 use frame_benchmarking::v2::*;
-use snowbridge_core::outbound::{AggregateMessageOrigin, Command, ExportOrigin, Initializer};
+use snowbridge_core::outbound::{
+	AggregateMessageOrigin, Command, Initializer, SnowbridgeMessageOrigin,
+};
 use sp_core::{H160, H256};
 
 #[allow(unused_imports)]
@@ -32,7 +34,7 @@ mod benchmarks {
 				}),
 			},
 		};
-		let origin = AggregateMessageOrigin::Export(ExportOrigin::Here);
+		let origin = AggregateMessageOrigin::Snowbridge(SnowbridgeMessageOrigin::Here);
 		let encoded_enqueued_message = enqueued_message.encode();
 
 		#[block]

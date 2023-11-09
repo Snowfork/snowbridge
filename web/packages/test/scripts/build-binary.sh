@@ -12,14 +12,14 @@ build_binaries() {
     fi
 
     echo "Building polkadot binary and parachain template node"
-    cargo build --release --workspace --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker --bin parachain-template-node
+    cargo build --release --workspace --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker --bin parachain-template-node
     cp target/release/polkadot $output_bin_dir/polkadot
     cp target/release/polkadot-execute-worker $output_bin_dir/polkadot-execute-worker
     cp target/release/polkadot-prepare-worker $output_bin_dir/polkadot-prepare-worker
     cp target/release/parachain-template-node $output_bin_dir/parachain-template-node
 
     echo "Building polkadot-parachain binary"
-    cargo build --release --workspace --locked --bin polkadot-parachain $features
+    cargo build --release --workspace --bin polkadot-parachain $features
     cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
 
     popd

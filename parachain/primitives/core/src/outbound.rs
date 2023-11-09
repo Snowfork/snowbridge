@@ -138,23 +138,26 @@ mod v1 {
 		/// ABI-encode the Command.
 		pub fn abi_encode(&self) -> Vec<u8> {
 			match self {
-				Command::AgentExecute { agent_id, command } =>
+				Command::AgentExecute { agent_id, command } => {
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 						Token::Bytes(command.abi_encode()),
-					])]),
-				Command::Upgrade { impl_address, impl_code_hash, initializer, .. } =>
+					])])
+				},
+				Command::Upgrade { impl_address, impl_code_hash, initializer, .. } => {
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::Address(*impl_address),
 						Token::FixedBytes(impl_code_hash.as_bytes().to_owned()),
 						initializer
 							.clone()
 							.map_or(Token::Bytes(vec![]), |i| Token::Bytes(i.params)),
-					])]),
-				Command::CreateAgent { agent_id } =>
+					])])
+				},
+				Command::CreateAgent { agent_id } => {
 					ethabi::encode(&[Token::Tuple(vec![Token::FixedBytes(
 						agent_id.as_bytes().to_owned(),
-					)])]),
+					)])])
+				},
 				Command::CreateChannel { para_id, agent_id } => {
 					let para_id: u32 = (*para_id).into();
 					ethabi::encode(&[Token::Tuple(vec![
@@ -170,9 +173,10 @@ mod v1 {
 						Token::Uint(U256::from(*fee)),
 					])])
 				},
-				Command::SetOperatingMode { mode } =>
-					ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
-				Command::TransferNativeFromAgent { agent_id, recipient, amount } =>
+				Command::SetOperatingMode { mode } => {
+					ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])])
+				},
+				Command::TransferNativeFromAgent { agent_id, recipient, amount } => {
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 						Token::Address(*recipient),
@@ -221,7 +225,7 @@ mod v1 {
 		/// ABI-encode the sub-command
 		pub fn abi_encode(&self) -> Vec<u8> {
 			match self {
-				AgentExecuteCommand::TransferToken { token, recipient, amount } =>
+				AgentExecuteCommand::TransferToken { token, recipient, amount } => {
 					ethabi::encode(&[
 						Token::Uint(self.index().into()),
 						Token::Bytes(ethabi::encode(&[
@@ -229,7 +233,8 @@ mod v1 {
 							Token::Address(*recipient),
 							Token::Uint(U256::from(*amount)),
 						])),
-					]),
+					])
+				},
 			}
 		}
 	}
@@ -363,12 +368,12 @@ impl GasMeter for () {
 
 impl From<u32> for AggregateMessageOrigin {
 	fn from(value: u32) -> Self {
-		AggregateMessageOrigin::Export(ExportOrigin::Sibling(value.into()))
+		AggregateMessageOrigin::Snowbridge(SnowbridgeMessageOrigin::Sibling(value.into()))
 	}
 }
 
 #[derive(Encode, Decode, Clone, Copy, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum ExportOrigin {
+pub enum SnowbridgeMessageOrigin {
 	Here,
 	Sibling(ParaId),
 }
@@ -377,7 +382,7 @@ pub enum ExportOrigin {
 #[derive(Encode, Decode, Clone, Copy, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum AggregateMessageOrigin {
 	/// Message is to be exported via a bridge
-	Export(ExportOrigin),
+	Snowbridge(SnowbridgeMessageOrigin),
 }
 
 pub const ETHER_DECIMALS: u8 = 18;

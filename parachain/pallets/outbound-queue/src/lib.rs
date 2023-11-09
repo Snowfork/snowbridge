@@ -104,7 +104,7 @@ use frame_support::{
 };
 use snowbridge_core::{
 	outbound::{
-		AggregateMessageOrigin, Command, ExportOrigin, Fee, GasMeter, QueuedMessage,
+		AggregateMessageOrigin, Command, Fee, GasMeter, QueuedMessage, SnowbridgeMessageOrigin,
 		VersionedQueuedMessage, ETHER_DECIMALS,
 	},
 	BasicOperatingMode, ParaId, GWEI, METH,
@@ -313,7 +313,7 @@ pub mod pallet {
 		pub(crate) fn commit() {
 			let count = MessageLeaves::<T>::decode_len().unwrap_or_default() as u64;
 			if count == 0 {
-				return
+				return;
 			}
 
 			// Create merkle root of messages
@@ -333,19 +333,19 @@ pub mod pallet {
 			mut message: &[u8],
 		) -> Result<bool, ProcessMessageError> {
 			use AggregateMessageOrigin::*;
-			use ExportOrigin::*;
 			use ProcessMessageError::*;
+			use SnowbridgeMessageOrigin::*;
 
 			// Yield if the maximum number of messages has been processed this block.
 			// This ensures that the weight of `on_finalize` has a known maximum bound.
 			ensure!(
-				MessageLeaves::<T>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerBlock::get() as usize,
+				MessageLeaves::<T>::decode_len().unwrap_or(0)
+					< T::MaxMessagesPerBlock::get() as usize,
 				Yield
 			);
 
 			// If this is a high priority message, mark it as processed
-			if let Export(Here) = origin {
+			if let Snowbridge(Here) = origin {
 				PendingHighPriorityMessageCount::<T>::mutate(|count| {
 					*count = count.saturating_sub(1)
 				});
