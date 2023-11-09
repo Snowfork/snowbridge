@@ -302,6 +302,14 @@ pub trait Ticket: Encode + Decode + Clone {
 	fn message_id(&self) -> H256;
 }
 
+/// A trait for getting the local costs associated with sending a message.
+pub trait OutboundQueueLocalFee {
+	type Balance: BaseArithmetic + Unsigned + Copy;
+
+	/// Calculate fee in native currency for processing a message locally
+	fn calculate_local_fee() -> Self::Balance;
+}
+
 /// Reasons why sending to Ethereum could not be initiated
 #[derive(Copy, Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, PalletError, TypeInfo)]
 pub enum SendError {

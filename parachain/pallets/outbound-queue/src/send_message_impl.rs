@@ -8,8 +8,8 @@ use frame_support::{
 };
 use frame_system::unique;
 use snowbridge_core::outbound::{
-	AggregateMessageOrigin, ExportOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
-	VersionedQueuedMessage,
+	AggregateMessageOrigin, ExportOrigin, Fee, Message, OutboundQueueLocalFee, QueuedMessage,
+	SendError, SendMessage, VersionedQueuedMessage,
 };
 use sp_core::H256;
 use sp_runtime::BoundedVec;
@@ -89,5 +89,16 @@ where
 		T::MessageQueue::enqueue_message(message, origin);
 		Self::deposit_event(Event::MessageQueued { id: ticket.message_id });
 		Ok(ticket.message_id)
+	}
+}
+
+impl<T: Config> OutboundQueueLocalFee for Pallet<T> {
+	type Balance = T::Balance;
+
+	/// Calculate fee in native currency for processing a message locally
+	fn calculate_local_fee() -> Self::Balance {
+		T::WeightToFee::weight_to_fee(
+			&T::WeightInfo::do_process_message().saturating_add(T::WeightInfo::commit_single()),
+		)
 	}
 }
