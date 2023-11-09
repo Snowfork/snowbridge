@@ -117,6 +117,13 @@ mod v1 {
 			/// The amount to transfer
 			amount: u128,
 		},
+		/// Set token fees of the Gateway contract
+		SetTokenTransferFees {
+			/// The fee for register token
+			register: u128,
+			/// The fee for send token to para chain
+			send: u128,
+		},
 	}
 
 	impl Command {
@@ -130,6 +137,7 @@ mod v1 {
 				Command::UpdateChannel { .. } => 4,
 				Command::SetOperatingMode { .. } => 5,
 				Command::TransferNativeFromAgent { .. } => 6,
+				Command::SetTokenTransferFees { .. } => 7,
 			}
 		}
 
@@ -175,6 +183,11 @@ mod v1 {
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 						Token::Address(*recipient),
 						Token::Uint(U256::from(*amount)),
+					])]),
+				Command::SetTokenTransferFees { register, send } =>
+					ethabi::encode(&[Token::Tuple(vec![
+						Token::Uint(U256::from(*register)),
+						Token::Uint(U256::from(*send)),
 					])]),
 			}
 		}
@@ -346,6 +359,7 @@ impl GasMeter for ConstantGasMeter {
 				// the the initializer is called.
 				50_000 + initializer_max_gas
 			},
+			Command::SetTokenTransferFees { .. } => 60_000,
 		}
 	}
 }

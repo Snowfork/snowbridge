@@ -173,6 +173,11 @@ contract Gateway is IGateway, IInitializable {
             catch {
                 success = false;
             }
+        } else if (message.command == Command.SetTokenTransferFees) {
+            try Gateway(this).setTokenTransferFees{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
         }
 
         // Calculate the actual cost of executing this message
@@ -228,6 +233,11 @@ contract Gateway is IGateway, IInitializable {
 
     function implementation() public view returns (address) {
         return ERC1967.load();
+    }
+
+    function tokenTransferFees() external view returns (uint256, uint256) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        return ($.registerTokenFee, $.sendTokenFee);
     }
 
     /**
@@ -409,6 +419,22 @@ contract Gateway is IGateway, IInitializable {
 
         _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
         emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
+    }
+
+    struct SetTokenTransferFeesParams {
+        /// @dev The fee for register token
+        uint256 register;
+        /// @dev The fee for send token from ethereum to polkadot
+        uint256 send;
+    }
+
+    // @dev Set the operating mode of the gateway
+    function setTokenTransferFees(bytes calldata data) external onlySelf {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        SetTokenTransferFeesParams memory params = abi.decode(data, (SetTokenTransferFeesParams));
+        $.registerTokenFee = params.register;
+        $.sendTokenFee = params.send;
+        emit TokenTransferFeesChanged(params.register, params.send);
     }
 
     /**

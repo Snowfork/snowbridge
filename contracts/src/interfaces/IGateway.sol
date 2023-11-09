@@ -60,12 +60,19 @@ interface IGateway {
      * Token Transfers
      */
 
-    /// @dev Emitted once the funds are locked and a message is successfully queued.
+    // @dev Emitted when the fees updated
+    event TokenTransferFeesChanged(uint256 register, uint256 send);
+
+    /// @dev Emitted once the funds are locked and an outbound message is successfully queued.
     event TokenSent(
         address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
     );
 
+    /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
     event TokenRegistrationSent(address token);
+
+    // @dev Fees in Ether for registering and sending tokens respectively
+    function tokenTransferFees() external view returns (uint256, uint256);
 
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset
     ///      in the `ForeignAssets` pallet.
