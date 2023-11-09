@@ -28,7 +28,6 @@ fund_accounts() {
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $template_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $beacon_relayer_pub_key
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_pub_key
-    transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $snowbridge_sovereign_account
 }
 
 open_hrmp_channel()
