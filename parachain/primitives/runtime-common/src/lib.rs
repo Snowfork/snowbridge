@@ -14,8 +14,9 @@ use xcm_builder::{deposit_or_burn_fee, HandleFee};
 use xcm_executor::traits::{FeeReason, TransactAsset};
 
 /// A `HandleFee` implementation that takes fees from `ExportMessage` XCM instructions
-/// to Snowbridge and splits it between the origin parachains sovereign and the system
-/// treasury account specified by `ReceiverAmount`.
+/// to Snowbridge and splits off the local remote fee and deposits it to the origin
+/// parachain sovereign account. The local fee is then returned back to be handled by
+/// the next fee handler in the chain. Most likely the treasury account.
 pub struct XcmExportFeeToSnowbridge<TokenLocation, EthereumNetwork, AssetTransactor, OutboundQueue>(
 	PhantomData<(TokenLocation, EthereumNetwork, AssetTransactor, OutboundQueue)>,
 );
