@@ -32,6 +32,9 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: "true"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/cache@v1
         with:
           path: |
@@ -64,6 +67,9 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           submodules: "true"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/cache@v1
         with:
           path: |
@@ -112,6 +118,9 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           submodules: "true"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: setup rust toolchain
         run: rustup show
       - name: run coverage test
