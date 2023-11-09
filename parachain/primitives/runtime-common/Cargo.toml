@@ -9,7 +9,6 @@ log = { version = "0.4.20", default-features = false }
 
 bp-rococo = { path = "../../../polkadot-sdk/bridges/primitives/chain-rococo", default-features = false }
 frame-support = { path = "../../../polkadot-sdk/substrate/frame/support", default-features = false }
-sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false }
 xcm = { package = "staging-xcm", path = "../../../polkadot-sdk/polkadot/xcm", default-features = false }
 xcm-builder = { package = "staging-xcm-builder", path = "../../../polkadot-sdk/polkadot/xcm/xcm-builder", default-features = false }
 xcm-executor = { package = "staging-xcm-executor", path = "../../../polkadot-sdk/polkadot/xcm/xcm-executor", default-features = false }
@@ -24,7 +23,6 @@ std = [
 	"bp-rococo/std",
     "frame-support/std",
     "snowbridge-core/std",
-    "sp-io/std",
     "xcm-builder/std",
     "xcm-executor/std",
     "xcm/std",

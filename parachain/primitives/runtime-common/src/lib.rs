@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+//! # Runtime Common
+//!
+//! Common traits and types shared by runtimes.
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use bp_rococo::AccountId;
 use core::marker::PhantomData;
 use frame_support::traits::Get;
@@ -7,29 +14,19 @@ use xcm_builder::{deposit_or_burn_fee, HandleFee};
 use xcm_executor::traits::{FeeReason, TransactAsset};
 
 /// A `HandleFee` implementation that takes fees from `ExportMessage` XCM instructions
-/// to Snowbridge and holds it in a receiver account. Burns the fees in case of a failure.
-pub struct XcmExportFeeToSnowbridge<
-	TokenLocation,
-	EthereumNetwork,
-	ReceiverAccount,
-	AssetTransactor,
-	OutboundQueue,
->(PhantomData<(TokenLocation, EthereumNetwork, ReceiverAccount, AssetTransactor, OutboundQueue)>);
+/// to Snowbridge and splits it between the origin parachains sovereign and the system
+/// treasury account specified by `ReceiverAmount`.
+pub struct XcmExportFeeToSnowbridge<TokenLocation, EthereumNetwork, AssetTransactor, OutboundQueue>(
+	PhantomData<(TokenLocation, EthereumNetwork, AssetTransactor, OutboundQueue)>,
+);
 
 impl<
 		TokenLocation: Get<MultiLocation>,
 		EthereumNetwork: Get<NetworkId>,
-		ReceiverAccount: Get<AccountId>,
 		AssetTransactor: TransactAsset,
 		OutboundQueue: SendMessageFeeProvider<Balance = bp_rococo::Balance>,
 	> HandleFee
-	for XcmExportFeeToSnowbridge<
-		TokenLocation,
-		EthereumNetwork,
-		ReceiverAccount,
-		AssetTransactor,
-		OutboundQueue,
-	>
+	for XcmExportFeeToSnowbridge<TokenLocation, EthereumNetwork, AssetTransactor, OutboundQueue>
 {
 	fn handle_fee(
 		fees: MultiAssets,
@@ -37,75 +34,72 @@ impl<
 		reason: FeeReason,
 	) -> MultiAssets {
 		let token_location = TokenLocation::get();
-		let mut fees = fees.into_inner();
 
-		if matches!(reason, FeeReason::Export { network: bridged_network, destination }
-				if bridged_network == EthereumNetwork::get() && destination == Here)
+		// Check the reason to see if this export is for snowbridge.
+		let snowbridge_export = matches!(
+			reason,
+			FeeReason::Export { network: bridged_network, destination }
+				if bridged_network == EthereumNetwork::get() && destination == Here
+		);
+
+		// Get the parachain sovereign from the `context`.
+		let maybe_para_sovereign = if let Some(XcmContext {
+			origin: Some(MultiLocation { parents: 1, interior }),
+			..
+		}) = context
 		{
-			log::info!(
-				target: "xcm::fees",
-				"XcmExportFeeToSnowbridge fees: {fees:?}, context: {context:?}, reason: {reason:?}",
-			);
-
-			let fee_item_index = fees.iter().position(|asset| {
-				matches!(
-					asset,
-					MultiAsset { id: Concrete(location), fun: Fungible(..)}
-						if *location == token_location,
-				)
-			});
-			// Find the fee asset.
-			let fee_item = if let Some(element) = fee_item_index {
-				fees.remove(element)
+			if let Some(Parachain(sibling_para_id)) = interior.first() {
+				let account: AccountId =
+					sibling_sovereign_account_raw((*sibling_para_id).into()).into();
+				Some(account)
 			} else {
-				return fees.into()
-			};
+				None
+			}
+		} else {
+			None
+		};
 
-			let receiver = ReceiverAccount::get();
-			// There is an origin so split fee into parts.
-			if let Some(XcmContext {
-				origin: Some(MultiLocation { parents: 1, interior }), ..
-			}) = context
-			{
-				if let Some(Parachain(sibling_para_id)) = interior.first() {
-					let account: AccountId =
-						sibling_sovereign_account_raw((*sibling_para_id).into()).into();
-					let local_fee = OutboundQueue::local_fee();
-					if let Fungible(amount) = fee_item.fun {
-						let remote_fee = amount.saturating_sub(local_fee);
-
-						// Send local fee to receiver
-						deposit_or_burn_fee::<AssetTransactor, _>(
-							MultiAsset {
-								id: Concrete(token_location),
-								fun: Fungible(amount - remote_fee),
-							}
-							.into(),
-							context,
-							receiver,
-						);
-						// Send remote fee to origin
-						deposit_or_burn_fee::<AssetTransactor, _>(
-							MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee) }
-								.into(),
-							context,
-							account,
-						);
-					} else {
-						// Push the fee item back and bail out to let other handlers run.
-						fees.push(fee_item);
-						return fees.into()
+		// Get the total fee offered by export message.
+		let maybe_total_supplied_fee = fees
+			.inner()
+			.iter()
+			.enumerate()
+			.filter_map(|(index, asset)| {
+				if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = asset {
+					if *location == token_location {
+						return Some((index, amount))
 					}
-				} else {
-					// Origin conversion failed so send the full fee to the receiver.
-					deposit_or_burn_fee::<AssetTransactor, _>(fee_item.into(), context, receiver);
 				}
-			} else {
-				// There is no context so send the full fee to the receiver.
-				deposit_or_burn_fee::<AssetTransactor, _>(fee_item.into(), context, receiver);
+				return None
+			})
+			.next();
+
+		if let (true, Some(para_sovereign), Some((fee_index, total_fee))) =
+			(snowbridge_export, maybe_para_sovereign, maybe_total_supplied_fee)
+		{
+			let remote_fee = total_fee.saturating_sub(OutboundQueue::local_fee());
+			if remote_fee > 0 {
+				// Send remote fee to origin
+				deposit_or_burn_fee::<AssetTransactor, _>(
+					MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee) }.into(),
+					context,
+					para_sovereign,
+				);
+				// Return remaining fee to the next fee handler in the chain.
+				let mut modified_fees = fees.inner().clone();
+				modified_fees.remove(fee_index);
+				modified_fees.push(MultiAsset {
+					id: Concrete(token_location),
+					fun: Fungible(total_fee - remote_fee),
+				});
+				return modified_fees.into()
 			}
 		}
 
-		fees.into()
+		log::trace!(
+			target: "xcm::fees",
+			"XcmExportFeeToSnowbridge skipped: {fees:?}, context: {context:?}, reason: {reason:?}",
+		);
+		return fees
 	}
 }
