@@ -40,7 +40,7 @@ impl TryFrom<Log> for Envelope {
 			.map_err(|_| EnvelopeDecodeError)?;
 
 		Ok(Self {
-			gateway: H160::from(log.address),
+			gateway: log.address,
 			dest: event.destination.saturating_to::<u32>().into(),
 			nonce: event.nonce,
 			message_id: H256::from(event.messageID.as_ref()),
