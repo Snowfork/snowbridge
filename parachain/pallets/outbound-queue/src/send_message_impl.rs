@@ -9,7 +9,7 @@ use frame_support::{
 use frame_system::unique;
 use snowbridge_core::outbound::{
 	AggregateMessageOrigin, ExportOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
-	SendMessageFee, VersionedQueuedMessage,
+	SendMessageFeeProvider, VersionedQueuedMessage,
 };
 use sp_core::H256;
 use sp_runtime::BoundedVec;
@@ -33,9 +33,10 @@ where
 	T: Config,
 {
 	type Ticket = Ticket<T>;
-	type Balance = T::Balance;
 
-	fn validate(message: &Message) -> Result<(Self::Ticket, Fee<Self::Balance>), SendError> {
+	fn validate(
+		message: &Message,
+	) -> Result<(Self::Ticket, Fee<<Self as SendMessageFeeProvider>::Balance>), SendError> {
 		// The inner payload should not be too large
 		let payload = message.command.abi_encode();
 
@@ -92,10 +93,10 @@ where
 	}
 }
 
-impl<T: Config> SendMessageFee for Pallet<T> {
+impl<T: Config> SendMessageFeeProvider for Pallet<T> {
 	type Balance = T::Balance;
 
-	/// Calculate fee in native currency for processing a message locally
+	/// The local component of the message processing fees in native currency
 	fn local_fee() -> Self::Balance {
 		Self::calculate_local_fee()
 	}

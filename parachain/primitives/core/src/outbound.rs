@@ -285,14 +285,15 @@ where
 }
 
 /// A trait for sending messages to Ethereum
-pub trait SendMessage {
+pub trait SendMessage: SendMessageFeeProvider {
 	type Ticket: Clone + Encode + Decode;
-	type Balance: BaseArithmetic + Unsigned + Copy;
 
 	/// Validate an outbound message and return a tuple:
 	/// 1. Ticket for submitting the message
 	/// 2. Delivery fee
-	fn validate(message: &Message) -> Result<(Self::Ticket, Fee<Self::Balance>), SendError>;
+	fn validate(
+		message: &Message,
+	) -> Result<(Self::Ticket, Fee<<Self as SendMessageFeeProvider>::Balance>), SendError>;
 
 	/// Submit the message ticket for eventual delivery to Ethereum
 	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError>;
@@ -303,10 +304,10 @@ pub trait Ticket: Encode + Decode + Clone {
 }
 
 /// A trait for getting the local costs associated with sending a message.
-pub trait SendMessageFee {
+pub trait SendMessageFeeProvider {
 	type Balance: BaseArithmetic + Unsigned + Copy;
 
-	/// Calculate fee in native currency for processing a message locally
+	/// The local component of the message processing fees in native currency
 	fn local_fee() -> Self::Balance;
 }
 
