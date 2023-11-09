@@ -60,31 +60,28 @@ async fn transfer_token() {
 	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new(keypair);
 
 	let amount: u128 = 1_000_000_000;
-	let assets = VersionedMultiAssets::V3(MultiAssets(vec![
-		MultiAsset {
-			id: AssetId::Concrete(MultiLocation {
-				parents: 2,
-				interior: Junctions::X2(
-					Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
-					Junction::AccountKey20 { network: None, key: WETH_CONTRACT.into() },
-				),
-			}),
-			fun: Fungibility::Fungible(amount),
-		},
-	]));
+	let assets = VersionedMultiAssets::V3(MultiAssets(vec![MultiAsset {
+		id: AssetId::Concrete(MultiLocation {
+			parents: 2,
+			interior: Junctions::X2(
+				Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+				Junction::AccountKey20 { network: None, key: WETH_CONTRACT.into() },
+			),
+		}),
+		fun: Fungibility::Fungible(amount),
+	}]));
 
 	let destination = VersionedMultiLocation::V3(MultiLocation {
 		parents: 2,
-		interior: Junctions::X1(
-			Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
-		),
+		interior: Junctions::X1(Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 })),
 	});
 
 	let beneficiary = VersionedMultiLocation::V3(MultiLocation {
 		parents: 0,
-		interior: Junctions::X1(
-			Junction::AccountKey20 { network: None, key: DESTINATION_ADDRESS.into() },
-		),
+		interior: Junctions::X1(Junction::AccountKey20 {
+			network: None,
+			key: DESTINATION_ADDRESS.into(),
+		}),
 	});
 
 	let token_transfer_call =

@@ -34,6 +34,8 @@ interface IGateway {
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
+    // Emitted when the fees updated
+    event TokenTransferFeesChanged(uint256 register, uint256 send);
     /// @dev Emitted once the funds are locked and a message is successfully queued.
     event TokenSent(
         address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
@@ -65,6 +67,7 @@ interface IGateway {
     /**
      * Token Transfers
      */
+    function tokenTransferFees() external view returns (uint256, uint256);
 
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset
     ///      in the `ForeignAssets` pallet.
