@@ -74,7 +74,6 @@ configure_bridgehub() {
     wait_beacon_chain_ready
     config_beacon_checkpoint
     open_hrmp_channels
-    enable_gateway
 }
 
 if [ -z "${from_start_services:-}" ]; then

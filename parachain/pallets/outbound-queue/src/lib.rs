@@ -173,7 +173,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Message has been queued and will be processed in the future
 		MessageQueued {
-			/// ID of the message. Usually the XCM message hash.
+			/// ID of the message. Usually the XCM message hash or a SetTopic.
 			id: H256,
 		},
 		/// Message will be committed at the end of current block. From now on, to track the
@@ -350,30 +350,31 @@ pub mod pallet {
 			}
 
 			// Decode bytes into versioned message
-			let versioned_enqueued_message: VersionedQueuedMessage =
+			let versioned_queued_message: VersionedQueuedMessage =
 				VersionedQueuedMessage::decode(&mut message).map_err(|_| Corrupt)?;
 
 			// Convert versioned message into latest supported message version
-			let enqueued_message: QueuedMessage =
-				versioned_enqueued_message.try_into().map_err(|_| Unsupported)?;
+			let queued_message: QueuedMessage =
+				versioned_queued_message.try_into().map_err(|_| Unsupported)?;
 
-			let next_nonce = Nonce::<T>::get(enqueued_message.origin).saturating_add(1);
+			let next_nonce = Nonce::<T>::get(queued_message.origin).saturating_add(1);
 
-			let command = enqueued_message.command.index();
-			let params = enqueued_message.command.abi_encode();
-			let max_dispatch_gas = T::GasMeter::maximum_required(&enqueued_message.command) as u128;
-			let max_refund = Self::calculate_maximum_gas_refund(&enqueued_message.command);
+			let command = queued_message.command.index();
+			let params = queued_message.command.abi_encode();
+			let max_dispatch_gas = T::GasMeter::maximum_required(&queued_message.command) as u128;
+			let max_refund = Self::calculate_maximum_gas_refund(&queued_message.command);
 			let reward = Self::fee_config().reward;
 
 			// Construct the final committed message
 			let message = CommittedMessage {
-				origin: enqueued_message.origin,
+				origin: queued_message.origin,
 				nonce: next_nonce,
 				command,
 				params,
 				max_dispatch_gas,
 				max_refund,
 				reward,
+				id: queued_message.id,
 			};
 
 			// ABI-encode and hash the prepared message
@@ -382,10 +383,10 @@ pub mod pallet {
 
 			Messages::<T>::append(Box::new(message));
 			MessageLeaves::<T>::append(message_abi_encoded_hash);
-			Nonce::<T>::set(enqueued_message.origin, next_nonce);
+			Nonce::<T>::set(queued_message.origin, next_nonce);
 
 			Self::deposit_event(Event::MessageAccepted {
-				id: enqueued_message.id,
+				id: queued_message.id,
 				nonce: next_nonce,
 			});
 

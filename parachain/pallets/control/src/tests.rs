@@ -520,8 +520,11 @@ fn charge_fee_for_create_agent() {
 
 		assert_ok!(EthereumControl::create_agent(origin.clone()));
 		// assert sovereign_balance decreased by (fee.base_fee + fee.delivery_fee)
-		let message =
-			Message { origin: para_id.into(), command: Command::CreateAgent { agent_id } };
+		let message = Message {
+			id: None,
+			origin: para_id.into(),
+			command: Command::CreateAgent { agent_id },
+		};
 		let (_, fee) = OutboundQueue::validate(&message).unwrap();
 		let sovereign_balance = Balances::balance(&sovereign_account);
 		assert_eq!(sovereign_balance + fee.local + fee.remote, InitialFunding::get());
@@ -555,6 +558,7 @@ fn charge_fee_for_transfer_native_from_agent() {
 		let sovereign_balance_before = Balances::balance(&sovereign_account);
 		assert_ok!(EthereumControl::transfer_native_from_agent(origin.clone(), recipient, amount));
 		let message = Message {
+			id: None,
 			origin: para_id.into(),
 			command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
 		};

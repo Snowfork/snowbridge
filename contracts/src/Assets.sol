@@ -71,6 +71,7 @@ library Assets {
 
         payload = SubstrateTypes.SendToken(address(this), token, destinationChain, destinationAddress, amount);
         extraFee = $.sendTokenFee;
+
         emit IGateway.TokenSent(sender, token, destinationChain, abi.encodePacked(destinationAddress), amount);
     }
 

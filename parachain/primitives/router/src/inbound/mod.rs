@@ -83,6 +83,7 @@ pub enum ConvertMessageError {
 
 /// convert the inbound message to xcm which will be forwarded to the destination chain
 pub trait ConvertMessage {
+	/// Converts a versioned message into an XCM message and an optional topicID
 	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError>;
 }
 

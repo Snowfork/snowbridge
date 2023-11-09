@@ -90,6 +90,7 @@ type OutboundQueueMessage struct {
 	MaxDispatchGas types.U128
 	MaxRefund      types.U128
 	Reward         types.U128
+	ID             types.Bytes32
 }
 
 func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
@@ -101,6 +102,7 @@ func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 		MaxDispatchGas: m.MaxDispatchGas.Int,
 		MaxRefund:      m.MaxRefund.Int,
 		Reward:         m.Reward.Int,
+		Id:             m.ID,
 	}
 }
 
