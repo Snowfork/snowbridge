@@ -8,8 +8,8 @@ use frame_support::{
 };
 use frame_system::unique;
 use snowbridge_core::outbound::{
-	AggregateMessageOrigin, ExportOrigin, Fee, Message, OutboundQueueLocalFee, QueuedMessage,
-	SendError, SendMessage, VersionedQueuedMessage,
+	AggregateMessageOrigin, ExportOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
+	SendMessageFee, VersionedQueuedMessage,
 };
 use sp_core::H256;
 use sp_runtime::BoundedVec;
@@ -92,11 +92,11 @@ where
 	}
 }
 
-impl<T: Config> OutboundQueueLocalFee for Pallet<T> {
+impl<T: Config> SendMessageFee for Pallet<T> {
 	type Balance = T::Balance;
 
 	/// Calculate fee in native currency for processing a message locally
-	fn calculate_local_fee() -> Self::Balance {
+	fn local_fee() -> Self::Balance {
 		Self::calculate_local_fee()
 	}
 }
