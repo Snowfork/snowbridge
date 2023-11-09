@@ -90,6 +90,7 @@ jobs:
           --workspace
           --features runtime-benchmarks
           --exclude snowbridge-ethereum-beacon-client
+          --exclude snowbridge-runtime-tests
       # Run tests for beacon light client, excluding benchmark tests
       - name: Tests for beacon light client excluding benchmark tests
         run: >
@@ -191,7 +192,7 @@ jobs:
         run: rustup show
       - name: snowbridge integration tests
         run: >
-          cargo test 
+          RUST_LOG=xcm=trace cargo test 
           --manifest-path polkadot-sdk/Cargo.toml
           -p bridge-hub-rococo-integration-tests snowbridge
           -- --nocapture

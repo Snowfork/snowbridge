@@ -213,10 +213,6 @@ pub fn send_unpaid_transfer_token_message<Runtime, XcmConfig>(
 						}),
 					},
 				},
-				DepositAsset {
-					assets: Wild(All),
-					beneficiary: MultiLocation { parents: 1, interior: X1(Parachain(1000)) },
-				},
 				SetTopic([0; 32]),
 			]);
 
@@ -323,7 +319,7 @@ pub fn send_transfer_token_message_insufficient_fund<Runtime, XcmConfig>(
 				destination_address,
 				fee_amount,
 			);
-			// check err is NotHoldingFees
+			// check err is FailedToTransactAsset("InsufficientBalance")
 			assert_err!(outcome.ensure_complete(), FailedToTransactAsset("InsufficientBalance"));
 		});
 }
