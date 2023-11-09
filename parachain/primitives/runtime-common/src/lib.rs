@@ -1,10 +1,11 @@
 use bp_rococo::AccountId;
 use core::marker::PhantomData;
 use frame_support::traits::Get;
-use snowbridge_core::{outbound::SendMessageFeeProvider, sibling_sovereign_account_raw};
 use xcm::prelude::*;
 use xcm_builder::{deposit_or_burn_fee, HandleFee};
 use xcm_executor::traits::{FeeReason, TransactAsset};
+use snowbridge_core::outbound::SendMessageFeeProvider;
+use snowbridge_core::sibling_sovereign_account_raw;
 
 /// A `HandleFee` implementation that takes fees from `ExportMessage` XCM instructions
 /// to Snowbridge and holds it in a receiver account. Burns the fees in case of a failure.
@@ -72,7 +73,7 @@ impl<
 						sibling_sovereign_account_raw((*sibling_para_id).into()).into();
 					let local_fee = OutboundQueue::local_fee();
 					if let Fungible(amount) = fee_item.fun {
-						let remote_fee = amount.checked_sub(local_fee).unwrap_or(0);
+						let remote_fee = amount.saturating_sub(local_fee);
 
 						// Send local fee to receiver
 						deposit_or_burn_fee::<AssetTransactor, _>(
