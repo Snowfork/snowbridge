@@ -459,7 +459,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Send `command` to the Gateway on the channel identified by `origin`.
 		fn send(origin: ParaId, command: Command, pays_fee: PaysFee<T>) -> DispatchResult {
-			let message = Message { origin, command };
+			let message = Message { id: None, origin, command };
 			let (ticket, fee) =
 				T::OutboundQueue::validate(&message).map_err(|err| Error::<T>::Send(err))?;
 

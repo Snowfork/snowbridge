@@ -2,23 +2,23 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use super::*;
 
-use snowbridge_ethereum::{Log, Receipt};
-use sp_runtime::DispatchError;
+use snowbridge_core::inbound::VerificationError::{self, *};
+use snowbridge_ethereum::Receipt;
 
 impl<T: Config> Verifier for Pallet<T> {
 	/// Verify a message by verifying the existence of the corresponding
 	/// Ethereum log in a block. Returns the log if successful. The execution header containing
 	/// the log should be in the beacon client storage, meaning it has been verified and is an
 	/// ancestor of a finalized beacon block.
-	fn verify(message: &Message) -> Result<Log, DispatchError> {
+	fn verify(message: &Message) -> Result<(), VerificationError> {
 		log::info!(
 			target: "ethereum-beacon-client",
 			"💫 Verifying message with block hash {}",
 			message.proof.block_hash,
 		);
 
-		let header = <ExecutionHeaderBuffer<T>>::get(message.proof.block_hash)
-			.ok_or(Error::<T>::MissingHeader)?;
+		let header =
+			<ExecutionHeaderBuffer<T>>::get(message.proof.block_hash).ok_or(HeaderNotFound)?;
 
 		let receipt = match Self::verify_receipt_inclusion(header.receipts_root, &message.proof) {
 			Ok(receipt) => receipt,
@@ -48,7 +48,7 @@ impl<T: Config> Verifier for Pallet<T> {
 					message.proof.block_hash,
 					err
 				);
-				return Err(Error::<T>::DecodeFailed.into())
+				return Err(InvalidLog)
 			},
 		};
 
@@ -58,7 +58,7 @@ impl<T: Config> Verifier for Pallet<T> {
 				"💫 Event log not found in receipt for transaction at index {} in block {}",
 				message.proof.tx_index, message.proof.block_hash,
 			);
-			return Err(Error::<T>::InvalidProof.into())
+			return Err(LogNotFound)
 		}
 
 		log::info!(
@@ -67,7 +67,7 @@ impl<T: Config> Verifier for Pallet<T> {
 			message.proof.block_hash,
 		);
 
-		Ok(log)
+		Ok(())
 	}
 }
 
@@ -77,9 +77,8 @@ impl<T: Config> Pallet<T> {
 	pub fn verify_receipt_inclusion(
 		receipts_root: H256,
 		proof: &Proof,
-	) -> Result<Receipt, DispatchError> {
-		let result =
-			verify_receipt_proof(receipts_root, &proof.data.1).ok_or(Error::<T>::InvalidProof)?;
+	) -> Result<Receipt, VerificationError> {
+		let result = verify_receipt_proof(receipts_root, &proof.data.1).ok_or(InvalidProof)?;
 
 		match result {
 			Ok(receipt) => Ok(receipt),
@@ -89,7 +88,7 @@ impl<T: Config> Pallet<T> {
 					"💫 Failed to decode transaction receipt: {}",
 					err
 				);
-				Err(Error::<T>::InvalidProof.into())
+				Err(InvalidProof)
 			},
 		}
 	}

@@ -4,7 +4,6 @@ pub use polkadot_parachain_primitives::primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 use sp_core::{RuntimeDebug, H256};
-
 pub use v1::{AgentExecuteCommand, Command, Initializer, Message, OperatingMode, QueuedMessage};
 
 /// Enqueued outbound messages need to be versioned to prevent data corruption
@@ -39,10 +38,17 @@ mod v1 {
 	use sp_core::{RuntimeDebug, H160, H256, U256};
 	use sp_std::{borrow::ToOwned, vec, vec::Vec};
 
-	/// A message which can be accepted by the [`OutboundQueue`]
+	/// A message which can be accepted by implementations of [`SendMessage`]
 	#[derive(Encode, Decode, TypeInfo, Clone, RuntimeDebug)]
 	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub struct Message {
+		/// ID for this message. One will be automatically generated if not provided.
+		///
+		/// When this message is created from an XCM message, the ID should be extracted
+		/// from the `SetTopic` instruction.
+		///
+		/// The ID plays no role in bridge consensus, and is purely meant for message tracing.
+		pub id: Option<H256>,
 		/// The parachain from which the message originated
 		pub origin: ParaId,
 		/// The stable ID for a receiving gateway contract
@@ -56,7 +62,7 @@ mod v1 {
 	}
 
 	/// A command which is executable by the Gateway contract on Ethereum
-	#[derive(Encode, Decode, TypeInfo, Clone, RuntimeDebug)]
+	#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub enum Command {
 		/// Execute a sub-command within an agent for a consensus system in Polkadot
@@ -189,7 +195,7 @@ mod v1 {
 
 	/// Representation of a call to the initializer of an implementation contract.
 	/// The initializer has the following ABI signature: `initialize(bytes)`.
-	#[derive(Encode, Decode, TypeInfo, PartialEq, Clone, RuntimeDebug)]
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 	pub struct Initializer {
 		/// ABI-encoded params of type `bytes` to pass to the initializer
 		pub params: Vec<u8>,
@@ -198,7 +204,8 @@ mod v1 {
 	}
 
 	/// A Sub-command executable within an agent
-	#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+	#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub enum AgentExecuteCommand {
 		/// Transfer ERC20 tokens
 		TransferToken {
@@ -235,10 +242,10 @@ mod v1 {
 	}
 
 	/// Message which is awaiting processing in the MessageQueue pallet
-	#[derive(Encode, Decode, Clone, RuntimeDebug, TypeInfo)]
+	#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub struct QueuedMessage {
-		/// Message ID (usually hash of message)
+		/// Message ID
 		pub id: H256,
 		/// ID of source parachain
 		pub origin: ParaId,
@@ -289,6 +296,10 @@ pub trait SendMessage {
 
 	/// Submit the message ticket for eventual delivery to Ethereum
 	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError>;
+}
+
+pub trait Ticket: Encode + Decode + Clone {
+	fn message_id(&self) -> H256;
 }
 
 /// Reasons why sending to Ethereum could not be initiated

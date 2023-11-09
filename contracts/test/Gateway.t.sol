@@ -28,20 +28,6 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import "./mocks/GatewayUpgradeMock.sol";
 
 contract GatewayTest is Test {
-    event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool result);
-    event OutboundMessageAccepted(ParaID indexed dest, uint64 nonce, bytes payload);
-    event NativeTokensUnlocked(address token, address recipient, uint256 amount);
-    event TokenRegistrationSent(address token);
-    event TokenSent(
-        address indexed sender, address indexed token, ParaID destinationChain, bytes destinationAddress, uint128 amount
-    );
-    event AgentCreated(bytes32 agentID, address agent);
-    event ChannelCreated(ParaID indexed paraID);
-    event ChannelUpdated(ParaID indexed paraID);
-
-    event Upgraded(address indexed implementation);
-    event Initialized(uint256 d0, uint256 d1);
-
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
     bytes32 public bridgeHubAgentID = keccak256("1001");
     address public bridgeHubAgent;
@@ -66,6 +52,7 @@ contract GatewayTest is Test {
     uint256 public maxDispatchGas = 500_000;
     uint256 public maxRefund = 1 ether;
     uint256 public reward = 1 ether;
+    bytes32 public messageID = keccak256("cabbage");
 
     uint256 public baseFee = 1 ether;
     uint256 public registerNativeTokenFee = 1 ether;
@@ -84,6 +71,7 @@ contract GatewayTest is Test {
         gateway = new GatewayProxy(
             address(gatewayLogic),
             abi.encode(
+                OperatingMode.Normal,
                 baseFee,
                 registerNativeTokenFee,
                 sendNativeTokenFee
@@ -156,11 +144,11 @@ contract GatewayTest is Test {
 
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, false, false, false);
-        emit IGateway.InboundMessageDispatched(bridgeHubParaID, 1, true);
+        emit IGateway.InboundMessageDispatched(bridgeHubParaID, 1, messageID, true);
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
         );
@@ -173,7 +161,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
         );
@@ -182,7 +170,7 @@ contract GatewayTest is Test {
         vm.expectRevert(Gateway.InvalidNonce.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
         );
@@ -194,7 +182,9 @@ contract GatewayTest is Test {
         vm.expectRevert(Gateway.ChannelDoesNotExist.selector);
         hoax(relayer);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(ParaID.wrap(42), 1, command, "", maxDispatchGas, maxRefund, reward), proof, makeMockProof()
+            InboundMessage(ParaID.wrap(42), 1, command, "", maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
         );
     }
 
@@ -208,7 +198,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
         );
@@ -231,7 +221,7 @@ contract GatewayTest is Test {
 
         uint256 startGas = gasleft();
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
         );
@@ -257,7 +247,7 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward),
+            InboundMessage(bridgeHubParaID, 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
         );
@@ -532,10 +522,10 @@ contract GatewayTest is Test {
 
     function testRegisterToken() public {
         vm.expectEmit(false, false, false, true);
-        emit TokenRegistrationSent(address(token));
+        emit IGateway.TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit IGateway.OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(token)));
+        emit IGateway.OutboundMessageAccepted(assetHubParaID, 1, messageID, bytes(""));
 
         IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
     }
@@ -545,7 +535,7 @@ contract GatewayTest is Test {
         emit IGateway.TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit IGateway.OutboundMessageAccepted(assetHubParaID, 1, SubstrateTypes.RegisterToken(address(token)));
+        emit IGateway.OutboundMessageAccepted(assetHubParaID, 1, messageID, bytes(""));
 
         uint256 totalFee = baseFee + registerNativeTokenFee;
         uint256 balanceBefore = address(this).balance;
@@ -571,9 +561,7 @@ contract GatewayTest is Test {
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit IGateway.OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.SendToken(address(token), destPara, destAddress, 1)
-        );
+        emit IGateway.OutboundMessageAccepted(assetHubParaID, 1, messageID, bytes(""));
 
         IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
     }
@@ -591,9 +579,7 @@ contract GatewayTest is Test {
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit IGateway.OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.SendToken(address(token), destAddress, 1)
-        );
+        emit IGateway.OutboundMessageAccepted(assetHubParaID, 1, messageID, bytes(""));
 
         IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
     }
@@ -611,7 +597,7 @@ contract GatewayTest is Test {
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit IGateway.OutboundMessageAccepted(assetHubParaID, 1, hex"");
+        emit IGateway.OutboundMessageAccepted(assetHubParaID, 1, messageID, bytes(""));
 
         IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
     }
@@ -743,10 +729,10 @@ contract GatewayTest is Test {
 
         vm.expectEmit(true, false, false, true);
         // Expect dispatch result as false for `OutOfGas`
-        emit IGateway.InboundMessageDispatched(bridgeHubParaID, 1, false);
+        emit IGateway.InboundMessageDispatched(bridgeHubParaID, 1, messageID, false);
         // maxDispatchGas as 1 for `create_agent` is definitely not enough
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params, 1, maxRefund, reward), proof, makeMockProof()
+            InboundMessage(bridgeHubParaID, 1, command, params, 1, maxRefund, reward, messageID), proof, makeMockProof()
         );
     }
 

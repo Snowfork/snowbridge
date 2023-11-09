@@ -11,10 +11,10 @@ interface IGateway {
      */
 
     // Emitted when inbound message has been dispatched
-    event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool success);
+    event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bytes32 indexed messageID, bool success);
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
-    event OutboundMessageAccepted(ParaID indexed destination, uint64 nonce, bytes payload);
+    event OutboundMessageAccepted(ParaID indexed destination, uint64 nonce, bytes32 indexed messageID, bytes payload);
 
     // Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);
@@ -33,14 +33,6 @@ interface IGateway {
 
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
-
-    // Emitted when the fees updated
-    event TokenTransferFeesChanged(uint256 register, uint256 send);
-    /// @dev Emitted once the funds are locked and a message is successfully queued.
-    event TokenSent(
-        address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
-    );
-    event TokenRegistrationSent(address token);
 
     /**
      * Getters
@@ -67,6 +59,19 @@ interface IGateway {
     /**
      * Token Transfers
      */
+
+    // @dev Emitted when the fees updated
+    event TokenTransferFeesChanged(uint256 register, uint256 send);
+
+    /// @dev Emitted once the funds are locked and an outbound message is successfully queued.
+    event TokenSent(
+        address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
+    );
+
+    /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
+    event TokenRegistrationSent(address token);
+
+    // @dev Fees in Ether for registering and sending tokens respectively
     function tokenTransferFees() external view returns (uint256, uint256);
 
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset

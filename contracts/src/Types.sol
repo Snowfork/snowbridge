@@ -45,6 +45,8 @@ struct InboundMessage {
     uint256 maxRefund;
     /// @dev The reward for message submission
     uint256 reward;
+    /// @dev ID for this message
+    bytes32 id;
 }
 
 enum OperatingMode {

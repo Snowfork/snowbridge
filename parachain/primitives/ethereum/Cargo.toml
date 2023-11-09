@@ -14,8 +14,7 @@ ethereum-types = { version = "0.14.1", default-features = false, features = [ "c
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 hex-literal = { version = "0.4.1", default-features = false }
 parity-bytes = { version = "0.1.2", default-features = false }
-rlp = { version = "0.5", default-features = false }
-#getrandom = { version = "0.2.1", features = [ "js" ] }
+rlp = { version = "0.5.2", default-features = false }
 
 sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-std = { path = "../../../polkadot-sdk/substrate/primitives/std", default-features = false }

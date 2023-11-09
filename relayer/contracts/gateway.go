@@ -38,6 +38,7 @@ type InboundMessage struct {
 	MaxDispatchGas *big.Int
 	MaxRefund      *big.Int
 	Reward         *big.Int
+	Id             [32]byte
 }
 
 // VerificationDigestItem is an auto generated low-level Go binding around an user-defined struct.
@@ -84,7 +85,7 @@ type VerificationProof struct {
 
 // GatewayMetaData contains all meta data concerning the Gateway contract.
 var GatewayMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"}],\"name\":\"AgentCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"AgentFundsWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"name\":\"InboundMessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"enumOperatingMode\",\"name\":\"mode\",\"type\":\"uint8\"}],\"name\":\"OperatingModeChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"destination\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"OutboundMessageAccepted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"register\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"send\",\"type\":\"uint256\"}],\"name\":\"SetTokenTransferFees\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenRegistrationSent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"destinationAddress\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"TokenSent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"}],\"name\":\"agentOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelFeeOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelNoncesOf\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelOperatingModeOf\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"implementation\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"operatingMode\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"registerToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"destinationAddress\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"sendToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"destinationAddress\",\"type\":\"address\"},{\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"sendToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"enumCommand\",\"name\":\"command\",\"type\":\"uint8\"},{\"internalType\":\"bytes\",\"name\":\"params\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"maxDispatchGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxRefund\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"internalType\":\"structInboundMessage\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"components\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"stateRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"kind\",\"type\":\"uint256\"},{\"internalType\":\"bytes4\",\"name\":\"consensusEngineID\",\"type\":\"bytes4\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"internalType\":\"structVerification.DigestItem[]\",\"name\":\"digestItems\",\"type\":\"tuple[]\"}],\"internalType\":\"structVerification.ParachainHeader\",\"name\":\"header\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structVerification.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structVerification.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"leafProofOrder\",\"type\":\"uint256\"}],\"internalType\":\"structVerification.Proof\",\"name\":\"headerProof\",\"type\":\"tuple\"}],\"name\":\"submitInbound\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenTransferFees\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"}],\"name\":\"AgentCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"AgentFundsWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"ChannelUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"messageID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"name\":\"InboundMessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"enumOperatingMode\",\"name\":\"mode\",\"type\":\"uint8\"}],\"name\":\"OperatingModeChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"ParaID\",\"name\":\"destination\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"messageID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"OutboundMessageAccepted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenRegistrationSent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"destinationAddress\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"TokenSent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"register\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"send\",\"type\":\"uint256\"}],\"name\":\"TokenTransferFeesChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"agentID\",\"type\":\"bytes32\"}],\"name\":\"agentOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelFeeOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelNoncesOf\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ParaID\",\"name\":\"paraID\",\"type\":\"uint256\"}],\"name\":\"channelOperatingModeOf\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"implementation\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"operatingMode\",\"outputs\":[{\"internalType\":\"enumOperatingMode\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"registerToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"destinationAddress\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"sendToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"ParaID\",\"name\":\"destinationChain\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"destinationAddress\",\"type\":\"address\"},{\"internalType\":\"uint128\",\"name\":\"amount\",\"type\":\"uint128\"}],\"name\":\"sendToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"ParaID\",\"name\":\"origin\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"enumCommand\",\"name\":\"command\",\"type\":\"uint8\"},{\"internalType\":\"bytes\",\"name\":\"params\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"maxDispatchGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxRefund\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"id\",\"type\":\"bytes32\"}],\"internalType\":\"structInboundMessage\",\"name\":\"message\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"components\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"stateRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"kind\",\"type\":\"uint256\"},{\"internalType\":\"bytes4\",\"name\":\"consensusEngineID\",\"type\":\"bytes4\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"internalType\":\"structVerification.DigestItem[]\",\"name\":\"digestItems\",\"type\":\"tuple[]\"}],\"internalType\":\"structVerification.ParachainHeader\",\"name\":\"header\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structVerification.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structVerification.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"leafProofOrder\",\"type\":\"uint256\"}],\"internalType\":\"structVerification.Proof\",\"name\":\"headerProof\",\"type\":\"tuple\"}],\"name\":\"submitInbound\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenTransferFees\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // GatewayABI is the input ABI used to generate the binding from.
@@ -515,23 +516,23 @@ func (_Gateway *GatewayTransactorSession) SendToken0(token common.Address, desti
 	return _Gateway.Contract.SendToken0(&_Gateway.TransactOpts, token, destinationChain, destinationAddress, amount)
 }
 
-// SubmitInbound is a paid mutator transaction binding the contract method 0xa7397d76.
+// SubmitInbound is a paid mutator transaction binding the contract method 0x5a058f67.
 //
-// Solidity: function submitInbound((uint256,uint64,uint8,bytes,uint256,uint256,uint256) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof) returns()
+// Solidity: function submitInbound((uint256,uint64,uint8,bytes,uint256,uint256,uint256,bytes32) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof) returns()
 func (_Gateway *GatewayTransactor) SubmitInbound(opts *bind.TransactOpts, message InboundMessage, leafProof [][32]byte, headerProof VerificationProof) (*types.Transaction, error) {
 	return _Gateway.contract.Transact(opts, "submitInbound", message, leafProof, headerProof)
 }
 
-// SubmitInbound is a paid mutator transaction binding the contract method 0xa7397d76.
+// SubmitInbound is a paid mutator transaction binding the contract method 0x5a058f67.
 //
-// Solidity: function submitInbound((uint256,uint64,uint8,bytes,uint256,uint256,uint256) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof) returns()
+// Solidity: function submitInbound((uint256,uint64,uint8,bytes,uint256,uint256,uint256,bytes32) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof) returns()
 func (_Gateway *GatewaySession) SubmitInbound(message InboundMessage, leafProof [][32]byte, headerProof VerificationProof) (*types.Transaction, error) {
 	return _Gateway.Contract.SubmitInbound(&_Gateway.TransactOpts, message, leafProof, headerProof)
 }
 
-// SubmitInbound is a paid mutator transaction binding the contract method 0xa7397d76.
+// SubmitInbound is a paid mutator transaction binding the contract method 0x5a058f67.
 //
-// Solidity: function submitInbound((uint256,uint64,uint8,bytes,uint256,uint256,uint256) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof) returns()
+// Solidity: function submitInbound((uint256,uint64,uint8,bytes,uint256,uint256,uint256,bytes32) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof) returns()
 func (_Gateway *GatewayTransactorSession) SubmitInbound(message InboundMessage, leafProof [][32]byte, headerProof VerificationProof) (*types.Transaction, error) {
 	return _Gateway.Contract.SubmitInbound(&_Gateway.TransactOpts, message, leafProof, headerProof)
 }
@@ -1182,40 +1183,51 @@ func (it *GatewayInboundMessageDispatchedIterator) Close() error {
 
 // GatewayInboundMessageDispatched represents a InboundMessageDispatched event raised by the Gateway contract.
 type GatewayInboundMessageDispatched struct {
-	Origin  *big.Int
-	Nonce   uint64
-	Success bool
-	Raw     types.Log // Blockchain specific contextual infos
+	Origin    *big.Int
+	Nonce     uint64
+	MessageID [32]byte
+	Success   bool
+	Raw       types.Log // Blockchain specific contextual infos
 }
 
-// FilterInboundMessageDispatched is a free log retrieval operation binding the contract event 0xc413674585e5f4244fd69ce2c9587aac57f3fdaf6b337a1f39317d2ffa1279f1.
+// FilterInboundMessageDispatched is a free log retrieval operation binding the contract event 0xe88d4734b8bcb71455d9b1ece51ef7aae126a1b670e20b299eb98d606ff7a5dc.
 //
-// Solidity: event InboundMessageDispatched(uint256 indexed origin, uint64 nonce, bool success)
-func (_Gateway *GatewayFilterer) FilterInboundMessageDispatched(opts *bind.FilterOpts, origin []*big.Int) (*GatewayInboundMessageDispatchedIterator, error) {
+// Solidity: event InboundMessageDispatched(uint256 indexed origin, uint64 nonce, bytes32 indexed messageID, bool success)
+func (_Gateway *GatewayFilterer) FilterInboundMessageDispatched(opts *bind.FilterOpts, origin []*big.Int, messageID [][32]byte) (*GatewayInboundMessageDispatchedIterator, error) {
 
 	var originRule []interface{}
 	for _, originItem := range origin {
 		originRule = append(originRule, originItem)
 	}
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "InboundMessageDispatched", originRule)
+	var messageIDRule []interface{}
+	for _, messageIDItem := range messageID {
+		messageIDRule = append(messageIDRule, messageIDItem)
+	}
+
+	logs, sub, err := _Gateway.contract.FilterLogs(opts, "InboundMessageDispatched", originRule, messageIDRule)
 	if err != nil {
 		return nil, err
 	}
 	return &GatewayInboundMessageDispatchedIterator{contract: _Gateway.contract, event: "InboundMessageDispatched", logs: logs, sub: sub}, nil
 }
 
-// WatchInboundMessageDispatched is a free log subscription operation binding the contract event 0xc413674585e5f4244fd69ce2c9587aac57f3fdaf6b337a1f39317d2ffa1279f1.
+// WatchInboundMessageDispatched is a free log subscription operation binding the contract event 0xe88d4734b8bcb71455d9b1ece51ef7aae126a1b670e20b299eb98d606ff7a5dc.
 //
-// Solidity: event InboundMessageDispatched(uint256 indexed origin, uint64 nonce, bool success)
-func (_Gateway *GatewayFilterer) WatchInboundMessageDispatched(opts *bind.WatchOpts, sink chan<- *GatewayInboundMessageDispatched, origin []*big.Int) (event.Subscription, error) {
+// Solidity: event InboundMessageDispatched(uint256 indexed origin, uint64 nonce, bytes32 indexed messageID, bool success)
+func (_Gateway *GatewayFilterer) WatchInboundMessageDispatched(opts *bind.WatchOpts, sink chan<- *GatewayInboundMessageDispatched, origin []*big.Int, messageID [][32]byte) (event.Subscription, error) {
 
 	var originRule []interface{}
 	for _, originItem := range origin {
 		originRule = append(originRule, originItem)
 	}
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "InboundMessageDispatched", originRule)
+	var messageIDRule []interface{}
+	for _, messageIDItem := range messageID {
+		messageIDRule = append(messageIDRule, messageIDItem)
+	}
+
+	logs, sub, err := _Gateway.contract.WatchLogs(opts, "InboundMessageDispatched", originRule, messageIDRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1247,9 +1259,9 @@ func (_Gateway *GatewayFilterer) WatchInboundMessageDispatched(opts *bind.WatchO
 	}), nil
 }
 
-// ParseInboundMessageDispatched is a log parse operation binding the contract event 0xc413674585e5f4244fd69ce2c9587aac57f3fdaf6b337a1f39317d2ffa1279f1.
+// ParseInboundMessageDispatched is a log parse operation binding the contract event 0xe88d4734b8bcb71455d9b1ece51ef7aae126a1b670e20b299eb98d606ff7a5dc.
 //
-// Solidity: event InboundMessageDispatched(uint256 indexed origin, uint64 nonce, bool success)
+// Solidity: event InboundMessageDispatched(uint256 indexed origin, uint64 nonce, bytes32 indexed messageID, bool success)
 func (_Gateway *GatewayFilterer) ParseInboundMessageDispatched(log types.Log) (*GatewayInboundMessageDispatched, error) {
 	event := new(GatewayInboundMessageDispatched)
 	if err := _Gateway.contract.UnpackLog(event, "InboundMessageDispatched", log); err != nil {
@@ -1464,38 +1476,49 @@ func (it *GatewayOutboundMessageAcceptedIterator) Close() error {
 type GatewayOutboundMessageAccepted struct {
 	Destination *big.Int
 	Nonce       uint64
+	MessageID   [32]byte
 	Payload     []byte
 	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterOutboundMessageAccepted is a free log retrieval operation binding the contract event 0xd56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fece.
+// FilterOutboundMessageAccepted is a free log retrieval operation binding the contract event 0x5066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169.
 //
-// Solidity: event OutboundMessageAccepted(uint256 indexed destination, uint64 nonce, bytes payload)
-func (_Gateway *GatewayFilterer) FilterOutboundMessageAccepted(opts *bind.FilterOpts, destination []*big.Int) (*GatewayOutboundMessageAcceptedIterator, error) {
+// Solidity: event OutboundMessageAccepted(uint256 indexed destination, uint64 nonce, bytes32 indexed messageID, bytes payload)
+func (_Gateway *GatewayFilterer) FilterOutboundMessageAccepted(opts *bind.FilterOpts, destination []*big.Int, messageID [][32]byte) (*GatewayOutboundMessageAcceptedIterator, error) {
 
 	var destinationRule []interface{}
 	for _, destinationItem := range destination {
 		destinationRule = append(destinationRule, destinationItem)
 	}
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "OutboundMessageAccepted", destinationRule)
+	var messageIDRule []interface{}
+	for _, messageIDItem := range messageID {
+		messageIDRule = append(messageIDRule, messageIDItem)
+	}
+
+	logs, sub, err := _Gateway.contract.FilterLogs(opts, "OutboundMessageAccepted", destinationRule, messageIDRule)
 	if err != nil {
 		return nil, err
 	}
 	return &GatewayOutboundMessageAcceptedIterator{contract: _Gateway.contract, event: "OutboundMessageAccepted", logs: logs, sub: sub}, nil
 }
 
-// WatchOutboundMessageAccepted is a free log subscription operation binding the contract event 0xd56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fece.
+// WatchOutboundMessageAccepted is a free log subscription operation binding the contract event 0x5066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169.
 //
-// Solidity: event OutboundMessageAccepted(uint256 indexed destination, uint64 nonce, bytes payload)
-func (_Gateway *GatewayFilterer) WatchOutboundMessageAccepted(opts *bind.WatchOpts, sink chan<- *GatewayOutboundMessageAccepted, destination []*big.Int) (event.Subscription, error) {
+// Solidity: event OutboundMessageAccepted(uint256 indexed destination, uint64 nonce, bytes32 indexed messageID, bytes payload)
+func (_Gateway *GatewayFilterer) WatchOutboundMessageAccepted(opts *bind.WatchOpts, sink chan<- *GatewayOutboundMessageAccepted, destination []*big.Int, messageID [][32]byte) (event.Subscription, error) {
 
 	var destinationRule []interface{}
 	for _, destinationItem := range destination {
 		destinationRule = append(destinationRule, destinationItem)
 	}
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "OutboundMessageAccepted", destinationRule)
+	var messageIDRule []interface{}
+	for _, messageIDItem := range messageID {
+		messageIDRule = append(messageIDRule, messageIDItem)
+	}
+
+	logs, sub, err := _Gateway.contract.WatchLogs(opts, "OutboundMessageAccepted", destinationRule, messageIDRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1527,147 +1550,12 @@ func (_Gateway *GatewayFilterer) WatchOutboundMessageAccepted(opts *bind.WatchOp
 	}), nil
 }
 
-// ParseOutboundMessageAccepted is a log parse operation binding the contract event 0xd56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fece.
+// ParseOutboundMessageAccepted is a log parse operation binding the contract event 0x5066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169.
 //
-// Solidity: event OutboundMessageAccepted(uint256 indexed destination, uint64 nonce, bytes payload)
+// Solidity: event OutboundMessageAccepted(uint256 indexed destination, uint64 nonce, bytes32 indexed messageID, bytes payload)
 func (_Gateway *GatewayFilterer) ParseOutboundMessageAccepted(log types.Log) (*GatewayOutboundMessageAccepted, error) {
 	event := new(GatewayOutboundMessageAccepted)
 	if err := _Gateway.contract.UnpackLog(event, "OutboundMessageAccepted", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// GatewaySetTokenTransferFeesIterator is returned from FilterSetTokenTransferFees and is used to iterate over the raw logs and unpacked data for SetTokenTransferFees events raised by the Gateway contract.
-type GatewaySetTokenTransferFeesIterator struct {
-	Event *GatewaySetTokenTransferFees // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *GatewaySetTokenTransferFeesIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(GatewaySetTokenTransferFees)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(GatewaySetTokenTransferFees)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *GatewaySetTokenTransferFeesIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *GatewaySetTokenTransferFeesIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// GatewaySetTokenTransferFees represents a SetTokenTransferFees event raised by the Gateway contract.
-type GatewaySetTokenTransferFees struct {
-	Register *big.Int
-	Send     *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterSetTokenTransferFees is a free log retrieval operation binding the contract event 0xe1a86b0b703265be7e2b8f52a38625965fc66f6d52413944bdb9c815caaa932a.
-//
-// Solidity: event SetTokenTransferFees(uint256 register, uint256 send)
-func (_Gateway *GatewayFilterer) FilterSetTokenTransferFees(opts *bind.FilterOpts) (*GatewaySetTokenTransferFeesIterator, error) {
-
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "SetTokenTransferFees")
-	if err != nil {
-		return nil, err
-	}
-	return &GatewaySetTokenTransferFeesIterator{contract: _Gateway.contract, event: "SetTokenTransferFees", logs: logs, sub: sub}, nil
-}
-
-// WatchSetTokenTransferFees is a free log subscription operation binding the contract event 0xe1a86b0b703265be7e2b8f52a38625965fc66f6d52413944bdb9c815caaa932a.
-//
-// Solidity: event SetTokenTransferFees(uint256 register, uint256 send)
-func (_Gateway *GatewayFilterer) WatchSetTokenTransferFees(opts *bind.WatchOpts, sink chan<- *GatewaySetTokenTransferFees) (event.Subscription, error) {
-
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "SetTokenTransferFees")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(GatewaySetTokenTransferFees)
-				if err := _Gateway.contract.UnpackLog(event, "SetTokenTransferFees", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseSetTokenTransferFees is a log parse operation binding the contract event 0xe1a86b0b703265be7e2b8f52a38625965fc66f6d52413944bdb9c815caaa932a.
-//
-// Solidity: event SetTokenTransferFees(uint256 register, uint256 send)
-func (_Gateway *GatewayFilterer) ParseSetTokenTransferFees(log types.Log) (*GatewaySetTokenTransferFees, error) {
-	event := new(GatewaySetTokenTransferFees)
-	if err := _Gateway.contract.UnpackLog(event, "SetTokenTransferFees", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1958,6 +1846,141 @@ func (_Gateway *GatewayFilterer) WatchTokenSent(opts *bind.WatchOpts, sink chan<
 func (_Gateway *GatewayFilterer) ParseTokenSent(log types.Log) (*GatewayTokenSent, error) {
 	event := new(GatewayTokenSent)
 	if err := _Gateway.contract.UnpackLog(event, "TokenSent", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// GatewayTokenTransferFeesChangedIterator is returned from FilterTokenTransferFeesChanged and is used to iterate over the raw logs and unpacked data for TokenTransferFeesChanged events raised by the Gateway contract.
+type GatewayTokenTransferFeesChangedIterator struct {
+	Event *GatewayTokenTransferFeesChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GatewayTokenTransferFeesChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GatewayTokenTransferFeesChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GatewayTokenTransferFeesChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GatewayTokenTransferFeesChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GatewayTokenTransferFeesChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GatewayTokenTransferFeesChanged represents a TokenTransferFeesChanged event raised by the Gateway contract.
+type GatewayTokenTransferFeesChanged struct {
+	Register *big.Int
+	Send     *big.Int
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterTokenTransferFeesChanged is a free log retrieval operation binding the contract event 0xf8b9e90b8d22eedd745a43851ee14b456fc1ca0e7248defe1ee10a9619c897ed.
+//
+// Solidity: event TokenTransferFeesChanged(uint256 register, uint256 send)
+func (_Gateway *GatewayFilterer) FilterTokenTransferFeesChanged(opts *bind.FilterOpts) (*GatewayTokenTransferFeesChangedIterator, error) {
+
+	logs, sub, err := _Gateway.contract.FilterLogs(opts, "TokenTransferFeesChanged")
+	if err != nil {
+		return nil, err
+	}
+	return &GatewayTokenTransferFeesChangedIterator{contract: _Gateway.contract, event: "TokenTransferFeesChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchTokenTransferFeesChanged is a free log subscription operation binding the contract event 0xf8b9e90b8d22eedd745a43851ee14b456fc1ca0e7248defe1ee10a9619c897ed.
+//
+// Solidity: event TokenTransferFeesChanged(uint256 register, uint256 send)
+func (_Gateway *GatewayFilterer) WatchTokenTransferFeesChanged(opts *bind.WatchOpts, sink chan<- *GatewayTokenTransferFeesChanged) (event.Subscription, error) {
+
+	logs, sub, err := _Gateway.contract.WatchLogs(opts, "TokenTransferFeesChanged")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GatewayTokenTransferFeesChanged)
+				if err := _Gateway.contract.UnpackLog(event, "TokenTransferFeesChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTokenTransferFeesChanged is a log parse operation binding the contract event 0xf8b9e90b8d22eedd745a43851ee14b456fc1ca0e7248defe1ee10a9619c897ed.
+//
+// Solidity: event TokenTransferFeesChanged(uint256 register, uint256 send)
+func (_Gateway *GatewayFilterer) ParseTokenTransferFeesChanged(log types.Log) (*GatewayTokenTransferFeesChanged, error) {
+	event := new(GatewayTokenTransferFeesChanged)
+	if err := _Gateway.contract.UnpackLog(event, "TokenTransferFeesChanged", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

@@ -30,41 +30,41 @@ mod benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
 use snowbridge_beacon_primitives::CompactExecutionHeader;
-#[cfg(feature = "runtime-benchmarks")]
-use snowbridge_ethereum::H256;
 
 pub mod weights;
 
 #[cfg(test)]
 mod test;
 
+use alloy_rlp::Decodable as RlpDecodable;
 use codec::{Decode, DecodeAll, Encode};
+use envelope::{Envelope, Log};
 use frame_support::{
-	traits::fungible::{Inspect, Mutate},
+	traits::{
+		fungible::{Inspect, Mutate},
+		tokens::Preservation,
+	},
+	weights::WeightToFee,
 	PalletError,
 };
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
-use sp_core::H160;
-use sp_std::convert::TryFrom;
+use sp_core::{H160, H256};
+use sp_std::{convert::TryFrom, vec};
 use xcm::prelude::{
-	send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, SendXcm, Xcm,
-	XcmHash,
+	send_xcm, Instruction::SetTopic, Junction::*, Junctions::*, MultiLocation,
+	SendError as XcmpSendError, SendXcm, Xcm, XcmHash,
 };
 
-use envelope::Envelope;
 use snowbridge_core::{
-	inbound::{Message, Verifier},
+	inbound::{Message, VerificationError, Verifier},
 	sibling_sovereign_account, BasicOperatingMode, ParaId,
 };
 use snowbridge_router_primitives::{
 	inbound,
 	inbound::{ConvertMessage, ConvertMessageError},
 };
-
 use sp_runtime::traits::Saturating;
-
-use frame_support::{traits::tokens::Preservation, weights::WeightToFee};
 
 pub use weights::WeightInfo;
 
@@ -136,8 +136,8 @@ pub mod pallet {
 			dest: ParaId,
 			/// The message nonce
 			nonce: u64,
-			/// XCM hash
-			xcm_hash: XcmHash,
+			/// ID of the XCM message which was forwarded to the final destination parachain
+			message_id: [u8; 32],
 		},
 		/// Set OperatingMode
 		OperatingModeChanged { mode: BasicOperatingMode },
@@ -159,6 +159,8 @@ pub mod pallet {
 		InvalidAccountConversion,
 		/// Pallet is halted
 		Halted,
+		/// Message verification error,
+		Verification(VerificationError),
 		/// XCMP send failure
 		Send(SendError),
 		/// Message conversion error
@@ -211,7 +213,10 @@ pub mod pallet {
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
 			// submit message to verifier for verification
-			let log = T::Verifier::verify(&message)?;
+			T::Verifier::verify(&message).map_err(|e| Error::<T>::Verification(e))?;
+
+			let log = Log::decode(&mut message.data.as_slice())
+				.map_err(|_| Error::<T>::InvalidEnvelope)?;
 
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
@@ -245,17 +250,17 @@ pub mod pallet {
 
 			// Decode message into XCM
 			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-				Ok(message) => Self::do_convert(message)?,
+				Ok(message) => Self::do_convert(envelope.message_id, message)?,
 				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 			};
 
 			// Attempt to send XCM to a dest parachain
-			let xcm_hash = Self::send_xcm(xcm, envelope.dest)?;
+			let message_id = Self::send_xcm(xcm, envelope.dest)?;
 
 			Self::deposit_event(Event::MessageReceived {
 				dest: envelope.dest,
 				nonce: envelope.nonce,
-				xcm_hash,
+				message_id,
 			});
 
 			Ok(())
@@ -276,9 +281,14 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		pub fn do_convert(message: inbound::VersionedMessage) -> Result<Xcm<()>, Error<T>> {
-			let xcm =
+		pub fn do_convert(
+			message_id: H256,
+			message: inbound::VersionedMessage,
+		) -> Result<Xcm<()>, Error<T>> {
+			let mut xcm =
 				T::MessageConverter::convert(message).map_err(|e| Error::<T>::ConvertMessage(e))?;
+			// Append the message id as an XCM topic
+			xcm.inner_mut().extend(vec![SetTopic(message_id.into())]);
 			Ok(xcm)
 		}
 

@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use ethabi::{Event, Param, ParamKind, Token};
 use snowbridge_core::ParaId;
-use snowbridge_ethereum::{log::Log, H160};
 
-use sp_core::RuntimeDebug;
+use sp_core::{RuntimeDebug, H160, H256};
 use sp_std::{convert::TryFrom, prelude::*};
 
-// Used to decode an OutboundMessageAccepted log into an [`Envelope`].
-static EVENT_ABI: &Event = &Event {
-	signature: "OutboundMessageAccepted(uint256,uint64,bytes)",
-	inputs: &[
-		Param { kind: ParamKind::Uint(256), indexed: true },
-		Param { kind: ParamKind::Uint(64), indexed: false },
-		Param { kind: ParamKind::Bytes, indexed: false },
-	],
-	anonymous: false,
-};
+use alloy_primitives::{Address, Bytes, B256};
+use alloy_rlp::RlpDecodable;
+use alloy_sol_types::{sol, SolEvent};
+
+#[derive(RlpDecodable, RuntimeDebug)]
+pub struct Log {
+	pub address: Address,
+	pub topics: Vec<B256>,
+	pub data: Bytes,
+}
+
+sol! {
+	event OutboundMessageAccepted(uint256 indexed destination, uint64 nonce, bytes32 indexed messageID, bytes payload);
+}
 
 /// An inbound message that has had its outer envelope decoded.
 #[derive(Clone, RuntimeDebug)]
@@ -27,36 +29,28 @@ pub struct Envelope {
 	pub dest: ParaId,
 	/// A nonce for enforcing replay protection and ordering.
 	pub nonce: u64,
+	/// An id for tracing the message on its route (has no role in bridge consensus)
+	pub message_id: H256,
 	/// The inner payload generated from the source application.
 	pub payload: Vec<u8>,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Copy, Clone, RuntimeDebug)]
 pub struct EnvelopeDecodeError;
 
 impl TryFrom<Log> for Envelope {
 	type Error = EnvelopeDecodeError;
 
 	fn try_from(log: Log) -> Result<Self, Self::Error> {
-		let tokens = EVENT_ABI.decode(log.topics, log.data).map_err(|_| EnvelopeDecodeError)?;
+		let event = OutboundMessageAccepted::decode_log(log.topics, &log.data, true)
+			.map_err(|_| EnvelopeDecodeError)?;
 
-		let mut iter = tokens.into_iter();
-
-		let dest = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Uint(dest) => dest.low_u32().into(),
-			_ => return Err(EnvelopeDecodeError),
-		};
-
-		let nonce = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Uint(nonce) => nonce.low_u64(),
-			_ => return Err(EnvelopeDecodeError),
-		};
-
-		let payload = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Bytes(payload) => payload,
-			_ => return Err(EnvelopeDecodeError),
-		};
-
-		Ok(Self { gateway: log.address, dest, nonce, payload })
+		Ok(Self {
+			gateway: H160::from(log.address.as_ref()),
+			dest: event.destination.saturating_to::<u32>().into(),
+			nonce: event.nonce,
+			message_id: H256::from(event.messageID.as_ref()),
+			payload: event.payload,
+		})
 	}
 }

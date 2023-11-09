@@ -25,7 +25,6 @@ where
 	UniversalLocation: Get<InteriorMultiLocation>,
 	EthereumNetwork: Get<NetworkId>,
 	OutboundQueue: SendMessage<Balance = u128>,
-	OutboundQueue::Ticket: Encode + Decode,
 	AgentHashedDescription: ConvertLocation<H256>,
 {
 	type Ticket = (Vec<u8>, XcmHash);
@@ -82,7 +81,7 @@ where
 		})?;
 
 		let mut converter = XcmConverter::new(&message, &expected_network);
-		let agent_execute_command = converter.convert().map_err(|err|{
+		let (agent_execute_command, message_id) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
@@ -98,6 +97,7 @@ where
 		};
 
 		let outbound_message = Message {
+			id: Some(message_id.into()),
 			origin: para_id.into(),
 			command: Command::AgentExecute { agent_id, command: agent_execute_command },
 		};
@@ -111,7 +111,7 @@ where
 		// convert fee to MultiAsset
 		let fee = MultiAsset::from((MultiLocation::parent(), fee.total())).into();
 
-		Ok(((ticket.encode(), XcmHash::default()), fee))
+		Ok(((ticket.encode(), message_id), fee))
 	}
 
 	fn deliver(blob: (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {
@@ -121,13 +121,13 @@ where
 				SendError::NotApplicable
 			})?;
 
-		let message_hash = OutboundQueue::deliver(ticket).map_err(|_| {
+		let message_id = OutboundQueue::deliver(ticket).map_err(|_| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue submit of message failed");
 			SendError::Transport("other transport error")
 		})?;
 
-		log::info!(target: "xcm::ethereum_blob_exporter", "message delivered {message_hash:#?}.");
-		Ok(message_hash.into())
+		log::info!(target: "xcm::ethereum_blob_exporter", "message delivered {message_id:#?}.");
+		Ok(message_id.into())
 	}
 }
 
@@ -166,7 +166,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Self { iter: message.inner().iter().peekable(), ethereum_network }
 	}
 
-	fn convert(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
+	fn convert(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
 		// Get withdraw/deposit and make native tokens create message.
 		let result = self.native_tokens_unlock_message()?;
 
@@ -178,7 +178,9 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(result)
 	}
 
-	fn native_tokens_unlock_message(&mut self) -> Result<AgentExecuteCommand, XcmConverterError> {
+	fn native_tokens_unlock_message(
+		&mut self,
+	) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
 		use XcmConverterError::*;
 
 		// Get the reserve assets from WithdrawAsset.
@@ -249,10 +251,9 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		ensure!(amount > 0, ZeroAssetTransfer);
 
 		// Check if there is a SetTopic and skip over it if found.
-		let _topic_id =
-			match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
+		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
-		Ok(AgentExecuteCommand::TransferToken { token, recipient, amount })
+		Ok((AgentExecuteCommand::TransferToken { token, recipient, amount }, *topic_id))
 	}
 
 	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {
@@ -285,6 +286,7 @@ mod tests {
 	use super::*;
 
 	parameter_types! {
+		const MaxMessageSize: u32 = u32::MAX;
 		const RelayNetwork: NetworkId = Polkadot;
 		const UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(1013));
 		const BridgedNetwork: NetworkId =  Ethereum{ chain_id: 1 };
@@ -296,7 +298,7 @@ mod tests {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Fee<Self::Balance>), SendError> {
+		fn validate(_: &Message) -> Result<(Self::Ticket, Fee<Self::Balance>), SendError> {
 			Ok(((), Fee { local: 1, remote: 1 }))
 		}
 
@@ -309,7 +311,7 @@ mod tests {
 		type Ticket = ();
 		type Balance = u128;
 
-		fn validate(_: &Message) -> Result<((), Fee<Self::Balance>), SendError> {
+		fn validate(_: &Message) -> Result<(Self::Ticket, Fee<Self::Balance>), SendError> {
 			Err(SendError::MessageTooLarge)
 		}
 
@@ -683,7 +685,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok(expected_payload));
+		assert_eq!(result, Ok((expected_payload, [0; 32])));
 	}
 
 	#[test]
@@ -716,7 +718,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok(expected_payload));
+		assert_eq!(result, Ok((expected_payload, [0; 32])));
 	}
 
 	#[test]
@@ -751,7 +753,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok(expected_payload));
+		assert_eq!(result, Ok((expected_payload, [0; 32])));
 	}
 
 	#[test]
@@ -787,7 +789,7 @@ mod tests {
 			amount: 1000,
 		};
 		let result = converter.convert();
-		assert_eq!(result, Ok(expected_payload));
+		assert_eq!(result, Ok((expected_payload, [0; 32])));
 	}
 
 	#[test]
