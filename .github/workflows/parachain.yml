@@ -100,7 +100,7 @@ jobs:
           --package snowbridge-ethereum-beacon-client
 
   coverage:
-    needs: check
+    needs: test
     runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
@@ -130,6 +130,7 @@ jobs:
           flags: rust
 
   check-cumulus-bridgehub:
+    needs: check
     runs-on: snowbridge-runner
     steps:
       - uses: actions/checkout@v2
@@ -148,6 +149,25 @@ jobs:
           --package bridge-hub-rococo-runtime
           --features runtime-benchmarks
 
+  runtime-tests:
+    needs: test
+    runs-on: snowbridge-runner
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: "true"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: setup rust toolchain
+        run: rustup show
+      - name: snowbridge runtime tests
+        run: >
+          cargo test 
+          --manifest-path parachain/Cargo.toml
+          -p snowbridge-runtime-tests
+          -- --nocapture
+
   integration-tests:
     needs: test
     runs-on: snowbridge-runner
@@ -160,11 +180,12 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: setup rust toolchain
         run: rustup show
-      - name: snowbridge integration
+      - name: snowbridge integration tests
         run: >
           cargo test 
           --manifest-path polkadot-sdk/Cargo.toml
-          -p bridge-hub-rococo-integration-tests
+          -p bridge-hub-rococo-integration-tests snowbridge
+          -- --nocapture
 
   beacon-fuzz:
     if: false
