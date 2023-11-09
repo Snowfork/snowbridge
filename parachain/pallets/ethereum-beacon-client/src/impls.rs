@@ -41,9 +41,7 @@ impl<T: Config> Verifier for Pallet<T> {
 			proof.tx_index, proof.block_hash,
 		);
 
-		if event_log.topics.len() > MAX_LOG_TOPICS {
-			return Err(InvalidLog)
-		}
+		event_log.validate().map_err(|_| InvalidLog)?;
 
 		// Convert snowbridge_core::inbound::Log to snowbridge_ethereum::Log.
 		let event_log = snowbridge_ethereum::Log {

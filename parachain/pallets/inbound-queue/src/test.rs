@@ -10,7 +10,7 @@ use frame_support::{
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::{
-	inbound::{Message, Proof, VerificationError},
+	inbound::{Log, Proof, VerificationError},
 	ParaId,
 };
 use snowbridge_router_primitives::inbound::MessageToXcm;
@@ -120,7 +120,7 @@ impl snowbridge_ethereum_beacon_client::Config for Test {
 pub struct MockVerifier;
 
 impl Verifier for MockVerifier {
-	fn verify(_: &Message) -> Result<(), VerificationError> {
+	fn verify(_: &Log, _: &Proof) -> Result<(), VerificationError> {
 		Ok(())
 	}
 }
@@ -219,26 +219,57 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	ext
 }
 
-// dest para is 1000
-const OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
-	"
-	f8fc94eda338e4dc46038493b885327842fd3e301cab39f863a05066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169a000000000000000000000000000000000000000000000000000000000000003e8a0afad3c9777134532ae230b4fad334eef2e0dacbb965920412a7eaa59b07d640fb88000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000
-	"
-);
+// Generated from smoketests:
+//   cd smoketests
+//   ./make-bindings
+//   cargo test --test register_token -- --nocapture
+fn mock_event_log() -> Log {
+	Log {
+		// gateway address
+		address: hex!("eda338e4dc46038493b885327842fd3e301cab39").into(),
+		topics: vec![
+			hex!("5066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169").into(),
+			// destination parachain id
+			hex!("00000000000000000000000000000000000000000000000000000000000003e8").into(),
+			// message id
+			hex!("afad3c9777134532ae230b4fad334eef2e0dacbb965920412a7eaa59b07d640f").into(),
+		],
+		// Nonce + Payload
+		data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000").into(),
+	}
+}
 
-// dest para is 1001
-const OUTBOUND_QUEUE_EVENT_LOG_INVALID_DEST: [u8; 254] = hex!(
-	"
-	f8fc94eda338e4dc46038493b885327842fd3e301cab39f863a05066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169a000000000000000000000000000000000000000000000000000000000000003e9a0afad3c9777134532ae230b4fad334eef2e0dacbb965920412a7eaa59b07d640fb88000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000
-	"
-);
+fn mock_event_log_invalid_dest() -> Log {
+	Log {
+		// gateway address
+		address: hex!("eda338e4dc46038493b885327842fd3e301cab39").into(),
+		topics: vec![
+			hex!("5066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169").into(),
+			// destination parachain id
+			hex!("00000000000000000000000000000000000000000000000000000000000003e9").into(),
+			// message id
+			hex!("afad3c9777134532ae230b4fad334eef2e0dacbb965920412a7eaa59b07d640f").into(),
+		],
+		// Nonce + Payload
+		data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000").into(),
+	}
+}
 
-// gateway in message does not match configured gateway in runtimeå
-const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
-	"
-	f8fc940000000000000000000000000000000000000000f863a05066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169a000000000000000000000000000000000000000000000000000000000000003e8a0afad3c9777134532ae230b4fad334eef2e0dacbb965920412a7eaa59b07d640fb88000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000
-	"
-);
+fn mock_event_log_invalid_gateway() -> Log {
+	Log {
+		// gateway address
+		address: H160::zero(),
+		topics: vec![
+			hex!("5066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169").into(),
+			// destination parachain id
+			hex!("00000000000000000000000000000000000000000000000000000000000003e8").into(),
+			// message id
+			hex!("afad3c9777134532ae230b4fad334eef2e0dacbb965920412a7eaa59b07d640f").into(),
+		],
+		// Nonce + Payload
+		data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000").into(),
+	}
+}
 
 const XCM_HASH: [u8; 32] = [
 	201, 101, 244, 67, 153, 61, 253, 203, 92, 23, 197, 172, 112, 209, 53, 248, 118, 25, 253, 110,
@@ -260,7 +291,7 @@ fn test_submit_happy_path() {
 
 		// Submit message
 		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			event_log: mock_event_log(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -271,6 +302,8 @@ fn test_submit_happy_path() {
 		expect_events(vec![InboundQueueEvent::MessageReceived {
 			dest: ASSET_HUB_PARAID.into(),
 			nonce: 1,
+			// The production runtime configuration will actually bubble up the embedded SetTopic as
+			// the messageID. So this XCM_HASH is only for unit tests.
 			message_id: XCM_HASH,
 		}
 		.into()]);
@@ -290,7 +323,7 @@ fn test_submit_xcm_send_failure() {
 
 		// Submit message
 		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG_INVALID_DEST.into(),
+			event_log: mock_event_log_invalid_dest(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -316,7 +349,7 @@ fn test_submit_with_invalid_gateway() {
 
 		// Submit message
 		let message = Message {
-			data: BAD_OUTBOUND_QUEUE_EVENT_LOG.into(),
+			event_log: mock_event_log_invalid_gateway(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -342,7 +375,7 @@ fn test_submit_with_invalid_nonce() {
 
 		// Submit message
 		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			event_log: mock_event_log(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -374,7 +407,7 @@ fn test_submit_no_funds_to_reward_relayers() {
 
 		// Submit message
 		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			event_log: mock_event_log(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -394,7 +427,7 @@ fn test_set_operating_mode() {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			event_log: mock_event_log(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),

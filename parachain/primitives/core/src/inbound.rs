@@ -19,9 +19,9 @@ pub trait Verifier {
 pub enum VerificationError {
 	/// Execution header is missing
 	HeaderNotFound,
-	/// Log was not found in the verified transaction receipt
+	/// Event log was not found in the verified transaction receipt
 	LogNotFound,
-	/// Data payload does not decode into a valid Log
+	/// Event log has an invalid format
 	InvalidLog,
 	/// Unable to verify the transaction receipt with the provided proof
 	InvalidProof,
@@ -32,19 +32,34 @@ pub type MessageNonce = u64;
 /// A bridge message from the Gateway contract on Ethereum
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Message {
-	/// Event log
-	pub data: Log,
+	/// Event log emitted by Gateway contract
+	pub event_log: Log,
 	/// Inclusion proof for a transaction receipt containing the event log
 	pub proof: Proof,
 }
 
+const MAX_TOPICS: usize = 4;
+
+#[derive(Clone, RuntimeDebug)]
+pub enum LogValidationError {
+	TooManyTopics,
+}
+
 /// Event log
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(PartialEq))]
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Log {
 	pub address: H160,
 	pub topics: Vec<H256>,
 	pub data: Vec<u8>,
+}
+
+impl Log {
+	pub fn validate(&self) -> Result<(), LogValidationError> {
+		if self.topics.len() > MAX_TOPICS {
+			return Err(LogValidationError::TooManyTopics)
+		}
+		Ok(())
+	}
 }
 
 /// Inclusion proof for a transaction receipt

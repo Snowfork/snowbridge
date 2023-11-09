@@ -56,7 +56,7 @@ use xcm::prelude::{
 };
 
 use snowbridge_core::{
-	inbound::{Log, Message, VerificationError, Verifier},
+	inbound::{Message, VerificationError, Verifier},
 	sibling_sovereign_account, BasicOperatingMode, ParaId,
 };
 use snowbridge_router_primitives::{
@@ -212,12 +212,12 @@ pub mod pallet {
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
 			// submit message to verifier for verification
-			T::Verifier::verify(&message.data, &message.proof)
+			T::Verifier::verify(&message.event_log, &message.proof)
 				.map_err(|e| Error::<T>::Verification(e))?;
 
 			// Decode event log into an Envelope
 			let envelope =
-				Envelope::try_from(message.data).map_err(|_| Error::<T>::InvalidEnvelope)?;
+				Envelope::try_from(message.event_log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
 			// Verify that the message was submitted from the known Gateway contract
 			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway,);
