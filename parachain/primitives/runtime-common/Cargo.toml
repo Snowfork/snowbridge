@@ -1,0 +1,35 @@
+[package]
+name = "snowbridge-runtime-common"
+version = "0.1.1"
+authors = [ "Snowfork <contact@snowfork.com>" ]
+edition = "2021"
+
+[dependencies]
+log = { version = "0.4.20", default-features = false }
+
+bp-rococo = { path = "../../../polkadot-sdk/bridges/primitives/chain-rococo", default-features = false }
+frame-support = { path = "../../../polkadot-sdk/substrate/frame/support", default-features = false }
+xcm = { package = "staging-xcm", path = "../../../polkadot-sdk/polkadot/xcm", default-features = false }
+xcm-builder = { package = "staging-xcm-builder", path = "../../../polkadot-sdk/polkadot/xcm/xcm-builder", default-features = false }
+xcm-executor = { package = "staging-xcm-executor", path = "../../../polkadot-sdk/polkadot/xcm/xcm-executor", default-features = false }
+
+snowbridge-core = { path = "../core", default-features = false }
+
+[dev-dependencies]
+
+[features]
+default = [ "std" ]
+std = [
+	"bp-rococo/std",
+    "frame-support/std",
+    "snowbridge-core/std",
+    "xcm-builder/std",
+    "xcm-executor/std",
+    "xcm/std",
+]
+runtime-benchmarks = [
+    "frame-support/runtime-benchmarks",
+    "snowbridge-core/runtime-benchmarks",
+    "xcm-builder/runtime-benchmarks",
+    "xcm-executor/runtime-benchmarks",
+]
