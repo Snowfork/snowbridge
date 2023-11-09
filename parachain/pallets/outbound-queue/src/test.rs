@@ -8,8 +8,12 @@ use frame_support::{
 	weights::WeightMeter,
 };
 
+use bridge_hub_common::{
+	AggregateMessageOrigin, AggregateMessageOrigin::Snowbridge, SnowbridgeMessageOrigin,
+	SnowbridgeMessageOrigin::Sibling,
+};
 use codec::Encode;
-use snowbridge_core::outbound::{Command, SendError, SendMessage, SnowbridgeMessageOrigin};
+use snowbridge_core::outbound::{Command, SendError, SendMessage};
 use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError};
 
@@ -158,11 +162,9 @@ fn set_fee_config_invalid() {
 
 #[test]
 fn low_priority_messages_are_processed_last() {
-	use AggregateMessageOrigin::*;
-	use SnowbridgeMessageOrigin::*;
-
 	let sibling_id = 1000;
-	let high_priority_queue = Snowbridge(Here);
+	let high_priority_queue =
+		Snowbridge(bridge_hub_common::message_queue::SnowbridgeMessageOrigin::Here);
 	let low_priority_queue = Snowbridge(Sibling(sibling_id.into()));
 
 	new_tester().execute_with(|| {
@@ -175,41 +177,41 @@ fn low_priority_messages_are_processed_last() {
 			OutboundQueue::deliver(ticket).unwrap();
 		}
 		let footprint = MessageQueue::footprint(high_priority_queue);
-		assert_eq!(footprint.count, (max_messages) as u64);
+		assert_eq!(footprint.storage.count, (max_messages) as u64);
 
 		// submit low priority message
 		let message = mock_message(sibling_id);
 		let (ticket, _) = OutboundQueue::validate(&message).unwrap();
 		OutboundQueue::deliver(ticket).unwrap();
 		let footprint = MessageQueue::footprint(low_priority_queue);
-		assert_eq!(footprint.count, 1);
+		assert_eq!(footprint.storage.count, 1);
 
 		// run to next block; only high priority messages should have been processed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
 		let footprint = MessageQueue::footprint(high_priority_queue);
-		assert_eq!(footprint.count, 40);
+		assert_eq!(footprint.storage.count, 40);
 
 		let footprint = MessageQueue::footprint(low_priority_queue);
-		assert_eq!(footprint.count, 1);
+		assert_eq!(footprint.storage.count, 1);
 
 		// move to the next block, some high priority messages get executed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
 		let footprint = MessageQueue::footprint(high_priority_queue);
-		assert_eq!(footprint.count, 20);
+		assert_eq!(footprint.storage.count, 20);
 
 		let footprint = MessageQueue::footprint(low_priority_queue);
-		assert_eq!(footprint.count, 1);
+		assert_eq!(footprint.storage.count, 1);
 
 		// move to the next block, some high priority messages get executed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
 		let footprint = MessageQueue::footprint(high_priority_queue);
-		assert_eq!(footprint.count, 0);
+		assert_eq!(footprint.storage.count, 0);
 
 		let footprint = MessageQueue::footprint(low_priority_queue);
-		assert_eq!(footprint.count, 1);
+		assert_eq!(footprint.storage.count, 1);
 
 		// move to the next block, the last remaining pending message,
 		// a lower priority one, is processed
@@ -217,7 +219,7 @@ fn low_priority_messages_are_processed_last() {
 		run_to_end_of_next_block();
 
 		let footprint = MessageQueue::footprint(low_priority_queue);
-		assert_eq!(footprint.count, 0);
+		assert_eq!(footprint.storage.count, 0);
 	});
 }
 

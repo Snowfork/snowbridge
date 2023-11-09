@@ -1,11 +1,11 @@
 //! Implementation for [`frame_support::traits::ProcessMessage`]
 use super::*;
 use crate::weights::WeightInfo;
+use bridge_hub_common::AggregateMessageOrigin;
 use frame_support::{
 	traits::{ProcessMessage, ProcessMessageError},
 	weights::WeightMeter,
 };
-use snowbridge_core::outbound::AggregateMessageOrigin;
 
 impl<T: Config> ProcessMessage for Pallet<T> {
 	type Origin = AggregateMessageOrigin;
@@ -17,7 +17,7 @@ impl<T: Config> ProcessMessage for Pallet<T> {
 	) -> Result<bool, ProcessMessageError> {
 		let weight = T::WeightInfo::do_process_message();
 		if meter.try_consume(weight).is_err() {
-			return Err(ProcessMessageError::Overweight(weight))
+			return Err(ProcessMessageError::Overweight(weight));
 		}
 		Self::do_process_message(origin, message)
 	}

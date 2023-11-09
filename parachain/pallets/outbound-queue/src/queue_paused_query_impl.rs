@@ -1,16 +1,13 @@
 //! Implementation for [`frame_support::traits::QueuePausedQuery`]
 use super::*;
+use bridge_hub_common::{AggregateMessageOrigin, SnowbridgeMessageOrigin::Sibling};
 use frame_support::traits::QueuePausedQuery;
-use snowbridge_core::outbound::{AggregateMessageOrigin, SnowbridgeMessageOrigin};
 
 impl<T> QueuePausedQuery<AggregateMessageOrigin> for Pallet<T>
 where
 	T: Config,
 {
 	fn is_paused(origin: &AggregateMessageOrigin) -> bool {
-		use AggregateMessageOrigin::*;
-		use SnowbridgeMessageOrigin::*;
-
 		// Queues for sibling parachains are paused when:
 		// 1. The pallet is halted
 		// 2. A higher-priority queue has pending messages

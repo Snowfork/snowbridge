@@ -23,6 +23,7 @@ sp-std = { path = "../../../polkadot-sdk/substrate/primitives/std", default-feat
 sp-runtime = { path = "../../../polkadot-sdk/substrate/primitives/runtime", default-features = false }
 sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-arithmetic = { path = "../../../polkadot-sdk/substrate/primitives/arithmetic", default-features = false }
+bridge-hub-common = { path = "../../../polkadot-sdk/cumulus/parachains/runtimes/bridge-hubs/common", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", features = ["serde"], default-features = false }
 snowbridge-outbound-queue-merkle-tree = { path = "merkle-tree", default-features = false }
@@ -53,11 +54,13 @@ std = [
     "snowbridge-outbound-queue-merkle-tree/std",
     "ethabi/std",
     "xcm/std",
+    "bridge-hub-common/std",
 ]
 runtime-benchmarks = [
     "snowbridge-core/runtime-benchmarks",
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "bridge-hub-common/runtime-benchmarks",
     "hex-literal",
 ]

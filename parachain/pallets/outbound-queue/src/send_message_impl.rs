@@ -1,5 +1,10 @@
 //! Implementation for [`snowbridge_core::outbound::SendMessage`]
 use super::*;
+use bridge_hub_common::{
+	AggregateMessageOrigin,
+	AggregateMessageOrigin::Snowbridge,
+	SnowbridgeMessageOrigin::{Here, Sibling},
+};
 use codec::Encode;
 use frame_support::{
 	ensure,
@@ -7,8 +12,7 @@ use frame_support::{
 	CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 use snowbridge_core::outbound::{
-	AggregateMessageOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
-	SnowbridgeMessageOrigin, VersionedQueuedMessage,
+	Fee, Message, QueuedMessage, SendError, SendMessage, VersionedQueuedMessage,
 };
 use sp_core::H256;
 use sp_runtime::BoundedVec;
@@ -57,9 +61,6 @@ impl<T: Config> SendMessage for Pallet<T> {
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError> {
-		use AggregateMessageOrigin::*;
-		use SnowbridgeMessageOrigin::*;
-
 		// Assign an `AggregateMessageOrigin` to track the message within the MessageQueue
 		// pallet. Governance commands are assigned origin `ExportOrigin::Here`. In other words
 		// emitted from BridgeHub itself.

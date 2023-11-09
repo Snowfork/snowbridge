@@ -96,6 +96,9 @@ mod mock;
 #[cfg(test)]
 mod test;
 
+use bridge_hub_common::{
+	AggregateMessageOrigin, AggregateMessageOrigin::Snowbridge, SnowbridgeMessageOrigin::Here,
+};
 use codec::Decode;
 use frame_support::{
 	storage::StorageStreamIter,
@@ -103,10 +106,7 @@ use frame_support::{
 	weights::{Weight, WeightToFee},
 };
 use snowbridge_core::{
-	outbound::{
-		AggregateMessageOrigin, Command, Fee, GasMeter, QueuedMessage, SnowbridgeMessageOrigin,
-		VersionedQueuedMessage, ETHER_DECIMALS,
-	},
+	outbound::{Command, Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
 	BasicOperatingMode, ParaId, GWEI, METH,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
@@ -332,9 +332,7 @@ pub mod pallet {
 			origin: ProcessMessageOriginOf<T>,
 			mut message: &[u8],
 		) -> Result<bool, ProcessMessageError> {
-			use AggregateMessageOrigin::*;
 			use ProcessMessageError::*;
-			use SnowbridgeMessageOrigin::*;
 
 			// Yield if the maximum number of messages has been processed this block.
 			// This ensures that the weight of `on_finalize` has a known maximum bound.

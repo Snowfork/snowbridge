@@ -1,4 +1,4 @@
-use codec::{Decode, Encode, MaxEncodedLen};
+use codec::{Decode, Encode};
 use frame_support::PalletError;
 pub use polkadot_parachain_primitives::primitives::Id as ParaId;
 use scale_info::TypeInfo;
@@ -364,25 +364,6 @@ impl GasMeter for () {
 	fn maximum_required(_: &Command) -> u64 {
 		1
 	}
-}
-
-impl From<u32> for AggregateMessageOrigin {
-	fn from(value: u32) -> Self {
-		AggregateMessageOrigin::Snowbridge(SnowbridgeMessageOrigin::Sibling(value.into()))
-	}
-}
-
-#[derive(Encode, Decode, Clone, Copy, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum SnowbridgeMessageOrigin {
-	Here,
-	Sibling(ParaId),
-}
-
-/// Aggregate message origin for the `MessageQueue` pallet.
-#[derive(Encode, Decode, Clone, Copy, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum AggregateMessageOrigin {
-	/// Message is to be exported via a bridge
-	Snowbridge(SnowbridgeMessageOrigin),
 }
 
 pub const ETHER_DECIMALS: u8 = 18;
