@@ -36,6 +36,7 @@ pub mod weights;
 #[cfg(test)]
 mod test;
 
+use alloy_rlp::Decodable as RlpDecodable;
 use codec::{Decode, DecodeAll, Encode};
 use envelope::Envelope;
 use frame_support::{
