@@ -97,8 +97,6 @@ impl<T: Config> OutboundQueueLocalFee for Pallet<T> {
 
 	/// Calculate fee in native currency for processing a message locally
 	fn calculate_local_fee() -> Self::Balance {
-		T::WeightToFee::weight_to_fee(
-			&T::WeightInfo::do_process_message().saturating_add(T::WeightInfo::commit_single()),
-		)
+		Self::calculate_local_fee()
 	}
 }

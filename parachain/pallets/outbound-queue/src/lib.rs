@@ -104,8 +104,8 @@ use frame_support::{
 };
 use snowbridge_core::{
 	outbound::{
-		AggregateMessageOrigin, Command, ExportOrigin, Fee, GasMeter, OutboundQueueLocalFee,
-		QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS,
+		AggregateMessageOrigin, Command, ExportOrigin, Fee, GasMeter, QueuedMessage,
+		VersionedQueuedMessage, ETHER_DECIMALS,
 	},
 	BasicOperatingMode, ParaId, GWEI, METH,
 };
@@ -428,6 +428,13 @@ pub mod pallet {
 			reward: u128,
 		) -> u128 {
 			fee_per_gas.saturating_mul(max_gas_required.into()).saturating_add(reward)
+		}
+
+		/// Calculate fee in native currency for processing a message locally
+		pub(crate) fn calculate_local_fee() -> T::Balance {
+			T::WeightToFee::weight_to_fee(
+				&T::WeightInfo::do_process_message().saturating_add(T::WeightInfo::commit_single()),
+			)
 		}
 
 		/// Maximum refund in Ether for delivering a message
