@@ -9322,6 +9322,7 @@ dependencies = [
 name = "snowbridge-runtime-tests"
 version = "0.1.0"
 dependencies = [
+ "assets-common",
  "bridge-hub-rococo-runtime",
  "bridge-hub-test-utils",
  "bridge-runtime-common",

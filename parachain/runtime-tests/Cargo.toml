@@ -69,7 +69,8 @@ pallet-collator-selection = { path = "../../polkadot-sdk/cumulus/pallets/collato
 parachain-info = { package = "staging-parachain-info", path = "../../polkadot-sdk/cumulus/parachains/pallets/parachain-info", default-features = false }
 parachains-common = { path = "../../polkadot-sdk/cumulus/parachains/common", default-features = false }
 parachains-runtimes-test-utils = { path = "../../polkadot-sdk/cumulus/parachains/runtimes/test-utils", default-features = false }
-bridge-hub-rococo-runtime = { path = "../../polkadot-sdk/cumulus/parachains/runtimes/bridge-hubs/bridge-hub-rococo" }
+bridge-hub-rococo-runtime = { path = "../../polkadot-sdk/cumulus/parachains/runtimes/bridge-hubs/bridge-hub-rococo", default-features = false }
+assets-common = { path = "../../polkadot-sdk/cumulus/parachains/runtimes/assets/common", default-features = false }
 
 # Ethereum Bridge (Snowbridge)
 snowbridge-core = { path = "../primitives/core", default-features = false }
@@ -100,6 +101,8 @@ std = [
 	"cumulus-pallet-xcmp-queue/std",
 	"cumulus-primitives-core/std",
 	"cumulus-primitives-utility/std",
+	"bridge-hub-rococo-runtime/std",
+	"assets-common/std",
 	"parachains-runtimes-test-utils/std",
 	"frame-benchmarking/std",
 	"frame-executive/std",
@@ -163,6 +166,8 @@ runtime-benchmarks = [
 	"cumulus-pallet-session-benchmarking/runtime-benchmarks",
 	"cumulus-pallet-xcmp-queue/runtime-benchmarks",
 	"cumulus-primitives-utility/runtime-benchmarks",
+	"bridge-hub-rococo-runtime/runtime-benchmarks",
+	"assets-common/runtime-benchmarks",
 	"frame-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system-benchmarking/runtime-benchmarks",
