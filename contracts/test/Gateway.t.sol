@@ -749,4 +749,16 @@ contract GatewayTest is Test {
             InboundMessage(bridgeHubParaID, 1, command, params, 1, maxRefund, reward), proof, makeMockProof()
         );
     }
+
+    function testSetTokenFees() public {
+        (uint256 register, uint256 send) = IGateway(address(gateway)).tokenTransferFees();
+        assertEq(register, 1 ether);
+        assertEq(send, 1 ether);
+        GatewayMock(address(gateway)).setTokenTransferFeesPublic(
+            abi.encode(Gateway.SetTokenTransferFeesParams({register: 1, send: 1}))
+        );
+        (register, send) = IGateway(address(gateway)).tokenTransferFees();
+        assertEq(register, 1);
+        assertEq(send, 1);
+    }
 }

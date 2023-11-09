@@ -176,6 +176,8 @@ pub mod pallet {
 		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
 		TransferNativeFromAgent { agent_id: AgentId, recipient: H160, amount: u128 },
+		/// A SetTokenTransferFees message was sent to the Gateway
+		SetTokenTransferFees { register: u128, send: u128 },
 	}
 
 	#[pallet::error]
@@ -188,6 +190,7 @@ pub mod pallet {
 		UnsupportedLocationVersion,
 		InvalidLocation,
 		Send(SendError),
+		InvalidTokenTransferFees,
 	}
 
 	/// The set of registered agents
@@ -423,6 +426,33 @@ pub mod pallet {
 			let pays_fee = PaysFee::<T>::No;
 
 			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount, pays_fee)
+		}
+
+		/// Sends a message to the Gateway contract to set token transfer fees
+		///
+		/// Privileged. Can only be called by root.
+		///
+		/// Fee required: No
+		///
+		/// - `origin`: Must be root
+		/// - `register`: The fee for register token
+		/// - `send`: The fee for send token to parachain
+		#[pallet::call_index(8)]
+		#[pallet::weight(T::WeightInfo::set_token_transfer_fees())]
+		pub fn set_token_transfer_fees(
+			origin: OriginFor<T>,
+			register: u128,
+			send: u128,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			ensure!(register > 0 && send > 0, Error::<T>::InvalidTokenTransferFees);
+
+			let command = Command::SetTokenTransferFees { register, send };
+			Self::send(T::OwnParaId::get(), command, PaysFee::<T>::No)?;
+
+			Self::deposit_event(Event::<T>::SetTokenTransferFees { register, send });
+			Ok(())
 		}
 	}
 

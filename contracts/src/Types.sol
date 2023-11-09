@@ -72,7 +72,8 @@ enum Command {
     CreateChannel,
     UpdateChannel,
     SetOperatingMode,
-    TransferNativeFromAgent
+    TransferNativeFromAgent,
+    SetTokenTransferFees
 }
 
 enum AgentExecuteCommand {TransferToken}

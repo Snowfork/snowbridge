@@ -32,6 +32,10 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return address(0);
     }
 
+    function tokenTransferFees() external pure returns (uint256, uint256) {
+        return (1, 1);
+    }
+
     function implementation() external pure returns (address) {
         return address(0);
     }
