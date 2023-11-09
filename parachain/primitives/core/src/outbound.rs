@@ -181,12 +181,14 @@ mod v1 {
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 						Token::Address(*recipient),
 						Token::Uint(U256::from(*amount)),
-					])]),
-				Command::SetTokenTransferFees { register, send } =>
+					])])
+				},
+				Command::SetTokenTransferFees { register, send } => {
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::Uint(U256::from(*register)),
 						Token::Uint(U256::from(*send)),
-					])]),
+					])])
+				},
 			}
 		}
 	}
