@@ -29,7 +29,7 @@ mod envelope;
 mod benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
-use {snowbridge_beacon_primitives::CompactExecutionHeader, sp_core::H256};
+use snowbridge_beacon_primitives::CompactExecutionHeader;
 
 pub mod weights;
 
@@ -48,6 +48,13 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
+use sp_core::{H160, H256};
+use sp_std::{convert::TryFrom, vec};
+use xcm::prelude::{
+	send_xcm, Instruction::SetTopic, Junction::*, Junctions::*, MultiLocation,
+	SendError as XcmpSendError, SendXcm, Xcm, XcmHash,
+};
+
 use snowbridge_core::{
 	inbound::{Log, Message, VerificationError, Verifier},
 	sibling_sovereign_account, BasicOperatingMode, ParaId,
@@ -56,14 +63,9 @@ use snowbridge_router_primitives::{
 	inbound,
 	inbound::{ConvertMessage, ConvertMessageError},
 };
-use sp_core::H160;
 use sp_runtime::traits::Saturating;
-use sp_std::{convert::TryFrom, vec};
+
 pub use weights::WeightInfo;
-use xcm::v3::{
-	send_xcm, Instruction::SetTopic, Junction::*, Junctions::*, MultiLocation,
-	SendError as XcmpSendError, SendXcm,
-};
 
 type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
@@ -245,19 +247,13 @@ pub mod pallet {
 			)?;
 
 			// Decode message into XCM
-			let mut xcm =
-				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(message) => T::MessageConverter::convert(message)
-						.map_err(|e| Error::<T>::ConvertMessage(e))?,
-					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
-				};
-
-			// Append the message id as an XCM topic
-			xcm.inner_mut().extend(vec![SetTopic(envelope.message_id.into())]);
+			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+				Ok(message) => Self::do_convert(envelope.message_id, message)?,
+				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
+			};
 
 			// Attempt to send XCM to a dest parachain
-			let dest = MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
-			let (message_id, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
+			let message_id = Self::send_xcm(xcm, envelope.dest)?;
 
 			Self::deposit_event(Event::MessageReceived {
 				dest: envelope.dest,
@@ -279,6 +275,25 @@ pub mod pallet {
 			OperatingMode::<T>::set(mode);
 			Self::deposit_event(Event::OperatingModeChanged { mode });
 			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn do_convert(
+			message_id: H256,
+			message: inbound::VersionedMessage,
+		) -> Result<Xcm<()>, Error<T>> {
+			let mut xcm =
+				T::MessageConverter::convert(message).map_err(|e| Error::<T>::ConvertMessage(e))?;
+			// Append the message id as an XCM topic
+			xcm.inner_mut().extend(vec![SetTopic(message_id.into())]);
+			Ok(xcm)
+		}
+
+		pub fn send_xcm(xcm: Xcm<()>, dest: ParaId) -> Result<XcmHash, Error<T>> {
+			let dest = MultiLocation { parents: 1, interior: X1(Parachain(dest.into())) };
+			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
+			Ok(xcm_hash)
 		}
 	}
 }

@@ -58,7 +58,7 @@ impl<T: Config> Verifier for Pallet<T> {
 				"💫 Event log not found in receipt for transaction at index {} in block {}",
 				proof.tx_index, proof.block_hash,
 			);
-			return Err(NotFound)
+			return Err(LogNotFound)
 		}
 
 		log::info!(

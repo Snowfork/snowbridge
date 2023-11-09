@@ -20,7 +20,7 @@ pub enum VerificationError {
 	/// Execution header is missing
 	HeaderNotFound,
 	/// Log was not found in the verified transaction receipt
-	NotFound,
+	LogNotFound,
 	/// Data payload does not decode into a valid Log
 	InvalidLog,
 	/// Unable to verify the transaction receipt with the provided proof
@@ -30,8 +30,7 @@ pub enum VerificationError {
 pub type MessageNonce = u64;
 
 /// A bridge message from the Gateway contract on Ethereum
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(PartialEq))]
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Message {
 	/// Event log
 	pub data: Log,
@@ -49,8 +48,7 @@ pub struct Log {
 }
 
 /// Inclusion proof for a transaction receipt
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(PartialEq))]
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Proof {
 	// The block hash of the block in which the receipt was included.
 	pub block_hash: H256,
