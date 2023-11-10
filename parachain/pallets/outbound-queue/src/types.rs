@@ -4,6 +4,7 @@ use frame_support::traits::ProcessMessage;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_arithmetic::FixedU128;
+use sp_core::H256;
 use sp_runtime::{traits::Zero, RuntimeDebug};
 use sp_std::prelude::*;
 
@@ -33,6 +34,8 @@ pub struct CommittedMessage {
 	pub max_refund: u128,
 	/// Reward in ether for delivering this message, in addition to the gas refund
 	pub reward: u128,
+	/// Message ID (Used for tracing messages across route, has no role in consensus)
+	pub id: H256,
 }
 
 /// Convert message into an ABI-encoded form for delivery to the InboundQueue contract on Ethereum
@@ -46,6 +49,7 @@ impl From<CommittedMessage> for Token {
 			Token::Uint(x.max_dispatch_gas.into()),
 			Token::Uint(x.max_refund.into()),
 			Token::Uint(x.reward.into()),
+			Token::FixedBytes(Vec::from(x.id.as_ref())),
 		])
 	}
 }

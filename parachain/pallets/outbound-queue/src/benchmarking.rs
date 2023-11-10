@@ -21,7 +21,7 @@ mod benchmarks {
 	#[benchmark]
 	fn do_process_message() -> Result<(), BenchmarkError> {
 		let enqueued_message = QueuedMessage {
-			id: H256::zero().into(),
+			id: H256::zero(),
 			origin: 1000.into(),
 			command: Command::Upgrade {
 				impl_address: H160::zero(),

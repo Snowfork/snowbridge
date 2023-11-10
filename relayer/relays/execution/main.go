@@ -255,7 +255,7 @@ func (r *Relay) findEvents(
 }
 
 func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start uint64) (bool, []*contracts.GatewayOutboundMessageAccepted, error) {
-	iter, err := r.gatewayContract.FilterOutboundMessageAccepted(opts, []*big.Int{big.NewInt(int64(paraID))})
+	iter, err := r.gatewayContract.FilterOutboundMessageAccepted(opts, []*big.Int{big.NewInt(int64(paraID))}, [][32]byte{})
 	if err != nil {
 		return false, nil, err
 	}

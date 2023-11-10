@@ -12,7 +12,7 @@ import {Gateway} from "./Gateway.sol";
 import {GatewayUpgradeMock} from "../test/mocks/GatewayUpgradeMock.sol";
 import {Agent} from "./Agent.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
-import {ParaID, Config} from "./Types.sol";
+import {ParaID, Config, OperatingMode} from "./Types.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
@@ -66,8 +66,19 @@ contract DeployScript is Script {
             assetHubAgentID
         );
 
+        bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");
+        OperatingMode defaultOperatingMode;
+        if (rejectOutboundMessages) {
+            defaultOperatingMode = OperatingMode.RejectingOutboundMessages;
+        } else {
+            defaultOperatingMode = OperatingMode.Normal;
+        }
+
         bytes memory initParams = abi.encode(
-            vm.envUint("DEFAULT_FEE"), vm.envUint("REGISTER_NATIVE_TOKEN_FEE"), vm.envUint("SEND_NATIVE_TOKEN_FEE")
+            defaultOperatingMode,
+            vm.envUint("DEFAULT_FEE"),
+            vm.envUint("REGISTER_NATIVE_TOKEN_FEE"),
+            vm.envUint("SEND_NATIVE_TOKEN_FEE")
         );
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), initParams);
