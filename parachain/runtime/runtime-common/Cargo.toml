@@ -14,7 +14,7 @@ xcm = { package = "staging-xcm", path = "../../../polkadot-sdk/polkadot/xcm", de
 xcm-builder = { package = "staging-xcm-builder", path = "../../../polkadot-sdk/polkadot/xcm/xcm-builder", default-features = false }
 xcm-executor = { package = "staging-xcm-executor", path = "../../../polkadot-sdk/polkadot/xcm/xcm-executor", default-features = false }
 
-snowbridge-core = { path = "../core", default-features = false }
+snowbridge-core = { path = "../../primitives/core", default-features = false }
 
 [dev-dependencies]
 

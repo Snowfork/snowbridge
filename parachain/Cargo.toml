@@ -5,7 +5,6 @@ members = [
     "primitives/core",
     "primitives/ethereum",
     "primitives/router",
-    "primitives/runtime-common",
     "pallets/inbound-queue",
     "pallets/outbound-queue",
     "pallets/outbound-queue/runtime-api",
@@ -13,5 +12,6 @@ members = [
     "pallets/ethereum-beacon-client",
     "pallets/control",
     "pallets/control/runtime-api",
+    "runtime/runtime-common",
     "tools/call-index"
 ]
