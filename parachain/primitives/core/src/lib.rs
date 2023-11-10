@@ -31,6 +31,10 @@ where
 	SiblingParaId::from(para_id).into_account_truncating()
 }
 
+pub fn sibling_sovereign_account_raw(para_id: ParaId) -> [u8; 32] {
+	SiblingParaId::from(para_id).into_account_truncating()
+}
+
 pub struct AllowSiblingsOnly;
 impl Contains<MultiLocation> for AllowSiblingsOnly {
 	fn contains(location: &MultiLocation) -> bool {

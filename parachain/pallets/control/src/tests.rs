@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
+use snowbridge_core::sibling_sovereign_account_raw;
 use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
 
@@ -501,11 +502,13 @@ fn check_sibling_sovereign_account() {
 	new_test_ext().execute_with(|| {
 		let para_id = 1001;
 		let sovereign_account = sibling_sovereign_account::<Test>(para_id.into());
+		let sovereign_account_raw = sibling_sovereign_account_raw(para_id.into());
 		println!(
 			"Sovereign account for parachain {}: {:#?}",
 			para_id,
-			hex::encode(sovereign_account)
+			hex::encode(sovereign_account.clone())
 		);
+		assert_eq!(sovereign_account, sovereign_account_raw.into());
 	});
 }
 

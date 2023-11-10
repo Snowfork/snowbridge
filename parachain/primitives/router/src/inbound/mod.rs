@@ -127,8 +127,9 @@ where
 
 				let xcm = match command {
 					Command::RegisterToken { token, .. } => {
-						let owner =
-							GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_params(&chain_id);
+						let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(
+							&chain_id,
+						);
 
 						let asset_id = Self::convert_token_address(network, token);
 
@@ -248,7 +249,7 @@ where
 	fn convert_location(location: &MultiLocation) -> Option<AccountId> {
 		if let MultiLocation { interior: X1(GlobalConsensus(Ethereum { chain_id })), .. } = location
 		{
-			Some(Self::from_params(chain_id).into())
+			Some(Self::from_chain_id(chain_id).into())
 		} else {
 			None
 		}
@@ -256,7 +257,7 @@ where
 }
 
 impl<AccountId> GlobalConsensusEthereumConvertsFor<AccountId> {
-	fn from_params(chain_id: &u64) -> [u8; 32] {
+	pub fn from_chain_id(chain_id: &u64) -> [u8; 32] {
 		(b"ethereum-chain", chain_id).using_encoded(blake2_256)
 	}
 }
