@@ -13,10 +13,10 @@ where
 		// 2. A higher-priority queue has pending messages
 		if let Snowbridge(Sibling(_)) = origin {
 			if Self::operating_mode().is_halted() {
-				return true;
+				return true
 			}
 			if PendingHighPriorityMessageCount::<T>::get() > 0 {
-				return true;
+				return true
 			}
 		}
 
