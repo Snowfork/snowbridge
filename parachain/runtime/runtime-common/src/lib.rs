@@ -95,7 +95,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 						return Some((index, (*amount).into()))
 					}
 				}
-				return None
+				None
 			})
 			.next();
 
@@ -124,6 +124,6 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 			target: "xcm::fees",
 			"XcmExportFeeToSibling skipped: {fees:?}, context: {context:?}, reason: {reason:?}",
 		);
-		return fees
+		fees
 	}
 }
