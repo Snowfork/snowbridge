@@ -59,14 +59,16 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		let token_location = FeeAssetLocation::get();
 
 		// Check the reason to see if this export is for snowbridge.
-		let snowbridge_export = matches!(
+		if !matches!(
 			reason,
 			FeeReason::Export { network: bridged_network, destination }
 				if bridged_network == EthereumNetwork::get() && destination == Here
-		);
+		) {
+			return fees
+		}
 
 		// Get the parachain sovereign from the `context`.
-		let maybe_para_sovereign = if let Some(XcmContext {
+		let para_sovereign = if let Some(XcmContext {
 			origin: Some(MultiLocation { parents: 1, interior }),
 			..
 		}) = context
@@ -74,12 +76,12 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 			if let Some(Parachain(sibling_para_id)) = interior.first() {
 				let account: AccountId =
 					sibling_sovereign_account_raw((*sibling_para_id).into()).into();
-				Some(account)
+				account
 			} else {
-				None
+				return fees
 			}
 		} else {
-			None
+			return fees
 		};
 
 		// Get the total fee offered by export message.
@@ -97,9 +99,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 			})
 			.next();
 
-		if let (true, Some(para_sovereign), Some((fee_index, total_fee))) =
-			(snowbridge_export, maybe_para_sovereign, maybe_total_supplied_fee)
-		{
+		if let Some((fee_index, total_fee)) = maybe_total_supplied_fee {
 			let remote_fee = total_fee.saturating_sub(FeeProvider::local_fee());
 			if remote_fee > (0u128).into() {
 				// Refund remote component of fee to physical origin
@@ -120,7 +120,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 			}
 		}
 
-		log::trace!(
+		log::info!(
 			target: "xcm::fees",
 			"XcmExportFeeToSibling skipped: {fees:?}, context: {context:?}, reason: {reason:?}",
 		);
