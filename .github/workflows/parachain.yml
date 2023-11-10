@@ -51,6 +51,7 @@ jobs:
           --manifest-path parachain/Cargo.toml
           --workspace
           --features runtime-benchmarks
+          --exclude snowbridge-runtime-tests
       - name: clippy
         run: cargo clippy --manifest-path parachain/Cargo.toml -- -D warnings
 
@@ -107,7 +108,7 @@ jobs:
           --package snowbridge-ethereum-beacon-client
 
   coverage:
-    needs: test
+    needs: check
     runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
@@ -140,7 +141,6 @@ jobs:
           flags: rust
 
   check-cumulus-bridgehub:
-    needs: check
     runs-on: snowbridge-runner
     steps:
       - uses: actions/checkout@v2
@@ -160,7 +160,7 @@ jobs:
           --features runtime-benchmarks
 
   runtime-tests:
-    needs: test
+    needs: check
     runs-on: snowbridge-runner
     steps:
       - uses: actions/checkout@v2
@@ -179,7 +179,7 @@ jobs:
           -- --nocapture
 
   integration-tests:
-    needs: test
+    needs: check
     runs-on: snowbridge-runner
     steps:
       - uses: actions/checkout@v2
