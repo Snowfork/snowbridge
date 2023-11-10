@@ -277,7 +277,8 @@ impl<'a, Call> XcmConverter<'a, Call> {
 mod tests {
 	use frame_support::parameter_types;
 	use hex_literal::hex;
-	use snowbridge_core::outbound::{Fee, SendError};
+	use snowbridge_core::outbound::{Fee, SendError, SendMessageFeeProvider};
+
 	use xcm::v3::prelude::SendError as XcmSendError;
 	use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
@@ -296,7 +297,6 @@ mod tests {
 	struct MockOkOutboundQueue;
 	impl SendMessage for MockOkOutboundQueue {
 		type Ticket = ();
-		type Balance = u128;
 
 		fn validate(_: &Message) -> Result<(Self::Ticket, Fee<Self::Balance>), SendError> {
 			Ok(((), Fee { local: 1, remote: 1 }))
@@ -306,10 +306,17 @@ mod tests {
 			Ok(H256::zero())
 		}
 	}
+
+	impl SendMessageFeeProvider for MockOkOutboundQueue {
+		type Balance = u128;
+
+		fn local_fee() -> Self::Balance {
+			1
+		}
+	}
 	struct MockErrOutboundQueue;
 	impl SendMessage for MockErrOutboundQueue {
 		type Ticket = ();
-		type Balance = u128;
 
 		fn validate(_: &Message) -> Result<(Self::Ticket, Fee<Self::Balance>), SendError> {
 			Err(SendError::MessageTooLarge)
@@ -317,6 +324,14 @@ mod tests {
 
 		fn deliver(_: Self::Ticket) -> Result<H256, SendError> {
 			Err(SendError::MessageTooLarge)
+		}
+	}
+
+	impl SendMessageFeeProvider for MockErrOutboundQueue {
+		type Balance = u128;
+
+		fn local_fee() -> Self::Balance {
+			1
 		}
 	}
 
