@@ -5,36 +5,58 @@
 //! Common traits and types shared by runtimes.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use bp_rococo::AccountId;
 use core::marker::PhantomData;
 use frame_support::traits::Get;
 use snowbridge_core::{outbound::SendMessageFeeProvider, sibling_sovereign_account_raw};
+use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 use xcm::prelude::*;
 use xcm_builder::{deposit_or_burn_fee, HandleFee};
 use xcm_executor::traits::{FeeReason, TransactAsset};
 
 /// A `HandleFee` implementation that takes fees from `ExportMessage` XCM instructions
-/// to Snowbridge and splits off the local remote fee and deposits it to the origin
+/// to Snowbridge and splits off the remote fee and deposits it to the origin
 /// parachain sovereign account. The local fee is then returned back to be handled by
 /// the next fee handler in the chain. Most likely the treasury account.
-pub struct XcmExportFeeToSnowbridge<TokenLocation, EthereumNetwork, AssetTransactor, OutboundQueue>(
-	PhantomData<(TokenLocation, EthereumNetwork, AssetTransactor, OutboundQueue)>,
+pub struct XcmExportFeeToSibling<
+	Balance,
+	AccountId,
+	FeeAssetLocation,
+	EthereumNetwork,
+	AssetTransactor,
+	FeeProvider,
+>(
+	PhantomData<(
+		Balance,
+		AccountId,
+		FeeAssetLocation,
+		EthereumNetwork,
+		AssetTransactor,
+		FeeProvider,
+	)>,
 );
 
-impl<
-		TokenLocation: Get<MultiLocation>,
-		EthereumNetwork: Get<NetworkId>,
-		AssetTransactor: TransactAsset,
-		OutboundQueue: SendMessageFeeProvider<Balance = bp_rococo::Balance>,
-	> HandleFee
-	for XcmExportFeeToSnowbridge<TokenLocation, EthereumNetwork, AssetTransactor, OutboundQueue>
+impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, FeeProvider> HandleFee
+	for XcmExportFeeToSibling<
+		Balance,
+		AccountId,
+		FeeAssetLocation,
+		EthereumNetwork,
+		AssetTransactor,
+		FeeProvider,
+	> where
+	Balance: BaseArithmetic + Unsigned + Copy + From<u128> + Into<u128>,
+	AccountId: Clone + Into<[u8; 32]> + From<[u8; 32]>,
+	FeeAssetLocation: Get<MultiLocation>,
+	EthereumNetwork: Get<NetworkId>,
+	AssetTransactor: TransactAsset,
+	FeeProvider: SendMessageFeeProvider<Balance = Balance>,
 {
 	fn handle_fee(
 		fees: MultiAssets,
 		context: Option<&XcmContext>,
 		reason: FeeReason,
 	) -> MultiAssets {
-		let token_location = TokenLocation::get();
+		let token_location = FeeAssetLocation::get();
 
 		// Check the reason to see if this export is for snowbridge.
 		let snowbridge_export = matches!(
@@ -61,14 +83,14 @@ impl<
 		};
 
 		// Get the total fee offered by export message.
-		let maybe_total_supplied_fee = fees
+		let maybe_total_supplied_fee: Option<(usize, Balance)> = fees
 			.inner()
 			.iter()
 			.enumerate()
 			.filter_map(|(index, asset)| {
 				if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = asset {
 					if *location == token_location {
-						return Some((index, amount))
+						return Some((index, (*amount).into()))
 					}
 				}
 				return None
@@ -78,11 +100,12 @@ impl<
 		if let (true, Some(para_sovereign), Some((fee_index, total_fee))) =
 			(snowbridge_export, maybe_para_sovereign, maybe_total_supplied_fee)
 		{
-			let remote_fee = total_fee.saturating_sub(OutboundQueue::local_fee());
-			if remote_fee > 0 {
-				// Send remote fee to origin
+			let remote_fee = total_fee.saturating_sub(FeeProvider::local_fee());
+			if remote_fee > (0u128).into() {
+				// Refund remote component of fee to physical origin
 				deposit_or_burn_fee::<AssetTransactor, _>(
-					MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee) }.into(),
+					MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee.into()) }
+						.into(),
 					context,
 					para_sovereign,
 				);
@@ -91,7 +114,7 @@ impl<
 				modified_fees.remove(fee_index);
 				modified_fees.push(MultiAsset {
 					id: Concrete(token_location),
-					fun: Fungible(total_fee - remote_fee),
+					fun: Fungible((total_fee - remote_fee).into()),
 				});
 				return modified_fees.into()
 			}
@@ -99,7 +122,7 @@ impl<
 
 		log::trace!(
 			target: "xcm::fees",
-			"XcmExportFeeToSnowbridge skipped: {fees:?}, context: {context:?}, reason: {reason:?}",
+			"XcmExportFeeToSibling skipped: {fees:?}, context: {context:?}, reason: {reason:?}",
 		);
 		return fees
 	}
