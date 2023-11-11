@@ -117,9 +117,9 @@ impl<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, SendTokenExec
 		use VersionedMessage::*;
 		match message {
 			V1(MessageV1 { chain_id, command: RegisterToken { token } }) =>
-				Self::convert_register_token(chain_id, token),
+				Ok(Self::convert_register_token(chain_id, token)),
 			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount } }) =>
-				Self::convert_send_token(chain_id, token, destination, amount),
+				Ok(Self::convert_send_token(chain_id, token, destination, amount)),
 		}
 	}
 }
@@ -132,13 +132,17 @@ where
 	CreateAssetDeposit: Get<u128>,
 	SendTokenExecutionFee: Get<u128>,
 {
-	fn convert_register_token(chain_id: u64, token: H160) -> Result<Xcm<()>, ConvertMessageError> {
+	fn convert_register_token(chain_id: u64, token: H160) -> Xcm<()> {
 		let network = Ethereum { chain_id };
 		let buy_execution_fee = MultiAsset {
 			id: Concrete(MultiLocation::parent()),
 			fun: Fungible(CreateAssetExecutionFee::get()),
 		};
-		let mut instructions = vec![
+		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
+		let asset_id = Self::convert_token_address(network, token);
+		let create_call_index: [u8; 2] = CreateAssetCall::get();
+
+		Xcm(vec![
 			//ReceiveTeleportedAsset(buy_execution_fee.clone().into()),
 			UniversalOrigin(GlobalConsensus(network)),
 			WithdrawAsset(buy_execution_fee.clone().into()),
@@ -153,13 +157,6 @@ where
 				]
 				.into(),
 			),
-		];
-
-		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
-		let asset_id = Self::convert_token_address(network, token);
-		let create_call_index: [u8; 2] = CreateAssetCall::get();
-
-		instructions.extend(vec![
 			Transact {
 				origin_kind: OriginKind::Xcm,
 				require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
@@ -173,8 +170,7 @@ where
 					.into(),
 			},
 			ExpectTransactStatus(MaybeErrorCode::Success),
-		]);
-		Ok(instructions.into())
+		])
 	}
 
 	fn convert_send_token(
@@ -182,32 +178,13 @@ where
 		token: H160,
 		destination: Destination,
 		amount: u128,
-	) -> Result<Xcm<()>, ConvertMessageError> {
+	) -> Xcm<()> {
 		let network = Ethereum { chain_id };
 		let buy_execution_fee = MultiAsset {
 			id: Concrete(MultiLocation::parent()),
 			fun: Fungible(SendTokenExecutionFee::get()),
 		};
-		let mut instructions = vec![
-			//ReceiveTeleportedAsset(buy_execution_fee.clone().into()),
-			UniversalOrigin(GlobalConsensus(network)),
-			WithdrawAsset(buy_execution_fee.clone().into()),
-			BuyExecution { fees: buy_execution_fee, weight_limit: Unlimited },
-			SetAppendix(
-				vec![
-					RefundSurplus,
-					DepositAsset {
-						assets: Wild(AllCounted(1)),
-						beneficiary: (Parent, Parent, GlobalConsensus(network)).into(),
-					},
-				]
-				.into(),
-			),
-		];
-
 		let asset = MultiAsset::from((Self::convert_token_address(network, token), amount));
-
-		instructions.extend(vec![ReserveAssetDeposited(vec![asset.clone()].into()), ClearOrigin]);
 
 		let (dest_para_id, beneficiary) = match destination {
 			Destination::AccountId32 { id } => (
@@ -224,22 +201,36 @@ where
 			),
 		};
 
-		let assets = Definite(vec![asset].into());
+		let assets = Definite(vec![asset.clone()].into());
 
-		let mut fragment: Vec<Instruction<()>> = match dest_para_id {
-			Some(dest_para_id) => {
-				vec![DepositReserveAsset {
-					assets: assets.clone(),
-					dest: MultiLocation { parents: 1, interior: X1(Parachain(dest_para_id)) },
-					xcm: vec![DepositAsset { assets, beneficiary }].into(),
-				}]
-			},
-			None => {
-				vec![DepositAsset { assets, beneficiary }]
-			},
-		};
-		instructions.append(&mut fragment);
-		Ok(instructions.into())
+		Xcm(vec![
+			//ReceiveTeleportedAsset(buy_execution_fee.clone().into()),
+			UniversalOrigin(GlobalConsensus(network)),
+			WithdrawAsset(buy_execution_fee.clone().into()),
+			BuyExecution { fees: buy_execution_fee, weight_limit: Unlimited },
+			SetAppendix(
+				vec![
+					RefundSurplus,
+					DepositAsset {
+						assets: Wild(AllCounted(1)),
+						beneficiary: (Parent, Parent, GlobalConsensus(network)).into(),
+					},
+				]
+				.into(),
+			),
+			ReserveAssetDeposited(asset.into()),
+			ClearOrigin,
+		]
+		.into_iter()
+		.chain(match dest_para_id {
+			Some(dest_para_id) => vec![DepositReserveAsset {
+				assets: assets.clone(),
+				dest: MultiLocation { parents: 1, interior: X1(Parachain(dest_para_id)) },
+				xcm: vec![DepositAsset { assets, beneficiary }].into(),
+			}],
+			None => vec![DepositAsset { assets, beneficiary }],
+		})
+		.collect())
 	}
 
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
