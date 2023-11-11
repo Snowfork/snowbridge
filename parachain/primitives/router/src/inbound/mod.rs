@@ -134,29 +134,26 @@ where
 {
 	fn convert_register_token(chain_id: u64, token: H160) -> Xcm<()> {
 		let network = Ethereum { chain_id };
-		let buy_execution_fee = MultiAsset {
-			id: Concrete(MultiLocation::parent()),
-			fun: Fungible(CreateAssetExecutionFee::get()),
-		};
+		let fee: MultiAsset = (MultiLocation::parent(), CreateAssetExecutionFee::get()).into();
+		let deposit: MultiAsset = (MultiLocation::parent(), CreateAssetDeposit::get()).into();
+		let total: MultiAsset =
+			(MultiLocation::parent(), CreateAssetExecutionFee::get() + CreateAssetDeposit::get())
+				.into();
+		let bridge_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
 		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
 		let asset_id = Self::convert_token_address(network, token);
 		let create_call_index: [u8; 2] = CreateAssetCall::get();
 
 		Xcm(vec![
-			//ReceiveTeleportedAsset(buy_execution_fee.clone().into()),
+			// Teleport required fees.
+			ReceiveTeleportedAsset(total.into()),
+			// Pay for execution.
+			BuyExecution { fees: fee.clone().into(), weight_limit: Unlimited },
+			// Fund the snwobride sovereign with the required deposit for creation.
+			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location.clone() },
+			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(network)),
-			WithdrawAsset(buy_execution_fee.clone().into()),
-			BuyExecution { fees: buy_execution_fee, weight_limit: Unlimited },
-			SetAppendix(
-				vec![
-					RefundSurplus,
-					DepositAsset {
-						assets: Wild(AllCounted(1)),
-						beneficiary: (Parent, Parent, GlobalConsensus(network)).into(),
-					},
-				]
-				.into(),
-			),
+			// Call create_asset on foreign assets pallet.
 			Transact {
 				origin_kind: OriginKind::Xcm,
 				require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
@@ -169,7 +166,14 @@ where
 					.encode()
 					.into(),
 			},
-			ExpectTransactStatus(MaybeErrorCode::Success),
+			// Refund any surplus execution from transact.
+			RefundSurplus,
+			// Send any remaining fees to the destination parachain.
+			DepositAsset {
+				assets: Wild(All),
+				// TODO(alistair): Deposit to destination
+				beneficiary: bridge_location,
+			},
 		])
 	}
 
@@ -180,11 +184,10 @@ where
 		amount: u128,
 	) -> Xcm<()> {
 		let network = Ethereum { chain_id };
-		let buy_execution_fee = MultiAsset {
-			id: Concrete(MultiLocation::parent()),
-			fun: Fungible(SendTokenExecutionFee::get()),
-		};
-		let asset = MultiAsset::from((Self::convert_token_address(network, token), amount));
+		let fee: MultiAsset = (MultiLocation::parent(), CreateAssetExecutionFee::get()).into();
+		let asset: MultiAsset = (Self::convert_token_address(network, token), amount).into();
+
+		let bridge_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
 
 		let (dest_para_id, beneficiary) = match destination {
 			Destination::AccountId32 { id } => (
@@ -201,34 +204,39 @@ where
 			),
 		};
 
-		let assets = Definite(vec![asset.clone()].into());
-
 		Xcm(vec![
-			//ReceiveTeleportedAsset(buy_execution_fee.clone().into()),
+			ReceiveTeleportedAsset(fee.clone().into()),
+			BuyExecution { fees: fee.clone().into(), weight_limit: Unlimited },
 			UniversalOrigin(GlobalConsensus(network)),
-			WithdrawAsset(buy_execution_fee.clone().into()),
-			BuyExecution { fees: buy_execution_fee, weight_limit: Unlimited },
-			SetAppendix(
-				vec![
-					RefundSurplus,
-					DepositAsset {
-						assets: Wild(AllCounted(1)),
-						beneficiary: (Parent, Parent, GlobalConsensus(network)).into(),
-					},
-				]
-				.into(),
-			),
-			ReserveAssetDeposited(asset.into()),
+			ReserveAssetDeposited(asset.clone().into()),
 			ClearOrigin,
 		]
 		.into_iter()
 		.chain(match dest_para_id {
-			Some(dest_para_id) => vec![DepositReserveAsset {
-				assets: assets.clone(),
-				dest: MultiLocation { parents: 1, interior: X1(Parachain(dest_para_id)) },
-				xcm: vec![DepositAsset { assets, beneficiary }].into(),
-			}],
-			None => vec![DepositAsset { assets, beneficiary }],
+			Some(dest_para_id) => vec![
+				// Perform a deposit reserve to send to destination chain.
+				DepositReserveAsset {
+					assets: Definite(asset.clone().into()),
+					dest: MultiLocation { parents: 1, interior: X1(Parachain(dest_para_id)) },
+					xcm: vec![
+						// Receive fees.
+						ReceiveTeleportedAsset(fee.clone().into()),
+						// Buy execution on target.
+						BuyExecution { fees: fee.into(), weight_limit: Unlimited },
+						// Deposit asset to benificiary.
+						DepositAsset { assets: Definite(asset.into()), beneficiary },
+						// Deposit remaining fees to destination.
+						DepositAsset { assets: Wild(All), beneficiary: bridge_location },
+					]
+					.into(),
+				},
+			],
+			None => vec![
+				// Deposit asset to benificiary.
+				DepositAsset { assets: Definite(asset.into()), beneficiary },
+				// Deposit remaining fees to destination.
+				DepositAsset { assets: Wild(All), beneficiary: bridge_location },
+			],
 		})
 		.collect())
 	}
