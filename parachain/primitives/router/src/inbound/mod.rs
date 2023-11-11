@@ -140,6 +140,8 @@ where
 			(MultiLocation::parent(), CreateAssetExecutionFee::get() + CreateAssetDeposit::get())
 				.into();
 		let bridge_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
+		// TODO(alistair): Get real fee refund locaton
+		let fee_refund_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
 		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
 		let asset_id = Self::convert_token_address(network, token);
 		let create_call_index: [u8; 2] = CreateAssetCall::get();
@@ -149,8 +151,8 @@ where
 			ReceiveTeleportedAsset(total.into()),
 			// Pay for execution.
 			BuyExecution { fees: fee.clone().into(), weight_limit: Unlimited },
-			// Fund the snwobride sovereign with the required deposit for creation.
-			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location.clone() },
+			// Fund the snowbridge sovereign with the required deposit for creation.
+			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(network)),
 			// Call create_asset on foreign assets pallet.
@@ -169,11 +171,7 @@ where
 			// Refund any surplus execution from transact.
 			RefundSurplus,
 			// Send any remaining fees to the destination parachain.
-			DepositAsset {
-				assets: Wild(All),
-				// TODO(alistair): Deposit to destination
-				beneficiary: bridge_location,
-			},
+			DepositAsset { assets: Wild(All), beneficiary: fee_refund_location },
 		])
 	}
 
@@ -187,7 +185,8 @@ where
 		let fee: MultiAsset = (MultiLocation::parent(), CreateAssetExecutionFee::get()).into();
 		let asset: MultiAsset = (Self::convert_token_address(network, token), amount).into();
 
-		let bridge_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
+		// TODO(alistair): Get real fee refund locaton
+		let fee_refund_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
 
 		let (dest_para_id, beneficiary) = match destination {
 			Destination::AccountId32 { id } => (
@@ -204,16 +203,16 @@ where
 			),
 		};
 
-		Xcm(vec![
+		let mut instructions = vec![
 			ReceiveTeleportedAsset(fee.clone().into()),
 			BuyExecution { fees: fee.clone().into(), weight_limit: Unlimited },
 			UniversalOrigin(GlobalConsensus(network)),
 			ReserveAssetDeposited(asset.clone().into()),
 			ClearOrigin,
-		]
-		.into_iter()
-		.chain(match dest_para_id {
-			Some(dest_para_id) => vec![
+		];
+
+		match dest_para_id {
+			Some(dest_para_id) => instructions.extend(vec![
 				// Perform a deposit reserve to send to destination chain.
 				DepositReserveAsset {
 					assets: Definite(asset.clone().into()),
@@ -226,19 +225,20 @@ where
 						// Deposit asset to benificiary.
 						DepositAsset { assets: Definite(asset.into()), beneficiary },
 						// Deposit remaining fees to destination.
-						DepositAsset { assets: Wild(All), beneficiary: bridge_location },
+						DepositAsset { assets: Wild(All), beneficiary: fee_refund_location },
 					]
 					.into(),
 				},
-			],
-			None => vec![
+			]),
+			None => instructions.extend(vec![
 				// Deposit asset to benificiary.
 				DepositAsset { assets: Definite(asset.into()), beneficiary },
 				// Deposit remaining fees to destination.
-				DepositAsset { assets: Wild(All), beneficiary: bridge_location },
-			],
-		})
-		.collect())
+				DepositAsset { assets: Wild(All), beneficiary: fee_refund_location },
+			]),
+		}
+
+		Xcm(instructions)
 	}
 
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
