@@ -94,7 +94,7 @@ pub enum ConvertMessageError {
 /// convert the inbound message to xcm which will be forwarded to the destination chain
 pub trait ConvertMessage {
 	/// Converts a versioned message into an XCM message and an optional topicID
-	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError>;
+	fn convert(message: VersionedMessage) -> Result<(Xcm<()>, u128), ConvertMessageError>;
 }
 
 pub type CallIndex = [u8; 2];
@@ -112,7 +112,7 @@ impl<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, SendTokenExec
 	CreateAssetDeposit: Get<u128>,
 	SendTokenExecutionFee: Get<u128>,
 {
-	fn convert(message: VersionedMessage) -> Result<Xcm<()>, ConvertMessageError> {
+	fn convert(message: VersionedMessage) -> Result<(Xcm<()>, u128), ConvertMessageError> {
 		use Command::*;
 		use VersionedMessage::*;
 		match message {
@@ -132,13 +132,14 @@ where
 	CreateAssetDeposit: Get<u128>,
 	SendTokenExecutionFee: Get<u128>,
 {
-	fn convert_register_token(chain_id: u64, token: H160) -> Xcm<()> {
+	fn convert_register_token(chain_id: u64, token: H160) -> (Xcm<()>, u128) {
 		let network = Ethereum { chain_id };
 		let fee: MultiAsset = (MultiLocation::parent(), CreateAssetExecutionFee::get()).into();
 		let deposit: MultiAsset = (MultiLocation::parent(), CreateAssetDeposit::get()).into();
-		let total: MultiAsset =
-			(MultiLocation::parent(), CreateAssetExecutionFee::get() + CreateAssetDeposit::get())
-				.into();
+
+		let total_amount = CreateAssetExecutionFee::get() + CreateAssetDeposit::get();
+		let total: MultiAsset = (MultiLocation::parent(), total_amount).into();
+
 		let bridge_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
 		// TODO(alistair): Get real fee refund locaton
 		let fee_refund_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
@@ -146,7 +147,7 @@ where
 		let asset_id = Self::convert_token_address(network, token);
 		let create_call_index: [u8; 2] = CreateAssetCall::get();
 
-		Xcm(vec![
+		let xcm: Xcm<()> = vec![
 			// Teleport required fees.
 			ReceiveTeleportedAsset(total.into()),
 			// Pay for execution.
@@ -172,7 +173,10 @@ where
 			RefundSurplus,
 			// Send any remaining fees to the destination parachain.
 			DepositAsset { assets: Wild(All), beneficiary: fee_refund_location },
-		])
+		]
+		.into();
+
+		(xcm, total_amount)
 	}
 
 	fn convert_send_token(
@@ -180,9 +184,10 @@ where
 		token: H160,
 		destination: Destination,
 		amount: u128,
-	) -> Xcm<()> {
+	) -> (Xcm<()>, u128) {
 		let network = Ethereum { chain_id };
-		let fee: MultiAsset = (MultiLocation::parent(), CreateAssetExecutionFee::get()).into();
+		let fee_amount = CreateAssetExecutionFee::get();
+		let fee: MultiAsset = (MultiLocation::parent(), fee_amount).into();
 		let asset: MultiAsset = (Self::convert_token_address(network, token), amount).into();
 
 		// TODO(alistair): Get real fee refund locaton
@@ -203,6 +208,7 @@ where
 			),
 		};
 
+		let mut total_fee_amount = fee_amount;
 		let mut instructions = vec![
 			ReceiveTeleportedAsset(fee.clone().into()),
 			BuyExecution { fees: fee.clone().into(), weight_limit: Unlimited },
@@ -212,33 +218,38 @@ where
 		];
 
 		match dest_para_id {
-			Some(dest_para_id) => instructions.extend(vec![
-				// Perform a deposit reserve to send to destination chain.
-				DepositReserveAsset {
-					assets: Definite(asset.clone().into()),
-					dest: MultiLocation { parents: 1, interior: X1(Parachain(dest_para_id)) },
-					xcm: vec![
-						// Receive fees.
-						ReceiveTeleportedAsset(fee.clone().into()),
-						// Buy execution on target.
-						BuyExecution { fees: fee.into(), weight_limit: Unlimited },
-						// Deposit asset to benificiary.
-						DepositAsset { assets: Definite(asset.into()), beneficiary },
-						// Deposit remaining fees to destination.
-						DepositAsset { assets: Wild(All), beneficiary: fee_refund_location },
-					]
-					.into(),
-				},
-			]),
-			None => instructions.extend(vec![
-				// Deposit asset to benificiary.
-				DepositAsset { assets: Definite(asset.into()), beneficiary },
-				// Deposit remaining fees to destination.
-				DepositAsset { assets: Wild(All), beneficiary: fee_refund_location },
-			]),
+			Some(dest_para_id) => {
+				instructions.extend(vec![
+					// Perform a deposit reserve to send to destination chain.
+					DepositReserveAsset {
+						assets: Definite(asset.clone().into()),
+						dest: MultiLocation { parents: 1, interior: X1(Parachain(dest_para_id)) },
+						xcm: vec![
+							// Receive fees.
+							ReceiveTeleportedAsset(fee.clone().into()),
+							// Buy execution on target.
+							BuyExecution { fees: fee.into(), weight_limit: Unlimited },
+							// Deposit asset to benificiary.
+							DepositAsset { assets: Definite(asset.into()), beneficiary },
+							// Deposit remaining fees to destination.
+							DepositAsset { assets: Wild(All), beneficiary: fee_refund_location },
+						]
+						.into(),
+					},
+				]);
+				total_fee_amount += fee_amount;
+			},
+			None => {
+				instructions.extend(vec![
+					// Deposit asset to benificiary.
+					DepositAsset { assets: Definite(asset.into()), beneficiary },
+					// Deposit remaining fees to destination.
+					DepositAsset { assets: Wild(All), beneficiary: fee_refund_location },
+				]);
+			},
 		}
 
-		Xcm(instructions)
+		(instructions.into(), total_fee_amount)
 	}
 
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
