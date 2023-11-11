@@ -132,6 +132,7 @@ parameter_types! {
 	pub const GatewayAddress: H160 = H160(GATEWAY_ADDRESS);
 	pub const CreateAssetCall: [u8;2] = [53, 0];
 	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
+	pub const CreateAssetDeposit: u128 = 100_000_000_000;
 	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
 	pub const InitialFund: u128 = 1_000_000_000_000;
 }
@@ -177,8 +178,12 @@ impl inbound_queue::Config for Test {
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
-	type MessageConverter =
-		MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>;
+	type MessageConverter = MessageToXcm<
+		CreateAssetCall,
+		CreateAssetExecutionFee,
+		CreateAssetDeposit,
+		SendTokenExecutionFee,
+	>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
 	type WeightToFee = IdentityFee<u128>;
