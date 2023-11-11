@@ -74,12 +74,15 @@ pub struct MessageToXcm<
 	CreateAssetExecutionFee,
 	CreateAssetDeposit,
 	SendTokenExecutionFee,
+	RefundAccount,
+	AccountId,
 	Balance,
 > where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
 	SendTokenExecutionFee: Get<u128>,
+	RefundAccount: Get<AccountId>,
 	Balance: BalanceT,
 {
 	_phantom: PhantomData<(
@@ -87,6 +90,8 @@ pub struct MessageToXcm<
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
+		RefundAccount,
+		AccountId,
 		Balance,
 	)>,
 }
@@ -101,6 +106,7 @@ pub enum ConvertMessageError {
 /// convert the inbound message to xcm which will be forwarded to the destination chain
 pub trait ConvertMessage {
 	type Balance: BalanceT + From<u128>;
+	type AccountId;
 	/// Converts a versioned message into an XCM message and an optional topicID
 	fn convert(message: VersionedMessage) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError>;
 }
@@ -112,6 +118,8 @@ impl<
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
+		RefundAccount,
+		AccountId,
 		Balance,
 	> ConvertMessage
 	for MessageToXcm<
@@ -119,15 +127,20 @@ impl<
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
+		RefundAccount,
+		AccountId,
 		Balance,
 	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
 	SendTokenExecutionFee: Get<u128>,
+	RefundAccount: Get<AccountId>,
 	Balance: BalanceT + From<u128>,
+	AccountId: Into<[u8; 32]>,
 {
 	type Balance = Balance;
+	type AccountId = AccountId;
 
 	fn convert(message: VersionedMessage) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError> {
 		use Command::*;
@@ -146,6 +159,8 @@ impl<
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
+		RefundAccount,
+		AccountId,
 		Balance,
 	>
 	MessageToXcm<
@@ -153,13 +168,17 @@ impl<
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
+		RefundAccount,
+		AccountId,
 		Balance,
 	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
 	SendTokenExecutionFee: Get<u128>,
+	RefundAccount: Get<AccountId>,
 	Balance: BalanceT + From<u128>,
+	AccountId: Into<[u8; 32]>,
 {
 	fn convert_register_token(chain_id: u64, token: H160) -> (Xcm<()>, Balance) {
 		let network = Ethereum { chain_id };
@@ -170,8 +189,9 @@ impl<
 		let total: MultiAsset = (MultiLocation::parent(), total_amount).into();
 
 		let bridge_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
-		// TODO(alistair): Get real fee refund locaton
-		let fee_refund_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
+		let fee_refund_location: MultiLocation =
+			(AccountId32 { network: None, id: RefundAccount::get().into() }).into();
+
 		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
 		let asset_id = Self::convert_token_address(network, token);
 		let create_call_index: [u8; 2] = CreateAssetCall::get();
@@ -219,8 +239,8 @@ impl<
 		let fee: MultiAsset = (MultiLocation::parent(), fee_amount).into();
 		let asset: MultiAsset = (Self::convert_token_address(network, token), amount).into();
 
-		// TODO(alistair): Get real fee refund locaton
-		let fee_refund_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
+		let fee_refund_location: MultiLocation =
+			(AccountId32 { network: None, id: RefundAccount::get().into() }).into();
 
 		let (dest_para_id, beneficiary) = match destination {
 			Destination::AccountId32 { id } => (
@@ -333,9 +353,10 @@ mod tests {
 		VersionedMessage, H160, MINIMUM_DEPOSIT,
 	};
 	use codec::Encode;
-	use frame_support::{parameter_types, traits::ContainsPair};
+	use frame_support::{parameter_types, traits::ContainsPair, PalletId};
 	use hex_literal::hex;
 	use sp_core::crypto::Ss58Codec;
+	use sp_runtime::traits::AccountIdConversion;
 	use xcm::v3::prelude::*;
 	use xcm_executor::traits::ConvertLocation;
 
@@ -354,6 +375,7 @@ mod tests {
 		pub const CreateAssetExecutionFee: u128 = 123;
 		pub const CreateAssetDeposit: u128 = 891;
 		pub const SendTokenExecutionFee: u128 = 592;
+		pub Treasury: [u8; 32] = PalletId(*b"01234567").into_account_truncating();
 	}
 
 	type Converter = MessageToXcm<
@@ -361,6 +383,8 @@ mod tests {
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
+		Treasury,
+		[u8; 32],
 		u128,
 	>;
 

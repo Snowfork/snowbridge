@@ -113,7 +113,10 @@ pub mod pallet {
 		type GatewayAddress: Get<H160>;
 
 		/// Convert inbound message to XCM
-		type MessageConverter: ConvertMessage<Balance = BalanceOf<Self>>;
+		type MessageConverter: ConvertMessage<
+			AccountId = Self::AccountId,
+			Balance = BalanceOf<Self>,
+		>;
 
 		type WeightInfo: WeightInfo;
 

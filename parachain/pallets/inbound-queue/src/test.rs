@@ -137,6 +137,7 @@ parameter_types! {
 	pub const CreateAssetDeposit: u128 = 100_000_000_000;
 	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
 	pub const InitialFund: u128 = 1_000_000_000_000;
+	pub const TreasuryAccount: [u8; 32] = [0; 32];
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -185,6 +186,8 @@ impl inbound_queue::Config for Test {
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
+		TreasuryAccount,
+		AccountId,
 		Balance,
 	>;
 	#[cfg(feature = "runtime-benchmarks")]
