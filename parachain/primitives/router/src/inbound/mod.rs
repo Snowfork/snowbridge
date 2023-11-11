@@ -180,7 +180,7 @@ impl<
 			// Teleport required fees.
 			ReceiveTeleportedAsset(total.into()),
 			// Pay for execution.
-			BuyExecution { fees: fee.clone().into(), weight_limit: Unlimited },
+			BuyExecution { fees: fee, weight_limit: Unlimited },
 			// Fund the snowbridge sovereign with the required deposit for creation.
 			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
 			// Change origin to the bridge.
@@ -240,7 +240,7 @@ impl<
 		let mut total_fee_amount = fee_amount;
 		let mut instructions = vec![
 			ReceiveTeleportedAsset(fee.clone().into()),
-			BuyExecution { fees: fee.clone().into(), weight_limit: Unlimited },
+			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
 			UniversalOrigin(GlobalConsensus(network)),
 			ReserveAssetDeposited(asset.clone().into()),
 			ClearOrigin,
@@ -257,7 +257,7 @@ impl<
 							// Receive fees.
 							ReceiveTeleportedAsset(fee.clone().into()),
 							// Buy execution on target.
-							BuyExecution { fees: fee.into(), weight_limit: Unlimited },
+							BuyExecution { fees: fee, weight_limit: Unlimited },
 							// Deposit asset to benificiary.
 							DepositAsset { assets: Definite(asset.into()), beneficiary },
 							// Deposit remaining fees to destination.
