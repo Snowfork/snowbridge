@@ -11,5 +11,5 @@ members = [
     "pallets/ethereum-beacon-client",
     "pallets/control",
     "pallets/control/runtime-api",
-    "runtime-tests"
+    "runtime/tests",
 ]
