@@ -44,6 +44,8 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
+type Balance = u128;
+
 impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
@@ -74,7 +76,7 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
-	type Balance = u128;
+	type Balance = Balance;
 	type RuntimeEvent = RuntimeEvent;
 	type DustRemoval = ();
 	type ExistentialDeposit = ConstU128<1>;
@@ -183,6 +185,7 @@ impl inbound_queue::Config for Test {
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
+		Balance,
 	>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;

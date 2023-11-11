@@ -3,7 +3,11 @@
 //! Converts messages from Ethereum to XCM messages
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use frame_support::{traits::ContainsPair, weights::Weight, PalletError};
+use frame_support::{
+	traits::{tokens::Balance as BalanceT, ContainsPair},
+	weights::Weight,
+	PalletError,
+};
 use scale_info::TypeInfo;
 use sp_core::{Get, RuntimeDebug, H160};
 use sp_io::hashing::blake2_256;
@@ -70,17 +74,20 @@ pub struct MessageToXcm<
 	CreateAssetExecutionFee,
 	CreateAssetDeposit,
 	SendTokenExecutionFee,
+	Balance,
 > where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
 	SendTokenExecutionFee: Get<u128>,
+	Balance: BalanceT,
 {
 	_phantom: PhantomData<(
 		CreateAssetCall,
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
+		Balance,
 	)>,
 }
 
@@ -93,26 +100,36 @@ pub enum ConvertMessageError {
 
 /// convert the inbound message to xcm which will be forwarded to the destination chain
 pub trait ConvertMessage {
+	type Balance: BalanceT + From<u128>;
 	/// Converts a versioned message into an XCM message and an optional topicID
-	fn convert(message: VersionedMessage) -> Result<(Xcm<()>, u128), ConvertMessageError>;
+	fn convert(message: VersionedMessage) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError>;
 }
 
 pub type CallIndex = [u8; 2];
 
-impl<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, SendTokenExecutionFee>
-	ConvertMessage
+impl<
+		CreateAssetCall,
+		CreateAssetExecutionFee,
+		CreateAssetDeposit,
+		SendTokenExecutionFee,
+		Balance,
+	> ConvertMessage
 	for MessageToXcm<
 		CreateAssetCall,
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
+		Balance,
 	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
 	SendTokenExecutionFee: Get<u128>,
+	Balance: BalanceT + From<u128>,
 {
-	fn convert(message: VersionedMessage) -> Result<(Xcm<()>, u128), ConvertMessageError> {
+	type Balance = Balance;
+
+	fn convert(message: VersionedMessage) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError> {
 		use Command::*;
 		use VersionedMessage::*;
 		match message {
@@ -124,15 +141,27 @@ impl<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, SendTokenExec
 	}
 }
 
-impl<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, SendTokenExecutionFee>
-	MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, SendTokenExecutionFee>
-where
+impl<
+		CreateAssetCall,
+		CreateAssetExecutionFee,
+		CreateAssetDeposit,
+		SendTokenExecutionFee,
+		Balance,
+	>
+	MessageToXcm<
+		CreateAssetCall,
+		CreateAssetExecutionFee,
+		CreateAssetDeposit,
+		SendTokenExecutionFee,
+		Balance,
+	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
 	SendTokenExecutionFee: Get<u128>,
+	Balance: BalanceT + From<u128>,
 {
-	fn convert_register_token(chain_id: u64, token: H160) -> (Xcm<()>, u128) {
+	fn convert_register_token(chain_id: u64, token: H160) -> (Xcm<()>, Balance) {
 		let network = Ethereum { chain_id };
 		let fee: MultiAsset = (MultiLocation::parent(), CreateAssetExecutionFee::get()).into();
 		let deposit: MultiAsset = (MultiLocation::parent(), CreateAssetDeposit::get()).into();
@@ -176,7 +205,7 @@ where
 		]
 		.into();
 
-		(xcm, total_amount)
+		(xcm, total_amount.into())
 	}
 
 	fn convert_send_token(
@@ -184,9 +213,9 @@ where
 		token: H160,
 		destination: Destination,
 		amount: u128,
-	) -> (Xcm<()>, u128) {
+	) -> (Xcm<()>, Balance) {
 		let network = Ethereum { chain_id };
-		let fee_amount = CreateAssetExecutionFee::get();
+		let fee_amount = SendTokenExecutionFee::get();
 		let fee: MultiAsset = (MultiLocation::parent(), fee_amount).into();
 		let asset: MultiAsset = (Self::convert_token_address(network, token), amount).into();
 
@@ -249,7 +278,7 @@ where
 			},
 		}
 
-		(instructions.into(), total_fee_amount)
+		(instructions.into(), total_fee_amount.into())
 	}
 
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.
@@ -299,6 +328,11 @@ impl<AccountId> GlobalConsensusEthereumConvertsFor<AccountId> {
 #[cfg(test)]
 mod tests {
 	use super::{FromEthereumGlobalConsensus, GlobalConsensusEthereumConvertsFor};
+	use crate::inbound::{
+		CallIndex, Command, ConvertMessage, Destination, MessageToXcm, MessageV1, MultiAddress,
+		VersionedMessage, H160, MINIMUM_DEPOSIT,
+	};
+	use codec::Encode;
 	use frame_support::{parameter_types, traits::ContainsPair};
 	use hex_literal::hex;
 	use sp_core::crypto::Ss58Codec;
@@ -315,7 +349,20 @@ mod tests {
 	parameter_types! {
 		pub EthereumNetwork: NetworkId = NETWORK;
 		pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
+
+		pub const CreateAssetCall: CallIndex = [1, 1];
+		pub const CreateAssetExecutionFee: u128 = 123;
+		pub const CreateAssetDeposit: u128 = 891;
+		pub const SendTokenExecutionFee: u128 = 592;
 	}
+
+	type Converter = MessageToXcm<
+		CreateAssetCall,
+		CreateAssetExecutionFee,
+		CreateAssetDeposit,
+		SendTokenExecutionFee,
+		u128,
+	>;
 
 	#[test]
 	fn test_contract_location_without_network_converts_successfully() {
@@ -388,5 +435,350 @@ mod tests {
 			interior: X2(GlobalConsensus(NETWORK), AccountKey20 { network: None, key: [0; 20] }),
 		};
 		assert!(!FromEthereumGlobalConsensus::<EthereumLocation>::contains(&asset, &origin));
+	}
+
+	#[test]
+	fn test_xcm_converter_send_token_local_returns_execution_fee() {
+		let amount = 100;
+		let id = [1; 32];
+		let token = [2; 20];
+		let chain_id = 15;
+		let destination = Destination::AccountId32 { id };
+		let command = Command::SendToken { token: H160(token), destination, amount };
+
+		let message = VersionedMessage::V1(MessageV1 { chain_id, command });
+		let expected_fee = SendTokenExecutionFee::get();
+		let expected = Xcm(vec![
+			ReceiveTeleportedAsset(
+				MultiAsset { id: Concrete(MultiLocation::parent()), fun: Fungible(expected_fee) }
+					.into(),
+			),
+			BuyExecution {
+				fees: MultiAsset {
+					id: Concrete(MultiLocation::parent()),
+					fun: Fungible(expected_fee),
+				},
+				weight_limit: Unlimited,
+			},
+			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
+			ReserveAssetDeposited(
+				MultiAsset {
+					id: Concrete(MultiLocation {
+						parents: 2,
+						interior: X2(
+							GlobalConsensus(Ethereum { chain_id }),
+							AccountKey20 { network: None, key: token },
+						),
+					}),
+					fun: Fungible(amount),
+				}
+				.into(),
+			),
+			ClearOrigin,
+			DepositAsset {
+				assets: Definite(
+					MultiAsset {
+						id: Concrete(MultiLocation {
+							parents: 2,
+							interior: X2(
+								GlobalConsensus(Ethereum { chain_id }),
+								AccountKey20 { network: None, key: token },
+							),
+						}),
+						fun: Fungible(100),
+					}
+					.into(),
+				),
+				beneficiary: MultiLocation {
+					parents: 0,
+					interior: X1(AccountId32 { network: None, id }),
+				},
+			},
+			DepositAsset {
+				assets: Wild(All),
+				beneficiary: MultiLocation {
+					parents: 2,
+					interior: X1(GlobalConsensus(Ethereum { chain_id })),
+				},
+			},
+		]);
+		let Ok((xcm, fee)) = Converter::convert(message) else {panic!("unreachable");};
+		assert_eq!(fee, expected_fee);
+		assert_eq!(xcm, expected);
+	}
+
+	#[test]
+	fn test_xcm_converter_send_token_remote_account_id_returns_double_execution_fee() {
+		let amount = 100;
+		let para_id = 1001;
+		let id = [1; 32];
+		let token = [2; 20];
+		let chain_id = 15;
+		let destination = Destination::ForeignAccountId32 { para_id, id };
+		let command = Command::SendToken { token: H160(token), destination, amount };
+
+		let message = VersionedMessage::V1(MessageV1 { chain_id, command });
+		let expected_fee = SendTokenExecutionFee::get();
+		let expected = Xcm(vec![
+			ReceiveTeleportedAsset(
+				MultiAsset { id: Concrete(MultiLocation::parent()), fun: Fungible(expected_fee) }
+					.into(),
+			),
+			BuyExecution {
+				fees: MultiAsset {
+					id: Concrete(MultiLocation::parent()),
+					fun: Fungible(expected_fee),
+				},
+				weight_limit: Unlimited,
+			},
+			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
+			ReserveAssetDeposited(
+				MultiAsset {
+					id: Concrete(MultiLocation {
+						parents: 2,
+						interior: X2(
+							GlobalConsensus(Ethereum { chain_id }),
+							AccountKey20 { network: None, key: token },
+						),
+					}),
+					fun: Fungible(100),
+				}
+				.into(),
+			),
+			ClearOrigin,
+			DepositReserveAsset {
+				assets: Definite(
+					MultiAsset {
+						id: Concrete(MultiLocation {
+							parents: 2,
+							interior: X2(
+								GlobalConsensus(Ethereum { chain_id }),
+								AccountKey20 { network: None, key: token },
+							),
+						}),
+						fun: Fungible(100),
+					}
+					.into(),
+				),
+				dest: MultiLocation { parents: 1, interior: X1(Parachain(para_id)) },
+				xcm: Xcm(vec![
+					ReceiveTeleportedAsset(
+						MultiAsset {
+							id: Concrete(MultiLocation::parent()),
+							fun: Fungible(expected_fee),
+						}
+						.into(),
+					),
+					BuyExecution {
+						fees: MultiAsset {
+							id: Concrete(MultiLocation::parent()),
+							fun: Fungible(expected_fee),
+						},
+						weight_limit: Unlimited,
+					},
+					DepositAsset {
+						assets: Definite(
+							MultiAsset {
+								id: Concrete(MultiLocation {
+									parents: 2,
+									interior: X2(
+										GlobalConsensus(Ethereum { chain_id }),
+										AccountKey20 { network: None, key: token },
+									),
+								}),
+								fun: Fungible(amount),
+							}
+							.into(),
+						),
+						beneficiary: MultiLocation {
+							parents: 0,
+							interior: X1(AccountId32 { network: None, id }),
+						},
+					},
+					DepositAsset {
+						assets: Wild(All),
+						beneficiary: MultiLocation {
+							parents: 2,
+							interior: X1(GlobalConsensus(Ethereum { chain_id })),
+						},
+					},
+				]),
+			},
+		]);
+		let Ok((xcm, fee)) = Converter::convert(message) else {panic!("unreachable");};
+		assert_eq!(fee, expected_fee * 2);
+		assert_eq!(xcm, expected);
+	}
+
+	#[test]
+	fn test_xcm_converter_send_token_remote_account_key_returns_double_execution_fee() {
+		let amount = 100;
+		let para_id = 1001;
+		let id = [1; 20];
+		let token = [2; 20];
+		let chain_id = 15;
+		let destination = Destination::ForeignAccountId20 { para_id, id };
+		let command = Command::SendToken { token: H160(token), destination, amount };
+
+		let message = VersionedMessage::V1(MessageV1 { chain_id, command });
+		let expected_fee = SendTokenExecutionFee::get();
+		let expected = Xcm(vec![
+			ReceiveTeleportedAsset(
+				MultiAsset { id: Concrete(MultiLocation::parent()), fun: Fungible(expected_fee) }
+					.into(),
+			),
+			BuyExecution {
+				fees: MultiAsset {
+					id: Concrete(MultiLocation::parent()),
+					fun: Fungible(expected_fee),
+				},
+				weight_limit: Unlimited,
+			},
+			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
+			ReserveAssetDeposited(
+				MultiAsset {
+					id: Concrete(MultiLocation {
+						parents: 2,
+						interior: X2(
+							GlobalConsensus(Ethereum { chain_id }),
+							AccountKey20 { network: None, key: token },
+						),
+					}),
+					fun: Fungible(amount),
+				}
+				.into(),
+			),
+			ClearOrigin,
+			DepositReserveAsset {
+				assets: Definite(
+					MultiAsset {
+						id: Concrete(MultiLocation {
+							parents: 2,
+							interior: X2(
+								GlobalConsensus(Ethereum { chain_id }),
+								AccountKey20 { network: None, key: token },
+							),
+						}),
+						fun: Fungible(100),
+					}
+					.into(),
+				),
+				dest: MultiLocation { parents: 1, interior: X1(Parachain(para_id)) },
+				xcm: Xcm(vec![
+					ReceiveTeleportedAsset(
+						MultiAsset {
+							id: Concrete(MultiLocation::parent()),
+							fun: Fungible(expected_fee),
+						}
+						.into(),
+					),
+					BuyExecution {
+						fees: MultiAsset {
+							id: Concrete(MultiLocation::parent()),
+							fun: Fungible(expected_fee),
+						},
+						weight_limit: Unlimited,
+					},
+					DepositAsset {
+						assets: Definite(
+							MultiAsset {
+								id: Concrete(MultiLocation {
+									parents: 2,
+									interior: X2(
+										GlobalConsensus(Ethereum { chain_id }),
+										AccountKey20 { network: None, key: token },
+									),
+								}),
+								fun: Fungible(100),
+							}
+							.into(),
+						),
+						beneficiary: MultiLocation {
+							parents: 0,
+							interior: X1(AccountKey20 { network: None, key: id }),
+						},
+					},
+					DepositAsset {
+						assets: Wild(All),
+						beneficiary: MultiLocation {
+							parents: 2,
+							interior: X1(GlobalConsensus(Ethereum { chain_id })),
+						},
+					},
+				]),
+			},
+		]);
+		let Ok((xcm, fee)) = Converter::convert(message) else {panic!("unreachable");};
+		assert_eq!(fee, expected_fee * 2);
+		assert_eq!(xcm, expected);
+	}
+
+	#[test]
+	fn test_xcm_converter_register_token_fee_includes_deposit_and_execution() {
+		let chain_id = 15;
+		let token = [3; 20];
+		let command = Command::RegisterToken { token: token.into() };
+		let message = VersionedMessage::V1(MessageV1 { chain_id, command });
+		let execution_fee = CreateAssetExecutionFee::get();
+		let deposit = CreateAssetDeposit::get();
+
+		let create_call_index: [u8; 2] = CreateAssetCall::get();
+		let expected_asset_id = MultiLocation {
+			parents: 2,
+			interior: X2(
+				GlobalConsensus(Ethereum { chain_id }),
+				AccountKey20 { network: None, key: token.into() },
+			),
+		};
+		let expected = Xcm(vec![
+			ReceiveTeleportedAsset(
+				MultiAsset {
+					id: Concrete(MultiLocation::parent()),
+					fun: Fungible(execution_fee + deposit),
+				}
+				.into(),
+			),
+			BuyExecution {
+				fees: MultiAsset {
+					id: Concrete(MultiLocation::parent()),
+					fun: Fungible(execution_fee),
+				},
+				weight_limit: Unlimited,
+			},
+			DepositAsset {
+				assets: Definite(
+					MultiAsset { id: Concrete(MultiLocation::parent()), fun: Fungible(deposit) }
+						.into(),
+				),
+				beneficiary: MultiLocation {
+					parents: 2,
+					interior: X1(GlobalConsensus(Ethereum { chain_id })),
+				},
+			},
+			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
+			Transact {
+				origin_kind: OriginKind::Xcm,
+				require_weight_at_most: Weight::from_parts(400000000, 8000),
+				call: (
+					create_call_index,
+					expected_asset_id,
+					MultiAddress::<[u8; 32], ()>::Id(EXPECTED_SOVEREIGN_KEY),
+					MINIMUM_DEPOSIT,
+				)
+					.encode()
+					.into(),
+			},
+			RefundSurplus,
+			DepositAsset {
+				assets: Wild(All),
+				beneficiary: MultiLocation {
+					parents: 2,
+					interior: X1(GlobalConsensus(Ethereum { chain_id })),
+				},
+			},
+		]);
+		let Ok((xcm, fee)) = Converter::convert(message) else {panic!("unreachable");};
+		assert_eq!(fee, execution_fee + deposit);
+		assert_eq!(xcm, expected);
 	}
 }
