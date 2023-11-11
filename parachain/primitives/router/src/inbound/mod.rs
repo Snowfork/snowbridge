@@ -353,10 +353,9 @@ mod tests {
 		VersionedMessage, H160, MINIMUM_DEPOSIT,
 	};
 	use codec::Encode;
-	use frame_support::{parameter_types, traits::ContainsPair, PalletId};
+	use frame_support::{parameter_types, traits::ContainsPair};
 	use hex_literal::hex;
 	use sp_core::crypto::Ss58Codec;
-	use sp_runtime::traits::AccountIdConversion;
 	use xcm::v3::prelude::*;
 	use xcm_executor::traits::ConvertLocation;
 
@@ -375,7 +374,7 @@ mod tests {
 		pub const CreateAssetExecutionFee: u128 = 123;
 		pub const CreateAssetDeposit: u128 = 891;
 		pub const SendTokenExecutionFee: u128 = 592;
-		pub Treasury: [u8; 32] = PalletId(*b"01234567").into_account_truncating();
+		pub RefundAccount: [u8; 32] = [5; 32];
 	}
 
 	type Converter = MessageToXcm<
@@ -383,7 +382,7 @@ mod tests {
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
-		Treasury,
+		RefundAccount,
 		[u8; 32],
 		u128,
 	>;
@@ -467,6 +466,7 @@ mod tests {
 		let id = [1; 32];
 		let token = [2; 20];
 		let chain_id = 15;
+		let refund_id = RefundAccount::get();
 		let destination = Destination::AccountId32 { id };
 		let command = Command::SendToken { token: H160(token), destination, amount };
 
@@ -521,8 +521,8 @@ mod tests {
 			DepositAsset {
 				assets: Wild(All),
 				beneficiary: MultiLocation {
-					parents: 2,
-					interior: X1(GlobalConsensus(Ethereum { chain_id })),
+					parents: 0,
+					interior: X1(AccountId32 { network: None, id: refund_id }),
 				},
 			},
 		]);
@@ -538,6 +538,7 @@ mod tests {
 		let id = [1; 32];
 		let token = [2; 20];
 		let chain_id = 15;
+		let refund_id = RefundAccount::get();
 		let destination = Destination::ForeignAccountId32 { para_id, id };
 		let command = Command::SendToken { token: H160(token), destination, amount };
 
@@ -622,8 +623,8 @@ mod tests {
 					DepositAsset {
 						assets: Wild(All),
 						beneficiary: MultiLocation {
-							parents: 2,
-							interior: X1(GlobalConsensus(Ethereum { chain_id })),
+							parents: 0,
+							interior: X1(AccountId32 { network: None, id: refund_id }),
 						},
 					},
 				]),
@@ -641,6 +642,7 @@ mod tests {
 		let id = [1; 20];
 		let token = [2; 20];
 		let chain_id = 15;
+		let refund_id = RefundAccount::get();
 		let destination = Destination::ForeignAccountId20 { para_id, id };
 		let command = Command::SendToken { token: H160(token), destination, amount };
 
@@ -725,8 +727,8 @@ mod tests {
 					DepositAsset {
 						assets: Wild(All),
 						beneficiary: MultiLocation {
-							parents: 2,
-							interior: X1(GlobalConsensus(Ethereum { chain_id })),
+							parents: 0,
+							interior: X1(AccountId32 { network: None, id: refund_id }),
 						},
 					},
 				]),
@@ -741,6 +743,7 @@ mod tests {
 	fn test_xcm_converter_register_token_fee_includes_deposit_and_execution() {
 		let chain_id = 15;
 		let token = [3; 20];
+		let refund_id = RefundAccount::get();
 		let command = Command::RegisterToken { token: token.into() };
 		let message = VersionedMessage::V1(MessageV1 { chain_id, command });
 		let execution_fee = CreateAssetExecutionFee::get();
@@ -796,8 +799,8 @@ mod tests {
 			DepositAsset {
 				assets: Wild(All),
 				beneficiary: MultiLocation {
-					parents: 2,
-					interior: X1(GlobalConsensus(Ethereum { chain_id })),
+					parents: 0,
+					interior: X1(AccountId32 { network: None, id: refund_id }),
 				},
 			},
 		]);
