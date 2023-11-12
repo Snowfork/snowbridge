@@ -137,7 +137,6 @@ parameter_types! {
 	pub const CreateAssetDeposit: u128 = 100_000_000_000;
 	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
 	pub const InitialFund: u128 = 1_000_000_000_000;
-	pub const TreasuryAccount: [u8; 32] = [0; 32];
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -186,7 +185,6 @@ impl inbound_queue::Config for Test {
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
 		SendTokenExecutionFee,
-		TreasuryAccount,
 		AccountId,
 		Balance,
 	>;
@@ -251,10 +249,6 @@ const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 254] = hex!(
 	"
 );
 
-const XCM_HASH: [u8; 32] = [
-	233, 15, 49, 86, 217, 239, 225, 133, 45, 227, 105, 81, 214, 170, 242, 251, 20, 220, 205, 196,
-	44, 15, 133, 59, 30, 231, 234, 76, 141, 44, 210, 210,
-];
 const ASSET_HUB_PARAID: u32 = 1000u32;
 const TEMPLATE_PARAID: u32 = 1001u32;
 
@@ -282,7 +276,10 @@ fn test_submit_happy_path() {
 		expect_events(vec![InboundQueueEvent::MessageReceived {
 			dest: ASSET_HUB_PARAID.into(),
 			nonce: 1,
-			message_id: XCM_HASH,
+			message_id: [
+				3, 29, 43, 131, 7, 80, 47, 2, 238, 64, 45, 200, 64, 1, 46, 74, 121, 211, 8, 178,
+				198, 26, 230, 13, 180, 78, 164, 58, 22, 133, 206, 83,
+			],
 		}
 		.into()]);
 	});
