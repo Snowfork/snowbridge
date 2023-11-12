@@ -17,6 +17,7 @@ pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 
 use frame_support::traits::Contains;
 use sp_core::H256;
+use sp_io::hashing::keccak_256;
 use sp_runtime::traits::AccountIdConversion;
 use xcm::prelude::{Junction::Parachain, Junctions::X1, MultiLocation};
 
@@ -45,3 +46,51 @@ impl Contains<MultiLocation> for AllowSiblingsOnly {
 pub const GWEI: u128 = 1_000_000_000;
 pub const METH: u128 = 1_000_000_000_000_000;
 pub const ETH: u128 = 1_000_000_000_000_000_000;
+
+#[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
+pub struct ChannelId([u8; 32]);
+
+impl From<ParaId> for ChannelId {
+	fn from(value: ParaId) -> Self {
+		let x: u32 = value.into();
+		let para_id_bytes: [u8; 4] = x.to_be_bytes();
+		let prefix: [u8; 4] = b"para";
+		let mut preimage: Vec<u8> =
+			b"para".into_iter().chain(para_id_bytes.into_iter()).map(|v| v).collect();
+		keccak_256(&preimage)
+	}
+}
+
+impl From<[u8; 32]> for ChannelId {
+	fn from(value: [u8; 32]) -> Self {
+		ChannelId(value)
+	}
+}
+
+impl<'a> From<&'a [u8; 32]> for ChannelId {
+	fn from(value: &'a [u8; 32]) -> Self {
+		ChannelId(value)
+	}
+}
+
+impl From<H256> for ChannelId {
+	fn from(value: H256) -> Self {
+		ChannelId(value.into())
+	}
+}
+
+impl AsRef<[u8]> for ChannelId {
+	fn as_ref(&self) -> &[u8] {
+		&self.0
+	}
+}
+
+#[derive(Clone, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+pub struct Channel {
+	pub agent_id: AgentId,
+	pub para_id: ParaId,
+}
+
+trait ChannelLookup {
+	fn lookup(channel_id: ChannelId) -> Option<Channel>;
+}

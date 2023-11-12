@@ -17,6 +17,7 @@ frame-support = { path = "../../../polkadot-sdk/substrate/frame/support", defaul
 frame-system = { path = "../../../polkadot-sdk/substrate/frame/system", default-features = false }
 sp-runtime = { path = "../../../polkadot-sdk/substrate/primitives/runtime", default-features = false }
 sp-std = { path = "../../../polkadot-sdk/substrate/primitives/std", default-features = false }
+sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-core = { path = "../../../polkadot-sdk/substrate/primitives/core", default-features = false }
 sp-arithmetic = { path = "../../../polkadot-sdk/substrate/primitives/arithmetic", default-features = false }
 
@@ -37,6 +38,7 @@ std = [
     "frame-system/std",
     "polkadot-parachain-primitives/std",
     "sp-std/std",
+    "sp-io/std",
     "sp-core/std",
     "sp-runtime/std",
     "snowbridge-ethereum/std",

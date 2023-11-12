@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.22;
 
-import {OperatingMode, InboundMessage, ParaID} from "../Types.sol";
+import {OperatingMode, InboundMessage, ParaID, ChannelID} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 
 interface IGateway {
@@ -11,19 +11,19 @@ interface IGateway {
      */
 
     // Emitted when inbound message has been dispatched
-    event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bytes32 indexed messageID, bool success);
+    event InboundMessageDispatched(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bool success);
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
-    event OutboundMessageAccepted(ParaID indexed destination, uint64 nonce, bytes32 indexed messageID, bytes payload);
+    event OutboundMessageAccepted(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bytes payload);
 
     // Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);
 
     // Emitted when a channel has been created
-    event ChannelCreated(ParaID indexed paraID);
+    event ChannelCreated(ChannelID indexed channelID);
 
     // Emitted when a channel has been updated
-    event ChannelUpdated(ParaID indexed paraID);
+    event ChannelUpdated(ChannelID indexed channelID);
 
     // Emitted when the gateway is upgraded
     event Upgraded(address indexed implementation);
@@ -39,9 +39,9 @@ interface IGateway {
      */
 
     function operatingMode() external view returns (OperatingMode);
-    function channelOperatingModeOf(ParaID paraID) external view returns (OperatingMode);
-    function channelFeeOf(ParaID paraID) external view returns (uint256);
-    function channelNoncesOf(ParaID paraID) external view returns (uint64, uint64);
+    function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
+    function channelFeeOf(ChannelID channelID) external view returns (uint256);
+    function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
     function agentOf(bytes32 agentID) external view returns (address);
     function implementation() external view returns (address);
 

@@ -3554,6 +3554,7 @@ dependencies = [
  "snowbridge-ethereum",
  "sp-arithmetic",
  "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
  "staging-xcm",

@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.22;
 
-type ParaID is uint256;
+type ParaID is uint32;
 
-using {ParaIDEq as ==, ParaIDNe as !=} for ParaID global;
+using {ParaIDEq as ==, ParaIDNe as !=, into} for ParaID global;
 
 function ParaIDEq(ParaID a, ParaID b) pure returns (bool) {
     return ParaID.unwrap(a) == ParaID.unwrap(b);
@@ -12,6 +12,22 @@ function ParaIDEq(ParaID a, ParaID b) pure returns (bool) {
 
 function ParaIDNe(ParaID a, ParaID b) pure returns (bool) {
     return !ParaIDEq(a, b);
+}
+
+function into(ParaID paraID) pure returns (ChannelID) {
+    return ChannelID.wrap(keccak256(abi.encodePacked("para", ParaID.unwrap(paraID))));
+}
+
+type ChannelID is bytes32;
+
+using {ChannelIDEq as ==, ChannelIDNe as !=} for ChannelID global;
+
+function ChannelIDEq(ChannelID a, ChannelID b) pure returns (bool) {
+    return ChannelID.unwrap(a) == ChannelID.unwrap(b);
+}
+
+function ChannelIDNe(ChannelID a, ChannelID b) pure returns (bool) {
+    return !ChannelIDEq(a, b);
 }
 
 /// @dev A messaging channel for a Polkadot parachain
@@ -32,7 +48,7 @@ struct Channel {
 /// @dev Inbound message from a Polkadot parachain (via BridgeHub)
 struct InboundMessage {
     /// @dev The parachain from which this message originated
-    ParaID origin;
+    ChannelID channelID;
     /// @dev The channel nonce
     uint64 nonce;
     /// @dev The command to execute

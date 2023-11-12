@@ -369,7 +369,7 @@ pub mod pallet {
 
 			// Construct the final committed message
 			let message = CommittedMessage {
-				origin: queued_message.origin,
+				channel_id: queued_message.origin,
 				nonce: next_nonce,
 				command,
 				params,

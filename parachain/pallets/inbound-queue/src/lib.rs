@@ -58,7 +58,7 @@ use xcm::prelude::{
 
 use snowbridge_core::{
 	inbound::{Message, VerificationError, Verifier},
-	sibling_sovereign_account, BasicOperatingMode, ParaId,
+	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ChannelLookup, ParaId,
 };
 use snowbridge_router_primitives::{
 	inbound,
@@ -115,6 +115,8 @@ pub mod pallet {
 		/// Convert inbound message to XCM
 		type MessageConverter: ConvertMessage;
 
+		type ChannelLookup: ChannelLookup;
+
 		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
@@ -132,8 +134,8 @@ pub mod pallet {
 	pub enum Event<T> {
 		/// A message was received from Ethereum
 		MessageReceived {
-			/// The destination parachain
-			dest: ParaId,
+			/// The message channel
+			channel_id: ChannelId,
 			/// The message nonce
 			nonce: u64,
 			/// ID of the XCM message which was forwarded to the final destination parachain
@@ -153,6 +155,8 @@ pub mod pallet {
 		InvalidNonce,
 		/// Message has an invalid payload.
 		InvalidPayload,
+		/// Message channel is invalid
+		InvaliChannel,
 		/// The max nonce for the type has been reached
 		MaxNonceReached,
 		/// Cannot convert location
@@ -194,9 +198,9 @@ pub mod pallet {
 		}
 	}
 
-	/// The current nonce for each parachain
+	/// The current nonce for each channel
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
+	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ChannelId, u64, ValueQuery>;
 
 	/// The current operating mode of the pallet.
 	#[pallet::storage]
@@ -222,10 +226,14 @@ pub mod pallet {
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
 			// Verify that the message was submitted from the known Gateway contract
-			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway,);
+			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway);
+
+			// Retrieve the registered channel for this message
+			let channel: Channel =
+				T::ChannelLookup::lookup(envelope.channel_id).ok_or(Error::<T>::InvalidChannel)?;
 
 			// Verify message nonce
-			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {
+			<Nonce<T>>::try_mutate(envelope.channel_id, |nonce| -> DispatchResult {
 				if *nonce == u64::MAX {
 					return Err(Error::<T>::MaxNonceReached.into())
 				}
@@ -239,7 +247,7 @@ pub mod pallet {
 
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
-			let sovereign_account = sibling_sovereign_account::<T>(envelope.dest);
+			let sovereign_account = sibling_sovereign_account::<T>(channel.para_id);
 			let refund = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
 			T::Token::transfer(
 				&sovereign_account,
@@ -255,10 +263,10 @@ pub mod pallet {
 			};
 
 			// Attempt to send XCM to a dest parachain
-			let message_id = Self::send_xcm(xcm, envelope.dest)?;
+			let message_id = Self::send_xcm(xcm, channel.para_id)?;
 
 			Self::deposit_event(Event::MessageReceived {
-				dest: envelope.dest,
+				channel_id: envelope.channel_id,
 				nonce: envelope.nonce,
 				message_id,
 			});

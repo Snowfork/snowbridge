@@ -89,15 +89,15 @@ mod v1 {
 		},
 		/// Create bidirectional messaging channel to a parachain
 		CreateChannel {
-			/// The ID of the parachain
-			para_id: ParaId,
+			/// The ID of the channel
+			channel_id: ChannelId,
 			/// The agent ID of the parachain
 			agent_id: H256,
 		},
 		/// Update the configuration of a channel
 		UpdateChannel {
-			/// The ID of the parachain to which the channel belongs.
-			para_id: ParaId,
+			/// The ID of the channel
+			channel_id: ChannelId,
 			/// The new operating mode
 			mode: OperatingMode,
 			/// The new fee to charge users for outbound messaging to Polkadot
@@ -161,21 +161,17 @@ mod v1 {
 					ethabi::encode(&[Token::Tuple(vec![Token::FixedBytes(
 						agent_id.as_bytes().to_owned(),
 					)])]),
-				Command::CreateChannel { para_id, agent_id } => {
-					let para_id: u32 = (*para_id).into();
+				Command::CreateChannel { channel_id, agent_id } =>
 					ethabi::encode(&[Token::Tuple(vec![
-						Token::Uint(U256::from(para_id)),
+						Token::FixedBytes(channel_id.as_ref().to_owned()),
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
-					])])
-				},
-				Command::UpdateChannel { para_id, mode, fee } => {
-					let para_id: u32 = (*para_id).into();
+					])]),
+				Command::UpdateChannel { channel_id, mode, fee } =>
 					ethabi::encode(&[Token::Tuple(vec![
-						Token::Uint(U256::from(para_id)),
+						Token::FixedBytes(channel_id.as_ref().to_owned()),
 						Token::Uint(U256::from((*mode) as u64)),
 						Token::Uint(U256::from(*fee)),
-					])])
-				},
+					])]),
 				Command::SetOperatingMode { mode } =>
 					ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
 				Command::TransferNativeFromAgent { agent_id, recipient, amount } =>
