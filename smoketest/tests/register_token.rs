@@ -1,7 +1,7 @@
 use codec::Encode;
 use ethers::{
-	core::types::Address,
-	utils::{parse_units, rlp::Encodable},
+	core::types::{Address, Log},
+	utils::{parse_units},
 };
 use futures::StreamExt;
 use snowbridge_smoketest::{
@@ -52,8 +52,9 @@ async fn register_token() {
 
 	// Log for OutboundMessageAccepted
 	let outbound_message_accepted_log = receipt.logs.last().unwrap();
-	// RLP-encode log and print it
-	println!("receipt log: {:#?}", hex::encode(outbound_message_accepted_log.rlp_bytes()));
+
+	// print log for unit tests
+	print_event_log_for_unit_tests(outbound_message_accepted_log);
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
@@ -93,4 +94,18 @@ async fn register_token() {
 		}
 	}
 	assert!(created_event_found)
+}
+
+fn print_event_log_for_unit_tests(log: &Log) {
+	let topics: Vec<String> = log.topics.iter().map(|t| hex::encode(t.as_ref())).collect();
+	println!("Log {{");
+	println!("	address: hex!(\"{}\").into(),", hex::encode(log.address.as_ref()));
+	println!("	topics: vec![");
+	for topic in topics.iter() {
+		println!("		hex!(\"{}\").into(),", topic);
+	}
+	println!("	],");
+	println!("	data: hex!(\"{}\").into(),", hex::encode(&log.data));
+
+	println!("}}")
 }
