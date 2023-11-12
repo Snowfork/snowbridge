@@ -36,9 +36,8 @@ pub mod weights;
 #[cfg(test)]
 mod test;
 
-use alloy_rlp::Decodable as RlpDecodable;
 use codec::{Decode, DecodeAll, Encode};
-use envelope::{Envelope, Log};
+use envelope::Envelope;
 use frame_support::{
 	traits::{
 		fungible::{Inspect, Mutate},
@@ -216,13 +215,12 @@ pub mod pallet {
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
 			// submit message to verifier for verification
-			T::Verifier::verify(&message).map_err(|e| Error::<T>::Verification(e))?;
+			T::Verifier::verify(&message.event_log, &message.proof)
+				.map_err(|e| Error::<T>::Verification(e))?;
 
-			let log = Log::decode(&mut message.data.as_slice())
-				.map_err(|_| Error::<T>::InvalidEnvelope)?;
-
-			// Decode log into an Envelope
-			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
+			// Decode event log into an Envelope
+			let envelope =
+				Envelope::try_from(message.event_log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
 			// Verify that the message was submitted from the known Gateway contract
 			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway,);

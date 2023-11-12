@@ -3551,7 +3551,6 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",
- "snowbridge-ethereum",
  "sp-arithmetic",
  "sp-core",
  "sp-runtime",
