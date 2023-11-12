@@ -10,9 +10,15 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 )
 
+type EventLog struct {
+	Address types.H160
+	Topics  []types.H256
+	Data    types.Bytes
+}
+
 type Message struct {
-	Data  []byte
-	Proof Proof
+	EventLog EventLog
+	Proof    Proof
 }
 
 type Proof struct {
