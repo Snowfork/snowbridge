@@ -259,7 +259,7 @@ impl<
 		let total_fee: MultiAsset = (MultiLocation::parent(), total_fee_amount).into();
 
 		let mut instructions = vec![
-			ReceiveTeleportedAsset(total_fee.clone().into()),
+			ReceiveTeleportedAsset(total_fee.into()),
 			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
 			UniversalOrigin(GlobalConsensus(network)),
 			ReserveAssetDeposited(asset.clone().into()),
