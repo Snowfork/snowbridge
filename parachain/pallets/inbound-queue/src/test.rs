@@ -305,7 +305,7 @@ fn test_submit_happy_path() {
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 		expect_events(vec![InboundQueueEvent::MessageReceived {
-			dest: ASSET_HUB_PARAID.into(),
+			channel_id: ASSET_HUB_PARAID.into(),
 			nonce: 1,
 			message_id: [
 				3, 29, 43, 131, 7, 80, 47, 2, 238, 64, 45, 200, 64, 1, 46, 74, 121, 211, 8, 178,

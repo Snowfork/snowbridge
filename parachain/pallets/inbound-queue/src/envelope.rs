@@ -41,7 +41,7 @@ impl TryFrom<Log> for Envelope {
 
 		Ok(Self {
 			gateway: log.address,
-			channel_id: ChannelID::from(event.channel_id.as_ref()),
+			channel_id: ChannelId::from(event.channel_id.as_ref()),
 			nonce: event.nonce,
 			message_id: H256::from(event.messageID.as_ref()),
 			payload: event.payload,

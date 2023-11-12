@@ -25,7 +25,8 @@ snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-featu
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
-hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+hex = { version = "0.4.3" }
+hex-literal = { version = "0.4.1" }
 
 [features]
 default = ["std"]

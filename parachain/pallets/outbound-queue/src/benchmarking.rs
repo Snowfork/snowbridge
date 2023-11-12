@@ -4,7 +4,10 @@ use super::*;
 
 use codec::Encode;
 use frame_benchmarking::v2::*;
-use snowbridge_core::outbound::{AggregateMessageOrigin, Command, ExportOrigin, Initializer};
+use snowbridge_core::{
+	outbound::{AggregateMessageOrigin, Command, Initializer},
+	ChannelId,
+};
 use sp_core::{H160, H256};
 
 #[allow(unused_imports)]
@@ -22,7 +25,7 @@ mod benchmarks {
 	fn do_process_message() -> Result<(), BenchmarkError> {
 		let enqueued_message = QueuedMessage {
 			id: H256::zero(),
-			origin: 1000.into(),
+			channel_id: ChannelId::from([1; 32]),
 			command: Command::Upgrade {
 				impl_address: H160::zero(),
 				impl_code_hash: H256::zero(),
@@ -32,7 +35,7 @@ mod benchmarks {
 				}),
 			},
 		};
-		let origin = AggregateMessageOrigin::Export(ExportOrigin::Here);
+		let origin = AggregateMessageOrigin::Snowbridge(ChannelId::from([1; 32]));
 		let encoded_enqueued_message = enqueued_message.encode();
 
 		#[block]

@@ -7,8 +7,9 @@ use frame_support::{
 	traits::{Everything, Hooks},
 	weights::IdentityFee,
 };
+use hex_literal::hex;
 
-use snowbridge_core::outbound::*;
+use snowbridge_core::{outbound::*, ParaId};
 use sp_core::{ConstU32, ConstU8, H160, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
@@ -77,6 +78,8 @@ impl pallet_message_queue::Config for Test {
 
 parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
+	pub const GovernanceChannelId: ChannelId = ChannelId::new(
+		hex!("eac6ce63463ed5ed5463182c98bbf10aaa66c1d2580e45f43b7b76b7cd3e3c1d"));
 }
 
 impl crate::Config for Test {
@@ -86,7 +89,7 @@ impl crate::Config for Test {
 	type Decimals = ConstU8<12>;
 	type MaxMessagePayloadSize = ConstU32<1024>;
 	type MaxMessagesPerBlock = ConstU32<20>;
-	type OwnParaId = OwnParaId;
+	type GovernanceChannelId = GovernanceChannelId;
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
 	type WeightToFee = IdentityFee<u128>;
@@ -120,15 +123,13 @@ pub fn run_to_end_of_next_block() {
 	System::on_finalize(System::block_number());
 }
 
-pub type OwnParaIdOf<T> = <T as Config>::OwnParaId;
-
 pub fn mock_governance_message<T>() -> Message
 where
 	T: Config,
 {
 	Message {
 		id: None,
-		origin: OwnParaIdOf::<T>::get(),
+		channel_id: T::GovernanceChannelId::get(),
 		command: Command::Upgrade {
 			impl_address: H160::zero(),
 			impl_code_hash: H256::zero(),
@@ -144,7 +145,7 @@ where
 {
 	Message {
 		id: None,
-		origin: OwnParaIdOf::<T>::get(),
+		channel_id: T::GovernanceChannelId::get(),
 		command: Command::Upgrade {
 			impl_address: H160::zero(),
 			impl_code_hash: H256::zero(),
@@ -159,7 +160,7 @@ where
 pub fn mock_message(sibling_para_id: u32) -> Message {
 	Message {
 		id: None,
-		origin: sibling_para_id.into(),
+		channel_id: ParaId::from(sibling_para_id).into(),
 		command: Command::AgentExecute {
 			agent_id: Default::default(),
 			command: AgentExecuteCommand::TransferToken {

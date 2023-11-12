@@ -752,4 +752,12 @@ contract GatewayTest is Test {
         assertEq(register, 1);
         assertEq(send, 1);
     }
+
+    bytes32 public expectChannelIDBytes = bytes32(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539);
+
+    function testDeriveChannelID() public {
+        ParaID para_id = ParaID.wrap(1000);
+        ChannelID channel_id = para_id.into();
+        assertEq(ChannelID.unwrap(channel_id), expectChannelIDBytes);
+    }
 }

@@ -205,7 +205,7 @@ fn update_channel() {
 		assert_ok!(EthereumControl::update_channel(origin, OperatingMode::Normal, 2004));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::UpdateChannel {
-			para_id: 2000.into(),
+			channel_id: ParaId::from(2000).into(),
 			mode: OperatingMode::Normal,
 			fee: 2004,
 		}));
@@ -306,7 +306,7 @@ fn force_update_channel() {
 		));
 
 		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::UpdateChannel {
-			para_id: 2000.into(),
+			channel_id: ParaId::from(2000).into(),
 			mode: OperatingMode::Normal,
 			fee: 2004,
 		}));
@@ -525,7 +525,7 @@ fn charge_fee_for_create_agent() {
 		// assert sovereign_balance decreased by (fee.base_fee + fee.delivery_fee)
 		let message = Message {
 			id: None,
-			origin: para_id.into(),
+			channel_id: ParaId::from(para_id).into(),
 			command: Command::CreateAgent { agent_id },
 		};
 		let (_, fee) = OutboundQueue::validate(&message).unwrap();
@@ -562,7 +562,7 @@ fn charge_fee_for_transfer_native_from_agent() {
 		assert_ok!(EthereumControl::transfer_native_from_agent(origin.clone(), recipient, amount));
 		let message = Message {
 			id: None,
-			origin: para_id.into(),
+			channel_id: ParaId::from(para_id).into(),
 			command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
 		};
 		let (_, fee) = OutboundQueue::validate(&message).unwrap();

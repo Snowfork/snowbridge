@@ -5,6 +5,9 @@
 //! Common traits and types
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(test)]
+mod tests;
+
 pub mod inbound;
 pub mod operating_mode;
 pub mod outbound;
@@ -15,11 +18,12 @@ pub use polkadot_parachain_primitives::primitives::{
 };
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::traits::Contains;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::hashing::keccak_256;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::{traits::AccountIdConversion, RuntimeDebug};
 use xcm::prelude::{Junction::Parachain, Junctions::X1, MultiLocation};
 
 /// The ID of an agent contract
@@ -48,17 +52,35 @@ pub const GWEI: u128 = 1_000_000_000;
 pub const METH: u128 = 1_000_000_000_000_000;
 pub const ETH: u128 = 1_000_000_000_000_000_000;
 
-#[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
+/// Identifier for a messaging channel
+#[derive(
+	Clone, Copy, Encode, Decode, PartialEq, Eq, Default, RuntimeDebug, MaxEncodedLen, TypeInfo,
+)]
 pub struct ChannelId([u8; 32]);
+
+/// Deterministically derive a ChannelId for a sibling parachain
+/// Generator: keccak256("para" + big_endian_bytes(para_id))
+///
+/// The equivalent generator on the Solidity side is in
+/// contracts/src/Types.sol:into().
+fn derive_channel_id_for_sibling(para_id: ParaId) -> ChannelId {
+	let para_id: u32 = para_id.into();
+	let para_id_bytes: [u8; 4] = para_id.to_be_bytes();
+	let prefix: [u8; 4] = *b"para";
+	let preimage: Vec<u8> =
+		prefix.into_iter().chain(para_id_bytes.into_iter()).map(|v| v).collect();
+	keccak_256(&preimage).into()
+}
+
+impl ChannelId {
+	pub const fn new(id: [u8; 32]) -> Self {
+		ChannelId(id)
+	}
+}
 
 impl From<ParaId> for ChannelId {
 	fn from(value: ParaId) -> Self {
-		let x: u32 = value.into();
-		let para_id_bytes: [u8; 4] = x.to_be_bytes();
-		let prefix: [u8; 4] = b"para";
-		let mut preimage: Vec<u8> =
-			b"para".into_iter().chain(para_id_bytes.into_iter()).map(|v| v).collect();
-		keccak_256(&preimage)
+		derive_channel_id_for_sibling(value.into())
 	}
 }
 
@@ -70,7 +92,7 @@ impl From<[u8; 32]> for ChannelId {
 
 impl<'a> From<&'a [u8; 32]> for ChannelId {
 	fn from(value: &'a [u8; 32]) -> Self {
-		ChannelId(value)
+		ChannelId(*value)
 	}
 }
 
@@ -92,6 +114,6 @@ pub struct Channel {
 	pub para_id: ParaId,
 }
 
-trait ChannelLookup {
+pub trait ChannelLookup {
 	fn lookup(channel_id: ChannelId) -> Option<Channel>;
 }

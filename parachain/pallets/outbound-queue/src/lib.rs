@@ -104,10 +104,10 @@ use frame_support::{
 };
 use snowbridge_core::{
 	outbound::{
-		AggregateMessageOrigin, Command, ExportOrigin, Fee, GasMeter, QueuedMessage,
-		VersionedQueuedMessage, ETHER_DECIMALS,
+		AggregateMessageOrigin, Command, Fee, GasMeter, QueuedMessage, VersionedQueuedMessage,
+		ETHER_DECIMALS,
 	},
-	BasicOperatingMode, ParaId, GWEI, METH,
+	BasicOperatingMode, ChannelId, GWEI, METH,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
@@ -157,9 +157,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
 
-		/// The ID of this parachain
+		/// The channel used for governance messages
 		#[pallet::constant]
-		type OwnParaId: Get<ParaId>;
+		type GovernanceChannelId: Get<ChannelId>;
 
 		/// Convert a weight value into a deductible fee based.
 		type WeightToFee: WeightToFee<Balance = Self::Balance>;
@@ -236,7 +236,7 @@ pub mod pallet {
 
 	/// The current nonce for each message origin
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
+	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ChannelId, u64, ValueQuery>;
 
 	/// The current operating mode of the pallet.
 	#[pallet::storage]
@@ -333,7 +333,6 @@ pub mod pallet {
 			mut message: &[u8],
 		) -> Result<bool, ProcessMessageError> {
 			use AggregateMessageOrigin::*;
-			use ExportOrigin::*;
 			use ProcessMessageError::*;
 
 			// Yield if the maximum number of messages has been processed this block.
@@ -345,10 +344,13 @@ pub mod pallet {
 			);
 
 			// If this is a high priority message, mark it as processed
-			if let Export(Here) = origin {
-				PendingHighPriorityMessageCount::<T>::mutate(|count| {
-					*count = count.saturating_sub(1)
-				});
+			match origin {
+				Snowbridge(channel_id) if channel_id == T::GovernanceChannelId::get() => {
+					PendingHighPriorityMessageCount::<T>::mutate(|count| {
+						*count = count.saturating_sub(1)
+					});
+				},
+				_ => {},
 			}
 
 			// Decode bytes into versioned message
@@ -359,7 +361,7 @@ pub mod pallet {
 			let queued_message: QueuedMessage =
 				versioned_queued_message.try_into().map_err(|_| Unsupported)?;
 
-			let next_nonce = Nonce::<T>::get(queued_message.origin).saturating_add(1);
+			let next_nonce = Nonce::<T>::get(queued_message.channel_id).saturating_add(1);
 
 			let command = queued_message.command.index();
 			let params = queued_message.command.abi_encode();
@@ -369,7 +371,7 @@ pub mod pallet {
 
 			// Construct the final committed message
 			let message = CommittedMessage {
-				channel_id: queued_message.origin,
+				channel_id: queued_message.channel_id,
 				nonce: next_nonce,
 				command,
 				params,
@@ -385,7 +387,7 @@ pub mod pallet {
 
 			Messages::<T>::append(Box::new(message));
 			MessageLeaves::<T>::append(message_abi_encoded_hash);
-			Nonce::<T>::set(queued_message.origin, next_nonce);
+			Nonce::<T>::set(queued_message.channel_id, next_nonce);
 
 			Self::deposit_event(Event::MessageAccepted {
 				id: queued_message.id,

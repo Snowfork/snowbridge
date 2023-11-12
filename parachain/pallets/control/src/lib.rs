@@ -55,10 +55,7 @@ pub use weights::*;
 use frame_support::traits::fungible::{Inspect, Mutate};
 use sp_core::{RuntimeDebug, H160, H256};
 use sp_io::hashing::blake2_256;
-use sp_runtime::{
-	traits::{BadOrigin, Hash},
-	DispatchError,
-};
+use sp_runtime::{traits::BadOrigin, DispatchError};
 use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
@@ -69,8 +66,8 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use snowbridge_core::{
-	outbound::{Command, Initializer, Message, OperatingMode, ParaId, SendError, SendMessage},
-	sibling_sovereign_account, AgentId, Channel, ChannelId,
+	outbound::{Command, Initializer, Message, OperatingMode, SendError, SendMessage},
+	sibling_sovereign_account, AgentId, Channel, ChannelId, ParaId,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -134,17 +131,11 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-		/// General-purpose hasher
-		type MessageHasher: Hash<Output = H256>;
-
 		/// Send messages to Ethereum
 		type OutboundQueue: SendMessage<Balance = BalanceOf<Self>>;
 
-		/// The ID of AssetHub. Used to build initial genesis config
-		type AssetHubParaId: Get<ParaId>;
-
-		/// The ID of this parachain
-		type OwnParaId: Get<ParaId>;
+		#[pallet::constant]
+		type GovernanceChannelId: Get<ChannelId>;
 
 		/// Origin check for XCM locations that can create agents
 		type SiblingOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
@@ -210,31 +201,34 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
+		// Own parachain id
+		pub para_id: ParaId,
+		// Own agent id
+		pub agent_id: AgentId,
+		// AssetHub's parachain id
+		pub asset_hub_para_id: ParaId,
 		#[serde(skip)]
-		_config: PhantomData<T>,
+		pub _config: PhantomData<T>,
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
-			let asset_hub_para_id: u32 = T::AssetHubParaId::get().into();
-			let asset_hub_agent_id = agent_id_of((Parent, Parachain(asset_hub_para_id)).into())
-				.expect("infallible; qed");
-			let asset_hub_channel_id: ChannelId = asset_hub_para_id.into();
+			let asset_hub_location: MultiLocation =
+				ParentThen(X1(Parachain(self.asset_hub_para_id.into()))).into();
+			let asset_hub_agent_id =
+				agent_id_of::<T>(&asset_hub_location).expect("infallible; qed");
+			let asset_hub_channel_id: ChannelId = self.asset_hub_para_id.into();
 			Agents::<T>::insert(asset_hub_agent_id, ());
 			Channels::<T>::insert(
 				asset_hub_channel_id,
-				Channel { agent_id: asset_hub_agent_id, para_id: asset_hub_para_id.into() },
+				Channel { agent_id: asset_hub_agent_id, para_id: self.asset_hub_para_id },
 			);
 
-			let bridge_hub_para_id: u32 = T::OwnParaId::get().into();
-			let bridge_hub_agent_id: AgentId =
-				blake2_256(("bridge-hub", bridge_hub_para_id).encode()).into();
-			let bridge_hub_channel_id: ChannelId = bridge_hub_para_id.into();
-			Agents::<T>::insert(bridge_hub_agent_id, ());
+			Agents::<T>::insert(self.agent_id, ());
 			Channels::<T>::insert(
-				bridge_hub_channel_id,
-				Channel { agent_id: bridge_hub_agent_id, para_id: bridge_hub_para_id.into() },
+				T::GovernanceChannelId::get(),
+				Channel { agent_id: self.agent_id, para_id: self.para_id },
 			);
 		}
 	}
@@ -260,10 +254,10 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			let initializer_params_hash =
-				initializer.as_ref().map(|i| T::MessageHasher::hash(i.params.as_ref()));
+			let initializer_params_hash: Option<H256> =
+				initializer.as_ref().map(|i| H256::from(blake2_256(i.params.as_ref())));
 			let command = Command::Upgrade { impl_address, impl_code_hash, initializer };
-			Self::send(T::OwnParaId::get(), command, PaysFee::<T>::No)?;
+			Self::send(T::GovernanceChannelId::get(), command, PaysFee::<T>::No)?;
 
 			Self::deposit_event(Event::<T>::Upgrade {
 				impl_address,
@@ -293,7 +287,7 @@ pub mod pallet {
 
 			let command = Command::CreateAgent { agent_id };
 			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
-			Self::send(T::OwnParaId::get(), command, pays_fee)?;
+			Self::send(T::GovernanceChannelId::get(), command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::CreateAgent {
 				location: Box::new(origin_location),
@@ -330,7 +324,7 @@ pub mod pallet {
 
 			let command = Command::CreateChannel { channel_id, agent_id };
 			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
-			Self::send(T::OwnParaId::get(), command, pays_fee)?;
+			Self::send(T::GovernanceChannelId::get(), command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::CreateChannel { channel_id, agent_id });
 			Ok(())
@@ -361,7 +355,7 @@ pub mod pallet {
 
 			let command = Command::UpdateChannel { channel_id, mode, fee };
 			let pays_fee = PaysFee::<T>::Partial(sibling_sovereign_account::<T>(para_id));
-			Self::send(para_id, command, pays_fee)?;
+			Self::send(channel_id, command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode, fee });
 			Ok(())
@@ -392,10 +386,10 @@ pub mod pallet {
 
 			let channel_id: ChannelId = para_id.into();
 
-			ensure!(Channels::<T>::contains_key(para_id), Error::<T>::NoChannel);
+			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::NoChannel);
 
 			let command = Command::UpdateChannel { channel_id, mode, fee };
-			Self::send(para_id, command, PaysFee::<T>::No)?;
+			Self::send(T::GovernanceChannelId::get(), command, PaysFee::<T>::No)?;
 
 			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode, fee });
 			Ok(())
@@ -412,7 +406,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			let command = Command::SetOperatingMode { mode };
-			Self::send(T::OwnParaId::get(), command, PaysFee::<T>::No)?;
+			Self::send(T::GovernanceChannelId::get(), command, PaysFee::<T>::No)?;
 
 			Self::deposit_event(Event::<T>::SetOperatingMode { mode });
 			Ok(())
@@ -437,7 +431,13 @@ pub mod pallet {
 
 			let pays_fee = PaysFee::<T>::Partial(sibling_sovereign_account::<T>(para_id));
 
-			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount, pays_fee)
+			Self::do_transfer_native_from_agent(
+				agent_id,
+				para_id.into(),
+				recipient,
+				amount,
+				pays_fee,
+			)
 		}
 
 		/// Sends a message to the Gateway contract to transfer ether from an agent to `recipient`.
@@ -463,12 +463,18 @@ pub mod pallet {
 			// Ensure that location is some consensus system on a sibling parachain
 			let location: MultiLocation =
 				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
-			let (para_id, agent_id) =
+			let (_, agent_id) =
 				ensure_sibling::<T>(&location).map_err(|_| Error::<T>::InvalidLocation)?;
 
 			let pays_fee = PaysFee::<T>::No;
 
-			Self::do_transfer_native_from_agent(agent_id, para_id, recipient, amount, pays_fee)
+			Self::do_transfer_native_from_agent(
+				agent_id,
+				T::GovernanceChannelId::get(),
+				recipient,
+				amount,
+				pays_fee,
+			)
 		}
 
 		/// Sends a message to the Gateway contract to set token transfer fees
@@ -492,7 +498,7 @@ pub mod pallet {
 			ensure!(register > 0 && send > 0, Error::<T>::InvalidTokenTransferFees);
 
 			let command = Command::SetTokenTransferFees { register, send };
-			Self::send(T::OwnParaId::get(), command, PaysFee::<T>::No)?;
+			Self::send(T::GovernanceChannelId::get(), command, PaysFee::<T>::No)?;
 
 			Self::deposit_event(Event::<T>::SetTokenTransferFees { register, send });
 			Ok(())
@@ -500,9 +506,9 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		/// Send `command` to the Gateway on the channel identified by `origin`.
-		fn send(origin: ParaId, command: Command, pays_fee: PaysFee<T>) -> DispatchResult {
-			let message = Message { id: None, origin, command };
+		/// Send `command` to the Gateway on the Channel identified by `channel_id`
+		fn send(channel_id: ChannelId, command: Command, pays_fee: PaysFee<T>) -> DispatchResult {
+			let message = Message { id: None, channel_id, command };
 			let (ticket, fee) =
 				T::OutboundQueue::validate(&message).map_err(|err| Error::<T>::Send(err))?;
 
@@ -526,10 +532,10 @@ pub mod pallet {
 		}
 
 		/// Issue a `Command::TransferNativeFromAgent` command. The command will be sent on the
-		/// channel owned by `para_id`.
+		/// channel `channel_id`
 		pub fn do_transfer_native_from_agent(
 			agent_id: H256,
-			para_id: ParaId,
+			channel_id: ChannelId,
 			recipient: H160,
 			amount: u128,
 			pays_fee: PaysFee<T>,
@@ -537,7 +543,7 @@ pub mod pallet {
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
 
 			let command = Command::TransferNativeFromAgent { agent_id, recipient, amount };
-			Self::send(para_id, command, pays_fee)?;
+			Self::send(channel_id, command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::TransferNativeFromAgent {
 				agent_id,
