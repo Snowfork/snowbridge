@@ -41,7 +41,7 @@ use envelope::Envelope;
 use frame_support::{
 	traits::{
 		fungible::{Inspect, Mutate},
-		tokens::Preservation,
+		tokens::{Fortitude, Precision, Preservation},
 	},
 	weights::WeightToFee,
 	PalletError,
@@ -112,7 +112,10 @@ pub mod pallet {
 		type GatewayAddress: Get<H160>;
 
 		/// Convert inbound message to XCM
-		type MessageConverter: ConvertMessage;
+		type MessageConverter: ConvertMessage<
+			AccountId = Self::AccountId,
+			Balance = BalanceOf<Self>,
+		>;
 
 		type WeightInfo: WeightInfo;
 
@@ -247,10 +250,15 @@ pub mod pallet {
 			)?;
 
 			// Decode message into XCM
-			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-				Ok(message) => Self::do_convert(envelope.message_id, message)?,
-				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
-			};
+			let (xcm, fee) =
+				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+					Ok(message) => Self::do_convert(envelope.message_id, message)?,
+					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
+				};
+
+			// We embed fees for xcm execution inside the xcm program using teleports
+			// so we must burn the amount of the fee embedded into the program.
+			T::Token::burn_from(&sovereign_account, fee, Precision::Exact, Fortitude::Polite)?;
 
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, envelope.dest)?;
@@ -282,12 +290,12 @@ pub mod pallet {
 		pub fn do_convert(
 			message_id: H256,
 			message: inbound::VersionedMessage,
-		) -> Result<Xcm<()>, Error<T>> {
-			let mut xcm =
+		) -> Result<(Xcm<()>, BalanceOf<T>), Error<T>> {
+			let (mut xcm, fee) =
 				T::MessageConverter::convert(message).map_err(|e| Error::<T>::ConvertMessage(e))?;
 			// Append the message id as an XCM topic
 			xcm.inner_mut().extend(vec![SetTopic(message_id.into())]);
-			Ok(xcm)
+			Ok((xcm, fee))
 		}
 
 		pub fn send_xcm(xcm: Xcm<()>, dest: ParaId) -> Result<XcmHash, Error<T>> {

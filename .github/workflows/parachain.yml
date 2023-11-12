@@ -130,6 +130,7 @@ jobs:
           flags: rust
 
   check-cumulus-bridgehub:
+    needs: check
     runs-on: snowbridge-runner
     steps:
       - uses: actions/checkout@v2
@@ -149,7 +150,7 @@ jobs:
           --features runtime-benchmarks
 
   integration-tests:
-    needs: test
+    needs: check
     runs-on: snowbridge-runner
     steps:
       - uses: actions/checkout@v2
@@ -162,7 +163,7 @@ jobs:
         run: rustup show
       - name: snowbridge integration
         run: >
-          cargo test 
+          cargo test
           --manifest-path polkadot-sdk/Cargo.toml
           -p bridge-hub-rococo-integration-tests
 
