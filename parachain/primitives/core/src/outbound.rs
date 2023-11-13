@@ -383,6 +383,12 @@ impl GasMeter for () {
 	}
 }
 
+impl From<u32> for AggregateMessageOrigin {
+	fn from(value: u32) -> Self {
+		AggregateMessageOrigin::Snowbridge(ParaId::from(value).into())
+	}
+}
+
 /// Aggregate message origin for the `MessageQueue` pallet.
 #[derive(Encode, Decode, Clone, Copy, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum AggregateMessageOrigin {
