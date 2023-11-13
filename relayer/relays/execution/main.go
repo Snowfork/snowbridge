@@ -111,7 +111,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 			log.WithFields(log.Fields{
 				"ethBlockNumber": executionHeaderState.BlockNumber,
-				"channelId":      r.config.Source.ChannelID,
+				"channelId":      types.H256(r.config.Source.ChannelID).Hex(),
 				"paraNonce":      paraNonce,
 				"ethNonce":       ethNonce,
 			}).Info("Polled Nonces")

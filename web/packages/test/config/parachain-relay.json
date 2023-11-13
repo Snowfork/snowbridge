@@ -14,7 +14,7 @@
       "Gateway": null
     },
     "beefy-activation-block": 0,
-    "channel-id": 0
+    "channel-id": null
   },
   "sink": {
     "ethereum": {
