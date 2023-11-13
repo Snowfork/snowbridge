@@ -231,8 +231,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     function agentOf(bytes32 agentID) external view returns (address) {
-        address agentAddress = _ensureAgent(agentID);
-        return agentAddress;
+        return _ensureAgent(agentID);
     }
 
     function implementation() public view returns (address) {
@@ -522,7 +521,7 @@ contract Gateway is IGateway, IInitializable {
         }
 
         // Generate a unique ID for this message
-        bytes32 messageID = keccak256(abi.encodePacked(dest, channel.outboundNonce));
+        bytes32 messageID = keccak256(abi.encodePacked(channelID, channel.outboundNonce));
 
         emit IGateway.OutboundMessageAccepted(channelID, channel.outboundNonce, messageID, payload);
     }
