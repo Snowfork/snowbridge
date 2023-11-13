@@ -1,7 +1,7 @@
 use ethers::prelude::Address;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway, i_gateway::SetTokenTransferFeesFilter},
+	contracts::{i_gateway, i_gateway::TokenTransferFeesChangedFilter},
 	helper::*,
 	parachains::bridgehub::api::{
 		ethereum_control::events::SetTokenTransferFees,
@@ -32,7 +32,7 @@ async fn set_token_transfer_fees() {
 
 	wait_for_bridgehub_event::<SetTokenTransferFees>(&test_clients.bridge_hub_client).await;
 
-	wait_for_ethereum_event::<SetTokenTransferFeesFilter>(&test_clients.ethereum_client).await;
+	wait_for_ethereum_event::<TokenTransferFeesChangedFilter>(&test_clients.ethereum_client).await;
 
 	let fees = gateway.token_transfer_fees().await.expect("get fees");
 	println!("asset fees {:?}", fees);

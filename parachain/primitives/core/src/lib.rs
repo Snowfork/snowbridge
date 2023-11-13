@@ -24,6 +24,7 @@ use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::hashing::keccak_256;
 use sp_runtime::{traits::AccountIdConversion, RuntimeDebug};
+use sp_std::prelude::*;
 use xcm::prelude::{Junction::Parachain, Junctions::X1, MultiLocation};
 
 /// The ID of an agent contract
@@ -67,8 +68,7 @@ fn derive_channel_id_for_sibling(para_id: ParaId) -> ChannelId {
 	let para_id: u32 = para_id.into();
 	let para_id_bytes: [u8; 4] = para_id.to_be_bytes();
 	let prefix: [u8; 4] = *b"para";
-	let preimage: Vec<u8> =
-		prefix.into_iter().chain(para_id_bytes.into_iter()).map(|v| v).collect();
+	let preimage: Vec<u8> = prefix.into_iter().chain(para_id_bytes.into_iter()).collect();
 	keccak_256(&preimage).into()
 }
 
@@ -80,7 +80,7 @@ impl ChannelId {
 
 impl From<ParaId> for ChannelId {
 	fn from(value: ParaId) -> Self {
-		derive_channel_id_for_sibling(value.into())
+		derive_channel_id_for_sibling(value)
 	}
 }
 
