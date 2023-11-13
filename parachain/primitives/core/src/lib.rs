@@ -20,6 +20,7 @@ pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::traits::Contains;
+use hex_literal::hex;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::hashing::keccak_256;
@@ -53,7 +54,7 @@ pub const GWEI: u128 = 1_000_000_000;
 pub const METH: u128 = 1_000_000_000_000_000;
 pub const ETH: u128 = 1_000_000_000_000_000_000;
 
-/// Identifier for a messaging channel
+/// Identifier for a message channel
 #[derive(
 	Clone, Copy, Encode, Decode, PartialEq, Eq, Default, RuntimeDebug, MaxEncodedLen, TypeInfo,
 )]
@@ -120,14 +121,14 @@ pub trait ChannelLookup {
 	fn lookup(channel_id: ChannelId) -> Option<Channel>;
 }
 
-pub const PRIMARY_GOVERNANCE_CHANNEL: ChannelId = ChannelId::new([
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-]);
+/// Channel for high-priority governance commands
+pub const PRIMARY_GOVERNANCE_CHANNEL: ChannelId =
+	ChannelId::new(hex!("0000000000000000000000000000000000000000000000000000000000000001"));
 
-pub const SECONDARY_GOVERNANCE_CHANNEL: ChannelId = ChannelId::new([
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-]);
+/// Channel for lower-priority governance commands
+pub const SECONDARY_GOVERNANCE_CHANNEL: ChannelId =
+	ChannelId::new(hex!("0000000000000000000000000000000000000000000000000000000000000002"));
 
-pub const BRIDGE_HUB_AGENT_ID: AgentId = H256([
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-]);
+/// Agent ID for BridgeHub
+pub const BRIDGE_HUB_AGENT_ID: AgentId =
+	H256(hex!("0000000000000000000000000000000000000000000000000000000000000001"));

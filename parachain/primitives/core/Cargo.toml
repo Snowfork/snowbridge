@@ -8,6 +8,7 @@ edition = "2021"
 serde = { version = "1.0.188", optional = true, features = [ "derive", "alloc" ], default-features = false }
 codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false }
 scale-info = { version = "2.9.0", default-features = false, features = [ "derive" ] }
+hex-literal = { version = "0.4.1" }
 
 polkadot-parachain-primitives = { path = "../../../polkadot-sdk/polkadot/parachain", default-features = false }
 xcm = { package = "staging-xcm", path = "../../../polkadot-sdk/polkadot/xcm", default-features = false }
@@ -26,7 +27,6 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 
 [dev-dependencies]
 hex = { version = "0.4.3" }
-hex-literal = { version = "0.4.1" }
 
 [features]
 default = ["std"]
