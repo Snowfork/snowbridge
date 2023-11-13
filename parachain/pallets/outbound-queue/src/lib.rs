@@ -428,7 +428,7 @@ pub mod pallet {
 			fee_per_gas.saturating_mul(max_gas_required.into()).saturating_add(reward)
 		}
 
-		/// Calculate fee in native currency for processing a message locally
+		/// The local component of the message processing fees in native currency
 		pub(crate) fn calculate_local_fee() -> T::Balance {
 			T::WeightToFee::weight_to_fee(
 				&T::WeightInfo::do_process_message().saturating_add(T::WeightInfo::commit_single()),

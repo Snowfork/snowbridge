@@ -1,20 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use snowbridge_core::ParaId;
+use snowbridge_core::{inbound::Log, ParaId};
 
 use sp_core::{RuntimeDebug, H160, H256};
 use sp_std::{convert::TryFrom, prelude::*};
 
-use alloy_primitives::{Address, Bytes, B256};
-use alloy_rlp::RlpDecodable;
+use alloy_primitives::B256;
 use alloy_sol_types::{sol, SolEvent};
-
-#[derive(RlpDecodable, RuntimeDebug)]
-pub struct Log {
-	pub address: Address,
-	pub topics: Vec<B256>,
-	pub data: Bytes,
-}
 
 sol! {
 	event OutboundMessageAccepted(uint256 indexed destination, uint64 nonce, bytes32 indexed messageID, bytes payload);
@@ -42,11 +34,13 @@ impl TryFrom<Log> for Envelope {
 	type Error = EnvelopeDecodeError;
 
 	fn try_from(log: Log) -> Result<Self, Self::Error> {
-		let event = OutboundMessageAccepted::decode_log(log.topics, &log.data, true)
+		let topics: Vec<B256> = log.topics.iter().map(|x| B256::from_slice(x.as_ref())).collect();
+
+		let event = OutboundMessageAccepted::decode_log(topics, &log.data, true)
 			.map_err(|_| EnvelopeDecodeError)?;
 
 		Ok(Self {
-			gateway: H160::from(log.address.as_ref()),
+			gateway: log.address,
 			dest: event.destination.saturating_to::<u32>().into(),
 			nonce: event.nonce,
 			message_id: H256::from(event.messageID.as_ref()),

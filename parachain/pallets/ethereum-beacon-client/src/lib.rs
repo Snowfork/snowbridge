@@ -43,10 +43,7 @@ use primitives::{
 	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, ForkData, ForkVersion,
 	ForkVersions, PublicKeyPrepared, SigningData,
 };
-use snowbridge_core::{
-	inbound::{Message, Proof, Verifier},
-	BasicOperatingMode, RingBufferMap,
-};
+use snowbridge_core::{BasicOperatingMode, RingBufferMap};
 use sp_core::H256;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;

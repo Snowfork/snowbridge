@@ -5,7 +5,6 @@ package ethereum
 
 import (
 	"bytes"
-	"encoding/hex"
 
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -36,8 +35,17 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*paracha
 		return nil, err
 	}
 
+	var convertedTopics []types.H256
+	for _, topic := range event.Topics {
+		convertedTopics = append(convertedTopics, types.H256(topic))
+	}
+
 	m := parachain.Message{
-		Data: buf.Bytes(),
+		EventLog: parachain.EventLog{
+			Address: types.H160(event.Address),
+			Topics:  convertedTopics,
+			Data:    event.Data,
+		},
 		Proof: parachain.Proof{
 			BlockHash: types.NewH256(event.BlockHash.Bytes()),
 			TxIndex:   types.NewU32(uint32(event.TxIndex)),
@@ -45,12 +53,10 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*paracha
 		},
 	}
 
-	value := hex.EncodeToString(m.Data)
 	log.WithFields(logrus.Fields{
-		"payload":    value,
-		"blockHash":  m.Proof.BlockHash.Hex(),
-		"eventIndex": m.Proof.TxIndex,
-		"txHash":     event.TxHash.Hex(),
+		"EventLog": m.EventLog,
+		"Proof":    m.Proof,
+		"txHash":   event.TxHash.Hex(),
 	}).Debug("Generated message from Ethereum log")
 
 	return &m, nil

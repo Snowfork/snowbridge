@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "primitives/beacon",
     "primitives/core",
     "primitives/ethereum",
     "primitives/router",
@@ -11,5 +12,6 @@ members = [
     "pallets/ethereum-beacon-client",
     "pallets/control",
     "pallets/control/runtime-api",
-    "tools/call-index"
+    "runtime/tests",
+    "runtime/runtime-common",
 ]

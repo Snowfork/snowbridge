@@ -911,73 +911,88 @@ fn submit_execution_header_not_finalized() {
 #[test]
 fn verify_message() {
 	let header = get_message_verification_header();
-	let message = get_message_verification_payload();
-	let block_hash = message.proof.block_hash;
+	let (event_log, proof) = get_message_verification_payload();
+	let block_hash = proof.block_hash;
 
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
-		assert_ok!(EthereumBeaconClient::verify(&message));
+		assert_ok!(EthereumBeaconClient::verify(&event_log, &proof));
 	});
 }
 
 #[test]
 fn verify_message_missing_header() {
-	let message = get_message_verification_payload();
+	let (event_log, proof) = get_message_verification_payload();
 
 	new_tester().execute_with(|| {
-		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::HeaderNotFound);
+		assert_err!(
+			EthereumBeaconClient::verify(&event_log, &proof),
+			VerificationError::HeaderNotFound
+		);
 	});
 }
 
 #[test]
 fn verify_message_invalid_proof() {
 	let header = get_message_verification_header();
-	let mut message = get_message_verification_payload();
-	message.proof.data.1[0] = TEST_HASH.into();
-	let block_hash = message.proof.block_hash;
+	let (event_log, mut proof) = get_message_verification_payload();
+	proof.data.1[0] = TEST_HASH.into();
+	let block_hash = proof.block_hash;
 
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
-		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::InvalidProof);
+		assert_err!(
+			EthereumBeaconClient::verify(&event_log, &proof),
+			VerificationError::InvalidProof
+		);
 	});
 }
 
 #[test]
 fn verify_message_invalid_receipts_root() {
 	let mut header = get_message_verification_header();
-	let message = get_message_verification_payload();
-	let block_hash = message.proof.block_hash;
+	let (event_log, proof) = get_message_verification_payload();
+	let block_hash = proof.block_hash;
 	header.receipts_root = TEST_HASH.into();
 
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
-		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::InvalidProof);
+		assert_err!(
+			EthereumBeaconClient::verify(&event_log, &proof),
+			VerificationError::InvalidProof
+		);
 	});
 }
 
 #[test]
-fn verify_message_invalid_message_data() {
+fn verify_message_invalid_log() {
 	let header = get_message_verification_header();
-	let mut message = get_message_verification_payload();
-	let block_hash = message.proof.block_hash;
-	message.data = TEST_HASH.into();
+	let (mut event_log, proof) = get_message_verification_payload();
+	let block_hash = proof.block_hash;
+	event_log.topics = vec![H256::zero(); 10];
 
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
-		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::InvalidLog);
+		assert_err!(
+			EthereumBeaconClient::verify(&event_log, &proof),
+			VerificationError::InvalidLog
+		);
 	});
 }
 
 #[test]
 fn verify_message_receipt_does_not_contain_log() {
 	let header = get_message_verification_header();
-	let mut message = get_message_verification_payload();
-	let block_hash = message.proof.block_hash;
-	message.data = hex!("f9013c94ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0f863a01b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ada000000000000000000000000000000000000000000000000000000000000003e8a00000000000000000000000000000000000000000000000000000000000000002b8c000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000068000f000000000000000101d184c103f7acc340847eee82a0b909e3358bc28d440edffa1352b13227e8ee646f3ea37456dec70100000101001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0000e8890423c78a0000000000000000000000000000000000000000000000000000000000000000").to_vec();
+	let (mut event_log, proof) = get_message_verification_payload();
+	let block_hash = proof.block_hash;
+	event_log.data = hex!("f9013c94ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0f863a01b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ada000000000000000000000000000000000000000000000000000000000000003e8a00000000000000000000000000000000000000000000000000000000000000002b8c000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000068000f000000000000000101d184c103f7acc340847eee82a0b909e3358bc28d440edffa1352b13227e8ee646f3ea37456dec70100000101001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0000e8890423c78a0000000000000000000000000000000000000000000000000000000000000000").to_vec();
 
 	new_tester().execute_with(|| {
 		<ExecutionHeaderBuffer<Test>>::insert(block_hash, header);
-		assert_err!(EthereumBeaconClient::verify(&message), VerificationError::LogNotFound);
+		assert_err!(
+			EthereumBeaconClient::verify(&event_log, &proof),
+			VerificationError::LogNotFound
+		);
 	});
 }
 
