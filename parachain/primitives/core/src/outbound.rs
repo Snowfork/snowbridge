@@ -1,4 +1,4 @@
-use crate::ChannelId;
+use crate::{ChannelId, ParaId};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::PalletError;
 use scale_info::TypeInfo;
