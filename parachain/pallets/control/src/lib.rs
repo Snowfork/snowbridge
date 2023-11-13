@@ -67,8 +67,8 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	outbound::{Command, Initializer, Message, OperatingMode, SendError, SendMessage},
-	sibling_sovereign_account, AgentId, Channel, ChannelId, ParaId, BRIDGE_HUB_AGENT_ID,
-	PRIMARY_GOVERNANCE_CHANNEL, SECONDARY_GOVERNANCE_CHANNEL,
+	sibling_sovereign_account, AgentId, Channel, ChannelId, ChannelLookup, ParaId,
+	BRIDGE_HUB_AGENT_ID, PRIMARY_GOVERNANCE_CHANNEL, SECONDARY_GOVERNANCE_CHANNEL,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -562,6 +562,12 @@ pub mod pallet {
 				amount,
 			});
 			Ok(())
+		}
+	}
+
+	impl<T: Config> ChannelLookup for Pallet<T> {
+		fn lookup(channel_id: ChannelId) -> Option<Channel> {
+			Channels::<T>::get(channel_id)
 		}
 	}
 }

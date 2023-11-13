@@ -43,10 +43,10 @@ func (wr *EthereumWriter) logFieldsForSubmission(
 
 	params := log.Fields{
 		"message": log.Fields{
-			"origin":  message.Origin,
-			"nonce":   message.Nonce,
-			"command": message.Command,
-			"params":  Hex(message.Params),
+			"channelID": Hex(message.ChannelID[:]),
+			"nonce":     message.Nonce,
+			"command":   message.Command,
+			"params":    Hex(message.Params),
 		},
 		"messageProof": messageProofHexes,
 		"proof": log.Fields{
