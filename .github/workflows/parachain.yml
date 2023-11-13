@@ -32,6 +32,9 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: "true"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/cache@v1
         with:
           path: |
@@ -48,6 +51,7 @@ jobs:
           --manifest-path parachain/Cargo.toml
           --workspace
           --features runtime-benchmarks
+          --exclude snowbridge-runtime-tests
       - name: clippy
         run: cargo clippy --manifest-path parachain/Cargo.toml -- -D warnings
 
@@ -64,6 +68,9 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           submodules: "true"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/cache@v1
         with:
           path: |
@@ -84,6 +91,7 @@ jobs:
           --workspace
           --features runtime-benchmarks
           --exclude snowbridge-ethereum-beacon-client
+          --exclude snowbridge-runtime-tests
       # Run tests for beacon light client, excluding benchmark tests
       - name: Tests for beacon light client excluding benchmark tests
         run: >
@@ -112,6 +120,9 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           submodules: "true"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: setup rust toolchain
         run: rustup show
       - name: run coverage test
@@ -130,7 +141,6 @@ jobs:
           flags: rust
 
   check-cumulus-bridgehub:
-    needs: check
     runs-on: snowbridge-runner
     steps:
       - uses: actions/checkout@v2
@@ -149,6 +159,25 @@ jobs:
           --package bridge-hub-rococo-runtime
           --features runtime-benchmarks
 
+  runtime-tests:
+    needs: check
+    runs-on: snowbridge-runner
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: "true"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: setup rust toolchain
+        run: rustup show
+      - name: snowbridge runtime tests
+        run: >
+          cargo test 
+          --manifest-path parachain/Cargo.toml
+          -p snowbridge-runtime-tests
+          -- --nocapture
+
   integration-tests:
     needs: check
     runs-on: snowbridge-runner
@@ -161,11 +190,12 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: setup rust toolchain
         run: rustup show
-      - name: snowbridge integration
+      - name: snowbridge integration tests
         run: >
-          cargo test
+          RUST_LOG=xcm=trace cargo test 
           --manifest-path polkadot-sdk/Cargo.toml
-          -p bridge-hub-rococo-integration-tests
+          -p bridge-hub-rococo-integration-tests snowbridge
+          -- --nocapture
 
   beacon-fuzz:
     if: false
