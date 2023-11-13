@@ -13,8 +13,8 @@ use frame_support::{
 };
 use frame_system::unique;
 use snowbridge_core::outbound::{
-	AggregateMessageOrigin, ExportOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
-	SendMessageFeeProvider, VersionedQueuedMessage,
+	Fee, Message, QueuedMessage, SendError, SendMessage, SendMessageFeeProvider,
+	VersionedQueuedMessage,
 };
 use sp_core::H256;
 use sp_runtime::BoundedVec;
