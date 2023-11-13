@@ -9,7 +9,7 @@ import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
 
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
-import {ParaID, Config} from "./Types.sol";
+import {ParaID} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.

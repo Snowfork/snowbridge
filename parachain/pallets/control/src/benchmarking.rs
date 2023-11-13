@@ -64,7 +64,7 @@ mod benchmarks {
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
 
 		#[extrinsic_call]
-		_(origin as T::RuntimeOrigin);
+		_(origin as T::RuntimeOrigin, OperatingMode::Normal, 1);
 
 		Ok(())
 	}
@@ -76,7 +76,7 @@ mod benchmarks {
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone())?;
+		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal, 1)?;
 
 		#[extrinsic_call]
 		_(origin as T::RuntimeOrigin, OperatingMode::RejectingOutboundMessages, 1);
@@ -89,19 +89,14 @@ mod benchmarks {
 		let origin_para_id = 2000;
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
 		let origin = T::Helper::make_xcm_origin(origin_location);
+		let channel_id: ChannelId = ParaId::from(origin_para_id).into();
+
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone())?;
-
-		let versioned_location: VersionedMultiLocation = origin_location.into();
+		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal, 1)?;
 
 		#[extrinsic_call]
-		_(
-			RawOrigin::Root,
-			Box::new(versioned_location),
-			OperatingMode::RejectingOutboundMessages,
-			1,
-		);
+		_(RawOrigin::Root, channel_id, OperatingMode::RejectingOutboundMessages, 1);
 
 		Ok(())
 	}

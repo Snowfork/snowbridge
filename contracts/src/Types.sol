@@ -42,7 +42,7 @@ struct Channel {
     /// @dev The address of the agent of the parachain owning this channel
     address agent;
     /// @dev The fee charged to users for submitting outbound messages
-    uint256 fee;
+    uint256 outboundFee;
 }
 
 /// @dev Inbound message from a Polkadot parachain (via BridgeHub)
@@ -68,18 +68,6 @@ struct InboundMessage {
 enum OperatingMode {
     Normal,
     RejectingOutboundMessages
-}
-
-// Initial configuration for bridge
-struct Config {
-    /// @dev The default fee charged to users for submitting outbound messages.
-    uint256 fee;
-    /// @dev The default reward disbursed to message relayers for submitting inbound messages.
-    uint256 reward;
-    /// @dev The extra fee charged for registering tokens.
-    uint256 registerNativeTokenFee;
-    /// @dev The extra fee charged for sending tokens.
-    uint256 sendNativeTokenFee;
 }
 
 /// @dev Messages from Polkadot take the form of these commands.

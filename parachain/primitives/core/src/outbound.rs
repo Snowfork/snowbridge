@@ -93,6 +93,10 @@ mod v1 {
 			channel_id: ChannelId,
 			/// The agent ID of the parachain
 			agent_id: H256,
+			/// Initial operating mode
+			mode: OperatingMode,
+			/// The fee to charge users for outbound messaging to Polkadot
+			outbound_fee: u128,
 		},
 		/// Update the configuration of a channel
 		UpdateChannel {
@@ -101,7 +105,7 @@ mod v1 {
 			/// The new operating mode
 			mode: OperatingMode,
 			/// The new fee to charge users for outbound messaging to Polkadot
-			fee: u128,
+			outbound_fee: u128,
 		},
 		/// Set the global operating mode of the Gateway contract
 		SetOperatingMode {
@@ -161,16 +165,18 @@ mod v1 {
 					ethabi::encode(&[Token::Tuple(vec![Token::FixedBytes(
 						agent_id.as_bytes().to_owned(),
 					)])]),
-				Command::CreateChannel { channel_id, agent_id } =>
+				Command::CreateChannel { channel_id, agent_id, mode, outbound_fee } =>
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(channel_id.as_ref().to_owned()),
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
+						Token::Uint(U256::from((*mode) as u64)),
+						Token::Uint(U256::from(*outbound_fee)),
 					])]),
-				Command::UpdateChannel { channel_id, mode, fee } =>
+				Command::UpdateChannel { channel_id, mode, outbound_fee } =>
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(channel_id.as_ref().to_owned()),
 						Token::Uint(U256::from((*mode) as u64)),
-						Token::Uint(U256::from(*fee)),
+						Token::Uint(U256::from(*outbound_fee)),
 					])]),
 				Command::SetOperatingMode { mode } =>
 					ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),

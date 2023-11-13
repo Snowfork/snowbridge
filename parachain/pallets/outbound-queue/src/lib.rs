@@ -82,7 +82,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod api;
 pub mod process_message_impl;
-pub mod queue_paused_query_impl;
 pub mod send_message_impl;
 pub mod types;
 pub mod weights;
@@ -157,10 +156,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
 
-		/// The channel used for governance messages
-		#[pallet::constant]
-		type GovernanceChannelId: Get<ChannelId>;
-
 		/// Convert a weight value into a deductible fee based.
 		type WeightToFee: WeightToFee<Balance = Self::Balance>;
 
@@ -219,12 +214,6 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::unbounded]
 	pub(super) type Messages<T: Config> = StorageValue<_, Vec<CommittedMessage>, ValueQuery>;
-
-	/// Number of high priority messages that are waiting to be processed.
-	/// While this number is greater than zero, processing of lower priority
-	/// messages is paused.
-	#[pallet::storage]
-	pub(super) type PendingHighPriorityMessageCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Hashes of the ABI-encoded messages in the [`Messages`] storage value. Used to generate a
 	/// merkle root during `on_finalize`. This storage value is killed in
@@ -329,10 +318,9 @@ pub mod pallet {
 
 		/// Process a message delivered by the MessageQueue pallet
 		pub(crate) fn do_process_message(
-			origin: ProcessMessageOriginOf<T>,
+			_: ProcessMessageOriginOf<T>,
 			mut message: &[u8],
 		) -> Result<bool, ProcessMessageError> {
-			use AggregateMessageOrigin::*;
 			use ProcessMessageError::*;
 
 			// Yield if the maximum number of messages has been processed this block.
@@ -342,16 +330,6 @@ pub mod pallet {
 					T::MaxMessagesPerBlock::get() as usize,
 				Yield
 			);
-
-			// If this is a high priority message, mark it as processed
-			match origin {
-				Snowbridge(channel_id) if channel_id == T::GovernanceChannelId::get() => {
-					PendingHighPriorityMessageCount::<T>::mutate(|count| {
-						*count = count.saturating_sub(1)
-					});
-				},
-				_ => {},
-			}
 
 			// Decode bytes into versioned message
 			let versioned_queued_message: VersionedQueuedMessage =

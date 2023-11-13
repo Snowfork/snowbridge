@@ -158,7 +158,7 @@ pub mod pallet {
 		/// Message has an invalid payload.
 		InvalidPayload,
 		/// Message channel is invalid
-		InvaliChannel,
+		InvalidChannel,
 		/// The max nonce for the type has been reached
 		MaxNonceReached,
 		/// Cannot convert location

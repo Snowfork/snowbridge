@@ -12,7 +12,7 @@ use snowbridge_core::{
 		AggregateMessageOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
 		SendMessageFeeProvider, VersionedQueuedMessage,
 	},
-	ChannelId,
+	ChannelId, PRIMARY_GOVERNANCE_CHANNEL,
 };
 use sp_core::H256;
 use sp_runtime::BoundedVec;
@@ -72,10 +72,7 @@ where
 	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError> {
 		let origin = AggregateMessageOrigin::Snowbridge(ticket.channel_id);
 
-		if ticket.channel_id == T::GovernanceChannelId::get() {
-			// Increase PendingHighPriorityMessageCount by one
-			PendingHighPriorityMessageCount::<T>::mutate(|count| *count = count.saturating_add(1));
-		} else {
+		if ticket.channel_id != PRIMARY_GOVERNANCE_CHANNEL {
 			ensure!(!Self::operating_mode().is_halted(), SendError::Halted);
 		}
 

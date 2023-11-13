@@ -7,9 +7,8 @@ use frame_support::{
 	traits::{Everything, Hooks},
 	weights::IdentityFee,
 };
-use hex_literal::hex;
 
-use snowbridge_core::{outbound::*, ParaId};
+use snowbridge_core::{outbound::*, ParaId, PRIMARY_GOVERNANCE_CHANNEL};
 use sp_core::{ConstU32, ConstU8, H160, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
@@ -73,13 +72,11 @@ impl pallet_message_queue::Config for Test {
 	type HeapSize = HeapSize;
 	type MaxStale = MaxStale;
 	type ServiceWeight = ServiceWeight;
-	type QueuePausedQuery = OutboundQueue;
+	type QueuePausedQuery = ();
 }
 
 parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
-	pub const GovernanceChannelId: ChannelId = ChannelId::new(
-		hex!("eac6ce63463ed5ed5463182c98bbf10aaa66c1d2580e45f43b7b76b7cd3e3c1d"));
 }
 
 impl crate::Config for Test {
@@ -89,7 +86,6 @@ impl crate::Config for Test {
 	type Decimals = ConstU8<12>;
 	type MaxMessagePayloadSize = ConstU32<1024>;
 	type MaxMessagesPerBlock = ConstU32<20>;
-	type GovernanceChannelId = GovernanceChannelId;
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
 	type WeightToFee = IdentityFee<u128>;
@@ -129,7 +125,7 @@ where
 {
 	Message {
 		id: None,
-		channel_id: T::GovernanceChannelId::get(),
+		channel_id: PRIMARY_GOVERNANCE_CHANNEL,
 		command: Command::Upgrade {
 			impl_address: H160::zero(),
 			impl_code_hash: H256::zero(),
@@ -145,7 +141,7 @@ where
 {
 	Message {
 		id: None,
-		channel_id: T::GovernanceChannelId::get(),
+		channel_id: PRIMARY_GOVERNANCE_CHANNEL,
 		command: Command::Upgrade {
 			impl_address: H160::zero(),
 			impl_code_hash: H256::zero(),

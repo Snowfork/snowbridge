@@ -9,10 +9,7 @@ use frame_support::{
 };
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
-use snowbridge_core::{
-	inbound::{Log, Proof, VerificationError},
-	ParaId,
-};
+use snowbridge_core::inbound::{Log, Proof, VerificationError};
 use snowbridge_router_primitives::inbound::MessageToXcm;
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
@@ -172,6 +169,18 @@ impl SendXcm for MockXcmSender {
 	}
 }
 
+pub struct MockChannelLookup;
+impl ChannelLookup for MockChannelLookup {
+	fn lookup(channel_id: ChannelId) -> Option<Channel> {
+		if channel_id !=
+			hex!("00000000000000000000000000000000000000000000000000000000000003e8").into()
+		{
+			return None
+		}
+		Some(Channel { agent_id: H256::zero().into(), para_id: 1000.into() })
+	}
+}
+
 impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
@@ -188,6 +197,7 @@ impl inbound_queue::Config for Test {
 		AccountId,
 		Balance,
 	>;
+	type ChannelLookup = MockChannelLookup;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
 	type WeightToFee = IdentityFee<u128>;
@@ -238,7 +248,7 @@ fn mock_event_log() -> Log {
 		address: hex!("eda338e4dc46038493b885327842fd3e301cab39").into(),
 		topics: vec![
 			hex!("5066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169").into(),
-			// destination parachain id
+			// channel id
 			hex!("00000000000000000000000000000000000000000000000000000000000003e8").into(),
 			// message id
 			hex!("afad3c9777134532ae230b4fad334eef2e0dacbb965920412a7eaa59b07d640f").into(),
@@ -248,13 +258,13 @@ fn mock_event_log() -> Log {
 	}
 }
 
-fn mock_event_log_invalid_dest() -> Log {
+fn mock_event_log_invalid_channel() -> Log {
 	Log {
 		// gateway address
 		address: hex!("eda338e4dc46038493b885327842fd3e301cab39").into(),
 		topics: vec![
 			hex!("5066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169").into(),
-			// destination parachain id
+			// channel id
 			hex!("00000000000000000000000000000000000000000000000000000000000003e9").into(),
 			// message id
 			hex!("afad3c9777134532ae230b4fad334eef2e0dacbb965920412a7eaa59b07d640f").into(),
@@ -270,7 +280,7 @@ fn mock_event_log_invalid_gateway() -> Log {
 		address: H160::zero(),
 		topics: vec![
 			hex!("5066fbba677e15936860e04088ca4cad3acd4c19706962196a5346f1457f7169").into(),
-			// destination parachain id
+			// channel id
 			hex!("00000000000000000000000000000000000000000000000000000000000003e8").into(),
 			// message id
 			hex!("afad3c9777134532ae230b4fad334eef2e0dacbb965920412a7eaa59b07d640f").into(),
@@ -305,7 +315,8 @@ fn test_submit_happy_path() {
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 		expect_events(vec![InboundQueueEvent::MessageReceived {
-			channel_id: ASSET_HUB_PARAID.into(),
+			channel_id: hex!("00000000000000000000000000000000000000000000000000000000000003e8")
+				.into(),
 			nonce: 1,
 			message_id: [
 				3, 29, 43, 131, 7, 80, 47, 2, 238, 64, 45, 200, 64, 1, 46, 74, 121, 211, 8, 178,
@@ -317,7 +328,7 @@ fn test_submit_happy_path() {
 }
 
 #[test]
-fn test_submit_xcm_send_failure() {
+fn test_submit_xcm_invalid_channel() {
 	new_tester().execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
@@ -329,7 +340,7 @@ fn test_submit_xcm_send_failure() {
 
 		// Submit message
 		let message = Message {
-			event_log: mock_event_log_invalid_dest(),
+			event_log: mock_event_log_invalid_channel(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -338,7 +349,7 @@ fn test_submit_xcm_send_failure() {
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
-			Error::<Test>::Send(crate::SendError::NotApplicable)
+			Error::<Test>::InvalidChannel,
 		);
 	});
 }
@@ -390,7 +401,9 @@ fn test_submit_with_invalid_nonce() {
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 
-		let nonce: u64 = <Nonce<Test>>::get(ParaId::from(1000));
+		let nonce: u64 = <Nonce<Test>>::get(ChannelId::from(hex!(
+			"00000000000000000000000000000000000000000000000000000000000003e8"
+		)));
 		assert_eq!(nonce, 1);
 
 		// Submit the same again

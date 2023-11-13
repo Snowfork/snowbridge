@@ -12,7 +12,7 @@ import {Gateway} from "./Gateway.sol";
 import {GatewayUpgradeMock} from "../test/mocks/GatewayUpgradeMock.sol";
 import {Agent} from "./Agent.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
-import {ParaID, Config} from "./Types.sol";
+import {ParaID} from "./Types.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 

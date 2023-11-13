@@ -67,7 +67,8 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	outbound::{Command, Initializer, Message, OperatingMode, SendError, SendMessage},
-	sibling_sovereign_account, AgentId, Channel, ChannelId, ParaId,
+	sibling_sovereign_account, AgentId, Channel, ChannelId, ParaId, BRIDGE_HUB_AGENT_ID,
+	PRIMARY_GOVERNANCE_CHANNEL, SECONDARY_GOVERNANCE_CHANNEL,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -134,9 +135,6 @@ pub mod pallet {
 		/// Send messages to Ethereum
 		type OutboundQueue: SendMessage<Balance = BalanceOf<Self>>;
 
-		#[pallet::constant]
-		type GovernanceChannelId: Get<ChannelId>;
-
 		/// Origin check for XCM locations that can create agents
 		type SiblingOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = MultiLocation>;
 
@@ -166,7 +164,7 @@ pub mod pallet {
 		/// An CreateChannel message was sent to the Gateway
 		CreateChannel { channel_id: ChannelId, agent_id: AgentId },
 		/// An UpdateChannel message was sent to the Gateway
-		UpdateChannel { channel_id: ChannelId, mode: OperatingMode, fee: u128 },
+		UpdateChannel { channel_id: ChannelId, mode: OperatingMode, outbound_fee: u128 },
 		/// An SetOperatingMode message was sent to the Gateway
 		SetOperatingMode { mode: OperatingMode },
 		/// An TransferNativeFromAgent message was sent to the Gateway
@@ -203,8 +201,6 @@ pub mod pallet {
 	pub struct GenesisConfig<T: Config> {
 		// Own parachain id
 		pub para_id: ParaId,
-		// Own agent id
-		pub agent_id: AgentId,
 		// AssetHub's parachain id
 		pub asset_hub_para_id: ParaId,
 		#[serde(skip)]
@@ -214,6 +210,22 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
+			// Agent for BridgeHub
+			Agents::<T>::insert(BRIDGE_HUB_AGENT_ID, ());
+
+			// Primary governance channel
+			Channels::<T>::insert(
+				PRIMARY_GOVERNANCE_CHANNEL,
+				Channel { agent_id: BRIDGE_HUB_AGENT_ID, para_id: self.para_id },
+			);
+
+			// Secondary governance channel
+			Channels::<T>::insert(
+				SECONDARY_GOVERNANCE_CHANNEL,
+				Channel { agent_id: BRIDGE_HUB_AGENT_ID, para_id: self.para_id },
+			);
+
+			// Asset Hub
 			let asset_hub_location: MultiLocation =
 				ParentThen(X1(Parachain(self.asset_hub_para_id.into()))).into();
 			let asset_hub_agent_id =
@@ -223,12 +235,6 @@ pub mod pallet {
 			Channels::<T>::insert(
 				asset_hub_channel_id,
 				Channel { agent_id: asset_hub_agent_id, para_id: self.asset_hub_para_id },
-			);
-
-			Agents::<T>::insert(self.agent_id, ());
-			Channels::<T>::insert(
-				T::GovernanceChannelId::get(),
-				Channel { agent_id: self.agent_id, para_id: self.para_id },
 			);
 		}
 	}
@@ -257,7 +263,7 @@ pub mod pallet {
 			let initializer_params_hash: Option<H256> =
 				initializer.as_ref().map(|i| H256::from(blake2_256(i.params.as_ref())));
 			let command = Command::Upgrade { impl_address, impl_code_hash, initializer };
-			Self::send(T::GovernanceChannelId::get(), command, PaysFee::<T>::No)?;
+			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
 
 			Self::deposit_event(Event::<T>::Upgrade {
 				impl_address,
@@ -267,13 +273,30 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Sends a message to the Gateway contract to change its operating mode
+		///
+		/// Fee required: No
+		///
+		/// - `origin`: Must be `MultiLocation`
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::set_operating_mode())]
+		pub fn set_operating_mode(origin: OriginFor<T>, mode: OperatingMode) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let command = Command::SetOperatingMode { mode };
+			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
+
+			Self::deposit_event(Event::<T>::SetOperatingMode { mode });
+			Ok(())
+		}
+
 		/// Sends a command to the Gateway contract to instantiate a new agent contract representing
 		/// `origin`.
 		///
 		/// Fee required: Yes
 		///
 		/// - `origin`: Must be `MultiLocation` of a sibling parachain
-		#[pallet::call_index(1)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::create_agent())]
 		pub fn create_agent(origin: OriginFor<T>) -> DispatchResult {
 			let origin_location: MultiLocation = T::SiblingOrigin::ensure_origin(origin)?;
@@ -287,7 +310,7 @@ pub mod pallet {
 
 			let command = Command::CreateAgent { agent_id };
 			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
-			Self::send(T::GovernanceChannelId::get(), command, pays_fee)?;
+			Self::send(SECONDARY_GOVERNANCE_CHANNEL, command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::CreateAgent {
 				location: Box::new(origin_location),
@@ -306,9 +329,15 @@ pub mod pallet {
 		/// The message is sent over the bridge on BridgeHub's own channel to the Gateway.
 		///
 		/// - `origin`: Must be `MultiLocation`
-		#[pallet::call_index(2)]
+		/// - `mode`: Initial operating mode of the channel
+		/// - `outbound_fee`: Fee charged to users for sending outbound messages to Polkadot
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::create_channel())]
-		pub fn create_channel(origin: OriginFor<T>) -> DispatchResult {
+		pub fn create_channel(
+			origin: OriginFor<T>,
+			mode: OperatingMode,
+			outbound_fee: u128,
+		) -> DispatchResult {
 			let origin_location: MultiLocation = T::SiblingOrigin::ensure_origin(origin)?;
 
 			// Ensure that origin location is a sibling parachain
@@ -322,9 +351,9 @@ pub mod pallet {
 			let channel = Channel { agent_id, para_id };
 			Channels::<T>::insert(channel_id, channel);
 
-			let command = Command::CreateChannel { channel_id, agent_id };
+			let command = Command::CreateChannel { channel_id, agent_id, mode, outbound_fee };
 			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
-			Self::send(T::GovernanceChannelId::get(), command, pays_fee)?;
+			Self::send(SECONDARY_GOVERNANCE_CHANNEL, command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::CreateChannel { channel_id, agent_id });
 			Ok(())
@@ -337,12 +366,14 @@ pub mod pallet {
 		/// Fee required: No
 		///
 		/// - `origin`: Must be `MultiLocation`
-		#[pallet::call_index(3)]
+		/// - `mode`: Initial operating mode of the channel
+		/// - `outbound_fee`: Fee charged to users for sending outbound messages to Polkadot
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::update_channel())]
 		pub fn update_channel(
 			origin: OriginFor<T>,
 			mode: OperatingMode,
-			fee: u128,
+			outbound_fee: u128,
 		) -> DispatchResult {
 			let origin_location: MultiLocation = T::SiblingOrigin::ensure_origin(origin)?;
 
@@ -353,11 +384,13 @@ pub mod pallet {
 
 			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::NoChannel);
 
-			let command = Command::UpdateChannel { channel_id, mode, fee };
+			let command = Command::UpdateChannel { channel_id, mode, outbound_fee };
 			let pays_fee = PaysFee::<T>::Partial(sibling_sovereign_account::<T>(para_id));
+
+			// Parachains send the update message on their own channel
 			Self::send(channel_id, command, pays_fee)?;
 
-			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode, fee });
+			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode, outbound_fee });
 			Ok(())
 		}
 
@@ -368,47 +401,25 @@ pub mod pallet {
 		/// Fee required: No
 		///
 		/// - `origin`: Must be root
-		#[pallet::call_index(4)]
+		/// - `channel_id`: ID of channel
+		/// - `mode`: Initial operating mode of the channel
+		/// - `outbound_fee`: Fee charged to users for sending outbound messages to Polkadot
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::force_update_channel())]
 		pub fn force_update_channel(
 			origin: OriginFor<T>,
-			location: Box<VersionedMultiLocation>,
+			channel_id: ChannelId,
 			mode: OperatingMode,
-			fee: u128,
+			outbound_fee: u128,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			// Ensure that location is a sibling parachain
-			let location: MultiLocation =
-				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
-			let (para_id, _) =
-				ensure_sibling::<T>(&location).map_err(|_| Error::<T>::InvalidLocation)?;
-
-			let channel_id: ChannelId = para_id.into();
-
 			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::NoChannel);
 
-			let command = Command::UpdateChannel { channel_id, mode, fee };
-			Self::send(T::GovernanceChannelId::get(), command, PaysFee::<T>::No)?;
+			let command = Command::UpdateChannel { channel_id, mode, outbound_fee };
+			Self::send(SECONDARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
 
-			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode, fee });
-			Ok(())
-		}
-
-		/// Sends a message to the Gateway contract to change its operating mode
-		///
-		/// Fee required: No
-		///
-		/// - `origin`: Must be `MultiLocation`
-		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::set_operating_mode())]
-		pub fn set_operating_mode(origin: OriginFor<T>, mode: OperatingMode) -> DispatchResult {
-			ensure_root(origin)?;
-
-			let command = Command::SetOperatingMode { mode };
-			Self::send(T::GovernanceChannelId::get(), command, PaysFee::<T>::No)?;
-
-			Self::deposit_event(Event::<T>::SetOperatingMode { mode });
+			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode, outbound_fee });
 			Ok(())
 		}
 
@@ -470,7 +481,7 @@ pub mod pallet {
 
 			Self::do_transfer_native_from_agent(
 				agent_id,
-				T::GovernanceChannelId::get(),
+				SECONDARY_GOVERNANCE_CHANNEL,
 				recipient,
 				amount,
 				pays_fee,
@@ -498,7 +509,7 @@ pub mod pallet {
 			ensure!(register > 0 && send > 0, Error::<T>::InvalidTokenTransferFees);
 
 			let command = Command::SetTokenTransferFees { register, send };
-			Self::send(T::GovernanceChannelId::get(), command, PaysFee::<T>::No)?;
+			Self::send(SECONDARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
 
 			Self::deposit_event(Event::<T>::SetTokenTransferFees { register, send });
 			Ok(())

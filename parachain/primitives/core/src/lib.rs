@@ -110,10 +110,24 @@ impl AsRef<[u8]> for ChannelId {
 
 #[derive(Clone, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct Channel {
+	/// ID of the agent contract deployed on Ethereum
 	pub agent_id: AgentId,
+	/// ID of the parachain who will receive or send messages using this channel
 	pub para_id: ParaId,
 }
 
 pub trait ChannelLookup {
 	fn lookup(channel_id: ChannelId) -> Option<Channel>;
 }
+
+pub const PRIMARY_GOVERNANCE_CHANNEL: ChannelId = ChannelId::new([
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+]);
+
+pub const SECONDARY_GOVERNANCE_CHANNEL: ChannelId = ChannelId::new([
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+]);
+
+pub const BRIDGE_HUB_AGENT_ID: AgentId = H256([
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+]);

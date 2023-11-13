@@ -10,10 +10,8 @@ use frame_support::{
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
-use hex_literal::hex;
 use snowbridge_core::{
-	outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly, ChannelId,
-	ParaId,
+	outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly, ParaId,
 };
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
@@ -173,7 +171,6 @@ impl snowbridge_outbound_queue::Config for Test {
 	type Hashing = Keccak256;
 	type MessageQueue = MessageQueue;
 	type Decimals = ConstU8<10>;
-	type GovernanceChannelId = GovernanceChannelId;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
 	type GasMeter = ConstantGasMeter;
@@ -198,8 +195,6 @@ parameter_types! {
 	pub const InitialFunding: u128 = 1_000_000_000_000;
 	pub AssetHubParaId: ParaId = ParaId::new(1000);
 	pub TestParaId: u32 = 2000;
-	pub const GovernanceChannelId: ChannelId = ChannelId::new(
-		hex!("eac6ce63463ed5ed5463182c98bbf10aaa66c1d2580e45f43b7b76b7cd3e3c1d"));
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -212,7 +207,6 @@ impl BenchmarkHelper<RuntimeOrigin> for () {
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OutboundQueue = OutboundQueue;
-	type GovernanceChannelId = GovernanceChannelId;
 	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = HashedDescription<AgentId, DescribeFamily<DescribeAllTerminal>>;
 	type TreasuryAccount = TreasuryAccount;
@@ -228,7 +222,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 	crate::GenesisConfig::<Test> {
 		para_id: OwnParaId::get(),
-		agent_id: hex!("bb0755c83bf7b13d97baf106c89c41a0abb9eb3b61dddbec6bdca49146bd016c").into(),
 		asset_hub_para_id: AssetHubParaId::get(),
 		_config: Default::default(),
 	}

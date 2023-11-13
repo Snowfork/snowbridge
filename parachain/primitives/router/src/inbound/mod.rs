@@ -20,8 +20,6 @@ use sp_std::prelude::*;
 use xcm::prelude::{Junction::AccountKey20, *};
 use xcm_executor::traits::ConvertLocation;
 
-use snowbridge_core::ParaId;
-
 const MINIMUM_DEPOSIT: u128 = 1;
 
 /// Messages from Ethereum are versioned. This is because in future,

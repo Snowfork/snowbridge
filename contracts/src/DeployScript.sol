@@ -12,7 +12,7 @@ import {Gateway} from "./Gateway.sol";
 import {GatewayUpgradeMock} from "../test/mocks/GatewayUpgradeMock.sol";
 import {Agent} from "./Agent.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
-import {ParaID, Config, OperatingMode} from "./Types.sol";
+import {ChannelID, ParaID, OperatingMode} from "./Types.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
@@ -74,14 +74,14 @@ contract DeployScript is Script {
             defaultOperatingMode = OperatingMode.Normal;
         }
 
-        bytes memory initParams = abi.encode(
-            defaultOperatingMode,
-            vm.envUint("DEFAULT_FEE"),
-            vm.envUint("REGISTER_NATIVE_TOKEN_FEE"),
-            vm.envUint("SEND_NATIVE_TOKEN_FEE")
-        );
+        Gateway.Config memory config = Gateway.Config({
+            mode: defaultOperatingMode,
+            outboundFee: vm.envUint("DEFAULT_FEE"),
+            registerTokenFee: vm.envUint("REGISTER_NATIVE_TOKEN_FEE"),
+            sendTokenFee: vm.envUint("SEND_NATIVE_TOKEN_FEE")
+        });
 
-        GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), initParams);
+        GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
 
         // Deploy WETH for testing
         new WETH9();
