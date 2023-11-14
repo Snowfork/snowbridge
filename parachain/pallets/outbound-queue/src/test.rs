@@ -180,3 +180,61 @@ fn submit_upgrade_message_success_when_queue_halted() {
 		assert_noop!(OutboundQueue::deliver(ticket), SendError::Halted);
 	});
 }
+
+#[test]
+fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_congest_of_low_priority_sibling_messages(
+) {
+	use snowbridge_core::PRIMARY_GOVERNANCE_CHANNEL;
+	use AggregateMessageOrigin::*;
+
+	let sibling_id: u32 = 1000;
+	let sibling_channel_id: ChannelId = ParaId::from(sibling_id).into();
+
+	new_tester().execute_with(|| {
+		// submit a lot of low priority messages from asset_hub which will need multiple blocks to
+		// execute(20 messages for each block so 40 required at least 2 blocks)
+		let max_messages = 40;
+		for _ in 0..max_messages {
+			// submit low priority message
+			let message = mock_message(sibling_id);
+			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+			OutboundQueue::deliver(ticket).unwrap();
+		}
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id));
+		assert_eq!(footprint.count, (max_messages) as u64);
+
+		let message = mock_governance_message::<Test>();
+		let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+		OutboundQueue::deliver(ticket).unwrap();
+
+		// move to next block
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+
+		// first process 20 messages from sibling channel
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id));
+		assert_eq!(footprint.count, 40 - 20);
+
+		// and governance message does not have the chance to execute in same block
+		let footprint = MessageQueue::footprint(Snowbridge(PRIMARY_GOVERNANCE_CHANNEL));
+		assert_eq!(footprint.count, 1);
+
+		// move to next block
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+
+		// now governance message get executed in this block
+		let footprint = MessageQueue::footprint(Snowbridge(PRIMARY_GOVERNANCE_CHANNEL));
+		assert_eq!(footprint.count, 0);
+
+		// and this time process 19 messages from sibling channel so we have 1 message left
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id));
+		assert_eq!(footprint.count, 1);
+
+		// move to the next block, the last 1 message from sibling channel get executed
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id));
+		assert_eq!(footprint.count, 0);
+	});
+}
