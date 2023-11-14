@@ -96,16 +96,14 @@ mod mock;
 mod test;
 
 use codec::Decode;
+use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
 	storage::StorageStreamIter,
 	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessageError},
 	weights::{Weight, WeightToFee},
 };
 use snowbridge_core::{
-	outbound::{
-		AggregateMessageOrigin, Command, Fee, GasMeter, QueuedMessage, VersionedQueuedMessage,
-		ETHER_DECIMALS,
-	},
+	outbound::{Command, Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
 	BasicOperatingMode, ChannelId, GWEI, METH,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;

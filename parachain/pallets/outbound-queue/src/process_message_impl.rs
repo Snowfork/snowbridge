@@ -5,7 +5,6 @@ use frame_support::{
 	traits::{ProcessMessage, ProcessMessageError},
 	weights::WeightMeter,
 };
-use snowbridge_core::outbound::AggregateMessageOrigin;
 
 impl<T: Config> ProcessMessage for Pallet<T> {
 	type Origin = AggregateMessageOrigin;
