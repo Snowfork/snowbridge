@@ -46,14 +46,15 @@ jobs:
       - name: setup rust toolchain
         run: rustup show
       - name: cargo check
+        working-directory: parachain
         run: >
           cargo check
-          --manifest-path parachain/Cargo.toml
           --workspace
           --features runtime-benchmarks
           --exclude snowbridge-runtime-tests
       - name: clippy
-        run: cargo clippy --manifest-path parachain/Cargo.toml -- -D warnings
+        working-directory: parachain
+        run: cargo clippy -- -D warnings
 
   test:
     needs: check
@@ -85,24 +86,24 @@ jobs:
       - run: sudo prlimit --pid $$ --stack=32768
       # Run tests for everything except the beacon light client
       - name: Tests for everything except the beacon light client
+        working-directory: parachain
         run: >
           cargo test
-          --manifest-path parachain/Cargo.toml
           --workspace
           --features runtime-benchmarks
           --exclude snowbridge-ethereum-beacon-client
           --exclude snowbridge-runtime-tests
       # Run tests for beacon light client, excluding benchmark tests
       - name: Tests for beacon light client excluding benchmark tests
+        working-directory: parachain
         run: >
           cargo test
-          --manifest-path parachain/Cargo.toml
           --package snowbridge-ethereum-beacon-client
       # Run benchmark tests for beacon light client
       - name: Benchmark tests for beacon light client
+        working-directory: parachain
         run: >
           cargo test
-          --manifest-path parachain/Cargo.toml
           --release
           --features runtime-benchmarks
           --package snowbridge-ethereum-beacon-client
@@ -126,10 +127,10 @@ jobs:
       - name: setup rust toolchain
         run: rustup show
       - name: run coverage test
+        working-directory: parachain
         run: >
           cargo install cargo-tarpaulin@0.27.0 &&
           cargo tarpaulin
-          --manifest-path parachain/Cargo.toml
           --workspace
           --engine llvm
           --out xml
@@ -152,9 +153,9 @@ jobs:
       - name: setup rust toolchain
         run: rustup show
       - name: check bridge-hub runtime
+        working-directory: polkadot-sdk
         run: >
           cargo check
-          --manifest-path polkadot-sdk/Cargo.toml
           --release --verbose
           --package bridge-hub-rococo-runtime
           --features runtime-benchmarks
@@ -172,9 +173,9 @@ jobs:
       - name: setup rust toolchain
         run: rustup show
       - name: snowbridge runtime tests
+        working-directory: parachain/runtime/tests
         run: >
           cargo test 
-          --manifest-path parachain/Cargo.toml
           -p snowbridge-runtime-tests
           -- --nocapture
 
@@ -191,9 +192,9 @@ jobs:
       - name: setup rust toolchain
         run: rustup show
       - name: snowbridge integration tests
+        working-directory: polkadot-sdk
         run: >
           RUST_LOG=xcm=trace cargo test 
-          --manifest-path polkadot-sdk/Cargo.toml
           -p bridge-hub-rococo-integration-tests snowbridge
           -- --nocapture
 
