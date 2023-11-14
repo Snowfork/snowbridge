@@ -8,6 +8,7 @@ edition = "2021"
 serde = { version = "1.0.188", optional = true, features = [ "derive", "alloc" ], default-features = false }
 codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false }
 scale-info = { version = "2.9.0", default-features = false, features = [ "derive" ] }
+hex-literal = { version = "0.4.1" }
 
 polkadot-parachain-primitives = { path = "../../../polkadot-sdk/polkadot/parachain", default-features = false }
 xcm = { package = "staging-xcm", path = "../../../polkadot-sdk/polkadot/xcm", default-features = false }
@@ -16,6 +17,7 @@ frame-support = { path = "../../../polkadot-sdk/substrate/frame/support", defaul
 frame-system = { path = "../../../polkadot-sdk/substrate/frame/system", default-features = false }
 sp-runtime = { path = "../../../polkadot-sdk/substrate/primitives/runtime", default-features = false }
 sp-std = { path = "../../../polkadot-sdk/substrate/primitives/std", default-features = false }
+sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-core = { path = "../../../polkadot-sdk/substrate/primitives/core", default-features = false }
 sp-arithmetic = { path = "../../../polkadot-sdk/substrate/primitives/arithmetic", default-features = false }
 
@@ -24,7 +26,7 @@ snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-featu
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
-hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+hex = { version = "0.4.3" }
 
 [features]
 default = ["std"]
@@ -36,6 +38,7 @@ std = [
     "frame-system/std",
     "polkadot-parachain-primitives/std",
     "sp-std/std",
+    "sp-io/std",
     "sp-core/std",
     "sp-runtime/std",
     "snowbridge-beacon-primitives/std",

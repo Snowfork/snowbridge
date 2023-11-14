@@ -1,6 +1,6 @@
+use crate::{ChannelId, ParaId};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::PalletError;
-pub use polkadot_parachain_primitives::primitives::Id as ParaId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 use sp_core::{RuntimeDebug, H256};
@@ -31,9 +31,9 @@ impl<T: Into<QueuedMessage>> From<T> for VersionedQueuedMessage {
 }
 
 mod v1 {
+	use crate::ChannelId;
 	use codec::{Decode, Encode};
 	use ethabi::Token;
-	use polkadot_parachain_primitives::primitives::Id as ParaId;
 	use scale_info::TypeInfo;
 	use sp_core::{RuntimeDebug, H160, H256, U256};
 	use sp_std::{borrow::ToOwned, vec, vec::Vec};
@@ -49,8 +49,8 @@ mod v1 {
 		///
 		/// The ID plays no role in bridge consensus, and is purely meant for message tracing.
 		pub id: Option<H256>,
-		/// The parachain from which the message originated
-		pub origin: ParaId,
+		/// The message channel ID
+		pub channel_id: ChannelId,
 		/// The stable ID for a receiving gateway contract
 		pub command: Command,
 	}
@@ -89,19 +89,23 @@ mod v1 {
 		},
 		/// Create bidirectional messaging channel to a parachain
 		CreateChannel {
-			/// The ID of the parachain
-			para_id: ParaId,
+			/// The ID of the channel
+			channel_id: ChannelId,
 			/// The agent ID of the parachain
 			agent_id: H256,
+			/// Initial operating mode
+			mode: OperatingMode,
+			/// The fee to charge users for outbound messaging to Polkadot
+			outbound_fee: u128,
 		},
 		/// Update the configuration of a channel
 		UpdateChannel {
-			/// The ID of the parachain to which the channel belongs.
-			para_id: ParaId,
+			/// The ID of the channel
+			channel_id: ChannelId,
 			/// The new operating mode
 			mode: OperatingMode,
 			/// The new fee to charge users for outbound messaging to Polkadot
-			fee: u128,
+			outbound_fee: u128,
 		},
 		/// Set the global operating mode of the Gateway contract
 		SetOperatingMode {
@@ -161,21 +165,19 @@ mod v1 {
 					ethabi::encode(&[Token::Tuple(vec![Token::FixedBytes(
 						agent_id.as_bytes().to_owned(),
 					)])]),
-				Command::CreateChannel { para_id, agent_id } => {
-					let para_id: u32 = (*para_id).into();
+				Command::CreateChannel { channel_id, agent_id, mode, outbound_fee } =>
 					ethabi::encode(&[Token::Tuple(vec![
-						Token::Uint(U256::from(para_id)),
+						Token::FixedBytes(channel_id.as_ref().to_owned()),
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
-					])])
-				},
-				Command::UpdateChannel { para_id, mode, fee } => {
-					let para_id: u32 = (*para_id).into();
-					ethabi::encode(&[Token::Tuple(vec![
-						Token::Uint(U256::from(para_id)),
 						Token::Uint(U256::from((*mode) as u64)),
-						Token::Uint(U256::from(*fee)),
-					])])
-				},
+						Token::Uint(U256::from(*outbound_fee)),
+					])]),
+				Command::UpdateChannel { channel_id, mode, outbound_fee } =>
+					ethabi::encode(&[Token::Tuple(vec![
+						Token::FixedBytes(channel_id.as_ref().to_owned()),
+						Token::Uint(U256::from((*mode) as u64)),
+						Token::Uint(U256::from(*outbound_fee)),
+					])]),
 				Command::SetOperatingMode { mode } =>
 					ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
 				Command::TransferNativeFromAgent { agent_id, recipient, amount } =>
@@ -247,8 +249,8 @@ mod v1 {
 	pub struct QueuedMessage {
 		/// Message ID
 		pub id: H256,
-		/// ID of source parachain
-		pub origin: ParaId,
+		/// Channel ID
+		pub channel_id: ChannelId,
 		/// Command to execute in the Gateway contract
 		pub command: Command,
 	}
@@ -383,21 +385,14 @@ impl GasMeter for () {
 
 impl From<u32> for AggregateMessageOrigin {
 	fn from(value: u32) -> Self {
-		AggregateMessageOrigin::Export(ExportOrigin::Sibling(value.into()))
+		AggregateMessageOrigin::Snowbridge(ParaId::from(value).into())
 	}
-}
-
-#[derive(Encode, Decode, Clone, Copy, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum ExportOrigin {
-	Here,
-	Sibling(ParaId),
 }
 
 /// Aggregate message origin for the `MessageQueue` pallet.
 #[derive(Encode, Decode, Clone, Copy, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum AggregateMessageOrigin {
-	/// Message is to be exported via a bridge
-	Export(ExportOrigin),
+	Snowbridge(ChannelId),
 }
 
 pub const ETHER_DECIMALS: u8 = 18;

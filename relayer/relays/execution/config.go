@@ -12,7 +12,7 @@ type Config struct {
 type SourceConfig struct {
 	Ethereum  config.EthereumConfig `mapstructure:"ethereum"`
 	Contracts ContractsConfig       `mapstructure:"contracts"`
-	ChannelID uint32                `mapstructure:"channel-id"`
+	ChannelID ChannelID             `mapstructure:"channel-id"`
 }
 
 type ContractsConfig struct {
@@ -22,3 +22,5 @@ type ContractsConfig struct {
 type SinkConfig struct {
 	Parachain config.ParachainConfig `mapstructure:"parachain"`
 }
+
+type ChannelID [32]byte

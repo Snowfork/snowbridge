@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.22;
 
-import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command} from "../../src/Types.sol";
+import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID} from "../../src/Types.sol";
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 import {Verification} from "../../src/Verification.sol";
@@ -16,15 +16,15 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return OperatingMode.Normal;
     }
 
-    function channelOperatingModeOf(ParaID) external pure returns (OperatingMode) {
+    function channelOperatingModeOf(ChannelID) external pure returns (OperatingMode) {
         return OperatingMode.Normal;
     }
 
-    function channelFeeOf(ParaID) external pure returns (uint256) {
+    function channelOutboundFeeOf(ChannelID) external pure returns (uint256) {
         return 0;
     }
 
-    function channelNoncesOf(ParaID) external pure returns (uint64, uint64) {
+    function channelNoncesOf(ChannelID) external pure returns (uint64, uint64) {
         return (0, 0);
     }
 

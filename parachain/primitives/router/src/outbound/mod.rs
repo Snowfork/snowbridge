@@ -10,7 +10,10 @@ use core::slice::Iter;
 use codec::{Decode, Encode};
 
 use frame_support::{ensure, traits::Get};
-use snowbridge_core::outbound::{AgentExecuteCommand, Command, Message, SendMessage};
+use snowbridge_core::{
+	outbound::{AgentExecuteCommand, Command, Message, SendMessage},
+	ChannelId, ParaId,
+};
 use sp_core::{H160, H256};
 use sp_std::{iter::Peekable, marker::PhantomData, prelude::*};
 use xcm::v3::prelude::*;
@@ -100,9 +103,11 @@ where
 			},
 		};
 
+		let channel_id: ChannelId = ParaId::from(para_id).into();
+
 		let outbound_message = Message {
 			id: Some(message_id.into()),
-			origin: para_id.into(),
+			channel_id,
 			command: Command::AgentExecute { agent_id, command: agent_execute_command },
 		};
 

@@ -7,9 +7,12 @@ use frame_support::{
 	CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 use frame_system::unique;
-use snowbridge_core::outbound::{
-	AggregateMessageOrigin, ExportOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
-	SendMessageFeeProvider, VersionedQueuedMessage,
+use snowbridge_core::{
+	outbound::{
+		AggregateMessageOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
+		SendMessageFeeProvider, VersionedQueuedMessage,
+	},
+	ChannelId, PRIMARY_GOVERNANCE_CHANNEL,
 };
 use sp_core::H256;
 use sp_runtime::BoundedVec;
@@ -24,7 +27,7 @@ where
 	T: Config,
 {
 	pub message_id: H256,
-	pub origin: ParaId,
+	pub channel_id: ChannelId,
 	pub message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<T>>,
 }
 
@@ -46,42 +49,30 @@ where
 		);
 
 		// Generate a unique message id unless one is provided
-		let message_id: H256 =
-			message.id.unwrap_or_else(|| unique((message.origin, &message.command)).into());
+		let message_id: H256 = message
+			.id
+			.unwrap_or_else(|| unique((message.channel_id, &message.command)).into());
 
 		let fee = Self::calculate_fee(&message.command);
 
 		let queued_message: VersionedQueuedMessage = QueuedMessage {
 			id: message_id,
-			origin: message.origin,
+			channel_id: message.channel_id,
 			command: message.command.clone(),
 		}
 		.into();
 		// The whole message should not be too large
 		let encoded = queued_message.encode().try_into().map_err(|_| SendError::MessageTooLarge)?;
 
-		let ticket = Ticket { message_id, origin: message.origin, message: encoded };
+		let ticket = Ticket { message_id, channel_id: message.channel_id, message: encoded };
 
 		Ok((ticket, fee))
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError> {
-		use AggregateMessageOrigin::*;
-		use ExportOrigin::*;
+		let origin = AggregateMessageOrigin::Snowbridge(ticket.channel_id);
 
-		// Assign an `AggregateMessageOrigin` to track the message within the MessageQueue
-		// pallet. Governance commands are assigned origin `ExportOrigin::Here`. In other words
-		// emitted from BridgeHub itself.
-		let origin = if ticket.origin == T::OwnParaId::get() {
-			Export(Here)
-		} else {
-			Export(Sibling(ticket.origin))
-		};
-
-		if let Export(Here) = origin {
-			// Increase PendingHighPriorityMessageCount by one
-			PendingHighPriorityMessageCount::<T>::mutate(|count| *count = count.saturating_add(1));
-		} else {
+		if ticket.channel_id != PRIMARY_GOVERNANCE_CHANNEL {
 			ensure!(!Self::operating_mode().is_halted(), SendError::Halted);
 		}
 

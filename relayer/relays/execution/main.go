@@ -111,7 +111,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 			log.WithFields(log.Fields{
 				"ethBlockNumber": executionHeaderState.BlockNumber,
-				"channelId":      r.config.Source.ChannelID,
+				"channelId":      types.H256(r.config.Source.ChannelID).Hex(),
 				"paraNonce":      paraNonce,
 				"ethNonce":       ethNonce,
 			}).Info("Polled Nonces")
@@ -138,7 +138,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 					"blockHash":   ev.Raw.BlockHash.Hex(),
 					"blockNumber": ev.Raw.BlockNumber,
 					"txHash":      ev.Raw.TxHash.Hex(),
-					"dest":        ev.Destination,
+					"channelID":   types.H256(ev.ChannelID).Hex(),
 				})
 
 				if ev.Nonce <= paraNonce {
@@ -193,7 +193,7 @@ func (r *Relay) fetchEthereumNonce(ctx context.Context, blockNumber uint64) (uin
 		BlockNumber: new(big.Int).SetUint64(blockNumber),
 		Context:     ctx,
 	}
-	_, ethOutboundNonce, err := r.gatewayContract.ChannelNoncesOf(&opts, big.NewInt(int64(r.config.Source.ChannelID)))
+	_, ethOutboundNonce, err := r.gatewayContract.ChannelNoncesOf(&opts, r.config.Source.ChannelID)
 	if err != nil {
 		return 0, fmt.Errorf("fetch Gateway.ChannelNoncesOf(%v): %w", r.config.Source.ChannelID, err)
 	}
@@ -209,7 +209,7 @@ func (r *Relay) findEvents(
 	start uint64,
 ) ([]*contracts.GatewayOutboundMessageAccepted, error) {
 
-	paraID := r.config.Source.ChannelID
+	channelID := r.config.Source.ChannelID
 
 	var allEvents []*contracts.GatewayOutboundMessageAccepted
 
@@ -231,7 +231,7 @@ func (r *Relay) findEvents(
 			Context: ctx,
 		}
 
-		done, events, err := r.findEventsWithFilter(&opts, paraID, start)
+		done, events, err := r.findEventsWithFilter(&opts, channelID, start)
 		if err != nil {
 			return nil, fmt.Errorf("filter events: %w", err)
 		}
@@ -254,8 +254,8 @@ func (r *Relay) findEvents(
 	return allEvents, nil
 }
 
-func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, paraID uint32, start uint64) (bool, []*contracts.GatewayOutboundMessageAccepted, error) {
-	iter, err := r.gatewayContract.FilterOutboundMessageAccepted(opts, []*big.Int{big.NewInt(int64(paraID))}, [][32]byte{})
+func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, channelID [32]byte, start uint64) (bool, []*contracts.GatewayOutboundMessageAccepted, error) {
+	iter, err := r.gatewayContract.FilterOutboundMessageAccepted(opts, [][32]byte{channelID}, [][32]byte{})
 	if err != nil {
 		return false, nil, err
 	}

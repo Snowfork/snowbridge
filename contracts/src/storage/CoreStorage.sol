@@ -2,18 +2,16 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.22;
 
-import {Channel, OperatingMode, ParaID} from "../Types.sol";
+import {Channel, OperatingMode, ChannelID, ParaID} from "../Types.sol";
 
 library CoreStorage {
     struct Layout {
         // Operating mode:
         OperatingMode mode;
         // Message channels
-        mapping(ParaID paraID => Channel) channels;
+        mapping(ChannelID channelID => Channel) channels;
         // Agents
         mapping(bytes32 agentID => address) agents;
-        // The default fee charged to users for submitting outbound message to Polkadot
-        uint256 defaultFee;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.core");

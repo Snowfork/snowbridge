@@ -10,7 +10,7 @@ use sp_std::prelude::*;
 
 use super::Pallet;
 
-use snowbridge_core::ParaId;
+use snowbridge_core::ChannelId;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 
 pub type ProcessMessageOriginOf<T> = <Pallet<T> as ProcessMessage>::Origin;
@@ -20,8 +20,8 @@ pub const LOG_TARGET: &str = "snowbridge-outbound-queue";
 /// Message which has been assigned a nonce and will be committed at the end of a block
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct CommittedMessage {
-	/// ID of source parachain
-	pub origin: ParaId,
+	/// Message channel
+	pub channel_id: ChannelId,
 	/// Unique nonce to prevent replaying messages
 	pub nonce: u64,
 	/// Command to execute in the Gateway contract
@@ -42,7 +42,7 @@ pub struct CommittedMessage {
 impl From<CommittedMessage> for Token {
 	fn from(x: CommittedMessage) -> Token {
 		Token::Tuple(vec![
-			Token::Uint(u32::from(x.origin).into()),
+			Token::FixedBytes(Vec::from(x.channel_id.as_ref())),
 			Token::Uint(x.nonce.into()),
 			Token::Uint(x.command.into()),
 			Token::Bytes(x.params.to_vec()),

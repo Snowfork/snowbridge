@@ -8,7 +8,7 @@ import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {Channel, InboundMessage, OperatingMode, ParaID, Config, Command} from "./Types.sol";
+import {Channel, ChannelID, InboundMessage, OperatingMode, ParaID, Command} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -38,6 +38,10 @@ contract Gateway is IGateway, IInitializable {
     // AssetHub
     ParaID internal immutable ASSET_HUB_PARA_ID;
     bytes32 internal immutable ASSET_HUB_AGENT_ID;
+
+    // ChannelIDs
+    ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(1)));
+    ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(2)));
 
     // Fixed amount of gas used outside the block of code
     // that is measured in submitInbound
@@ -107,7 +111,7 @@ contract Gateway is IGateway, IInitializable {
     ) external {
         uint256 startGas = gasleft();
 
-        Channel storage channel = _ensureChannel(message.origin);
+        Channel storage channel = _ensureChannel(message.channelID);
 
         // Ensure this message is not being replayed
         if (message.nonce != channel.inboundNonce + 1) {
@@ -200,7 +204,7 @@ contract Gateway is IGateway, IInitializable {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
         }
 
-        emit IGateway.InboundMessageDispatched(message.origin, message.nonce, message.id, success);
+        emit IGateway.InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
     }
 
     /**
@@ -211,24 +215,23 @@ contract Gateway is IGateway, IInitializable {
         return CoreStorage.layout().mode;
     }
 
-    function channelOperatingModeOf(ParaID paraID) external view returns (OperatingMode) {
-        Channel storage ch = _ensureChannel(paraID);
+    function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode) {
+        Channel storage ch = _ensureChannel(channelID);
         return ch.mode;
     }
 
-    function channelNoncesOf(ParaID paraID) external view returns (uint64, uint64) {
-        Channel storage ch = _ensureChannel(paraID);
+    function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64) {
+        Channel storage ch = _ensureChannel(channelID);
         return (ch.inboundNonce, ch.outboundNonce);
     }
 
-    function channelFeeOf(ParaID paraID) external view returns (uint256) {
-        Channel storage ch = _ensureChannel(paraID);
-        return ch.fee;
+    function channelOutboundFeeOf(ChannelID channelID) external view returns (uint256) {
+        Channel storage ch = _ensureChannel(channelID);
+        return ch.outboundFee;
     }
 
     function agentOf(bytes32 agentID) external view returns (address) {
-        address agentAddress = _ensureAgent(agentID);
-        return agentAddress;
+        return _ensureAgent(agentID);
     }
 
     function implementation() public view returns (address) {
@@ -290,10 +293,14 @@ contract Gateway is IGateway, IInitializable {
     }
 
     struct CreateChannelParams {
-        /// @dev The parachain which will own the newly created channel
-        ParaID paraID;
-        /// @dev The agent ID of the parachain
+        /// @dev The channel ID
+        ChannelID channelID;
+        /// @dev The agent ID
         bytes32 agentID;
+        /// @dev Initial operating mode
+        OperatingMode mode;
+        /// @dev outbound fee
+        uint256 outboundFee;
     }
 
     /// @dev Create a messaging channel for a Polkadot parachain
@@ -306,46 +313,44 @@ contract Gateway is IGateway, IInitializable {
         address agent = _ensureAgent(params.agentID);
 
         // Ensure channel has not already been created
-        Channel storage ch = $.channels[params.paraID];
+        Channel storage ch = $.channels[params.channelID];
         if (address(ch.agent) != address(0)) {
             revert ChannelAlreadyCreated();
         }
 
-        ch.mode = OperatingMode.Normal;
+        ch.mode = params.mode;
         ch.agent = agent;
         ch.inboundNonce = 0;
         ch.outboundNonce = 0;
-        ch.fee = $.defaultFee;
+        ch.outboundFee = params.outboundFee;
 
-        emit ChannelCreated(params.paraID);
+        emit ChannelCreated(params.channelID);
     }
 
     struct UpdateChannelParams {
         /// @dev The parachain used to identify the channel to update
-        ParaID paraID;
+        ChannelID channelID;
         /// @dev The new operating mode
         OperatingMode mode;
         /// @dev The new fee for accepting outbound messages
-        uint256 fee;
-        /// @dev The new reward to be given to relayers for submitting inbound messages
-        uint256 reward;
+        uint256 outboundFee;
     }
 
     /// @dev Update the configuration for a channel
     function updateChannel(bytes calldata data) external onlySelf {
         UpdateChannelParams memory params = abi.decode(data, (UpdateChannelParams));
 
-        Channel storage ch = _ensureChannel(params.paraID);
+        Channel storage ch = _ensureChannel(params.channelID);
 
-        // Extra sanity checks when updating the BridgeHub channel, which should never be paused.
-        if (params.paraID == BRIDGE_HUB_PARA_ID && (params.mode != OperatingMode.Normal || params.fee > 1 ether)) {
+        // Extra sanity checks when updating the primary governance channel, which should never be halted.
+        if (params.channelID == PRIMARY_GOVERNANCE_CHANNEL_ID && (params.mode != OperatingMode.Normal)) {
             revert InvalidChannelUpdate();
         }
 
         ch.mode = params.mode;
-        ch.fee = params.fee;
+        ch.outboundFee = params.outboundFee;
 
-        emit ChannelUpdated(params.paraID);
+        emit ChannelUpdated(params.channelID);
     }
 
     struct UpgradeParams {
@@ -492,30 +497,33 @@ contract Gateway is IGateway, IInitializable {
 
     // Submit an outbound message to Polkadot
     function _submitOutbound(ParaID dest, bytes memory payload, uint256 extraFee) internal {
-        Channel storage channel = _ensureChannel(dest);
+        ChannelID channelID = dest.into();
+        Channel storage channel = _ensureChannel(channelID);
 
         // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled(channel);
 
+        uint256 totalFee = channel.outboundFee + extraFee;
+
         // Ensure the user has enough funds for this message to be accepted
-        if (msg.value < channel.fee + extraFee) {
+        if (msg.value < totalFee) {
             revert FeePaymentToLow();
         }
 
         channel.outboundNonce = channel.outboundNonce + 1;
 
         // Deposit total fee into agent's contract
-        payable(channel.agent).safeNativeTransfer(channel.fee + extraFee);
+        payable(channel.agent).safeNativeTransfer(totalFee);
 
         // Reimburse excess fee payment
-        if (msg.value > channel.fee + extraFee) {
-            payable(msg.sender).safeNativeTransfer(msg.value - channel.fee - extraFee);
+        if (msg.value > totalFee) {
+            payable(msg.sender).safeNativeTransfer(msg.value - totalFee);
         }
 
         // Generate a unique ID for this message
-        bytes32 messageID = keccak256(abi.encodePacked(dest, channel.outboundNonce));
+        bytes32 messageID = keccak256(abi.encodePacked(channelID, channel.outboundNonce));
 
-        emit IGateway.OutboundMessageAccepted(dest, channel.outboundNonce, messageID, payload);
+        emit IGateway.OutboundMessageAccepted(channelID, channel.outboundNonce, messageID, payload);
     }
 
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
@@ -527,8 +535,8 @@ contract Gateway is IGateway, IInitializable {
     }
 
     /// @dev Ensure that the specified parachain has a channel allocated
-    function _ensureChannel(ParaID paraID) internal view returns (Channel storage ch) {
-        ch = CoreStorage.layout().channels[paraID];
+    function _ensureChannel(ChannelID channelID) internal view returns (Channel storage ch) {
+        ch = CoreStorage.layout().channels[channelID];
         // A channel always has an agent specified.
         if (ch.agent == address(0)) {
             revert ChannelDoesNotExist();
@@ -564,44 +572,66 @@ contract Gateway is IGateway, IInitializable {
      * Upgrades
      */
 
+    // Initial configuration for bridge
+    struct Config {
+        OperatingMode mode;
+        /// @dev The fee charged to users for submitting outbound messages.
+        uint256 outboundFee;
+        /// @dev The extra fee charged for registering tokens.
+        uint256 registerTokenFee;
+        /// @dev The extra fee charged for sending tokens.
+        uint256 sendTokenFee;
+    }
+
     /// @dev Initialize storage in the gateway
     /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
-    function initialize(bytes memory data) external {
+    function initialize(bytes calldata data) external {
         // Prevent initialization of storage in implementation contract
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
 
-        (OperatingMode defaultMode, uint256 defaultFee, uint256 registerTokenFee, uint256 sendTokenFee) =
-            abi.decode(data, (OperatingMode, uint256, uint256, uint256));
+        Config memory config = abi.decode(data, (Config));
 
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        $.mode = defaultMode;
-        $.defaultFee = defaultFee;
+        $.mode = config.mode;
 
-        // Initialize an agent & channel for BridgeHub
+        // Initialize agent for BridgeHub
         address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
         $.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
-        $.channels[BRIDGE_HUB_PARA_ID] = Channel({
+
+        // Initialize channel for primary governance track
+        $.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] = Channel({
             mode: OperatingMode.Normal,
             agent: bridgeHubAgent,
             inboundNonce: 0,
             outboundNonce: 0,
-            fee: defaultFee
+            outboundFee: config.outboundFee
         });
 
-        // Initialize an agent & channel for AssetHub
+        // Initialize channel for secondary governance track
+        $.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] = Channel({
+            mode: OperatingMode.Normal,
+            agent: bridgeHubAgent,
+            inboundNonce: 0,
+            outboundNonce: 0,
+            outboundFee: config.outboundFee
+        });
+
+        // Initialize agent for for AssetHub
         address assetHubAgent = address(new Agent(ASSET_HUB_AGENT_ID));
         $.agents[ASSET_HUB_AGENT_ID] = assetHubAgent;
-        $.channels[ASSET_HUB_PARA_ID] = Channel({
+
+        // Initialize channel for AssetHub
+        $.channels[ASSET_HUB_PARA_ID.into()] = Channel({
             mode: OperatingMode.Normal,
             agent: assetHubAgent,
             inboundNonce: 0,
             outboundNonce: 0,
-            fee: defaultFee
+            outboundFee: config.outboundFee
         });
 
-        Assets.initialize(registerTokenFee, sendTokenFee);
+        Assets.initialize(config.registerTokenFee, config.sendTokenFee);
     }
 }

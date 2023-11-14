@@ -5,7 +5,11 @@ use crate::{
 		bridgehub::{
 			self,
 			api::{
-				runtime_types::bridge_hub_rococo_runtime::RuntimeCall as BHRuntimeCall, utility,
+				runtime_types::{
+					bridge_hub_rococo_runtime::RuntimeCall as BHRuntimeCall,
+					snowbridge_core::outbound::v1::OperatingMode,
+				},
+				utility,
 			},
 		},
 		relaychain,
@@ -259,7 +263,7 @@ pub async fn construct_create_channel_call(
 	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
 	let call = bridgehub::api::ethereum_control::calls::TransactionApi
-		.create_channel()
+		.create_channel(OperatingMode::Normal, 1)
 		.encode_call_data(&bridge_hub_client.metadata())?;
 
 	Ok(call)

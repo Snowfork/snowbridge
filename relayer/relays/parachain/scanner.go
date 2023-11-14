@@ -2,9 +2,7 @@ package parachain
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -84,7 +82,7 @@ func (s *Scanner) findTasks(
 		Pending: true,
 		Context: ctx,
 	}
-	ethInboundNonce, _, err := gatewayContract.ChannelNoncesOf(&options, big.NewInt(int64(s.config.ChannelID)))
+	ethInboundNonce, _, err := gatewayContract.ChannelNoncesOf(&options, s.config.ChannelID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch nonce from gateway contract for channelID '%v': %w", s.config.ChannelID, err)
 	}
@@ -94,9 +92,8 @@ func (s *Scanner) findTasks(
 	}).Info("Checked latest nonce delivered to ethereum gateway")
 
 	// Fetch latest nonce in parachain outbound queue
-	sourceIDBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(sourceIDBytes, s.config.ChannelID)
-	paraNonceKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueue", "Nonce", sourceIDBytes, nil)
+
+	paraNonceKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueue", "Nonce", s.config.ChannelID[:], nil)
 	if err != nil {
 		return nil, fmt.Errorf("create storage key for parachain outbound queue nonce with channelID '%v': %w", s.config.ChannelID, err)
 	}
@@ -126,7 +123,7 @@ func (s *Scanner) findTasks(
 	tasks, err := s.findTasksImpl(
 		ctx,
 		paraBlock,
-		s.config.ChannelID,
+		types.H256(s.config.ChannelID),
 		ethInboundNonce+1,
 	)
 	if err != nil {
@@ -143,7 +140,7 @@ func (s *Scanner) findTasks(
 func (s *Scanner) findTasksImpl(
 	_ context.Context,
 	lastParaBlockNumber uint64,
-	channelID uint32,
+	channelID types.H256,
 	startingNonce uint64,
 ) ([]*Task, error) {
 	log.WithFields(log.Fields{
@@ -331,7 +328,7 @@ func scanForOutboundQueueProofs(
 	blockHash types.Hash,
 	commitmentHash types.H256,
 	startingNonce uint64,
-	channelID uint32,
+	channelID types.H256,
 	messages []OutboundQueueMessage,
 ) (*struct {
 	proofs   []MessageProof
@@ -360,7 +357,7 @@ func scanForOutboundQueueProofs(
 	for i := len(messages) - 1; i >= 0; i-- {
 		message := messages[i]
 
-		if message.Origin != channelID {
+		if message.ChannelID != channelID {
 			continue
 		}
 
@@ -370,7 +367,7 @@ func scanForOutboundQueueProofs(
 		if messageNonce < startingNonce {
 			log.Debugf(
 				"Halting scan for channelID '%v'. Messages not committed yet on outbound channel",
-				message.Origin,
+				message.ChannelID.Hex(),
 			)
 			scanDone = true
 			break
@@ -384,7 +381,7 @@ func scanForOutboundQueueProofs(
 		if messageProof.Proof.Root != commitmentHash {
 			return nil, fmt.Errorf(
 				"Halting scan for channelID '%v'. Outbound queue proof root '%v' doesn't match digest item's commitment hash '%v'",
-				message.Origin,
+				message.ChannelID.Hex(),
 				messageProof.Proof.Root,
 				commitmentHash,
 			)

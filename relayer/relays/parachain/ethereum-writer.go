@@ -183,9 +183,9 @@ func (wr *EthereumWriter) WriteChannel(
 				return fmt.Errorf("unpack event log: %w", err)
 			}
 			log.WithFields(log.Fields{
-				"origin":  holder.Origin,
-				"nonce":   holder.Nonce,
-				"success": holder.Success,
+				"channelID": Hex(holder.ChannelID[:]),
+				"nonce":     holder.Nonce,
+				"success":   holder.Success,
 			}).Info("Message dispatched")
 		}
 	}

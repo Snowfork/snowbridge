@@ -8,7 +8,7 @@ use frame_support::{
 	weights::IdentityFee,
 };
 
-use snowbridge_core::outbound::*;
+use snowbridge_core::{outbound::*, ParaId, PRIMARY_GOVERNANCE_CHANNEL};
 use sp_core::{ConstU32, ConstU8, H160, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
@@ -72,7 +72,7 @@ impl pallet_message_queue::Config for Test {
 	type HeapSize = HeapSize;
 	type MaxStale = MaxStale;
 	type ServiceWeight = ServiceWeight;
-	type QueuePausedQuery = OutboundQueue;
+	type QueuePausedQuery = ();
 }
 
 parameter_types! {
@@ -86,7 +86,6 @@ impl crate::Config for Test {
 	type Decimals = ConstU8<12>;
 	type MaxMessagePayloadSize = ConstU32<1024>;
 	type MaxMessagesPerBlock = ConstU32<20>;
-	type OwnParaId = OwnParaId;
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
 	type WeightToFee = IdentityFee<u128>;
@@ -120,15 +119,13 @@ pub fn run_to_end_of_next_block() {
 	System::on_finalize(System::block_number());
 }
 
-pub type OwnParaIdOf<T> = <T as Config>::OwnParaId;
-
 pub fn mock_governance_message<T>() -> Message
 where
 	T: Config,
 {
 	Message {
 		id: None,
-		origin: OwnParaIdOf::<T>::get(),
+		channel_id: PRIMARY_GOVERNANCE_CHANNEL,
 		command: Command::Upgrade {
 			impl_address: H160::zero(),
 			impl_code_hash: H256::zero(),
@@ -144,7 +141,7 @@ where
 {
 	Message {
 		id: None,
-		origin: OwnParaIdOf::<T>::get(),
+		channel_id: PRIMARY_GOVERNANCE_CHANNEL,
 		command: Command::Upgrade {
 			impl_address: H160::zero(),
 			impl_code_hash: H256::zero(),
@@ -159,7 +156,7 @@ where
 pub fn mock_message(sibling_para_id: u32) -> Message {
 	Message {
 		id: None,
-		origin: sibling_para_id.into(),
+		channel_id: ParaId::from(sibling_para_id).into(),
 		command: Command::AgentExecute {
 			agent_id: Default::default(),
 			command: AgentExecuteCommand::TransferToken {
