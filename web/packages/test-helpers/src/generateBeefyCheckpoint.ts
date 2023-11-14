@@ -4,16 +4,15 @@ import createKeccakHash from "keccak"
 import { publicKeyConvert } from "secp256k1"
 import type {
     ValidatorSetId,
-    BeefyNextAuthoritySet,
     BeefyId,
 } from "@polkadot/types/interfaces/beefy/types"
 import fs from "fs"
 import path from "path"
-import {u32, u64} from "@polkadot/types-codec";
-import {H256} from "@polkadot/types/interfaces";
-import {Codec} from "@polkadot/types-codec/types";
+import { u32, u64 } from "@polkadot/types-codec";
+import { H256 } from "@polkadot/types/interfaces";
+import { Struct } from "@polkadot/types";
 
-interface NextAuthoritySet extends Codec{
+interface NextAuthoritySet extends Struct {
     id: u64;
     len: u32;
     keysetCommitment: H256;
