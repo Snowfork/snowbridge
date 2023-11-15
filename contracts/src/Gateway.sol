@@ -8,7 +8,7 @@ import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {Channel, ChannelID, InboundMessage, OperatingMode, ParaID, Command} from "./Types.sol";
+import {Channel, ChannelID, InboundMessage, OperatingMode, ParaID, Command, MultiAddress} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -454,22 +454,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
-    function sendToken(address token, ParaID destinationChain, bytes32 destinationAddress, uint128 amount)
-        external
-        payable
-    {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
-
-        (bytes memory payload, uint256 extraFee) = Assets.sendToken(
-            ASSET_HUB_PARA_ID, assetHubAgent, token, msg.sender, destinationChain, destinationAddress, amount
-        );
-
-        _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
-    }
-
-    // Transfer ERC20 tokens to a Polkadot parachain
-    function sendToken(address token, ParaID destinationChain, address destinationAddress, uint128 amount)
+    function sendToken(address token, ParaID destinationChain, MultiAddress calldata destinationAddress, uint128 amount)
         external
         payable
     {
