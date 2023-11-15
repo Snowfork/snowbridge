@@ -3,7 +3,6 @@ set -eu
 
 source scripts/set-env.sh
 source scripts/xcm-helper.sh
-source scripts/set_operating_mode.sh
 
 config_beacon_checkpoint() {
     pushd $root_dir
