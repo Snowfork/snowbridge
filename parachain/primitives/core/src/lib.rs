@@ -91,6 +91,12 @@ impl From<[u8; 32]> for ChannelId {
 	}
 }
 
+impl From<ChannelId> for [u8; 32] {
+	fn from(value: ChannelId) -> Self {
+		value.0
+	}
+}
+
 impl<'a> From<&'a [u8; 32]> for ChannelId {
 	fn from(value: &'a [u8; 32]) -> Self {
 		ChannelId(*value)

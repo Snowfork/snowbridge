@@ -1,6 +1,7 @@
 //! Implementation for [`snowbridge_core::outbound::SendMessage`]
 use super::*;
 use codec::Encode;
+use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
 	ensure,
 	traits::{EnqueueMessage, Get},
@@ -9,8 +10,8 @@ use frame_support::{
 use frame_system::unique;
 use snowbridge_core::{
 	outbound::{
-		AggregateMessageOrigin, Fee, Message, QueuedMessage, SendError, SendMessage,
-		SendMessageFeeProvider, VersionedQueuedMessage,
+		Fee, Message, QueuedMessage, SendError, SendMessage, SendMessageFeeProvider,
+		VersionedQueuedMessage,
 	},
 	ChannelId, PRIMARY_GOVERNANCE_CHANNEL,
 };
@@ -70,7 +71,7 @@ where
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError> {
-		let origin = AggregateMessageOrigin::Snowbridge(ticket.channel_id);
+		let origin = AggregateMessageOrigin::GeneralKey(ticket.channel_id.into());
 
 		if ticket.channel_id != PRIMARY_GOVERNANCE_CHANNEL {
 			ensure!(!Self::operating_mode().is_halted(), SendError::Halted);

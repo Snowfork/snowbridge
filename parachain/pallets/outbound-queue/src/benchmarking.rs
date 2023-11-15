@@ -3,9 +3,10 @@
 use super::*;
 
 use codec::Encode;
+use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_benchmarking::v2::*;
 use snowbridge_core::{
-	outbound::{AggregateMessageOrigin, Command, Initializer},
+	outbound::{Command, Initializer},
 	ChannelId,
 };
 use sp_core::{H160, H256};
@@ -35,7 +36,7 @@ mod benchmarks {
 				}),
 			},
 		};
-		let origin = AggregateMessageOrigin::Snowbridge(ChannelId::from([1; 32]));
+		let origin = AggregateMessageOrigin::GeneralKey([1; 32]);
 		let encoded_enqueued_message = enqueued_message.encode();
 
 		#[block]

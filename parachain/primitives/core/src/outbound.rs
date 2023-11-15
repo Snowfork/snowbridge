@@ -1,5 +1,4 @@
-use crate::{ChannelId, ParaId};
-use codec::{Decode, Encode, MaxEncodedLen};
+use codec::{Decode, Encode};
 use frame_support::PalletError;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
@@ -381,18 +380,6 @@ impl GasMeter for () {
 	fn maximum_required(_: &Command) -> u64 {
 		1
 	}
-}
-
-impl From<u32> for AggregateMessageOrigin {
-	fn from(value: u32) -> Self {
-		AggregateMessageOrigin::Snowbridge(ParaId::from(value).into())
-	}
-}
-
-/// Aggregate message origin for the `MessageQueue` pallet.
-#[derive(Encode, Decode, Clone, Copy, MaxEncodedLen, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum AggregateMessageOrigin {
-	Snowbridge(ChannelId),
 }
 
 pub const ETHER_DECIMALS: u8 = 18;
