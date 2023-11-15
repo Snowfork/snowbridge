@@ -486,7 +486,7 @@ contract GatewayTest is Test {
             initParams: abi.encode(666)
         });
 
-        vm.expectRevert(IInitializable.InitializationFailed.selector);
+        vm.expectRevert("initialize failed");
         GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
     }
 

@@ -373,8 +373,8 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidCodeHash();
         }
 
-        // Verify that the code in the implementation contract was not changed
-        // after the upgrade initiated on BridgeHub parachain.
+        // As a sanity check, ensure that the codehash of implementation contract
+        // matches the codehash in the upgrade proposal
         if (params.impl.codehash != params.implCodeHash) {
             revert InvalidCodeHash();
         }
@@ -384,11 +384,9 @@ contract Gateway is IGateway, IInitializable {
 
         // Apply the initialization function of the implementation only if params were provided
         if (params.initParams.length > 0) {
-            (bool success,) =
-                params.impl.delegatecall(abi.encodeWithSelector(this.initialize.selector, params.initParams));
-            if (!success) {
-                revert InitializationFailed();
-            }
+            (bool success, bytes memory returndata) =
+                params.impl.delegatecall(abi.encodeCall(IInitializable.initialize, params.initParams));
+            Call.verifyResult(success, returndata);
         }
 
         emit Upgraded(params.impl);
