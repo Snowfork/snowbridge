@@ -179,7 +179,7 @@ jobs:
           -p snowbridge-runtime-tests
           -- --nocapture
 
-  integration-tests:
+  integration-tests-bridge-hub:
     needs: check
     runs-on: snowbridge-runner
     steps:
@@ -196,6 +196,25 @@ jobs:
         run: >
           RUST_LOG=xcm=trace cargo test 
           -p bridge-hub-rococo-integration-tests snowbridge
+          -- --nocapture
+
+  integration-tests-asset-hub:
+    needs: check
+    runs-on: snowbridge-runner
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: "true"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: setup rust toolchain
+        run: rustup show
+      - name: snowbridge integration tests
+        working-directory: polkadot-sdk
+        run: >
+          RUST_LOG=xcm=trace cargo test 
+          -p asset-hub-rococo-integration-tests snowbridge
           -- --nocapture
 
   beacon-fuzz:
