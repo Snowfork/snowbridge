@@ -2,6 +2,10 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.22;
 
+import {
+    MultiAddress, multiAddressFromUint32, multiAddressFromBytes32, multiAddressFromBytes20
+} from "./MultiAddress.sol";
+
 type ParaID is uint32;
 
 using {ParaIDEq as ==, ParaIDNe as !=, into} for ParaID global;

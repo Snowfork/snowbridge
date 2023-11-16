@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.22;
 
-import {OperatingMode, InboundMessage, ParaID, ChannelID} from "../Types.sol";
+import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 
 interface IGateway {
@@ -65,7 +65,11 @@ interface IGateway {
 
     /// @dev Emitted once the funds are locked and an outbound message is successfully queued.
     event TokenSent(
-        address indexed token, address indexed sender, ParaID destinationChain, bytes destinationAddress, uint128 amount
+        address indexed token,
+        address indexed sender,
+        ParaID destinationChain,
+        MultiAddress destinationAddress,
+        uint128 amount
     );
 
     /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
@@ -79,12 +83,7 @@ interface IGateway {
     function registerToken(address token) external payable;
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
-    function sendToken(address token, ParaID destinationChain, bytes32 destinationAddress, uint128 amount)
-        external
-        payable;
-
-    /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
-    function sendToken(address token, ParaID destinationChain, address destinationAddress, uint128 amount)
+    function sendToken(address token, ParaID destinationChain, MultiAddress calldata destinationAddress, uint128 amount)
         external
         payable;
 }

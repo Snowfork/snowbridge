@@ -22,7 +22,15 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 
-import {AgentExecuteCommand, InboundMessage, OperatingMode, ParaID, Command} from "../src/Types.sol";
+import {
+    AgentExecuteCommand,
+    InboundMessage,
+    OperatingMode,
+    ParaID,
+    Command,
+    multiAddressFromBytes32,
+    multiAddressFromBytes20
+} from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import "./mocks/GatewayUpgradeMock.sol";
@@ -57,6 +65,9 @@ contract GatewayTest is Test {
     uint256 public outboundFee = 1 ether;
     uint256 public registerNativeTokenFee = 1 ether;
     uint256 public sendNativeTokenFee = 1 ether;
+
+    MultiAddress public recipientAddress32;
+    MultiAddress public recipientAddress20;
 
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
@@ -101,6 +112,9 @@ contract GatewayTest is Test {
 
         // create tokens for account 2
         token.deposit{value: 500}();
+
+        recipientAddress32 = multiAddressFromBytes32(keccak256("recipient"));
+        recipientAddress20 = multiAddressFromBytes20(bytes20(keccak256("recipient")));
     }
 
     function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
@@ -267,7 +281,7 @@ contract GatewayTest is Test {
         token.approve(address(gateway), 1);
 
         hoax(user, 2 ether);
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), ParaID.wrap(0), recipientAddress32, 1);
 
         assertEq(user.balance, 0 ether);
     }
@@ -284,7 +298,7 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Gateway.FeePaymentToLow.selector);
         hoax(user, 2 ether);
-        IGateway(address(gateway)).sendToken{value: 0.5 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).sendToken{value: 0.5 ether}(address(token), ParaID.wrap(0), recipientAddress32, 1);
 
         assertEq(user.balance, 2 ether);
     }
@@ -566,16 +580,15 @@ contract GatewayTest is Test {
 
         // Multilocation for recipient
         ParaID destPara = ParaID.wrap(2043);
-        bytes32 destAddress = keccak256("/Alice");
 
         vm.expectEmit(true, true, false, true);
-        emit IGateway.TokenSent(address(this), address(token), destPara, abi.encodePacked(destAddress), 1);
+        emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress32, 1);
     }
 
     function testSendTokenAddress32ToAssetHub() public {
@@ -584,16 +597,15 @@ contract GatewayTest is Test {
 
         // Multilocation for recipient
         ParaID destPara = assetHubParaID;
-        bytes32 destAddress = keccak256("/Alice");
 
         vm.expectEmit(true, true, false, true);
-        emit IGateway.TokenSent(address(this), address(token), destPara, abi.encodePacked(destAddress), 1);
+        emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress32, 1);
     }
 
     function testSendTokenAddress20() public {
@@ -602,16 +614,15 @@ contract GatewayTest is Test {
 
         // Multilocation for recipient
         ParaID destPara = ParaID.wrap(2043);
-        address destAddress = makeAddr("/Alice");
 
         vm.expectEmit(true, true, false, true);
-        emit IGateway.TokenSent(address(this), address(token), destPara, abi.encodePacked(destAddress), 1);
+        emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress20, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress20, 1);
     }
 
     function testSendTokenAddress20FailsInvalidDestination() public {
@@ -619,11 +630,10 @@ contract GatewayTest is Test {
         token.approve(address(gateway), 1);
 
         ParaID destPara = assetHubParaID;
-        address destAddress = makeAddr("/Alice");
 
         // Should fail to send tokens to AssetHub
-        vm.expectRevert(Assets.InvalidDestination.selector);
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+        vm.expectRevert(Assets.Unsupported.selector);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress20, 1);
     }
 
     /**
@@ -668,7 +678,7 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).registerToken{value: 1 ether}(address(token));
 
         vm.expectRevert(Gateway.Disabled.selector);
-        IGateway(address(gateway)).sendToken{value: 1 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).sendToken{value: 1 ether}(address(token), ParaID.wrap(0), recipientAddress32, 1);
     }
 
     /**

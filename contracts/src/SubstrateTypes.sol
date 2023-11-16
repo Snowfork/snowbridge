@@ -66,8 +66,12 @@ library SubstrateTypes {
      * @dev SCALE-encodes `router_primitives::inbound::VersionedMessage` containing payload
      * `NativeTokensMessage::Mint`
      */
-    // solhint-disable-next-line func-name-mixedcase
-    function SendToken(address token, bytes32 recipient, uint128 amount) internal view returns (bytes memory) {
+    // destination is AccountID32 address on AssetHub
+    function SendTokenToAssetHubAddress32(address token, bytes32 recipient, uint128 amount)
+        internal
+        view
+        returns (bytes memory)
+    {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
@@ -79,7 +83,8 @@ library SubstrateTypes {
         );
     }
 
-    function SendToken(address token, ParaID paraID, bytes32 recipient, uint128 amount)
+    // destination is AccountID32 address
+    function SendTokenToAddress32(address token, ParaID paraID, bytes32 recipient, uint128 amount)
         internal
         view
         returns (bytes memory)
@@ -96,7 +101,8 @@ library SubstrateTypes {
         );
     }
 
-    function SendToken(address gateway, address token, ParaID paraID, address recipient, uint128 amount)
+    // destination is AccountID20 address
+    function SendTokenToAddress20(address token, ParaID paraID, bytes20 recipient, uint128 amount)
         internal
         view
         returns (bytes memory)
@@ -105,11 +111,10 @@ library SubstrateTypes {
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x01),
-            SubstrateTypes.H160(gateway),
             SubstrateTypes.H160(token),
             bytes1(0x02),
             ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
-            abi.encodePacked(recipient),
+            recipient,
             ScaleCodec.encodeU128(amount)
         );
     }
