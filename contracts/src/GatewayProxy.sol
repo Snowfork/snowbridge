@@ -6,7 +6,7 @@ import {ERC1967} from "./utils/ERC1967.sol";
 import {Call} from "./utils/Call.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 
-contract GatewayProxy {
+contract GatewayProxy is IInitializable {
     error Unauthorized();
     error NativeCurrencyNotAccepted();
 
@@ -20,7 +20,7 @@ contract GatewayProxy {
         Call.verifyResult(success, returndata);
     }
 
-    // Prevent fallback() from calling `initialize(bytes)` on the implementation contract
+    // Prevent fallback() from calling `IInitializable.initialize(bytes)` on the implementation contract
     function initialize(bytes calldata) external pure {
         revert Unauthorized();
     }
