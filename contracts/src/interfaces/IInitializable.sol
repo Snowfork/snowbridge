@@ -3,10 +3,8 @@
 pragma solidity 0.8.22;
 
 /**
- * @title Initialization of gateway contracts
+ * @title Initialization of gateway logic contracts
  */
 interface IInitializable {
-    error InitializationFailed();
-
     function initialize(bytes calldata data) external;
 }
