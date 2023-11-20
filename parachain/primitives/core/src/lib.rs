@@ -69,7 +69,7 @@ fn derive_channel_id_for_sibling(para_id: ParaId) -> ChannelId {
 	let para_id: u32 = para_id.into();
 	let para_id_bytes: [u8; 4] = para_id.to_be_bytes();
 	let prefix: [u8; 4] = *b"para";
-	let preimage: Vec<u8> = prefix.into_iter().chain(para_id_bytes.into_iter()).collect();
+	let preimage: Vec<u8> = prefix.into_iter().chain(para_id_bytes).collect();
 	keccak_256(&preimage).into()
 }
 
