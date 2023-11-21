@@ -17,7 +17,8 @@ pub const ETHEREUM_CHAIN_ID: u64 = 15;
 pub const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
 pub const ETHEREUM_ADDRESS: [u8; 20] = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe");
 
-// GatewayProxy in local setup
+// The deployment addresses of the following contracts are stable in our E2E env, unless we modify
+// the order in contracts are deployed in DeployScript.sol.
 pub const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
 pub const WETH_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 
@@ -31,10 +32,11 @@ pub const ASSET_HUB_AGENT_ID: [u8; 32] =
 pub const SIBLING_AGENT_ID: [u8; 32] =
 	hex!("e01018a3378502770faff44fbef3910d120a0353d18be653625b8daa88a86453");
 
-// The deployment addresses of the following contracts are stable in our E2E env, unless we modify
-// the order in contracts are deployed in DeployScript.sol.
 pub const SNOWBRIDGE_SOVEREIGN: [u8; 32] =
 	hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5");
+
+pub const PENPAL_SOVEREIGN: [u8; 32] =
+	hex!("7369626cd0070000000000000000000000000000000000000000000000000000");
 
 // SS58: DE14BzQ1bDXWPKeLoAqdLAm1GpyAWaWF1knF74cEZeomTBM
 pub const FERDIE: [u8; 32] =
