@@ -1,17 +1,17 @@
 use hex_literal::hex;
 
+pub const ASSET_HUB_PARA_ID: u32 = 1000;
+pub const BRIDGE_HUB_PARA_ID: u32 = 1013;
+pub const PENPAL_PARA_ID: u32 = 2000;
+
 pub const ETHEREUM_API: &str = "ws://localhost:8546";
 pub const ETHEREUM_HTTP_API: &str = "http://localhost:8545";
-pub const BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
-pub const RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
-pub const BRIDGE_HUB_PARA_ID: u32 = 1013;
+
 pub const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
-
+pub const BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
+pub const PENPAL_WS_URL: &str = "ws://127.0.0.1:14144";
+pub const RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
 pub const TEMPLATE_NODE_WS_URL: &str = "ws://127.0.0.1:13144";
-
-pub const XCM_WEIGHT_REQUIRED: u64 = 3_000_000_000;
-pub const XCM_PROOF_SIZE_REQUIRED: u64 = 100_000;
-pub const BRIDGE_HUB_FEE_REQUIRED: u128 = 1000000000000;
 
 pub const ETHEREUM_CHAIN_ID: u64 = 15;
 pub const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
