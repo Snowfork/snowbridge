@@ -191,17 +191,12 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: setup rust toolchain
         run: rustup show
-      - name: snowbridge integration tests
+      - name: bridge-hub and asset-hub integration tests
         working-directory: polkadot-sdk
         run: >
           RUST_LOG=xcm=trace cargo test 
-          -p bridge-hub-rococo-integration-tests snowbridge
-          -- --nocapture
-      - name: snowbridge integration tests
-        working-directory: polkadot-sdk
-        run: >
-          RUST_LOG=xcm=trace cargo test 
-          -p asset-hub-rococo-integration-tests snowbridge
+          -p bridge-hub-rococo-integration-tests
+          -p asset-hub-rococo-integration-tests
           -- --nocapture
 
   beacon-fuzz:
