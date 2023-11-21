@@ -16,8 +16,6 @@ url = https://github.com/Snowfork/canonical-weth
 [submodule "lodestar"]
 path = lodestar
 url = https://github.com/ChainSafe/lodestar
-branch = v1.12.0
 [submodule "go-ethereum"]
 path = go-ethereum
 url = https://github.com/ethereum/go-ethereum
-branch = v1.13.5
