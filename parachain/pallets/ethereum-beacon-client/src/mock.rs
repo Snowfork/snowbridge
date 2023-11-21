@@ -5,10 +5,7 @@ use frame_support::parameter_types;
 use pallet_timestamp;
 use primitives::{Fork, ForkVersions};
 use sp_core::H256;
-use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
-};
+use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 
 #[cfg(not(feature = "beacon-spec-mainnet"))]
 pub mod minimal {
@@ -17,18 +14,14 @@ pub mod minimal {
 	use crate::config;
 	use hex_literal::hex;
 	use primitives::CompactExecutionHeader;
-	use snowbridge_core::inbound::{Message, Proof};
+	use snowbridge_core::inbound::{Log, Proof};
+	use sp_runtime::BuildStorage;
 	use std::{fs::File, path::PathBuf};
 
-	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
 
 	frame_support::construct_runtime!(
-		pub enum Test where
-			Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
-		{
+		pub enum Test {
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
 			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
@@ -48,13 +41,10 @@ pub mod minimal {
 		type DbWeight = ();
 		type RuntimeOrigin = RuntimeOrigin;
 		type RuntimeCall = RuntimeCall;
-		type Index = u64;
-		type BlockNumber = u64;
 		type Hash = H256;
 		type Hashing = BlakeTwo256;
 		type AccountId = u64;
 		type Lookup = IdentityLookup<Self::AccountId>;
-		type Header = Header;
 		type RuntimeEvent = RuntimeEvent;
 		type BlockHashCount = BlockHashCount;
 		type Version = ();
@@ -65,6 +55,8 @@ pub mod minimal {
 		type SystemWeightInfo = ();
 		type SS58Prefix = SS58Prefix;
 		type MaxConsumers = frame_support::traits::ConstU32<16>;
+		type Nonce = u64;
+		type Block = Block;
 	}
 
 	impl pallet_timestamp::Config for Test {
@@ -105,9 +97,9 @@ pub mod minimal {
 
 	// Build genesis storage according to the mock runtime.
 	pub fn new_tester() -> sp_io::TestExternalities {
-		let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+		let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| Timestamp::set_timestamp(30_000));
+		let _ = ext.execute_with(|| Timestamp::set(RuntimeOrigin::signed(1), 30_000));
 		ext
 	}
 
@@ -149,10 +141,18 @@ pub mod minimal {
 		load_fixture("next-finalized-header-update.minimal.json").unwrap()
 	}
 
-	pub fn get_message_verification_payload() -> Message {
-		Message {
-			data: hex!("f9011c94ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0f863a01b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ada000000000000000000000000000000000000000000000000000000000000003e8a00000000000000000000000000000000000000000000000000000000000000001b8a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004b000f000000000000000100d184c103f7acc340847eee82a0b909e3358bc28d440edffa1352b13227e8ee646f3ea37456dec701345772617070656420457468657210574554481235003511000000000000000000000000000000000000000000").to_vec(),
-			proof: Proof {
+	pub fn get_message_verification_payload() -> (Log, Proof) {
+		(
+			Log {
+				address: hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into(),
+				topics: vec![
+					hex!("1b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ad").into(),
+					hex!("00000000000000000000000000000000000000000000000000000000000003e8").into(),
+					hex!("0000000000000000000000000000000000000000000000000000000000000001").into(),
+				],
+				data: hex!("0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004b000f000000000000000100d184c103f7acc340847eee82a0b909e3358bc28d440edffa1352b13227e8ee646f3ea37456dec701345772617070656420457468657210574554481235003511000000000000000000000000000000000000000000").into(),
+			},
+			Proof {
 				block_hash: hex!("05aaa60b0f27cce9e71909508527264b77ee14da7b5bf915fcc4e32715333213").into(),
 				tx_index: 0,
 				data: (vec![
@@ -164,8 +164,8 @@ pub mod minimal {
 					hex!("f851a0b9890f91ca0d77aa2a4adfaf9b9e40c94cac9e638b6d9797923865872944b646a060a634b9280e3a23fb63375e7bbdd9ab07fd379ab6a67e2312bbc112195fa358808080808080808080808080808080").to_vec(),
 					hex!("f9030820b9030402f90300018301d6e2b9010000000000000800000000000020040008000000000000000000000000400000008000000000000000000000000000000000000000000000000000000000042010000000001000000000000000000000000000000000040000000000000000000000000000000000000000000000008000000000000000002000000000000000000000000200000000000000200000000000100000000040000001000200008000000000000200000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000000f901f5f87a942ffa5ecdbe006d30397c7636d3e015eee251369ff842a0c965575a00553e094ca7c5d14f02e107c258dda06867cbf9e0e69f80e71bbcc1a000000000000000000000000000000000000000000000000000000000000003e8a000000000000000000000000000000000000000000000000000000000000003e8f9011c94ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0f863a01b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ada000000000000000000000000000000000000000000000000000000000000003e8a00000000000000000000000000000000000000000000000000000000000000001b8a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004b000f000000000000000100d184c103f7acc340847eee82a0b909e3358bc28d440edffa1352b13227e8ee646f3ea37456dec701345772617070656420457468657210574554481235003511000000000000000000000000000000000000000000f858948cf6147918a5cbb672703f879f385036f8793a24e1a01449abf21e49fd025f33495e77f7b1461caefdd3d4bb646424a3f445c4576a5ba0000000000000000000000000440edffa1352b13227e8ee646f3ea37456dec701").to_vec(),
 				]),
-			},
-		}
+			}
+		)
 	}
 
 	pub fn get_message_verification_header() -> CompactExecutionHeader {
@@ -185,15 +185,11 @@ pub mod minimal {
 pub mod mainnet {
 	use super::*;
 
-	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
+	use sp_runtime::BuildStorage;
 
 	frame_support::construct_runtime!(
-		pub enum Test where
-			Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
-		{
+		pub enum Test {
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
 			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
@@ -213,13 +209,10 @@ pub mod mainnet {
 		type DbWeight = ();
 		type RuntimeOrigin = RuntimeOrigin;
 		type RuntimeCall = RuntimeCall;
-		type Index = u64;
-		type BlockNumber = u64;
 		type Hash = H256;
 		type Hashing = BlakeTwo256;
 		type AccountId = u64;
 		type Lookup = IdentityLookup<Self::AccountId>;
-		type Header = Header;
 		type RuntimeEvent = RuntimeEvent;
 		type BlockHashCount = BlockHashCount;
 		type Version = ();
@@ -230,6 +223,8 @@ pub mod mainnet {
 		type SystemWeightInfo = ();
 		type SS58Prefix = SS58Prefix;
 		type MaxConsumers = frame_support::traits::ConstU32<16>;
+		type Nonce = u64;
+		type Block = Block;
 	}
 
 	impl pallet_timestamp::Config for Test {
@@ -270,9 +265,9 @@ pub mod mainnet {
 
 	// Build genesis storage according to the mock runtime.
 	pub fn new_tester() -> sp_io::TestExternalities {
-		let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+		let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| Timestamp::set_timestamp(30_000));
+		let _ = ext.execute_with(|| Timestamp::set(RuntimeOrigin::signed(1), 30_000));
 		ext
 	}
 }

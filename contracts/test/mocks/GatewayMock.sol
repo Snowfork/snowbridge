@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.20;
+pragma solidity 0.8.22;
 
 import {Gateway} from "../../src/Gateway.sol";
 import {ParaID, OperatingMode} from "../../src/Types.sol";
@@ -12,24 +12,11 @@ contract GatewayMock is Gateway {
     constructor(
         address beefyClient,
         address agentExecutor,
-        uint256 dispatchGas,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubHubAgentID,
         ParaID assetHubParaID,
-        bytes32 assetHubHubAgentID,
-        bytes2 createTokenCallID
-    )
-        Gateway(
-            beefyClient,
-            agentExecutor,
-            dispatchGas,
-            bridgeHubParaID,
-            bridgeHubHubAgentID,
-            assetHubParaID,
-            assetHubHubAgentID,
-            createTokenCallID
-        )
-    {}
+        bytes32 assetHubHubAgentID
+    ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, assetHubParaID, assetHubHubAgentID) {}
 
     function agentExecutePublic(bytes calldata params) external {
         this.agentExecute(params);
@@ -75,6 +62,10 @@ contract GatewayMock is Gateway {
             // for unit tests, verification is set with commitmentsAreVerified
             return commitmentsAreVerified;
         }
+    }
+
+    function setTokenTransferFeesPublic(bytes calldata params) external {
+        this.setTokenTransferFees(params);
     }
 }
 

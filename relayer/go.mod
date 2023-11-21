@@ -9,12 +9,11 @@ require (
 	github.com/magefile/mage v1.15.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454
-	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20230921163942-4a1eb53d821e
-	github.com/spf13/cobra v1.7.0
-	github.com/spf13/viper v1.16.0
-	github.com/stretchr/testify v1.8.4
-	github.com/vedhavyas/go-subkey v1.0.4
-	golang.org/x/sync v0.3.0
+	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20231109131025-3ece5b994f03
+	github.com/spf13/cobra v1.4.0
+	github.com/spf13/viper v1.12.0
+	github.com/stretchr/testify v1.8.1
+	golang.org/x/sync v0.1.0
 )
 
 require (

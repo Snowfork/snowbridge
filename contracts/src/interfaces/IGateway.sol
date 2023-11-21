@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
-import {OperatingMode, InboundMessage, ParaID} from "../Types.sol";
+import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 
 interface IGateway {
@@ -11,19 +11,19 @@ interface IGateway {
      */
 
     // Emitted when inbound message has been dispatched
-    event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool success);
+    event InboundMessageDispatched(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bool success);
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
-    event OutboundMessageAccepted(ParaID indexed destination, uint64 nonce, bytes payload);
+    event OutboundMessageAccepted(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bytes payload);
 
     // Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);
 
     // Emitted when a channel has been created
-    event ChannelCreated(ParaID indexed paraID);
+    event ChannelCreated(ChannelID indexed channelID);
 
     // Emitted when a channel has been updated
-    event ChannelUpdated(ParaID indexed paraID);
+    event ChannelUpdated(ChannelID indexed channelID);
 
     // Emitted when the gateway is upgraded
     event Upgraded(address indexed implementation);
@@ -39,9 +39,9 @@ interface IGateway {
      */
 
     function operatingMode() external view returns (OperatingMode);
-    function channelOperatingModeOf(ParaID paraID) external view returns (OperatingMode);
-    function channelFeeRewardOf(ParaID paraID) external view returns (uint256, uint256);
-    function channelNoncesOf(ParaID paraID) external view returns (uint64, uint64);
+    function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
+    function channelOutboundFeeOf(ChannelID channelID) external view returns (uint256);
+    function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
     function agentOf(bytes32 agentID) external view returns (address);
     function implementation() external view returns (address);
 
@@ -60,17 +60,30 @@ interface IGateway {
      * Token Transfers
      */
 
+    // @dev Emitted when the fees updated
+    event TokenTransferFeesChanged(uint256 register, uint256 send);
+
+    /// @dev Emitted once the funds are locked and an outbound message is successfully queued.
+    event TokenSent(
+        address indexed token,
+        address indexed sender,
+        ParaID destinationChain,
+        MultiAddress destinationAddress,
+        uint128 amount
+    );
+
+    /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
+    event TokenRegistrationSent(address token);
+
+    // @dev Fees in Ether for registering and sending tokens respectively
+    function tokenTransferFees() external view returns (uint256, uint256);
+
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset
     ///      in the `ForeignAssets` pallet.
     function registerToken(address token) external payable;
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
-    function sendToken(address token, ParaID destinationChain, bytes32 destinationAddress, uint128 amount)
-        external
-        payable;
-
-    /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
-    function sendToken(address token, ParaID destinationChain, address destinationAddress, uint128 amount)
+    function sendToken(address token, ParaID destinationChain, MultiAddress calldata destinationAddress, uint128 amount)
         external
         payable;
 }

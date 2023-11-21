@@ -3,8 +3,13 @@
 use super::*;
 
 use codec::Encode;
+use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_benchmarking::v2::*;
-use snowbridge_core::outbound::Command;
+use snowbridge_core::{
+	outbound::{Command, Initializer},
+	ChannelId,
+};
+use sp_core::{H160, H256};
 
 #[allow(unused_imports)]
 use crate::Pallet as OutboundQueue;
@@ -16,19 +21,27 @@ use crate::Pallet as OutboundQueue;
 mod benchmarks {
 	use super::*;
 
-	/// Benchmark for processing a message payload of length `x`.
+	/// Benchmark for processing a message.
 	#[benchmark]
 	fn do_process_message() -> Result<(), BenchmarkError> {
-		let enqueued_message = EnqueuedMessage {
-			id: H256::zero().into(),
-			origin: 1000.into(),
-			command: Command::CreateAgent { agent_id: H256::zero() },
+		let enqueued_message = QueuedMessage {
+			id: H256::zero(),
+			channel_id: ChannelId::from([1; 32]),
+			command: Command::Upgrade {
+				impl_address: H160::zero(),
+				impl_code_hash: H256::zero(),
+				initializer: Some(Initializer {
+					params: [7u8; 256].into_iter().collect(),
+					maximum_required_gas: 200_000,
+				}),
+			},
 		};
+		let origin = AggregateMessageOrigin::GeneralKey([1; 32]);
 		let encoded_enqueued_message = enqueued_message.encode();
 
 		#[block]
 		{
-			let _ = OutboundQueue::<T>::do_process_message(&encoded_enqueued_message);
+			let _ = OutboundQueue::<T>::do_process_message(origin, &encoded_enqueued_message);
 		}
 
 		assert_eq!(MessageLeaves::<T>::decode_len().unwrap(), 1);
@@ -38,7 +51,7 @@ mod benchmarks {
 
 	/// Benchmark for producing final messages commitment
 	#[benchmark]
-	fn on_finalize() -> Result<(), BenchmarkError> {
+	fn commit() -> Result<(), BenchmarkError> {
 		// Assume worst case, where `MaxMessagesPerBlock` messages need to be committed.
 		for i in 0..T::MaxMessagesPerBlock::get() {
 			let leaf_data: [u8; 1] = [i as u8];
@@ -48,11 +61,25 @@ mod benchmarks {
 
 		#[block]
 		{
-			OutboundQueue::<T>::commit_messages();
+			OutboundQueue::<T>::commit();
 		}
 
 		Ok(())
 	}
 
-	impl_benchmark_test_suite!(OutboundQueue, crate::test::new_tester(), crate::test::Test,);
+	/// Benchmark for producing commitment for a single message
+	#[benchmark]
+	fn commit_single() -> Result<(), BenchmarkError> {
+		let leaf = <T as Config>::Hashing::hash(&[100; 1]);
+		MessageLeaves::<T>::append(leaf);
+
+		#[block]
+		{
+			OutboundQueue::<T>::commit();
+		}
+
+		Ok(())
+	}
+
+	impl_benchmark_test_suite!(OutboundQueue, crate::mock::new_tester(), crate::mock::Test,);
 }

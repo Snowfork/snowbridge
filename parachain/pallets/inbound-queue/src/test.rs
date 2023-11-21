@@ -3,37 +3,29 @@
 use super::*;
 
 use frame_support::{
-	assert_noop, assert_ok,
-	dispatch::DispatchError,
-	parameter_types,
-	traits::{ConstU64, Everything},
+	assert_noop, assert_ok, parameter_types,
+	traits::{ConstU128, Everything},
+	weights::IdentityFee,
 };
+use hex_literal::hex;
+use snowbridge_beacon_primitives::{Fork, ForkVersions};
+use snowbridge_core::inbound::{Log, Proof, VerificationError};
+use snowbridge_router_primitives::inbound::MessageToXcm;
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
-	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	ArithmeticError, MultiSignature,
+	BuildStorage, DispatchError, MultiSignature, TokenError,
 };
 use sp_std::convert::From;
-
-use snowbridge_beacon_primitives::{Fork, ForkVersions};
-use snowbridge_core::inbound::{Message, Proof};
-use snowbridge_ethereum::Log;
-
-use hex_literal::hex;
 use xcm::v3::{prelude::*, MultiAssets, SendXcm};
 
-use crate::{self as inbound_queue, envelope::Envelope, Error, Event as InboundQueueEvent};
+use crate::{self as inbound_queue, Error, Event as InboundQueueEvent};
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
+	pub enum Test
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
@@ -49,46 +41,48 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
+type Balance = u128;
+
 impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountData = pallet_balances::AccountData<u128>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type Nonce = u64;
+	type Block = Block;
 }
 
 impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
-	type Balance = u64;
+	type Balance = Balance;
 	type RuntimeEvent = RuntimeEvent;
 	type DustRemoval = ();
-	type ExistentialDeposit = ConstU64<1>;
+	type ExistentialDeposit = ConstU128<1>;
 	type AccountStore = System;
 	type WeightInfo = ();
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type MaxHolds = ();
 }
 
@@ -125,9 +119,8 @@ impl snowbridge_ethereum_beacon_client::Config for Test {
 pub struct MockVerifier;
 
 impl Verifier for MockVerifier {
-	fn verify(message: &Message) -> Result<Log, DispatchError> {
-		let log: Log = rlp::decode(&message.data).unwrap();
-		Ok(log)
+	fn verify(_: &Log, _: &Proof) -> Result<(), VerificationError> {
+		Ok(())
 	}
 }
 
@@ -136,6 +129,11 @@ const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39
 parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 15 };
 	pub const GatewayAddress: H160 = H160(GATEWAY_ADDRESS);
+	pub const CreateAssetCall: [u8;2] = [53, 0];
+	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
+	pub const CreateAssetDeposit: u128 = 100_000_000_000;
+	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
+	pub const InitialFund: u128 = 1_000_000_000_000;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -148,25 +146,38 @@ impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Test {
 pub struct MockXcmSender;
 
 impl SendXcm for MockXcmSender {
-	type Ticket = ();
+	type Ticket = Xcm<()>;
 
 	fn validate(
 		dest: &mut Option<MultiLocation>,
-		_: &mut Option<xcm::v3::Xcm<()>>,
-	) -> xcm::v3::SendResult<Self::Ticket> {
+		xcm: &mut Option<xcm::v3::Xcm<()>>,
+	) -> SendResult<Self::Ticket> {
 		match dest {
-			Some(MultiLocation { parents: _, interior }) => {
+			Some(MultiLocation { interior, .. }) => {
 				if let X1(Parachain(1001)) = interior {
 					return Err(XcmpSendError::NotApplicable)
 				}
-				Ok(((), MultiAssets::default()))
+				Ok((xcm.clone().unwrap(), MultiAssets::default()))
 			},
-			_ => Ok(((), MultiAssets::default())),
+			_ => Ok((xcm.clone().unwrap(), MultiAssets::default())),
 		}
 	}
 
-	fn deliver(_: Self::Ticket) -> core::result::Result<XcmHash, XcmpSendError> {
-		Ok(H256::zero().into())
+	fn deliver(xcm: Self::Ticket) -> core::result::Result<XcmHash, XcmpSendError> {
+		let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
+		Ok(hash)
+	}
+}
+
+pub struct MockChannelLookup;
+impl ChannelLookup for MockChannelLookup {
+	fn lookup(channel_id: ChannelId) -> Option<Channel> {
+		if channel_id !=
+			hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539").into()
+		{
+			return None
+		}
+		Some(Channel { agent_id: H256::zero().into(), para_id: 1000.into() })
 	}
 }
 
@@ -174,12 +185,22 @@ impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
 	type Token = Balances;
-	type Reward = ConstU64<100>;
+	type Reward = ConstU128<100>;
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
+	type MessageConverter = MessageToXcm<
+		CreateAssetCall,
+		CreateAssetExecutionFee,
+		CreateAssetDeposit,
+		SendTokenExecutionFee,
+		AccountId,
+		Balance,
+	>;
+	type ChannelLookup = MockChannelLookup;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
+	type WeightToFee = IdentityFee<u128>;
 }
 
 fn last_events(n: usize) -> Vec<RuntimeEvent> {
@@ -196,51 +217,78 @@ fn expect_events(e: Vec<RuntimeEvent>) {
 	assert_eq!(last_events(e.len()), e);
 }
 
+fn setup() {
+	System::set_block_number(1);
+	Balances::mint_into(
+		&sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into()),
+		InitialFund::get(),
+	)
+	.unwrap();
+	Balances::mint_into(
+		&sibling_sovereign_account::<Test>(TEMPLATE_PARAID.into()),
+		InitialFund::get(),
+	)
+	.unwrap();
+}
+
 pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| System::set_block_number(1));
+	ext.execute_with(|| setup());
 	ext
 }
 
-fn parse_dest(message: Message) -> ParaId {
-	let log = MockVerifier::verify(&message)
-		.map_err(|err| {
-			println!("mock verify: {:?}", err);
-			err
-		})
-		.unwrap();
-	let envelope = Envelope::try_from(log)
-		.map_err(|err| {
-			println!("envelope: {:?}", err);
-			err
-		})
-		.unwrap();
-	envelope.dest
+// Generated from smoketests:
+//   cd smoketests
+//   ./make-bindings
+//   cargo test --test register_token -- --nocapture
+fn mock_event_log() -> Log {
+	Log {
+		// gateway address
+		address: hex!("eda338e4dc46038493b885327842fd3e301cab39").into(),
+		topics: vec![
+			hex!("7153f9357c8ea496bba60bf82e67143e27b64462b49041f8e689e1b05728f84f").into(),
+			// channel id
+			hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539").into(),
+			// message id
+			hex!("5f7060e971b0dc81e63f0aa41831091847d97c1a4693ac450cc128c7214e65e0").into(),
+		],
+		// Nonce + Payload
+		data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000").into(),
+	}
 }
 
-// dest para is 1000
-const OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
-	"
-	f8fb94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000034000f000000000000000057a2d4ff0c3866d96556884bf09fecdd7ccd530c87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d3500000000000000000000000000
-	"
-);
+fn mock_event_log_invalid_channel() -> Log {
+	Log {
+		address: hex!("eda338e4dc46038493b885327842fd3e301cab39").into(),
+		topics: vec![
+			hex!("7153f9357c8ea496bba60bf82e67143e27b64462b49041f8e689e1b05728f84f").into(),
+			// invalid channel id
+			hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+			hex!("5f7060e971b0dc81e63f0aa41831091847d97c1a4693ac450cc128c7214e65e0").into(),
+		],
+		data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000").into(),
+	}
+}
 
-// dest para is 1001
-const OUTBOUND_QUEUE_EVENT_LOG_INVALID_DEST: [u8; 253] = hex!(
-	"
-	f8fb94eda338e4dc46038493b885327842fd3e301cab39f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e9b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000034000f000000000000000057a2d4ff0c3866d96556884bf09fecdd7ccd530c87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d3500000000000000000000000000
-	"
-);
+fn mock_event_log_invalid_gateway() -> Log {
+	Log {
+		// gateway address
+		address: H160::zero(),
+		topics: vec![
+			hex!("7153f9357c8ea496bba60bf82e67143e27b64462b49041f8e689e1b05728f84f").into(),
+			// channel id
+			hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539").into(),
+			// message id
+			hex!("5f7060e971b0dc81e63f0aa41831091847d97c1a4693ac450cc128c7214e65e0").into(),
+		],
+		// Nonce + Payload
+		data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000").into(),
+	}
+}
 
-// gateway in message does not match configured gateway in runtime
-const BAD_OUTBOUND_QUEUE_EVENT_LOG: [u8; 253] = hex!(
-	"
-	f8fb940000000000000000000000000000000000000000f842a0d56f1b8dfd3ba41f19c499ceec5f9546f61befa5f10398a75d7dba53a219fecea000000000000000000000000000000000000000000000000000000000000003e8b8a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000034000f000000000000000057a2d4ff0c3866d96556884bf09fecdd7ccd530c87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d3500000000000000000000000000
-	"
-);
-
-use snowbridge_core::ParaId;
+const ASSET_HUB_PARAID: u32 = 1000u32;
+const TEMPLATE_PARAID: u32 = 1001u32;
 
 #[test]
 fn test_submit_happy_path() {
@@ -249,14 +297,13 @@ fn test_submit_happy_path() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		println!("account: {}", sovereign_account);
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		// Submit message
 		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			event_log: mock_event_log(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -265,29 +312,32 @@ fn test_submit_happy_path() {
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 		expect_events(vec![InboundQueueEvent::MessageReceived {
-			dest: dest_para,
+			channel_id: hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539")
+				.into(),
 			nonce: 1,
-			xcm_hash: H256::zero().into(),
+			message_id: [
+				168, 12, 232, 40, 69, 197, 207, 74, 203, 65, 199, 240, 164, 52, 244, 217, 62, 156,
+				107, 237, 117, 203, 233, 78, 251, 233, 31, 54, 155, 124, 204, 201,
+			],
 		}
 		.into()]);
 	});
 }
 
 #[test]
-fn test_submit_xcm_send_failure() {
+fn test_submit_xcm_invalid_channel() {
 	new_tester().execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of parachain 1001
-		let dest_para: ParaId = 1001u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(1001u32.into());
 		println!("account: {}", sovereign_account);
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		// Submit message
 		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG_INVALID_DEST.into(),
+			event_log: mock_event_log_invalid_channel(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -296,7 +346,7 @@ fn test_submit_xcm_send_failure() {
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
-			Error::<Test>::Send(crate::SendError::NotApplicable)
+			Error::<Test>::InvalidChannel,
 		);
 	});
 }
@@ -308,13 +358,12 @@ fn test_submit_with_invalid_gateway() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		// Submit message
 		let message = Message {
-			data: BAD_OUTBOUND_QUEUE_EVENT_LOG.into(),
+			event_log: mock_event_log_invalid_gateway(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -335,13 +384,12 @@ fn test_submit_with_invalid_nonce() {
 		let origin = RuntimeOrigin::signed(relayer);
 
 		// Deposit funds into sovereign account of Asset Hub (Statemint)
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		// Submit message
 		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			event_log: mock_event_log(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -350,8 +398,9 @@ fn test_submit_with_invalid_nonce() {
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 
-		let event_dest = parse_dest(message.clone());
-		let nonce: u64 = <Nonce<Test>>::get(event_dest);
+		let nonce: u64 = <Nonce<Test>>::get(ChannelId::from(hex!(
+			"c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539"
+		)));
 		assert_eq!(nonce, 1);
 
 		// Submit the same again
@@ -368,14 +417,13 @@ fn test_submit_no_funds_to_reward_relayers() {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
-		// Create sovereign account for Asset Hub (Statemint), but with no funds to cover rewards
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account: AccountId = dest_para.into_account_truncating();
-		assert_ok!(Balances::mint_into(&sovereign_account, 2));
+		// Reset balance of sovereign_account to zero so to trigger the FundsUnavailable error
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
+		Balances::set_balance(&sovereign_account, 0);
 
 		// Submit message
 		let message = Message {
-			data: OUTBOUND_QUEUE_EVENT_LOG.into(),
+			event_log: mock_event_log(),
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
@@ -384,9 +432,43 @@ fn test_submit_no_funds_to_reward_relayers() {
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
-			// should actually be `NoFunds`. See this bug in substrate:
-			// https://github.com/paritytech/substrate/issues/13866
-			ArithmeticError::Underflow
+			TokenError::FundsUnavailable
+		);
+	});
+}
+
+#[test]
+fn test_set_operating_mode() {
+	new_tester().execute_with(|| {
+		let relayer: AccountId = Keyring::Bob.into();
+		let origin = RuntimeOrigin::signed(relayer);
+		let message = Message {
+			event_log: mock_event_log(),
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+		};
+
+		assert_ok!(InboundQueue::set_operating_mode(
+			RuntimeOrigin::root(),
+			snowbridge_core::BasicOperatingMode::Halted
+		));
+
+		assert_noop!(InboundQueue::submit(origin, message), Error::<Test>::Halted);
+	});
+}
+
+#[test]
+fn test_set_operating_mode_root_only() {
+	new_tester().execute_with(|| {
+		assert_noop!(
+			InboundQueue::set_operating_mode(
+				RuntimeOrigin::signed(Keyring::Bob.into()),
+				snowbridge_core::BasicOperatingMode::Halted
+			),
+			DispatchError::BadOrigin
 		);
 	});
 }

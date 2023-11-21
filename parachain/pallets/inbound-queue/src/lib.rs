@@ -1,5 +1,26 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+//! Inbound Queue
+//!
+//! # Overview
+//!
+//! Receives messages emitted by the Gateway contract on Ethereum, whereupon they are verified,
+//! translated to XCM, and finally sent to their final destination parachain.
+//!
+//! The message relayers are rewarded using native currency from the sovereign account of the
+//! destination parachain.
+//!
+//! # Extrinsics
+//!
+//! ## Governance
+//!
+//! * [`Call::set_operating_mode`]: Set the operating mode of the pallet. Can be used to disable
+//!   processing of inbound messages.
+//!
+//! ## Message Submission
+//!
+//! * [`Call::submit`]: Submit a message for verification and dispatch the final destination
+//!   parachain.
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod envelope;
@@ -9,8 +30,6 @@ mod benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
 use snowbridge_beacon_primitives::CompactExecutionHeader;
-#[cfg(feature = "runtime-benchmarks")]
-use snowbridge_ethereum::H256;
 
 pub mod weights;
 
@@ -18,23 +37,34 @@ pub mod weights;
 mod test;
 
 use codec::{Decode, DecodeAll, Encode};
+use envelope::Envelope;
 use frame_support::{
-	traits::fungible::{Inspect, Mutate},
+	traits::{
+		fungible::{Inspect, Mutate},
+		tokens::{Fortitude, Precision, Preservation},
+	},
+	weights::WeightToFee,
 	PalletError,
 };
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
-use sp_core::H160;
-use sp_runtime::traits::AccountIdConversion;
-use sp_std::convert::TryFrom;
-use xcm::v3::{send_xcm, Junction::*, Junctions::*, MultiLocation, SendError as XcmpSendError, XcmHash};
-
-use envelope::Envelope;
-use snowbridge_core::{
-	inbound::{Message, Verifier},
-	ParaId,
+use sp_core::{H160, H256};
+use sp_std::{convert::TryFrom, vec};
+use xcm::prelude::{
+	send_xcm, Instruction::SetTopic, Junction::*, Junctions::*, MultiLocation,
+	SendError as XcmpSendError, SendXcm, Xcm, XcmHash,
 };
-use snowbridge_router_primitives::inbound;
+
+use snowbridge_core::{
+	inbound::{Message, VerificationError, Verifier},
+	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ChannelLookup, ParaId,
+};
+use snowbridge_router_primitives::{
+	inbound,
+	inbound::{ConvertMessage, ConvertMessageError},
+};
+use sp_runtime::traits::Saturating;
+
 pub use weights::WeightInfo;
 
 type BalanceOf<T> =
@@ -49,11 +79,8 @@ pub mod pallet {
 
 	use super::*;
 
-	use frame_support::{pallet_prelude::*, traits::tokens::Preservation};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use xcm::v3::SendXcm;
-
-	use bp_runtime::{BasicOperatingMode, OwnedBridgeModule};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -74,19 +101,31 @@ pub mod pallet {
 		type Token: Mutate<Self::AccountId>;
 
 		/// The amount to reward message relayers
+		#[pallet::constant]
 		type Reward: Get<BalanceOf<Self>>;
 
 		/// XCM message sender
 		type XcmSender: SendXcm;
 
-		type WeightInfo: WeightInfo;
-
-		// Gateway contract address
+		// Address of the Gateway contract
 		#[pallet::constant]
 		type GatewayAddress: Get<H160>;
 
+		/// Convert inbound message to XCM
+		type MessageConverter: ConvertMessage<
+			AccountId = Self::AccountId,
+			Balance = BalanceOf<Self>,
+		>;
+
+		type ChannelLookup: ChannelLookup;
+
+		type WeightInfo: WeightInfo;
+
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self>;
+
+		/// Convert a weight value into balance type.
+		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
 	}
 
 	#[pallet::hooks]
@@ -97,13 +136,15 @@ pub mod pallet {
 	pub enum Event<T> {
 		/// A message was received from Ethereum
 		MessageReceived {
-			/// The destination parachain
-			dest: ParaId,
+			/// The message channel
+			channel_id: ChannelId,
 			/// The message nonce
 			nonce: u64,
-			/// XCM hash
-			xcm_hash: XcmHash,
+			/// ID of the XCM message which was forwarded to the final destination parachain
+			message_id: [u8; 32],
 		},
+		/// Set OperatingMode
+		OperatingModeChanged { mode: BasicOperatingMode },
 	}
 
 	#[pallet::error]
@@ -116,14 +157,20 @@ pub mod pallet {
 		InvalidNonce,
 		/// Message has an invalid payload.
 		InvalidPayload,
+		/// Message channel is invalid
+		InvalidChannel,
 		/// The max nonce for the type has been reached
 		MaxNonceReached,
 		/// Cannot convert location
 		InvalidAccountConversion,
+		/// Pallet is halted
+		Halted,
+		/// Message verification error,
+		Verification(VerificationError),
 		/// XCMP send failure
 		Send(SendError),
-		/// Operational mode errors
-		OperationalMode(bp_runtime::OwnedBridgeModuleError),
+		/// Message conversion error
+		ConvertMessage(ConvertMessageError),
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, PalletError)]
@@ -143,39 +190,24 @@ pub mod pallet {
 				XcmpSendError::NotApplicable => Error::<T>::Send(SendError::NotApplicable),
 				XcmpSendError::Unroutable => Error::<T>::Send(SendError::NotRoutable),
 				XcmpSendError::Transport(_) => Error::<T>::Send(SendError::Transport),
-				XcmpSendError::DestinationUnsupported => Error::<T>::Send(SendError::DestinationUnsupported),
-				XcmpSendError::ExceedsMaxMessageSize => Error::<T>::Send(SendError::ExceedsMaxMessageSize),
+				XcmpSendError::DestinationUnsupported =>
+					Error::<T>::Send(SendError::DestinationUnsupported),
+				XcmpSendError::ExceedsMaxMessageSize =>
+					Error::<T>::Send(SendError::ExceedsMaxMessageSize),
 				XcmpSendError::MissingArgument => Error::<T>::Send(SendError::MissingArgument),
 				XcmpSendError::Fees => Error::<T>::Send(SendError::Fees),
 			}
 		}
 	}
 
-	/// The current nonce for each parachain
+	/// The current nonce for each channel
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ParaId, u64, ValueQuery>;
-
-	/// Optional pallet owner.
-	///
-	/// Pallet owner has a right to halt all pallet operations and then resume them. If it is
-	/// `None`, then there are no direct ways to halt/resume pallet operations, but other
-	/// runtime methods may still be used to do that (i.e. democracy::referendum to update halt
-	/// flag directly or call the `halt_operations`).
-	#[pallet::storage]
-	pub type PalletOwner<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+	pub type Nonce<T: Config> = StorageMap<_, Twox64Concat, ChannelId, u64, ValueQuery>;
 
 	/// The current operating mode of the pallet.
-	///
-	/// Depending on the mode either all, or no transactions will be allowed.
 	#[pallet::storage]
-	pub type PalletOperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
-
-	impl<T: Config> OwnedBridgeModule<T> for Pallet<T> {
-		const LOG_TARGET: &'static str = LOG_TARGET;
-		type OwnerStorage = PalletOwner<T>;
-		type OperatingMode = BasicOperatingMode;
-		type OperatingModeStorage = PalletOperatingMode<T>;
-	}
+	#[pallet::getter(fn operating_mode)]
+	pub type OperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -183,19 +215,26 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::submit())]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
-			Self::ensure_not_halted().map_err(Error::<T>::OperationalMode)?;
 			let who = ensure_signed(origin)?;
-			// submit message to verifier for verification
-			let log = T::Verifier::verify(&message)?;
+			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
-			// Decode log into an Envelope
-			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
+			// submit message to verifier for verification
+			T::Verifier::verify(&message.event_log, &message.proof)
+				.map_err(|e| Error::<T>::Verification(e))?;
+
+			// Decode event log into an Envelope
+			let envelope =
+				Envelope::try_from(message.event_log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
 			// Verify that the message was submitted from the known Gateway contract
-			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway,);
+			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway);
+
+			// Retrieve the registered channel for this message
+			let channel: Channel =
+				T::ChannelLookup::lookup(envelope.channel_id).ok_or(Error::<T>::InvalidChannel)?;
 
 			// Verify message nonce
-			<Nonce<T>>::try_mutate(envelope.dest, |nonce| -> DispatchResult {
+			<Nonce<T>>::try_mutate(envelope.channel_id, |nonce| -> DispatchResult {
 				if *nonce == u64::MAX {
 					return Err(Error::<T>::MaxNonceReached.into())
 				}
@@ -209,46 +248,68 @@ pub mod pallet {
 
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
-			let sovereign_account = envelope.dest.into_account_truncating();
-			T::Token::transfer(&sovereign_account, &who, T::Reward::get(), Preservation::Preserve)?;
+			let sovereign_account = sibling_sovereign_account::<T>(channel.para_id);
+			let refund = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
+			T::Token::transfer(
+				&sovereign_account,
+				&who,
+				refund.saturating_add(T::Reward::get()),
+				Preservation::Preserve,
+			)?;
 
 			// Decode message into XCM
-			let xcm = match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-				Ok(inbound::VersionedMessage::V1(message_v1)) => message_v1.into(),
-				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
-			};
+			let (xcm, fee) =
+				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+					Ok(message) => Self::do_convert(envelope.message_id, message)?,
+					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
+				};
+
+			// We embed fees for xcm execution inside the xcm program using teleports
+			// so we must burn the amount of the fee embedded into the program.
+			T::Token::burn_from(&sovereign_account, fee, Precision::Exact, Fortitude::Polite)?;
 
 			// Attempt to send XCM to a dest parachain
-			let dest = MultiLocation { parents: 1, interior: X1(Parachain(envelope.dest.into())) };
-			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
+			let message_id = Self::send_xcm(xcm, channel.para_id)?;
 
-			Self::deposit_event(
-				Event::MessageReceived {
-					dest: envelope.dest,
-					nonce: envelope.nonce,
-					xcm_hash,
-				});
+			Self::deposit_event(Event::MessageReceived {
+				channel_id: envelope.channel_id,
+				nonce: envelope.nonce,
+				message_id,
+			});
 
 			Ok(())
 		}
 
-		/// Change `PalletOwner`.
-		/// May only be called either by root, or by `PalletOwner`.
-		#[pallet::call_index(3)]
-		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
-		pub fn set_owner(origin: OriginFor<T>, new_owner: Option<T::AccountId>) -> DispatchResult {
-			<Self as OwnedBridgeModule<_>>::set_owner(origin, new_owner)
-		}
-
-		/// Halt or resume all pallet operations.
-		/// May only be called either by root, or by `PalletOwner`.
-		#[pallet::call_index(4)]
+		/// Halt or resume all pallet operations. May only be called by root.
+		#[pallet::call_index(1)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_operating_mode(
 			origin: OriginFor<T>,
-			operating_mode: BasicOperatingMode,
+			mode: BasicOperatingMode,
 		) -> DispatchResult {
-			<Self as OwnedBridgeModule<_>>::set_operating_mode(origin, operating_mode)
+			ensure_root(origin)?;
+			OperatingMode::<T>::set(mode);
+			Self::deposit_event(Event::OperatingModeChanged { mode });
+			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn do_convert(
+			message_id: H256,
+			message: inbound::VersionedMessage,
+		) -> Result<(Xcm<()>, BalanceOf<T>), Error<T>> {
+			let (mut xcm, fee) =
+				T::MessageConverter::convert(message).map_err(|e| Error::<T>::ConvertMessage(e))?;
+			// Append the message id as an XCM topic
+			xcm.inner_mut().extend(vec![SetTopic(message_id.into())]);
+			Ok((xcm, fee))
+		}
+
+		pub fn send_xcm(xcm: Xcm<()>, dest: ParaId) -> Result<XcmHash, Error<T>> {
+			let dest = MultiLocation { parents: 1, interior: X1(Parachain(dest.into())) };
+			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
+			Ok(xcm_hash)
 		}
 	}
 }

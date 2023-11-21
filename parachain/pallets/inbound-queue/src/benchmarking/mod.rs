@@ -7,6 +7,7 @@ use super::*;
 use crate::Pallet as InboundQueue;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
+use sp_std::vec;
 
 #[benchmarks]
 mod benchmarks {
@@ -24,8 +25,7 @@ mod benchmarks {
 			create_message.execution_header,
 		);
 
-		let dest_para: ParaId = 1000u32.into();
-		let sovereign_account = dest_para.into_account_truncating();
+		let sovereign_account = sibling_sovereign_account::<T>(1000u32.into());
 
 		let minimum_balance = T::Token::minimum_balance();
 		let minimum_balance_u32: u32 = minimum_balance

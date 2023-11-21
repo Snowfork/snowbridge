@@ -1,8 +1,6 @@
 package parachain
 
 import (
-	"math/big"
-
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
@@ -83,18 +81,26 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 }
 
 type OutboundQueueMessage struct {
-	Origin  uint32
-	Nonce   uint64
-	Command uint8
-	Params  []byte
+	ChannelID      types.H256
+	Nonce          uint64
+	Command        uint8
+	Params         []byte
+	MaxDispatchGas types.U128
+	MaxRefund      types.U128
+	Reward         types.U128
+	ID             types.Bytes32
 }
 
 func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 	return contracts.InboundMessage{
-		Origin:  big.NewInt(int64(m.Origin)),
-		Nonce:   m.Nonce,
-		Command: m.Command,
-		Params:  m.Params,
+		ChannelID:      m.ChannelID,
+		Nonce:          m.Nonce,
+		Command:        m.Command,
+		Params:         m.Params,
+		MaxDispatchGas: m.MaxDispatchGas.Int,
+		MaxRefund:      m.MaxRefund.Int,
+		Reward:         m.Reward.Int,
+		Id:             m.ID,
 	}
 }
 

@@ -1,14 +1,7 @@
 root_dir="$(realpath ../../..)"
-bridge_hub_runtime="${PARACHAIN_RUNTIME:-bridge-hub-rococo-local}"
-relaychain_version="${POLKADOT_VER:-v0.9.43}"
-relaychain_dir="$root_dir/parachain/.cargo/$relaychain_version"
-relaychain_bin="${POLKADOT_BIN:-$relaychain_dir/bin/polkadot}"
-cumulus_version="${CUMULUS_VER:-snowbridge}"
-cumulus_dir="$root_dir/parachain/.cargo/$cumulus_version"
-cumulus_bin="${CUMULUS_BIN:-$cumulus_dir/bin/polkadot-parachain}"
 web_dir="$root_dir/web"
-lodestar_version="${LODESTAR_VER:-1.11.1}"
-geth_version="${GETH_VER:-v1.13.1}"
+lodestar_version="${LODESTAR_VER:-1.12.0}"
+geth_version="${GETH_VER:-v1.13.5}"
 geth_dir="$root_dir/../go-ethereum/$geth_version"
 export contract_dir="$root_dir/contracts"
 test_helpers_dir="$web_dir/packages/test-helpers"
@@ -45,12 +38,19 @@ bridgehub_ws_url="${BRIDGE_HUB_WS_URL:-ws://127.0.0.1:11144}"
 bridgehub_seed="${BRIDGE_HUB_SEED:-//Alice}"
 bridgehub_pallets_owner="${BRIDGE_HUB_PALLETS_OWNER:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d}"
 export BRIDGE_HUB_PARAID="${BRIDGE_HUB_PARAID:-1013}"
-export BRIDGE_HUB_AGENT_ID="${BRIDGE_HUB_AGENT_ID:-0x05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6}"
+export BRIDGE_HUB_AGENT_ID="${BRIDGE_HUB_AGENT_ID:-0x0000000000000000000000000000000000000000000000000000000000000001}"
 
 assethub_ws_url="${ASSET_HUB_WS_URL:-ws://127.0.0.1:12144}"
 assethub_seed="${ASSET_HUB_SEED:-//Alice}"
 export ASSET_HUB_PARAID="${ASSET_HUB_PARAID:-1000}"
 export ASSET_HUB_AGENT_ID="${ASSET_HUB_AGENT_ID:-0x72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4}"
+export TEMPLATE_PARA_ID="${TEMPLATE_PARA_ID:-1001}"
+export TEMPLATE_AGENT_ID="${TEMPLATE_AGENT_ID:-0x2075b9f5bc236462eb1473c9a6236c3588e33ed19ead53aa3d9c62ed941cb793}"
+
+export ASSET_HUB_CHANNEL_ID="0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539"
+export TEMPLATE_CHANNEL_ID="0x26c13363ad6499b895574b3ca482545dda41d657ffc5673b39a218cd34053e5b"
+export PRIMARY_GOVERNANCE_CHANNEL_ID="0x0000000000000000000000000000000000000000000000000000000000000001"
+export SECONDARY_GOVERNANCE_CHANNEL_ID="0x0000000000000000000000000000000000000000000000000000000000000002"
 
 relaychain_ws_url="${RELAYCHAIN_WS_URL:-ws://127.0.0.1:9944}"
 relaychain_sudo_seed="${RELAYCHAIN_SUDO_SEED:-//Alice}"
@@ -59,14 +59,14 @@ skip_relayer="${SKIP_RELAYER:-false}"
 
 ## Important accounts
 
-# Account for assethub (1000 5Ec4AhPZk8STuex8Wsi9TwDtJQxKqzPJRCH7348Xtcs9vZLJ in testnet)
-assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x70617261e8030000000000000000000000000000000000000000000000000000}"
+# Account for assethub (Sibling parachain 1000 5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV in testnet)
+assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x7369626ce8030000000000000000000000000000000000000000000000000000}"
+# Account for template (Sibling parachain 1001 5Eg2fntP2UgYZNc5tW8xmmCmeXJ3hmNXaZ9MvcpbMdvh1bBJ in testnet)
+template_sovereign_account="${TEMPLATE_SOVEREIGN_ACCOUNT:-0x7369626ce9030000000000000000000000000000000000000000000000000000}"
 # Beacon relay account (//BeaconRelay 5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c in testnet)
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
 # Execution relay account (//ExecutionRelay 5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)
 execution_relayer_pub_key="${EXECUTION_RELAYER_PUB_KEY:-0x08228efd065c58a043da95c8bf177659fc587643e71e7ed1534666177730196f}"
-# Gateway contract account (H8VBFC4LG91ByxMG6GwsCcAacjitnzGmGbqnvSEQFBywJEL in testnet)
-gateway_contract_sovereign_account="${GATEWAY_CONTRACT_SOVEREIGN_ACCOUNT:-0xc9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5}"
 
 # Config for deploying contracts
 
@@ -80,21 +80,22 @@ export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea
 # for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
 export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
 export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
+export MINIMUM_REQUIRED_SIGNATURES="${MINIMUM_REQUIRED_SIGNATURES:-16}"
 
+export REJECT_OUTBOUND_MESSAGES=false
 export DEFAULT_FEE="${ETH_DEFAULT_FEE:-1}"
-export DEFAULT_REWARD="${ETH_DEFAULT_REWARD:-1}"
 
 export CREATE_CALL_INDEX="${ETH_CREATE_CALL_INDEX:-0x3500}"
-export DISPATCH_GAS="${ETH_DISPATCH_GAS:-500000}"
 
 export REGISTER_NATIVE_TOKEN_FEE="${ETH_REGISTER_NATIVE_TOKEN_FEE:-0}"
 export SEND_NATIVE_TOKEN_FEE="${ETH_SEND_NATIVE_TOKEN_FEE:-0}"
 
 ## Vault
-export BRIDGE_HUB_INITIAL_DEPOSIT="${ETH_BRIDGE_HUB_INITIAL_DEPOSIT:-1000}"
+export BRIDGE_HUB_INITIAL_DEPOSIT="${ETH_BRIDGE_HUB_INITIAL_DEPOSIT:-10000000000000000000}"
 
-address_for()
-{
+export GATEWAY_PROXY_CONTRACT="${GATEWAY_PROXY_CONTRACT:-0xEDa338E4dC46038493b885327842fD3E301CaB39}"
+
+address_for() {
     jq -r ".contracts.${1}.address" "$output_dir/contracts.json"
 }
 
@@ -144,8 +145,7 @@ check_tool() {
 
 wait_contract_deployed() {
     local ready=""
-    while [ -z "$ready" ]
-    do
+    while [ -z "$ready" ]; do
         if [ -f "$output_dir/contracts.json" ]; then
             ready="true"
         fi

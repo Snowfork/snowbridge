@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "primitives/beacon",
     "primitives/core",
     "primitives/ethereum",
     "primitives/router",
@@ -10,5 +11,6 @@ members = [
     "pallets/outbound-queue/merkle-tree",
     "pallets/ethereum-beacon-client",
     "pallets/control",
-    "tools/call-index"
+    "pallets/control/runtime-api",
+    "runtime/runtime-common",
 ]

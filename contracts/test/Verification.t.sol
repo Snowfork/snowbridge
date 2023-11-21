@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.20;
+pragma solidity 0.8.22;
 
 import "openzeppelin/utils/Strings.sol";
 import "forge-std/Test.sol";
@@ -17,7 +17,7 @@ contract VerificationTest is Test {
     bytes4 public encodedParachainID;
 
     function setUp() public {
-        beefyClient = new BeefyClientMock(3, 8);
+        beefyClient = new BeefyClientMock(3, 8, 16);
         encodedParachainID = ScaleCodec.encodeU32(BRIDGE_HUB_PARA_ID);
         v = new VerificationWrapper();
     }

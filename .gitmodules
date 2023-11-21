@@ -1,7 +1,6 @@
-[submodule "cumulus"]
-path = cumulus
-url = https://github.com/Snowfork/cumulus
-branch = snowbridge
+[submodule "polkadot-sdk"]
+path = polkadot-sdk
+url = https://github.com/Snowfork/polkadot-sdk.git
 [submodule "contracts/lib/forge-std"]
 path = contracts/lib/forge-std
 url = https://github.com/foundry-rs/forge-std
@@ -16,9 +15,9 @@ path = contracts/lib/canonical-weth
 url = https://github.com/Snowfork/canonical-weth
 [submodule "lodestar"]
 path = lodestar
-url = https://github.com/Snowfork/lodestar
-branch = snowbridge
+url = https://github.com/ChainSafe/lodestar
+branch = v1.12.0
 [submodule "go-ethereum"]
 path = go-ethereum
 url = https://github.com/ethereum/go-ethereum
-branch = v1.13.1
+branch = v1.13.5

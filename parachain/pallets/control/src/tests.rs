@@ -1,287 +1,551 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{mock::*, *};
-use frame_support::{assert_ok, traits::EnsureOrigin};
-use hex_literal::hex;
+use frame_support::{assert_noop, assert_ok};
+use snowbridge_core::sibling_sovereign_account_raw;
 use sp_core::H256;
-use sp_runtime::{AccountId32, DispatchError::BadOrigin};
+use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
 
 #[test]
-fn create_agent_with_unknown_origin_yields_bad_origin() {
+fn create_agent() {
 	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([0; 32]));
-		frame_support::assert_noop!(EthereumControl::create_agent(origin), BadOrigin);
-	});
-}
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
+		let agent_id = make_agent_id(origin_location);
+		let sovereign_account = sibling_sovereign_account::<Test>(origin_para_id.into());
 
-#[test]
-fn create_agent_with_bad_multi_location_yields_location_conversion_failed() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([9; 32]));
-		frame_support::assert_noop!(
-			EthereumControl::create_agent(origin),
-			Error::<Test>::LocationToAgentIdConversionFailed
-		);
-	});
-}
-
-#[test]
-fn create_agent_with_bridgehub_origin_yields_success() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([1; 32]));
-
-		let location: MultiLocation =
-			<Test as Config>::AgentOrigin::ensure_origin(origin.clone()).unwrap();
-		let (agent_id, _, location) = EthereumControl::convert_location(location).unwrap();
+		// fund sovereign account of origin
+		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		assert!(!Agents::<Test>::contains_key(agent_id));
-		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
+
+		let origin = make_xcm_origin(origin_location);
+		assert_ok!(EthereumControl::create_agent(origin));
+
 		assert!(Agents::<Test>::contains_key(agent_id));
-
-		// println!("agent_id: {:#?}", hex::encode(agent_id.as_bytes()));
-
-		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: Box::new(location),
-			agent_id,
-		}));
 	});
 }
 
 #[test]
-fn create_agent_with_local_account32_yields_success() {
+fn create_agent_fails_on_funds_unavailable() {
 	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([2; 32]));
-		let expected_agent_id =
-			H256(hex!("57fc5659083f0cc883125ccb2c380a1397a3b08434586b8647cc44bcb3647d29"));
-		let expected_multi_location = MultiLocation {
-			parents: 0,
-			interior: X2(Parachain(1013), Junction::AccountId32 { network: None, id: [0; 32] }),
-		};
-
-		assert!(!Agents::<Test>::contains_key(expected_agent_id));
-		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
-		assert!(Agents::<Test>::contains_key(expected_agent_id));
-
-		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: Box::new(expected_multi_location),
-			agent_id: expected_agent_id,
-		}));
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
+		let origin = make_xcm_origin(origin_location);
+		// Reset balance of sovereign_account to zero so to trigger the FundsUnavailable error
+		let sovereign_account = sibling_sovereign_account::<Test>(2000.into());
+		Balances::set_balance(&sovereign_account, 0);
+		assert_noop!(EthereumControl::create_agent(origin), TokenError::FundsUnavailable);
 	});
 }
 
 #[test]
-fn create_agent_with_local_account20_yields_success() {
+fn create_agent_bad_origin() {
 	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([3; 32]));
-		let expected_agent_id =
-			H256(hex!("fc29ec0899cf25874937d04b9b011760fa5dc5cf59af1448abefd389bba7bea2"));
-		let expected_multi_location = MultiLocation {
-			parents: 0,
-			interior: X2(Parachain(1013), AccountKey20 { network: None, key: [0; 20] }),
-		};
+		// relay chain location not allowed
+		assert_noop!(
+			EthereumControl::create_agent(make_xcm_origin(MultiLocation {
+				parents: 1,
+				interior: Here,
+			})),
+			BadOrigin,
+		);
 
-		assert!(!Agents::<Test>::contains_key(expected_agent_id));
-		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
-		assert!(Agents::<Test>::contains_key(expected_agent_id));
+		// local account location not allowed
+		assert_noop!(
+			EthereumControl::create_agent(make_xcm_origin(MultiLocation {
+				parents: 0,
+				interior: X1(Junction::AccountId32 { network: None, id: [67u8; 32] }),
+			})),
+			BadOrigin,
+		);
 
-		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: Box::new(expected_multi_location),
-			agent_id: expected_agent_id,
-		}));
+		// Signed origin not allowed
+		assert_noop!(
+			EthereumControl::create_agent(RuntimeOrigin::signed([14; 32].into())),
+			BadOrigin
+		);
+
+		// None origin not allowed
+		assert_noop!(EthereumControl::create_agent(RuntimeOrigin::none()), BadOrigin);
 	});
 }
 
 #[test]
-fn create_agent_with_local_pallet_yields_success() {
+fn upgrade_as_root() {
 	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([4; 32]));
-		let expected_agent_id =
-			H256(hex!("ed40c69763094b73c0e3585eeb576fbcee6999123ff1f1beac1f05f5f4c9d945"));
-		let expected_multi_location =
-			MultiLocation { parents: 0, interior: X2(Parachain(1013), PalletInstance(1)) };
+		let origin = RuntimeOrigin::root();
+		let address: H160 = Default::default();
+		let code_hash: H256 = Default::default();
 
-		assert!(!Agents::<Test>::contains_key(expected_agent_id));
-		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
-		assert!(Agents::<Test>::contains_key(expected_agent_id));
+		assert_ok!(EthereumControl::upgrade(origin, address, code_hash, None));
 
-		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: Box::new(expected_multi_location),
-			agent_id: expected_agent_id,
+		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::Upgrade {
+			impl_address: address,
+			impl_code_hash: code_hash,
+			initializer_params_hash: None,
 		}));
 	});
 }
 
 #[test]
-fn create_agent_with_sibling_chain_origin_yields_success() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
-		let expected_agent_id =
-			H256(hex!("72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4"));
-		let expected_multi_location = MultiLocation { parents: 0, interior: X1(Parachain(1000)) };
-
-		assert!(!Agents::<Test>::contains_key(expected_agent_id));
-		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
-		assert!(Agents::<Test>::contains_key(expected_agent_id));
-
-		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: Box::new(expected_multi_location),
-			agent_id: expected_agent_id,
-		}));
-	});
-}
-
-#[test]
-fn create_agent_with_sibling_chain_account32_origin_yields_success() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([7; 32]));
-		let expected_agent_id =
-			H256(hex!("fb804b0b77f9c9d69a16d7a45de81225ab8da112e0eb8d2e0229c78086b8927a"));
-		let expected_multi_location = MultiLocation {
-			parents: 0,
-			interior: X2(Parachain(1000), Junction::AccountId32 { network: None, id: [0; 32] }),
-		};
-
-		assert!(!Agents::<Test>::contains_key(expected_agent_id));
-		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
-		assert!(Agents::<Test>::contains_key(expected_agent_id));
-
-		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: Box::new(expected_multi_location),
-			agent_id: expected_agent_id,
-		}));
-	});
-}
-
-#[test]
-fn create_agent_with_sibling_chain_account20_origin_yields_success() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([8; 32]));
-		let expected_agent_id =
-			H256(hex!("74867486f141b159ba1e295bf616d740429269879d4291a12a65eaedbb4b502a"));
-		let expected_multi_location = MultiLocation {
-			parents: 0,
-			interior: X2(Parachain(1000), AccountKey20 { network: None, key: [0; 20] }),
-		};
-
-		assert!(!Agents::<Test>::contains_key(expected_agent_id));
-		assert_eq!(EthereumControl::create_agent(origin), Ok(()));
-		assert!(Agents::<Test>::contains_key(expected_agent_id));
-
-		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::CreateAgent {
-			location: Box::new(expected_multi_location),
-			agent_id: expected_agent_id,
-		}));
-	});
-}
-
-#[test]
-fn create_agent_without_root_yields_bad_origin() {
+fn upgrade_as_signed_fails() {
 	new_test_ext().execute_with(|| {
 		let origin = RuntimeOrigin::signed(AccountId32::new([0; 32]));
 		let address: H160 = Default::default();
 		let code_hash: H256 = Default::default();
-		let params: Option<Vec<u8>> = None;
 
-		frame_support::assert_noop!(
-			EthereumControl::upgrade(origin, address, code_hash, params),
-			BadOrigin
-		);
+		assert_noop!(EthereumControl::upgrade(origin, address, code_hash, None), BadOrigin);
 	});
 }
 
 #[test]
-fn create_agent_with_root_yields_success() {
+fn upgrade_with_params() {
 	new_test_ext().execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		let address: H160 = Default::default();
 		let code_hash: H256 = Default::default();
-		let params: Option<Vec<u8>> = None;
-		let expected_hash = None;
-
-		frame_support::assert_ok!(EthereumControl::upgrade(origin, address, code_hash, params));
-
-		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::Upgrade {
-			impl_address: address,
-			impl_code_hash: code_hash,
-			params_hash: expected_hash,
-		}));
+		let initializer: Option<Initializer> =
+			Some(Initializer { params: [0; 256].into(), maximum_required_gas: 10000 });
+		assert_ok!(EthereumControl::upgrade(origin, address, code_hash, initializer));
 	});
 }
 
 #[test]
-fn create_agent_with_large_params_yields_upgrade_too_large() {
+fn create_channel() {
 	new_test_ext().execute_with(|| {
-		const MAX_SIZE: usize = MaxUpgradeDataSize::get() as usize;
-		let origin = RuntimeOrigin::root();
-		let address: H160 = Default::default();
-		let code_hash: H256 = Default::default();
-		let params: Option<Vec<u8>> = Some([0; MAX_SIZE].into());
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
+		let sovereign_account = sibling_sovereign_account::<Test>(origin_para_id.into());
+		let origin = make_xcm_origin(origin_location);
 
-		frame_support::assert_noop!(
-			EthereumControl::upgrade(origin, address, code_hash, params),
-			Error::<Test>::UpgradeDataTooLarge
-		);
-	});
-}
-
-#[test]
-fn create_agent_with_small_params_yields_success() {
-	new_test_ext().execute_with(|| {
-		const MAX_SIZE_LESS_ONE: usize = (MaxUpgradeDataSize::get() - 1) as usize;
-		let origin = RuntimeOrigin::root();
-		let address: H160 = Default::default();
-		let code_hash: H256 = Default::default();
-		let params: Option<Vec<u8>> = Some([0; MAX_SIZE_LESS_ONE].into());
-		let expected_hash =
-			Some(H256(hex!("c95ef6b0bf891c06e1318f07b86977998674a0ae996999915c1f5d93359e72a9")));
-
-		frame_support::assert_ok!(EthereumControl::upgrade(origin, address, code_hash, params));
-
-		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::Upgrade {
-			impl_address: address,
-			impl_code_hash: code_hash,
-			params_hash: expected_hash,
-		}));
-	});
-}
-
-#[test]
-fn create_channel_with_sibling_chain_origin_yields_success() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
+		// fund sovereign account of origin
+		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		assert_ok!(EthereumControl::create_agent(origin.clone()));
-
-		assert_ok!(EthereumControl::create_channel(origin));
+		assert_ok!(EthereumControl::create_channel(origin, OperatingMode::Normal, 1));
 	});
 }
 
 #[test]
-fn create_channel_with_sibling_chain_pallet_as_origin_yields_location_conversion_failed() {
+fn create_channel_fail_already_exists() {
 	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([6; 32]));
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
+		let sovereign_account = sibling_sovereign_account::<Test>(origin_para_id.into());
+		let origin = make_xcm_origin(origin_location);
+
+		// fund sovereign account of origin
+		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		assert_ok!(EthereumControl::create_agent(origin.clone()));
+		assert_ok!(EthereumControl::create_channel(origin.clone(), OperatingMode::Normal, 1));
 
-		frame_support::assert_noop!(
-			EthereumControl::create_channel(origin),
-			Error::<Test>::LocationToParaIdConversionFailed
-		);
-	});
-}
-
-#[test]
-fn create_channel_already_exist_yields_failed() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::new([5; 32]));
-
-		assert_ok!(EthereumControl::create_agent(origin.clone()));
-
-		assert_ok!(EthereumControl::create_channel(origin.clone()));
-
-		frame_support::assert_noop!(
-			EthereumControl::create_channel(origin),
+		assert_noop!(
+			EthereumControl::create_channel(origin, OperatingMode::Normal, 1),
 			Error::<Test>::ChannelAlreadyCreated
 		);
+	});
+}
+
+#[test]
+fn create_channel_bad_origin() {
+	new_test_ext().execute_with(|| {
+		// relay chain location not allowed
+		assert_noop!(
+			EthereumControl::create_channel(
+				make_xcm_origin(MultiLocation { parents: 1, interior: Here }),
+				OperatingMode::Normal,
+				1
+			),
+			BadOrigin,
+		);
+
+		// child of sibling location not allowed
+		assert_noop!(
+			EthereumControl::create_channel(
+				make_xcm_origin(MultiLocation {
+					parents: 1,
+					interior: X2(
+						Parachain(2000),
+						Junction::AccountId32 { network: None, id: [67u8; 32] }
+					),
+				}),
+				OperatingMode::Normal,
+				1
+			),
+			BadOrigin,
+		);
+
+		// local account location not allowed
+		assert_noop!(
+			EthereumControl::create_channel(
+				make_xcm_origin(MultiLocation {
+					parents: 0,
+					interior: X1(Junction::AccountId32 { network: None, id: [67u8; 32] }),
+				}),
+				OperatingMode::Normal,
+				1
+			),
+			BadOrigin,
+		);
+
+		// Signed origin not allowed
+		assert_noop!(
+			EthereumControl::create_channel(
+				RuntimeOrigin::signed([14; 32].into()),
+				OperatingMode::Normal,
+				1
+			),
+			BadOrigin
+		);
+
+		// None origin not allowed
+		assert_noop!(EthereumControl::create_agent(RuntimeOrigin::none()), BadOrigin);
+	});
+}
+
+#[test]
+fn update_channel() {
+	new_test_ext().execute_with(|| {
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
+		let sovereign_account = sibling_sovereign_account::<Test>(origin_para_id.into());
+		let origin = make_xcm_origin(origin_location);
+
+		// First create the channel
+		let _ = Balances::mint_into(&sovereign_account, 10000);
+		EthereumControl::create_agent(origin.clone()).unwrap();
+		EthereumControl::create_channel(origin.clone(), OperatingMode::Normal, 1).unwrap();
+
+		// Now try to update it
+		assert_ok!(EthereumControl::update_channel(origin, OperatingMode::Normal, 2004));
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::UpdateChannel {
+			channel_id: ParaId::from(2000).into(),
+			mode: OperatingMode::Normal,
+			outbound_fee: 2004,
+		}));
+	});
+}
+
+#[test]
+fn update_channel_bad_origin() {
+	new_test_ext().execute_with(|| {
+		let mode = OperatingMode::Normal;
+		let fee = 45;
+
+		// relay chain location not allowed
+		assert_noop!(
+			EthereumControl::update_channel(
+				make_xcm_origin(MultiLocation { parents: 1, interior: Here }),
+				mode,
+				fee,
+			),
+			BadOrigin,
+		);
+
+		// child of sibling location not allowed
+		assert_noop!(
+			EthereumControl::update_channel(
+				make_xcm_origin(MultiLocation {
+					parents: 1,
+					interior: X2(
+						Parachain(2000),
+						Junction::AccountId32 { network: None, id: [67u8; 32] }
+					),
+				}),
+				mode,
+				fee,
+			),
+			BadOrigin,
+		);
+
+		// local account location not allowed
+		assert_noop!(
+			EthereumControl::update_channel(
+				make_xcm_origin(MultiLocation {
+					parents: 0,
+					interior: X1(Junction::AccountId32 { network: None, id: [67u8; 32] }),
+				}),
+				mode,
+				fee,
+			),
+			BadOrigin,
+		);
+
+		// Signed origin not allowed
+		assert_noop!(
+			EthereumControl::update_channel(RuntimeOrigin::signed([14; 32].into()), mode, fee),
+			BadOrigin
+		);
+
+		// None origin not allowed
+		assert_noop!(EthereumControl::update_channel(RuntimeOrigin::none(), mode, fee), BadOrigin);
+	});
+}
+
+#[test]
+fn update_channel_fails_not_exist() {
+	new_test_ext().execute_with(|| {
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
+		let origin = make_xcm_origin(origin_location);
+
+		// Now try to update it
+		assert_noop!(
+			EthereumControl::update_channel(origin, OperatingMode::Normal, 2004),
+			Error::<Test>::NoChannel
+		);
+	});
+}
+
+#[test]
+fn force_update_channel() {
+	new_test_ext().execute_with(|| {
+		let origin_para_id = 2000;
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
+		let sovereign_account = sibling_sovereign_account::<Test>(origin_para_id.into());
+		let origin = make_xcm_origin(origin_location);
+
+		let channel_id: ChannelId = ParaId::from(origin_para_id).into();
+
+		// First create the channel
+		let _ = Balances::mint_into(&sovereign_account, 10000);
+		EthereumControl::create_agent(origin.clone()).unwrap();
+		EthereumControl::create_channel(origin.clone(), OperatingMode::Normal, 1).unwrap();
+
+		// Now try to force update it
+		let force_origin = RuntimeOrigin::root();
+		assert_ok!(EthereumControl::force_update_channel(
+			force_origin,
+			channel_id,
+			OperatingMode::Normal,
+			2004
+		));
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::UpdateChannel {
+			channel_id: ParaId::from(2000).into(),
+			mode: OperatingMode::Normal,
+			outbound_fee: 2004,
+		}));
+	});
+}
+
+#[test]
+fn force_update_channel_bad_origin() {
+	new_test_ext().execute_with(|| {
+		let mode = OperatingMode::Normal;
+		let fee = 45;
+
+		// signed origin not allowed
+		assert_noop!(
+			EthereumControl::force_update_channel(
+				RuntimeOrigin::signed([14; 32].into()),
+				ParaId::from(1000).into(),
+				mode,
+				fee,
+			),
+			BadOrigin,
+		);
+	});
+}
+
+#[test]
+fn set_operating_mode_as_root() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let mode = OperatingMode::RejectingOutboundMessages;
+
+		assert_ok!(EthereumControl::set_operating_mode(origin, mode));
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::SetOperatingMode {
+			mode,
+		}));
+	});
+}
+
+#[test]
+fn set_operating_mode_as_signed_fails() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed([14; 32].into());
+		let mode = OperatingMode::RejectingOutboundMessages;
+
+		assert_noop!(EthereumControl::set_operating_mode(origin, mode), BadOrigin);
+	});
+}
+
+#[test]
+fn transfer_native_from_agent() {
+	new_test_ext().execute_with(|| {
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
+		let recipient: H160 = [27u8; 20].into();
+		let amount = 103435;
+
+		// First create the agent
+		Agents::<Test>::insert(make_agent_id(origin_location), ());
+
+		let origin = make_xcm_origin(origin_location);
+		assert_ok!(EthereumControl::transfer_native_from_agent(origin, recipient, amount),);
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(
+			crate::Event::TransferNativeFromAgent {
+				agent_id: make_agent_id(origin_location),
+				recipient,
+				amount,
+			},
+		));
+	});
+}
+
+#[test]
+fn force_transfer_native_from_agent() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
+		let versioned_location: Box<VersionedMultiLocation> = Box::new(location.into());
+		let recipient: H160 = [27u8; 20].into();
+		let amount = 103435;
+
+		// First create the agent
+		Agents::<Test>::insert(make_agent_id(location), ());
+
+		assert_ok!(EthereumControl::force_transfer_native_from_agent(
+			origin,
+			versioned_location,
+			recipient,
+			amount
+		),);
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(
+			crate::Event::TransferNativeFromAgent {
+				agent_id: make_agent_id(location),
+				recipient,
+				amount,
+			},
+		));
+	});
+}
+
+#[test]
+fn force_transfer_native_from_agent_bad_origin() {
+	new_test_ext().execute_with(|| {
+		let recipient: H160 = [27u8; 20].into();
+		let amount = 103435;
+
+		// signed origin not allowed
+		assert_noop!(
+			EthereumControl::force_transfer_native_from_agent(
+				RuntimeOrigin::signed([14; 32].into()),
+				Box::new(
+					MultiLocation {
+						parents: 1,
+						interior: X2(
+							Parachain(2000),
+							Junction::AccountId32 { network: None, id: [67u8; 32] }
+						),
+					}
+					.into()
+				),
+				recipient,
+				amount,
+			),
+			BadOrigin,
+		);
+	});
+}
+
+// NOTE: The following tests are not actually tests and are more about obtaining location
+// conversions for devops purposes. They need to be removed here and incorporated into a command
+// line utility.
+
+#[ignore]
+#[test]
+fn check_sibling_sovereign_account() {
+	new_test_ext().execute_with(|| {
+		let para_id = 1001;
+		let sovereign_account = sibling_sovereign_account::<Test>(para_id.into());
+		let sovereign_account_raw = sibling_sovereign_account_raw(para_id.into());
+		println!(
+			"Sovereign account for parachain {}: {:#?}",
+			para_id,
+			hex::encode(sovereign_account.clone())
+		);
+		assert_eq!(sovereign_account, sovereign_account_raw.into());
+	});
+}
+
+#[test]
+fn charge_fee_for_create_agent() {
+	new_test_ext().execute_with(|| {
+		let para_id: u32 = TestParaId::get();
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(para_id)) };
+		let origin = make_xcm_origin(origin_location);
+		let sovereign_account = sibling_sovereign_account::<Test>(para_id.into());
+		let (_, agent_id) = ensure_sibling::<Test>(&origin_location).unwrap();
+
+		assert_ok!(EthereumControl::create_agent(origin.clone()));
+		// assert sovereign_balance decreased by (fee.base_fee + fee.delivery_fee)
+		let message = Message {
+			id: None,
+			channel_id: ParaId::from(para_id).into(),
+			command: Command::CreateAgent { agent_id },
+		};
+		let (_, fee) = OutboundQueue::validate(&message).unwrap();
+		let sovereign_balance = Balances::balance(&sovereign_account);
+		assert_eq!(sovereign_balance + fee.local + fee.remote, InitialFunding::get());
+
+		// and treasury_balance increased
+		let treasury_balance = Balances::balance(&TreasuryAccount::get());
+		assert_eq!(treasury_balance > InitialFunding::get(), true);
+
+		// (sovereign_balance + treasury_balance) keeps the same
+		assert_eq!(sovereign_balance + treasury_balance, (InitialFunding::get() * 2) as u128);
+	});
+}
+
+#[test]
+fn charge_fee_for_transfer_native_from_agent() {
+	new_test_ext().execute_with(|| {
+		let para_id: u32 = TestParaId::get();
+		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(para_id)) };
+		let recipient: H160 = [27u8; 20].into();
+		let amount = 103435;
+		let origin = make_xcm_origin(origin_location);
+		let (_, agent_id) = ensure_sibling::<Test>(&origin_location).unwrap();
+
+		let sovereign_account = sibling_sovereign_account::<Test>(para_id.into());
+
+		// create_agent & create_channel first
+		assert_ok!(EthereumControl::create_agent(origin.clone()));
+		assert_ok!(EthereumControl::create_channel(origin.clone(), OperatingMode::Normal, 1));
+
+		// assert sovereign_balance decreased by only the base_fee
+		let sovereign_balance_before = Balances::balance(&sovereign_account);
+		assert_ok!(EthereumControl::transfer_native_from_agent(origin.clone(), recipient, amount));
+		let message = Message {
+			id: None,
+			channel_id: ParaId::from(para_id).into(),
+			command: Command::TransferNativeFromAgent { agent_id, recipient, amount },
+		};
+		let (_, fee) = OutboundQueue::validate(&message).unwrap();
+		let sovereign_balance_after = Balances::balance(&sovereign_account);
+		assert_eq!(sovereign_balance_after + fee.local, sovereign_balance_before);
+	});
+}
+
+#[test]
+fn charge_fee_for_upgrade() {
+	new_test_ext().execute_with(|| {
+		let para_id: u32 = TestParaId::get();
+		let origin = RuntimeOrigin::root();
+		let address: H160 = Default::default();
+		let code_hash: H256 = Default::default();
+		let initializer: Option<Initializer> =
+			Some(Initializer { params: [0; 256].into(), maximum_required_gas: 10000 });
+		assert_ok!(EthereumControl::upgrade(origin, address, code_hash, initializer.clone()));
+
+		// assert sovereign_balance does not change as we do not charge for sudo operations
+		let sovereign_account = sibling_sovereign_account::<Test>(para_id.into());
+		let sovereign_balance = Balances::balance(&sovereign_account);
+		assert_eq!(sovereign_balance, InitialFunding::get());
 	});
 }

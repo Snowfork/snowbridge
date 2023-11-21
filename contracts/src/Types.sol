@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
-type ParaID is uint256;
+import {
+    MultiAddress, multiAddressFromUint32, multiAddressFromBytes32, multiAddressFromBytes20
+} from "./MultiAddress.sol";
 
-using {ParaIDEq as ==, ParaIDNe as !=} for ParaID global;
+type ParaID is uint32;
+
+using {ParaIDEq as ==, ParaIDNe as !=, into} for ParaID global;
 
 function ParaIDEq(ParaID a, ParaID b) pure returns (bool) {
     return ParaID.unwrap(a) == ParaID.unwrap(b);
@@ -12,6 +16,22 @@ function ParaIDEq(ParaID a, ParaID b) pure returns (bool) {
 
 function ParaIDNe(ParaID a, ParaID b) pure returns (bool) {
     return !ParaIDEq(a, b);
+}
+
+function into(ParaID paraID) pure returns (ChannelID) {
+    return ChannelID.wrap(keccak256(abi.encodePacked("para", ParaID.unwrap(paraID))));
+}
+
+type ChannelID is bytes32;
+
+using {ChannelIDEq as ==, ChannelIDNe as !=} for ChannelID global;
+
+function ChannelIDEq(ChannelID a, ChannelID b) pure returns (bool) {
+    return ChannelID.unwrap(a) == ChannelID.unwrap(b);
+}
+
+function ChannelIDNe(ChannelID a, ChannelID b) pure returns (bool) {
+    return !ChannelIDEq(a, b);
 }
 
 /// @dev A messaging channel for a Polkadot parachain
@@ -26,38 +46,32 @@ struct Channel {
     /// @dev The address of the agent of the parachain owning this channel
     address agent;
     /// @dev The fee charged to users for submitting outbound messages
-    uint256 fee;
-    /// @dev The reward disbursed to message relayers for submitting inbound messages
-    uint256 reward;
+    uint256 outboundFee;
 }
 
 /// @dev Inbound message from a Polkadot parachain (via BridgeHub)
 struct InboundMessage {
     /// @dev The parachain from which this message originated
-    ParaID origin;
+    ChannelID channelID;
     /// @dev The channel nonce
     uint64 nonce;
     /// @dev The command to execute
     Command command;
     /// @dev The Parameters for the command
     bytes params;
+    /// @dev The maximum gas allowed for message dispatch
+    uint256 maxDispatchGas;
+    /// @dev The maximum gas refund for message submission
+    uint256 maxRefund;
+    /// @dev The reward for message submission
+    uint256 reward;
+    /// @dev ID for this message
+    bytes32 id;
 }
 
 enum OperatingMode {
     Normal,
     RejectingOutboundMessages
-}
-
-// Initial configuration for bridge
-struct Config {
-    /// @dev The default fee charged to users for submitting outbound messages.
-    uint256 fee;
-    /// @dev The default reward disbursed to message relayers for submitting inbound messages.
-    uint256 reward;
-    /// @dev The extra fee charged for registering tokens.
-    uint256 registerNativeTokenFee;
-    /// @dev The extra fee charged for sending tokens.
-    uint256 sendNativeTokenFee;
 }
 
 /// @dev Messages from Polkadot take the form of these commands.
@@ -68,7 +82,8 @@ enum Command {
     CreateChannel,
     UpdateChannel,
     SetOperatingMode,
-    TransferNativeFromAgent
+    TransferNativeFromAgent,
+    SetTokenTransferFees
 }
 
 enum AgentExecuteCommand {TransferToken}

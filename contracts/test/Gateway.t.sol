@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.20;
+pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {Strings} from "openzeppelin/utils/Strings.sol";
@@ -22,24 +22,20 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 
-import {AgentExecuteCommand, InboundMessage, OperatingMode, ParaID, Config, Command} from "../src/Types.sol";
+import {
+    AgentExecuteCommand,
+    InboundMessage,
+    OperatingMode,
+    ParaID,
+    Command,
+    multiAddressFromBytes32,
+    multiAddressFromBytes20
+} from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
+import "./mocks/GatewayUpgradeMock.sol";
 
 contract GatewayTest is Test {
-    event InboundMessageDispatched(ParaID indexed origin, uint64 nonce, bool result);
-    event OutboundMessageAccepted(ParaID indexed dest, uint64 nonce, bytes payload);
-    event NativeTokensUnlocked(address token, address recipient, uint256 amount);
-    event TokenRegistrationSent(address token);
-    event TokenSent(
-        address indexed sender, address indexed token, ParaID destinationChain, bytes destinationAddress, uint128 amount
-    );
-    event AgentCreated(bytes32 agentID, address agent);
-    event ChannelCreated(ParaID indexed paraID);
-    event ChannelUpdated(ParaID indexed paraID);
-
-    event Upgraded(address indexed implementation);
-
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
     bytes32 public bridgeHubAgentID = keccak256("1001");
     address public bridgeHubAgent;
@@ -61,35 +57,41 @@ contract GatewayTest is Test {
     address public account1;
     address public account2;
 
-    uint256 public constant DISPATCH_GAS = 500_000;
+    uint256 public maxDispatchGas = 500_000;
+    uint256 public maxRefund = 1 ether;
+    uint256 public reward = 1 ether;
+    bytes32 public messageID = keccak256("cabbage");
 
-    uint256 public defaultFee = 1 ether;
-    uint256 public defaultReward = 1 ether;
+    uint256 public outboundFee = 1 ether;
     uint256 public registerNativeTokenFee = 1 ether;
     uint256 public sendNativeTokenFee = 1 ether;
+
+    MultiAddress public recipientAddress32;
+    MultiAddress public recipientAddress20;
 
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
         gatewayLogic = new GatewayMock(
             address(0),
             address(executor),
-            DISPATCH_GAS,
             bridgeHubParaID,
             bridgeHubAgentID,
             assetHubParaID,
-            assetHubAgentID,
-            bytes2(0x3500)
+            assetHubAgentID
         );
         gateway = new GatewayProxy(
             address(gatewayLogic),
             abi.encode(
-                defaultFee,
-                defaultReward,
+                OperatingMode.Normal,
+                outboundFee,
                 registerNativeTokenFee,
                 sendNativeTokenFee
             )
         );
         GatewayMock(address(gateway)).setCommitmentsAreVerified(true);
+
+        Gateway.SetOperatingModeParams memory params = Gateway.SetOperatingModeParams({mode: OperatingMode.Normal});
+        GatewayMock(address(gateway)).setOperatingModePublic(abi.encode(params));
 
         bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
@@ -110,6 +112,9 @@ contract GatewayTest is Test {
 
         // create tokens for account 2
         token.deposit{value: 500}();
+
+        recipientAddress32 = multiAddressFromBytes32(keccak256("recipient"));
+        recipientAddress20 = multiAddressFromBytes20(bytes20(keccak256("recipient")));
     }
 
     function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
@@ -147,35 +152,41 @@ contract GatewayTest is Test {
      */
 
     function testSubmitHappyPath() public {
-        deal(bridgeHubAgent, 50 ether);
+        deal(assetHubAgent, 50 ether);
 
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, false, false, false);
-        emit InboundMessageDispatched(bridgeHubParaID, 1, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
         );
     }
 
     function testSubmitFailInvalidNonce() public {
-        deal(bridgeHubAgent, 50 ether);
+        deal(assetHubAgent, 50 ether);
 
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
         );
 
         // try to replay the message
         vm.expectRevert(Gateway.InvalidNonce.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
         );
     }
 
@@ -185,12 +196,14 @@ contract GatewayTest is Test {
         vm.expectRevert(Gateway.ChannelDoesNotExist.selector);
         hoax(relayer);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(ParaID.wrap(42), 1, command, ""), proof, makeMockProof()
+            InboundMessage(ParaID.wrap(42).into(), 1, command, "", maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
         );
     }
 
     function testSubmitFailInvalidProof() public {
-        deal(bridgeHubAgent, 50 ether);
+        deal(assetHubAgent, 50 ether);
 
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
@@ -199,7 +212,9 @@ contract GatewayTest is Test {
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
         );
     }
 
@@ -209,30 +224,49 @@ contract GatewayTest is Test {
 
     // Message relayer should be rewarded from the agent for a channel
     function testRelayerRewardedFromAgent() public {
-        deal(bridgeHubAgent, 50 ether);
-
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
+        vm.txGasPrice(10 gwei);
         hoax(relayer, 1 ether);
-        IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
-        );
+        deal(assetHubAgent, 50 ether);
 
-        assertEq(address(bridgeHubAgent).balance, 49 ether);
-        assertEq(relayer.balance, 2 ether);
+        uint256 relayerBalanceBefore = address(relayer).balance;
+        uint256 agentBalanceBefore = address(assetHubAgent).balance;
+
+        uint256 startGas = gasleft();
+        IGateway(address(gateway)).submitInbound(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+        uint256 endGas = gasleft();
+        uint256 estimatedActualRefundAmount = (startGas - endGas) * tx.gasprice;
+        assertLt(estimatedActualRefundAmount, maxRefund);
+
+        // Check that agent balance decreased and relayer balance increases
+        assertLt(address(assetHubAgent).balance, agentBalanceBefore);
+        assertGt(relayer.balance, relayerBalanceBefore);
+
+        // The total amount paid to the relayer
+        uint256 totalPaid = agentBalanceBefore - address(assetHubAgent).balance;
+
+        // Since we know that the actual refund amount is less than the max refund,
+        // the total amount paid to the relayer is less.
+        assertLt(totalPaid, maxRefund + reward);
     }
 
     // In this case, the agent has no funds to reward the relayer
     function testRelayerNotRewarded() public {
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
-        vm.expectRevert(NativeTransferFailed.selector);
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitInbound(
-            InboundMessage(bridgeHubParaID, 1, command, params), proof, makeMockProof()
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
         );
 
-        assertEq(address(bridgeHubAgent).balance, 0 ether);
+        assertEq(address(assetHubAgent).balance, 0 ether);
         assertEq(relayer.balance, 1 ether);
     }
 
@@ -247,7 +281,7 @@ contract GatewayTest is Test {
         token.approve(address(gateway), 1);
 
         hoax(user, 2 ether);
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), ParaID.wrap(0), recipientAddress32, 1);
 
         assertEq(user.balance, 0 ether);
     }
@@ -264,7 +298,7 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Gateway.FeePaymentToLow.selector);
         hoax(user, 2 ether);
-        IGateway(address(gateway)).sendToken{value: 0.5 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).sendToken{value: 0.5 ether}(address(token), ParaID.wrap(0), recipientAddress32, 1);
 
         assertEq(user.balance, 2 ether);
     }
@@ -274,14 +308,15 @@ contract GatewayTest is Test {
      */
 
     function testAgentExecution() public {
-        token.transfer(address(assetHubAgent), 1);
+        token.transfer(address(assetHubAgent), 200);
 
         Gateway.AgentExecuteParams memory params = Gateway.AgentExecuteParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.TransferToken, abi.encode(address(token), address(this), 1))
+            payload: abi.encode(AgentExecuteCommand.TransferToken, abi.encode(address(token), address(account2), 10))
         });
 
-        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+        bytes memory encodedParams = abi.encode(params);
+        GatewayMock(address(gateway)).agentExecutePublic(encodedParams);
     }
 
     function testAgentExecutionBadOrigin() public {
@@ -306,7 +341,7 @@ contract GatewayTest is Test {
         Gateway.CreateAgentParams memory params = Gateway.CreateAgentParams({agentID: agentID});
 
         vm.expectEmit(false, false, false, false, address(gateway));
-        emit AgentCreated(agentID, address(0));
+        emit IGateway.AgentCreated(agentID, address(0));
 
         GatewayMock(address(gateway)).createAgentPublic(abi.encode(params));
     }
@@ -327,10 +362,15 @@ contract GatewayTest is Test {
 
         GatewayMock(address(gateway)).createAgentPublic(abi.encode(Gateway.CreateAgentParams({agentID: agentID})));
 
-        Gateway.CreateChannelParams memory params = Gateway.CreateChannelParams({paraID: paraID, agentID: agentID});
+        Gateway.CreateChannelParams memory params = Gateway.CreateChannelParams({
+            channelID: paraID.into(),
+            agentID: agentID,
+            mode: OperatingMode.Normal,
+            outboundFee: outboundFee
+        });
 
         vm.expectEmit(true, false, false, true);
-        emit ChannelCreated(paraID);
+        emit IGateway.ChannelCreated(paraID.into());
         GatewayMock(address(gateway)).createChannelPublic(abi.encode(params));
     }
 
@@ -338,7 +378,12 @@ contract GatewayTest is Test {
         ParaID paraID = ParaID.wrap(3042);
         bytes32 agentID = keccak256("3042");
 
-        Gateway.CreateChannelParams memory params = Gateway.CreateChannelParams({paraID: paraID, agentID: agentID});
+        Gateway.CreateChannelParams memory params = Gateway.CreateChannelParams({
+            channelID: paraID.into(),
+            mode: OperatingMode.Normal,
+            agentID: agentID,
+            outboundFee: 1 ether
+        });
 
         vm.expectRevert(Gateway.AgentDoesNotExist.selector);
         GatewayMock(address(gateway)).createChannelPublic(abi.encode(params));
@@ -350,7 +395,12 @@ contract GatewayTest is Test {
 
         GatewayMock(address(gateway)).createAgentPublic(abi.encode(Gateway.CreateAgentParams({agentID: agentID})));
 
-        Gateway.CreateChannelParams memory params = Gateway.CreateChannelParams({paraID: paraID, agentID: agentID});
+        Gateway.CreateChannelParams memory params = Gateway.CreateChannelParams({
+            channelID: paraID.into(),
+            agentID: agentID,
+            mode: OperatingMode.Normal,
+            outboundFee: 1 ether
+        });
 
         GatewayMock(address(gateway)).createChannelPublic(abi.encode(params));
 
@@ -361,29 +411,26 @@ contract GatewayTest is Test {
     function testUpdateChannel() public {
         bytes memory params = abi.encode(
             Gateway.UpdateChannelParams({
-                paraID: assetHubParaID,
+                channelID: assetHubParaID.into(),
                 mode: OperatingMode.RejectingOutboundMessages,
-                fee: 2 ether,
-                reward: 2 ether
+                outboundFee: 2 ether
             })
         );
 
         vm.expectEmit(true, false, false, true);
-        emit ChannelUpdated(assetHubParaID);
+        emit IGateway.ChannelUpdated(assetHubParaID.into());
         GatewayMock(address(gateway)).updateChannelPublic(params);
 
-        (uint256 fee, uint256 reward) = IGateway(address(gateway)).channelFeeRewardOf(assetHubParaID);
+        uint256 fee = IGateway(address(gateway)).channelOutboundFeeOf(assetHubParaID.into());
         assertEq(fee, 2 ether);
-        assertEq(reward, 2 ether);
     }
 
     function testUpdateChannelFailDoesNotExist() public {
         bytes memory params = abi.encode(
             Gateway.UpdateChannelParams({
-                paraID: ParaID.wrap(5956),
+                channelID: ParaID.wrap(5956).into(),
                 mode: OperatingMode.RejectingOutboundMessages,
-                fee: 2 ether,
-                reward: 2 ether
+                outboundFee: 2 ether
             })
         );
 
@@ -391,13 +438,12 @@ contract GatewayTest is Test {
         GatewayMock(address(gateway)).updateChannelPublic(params);
     }
 
-    function testUpdateChannelSanityChecksForBridgeHubChannel() public {
+    function testUpdateChannelSanityChecksForPrimaryGovernanceChannel() public {
         bytes memory params = abi.encode(
             Gateway.UpdateChannelParams({
-                paraID: bridgeHubParaID,
-                mode: OperatingMode.Normal,
-                fee: 100000000 ether,
-                reward: 100000000 ether
+                channelID: ChannelID.wrap(bytes32(uint256(1))),
+                mode: OperatingMode.RejectingOutboundMessages,
+                outboundFee: 1 ether
             })
         );
 
@@ -417,12 +463,32 @@ contract GatewayTest is Test {
 
         // Expect the gateway to emit `Upgraded`
         vm.expectEmit(true, false, false, false);
-        emit Upgraded(address(newLogic));
+        emit IGateway.Upgraded(address(newLogic));
 
         GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
 
         // Verify that the GatewayV2.setup was called
         assertEq(GatewayV2(address(gateway)).getValue(), 42);
+    }
+
+    function testUpgradeGatewayMock() public {
+        GatewayUpgradeMock newLogic = new GatewayUpgradeMock();
+        uint256 d0 = 99;
+        uint256 d1 = 66;
+        bytes memory initParams = abi.encode(d0, d1);
+        console.logBytes(initParams);
+
+        Gateway.UpgradeParams memory params = Gateway.UpgradeParams({
+            impl: address(newLogic),
+            implCodeHash: address(newLogic).codehash,
+            initParams: initParams
+        });
+
+        // Expect the gateway to emit `Initialized`
+        vm.expectEmit(true, false, false, true);
+        emit GatewayUpgradeMock.Initialized(d0, d1);
+
+        GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
     }
 
     function testUpgradeFailOnInitializationFailure() public {
@@ -434,7 +500,7 @@ contract GatewayTest is Test {
             initParams: abi.encode(666)
         });
 
-        vm.expectRevert(IInitializable.InitializationFailed.selector);
+        vm.expectRevert("initialize failed");
         GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
     }
 
@@ -482,32 +548,28 @@ contract GatewayTest is Test {
 
     function testRegisterToken() public {
         vm.expectEmit(false, false, false, true);
-        emit TokenRegistrationSent(address(token));
+        emit IGateway.TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token), bytes2(0x3500))
-        );
+        emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
         IGateway(address(gateway)).registerToken{value: 2 ether}(address(token));
     }
 
     function testRegisterTokenReimbursesExcessFees() public {
         vm.expectEmit(false, false, false, true);
-        emit TokenRegistrationSent(address(token));
+        emit IGateway.TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.RegisterToken(address(gateway), address(token), bytes2(0x3500))
-        );
+        emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        uint256 totalFee = defaultFee + registerNativeTokenFee;
+        uint256 totalFee = outboundFee + registerNativeTokenFee;
         uint256 balanceBefore = address(this).balance;
         IGateway(address(gateway)).registerToken{value: totalFee + 1 ether}(address(token));
         uint256 balanceAfter = address(this).balance;
 
         // Check that the balance has decreased by the amount of gas used
-        // channel.fee is defaultFee & extraFee is registerNativeTokenFee
+        // channel.fee is baseFee & extraFee is registerNativeTokenFee
         uint256 etherUsed = balanceBefore - balanceAfter;
         assert(etherUsed == totalFee);
     }
@@ -518,18 +580,15 @@ contract GatewayTest is Test {
 
         // Multilocation for recipient
         ParaID destPara = ParaID.wrap(2043);
-        bytes32 destAddress = keccak256("/Alice");
 
         vm.expectEmit(true, true, false, true);
-        emit TokenSent(address(this), address(token), destPara, abi.encodePacked(destAddress), 1);
+        emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.SendToken(address(gateway), address(token), destPara, destAddress, 1)
-        );
+        emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress32, 1);
     }
 
     function testSendTokenAddress32ToAssetHub() public {
@@ -538,18 +597,15 @@ contract GatewayTest is Test {
 
         // Multilocation for recipient
         ParaID destPara = assetHubParaID;
-        bytes32 destAddress = keccak256("/Alice");
 
         vm.expectEmit(true, true, false, true);
-        emit TokenSent(address(this), address(token), destPara, abi.encodePacked(destAddress), 1);
+        emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(
-            assetHubParaID, 1, SubstrateTypes.SendToken(address(gateway), address(token), destAddress, 1)
-        );
+        emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress32, 1);
     }
 
     function testSendTokenAddress20() public {
@@ -558,16 +614,15 @@ contract GatewayTest is Test {
 
         // Multilocation for recipient
         ParaID destPara = ParaID.wrap(2043);
-        address destAddress = makeAddr("/Alice");
 
         vm.expectEmit(true, true, false, true);
-        emit TokenSent(address(this), address(token), destPara, abi.encodePacked(destAddress), 1);
+        emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress20, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit OutboundMessageAccepted(assetHubParaID, 1, hex"");
+        emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress20, 1);
     }
 
     function testSendTokenAddress20FailsInvalidDestination() public {
@@ -575,11 +630,10 @@ contract GatewayTest is Test {
         token.approve(address(gateway), 1);
 
         ParaID destPara = assetHubParaID;
-        address destAddress = makeAddr("/Alice");
 
         // Should fail to send tokens to AssetHub
-        vm.expectRevert(Assets.InvalidDestination.selector);
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, destAddress, 1);
+        vm.expectRevert(Assets.Unsupported.selector);
+        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress20, 1);
     }
 
     /**
@@ -608,15 +662,14 @@ contract GatewayTest is Test {
 
         bytes memory params = abi.encode(
             Gateway.UpdateChannelParams({
-                paraID: assetHubParaID,
+                channelID: assetHubParaID.into(),
                 mode: OperatingMode.RejectingOutboundMessages,
-                fee: 1 ether,
-                reward: 1 ether
+                outboundFee: 1 ether
             })
         );
         GatewayMock(address(gateway)).updateChannelPublic(params);
 
-        OperatingMode mode = IGateway(address(gateway)).channelOperatingModeOf(assetHubParaID);
+        OperatingMode mode = IGateway(address(gateway)).channelOperatingModeOf(assetHubParaID.into());
         assertEq(uint256(mode), 1);
 
         // Now all outbound messaging should be disabled
@@ -625,7 +678,7 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).registerToken{value: 1 ether}(address(token));
 
         vm.expectRevert(Gateway.Disabled.selector);
-        IGateway(address(gateway)).sendToken{value: 1 ether}(address(token), ParaID.wrap(0), "", 1);
+        IGateway(address(gateway)).sendToken{value: 1 ether}(address(token), ParaID.wrap(0), recipientAddress32, 1);
     }
 
     /**
@@ -671,21 +724,58 @@ contract GatewayTest is Test {
         OperatingMode mode = gw.operatingMode();
         assertEq(uint256(mode), 0);
 
-        OperatingMode channelMode = gw.channelOperatingModeOf(bridgeHubParaID);
+        OperatingMode channelMode = gw.channelOperatingModeOf(assetHubParaID.into());
         assertEq(uint256(channelMode), 0);
 
-        (uint256 fee, uint256 reward) = gw.channelFeeRewardOf(bridgeHubParaID);
+        (uint256 fee) = gw.channelOutboundFeeOf(assetHubParaID.into());
         assertEq(fee, 1 ether);
-        assertEq(reward, 1 ether);
 
-        (uint64 inbound, uint64 outbound) = gw.channelNoncesOf(bridgeHubParaID);
+        (uint64 inbound, uint64 outbound) = gw.channelNoncesOf(assetHubParaID.into());
         assertEq(inbound, 0);
         assertEq(outbound, 0);
 
-        address agent = gw.agentOf(bridgeHubAgentID);
-        assertEq(agent, bridgeHubAgent);
+        address agent = gw.agentOf(assetHubAgentID);
+        assertEq(agent, assetHubAgent);
 
         address implementation = gw.implementation();
         assertEq(implementation, address(gatewayLogic));
+    }
+
+    function testCreateAgentWithNotEnoughGas() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = makeCreateAgentCommand();
+
+        hoax(relayer, 1 ether);
+
+        vm.expectEmit(true, false, false, true);
+        // Expect dispatch result as false for `OutOfGas`
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
+        // maxDispatchGas as 1 for `create_agent` is definitely not enough
+        IGateway(address(gateway)).submitInbound(
+            InboundMessage(assetHubParaID.into(), 1, command, params, 1, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    function testSetTokenFees() public {
+        (uint256 register, uint256 send) = IGateway(address(gateway)).tokenTransferFees();
+        assertEq(register, 1 ether);
+        assertEq(send, 1 ether);
+        GatewayMock(address(gateway)).setTokenTransferFeesPublic(
+            abi.encode(Gateway.SetTokenTransferFeesParams({register: 1, send: 1}))
+        );
+        (register, send) = IGateway(address(gateway)).tokenTransferFees();
+        assertEq(register, 1);
+        assertEq(send, 1);
+    }
+
+    bytes32 public expectChannelIDBytes = bytes32(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539);
+
+    function testDeriveChannelID() public {
+        ParaID para_id = ParaID.wrap(1000);
+        ChannelID channel_id = para_id.into();
+        assertEq(ChannelID.unwrap(channel_id), expectChannelIDBytes);
     }
 }

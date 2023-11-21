@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import {Bits} from "./Bits.sol";
 
@@ -74,11 +74,8 @@ library Bitfield {
 
         bitfield = new uint256[](arrayLength);
 
-        for (uint256 i = 0; i < bitsToSet.length;) {
+        for (uint256 i = 0; i < bitsToSet.length; i++) {
             set(bitfield, bitsToSet[i]);
-            unchecked {
-                ++i;
-            }
         }
 
         return bitfield;

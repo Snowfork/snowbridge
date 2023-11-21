@@ -1,144 +1,28 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use super::*;
+use crate::{mock::*, *};
 
 use frame_support::{
-	assert_err, assert_noop, assert_ok, parameter_types,
-	traits::{Everything, Hooks, ProcessMessageError},
+	assert_err, assert_noop, assert_ok,
+	traits::{Hooks, ProcessMessage, ProcessMessageError},
 	weights::WeightMeter,
 };
 
-use sp_core::{H160, H256};
-use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
-	BoundedVec, MultiSignature,
+use codec::Encode;
+use snowbridge_core::{
+	outbound::{Command, SendError, SendMessage},
+	ParaId,
 };
-use sp_std::convert::From;
-
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-type Block = frame_system::mocking::MockBlock<Test>;
-
-frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
-		OutboundQueue: crate::{Pallet, Storage, Event<T>},
-	}
-);
-
-pub type Signature = MultiSignature;
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-}
-
-impl frame_system::Config for Test {
-	type BaseCallFilter = Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type DbWeight = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
-}
-
-parameter_types! {
-	pub const HeapSize: u32 = 32 * 1024;
-	pub const MaxStale: u32 = 32;
-	pub static ServiceWeight: Option<Weight> = Some(Weight::from_parts(100, 100));
-}
-
-impl pallet_message_queue::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
-	type MessageProcessor = OutboundQueue;
-	type Size = u32;
-	type QueueChangeHandler = ();
-	type HeapSize = HeapSize;
-	type MaxStale = MaxStale;
-	type ServiceWeight = ServiceWeight;
-}
-
-parameter_types! {
-	pub const MaxMessagePayloadSize: u32 = 1024;
-	pub const MaxMessagesPerBlock: u32 = 20;
-}
-
-impl crate::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type Hashing = Keccak256;
-	type MessageQueue = MessageQueue;
-	type MaxMessagePayloadSize = MaxMessagePayloadSize;
-	type MaxMessagesPerBlock = MaxMessagesPerBlock;
-	type WeightInfo = ();
-}
-
-pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| System::set_block_number(1));
-	ext
-}
-
-fn run_to_end_of_next_block() {
-	// finish current block
-	MessageQueue::on_finalize(System::block_number());
-	OutboundQueue::on_finalize(System::block_number());
-	System::on_finalize(System::block_number());
-	// start next block
-	System::set_block_number(System::block_number() + 1);
-	System::on_initialize(System::block_number());
-	OutboundQueue::on_initialize(System::block_number());
-	MessageQueue::on_initialize(System::block_number());
-	// finish next block
-	MessageQueue::on_finalize(System::block_number());
-	OutboundQueue::on_finalize(System::block_number());
-	System::on_finalize(System::block_number());
-}
+use sp_core::H256;
+use sp_runtime::{AccountId32, DispatchError};
 
 #[test]
-fn submit_messages_from_multiple_origins_and_commit() {
+fn submit_messages_and_commit() {
 	new_tester().execute_with(|| {
-		//next_block();
-
 		for para_id in 1000..1004 {
-			let message = Message {
-				origin: para_id.into(),
-				command: Command::Upgrade {
-					impl_address: H160::zero(),
-					impl_code_hash: H256::zero(),
-					params: Some((0..100).map(|_| 1u8).collect::<Vec<u8>>()),
-				},
-			};
-
-			let result = OutboundQueue::validate(&message);
-			assert!(result.is_ok());
-			let ticket = result.unwrap();
-
-			assert_ok!(OutboundQueue::submit(ticket));
+			let message = mock_message(para_id);
+			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+			assert_ok!(OutboundQueue::deliver(ticket));
 		}
 
 		ServiceWeight::set(Some(Weight::MAX));
@@ -146,29 +30,42 @@ fn submit_messages_from_multiple_origins_and_commit() {
 
 		for para_id in 1000..1004 {
 			let origin: ParaId = (para_id as u32).into();
-			assert_eq!(Nonce::<Test>::get(origin), 1);
+			let channel_id: ChannelId = origin.into();
+			assert_eq!(Nonce::<Test>::get(channel_id), 1);
 		}
 
 		let digest = System::digest();
 		let digest_items = digest.logs();
 		assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
+		assert_eq!(Messages::<Test>::decode_len(), Some(4));
 	});
 }
 
 #[test]
 fn submit_message_fail_too_large() {
 	new_tester().execute_with(|| {
-		let message = Message {
-			origin: 1000.into(),
-			command: Command::Upgrade {
-				impl_address: H160::zero(),
-				impl_code_hash: H256::zero(),
-				params: Some((0..1000).map(|_| 1u8).collect::<Vec<u8>>()),
-			},
-		};
-
-		assert_err!(OutboundQueue::validate(&message), SubmitError::MessageTooLarge);
+		let message = mock_invalid_governance_message::<Test>();
+		assert_err!(OutboundQueue::validate(&message), SendError::MessageTooLarge);
 	});
+}
+
+#[test]
+fn calculate_fees() {
+	new_tester().execute_with(|| {
+		let command = mock_message(1000).command;
+		let fee = OutboundQueue::calculate_fee(&command);
+		assert_eq!(fee.remote, 2200000000000);
+
+		println!("Total fee: {}", fee.total())
+	});
+}
+
+#[test]
+fn convert_from_ether_decimals() {
+	assert_eq!(
+		OutboundQueue::convert_from_ether_decimals(1_000_000_000_000_000_000),
+		100_000_000_000_0
+	);
 }
 
 #[test]
@@ -190,19 +87,23 @@ fn process_message_yields_on_max_messages_per_block() {
 			MessageLeaves::<Test>::append(H256::zero())
 		}
 
-		let origin = AggregateMessageOrigin::Parachain(1000.into());
-		let message = (0..100).map(|_| 1u8).collect::<Vec<u8>>();
-		let message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<Test>> = message.try_into().unwrap();
+		let channel_id: ChannelId = ParaId::from(1000).into();
+		let origin = AggregateMessageOrigin::GeneralKey(channel_id.into());
+		let message = QueuedMessage {
+			id: Default::default(),
+			channel_id,
+			command: Command::Upgrade {
+				impl_address: Default::default(),
+				impl_code_hash: Default::default(),
+				initializer: None,
+			},
+		}
+		.encode();
 
-		let mut meter = WeightMeter::max_limit();
+		let mut meter = WeightMeter::new();
 
 		assert_noop!(
-			OutboundQueue::process_message(
-				&message.as_bounded_slice(),
-				origin,
-				&mut meter,
-				&mut [0u8; 32]
-			),
+			OutboundQueue::process_message(&message.as_slice(), origin, &mut meter, &mut [0u8; 32]),
 			ProcessMessageError::Yield
 		);
 	})
@@ -211,20 +112,129 @@ fn process_message_yields_on_max_messages_per_block() {
 #[test]
 fn process_message_fails_on_overweight_message() {
 	new_tester().execute_with(|| {
-		let origin = AggregateMessageOrigin::Parachain(1000.into());
-		let message = (0..100).map(|_| 1u8).collect::<Vec<u8>>();
-		let message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<Test>> = message.try_into().unwrap();
-
-		let mut meter = WeightMeter::from_limit(Weight::from_parts(1, 1));
-
+		let sibling_id = 1000;
+		let channel_id: ChannelId = ParaId::from(sibling_id).into();
+		let origin = AggregateMessageOrigin::GeneralKey(channel_id.into());
+		let message = mock_message(sibling_id).encode();
+		let mut meter = WeightMeter::with_limit(Weight::from_parts(1, 1));
 		assert_noop!(
-			OutboundQueue::process_message(
-				&message.as_bounded_slice(),
-				origin,
-				&mut meter,
-				&mut [0u8; 32]
-			),
+			OutboundQueue::process_message(&message.as_slice(), origin, &mut meter, &mut [0u8; 32]),
 			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
 		);
 	})
+}
+
+#[test]
+fn set_operating_mode_root_only() {
+	new_tester().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
+		assert_noop!(
+			OutboundQueue::set_operating_mode(origin, BasicOperatingMode::Halted),
+			DispatchError::BadOrigin,
+		);
+	})
+}
+
+#[test]
+fn set_fee_config_root_only() {
+	new_tester().execute_with(|| {
+		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
+		assert_noop!(
+			OutboundQueue::set_fee_config(origin, DefaultFeeConfig::get()),
+			DispatchError::BadOrigin,
+		);
+	})
+}
+
+#[test]
+fn set_fee_config_invalid() {
+	new_tester().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		assert_noop!(
+			OutboundQueue::set_fee_config(
+				origin,
+				FeeConfigRecord { exchange_rate: (1, 1).into(), reward: 0, fee_per_gas: 0 }
+			),
+			Error::<Test>::InvalidFeeConfig
+		);
+	})
+}
+
+// Governance messages should be able to bypass a halted operating mode
+// Other message sends should fail when halted
+#[test]
+fn submit_upgrade_message_success_when_queue_halted() {
+	new_tester().execute_with(|| {
+		// halt the outbound queue
+		OutboundQueue::set_operating_mode(RuntimeOrigin::root(), BasicOperatingMode::Halted)
+			.unwrap();
+
+		// submit a high priority message from bridge_hub should success
+		let message = mock_governance_message::<Test>();
+		let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+		assert_ok!(OutboundQueue::deliver(ticket));
+
+		// submit a low priority message from asset_hub will fail as pallet is halted
+		let message = mock_message(1000);
+		let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+		assert_noop!(OutboundQueue::deliver(ticket), SendError::Halted);
+	});
+}
+
+#[test]
+fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_congest_of_low_priority_sibling_messages(
+) {
+	use snowbridge_core::PRIMARY_GOVERNANCE_CHANNEL;
+	use AggregateMessageOrigin::*;
+
+	let sibling_id: u32 = 1000;
+	let sibling_channel_id: ChannelId = ParaId::from(sibling_id).into();
+
+	new_tester().execute_with(|| {
+		// submit a lot of low priority messages from asset_hub which will need multiple blocks to
+		// execute(20 messages for each block so 40 required at least 2 blocks)
+		let max_messages = 40;
+		for _ in 0..max_messages {
+			// submit low priority message
+			let message = mock_message(sibling_id);
+			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+			OutboundQueue::deliver(ticket).unwrap();
+		}
+		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+		assert_eq!(footprint.storage.count, (max_messages) as u64);
+
+		let message = mock_governance_message::<Test>();
+		let (ticket, _) = OutboundQueue::validate(&message).unwrap();
+		OutboundQueue::deliver(ticket).unwrap();
+
+		// move to next block
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+
+		// first process 20 messages from sibling channel
+		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+		assert_eq!(footprint.storage.count, 40 - 20);
+
+		// and governance message does not have the chance to execute in same block
+		let footprint = MessageQueue::footprint(GeneralKey(PRIMARY_GOVERNANCE_CHANNEL.into()));
+		assert_eq!(footprint.storage.count, 1);
+
+		// move to next block
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+
+		// now governance message get executed in this block
+		let footprint = MessageQueue::footprint(GeneralKey(PRIMARY_GOVERNANCE_CHANNEL.into()));
+		assert_eq!(footprint.storage.count, 0);
+
+		// and this time process 19 messages from sibling channel so we have 1 message left
+		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+		assert_eq!(footprint.storage.count, 1);
+
+		// move to the next block, the last 1 message from sibling channel get executed
+		ServiceWeight::set(Some(Weight::MAX));
+		run_to_end_of_next_block();
+		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+		assert_eq!(footprint.storage.count, 0);
+	});
 }

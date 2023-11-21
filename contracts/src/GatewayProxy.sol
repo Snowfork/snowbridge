@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import {ERC1967} from "./utils/ERC1967.sol";
+import {Call} from "./utils/Call.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 
 contract GatewayProxy is IInitializable {
@@ -14,13 +15,12 @@ contract GatewayProxy is IInitializable {
         ERC1967.store(implementation);
         // Initialize storage by calling the implementation's `initialize(bytes)` function
         // using `delegatecall`.
-        (bool success,) = implementation.delegatecall(abi.encodeCall(IInitializable.initialize, params));
-        if (!success) {
-            revert InitializationFailed();
-        }
+        (bool success, bytes memory returndata) =
+            implementation.delegatecall(abi.encodeCall(IInitializable.initialize, params));
+        Call.verifyResult(success, returndata);
     }
 
-    // Prevent fallback() from calling `initialize(bytes)` on the implementation contract
+    // Prevent fallback() from calling `IInitializable.initialize(bytes)` on the implementation contract
     function initialize(bytes calldata) external pure {
         revert Unauthorized();
     }
