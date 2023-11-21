@@ -48,7 +48,7 @@ start_lodestar() {
 
         local config_dir="$web_dir/packages/test/config"
         pushd $root_dir/lodestar
-        node packages/cli/bin/lodestar.js dev \
+        ./lodestar dev \
             --genesisValidators 8 \
             --genesisTime $timestamp \
             --startValidators "0..7" \
