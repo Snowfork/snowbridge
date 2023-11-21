@@ -92,13 +92,13 @@ cumulus_based = true
 ## Penpal
 [[parachains]]
 id = 2000
-chain = "penpal-kusama-2000"
+chain = "penpal-rococo-2000"
 cumulus_based = true
 
     [[parachains.collators]]
     name = "penpal01"
     validator = true
-    command = "{{output_bin_dir}}/parachain-template-node"
+    command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8084
     ws_port = 14144
     args = [ 
