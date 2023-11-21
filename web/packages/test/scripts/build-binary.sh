@@ -49,12 +49,16 @@ hack_beacon_client() {
 }
 
 build_lodestar() {
-    pushd $root_dir/lodestar
-    if [ "$eth_fast_mode" == "true" ]; then
-        hack_beacon_client
+    if [ ! -d "$root_dir/lodestar/packages/cli/lib" ]; then
+        pushd $root_dir/lodestar
+        if [ "$eth_fast_mode" == "true" ]; then
+            hack_beacon_client
+        fi
+        yarn install && yarn run build
+        popd
+    else
+        echo "lodestar has already been built."
     fi
-    yarn install && yarn build
-    popd
 }
 
 build_geth() {
