@@ -5,7 +5,6 @@ source scripts/set-env.sh
 source scripts/xcm-helper.sh
 
 config_beacon_checkpoint() {
-    wait_beacon_chain_ready
     pushd $root_dir
     local check_point_call=$($relay_bin generate-beacon-checkpoint --spec $active_spec --url $beacon_endpoint_http)
     popd
@@ -30,7 +29,8 @@ fund_accounts() {
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_pub_key
 }
 
-open_hrmp_channel() {
+open_hrmp_channel()
+{
     local relay_url=$1
     local relay_chain_seed=$2
     local sender_para_id=$3
@@ -52,24 +52,26 @@ open_hrmp_channel() {
         --seed "${relay_chain_seed?}" \
         --sudo \
         tx.hrmp.forceOpenHrmpChannel \
-        ${sender_para_id} \
-        ${recipient_para_id} \
-        ${max_capacity} \
-        ${max_message_size}
+            ${sender_para_id} \
+            ${recipient_para_id} \
+            ${max_capacity} \
+            ${max_message_size}
 }
 
-open_hrmp_channels() {
+open_hrmp_channels()
+{
     echo "Opening HRMP channels"
     open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1000 1013 8 512 # Assethub -> BridgeHub
-    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1013 1000 8 512 # BridgeHub -> Assethub
+    open_hrmp_channel "${relaychain_ws_url}"  "${relaychain_sudo_seed}" 1013 1000 8 512 # BridgeHub -> Assethub
     open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1001 1013 8 512 # TemplateNode -> BridgeHub
     open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1013 1001 8 512 # BridgeHub -> TemplateNode
 }
 
 configure_bridgehub() {
-    fund_accounts &
-    open_hrmp_channels &
+    fund_accounts
+    wait_beacon_chain_ready
     config_beacon_checkpoint
+    open_hrmp_channels
 }
 
 if [ -z "${from_start_services:-}" ]; then

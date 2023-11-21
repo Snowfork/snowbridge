@@ -23,17 +23,17 @@ install_binary
 echo "Starting ethereum nodes"
 if [ "$eth_network" == "localhost" ]; then
   source scripts/deploy-ethereum.sh
-  deploy_ethereum &
+  deploy_ethereum
 else
   source scripts/start-goerli.sh
   # deploy beacon node locally for fast response time or retrieving beacon state from remote could be very slow
-  deploy_goerli &
+  deploy_goerli
 fi
 
 # 3. start polkadot
 echo "Starting polkadot nodes"
 source scripts/deploy-polkadot.sh
-deploy_polkadot &
+deploy_polkadot
 
 # 4. generate beefy checkpoint
 echo "Generate beefy checkpoint"
