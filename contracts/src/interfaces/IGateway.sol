@@ -75,12 +75,19 @@ interface IGateway {
     /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
     event TokenRegistrationSent(address token);
 
-    // @dev Fees in Ether for registering and sending tokens respectively
-    function tokenTransferFees() external view returns (uint256, uint256);
+    /// @dev Fee schedule in Ether for registering a token, covering
+    /// 1. Delivery costs to BridgeHub
+    /// 2. XCM Execution costs on AssetHub
+    function registerTokenFee() external view returns (uint256, uint256);
 
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset
     ///      in the `ForeignAssets` pallet.
     function registerToken(address token) external payable;
+
+    /// @dev Fees in Ether for sending a token
+    /// 1. Delivery costs to BridgeHub
+    /// 2. XCM execution costs on destinationChain
+    function sendTokenFee(address token, ParaID destinationChain) external view returns (uint256, uint256);
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
     function sendToken(address token, ParaID destinationChain, MultiAddress calldata destinationAddress, uint128 amount)

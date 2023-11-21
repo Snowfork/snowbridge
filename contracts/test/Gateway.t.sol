@@ -760,15 +760,13 @@ contract GatewayTest is Test {
     }
 
     function testSetTokenFees() public {
-        (uint256 register, uint256 send) = IGateway(address(gateway)).tokenTransferFees();
-        assertEq(register, 1 ether);
-        assertEq(send, 1 ether);
+        (, uint256 fee) = IGateway(address(gateway)).registerTokenFee();
+        assertEq(fee, 1 ether);
         GatewayMock(address(gateway)).setTokenTransferFeesPublic(
-            abi.encode(Gateway.SetTokenTransferFeesParams({register: 1, send: 1}))
+            abi.encode(Gateway.SetTokenTransferFeesParams({register: 2, send: 1}))
         );
-        (register, send) = IGateway(address(gateway)).tokenTransferFees();
-        assertEq(register, 1);
-        assertEq(send, 1);
+        (, fee) = IGateway(address(gateway)).registerTokenFee();
+        assertEq(fee, 2);
     }
 
     bytes32 public expectChannelIDBytes = bytes32(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539);

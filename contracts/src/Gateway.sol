@@ -238,11 +238,6 @@ contract Gateway is IGateway, IInitializable {
         return ERC1967.load();
     }
 
-    function tokenTransferFees() external view returns (uint256, uint256) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        return ($.registerTokenFee, $.sendTokenFee);
-    }
-
     /**
      * Handlers
      */
@@ -262,7 +257,7 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidAgentExecutionPayload();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, (address(this), params.payload));
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, params.payload);
 
         (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         if (!success) {
@@ -444,11 +439,23 @@ contract Gateway is IGateway, IInitializable {
      * Assets
      */
 
+    // Total fee for registering a token
+    function registerTokenFee() external view returns (uint256, uint256) {
+        Channel storage channel = _ensureChannel(ASSET_HUB_PARA_ID.into());
+        return (channel.outboundFee, Assets.registerTokenFee());
+    }
+
     // Register a token on AssetHub
     function registerToken(address token) external payable {
         (bytes memory payload, uint256 extraFee) = Assets.registerToken(token);
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
+    }
+
+    // Total fee for sending a token
+    function sendTokenFee(address, ParaID destinationChain) external view returns (uint256, uint256) {
+        Channel storage channel = _ensureChannel(ASSET_HUB_PARA_ID.into());
+        return (channel.outboundFee, Assets.sendTokenFee(ASSET_HUB_PARA_ID, destinationChain));
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain

@@ -24,11 +24,11 @@ library Assets {
     error Unsupported();
 
     // This library requires state which must be initialized in the gateway's storage.
-    function initialize(uint256 registerTokenFee, uint256 sendTokenFee) external {
+    function initialize(uint256 _registerTokenFee, uint256 _sendTokenFee) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        $.registerTokenFee = registerTokenFee;
-        $.sendTokenFee = sendTokenFee;
+        $.registerTokenFee = _registerTokenFee;
+        $.sendTokenFee = _sendTokenFee;
     }
 
     /// @dev transfer tokens from the sender to the specified
@@ -42,6 +42,16 @@ library Assets {
         }
 
         IERC20(token).safeTransferFrom(sender, assetHubAgent, amount);
+    }
+
+    function sendTokenFee(ParaID assetHubParaID, ParaID destinationChain) external view returns (uint256) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if (assetHubParaID == destinationChain) {
+            return $.sendTokenFee;
+        }
+        // If the final destination chain is not AssetHub, we need to add to the costs
+        // an extra XCM message to the destination
+        return 2 * $.sendTokenFee;
     }
 
     function sendToken(
@@ -79,6 +89,11 @@ library Assets {
         extraFee = $.sendTokenFee;
 
         emit IGateway.TokenSent(sender, token, destinationChain, destinationAddress, amount);
+    }
+
+    function registerTokenFee() external view returns (uint256) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        return $.registerTokenFee;
     }
 
     /// @dev Enqueues a create native token message to substrate.
