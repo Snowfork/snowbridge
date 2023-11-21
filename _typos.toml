@@ -10,4 +10,5 @@ extend-exclude = [
     "polkadot-sdk/**",
     "smoketest/src/parachains",
     "smoketest/src/contracts",
+    "lodestar/**",
 ]

@@ -41,9 +41,33 @@ build_relayer() {
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
+    build_lodestar
     build_binaries
     build_contracts
     build_relayer
+}
+
+build_lodestar() {
+    if [ ! -d "$root_dir/lodestar/packages/cli/lib" ]; then
+        pushd $root_dir/lodestar
+        if [ "$eth_fast_mode" == "true" ]; then
+            hack_beacon_client
+        fi
+        yarn install && yarn run build
+        popd
+    else
+        echo "lodestar has already been built."
+    fi
+}
+
+hack_beacon_client() {
+    echo "Hack lodestar for faster slot time"
+    local preset_minimal_config_file="$root_dir/lodestar/packages/config/src/chainConfig/presets/minimal.ts"
+    if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
+        gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
+    else
+        sed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 2/g" $preset_minimal_config_file
+    fi
 }
 
 if [ -z "${from_start_services:-}" ]; then

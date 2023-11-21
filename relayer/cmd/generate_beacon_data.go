@@ -95,7 +95,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 
 		endpoint, err := cmd.Flags().GetString("url")
 
-		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
+		viper.SetConfigFile("deploy/config/beacon-relay.json")
 
 		if err := viper.ReadInConfig(); err != nil {
 			return err
@@ -151,7 +151,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 
 		endpoint, _ := cmd.Flags().GetString("url")
 
-		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
+		viper.SetConfigFile("deploy/config/beacon-relay.json")
 		if err := viper.ReadInConfig(); err != nil {
 			return err
 		}

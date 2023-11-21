@@ -13,3 +13,6 @@
 [submodule "contracts/lib/canonical-weth"]
 	path = contracts/lib/canonical-weth
 	url = https://github.com/Snowfork/canonical-weth
+[submodule "lodestar"]
+	path = lodestar
+	url = https://github.com/Snowfork/lodestar

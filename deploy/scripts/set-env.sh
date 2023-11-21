@@ -1,4 +1,5 @@
-root_dir="$(realpath ../../..)"
+root_dir="$(realpath ../)"
+deploy_dir="$root_dir/deploy"
 web_dir="$root_dir/web"
 lodestar_version="${LODESTAR_VER:-1.8.0}"
 export contract_dir="$root_dir/contracts"
@@ -90,7 +91,6 @@ export SEND_NATIVE_TOKEN_FEE="${ETH_SEND_NATIVE_TOKEN_FEE:-0}"
 
 ## Vault
 export BRIDGE_HUB_INITIAL_DEPOSIT="${ETH_BRIDGE_HUB_INITIAL_DEPOSIT:-10000000000000000000}"
-
 
 export GATEWAY_PROXY_CONTRACT="${GATEWAY_PROXY_CONTRACT:-0xEDa338E4dC46038493b885327842fD3E301CaB39}"
 

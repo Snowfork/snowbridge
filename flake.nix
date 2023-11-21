@@ -38,6 +38,7 @@
 
                     # typescript
                     nodePackages.pnpm
+                    nodePackages.yarn
                     nodejs-18_x
 
                     # ethereum

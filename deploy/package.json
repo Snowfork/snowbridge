@@ -1,0 +1,20 @@
+{
+  "name": "@snowbridge/deploy",
+  "version": "1.0.0",
+  "description": "Snowbridge deploy scripts",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Snowfork/snowbridge.git",
+    "directory": "deploy"
+  },
+  "devDependencies": {
+    "@polkadot/api": "^10.10.1",
+    "@polkadot/api-cli": "^0.54.4",
+    "@polkadot/keyring": "^12.5.1",
+    "@polkadot/types": "^10.10.1",
+    "@polkadot/util": "^12.5.1",
+    "@polkadot/util-crypto": "^12.5.1",
+    "@zombienet/cli": "^1.3.79"
+  }
+}

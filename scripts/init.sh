@@ -20,3 +20,6 @@ cargo install cargo-fuzz
 
 echo "Installing web packages"
 (cd web && pnpm install)
+
+echo "Installing deploy packages"
+(cd deploy && pnpm install)
