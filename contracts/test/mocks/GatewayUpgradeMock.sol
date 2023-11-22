@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.22;
 
-import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../../src/Types.sol";
+import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress, Fee} from "../../src/Types.sol";
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 import {Verification} from "../../src/Verification.sol";
@@ -38,14 +38,14 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
 
     function submitInbound(InboundMessage calldata, bytes32[] calldata, Verification.Proof calldata) external {}
 
-    function registerTokenFee() external pure returns (uint256, uint256) {
-        return (1, 1);
+    function registerTokenFee() external pure returns (Fee memory) {
+        return Fee(1, 1);
     }
 
     function registerToken(address) external payable {}
 
-    function sendTokenFee(address, ParaID) external pure returns (uint256, uint256) {
-        return (1, 1);
+    function sendTokenFee(address, ParaID) external pure returns (Fee memory) {
+        return Fee(1, 1);
     }
 
     function sendToken(address, ParaID, MultiAddress calldata, uint128) external payable {}

@@ -87,3 +87,15 @@ enum Command {
 }
 
 enum AgentExecuteCommand {TransferToken}
+
+
+using {total} for Fee global;
+
+struct Fee {
+    uint256 bridge;
+    uint256 xcm;
+}
+
+function total(Fee memory fee) pure returns (uint256) {
+    return fee.bridge + fee.xcm;
+}

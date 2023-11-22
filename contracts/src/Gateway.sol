@@ -8,7 +8,7 @@ import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {Channel, ChannelID, InboundMessage, OperatingMode, ParaID, Command, MultiAddress} from "./Types.sol";
+import {Channel, ChannelID, InboundMessage, OperatingMode, ParaID, Command, MultiAddress, Fee} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -440,9 +440,9 @@ contract Gateway is IGateway, IInitializable {
      */
 
     // Total fee for registering a token
-    function registerTokenFee() external view returns (uint256, uint256) {
+    function registerTokenFee() external view returns (Fee memory) {
         Channel storage channel = _ensureChannel(ASSET_HUB_PARA_ID.into());
-        return (channel.outboundFee, Assets.registerTokenFee());
+        return Fee({bridge: channel.outboundFee, xcm: Assets.registerTokenFee()});
     }
 
     // Register a token on AssetHub
@@ -453,9 +453,9 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Total fee for sending a token
-    function sendTokenFee(address, ParaID destinationChain) external view returns (uint256, uint256) {
+    function sendTokenFee(address, ParaID destinationChain) external view returns (Fee memory) {
         Channel storage channel = _ensureChannel(ASSET_HUB_PARA_ID.into());
-        return (channel.outboundFee, Assets.sendTokenFee(ASSET_HUB_PARA_ID, destinationChain));
+        return Fee({bridge: channel.outboundFee, xcm: Assets.sendTokenFee(ASSET_HUB_PARA_ID, destinationChain)});
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
