@@ -101,3 +101,8 @@ func (s *SyncAggregate) ToJSON() json.SyncAggregate {
 		SyncCommitteeSignature: util.BytesToHexString(s.SyncCommitteeSignature[:]),
 	}
 }
+
+func (v *VersionedExecutionPayloadHeader) ToJSON() json.VersionedExecutionPayloadHeader {
+	data := v.Capella.ToJSON()
+	return json.VersionedExecutionPayloadHeader{Capella: &data}
+}

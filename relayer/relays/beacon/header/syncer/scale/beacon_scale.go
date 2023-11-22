@@ -63,7 +63,7 @@ func (o *OptionNextSyncCommitteeUpdatePayload) Decode(decoder scale.Decoder) err
 type HeaderUpdatePayload struct {
 	Header          BeaconHeader
 	AncestryProof   OptionAncestryProof
-	ExecutionHeader ExecutionPayloadHeaderCapella
+	ExecutionHeader VersionedExecutionPayloadHeader
 	ExecutionBranch []types.H256
 }
 
@@ -293,4 +293,17 @@ type CompactBeaconState struct {
 type BeaconState struct {
 	CompactBeaconState
 	BlockRoot types.H256
+}
+
+type VersionedExecutionPayloadHeader struct {
+	Capella *ExecutionPayloadHeaderCapella
+}
+
+func (v VersionedExecutionPayloadHeader) Encode(encoder scale.Encoder) error {
+	var err error
+	if v.Capella != nil {
+		encoder.PushByte(0)
+		err = encoder.Encode(v.Capella)
+	}
+	return err
 }

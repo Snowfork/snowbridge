@@ -394,15 +394,17 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("beacon header to scale: %w", err)
 	}
 
-	executionPayloadScale, err := api.CapellaExecutionPayloadToScale(block.GetExecutionPayload(), s.activeSpec)
-	if err != nil {
-		return scale.HeaderUpdatePayload{}, err
-	}
-
 	executionHeaderBranch, err := s.getExecutionHeaderBranch(block)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, err
 	}
+
+	// Todo: Upgrade to Deneb based on fork epoch
+	executionPayloadScale, err := api.CapellaExecutionPayloadToScale(block.GetExecutionPayload(), s.activeSpec)
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, err
+	}
+	versionedExecutionPayloadHeader := scale.VersionedExecutionPayloadHeader{Capella: &executionPayloadScale}
 
 	// If checkpoint not provided or slot == finalizedSlot there won't be an ancestry proof because the header state in question is also the finalized header
 	if checkpoint == nil || block.GetBeaconSlot() == checkpoint.Slot {
@@ -411,7 +413,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 			AncestryProof: scale.OptionAncestryProof{
 				HasValue: false,
 			},
-			ExecutionHeader: executionPayloadScale,
+			ExecutionHeader: versionedExecutionPayloadHeader,
 			ExecutionBranch: executionHeaderBranch,
 		}, nil
 	}
@@ -435,7 +437,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 				FinalizedBlockRoot: types.NewH256(checkpoint.FinalizedBlockRoot.Bytes()),
 			},
 		},
-		ExecutionHeader: executionPayloadScale,
+		ExecutionHeader: versionedExecutionPayloadHeader,
 		ExecutionBranch: executionHeaderBranch,
 	}, nil
 }

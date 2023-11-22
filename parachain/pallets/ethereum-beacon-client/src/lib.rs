@@ -549,10 +549,12 @@ pub mod pallet {
 			);
 
 			// Checks that we don't skip execution headers, they need to be imported sequentially.
+			let compact_execution_header: CompactExecutionHeader =
+				update.execution_header.clone().into();
 			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
 			ensure!(
 				latest_execution_state.block_number == 0 ||
-					update.execution_header.block_number ==
+					compact_execution_header.block_number ==
 						latest_execution_state.block_number + 1,
 				Error::<T>::ExecutionHeaderSkippedBlock
 			);
@@ -603,8 +605,8 @@ pub mod pallet {
 			}
 
 			Self::store_execution_header(
-				update.execution_header.block_hash,
-				update.execution_header.clone().into(),
+				update.execution_header.block_hash(),
+				compact_execution_header,
 				update.header.slot,
 				block_root,
 			);

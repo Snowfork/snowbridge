@@ -309,7 +309,7 @@ impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 )]
 #[cfg_attr(
 	feature = "std",
-	derive(Deserialize),
+	derive(Serialize, Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[codec(mel_bound())]
@@ -384,6 +384,46 @@ pub struct CompactBeaconState {
 	#[codec(compact)]
 	pub slot: u64,
 	pub block_roots_root: H256,
+}
+
+/// VersionedExecutionPayloadHeader
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+#[cfg_attr(
+	feature = "std",
+	derive(Serialize, Deserialize),
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+)]
+#[codec(mel_bound())]
+pub enum VersionedExecutionPayloadHeader {
+	Capella(ExecutionPayloadHeader),
+}
+
+/// Convert VersionedExecutionPayloadHeader to CompactExecutionHeader
+impl From<VersionedExecutionPayloadHeader> for CompactExecutionHeader {
+	fn from(versioned_execution_header: VersionedExecutionPayloadHeader) -> Self {
+		match versioned_execution_header {
+			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				execution_payload_header.into(),
+		}
+	}
+}
+
+impl VersionedExecutionPayloadHeader {
+	pub fn hash_tree_root(&self) -> Result<H256, SimpleSerializeError> {
+		match self {
+			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				hash_tree_root::<SSZExecutionPayloadHeader>(
+					execution_payload_header.clone().try_into()?,
+				),
+		}
+	}
+
+	pub fn block_hash(&self) -> H256 {
+		match self {
+			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				execution_payload_header.block_hash,
+		}
+	}
 }
 
 #[cfg(test)]

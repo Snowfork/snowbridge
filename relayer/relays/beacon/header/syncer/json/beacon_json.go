@@ -127,10 +127,10 @@ type BlockBody struct {
 }
 
 type HeaderUpdate struct {
-	Header          BeaconHeader                  `json:"header"`
-	AncestryProof   *AncestryProof                `json:"ancestry_proof"`
-	ExecutionHeader ExecutionPayloadHeaderCapella `json:"execution_header"`
-	ExecutionBranch []string                      `json:"execution_branch"`
+	Header          BeaconHeader                    `json:"header"`
+	AncestryProof   *AncestryProof                  `json:"ancestry_proof"`
+	ExecutionHeader VersionedExecutionPayloadHeader `json:"execution_header"`
+	ExecutionBranch []string                        `json:"execution_branch"`
 }
 
 type AncestryProof struct {
@@ -311,4 +311,14 @@ func removeLeadingZeroHashForSlice(s []string) []string {
 
 func removeLeadingZeroHash(s string) string {
 	return strings.Replace(s, "0x", "", 1)
+}
+
+type VersionedExecutionPayloadHeader struct {
+	Capella *ExecutionPayloadHeaderCapella `json:"Capella"`
+}
+
+func (v *VersionedExecutionPayloadHeader) RemoveLeadingZeroHashes() {
+	if v.Capella != nil {
+		v.Capella.RemoveLeadingZeroHashes()
+	}
 }

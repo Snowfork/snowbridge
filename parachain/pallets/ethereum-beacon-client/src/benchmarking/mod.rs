@@ -76,7 +76,7 @@ mod benchmarks {
 		let checkpoint_update = make_checkpoint();
 		let finalized_header_update = make_finalized_header_update();
 		let execution_header_update = make_execution_header_update();
-		let execution_header_hash = execution_header_update.execution_header.block_hash;
+		let execution_header_hash = execution_header_update.execution_header.block_hash();
 		EthereumBeaconClient::<T>::process_checkpoint_update(&checkpoint_update)?;
 		EthereumBeaconClient::<T>::process_update(&finalized_header_update)?;
 
