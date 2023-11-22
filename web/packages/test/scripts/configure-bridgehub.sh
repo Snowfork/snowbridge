@@ -65,6 +65,8 @@ open_hrmp_channels()
     open_hrmp_channel "${relaychain_ws_url}"  "${relaychain_sudo_seed}" 1013 1000 8 512 # BridgeHub -> Assethub
     open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1001 1013 8 512 # TemplateNode -> BridgeHub
     open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1013 1001 8 512 # BridgeHub -> TemplateNode
+    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1000 2000 8 512 # Penpal -> AssetHub
+    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 2000 1000 8 512 # Assethub -> Penpal
 }
 
 configure_bridgehub() {

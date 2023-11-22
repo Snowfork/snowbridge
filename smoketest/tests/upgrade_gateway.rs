@@ -9,6 +9,7 @@ use ethers::{
 use futures::StreamExt;
 use hex_literal::hex;
 use snowbridge_smoketest::{
+	constants::*,
 	contracts::{
 		gateway_upgrade_mock::{self, InitializedFilter},
 		i_gateway::{self, UpgradedFilter},
@@ -39,12 +40,6 @@ use subxt::{
 	OnlineClient, PolkadotConfig,
 };
 
-const ETHEREUM_API: &str = "ws://localhost:8546";
-const RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
-const BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
-const BRIDGE_HUB_PARA_ID: u32 = 1013;
-
-const GATEWAY_PROXY_CONTRACT: &str = "0xEDa338E4dC46038493b885327842fD3E301CaB39";
 const GATETWAY_UPGRADE_MOCK_CONTRACT: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228e73");
 
 #[tokio::test]
@@ -56,7 +51,7 @@ async fn upgrade_gateway() {
 
 	let ethereum_client = Arc::new(ethereum_provider);
 
-	let gateway_addr = GATEWAY_PROXY_CONTRACT.parse::<Address>().unwrap();
+	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 
 	let mock_gateway_addr: Address = GATETWAY_UPGRADE_MOCK_CONTRACT.into();

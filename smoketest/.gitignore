@@ -11,8 +11,9 @@
 # The cache for chain data in container
 .local
 
-src/parachains/bridgehub.rs
 src/parachains/assethub.rs
+src/parachains/bridgehub.rs
+src/parachains/penpal.rs
 src/parachains/relaychain.rs
 src/parachains/template.rs
 src/contracts

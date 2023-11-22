@@ -7,9 +7,7 @@ use ethers::{
 use futures::StreamExt;
 use hex_literal::hex;
 use snowbridge_smoketest::{
-	constants::{
-		ASSET_HUB_AGENT_ID, ASSET_HUB_WS_URL, ETHEREUM_API, GATEWAY_PROXY_CONTRACT, WETH_CONTRACT,
-	},
+	constants::*,
 	contracts::{
 		i_gateway::IGateway,
 		weth9::{TransferFilter, WETH9},
@@ -64,7 +62,7 @@ async fn transfer_token() {
 		id: AssetId::Concrete(MultiLocation {
 			parents: 2,
 			interior: Junctions::X2(
-				Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+				Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
 				Junction::AccountKey20 { network: None, key: WETH_CONTRACT.into() },
 			),
 		}),
@@ -73,7 +71,9 @@ async fn transfer_token() {
 
 	let destination = VersionedMultiLocation::V3(MultiLocation {
 		parents: 2,
-		interior: Junctions::X1(Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: 15 })),
+		interior: Junctions::X1(Junction::GlobalConsensus(NetworkId::Ethereum {
+			chain_id: ETHEREUM_CHAIN_ID,
+		})),
 	});
 
 	let beneficiary = VersionedMultiLocation::V3(MultiLocation {

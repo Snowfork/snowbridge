@@ -61,7 +61,7 @@ use templateTypes::{
 	},
 };
 
-/// Custom config that works with Statemint
+/// Custom config that works with TemplateParachain
 pub enum TemplateConfig {}
 
 impl Config for TemplateConfig {
@@ -73,6 +73,20 @@ impl Config for TemplateConfig {
 	type Hasher = <PolkadotConfig as Config>::Hasher;
 	type Header = <PolkadotConfig as Config>::Header;
 	type ExtrinsicParams = <PolkadotConfig as Config>::ExtrinsicParams;
+}
+
+/// Custom config that works with Penpal
+pub enum PenpalConfig {}
+
+impl Config for PenpalConfig {
+	type Index = <PolkadotConfig as Config>::Index;
+	type Hash = <PolkadotConfig as Config>::Hash;
+	type AccountId = <PolkadotConfig as Config>::AccountId;
+	type Address = <PolkadotConfig as Config>::Address;
+	type Signature = <PolkadotConfig as Config>::Signature;
+	type Hasher = <PolkadotConfig as Config>::Hasher;
+	type Header = <PolkadotConfig as Config>::Header;
+	type ExtrinsicParams = <SubstrateConfig as Config>::ExtrinsicParams;
 }
 
 /// Custom config that works with Statemint
@@ -93,6 +107,7 @@ pub struct TestClients {
 	pub asset_hub_client: Box<OnlineClient<PolkadotConfig>>,
 	pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
 	pub template_client: Box<OnlineClient<TemplateConfig>>,
+	pub penpal_client: Box<OnlineClient<PenpalConfig>>,
 	pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
 	pub ethereum_client: Box<Arc<Provider<Ws>>>,
 	pub ethereum_signed_client: Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
@@ -112,6 +127,10 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 			.await
 			.expect("can not connect to template parachain");
 
+	let penpal_client: OnlineClient<PenpalConfig> = OnlineClient::from_url(PENPAL_WS_URL)
+		.await
+		.expect("can not connect to penpal parachain");
+
 	let relaychain_client: OnlineClient<PolkadotConfig> =
 		OnlineClient::from_url(RELAY_CHAIN_WS_URL)
 			.await
@@ -130,6 +149,7 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 		asset_hub_client: Box::new(asset_hub_client),
 		bridge_hub_client: Box::new(bridge_hub_client),
 		template_client: Box::new(template_client),
+		penpal_client: Box::new(penpal_client),
 		relaychain_client: Box::new(relaychain_client),
 		ethereum_client: Box::new(ethereum_client),
 		ethereum_signed_client: Box::new(Arc::new(ethereum_signed_client)),
