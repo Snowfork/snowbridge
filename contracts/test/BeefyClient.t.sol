@@ -242,6 +242,9 @@ contract BeefyClientTest is Test {
         // Signature count is now 1 after a second submitInitial.
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
+        // Signature count is now 2 after a second submitInitial.
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
         // mine random delay blocks
         vm.roll(block.number + randaoCommitDelay);
 
@@ -469,6 +472,9 @@ contract BeefyClientTest is Test {
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
         // Signature count is now 1 after a second submitInitial.
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
+        // Signature count is now 2 after a second submitInitial.
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
         vm.roll(block.number + randaoCommitDelay);
