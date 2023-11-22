@@ -182,7 +182,7 @@ async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfi
 	}
 
 	println!("creating WETH on penpal.");
-	let admin = MultiAddress::Address32(ASSET_HUB_SOVEREIGN);
+	let admin = MultiAddress::Id(ASSET_HUB_SOVEREIGN.into());
 	let keypair: Pair = Pair::from_string("//Ferdie", None).expect("cannot create keypair");
 	let signer: PairSigner<PenpalConfig, _> = PairSigner::new(keypair);
 
