@@ -276,14 +276,17 @@ contract GatewayTest is Test {
         address user = makeAddr("user");
         deal(address(token), user, 1);
 
+        (uint256 bridgeFee, uint256 xcmFee) = IGateway(address(gateway)).sendTokenFee(address(token), ParaID.wrap(0));
+        uint256 totalFee = bridgeFee + xcmFee;
+
         // Let gateway lock up to 1 tokens
         hoax(user);
         token.approve(address(gateway), 1);
 
-        hoax(user, 2 ether);
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), ParaID.wrap(0), recipientAddress32, 1);
+        hoax(user, totalFee);
+        IGateway(address(gateway)).sendToken{value: totalFee}(address(token), ParaID.wrap(0), recipientAddress32, 1);
 
-        assertEq(user.balance, 0 ether);
+        assertEq(user.balance, 0);
     }
 
     // User doesn't have enough funds to send message
@@ -581,6 +584,9 @@ contract GatewayTest is Test {
         // Multilocation for recipient
         ParaID destPara = ParaID.wrap(2043);
 
+        (uint256 bridgeFee, uint256 xcmFee) = IGateway(address(gateway)).sendTokenFee(address(token), destPara);
+        uint256 totalFee = bridgeFee + xcmFee;
+
         vm.expectEmit(true, true, false, true);
         emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
 
@@ -588,7 +594,7 @@ contract GatewayTest is Test {
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress32, 1);
+        IGateway(address(gateway)).sendToken{value: totalFee}(address(token), destPara, recipientAddress32, 1);
     }
 
     function testSendTokenAddress32ToAssetHub() public {
@@ -598,6 +604,9 @@ contract GatewayTest is Test {
         // Multilocation for recipient
         ParaID destPara = assetHubParaID;
 
+        (uint256 bridgeFee, uint256 xcmFee) = IGateway(address(gateway)).sendTokenFee(address(token), destPara);
+        uint256 totalFee = bridgeFee + xcmFee;
+
         vm.expectEmit(true, true, false, true);
         emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
 
@@ -605,7 +614,7 @@ contract GatewayTest is Test {
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress32, 1);
+        IGateway(address(gateway)).sendToken{value: totalFee}(address(token), destPara, recipientAddress32, 1);
     }
 
     function testSendTokenAddress20() public {
@@ -615,6 +624,9 @@ contract GatewayTest is Test {
         // Multilocation for recipient
         ParaID destPara = ParaID.wrap(2043);
 
+        (uint256 bridgeFee, uint256 xcmFee) = IGateway(address(gateway)).sendTokenFee(address(token), destPara);
+        uint256 totalFee = bridgeFee + xcmFee;
+
         vm.expectEmit(true, true, false, true);
         emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress20, 1);
 
@@ -622,7 +634,7 @@ contract GatewayTest is Test {
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 2 ether}(address(token), destPara, recipientAddress20, 1);
+        IGateway(address(gateway)).sendToken{value: totalFee}(address(token), destPara, recipientAddress20, 1);
     }
 
     function testSendTokenAddress20FailsInvalidDestination() public {

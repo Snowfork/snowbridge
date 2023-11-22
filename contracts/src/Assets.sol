@@ -49,8 +49,8 @@ library Assets {
         if (assetHubParaID == destinationChain) {
             return $.sendTokenFee;
         }
-        // If the final destination chain is not AssetHub, we need to add to the costs
-        // an extra XCM message to the destination
+        // If the final destination chain is not AssetHub, then the fee needs to additionally
+        // include the cost of executing an XCM on the final destination parachain.
         return 2 * $.sendTokenFee;
     }
 
@@ -71,8 +71,10 @@ library Assets {
             if (destinationAddress.isAddress32()) {
                 payload = SubstrateTypes.SendTokenToAssetHubAddress32(token, destinationAddress.asAddress32(), amount);
             } else {
+                // AssetHub does not support 20-byte account IDs
                 revert Unsupported();
             }
+            extraFee = $.sendTokenFee;
         } else {
             if (destinationAddress.isAddress32()) {
                 payload = SubstrateTypes.SendTokenToAddress32(
@@ -85,8 +87,10 @@ library Assets {
             } else {
                 revert Unsupported();
             }
+            // If the final destination chain is not AssetHub, then the fee needs to additionally
+            // include the cost of executing an XCM on the final destination parachain.
+            extraFee = 2 * $.sendTokenFee;
         }
-        extraFee = $.sendTokenFee;
 
         emit IGateway.TokenSent(sender, token, destinationChain, destinationAddress, amount);
     }
