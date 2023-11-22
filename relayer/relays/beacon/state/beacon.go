@@ -197,6 +197,7 @@ type BeaconBlock interface {
 	UnmarshalSSZ(buf []byte) error
 	GetBeaconSlot() uint64
 	GetExecutionPayload() *ExecutionPayloadCapella
+	GetExecutionPayloadDeneb() *ExecutionPayloadDeneb
 	GetTree() (*ssz.Node, error)
 	GetBlockBodyTree() (*ssz.Node, error)
 }
