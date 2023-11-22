@@ -106,4 +106,16 @@ contract Uint16ArrayTest is Test {
         console.log("round2:index at %d set %d and get %d", index, value, new_value);
         assertEq(value, new_value);
     }
+
+    function testCounterGetOutOfBounds() public {
+        counters = Uint16Array.create(17);
+        vm.expectRevert(Uint16Array.IndexOutOfBounds.selector);
+        counters.get(17);
+    }
+
+    function testCounterSetOutOfBounds() public {
+        counters = Uint16Array.create(17);
+        vm.expectRevert(Uint16Array.IndexOutOfBounds.selector);
+        counters.set(17, 1);
+    }
 }
