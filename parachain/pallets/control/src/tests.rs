@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
+use hex_literal::hex;
 use snowbridge_core::sibling_sovereign_account_raw;
 use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
@@ -23,6 +24,18 @@ fn create_agent() {
 		assert_ok!(EthereumControl::create_agent(origin));
 
 		assert!(Agents::<Test>::contains_key(agent_id));
+	});
+}
+
+#[test]
+fn test_agent_for_here() {
+	new_test_ext().execute_with(|| {
+		let origin_location = MultiLocation::here();
+		let agent_id = make_agent_id(origin_location);
+		assert_eq!(
+			agent_id,
+			hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314").into(),
+		)
 	});
 }
 

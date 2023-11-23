@@ -26,7 +26,12 @@ use sp_core::H256;
 use sp_io::hashing::keccak_256;
 use sp_runtime::{traits::AccountIdConversion, RuntimeDebug};
 use sp_std::prelude::*;
-use xcm::prelude::{Junction::Parachain, Junctions::X1, MultiLocation};
+use xcm::prelude::{
+	Junction::Parachain,
+	Junctions::{Here, X1},
+	MultiLocation,
+};
+use xcm_builder::DescribeLocation;
 
 /// The ID of an agent contract
 pub type AgentId = H256;
@@ -138,3 +143,13 @@ pub const SECONDARY_GOVERNANCE_CHANNEL: ChannelId =
 /// Agent ID for BridgeHub
 pub const BRIDGE_HUB_AGENT_ID: AgentId =
 	H256(hex!("0000000000000000000000000000000000000000000000000000000000000001"));
+
+pub struct DescribeHere;
+impl DescribeLocation for DescribeHere {
+	fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
+		match (l.parents, l.interior) {
+			(0, Here) => Some(Vec::<u8>::new().encode()),
+			_ => None,
+		}
+	}
+}

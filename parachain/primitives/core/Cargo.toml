@@ -12,6 +12,7 @@ hex-literal = { version = "0.4.1" }
 
 polkadot-parachain-primitives = { path = "../../../polkadot-sdk/polkadot/parachain", default-features = false }
 xcm = { package = "staging-xcm", path = "../../../polkadot-sdk/polkadot/xcm", default-features = false }
+xcm-builder = { package = "staging-xcm-builder", path = "../../../polkadot-sdk/polkadot/xcm/xcm-builder", default-features = false }
 
 frame-support = { path = "../../../polkadot-sdk/substrate/frame/support", default-features = false }
 frame-system = { path = "../../../polkadot-sdk/substrate/frame/system", default-features = false }
@@ -44,6 +45,7 @@ std = [
     "snowbridge-beacon-primitives/std",
     "xcm/std",
     "ethabi/std",
+    "xcm-builder/std",
 ]
 serde = ["dep:serde", "scale-info/serde"]
 runtime-benchmarks = []
