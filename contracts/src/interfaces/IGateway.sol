@@ -90,7 +90,7 @@ interface IGateway {
     function sendTokenFee(address token, ParaID destinationChain) external view returns (Fee memory);
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
-    function sendToken(address token, ParaID destinationChain, MultiAddress calldata destinationAddress, uint128 amount)
+    function sendToken(address token, ParaID destinationChain, MultiAddress calldata destinationAddress, uint256 destinationChainFee, uint128 amount)
         external
         payable;
 }
