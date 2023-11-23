@@ -67,7 +67,7 @@ library SubstrateTypes {
      * `NativeTokensMessage::Mint`
      */
     // destination is AccountID32 address on AssetHub
-    function SendTokenToAssetHubAddress32(address token, bytes32 recipient, uint128 amount)
+    function SendTokenToAssetHubAddress32(address token, bytes32 recipient, uint128 xcmFee, uint128 amount)
         internal
         view
         returns (bytes memory)
@@ -79,16 +79,20 @@ library SubstrateTypes {
             SubstrateTypes.H160(token),
             bytes1(0x00),
             recipient,
-            ScaleCodec.encodeU128(amount)
+            ScaleCodec.encodeU128(amount),
+            ScaleCodec.encodeU128(xcmFee)
         );
     }
 
     // destination is AccountID32 address
-    function SendTokenToAddress32(address token, ParaID paraID, bytes32 recipient, uint128 amount)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function SendTokenToAddress32(
+        address token,
+        ParaID paraID,
+        bytes32 recipient,
+        uint128 xcmFee,
+        uint128 destinationXcmFee,
+        uint128 amount
+    ) internal view returns (bytes memory) {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
@@ -97,16 +101,21 @@ library SubstrateTypes {
             bytes1(0x01),
             ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
             recipient,
-            ScaleCodec.encodeU128(amount)
+            ScaleCodec.encodeU128(destinationXcmFee),
+            ScaleCodec.encodeU128(amount),
+            ScaleCodec.encodeU128(xcmFee)
         );
     }
 
     // destination is AccountID20 address
-    function SendTokenToAddress20(address token, ParaID paraID, bytes20 recipient, uint128 amount)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function SendTokenToAddress20(
+        address token,
+        ParaID paraID,
+        bytes20 recipient,
+        uint128 xcmFee,
+        uint128 destinationXcmFee,
+        uint128 amount
+    ) internal view returns (bytes memory) {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
@@ -115,7 +124,9 @@ library SubstrateTypes {
             bytes1(0x02),
             ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
             recipient,
-            ScaleCodec.encodeU128(amount)
+            ScaleCodec.encodeU128(destinationXcmFee),
+            ScaleCodec.encodeU128(amount),
+            ScaleCodec.encodeU128(xcmFee)
         );
     }
 }

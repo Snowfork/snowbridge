@@ -4,8 +4,8 @@ pragma solidity 0.8.22;
 
 library AssetsStorage {
     struct Layout {
-        uint256 registerTokenFee;
-        uint256 sendTokenFee;
+        uint128 registerTokenFee;
+        uint128 sendTokenFee;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");

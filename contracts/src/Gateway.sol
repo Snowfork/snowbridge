@@ -21,6 +21,8 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
+import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+
 contract Gateway is IGateway, IInitializable {
     using Address for address;
     using SafeNativeTransfer for address payable;
@@ -52,6 +54,8 @@ contract Gateway is IGateway, IInitializable {
     // 2. Calling implementation function
     uint256 DISPATCH_OVERHEAD_GAS = 10_000;
 
+    UD60x18 internal immutable DOT_TO_ETH_DECIMALS;
+
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
@@ -82,7 +86,8 @@ contract Gateway is IGateway, IInitializable {
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
         ParaID assetHubParaID,
-        bytes32 assetHubAgentID
+        bytes32 assetHubAgentID,
+        UD60x18 dotToEthDecimals
     ) {
         if (
             bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0 || assetHubParaID == ParaID.wrap(0)
@@ -98,12 +103,13 @@ contract Gateway is IGateway, IInitializable {
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         ASSET_HUB_PARA_ID = assetHubParaID;
         ASSET_HUB_AGENT_ID = assetHubAgentID;
+        DOT_TO_ETH_DECIMALS = dotToEthDecimals;
     }
 
     /// @dev Submit a message from Polkadot for verification and dispatch
     /// @param message A message produced by the OutboundQueue pallet on BridgeHub
     /// @param leafProof A message proof used to verify that the message is in the merkle tree committed by the OutboundQueue pallet
-    /// @param headerProof A proof used to verify that the commitment was included in a BridgeHub header that was finalized by BEEFY.
+    /// @param headerProof A proof that the commitment is included in parachain header that was finalized by BEEFY.
     function submitInbound(
         InboundMessage calldata message,
         bytes32[] calldata leafProof,
@@ -225,9 +231,9 @@ contract Gateway is IGateway, IInitializable {
         return (ch.inboundNonce, ch.outboundNonce);
     }
 
-    function channelOutboundFeeOf(ChannelID channelID) external view returns (uint256) {
+    function channelFeeOf(ChannelID channelID) external view returns (uint256) {
         Channel storage ch = _ensureChannel(channelID);
-        return ch.outboundFee;
+        return calculateLocalFee(ch.exchangeRate, ch.fee);
     }
 
     function agentOf(bytes32 agentID) external view returns (address) {
@@ -317,7 +323,7 @@ contract Gateway is IGateway, IInitializable {
         ch.agent = agent;
         ch.inboundNonce = 0;
         ch.outboundNonce = 0;
-        ch.outboundFee = params.outboundFee;
+        ch.fee = params.outboundFee;
 
         emit ChannelCreated(params.channelID);
     }
@@ -327,8 +333,11 @@ contract Gateway is IGateway, IInitializable {
         ChannelID channelID;
         /// @dev The new operating mode
         OperatingMode mode;
-        /// @dev The new fee for accepting outbound messages
-        uint256 outboundFee;
+        /// @dev The new fee in DOT for accepting outbound messages
+        uint128 fee;
+        /// @dev The new ETH/DOT exchange rate
+        uint128 exchangeRateNumerator;
+        uint128 exchangeRateDenominator;
     }
 
     /// @dev Update the configuration for a channel
@@ -343,7 +352,8 @@ contract Gateway is IGateway, IInitializable {
         }
 
         ch.mode = params.mode;
-        ch.outboundFee = params.outboundFee;
+        ch.fee = params.fee;
+        ch.exchangeRate = convert(params.exchangeRateNumerator).div(convert(params.exchangeRateDenominator));
 
         emit ChannelUpdated(params.channelID);
     }
@@ -420,10 +430,10 @@ contract Gateway is IGateway, IInitializable {
     }
 
     struct SetTokenTransferFeesParams {
-        /// @dev The fee for register token
-        uint256 register;
-        /// @dev The fee for send token from ethereum to polkadot
-        uint256 send;
+        /// @dev The remote fee (DOT) for registering a token on AssetHub
+        uint128 register;
+        /// @dev The remote fee (DOT) for send tokens to AssetHub
+        uint128 send;
     }
 
     // @dev Set the operating mode of the gateway
@@ -442,7 +452,10 @@ contract Gateway is IGateway, IInitializable {
     // Total fee for registering a token
     function registerTokenFee() external view returns (Fee memory) {
         Channel storage channel = _ensureChannel(ASSET_HUB_PARA_ID.into());
-        return Fee({bridge: channel.outboundFee, xcm: Assets.registerTokenFee()});
+        return Fee({
+            bridge: calculateLocalFee(channel.exchangeRate, channel.fee),
+            xcm: calculateLocalFee(channel.exchangeRate, Assets.registerTokenFee())
+        });
     }
 
     // Register a token on AssetHub
@@ -453,21 +466,40 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Total fee for sending a token
-    function sendTokenFee(address, ParaID destinationChain) external view returns (Fee memory) {
+    function sendTokenFee(address, ParaID destinationChain, uint128 destinationFee)
+        external
+        view
+        returns (Fee memory)
+    {
         Channel storage channel = _ensureChannel(ASSET_HUB_PARA_ID.into());
-        return Fee({bridge: channel.outboundFee, xcm: Assets.sendTokenFee(ASSET_HUB_PARA_ID, destinationChain)});
+        return Fee({
+            bridge: calculateLocalFee(channel.exchangeRate, channel.fee),
+            xcm: calculateLocalFee(
+                channel.exchangeRate, Assets.sendTokenFee(ASSET_HUB_PARA_ID, destinationChain, destinationFee)
+                )
+        });
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
-    function sendToken(address token, ParaID destinationChain, MultiAddress calldata destinationAddress, uint128 amount)
-        external
-        payable
-    {
+    function sendToken(
+        address token,
+        ParaID destinationChain,
+        MultiAddress calldata destinationAddress,
+        uint128 destinationFee,
+        uint128 amount
+    ) external payable {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
 
         (bytes memory payload, uint256 extraFee) = Assets.sendToken(
-            ASSET_HUB_PARA_ID, assetHubAgent, token, msg.sender, destinationChain, destinationAddress, amount
+            ASSET_HUB_PARA_ID,
+            assetHubAgent,
+            token,
+            msg.sender,
+            destinationChain,
+            destinationAddress,
+            destinationFee,
+            amount
         );
 
         _submitOutbound(ASSET_HUB_PARA_ID, payload, extraFee);
@@ -485,6 +517,13 @@ contract Gateway is IGateway, IInitializable {
         return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
     }
 
+    function calculateLocalFee(UD60x18 exchangeRate, uint256 remoteFee) internal pure returns (uint256) {
+        UD60x18 remoteFeeFP = convert(remoteFee);
+        UD60x18 localFeeFP = remoteFeeFP.mul(exchangeRate).mul(convert(1e8));
+        uint256 localFee = convert(localFeeFP);
+        return localFee;
+    }
+
     // Submit an outbound message to Polkadot
     function _submitOutbound(ParaID dest, bytes memory payload, uint256 extraFee) internal {
         ChannelID channelID = dest.into();
@@ -493,7 +532,7 @@ contract Gateway is IGateway, IInitializable {
         // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled(channel);
 
-        uint256 totalFee = channel.outboundFee + extraFee;
+        uint256 totalFee = calculateLocalFee(channel.exchangeRate, channel.fee + extraFee);
 
         // Ensure the user has enough funds for this message to be accepted
         if (msg.value < totalFee) {
@@ -565,12 +604,14 @@ contract Gateway is IGateway, IInitializable {
     // Initial configuration for bridge
     struct Config {
         OperatingMode mode;
-        /// @dev The fee charged to users for submitting outbound messages.
-        uint256 outboundFee;
-        /// @dev The extra fee charged for registering tokens.
-        uint256 registerTokenFee;
-        /// @dev The extra fee charged for sending tokens.
-        uint256 sendTokenFee;
+        /// @dev The fee charged to users for submitting outbound messages (DOT)
+        uint128 fee;
+        /// @dev The extra fee charged for registering tokens (DOT)
+        uint128 registerTokenFee;
+        /// @dev The extra fee charged for sending tokens (DOT)
+        uint128 sendTokenFee;
+        /// @dev The ETH/DOT exchange rate
+        UD60x18 exchangeRate;
     }
 
     /// @dev Initialize storage in the gateway
@@ -597,7 +638,8 @@ contract Gateway is IGateway, IInitializable {
             agent: bridgeHubAgent,
             inboundNonce: 0,
             outboundNonce: 0,
-            outboundFee: config.outboundFee
+            fee: config.fee,
+            exchangeRate: config.exchangeRate
         });
 
         // Initialize channel for secondary governance track
@@ -606,7 +648,8 @@ contract Gateway is IGateway, IInitializable {
             agent: bridgeHubAgent,
             inboundNonce: 0,
             outboundNonce: 0,
-            outboundFee: config.outboundFee
+            fee: config.fee,
+            exchangeRate: config.exchangeRate
         });
 
         // Initialize agent for for AssetHub
@@ -619,7 +662,8 @@ contract Gateway is IGateway, IInitializable {
             agent: assetHubAgent,
             inboundNonce: 0,
             outboundNonce: 0,
-            outboundFee: config.outboundFee
+            fee: config.fee,
+            exchangeRate: config.exchangeRate
         });
 
         Assets.initialize(config.registerTokenFee, config.sendTokenFee);

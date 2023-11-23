@@ -15,10 +15,13 @@ import {AgentExecutor} from "./AgentExecutor.sol";
 import {ChannelID, ParaID, OperatingMode} from "./Types.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 contract DeployScript is Script {
     using SafeNativeTransfer for address payable;
     using stdJson for string;
+
+    UD60x18 internal dotToEthDecimals;
 
     function setUp() public {}
 
@@ -56,6 +59,8 @@ contract DeployScript is Script {
         ParaID assetHubParaID = ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID")));
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
 
+        dotToEthDecimals = convert(vm.envUint("DOT_TO_ETH_DECIMALS"));
+
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
             address(beefyClient),
@@ -63,7 +68,8 @@ contract DeployScript is Script {
             bridgeHubParaID,
             bridgeHubAgentID,
             assetHubParaID,
-            assetHubAgentID
+            assetHubAgentID,
+            dotToEthDecimals
         );
 
         bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");
@@ -76,9 +82,10 @@ contract DeployScript is Script {
 
         Gateway.Config memory config = Gateway.Config({
             mode: defaultOperatingMode,
-            outboundFee: vm.envUint("DEFAULT_FEE"),
-            registerTokenFee: vm.envUint("REGISTER_NATIVE_TOKEN_FEE"),
-            sendTokenFee: vm.envUint("SEND_NATIVE_TOKEN_FEE")
+            fee: uint128(vm.envUint("DEFAULT_FEE")),
+            registerTokenFee: uint128(vm.envUint("REGISTER_NATIVE_TOKEN_FEE")),
+            sendTokenFee: uint128(vm.envUint("SEND_NATIVE_TOKEN_FEE")),
+            exchangeRate: ud60x18(0.0025e18)
         });
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));

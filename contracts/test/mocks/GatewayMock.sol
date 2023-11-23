@@ -6,6 +6,8 @@ import {ParaID, OperatingMode} from "../../src/Types.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 import {Verification} from "../../src/Verification.sol";
 
+import {UD60x18} from "prb/math/src/UD60x18.sol";
+
 contract GatewayMock is Gateway {
     bool public commitmentsAreVerified;
 
@@ -15,8 +17,19 @@ contract GatewayMock is Gateway {
         ParaID bridgeHubParaID,
         bytes32 bridgeHubHubAgentID,
         ParaID assetHubParaID,
-        bytes32 assetHubHubAgentID
-    ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, assetHubParaID, assetHubHubAgentID) {}
+        bytes32 assetHubHubAgentID,
+        UD60x18 dotToEthDecimals
+    )
+        Gateway(
+            beefyClient,
+            agentExecutor,
+            bridgeHubParaID,
+            bridgeHubHubAgentID,
+            assetHubParaID,
+            assetHubHubAgentID,
+            dotToEthDecimals
+        )
+    {}
 
     function agentExecutePublic(bytes calldata params) external {
         this.agentExecute(params);
@@ -66,6 +79,10 @@ contract GatewayMock is Gateway {
 
     function setTokenTransferFeesPublic(bytes calldata params) external {
         this.setTokenTransferFees(params);
+    }
+
+    function calculateLocalFeePublic(UD60x18 exchangeRate, uint256 remoteFee) external pure returns (uint256) {
+        return calculateLocalFee(exchangeRate, remoteFee);
     }
 }
 

@@ -6,6 +6,8 @@ import {
     MultiAddress, multiAddressFromUint32, multiAddressFromBytes32, multiAddressFromBytes20
 } from "./MultiAddress.sol";
 
+import {UD60x18} from "prb/math/src/UD60x18.sol";
+
 type ParaID is uint32;
 
 using {ParaIDEq as ==, ParaIDNe as !=, into} for ParaID global;
@@ -45,8 +47,10 @@ struct Channel {
     uint64 outboundNonce;
     /// @dev The address of the agent of the parachain owning this channel
     address agent;
-    /// @dev The fee charged to users for submitting outbound messages
-    uint256 outboundFee;
+    /// @dev The DOT fee charged to users for submitting outbound messages
+    uint256 fee;
+    /// @dev The ETH/DOT exchange rate
+    UD60x18 exchangeRate;
 }
 
 /// @dev Inbound message from a Polkadot parachain (via BridgeHub)
@@ -87,7 +91,6 @@ enum Command {
 }
 
 enum AgentExecuteCommand {TransferToken}
-
 
 using {total} for Fee global;
 

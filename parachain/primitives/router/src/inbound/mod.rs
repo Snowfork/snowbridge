@@ -46,6 +46,9 @@ pub enum Command {
 	RegisterToken {
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
+		/// The fee for executing the XCM on AssetHub
+		/// Includes the XCM fee and the registration deposit
+		fee: u128,
 	},
 	/// Send a token to AssetHub or another parachain
 	SendToken {
@@ -55,6 +58,8 @@ pub enum Command {
 		destination: Destination,
 		/// Amount to transfer
 		amount: u128,
+		/// XCM execution fee on AssetHub
+		fee: u128,
 	},
 }
 
@@ -66,11 +71,21 @@ pub enum Destination {
 	/// The funds will deposited into the sovereign account of destination parachain `para_id` on
 	/// AssetHub, Account `id` on the destination parachain will receive the funds via a
 	/// reserve-backed transfer. See https://github.com/paritytech/xcm-format#depositreserveasset
-	ForeignAccountId32 { para_id: u32, id: [u8; 32] },
+	ForeignAccountId32 {
+		para_id: u32,
+		id: [u8; 32],
+		/// XCM execution fee on final destination
+		fee: u128,
+	},
 	/// The funds will deposited into the sovereign account of destination parachain `para_id` on
 	/// AssetHub, Account `id` on the destination parachain will receive the funds via a
 	/// reserve-backed transfer. See https://github.com/paritytech/xcm-format#depositreserveasset
-	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
+	ForeignAccountId20 {
+		para_id: u32,
+		id: [u8; 20],
+		/// XCM execution fee on final destination
+		fee: u128,
+	},
 }
 
 pub struct MessageToXcm<

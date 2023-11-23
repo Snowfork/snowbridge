@@ -40,7 +40,7 @@ interface IGateway {
 
     function operatingMode() external view returns (OperatingMode);
     function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
-    function channelOutboundFeeOf(ChannelID channelID) external view returns (uint256);
+    function channelFeeOf(ChannelID channelID) external view returns (uint256);
     function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
     function agentOf(bytes32 agentID) external view returns (address);
     function implementation() external view returns (address);
@@ -87,10 +87,17 @@ interface IGateway {
     /// @dev Fees in Ether for sending a token
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM execution costs on destinationChain
-    function sendTokenFee(address token, ParaID destinationChain) external view returns (Fee memory);
+    function sendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
+        external
+        view
+        returns (Fee memory);
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
-    function sendToken(address token, ParaID destinationChain, MultiAddress calldata destinationAddress, uint256 destinationChainFee, uint128 amount)
-        external
-        payable;
+    function sendToken(
+        address token,
+        ParaID destinationChain,
+        MultiAddress calldata destinationAddress,
+        uint128 destinationFee,
+        uint128 amount
+    ) external payable;
 }

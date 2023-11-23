@@ -24,7 +24,7 @@ library Assets {
     error Unsupported();
 
     // This library requires state which must be initialized in the gateway's storage.
-    function initialize(uint256 _registerTokenFee, uint256 _sendTokenFee) external {
+    function initialize(uint128 _registerTokenFee, uint128 _sendTokenFee) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         $.registerTokenFee = _registerTokenFee;
@@ -44,14 +44,18 @@ library Assets {
         IERC20(token).safeTransferFrom(sender, assetHubAgent, amount);
     }
 
-    function sendTokenFee(ParaID assetHubParaID, ParaID destinationChain) external view returns (uint256) {
+    function sendTokenFee(ParaID assetHubParaID, ParaID destinationChain, uint128 destinationChainFee)
+        external
+        view
+        returns (uint256)
+    {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if (assetHubParaID == destinationChain) {
             return $.sendTokenFee;
         }
         // If the final destination chain is not AssetHub, then the fee needs to additionally
         // include the cost of executing an XCM on the final destination parachain.
-        return 2 * $.sendTokenFee;
+        return $.sendTokenFee + destinationChainFee;
     }
 
     function sendToken(
@@ -61,6 +65,7 @@ library Assets {
         address sender,
         ParaID destinationChain,
         MultiAddress calldata destinationAddress,
+        uint128 destinationChainFee,
         uint128 amount
     ) external returns (bytes memory payload, uint256 extraFee) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
@@ -69,7 +74,9 @@ library Assets {
 
         if (destinationChain == assetHubParaID) {
             if (destinationAddress.isAddress32()) {
-                payload = SubstrateTypes.SendTokenToAssetHubAddress32(token, destinationAddress.asAddress32(), amount);
+                payload = SubstrateTypes.SendTokenToAssetHubAddress32(
+                    token, destinationAddress.asAddress32(), $.sendTokenFee, amount
+                );
             } else {
                 // AssetHub does not support 20-byte account IDs
                 revert Unsupported();
@@ -78,18 +85,28 @@ library Assets {
         } else {
             if (destinationAddress.isAddress32()) {
                 payload = SubstrateTypes.SendTokenToAddress32(
-                    token, destinationChain, destinationAddress.asAddress32(), amount
+                    token,
+                    destinationChain,
+                    destinationAddress.asAddress32(),
+                    $.sendTokenFee,
+                    destinationChainFee,
+                    amount
                 );
             } else if (destinationAddress.isAddress20()) {
                 payload = SubstrateTypes.SendTokenToAddress20(
-                    token, destinationChain, destinationAddress.asAddress20(), amount
+                    token,
+                    destinationChain,
+                    destinationAddress.asAddress20(),
+                    $.sendTokenFee,
+                    destinationChainFee,
+                    amount
                 );
             } else {
                 revert Unsupported();
             }
             // If the final destination chain is not AssetHub, then the fee needs to additionally
             // include the cost of executing an XCM on the final destination parachain.
-            extraFee = 2 * $.sendTokenFee;
+            extraFee = $.sendTokenFee + destinationChainFee;
         }
 
         emit IGateway.TokenSent(sender, token, destinationChain, destinationAddress, amount);
