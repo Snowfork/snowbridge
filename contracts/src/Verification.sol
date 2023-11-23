@@ -149,27 +149,16 @@ library Verification {
             accum = bytes.concat(accum, encodeDigestItem(digestItems[i]));
         }
         // Encode number of digest items, followed by encoded digest items
-        return bytes.concat(ScaleCodec.checkedEncodeCompactU32(uint32(digestItems.length)), accum);
+        return bytes.concat(ScaleCodec.checkedEncodeCompactU32(digestItems.length), accum);
     }
 
     function encodeDigestItem(DigestItem calldata digestItem) internal pure returns (bytes memory) {
-        if (digestItem.kind == DIGEST_ITEM_PRERUNTIME) {
+        if (
+            digestItem.kind == DIGEST_ITEM_PRERUNTIME || digestItem.kind == DIGEST_ITEM_CONSENSUS
+                || digestItem.kind == DIGEST_ITEM_SEAL
+        ) {
             return bytes.concat(
-                bytes1(uint8(DIGEST_ITEM_PRERUNTIME)),
-                digestItem.consensusEngineID,
-                ScaleCodec.checkedEncodeCompactU32(digestItem.data.length),
-                digestItem.data
-            );
-        } else if (digestItem.kind == DIGEST_ITEM_CONSENSUS) {
-            return bytes.concat(
-                bytes1(uint8(DIGEST_ITEM_CONSENSUS)),
-                digestItem.consensusEngineID,
-                ScaleCodec.checkedEncodeCompactU32(digestItem.data.length),
-                digestItem.data
-            );
-        } else if (digestItem.kind == DIGEST_ITEM_SEAL) {
-            return bytes.concat(
-                bytes1(uint8(DIGEST_ITEM_SEAL)),
+                bytes1(uint8(digestItem.kind)),
                 digestItem.consensusEngineID,
                 ScaleCodec.checkedEncodeCompactU32(digestItem.data.length),
                 digestItem.data
@@ -193,30 +182,8 @@ library Verification {
         pure
         returns (bytes32)
     {
-        // Encode Parachain header
-        bytes memory encodedHeader = bytes.concat(
-            // H256
-            header.parentHash,
-            // Compact unsigned int
-            ScaleCodec.checkedEncodeCompactU32(uint32(header.number)),
-            // H256
-            header.stateRoot,
-            // H256
-            header.extrinsicsRoot,
-            // Vec<DigestItem>
-            encodeDigestItems(header.digestItems)
-        );
-
         // Hash of encoded parachain header merkle leaf
-        return keccak256(
-            bytes.concat(
-                // u32
-                encodedParaID,
-                // Vec<u8>
-                ScaleCodec.checkedEncodeCompactU32(encodedHeader.length),
-                encodedHeader
-            )
-        );
+        return keccak256(createParachainHeader(encodedParaID, header));
     }
 
     function createParachainHeader(bytes4 encodedParaID, ParachainHeader calldata header)
@@ -234,7 +201,6 @@ library Verification {
             // H256
             header.extrinsicsRoot,
             // Vec<DigestItem>
-            ScaleCodec.checkedEncodeCompactU32(header.digestItems.length),
             encodeDigestItems(header.digestItems)
         );
 
@@ -242,7 +208,7 @@ library Verification {
             // u32
             encodedParaID,
             // length of encoded header
-            ScaleCodec.checkedEncodeCompactU32(uint32(encodedHeader.length)),
+            ScaleCodec.checkedEncodeCompactU32(encodedHeader.length),
             encodedHeader
         );
     }
