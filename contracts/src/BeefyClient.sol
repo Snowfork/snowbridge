@@ -199,6 +199,7 @@ contract BeefyClient {
     error InvalidSignature();
     error InvalidTicket();
     error InvalidValidatorProof();
+    error InvalidValidatorProofLength();
     error CommitmentNotRelevant();
     error NotEnoughClaims();
     error PrevRandaoAlreadyCaptured();
@@ -474,7 +475,7 @@ contract BeefyClient {
         // Verify that enough signature proofs have been supplied
         uint256 numRequiredSignatures = ticket.numRequiredSignatures;
         if (proofs.length != numRequiredSignatures) {
-            revert InvalidValidatorProof();
+            revert InvalidValidatorProofLength();
         }
 
         // Generate final bitfield indicating which validators need to be included in the proofs.
