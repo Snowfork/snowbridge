@@ -140,10 +140,6 @@ pub const PRIMARY_GOVERNANCE_CHANNEL: ChannelId =
 pub const SECONDARY_GOVERNANCE_CHANNEL: ChannelId =
 	ChannelId::new(hex!("0000000000000000000000000000000000000000000000000000000000000002"));
 
-/// Agent ID for BridgeHub
-pub const BRIDGE_HUB_AGENT_ID: AgentId =
-	H256(hex!("0000000000000000000000000000000000000000000000000000000000000001"));
-
 pub struct DescribeHere;
 impl DescribeLocation for DescribeHere {
 	fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
