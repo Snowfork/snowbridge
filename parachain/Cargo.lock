@@ -836,6 +836,7 @@ dependencies = [
  "pallet-message-queue",
  "parity-scale-codec",
  "scale-info",
+ "snowbridge-core",
  "sp-runtime",
  "sp-std 8.0.0",
  "staging-xcm",

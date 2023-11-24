@@ -36,7 +36,7 @@ mod benchmarks {
 				}),
 			},
 		};
-		let origin = AggregateMessageOrigin::Snowbridge([1; 32]);
+		let origin = AggregateMessageOrigin::Snowbridge([1; 32].into());
 		let encoded_enqueued_message = enqueued_message.encode();
 
 		#[block]

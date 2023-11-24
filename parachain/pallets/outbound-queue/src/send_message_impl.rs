@@ -71,7 +71,7 @@ where
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError> {
-		let origin = AggregateMessageOrigin::Snowbridge(ticket.channel_id.into());
+		let origin = AggregateMessageOrigin::Snowbridge(ticket.channel_id);
 
 		if ticket.channel_id != PRIMARY_GOVERNANCE_CHANNEL {
 			ensure!(!Self::operating_mode().is_halted(), SendError::Halted);
