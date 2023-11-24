@@ -88,7 +88,7 @@ fn process_message_yields_on_max_messages_per_block() {
 		}
 
 		let channel_id: ChannelId = ParaId::from(1000).into();
-		let origin = AggregateMessageOrigin::GeneralKey(channel_id.into());
+		let origin = AggregateMessageOrigin::Snowbridge(channel_id.into());
 		let message = QueuedMessage {
 			id: Default::default(),
 			channel_id,
@@ -114,7 +114,7 @@ fn process_message_fails_on_overweight_message() {
 	new_tester().execute_with(|| {
 		let sibling_id = 1000;
 		let channel_id: ChannelId = ParaId::from(sibling_id).into();
-		let origin = AggregateMessageOrigin::GeneralKey(channel_id.into());
+		let origin = AggregateMessageOrigin::Snowbridge(channel_id.into());
 		let message = mock_message(sibling_id).encode();
 		let mut meter = WeightMeter::with_limit(Weight::from_parts(1, 1));
 		assert_noop!(
