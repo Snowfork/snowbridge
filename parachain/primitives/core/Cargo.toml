@@ -48,4 +48,6 @@ std = [
     "xcm-builder/std",
 ]
 serde = ["dep:serde", "scale-info/serde"]
-runtime-benchmarks = []
+runtime-benchmarks = [
+    "xcm-builder/runtime-benchmarks",
+]
