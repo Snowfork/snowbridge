@@ -216,6 +216,9 @@ contract BeefyClient {
         ValidatorSet memory _initialValidatorSet,
         ValidatorSet memory _nextValidatorSet
     ) {
+        if (_nextValidatorSet.id != _initialValidatorSet.id + 1) {
+            revert InvalidValidatorSetData();
+        }
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
         minNumRequiredSignatures = _minNumRequiredSignatures;

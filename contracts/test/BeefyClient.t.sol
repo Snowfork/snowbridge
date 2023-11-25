@@ -733,4 +733,18 @@ contract BeefyClientTest is Test {
     function testStorageToStorageCopies() public {
         beefyClient.copyCounters();
     }
+
+    function testFuzzInitializationValidation(uint128 currentId, uint128 nextId) public {
+        vm.assume(currentId < type(uint128).max);
+        vm.assume(currentId + 1 != nextId);
+        vm.expectRevert(BeefyClient.InvalidValidatorSetData.selector);
+        new BeefyClient(
+            randaoCommitDelay,
+            randaoCommitExpiration,
+            minNumRequiredSignatures,
+            0,
+            BeefyClient.ValidatorSet(currentId, 0, 0x0),
+            BeefyClient.ValidatorSet(nextId, 0, 0x0)
+        );
+    }
 }

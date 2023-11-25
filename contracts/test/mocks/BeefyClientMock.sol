@@ -15,7 +15,7 @@ contract BeefyClientMock is BeefyClient {
             minNumRequiredSignatures,
             0,
             BeefyClient.ValidatorSet(0, 0, 0x0),
-            BeefyClient.ValidatorSet(0, 0, 0x0)
+            BeefyClient.ValidatorSet(1, 0, 0x0)
         )
     {}
 
