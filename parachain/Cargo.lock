@@ -729,7 +729,6 @@ checksum = "1bc2832c24239b0141d5674bb9174f9d68a8b5b3f2753311927c172ca46f7e9c"
 dependencies = [
  "funty",
  "radium",
- "serde",
  "tap",
  "wyz",
 ]
@@ -836,7 +835,6 @@ dependencies = [
  "pallet-message-queue",
  "parity-scale-codec",
  "scale-info",
- "snowbridge-core",
  "sp-runtime",
  "sp-std 8.0.0",
  "staging-xcm",
@@ -1796,7 +1794,6 @@ name = "frame-system"
 version = "4.0.0-dev"
 dependencies = [
  "cfg-if",
- "docify",
  "frame-support",
  "log",
  "parity-scale-codec",
@@ -2709,7 +2706,6 @@ dependencies = [
 name = "pallet-message-queue"
 version = "7.0.0-dev"
 dependencies = [
- "environmental",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
