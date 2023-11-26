@@ -9,13 +9,17 @@ use frame_support::{
 };
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
-use snowbridge_core::inbound::{Log, Proof, VerificationError};
+use snowbridge_core::{
+	gwei,
+	inbound::{Log, Proof, VerificationError},
+	meth, Channel, ChannelId, PricingParameters, Rewards, StaticLookup,
+};
 use snowbridge_router_primitives::inbound::MessageToXcm;
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, DispatchError, MultiSignature, TokenError,
+	BuildStorage, DispatchError, FixedU128, MultiSignature, TokenError,
 };
 use sp_std::convert::From;
 use xcm::v3::{prelude::*, MultiAssets, SendXcm};
@@ -169,15 +173,24 @@ impl SendXcm for MockXcmSender {
 	}
 }
 
+parameter_types! {
+	pub const OwnParaId: ParaId = ParaId::new(1013);
+	pub Parameters: PricingParameters<u128> = PricingParameters {
+		exchange_rate: FixedU128::from_rational(1, 400),
+		fee_per_gas: gwei(20),
+		rewards: Rewards { local: 1 * DOT, remote: meth(1) }
+	};
+}
+
+pub const DOT: u128 = 10_000_000_000;
+
 pub struct MockChannelLookup;
-impl ChannelLookup for MockChannelLookup {
-	fn lookup(channel_id: ChannelId) -> Option<Channel> {
-		if channel_id !=
-			hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539").into()
-		{
-			return None
-		}
-		Some(Channel { agent_id: H256::zero().into(), para_id: 1000.into() })
+impl StaticLookup for MockChannelLookup {
+	type Source = ChannelId;
+	type Target = Channel;
+
+	fn lookup(_: Self::Source) -> Option<Self::Target> {
+		Some(Channel { agent_id: H256::zero().into(), para_id: Default::default() })
 	}
 }
 
@@ -185,7 +198,6 @@ impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
 	type Token = Balances;
-	type Reward = ConstU128<100>;
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
@@ -193,10 +205,10 @@ impl inbound_queue::Config for Test {
 		CreateAssetCall,
 		CreateAssetExecutionFee,
 		CreateAssetDeposit,
-		SendTokenExecutionFee,
 		AccountId,
 		Balance,
 	>;
+	type PricingParameters = Parameters;
 	type ChannelLookup = MockChannelLookup;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;

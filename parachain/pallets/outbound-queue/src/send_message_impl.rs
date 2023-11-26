@@ -54,7 +54,8 @@ where
 			.id
 			.unwrap_or_else(|| unique((message.channel_id, &message.command)).into());
 
-		let fee = Self::calculate_fee(&message.command);
+		let gas_used_at_most = T::GasMeter::maximum_gas_used_at_most(&message.command);
+		let fee = Self::calculate_fee(gas_used_at_most, T::PricingParameters::get());
 
 		let queued_message: VersionedQueuedMessage = QueuedMessage {
 			id: message_id,

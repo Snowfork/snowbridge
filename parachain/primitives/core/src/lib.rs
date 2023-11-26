@@ -11,12 +11,14 @@ mod tests;
 pub mod inbound;
 pub mod operating_mode;
 pub mod outbound;
+pub mod pricing;
 pub mod ringbuffer;
 
 pub use polkadot_parachain_primitives::primitives::{
 	Id as ParaId, IsSystem, Sibling as SiblingParaId,
 };
 pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
+pub use sp_core::U256;
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::traits::Contains;
@@ -31,6 +33,8 @@ use xcm::prelude::{Junction::Parachain, Junctions::X1, MultiLocation};
 /// The ID of an agent contract
 pub type AgentId = H256;
 pub use operating_mode::BasicOperatingMode;
+
+pub use pricing::{PricingParameters, Rewards};
 
 pub fn sibling_sovereign_account<T>(para_id: ParaId) -> T::AccountId
 where
@@ -50,9 +54,19 @@ impl Contains<MultiLocation> for AllowSiblingsOnly {
 	}
 }
 
-pub const GWEI: u128 = 1_000_000_000;
-pub const METH: u128 = 1_000_000_000_000_000;
-pub const ETH: u128 = 1_000_000_000_000_000_000;
+pub fn gwei(x: u128) -> U256 {
+	U256::from(1_000_000_000u128).saturating_mul(x.into())
+}
+
+pub fn meth(x: u128) -> U256 {
+	U256::from(1_000_000_000_000_000u128).saturating_mul(x.into())
+}
+
+pub fn eth(x: u128) -> U256 {
+	U256::from(1_000_000_000_000_000_000u128).saturating_mul(x.into())
+}
+
+pub const ROC: u128 = 1_000_000_000_000;
 
 /// Identifier for a message channel
 #[derive(
@@ -123,8 +137,13 @@ pub struct Channel {
 	pub para_id: ParaId,
 }
 
-pub trait ChannelLookup {
-	fn lookup(channel_id: ChannelId) -> Option<Channel>;
+pub trait StaticLookup {
+	/// Type to lookup from.
+	type Source;
+	/// Type to lookup into.
+	type Target;
+	/// Attempt a lookup.
+	fn lookup(s: Self::Source) -> Option<Self::Target>;
 }
 
 /// Channel for high-priority governance commands

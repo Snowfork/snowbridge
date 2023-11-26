@@ -40,7 +40,6 @@ interface IGateway {
 
     function operatingMode() external view returns (OperatingMode);
     function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
-    function channelFeeOf(ChannelID channelID) external view returns (uint256);
     function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
     function agentOf(bytes32 agentID) external view returns (address);
     function implementation() external view returns (address);
@@ -61,7 +60,7 @@ interface IGateway {
      */
 
     // @dev Emitted when the fees updated
-    event TokenTransferFeesChanged(uint256 register, uint256 send);
+    event TokenTransferFeesChanged();
 
     /// @dev Emitted once the funds are locked and an outbound message is successfully queued.
     event TokenSent(
@@ -78,7 +77,7 @@ interface IGateway {
     /// @dev Fee schedule in Ether for registering a token, covering
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM Execution costs on AssetHub
-    function registerTokenFee() external view returns (Fee memory);
+    function registerTokenFee() external view returns (uint256);
 
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset
     ///      in the `ForeignAssets` pallet.
@@ -90,7 +89,7 @@ interface IGateway {
     function sendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
         external
         view
-        returns (Fee memory);
+        returns (uint256);
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
     function sendToken(

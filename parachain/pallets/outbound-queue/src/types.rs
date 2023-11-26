@@ -4,7 +4,7 @@ use frame_support::traits::ProcessMessage;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_arithmetic::FixedU128;
-use sp_core::H256;
+use sp_core::{H256, U256};
 use sp_runtime::{traits::Zero, RuntimeDebug};
 use sp_std::prelude::*;
 
@@ -23,16 +23,20 @@ pub struct CommittedMessage {
 	/// Message channel
 	pub channel_id: ChannelId,
 	/// Unique nonce to prevent replaying messages
+	#[codec(compact)]
 	pub nonce: u64,
 	/// Command to execute in the Gateway contract
 	pub command: u8,
 	/// Params for the command
 	pub params: Vec<u8>,
 	/// Maximum gas allowed for message dispatch
-	pub max_dispatch_gas: u128,
+	#[codec(compact)]
+	pub max_dispatch_gas: u64,
 	/// Maximum gas refund for message relayer
+	#[codec(compact)]
 	pub max_refund: u128,
 	/// Reward in ether for delivering this message, in addition to the gas refund
+	#[codec(compact)]
 	pub reward: u128,
 	/// Message ID (Used for tracing messages across route, has no role in consensus)
 	pub id: H256,

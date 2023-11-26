@@ -47,10 +47,6 @@ struct Channel {
     uint64 outboundNonce;
     /// @dev The address of the agent of the parachain owning this channel
     address agent;
-    /// @dev The DOT fee charged to users for submitting outbound messages
-    uint256 fee;
-    /// @dev The ETH/DOT exchange rate
-    UD60x18 exchangeRate;
 }
 
 /// @dev Inbound message from a Polkadot parachain (via BridgeHub)
@@ -101,4 +97,14 @@ struct Fee {
 
 function total(Fee memory fee) pure returns (uint256) {
     return fee.bridge + fee.xcm;
+}
+
+struct Cost {
+    uint256 remote;
+    uint256 local;
+}
+
+struct Ticket {
+    Cost cost;
+    bytes payload;
 }

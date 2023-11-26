@@ -22,10 +22,6 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return OperatingMode.Normal;
     }
 
-    function channelFeeOf(ChannelID) external pure returns (uint256) {
-        return 0;
-    }
-
     function channelNoncesOf(ChannelID) external pure returns (uint64, uint64) {
         return (0, 0);
     }
@@ -40,14 +36,14 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
 
     function submitInbound(InboundMessage calldata, bytes32[] calldata, Verification.Proof calldata) external {}
 
-    function registerTokenFee() external pure returns (Fee memory) {
-        return Fee(1, 1);
+    function registerTokenFee() external pure returns (uint256) {
+        return 1;
     }
 
     function registerToken(address) external payable {}
 
-    function sendTokenFee(address, ParaID, uint128) external pure returns (Fee memory) {
-        return Fee(1, 1);
+    function sendTokenFee(address, ParaID, uint128) external pure returns (uint256) {
+        return 1;
     }
 
     function sendToken(address, ParaID, MultiAddress calldata, uint128, uint128) external payable {}

@@ -4,8 +4,13 @@ pragma solidity 0.8.22;
 
 library AssetsStorage {
     struct Layout {
-        uint128 registerTokenFee;
-        uint128 sendTokenFee;
+        // XCM fee charged by AssetHub for registering a token (DOT)
+        uint128 assetHubCreateAssetFee;
+        // XCM fee charged by AssetHub for receiving a token from the Gateway (DOT)
+        uint128 assetHubReserveTransferFee;
+        // Extra fee for registering a token, to discourage spamming (Ether)
+        uint256 registerTokenFee;
+
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");

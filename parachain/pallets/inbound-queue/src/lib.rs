@@ -57,7 +57,7 @@ use xcm::prelude::{
 
 use snowbridge_core::{
 	inbound::{Message, VerificationError, Verifier},
-	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ChannelLookup, ParaId,
+	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ParaId, StaticLookup,
 };
 use snowbridge_router_primitives::{
 	inbound,
@@ -81,6 +81,7 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use snowbridge_core::PricingParameters;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -100,10 +101,6 @@ pub mod pallet {
 		/// Message relayers are rewarded with this asset
 		type Token: Mutate<Self::AccountId>;
 
-		/// The amount to reward message relayers
-		#[pallet::constant]
-		type Reward: Get<BalanceOf<Self>>;
-
 		/// XCM message sender
 		type XcmSender: SendXcm;
 
@@ -117,7 +114,9 @@ pub mod pallet {
 			Balance = BalanceOf<Self>,
 		>;
 
-		type ChannelLookup: ChannelLookup;
+		type ChannelLookup: StaticLookup<Source = ChannelId, Target = Channel>;
+
+		type PricingParameters: Get<PricingParameters<BalanceOf<Self>>>;
 
 		type WeightInfo: WeightInfo;
 
@@ -230,7 +229,7 @@ pub mod pallet {
 			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway);
 
 			// Retrieve the registered channel for this message
-			let channel: Channel =
+			let channel =
 				T::ChannelLookup::lookup(envelope.channel_id).ok_or(Error::<T>::InvalidChannel)?;
 
 			// Verify message nonce
@@ -246,6 +245,8 @@ pub mod pallet {
 				}
 			})?;
 
+			let pricing_parameters = T::PricingParameters::get();
+
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
 			let sovereign_account = sibling_sovereign_account::<T>(channel.para_id);
@@ -253,7 +254,7 @@ pub mod pallet {
 			T::Token::transfer(
 				&sovereign_account,
 				&who,
-				refund.saturating_add(T::Reward::get()),
+				refund.saturating_add(pricing_parameters.rewards.local),
 				Preservation::Preserve,
 			)?;
 

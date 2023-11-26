@@ -30,7 +30,7 @@ impl<T: Into<QueuedMessage>> From<T> for VersionedQueuedMessage {
 }
 
 mod v1 {
-	use crate::ChannelId;
+	use crate::{pricing::UD60x18, ChannelId};
 	use codec::{Decode, Encode};
 	use ethabi::Token;
 	use scale_info::TypeInfo;
@@ -94,8 +94,6 @@ mod v1 {
 			agent_id: H256,
 			/// Initial operating mode
 			mode: OperatingMode,
-			/// The fee to charge users for outbound messaging to Polkadot
-			outbound_fee: u128,
 		},
 		/// Update the configuration of a channel
 		UpdateChannel {
@@ -103,8 +101,6 @@ mod v1 {
 			channel_id: ChannelId,
 			/// The new operating mode
 			mode: OperatingMode,
-			/// The new fee to charge users for outbound messaging to Polkadot
-			outbound_fee: u128,
 		},
 		/// Set the global operating mode of the Gateway contract
 		SetOperatingMode {
@@ -127,6 +123,13 @@ mod v1 {
 			/// The fee for send token to para chain
 			send: u128,
 		},
+		/// Set pricing parameters
+		SetPricingParameters {
+			// relative ETH value
+			exchange_rate: UD60x18,
+			// Cost of delivering a message from Ethereum to BridgeHub, in ROC/KSM/DOT
+			delivery_cost: u128,
+		},
 	}
 
 	impl Command {
@@ -141,6 +144,7 @@ mod v1 {
 				Command::SetOperatingMode { .. } => 5,
 				Command::TransferNativeFromAgent { .. } => 6,
 				Command::SetTokenTransferFees { .. } => 7,
+				Command::SetPricingParameters { .. } => 8,
 			}
 		}
 
@@ -164,18 +168,16 @@ mod v1 {
 					ethabi::encode(&[Token::Tuple(vec![Token::FixedBytes(
 						agent_id.as_bytes().to_owned(),
 					)])]),
-				Command::CreateChannel { channel_id, agent_id, mode, outbound_fee } =>
+				Command::CreateChannel { channel_id, agent_id, mode } =>
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(channel_id.as_ref().to_owned()),
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 						Token::Uint(U256::from((*mode) as u64)),
-						Token::Uint(U256::from(*outbound_fee)),
 					])]),
-				Command::UpdateChannel { channel_id, mode, outbound_fee } =>
+				Command::UpdateChannel { channel_id, mode } =>
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(channel_id.as_ref().to_owned()),
 						Token::Uint(U256::from((*mode) as u64)),
-						Token::Uint(U256::from(*outbound_fee)),
 					])]),
 				Command::SetOperatingMode { mode } =>
 					ethabi::encode(&[Token::Tuple(vec![Token::Uint(U256::from((*mode) as u64))])]),
@@ -189,6 +191,11 @@ mod v1 {
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::Uint(U256::from(*register)),
 						Token::Uint(U256::from(*send)),
+					])]),
+				Command::SetPricingParameters { exchange_rate, delivery_cost } =>
+					ethabi::encode(&[Token::Tuple(vec![
+						Token::Uint(exchange_rate.clone().into_inner()),
+						Token::Uint(U256::from(*delivery_cost)),
 					])]),
 			}
 		}
@@ -319,6 +326,8 @@ pub enum SendError {
 	MessageTooLarge,
 	/// The bridge has been halted for maintenance
 	Halted,
+	/// Invalid Channel
+	InvalidChannel,
 }
 
 pub trait GasMeter {
@@ -326,9 +335,13 @@ pub trait GasMeter {
 	/// the command within the message
 	const MAXIMUM_BASE_GAS: u64;
 
-	/// Measures the maximum amount of gas a command will require to dispatch. Does not include the
-	/// base cost of message submission.
-	fn maximum_required(command: &Command) -> u64;
+	fn maximum_gas_used_at_most(command: &Command) -> u64 {
+		Self::MAXIMUM_BASE_GAS + Self::maximum_dispatch_gas_used_at_most(command)
+	}
+
+	/// Measures the maximum amount of gas a command payload will require to dispatch, AFTER
+	/// validation & verification.
+	fn maximum_dispatch_gas_used_at_most(command: &Command) -> u64;
 }
 
 /// A meter that assigns a constant amount of gas for the execution of a command
@@ -344,7 +357,7 @@ pub struct ConstantGasMeter;
 impl GasMeter for ConstantGasMeter {
 	const MAXIMUM_BASE_GAS: u64 = 125_000;
 
-	fn maximum_required(command: &Command) -> u64 {
+	fn maximum_dispatch_gas_used_at_most(command: &Command) -> u64 {
 		match command {
 			Command::CreateAgent { .. } => 275_000,
 			Command::CreateChannel { .. } => 100_000,
@@ -370,6 +383,7 @@ impl GasMeter for ConstantGasMeter {
 				50_000 + initializer_max_gas
 			},
 			Command::SetTokenTransferFees { .. } => 60_000,
+			Command::SetPricingParameters { .. } => 60_000,
 		}
 	}
 }
@@ -377,7 +391,7 @@ impl GasMeter for ConstantGasMeter {
 impl GasMeter for () {
 	const MAXIMUM_BASE_GAS: u64 = 1;
 
-	fn maximum_required(_: &Command) -> u64 {
+	fn maximum_dispatch_gas_used_at_most(_: &Command) -> u64 {
 		1
 	}
 }
