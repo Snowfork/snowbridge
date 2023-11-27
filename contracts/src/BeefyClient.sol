@@ -539,13 +539,10 @@ contract BeefyClient {
     }
 
     function encodeCommitmentPayload(PayloadItem[] calldata items) internal pure returns (bytes memory) {
-        bytes memory payload = ScaleCodec.checkedEncodeCompactU32(uint32(items.length));
+        bytes memory payload = ScaleCodec.checkedEncodeCompactU32(items.length);
         for (uint256 i = 0; i < items.length; i++) {
             payload = bytes.concat(
-                payload,
-                items[i].payloadID,
-                ScaleCodec.checkedEncodeCompactU32(uint32(items[i].data.length)),
-                items[i].data
+                payload, items[i].payloadID, ScaleCodec.checkedEncodeCompactU32(items[i].data.length), items[i].data
             );
         }
 
