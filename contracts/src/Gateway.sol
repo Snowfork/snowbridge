@@ -336,11 +336,6 @@ contract Gateway is IGateway, IInitializable {
         ChannelID channelID;
         /// @dev The new operating mode
         OperatingMode mode;
-        /// @dev The new fee in DOT for accepting outbound messages
-        uint128 fee;
-        /// @dev The new ETH/DOT exchange rate
-        uint128 exchangeRateNumerator;
-        uint128 exchangeRateDenominator;
     }
 
     /// @dev Update the configuration for a channel
