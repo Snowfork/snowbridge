@@ -41,7 +41,7 @@ async fn transfer_native_from_agent() {
 	)
 	.await;
 
-	let result = send_xcm_transact(&test_clients.template_client, message)
+	let result = send_sudo_xcm_transact(&test_clients.penpal_client, message)
 		.await
 		.expect("failed to send xcm transact.");
 
