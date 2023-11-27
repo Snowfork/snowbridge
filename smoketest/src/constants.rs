@@ -10,7 +10,7 @@ pub const ETHEREUM_HTTP_API: &str = "http://localhost:8545";
 
 pub const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
 pub const BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
-pub const PENPAL_WS_URL: &str = "ws://127.0.0.1:14144";
+pub const PENPAL_WS_URL: &str = "ws://127.0.0.1:13144";
 pub const RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
 pub const TEMPLATE_NODE_WS_URL: &str = "ws://127.0.0.1:13144";
 

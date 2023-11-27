@@ -81,7 +81,7 @@ cumulus_based = true
     validator = true
     command = "{{output_bin_dir}}/polkadot-parachain"
     rpc_port = 8084
-    ws_port = 14144
+    ws_port = 13144
     args = [
         "--force-authoring",
         "-lxcm=trace,runtime::assets=trace",
