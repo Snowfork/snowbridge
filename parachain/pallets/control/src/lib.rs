@@ -55,8 +55,8 @@ pub use weights::*;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
-		fungible::Mutate,
-		tokens::{Balance, Preservation},
+		fungible::{Inspect, Mutate},
+		tokens::Preservation,
 		EnsureOrigin,
 	},
 };
@@ -69,7 +69,7 @@ use snowbridge_core::{
 };
 use sp_core::{RuntimeDebug, H160, H256};
 use sp_io::hashing::blake2_256;
-use sp_runtime::{traits::BadOrigin, DispatchError};
+use sp_runtime::{traits::BadOrigin, DispatchError, SaturatedConversion};
 use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
@@ -79,7 +79,8 @@ use frame_support::traits::OriginTrait;
 
 pub use pallet::*;
 
-pub type BalanceOf<T> = <T as pallet::Config>::Balance;
+pub type BalanceOf<T> =
+	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type PricingParametersOf<T> = PricingParametersRecord<BalanceOf<T>>;
 
@@ -146,8 +147,6 @@ pub mod pallet {
 		/// Converts MultiLocation to AgentId
 		type AgentIdOf: ConvertLocation<AgentId>;
 
-		type Balance: Balance + Into<u128>;
-
 		/// Token reserved for control operations
 		type Token: Mutate<Self::AccountId>;
 
@@ -159,6 +158,7 @@ pub mod pallet {
 		type DefaultPricingParameters: Get<PricingParametersOf<Self>>;
 
 		/// Cost of delivering a message from Ethereum
+		/// Todo: Remove with a dynamic read from inbound queue
 		type InboundDeliveryCost: Get<BalanceOf<Self>>;
 
 		type WeightInfo: WeightInfo;
@@ -347,7 +347,7 @@ pub mod pallet {
 
 			let command = Command::SetPricingParameters {
 				exchange_rate: params.exchange_rate.into(),
-				delivery_cost: T::InboundDeliveryCost::get().into(),
+				delivery_cost: T::InboundDeliveryCost::get().saturated_into::<u128>(),
 			};
 			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
 

@@ -10,7 +10,6 @@ library AssetsStorage {
         uint128 assetHubReserveTransferFee;
         // Extra fee for registering a token, to discourage spamming (Ether)
         uint256 registerTokenFee;
-
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");

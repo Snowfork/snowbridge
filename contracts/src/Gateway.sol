@@ -8,7 +8,17 @@ import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {Channel, ChannelID, InboundMessage, OperatingMode, ParaID, Command, MultiAddress, Ticket, Costs} from "./Types.sol";
+import {
+    Channel,
+    ChannelID,
+    InboundMessage,
+    OperatingMode,
+    ParaID,
+    Command,
+    MultiAddress,
+    Ticket,
+    Costs
+} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -455,11 +465,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Total fee for sending a token
-    function sendTokenFee(address, ParaID destinationChain, uint128 destinationFee)
-        external
-        view
-        returns (uint256)
-    {
+    function sendTokenFee(address, ParaID destinationChain, uint128 destinationFee) external view returns (uint256) {
         Costs memory costs = Assets.sendTokenCosts(ASSET_HUB_PARA_ID, destinationChain, destinationFee);
         return _calculateFee(costs);
     }
@@ -626,32 +632,20 @@ contract Gateway is IGateway, IInitializable {
         core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
 
         // Initialize channel for primary governance track
-        core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] = Channel({
-            mode: OperatingMode.Normal,
-            agent: bridgeHubAgent,
-            inboundNonce: 0,
-            outboundNonce: 0
-        });
+        core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] =
+            Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
 
         // Initialize channel for secondary governance track
-        core.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] = Channel({
-            mode: OperatingMode.Normal,
-            agent: bridgeHubAgent,
-            inboundNonce: 0,
-            outboundNonce: 0
-        });
+        core.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] =
+            Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
 
         // Initialize agent for for AssetHub
         address assetHubAgent = address(new Agent(ASSET_HUB_AGENT_ID));
         core.agents[ASSET_HUB_AGENT_ID] = assetHubAgent;
 
         // Initialize channel for AssetHub
-        core.channels[ASSET_HUB_PARA_ID.into()] = Channel({
-            mode: OperatingMode.Normal,
-            agent: assetHubAgent,
-            inboundNonce: 0,
-            outboundNonce: 0
-        });
+        core.channels[ASSET_HUB_PARA_ID.into()] =
+            Channel({mode: OperatingMode.Normal, agent: assetHubAgent, inboundNonce: 0, outboundNonce: 0});
 
         // Initialize pricing storage
         PricingStorage.Layout storage pricing = PricingStorage.layout();
@@ -662,6 +656,6 @@ contract Gateway is IGateway, IInitializable {
         AssetsStorage.Layout storage assets = AssetsStorage.layout();
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubAssetCreationFee = config.assetHubAssetCreationFee;
-        assets.assetHubReserveTransferFee =  config.assetHubReserveTransferFee;
+        assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
     }
 }

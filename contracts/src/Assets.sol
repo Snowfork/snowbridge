@@ -110,7 +110,6 @@ library Assets {
         emit IGateway.TokenSent(sender, token, destinationChain, destinationAddress, amount);
     }
 
-
     function registerTokenCosts() external view returns (Costs memory costs) {
         return _registerTokenCosts();
     }

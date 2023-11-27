@@ -13,21 +13,18 @@
 //! The message submission pipeline works like this:
 //! 1. The message is first validated via the implementation for
 //!    [`snowbridge_core::outbound::SendMessage::validate`]
-//! 2. The message is then enqueued for later processing via the implementation
-//!    for [`snowbridge_core::outbound::SendMessage::deliver`]
+//! 2. The message is then enqueued for later processing via the implementation for
+//!    [`snowbridge_core::outbound::SendMessage::deliver`]
 //! 3. The underlying message queue is implemented by [`Config::MessageQueue`]
-//! 4. The message queue delivers messages back to this pallet via
-//!    the implementation for [`frame_support::traits::ProcessMessage::process_message`]
-//! 5. The message is processed in `Pallet::do_process_message`:
-//!    a. Assigned a nonce
-//!    b. ABI-encoded, hashed, and stored in the `MessageLeaves` vector
-//! 6. At the end of the block, a merkle root is constructed from all the
-//!    leaves in `MessageLeaves`.
+//! 4. The message queue delivers messages back to this pallet via the implementation for
+//!    [`frame_support::traits::ProcessMessage::process_message`]
+//! 5. The message is processed in `Pallet::do_process_message`: a. Assigned a nonce b. ABI-encoded,
+//!    hashed, and stored in the `MessageLeaves` vector
+//! 6. At the end of the block, a merkle root is constructed from all the leaves in `MessageLeaves`.
 //! 7. This merkle root is inserted into the parachain header as a digest item
-//! 8. Offchain relayers are able to relay the message to Ethereum after:
-//!    a. Generating a merkle proof for the committed message using the `prove_message`
-//!       runtime API
-//!    b. Reading the actual message content from the `Messages` vector in storage
+//! 8. Offchain relayers are able to relay the message to Ethereum after: a. Generating a merkle
+//!    proof for the committed message using the `prove_message` runtime API b. Reading the actual
+//!    message content from the `Messages` vector in storage
 //!
 //! On the Ethereum side, the message root is ultimately the thing being
 //! verified by the Polkadot light client.
@@ -103,7 +100,6 @@ use frame_support::{
 	weights::{Weight, WeightToFee},
 };
 use snowbridge_core::{
-	gwei, meth,
 	outbound::{Command, Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
 	BasicOperatingMode, ChannelId,
 };

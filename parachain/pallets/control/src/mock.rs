@@ -204,6 +204,7 @@ parameter_types! {
 		fee_per_gas: gwei(20),
 		rewards: Rewards { local: 1 * DOT, remote: meth(1) }
 	};
+	pub const InboundDeliveryCost: u128 = 1_000_000_000;
 
 }
 
@@ -223,6 +224,7 @@ impl crate::Config for Test {
 	type Token = Balances;
 	type DefaultPricingParameters = Parameters;
 	type WeightInfo = ();
+	type InboundDeliveryCost = InboundDeliveryCost;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
 }

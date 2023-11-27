@@ -4,7 +4,7 @@ use frame_support::traits::ProcessMessage;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_arithmetic::FixedU128;
-use sp_core::{H256, U256};
+use sp_core::H256;
 use sp_runtime::{traits::Zero, RuntimeDebug};
 use sp_std::prelude::*;
 
