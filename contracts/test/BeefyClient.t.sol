@@ -737,7 +737,7 @@ contract BeefyClientTest is Test {
     function testFuzzInitializationValidation(uint128 currentId, uint128 nextId) public {
         vm.assume(currentId < type(uint128).max);
         vm.assume(currentId + 1 != nextId);
-        vm.expectRevert("Invalid validator set data.");
+        vm.expectRevert("invalid-constructor-params");
         new BeefyClient(
             randaoCommitDelay,
             randaoCommitExpiration,
