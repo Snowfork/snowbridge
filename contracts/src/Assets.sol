@@ -73,7 +73,7 @@ library Assets {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         _transferToAgent(assetHubAgent, token, sender, amount);
-        ticket.cost = _sendTokenCosts(assetHubParaID, destinationChain, destinationChainFee);
+        ticket.costs = _sendTokenCosts(assetHubParaID, destinationChain, destinationChainFee);
 
         if (destinationChain == assetHubParaID) {
             if (destinationAddress.isAddress32()) {
@@ -129,7 +129,7 @@ library Assets {
             revert InvalidToken();
         }
 
-        ticket.cost = _registerTokenCosts();
+        ticket.costs = _registerTokenCosts();
         ticket.payload = SubstrateTypes.RegisterToken(token);
 
         emit IGateway.TokenRegistrationSent(token);
