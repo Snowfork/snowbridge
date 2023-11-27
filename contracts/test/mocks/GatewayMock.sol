@@ -80,10 +80,6 @@ contract GatewayMock is Gateway {
     function setTokenTransferFeesPublic(bytes calldata params) external {
         this.setTokenTransferFees(params);
     }
-
-    function calculateLocalFeePublic(UD60x18 exchangeRate, uint256 remoteFee) external pure returns (uint256) {
-        return calculateLocalFee(exchangeRate, remoteFee);
-    }
 }
 
 library AdditionalStorage {

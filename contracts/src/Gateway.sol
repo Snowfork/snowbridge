@@ -508,9 +508,9 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Convert foreign currency to native currency (ROC/KSM/DOT -> ETH)
-    function _convertToNative(UD60x18 exchangeRate, uint256 amount) internal pure returns (uint256) {
+    function _convertToNative(UD60x18 exchangeRate, uint256 amount) internal view returns (uint256) {
         UD60x18 amountFP = convert(amount);
-        UD60x18 nativeAmountFP = amountFP.mul(exchangeRate).mul(convert(DOT_TO_ETH_DECIMALS));
+        UD60x18 nativeAmountFP = amountFP.mul(exchangeRate).mul(DOT_TO_ETH_DECIMALS);
         uint256 nativeAmount = convert(nativeAmountFP);
         return nativeAmount;
     }
@@ -525,7 +525,6 @@ contract Gateway is IGateway, IInitializable {
     function _submitOutbound(ParaID dest, Ticket memory ticket) internal {
         ChannelID channelID = dest.into();
         Channel storage channel = _ensureChannel(channelID);
-        PricingStorage.Layout storage pricing = PricingStorage.layout();
 
         // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled(channel);
@@ -655,7 +654,7 @@ contract Gateway is IGateway, IInitializable {
         // Initialize assets storage
         AssetsStorage.Layout storage assets = AssetsStorage.layout();
         assets.registerTokenFee = config.registerTokenFee;
-        assets.assetHubAssetCreationFee = config.assetHubAssetCreationFee;
+        assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
     }
 }

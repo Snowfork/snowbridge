@@ -73,7 +73,7 @@ library Assets {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         _transferToAgent(assetHubAgent, token, sender, amount);
-        ticket.cost = _sendTokenCosts(assetHubParaID, destinationChain, destinationChainFee);
+        ticket.costs = _sendTokenCosts(assetHubParaID, destinationChain, destinationChainFee);
 
         if (destinationChain == assetHubParaID) {
             if (destinationAddress.isAddress32()) {
@@ -123,13 +123,11 @@ library Assets {
     /// @dev Enqueues a create native token message to substrate.
     /// @param token The ERC20 token address.
     function registerToken(address token) external returns (Ticket memory ticket) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-
         if (!token.isContract()) {
             revert InvalidToken();
         }
 
-        ticket.cost = _registerTokenCosts();
+        ticket.costs = _registerTokenCosts();
         ticket.payload = SubstrateTypes.RegisterToken(token);
 
         emit IGateway.TokenRegistrationSent(token);

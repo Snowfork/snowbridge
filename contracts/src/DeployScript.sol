@@ -84,7 +84,8 @@ contract DeployScript is Script {
             mode: defaultOperatingMode,
             deliveryCost: uint128(vm.envUint("DEFAULT_FEE")),
             registerTokenFee: uint128(vm.envUint("REGISTER_NATIVE_TOKEN_FEE")),
-            sendTokenFee: uint128(vm.envUint("SEND_NATIVE_TOKEN_FEE")),
+            assetHubCreateAssetFee: uint128(vm.envUint("SEND_NATIVE_TOKEN_FEE")),
+            assetHubReserveTransferFee: uint128(vm.envUint("SEND_NATIVE_TOKEN_FEE")),
             exchangeRate: ud60x18(0.0025e18)
         });
 
