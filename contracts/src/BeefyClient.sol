@@ -199,7 +199,6 @@ contract BeefyClient {
     error InvalidSignature();
     error InvalidTicket();
     error InvalidValidatorProof();
-    error InvalidValidatorProofLength();
     error CommitmentNotRelevant();
     error NotEnoughClaims();
     error PrevRandaoAlreadyCaptured();
@@ -217,7 +216,7 @@ contract BeefyClient {
         ValidatorSet memory _nextValidatorSet
     ) {
         if (_nextValidatorSet.id != _initialValidatorSet.id + 1) {
-            revert InvalidValidatorSetData();
+            revert("Invalid validator set data.");
         }
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
