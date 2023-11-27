@@ -3,7 +3,7 @@
 pragma solidity 0.8.22;
 
 import {
-    Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress, Fee
+    Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress
 } from "../../src/Types.sol";
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";

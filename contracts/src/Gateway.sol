@@ -8,7 +8,7 @@ import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {Channel, ChannelID, InboundMessage, OperatingMode, ParaID, Command, MultiAddress, Ticket, Cost} from "./Types.sol";
+import {Channel, ChannelID, InboundMessage, OperatingMode, ParaID, Command, MultiAddress, Ticket, Costs} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -444,15 +444,14 @@ contract Gateway is IGateway, IInitializable {
 
     // Total fee for registering a token
     function registerTokenFee() external view returns (uint256) {
-        Cost memory cost = Assets.registerTokenCosts();
-        return _calculateFee(cost);
+        Costs memory costs = Assets.registerTokenCosts();
+        return _calculateFee(costs);
     }
 
     // Register a token on AssetHub
     function registerToken(address token) external payable {
-        (bytes memory payload, uint128 extraCosts) = Assets.registerToken(token);
-
-        _submitOutbound(ASSET_HUB_PARA_ID, payload, extraCosts);
+        Ticket memory ticket = Assets.registerToken(token);
+        _submitOutbound(ASSET_HUB_PARA_ID, ticket);
     }
 
     // Total fee for sending a token
@@ -461,8 +460,8 @@ contract Gateway is IGateway, IInitializable {
         view
         returns (uint256)
     {
-        Cost memory cost = Assets.sendTokenFee(ASSET_HUB_PARA_ID, destinationChain, destinationFee);
-        return _calculateFee(cost);
+        Costs memory costs = Assets.sendTokenCosts(ASSET_HUB_PARA_ID, destinationChain, destinationFee);
+        return _calculateFee(costs);
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
@@ -502,8 +501,8 @@ contract Gateway is IGateway, IInitializable {
         return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
     }
 
-    // Convert ROC/KSM/DOT to ETH
-    function _convertToNative(UD60x18 exchangeRate, uint128 amount) internal pure returns (uint256) {
+    // Convert foreign currency to native currency (ROC/KSM/DOT -> ETH)
+    function _convertToNative(UD60x18 exchangeRate, uint256 amount) internal pure returns (uint256) {
         UD60x18 amountFP = convert(amount);
         UD60x18 nativeAmountFP = amountFP.mul(exchangeRate).mul(convert(DOT_TO_ETH_DECIMALS));
         uint256 nativeAmount = convert(nativeAmountFP);
@@ -511,9 +510,9 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Calculate the fee for accepting an outbound message
-    function _calculateFee(Cost memory cost) internal view returns (uint256) {
+    function _calculateFee(Costs memory costs) internal view returns (uint256) {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
-        return _convertToNative(pricing.exchangeRate, pricing.deliveryCost + cost.remote) + cost.local;
+        return costs.native + _convertToNative(pricing.exchangeRate, pricing.deliveryCost + costs.foreign);
     }
 
     // Submit an outbound message to Polkadot
@@ -525,7 +524,7 @@ contract Gateway is IGateway, IInitializable {
         // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled(channel);
 
-        uint256 fee = _calculateFee(ticket.cost);
+        uint256 fee = _calculateFee(ticket.costs);
 
         // Ensure the user has enough funds for this message to be accepted
         if (msg.value < fee) {

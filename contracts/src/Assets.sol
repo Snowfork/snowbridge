@@ -9,7 +9,7 @@ import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
 
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
-import {ParaID, MultiAddress, Ticket, Cost} from "./Types.sol";
+import {ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
@@ -39,7 +39,7 @@ library Assets {
     function sendTokenCosts(ParaID assetHubParaID, ParaID destinationChain, uint128 destinationChainFee)
         external
         view
-        returns (Cost memory costs)
+        returns (Costs memory costs)
     {
         return _sendTokenCosts(assetHubParaID, destinationChain, destinationChainFee);
     }
@@ -47,17 +47,17 @@ library Assets {
     function _sendTokenCosts(ParaID assetHubParaID, ParaID destinationChain, uint128 destinationChainFee)
         internal
         view
-        returns (Cost memory cost)
+        returns (Costs memory costs)
     {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if (assetHubParaID == destinationChain) {
-            cost.remote = $.assetHubReserveTransferFee;
+            costs.foreign = $.assetHubReserveTransferFee;
         } else {
             // If the final destination chain is not AssetHub, then the fee needs to additionally
             // include the cost of executing an XCM on the final destination parachain.
-            cost.remote = $.assetHubReserveTransferFee + destinationChainFee;
+            costs.foreign = $.assetHubReserveTransferFee + destinationChainFee;
         }
-        cost.local = 0;
+        costs.native = 0;
     }
 
     function sendToken(
@@ -111,14 +111,14 @@ library Assets {
     }
 
 
-    function registerTokenCosts() external view returns (Cost memory costs) {
+    function registerTokenCosts() external view returns (Costs memory costs) {
         return _registerTokenCosts();
     }
 
-    function _registerTokenCosts() internal view returns (Cost memory costs) {
+    function _registerTokenCosts() internal view returns (Costs memory costs) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        costs.remote = $.assetHubCreateAssetFee;
-        costs.local = $.registerTokenFee;
+        costs.foreign = $.assetHubCreateAssetFee;
+        costs.native = $.registerTokenFee;
     }
 
     /// @dev Enqueues a create native token message to substrate.

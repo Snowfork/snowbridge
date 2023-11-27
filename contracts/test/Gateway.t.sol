@@ -10,7 +10,6 @@ import {BeefyClient} from "../src/BeefyClient.sol";
 import {IGateway} from "../src/interfaces/IGateway.sol";
 import {IInitializable} from "../src/interfaces/IInitializable.sol";
 import {Gateway} from "../src/Gateway.sol";
-import {Fee} from "../src/Types.sol";
 import {GatewayMock, GatewayV2} from "./mocks/GatewayMock.sol";
 
 import {GatewayProxy} from "../src/GatewayProxy.sol";

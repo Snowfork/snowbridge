@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.22;
 
-import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress, Fee} from "../Types.sol";
+import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 
 interface IGateway {
@@ -66,7 +66,7 @@ interface IGateway {
     event TokenSent(
         address indexed token,
         address indexed sender,
-        ParaID destinationChain,
+        ParaID indexed destinationChain,
         MultiAddress destinationAddress,
         uint128 amount
     );

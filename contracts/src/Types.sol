@@ -88,23 +88,15 @@ enum Command {
 
 enum AgentExecuteCommand {TransferToken}
 
-using {total} for Fee global;
-
-struct Fee {
-    uint256 bridge;
-    uint256 xcm;
-}
-
-function total(Fee memory fee) pure returns (uint256) {
-    return fee.bridge + fee.xcm;
-}
-
-struct Cost {
-    uint256 remote;
-    uint256 local;
+/// @dev Application-level costs for a message
+struct Costs {
+    /// @dev Costs in foreign currency
+    uint256 foreign;
+    /// @dev Costs in native currency
+    uint256 native;
 }
 
 struct Ticket {
-    Cost cost;
+    Costs costs;
     bytes payload;
 }
