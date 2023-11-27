@@ -423,10 +423,7 @@ contract GatewayTest is Test {
         bytes memory params = abi.encode(
             Gateway.UpdateChannelParams({
                 channelID: assetHubParaID.into(),
-                mode: OperatingMode.RejectingOutboundMessages,
-                fee: outboundFee * 1,
-                exchangeRateNumerator: 1,
-                exchangeRateDenominator: 800
+                mode: OperatingMode.RejectingOutboundMessages
             })
         );
 
@@ -443,10 +440,7 @@ contract GatewayTest is Test {
         bytes memory params = abi.encode(
             Gateway.UpdateChannelParams({
                 channelID: ParaID.wrap(5956).into(),
-                mode: OperatingMode.RejectingOutboundMessages,
-                fee: outboundFee * 2,
-                exchangeRateNumerator: 1,
-                exchangeRateDenominator: 800
+                mode: OperatingMode.RejectingOutboundMessages
             })
         );
 
@@ -458,10 +452,7 @@ contract GatewayTest is Test {
         bytes memory params = abi.encode(
             Gateway.UpdateChannelParams({
                 channelID: ChannelID.wrap(bytes32(uint256(1))),
-                mode: OperatingMode.RejectingOutboundMessages,
-                fee: outboundFee * 2,
-                exchangeRateNumerator: 1,
-                exchangeRateDenominator: 800
+                mode: OperatingMode.RejectingOutboundMessages
             })
         );
 
@@ -688,10 +679,7 @@ contract GatewayTest is Test {
         bytes memory params = abi.encode(
             Gateway.UpdateChannelParams({
                 channelID: assetHubParaID.into(),
-                mode: OperatingMode.RejectingOutboundMessages,
-                fee: outboundFee * 2,
-                exchangeRateNumerator: 1,
-                exchangeRateDenominator: 800
+                mode: OperatingMode.RejectingOutboundMessages
             })
         );
         GatewayMock(address(gateway)).updateChannelPublic(params);
