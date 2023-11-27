@@ -1,8 +1,5 @@
-use crate::{
-	constants::*,
-	parachains::template::api::{
-		runtime_types as templateTypes, runtime_types::staging_xcm as templateXcm,
-	},
+use crate::parachains::template::api::{
+	runtime_types as templateTypes, runtime_types::staging_xcm as templateXcm,
 };
 use templateTypes::sp_weights::weight_v2::Weight;
 use templateXcm::v3::multilocation::MultiLocation;
@@ -17,6 +14,10 @@ use templateTypes::xcm::{
 	},
 	VersionedXcm,
 };
+
+pub const XCM_WEIGHT_REQUIRED: u64 = 3_000_000_000;
+pub const XCM_PROOF_SIZE_REQUIRED: u64 = 100_000;
+pub const BRIDGE_HUB_FEE_REQUIRED: u128 = 1000000000000;
 
 pub fn construct_xcm_message(encoded_call: Vec<u8>) -> Box<VersionedXcm> {
 	Box::new(VersionedXcm::V3(Xcm(vec![

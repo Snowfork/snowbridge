@@ -4,7 +4,7 @@ use ethers::{
 };
 use futures::StreamExt;
 use snowbridge_smoketest::{
-	constants::{FERDIE, GATEWAY_PROXY_CONTRACT, WETH_CONTRACT},
+	constants::*,
 	contracts::{i_gateway, weth9},
 	helper::initial_clients,
 	parachains::assethub::api::{
@@ -56,7 +56,7 @@ async fn send_token() {
 	let receipt = gateway
 		.send_token(
 			weth.address(),
-			1000,
+			ASSET_HUB_PARA_ID,
 			i_gateway::MultiAddress { kind: 1, data: FERDIE.into() },
 			amount,
 		)
@@ -83,7 +83,7 @@ async fn send_token() {
 	let expected_asset_id: MultiLocation = MultiLocation {
 		parents: 2,
 		interior: X2(
-			GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
 			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
 		),
 	};

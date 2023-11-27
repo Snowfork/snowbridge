@@ -1,11 +1,11 @@
 use codec::Encode;
 use ethers::{
 	core::types::{Address, Log},
-	utils::{parse_units},
+	utils::parse_units,
 };
 use futures::StreamExt;
 use snowbridge_smoketest::{
-	constants::{GATEWAY_PROXY_CONTRACT, SNOWBRIDGE_SOVEREIGN, WETH_CONTRACT},
+	constants::*,
 	contracts::{i_gateway, weth9},
 	helper::initial_clients,
 	parachains::assethub::api::{
@@ -69,7 +69,7 @@ async fn register_token() {
 	let expected_asset_id: MultiLocation = MultiLocation {
 		parents: 2,
 		interior: X2(
-			GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
 			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
 		),
 	};

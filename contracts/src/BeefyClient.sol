@@ -260,10 +260,6 @@ contract BeefyClient {
             revert InvalidValidatorProof();
         }
 
-        if (commitment.validatorSetID != vset.id) {
-            revert InvalidCommitment();
-        }
-
         // Check if validatorSignature is correct, ie. check if it matches
         // the signature of senderPublicKey on the commitmentHash
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
