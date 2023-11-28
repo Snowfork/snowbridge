@@ -31,8 +31,8 @@ use crate::{
 				VersionedXcm as RelaychainVersionedXcm,
 			},
 		},
-		template::{
-			api::runtime_types as templateTypes,
+		penpal::{
+			api::runtime_types as penpalTypes,
 			{self},
 		},
 	},
@@ -54,27 +54,15 @@ use subxt::{
 	tx::{PairSigner, TxPayload},
 	Config, OnlineClient, PolkadotConfig, SubstrateConfig,
 };
-use templateTypes::{
+use penpalTypes::{
 	staging_xcm::v3::multilocation::MultiLocation,
 	xcm::{
 		v3::{junction::Junction, junctions::Junctions},
 		VersionedMultiLocation, VersionedXcm,
 	},
+	pallet_xcm::pallet::Call,
+	penpal_runtime::RuntimeCall
 };
-
-/// Custom config that works with TemplateParachain
-pub enum TemplateConfig {}
-
-impl Config for TemplateConfig {
-	type Index = <PolkadotConfig as Config>::Index;
-	type Hash = <PolkadotConfig as Config>::Hash;
-	type AccountId = <PolkadotConfig as Config>::AccountId;
-	type Address = <PolkadotConfig as Config>::Address;
-	type Signature = <PolkadotConfig as Config>::Signature;
-	type Hasher = <PolkadotConfig as Config>::Hasher;
-	type Header = <PolkadotConfig as Config>::Header;
-	type ExtrinsicParams = <PolkadotConfig as Config>::ExtrinsicParams;
-}
 
 /// Custom config that works with Penpal
 pub enum PenpalConfig {}
@@ -107,7 +95,6 @@ impl Config for AssetHubConfig {
 pub struct TestClients {
 	pub asset_hub_client: Box<OnlineClient<PolkadotConfig>>,
 	pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
-	pub template_client: Box<OnlineClient<TemplateConfig>>,
 	pub penpal_client: Box<OnlineClient<PenpalConfig>>,
 	pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
 	pub ethereum_client: Box<Arc<Provider<Ws>>>,
@@ -122,11 +109,6 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 	let asset_hub_client: OnlineClient<PolkadotConfig> = OnlineClient::from_url(ASSET_HUB_WS_URL)
 		.await
 		.expect("can not connect to bridgehub");
-
-	let template_client: OnlineClient<TemplateConfig> =
-		OnlineClient::from_url(TEMPLATE_NODE_WS_URL)
-			.await
-			.expect("can not connect to template parachain");
 
 	let penpal_client: OnlineClient<PenpalConfig> = OnlineClient::from_url(PENPAL_WS_URL)
 		.await
@@ -149,7 +131,6 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 	Ok(TestClients {
 		asset_hub_client: Box::new(asset_hub_client),
 		bridge_hub_client: Box::new(bridge_hub_client),
-		template_client: Box::new(template_client),
 		penpal_client: Box::new(penpal_client),
 		relaychain_client: Box::new(relaychain_client),
 		ethereum_client: Box::new(ethereum_client),
@@ -208,24 +189,24 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 	assert!(ethereum_event_found);
 }
 
-pub async fn send_xcm_transact(
-	template_client: &Box<OnlineClient<TemplateConfig>>,
+pub async fn send_sudo_xcm_transact(
+	penpal_client: &Box<OnlineClient<PenpalConfig>>,
 	message: Box<VersionedXcm>,
-) -> Result<ExtrinsicEvents<TemplateConfig>, Box<dyn std::error::Error>> {
+) -> Result<ExtrinsicEvents<PenpalConfig>, Box<dyn std::error::Error>> {
 	let dest = Box::new(VersionedMultiLocation::V3(MultiLocation {
 		parents: 1,
 		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
 	}));
 
-	let xcm_call = template::api::template_pallet::calls::TransactionApi.send_xcm(*dest, *message);
+	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(&penpal::api::sudo::calls::TransactionApi,RuntimeCall::PolkadotXcm(Call::send { dest, message }));
 
 	let owner: Pair = Pair::from_string("//Alice", None).expect("cannot create keypair");
 
-	let signer: PairSigner<TemplateConfig, _> = PairSigner::new(owner);
+	let signer: PairSigner<PenpalConfig, _> = PairSigner::new(owner);
 
-	let result = template_client
+	let result = penpal_client
 		.tx()
-		.sign_and_submit_then_watch_default(&xcm_call, &signer)
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
 		.await
 		.expect("send through xcm call.")
 		.wait_for_finalized_success()

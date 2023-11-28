@@ -14,7 +14,7 @@ async fn create_agent() {
 
 	let message = construct_xcm_message_with_fee(encoded_call).await;
 
-	let result = send_xcm_transact(&test_clients.template_client, message)
+	let result = send_sudo_xcm_transact(&test_clients.penpal_client, message)
 		.await
 		.expect("failed to send xcm transact.");
 
