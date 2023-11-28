@@ -216,6 +216,9 @@ contract BeefyClient {
         ValidatorSet memory _initialValidatorSet,
         ValidatorSet memory _nextValidatorSet
     ) {
+        if (_nextValidatorSet.id != _initialValidatorSet.id + 1) {
+            revert("invalid-constructor-params");
+        }
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
         minNumRequiredSignatures = _minNumRequiredSignatures;
@@ -241,6 +244,10 @@ contract BeefyClient {
     function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
         external
     {
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            revert StaleCommitment();
+        }
+
         ValidatorSetState storage vset;
         uint16 signatureUsageCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {

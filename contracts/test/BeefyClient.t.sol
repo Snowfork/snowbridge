@@ -190,6 +190,20 @@ contract BeefyClientTest is Test {
         return commitment;
     }
 
+    function testSubmitWithOldBlockFailsWithStaleCommitment() public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+        beefyClient.setLatestBeefyBlock(commitment.blockNumber + 1);
+        vm.expectRevert(BeefyClient.StaleCommitment.selector);
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+    }
+
+    function testSubmitWithHandoverAndOldBlockFailsWithStaleCommitment() public {
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+        beefyClient.setLatestBeefyBlock(commitment.blockNumber + 1);
+        vm.expectRevert(BeefyClient.StaleCommitment.selector);
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+    }
+
     function testSubmitWith3SignatureCount() public returns (BeefyClient.Commitment memory) {
         BeefyClient.Commitment memory commitment = initialize(setId);
 
@@ -298,17 +312,20 @@ contract BeefyClientTest is Test {
     }
 
     function testSubmitFailWithStaleCommitment() public {
-        // first round of submit should be fine
-        BeefyClient.Commitment memory commitment = testSubmit();
+        BeefyClient.Commitment memory commitment = initialize(setId);
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
+        // mine random delay blocks
         vm.roll(block.number + randaoCommitDelay);
 
         commitPrevRandao();
 
         createFinalProofs();
 
-        //submit again will be reverted with StaleCommitment
+        // Simulates another submitFinal incrementing the latestBeefyBlock
+        beefyClient.setLatestBeefyBlock(commitment.blockNumber + 1);
+
         vm.expectRevert(BeefyClient.StaleCommitment.selector);
         beefyClient.submitFinal(
             commitment, bitfield, finalValidatorProofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
@@ -496,18 +513,23 @@ contract BeefyClientTest is Test {
 
     function testSubmitWithHandoverFailStaleCommitment() public {
         BeefyClient.Commitment memory commitment = initialize(setId - 1);
-        beefyClient.setLatestBeefyBlock(blockNumber);
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
+        // mine random delay blocks
         vm.roll(block.number + randaoCommitDelay);
 
         commitPrevRandao();
 
         createFinalProofs();
 
+        // Simulates another submitFinal incrementing the latestBeefyBlock
+        beefyClient.setLatestBeefyBlock(commitment.blockNumber + 1);
+
         vm.expectRevert(BeefyClient.StaleCommitment.selector);
-        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
+        );
     }
 
     function testScaleEncodeCommit() public {
@@ -710,5 +732,19 @@ contract BeefyClientTest is Test {
 
     function testStorageToStorageCopies() public {
         beefyClient.copyCounters();
+    }
+
+    function testFuzzInitializationValidation(uint128 currentId, uint128 nextId) public {
+        vm.assume(currentId < type(uint128).max);
+        vm.assume(currentId + 1 != nextId);
+        vm.expectRevert("invalid-constructor-params");
+        new BeefyClient(
+            randaoCommitDelay,
+            randaoCommitExpiration,
+            minNumRequiredSignatures,
+            0,
+            BeefyClient.ValidatorSet(currentId, 0, 0x0),
+            BeefyClient.ValidatorSet(nextId, 0, 0x0)
+        );
     }
 }
