@@ -12,7 +12,7 @@ use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::{
 	gwei, meth, outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly,
-	ParaId, PricingParameters, Rewards,
+	DescribeHere, ParaId, PricingParameters, Rewards,
 };
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
@@ -219,7 +219,8 @@ impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OutboundQueue = OutboundQueue;
 	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
-	type AgentIdOf = HashedDescription<AgentId, DescribeFamily<DescribeAllTerminal>>;
+	type AgentIdOf =
+		HashedDescription<AgentId, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
 	type DefaultPricingParameters = Parameters;
@@ -262,6 +263,6 @@ pub fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
 }
 
 pub fn make_agent_id(location: MultiLocation) -> AgentId {
-	HashedDescription::<AgentId, DescribeFamily<DescribeAllTerminal>>::convert_location(&location)
+	<Test as snowbridge_control::Config>::AgentIdOf::convert_location(&location)
 		.expect("convert location")
 }

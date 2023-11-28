@@ -64,7 +64,7 @@ use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	outbound::{Command, Initializer, Message, OperatingMode, SendError, SendMessage},
 	sibling_sovereign_account, AgentId, Channel, ChannelId, ParaId,
-	PricingParameters as PricingParametersRecord, BRIDGE_HUB_AGENT_ID, PRIMARY_GOVERNANCE_CHANNEL,
+	PricingParameters as PricingParametersRecord, PRIMARY_GOVERNANCE_CHANNEL,
 	SECONDARY_GOVERNANCE_CHANNEL,
 };
 use sp_core::{RuntimeDebug, H160, H256};
@@ -255,19 +255,21 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
+			let bridge_hub_agent_id =
+				agent_id_of::<T>(&MultiLocation::here()).expect("infallible; qed");
 			// Agent for BridgeHub
-			Agents::<T>::insert(BRIDGE_HUB_AGENT_ID, ());
+			Agents::<T>::insert(bridge_hub_agent_id, ());
 
 			// Primary governance channel
 			Channels::<T>::insert(
 				PRIMARY_GOVERNANCE_CHANNEL,
-				Channel { agent_id: BRIDGE_HUB_AGENT_ID, para_id: self.para_id },
+				Channel { agent_id: bridge_hub_agent_id, para_id: self.para_id },
 			);
 
 			// Secondary governance channel
 			Channels::<T>::insert(
 				SECONDARY_GOVERNANCE_CHANNEL,
-				Channel { agent_id: BRIDGE_HUB_AGENT_ID, para_id: self.para_id },
+				Channel { agent_id: bridge_hub_agent_id, para_id: self.para_id },
 			);
 
 			// Asset Hub
