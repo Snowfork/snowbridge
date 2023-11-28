@@ -265,6 +265,13 @@ pub mod pallet {
 			// so we must burn the amount of the fee embedded into the program.
 			T::Token::burn_from(&sovereign_account, fee, Precision::Exact, Fortitude::Polite)?;
 
+			log::info!(
+				target: LOG_TARGET,
+				"💫 xcm {:?} sent with fee {:?}",
+				xcm,
+				fee
+			);
+
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, channel.para_id)?;
 

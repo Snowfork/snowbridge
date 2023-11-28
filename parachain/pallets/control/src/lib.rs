@@ -203,8 +203,9 @@ pub mod pallet {
 		},
 		/// A SetTokenTransferFees message was sent to the Gateway
 		SetTokenTransferFees {
+			create: u128,
+			transfer: u128,
 			register: u128,
-			send: u128,
 		},
 		PricingParametersChanged {
 			params: PricingParametersOf<T>,
@@ -563,17 +564,21 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_token_transfer_fees())]
 		pub fn set_token_transfer_fees(
 			origin: OriginFor<T>,
+			create: u128,
+			transfer: u128,
 			register: u128,
-			send: u128,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			ensure!(register > 0 && send > 0, Error::<T>::InvalidTokenTransferFees);
+			ensure!(
+				create > 0 && transfer > 0 && register > 0,
+				Error::<T>::InvalidTokenTransferFees
+			);
 
-			let command = Command::SetTokenTransferFees { register, send };
-			Self::send(SECONDARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
+			let command = Command::SetTokenTransferFees { create, transfer, register };
+			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
 
-			Self::deposit_event(Event::<T>::SetTokenTransferFees { register, send });
+			Self::deposit_event(Event::<T>::SetTokenTransferFees { register, create, transfer });
 			Ok(())
 		}
 	}

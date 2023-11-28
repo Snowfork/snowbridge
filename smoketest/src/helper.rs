@@ -43,6 +43,7 @@ use ethers::{
 		TransactionRequest, Ws, U256,
 	},
 	providers::Http,
+	types::Log,
 };
 use futures::StreamExt;
 use sp_core::{sr25519::Pair, Pair as PairT, H160};
@@ -283,7 +284,7 @@ pub async fn construct_create_channel_call(
 	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
 	let call = bridgehub::api::ethereum_control::calls::TransactionApi
-		.create_channel(OperatingMode::Normal, 1)
+		.create_channel(OperatingMode::Normal)
 		.encode_call_data(&bridge_hub_client.metadata())?;
 
 	Ok(call)
@@ -367,4 +368,18 @@ pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Er
 		.await
 		.expect("fund account");
 	Ok(())
+}
+
+pub fn print_event_log_for_unit_tests(log: &Log) {
+	let topics: Vec<String> = log.topics.iter().map(|t| hex::encode(t.as_ref())).collect();
+	println!("Log {{");
+	println!("	address: hex!(\"{}\").into(),", hex::encode(log.address.as_ref()));
+	println!("	topics: vec![");
+	for topic in topics.iter() {
+		println!("		hex!(\"{}\").into(),", topic);
+	}
+	println!("	],");
+	println!("	data: hex!(\"{}\").into(),", hex::encode(&log.data));
+
+	println!("}}")
 }

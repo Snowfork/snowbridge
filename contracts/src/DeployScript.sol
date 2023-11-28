@@ -82,10 +82,10 @@ contract DeployScript is Script {
 
         Gateway.Config memory config = Gateway.Config({
             mode: defaultOperatingMode,
-            deliveryCost: uint128(vm.envUint("DEFAULT_FEE")),
-            registerTokenFee: uint128(vm.envUint("REGISTER_NATIVE_TOKEN_FEE")),
-            assetHubCreateAssetFee: uint128(vm.envUint("SEND_NATIVE_TOKEN_FEE")),
-            assetHubReserveTransferFee: uint128(vm.envUint("SEND_NATIVE_TOKEN_FEE")),
+            deliveryCost: uint128(vm.envUint("DELIVERY_COST")),
+            registerTokenFee: uint128(vm.envUint("REGISTER_TOKEN_FEE")),
+            assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),
+            assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
             exchangeRate: ud60x18(0.0025e18)
         });
 

@@ -118,10 +118,12 @@ mod v1 {
 		},
 		/// Set token fees of the Gateway contract
 		SetTokenTransferFees {
-			/// The fee for register token
+			/// The fee(DOT) for the cost of creating asset on AssetHub
+			create: u128,
+			/// The fee(DOT) for the cost of sending asset on AssetHub
+			transfer: u128,
+			/// The fee(Ether) for register an asset with reserve deposit and discourage spamming
 			register: u128,
-			/// The fee for send token to para chain
-			send: u128,
 		},
 		/// Set pricing parameters
 		SetPricingParameters {
@@ -187,10 +189,11 @@ mod v1 {
 						Token::Address(*recipient),
 						Token::Uint(U256::from(*amount)),
 					])]),
-				Command::SetTokenTransferFees { register, send } =>
+				Command::SetTokenTransferFees { create, transfer, register } =>
 					ethabi::encode(&[Token::Tuple(vec![
+						Token::Uint(U256::from(*create)),
+						Token::Uint(U256::from(*transfer)),
 						Token::Uint(U256::from(*register)),
-						Token::Uint(U256::from(*send)),
 					])]),
 				Command::SetPricingParameters { exchange_rate, delivery_cost } =>
 					ethabi::encode(&[Token::Tuple(vec![
