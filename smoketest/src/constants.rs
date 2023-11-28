@@ -10,7 +10,7 @@ pub const ETHEREUM_HTTP_API: &str = "http://localhost:8545";
 
 pub const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
 pub const BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
-pub const PENPAL_WS_URL: &str = "ws://127.0.0.1:14144";
+pub const PENPAL_WS_URL: &str = "ws://127.0.0.1:13144";
 pub const RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
 pub const TEMPLATE_NODE_WS_URL: &str = "ws://127.0.0.1:13144";
 
@@ -29,9 +29,9 @@ pub const BRIDGE_HUB_AGENT_ID: [u8; 32] =
 // Agent for asset hub parachain 1000
 pub const ASSET_HUB_AGENT_ID: [u8; 32] =
 	hex!("72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4");
-// Agent for template parachain 1001
+// Agent for penpal parachain 2000
 pub const SIBLING_AGENT_ID: [u8; 32] =
-	hex!("e01018a3378502770faff44fbef3910d120a0353d18be653625b8daa88a86453");
+	hex!("5097ee1101e90c3aadb882858c59a22108668021ec81bce9f4930155e5c21e59");
 
 pub const ASSET_HUB_SOVEREIGN: [u8; 32] =
 	hex!("7369626ce8030000000000000000000000000000000000000000000000000000");

@@ -71,12 +71,12 @@ config_relayer() {
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-asset-hub.json
 
-    # Configure parachain relay (parachain template)
+    # Configure parachain relay (penpal)
     jq \
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg channelID $TEMPLATE_CHANNEL_ID \
+        --arg channelID $PENPAL_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
       .source.contracts.Gateway = $k1
@@ -87,7 +87,7 @@ config_relayer() {
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
     ' \
-        config/parachain-relay.json >$output_dir/parachain-relay-template.json
+        config/parachain-relay.json >$output_dir/parachain-relay-penpal.json
 
     # Configure beacon relay
     jq \
@@ -111,17 +111,17 @@ config_relayer() {
     ' \
         config/execution-relay.json >$output_dir/execution-relay-asset-hub.json
 
-    # Configure execution relay for template node
+    # Configure execution relay for penpal
     jq \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg k1 "$(address_for GatewayProxy)" \
-        --arg channelID $TEMPLATE_CHANNEL_ID \
+        --arg channelID $PENPAL_CHANNEL_ID \
         '
               .source.ethereum.endpoint = $eth_endpoint_ws
             | .source.contracts.Gateway = $k1
             | .source."channel-id" = $channelID
             ' \
-        config/execution-relay.json >$output_dir/execution-relay-template.json
+        config/execution-relay.json >$output_dir/execution-relay-penpal.json
 }
 
 start_relayer() {
@@ -178,15 +178,15 @@ start_relayer() {
         done
     ) &
 
-    # Launch parachain relay for parachain template
+    # Launch parachain relay for parachain penpal
     (
-        : >"$output_dir"/parachain-relay-template.log
+        : >"$output_dir"/parachain-relay-penpal.log
         while :; do
-            echo "Starting parachain-relay (parachain-template) at $(date)"
+            echo "Starting parachain-relay (penpal) at $(date)"
             "${relay_bin}" run parachain \
-                --config "$output_dir/parachain-relay-template.json" \
+                --config "$output_dir/parachain-relay-penpal.json" \
                 --ethereum.private-key $parachain_relay_eth_key \
-                >>"$output_dir"/parachain-relay-template.log 2>&1 || true
+                >>"$output_dir"/parachain-relay-penpal.log 2>&1 || true
             sleep 20
         done
     ) &
@@ -217,15 +217,15 @@ start_relayer() {
         done
     ) &
 
-    # Launch execution relay for template
+    # Launch execution relay for penpal
     (
-        : >$output_dir/execution-relay-template.log
+        : >$output_dir/execution-relay-penpal.log
         while :; do
-            echo "Starting execution relay (parachain-template) at $(date)"
+            echo "Starting execution relay (penpal) at $(date)"
             "${relay_bin}" run execution \
-                --config $output_dir/execution-relay-template.json \
+                --config $output_dir/execution-relay-penpal.json \
                 --substrate.private-key "//ExecutionRelay" \
-                >>"$output_dir"/execution-relay-template.log 2>&1 || true
+                >>"$output_dir"/execution-relay-penpal.log 2>&1 || true
             sleep 20
         done
     ) &

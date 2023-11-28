@@ -1,10 +1,10 @@
-use crate::parachains::template::api::{
-	runtime_types as templateTypes, runtime_types::staging_xcm as templateXcm,
+use crate::parachains::penpal::api::{
+	runtime_types as penpalTypes, runtime_types::staging_xcm as penpalXcm,
 };
-use templateTypes::sp_weights::weight_v2::Weight;
-use templateXcm::v3::multilocation::MultiLocation;
+use penpalTypes::sp_weights::weight_v2::Weight;
+use penpalXcm::v3::multilocation::MultiLocation;
 
-use templateTypes::xcm::{
+use penpalTypes::xcm::{
 	double_encoded::DoubleEncoded,
 	v2::OriginKind,
 	v3::{
