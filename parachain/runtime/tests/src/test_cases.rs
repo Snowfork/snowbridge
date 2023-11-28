@@ -5,7 +5,7 @@
 
 use codec::Encode;
 use frame_support::{assert_err, assert_ok, traits::fungible::Mutate};
-use parachains_common::snowbridge_config::BridgeHubEthereumBaseFeeInRocs;
+use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::BridgeHubEthereumBaseFeeInROC;
 use parachains_runtimes_test_utils::{
 	AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf, XcmReceivedFrom,
 };
