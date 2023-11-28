@@ -55,7 +55,7 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         emit Initialized(d0, d1);
     }
 
-    function getPricingParameters() external view returns (UD60x18, uint128) {
+    function getPricingParameters() external pure returns (UD60x18, uint128) {
         return (convert(0), uint128(0));
     }
 }

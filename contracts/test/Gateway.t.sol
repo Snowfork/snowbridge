@@ -59,7 +59,7 @@ contract GatewayTest is Test {
     address public account1;
     address public account2;
 
-    uint256 public maxDispatchGas = 500_000;
+    uint64 public maxDispatchGas = 500_000;
     uint256 public maxRefund = 1 ether;
     uint256 public reward = 1 ether;
     bytes32 public messageID = keccak256("cabbage");
@@ -743,9 +743,7 @@ contract GatewayTest is Test {
         OperatingMode channelMode = gw.channelOperatingModeOf(assetHubParaID.into());
         assertEq(uint256(channelMode), 0);
 
-        PricingStorage.Layout storage pricing = PricingStorage.layout();
-
-        (UD60x18 _exchangeRate, uint128 fee) = gw.getPricingParameters();
+        (, uint128 fee) = gw.getPricingParameters();
         assertEq(fee, 10000000000);
 
         (uint64 inbound, uint64 outbound) = gw.channelNoncesOf(assetHubParaID.into());
