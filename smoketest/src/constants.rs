@@ -1,5 +1,6 @@
 use hex_literal::hex;
 
+// Todo: load all configs from env in consistent with set-env.sh
 pub const ASSET_HUB_PARA_ID: u32 = 1000;
 pub const BRIDGE_HUB_PARA_ID: u32 = 1013;
 pub const PENPAL_PARA_ID: u32 = 2000;
@@ -24,7 +25,7 @@ pub const WETH_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A
 
 // Agent for bridge hub parachain 1013
 pub const BRIDGE_HUB_AGENT_ID: [u8; 32] =
-	hex!("05f0ced792884ed09997292bd95f8d0d1094bb3bded91ec3f2f08531624037d6");
+	hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314");
 // Agent for asset hub parachain 1000
 pub const ASSET_HUB_AGENT_ID: [u8; 32] =
 	hex!("72456f48efed08af20e5b317abf8648ac66e86bb90a411d9b0b713f7364b75b4");
