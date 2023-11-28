@@ -15,8 +15,7 @@ def samples(ratio_per_validator, validators_length, slash_rate, randao_commit_ex
 
     result += ceil(log2(validators_length));
 
-    if(signature_use_count > 0):
-        result += 1 + 2 * ceil(log2(signature_use_count))
+    result += 1 + (2 * ceil(log2(signature_use_count)) if signature_use_count > 1 else 0)
 
     return result
 
@@ -32,10 +31,7 @@ def samples_static(ratio_per_validator, slash_rate, randao_commit_expiry):
 
 # The samples method that we used to get the dynamic signatures. Run on-chain.
 def samples_dynamic(validators_length, signature_use_count):
-    result = ceil(log2(validators_length))
-
-    if(signature_use_count > 0):
-      result += 1 + 2 * ceil(log2(signature_use_count))
+    result = ceil(log2(validators_length)) + 1 + (2 * ceil(log2(signature_use_count)) if signature_use_count > 1 else 0)
 
     return result
 
