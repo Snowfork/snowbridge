@@ -248,18 +248,11 @@ pub mod pallet {
 				}
 			})?;
 
-			let pricing_parameters = T::PricingParameters::get();
-
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
 			let sovereign_account = sibling_sovereign_account::<T>(channel.para_id);
-			let refund = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
-			T::Token::transfer(
-				&sovereign_account,
-				&who,
-				refund.saturating_add(pricing_parameters.rewards.local),
-				Preservation::Preserve,
-			)?;
+			let delivery_cost = Self::get();
+			T::Token::transfer(&sovereign_account, &who, delivery_cost, Preservation::Preserve)?;
 
 			// Decode message into XCM
 			let (xcm, fee) =
@@ -314,6 +307,14 @@ pub mod pallet {
 			let dest = MultiLocation { parents: 1, interior: X1(Parachain(dest.into())) };
 			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
 			Ok(xcm_hash)
+		}
+	}
+
+	impl<T: Config> Get<BalanceOf<T>> for Pallet<T> {
+		fn get() -> BalanceOf<T> {
+			let pricing_parameters = T::PricingParameters::get();
+			let refund: BalanceOf<T> = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
+			refund.saturating_add(pricing_parameters.rewards.local)
 		}
 	}
 }

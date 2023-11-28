@@ -158,7 +158,6 @@ pub mod pallet {
 		type DefaultPricingParameters: Get<PricingParametersOf<Self>>;
 
 		/// Cost of delivering a message from Ethereum
-		/// Todo: Remove with a dynamic read from inbound queue
 		type InboundDeliveryCost: Get<BalanceOf<Self>>;
 
 		type WeightInfo: WeightInfo;
