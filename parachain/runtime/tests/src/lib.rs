@@ -7,7 +7,8 @@ mod test_cases;
 
 use bridge_hub_rococo_runtime::{xcm_config::XcmConfig, Runtime, RuntimeEvent, SessionKeys};
 use codec::Decode;
-use parachains_common::{snowbridge_config::BridgeHubEthereumBaseFeeInRocs, AccountId, AuraId};
+use parachains_common::{AccountId, AuraId};
+use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::BridgeHubEthereumBaseFeeInROC;
 use sp_core::H160;
 use sp_keyring::AccountKeyring::Alice;
 
@@ -27,7 +28,7 @@ pub fn transfer_token_to_ethereum_works() {
 		1000,
 		H160::random(),
 		H160::random(),
-		BridgeHubEthereumBaseFeeInRocs::get(),
+		BridgeHubEthereumBaseFeeInROC::get(),
 		Box::new(|runtime_event_encoded: Vec<u8>| {
 			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
 				Ok(RuntimeEvent::EthereumOutboundQueue(event)) => Some(event),
@@ -69,6 +70,6 @@ pub fn transfer_token_to_ethereum_insufficient_fund() {
 		1000,
 		H160::random(),
 		H160::random(),
-		BridgeHubEthereumBaseFeeInRocs::get(),
+		BridgeHubEthereumBaseFeeInROC::get(),
 	)
 }

@@ -88,7 +88,7 @@ fn process_message_yields_on_max_messages_per_block() {
 		}
 
 		let channel_id: ChannelId = ParaId::from(1000).into();
-		let origin = AggregateMessageOrigin::GeneralKey(channel_id.into());
+		let origin = AggregateMessageOrigin::Snowbridge(channel_id.into());
 		let message = QueuedMessage {
 			id: Default::default(),
 			channel_id,
@@ -114,7 +114,7 @@ fn process_message_fails_on_overweight_message() {
 	new_tester().execute_with(|| {
 		let sibling_id = 1000;
 		let channel_id: ChannelId = ParaId::from(sibling_id).into();
-		let origin = AggregateMessageOrigin::GeneralKey(channel_id.into());
+		let origin = AggregateMessageOrigin::Snowbridge(channel_id.into());
 		let message = mock_message(sibling_id).encode();
 		let mut meter = WeightMeter::with_limit(Weight::from_parts(1, 1));
 		assert_noop!(
@@ -200,7 +200,8 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
 			OutboundQueue::deliver(ticket).unwrap();
 		}
-		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
 		assert_eq!(footprint.storage.count, (max_messages) as u64);
 
 		let message = mock_governance_message::<Test>();
@@ -212,11 +213,11 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 		run_to_end_of_next_block();
 
 		// first process 20 messages from sibling channel
-		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
 		assert_eq!(footprint.storage.count, 40 - 20);
 
 		// and governance message does not have the chance to execute in same block
-		let footprint = MessageQueue::footprint(GeneralKey(PRIMARY_GOVERNANCE_CHANNEL.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(PRIMARY_GOVERNANCE_CHANNEL.into()));
 		assert_eq!(footprint.storage.count, 1);
 
 		// move to next block
@@ -224,17 +225,17 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 		run_to_end_of_next_block();
 
 		// now governance message get executed in this block
-		let footprint = MessageQueue::footprint(GeneralKey(PRIMARY_GOVERNANCE_CHANNEL.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(PRIMARY_GOVERNANCE_CHANNEL.into()));
 		assert_eq!(footprint.storage.count, 0);
 
 		// and this time process 19 messages from sibling channel so we have 1 message left
-		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
 		assert_eq!(footprint.storage.count, 1);
 
 		// move to the next block, the last 1 message from sibling channel get executed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
-		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
 		assert_eq!(footprint.storage.count, 0);
 	});
 }

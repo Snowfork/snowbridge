@@ -1,7 +1,7 @@
 //! Implementation for [`snowbridge_core::outbound::SendMessage`]
 use super::*;
+use bridge_hub_common::AggregateMessageOrigin;
 use codec::Encode;
-use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
 	ensure,
 	traits::{EnqueueMessage, Get},
@@ -71,7 +71,7 @@ where
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError> {
-		let origin = AggregateMessageOrigin::GeneralKey(ticket.channel_id.into());
+		let origin = AggregateMessageOrigin::Snowbridge(ticket.channel_id);
 
 		if ticket.channel_id != PRIMARY_GOVERNANCE_CHANNEL {
 			ensure!(!Self::operating_mode().is_halted(), SendError::Halted);

@@ -95,8 +95,8 @@ mod mock;
 #[cfg(test)]
 mod test;
 
+use bridge_hub_common::AggregateMessageOrigin;
 use codec::Decode;
-use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
 	storage::StorageStreamIter,
 	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessageError},
