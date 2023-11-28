@@ -242,6 +242,9 @@ contract BeefyClientTest is Test {
         // Signature count is now 1 after a second submitInitial.
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
+        // Signature count is now 2 after a third submitInitial.
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
         // mine random delay blocks
         vm.roll(block.number + randaoCommitDelay);
 
@@ -250,11 +253,8 @@ contract BeefyClientTest is Test {
         createFinalProofs();
 
         // make an invalid signature
-        finalValidatorProofs[0].r = 0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c;
-        vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
-        beefyClient.submitFinal(
-            commitment, bitfield, finalValidatorProofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
-        );
+        vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
     }
 
     function testSubmitFailInvalidSignature() public {
@@ -471,13 +471,16 @@ contract BeefyClientTest is Test {
         // Signature count is now 1 after a second submitInitial.
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
 
+        // Signature count is now 2 after a third submitInitial.
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
         vm.roll(block.number + randaoCommitDelay);
 
         commitPrevRandao();
 
         createFinalProofs();
 
-        vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
+        vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
         beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
     }
 
