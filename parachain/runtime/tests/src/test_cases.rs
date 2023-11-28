@@ -131,7 +131,7 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 			// fund asset hub sovereign account enough so it can pay fees
 			initial_fund::<Runtime>(
 				assethub_parachain_id,
-				BridgeHubEthereumBaseFeeInRocs::get() + 1_000_000_000,
+				BridgeHubEthereumBaseFeeInROC::get() + 1_000_000_000,
 			);
 
 			let outcome = send_transfer_token_message::<Runtime, XcmConfig>(
@@ -269,7 +269,7 @@ pub fn send_transfer_token_message_fee_not_enough<Runtime, XcmConfig>(
 			// fund asset hub sovereign account enough so it can pay fees
 			initial_fund::<Runtime>(
 				assethub_parachain_id,
-				BridgeHubEthereumBaseFeeInRocs::get() + 1_000_000_000,
+				BridgeHubEthereumBaseFeeInROC::get() + 1_000_000_000,
 			);
 
 			let outcome = send_transfer_token_message::<Runtime, XcmConfig>(
