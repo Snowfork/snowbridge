@@ -66,8 +66,9 @@ contract GatewayTest is Test {
 
     // remote fees in DOT
     uint128 public outboundFee = 1e10;
-    uint128 public registerTokenFee = 1e10;
+    uint128 public registerTokenFee = 0;
     uint128 public sendTokenFee = 1e10;
+    uint128 public createTokenFee = 1e10;
 
     MultiAddress public recipientAddress32;
     MultiAddress public recipientAddress20;
@@ -95,7 +96,7 @@ contract GatewayTest is Test {
             mode: OperatingMode.Normal,
             deliveryCost: outboundFee,
             registerTokenFee: registerTokenFee,
-            assetHubCreateAssetFee: registerTokenFee,
+            assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
             exchangeRate: exchangeRate
         });
@@ -743,8 +744,9 @@ contract GatewayTest is Test {
         assertEq(uint256(channelMode), 0);
 
         PricingStorage.Layout storage pricing = PricingStorage.layout();
-        uint256 fee = pricing.deliveryCost;
-        assertEq(fee, 0);
+
+        (UD60x18 _exchangeRate, uint128 fee) = gw.getPricingParameters();
+        assertEq(fee, 10000000000);
 
         (uint64 inbound, uint64 outbound) = gw.channelNoncesOf(assetHubParaID.into());
         assertEq(inbound, 0);
@@ -776,20 +778,21 @@ contract GatewayTest is Test {
     }
 
     function testSetTokenFees() public {
-        // Double the fees
         uint256 fee = IGateway(address(gateway)).registerTokenFee();
-        assertEq(fee, 5000010000000000);
+        assertEq(fee, 5000000000000000);
+        // Double the assetHubCreateAssetFee
         GatewayMock(address(gateway)).setTokenTransferFeesPublic(
             abi.encode(
                 Gateway.SetTokenTransferFeesParams({
-                    assetHubCreateAssetFee: registerTokenFee,
-                    registerTokenFee: registerTokenFee * 2,
-                    assetHubReserveTransferFee: sendTokenFee * 2
+                    assetHubCreateAssetFee: createTokenFee * 2,
+                    registerTokenFee: registerTokenFee,
+                    assetHubReserveTransferFee: sendTokenFee
                 })
             )
         );
         fee = IGateway(address(gateway)).registerTokenFee();
-        assertEq(fee, 5000020000000000);
+        // since deliveryCost not changed, so the total fee increased only by 50%
+        assertEq(fee, 7500000000000000);
     }
 
     bytes32 public expectChannelIDBytes = bytes32(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539);
@@ -798,5 +801,21 @@ contract GatewayTest is Test {
         ParaID para_id = ParaID.wrap(1000);
         ChannelID channel_id = para_id.into();
         assertEq(ChannelID.unwrap(channel_id), expectChannelIDBytes);
+    }
+
+    function testSetPricingParameters() public {
+        uint256 fee = IGateway(address(gateway)).registerTokenFee();
+        assertEq(fee, 5000000000000000);
+        // Double the exchangeRate
+        GatewayMock(address(gateway)).setPricingParametersPublic(
+            abi.encode(
+                Gateway.SetPricingParametersParams({
+                    exchangeRate: exchangeRate.mul(convert(2)),
+                    deliveryCost: outboundFee
+                })
+            )
+        );
+        fee = IGateway(address(gateway)).registerTokenFee();
+        assertEq(fee, 10000000000000000);
     }
 }

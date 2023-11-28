@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 
 import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
 import {Verification} from "../Verification.sol";
+import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 interface IGateway {
     /**
@@ -74,6 +75,9 @@ interface IGateway {
     /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
     event TokenRegistrationSent(address token);
 
+    // @dev Emitted when pricing params updated
+    event PricingParametersChanged();
+
     /// @dev Fee schedule in Ether for registering a token, covering
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM Execution costs on AssetHub
@@ -99,4 +103,7 @@ interface IGateway {
         uint128 destinationFee,
         uint128 amount
     ) external payable;
+
+    /// @dev Get pricing params (exchangeRate,deliveryCost)
+    function getPricingParameters() external view returns (UD60x18, uint128);
 }

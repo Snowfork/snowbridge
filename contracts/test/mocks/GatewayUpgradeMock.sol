@@ -6,6 +6,7 @@ import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, Mult
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 import {Verification} from "../../src/Verification.sol";
+import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
 
 contract GatewayUpgradeMock is IGateway, IInitializable {
     /**
@@ -52,5 +53,9 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         // Just decode and exit
         (uint256 d0, uint256 d1) = abi.decode(data, (uint256, uint256));
         emit Initialized(d0, d1);
+    }
+
+    function getPricingParameters() external view returns (UD60x18, uint128) {
+        return (convert(0), uint128(0));
     }
 }

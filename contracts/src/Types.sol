@@ -83,7 +83,8 @@ enum Command {
     UpdateChannel,
     SetOperatingMode,
     TransferNativeFromAgent,
-    SetTokenTransferFees
+    SetTokenTransferFees,
+    SetPricingParameters
 }
 
 enum AgentExecuteCommand {TransferToken}

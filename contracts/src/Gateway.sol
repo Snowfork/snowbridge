@@ -199,6 +199,11 @@ contract Gateway is IGateway, IInitializable {
             catch {
                 success = false;
             }
+        } else if (message.command == Command.SetPricingParameters) {
+            try Gateway(this).setPricingParameters{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
         }
 
         // Calculate the actual cost of executing this message
@@ -433,7 +438,7 @@ contract Gateway is IGateway, IInitializable {
         uint128 registerTokenFee;
     }
 
-    // @dev Set the operating mode of the gateway
+    // @dev Set token fees of the gateway
     function setTokenTransferFees(bytes calldata data) external onlySelf {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         SetTokenTransferFeesParams memory params = abi.decode(data, (SetTokenTransferFeesParams));
@@ -441,6 +446,27 @@ contract Gateway is IGateway, IInitializable {
         $.assetHubReserveTransferFee = params.assetHubReserveTransferFee;
         $.registerTokenFee = params.registerTokenFee;
         emit TokenTransferFeesChanged();
+    }
+
+    struct SetPricingParametersParams {
+        /// @dev The ETH/DOT exchange rate
+        UD60x18 exchangeRate;
+        /// @dev The cost of delivering messages to BridgeHub in DOT
+        uint128 deliveryCost;
+    }
+
+    // @dev Set pricing params of the gateway
+    function setPricingParameters(bytes calldata data) external onlySelf {
+        PricingStorage.Layout storage pricing = PricingStorage.layout();
+        SetPricingParametersParams memory params = abi.decode(data, (SetPricingParametersParams));
+        pricing.exchangeRate = params.exchangeRate;
+        pricing.deliveryCost = params.deliveryCost;
+        emit PricingParametersChanged();
+    }
+
+    function getPricingParameters() external view returns (UD60x18, uint128) {
+        PricingStorage.Layout storage pricing = PricingStorage.layout();
+        return (pricing.exchangeRate, pricing.deliveryCost);
     }
 
     /**
