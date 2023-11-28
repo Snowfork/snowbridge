@@ -210,7 +210,7 @@ impl crate::Config for Test {
 	type OutboundQueue = OutboundQueue;
 	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf =
-		HashedDescription<AgentId, (DescribeFamily<DescribeAllTerminal>, DescribeHere)>;
+		HashedDescription<AgentId, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
 	type WeightInfo = ();
