@@ -34,6 +34,9 @@ use snowbridge_beacon_primitives::CompactExecutionHeader;
 pub mod weights;
 
 #[cfg(test)]
+mod mock;
+
+#[cfg(test)]
 mod test;
 
 use codec::{Decode, DecodeAll, Encode};

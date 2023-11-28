@@ -14,7 +14,6 @@ use snowbridge_core::{
 	ParaId,
 };
 use sp_core::H256;
-use sp_runtime::{AccountId32, DispatchError};
 
 #[test]
 fn submit_messages_and_commit() {

@@ -12,7 +12,7 @@ use snowbridge_core::{
 	gwei, meth,
 	outbound::*,
 	pricing::{PricingParameters, Rewards},
-	Channel, ChannelId, ParaId, PRIMARY_GOVERNANCE_CHANNEL,
+	ParaId, PRIMARY_GOVERNANCE_CHANNEL,
 };
 use sp_core::{ConstU32, ConstU8, H160, H256};
 use sp_runtime::{
