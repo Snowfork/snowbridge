@@ -62,6 +62,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use snowbridge_core::{
+	meth,
 	outbound::{Command, Initializer, Message, OperatingMode, SendError, SendMessage},
 	sibling_sovereign_account, AgentId, Channel, ChannelId, ParaId,
 	PricingParameters as PricingParametersRecord, PRIMARY_GOVERNANCE_CHANNEL,
@@ -128,6 +129,7 @@ where
 #[frame_support::pallet]
 pub mod pallet {
 	use snowbridge_core::StaticLookup;
+	use sp_core::U256;
 
 	use super::*;
 
@@ -203,9 +205,9 @@ pub mod pallet {
 		},
 		/// A SetTokenTransferFees message was sent to the Gateway
 		SetTokenTransferFees {
-			create: u128,
-			transfer: u128,
-			register: u128,
+			create_asset_xcm: u128,
+			transfer_asset_xcm: u128,
+			register_token: U256,
 		},
 		PricingParametersChanged {
 			params: PricingParametersOf<T>,
@@ -337,6 +339,11 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Set pricing parameters on both sides of the bridge
+		///
+		/// Fee required: No
+		///
+		/// - `origin`: Must be root
 		#[pallet::call_index(2)]
 		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
 		pub fn set_pricing_parameters(
@@ -551,34 +558,48 @@ pub mod pallet {
 			)
 		}
 
-		/// Sends a message to the Gateway contract to set token transfer fees
+		/// Sends a message to the Gateway contract to update fee related parameters for
+		/// token transfers.
 		///
 		/// Privileged. Can only be called by root.
 		///
 		/// Fee required: No
 		///
 		/// - `origin`: Must be root
-		/// - `register`: The fee for register token
-		/// - `send`: The fee for send token to parachain
+		/// - `create_asset_xcm`: The XCM execution cost for creating a new asset class on AssetHub,
+		///   in DOT
+		/// - `transfer_asset_xcm`: The XCM execution cost for performing a reserve transfer on
+		///   AssetHub, in DOT
+		/// - `register_token`: The Ether fee for registering a new token, to discourage spamming
 		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::set_token_transfer_fees())]
 		pub fn set_token_transfer_fees(
 			origin: OriginFor<T>,
-			create: u128,
-			transfer: u128,
-			register: u128,
+			create_asset_xcm: u128,
+			transfer_asset_xcm: u128,
+			register_token: U256,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
+			// Basic validation of new costs. Particularly for token registration, we want to ensure
+			// its relatively expensive to discourage spamming. Like at least 100 USD.
 			ensure!(
-				create > 0 && transfer > 0 && register > 0,
+				create_asset_xcm > 0 && transfer_asset_xcm > 0 && register_token > meth(100),
 				Error::<T>::InvalidTokenTransferFees
 			);
 
-			let command = Command::SetTokenTransferFees { create, transfer, register };
+			let command = Command::SetTokenTransferFees {
+				create_asset_xcm,
+				transfer_asset_xcm,
+				register_token,
+			};
 			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
 
-			Self::deposit_event(Event::<T>::SetTokenTransferFees { register, create, transfer });
+			Self::deposit_event(Event::<T>::SetTokenTransferFees {
+				create_asset_xcm,
+				transfer_asset_xcm,
+				register_token,
+			});
 			Ok(())
 		}
 	}

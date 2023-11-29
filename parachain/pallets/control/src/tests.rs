@@ -3,7 +3,7 @@
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 use hex_literal::hex;
-use snowbridge_core::sibling_sovereign_account_raw;
+use snowbridge_core::{eth, sibling_sovereign_account_raw};
 use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
 
@@ -120,6 +120,97 @@ fn upgrade_with_params() {
 		let initializer: Option<Initializer> =
 			Some(Initializer { params: [0; 256].into(), maximum_required_gas: 10000 });
 		assert_ok!(EthereumControl::upgrade(origin, address, code_hash, initializer));
+	});
+}
+
+#[test]
+fn set_operating_mode() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let mode = OperatingMode::RejectingOutboundMessages;
+
+		assert_ok!(EthereumControl::set_operating_mode(origin, mode));
+
+		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::SetOperatingMode {
+			mode,
+		}));
+	});
+}
+
+#[test]
+fn set_operating_mode_as_signed_fails() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed([14; 32].into());
+		let mode = OperatingMode::RejectingOutboundMessages;
+
+		assert_noop!(EthereumControl::set_operating_mode(origin, mode), BadOrigin);
+	});
+}
+
+#[test]
+fn set_pricing_parameters() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let mut params = Parameters::get();
+		params.rewards.local = 7;
+
+		assert_ok!(EthereumControl::set_pricing_parameters(origin, params));
+
+		assert_eq!(PricingParameters::<Test>::get().rewards.local, 7);
+	});
+}
+
+#[test]
+fn set_pricing_parameters_as_signed_fails() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed([14; 32].into());
+		let params = Parameters::get();
+
+		assert_noop!(EthereumControl::set_pricing_parameters(origin, params), BadOrigin);
+	});
+}
+
+#[test]
+fn set_pricing_parameters_invalid() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let mut params = Parameters::get();
+		params.rewards.local = 0;
+
+		assert_noop!(
+			EthereumControl::set_pricing_parameters(origin, params),
+			Error::<Test>::InvalidPricingParameters
+		);
+	});
+}
+
+#[test]
+fn set_token_transfer_fees() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+
+		assert_ok!(EthereumControl::set_token_transfer_fees(origin, 1, 1, eth(1)));
+	});
+}
+
+#[test]
+fn set_token_transfer_fees_root_only() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed([14; 32].into());
+
+		assert_noop!(EthereumControl::set_token_transfer_fees(origin, 1, 1, 1.into()), BadOrigin);
+	});
+}
+
+#[test]
+fn set_token_transfer_fees_invalid() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+
+		assert_noop!(
+			EthereumControl::set_token_transfer_fees(origin, 0, 0, 0.into()),
+			Error::<Test>::InvalidTokenTransferFees
+		);
 	});
 }
 
@@ -359,30 +450,6 @@ fn force_update_channel_bad_origin() {
 }
 
 #[test]
-fn set_operating_mode_as_root() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let mode = OperatingMode::RejectingOutboundMessages;
-
-		assert_ok!(EthereumControl::set_operating_mode(origin, mode));
-
-		System::assert_last_event(RuntimeEvent::EthereumControl(crate::Event::SetOperatingMode {
-			mode,
-		}));
-	});
-}
-
-#[test]
-fn set_operating_mode_as_signed_fails() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed([14; 32].into());
-		let mode = OperatingMode::RejectingOutboundMessages;
-
-		assert_noop!(EthereumControl::set_operating_mode(origin, mode), BadOrigin);
-	});
-}
-
-#[test]
 fn transfer_native_from_agent() {
 	new_test_ext().execute_with(|| {
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(2000)) };
@@ -557,28 +624,4 @@ fn charge_fee_for_upgrade() {
 		let sovereign_balance = Balances::balance(&sovereign_account);
 		assert_eq!(sovereign_balance, InitialFunding::get());
 	});
-}
-
-#[test]
-fn set_pricing_params_root_only() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
-		assert_noop!(
-			EthereumControl::set_pricing_parameters(origin, Parameters::get()),
-			DispatchError::BadOrigin,
-		);
-	})
-}
-
-#[test]
-fn set_fee_config_invalid() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let mut params = Parameters::get();
-		params.rewards.local = 0;
-		assert_noop!(
-			EthereumControl::set_pricing_parameters(origin, params),
-			Error::<Test>::InvalidPricingParameters
-		);
-	})
 }

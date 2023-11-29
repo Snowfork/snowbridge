@@ -439,8 +439,8 @@ contract Gateway is IGateway, IInitializable {
         uint128 assetHubCreateAssetFee;
         /// @dev The remote fee (DOT) for send tokens to AssetHub
         uint128 assetHubReserveTransferFee;
-        /// @dev extra fee to register an asset and discourage spamming
-        uint128 registerTokenFee;
+        /// @dev extra fee to register an asset and discourage spamming (Ether)
+        uint256 registerTokenFee;
     }
 
     // @dev Set token fees of the gateway
@@ -486,7 +486,11 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Total fee for sending a token
-    function quoteSendTokenFee(address, ParaID destinationChain, uint128 destinationFee) external view returns (uint256) {
+    function quoteSendTokenFee(address, ParaID destinationChain, uint128 destinationFee)
+        external
+        view
+        returns (uint256)
+    {
         Costs memory costs = Assets.sendTokenCosts(ASSET_HUB_PARA_ID, destinationChain, destinationFee);
         return _calculateFee(costs);
     }

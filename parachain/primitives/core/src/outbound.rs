@@ -119,15 +119,15 @@ mod v1 {
 		/// Set token fees of the Gateway contract
 		SetTokenTransferFees {
 			/// The fee(DOT) for the cost of creating asset on AssetHub
-			create: u128,
+			create_asset_xcm: u128,
 			/// The fee(DOT) for the cost of sending asset on AssetHub
-			transfer: u128,
-			/// The fee(Ether) for register an asset with reserve deposit and discourage spamming
-			register: u128,
+			transfer_asset_xcm: u128,
+			/// The fee(Ether) for register token to discourage spamming
+			register_token: U256,
 		},
 		/// Set pricing parameters
 		SetPricingParameters {
-			// relative ETH value
+			// ETH/DOT exchange rate
 			exchange_rate: UD60x18,
 			// Cost of delivering a message from Ethereum to BridgeHub, in ROC/KSM/DOT
 			delivery_cost: u128,
@@ -189,12 +189,15 @@ mod v1 {
 						Token::Address(*recipient),
 						Token::Uint(U256::from(*amount)),
 					])]),
-				Command::SetTokenTransferFees { create, transfer, register } =>
-					ethabi::encode(&[Token::Tuple(vec![
-						Token::Uint(U256::from(*create)),
-						Token::Uint(U256::from(*transfer)),
-						Token::Uint(U256::from(*register)),
-					])]),
+				Command::SetTokenTransferFees {
+					create_asset_xcm,
+					transfer_asset_xcm,
+					register_token,
+				} => ethabi::encode(&[Token::Tuple(vec![
+					Token::Uint(U256::from(*create_asset_xcm)),
+					Token::Uint(U256::from(*transfer_asset_xcm)),
+					Token::Uint(*register_token),
+				])]),
 				Command::SetPricingParameters { exchange_rate, delivery_cost } =>
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::Uint(exchange_rate.clone().into_inner()),

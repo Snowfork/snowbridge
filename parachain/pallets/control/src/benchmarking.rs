@@ -7,7 +7,7 @@ use super::*;
 use crate::Pallet as SnowbridgeControl;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
-use snowbridge_core::outbound::OperatingMode;
+use snowbridge_core::{eth, outbound::OperatingMode};
 use sp_runtime::SaturatedConversion;
 use xcm::prelude::*;
 
@@ -37,6 +37,24 @@ mod benchmarks {
 			impl_code_hash,
 			Some(Initializer { params, maximum_required_gas: 100000 }),
 		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_operating_mode() -> Result<(), BenchmarkError> {
+		#[extrinsic_call]
+		_(RawOrigin::Root, OperatingMode::RejectingOutboundMessages);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_pricing_parameters() -> Result<(), BenchmarkError> {
+		let params = T::DefaultPricingParameters::get();
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, params);
 
 		Ok(())
 	}
@@ -102,14 +120,6 @@ mod benchmarks {
 	}
 
 	#[benchmark]
-	fn set_operating_mode() -> Result<(), BenchmarkError> {
-		#[extrinsic_call]
-		_(RawOrigin::Root, OperatingMode::RejectingOutboundMessages);
-
-		Ok(())
-	}
-
-	#[benchmark]
 	fn transfer_native_from_agent() -> Result<(), BenchmarkError> {
 		let origin_para_id = 2000;
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
@@ -135,6 +145,14 @@ mod benchmarks {
 
 		#[extrinsic_call]
 		_(RawOrigin::Root, Box::new(versioned_location), H160::default(), 1);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_token_transfer_fees() -> Result<(), BenchmarkError> {
+		#[extrinsic_call]
+		_(RawOrigin::Root, 1, 1, eth(1));
 
 		Ok(())
 	}
