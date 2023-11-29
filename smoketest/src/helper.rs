@@ -12,6 +12,10 @@ use crate::{
 				utility,
 			},
 		},
+		penpal::{
+			api::runtime_types as penpalTypes,
+			{self},
+		},
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
@@ -31,10 +35,6 @@ use crate::{
 				VersionedXcm as RelaychainVersionedXcm,
 			},
 		},
-		penpal::{
-			api::runtime_types as penpalTypes,
-			{self},
-		},
 	},
 };
 use ethers::{
@@ -46,6 +46,15 @@ use ethers::{
 	types::Log,
 };
 use futures::StreamExt;
+use penpalTypes::{
+	pallet_xcm::pallet::Call,
+	penpal_runtime::RuntimeCall,
+	staging_xcm::v3::multilocation::MultiLocation,
+	xcm::{
+		v3::{junction::Junction, junctions::Junctions},
+		VersionedMultiLocation, VersionedXcm,
+	},
+};
 use sp_core::{sr25519::Pair, Pair as PairT, H160};
 use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
@@ -53,15 +62,6 @@ use subxt::{
 	events::StaticEvent,
 	tx::{PairSigner, TxPayload},
 	Config, OnlineClient, PolkadotConfig, SubstrateConfig,
-};
-use penpalTypes::{
-	staging_xcm::v3::multilocation::MultiLocation,
-	xcm::{
-		v3::{junction::Junction, junctions::Junctions},
-		VersionedMultiLocation, VersionedXcm,
-	},
-	pallet_xcm::pallet::Call,
-	penpal_runtime::RuntimeCall
 };
 
 /// Custom config that works with Penpal
@@ -198,7 +198,10 @@ pub async fn send_sudo_xcm_transact(
 		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
 	}));
 
-	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(&penpal::api::sudo::calls::TransactionApi,RuntimeCall::PolkadotXcm(Call::send { dest, message }));
+	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(
+		&penpal::api::sudo::calls::TransactionApi,
+		RuntimeCall::PolkadotXcm(Call::send { dest, message }),
+	);
 
 	let owner: Pair = Pair::from_string("//Alice", None).expect("cannot create keypair");
 
