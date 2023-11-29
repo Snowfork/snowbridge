@@ -86,7 +86,7 @@ contract DeployScript is Script {
             registerTokenFee: uint128(vm.envUint("REGISTER_TOKEN_FEE")),
             assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
-            exchangeRate: ud60x18(0.0025e18)
+            exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE"))
         });
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));

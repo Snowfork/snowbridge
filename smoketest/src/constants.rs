@@ -59,4 +59,16 @@ lazy_static! {
 		.unwrap_or("20000000000".to_string())
 		.parse()
 		.unwrap();
+	pub static ref EXCHANGE_RATE: u128 = env::var("EXCHANGE_RATE")
+		.unwrap_or("2500000000000000".to_string())
+		.parse()
+		.unwrap();
+	pub static ref FEE_PER_GAS: u64 =
+		env::var("FEE_PER_GAS").unwrap_or("20000000000".to_string()).parse().unwrap();
+	pub static ref LOCAL_REWARD: u128 =
+		env::var("LOCAL_REWARD").unwrap_or("1000000000000".to_string()).parse().unwrap();
+	pub static ref REMOTE_REWARD: u64 = env::var("REMOTE_REWARD")
+		.unwrap_or("1000000000000000".to_string())
+		.parse()
+		.unwrap();
 }

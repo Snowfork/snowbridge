@@ -28,12 +28,9 @@ async fn set_pricing_params() {
 	let set_pricing_params_call = BHRuntimeCall::EthereumControl(
 		runtime_types::snowbridge_control::pallet::Call::set_pricing_parameters {
 			params: PricingParameters {
-				exchange_rate: FixedU128(5_000_000_000_000_000),
-				rewards: Rewards {
-					local: 2_000_000_000_000,
-					remote: U256([2_000_000_000_000_000, 0, 0, 0]),
-				},
-				fee_per_gas: U256([30_000_000_000, 0, 0, 0]),
+				exchange_rate: FixedU128(*EXCHANGE_RATE),
+				rewards: Rewards { local: *LOCAL_REWARD, remote: U256([*REMOTE_REWARD, 0, 0, 0]) },
+				fee_per_gas: U256([*FEE_PER_GAS, 0, 0, 0]),
 			},
 		},
 	);
