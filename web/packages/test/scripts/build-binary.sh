@@ -18,10 +18,8 @@ build_binaries() {
     cp target/release/polkadot-prepare-worker $output_bin_dir/polkadot-prepare-worker
 
     echo "Building polkadot-parachain binary"
-    cd cumulus/polkadot-parachain
-    cargo build --release --locked --bin polkadot-parachain $features
-    cp ../../target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
-    cd -
+    cargo build --release --locked -p polkadot-parachain-bin --bin polkadot-parachain $features
+    cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
 
     popd
 }
