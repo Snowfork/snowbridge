@@ -106,10 +106,7 @@ use snowbridge_core::{
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 use sp_core::{H256, U256};
-use sp_runtime::{
-	traits::{CheckedDiv, Hash},
-	FixedPointNumber,
-};
+use sp_runtime::traits::{CheckedDiv, Hash};
 use sp_std::prelude::*;
 pub use types::{CommittedMessage, FeeConfigRecord, ProcessMessageOriginOf};
 pub use weights::WeightInfo;
@@ -372,12 +369,10 @@ pub mod pallet {
 			let fee: u128 = fee.try_into().defensive_unwrap_or(u128::MAX);
 
 			// convert to local currency
-			let fee = FixedU128::from(fee)
+			let fee = FixedU128::from_inner(fee)
 				.checked_div(&params.exchange_rate)
 				.expect("exchange rate is not zero; qed")
-				.into_inner()
-				.checked_div(FixedU128::accuracy())
-				.expect("accuracy is not zero; qed");
+				.into_inner();
 
 			// adjust fixed point to match local currency
 			let fee = Self::convert_from_ether_decimals(fee);
