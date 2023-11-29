@@ -53,7 +53,7 @@ async fn send_token() {
 
 	// Lock tokens into vault
 	let amount: u128 = U256::from(value).low_u128();
-	let fee: u128 = 1_000_000_000_000_000;
+	let fee: u128 = 30_000_000_000_000_000;
 	let receipt = gateway
 		.send_token(
 			weth.address(),
