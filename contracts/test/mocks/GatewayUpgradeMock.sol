@@ -35,13 +35,13 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
 
     function submitInbound(InboundMessage calldata, bytes32[] calldata, Verification.Proof calldata) external {}
 
-    function registerTokenFee() external pure returns (uint256) {
+    function quoteRegisterTokenFee() external pure returns (uint256) {
         return 1;
     }
 
     function registerToken(address) external payable {}
 
-    function sendTokenFee(address, ParaID, uint128) external pure returns (uint256) {
+    function quoteSendTokenFee(address, ParaID, uint128) external pure returns (uint256) {
         return 1;
     }
 
@@ -55,7 +55,7 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         emit Initialized(d0, d1);
     }
 
-    function getPricingParameters() external pure returns (UD60x18, uint128) {
+    function pricingParameters() external pure returns (UD60x18, uint128) {
         return (convert(0), uint128(0));
     }
 }

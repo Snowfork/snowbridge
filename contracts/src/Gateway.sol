@@ -251,6 +251,11 @@ contract Gateway is IGateway, IInitializable {
         return _ensureAgent(agentID);
     }
 
+    function pricingParameters() external view returns (UD60x18, uint128) {
+        PricingStorage.Layout storage pricing = PricingStorage.layout();
+        return (pricing.exchangeRate, pricing.deliveryCost);
+    }
+
     function implementation() public view returns (address) {
         return ERC1967.load();
     }
@@ -464,17 +469,12 @@ contract Gateway is IGateway, IInitializable {
         emit PricingParametersChanged();
     }
 
-    function getPricingParameters() external view returns (UD60x18, uint128) {
-        PricingStorage.Layout storage pricing = PricingStorage.layout();
-        return (pricing.exchangeRate, pricing.deliveryCost);
-    }
-
     /**
      * Assets
      */
 
     // Total fee for registering a token
-    function registerTokenFee() external view returns (uint256) {
+    function quoteRegisterTokenFee() external view returns (uint256) {
         Costs memory costs = Assets.registerTokenCosts();
         return _calculateFee(costs);
     }
@@ -486,7 +486,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Total fee for sending a token
-    function sendTokenFee(address, ParaID destinationChain, uint128 destinationFee) external view returns (uint256) {
+    function quoteSendTokenFee(address, ParaID destinationChain, uint128 destinationFee) external view returns (uint256) {
         Costs memory costs = Assets.sendTokenCosts(ASSET_HUB_PARA_ID, destinationChain, destinationFee);
         return _calculateFee(costs);
     }

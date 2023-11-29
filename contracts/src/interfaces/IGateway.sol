@@ -32,6 +32,9 @@ interface IGateway {
     // Emitted when the operating mode is changed
     event OperatingModeChanged(OperatingMode mode);
 
+    // Emitted when pricing params updated
+    event PricingParametersChanged();
+
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
@@ -43,6 +46,7 @@ interface IGateway {
     function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
     function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
     function agentOf(bytes32 agentID) external view returns (address);
+    function pricingParameters() external view returns (UD60x18, uint128);
     function implementation() external view returns (address);
 
     /**
@@ -75,22 +79,19 @@ interface IGateway {
     /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
     event TokenRegistrationSent(address token);
 
-    // @dev Emitted when pricing params updated
-    event PricingParametersChanged();
-
-    /// @dev Fee schedule in Ether for registering a token, covering
+    /// @dev Quote a fee in Ether for registering a token, covering
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM Execution costs on AssetHub
-    function registerTokenFee() external view returns (uint256);
+    function quoteRegisterTokenFee() external view returns (uint256);
 
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset
     ///      in the `ForeignAssets` pallet.
     function registerToken(address token) external payable;
 
-    /// @dev Fees in Ether for sending a token
+    /// @dev Quote a fee in Ether for sending a token
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM execution costs on destinationChain
-    function sendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
+    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
         external
         view
         returns (uint256);
@@ -103,7 +104,4 @@ interface IGateway {
         uint128 destinationFee,
         uint128 amount
     ) external payable;
-
-    /// @dev Get pricing params (exchangeRate,deliveryCost)
-    function getPricingParameters() external view returns (UD60x18, uint128);
 }

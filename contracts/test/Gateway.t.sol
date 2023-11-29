@@ -292,7 +292,7 @@ contract GatewayTest is Test {
         address user = makeAddr("user");
         deal(address(token), user, 1);
 
-        uint256 fee = IGateway(address(gateway)).sendTokenFee(address(token), ParaID.wrap(0), 1);
+        uint256 fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), ParaID.wrap(0), 1);
 
         // Let gateway lock up to 1 tokens
         hoax(user);
@@ -573,7 +573,7 @@ contract GatewayTest is Test {
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        uint256 totalFee = GatewayMock(address(gateway)).registerTokenFee();
+        uint256 totalFee = GatewayMock(address(gateway)).quoteRegisterTokenFee();
 
         uint256 balanceBefore = address(this).balance;
         IGateway(address(gateway)).registerToken{value: totalFee + 1 ether}(address(token));
@@ -592,7 +592,7 @@ contract GatewayTest is Test {
         // Multilocation for recipient
         ParaID destPara = ParaID.wrap(2043);
 
-        uint256 fee = IGateway(address(gateway)).sendTokenFee(address(token), destPara, 1);
+        uint256 fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
         emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
@@ -611,7 +611,7 @@ contract GatewayTest is Test {
         // Multilocation for recipient
         ParaID destPara = assetHubParaID;
 
-        uint256 fee = IGateway(address(gateway)).sendTokenFee(address(token), destPara, 1);
+        uint256 fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
         emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
@@ -630,7 +630,7 @@ contract GatewayTest is Test {
         // Multilocation for recipient
         ParaID destPara = ParaID.wrap(2043);
 
-        uint256 fee = IGateway(address(gateway)).sendTokenFee(address(token), destPara, 1);
+        uint256 fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
         emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress20, 1);
@@ -743,7 +743,7 @@ contract GatewayTest is Test {
         OperatingMode channelMode = gw.channelOperatingModeOf(assetHubParaID.into());
         assertEq(uint256(channelMode), 0);
 
-        (, uint128 fee) = gw.getPricingParameters();
+        (, uint128 fee) = gw.pricingParameters();
         assertEq(fee, 10000000000);
 
         (uint64 inbound, uint64 outbound) = gw.channelNoncesOf(assetHubParaID.into());
@@ -776,7 +776,7 @@ contract GatewayTest is Test {
     }
 
     function testSetTokenFees() public {
-        uint256 fee = IGateway(address(gateway)).registerTokenFee();
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         assertEq(fee, 5000000000000000);
         // Double the assetHubCreateAssetFee
         GatewayMock(address(gateway)).setTokenTransferFeesPublic(
@@ -788,7 +788,7 @@ contract GatewayTest is Test {
                 })
             )
         );
-        fee = IGateway(address(gateway)).registerTokenFee();
+        fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         // since deliveryCost not changed, so the total fee increased only by 50%
         assertEq(fee, 7500000000000000);
     }
@@ -802,7 +802,7 @@ contract GatewayTest is Test {
     }
 
     function testSetPricingParameters() public {
-        uint256 fee = IGateway(address(gateway)).registerTokenFee();
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         assertEq(fee, 5000000000000000);
         // Double the exchangeRate
         GatewayMock(address(gateway)).setPricingParametersPublic(
@@ -813,7 +813,7 @@ contract GatewayTest is Test {
                 })
             )
         );
-        fee = IGateway(address(gateway)).registerTokenFee();
+        fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         assertEq(fee, 10000000000000000);
     }
 }
