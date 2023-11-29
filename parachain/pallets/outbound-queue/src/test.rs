@@ -13,7 +13,9 @@ use snowbridge_core::{
 	outbound::{Command, SendError, SendMessage},
 	ParaId,
 };
+use sp_arithmetic::FixedU128;
 use sp_core::H256;
+use sp_runtime::FixedPointNumber;
 
 #[test]
 fn submit_messages_and_commit() {
@@ -189,5 +191,19 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 		run_to_end_of_next_block();
 		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
 		assert_eq!(footprint.storage.count, 0);
+	});
+}
+
+#[test]
+fn convert_local_currency() {
+	new_tester().execute_with(|| {
+		let fee: u128 = 1_000_000;
+		let fee1 = FixedU128::from_inner(fee).into_inner();
+		let fee2 = FixedU128::from(fee)
+			.into_inner()
+			.checked_div(FixedU128::accuracy())
+			.expect("accuracy is not zero; qed");
+		assert_eq!(fee, fee1);
+		assert_eq!(fee, fee2);
 	});
 }
