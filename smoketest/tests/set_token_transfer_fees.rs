@@ -21,9 +21,9 @@ async fn set_token_transfer_fees() {
 
 	let set_token_fees_call = BHRuntimeCall::EthereumControl(
 		runtime_types::snowbridge_control::pallet::Call::set_token_transfer_fees {
-			create: 10_000_000_000_000,
-			transfer: 20_000_000_000,
-			register: 100_000_000_000_000_000, //0.1 Ether
+			create: *CREATE_ASSET_FEE,
+			transfer: *RESERVE_TRANSFER_FEE,
+			register: *REGISTER_TOKEN_FEE,
 		},
 	);
 

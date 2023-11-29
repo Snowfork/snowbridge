@@ -3963,6 +3963,7 @@ dependencies = [
  "futures",
  "hex",
  "hex-literal",
+ "lazy_static",
  "parity-scale-codec",
  "serde",
  "sp-core 16.0.0",
