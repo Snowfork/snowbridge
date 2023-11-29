@@ -205,13 +205,7 @@ impl inbound_queue::Config for Test {
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
-	type MessageConverter = MessageToXcm<
-		CreateAssetCall,
-		CreateAssetExecutionFee,
-		CreateAssetDeposit,
-		AccountId,
-		Balance,
-	>;
+	type MessageConverter = MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>;
 	type PricingParameters = Parameters;
 	type ChannelLookup = MockChannelLookup;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -270,7 +264,7 @@ pub fn mock_event_log() -> Log {
             hex!("5f7060e971b0dc81e63f0aa41831091847d97c1a4693ac450cc128c7214e65e0").into(),
         ],
         // Nonce + Payload
-        data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000").into(),
+        data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d00e40b54020000000000000000000000000000000000000000000000000000000000").into(),
     }
 }
 

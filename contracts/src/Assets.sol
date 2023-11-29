@@ -127,8 +127,9 @@ library Assets {
             revert InvalidToken();
         }
 
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
         ticket.costs = _registerTokenCosts();
-        ticket.payload = SubstrateTypes.RegisterToken(token);
+        ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
 
         emit IGateway.TokenRegistrationSent(token);
     }

@@ -46,6 +46,8 @@ pub enum Command {
 	RegisterToken {
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
+		/// XCM execution fee on AssetHub
+		fee: u128,
 	},
 	/// Send a token to AssetHub or another parachain
 	SendToken {
@@ -85,25 +87,13 @@ pub enum Destination {
 	},
 }
 
-pub struct MessageToXcm<
-	CreateAssetCall,
-	CreateAssetExecutionFee,
-	CreateAssetDeposit,
-	AccountId,
-	Balance,
-> where
+pub struct MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
+where
 	CreateAssetCall: Get<CallIndex>,
-	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT,
 {
-	_phantom: PhantomData<(
-		CreateAssetCall,
-		CreateAssetExecutionFee,
-		CreateAssetDeposit,
-		AccountId,
-		Balance,
-	)>,
+	_phantom: PhantomData<(CreateAssetCall, CreateAssetDeposit, AccountId, Balance)>,
 }
 
 /// Reason why a message conversion failed.
@@ -123,12 +113,10 @@ pub trait ConvertMessage {
 
 pub type CallIndex = [u8; 2];
 
-impl<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, AccountId, Balance>
-	ConvertMessage
-	for MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, AccountId, Balance>
+impl<CreateAssetCall, CreateAssetDeposit, AccountId, Balance> ConvertMessage
+	for MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
 where
 	CreateAssetCall: Get<CallIndex>,
-	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
@@ -140,29 +128,28 @@ where
 		use Command::*;
 		use VersionedMessage::*;
 		match message {
-			V1(MessageV1 { chain_id, command: RegisterToken { token } }) =>
-				Ok(Self::convert_register_token(chain_id, token)),
+			V1(MessageV1 { chain_id, command: RegisterToken { token, fee } }) =>
+				Ok(Self::convert_register_token(chain_id, token, fee)),
 			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount, fee } }) =>
 				Ok(Self::convert_send_token(chain_id, token, destination, amount, fee)),
 		}
 	}
 }
 
-impl<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, AccountId, Balance>
-	MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, AccountId, Balance>
+impl<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
+	MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
 where
 	CreateAssetCall: Get<CallIndex>,
-	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
 {
-	fn convert_register_token(chain_id: u64, token: H160) -> (Xcm<()>, Balance) {
+	fn convert_register_token(chain_id: u64, token: H160, fee: u128) -> (Xcm<()>, Balance) {
 		let network = Ethereum { chain_id };
-		let fee: MultiAsset = (MultiLocation::parent(), CreateAssetExecutionFee::get()).into();
+		let xcm_fee: MultiAsset = (MultiLocation::parent(), fee).into();
 		let deposit: MultiAsset = (MultiLocation::parent(), CreateAssetDeposit::get()).into();
 
-		let total_amount = CreateAssetExecutionFee::get() + CreateAssetDeposit::get();
+		let total_amount = fee + CreateAssetDeposit::get();
 		let total: MultiAsset = (MultiLocation::parent(), total_amount).into();
 
 		let bridge_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
@@ -175,7 +162,7 @@ where
 			// Teleport required fees.
 			ReceiveTeleportedAsset(total.into()),
 			// Pay for execution.
-			BuyExecution { fees: fee, weight_limit: Unlimited },
+			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
 			// Fund the snowbridge sovereign with the required deposit for creation.
 			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
 			// Change origin to the bridge.
