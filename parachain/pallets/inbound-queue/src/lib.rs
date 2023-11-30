@@ -34,6 +34,9 @@ use snowbridge_beacon_primitives::CompactExecutionHeader;
 pub mod weights;
 
 #[cfg(test)]
+mod mock;
+
+#[cfg(test)]
 mod test;
 
 use codec::{Decode, DecodeAll, Encode};
@@ -57,7 +60,7 @@ use xcm::prelude::{
 
 use snowbridge_core::{
 	inbound::{Message, VerificationError, Verifier},
-	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ChannelLookup, ParaId,
+	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ParaId, StaticLookup,
 };
 use snowbridge_router_primitives::{
 	inbound,
@@ -81,6 +84,7 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use snowbridge_core::PricingParameters;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -100,10 +104,6 @@ pub mod pallet {
 		/// Message relayers are rewarded with this asset
 		type Token: Mutate<Self::AccountId>;
 
-		/// The amount to reward message relayers
-		#[pallet::constant]
-		type Reward: Get<BalanceOf<Self>>;
-
 		/// XCM message sender
 		type XcmSender: SendXcm;
 
@@ -117,7 +117,9 @@ pub mod pallet {
 			Balance = BalanceOf<Self>,
 		>;
 
-		type ChannelLookup: ChannelLookup;
+		type ChannelLookup: StaticLookup<Source = ChannelId, Target = Channel>;
+
+		type PricingParameters: Get<PricingParameters<BalanceOf<Self>>>;
 
 		type WeightInfo: WeightInfo;
 
@@ -230,7 +232,7 @@ pub mod pallet {
 			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway);
 
 			// Retrieve the registered channel for this message
-			let channel: Channel =
+			let channel =
 				T::ChannelLookup::lookup(envelope.channel_id).ok_or(Error::<T>::InvalidChannel)?;
 
 			// Verify message nonce
@@ -249,13 +251,8 @@ pub mod pallet {
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
 			let sovereign_account = sibling_sovereign_account::<T>(channel.para_id);
-			let refund = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
-			T::Token::transfer(
-				&sovereign_account,
-				&who,
-				refund.saturating_add(T::Reward::get()),
-				Preservation::Preserve,
-			)?;
+			let delivery_cost = Self::get();
+			T::Token::transfer(&sovereign_account, &who, delivery_cost, Preservation::Preserve)?;
 
 			// Decode message into XCM
 			let (xcm, fee) =
@@ -267,6 +264,13 @@ pub mod pallet {
 			// We embed fees for xcm execution inside the xcm program using teleports
 			// so we must burn the amount of the fee embedded into the program.
 			T::Token::burn_from(&sovereign_account, fee, Precision::Exact, Fortitude::Polite)?;
+
+			log::info!(
+				target: LOG_TARGET,
+				"💫 xcm {:?} sent with fee {:?}",
+				xcm,
+				fee
+			);
 
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, channel.para_id)?;
@@ -310,6 +314,14 @@ pub mod pallet {
 			let dest = MultiLocation { parents: 1, interior: X1(Parachain(dest.into())) };
 			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
 			Ok(xcm_hash)
+		}
+	}
+
+	impl<T: Config> Get<BalanceOf<T>> for Pallet<T> {
+		fn get() -> BalanceOf<T> {
+			let pricing_parameters = T::PricingParameters::get();
+			let refund: BalanceOf<T> = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
+			refund.saturating_add(pricing_parameters.rewards.local)
 		}
 	}
 }

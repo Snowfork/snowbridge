@@ -6,7 +6,7 @@ use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{i_gateway, weth9},
-	helper::initial_clients,
+	helper::{initial_clients, print_event_log_for_unit_tests},
 	parachains::assethub::api::{
 		foreign_assets::events::Issued,
 		runtime_types::{
@@ -53,14 +53,16 @@ async fn send_token() {
 
 	// Lock tokens into vault
 	let amount: u128 = U256::from(value).low_u128();
+	let fee: u128 = 30_000_000_000_000_000;
 	let receipt = gateway
 		.send_token(
 			weth.address(),
 			ASSET_HUB_PARA_ID,
 			i_gateway::MultiAddress { kind: 1, data: FERDIE.into() },
+			0,
 			amount,
 		)
-		.value(1000)
+		.value(fee)
 		.send()
 		.await
 		.unwrap()
@@ -68,7 +70,13 @@ async fn send_token() {
 		.unwrap()
 		.unwrap();
 
-	println!("receipt: {:#?}", receipt);
+	println!("receipt transaction hash: {:#?}", hex::encode(receipt.transaction_hash));
+
+	// Log for OutboundMessageAccepted
+	let outbound_message_accepted_log = receipt.logs.last().unwrap();
+
+	// print log for unit tests
+	print_event_log_for_unit_tests(outbound_message_accepted_log);
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 

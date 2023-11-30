@@ -15,6 +15,7 @@ serde = { version = "1.0", features = ["derive"] }
 subxt = { git = "https://github.com/paritytech/subxt.git", tag = "v0.27.1" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = false, features = ["abigen", "ws"] }
 sp-core = "16.0.0"
+lazy_static = "1.4.0"
 
 [dev-dependencies]
 xcm = { path = "../polkadot-sdk/polkadot/xcm", package="staging-xcm"}

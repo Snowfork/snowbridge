@@ -1,4 +1,6 @@
 use hex_literal::hex;
+use lazy_static::lazy_static;
+use std::{env, string::ToString};
 
 // Todo: load all configs from env in consistent with set-env.sh
 pub const ASSET_HUB_PARA_ID: u32 = 1000;
@@ -43,3 +45,30 @@ pub const PENPAL_SOVEREIGN: [u8; 32] =
 // SS58: DE14BzQ1bDXWPKeLoAqdLAm1GpyAWaWF1knF74cEZeomTBM
 pub const FERDIE: [u8; 32] =
 	hex!("1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c");
+
+lazy_static! {
+	pub static ref REGISTER_TOKEN_FEE: u128 = env::var("REGISTER_TOKEN_FEE")
+		.unwrap_or("100000000000000000".to_string())
+		.parse()
+		.unwrap();
+	pub static ref CREATE_ASSET_FEE: u128 = env::var("CREATE_ASSET_FEE")
+		.unwrap_or("10000000000000".to_string())
+		.parse()
+		.unwrap();
+	pub static ref RESERVE_TRANSFER_FEE: u128 = env::var("RESERVE_TRANSFER_FEE")
+		.unwrap_or("20000000000".to_string())
+		.parse()
+		.unwrap();
+	pub static ref EXCHANGE_RATE: u128 = env::var("EXCHANGE_RATE")
+		.unwrap_or("2500000000000000".to_string())
+		.parse()
+		.unwrap();
+	pub static ref FEE_PER_GAS: u64 =
+		env::var("FEE_PER_GAS").unwrap_or("20000000000".to_string()).parse().unwrap();
+	pub static ref LOCAL_REWARD: u128 =
+		env::var("LOCAL_REWARD").unwrap_or("1000000000000".to_string()).parse().unwrap();
+	pub static ref REMOTE_REWARD: u64 = env::var("REMOTE_REWARD")
+		.unwrap_or("1000000000000000".to_string())
+		.parse()
+		.unwrap();
+}
