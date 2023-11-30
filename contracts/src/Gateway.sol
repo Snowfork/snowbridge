@@ -222,7 +222,7 @@ contract Gateway is IGateway, IInitializable {
         amount = Math.min(amount + message.reward, address(channel.agent).balance);
 
         // Do the payment if there funds available in the agent
-        if (amount > dustThreshold()) {
+        if (amount > _dustThreshold()) {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
         }
 
@@ -473,26 +473,27 @@ contract Gateway is IGateway, IInitializable {
      * Assets
      */
 
-    // Total fee for registering a token
-    function quoteRegisterTokenFee() external view returns (uint256) {
-        Costs memory costs = Assets.registerTokenCosts();
-        return _calculateFee(costs);
+    function isTokenRegistered(address token) external view returns (bool) {
+        return Assets.isTokenRegistered(token);
     }
 
-    // Register a token on AssetHub
+    // Total fee for registering a token
+    function quoteRegisterTokenFee() external view returns (uint256) {
+        return _calculateFee(Assets.registerTokenCosts());
+    }
+
+    // Register an Ethereum-native token in the gateway and on AssetHub
     function registerToken(address token) external payable {
-        Ticket memory ticket = Assets.registerToken(token);
-        _submitOutbound(ASSET_HUB_PARA_ID, ticket);
+        _submitOutbound(Assets.registerToken(token));
     }
 
     // Total fee for sending a token
-    function quoteSendTokenFee(address, ParaID destinationChain, uint128 destinationFee)
+    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
         external
         view
         returns (uint256)
     {
-        Costs memory costs = Assets.sendTokenCosts(ASSET_HUB_PARA_ID, destinationChain, destinationFee);
-        return _calculateFee(costs);
+        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee));
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
@@ -503,24 +504,14 @@ contract Gateway is IGateway, IInitializable {
         uint128 destinationFee,
         uint128 amount
     ) external payable {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
-
-        Ticket memory ticket = Assets.sendToken(
-            ASSET_HUB_PARA_ID,
-            assetHubAgent,
-            token,
-            msg.sender,
-            destinationChain,
-            destinationAddress,
-            destinationFee,
-            amount
+        _submitOutbound(
+            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
         );
-
-        _submitOutbound(ASSET_HUB_PARA_ID, ticket);
     }
 
-    /* Internal functions */
+    /**
+     * Internal functions
+     */
 
     // Verify that a message commitment is considered finalized by our BEEFY light client.
     function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
@@ -548,9 +539,9 @@ contract Gateway is IGateway, IInitializable {
         return costs.native + _convertToNative(pricing.exchangeRate, pricing.deliveryCost + costs.foreign);
     }
 
-    // Submit an outbound message to Polkadot
-    function _submitOutbound(ParaID dest, Ticket memory ticket) internal {
-        ChannelID channelID = dest.into();
+    // Submit an outbound message to Polkadot, after taking fees
+    function _submitOutbound(Ticket memory ticket) internal {
+        ChannelID channelID = ticket.dest.into();
         Channel storage channel = _ensureChannel(channelID);
 
         // Ensure outbound messaging is allowed
@@ -617,7 +608,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
-    function dustThreshold() internal view returns (uint256) {
+    function _dustThreshold() internal view returns (uint256) {
         return 21000 * tx.gasprice;
     }
 
@@ -680,6 +671,9 @@ contract Gateway is IGateway, IInitializable {
 
         // Initialize assets storage
         AssetsStorage.Layout storage assets = AssetsStorage.layout();
+
+        assets.assetHubParaID = ASSET_HUB_PARA_ID;
+        assets.assetHubAgent = assetHubAgent;
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;

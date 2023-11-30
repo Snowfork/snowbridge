@@ -290,7 +290,11 @@ contract GatewayTest is Test {
         address user = makeAddr("user");
         deal(address(token), user, 1);
 
-        uint256 fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), ParaID.wrap(0), 1);
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
+
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), ParaID.wrap(0), 1);
 
         // Let gateway lock up to 1 tokens
         hoax(user);
@@ -304,6 +308,10 @@ contract GatewayTest is Test {
 
     // User doesn't have enough funds to send message
     function testUserDoesNotProvideEnoughFees() public {
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
+
         // Create a mock user
         address user = makeAddr("user");
         deal(address(token), user, 1);
@@ -590,7 +598,11 @@ contract GatewayTest is Test {
         // Multilocation for recipient
         ParaID destPara = ParaID.wrap(2043);
 
-        uint256 fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
+
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
         emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
@@ -609,7 +621,11 @@ contract GatewayTest is Test {
         // Multilocation for recipient
         ParaID destPara = assetHubParaID;
 
-        uint256 fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
+
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
         emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
@@ -628,7 +644,11 @@ contract GatewayTest is Test {
         // Multilocation for recipient
         ParaID destPara = ParaID.wrap(2043);
 
-        uint256 fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
+
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
         emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress20, 1);
@@ -645,6 +665,10 @@ contract GatewayTest is Test {
         token.approve(address(gateway), 1);
 
         ParaID destPara = assetHubParaID;
+
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
 
         // Should fail to send tokens to AssetHub
         vm.expectRevert(Assets.Unsupported.selector);
@@ -674,6 +698,10 @@ contract GatewayTest is Test {
         GatewayMock(address(gateway)).setOperatingModePublic(
             abi.encode(Gateway.SetOperatingModeParams({mode: OperatingMode.Normal}))
         );
+
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
 
         bytes memory params = abi.encode(
             Gateway.UpdateChannelParams({

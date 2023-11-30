@@ -33,6 +33,10 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return address(0);
     }
 
+    function isTokenRegistered(address) external pure returns (bool) {
+        return true;
+    }
+
     function submitInbound(InboundMessage calldata, bytes32[] calldata, Verification.Proof calldata) external {}
 
     function quoteRegisterTokenFee() external pure returns (uint256) {
