@@ -13,4 +13,5 @@ members = [
     "pallets/control",
     "pallets/control/runtime-api",
     "runtime/runtime-common",
+    "runtime/rococo-common",
 ]
