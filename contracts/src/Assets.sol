@@ -24,7 +24,7 @@ library Assets {
     error TokenNotRegistered();
     error Unsupported();
 
-    function isTokenRegistered(address token) internal view returns (bool) {
+    function isTokenRegistered(address token) external view returns (bool) {
         return AssetsStorage.layout().tokenRegistry[token].isRegistered;
     }
 
@@ -42,7 +42,7 @@ library Assets {
     }
 
     function sendTokenCosts(address token, ParaID destinationChain, uint128 destinationChainFee)
-        internal
+        external
         view
         returns (Costs memory costs)
     {
@@ -78,7 +78,7 @@ library Assets {
         MultiAddress calldata destinationAddress,
         uint128 destinationChainFee,
         uint128 amount
-    ) internal returns (Ticket memory ticket) {
+    ) external returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         TokenInfo storage info = $.tokenRegistry[token];
@@ -125,7 +125,7 @@ library Assets {
         emit IGateway.TokenSent(sender, token, destinationChain, destinationAddress, amount);
     }
 
-    function registerTokenCosts() internal view returns (Costs memory costs) {
+    function registerTokenCosts() external view returns (Costs memory costs) {
         return _registerTokenCosts();
     }
 
@@ -137,7 +137,7 @@ library Assets {
 
     /// @dev Registers a token (only native tokens at this time)
     /// @param token The ERC20 token address.
-    function registerToken(address token) internal returns (Ticket memory ticket) {
+    function registerToken(address token) external returns (Ticket memory ticket) {
         if (!token.isContract()) {
             revert InvalidToken();
         }
