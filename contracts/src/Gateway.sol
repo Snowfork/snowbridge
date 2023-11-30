@@ -65,7 +65,7 @@ contract Gateway is IGateway, IInitializable {
     // 2. Calling implementation function
     uint256 DISPATCH_OVERHEAD_GAS = 10_000;
 
-    UD60x18 internal immutable DOT_TO_ETH_DECIMALS;
+    uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
 
     error InvalidProof();
     error InvalidNonce();
@@ -98,7 +98,7 @@ contract Gateway is IGateway, IInitializable {
         bytes32 bridgeHubAgentID,
         ParaID assetHubParaID,
         bytes32 assetHubAgentID,
-        UD60x18 dotToEthDecimals
+        uint8 foreignTokenDecimals
     ) {
         if (
             bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0 || assetHubParaID == ParaID.wrap(0)
@@ -114,7 +114,7 @@ contract Gateway is IGateway, IInitializable {
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         ASSET_HUB_PARA_ID = assetHubParaID;
         ASSET_HUB_AGENT_ID = assetHubAgentID;
-        DOT_TO_ETH_DECIMALS = dotToEthDecimals;
+        FOREIGN_TOKEN_DECIMALS = foreignTokenDecimals;
     }
 
     /// @dev Submit a message from Polkadot for verification and dispatch
@@ -535,7 +535,9 @@ contract Gateway is IGateway, IInitializable {
     // Convert foreign currency to native currency (ROC/KSM/DOT -> ETH)
     function _convertToNative(UD60x18 exchangeRate, uint256 amount) internal view returns (uint256) {
         UD60x18 amountFP = convert(amount);
-        UD60x18 nativeAmountFP = amountFP.mul(exchangeRate).mul(DOT_TO_ETH_DECIMALS);
+        UD60x18 ethDecimals = convert(1e18);
+        UD60x18 foreignDecimals = convert(10).pow(convert(uint256(FOREIGN_TOKEN_DECIMALS)));
+        UD60x18 nativeAmountFP = amountFP.mul(exchangeRate).div(foreignDecimals).mul(ethDecimals);
         uint256 nativeAmount = convert(nativeAmountFP);
         return nativeAmount;
     }

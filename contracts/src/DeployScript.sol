@@ -15,13 +15,11 @@ import {AgentExecutor} from "./AgentExecutor.sol";
 import {ChannelID, ParaID, OperatingMode} from "./Types.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
 
 contract DeployScript is Script {
     using SafeNativeTransfer for address payable;
     using stdJson for string;
-
-    UD60x18 internal dotToEthDecimals;
 
     function setUp() public {}
 
@@ -59,7 +57,7 @@ contract DeployScript is Script {
         ParaID assetHubParaID = ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID")));
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
 
-        dotToEthDecimals = convert(vm.envUint("DOT_TO_ETH_DECIMALS"));
+        uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
 
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
@@ -69,7 +67,7 @@ contract DeployScript is Script {
             bridgeHubAgentID,
             assetHubParaID,
             assetHubAgentID,
-            dotToEthDecimals
+            foreignTokenDecimals
         );
 
         bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");

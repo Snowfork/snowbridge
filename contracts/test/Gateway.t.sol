@@ -73,10 +73,8 @@ contract GatewayTest is Test {
     MultiAddress public recipientAddress32;
     MultiAddress public recipientAddress20;
 
-    // DOT amounts need to be multiplied by 10^(18 - 10) to have the same number
-    // decimal places as ETH (18 decimal places)
-    // UD60x18.convert(1e8) == ud60x18(1e26)
-    UD60x18 public dotToEthDecimals = ud60x18(1e26);
+    // For DOT
+    uint8 public foreignTokenDecimals = 10;
 
     // ETH/DOT exchange rate
     UD60x18 public exchangeRate = ud60x18(0.0025e18);
@@ -90,7 +88,7 @@ contract GatewayTest is Test {
             bridgeHubAgentID,
             assetHubParaID,
             assetHubAgentID,
-            dotToEthDecimals
+            foreignTokenDecimals
         );
         Gateway.Config memory config = Gateway.Config({
             mode: OperatingMode.Normal,

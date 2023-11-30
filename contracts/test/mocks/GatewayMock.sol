@@ -18,7 +18,7 @@ contract GatewayMock is Gateway {
         bytes32 bridgeHubHubAgentID,
         ParaID assetHubParaID,
         bytes32 assetHubHubAgentID,
-        UD60x18 dotToEthDecimals
+        uint8 foreignTokenDecimals
     )
         Gateway(
             beefyClient,
@@ -27,7 +27,7 @@ contract GatewayMock is Gateway {
             bridgeHubHubAgentID,
             assetHubParaID,
             assetHubHubAgentID,
-            dotToEthDecimals
+            foreignTokenDecimals
         )
     {}
 
