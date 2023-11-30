@@ -48,7 +48,7 @@ pub const FERDIE: [u8; 32] =
 
 lazy_static! {
 	pub static ref REGISTER_TOKEN_FEE: u64 = env::var("REGISTER_TOKEN_FEE")
-		.unwrap_or("1000000000000000".to_string())
+		.unwrap_or("200000000000000000".to_string())
 		.parse()
 		.unwrap();
 	pub static ref CREATE_ASSET_FEE: u128 = env::var("CREATE_ASSET_FEE")
