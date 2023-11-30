@@ -16,13 +16,14 @@ async fn set_token_transfer_fees() {
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
-	let fees = gateway.token_transfer_fees().await.expect("get fees");
-	println!("asset fees {:?}", fees);
+	let fees = gateway.register_token_fee().await.expect("get fees");
+	println!("register fees {:?}", fees);
 
 	let set_token_fees_call = BHRuntimeCall::EthereumSystem(
 		runtime_types::snowbridge_system::pallet::Call::set_token_transfer_fees {
-			register: 10_000_000_000_000,
-			send: 20_000_000_000,
+			create: *CREATE_ASSET_FEE,
+			transfer: *RESERVE_TRANSFER_FEE,
+			register: *REGISTER_TOKEN_FEE,
 		},
 	);
 
@@ -34,6 +35,6 @@ async fn set_token_transfer_fees() {
 
 	wait_for_ethereum_event::<TokenTransferFeesChangedFilter>(&test_clients.ethereum_client).await;
 
-	let fees = gateway.token_transfer_fees().await.expect("get fees");
+	let fees = gateway.register_token_fee().await.expect("get fees");
 	println!("asset fees {:?}", fees);
 }

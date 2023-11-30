@@ -96,20 +96,17 @@ use bridge_hub_common::AggregateMessageOrigin;
 use codec::Decode;
 use frame_support::{
 	storage::StorageStreamIter,
-	traits::{tokens::Balance, EnqueueMessage, Get, ProcessMessageError},
+	traits::{tokens::Balance, Defensive, EnqueueMessage, Get, ProcessMessageError},
 	weights::{Weight, WeightToFee},
 };
 use snowbridge_core::{
 	outbound::{Command, Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
-	BasicOperatingMode, ChannelId, GWEI, METH,
+	BasicOperatingMode, ChannelId,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
-use sp_core::H256;
-use sp_runtime::{
-	traits::{CheckedDiv, Hash},
-	FixedPointNumber,
-};
+use sp_core::{H256, U256};
+use sp_runtime::traits::{CheckedDiv, Hash};
 use sp_std::prelude::*;
 pub use types::{CommittedMessage, FeeConfigRecord, ProcessMessageOriginOf};
 pub use weights::WeightInfo;
@@ -121,6 +118,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use snowbridge_core::PricingParameters;
 	use sp_arithmetic::FixedU128;
 
 	#[pallet::pallet]
@@ -150,6 +148,8 @@ pub mod pallet {
 		/// Max number of messages processed per block
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
+
+		type PricingParameters: Get<PricingParameters<Self::Balance>>;
 
 		/// Convert a weight value into a deductible fee based.
 		type WeightToFee: WeightToFee<Balance = Self::Balance>;
@@ -198,6 +198,8 @@ pub mod pallet {
 		Halted,
 		// Invalid fee config
 		InvalidFeeConfig,
+		/// Invalid Channel
+		InvalidChannel,
 	}
 
 	/// Messages to be committed in the current block. This storage value is killed in
@@ -226,22 +228,6 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn operating_mode)]
 	pub type OperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn fee_config)]
-	pub type FeeConfig<T: Config> = StorageValue<_, FeeConfigRecord, ValueQuery, DefaultFeeConfig>;
-
-	#[pallet::type_value]
-	pub fn DefaultFeeConfig() -> FeeConfigRecord {
-		// When the FeeConfigRecord is updated, so should this fee constant on asset hub:
-		// polkadot-sdk/cumulus/parachains/common/src/snowbridge_config.rs
-		FeeConfigRecord {
-			exchange_rate: FixedU128::saturating_from_rational(1, 400),
-			fee_per_gas: 20 * GWEI,
-			#[allow(clippy::identity_op)]
-			reward: 1 * METH,
-		}
-	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
@@ -278,16 +264,6 @@ pub mod pallet {
 			ensure_root(origin)?;
 			OperatingMode::<T>::put(mode);
 			Self::deposit_event(Event::OperatingModeChanged { mode });
-			Ok(())
-		}
-
-		#[pallet::call_index(1)]
-		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
-		pub fn set_fee_config(origin: OriginFor<T>, fee_config: FeeConfigRecord) -> DispatchResult {
-			ensure_root(origin)?;
-			fee_config.validate().map_err(|_| Error::<T>::InvalidFeeConfig)?;
-			FeeConfig::<T>::put(fee_config);
-			Self::deposit_event(Event::FeeConfigChanged { fee_config });
 			Ok(())
 		}
 	}
@@ -334,13 +310,19 @@ pub mod pallet {
 			let queued_message: QueuedMessage =
 				versioned_queued_message.try_into().map_err(|_| Unsupported)?;
 
+			let pricing_params = T::PricingParameters::get();
+
 			let next_nonce = Nonce::<T>::get(queued_message.channel_id).saturating_add(1);
 
 			let command = queued_message.command.index();
 			let params = queued_message.command.abi_encode();
-			let max_dispatch_gas = T::GasMeter::maximum_required(&queued_message.command) as u128;
-			let max_refund = Self::calculate_maximum_gas_refund(&queued_message.command);
-			let reward = Self::fee_config().reward;
+			let max_dispatch_gas =
+				T::GasMeter::maximum_dispatch_gas_used_at_most(&queued_message.command);
+			let max_refund = Self::calculate_maximum_gas_refund(
+				&queued_message.command,
+				pricing_params.fee_per_gas,
+			);
+			let reward = pricing_params.rewards.remote;
 
 			// Construct the final committed message
 			let message = CommittedMessage {
@@ -349,8 +331,8 @@ pub mod pallet {
 				command,
 				params,
 				max_dispatch_gas,
-				max_refund,
-				reward,
+				max_refund: max_refund.try_into().defensive_unwrap_or(u128::MAX),
+				reward: reward.try_into().defensive_unwrap_or(u128::MAX),
 				id: queued_message.id,
 			};
 
@@ -370,39 +352,41 @@ pub mod pallet {
 			Ok(true)
 		}
 
-		/// Maximum overall gas required for delivering a message
-		pub(crate) fn maximum_overall_required_gas(command: &Command) -> u64 {
-			T::GasMeter::MAXIMUM_BASE_GAS + T::GasMeter::maximum_required(command)
-		}
-
-		/// Calculate fee in native currency for delivering a message.
-		pub(crate) fn calculate_fee(command: &Command) -> Fee<T::Balance> {
-			let max_gas = Self::maximum_overall_required_gas(command);
-			let remote = Self::calculate_remote_fee(
-				max_gas,
-				Self::fee_config().fee_per_gas,
-				Self::fee_config().reward,
+		/// Calculate total fee in native currency to cover all costs of delivering a message to the
+		/// remote destination. See module-level documentation for more details.
+		pub(crate) fn calculate_fee(
+			gas_used_at_most: u64,
+			params: PricingParameters<T::Balance>,
+		) -> Fee<T::Balance> {
+			// Remote fee in ether
+			let fee = Self::calculate_remote_fee(
+				gas_used_at_most,
+				params.fee_per_gas,
+				params.rewards.remote,
 			);
 
-			let remote = FixedU128::from(remote)
-				.checked_div(&Self::fee_config().exchange_rate)
+			// downcast to u128
+			let fee: u128 = fee.try_into().defensive_unwrap_or(u128::MAX);
+
+			// convert to local currency
+			let fee = FixedU128::from_inner(fee)
+				.checked_div(&params.exchange_rate)
 				.expect("exchange rate is not zero; qed")
-				.into_inner()
-				.checked_div(FixedU128::accuracy())
-				.expect("accuracy is not zero; qed");
+				.into_inner();
 
-			let remote = Self::convert_from_ether_decimals(remote);
+			// adjust fixed point to match local currency
+			let fee = Self::convert_from_ether_decimals(fee);
 
-			Fee::from((Self::calculate_local_fee(), remote))
+			Fee::from((Self::calculate_local_fee(), fee))
 		}
 
 		/// Calculate fee in remote currency for dispatching a message on Ethereum
 		pub(crate) fn calculate_remote_fee(
-			max_gas_required: u64,
-			fee_per_gas: u128,
-			reward: u128,
-		) -> u128 {
-			fee_per_gas.saturating_mul(max_gas_required.into()).saturating_add(reward)
+			gas_used_at_most: u64,
+			fee_per_gas: U256,
+			reward: U256,
+		) -> U256 {
+			fee_per_gas.saturating_mul(gas_used_at_most.into()).saturating_add(reward)
 		}
 
 		/// The local component of the message processing fees in native currency
@@ -413,9 +397,11 @@ pub mod pallet {
 		}
 
 		/// Maximum refund in Ether for delivering a message
-		pub(crate) fn calculate_maximum_gas_refund(command: &Command) -> u128 {
-			let max_gas = Self::maximum_overall_required_gas(command);
-			Self::fee_config().fee_per_gas.saturating_mul(max_gas.into())
+		pub(crate) fn calculate_maximum_gas_refund(command: &Command, fee_per_gas: U256) -> U256 {
+			// Maximum overall gas required for delivering a message
+			let max_gas = T::GasMeter::MAXIMUM_BASE_GAS +
+				T::GasMeter::maximum_dispatch_gas_used_at_most(command);
+			fee_per_gas.saturating_mul(max_gas.into())
 		}
 
 		// 1 DOT has 10 digits of precision

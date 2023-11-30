@@ -13,8 +13,9 @@ use snowbridge_core::{
 	outbound::{Command, SendError, SendMessage},
 	ParaId,
 };
+use sp_arithmetic::FixedU128;
 use sp_core::H256;
-use sp_runtime::{AccountId32, DispatchError};
+use sp_runtime::FixedPointNumber;
 
 #[test]
 fn submit_messages_and_commit() {
@@ -46,17 +47,6 @@ fn submit_message_fail_too_large() {
 	new_tester().execute_with(|| {
 		let message = mock_invalid_governance_message::<Test>();
 		assert_err!(OutboundQueue::validate(&message), SendError::MessageTooLarge);
-	});
-}
-
-#[test]
-fn calculate_fees() {
-	new_tester().execute_with(|| {
-		let command = mock_message(1000).command;
-		let fee = OutboundQueue::calculate_fee(&command);
-		assert_eq!(fee.remote, 2200000000000);
-
-		println!("Total fee: {}", fee.total())
 	});
 }
 
@@ -120,42 +110,6 @@ fn process_message_fails_on_overweight_message() {
 		assert_noop!(
 			OutboundQueue::process_message(&message.as_slice(), origin, &mut meter, &mut [0u8; 32]),
 			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
-		);
-	})
-}
-
-#[test]
-fn set_operating_mode_root_only() {
-	new_tester().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
-		assert_noop!(
-			OutboundQueue::set_operating_mode(origin, BasicOperatingMode::Halted),
-			DispatchError::BadOrigin,
-		);
-	})
-}
-
-#[test]
-fn set_fee_config_root_only() {
-	new_tester().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
-		assert_noop!(
-			OutboundQueue::set_fee_config(origin, DefaultFeeConfig::get()),
-			DispatchError::BadOrigin,
-		);
-	})
-}
-
-#[test]
-fn set_fee_config_invalid() {
-	new_tester().execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		assert_noop!(
-			OutboundQueue::set_fee_config(
-				origin,
-				FeeConfigRecord { exchange_rate: (1, 1).into(), reward: 0, fee_per_gas: 0 }
-			),
-			Error::<Test>::InvalidFeeConfig
 		);
 	})
 }
@@ -237,5 +191,19 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 		run_to_end_of_next_block();
 		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
 		assert_eq!(footprint.storage.count, 0);
+	});
+}
+
+#[test]
+fn convert_local_currency() {
+	new_tester().execute_with(|| {
+		let fee: u128 = 1_000_000;
+		let fee1 = FixedU128::from_inner(fee).into_inner();
+		let fee2 = FixedU128::from(fee)
+			.into_inner()
+			.checked_div(FixedU128::accuracy())
+			.expect("accuracy is not zero; qed");
+		assert_eq!(fee, fee1);
+		assert_eq!(fee, fee2);
 	});
 }

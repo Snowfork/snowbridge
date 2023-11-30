@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 
 import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
 import {Verification} from "../Verification.sol";
+import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 interface IGateway {
     /**
@@ -31,6 +32,9 @@ interface IGateway {
     // Emitted when the operating mode is changed
     event OperatingModeChanged(OperatingMode mode);
 
+    // Emitted when pricing params updated
+    event PricingParametersChanged();
+
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
@@ -40,9 +44,9 @@ interface IGateway {
 
     function operatingMode() external view returns (OperatingMode);
     function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
-    function channelOutboundFeeOf(ChannelID channelID) external view returns (uint256);
     function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
     function agentOf(bytes32 agentID) external view returns (address);
+    function pricingParameters() external view returns (UD60x18, uint128);
     function implementation() external view returns (address);
 
     /**
@@ -61,13 +65,13 @@ interface IGateway {
      */
 
     // @dev Emitted when the fees updated
-    event TokenTransferFeesChanged(uint256 register, uint256 send);
+    event TokenTransferFeesChanged();
 
     /// @dev Emitted once the funds are locked and an outbound message is successfully queued.
     event TokenSent(
         address indexed token,
         address indexed sender,
-        ParaID destinationChain,
+        ParaID indexed destinationChain,
         MultiAddress destinationAddress,
         uint128 amount
     );
@@ -75,15 +79,29 @@ interface IGateway {
     /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
     event TokenRegistrationSent(address token);
 
-    // @dev Fees in Ether for registering and sending tokens respectively
-    function tokenTransferFees() external view returns (uint256, uint256);
+    /// @dev Quote a fee in Ether for registering a token, covering
+    /// 1. Delivery costs to BridgeHub
+    /// 2. XCM Execution costs on AssetHub
+    function quoteRegisterTokenFee() external view returns (uint256);
 
     /// @dev Send a message to the AssetHub parachain to register a new fungible asset
     ///      in the `ForeignAssets` pallet.
     function registerToken(address token) external payable;
 
-    /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
-    function sendToken(address token, ParaID destinationChain, MultiAddress calldata destinationAddress, uint128 amount)
+    /// @dev Quote a fee in Ether for sending a token
+    /// 1. Delivery costs to BridgeHub
+    /// 2. XCM execution costs on destinationChain
+    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
         external
-        payable;
+        view
+        returns (uint256);
+
+    /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
+    function sendToken(
+        address token,
+        ParaID destinationChain,
+        MultiAddress calldata destinationAddress,
+        uint128 destinationFee,
+        uint128 amount
+    ) external payable;
 }

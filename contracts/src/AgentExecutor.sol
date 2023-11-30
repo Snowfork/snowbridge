@@ -17,8 +17,7 @@ contract AgentExecutor {
     /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
     /// the `data` parameter is constructed by the BridgeHub parachain.
     ///
-    /// NOTE: There are no authorization checks here. Since this contract is only used for its code.
-    function execute(address, bytes memory data) external {
+    function execute(bytes memory data) external {
         (AgentExecuteCommand command, bytes memory params) = abi.decode(data, (AgentExecuteCommand, bytes));
         if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
@@ -29,7 +28,6 @@ contract AgentExecutor {
     /// @dev Transfer ether to `recipient`. Unlike `_transferToken` This logic is not nested within `execute`,
     /// as the gateway needs to control an agent's ether balance directly.
     ///
-    /// NOTE: There are no authorization checks here. Since this contract is only used for its code.
     function transferNative(address payable recipient, uint256 amount) external {
         recipient.safeNativeTransfer(amount);
     }

@@ -3,7 +3,7 @@
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 use hex_literal::hex;
-use snowbridge_core::sibling_sovereign_account_raw;
+use snowbridge_core::{eth, sibling_sovereign_account_raw};
 use sp_core::H256;
 use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
 
@@ -124,6 +124,97 @@ fn upgrade_with_params() {
 }
 
 #[test]
+fn set_operating_mode() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let mode = OperatingMode::RejectingOutboundMessages;
+
+		assert_ok!(EthereumSystem::set_operating_mode(origin, mode));
+
+		System::assert_last_event(RuntimeEvent::EthereumSystem(crate::Event::SetOperatingMode {
+			mode,
+		}));
+	});
+}
+
+#[test]
+fn set_operating_mode_as_signed_fails() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed([14; 32].into());
+		let mode = OperatingMode::RejectingOutboundMessages;
+
+		assert_noop!(EthereumSystem::set_operating_mode(origin, mode), BadOrigin);
+	});
+}
+
+#[test]
+fn set_pricing_parameters() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let mut params = Parameters::get();
+		params.rewards.local = 7;
+
+		assert_ok!(EthereumSystem::set_pricing_parameters(origin, params));
+
+		assert_eq!(PricingParameters::<Test>::get().rewards.local, 7);
+	});
+}
+
+#[test]
+fn set_pricing_parameters_as_signed_fails() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed([14; 32].into());
+		let params = Parameters::get();
+
+		assert_noop!(EthereumSystem::set_pricing_parameters(origin, params), BadOrigin);
+	});
+}
+
+#[test]
+fn set_pricing_parameters_invalid() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let mut params = Parameters::get();
+		params.rewards.local = 0;
+
+		assert_noop!(
+			EthereumSystem::set_pricing_parameters(origin, params),
+			Error::<Test>::InvalidPricingParameters
+		);
+	});
+}
+
+#[test]
+fn set_token_transfer_fees() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+
+		assert_ok!(EthereumSystem::set_token_transfer_fees(origin, 1, 1, eth(1)));
+	});
+}
+
+#[test]
+fn set_token_transfer_fees_root_only() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::signed([14; 32].into());
+
+		assert_noop!(EthereumSystem::set_token_transfer_fees(origin, 1, 1, 1.into()), BadOrigin);
+	});
+}
+
+#[test]
+fn set_token_transfer_fees_invalid() {
+	new_test_ext().execute_with(|| {
+		let origin = RuntimeOrigin::root();
+
+		assert_noop!(
+			EthereumSystem::set_token_transfer_fees(origin, 0, 0, 0.into()),
+			Error::<Test>::InvalidTokenTransferFees
+		);
+	});
+}
+
+#[test]
 fn create_channel() {
 	new_test_ext().execute_with(|| {
 		let origin_para_id = 2000;
@@ -135,7 +226,7 @@ fn create_channel() {
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		assert_ok!(EthereumSystem::create_agent(origin.clone()));
-		assert_ok!(EthereumSystem::create_channel(origin, OperatingMode::Normal, 1));
+		assert_ok!(EthereumSystem::create_channel(origin, OperatingMode::Normal));
 	});
 }
 
@@ -151,10 +242,10 @@ fn create_channel_fail_already_exists() {
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 
 		assert_ok!(EthereumSystem::create_agent(origin.clone()));
-		assert_ok!(EthereumSystem::create_channel(origin.clone(), OperatingMode::Normal, 1));
+		assert_ok!(EthereumSystem::create_channel(origin.clone(), OperatingMode::Normal));
 
 		assert_noop!(
-			EthereumSystem::create_channel(origin, OperatingMode::Normal, 1),
+			EthereumSystem::create_channel(origin, OperatingMode::Normal),
 			Error::<Test>::ChannelAlreadyCreated
 		);
 	});
@@ -168,7 +259,6 @@ fn create_channel_bad_origin() {
 			EthereumSystem::create_channel(
 				make_xcm_origin(MultiLocation { parents: 1, interior: Here }),
 				OperatingMode::Normal,
-				1
 			),
 			BadOrigin,
 		);
@@ -184,7 +274,6 @@ fn create_channel_bad_origin() {
 					),
 				}),
 				OperatingMode::Normal,
-				1
 			),
 			BadOrigin,
 		);
@@ -197,7 +286,6 @@ fn create_channel_bad_origin() {
 					interior: X1(Junction::AccountId32 { network: None, id: [67u8; 32] }),
 				}),
 				OperatingMode::Normal,
-				1
 			),
 			BadOrigin,
 		);
@@ -207,7 +295,6 @@ fn create_channel_bad_origin() {
 			EthereumSystem::create_channel(
 				RuntimeOrigin::signed([14; 32].into()),
 				OperatingMode::Normal,
-				1
 			),
 			BadOrigin
 		);
@@ -228,7 +315,7 @@ fn update_channel() {
 		// First create the channel
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 		EthereumSystem::create_agent(origin.clone()).unwrap();
-		EthereumSystem::create_channel(origin.clone(), OperatingMode::Normal, 1).unwrap();
+		EthereumSystem::create_channel(origin.clone(), OperatingMode::Normal).unwrap();
 
 		// Now try to update it
 		assert_ok!(EthereumSystem::update_channel(origin, OperatingMode::Normal, 2004));
@@ -324,7 +411,7 @@ fn force_update_channel() {
 		// First create the channel
 		let _ = Balances::mint_into(&sovereign_account, 10000);
 		EthereumSystem::create_agent(origin.clone()).unwrap();
-		EthereumSystem::create_channel(origin.clone(), OperatingMode::Normal, 1).unwrap();
+		EthereumSystem::create_channel(origin.clone(), OperatingMode::Normal).unwrap();
 
 		// Now try to force update it
 		let force_origin = RuntimeOrigin::root();
@@ -359,30 +446,6 @@ fn force_update_channel_bad_origin() {
 			),
 			BadOrigin,
 		);
-	});
-}
-
-#[test]
-fn set_operating_mode_as_root() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let mode = OperatingMode::RejectingOutboundMessages;
-
-		assert_ok!(EthereumSystem::set_operating_mode(origin, mode));
-
-		System::assert_last_event(RuntimeEvent::EthereumSystem(crate::Event::SetOperatingMode {
-			mode,
-		}));
-	});
-}
-
-#[test]
-fn set_operating_mode_as_signed_fails() {
-	new_test_ext().execute_with(|| {
-		let origin = RuntimeOrigin::signed([14; 32].into());
-		let mode = OperatingMode::RejectingOutboundMessages;
-
-		assert_noop!(EthereumSystem::set_operating_mode(origin, mode), BadOrigin);
 	});
 }
 
@@ -529,7 +592,7 @@ fn charge_fee_for_transfer_native_from_agent() {
 
 		// create_agent & create_channel first
 		assert_ok!(EthereumSystem::create_agent(origin.clone()));
-		assert_ok!(EthereumSystem::create_channel(origin.clone(), OperatingMode::Normal, 1));
+		assert_ok!(EthereumSystem::create_channel(origin.clone(), OperatingMode::Normal));
 
 		// assert sovereign_balance decreased by only the base_fee
 		let sovereign_balance_before = Balances::balance(&sovereign_account);

@@ -6,6 +6,7 @@ import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, Mult
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 import {Verification} from "../../src/Verification.sol";
+import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
 
 contract GatewayUpgradeMock is IGateway, IInitializable {
     /**
@@ -20,10 +21,6 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return OperatingMode.Normal;
     }
 
-    function channelOutboundFeeOf(ChannelID) external pure returns (uint256) {
-        return 0;
-    }
-
     function channelNoncesOf(ChannelID) external pure returns (uint64, uint64) {
         return (0, 0);
     }
@@ -32,18 +29,23 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return address(0);
     }
 
-    function tokenTransferFees() external pure returns (uint256, uint256) {
-        return (1, 1);
-    }
-
     function implementation() external pure returns (address) {
         return address(0);
     }
 
     function submitInbound(InboundMessage calldata, bytes32[] calldata, Verification.Proof calldata) external {}
 
+    function quoteRegisterTokenFee() external pure returns (uint256) {
+        return 1;
+    }
+
     function registerToken(address) external payable {}
-    function sendToken(address, ParaID, MultiAddress calldata, uint128) external payable {}
+
+    function quoteSendTokenFee(address, ParaID, uint128) external pure returns (uint256) {
+        return 1;
+    }
+
+    function sendToken(address, ParaID, MultiAddress calldata, uint128, uint128) external payable {}
 
     event Initialized(uint256 d0, uint256 d1);
 
@@ -51,5 +53,9 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         // Just decode and exit
         (uint256 d0, uint256 d1) = abi.decode(data, (uint256, uint256));
         emit Initialized(d0, d1);
+    }
+
+    function pricingParameters() external pure returns (UD60x18, uint128) {
+        return (convert(0), uint128(0));
     }
 }

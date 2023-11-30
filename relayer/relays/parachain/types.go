@@ -1,11 +1,12 @@
 package parachain
 
 import (
+	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
-	"github.com/vedhavyas/go-subkey/scale"
+	"math/big"
 )
 
 // A Task contains the working state for message commitments in a single parachain block
@@ -85,7 +86,7 @@ type OutboundQueueMessage struct {
 	Nonce          uint64
 	Command        uint8
 	Params         []byte
-	MaxDispatchGas types.U128
+	MaxDispatchGas uint64
 	MaxRefund      types.U128
 	Reward         types.U128
 	ID             types.Bytes32
@@ -97,11 +98,63 @@ func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 		Nonce:          m.Nonce,
 		Command:        m.Command,
 		Params:         m.Params,
-		MaxDispatchGas: m.MaxDispatchGas.Int,
+		MaxDispatchGas: m.MaxDispatchGas,
 		MaxRefund:      m.MaxRefund.Int,
 		Reward:         m.Reward.Int,
 		Id:             m.ID,
 	}
+}
+
+func (m OutboundQueueMessage) Encode(encoder scale.Encoder) error {
+	encoder.Encode(m.ChannelID)
+	encoder.EncodeUintCompact(*big.NewInt(0).SetUint64(m.Nonce))
+	encoder.Encode(m.Command)
+	encoder.Encode(m.Params)
+	encoder.EncodeUintCompact(*big.NewInt(0).SetUint64(m.MaxDispatchGas))
+	encoder.EncodeUintCompact(*m.MaxRefund.Int)
+	encoder.EncodeUintCompact(*m.Reward.Int)
+	encoder.Encode(m.ID)
+	return nil
+}
+
+func (m *OutboundQueueMessage) Decode(decoder scale.Decoder) error {
+	err := decoder.Decode(&m.ChannelID)
+	if err != nil {
+		return err
+	}
+	decoded, err := decoder.DecodeUintCompact()
+	if err != nil {
+		return err
+	}
+	m.Nonce = decoded.Uint64()
+	err = decoder.Decode(&m.Command)
+	if err != nil {
+		return err
+	}
+	err = decoder.Decode(&m.Params)
+	if err != nil {
+		return err
+	}
+	decoded, err = decoder.DecodeUintCompact()
+	if err != nil {
+		return err
+	}
+	m.MaxDispatchGas = decoded.Uint64()
+	decoded, err = decoder.DecodeUintCompact()
+	if err != nil {
+		return err
+	}
+	m.MaxRefund = types.U128{Int: decoded}
+	decoded, err = decoder.DecodeUintCompact()
+	if err != nil {
+		return err
+	}
+	m.Reward = types.U128{Int: decoded}
+	err = decoder.Decode(&m.ID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type MessageProof struct {

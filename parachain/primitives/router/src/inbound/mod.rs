@@ -46,6 +46,8 @@ pub enum Command {
 	RegisterToken {
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
+		/// XCM execution fee on AssetHub
+		fee: u128,
 	},
 	/// Send a token to AssetHub or another parachain
 	SendToken {
@@ -55,6 +57,8 @@ pub enum Command {
 		destination: Destination,
 		/// Amount to transfer
 		amount: u128,
+		/// XCM execution fee on AssetHub
+		fee: u128,
 	},
 }
 
@@ -66,35 +70,30 @@ pub enum Destination {
 	/// The funds will deposited into the sovereign account of destination parachain `para_id` on
 	/// AssetHub, Account `id` on the destination parachain will receive the funds via a
 	/// reserve-backed transfer. See https://github.com/paritytech/xcm-format#depositreserveasset
-	ForeignAccountId32 { para_id: u32, id: [u8; 32] },
+	ForeignAccountId32 {
+		para_id: u32,
+		id: [u8; 32],
+		/// XCM execution fee on final destination
+		fee: u128,
+	},
 	/// The funds will deposited into the sovereign account of destination parachain `para_id` on
 	/// AssetHub, Account `id` on the destination parachain will receive the funds via a
 	/// reserve-backed transfer. See https://github.com/paritytech/xcm-format#depositreserveasset
-	ForeignAccountId20 { para_id: u32, id: [u8; 20] },
+	ForeignAccountId20 {
+		para_id: u32,
+		id: [u8; 20],
+		/// XCM execution fee on final destination
+		fee: u128,
+	},
 }
 
-pub struct MessageToXcm<
-	CreateAssetCall,
-	CreateAssetExecutionFee,
-	CreateAssetDeposit,
-	SendTokenExecutionFee,
-	AccountId,
-	Balance,
-> where
+pub struct MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
+where
 	CreateAssetCall: Get<CallIndex>,
-	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
-	SendTokenExecutionFee: Get<u128>,
 	Balance: BalanceT,
 {
-	_phantom: PhantomData<(
-		CreateAssetCall,
-		CreateAssetExecutionFee,
-		CreateAssetDeposit,
-		SendTokenExecutionFee,
-		AccountId,
-		Balance,
-	)>,
+	_phantom: PhantomData<(CreateAssetCall, CreateAssetDeposit, AccountId, Balance)>,
 }
 
 /// Reason why a message conversion failed.
@@ -114,26 +113,11 @@ pub trait ConvertMessage {
 
 pub type CallIndex = [u8; 2];
 
-impl<
-		CreateAssetCall,
-		CreateAssetExecutionFee,
-		CreateAssetDeposit,
-		SendTokenExecutionFee,
-		AccountId,
-		Balance,
-	> ConvertMessage
-	for MessageToXcm<
-		CreateAssetCall,
-		CreateAssetExecutionFee,
-		CreateAssetDeposit,
-		SendTokenExecutionFee,
-		AccountId,
-		Balance,
-	> where
+impl<CreateAssetCall, CreateAssetDeposit, AccountId, Balance> ConvertMessage
+	for MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
+where
 	CreateAssetCall: Get<CallIndex>,
-	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
-	SendTokenExecutionFee: Get<u128>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
 {
@@ -144,43 +128,28 @@ impl<
 		use Command::*;
 		use VersionedMessage::*;
 		match message {
-			V1(MessageV1 { chain_id, command: RegisterToken { token } }) =>
-				Ok(Self::convert_register_token(chain_id, token)),
-			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount } }) =>
-				Ok(Self::convert_send_token(chain_id, token, destination, amount)),
+			V1(MessageV1 { chain_id, command: RegisterToken { token, fee } }) =>
+				Ok(Self::convert_register_token(chain_id, token, fee)),
+			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount, fee } }) =>
+				Ok(Self::convert_send_token(chain_id, token, destination, amount, fee)),
 		}
 	}
 }
 
-impl<
-		CreateAssetCall,
-		CreateAssetExecutionFee,
-		CreateAssetDeposit,
-		SendTokenExecutionFee,
-		AccountId,
-		Balance,
-	>
-	MessageToXcm<
-		CreateAssetCall,
-		CreateAssetExecutionFee,
-		CreateAssetDeposit,
-		SendTokenExecutionFee,
-		AccountId,
-		Balance,
-	> where
+impl<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
+	MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
+where
 	CreateAssetCall: Get<CallIndex>,
-	CreateAssetExecutionFee: Get<u128>,
 	CreateAssetDeposit: Get<u128>,
-	SendTokenExecutionFee: Get<u128>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
 {
-	fn convert_register_token(chain_id: u64, token: H160) -> (Xcm<()>, Balance) {
+	fn convert_register_token(chain_id: u64, token: H160, fee: u128) -> (Xcm<()>, Balance) {
 		let network = Ethereum { chain_id };
-		let fee: MultiAsset = (MultiLocation::parent(), CreateAssetExecutionFee::get()).into();
+		let xcm_fee: MultiAsset = (MultiLocation::parent(), fee).into();
 		let deposit: MultiAsset = (MultiLocation::parent(), CreateAssetDeposit::get()).into();
 
-		let total_amount = CreateAssetExecutionFee::get() + CreateAssetDeposit::get();
+		let total_amount = fee + CreateAssetDeposit::get();
 		let total: MultiAsset = (MultiLocation::parent(), total_amount).into();
 
 		let bridge_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
@@ -193,7 +162,7 @@ impl<
 			// Teleport required fees.
 			ReceiveTeleportedAsset(total.into()),
 			// Pay for execution.
-			BuyExecution { fees: fee, weight_limit: Unlimited },
+			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
 			// Fund the snowbridge sovereign with the required deposit for creation.
 			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
 			// Change origin to the bridge.
@@ -226,41 +195,41 @@ impl<
 		token: H160,
 		destination: Destination,
 		amount: u128,
+		asset_hub_fee: u128,
 	) -> (Xcm<()>, Balance) {
 		let network = Ethereum { chain_id };
-		let fee_amount = SendTokenExecutionFee::get();
-		let fee: MultiAsset = (MultiLocation::parent(), fee_amount).into();
+		let asset_hub_fee_asset: MultiAsset = (MultiLocation::parent(), asset_hub_fee).into();
 		let asset: MultiAsset = (Self::convert_token_address(network, token), amount).into();
 
-		let (dest_para_id, beneficiary, total_fee_amount) = match destination {
+		let (dest_para_id, beneficiary, dest_para_fee) = match destination {
 			// Final destination is a 32-byte account on AssetHub
 			Destination::AccountId32 { id } => (
 				None,
 				MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id }) },
-				// Total fee needs to cover execution only on AssetHub
-				fee_amount,
+				0,
 			),
 			// Final destination is a 32-byte account on a sibling of AssetHub
-			Destination::ForeignAccountId32 { para_id, id } => (
+			Destination::ForeignAccountId32 { para_id, id, fee } => (
 				Some(para_id),
 				MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id }) },
 				// Total fee needs to cover execution on AssetHub and Sibling
-				fee_amount * 2,
+				fee,
 			),
 			// Final destination is a 20-byte account on a sibling of AssetHub
-			Destination::ForeignAccountId20 { para_id, id } => (
+			Destination::ForeignAccountId20 { para_id, id, fee } => (
 				Some(para_id),
 				MultiLocation { parents: 0, interior: X1(AccountKey20 { network: None, key: id }) },
 				// Total fee needs to cover execution on AssetHub and Sibling
-				fee_amount * 2,
+				fee,
 			),
 		};
 
-		let total_fee: MultiAsset = (MultiLocation::parent(), total_fee_amount).into();
+		let total_fees = asset_hub_fee.saturating_add(dest_para_fee);
+		let total_fee_asset: MultiAsset = (MultiLocation::parent(), total_fees).into();
 
 		let mut instructions = vec![
-			ReceiveTeleportedAsset(total_fee.into()),
-			BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+			ReceiveTeleportedAsset(total_fee_asset.into()),
+			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
 			UniversalOrigin(GlobalConsensus(network)),
 			ReserveAssetDeposited(asset.clone().into()),
 			ClearOrigin,
@@ -268,14 +237,17 @@ impl<
 
 		match dest_para_id {
 			Some(dest_para_id) => {
+				let dest_para_fee_asset: MultiAsset =
+					(MultiLocation::parent(), dest_para_fee).into();
+
 				instructions.extend(vec![
 					// Perform a deposit reserve to send to destination chain.
 					DepositReserveAsset {
-						assets: Definite(vec![fee.clone(), asset.clone()].into()),
+						assets: Definite(vec![dest_para_fee_asset.clone(), asset.clone()].into()),
 						dest: MultiLocation { parents: 1, interior: X1(Parachain(dest_para_id)) },
 						xcm: vec![
 							// Buy execution on target.
-							BuyExecution { fees: fee, weight_limit: Unlimited },
+							BuyExecution { fees: dest_para_fee_asset, weight_limit: Unlimited },
 							// Deposit asset to beneficiary.
 							DepositAsset { assets: Definite(asset.into()), beneficiary },
 						]
@@ -291,7 +263,7 @@ impl<
 			},
 		}
 
-		(instructions.into(), total_fee_amount.into())
+		(instructions.into(), total_fees.into())
 	}
 
 	// Convert ERC20 token address to a Multilocation that can be understood by Assets Hub.

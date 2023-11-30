@@ -7,7 +7,7 @@ use super::*;
 use crate::Pallet as SnowbridgeControl;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
-use snowbridge_core::outbound::OperatingMode;
+use snowbridge_core::{eth, outbound::OperatingMode};
 use sp_runtime::SaturatedConversion;
 use xcm::prelude::*;
 
@@ -42,6 +42,24 @@ mod benchmarks {
 	}
 
 	#[benchmark]
+	fn set_operating_mode() -> Result<(), BenchmarkError> {
+		#[extrinsic_call]
+		_(RawOrigin::Root, OperatingMode::RejectingOutboundMessages);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_pricing_parameters() -> Result<(), BenchmarkError> {
+		let params = T::DefaultPricingParameters::get();
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, params);
+
+		Ok(())
+	}
+
+	#[benchmark]
 	fn create_agent() -> Result<(), BenchmarkError> {
 		let origin_para_id = 2000;
 		let origin_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para_id)) };
@@ -64,7 +82,7 @@ mod benchmarks {
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
 
 		#[extrinsic_call]
-		_(origin as T::RuntimeOrigin, OperatingMode::Normal, 1);
+		_(origin as T::RuntimeOrigin, OperatingMode::Normal);
 
 		Ok(())
 	}
@@ -76,7 +94,7 @@ mod benchmarks {
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal, 1)?;
+		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
 
 		#[extrinsic_call]
 		_(origin as T::RuntimeOrigin, OperatingMode::RejectingOutboundMessages, 1);
@@ -93,18 +111,10 @@ mod benchmarks {
 
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal, 1)?;
+		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
 
 		#[extrinsic_call]
 		_(RawOrigin::Root, channel_id, OperatingMode::RejectingOutboundMessages, 1);
-
-		Ok(())
-	}
-
-	#[benchmark]
-	fn set_operating_mode() -> Result<(), BenchmarkError> {
-		#[extrinsic_call]
-		_(RawOrigin::Root, OperatingMode::RejectingOutboundMessages);
 
 		Ok(())
 	}
@@ -135,6 +145,14 @@ mod benchmarks {
 
 		#[extrinsic_call]
 		_(RawOrigin::Root, Box::new(versioned_location), H160::default(), 1);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_token_transfer_fees() -> Result<(), BenchmarkError> {
+		#[extrinsic_call]
+		_(RawOrigin::Root, 1, 1, eth(1));
 
 		Ok(())
 	}
