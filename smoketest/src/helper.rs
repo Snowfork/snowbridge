@@ -267,7 +267,7 @@ pub async fn construct_create_agent_call(
 pub async fn construct_create_channel_call(
 	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let call = bridgehub::api::ethereum_control::calls::TransactionApi
+	let call = bridgehub::api::ethereum_system::calls::TransactionApi
 		.create_channel(OperatingMode::Normal)
 		.encode_call_data(&bridge_hub_client.metadata())?;
 
