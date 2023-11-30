@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use crate as snowbridge_control;
+use crate as snowbridge_system;
 use frame_support::{
 	parameter_types,
 	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, ConstU8},
@@ -91,7 +91,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		XcmOrigin: pallet_xcm_origin::{Pallet, Origin},
 		OutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>},
-		EthereumControl: snowbridge_control,
+		EthereumSystem: snowbridge_system,
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>}
 	}
 );
@@ -251,6 +251,6 @@ pub fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
 }
 
 pub fn make_agent_id(location: MultiLocation) -> AgentId {
-	<Test as snowbridge_control::Config>::AgentIdOf::convert_location(&location)
+	<Test as snowbridge_system::Config>::AgentIdOf::convert_location(&location)
 		.expect("convert location")
 }

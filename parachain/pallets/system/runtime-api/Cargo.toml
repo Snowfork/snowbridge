@@ -1,5 +1,5 @@
 [package]
-name = "snowbridge-control-runtime-api"
+name = "snowbridge-system-runtime-api"
 version = "0.1.0"
 edition = "2021"
 authors = ["Snowfork <contact@snowfork.com>"]

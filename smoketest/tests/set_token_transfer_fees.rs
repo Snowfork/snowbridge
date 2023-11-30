@@ -4,7 +4,7 @@ use snowbridge_smoketest::{
 	contracts::{i_gateway, i_gateway::TokenTransferFeesChangedFilter},
 	helper::*,
 	parachains::bridgehub::api::{
-		ethereum_control::events::SetTokenTransferFees,
+		ethereum_system::events::SetTokenTransferFees,
 		runtime_types::{self, bridge_hub_rococo_runtime::RuntimeCall as BHRuntimeCall},
 	},
 };
@@ -19,8 +19,8 @@ async fn set_token_transfer_fees() {
 	let fees = gateway.token_transfer_fees().await.expect("get fees");
 	println!("asset fees {:?}", fees);
 
-	let set_token_fees_call = BHRuntimeCall::EthereumControl(
-		runtime_types::snowbridge_control::pallet::Call::set_token_transfer_fees {
+	let set_token_fees_call = BHRuntimeCall::EthereumSystem(
+		runtime_types::snowbridge_system::pallet::Call::set_token_transfer_fees {
 			register: 10_000_000_000_000,
 			send: 20_000_000_000,
 		},
