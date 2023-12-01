@@ -13,6 +13,7 @@ members = [
     "pallets/system",
     "pallets/system/runtime-api",
     "runtime/runtime-common",
+    "runtime/rococo-common",
 ]
 
 [patch.'https://github.com/snowfork/snowbridge']
