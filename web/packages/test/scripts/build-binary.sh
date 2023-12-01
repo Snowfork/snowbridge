@@ -14,7 +14,7 @@ build_binaries() {
     check_local_changes "polkadot"
     check_local_changes "substrate"
 
-  # Check that all 3 binaries are available and no changes made in the polkadot and substrate dirs
+    # Check that all 3 binaries are available and no changes made in the polkadot and substrate dirs
     if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" || "$changes_detected" -eq 1 ]]; then
         echo "Building polkadot binary, due to changes detected in polkadot or substrate, or binaries not found"
         cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker
