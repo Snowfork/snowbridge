@@ -3723,46 +3723,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-control"
-version = "4.0.0-dev"
-dependencies = [
- "ethabi-decode",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex",
- "hex-literal",
- "log",
- "pallet-balances",
- "pallet-message-queue",
- "parity-scale-codec",
- "polkadot-primitives",
- "scale-info",
- "snowbridge-core",
- "snowbridge-outbound-queue",
- "sp-core",
- "sp-io",
- "sp-keyring",
- "sp-runtime",
- "sp-std 8.0.0",
- "staging-xcm",
- "staging-xcm-builder",
- "staging-xcm-executor",
-]
-
-[[package]]
-name = "snowbridge-control-runtime-api"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "snowbridge-core",
- "sp-api",
- "sp-core",
- "sp-std 8.0.0",
- "staging-xcm",
-]
-
-[[package]]
 name = "snowbridge-core"
 version = "0.1.1"
 dependencies = [
@@ -3959,6 +3919,46 @@ dependencies = [
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
+]
+
+[[package]]
+name = "snowbridge-system"
+version = "0.1.1"
+dependencies = [
+ "ethabi-decode",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "log",
+ "pallet-balances",
+ "pallet-message-queue",
+ "parity-scale-codec",
+ "polkadot-primitives",
+ "scale-info",
+ "snowbridge-core",
+ "snowbridge-outbound-queue",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std 8.0.0",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+]
+
+[[package]]
+name = "snowbridge-system-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "snowbridge-core",
+ "sp-api",
+ "sp-core",
+ "sp-std 8.0.0",
+ "staging-xcm",
 ]
 
 [[package]]

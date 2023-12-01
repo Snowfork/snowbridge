@@ -83,8 +83,8 @@ snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-clie
 snowbridge-inbound-queue = { path = "../../pallets/inbound-queue", default-features = false }
 snowbridge-outbound-queue = { path = "../../pallets/outbound-queue", default-features = false }
 snowbridge-outbound-queue-runtime-api = { path = "../../pallets/outbound-queue/runtime-api", default-features = false }
-snowbridge-control = { path = "../../pallets/control", default-features = false }
-snowbridge-control-runtime-api = { path = "../../pallets/control/runtime-api", default-features = false }
+snowbridge-system = { path = "../../pallets/system", default-features = false }
+snowbridge-system-runtime-api = { path = "../../pallets/system/runtime-api", default-features = false }
 
 [dev-dependencies]
 static_assertions = "1.1"
@@ -161,8 +161,8 @@ std = [
 	"snowbridge-inbound-queue/std",
 	"snowbridge-outbound-queue/std",
 	"snowbridge-outbound-queue-runtime-api/std",
-	"snowbridge-control/std",
-	"snowbridge-control-runtime-api/std",
+	"snowbridge-system/std",
+	"snowbridge-system-runtime-api/std",
 ]
 
 runtime-benchmarks = [
@@ -191,7 +191,7 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
-	"snowbridge-control/runtime-benchmarks",
+	"snowbridge-system/runtime-benchmarks",
 	"snowbridge-inbound-queue/runtime-benchmarks",
 	"snowbridge-outbound-queue/runtime-benchmarks",
 	"snowbridge-ethereum-beacon-client/runtime-benchmarks",
@@ -230,3 +230,15 @@ experimental = ["pallet-aura/experimental"]
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller like logging for example.
 on-chain-release-build = ["sp-api/disable-logging"]
+
+[patch.'https://github.com/snowfork/snowbridge']
+snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
+snowbridge-system = { path = "../../pallets/system" }
+snowbridge-system-runtime-api = { path = "../../pallets/system/runtime-api" }
+snowbridge-core = { path = "../../primitives/core" }
+snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
+snowbridge-inbound-queue = { path = "../../pallets/inbound-queue" }
+snowbridge-outbound-queue = { path = "../../pallets/outbound-queue" }
+snowbridge-outbound-queue-runtime-api = { path = "../../pallets/outbound-queue/runtime-api" }
+snowbridge-router-primitives = { path = "../../primitives/router" }
+snowbridge-runtime-common = { path = "../../runtime/runtime-common" }

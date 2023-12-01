@@ -17,7 +17,7 @@ use snowbridge_smoketest::{
 	parachains::{
 		bridgehub::{
 			self,
-			api::{ethereum_control, runtime_types::snowbridge_core::outbound::v1::Initializer},
+			api::{ethereum_system, runtime_types::snowbridge_core::outbound::v1::Initializer},
 		},
 		relaychain,
 		relaychain::api::runtime_types::{
@@ -67,7 +67,7 @@ async fn upgrade_gateway() {
 
 	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
 
-	let ethereum_control_api = bridgehub::api::ethereum_control::calls::TransactionApi;
+	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
 
 	let d_0 = 99;
 	let d_1 = 66;
@@ -81,7 +81,7 @@ async fn upgrade_gateway() {
 	let gateway_upgrade_mock_code_hash = keccak256(code);
 
 	// The upgrade call
-	let upgrade_call = ethereum_control_api
+	let upgrade_call = ethereum_system_api
 		.upgrade(
 			GATETWAY_UPGRADE_MOCK_CONTRACT.into(),
 			gateway_upgrade_mock_code_hash.into(),
@@ -132,7 +132,7 @@ async fn upgrade_gateway() {
 	while let Some(Ok(block)) = blocks.next().await {
 		println!("Polling bridgehub block {} for upgrade event.", block.number());
 		let upgrades = block.events().await.expect("read block events");
-		for upgrade in upgrades.find::<ethereum_control::events::Upgrade>() {
+		for upgrade in upgrades.find::<ethereum_system::events::Upgrade>() {
 			let _upgrade = upgrade.expect("expect upgrade");
 			println!("Event found at bridgehub block {}.", block.number());
 			upgrade_event_found = true;
