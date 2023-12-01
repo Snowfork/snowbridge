@@ -2,8 +2,8 @@
   "name": "@snowbridge/web",
   "private": true,
   "engines": {
-    "node": "v20.10.0",
-    "pnpm": "8.11.0"
+    "node": "v20.4.0",
+    "pnpm": "8.6.6"
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
