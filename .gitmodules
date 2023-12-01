@@ -16,3 +16,9 @@
 [submodule "contracts/lib/prb-math"]
 	path = contracts/lib/prb-math
 	url = https://github.com/PaulRBerg/prb-math
+[submodule "lodestar"]
+	path = lodestar
+	url = https://github.com/Snowfork/lodestar
+[submodule "go-ethereum"]
+	path = go-ethereum
+	url = https://github.com/Snowfork/go-ethereum
