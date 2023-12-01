@@ -24,7 +24,7 @@ wait_beacon_chain_ready() {
 fund_accounts() {
     echo "Funding substrate accounts"
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $assethub_sovereign_account
-    transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $template_sovereign_account
+    transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $penpal_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $beacon_relayer_pub_key
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_pub_key
 }
@@ -63,8 +63,10 @@ open_hrmp_channels()
     echo "Opening HRMP channels"
     open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1000 1013 8 512 # Assethub -> BridgeHub
     open_hrmp_channel "${relaychain_ws_url}"  "${relaychain_sudo_seed}" 1013 1000 8 512 # BridgeHub -> Assethub
-    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1001 1013 8 512 # TemplateNode -> BridgeHub
-    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1013 1001 8 512 # BridgeHub -> TemplateNode
+    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 2000 1013 8 512 # Penpal -> BridgeHub
+    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1013 2000 8 512 # BridgeHub -> Penpal
+    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1000 2000 8 512 # Penpal -> AssetHub
+    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 2000 1000 8 512 # Assethub -> Penpal
 }
 
 configure_bridgehub() {

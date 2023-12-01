@@ -6,6 +6,8 @@ import {
     MultiAddress, multiAddressFromUint32, multiAddressFromBytes32, multiAddressFromBytes20
 } from "./MultiAddress.sol";
 
+import {UD60x18} from "prb/math/src/UD60x18.sol";
+
 type ParaID is uint32;
 
 using {ParaIDEq as ==, ParaIDNe as !=, into} for ParaID global;
@@ -45,8 +47,6 @@ struct Channel {
     uint64 outboundNonce;
     /// @dev The address of the agent of the parachain owning this channel
     address agent;
-    /// @dev The fee charged to users for submitting outbound messages
-    uint256 outboundFee;
 }
 
 /// @dev Inbound message from a Polkadot parachain (via BridgeHub)
@@ -60,7 +60,7 @@ struct InboundMessage {
     /// @dev The Parameters for the command
     bytes params;
     /// @dev The maximum gas allowed for message dispatch
-    uint256 maxDispatchGas;
+    uint64 maxDispatchGas;
     /// @dev The maximum gas refund for message submission
     uint256 maxRefund;
     /// @dev The reward for message submission
@@ -83,7 +83,21 @@ enum Command {
     UpdateChannel,
     SetOperatingMode,
     TransferNativeFromAgent,
-    SetTokenTransferFees
+    SetTokenTransferFees,
+    SetPricingParameters
 }
 
 enum AgentExecuteCommand {TransferToken}
+
+/// @dev Application-level costs for a message
+struct Costs {
+    /// @dev Costs in foreign currency
+    uint256 foreign;
+    /// @dev Costs in native currency
+    uint256 native;
+}
+
+struct Ticket {
+    Costs costs;
+    bytes payload;
+}

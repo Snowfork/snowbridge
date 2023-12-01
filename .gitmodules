@@ -13,9 +13,6 @@
 [submodule "contracts/lib/canonical-weth"]
 	path = contracts/lib/canonical-weth
 	url = https://github.com/Snowfork/canonical-weth
-[submodule "lodestar"]
-    path = lodestar
-    url = https://github.com/ChainSafe/lodestar
-[submodule "go-ethereum"]
-    path = go-ethereum
-    url = https://github.com/ethereum/go-ethereum
+[submodule "contracts/lib/prb-math"]
+	path = contracts/lib/prb-math
+	url = https://github.com/PaulRBerg/prb-math

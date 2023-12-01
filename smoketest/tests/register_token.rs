@@ -1,13 +1,10 @@
 use codec::Encode;
-use ethers::{
-	core::types::{Address, Log},
-	utils::{parse_units},
-};
+use ethers::{core::types::Address, utils::parse_units};
 use futures::StreamExt;
 use snowbridge_smoketest::{
-	constants::{GATEWAY_PROXY_CONTRACT, SNOWBRIDGE_SOVEREIGN, WETH_CONTRACT},
+	constants::*,
 	contracts::{i_gateway, weth9},
-	helper::initial_clients,
+	helper::{initial_clients, print_event_log_for_unit_tests},
 	parachains::assethub::api::{
 		foreign_assets::events::Created,
 		runtime_types::{
@@ -69,7 +66,7 @@ async fn register_token() {
 	let expected_asset_id: MultiLocation = MultiLocation {
 		parents: 2,
 		interior: X2(
-			GlobalConsensus(NetworkId::Ethereum { chain_id: 15 }),
+			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
 			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
 		),
 	};
@@ -94,18 +91,4 @@ async fn register_token() {
 		}
 	}
 	assert!(created_event_found)
-}
-
-fn print_event_log_for_unit_tests(log: &Log) {
-	let topics: Vec<String> = log.topics.iter().map(|t| hex::encode(t.as_ref())).collect();
-	println!("Log {{");
-	println!("	address: hex!(\"{}\").into(),", hex::encode(log.address.as_ref()));
-	println!("	topics: vec![");
-	for topic in topics.iter() {
-		println!("		hex!(\"{}\").into(),", topic);
-	}
-	println!("	],");
-	println!("	data: hex!(\"{}\").into(),", hex::encode(&log.data));
-
-	println!("}}")
 }

@@ -1,6 +1,6 @@
 use snowbridge_smoketest::{
 	contracts::i_gateway::ChannelCreatedFilter, helper::*,
-	parachains::bridgehub::api::ethereum_control::events::CreateChannel,
+	parachains::bridgehub::api::ethereum_system::events::CreateChannel,
 	xcm::construct_xcm_message_with_fee,
 };
 
@@ -10,11 +10,11 @@ async fn create_channel() {
 
 	let encoded_call = construct_create_channel_call(&test_clients.bridge_hub_client)
 		.await
-		.expect("construct innner call.");
+		.expect("construct inner call.");
 
 	let message = construct_xcm_message_with_fee(encoded_call).await;
 
-	let result = send_xcm_transact(&test_clients.template_client, message)
+	let result = send_sudo_xcm_transact(&test_clients.penpal_client, message)
 		.await
 		.expect("failed to send xcm transact.");
 

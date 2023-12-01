@@ -8,11 +8,16 @@ use frame_support::{
 	weights::IdentityFee,
 };
 
-use snowbridge_core::{outbound::*, ParaId, PRIMARY_GOVERNANCE_CHANNEL};
+use snowbridge_core::{
+	gwei, meth,
+	outbound::*,
+	pricing::{PricingParameters, Rewards},
+	ParaId, PRIMARY_GOVERNANCE_CHANNEL,
+};
 use sp_core::{ConstU32, ConstU8, H160, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, Keccak256},
-	AccountId32, BuildStorage,
+	AccountId32, BuildStorage, FixedU128,
 };
 
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -77,7 +82,14 @@ impl pallet_message_queue::Config for Test {
 
 parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
+	pub Parameters: PricingParameters<u128> = PricingParameters {
+		exchange_rate: FixedU128::from_rational(1, 400),
+		fee_per_gas: gwei(20),
+		rewards: Rewards { local: 1 * DOT, remote: meth(1) }
+	};
 }
+
+pub const DOT: u128 = 10_000_000_000;
 
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -88,6 +100,7 @@ impl crate::Config for Test {
 	type MaxMessagesPerBlock = ConstU32<20>;
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
+	type PricingParameters = Parameters;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }

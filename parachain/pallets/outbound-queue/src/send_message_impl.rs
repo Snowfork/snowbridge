@@ -1,7 +1,7 @@
 //! Implementation for [`snowbridge_core::outbound::SendMessage`]
 use super::*;
+use bridge_hub_common::AggregateMessageOrigin;
 use codec::Encode;
-use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
 	ensure,
 	traits::{EnqueueMessage, Get},
@@ -54,7 +54,8 @@ where
 			.id
 			.unwrap_or_else(|| unique((message.channel_id, &message.command)).into());
 
-		let fee = Self::calculate_fee(&message.command);
+		let gas_used_at_most = T::GasMeter::maximum_gas_used_at_most(&message.command);
+		let fee = Self::calculate_fee(gas_used_at_most, T::PricingParameters::get());
 
 		let queued_message: VersionedQueuedMessage = QueuedMessage {
 			id: message_id,
@@ -71,7 +72,7 @@ where
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<H256, SendError> {
-		let origin = AggregateMessageOrigin::GeneralKey(ticket.channel_id.into());
+		let origin = AggregateMessageOrigin::Snowbridge(ticket.channel_id);
 
 		if ticket.channel_id != PRIMARY_GOVERNANCE_CHANNEL {
 			ensure!(!Self::operating_mode().is_halted(), SendError::Halted);

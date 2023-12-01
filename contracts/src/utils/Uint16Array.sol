@@ -9,7 +9,7 @@ pragma solidity 0.8.22;
  * expensive in terms of gas. The BeefyClient only needs 16 bits per counter. This library allows us to pack
  * 16 uint16 into a single uint256 and save 16x storage.
  *
- * Layout of 8 counters (2 uint256)
+ * Layout of 32 counters (2 uint256)
  * We store all counts in a single large uint256 array and convert from index from the logical uint16 array
  * to the physical uint256 array.
  *
@@ -27,21 +27,30 @@ pragma solidity 0.8.22;
  * In the above table counter YY is at logical index 12 in the uint16 array. It will convert to a physical
  * index of 0 in the physical uint256 array and then to bit-index of 192 to 207 of that uint256. In the
  * above table counter XX is at logical index 22. It will convert to a physical index of 1 in the array and
- * then to bit-index 128 to 143 of uint256[1].
+ * then to bit-index 96 to 111 of uint256[1].
  */
 library Uint16Array {
+    /**
+     * @dev stores the backing array and the length.
+     */
     struct Array {
         uint256[] data;
+        uint256 length;
     }
+
+    /**
+     * @dev error for when out of bound accesses occur.
+     */
+    error IndexOutOfBounds();
+
     /**
      * @dev Creates a new counter which can store at least `length` counters.
      * @param length The amount of counters.
      */
-
     function create(uint256 length) internal pure returns (Array memory) {
         // create space for `length` elements and round up if needed.
         uint256 bufferLength = length / 16 + (length % 16 == 0 ? 0 : 1);
-        return Array({data: new uint256[](bufferLength)});
+        return Array({data: new uint256[](bufferLength), length: length});
     }
 
     /**
@@ -50,10 +59,13 @@ library Uint16Array {
      * @param index The logical index.
      */
     function get(Array storage self, uint256 index) internal view returns (uint16) {
+        if (index >= self.length) {
+            revert IndexOutOfBounds();
+        }
         // Right-shift the index by 4. This truncates the first 4 bits (bit-index) leaving us with the index
         // into the array.
         uint256 element = index >> 4;
-        // Mask out the first 4 bytes of the logical index to give us the bit-index.
+        // Mask out the first 4 bits of the logical index to give us the bit-index.
         uint8 inside = uint8(index) & 0x0F;
         // find the element in the array, shift until its bit index and mask to only take the first 16 bits.
         return uint16((self.data[element] >> (16 * inside)) & 0xFFFF);
@@ -66,6 +78,9 @@ library Uint16Array {
      * @param value The value to set the counter to.
      */
     function set(Array storage self, uint256 index, uint16 value) internal {
+        if (index >= self.length) {
+            revert IndexOutOfBounds();
+        }
         // Right-shift the index by 4. This truncates the first 4 bits (bit-index) leaving us with the index
         // into the array.
         uint256 element = index >> 4;

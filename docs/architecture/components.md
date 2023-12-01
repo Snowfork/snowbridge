@@ -53,7 +53,7 @@ More concretely, they have a number of purposes in the bridge design:
   * Users wanting to send outbound messages to Polkadot need to pay fees into the agent contract corresponding to the destination parachain
   * Relayers submitting messages to the Gateway are rewarded from the agent contract corresponding to the origin parachain.
 
-The creation of new agents can be initiated permissionlessly by calling `EthereumControl::create_agent` extrinsic on the BridgeHub parachain.
+The creation of new agents can be initiated permissionlessly by calling `EthereumSystem::create_agent` extrinsic on the BridgeHub parachain.
 
 ### BeefyClient
 

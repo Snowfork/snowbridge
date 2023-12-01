@@ -13,8 +13,9 @@ use snowbridge_core::{
 	outbound::{Command, SendError, SendMessage},
 	ParaId,
 };
+use sp_arithmetic::FixedU128;
 use sp_core::H256;
-use sp_runtime::{AccountId32, DispatchError};
+use sp_runtime::FixedPointNumber;
 
 #[test]
 fn submit_messages_and_commit() {
@@ -50,17 +51,6 @@ fn submit_message_fail_too_large() {
 }
 
 #[test]
-fn calculate_fees() {
-	new_tester().execute_with(|| {
-		let command = mock_message(1000).command;
-		let fee = OutboundQueue::calculate_fee(&command);
-		assert_eq!(fee.remote, 2200000000000);
-
-		println!("Total fee: {}", fee.total())
-	});
-}
-
-#[test]
 fn convert_from_ether_decimals() {
 	assert_eq!(
 		OutboundQueue::convert_from_ether_decimals(1_000_000_000_000_000_000),
@@ -88,7 +78,7 @@ fn process_message_yields_on_max_messages_per_block() {
 		}
 
 		let channel_id: ChannelId = ParaId::from(1000).into();
-		let origin = AggregateMessageOrigin::GeneralKey(channel_id.into());
+		let origin = AggregateMessageOrigin::Snowbridge(channel_id.into());
 		let message = QueuedMessage {
 			id: Default::default(),
 			channel_id,
@@ -114,48 +104,12 @@ fn process_message_fails_on_overweight_message() {
 	new_tester().execute_with(|| {
 		let sibling_id = 1000;
 		let channel_id: ChannelId = ParaId::from(sibling_id).into();
-		let origin = AggregateMessageOrigin::GeneralKey(channel_id.into());
+		let origin = AggregateMessageOrigin::Snowbridge(channel_id.into());
 		let message = mock_message(sibling_id).encode();
 		let mut meter = WeightMeter::with_limit(Weight::from_parts(1, 1));
 		assert_noop!(
 			OutboundQueue::process_message(&message.as_slice(), origin, &mut meter, &mut [0u8; 32]),
 			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
-		);
-	})
-}
-
-#[test]
-fn set_operating_mode_root_only() {
-	new_tester().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
-		assert_noop!(
-			OutboundQueue::set_operating_mode(origin, BasicOperatingMode::Halted),
-			DispatchError::BadOrigin,
-		);
-	})
-}
-
-#[test]
-fn set_fee_config_root_only() {
-	new_tester().execute_with(|| {
-		let origin = RuntimeOrigin::signed(AccountId32::from([0; 32]));
-		assert_noop!(
-			OutboundQueue::set_fee_config(origin, DefaultFeeConfig::get()),
-			DispatchError::BadOrigin,
-		);
-	})
-}
-
-#[test]
-fn set_fee_config_invalid() {
-	new_tester().execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		assert_noop!(
-			OutboundQueue::set_fee_config(
-				origin,
-				FeeConfigRecord { exchange_rate: (1, 1).into(), reward: 0, fee_per_gas: 0 }
-			),
-			Error::<Test>::InvalidFeeConfig
 		);
 	})
 }
@@ -200,7 +154,8 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 			let (ticket, _) = OutboundQueue::validate(&message).unwrap();
 			OutboundQueue::deliver(ticket).unwrap();
 		}
-		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
 		assert_eq!(footprint.storage.count, (max_messages) as u64);
 
 		let message = mock_governance_message::<Test>();
@@ -212,11 +167,11 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 		run_to_end_of_next_block();
 
 		// first process 20 messages from sibling channel
-		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
 		assert_eq!(footprint.storage.count, 40 - 20);
 
 		// and governance message does not have the chance to execute in same block
-		let footprint = MessageQueue::footprint(GeneralKey(PRIMARY_GOVERNANCE_CHANNEL.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(PRIMARY_GOVERNANCE_CHANNEL.into()));
 		assert_eq!(footprint.storage.count, 1);
 
 		// move to next block
@@ -224,17 +179,31 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 		run_to_end_of_next_block();
 
 		// now governance message get executed in this block
-		let footprint = MessageQueue::footprint(GeneralKey(PRIMARY_GOVERNANCE_CHANNEL.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(PRIMARY_GOVERNANCE_CHANNEL.into()));
 		assert_eq!(footprint.storage.count, 0);
 
 		// and this time process 19 messages from sibling channel so we have 1 message left
-		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
 		assert_eq!(footprint.storage.count, 1);
 
 		// move to the next block, the last 1 message from sibling channel get executed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
-		let footprint = MessageQueue::footprint(GeneralKey(sibling_channel_id.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
 		assert_eq!(footprint.storage.count, 0);
+	});
+}
+
+#[test]
+fn convert_local_currency() {
+	new_tester().execute_with(|| {
+		let fee: u128 = 1_000_000;
+		let fee1 = FixedU128::from_inner(fee).into_inner();
+		let fee2 = FixedU128::from(fee)
+			.into_inner()
+			.checked_div(FixedU128::accuracy())
+			.expect("accuracy is not zero; qed");
+		assert_eq!(fee, fee1);
+		assert_eq!(fee, fee2);
 	});
 }

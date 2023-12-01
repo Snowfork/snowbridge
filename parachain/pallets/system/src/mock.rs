@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use crate as snowbridge_control;
+use crate as snowbridge_system;
 use frame_support::{
 	parameter_types,
 	traits::{tokens::fungible::Mutate, ConstU128, ConstU16, ConstU64, ConstU8},
@@ -11,11 +11,12 @@ use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::{
-	outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly, ParaId,
+	gwei, meth, outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly,
+	DescribeHere, ParaId, PricingParameters, Rewards,
 };
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
-	AccountId32, BuildStorage,
+	AccountId32, BuildStorage, FixedU128,
 };
 use xcm::prelude::*;
 use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
@@ -90,7 +91,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		XcmOrigin: pallet_xcm_origin::{Pallet, Origin},
 		OutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>},
-		EthereumControl: snowbridge_control,
+		EthereumSystem: snowbridge_system,
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>}
 	}
 );
@@ -175,6 +176,7 @@ impl snowbridge_outbound_queue::Config for Test {
 	type MaxMessagesPerBlock = MaxMessagesPerBlock;
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
+	type PricingParameters = EthereumSystem;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }
@@ -188,6 +190,8 @@ parameter_types! {
 		X2(GlobalConsensus(RelayNetwork::get().unwrap()), Parachain(1013));
 }
 
+pub const DOT: u128 = 10_000_000_000;
+
 parameter_types! {
 	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
 	pub Fee: u64 = 1000;
@@ -195,6 +199,13 @@ parameter_types! {
 	pub const InitialFunding: u128 = 1_000_000_000_000;
 	pub AssetHubParaId: ParaId = ParaId::new(1000);
 	pub TestParaId: u32 = 2000;
+	pub Parameters: PricingParameters<u128> = PricingParameters {
+		exchange_rate: FixedU128::from_rational(1, 400),
+		fee_per_gas: gwei(20),
+		rewards: Rewards { local: 1 * DOT, remote: meth(1) }
+	};
+	pub const InboundDeliveryCost: u128 = 1_000_000_000;
+
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -208,10 +219,13 @@ impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OutboundQueue = OutboundQueue;
 	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
-	type AgentIdOf = HashedDescription<AgentId, DescribeFamily<DescribeAllTerminal>>;
+	type AgentIdOf =
+		HashedDescription<AgentId, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
+	type DefaultPricingParameters = Parameters;
 	type WeightInfo = ();
+	type InboundDeliveryCost = InboundDeliveryCost;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
 }
@@ -249,6 +263,6 @@ pub fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
 }
 
 pub fn make_agent_id(location: MultiLocation) -> AgentId {
-	HashedDescription::<AgentId, DescribeFamily<DescribeAllTerminal>>::convert_location(&location)
+	<Test as snowbridge_system::Config>::AgentIdOf::convert_location(&location)
 		.expect("convert location")
 }

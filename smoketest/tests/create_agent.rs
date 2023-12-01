@@ -1,6 +1,6 @@
 use snowbridge_smoketest::{
 	contracts::i_gateway::AgentCreatedFilter, helper::*,
-	parachains::bridgehub::api::ethereum_control::events::CreateAgent,
+	parachains::bridgehub::api::ethereum_system::events::CreateAgent,
 	xcm::construct_xcm_message_with_fee,
 };
 
@@ -14,7 +14,7 @@ async fn create_agent() {
 
 	let message = construct_xcm_message_with_fee(encoded_call).await;
 
-	let result = send_xcm_transact(&test_clients.template_client, message)
+	let result = send_sudo_xcm_transact(&test_clients.penpal_client, message)
 		.await
 		.expect("failed to send xcm transact.");
 

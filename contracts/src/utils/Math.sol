@@ -107,7 +107,7 @@ library Math {
      */
     function saturatingSub(uint256 a, uint256 b) internal pure returns (uint256) {
         unchecked {
-            if (b > a) {
+            if (b >= a) {
                 return 0;
             }
             return a - b;

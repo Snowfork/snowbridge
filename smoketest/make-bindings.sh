@@ -23,5 +23,5 @@ fi
 # Fetch metadata from BridgeHub and generate client
 subxt codegen --url ws://localhost:11144 > src/parachains/bridgehub.rs
 subxt codegen --url ws://localhost:12144 > src/parachains/assethub.rs
+subxt codegen --url ws://localhost:13144 > src/parachains/penpal.rs
 subxt codegen --url ws://localhost:9944  > src/parachains/relaychain.rs
-subxt codegen --url ws://localhost:13144 > src/parachains/template.rs

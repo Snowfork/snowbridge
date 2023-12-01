@@ -199,6 +199,7 @@ contract BeefyClient {
     error InvalidSignature();
     error InvalidTicket();
     error InvalidValidatorProof();
+    error InvalidValidatorProofLength();
     error CommitmentNotRelevant();
     error NotEnoughClaims();
     error PrevRandaoAlreadyCaptured();
@@ -215,6 +216,9 @@ contract BeefyClient {
         ValidatorSet memory _initialValidatorSet,
         ValidatorSet memory _nextValidatorSet
     ) {
+        if (_nextValidatorSet.id != _initialValidatorSet.id + 1) {
+            revert("invalid-constructor-params");
+        }
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
         minNumRequiredSignatures = _minNumRequiredSignatures;
@@ -240,6 +244,10 @@ contract BeefyClient {
     function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
         external
     {
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            revert StaleCommitment();
+        }
+
         ValidatorSetState storage vset;
         uint16 signatureUsageCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {
@@ -258,10 +266,6 @@ contract BeefyClient {
         if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index))
         {
             revert InvalidValidatorProof();
-        }
-
-        if (commitment.validatorSetID != vset.id) {
-            revert InvalidCommitment();
         }
 
         // Check if validatorSignature is correct, ie. check if it matches
@@ -448,22 +452,10 @@ contract BeefyClient {
     ) internal pure returns (uint256) {
         // Start with the minimum number of signatures.
         uint256 numRequiredSignatures = minRequiredSignatures;
-
-        // We must subtract minimumSignatures from the number of validators or we might end up
-        // requiring more signatures than there are validators.
-        uint256 extraValidatorsLen = validatorSetLen.saturatingSub(minRequiredSignatures);
-        if (extraValidatorsLen > 1) {
-            numRequiredSignatures += Math.log2(extraValidatorsLen, Math.Rounding.Ceil);
-        } else if (extraValidatorsLen == 1) {
-            // log2 returns 0 when there is one validator so when this case is hit the single
-            // validator needs to be verified.
-            numRequiredSignatures += 1;
-        }
-
-        if (signatureUsageCount > 0) {
-            numRequiredSignatures += 1 + 2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil);
-        }
-
+        // Add signatures based on the number of validators in the validator set.
+        numRequiredSignatures += Math.log2(validatorSetLen, Math.Rounding.Ceil);
+        // Add signatures based on the signature usage count.
+        numRequiredSignatures += 1 + (2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil));
         // Never require more signatures than a 2/3 majority
         return Math.min(numRequiredSignatures, computeQuorum(validatorSetLen));
     }
@@ -490,7 +482,7 @@ contract BeefyClient {
         // Verify that enough signature proofs have been supplied
         uint256 numRequiredSignatures = ticket.numRequiredSignatures;
         if (proofs.length != numRequiredSignatures) {
-            revert InvalidValidatorProof();
+            revert InvalidValidatorProofLength();
         }
 
         // Generate final bitfield indicating which validators need to be included in the proofs.
@@ -543,13 +535,10 @@ contract BeefyClient {
     }
 
     function encodeCommitmentPayload(PayloadItem[] calldata items) internal pure returns (bytes memory) {
-        bytes memory payload = ScaleCodec.checkedEncodeCompactU32(uint32(items.length));
+        bytes memory payload = ScaleCodec.checkedEncodeCompactU32(items.length);
         for (uint256 i = 0; i < items.length; i++) {
             payload = bytes.concat(
-                payload,
-                items[i].payloadID,
-                ScaleCodec.checkedEncodeCompactU32(uint32(items[i].data.length)),
-                items[i].data
+                payload, items[i].payloadID, ScaleCodec.checkedEncodeCompactU32(items[i].data.length), items[i].data
             );
         }
 

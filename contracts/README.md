@@ -40,7 +40,7 @@ Agents are defined by the following contracts:
 * [Agent.sol](src/Agent.sol): Agent contract
 * [AgentExecutor.sol](src/AgentExecutor.sol): Code executed within an agent using `delegatecall`
 
-The creation of new agents can be initiated by calling `EthereumControl::create_agent` extrinsic on the BridgeHub parachain.
+The creation of new agents can be initiated by calling `EthereumSystem::create_agent` extrinsic on the BridgeHub parachain.
 
 ### BeefyClient
 

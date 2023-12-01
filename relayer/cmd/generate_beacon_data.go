@@ -125,7 +125,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		}
 		checkPointBytes, _ := types.EncodeToBytes(checkPointScale)
 		// Call index for EthereumBeaconClient.force_checkpoint
-		checkPointCallIndex := "0x3E00"
+		checkPointCallIndex := "0x5200"
 		checkPointUpdateCall := checkPointCallIndex + hex.EncodeToString(checkPointBytes)
 		fmt.Println(checkPointUpdateCall)
 		return nil

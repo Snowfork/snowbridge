@@ -1,8 +1,10 @@
 package parachain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -185,12 +187,22 @@ func (s *Scanner) findTasksImpl(
 		}
 
 		var messages []OutboundQueueMessage
-		ok, err := s.paraConn.API().RPC.State.GetStorage(messagesKey, &messages, blockHash)
+		raw, err := s.paraConn.API().RPC.State.GetStorageRaw(messagesKey, blockHash)
 		if err != nil {
 			return nil, fmt.Errorf("fetch committed messages for block %v: %w", blockHash.Hex(), err)
 		}
-		if !ok {
-			return nil, fmt.Errorf("committed messages not found for block %v", blockHash.Hex())
+		decoder := scale.NewDecoder(bytes.NewReader(*raw))
+		n, err := decoder.DecodeUintCompact()
+		if err != nil {
+			return nil, fmt.Errorf("decode message length error: %w", err)
+		}
+		for i := uint64(0); i < n.Uint64(); i++ {
+			m := OutboundQueueMessage{}
+			err = decoder.Decode(&m)
+			if err != nil {
+				return nil, fmt.Errorf("decode message error: %w", err)
+			}
+			messages = append(messages, m)
 		}
 
 		// For the outbound channel, the commitment hash is the merkle root of the messages

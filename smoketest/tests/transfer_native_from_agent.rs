@@ -3,7 +3,7 @@ use snowbridge_smoketest::{
 	constants::*,
 	contracts::{i_gateway, i_gateway::InboundMessageDispatchedFilter},
 	helper::*,
-	parachains::bridgehub::api::ethereum_control::events::TransferNativeFromAgent,
+	parachains::bridgehub::api::ethereum_system::events::TransferNativeFromAgent,
 	xcm::construct_xcm_message_with_fee,
 };
 
@@ -41,7 +41,7 @@ async fn transfer_native_from_agent() {
 	)
 	.await;
 
-	let result = send_xcm_transact(&test_clients.template_client, message)
+	let result = send_sudo_xcm_transact(&test_clients.penpal_client, message)
 		.await
 		.expect("failed to send xcm transact.");
 

@@ -12,6 +12,10 @@ use crate::{
 				utility,
 			},
 		},
+		penpal::{
+			api::runtime_types as penpalTypes,
+			{self},
+		},
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
@@ -31,10 +35,6 @@ use crate::{
 				VersionedXcm as RelaychainVersionedXcm,
 			},
 		},
-		template::{
-			api::runtime_types as templateTypes,
-			{self},
-		},
 	},
 };
 use ethers::{
@@ -43,8 +43,18 @@ use ethers::{
 		TransactionRequest, Ws, U256,
 	},
 	providers::Http,
+	types::Log,
 };
 use futures::StreamExt;
+use penpalTypes::{
+	pallet_xcm::pallet::Call,
+	penpal_runtime::RuntimeCall,
+	staging_xcm::v3::multilocation::MultiLocation,
+	xcm::{
+		v3::{junction::Junction, junctions::Junctions},
+		VersionedMultiLocation, VersionedXcm,
+	},
+};
 use sp_core::{sr25519::Pair, Pair as PairT, H160};
 use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
@@ -53,18 +63,11 @@ use subxt::{
 	tx::{PairSigner, TxPayload},
 	Config, OnlineClient, PolkadotConfig, SubstrateConfig,
 };
-use templateTypes::{
-	staging_xcm::v3::multilocation::MultiLocation,
-	xcm::{
-		v3::{junction::Junction, junctions::Junctions},
-		VersionedMultiLocation, VersionedXcm,
-	},
-};
 
-/// Custom config that works with Statemint
-pub enum TemplateConfig {}
+/// Custom config that works with Penpal
+pub enum PenpalConfig {}
 
-impl Config for TemplateConfig {
+impl Config for PenpalConfig {
 	type Index = <PolkadotConfig as Config>::Index;
 	type Hash = <PolkadotConfig as Config>::Hash;
 	type AccountId = <PolkadotConfig as Config>::AccountId;
@@ -72,7 +75,7 @@ impl Config for TemplateConfig {
 	type Signature = <PolkadotConfig as Config>::Signature;
 	type Hasher = <PolkadotConfig as Config>::Hasher;
 	type Header = <PolkadotConfig as Config>::Header;
-	type ExtrinsicParams = <PolkadotConfig as Config>::ExtrinsicParams;
+	type ExtrinsicParams = <SubstrateConfig as Config>::ExtrinsicParams;
 }
 
 /// Custom config that works with Statemint
@@ -92,7 +95,7 @@ impl Config for AssetHubConfig {
 pub struct TestClients {
 	pub asset_hub_client: Box<OnlineClient<PolkadotConfig>>,
 	pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
-	pub template_client: Box<OnlineClient<TemplateConfig>>,
+	pub penpal_client: Box<OnlineClient<PenpalConfig>>,
 	pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
 	pub ethereum_client: Box<Arc<Provider<Ws>>>,
 	pub ethereum_signed_client: Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
@@ -107,10 +110,9 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 		.await
 		.expect("can not connect to bridgehub");
 
-	let template_client: OnlineClient<TemplateConfig> =
-		OnlineClient::from_url(TEMPLATE_NODE_WS_URL)
-			.await
-			.expect("can not connect to template parachain");
+	let penpal_client: OnlineClient<PenpalConfig> = OnlineClient::from_url(PENPAL_WS_URL)
+		.await
+		.expect("can not connect to penpal parachain");
 
 	let relaychain_client: OnlineClient<PolkadotConfig> =
 		OnlineClient::from_url(RELAY_CHAIN_WS_URL)
@@ -129,7 +131,7 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 	Ok(TestClients {
 		asset_hub_client: Box::new(asset_hub_client),
 		bridge_hub_client: Box::new(bridge_hub_client),
-		template_client: Box::new(template_client),
+		penpal_client: Box::new(penpal_client),
 		relaychain_client: Box::new(relaychain_client),
 		ethereum_client: Box::new(ethereum_client),
 		ethereum_signed_client: Box::new(Arc::new(ethereum_signed_client)),
@@ -187,24 +189,27 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 	assert!(ethereum_event_found);
 }
 
-pub async fn send_xcm_transact(
-	template_client: &Box<OnlineClient<TemplateConfig>>,
+pub async fn send_sudo_xcm_transact(
+	penpal_client: &Box<OnlineClient<PenpalConfig>>,
 	message: Box<VersionedXcm>,
-) -> Result<ExtrinsicEvents<TemplateConfig>, Box<dyn std::error::Error>> {
+) -> Result<ExtrinsicEvents<PenpalConfig>, Box<dyn std::error::Error>> {
 	let dest = Box::new(VersionedMultiLocation::V3(MultiLocation {
 		parents: 1,
 		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
 	}));
 
-	let xcm_call = template::api::template_pallet::calls::TransactionApi.send_xcm(*dest, *message);
+	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(
+		&penpal::api::sudo::calls::TransactionApi,
+		RuntimeCall::PolkadotXcm(Call::send { dest, message }),
+	);
 
 	let owner: Pair = Pair::from_string("//Alice", None).expect("cannot create keypair");
 
-	let signer: PairSigner<TemplateConfig, _> = PairSigner::new(owner);
+	let signer: PairSigner<PenpalConfig, _> = PairSigner::new(owner);
 
-	let result = template_client
+	let result = penpal_client
 		.tx()
-		.sign_and_submit_then_watch_default(&xcm_call, &signer)
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
 		.await
 		.expect("send through xcm call.")
 		.wait_for_finalized_success()
@@ -252,7 +257,7 @@ pub async fn fund_account(
 pub async fn construct_create_agent_call(
 	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let call = bridgehub::api::ethereum_control::calls::TransactionApi
+	let call = bridgehub::api::ethereum_system::calls::TransactionApi
 		.create_agent()
 		.encode_call_data(&bridge_hub_client.metadata())?;
 
@@ -262,8 +267,8 @@ pub async fn construct_create_agent_call(
 pub async fn construct_create_channel_call(
 	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let call = bridgehub::api::ethereum_control::calls::TransactionApi
-		.create_channel(OperatingMode::Normal, 1)
+	let call = bridgehub::api::ethereum_system::calls::TransactionApi
+		.create_channel(OperatingMode::Normal)
 		.encode_call_data(&bridge_hub_client.metadata())?;
 
 	Ok(call)
@@ -274,7 +279,7 @@ pub async fn construct_transfer_native_from_agent_call(
 	recipient: H160,
 	amount: u128,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let call = bridgehub::api::ethereum_control::calls::TransactionApi
+	let call = bridgehub::api::ethereum_system::calls::TransactionApi
 		.transfer_native_from_agent(recipient, amount)
 		.encode_call_data(&bridge_hub_client.metadata())?;
 
@@ -347,4 +352,18 @@ pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Er
 		.await
 		.expect("fund account");
 	Ok(())
+}
+
+pub fn print_event_log_for_unit_tests(log: &Log) {
+	let topics: Vec<String> = log.topics.iter().map(|t| hex::encode(t.as_ref())).collect();
+	println!("Log {{");
+	println!("	address: hex!(\"{}\").into(),", hex::encode(log.address.as_ref()));
+	println!("	topics: vec![");
+	for topic in topics.iter() {
+		println!("		hex!(\"{}\").into(),", topic);
+	}
+	println!("	],");
+	println!("	data: hex!(\"{}\").into(),", hex::encode(&log.data));
+
+	println!("}}")
 }
