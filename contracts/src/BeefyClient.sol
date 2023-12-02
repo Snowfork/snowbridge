@@ -5,7 +5,7 @@ pragma solidity 0.8.22;
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
-import {Uint16Array} from "./utils/Uint16Array.sol";
+import {Uint16Array, createUint16Array} from "./utils/Uint16Array.sol";
 import {Math} from "./utils/Math.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
@@ -23,7 +23,6 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
  *
  */
 contract BeefyClient {
-    using Uint16Array for Uint16Array.Array;
     using Math for uint16;
     using Math for uint256;
 
@@ -139,7 +138,7 @@ contract BeefyClient {
         // Merkle root of BEEFY validator addresses
         bytes32 root;
         // Number of times a validator signature has been used
-        Uint16Array.Array usageCounters;
+        Uint16Array usageCounters;
     }
 
     /* State */
@@ -226,11 +225,11 @@ contract BeefyClient {
         currentValidatorSet.id = _initialValidatorSet.id;
         currentValidatorSet.length = _initialValidatorSet.length;
         currentValidatorSet.root = _initialValidatorSet.root;
-        currentValidatorSet.usageCounters = Uint16Array.create(currentValidatorSet.length);
+        currentValidatorSet.usageCounters = createUint16Array(currentValidatorSet.length);
         nextValidatorSet.id = _nextValidatorSet.id;
         nextValidatorSet.length = _nextValidatorSet.length;
         nextValidatorSet.root = _nextValidatorSet.root;
-        nextValidatorSet.usageCounters = Uint16Array.create(nextValidatorSet.length);
+        nextValidatorSet.usageCounters = createUint16Array(nextValidatorSet.length);
     }
 
     /* External Functions */
@@ -368,7 +367,7 @@ contract BeefyClient {
             nextValidatorSet.id = leaf.nextAuthoritySetID;
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
-            nextValidatorSet.usageCounters = Uint16Array.create(leaf.nextAuthoritySetLen);
+            nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
         }
 
         latestMMRRoot = newMMRRoot;

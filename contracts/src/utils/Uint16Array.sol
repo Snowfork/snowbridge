@@ -29,68 +29,66 @@ pragma solidity 0.8.22;
  * above table counter XX is at logical index 22. It will convert to a physical index of 1 in the array and
  * then to bit-index 96 to 111 of uint256[1].
  */
-library Uint16Array {
-    /**
-     * @dev stores the backing array and the length.
-     */
-    struct Array {
-        uint256[] data;
-        uint256 length;
-    }
 
-    /**
-     * @dev error for when out of bound accesses occur.
-     */
-    error IndexOutOfBounds();
+using {get, set} for Uint16Array global;
 
-    /**
-     * @dev Creates a new counter which can store at least `length` counters.
-     * @param length The amount of counters.
-     */
-    function create(uint256 length) internal pure returns (Array memory) {
-        // create space for `length` elements and round up if needed.
-        uint256 bufferLength = length / 16 + (length % 16 == 0 ? 0 : 1);
-        return Array({data: new uint256[](bufferLength), length: length});
-    }
+error IndexOutOfBounds();
 
-    /**
-     * @dev Gets the counter at the logical index
-     * @param self The array.
-     * @param index The logical index.
-     */
-    function get(Array storage self, uint256 index) internal view returns (uint16) {
-        if (index >= self.length) {
-            revert IndexOutOfBounds();
-        }
-        // Right-shift the index by 4. This truncates the first 4 bits (bit-index) leaving us with the index
-        // into the array.
-        uint256 element = index >> 4;
-        // Mask out the first 4 bits of the logical index to give us the bit-index.
-        uint8 inside = uint8(index) & 0x0F;
-        // find the element in the array, shift until its bit index and mask to only take the first 16 bits.
-        return uint16((self.data[element] >> (16 * inside)) & 0xFFFF);
-    }
+/**
+ * @dev stores the backing array and the length.
+ */
+struct Uint16Array {
+    uint256[] data;
+    uint256 length;
+}
 
-    /**
-     * @dev Sets the counter at the logical index.
-     * @param self The array.
-     * @param index The logical index of the counter in the array.
-     * @param value The value to set the counter to.
-     */
-    function set(Array storage self, uint256 index, uint16 value) internal {
-        if (index >= self.length) {
-            revert IndexOutOfBounds();
-        }
-        // Right-shift the index by 4. This truncates the first 4 bits (bit-index) leaving us with the index
-        // into the array.
-        uint256 element = index >> 4;
-        // Mask out the first 4 bytes of the logical index to give us the bit-index.
-        uint8 inside = uint8(index) & 0x0F;
-        // Create a zero mask which will clear the existing value at the bit-index.
-        uint256 zero = ~(uint256(0xFFFF) << (16 * inside));
-        // Shift the value to the bit index.
-        uint256 shiftedValue = uint256(value) << (16 * inside);
-        // Take the element, apply the zero mask to clear the existing value, and then apply the shifted value with bitwise or.
-        self.data[element] = self.data[element] & zero | shiftedValue;
+/**
+ * @dev Creates a new counter which can store at least `length` counters.
+ * @param length The amount of counters.
+ */
+function createUint16Array(uint256 length) pure returns (Uint16Array memory) {
+    // create space for `length` elements and round up if needed.
+    uint256 bufferLength = length / 16 + (length % 16 == 0 ? 0 : 1);
+    return Uint16Array({data: new uint256[](bufferLength), length: length});
+}
+
+/**
+ * @dev Gets the counter at the logical index
+ * @param self The array.
+ * @param index The logical index.
+ */
+function get(Uint16Array storage self, uint256 index) view returns (uint16) {
+    if (index >= self.length) {
+        revert IndexOutOfBounds();
     }
+    // Right-shift the index by 4. This truncates the first 4 bits (bit-index) leaving us with the index
+    // into the array.
+    uint256 element = index >> 4;
+    // Mask out the first 4 bits of the logical index to give us the bit-index.
+    uint8 inside = uint8(index) & 0x0F;
+    // find the element in the array, shift until its bit index and mask to only take the first 16 bits.
+    return uint16((self.data[element] >> (16 * inside)) & 0xFFFF);
+}
+
+/**
+ * @dev Sets the counter at the logical index.
+ * @param self The array.
+ * @param index The logical index of the counter in the array.
+ * @param value The value to set the counter to.
+ */
+function set(Uint16Array storage self, uint256 index, uint16 value) {
+    if (index >= self.length) {
+        revert IndexOutOfBounds();
+    }
+    // Right-shift the index by 4. This truncates the first 4 bits (bit-index) leaving us with the index
+    // into the array.
+    uint256 element = index >> 4;
+    // Mask out the first 4 bytes of the logical index to give us the bit-index.
+    uint8 inside = uint8(index) & 0x0F;
+    // Create a zero mask which will clear the existing value at the bit-index.
+    uint256 zero = ~(uint256(0xFFFF) << (16 * inside));
+    // Shift the value to the bit index.
+    uint256 shiftedValue = uint256(value) << (16 * inside);
+    // Take the element, apply the zero mask to clear the existing value, and then apply the shifted value with bitwise or.
+    self.data[element] = self.data[element] & zero | shiftedValue;
 }
