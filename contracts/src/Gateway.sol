@@ -96,14 +96,9 @@ contract Gateway is IGateway, IInitializable {
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
-        ParaID assetHubParaID,
-        bytes32 assetHubAgentID,
         uint8 foreignTokenDecimals
     ) {
-        if (
-            bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0 || assetHubParaID == ParaID.wrap(0)
-                || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID || bridgeHubAgentID == assetHubAgentID
-        ) {
+        if (bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0) {
             revert InvalidConstructorParams();
         }
 
@@ -112,8 +107,6 @@ contract Gateway is IGateway, IInitializable {
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
-        ASSET_HUB_PARA_ID = assetHubParaID;
-        ASSET_HUB_AGENT_ID = assetHubAgentID;
         FOREIGN_TOKEN_DECIMALS = foreignTokenDecimals;
     }
 
@@ -623,6 +616,8 @@ contract Gateway is IGateway, IInitializable {
         uint128 deliveryCost;
         /// @dev The ETH/DOT exchange rate
         UD60x18 exchangeRate;
+        ParaID assetHubParaID;
+        bytes32 assetHubAgentID;
         /// @dev The extra fee charged for registering tokens (DOT)
         uint128 assetHubCreateAssetFee;
         /// @dev The extra fee charged for sending tokens (DOT)
@@ -657,11 +652,11 @@ contract Gateway is IGateway, IInitializable {
             Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
 
         // Initialize agent for for AssetHub
-        address assetHubAgent = address(new Agent(ASSET_HUB_AGENT_ID));
-        core.agents[ASSET_HUB_AGENT_ID] = assetHubAgent;
+        address assetHubAgent = address(new Agent(config.assetHubAgentID));
+        core.agents[config.assetHubAgentID] = assetHubAgent;
 
         // Initialize channel for AssetHub
-        core.channels[ASSET_HUB_PARA_ID.into()] =
+        core.channels[config.assetHubParaID.into()] =
             Channel({mode: OperatingMode.Normal, agent: assetHubAgent, inboundNonce: 0, outboundNonce: 0});
 
         // Initialize pricing storage
@@ -672,7 +667,7 @@ contract Gateway is IGateway, IInitializable {
         // Initialize assets storage
         AssetsStorage.Layout storage assets = AssetsStorage.layout();
 
-        assets.assetHubParaID = ASSET_HUB_PARA_ID;
+        assets.assetHubParaID = config.assetHubParaID;
         assets.assetHubAgent = assetHubAgent;
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;

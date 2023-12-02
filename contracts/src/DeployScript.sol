@@ -65,8 +65,6 @@ contract DeployScript is Script {
             address(executor),
             bridgeHubParaID,
             bridgeHubAgentID,
-            assetHubParaID,
-            assetHubAgentID,
             foreignTokenDecimals
         );
 
@@ -82,6 +80,8 @@ contract DeployScript is Script {
             mode: defaultOperatingMode,
             deliveryCost: uint128(vm.envUint("DELIVERY_COST")),
             registerTokenFee: uint128(vm.envUint("REGISTER_TOKEN_FEE")),
+            assetHubParaID: assetHubParaID,
+            assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
             exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE"))

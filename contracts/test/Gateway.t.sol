@@ -86,14 +86,14 @@ contract GatewayTest is Test {
             address(executor),
             bridgeHubParaID,
             bridgeHubAgentID,
-            assetHubParaID,
-            assetHubAgentID,
             foreignTokenDecimals
         );
         Gateway.Config memory config = Gateway.Config({
             mode: OperatingMode.Normal,
             deliveryCost: outboundFee,
             registerTokenFee: registerTokenFee,
+            assetHubParaID: assetHubParaID,
+            assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
             exchangeRate: exchangeRate
