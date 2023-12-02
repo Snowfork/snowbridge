@@ -98,6 +98,12 @@ struct Costs {
 }
 
 struct Ticket {
+    ParaID dest;
     Costs costs;
     bytes payload;
+}
+
+struct TokenInfo {
+    bool isRegistered;
+    bytes31 __padding;
 }

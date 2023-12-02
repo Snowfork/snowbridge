@@ -28,6 +28,18 @@ import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
+import {
+    UpgradeParams,
+    CreateAgentParams,
+    AgentExecuteParams,
+    CreateChannelParams,
+    UpdateChannelParams,
+    SetOperatingModeParams,
+    TransferNativeFromAgentParams,
+    SetTokenTransferFeesParams,
+    SetPricingParametersParams
+} from "./Params.sol";
+
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
@@ -55,10 +67,6 @@ contract Gateway is IGateway, IInitializable {
     // ChannelIDs
     ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(1)));
     ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(2)));
-
-    // Fixed amount of gas used outside the block of code
-    // that is measured in submitInbound
-    uint256 BASE_GAS_USED = 31_000;
 
     // Gas used for:
     // 1. Mapping a command id to an implementation function
@@ -96,14 +104,9 @@ contract Gateway is IGateway, IInitializable {
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
-        ParaID assetHubParaID,
-        bytes32 assetHubAgentID,
         uint8 foreignTokenDecimals
     ) {
-        if (
-            bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0 || assetHubParaID == ParaID.wrap(0)
-                || assetHubAgentID == 0 || bridgeHubParaID == assetHubParaID || bridgeHubAgentID == assetHubAgentID
-        ) {
+        if (bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0) {
             revert InvalidConstructorParams();
         }
 
@@ -112,8 +115,6 @@ contract Gateway is IGateway, IInitializable {
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
-        ASSET_HUB_PARA_ID = assetHubParaID;
-        ASSET_HUB_AGENT_ID = assetHubAgentID;
         FOREIGN_TOKEN_DECIMALS = foreignTokenDecimals;
     }
 
@@ -145,11 +146,11 @@ contract Gateway is IGateway, IInitializable {
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
 
         // Verify that the commitment is included in a parachain header finalized by BEEFY.
-        if (!verifyCommitment(commitment, headerProof)) {
+        if (!_verifyCommitment(commitment, headerProof)) {
             revert InvalidProof();
         }
 
-        // Make sure relayers provide enough gas so that message dispatch
+        // Make sure relayers provide enough gas so that inner message dispatch
         // does not run out of gas.
         uint256 maxDispatchGas = message.maxDispatchGas;
         if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS) {
@@ -207,7 +208,7 @@ contract Gateway is IGateway, IInitializable {
         }
 
         // Calculate the actual cost of executing this message
-        uint256 gasUsed = startGas - gasleft() + BASE_GAS_USED;
+        uint256 gasUsed = _transactionBaseGas(leafProof, headerProof) + (startGas - gasleft());
         uint256 calculatedRefund = gasUsed * tx.gasprice;
 
         // If the actual refund amount is less than the estimated maximum refund, then
@@ -222,7 +223,7 @@ contract Gateway is IGateway, IInitializable {
         amount = Math.min(amount + message.reward, address(channel.agent).balance);
 
         // Do the payment if there funds available in the agent
-        if (amount > dustThreshold()) {
+        if (amount > _dustThreshold()) {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
         }
 
@@ -264,11 +265,6 @@ contract Gateway is IGateway, IInitializable {
      * Handlers
      */
 
-    struct AgentExecuteParams {
-        bytes32 agentID;
-        bytes payload;
-    }
-
     // Execute code within an agent
     function agentExecute(bytes calldata data) external onlySelf {
         AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
@@ -287,11 +283,6 @@ contract Gateway is IGateway, IInitializable {
         }
     }
 
-    struct CreateAgentParams {
-        /// @dev The agent ID of the consensus system
-        bytes32 agentID;
-    }
-
     /// @dev Create an agent for a consensus system on Polkadot
     function createAgent(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
@@ -307,15 +298,6 @@ contract Gateway is IGateway, IInitializable {
         $.agents[params.agentID] = agent;
 
         emit AgentCreated(params.agentID, agent);
-    }
-
-    struct CreateChannelParams {
-        /// @dev The channel ID
-        ChannelID channelID;
-        /// @dev The agent ID
-        bytes32 agentID;
-        /// @dev Initial operating mode
-        OperatingMode mode;
     }
 
     /// @dev Create a messaging channel for a Polkadot parachain
@@ -341,13 +323,6 @@ contract Gateway is IGateway, IInitializable {
         emit ChannelCreated(params.channelID);
     }
 
-    struct UpdateChannelParams {
-        /// @dev The parachain used to identify the channel to update
-        ChannelID channelID;
-        /// @dev The new operating mode
-        OperatingMode mode;
-    }
-
     /// @dev Update the configuration for a channel
     function updateChannel(bytes calldata data) external onlySelf {
         UpdateChannelParams memory params = abi.decode(data, (UpdateChannelParams));
@@ -361,17 +336,6 @@ contract Gateway is IGateway, IInitializable {
 
         ch.mode = params.mode;
         emit ChannelUpdated(params.channelID);
-    }
-
-    struct UpgradeParams {
-        /// @dev The address of the implementation contract
-        address impl;
-        /// @dev the codehash of the new implementation contract.
-        /// Used to ensure the implementation isn't updated while
-        /// the upgrade is in flight
-        bytes32 implCodeHash;
-        /// @dev parameters used to upgrade storage of the gateway
-        bytes initParams;
     }
 
     /// @dev Perform an upgrade of the gateway
@@ -402,26 +366,12 @@ contract Gateway is IGateway, IInitializable {
         emit Upgraded(params.impl);
     }
 
-    struct SetOperatingModeParams {
-        /// @dev The new operating mode
-        OperatingMode mode;
-    }
-
     // @dev Set the operating mode of the gateway
     function setOperatingMode(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
         $.mode = params.mode;
         emit OperatingModeChanged(params.mode);
-    }
-
-    struct TransferNativeFromAgentParams {
-        /// @dev The ID of the agent to transfer funds from
-        bytes32 agentID;
-        /// @dev The recipient of the funds
-        address recipient;
-        /// @dev The amount to transfer
-        uint256 amount;
     }
 
     // @dev Transfer funds from an agent to a recipient account
@@ -434,15 +384,6 @@ contract Gateway is IGateway, IInitializable {
         emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
     }
 
-    struct SetTokenTransferFeesParams {
-        /// @dev The remote fee (DOT) for registering a token on AssetHub
-        uint128 assetHubCreateAssetFee;
-        /// @dev The remote fee (DOT) for send tokens to AssetHub
-        uint128 assetHubReserveTransferFee;
-        /// @dev extra fee to register an asset and discourage spamming (Ether)
-        uint256 registerTokenFee;
-    }
-
     // @dev Set token fees of the gateway
     function setTokenTransferFees(bytes calldata data) external onlySelf {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
@@ -451,13 +392,6 @@ contract Gateway is IGateway, IInitializable {
         $.assetHubReserveTransferFee = params.assetHubReserveTransferFee;
         $.registerTokenFee = params.registerTokenFee;
         emit TokenTransferFeesChanged();
-    }
-
-    struct SetPricingParametersParams {
-        /// @dev The ETH/DOT exchange rate
-        UD60x18 exchangeRate;
-        /// @dev The cost of delivering messages to BridgeHub in DOT
-        uint128 deliveryCost;
     }
 
     // @dev Set pricing params of the gateway
@@ -473,26 +407,27 @@ contract Gateway is IGateway, IInitializable {
      * Assets
      */
 
-    // Total fee for registering a token
-    function quoteRegisterTokenFee() external view returns (uint256) {
-        Costs memory costs = Assets.registerTokenCosts();
-        return _calculateFee(costs);
+    function isTokenRegistered(address token) external view returns (bool) {
+        return Assets.isTokenRegistered(token);
     }
 
-    // Register a token on AssetHub
+    // Total fee for registering a token
+    function quoteRegisterTokenFee() external view returns (uint256) {
+        return _calculateFee(Assets.registerTokenCosts());
+    }
+
+    // Register an Ethereum-native token in the gateway and on AssetHub
     function registerToken(address token) external payable {
-        Ticket memory ticket = Assets.registerToken(token);
-        _submitOutbound(ASSET_HUB_PARA_ID, ticket);
+        _submitOutbound(Assets.registerToken(token));
     }
 
     // Total fee for sending a token
-    function quoteSendTokenFee(address, ParaID destinationChain, uint128 destinationFee)
+    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
         external
         view
         returns (uint256)
     {
-        Costs memory costs = Assets.sendTokenCosts(ASSET_HUB_PARA_ID, destinationChain, destinationFee);
-        return _calculateFee(costs);
+        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee));
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
@@ -503,27 +438,39 @@ contract Gateway is IGateway, IInitializable {
         uint128 destinationFee,
         uint128 amount
     ) external payable {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        address assetHubAgent = $.agents[ASSET_HUB_AGENT_ID];
-
-        Ticket memory ticket = Assets.sendToken(
-            ASSET_HUB_PARA_ID,
-            assetHubAgent,
-            token,
-            msg.sender,
-            destinationChain,
-            destinationAddress,
-            destinationFee,
-            amount
+        _submitOutbound(
+            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
         );
-
-        _submitOutbound(ASSET_HUB_PARA_ID, ticket);
     }
 
-    /* Internal functions */
+    /**
+     * Internal functions
+     */
+
+    // Best-effort attempt at estimating the base gas use of `submitInbound` transaction, outside the block of
+    // code that is metered.
+    // This includes:
+    // * Cost paid for every transaction: 21000 gas
+    // * Cost of calldata: Zero byte = 4 gas, Non-zero byte = 16 gas
+    // * Cost of code inside submitInitial that is not metered: 14_698
+    //
+    // The major cost of calldata are the merkle proofs, which should dominate anything else (including the message payload)
+    // Since the merkle proofs are hashes, they are much more likely to be composed of more non-zero bytes than zero bytes.
+    //
+    // NOTE: this is not consensus-critical, a bad estimate here just means relayers get refunded slightly less.
+    //
+    // Reference: Ethereum Yellow Paper
+    function _transactionBaseGas(bytes32[] calldata leafProof, Verification.Proof calldata headerProof)
+        internal
+        pure
+        returns (uint256)
+    {
+        return 21_000 + 14_698
+            + 16 * 32 * (leafProof.length + headerProof.leafProof.length + headerProof.headProof.proof.length);
+    }
 
     // Verify that a message commitment is considered finalized by our BEEFY light client.
-    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
         internal
         view
         virtual
@@ -548,9 +495,9 @@ contract Gateway is IGateway, IInitializable {
         return costs.native + _convertToNative(pricing.exchangeRate, pricing.deliveryCost + costs.foreign);
     }
 
-    // Submit an outbound message to Polkadot
-    function _submitOutbound(ParaID dest, Ticket memory ticket) internal {
-        ChannelID channelID = dest.into();
+    // Submit an outbound message to Polkadot, after taking fees
+    function _submitOutbound(Ticket memory ticket) internal {
+        ChannelID channelID = ticket.dest.into();
         Channel storage channel = _ensureChannel(channelID);
 
         // Ensure outbound messaging is allowed
@@ -617,7 +564,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
-    function dustThreshold() internal view returns (uint256) {
+    function _dustThreshold() internal view returns (uint256) {
         return 21000 * tx.gasprice;
     }
 
@@ -632,6 +579,8 @@ contract Gateway is IGateway, IInitializable {
         uint128 deliveryCost;
         /// @dev The ETH/DOT exchange rate
         UD60x18 exchangeRate;
+        ParaID assetHubParaID;
+        bytes32 assetHubAgentID;
         /// @dev The extra fee charged for registering tokens (DOT)
         uint128 assetHubCreateAssetFee;
         /// @dev The extra fee charged for sending tokens (DOT)
@@ -666,11 +615,11 @@ contract Gateway is IGateway, IInitializable {
             Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
 
         // Initialize agent for for AssetHub
-        address assetHubAgent = address(new Agent(ASSET_HUB_AGENT_ID));
-        core.agents[ASSET_HUB_AGENT_ID] = assetHubAgent;
+        address assetHubAgent = address(new Agent(config.assetHubAgentID));
+        core.agents[config.assetHubAgentID] = assetHubAgent;
 
         // Initialize channel for AssetHub
-        core.channels[ASSET_HUB_PARA_ID.into()] =
+        core.channels[config.assetHubParaID.into()] =
             Channel({mode: OperatingMode.Normal, agent: assetHubAgent, inboundNonce: 0, outboundNonce: 0});
 
         // Initialize pricing storage
@@ -680,6 +629,9 @@ contract Gateway is IGateway, IInitializable {
 
         // Initialize assets storage
         AssetsStorage.Layout storage assets = AssetsStorage.layout();
+
+        assets.assetHubParaID = config.assetHubParaID;
+        assets.assetHubAgent = assetHubAgent;
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;

@@ -2,8 +2,13 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.22;
 
+import {TokenInfo, ParaID} from "../Types.sol";
+
 library AssetsStorage {
     struct Layout {
+        mapping(address token => TokenInfo) tokenRegistry;
+        address assetHubAgent;
+        ParaID assetHubParaID;
         // XCM fee charged by AssetHub for registering a token (DOT)
         uint128 assetHubCreateAssetFee;
         // XCM fee charged by AssetHub for receiving a token from the Gateway (DOT)

@@ -7,7 +7,7 @@ import {IGateway} from "./interfaces/IGateway.sol";
 
 import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
 
-import {AssetsStorage} from "./storage/AssetsStorage.sol";
+import {AssetsStorage, TokenInfo} from "./storage/AssetsStorage.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
@@ -21,10 +21,15 @@ library Assets {
     error InvalidToken();
     error InvalidAmount();
     error InvalidDestination();
+    error TokenNotRegistered();
     error Unsupported();
 
-    /// @dev transfer tokens from the sender to the specified
-    function _transferToAgent(address assetHubAgent, address token, address sender, uint128 amount) internal {
+    function isTokenRegistered(address token) external view returns (bool) {
+        return AssetsStorage.layout().tokenRegistry[token].isRegistered;
+    }
+
+    /// @dev transfer tokens from the sender to the specified agent
+    function _transferToAgent(address agent, address token, address sender, uint128 amount) internal {
         if (!token.isContract()) {
             revert InvalidToken();
         }
@@ -33,24 +38,30 @@ library Assets {
             revert InvalidAmount();
         }
 
-        IERC20(token).safeTransferFrom(sender, assetHubAgent, amount);
+        IERC20(token).safeTransferFrom(sender, agent, amount);
     }
 
-    function sendTokenCosts(ParaID assetHubParaID, ParaID destinationChain, uint128 destinationChainFee)
+    function sendTokenCosts(address token, ParaID destinationChain, uint128 destinationChainFee)
         external
         view
         returns (Costs memory costs)
     {
-        return _sendTokenCosts(assetHubParaID, destinationChain, destinationChainFee);
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        TokenInfo storage info = $.tokenRegistry[token];
+        if (!info.isRegistered) {
+            revert TokenNotRegistered();
+        }
+
+        return _sendTokenCosts(destinationChain, destinationChainFee);
     }
 
-    function _sendTokenCosts(ParaID assetHubParaID, ParaID destinationChain, uint128 destinationChainFee)
+    function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee)
         internal
         view
         returns (Costs memory costs)
     {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        if (assetHubParaID == destinationChain) {
+        if ($.assetHubParaID == destinationChain) {
             costs.foreign = $.assetHubReserveTransferFee;
         } else {
             // If the final destination chain is not AssetHub, then the fee needs to additionally
@@ -61,8 +72,6 @@ library Assets {
     }
 
     function sendToken(
-        ParaID assetHubParaID,
-        address assetHubAgent,
         address token,
         address sender,
         ParaID destinationChain,
@@ -72,10 +81,16 @@ library Assets {
     ) external returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        _transferToAgent(assetHubAgent, token, sender, amount);
-        ticket.costs = _sendTokenCosts(assetHubParaID, destinationChain, destinationChainFee);
+        TokenInfo storage info = $.tokenRegistry[token];
+        if (!info.isRegistered) {
+            revert TokenNotRegistered();
+        }
 
-        if (destinationChain == assetHubParaID) {
+        _transferToAgent($.assetHubAgent, token, sender, amount);
+        ticket.dest = $.assetHubParaID;
+        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee);
+
+        if (destinationChain == $.assetHubParaID) {
             if (destinationAddress.isAddress32()) {
                 ticket.payload = SubstrateTypes.SendTokenToAssetHubAddress32(
                     token, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
@@ -120,7 +135,7 @@ library Assets {
         costs.native = $.registerTokenFee;
     }
 
-    /// @dev Enqueues a create native token message to substrate.
+    /// @dev Registers a token (only native tokens at this time)
     /// @param token The ERC20 token address.
     function registerToken(address token) external returns (Ticket memory ticket) {
         if (!token.isContract()) {
@@ -128,6 +143,14 @@ library Assets {
         }
 
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        // NOTE: Explicitly allow a token to be re-registered. This offers resiliency
+        // in case a previous registration attempt of the same token failed on the remote side.
+        // It means that registration can be retried.
+        TokenInfo storage info = $.tokenRegistry[token];
+        info.isRegistered = true;
+
+        ticket.dest = $.assetHubParaID;
         ticket.costs = _registerTokenCosts();
         ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
 
