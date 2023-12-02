@@ -51,14 +51,14 @@ contract GatewayMock is Gateway {
         commitmentsAreVerified = value;
     }
 
-    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
         internal
         view
         override
         returns (bool)
     {
         if (BEEFY_CLIENT != address(0)) {
-            return super.verifyCommitment(commitment, proof);
+            return super._verifyCommitment(commitment, proof);
         } else {
             // for unit tests, verification is set with commitmentsAreVerified
             return commitmentsAreVerified;

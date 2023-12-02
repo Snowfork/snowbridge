@@ -28,6 +28,18 @@ import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
+import {
+    UpgradeParams,
+    CreateAgentParams,
+    AgentExecuteParams,
+    CreateChannelParams,
+    UpdateChannelParams,
+    SetOperatingModeParams,
+    TransferNativeFromAgentParams,
+    SetTokenTransferFeesParams,
+    SetPricingParametersParams
+} from "./Params.sol";
+
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
@@ -55,10 +67,6 @@ contract Gateway is IGateway, IInitializable {
     // ChannelIDs
     ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(1)));
     ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(2)));
-
-    // Fixed amount of gas used outside the block of code
-    // that is measured in submitInbound
-    uint256 BASE_GAS_USED = 31_000;
 
     // Gas used for:
     // 1. Mapping a command id to an implementation function
@@ -138,11 +146,11 @@ contract Gateway is IGateway, IInitializable {
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
 
         // Verify that the commitment is included in a parachain header finalized by BEEFY.
-        if (!verifyCommitment(commitment, headerProof)) {
+        if (!_verifyCommitment(commitment, headerProof)) {
             revert InvalidProof();
         }
 
-        // Make sure relayers provide enough gas so that message dispatch
+        // Make sure relayers provide enough gas so that inner message dispatch
         // does not run out of gas.
         uint256 maxDispatchGas = message.maxDispatchGas;
         if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS) {
@@ -200,7 +208,7 @@ contract Gateway is IGateway, IInitializable {
         }
 
         // Calculate the actual cost of executing this message
-        uint256 gasUsed = startGas - gasleft() + BASE_GAS_USED;
+        uint256 gasUsed = _transactionBaseGas(leafProof, headerProof) + (startGas - gasleft());
         uint256 calculatedRefund = gasUsed * tx.gasprice;
 
         // If the actual refund amount is less than the estimated maximum refund, then
@@ -257,11 +265,6 @@ contract Gateway is IGateway, IInitializable {
      * Handlers
      */
 
-    struct AgentExecuteParams {
-        bytes32 agentID;
-        bytes payload;
-    }
-
     // Execute code within an agent
     function agentExecute(bytes calldata data) external onlySelf {
         AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
@@ -280,11 +283,6 @@ contract Gateway is IGateway, IInitializable {
         }
     }
 
-    struct CreateAgentParams {
-        /// @dev The agent ID of the consensus system
-        bytes32 agentID;
-    }
-
     /// @dev Create an agent for a consensus system on Polkadot
     function createAgent(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
@@ -300,15 +298,6 @@ contract Gateway is IGateway, IInitializable {
         $.agents[params.agentID] = agent;
 
         emit AgentCreated(params.agentID, agent);
-    }
-
-    struct CreateChannelParams {
-        /// @dev The channel ID
-        ChannelID channelID;
-        /// @dev The agent ID
-        bytes32 agentID;
-        /// @dev Initial operating mode
-        OperatingMode mode;
     }
 
     /// @dev Create a messaging channel for a Polkadot parachain
@@ -334,13 +323,6 @@ contract Gateway is IGateway, IInitializable {
         emit ChannelCreated(params.channelID);
     }
 
-    struct UpdateChannelParams {
-        /// @dev The parachain used to identify the channel to update
-        ChannelID channelID;
-        /// @dev The new operating mode
-        OperatingMode mode;
-    }
-
     /// @dev Update the configuration for a channel
     function updateChannel(bytes calldata data) external onlySelf {
         UpdateChannelParams memory params = abi.decode(data, (UpdateChannelParams));
@@ -354,17 +336,6 @@ contract Gateway is IGateway, IInitializable {
 
         ch.mode = params.mode;
         emit ChannelUpdated(params.channelID);
-    }
-
-    struct UpgradeParams {
-        /// @dev The address of the implementation contract
-        address impl;
-        /// @dev the codehash of the new implementation contract.
-        /// Used to ensure the implementation isn't updated while
-        /// the upgrade is in flight
-        bytes32 implCodeHash;
-        /// @dev parameters used to upgrade storage of the gateway
-        bytes initParams;
     }
 
     /// @dev Perform an upgrade of the gateway
@@ -395,26 +366,12 @@ contract Gateway is IGateway, IInitializable {
         emit Upgraded(params.impl);
     }
 
-    struct SetOperatingModeParams {
-        /// @dev The new operating mode
-        OperatingMode mode;
-    }
-
     // @dev Set the operating mode of the gateway
     function setOperatingMode(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
         $.mode = params.mode;
         emit OperatingModeChanged(params.mode);
-    }
-
-    struct TransferNativeFromAgentParams {
-        /// @dev The ID of the agent to transfer funds from
-        bytes32 agentID;
-        /// @dev The recipient of the funds
-        address recipient;
-        /// @dev The amount to transfer
-        uint256 amount;
     }
 
     // @dev Transfer funds from an agent to a recipient account
@@ -427,15 +384,6 @@ contract Gateway is IGateway, IInitializable {
         emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
     }
 
-    struct SetTokenTransferFeesParams {
-        /// @dev The remote fee (DOT) for registering a token on AssetHub
-        uint128 assetHubCreateAssetFee;
-        /// @dev The remote fee (DOT) for send tokens to AssetHub
-        uint128 assetHubReserveTransferFee;
-        /// @dev extra fee to register an asset and discourage spamming (Ether)
-        uint256 registerTokenFee;
-    }
-
     // @dev Set token fees of the gateway
     function setTokenTransferFees(bytes calldata data) external onlySelf {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
@@ -444,13 +392,6 @@ contract Gateway is IGateway, IInitializable {
         $.assetHubReserveTransferFee = params.assetHubReserveTransferFee;
         $.registerTokenFee = params.registerTokenFee;
         emit TokenTransferFeesChanged();
-    }
-
-    struct SetPricingParametersParams {
-        /// @dev The ETH/DOT exchange rate
-        UD60x18 exchangeRate;
-        /// @dev The cost of delivering messages to BridgeHub in DOT
-        uint128 deliveryCost;
     }
 
     // @dev Set pricing params of the gateway
@@ -506,8 +447,30 @@ contract Gateway is IGateway, IInitializable {
      * Internal functions
      */
 
+    // Best-effort attempt at estimating the base gas use of `submitInbound` transaction, outside the block of
+    // code that is metered.
+    // This includes:
+    // * Cost paid for every transaction: 21000 gas
+    // * Cost of calldata: Zero byte = 4 gas, Non-zero byte = 16 gas
+    // * Cost of code inside submitInitial that is not metered: 14_698
+    //
+    // The major cost of calldata are the merkle proofs, which should dominate anything else (including the message payload)
+    // Since the merkle proofs are hashes, they are much more likely to be composed of more non-zero bytes than zero bytes.
+    //
+    // NOTE: this is not consensus-critical, a bad estimate here just means relayers get refunded slightly less.
+    //
+    // Reference: Ethereum Yellow Paper
+    function _transactionBaseGas(bytes32[] calldata leafProof, Verification.Proof calldata headerProof)
+        internal
+        pure
+        returns (uint256)
+    {
+        return 21_000 + 14_698
+            + 16 * 32 * (leafProof.length + headerProof.leafProof.length + headerProof.headProof.proof.length);
+    }
+
     // Verify that a message commitment is considered finalized by our BEEFY light client.
-    function verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
         internal
         view
         virtual
