@@ -12,8 +12,6 @@ members = [
     "pallets/ethereum-beacon-client",
     "pallets/system",
     "pallets/system/runtime-api",
-    "runtime/runtime-common",
-    "runtime/rococo-common",
 ]
 
 [patch.'https://github.com/snowfork/snowbridge']
@@ -26,4 +24,3 @@ snowbridge-inbound-queue = { path = "./pallets/inbound-queue" }
 snowbridge-outbound-queue = { path = "./pallets/outbound-queue" }
 snowbridge-outbound-queue-runtime-api = { path = "./pallets/outbound-queue/runtime-api" }
 snowbridge-router-primitives = { path = "./primitives/router" }
-snowbridge-runtime-common = { path = "./runtime/runtime-common" }
