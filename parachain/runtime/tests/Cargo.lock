@@ -1646,8 +1646,6 @@ dependencies = [
  "serde",
  "smallvec",
  "snowbridge-beacon-primitives",
- "snowbridge-control",
- "snowbridge-control-runtime-api",
  "snowbridge-core",
  "snowbridge-ethereum-beacon-client",
  "snowbridge-inbound-queue",
@@ -1655,6 +1653,8 @@ dependencies = [
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-router-primitives",
  "snowbridge-runtime-common",
+ "snowbridge-system",
+ "snowbridge-system-runtime-api",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
@@ -9715,39 +9715,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-control"
-version = "4.0.0-dev"
-dependencies = [
- "ethabi-decode",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "snowbridge-core",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std 8.0.0",
- "staging-xcm",
- "staging-xcm-builder",
- "staging-xcm-executor",
-]
-
-[[package]]
-name = "snowbridge-control-runtime-api"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "snowbridge-core",
- "sp-api",
- "sp-core",
- "sp-std 8.0.0",
- "staging-xcm",
-]
-
-[[package]]
 name = "snowbridge-core"
 version = "0.1.1"
 dependencies = [
@@ -9980,14 +9947,14 @@ dependencies = [
  "serde",
  "smallvec",
  "snowbridge-beacon-primitives",
- "snowbridge-control",
- "snowbridge-control-runtime-api",
  "snowbridge-core",
  "snowbridge-ethereum-beacon-client",
  "snowbridge-inbound-queue",
  "snowbridge-outbound-queue",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-router-primitives",
+ "snowbridge-system",
+ "snowbridge-system-runtime-api",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
@@ -10008,6 +9975,39 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "static_assertions",
+]
+
+[[package]]
+name = "snowbridge-system"
+version = "0.1.1"
+dependencies = [
+ "ethabi-decode",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "snowbridge-core",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 8.0.0",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+]
+
+[[package]]
+name = "snowbridge-system-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "snowbridge-core",
+ "sp-api",
+ "sp-core",
+ "sp-std 8.0.0",
+ "staging-xcm",
 ]
 
 [[package]]

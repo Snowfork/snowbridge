@@ -1,6 +1,6 @@
 use snowbridge_smoketest::{
 	contracts::i_gateway::ChannelCreatedFilter, helper::*,
-	parachains::bridgehub::api::ethereum_control::events::CreateChannel,
+	parachains::bridgehub::api::ethereum_system::events::CreateChannel,
 	xcm::construct_xcm_message_with_fee,
 };
 

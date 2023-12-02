@@ -1,6 +1,6 @@
 use snowbridge_smoketest::{
 	contracts::i_gateway::AgentCreatedFilter, helper::*,
-	parachains::bridgehub::api::ethereum_control::events::CreateAgent,
+	parachains::bridgehub::api::ethereum_system::events::CreateAgent,
 	xcm::construct_xcm_message_with_fee,
 };
 

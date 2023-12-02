@@ -4,8 +4,10 @@ use snowbridge_smoketest::{
 	contracts::{i_gateway, i_gateway::TokenTransferFeesChangedFilter},
 	helper::*,
 	parachains::bridgehub::api::{
-		ethereum_control::events::SetTokenTransferFees,
-		runtime_types::{self, bridge_hub_rococo_runtime::RuntimeCall as BHRuntimeCall},
+		ethereum_system::events::SetTokenTransferFees,
+		runtime_types::{
+			self, bridge_hub_rococo_runtime::RuntimeCall as BHRuntimeCall, primitive_types::U256,
+		},
 	},
 };
 
@@ -16,14 +18,14 @@ async fn set_token_transfer_fees() {
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
-	let fees = gateway.register_token_fee().await.expect("get fees");
+	let fees = gateway.quote_register_token_fee().await.expect("get fees");
 	println!("register fees {:?}", fees);
 
-	let set_token_fees_call = BHRuntimeCall::EthereumControl(
-		runtime_types::snowbridge_control::pallet::Call::set_token_transfer_fees {
-			create: *CREATE_ASSET_FEE,
-			transfer: *RESERVE_TRANSFER_FEE,
-			register: *REGISTER_TOKEN_FEE,
+	let set_token_fees_call = BHRuntimeCall::EthereumSystem(
+		runtime_types::snowbridge_system::pallet::Call::set_token_transfer_fees {
+			create_asset_xcm: *CREATE_ASSET_FEE,
+			transfer_asset_xcm: *RESERVE_TRANSFER_FEE,
+			register_token: U256([*REGISTER_TOKEN_FEE, 0, 0, 0]),
 		},
 	);
 
@@ -35,6 +37,6 @@ async fn set_token_transfer_fees() {
 
 	wait_for_ethereum_event::<TokenTransferFeesChangedFilter>(&test_clients.ethereum_client).await;
 
-	let fees = gateway.register_token_fee().await.expect("get fees");
+	let fees = gateway.quote_register_token_fee().await.expect("get fees");
 	println!("asset fees {:?}", fees);
 }

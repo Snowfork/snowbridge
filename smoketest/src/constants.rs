@@ -47,8 +47,8 @@ pub const FERDIE: [u8; 32] =
 	hex!("1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c");
 
 lazy_static! {
-	pub static ref REGISTER_TOKEN_FEE: u128 = env::var("REGISTER_TOKEN_FEE")
-		.unwrap_or("100000000000000000".to_string())
+	pub static ref REGISTER_TOKEN_FEE: u64 = env::var("REGISTER_TOKEN_FEE")
+		.unwrap_or("200000000000000000".to_string())
 		.parse()
 		.unwrap();
 	pub static ref CREATE_ASSET_FEE: u128 = env::var("CREATE_ASSET_FEE")

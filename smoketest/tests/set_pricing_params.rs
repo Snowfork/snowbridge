@@ -4,7 +4,7 @@ use snowbridge_smoketest::{
 	contracts::{i_gateway, i_gateway::PricingParametersChangedFilter},
 	helper::*,
 	parachains::bridgehub::api::{
-		ethereum_control::events::PricingParametersChanged,
+		ethereum_system::events::PricingParametersChanged,
 		runtime_types::{
 			self,
 			bridge_hub_rococo_runtime::RuntimeCall as BHRuntimeCall,
@@ -22,11 +22,11 @@ async fn set_pricing_params() {
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
-	let params = gateway.get_pricing_parameters().await.expect("get fees");
+	let params = gateway.pricing_parameters().await.expect("get fees");
 	println!("pricing params {:?}", params);
 
-	let set_pricing_params_call = BHRuntimeCall::EthereumControl(
-		runtime_types::snowbridge_control::pallet::Call::set_pricing_parameters {
+	let set_pricing_params_call = BHRuntimeCall::EthereumSystem(
+		runtime_types::snowbridge_system::pallet::Call::set_pricing_parameters {
 			params: PricingParameters {
 				exchange_rate: FixedU128(*EXCHANGE_RATE),
 				rewards: Rewards { local: *LOCAL_REWARD, remote: U256([*REMOTE_REWARD, 0, 0, 0]) },
@@ -43,6 +43,6 @@ async fn set_pricing_params() {
 
 	wait_for_ethereum_event::<PricingParametersChangedFilter>(&test_clients.ethereum_client).await;
 
-	let params = gateway.get_pricing_parameters().await.expect("get fees");
+	let params = gateway.pricing_parameters().await.expect("get fees");
 	println!("pricing params {:?}", params);
 }
