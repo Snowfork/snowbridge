@@ -14,6 +14,7 @@ members = [
     "pallets/system/runtime-api",
     "runtime/runtime-common",
     "runtime/rococo-common",
+    "runtime/tests",
 ]
 
 [patch.'https://github.com/snowfork/snowbridge']
@@ -27,3 +28,4 @@ snowbridge-outbound-queue = { path = "./pallets/outbound-queue" }
 snowbridge-outbound-queue-runtime-api = { path = "./pallets/outbound-queue/runtime-api" }
 snowbridge-router-primitives = { path = "./primitives/router" }
 snowbridge-runtime-common = { path = "./runtime/runtime-common" }
+snowbridge-rococo-common = { path = "./runtime/rococo-common" }
