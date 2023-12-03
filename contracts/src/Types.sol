@@ -61,8 +61,8 @@ struct InboundMessage {
     bytes params;
     /// @dev The maximum gas allowed for message dispatch
     uint64 maxDispatchGas;
-    /// @dev The maximum gas refund for message submission
-    uint256 maxRefund;
+    /// @dev The maximum fee per gas
+    uint256 maxFeePerGas;
     /// @dev The reward for message submission
     uint256 reward;
     /// @dev ID for this message

@@ -187,7 +187,7 @@ contract GatewayTest is Test {
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 
         hoax(relayer, 1 ether);
-        IGateway(address(gateway)).submitInbound(
+        IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
@@ -200,7 +200,7 @@ contract GatewayTest is Test {
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         hoax(relayer, 1 ether);
-        IGateway(address(gateway)).submitInbound(
+        IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
@@ -209,7 +209,7 @@ contract GatewayTest is Test {
         // try to replay the message
         vm.expectRevert(Gateway.InvalidNonce.selector);
         hoax(relayer, 1 ether);
-        IGateway(address(gateway)).submitInbound(
+        IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
@@ -221,7 +221,7 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Gateway.ChannelDoesNotExist.selector);
         hoax(relayer);
-        IGateway(address(gateway)).submitInbound(
+        IGateway(address(gateway)).submitV1(
             InboundMessage(ParaID.wrap(42).into(), 1, command, "", maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
@@ -237,7 +237,7 @@ contract GatewayTest is Test {
         vm.expectRevert(Gateway.InvalidProof.selector);
 
         hoax(relayer, 1 ether);
-        IGateway(address(gateway)).submitInbound(
+        IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
@@ -260,7 +260,7 @@ contract GatewayTest is Test {
         uint256 agentBalanceBefore = address(assetHubAgent).balance;
 
         uint256 startGas = gasleft();
-        IGateway(address(gateway)).submitInbound(
+        IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
@@ -286,7 +286,7 @@ contract GatewayTest is Test {
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         hoax(relayer, 1 ether);
-        IGateway(address(gateway)).submitInbound(
+        IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
@@ -792,7 +792,7 @@ contract GatewayTest is Test {
         // Expect dispatch result as false for `OutOfGas`
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
         // maxDispatchGas as 1 for `create_agent` is definitely not enough
-        IGateway(address(gateway)).submitInbound(
+        IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, 1, maxRefund, reward, messageID),
             proof,
             makeMockProof()

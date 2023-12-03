@@ -100,7 +100,7 @@ use frame_support::{
 	weights::{Weight, WeightToFee},
 };
 use snowbridge_core::{
-	outbound::{Command, Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
+	outbound::{Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
 	BasicOperatingMode, ChannelId,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
@@ -318,10 +318,6 @@ pub mod pallet {
 			let params = queued_message.command.abi_encode();
 			let max_dispatch_gas =
 				T::GasMeter::maximum_dispatch_gas_used_at_most(&queued_message.command);
-			let max_refund = Self::calculate_maximum_gas_refund(
-				&queued_message.command,
-				pricing_params.fee_per_gas,
-			);
 			let reward = pricing_params.rewards.remote;
 
 			// Construct the final committed message
@@ -331,7 +327,10 @@ pub mod pallet {
 				command,
 				params,
 				max_dispatch_gas,
-				max_refund: max_refund.try_into().defensive_unwrap_or(u128::MAX),
+				max_fee_per_gas: pricing_params
+					.fee_per_gas
+					.try_into()
+					.defensive_unwrap_or(u128::MAX),
 				reward: reward.try_into().defensive_unwrap_or(u128::MAX),
 				id: queued_message.id,
 			};
@@ -394,14 +393,6 @@ pub mod pallet {
 			T::WeightToFee::weight_to_fee(
 				&T::WeightInfo::do_process_message().saturating_add(T::WeightInfo::commit_single()),
 			)
-		}
-
-		/// Maximum refund in Ether for delivering a message
-		pub(crate) fn calculate_maximum_gas_refund(command: &Command, fee_per_gas: U256) -> U256 {
-			// Maximum overall gas required for delivering a message
-			let max_gas = T::GasMeter::MAXIMUM_BASE_GAS +
-				T::GasMeter::maximum_dispatch_gas_used_at_most(command);
-			fee_per_gas.saturating_mul(max_gas.into())
 		}
 
 		// 1 DOT has 10 digits of precision
