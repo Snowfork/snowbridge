@@ -120,7 +120,7 @@ where
 {
 	/// Fully charge includes (local + remote fee)
 	Yes(AccountIdOf<T>),
-	/// Partially charge includes local only
+	/// Partially charge includes local fee only
 	Partial(AccountIdOf<T>),
 	/// No charge
 	No,

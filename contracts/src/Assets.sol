@@ -68,6 +68,7 @@ library Assets {
             // include the cost of executing an XCM on the final destination parachain.
             costs.foreign = $.assetHubReserveTransferFee + destinationChainFee;
         }
+        // We don't charge any extra fees beyond delivery costs
         costs.native = 0;
     }
 
@@ -86,12 +87,17 @@ library Assets {
             revert TokenNotRegistered();
         }
 
+        // Lock the funds into AssetHub's agent contract
         _transferToAgent($.assetHubAgent, token, sender, amount);
+
         ticket.dest = $.assetHubParaID;
         ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee);
 
+        // Construct a message payload
         if (destinationChain == $.assetHubParaID) {
+            // The funds will be minted into the receiver's account on AssetHub
             if (destinationAddress.isAddress32()) {
+                // The receiver has a 32-byte account ID
                 ticket.payload = SubstrateTypes.SendTokenToAssetHubAddress32(
                     token, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
                 );
@@ -100,7 +106,10 @@ library Assets {
                 revert Unsupported();
             }
         } else {
+            // The funds will be minted into sovereign account of the destination parachain on AssetHub,
+            // and then reserve-transferred to the receiver's account on the destination parachain.
             if (destinationAddress.isAddress32()) {
+                // The receiver has a 32-byte account ID
                 ticket.payload = SubstrateTypes.SendTokenToAddress32(
                     token,
                     destinationChain,
@@ -110,6 +119,7 @@ library Assets {
                     amount
                 );
             } else if (destinationAddress.isAddress20()) {
+                // The receiver has a 20-byte account ID
                 ticket.payload = SubstrateTypes.SendTokenToAddress20(
                     token,
                     destinationChain,
@@ -131,7 +141,11 @@ library Assets {
 
     function _registerTokenCosts() internal view returns (Costs memory costs) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        // Cost of registering this asset on AssetHub
         costs.foreign = $.assetHubCreateAssetFee;
+
+        // Extra fee to prevent spamming
         costs.native = $.registerTokenFee;
     }
 

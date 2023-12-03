@@ -117,8 +117,10 @@ pub mod pallet {
 			Balance = BalanceOf<Self>,
 		>;
 
+		/// Lookup a channel descriptor
 		type ChannelLookup: StaticLookup<Source = ChannelId, Target = Channel>;
 
+		/// Lookup pricing parameters
 		type PricingParameters: Get<PricingParameters<BalanceOf<Self>>>;
 
 		type WeightInfo: WeightInfo;
@@ -262,7 +264,7 @@ pub mod pallet {
 				};
 
 			// We embed fees for xcm execution inside the xcm program using teleports
-			// so we must burn the amount of the fee embedded into the program.
+			// so we must burn the amount of the fee embedded into the XCM script.
 			T::Token::burn_from(&sovereign_account, fee, Precision::Exact, Fortitude::Polite)?;
 
 			log::info!(
@@ -317,6 +319,7 @@ pub mod pallet {
 		}
 	}
 
+	/// API for accessing the delivery cost of a message
 	impl<T: Config> Get<BalanceOf<T>> for Pallet<T> {
 		fn get() -> BalanceOf<T> {
 			let pricing_parameters = T::PricingParameters::get();

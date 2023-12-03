@@ -31,12 +31,6 @@
 //!
 //! # Message Priorities
 //!
-//! Within the message submission pipeline, messages have different priorities,
-//! which results in differing processing behavior.
-//!
-//! All outgoing messages are buffered in the `MessageQueue` pallet, however
-//! Governance commands are always processed before lower priority commands
-//!
 //! The processing of governance commands can never be halted. This effectively
 //! allows us to pause processing of normal user messages while still allowing
 //! governance commands to be sent to Ethereum.
@@ -57,7 +51,8 @@
 //! * Ether fee per unit of gas
 //!
 //! By design, it is expected that governance should manually update these
-//! parameters every few weeks using the [`Call::set_fee_config`] extrinsic.
+//! parameters every few weeks using the `set_fee_parameters` extrinsic in the
+//! system pallet.
 //!
 //! ## Fee Computation Function
 //!
@@ -67,10 +62,13 @@
 //! Fee(Message) = LocalFee(Message) + (RemoteFee(Message) / Ratio("ETH/DOT"))
 //! ```
 //!
+//! By design, the computed fee is always going to conservative, to cover worst-case
+//! costs of dispatch on Ethereum. In future iterations of the design, we will optimize
+//! this, or provide a mechanism to asynchronously refund a portion of collected fees.
+//!
 //! # Extrinsics
 //!
 //! * [`Call::set_operating_mode`]: Set the operating mode
-//! * [`Call::set_fee_config`]: Set configuration for calculating fees
 //!
 //! # Runtime API
 //!
