@@ -143,7 +143,7 @@ func (wr *EthereumWriter) WriteChannel(
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
-	tx, err := wr.gateway.SubmitInbound(
+	tx, err := wr.gateway.SubmitV1(
 		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
 	)
 	if err != nil {

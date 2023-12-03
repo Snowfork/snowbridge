@@ -1,12 +1,13 @@
 package parachain
 
 import (
+	"math/big"
+
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
-	"math/big"
 )
 
 // A Task contains the working state for message commitments in a single parachain block
@@ -87,7 +88,7 @@ type OutboundQueueMessage struct {
 	Command        uint8
 	Params         []byte
 	MaxDispatchGas uint64
-	MaxRefund      types.U128
+	MaxFeePerGas   types.U128
 	Reward         types.U128
 	ID             types.Bytes32
 }
@@ -99,7 +100,7 @@ func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 		Command:        m.Command,
 		Params:         m.Params,
 		MaxDispatchGas: m.MaxDispatchGas,
-		MaxRefund:      m.MaxRefund.Int,
+		MaxFeePerGas:   m.MaxFeePerGas.Int,
 		Reward:         m.Reward.Int,
 		Id:             m.ID,
 	}
@@ -111,7 +112,7 @@ func (m OutboundQueueMessage) Encode(encoder scale.Encoder) error {
 	encoder.Encode(m.Command)
 	encoder.Encode(m.Params)
 	encoder.EncodeUintCompact(*big.NewInt(0).SetUint64(m.MaxDispatchGas))
-	encoder.EncodeUintCompact(*m.MaxRefund.Int)
+	encoder.EncodeUintCompact(*m.MaxFeePerGas.Int)
 	encoder.EncodeUintCompact(*m.Reward.Int)
 	encoder.Encode(m.ID)
 	return nil
@@ -144,7 +145,7 @@ func (m *OutboundQueueMessage) Decode(decoder scale.Decoder) error {
 	if err != nil {
 		return err
 	}
-	m.MaxRefund = types.U128{Int: decoded}
+	m.MaxFeePerGas = types.U128{Int: decoded}
 	decoded, err = decoder.DecodeUintCompact()
 	if err != nil {
 		return err

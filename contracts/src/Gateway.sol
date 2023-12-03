@@ -122,7 +122,7 @@ contract Gateway is IGateway, IInitializable {
     /// @param message A message produced by the OutboundQueue pallet on BridgeHub
     /// @param leafProof A message proof used to verify that the message is in the merkle tree committed by the OutboundQueue pallet
     /// @param headerProof A proof that the commitment is included in parachain header that was finalized by BEEFY.
-    function submitInbound(
+    function submitV1(
         InboundMessage calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
@@ -207,20 +207,14 @@ contract Gateway is IGateway, IInitializable {
             }
         }
 
-        // Calculate the actual cost of executing this message
-        uint256 gasUsed = _transactionBaseGas(leafProof, headerProof) + (startGas - gasleft());
-        uint256 calculatedRefund = gasUsed * tx.gasprice;
-
-        // If the actual refund amount is less than the estimated maximum refund, then
-        // reduce the amount paid out accordingly
-        uint256 amount = message.maxRefund;
-        if (message.maxRefund > calculatedRefund) {
-            amount = calculatedRefund;
-        }
+        // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
+        // that could drain funds unnecessarily. During these spikes, relayers should back off.
+        uint256 gasUsed = _transactionBaseGas() + (startGas - gasleft());
+        uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        amount = Math.min(amount + message.reward, address(channel.agent).balance);
+        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
 
         // Do the payment if there funds available in the agent
         if (amount > _dustThreshold()) {
@@ -457,16 +451,9 @@ contract Gateway is IGateway, IInitializable {
     // The major cost of calldata are the merkle proofs, which should dominate anything else (including the message payload)
     // Since the merkle proofs are hashes, they are much more likely to be composed of more non-zero bytes than zero bytes.
     //
-    // NOTE: this is not consensus-critical, a bad estimate here just means relayers get refunded slightly less.
-    //
     // Reference: Ethereum Yellow Paper
-    function _transactionBaseGas(bytes32[] calldata leafProof, Verification.Proof calldata headerProof)
-        internal
-        pure
-        returns (uint256)
-    {
-        return 21_000 + 14_698
-            + 16 * 32 * (leafProof.length + headerProof.leafProof.length + headerProof.headProof.proof.length);
+    function _transactionBaseGas() internal pure returns (uint256) {
+        return 21_000 + 14_698 + (msg.data.length * 16);
     }
 
     // Verify that a message commitment is considered finalized by our BEEFY light client.

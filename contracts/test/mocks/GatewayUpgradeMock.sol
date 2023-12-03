@@ -37,7 +37,7 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return true;
     }
 
-    function submitInbound(InboundMessage calldata, bytes32[] calldata, Verification.Proof calldata) external {}
+    function submitV1(InboundMessage calldata, bytes32[] calldata, Verification.Proof calldata) external {}
 
     function quoteRegisterTokenFee() external pure returns (uint256) {
         return 1;
