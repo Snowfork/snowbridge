@@ -27,15 +27,15 @@ The merkle root in (3) is the commitment that needs to verified on the Ethereum 
 
 This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/ethereum-beacon-client) implements a light client that tracks Ethereum's [Beacon Chain](https://ethereum.org/en/roadmap/beacon-chain/). It is used to verify inbound messages submitted to the [InboundQueue](components.md#inboundqueue) pallet.
 
-### Control
+### System
 
-This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/control) is responsible for governing the Gateway contract on the Ethereum side of the bridge.
+This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/system) has overall responsibility for the bridge as well as providing basic system functionality for bridge operations.
 
 ## Ethereum
 
 ### Gateway
 
-The Ethereum side of the bridge is organised around a central  gateway [contract](../../contracts/src/interfaces/IGateway.sol), responsible for the following:
+The Ethereum side of the bridge is organised around a central gateway [contract](../../contracts/src/interfaces/IGateway.sol), responsible for the following:
 
 * Receiving, verifying, and dispatching inbound messages from Polkadot
 * Accepting outbound messages for delivery to Polkadot
