@@ -4,12 +4,10 @@ pragma solidity 0.8.22;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import {Uint16Array} from "../src/utils/Uint16Array.sol";
+import {Uint16Array, createUint16Array, IndexOutOfBounds} from "../src/utils/Uint16Array.sol";
 
 contract Uint16ArrayTest is Test {
-    using Uint16Array for Uint16Array.Array;
-
-    Uint16Array.Array counters;
+    Uint16Array counters;
 
     function setUp() public {
         delete counters;
@@ -18,7 +16,7 @@ contract Uint16ArrayTest is Test {
     function testCounterCreatedInitializationRoundsUp() public {
         // 33 uint16s will require 3 uint256s
         uint256[] memory expected = new uint256[](3);
-        counters = Uint16Array.create(33);
+        counters = createUint16Array(33);
         assertEq(counters.data, expected);
     }
 
@@ -27,16 +25,16 @@ contract Uint16ArrayTest is Test {
         uint256[] memory expected = new uint256[](3);
         expected[2] = 1;
 
-        counters = Uint16Array.create(33);
+        counters = createUint16Array(33);
         counters.set(32, counters.get(32) + 1);
         assertEq(counters.data, expected);
     }
 
     function testCounterCreatedAsZeroed() public {
         uint256[] memory expected = new uint256[](2);
-        counters = Uint16Array.create(16);
+        counters = createUint16Array(16);
         counters.data[0] = 0xABABABAB;
-        counters = Uint16Array.create(32);
+        counters = createUint16Array(32);
         assertEq(counters.data, expected);
     }
 
@@ -46,14 +44,14 @@ contract Uint16ArrayTest is Test {
         // Manually set the 16th index to 2.
         expected[1] = 2;
 
-        counters = Uint16Array.create(32);
+        counters = createUint16Array(32);
         counters.set(16, 2);
 
         assertEq(counters.data, expected);
     }
 
     function testCounterGet() public {
-        counters = Uint16Array.create(32);
+        counters = createUint16Array(32);
 
         // Manually set the 16th index to 2.
         counters.data[1] = 2;
@@ -62,7 +60,7 @@ contract Uint16ArrayTest is Test {
     }
 
     function testCounterGetAndSetAlongEntireRange() public {
-        counters = Uint16Array.create(32);
+        counters = createUint16Array(32);
         for (uint16 index = 0; index < 32; index++) {
             // Should be zero as the initial value.
             uint16 value = counters.get(index);
@@ -93,7 +91,7 @@ contract Uint16ArrayTest is Test {
     }
 
     function testCounterGetAndSetWithTwoIterations() public {
-        counters = Uint16Array.create(300);
+        counters = createUint16Array(300);
         uint256 index = 0;
         uint16 value = 11;
         counters.set(index, value);
@@ -108,14 +106,14 @@ contract Uint16ArrayTest is Test {
     }
 
     function testCounterGetOutOfBounds() public {
-        counters = Uint16Array.create(17);
-        vm.expectRevert(Uint16Array.IndexOutOfBounds.selector);
+        counters = createUint16Array(17);
+        vm.expectRevert(IndexOutOfBounds.selector);
         counters.get(17);
     }
 
     function testCounterSetOutOfBounds() public {
-        counters = Uint16Array.create(17);
-        vm.expectRevert(Uint16Array.IndexOutOfBounds.selector);
+        counters = createUint16Array(17);
+        vm.expectRevert(IndexOutOfBounds.selector);
         counters.set(17, 1);
     }
 }
