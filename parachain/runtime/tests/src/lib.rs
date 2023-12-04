@@ -5,10 +5,10 @@
 
 mod test_cases;
 
+use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::BridgeHubEthereumBaseFeeInROC;
 use bridge_hub_rococo_runtime::{xcm_config::XcmConfig, Runtime, RuntimeEvent, SessionKeys};
 use codec::Decode;
 use parachains_common::{AccountId, AuraId};
-use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::BridgeHubEthereumBaseFeeInROC;
 use sp_core::H160;
 use sp_keyring::AccountKeyring::Alice;
 

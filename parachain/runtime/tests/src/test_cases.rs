@@ -3,9 +3,9 @@
 
 //! Module contains predefined test-case scenarios for `Runtime` with bridging capabilities.
 
+use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::BridgeHubEthereumBaseFeeInROC;
 use codec::Encode;
 use frame_support::{assert_err, assert_ok, traits::fungible::Mutate};
-use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::BridgeHubEthereumBaseFeeInROC;
 use parachains_runtimes_test_utils::{
 	AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf, XcmReceivedFrom,
 };

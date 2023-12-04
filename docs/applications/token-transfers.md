@@ -18,7 +18,7 @@ Sending tokens is usually a single step for the user. However, a preliminary reg
 
 First, the ERC20 token needs to be registered on AssetHub in the `ForeignAssets` pallet.
 
-This can initiated permissionlessly by sending the following transaction to the Gateway.
+This can initiated by sending the following transaction to the Gateway.
 
 ```solidity
 /// @dev Send a message to the AssetHub parachain to register a new fungible asset
@@ -26,23 +26,18 @@ This can initiated permissionlessly by sending the following transaction to the 
 function registerToken(address token) external payable;
 ```
 
+This function will charge a fee in Ether that can be retrieved ahead of time by calling `quoteRegisterTokenFee`.
+
 ### Token Sending
 
-To send a previously registered token to a 32-byte account on a destination parachain, send the transaction to the Gateway:
+To send a previously registered token to a destination parachain, send this transaction to the Gateway:
 
 ```solidity
 /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
-function sendToken(address token, ParaID destinationChain, bytes32 destinationAddress, uint128 amount)
+function sendToken(address token, ParaID destinationChain, MultiAddress destinationAddress, uint128 destinationFee, uint128 amount)
     external
     payable;
 ```
 
-For a 20-byte destination account, on parachains like Moonbeam, send the following transaction:
-
-```solidity
-/// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
-function sendToken(address token, ParaID destinationChain, address destinationAddress, uint128 amount)
-    external
-    payable;
-```
+This function will charge a fee in Ether that can be retrieved ahead of time by calling `quoteSendTokenFee`.
 

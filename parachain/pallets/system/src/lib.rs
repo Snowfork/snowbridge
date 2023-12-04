@@ -120,7 +120,7 @@ where
 {
 	/// Fully charge includes (local + remote fee)
 	Yes(AccountIdOf<T>),
-	/// Partially charge includes local only
+	/// Partially charge includes local fee only
 	Partial(AccountIdOf<T>),
 	/// No charge
 	No,
@@ -300,7 +300,7 @@ pub mod pallet {
 		/// - `impl_code_hash`: The codehash of the implementation contract.
 		/// - `initializer`: Optionally call an initializer on the implementation contract.
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::upgrade())]
+		#[pallet::weight((T::WeightInfo::upgrade(), DispatchClass::Operational))]
 		pub fn upgrade(
 			origin: OriginFor<T>,
 			impl_address: H160,
@@ -328,7 +328,7 @@ pub mod pallet {
 		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::set_operating_mode())]
+		#[pallet::weight((T::WeightInfo::set_operating_mode(), DispatchClass::Operational))]
 		pub fn set_operating_mode(origin: OriginFor<T>, mode: OperatingMode) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -345,7 +345,7 @@ pub mod pallet {
 		///
 		/// - `origin`: Must be root
 		#[pallet::call_index(2)]
-		#[pallet::weight((T::DbWeight::get().reads_writes(1, 1), DispatchClass::Operational))]
+		#[pallet::weight((T::WeightInfo::set_pricing_parameters(), DispatchClass::Operational))]
 		pub fn set_pricing_parameters(
 			origin: OriginFor<T>,
 			params: PricingParametersOf<T>,
@@ -572,7 +572,7 @@ pub mod pallet {
 		///   AssetHub, in DOT
 		/// - `register_token`: The Ether fee for registering a new token, to discourage spamming
 		#[pallet::call_index(9)]
-		#[pallet::weight(T::WeightInfo::set_token_transfer_fees())]
+		#[pallet::weight((T::WeightInfo::set_token_transfer_fees(), DispatchClass::Operational))]
 		pub fn set_token_transfer_fees(
 			origin: OriginFor<T>,
 			create_asset_xcm: u128,

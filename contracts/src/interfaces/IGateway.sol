@@ -53,8 +53,8 @@ interface IGateway {
      * Messaging
      */
 
-    // Submit an inbound message from Polkadot
-    function submitInbound(
+    // Submit a message from a Polkadot network
+    function submitV1(
         InboundMessage calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
@@ -79,13 +79,15 @@ interface IGateway {
     /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
     event TokenRegistrationSent(address token);
 
+    /// @dev Check whether a token is registered
+    function isTokenRegistered(address token) external view returns (bool);
+
     /// @dev Quote a fee in Ether for registering a token, covering
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM Execution costs on AssetHub
     function quoteRegisterTokenFee() external view returns (uint256);
 
-    /// @dev Send a message to the AssetHub parachain to register a new fungible asset
-    ///      in the `ForeignAssets` pallet.
+    /// @dev Register an ERC20 token and create a wrapped derivative on AssetHub in the `ForeignAssets` pallet.
     function registerToken(address token) external payable;
 
     /// @dev Quote a fee in Ether for sending a token

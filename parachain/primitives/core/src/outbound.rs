@@ -361,7 +361,10 @@ pub trait GasMeter {
 pub struct ConstantGasMeter;
 
 impl GasMeter for ConstantGasMeter {
-	const MAXIMUM_BASE_GAS: u64 = 125_000;
+	// The base transaction cost, which includes:
+	// 21_000 transaction cost, roughly worst case 64_000 for calldata, and 100_000
+	// for message verification
+	const MAXIMUM_BASE_GAS: u64 = 185_000;
 
 	fn maximum_dispatch_gas_used_at_most(command: &Command) -> u64 {
 		match command {

@@ -87,13 +87,24 @@ pub enum Destination {
 	},
 }
 
-pub struct MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
-where
+pub struct MessageToXcm<
+	CreateAssetCall,
+	CreateAssetDeposit,
+	InboundQueuePalletInstance,
+	AccountId,
+	Balance,
+> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT,
 {
-	_phantom: PhantomData<(CreateAssetCall, CreateAssetDeposit, AccountId, Balance)>,
+	_phantom: PhantomData<(
+		CreateAssetCall,
+		CreateAssetDeposit,
+		InboundQueuePalletInstance,
+		AccountId,
+		Balance,
+	)>,
 }
 
 /// Reason why a message conversion failed.
@@ -113,11 +124,18 @@ pub trait ConvertMessage {
 
 pub type CallIndex = [u8; 2];
 
-impl<CreateAssetCall, CreateAssetDeposit, AccountId, Balance> ConvertMessage
-	for MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
-where
+impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
+	ConvertMessage
+	for MessageToXcm<
+		CreateAssetCall,
+		CreateAssetDeposit,
+		InboundQueuePalletInstance,
+		AccountId,
+		Balance,
+	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
+	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
 {
@@ -136,11 +154,12 @@ where
 	}
 }
 
-impl<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
-	MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>
+impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
+	MessageToXcm<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
 where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
+	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
 {
@@ -157,8 +176,10 @@ where
 		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
 		let asset_id = Self::convert_token_address(network, token);
 		let create_call_index: [u8; 2] = CreateAssetCall::get();
+		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let xcm: Xcm<()> = vec![
+			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
 			// Teleport required fees.
 			ReceiveTeleportedAsset(total.into()),
 			// Pay for execution.
@@ -226,10 +247,12 @@ where
 
 		let total_fees = asset_hub_fee.saturating_add(dest_para_fee);
 		let total_fee_asset: MultiAsset = (MultiLocation::parent(), total_fees).into();
+		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let mut instructions = vec![
 			ReceiveTeleportedAsset(total_fee_asset.into()),
 			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
+			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
 			UniversalOrigin(GlobalConsensus(network)),
 			ReserveAssetDeposited(asset.clone().into()),
 			ClearOrigin,

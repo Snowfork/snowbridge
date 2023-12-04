@@ -32,9 +32,9 @@ pub struct CommittedMessage {
 	/// Maximum gas allowed for message dispatch
 	#[codec(compact)]
 	pub max_dispatch_gas: u64,
-	/// Maximum gas refund for message relayer
+	/// Maximum fee per gas
 	#[codec(compact)]
-	pub max_refund: u128,
+	pub max_fee_per_gas: u128,
 	/// Reward in ether for delivering this message, in addition to the gas refund
 	#[codec(compact)]
 	pub reward: u128,
@@ -51,7 +51,7 @@ impl From<CommittedMessage> for Token {
 			Token::Uint(x.command.into()),
 			Token::Bytes(x.params.to_vec()),
 			Token::Uint(x.max_dispatch_gas.into()),
-			Token::Uint(x.max_refund.into()),
+			Token::Uint(x.max_fee_per_gas.into()),
 			Token::Uint(x.reward.into()),
 			Token::FixedBytes(Vec::from(x.id.as_ref())),
 		])
