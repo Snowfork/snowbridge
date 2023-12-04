@@ -10,7 +10,7 @@ start_geth() {
         geth init --datadir "$ethereum_data_dir" "$output_dir/genesis.json"
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key0.prv
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key1.prv
-        geth --vmdebug --datadir "$ethereum_data_dir" --networkid 15 \
+        geth --vmdebug --datadir "$ethereum_data_dir" --networkid 5 \
             --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
             --rpc.allow-unprotected-txs --mine \
             --miner.etherbase=0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD \
@@ -60,6 +60,8 @@ start_lodestar() {
             --params.ALTAIR_FORK_EPOCH 0 \
             --params.BELLATRIX_FORK_EPOCH 0 \
             --params.CAPELLA_FORK_EPOCH 0 \
+            --params.DEPOSIT_CHAIN_ID 5 \
+            --params.DEPOSIT_NETWORK_ID 5 \
             --eth1=true \
             --rest.namespace="*" \
             --jwt-secret config/jwtsecret \
