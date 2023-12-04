@@ -9,7 +9,7 @@ use xcm_executor::traits::ConvertLocation;
 const NETWORK: NetworkId = Ethereum { chain_id: 15 };
 const SS58_FORMAT: u16 = 2;
 const EXPECTED_SOVEREIGN_KEY: [u8; 32] =
-	hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5");
+	hex!("a0141059b224a45521038f88bd0bf13535b8d2ca7dac8c6777f1ef61f52166a2");
 const EXPECTED_SOVEREIGN_ADDRESS: &'static str = "HWYx2xgcdpSjJQicUUZFRR1EJNPVEQoUDSUB29rfxF617nv";
 
 parameter_types! {
