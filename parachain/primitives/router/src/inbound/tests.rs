@@ -6,11 +6,11 @@ use sp_core::crypto::Ss58Codec;
 use xcm::v3::prelude::*;
 use xcm_executor::traits::ConvertLocation;
 
-const NETWORK: NetworkId = Ethereum { chain_id: 15 };
+const NETWORK: NetworkId = Ethereum { chain_id: 11155111 };
 const SS58_FORMAT: u16 = 2;
 const EXPECTED_SOVEREIGN_KEY: [u8; 32] =
-	hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5");
-const EXPECTED_SOVEREIGN_ADDRESS: &'static str = "HWYx2xgcdpSjJQicUUZFRR1EJNPVEQoUDSUB29rfxF617nv";
+	hex!("ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d");
+const EXPECTED_SOVEREIGN_ADDRESS: &'static str = "HF3T62xRQvoCCowYamEQweEyWbD5yt4mkET8UkNWxfMbvJE";
 
 parameter_types! {
 	pub EthereumNetwork: NetworkId = NETWORK;
