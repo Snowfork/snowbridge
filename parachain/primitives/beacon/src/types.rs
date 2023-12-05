@@ -23,7 +23,11 @@ use ssz_rs::SimpleSerializeError;
 
 pub use crate::bits::decompress_sync_committee_bits;
 
-use crate::bls::{prepare_g1_pubkeys, prepare_milagro_pubkey, BlsError};
+use crate::{
+	bls::{prepare_g1_pubkeys, prepare_milagro_pubkey, BlsError},
+	ssz_deneb::SSZExecutionPayloadHeaderDeneb,
+	ExecutionPayloadHeaderDeneb,
+};
 use milagro_bls::PublicKey as PublicKeyPrepared;
 
 pub type ValidatorIndex = u64;
@@ -396,6 +400,7 @@ pub struct CompactBeaconState {
 #[codec(mel_bound())]
 pub enum VersionedExecutionPayloadHeader {
 	Capella(ExecutionPayloadHeader),
+	Deneb(ExecutionPayloadHeaderDeneb),
 }
 
 /// Convert VersionedExecutionPayloadHeader to CompactExecutionHeader
@@ -403,6 +408,8 @@ impl From<VersionedExecutionPayloadHeader> for CompactExecutionHeader {
 	fn from(versioned_execution_header: VersionedExecutionPayloadHeader) -> Self {
 		match versioned_execution_header {
 			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				execution_payload_header.into(),
+			VersionedExecutionPayloadHeader::Deneb(execution_payload_header) =>
 				execution_payload_header.into(),
 		}
 	}
@@ -415,12 +422,18 @@ impl VersionedExecutionPayloadHeader {
 				hash_tree_root::<SSZExecutionPayloadHeader>(
 					execution_payload_header.clone().try_into()?,
 				),
+			VersionedExecutionPayloadHeader::Deneb(execution_payload_header) =>
+				hash_tree_root::<SSZExecutionPayloadHeaderDeneb>(
+					execution_payload_header.clone().try_into()?,
+				),
 		}
 	}
 
 	pub fn block_hash(&self) -> H256 {
 		match self {
 			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				execution_payload_header.block_hash,
+			VersionedExecutionPayloadHeader::Deneb(execution_payload_header) =>
 				execution_payload_header.block_hash,
 		}
 	}

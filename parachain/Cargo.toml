@@ -14,7 +14,6 @@ members = [
     "pallets/system/runtime-api",
     "runtime/runtime-common",
     "runtime/rococo-common",
-    "runtime/tests",
 ]
 
 [patch.'https://github.com/snowfork/snowbridge']

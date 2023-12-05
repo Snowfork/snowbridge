@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2021"
 
+[workspace]
+
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex-literal = { version = "0.4.1" }
@@ -195,36 +197,19 @@ runtime-benchmarks = [
 	"snowbridge-ethereum-beacon-client/runtime-benchmarks",
 ]
 
-try-runtime = [
-	"cumulus-pallet-aura-ext/try-runtime",
-	"cumulus-pallet-dmp-queue/try-runtime",
-	"cumulus-pallet-parachain-system/try-runtime",
-	"cumulus-pallet-xcm/try-runtime",
-	"cumulus-pallet-xcmp-queue/try-runtime",
-	"frame-executive/try-runtime",
-	"frame-support/try-runtime",
-	"frame-system/try-runtime",
-	"frame-try-runtime/try-runtime",
-	"pallet-aura/try-runtime",
-	"pallet-authorship/try-runtime",
-	"pallet-balances/try-runtime",
-	"pallet-collator-selection/try-runtime",
-	"pallet-multisig/try-runtime",
-	"pallet-session/try-runtime",
-	"pallet-timestamp/try-runtime",
-	"pallet-transaction-payment/try-runtime",
-	"pallet-utility/try-runtime",
-	"pallet-xcm/try-runtime",
-	"parachain-info/try-runtime",
-	"polkadot-runtime-common/try-runtime",
-	"sp-runtime/try-runtime",
-]
 beacon-spec-mainnet = [
 	"snowbridge-ethereum-beacon-client/beacon-spec-mainnet",
 ]
-experimental = ["pallet-aura/experimental"]
 
-# A feature that should be enabled when the runtime should be built for on-chain
-# deployment. This will disable stuff that shouldn't be part of the on-chain wasm
-# to make it smaller like logging for example.
-on-chain-release-build = ["sp-api/disable-logging"]
+[patch.'https://github.com/snowfork/snowbridge']
+snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
+snowbridge-system = { path = "../../pallets/system" }
+snowbridge-system-runtime-api = { path = "../../pallets/system/runtime-api" }
+snowbridge-core = { path = "../../primitives/core" }
+snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
+snowbridge-inbound-queue = { path = "../../pallets/inbound-queue" }
+snowbridge-outbound-queue = { path = "../../pallets/outbound-queue" }
+snowbridge-outbound-queue-runtime-api = { path = "../../pallets/outbound-queue/runtime-api" }
+snowbridge-router-primitives = { path = "../../primitives/router" }
+snowbridge-runtime-common = { path = "../../runtime/runtime-common" }
+snowbridge-rococo-common = { path = "../../runtime/rococo-common" }

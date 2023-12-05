@@ -803,6 +803,11 @@ fn submit_execution_header_update_that_skips_block() {
 			mut_execution_payload_header.block_number = execution_payload_header.block_number + 2;
 			VersionedExecutionPayloadHeader::Capella(mut_execution_payload_header)
 		},
+		VersionedExecutionPayloadHeader::Deneb(execution_payload_header) => {
+			let mut mut_execution_payload_header = execution_payload_header.clone();
+			mut_execution_payload_header.block_number = execution_payload_header.block_number + 2;
+			VersionedExecutionPayloadHeader::Deneb(mut_execution_payload_header)
+		},
 	};
 
 	skipped_block_execution_header_update.execution_header = skipped_execution_header;

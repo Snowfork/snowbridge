@@ -5,9 +5,11 @@
 pub mod bits;
 pub mod bls;
 pub mod config;
+pub mod deneb;
 pub mod merkle_proof;
 pub mod receipt;
 pub mod ssz;
+pub mod ssz_deneb;
 pub mod types;
 pub mod updates;
 
@@ -28,5 +30,7 @@ pub use bls::{
 	prepare_aggregate_signature, prepare_g1_pubkeys, AggregatePublicKey, AggregateSignature,
 	BlsError, PublicKeyPrepared, SignaturePrepared,
 };
+pub use deneb::ExecutionPayloadHeaderDeneb;
 pub use merkle_proof::verify_merkle_branch;
 pub use receipt::verify_receipt_proof;
+pub use ssz_deneb::SSZExecutionPayloadHeaderDeneb;
