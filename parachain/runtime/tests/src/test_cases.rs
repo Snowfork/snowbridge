@@ -85,7 +85,7 @@ where
 	let xcm = Xcm(vec![
 		WithdrawAsset(MultiAssets::from(vec![fee.clone()])),
 		BuyExecution { fees: fee, weight_limit: Unlimited },
-		ExportMessage { network: Ethereum { chain_id: 5 }, destination: Here, xcm: inner_xcm },
+		ExportMessage { network: Ethereum { chain_id: 11155111 }, destination: Here, xcm: inner_xcm },
 	]);
 
 	// execute XCM
@@ -220,7 +220,7 @@ pub fn send_unpaid_transfer_token_message<Runtime, XcmConfig>(
 			let xcm = Xcm(vec![
 				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 				ExportMessage {
-					network: Ethereum { chain_id: 5 },
+					network: Ethereum { chain_id: 11155111 },
 					destination: Here,
 					xcm: inner_xcm,
 				},
