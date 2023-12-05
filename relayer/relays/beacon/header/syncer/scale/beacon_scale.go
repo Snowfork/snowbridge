@@ -297,6 +297,7 @@ type BeaconState struct {
 
 type VersionedExecutionPayloadHeader struct {
 	Capella *ExecutionPayloadHeaderCapella
+	Deneb   *ExecutionPayloadHeaderDeneb
 }
 
 func (v VersionedExecutionPayloadHeader) Encode(encoder scale.Encoder) error {
@@ -304,6 +305,9 @@ func (v VersionedExecutionPayloadHeader) Encode(encoder scale.Encoder) error {
 	if v.Capella != nil {
 		encoder.PushByte(0)
 		err = encoder.Encode(v.Capella)
+	} else if v.Deneb != nil {
+		encoder.PushByte(1)
+		err = encoder.Encode(v.Deneb)
 	}
 	return err
 }
