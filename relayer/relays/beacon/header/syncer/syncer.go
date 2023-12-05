@@ -3,7 +3,6 @@ package syncer
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -158,25 +157,11 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 }
 
 func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
-	beaconStateFilename, err := s.Client.DownloadBeaconState(fmt.Sprintf("%d", slot))
-	switch {
-	case errors.Is(err, api.ErrNotFound):
-		return scale.BlockRootProof{}, ErrBeaconStateAvailableYet
-	case err != nil:
-		return scale.BlockRootProof{}, err
-	}
-
-	defer func() {
-		_ = os.Remove(beaconStateFilename)
-	}()
-
-	data, err := os.ReadFile(beaconStateFilename)
-	if err != nil {
-		return scale.BlockRootProof{}, fmt.Errorf("find beacon state file: %w", err)
-	}
-
+	var blockRootProof scale.BlockRootProof
 	var beaconState state.BeaconState
 	var blockRootsContainer state.BlockRootsContainer
+
+	data, err := s.Client.DownloadBeaconState(strconv.FormatUint(slot, 10))
 
 	if s.activeSpec == config.Minimal {
 		blockRootsContainer = &state.BlockRootsContainerMinimal{}
@@ -188,12 +173,12 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	err = beaconState.UnmarshalSSZ(data)
 	if err != nil {
-		return scale.BlockRootProof{}, fmt.Errorf("unmarshal beacon state: %w", err)
+		return blockRootProof, fmt.Errorf("unmarshal beacon state: %w", err)
 	}
 
 	stateTree, err := beaconState.GetTree()
 	if err != nil {
-		return scale.BlockRootProof{}, fmt.Errorf("get state tree: %w", err)
+		return blockRootProof, fmt.Errorf("get state tree: %w", err)
 	}
 
 	_ = stateTree.Hash() // necessary to populate the proof tree values
@@ -212,7 +197,7 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	tree, err := blockRootsContainer.GetTree()
 	if err != nil {
-		return scale.BlockRootProof{}, fmt.Errorf("convert block roots to tree: %w", err)
+		return blockRootProof, fmt.Errorf("convert block roots to tree: %w", err)
 	}
 
 	return scale.BlockRootProof{
