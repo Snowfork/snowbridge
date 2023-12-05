@@ -788,6 +788,9 @@ pub mod pallet {
 
 		/// Returns the fork version based on the current epoch.
 		pub(super) fn select_fork_version(fork_versions: &ForkVersions, epoch: u64) -> ForkVersion {
+			if epoch >= fork_versions.deneb.epoch {
+				return fork_versions.deneb.version
+			}
 			if epoch >= fork_versions.capella.epoch {
 				return fork_versions.capella.version
 			}
@@ -797,7 +800,6 @@ pub mod pallet {
 			if epoch >= fork_versions.altair.epoch {
 				return fork_versions.altair.version
 			}
-
 			fork_versions.genesis.version
 		}
 

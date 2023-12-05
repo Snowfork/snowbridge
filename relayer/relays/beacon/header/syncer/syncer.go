@@ -162,13 +162,25 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	var blockRootsContainer state.BlockRootsContainer
 
 	data, err := s.Client.DownloadBeaconState(strconv.FormatUint(slot, 10))
+	if err != nil {
+		return blockRootProof, fmt.Errorf("download beacon state failed: %w", err)
+	}
+	isDeneb := s.DenebForked(slot)
 
 	if s.activeSpec == config.Minimal {
 		blockRootsContainer = &state.BlockRootsContainerMinimal{}
-		beaconState = &state.BeaconStateCapellaMinimal{}
+		if isDeneb {
+			beaconState = &state.BeaconStateDenebMinimal{}
+		} else {
+			beaconState = &state.BeaconStateCapellaMinimal{}
+		}
 	} else {
 		blockRootsContainer = &state.BlockRootsContainerMainnet{}
-		beaconState = &state.BeaconStateCapellaMainnet{}
+		if isDeneb {
+			beaconState = &state.BeaconStateDenebMainnet{}
+		} else {
+			beaconState = &state.BeaconStateCapellaMainnet{}
+		}
 	}
 
 	err = beaconState.UnmarshalSSZ(data)

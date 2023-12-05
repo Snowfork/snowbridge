@@ -72,7 +72,7 @@ type BeaconBlockBodyDenebMinimal struct {
 	SyncAggregate         *SyncAggregateMinimal         `json:"sync_aggregate"`
 	ExecutionPayload      *ExecutionPayloadDeneb        `json:"execution_payload"`
 	BlsToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
-	BlobKzgCommitments    [][]byte                      `json:"blob_kzg_commitments,omitempty" ssz-max:"16" ssz-size:"?,48"`
+	BlobKzgCommitments    [][48]byte                    `json:"blob_kzg_commitments,omitempty" ssz-max:"16" ssz-size:"?,48"`
 }
 
 type BeaconBlockBodyDenebMainnet struct {
@@ -87,7 +87,7 @@ type BeaconBlockBodyDenebMainnet struct {
 	SyncAggregate         *SyncAggregateMainnet         `json:"sync_aggregate"`
 	ExecutionPayload      *ExecutionPayloadDeneb        `json:"execution_payload"`
 	BlsToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
-	BlobKzgCommitments    [][]byte                      `json:"blob_kzg_commitments,omitempty" ssz-max:"4096" ssz-size:"?,48"`
+	BlobKzgCommitments    [][48]byte                    `json:"blob_kzg_commitments,omitempty" ssz-max:"4096" ssz-size:"?,48"`
 }
 
 type BeaconStateDenebMainnet struct {
@@ -156,28 +156,12 @@ func (b *BeaconBlockDenebMinimal) GetBeaconSlot() uint64 {
 	return b.Slot
 }
 
-func (b *BeaconBlockDenebMinimal) DenebExecutionPayload() *ExecutionPayloadDeneb {
-	return b.Body.ExecutionPayload
-}
-
-func (b *BeaconBlockDenebMinimal) CapellaExecutionPayload() *ExecutionPayloadCapella {
-	return nil
-}
-
 func (b *BeaconBlockDenebMinimal) GetBlockBodyTree() (*ssz.Node, error) {
 	return b.Body.GetTree()
 }
 
 func (b *BeaconBlockDenebMainnet) GetBeaconSlot() uint64 {
 	return b.Slot
-}
-
-func (b *BeaconBlockDenebMainnet) DenebExecutionPayload() *ExecutionPayloadDeneb {
-	return b.Body.ExecutionPayload
-}
-
-func (b *BeaconBlockDenebMainnet) CapellaExecutionPayload() *ExecutionPayloadCapella {
-	return nil
 }
 
 func (b *BeaconBlockDenebMainnet) GetBlockBodyTree() (*ssz.Node, error) {
@@ -210,4 +194,20 @@ func (b *BeaconStateDenebMainnet) GetBlockRoots() [][]byte {
 
 func (b *BeaconStateDenebMainnet) SetBlockRoots(blockRoots [][]byte) {
 	b.BlockRoots = blockRoots
+}
+
+func (b *BeaconBlockDenebMainnet) CapallaExecutionPayload() *ExecutionPayloadCapella {
+	return nil
+}
+
+func (b *BeaconBlockDenebMainnet) DenebExecutionPayload() *ExecutionPayloadDeneb {
+	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockDenebMinimal) CapallaExecutionPayload() *ExecutionPayloadCapella {
+	return nil
+}
+
+func (b *BeaconBlockDenebMinimal) DenebExecutionPayload() *ExecutionPayloadDeneb {
+	return b.Body.ExecutionPayload
 }

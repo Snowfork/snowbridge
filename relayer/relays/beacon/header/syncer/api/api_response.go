@@ -648,6 +648,16 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, isDeneb boo
 		return nil, err
 	}
 
+	blobGasUsed, err := util.ToUint64(executionPayload.BlobGasUsed)
+	if err != nil {
+		return nil, err
+	}
+
+	excessBlobGas, err := util.ToUint64(executionPayload.ExcessBlobGas)
+	if err != nil {
+		return nil, err
+	}
+
 	syncCommitteeBits, err := util.HexStringToByteArray(body.SyncAggregate.SyncCommitteeBits)
 	if err != nil {
 		return nil, err
@@ -677,6 +687,53 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, isDeneb boo
 	}
 
 	if activeSpec == config.Minimal {
+		if isDeneb {
+			return &state.BeaconBlockDenebMinimal{
+				Slot:          slot,
+				ProposerIndex: proposerIndex,
+				ParentRoot:    parentRoot,
+				StateRoot:     stateRoot,
+				Body: &state.BeaconBlockBodyDenebMinimal{
+					RandaoReveal: randaoReveal,
+					Eth1Data: &state.Eth1Data{
+						DepositRoot:  eth1DepositRoot,
+						DepositCount: eth1DepositCount,
+						BlockHash:    eth1BlockHash,
+					},
+					Graffiti:          graffiti,
+					ProposerSlashings: proposerSlashings,
+					AttesterSlashings: attesterSlashings,
+					Attestations:      attestations,
+					Deposits:          deposits,
+					VoluntaryExits:    voluntaryExits,
+					SyncAggregate: &state.SyncAggregateMinimal{
+						SyncCommitteeBits:      syncCommitteeBits,
+						SyncCommitteeSignature: syncCommitteeSignature,
+					},
+					ExecutionPayload: &state.ExecutionPayloadDeneb{
+						ParentHash:    parentHash,
+						FeeRecipient:  feeRecipient,
+						StateRoot:     executionStateRoot,
+						ReceiptsRoot:  receiptsRoot,
+						LogsBloom:     logsBloom,
+						PrevRandao:    prevRando,
+						BlockNumber:   blockNumber,
+						GasLimit:      gasLimit,
+						GasUsed:       gasUsed,
+						Timestamp:     timestamp,
+						ExtraData:     extraData,
+						BaseFeePerGas: baseFeePerGasBytes,
+						BlockHash:     blockHash,
+						Transactions:  transactions,
+						Withdrawals:   withdrawals,
+						BlobGasUsed:   blobGasUsed,   // new for Deneb
+						ExcessBlobGas: excessBlobGas, // new for Deneb
+					},
+					BlsToExecutionChanges: blsExecutionChanges,
+					BlobKzgCommitments:    kzgCommitments, // new for Deneb
+				},
+			}, nil
+		}
 		return &state.BeaconBlockCapellaMinimal{
 			Slot:          slot,
 			ProposerIndex: proposerIndex,
@@ -720,6 +777,53 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, isDeneb boo
 			},
 		}, nil
 	} else {
+		if isDeneb {
+			return &state.BeaconBlockDenebMainnet{
+				Slot:          slot,
+				ProposerIndex: proposerIndex,
+				ParentRoot:    parentRoot,
+				StateRoot:     stateRoot,
+				Body: &state.BeaconBlockBodyDenebMainnet{
+					RandaoReveal: randaoReveal,
+					Eth1Data: &state.Eth1Data{
+						DepositRoot:  eth1DepositRoot,
+						DepositCount: eth1DepositCount,
+						BlockHash:    eth1BlockHash,
+					},
+					Graffiti:          graffiti,
+					ProposerSlashings: proposerSlashings,
+					AttesterSlashings: attesterSlashings,
+					Attestations:      attestations,
+					Deposits:          deposits,
+					VoluntaryExits:    voluntaryExits,
+					SyncAggregate: &state.SyncAggregateMainnet{
+						SyncCommitteeBits:      syncCommitteeBits,
+						SyncCommitteeSignature: syncCommitteeSignature,
+					},
+					ExecutionPayload: &state.ExecutionPayloadDeneb{
+						ParentHash:    parentHash,
+						FeeRecipient:  feeRecipient,
+						StateRoot:     executionStateRoot,
+						ReceiptsRoot:  receiptsRoot,
+						LogsBloom:     logsBloom,
+						PrevRandao:    prevRando,
+						BlockNumber:   blockNumber,
+						GasLimit:      gasLimit,
+						GasUsed:       gasUsed,
+						Timestamp:     timestamp,
+						ExtraData:     extraData,
+						BaseFeePerGas: baseFeePerGasBytes,
+						BlockHash:     blockHash,
+						Transactions:  transactions,
+						Withdrawals:   withdrawals,
+						BlobGasUsed:   blobGasUsed,   // new for Deneb
+						ExcessBlobGas: excessBlobGas, // new for Deneb
+					},
+					BlsToExecutionChanges: blsExecutionChanges,
+					BlobKzgCommitments:    kzgCommitments, // new for Deneb
+				},
+			}, nil
+		}
 		return &state.BeaconBlockCapellaMainnet{
 			Slot:          slot,
 			ProposerIndex: proposerIndex,
