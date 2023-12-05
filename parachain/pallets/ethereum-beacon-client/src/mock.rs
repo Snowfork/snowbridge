@@ -85,6 +85,10 @@ pub mod minimal {
 				version: [3, 0, 0, 1], // 0x03000001
 				epoch: 0,
 			},
+			deneb: Fork {
+				version: [4, 0, 0, 1], // 0x04000001
+				epoch: 4294967295,
+			},
 		};
 	}
 
@@ -252,6 +256,10 @@ pub mod mainnet {
 				version: [3, 0, 16, 32], // 0x03001020
 				epoch: 162304,
 			},
+			deneb: Fork {
+				version: [4, 0, 16, 32], // 0x04001020
+				epoch: 4294967295,
+			}
 		};
 		pub const ExecutionHeadersPruneThreshold: u32 = 10;
 	}

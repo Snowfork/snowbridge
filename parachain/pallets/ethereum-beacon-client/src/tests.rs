@@ -274,6 +274,7 @@ fn compute_fork_version() {
 		altair: Fork { version: [0, 0, 0, 1], epoch: 10 },
 		bellatrix: Fork { version: [0, 0, 0, 2], epoch: 20 },
 		capella: Fork { version: [0, 0, 0, 3], epoch: 30 },
+		deneb: Fork { version: [0, 0, 0, 4], epoch: 40 },
 	};
 	new_tester().execute_with(|| {
 		assert_eq!(EthereumBeaconClient::select_fork_version(&mock_fork_versions, 0), [0, 0, 0, 0]);
