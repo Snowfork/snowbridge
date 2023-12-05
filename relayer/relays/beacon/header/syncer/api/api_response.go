@@ -67,8 +67,11 @@ type BeaconBlockResponse struct {
 					BlockHash     string               `json:"block_hash"`
 					Transactions  []string             `json:"transactions"`
 					Withdrawals   []WithdrawalResponse `json:"withdrawals"`
+					BlobGasUsed   string               `json:"blob_gas_used,omitempty"`
+					ExcessBlobGas string               `json:"excess_blob_gas,omitempty"`
 				} `json:"execution_payload"`
 				BlsToExecutionChanges []SignedBLSToExecutionChangeResponse `json:"bls_to_execution_changes"`
+				BlobKzgCommitments    []string                             `json:"blob_kzg_commitments"`
 			} `json:"body"`
 		} `json:"message"`
 	} `json:"data"`
@@ -453,7 +456,7 @@ func (s SyncAggregateResponse) ToScale() (scale.SyncAggregate, error) {
 // Because it only returns JSON, we need this interim step where we convert the block JSON to the data
 // types that the FastSSZ lib expects. When Lodestar supports SSZ block response, we can remove all these
 // and directly unmarshal SSZ bytes to state.BeaconBlock.
-func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint64) (state.BeaconBlock, error) {
+func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, isDeneb bool) (state.BeaconBlock, error) {
 	data := b.Data.Message
 
 	slot, err := util.ToUint64(data.Slot)
@@ -656,13 +659,21 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint6
 	}
 
 	blsExecutionChanges := []*state.SignedBLSToExecutionChange{}
-
 	for _, changeResponse := range body.BlsToExecutionChanges {
 		changeSSZ, err := changeResponse.ToFastSSZ()
 		if err != nil {
 			return nil, err
 		}
 		blsExecutionChanges = append(blsExecutionChanges, changeSSZ)
+	}
+
+	var kzgCommitments [][48]byte
+	for _, kzgCommitment := range body.BlobKzgCommitments {
+		kzgCommitmentSSZ, err := util.HexStringTo48Bytes(kzgCommitment)
+		if err != nil {
+			return nil, err
+		}
+		kzgCommitments = append(kzgCommitments, kzgCommitmentSSZ)
 	}
 
 	if activeSpec == config.Minimal {

@@ -196,7 +196,8 @@ type BlockRootsContainer interface {
 type BeaconBlock interface {
 	UnmarshalSSZ(buf []byte) error
 	GetBeaconSlot() uint64
-	GetExecutionPayload() *ExecutionPayloadCapella
+	CapallaExecutionPayload() *ExecutionPayloadCapella
+	DenebExecutionPayload() *ExecutionPayloadDeneb
 	GetTree() (*ssz.Node, error)
 	GetBlockBodyTree() (*ssz.Node, error)
 }
@@ -366,8 +367,12 @@ func (b *BeaconBlockCapellaMinimal) GetBeaconSlot() uint64 {
 	return b.Slot
 }
 
-func (b *BeaconBlockCapellaMinimal) GetExecutionPayload() *ExecutionPayloadCapella {
+func (b *BeaconBlockCapellaMinimal) CapallaExecutionPayload() *ExecutionPayloadCapella {
 	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockCapellaMinimal) DenebExecutionPayload() *ExecutionPayloadDeneb {
+	return nil
 }
 
 func (b *BeaconBlockCapellaMinimal) GetBlockBodyTree() (*ssz.Node, error) {
@@ -378,8 +383,12 @@ func (b *BeaconBlockCapellaMainnet) GetBeaconSlot() uint64 {
 	return b.Slot
 }
 
-func (b *BeaconBlockCapellaMainnet) GetExecutionPayload() *ExecutionPayloadCapella {
+func (b *BeaconBlockCapellaMainnet) CapallaExecutionPayload() *ExecutionPayloadCapella {
 	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockCapellaMainnet) DenebExecutionPayload() *ExecutionPayloadDeneb {
+	return nil
 }
 
 func (b *BeaconBlockCapellaMainnet) GetBlockBodyTree() (*ssz.Node, error) {

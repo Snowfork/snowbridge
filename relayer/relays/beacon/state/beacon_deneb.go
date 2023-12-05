@@ -156,8 +156,12 @@ func (b *BeaconBlockDenebMinimal) GetBeaconSlot() uint64 {
 	return b.Slot
 }
 
-func (b *BeaconBlockDenebMinimal) GetExecutionPayload() *ExecutionPayloadDeneb {
+func (b *BeaconBlockDenebMinimal) DenebExecutionPayload() *ExecutionPayloadDeneb {
 	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockDenebMinimal) CapellaExecutionPayload() *ExecutionPayloadCapella {
+	return nil
 }
 
 func (b *BeaconBlockDenebMinimal) GetBlockBodyTree() (*ssz.Node, error) {
@@ -168,8 +172,12 @@ func (b *BeaconBlockDenebMainnet) GetBeaconSlot() uint64 {
 	return b.Slot
 }
 
-func (b *BeaconBlockDenebMainnet) GetExecutionPayload() *ExecutionPayloadDeneb {
+func (b *BeaconBlockDenebMainnet) DenebExecutionPayload() *ExecutionPayloadDeneb {
 	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockDenebMainnet) CapellaExecutionPayload() *ExecutionPayloadCapella {
+	return nil
 }
 
 func (b *BeaconBlockDenebMainnet) GetBlockBodyTree() (*ssz.Node, error) {

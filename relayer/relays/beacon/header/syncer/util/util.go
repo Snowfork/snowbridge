@@ -71,6 +71,10 @@ func BytesToHexString(bytes []byte) string {
 }
 
 func HexStringToPublicKey(hexString string) ([48]byte, error) {
+	return HexStringTo48Bytes(hexString)
+}
+
+func HexStringTo48Bytes(hexString string) ([48]byte, error) {
 	var pubkeyBytes [48]byte
 	key, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
 	if err != nil {

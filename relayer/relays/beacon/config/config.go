@@ -13,6 +13,7 @@ type Config struct {
 type SpecSettings struct {
 	SlotsInEpoch                 uint64 `mapstructure:"slotsInEpoch"`
 	EpochsPerSyncCommitteePeriod uint64 `mapstructure:"epochsPerSyncCommitteePeriod"`
+	DenebForkEpoch               uint64 `mapstructure:"denebForkedEpoch"`
 }
 
 type Spec struct {

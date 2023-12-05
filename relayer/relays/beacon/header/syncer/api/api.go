@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"io"
 	"net/http"
 	"strconv"
@@ -242,50 +241,6 @@ func (b *BeaconClient) GetHeader(blockRoot common.Hash) (BeaconHeader, error) {
 	}, nil
 }
 
-func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (state.BeaconBlock, error) {
-	var beaconBlock state.BeaconBlock
-
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
-	if err != nil {
-		return beaconBlock, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
-	}
-
-	req.Header.Add("Accept", "application/json")
-	res, err := b.httpClient.Do(req)
-	if err != nil {
-		return beaconBlock, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return beaconBlock, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
-	}
-
-	blockResponse := BeaconBlockResponse{}
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return beaconBlock, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
-	}
-
-	err = json.Unmarshal(bodyBytes, &blockResponse)
-	if err != nil {
-		return beaconBlock, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
-	}
-
-	data := blockResponse.Data.Message
-	slot, err := util.ToUint64(data.Slot)
-	if err != nil {
-		return nil, err
-	}
-
-	ssz, err := blockResponse.ToFastSSZ(b.activeSpec, slot/b.slotsInEpoch)
-	if err != nil {
-		return nil, err
-	}
-
-	return ssz, nil
-}
-
 func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/blocks/%d/root", b.endpoint, slot), nil)
 	if err != nil {
@@ -432,4 +387,34 @@ func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) ([]byte, error)
 	buf.ReadFrom(res.Body)
 	data = buf.Bytes()
 	return data, nil
+}
+
+func (b *BeaconClient) GetBeaconBlockResponse(blockID common.Hash) (BeaconBlockResponse, error) {
+	var beaconBlockResponse BeaconBlockResponse
+
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
+	if err != nil {
+		return beaconBlockResponse, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
+	}
+
+	req.Header.Add("Accept", "application/json")
+	res, err := b.httpClient.Do(req)
+	if err != nil {
+		return beaconBlockResponse, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return beaconBlockResponse, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
+	}
+
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return beaconBlockResponse, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
+	}
+
+	err = json.Unmarshal(bodyBytes, &beaconBlockResponse)
+	if err != nil {
+		return beaconBlockResponse, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
+	}
+	return beaconBlockResponse, nil
 }
