@@ -47,7 +47,6 @@ where
 		+ pallet_xcm::Config
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
-		+ cumulus_pallet_dmp_queue::Config
 		+ cumulus_pallet_parachain_system::Config
 		+ snowbridge_outbound_queue::Config,
 	XcmConfig: xcm_executor::Config,
@@ -115,7 +114,6 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 		+ pallet_xcm::Config
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
-		+ cumulus_pallet_dmp_queue::Config
 		+ cumulus_pallet_parachain_system::Config
 		+ snowbridge_outbound_queue::Config,
 	XcmConfig: xcm_executor::Config,
@@ -166,7 +164,6 @@ pub fn send_unpaid_transfer_token_message<Runtime, XcmConfig>(
 		+ pallet_xcm::Config
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
-		+ cumulus_pallet_dmp_queue::Config
 		+ cumulus_pallet_parachain_system::Config
 		+ snowbridge_outbound_queue::Config,
 	XcmConfig: xcm_executor::Config,
@@ -253,7 +250,6 @@ pub fn send_transfer_token_message_fee_not_enough<Runtime, XcmConfig>(
 		+ pallet_xcm::Config
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
-		+ cumulus_pallet_dmp_queue::Config
 		+ cumulus_pallet_parachain_system::Config
 		+ snowbridge_outbound_queue::Config,
 	XcmConfig: xcm_executor::Config,
@@ -297,7 +293,6 @@ pub fn send_transfer_token_message_insufficient_fund<Runtime, XcmConfig>(
 		+ pallet_xcm::Config
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
-		+ cumulus_pallet_dmp_queue::Config
 		+ cumulus_pallet_parachain_system::Config
 		+ snowbridge_outbound_queue::Config,
 	XcmConfig: xcm_executor::Config,
