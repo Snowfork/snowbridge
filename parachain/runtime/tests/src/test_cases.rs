@@ -84,7 +84,11 @@ where
 	let xcm = Xcm(vec![
 		WithdrawAsset(MultiAssets::from(vec![fee.clone()])),
 		BuyExecution { fees: fee, weight_limit: Unlimited },
-		ExportMessage { network: Ethereum { chain_id: 11155111 }, destination: Here, xcm: inner_xcm },
+		ExportMessage {
+			network: Ethereum { chain_id: 11155111 },
+			destination: Here,
+			xcm: inner_xcm,
+		},
 	]);
 
 	// execute XCM
