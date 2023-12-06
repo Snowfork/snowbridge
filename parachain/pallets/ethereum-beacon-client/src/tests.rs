@@ -1054,3 +1054,15 @@ fn set_operating_mode_root_only() {
 		);
 	});
 }
+
+#[test]
+fn process_deneb_initial_checkpoint() {
+	let checkpoint = load_deneb_checkpoint_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::force_checkpoint(
+			RuntimeOrigin::root(),
+			Box::new(checkpoint)
+		),);
+	});
+}

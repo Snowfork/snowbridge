@@ -125,6 +125,11 @@ pub mod minimal {
 		load_fixture("initial-checkpoint.minimal.json").unwrap()
 	}
 
+	pub fn load_deneb_checkpoint_update_fixture(
+	) -> primitives::CheckpointUpdate<{ config::SYNC_COMMITTEE_SIZE }> {
+		load_fixture("initial-checkpoint-deneb.minimal.json").unwrap()
+	}
+
 	pub fn load_sync_committee_update_fixture(
 	) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
 		load_fixture("sync-committee-update.minimal.json").unwrap()
