@@ -10,16 +10,16 @@ codec = { package = "parity-scale-codec", version = "3.6.1", default-features = 
 scale-info = { version = "2.9.0", default-features = false, features = [ "derive" ] }
 log = { version = "0.4.20", default-features = false }
 
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-frame-system = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
+frame-support = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+frame-system = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+sp-core = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+sp-io = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+sp-runtime = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+sp-std = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
 
-xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-xcm-builder = { package = "staging-xcm-builder", git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-xcm-executor = { package = "staging-xcm-executor", git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
+xcm = { package = "staging-xcm", git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+xcm-builder = { package = "staging-xcm-builder", git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+xcm-executor = { package = "staging-xcm-executor", git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 

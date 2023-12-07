@@ -22,28 +22,28 @@ rlp = { version = "0.5.2", default-features = false }
 hex-literal = { version = "0.4.1", optional = true }
 log = { version = "0.4.20", default-features = false }
 
-frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false, optional = true}
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-frame-system = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false, optional = true }
+frame-benchmarking = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false, optional = true}
+frame-support = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+frame-system = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+sp-core = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+sp-std = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+sp-runtime = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+sp-io = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false, optional = true }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 primitives = { package = "snowbridge-beacon-primitives", path = "../../primitives/beacon", default-features = false }
 static_assertions = { version = "1.1.0", default-features = false }
-bp-runtime = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
-pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false, optional = true}
+bp-runtime = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
+pallet-timestamp = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false, optional = true}
 
 [dev-dependencies]
 rand = "0.8.5"
-sp-keyring = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master" }
+sp-keyring = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream" }
 serde_json = "1.0.96"
 hex-literal = "0.4.1"
-pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master" }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master" }
+pallet-timestamp = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream" }
+sp-io = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream" }
 serde = "1.0.188"
 
 [features]
