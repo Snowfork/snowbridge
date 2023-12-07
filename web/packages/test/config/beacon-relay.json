@@ -6,12 +6,12 @@
         "minimal": {
           "slotsInEpoch": 8,
           "epochsPerSyncCommitteePeriod": 8,
-          "denebForkedEpoch": 0
+          "denebForkedEpoch": 20
         },
         "mainnet": {
           "slotsInEpoch": 32,
           "epochsPerSyncCommitteePeriod": 256,
-          "denebForkedEpoch": 0
+          "denebForkedEpoch": 4294967295
         }
       },
       "activeSpec": "minimal"

@@ -6,7 +6,26 @@ source scripts/set-env.sh
 start_geth() {
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local node"
-        cp config/genesis.json $output_dir/genesis.json
+        local timestamp=""
+        if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
+            if [ "$eth_fast_mode" == "true" ]; then
+                timestamp=$(gdate -d'+180second' +%s)
+            else
+                timestamp=$(gdate -d'+1000second' +%s)
+            fi
+        else
+            if [ "$eth_fast_mode" == "true" ]; then
+                timestamp=$(date -d'+180second' +%s)
+            else
+                timestamp=$(date -d'+1000second' +%s)
+            fi
+        fi
+        jq \
+            --argjson timestamp "$timestamp" \
+            '
+            .config.CancunTime = $timestamp
+            ' \
+            config/genesis.json >$output_dir/genesis.json
         geth init --datadir "$ethereum_data_dir" "$output_dir/genesis.json"
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key0.prv
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key1.prv
@@ -62,9 +81,7 @@ start_lodestar() {
             --params.ALTAIR_FORK_EPOCH 0 \
             --params.BELLATRIX_FORK_EPOCH 0 \
             --params.CAPELLA_FORK_EPOCH 0 \
-            --params.DENEB_FORK_EPOCH 0 \
-            --params.DEPOSIT_CHAIN_ID 11155111 \
-            --params.DEPOSIT_NETWORK_ID 11155111 \
+            --params.DENEB_FORK_EPOCH 20 \
             --eth1=true \
             --rest.namespace="*" \
             --jwt-secret $config_dir/jwtsecret \
