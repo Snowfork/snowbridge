@@ -103,6 +103,11 @@ func (s *SyncAggregate) ToJSON() json.SyncAggregate {
 }
 
 func (v *VersionedExecutionPayloadHeader) ToJSON() json.VersionedExecutionPayloadHeader {
-	data := v.Capella.ToJSON()
-	return json.VersionedExecutionPayloadHeader{Capella: &data}
+	if v.Deneb != nil {
+		data := v.Deneb.ToJSON()
+		return json.VersionedExecutionPayloadHeader{Deneb: &data}
+	} else {
+		data := v.Capella.ToJSON()
+		return json.VersionedExecutionPayloadHeader{Capella: &data}
+	}
 }

@@ -90,10 +90,35 @@ pub mod minimal {
 				epoch: 4294967295,
 			},
 		};
+		pub const DenebChainForkVersions: ForkVersions = ForkVersions{
+			genesis: Fork {
+				version: [0, 0, 0, 1], // 0x00000001
+				epoch: 0,
+			},
+			altair: Fork {
+				version: [1, 0, 0, 1], // 0x01000001
+				epoch: 0,
+			},
+			bellatrix: Fork {
+				version: [2, 0, 0, 1], // 0x02000001
+				epoch: 0,
+			},
+			capella: Fork {
+				version: [3, 0, 0, 1], // 0x03000001
+				epoch: 0,
+			},
+			deneb: Fork {
+				version: [4, 0, 0, 1], // 0x04000001
+				epoch: 0,
+			},
+		};
 	}
 
 	impl ethereum_beacon_client::Config for Test {
 		type RuntimeEvent = RuntimeEvent;
+		#[cfg(feature = "beacon-spec-minimal-deneb")]
+		type ForkVersions = DenebChainForkVersions;
+		#[cfg(not(feature = "beacon-spec-minimal-deneb"))]
 		type ForkVersions = ChainForkVersions;
 		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
 		type WeightInfo = ();
@@ -116,8 +141,23 @@ pub mod minimal {
 		serde_json::from_reader(File::open(&filepath).unwrap())
 	}
 
+	fn load_deneb_fixture<T>(basename: &str) -> Result<T, serde_json::Error>
+	where
+		T: for<'de> serde::Deserialize<'de>,
+	{
+		let filepath: PathBuf =
+			[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "deneb", basename]
+				.iter()
+				.collect();
+		serde_json::from_reader(File::open(&filepath).unwrap())
+	}
+
 	pub fn load_execution_header_update_fixture() -> primitives::ExecutionHeaderUpdate {
 		load_fixture("execution-header-update.minimal.json").unwrap()
+	}
+
+	pub fn load_deneb_execution_header_update_fixture() -> primitives::ExecutionHeaderUpdate {
+		load_deneb_fixture("execution-header-update.minimal.json").unwrap()
 	}
 
 	pub fn load_checkpoint_update_fixture(
@@ -127,7 +167,7 @@ pub mod minimal {
 
 	pub fn load_deneb_checkpoint_update_fixture(
 	) -> primitives::CheckpointUpdate<{ config::SYNC_COMMITTEE_SIZE }> {
-		load_fixture("initial-checkpoint-deneb.minimal.json").unwrap()
+		load_deneb_fixture("initial-checkpoint.minimal.json").unwrap()
 	}
 
 	pub fn load_sync_committee_update_fixture(
@@ -135,9 +175,19 @@ pub mod minimal {
 		load_fixture("sync-committee-update.minimal.json").unwrap()
 	}
 
+	pub fn load_deneb_sync_committee_update_fixture(
+	) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
+		load_deneb_fixture("sync-committee-update.minimal.json").unwrap()
+	}
+
 	pub fn load_finalized_header_update_fixture(
 	) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
 		load_fixture("finalized-header-update.minimal.json").unwrap()
+	}
+
+	pub fn load_deneb_finalized_header_update_fixture(
+	) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
+		load_deneb_fixture("finalized-header-update.minimal.json").unwrap()
 	}
 
 	pub fn load_next_sync_committee_update_fixture(

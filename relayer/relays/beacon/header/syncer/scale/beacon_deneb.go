@@ -1,6 +1,10 @@
 package scale
 
-import "github.com/snowfork/go-substrate-rpc-client/v4/types"
+import (
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
+)
 
 type ExecutionPayloadHeaderDeneb struct {
 	ParentHash       types.H256
@@ -20,4 +24,26 @@ type ExecutionPayloadHeaderDeneb struct {
 	WithdrawalsRoot  types.H256
 	BlobGasUsed      types.U64
 	ExcessBlobGas    types.U64
+}
+
+func (e *ExecutionPayloadHeaderDeneb) ToJSON() json.ExecutionPayloadHeaderDeneb {
+	return json.ExecutionPayloadHeaderDeneb{
+		ParentHash:      e.ParentHash.Hex(),
+		FeeRecipient:    util.BytesToHexString(e.FeeRecipient[:]),
+		StateRoot:       e.StateRoot.Hex(),
+		ReceiptsRoot:    e.ReceiptsRoot.Hex(),
+		LogsBloom:       util.BytesToHexString(e.LogsBloom),
+		PrevRandao:      e.PrevRandao.Hex(),
+		BlockNumber:     uint64(e.BlockNumber),
+		GasLimit:        uint64(e.GasLimit),
+		GasUsed:         uint64(e.GasUsed),
+		Timestamp:       uint64(e.Timestamp),
+		ExtraData:       util.BytesToHexString(e.ExtraData),
+		BaseFeePerGas:   e.BaseFeePerGas.Uint64(),
+		BlockHash:       e.BlockHash.Hex(),
+		TransactionRoot: e.TransactionsRoot.Hex(),
+		WithdrawalsRoot: e.WithdrawalsRoot.Hex(),
+		BlobGasUsed:     uint64(e.BlobGasUsed),
+		ExcessBlobGas:   uint64(e.ExcessBlobGas),
+	}
 }

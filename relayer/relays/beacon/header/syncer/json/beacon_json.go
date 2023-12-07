@@ -314,11 +314,14 @@ func removeLeadingZeroHash(s string) string {
 }
 
 type VersionedExecutionPayloadHeader struct {
-	Capella *ExecutionPayloadHeaderCapella `json:"Capella"`
+	Capella *ExecutionPayloadHeaderCapella `json:"Capella,omitempty"`
+	Deneb   *ExecutionPayloadHeaderDeneb   `json:"Deneb,omitempty"`
 }
 
 func (v *VersionedExecutionPayloadHeader) RemoveLeadingZeroHashes() {
 	if v.Capella != nil {
 		v.Capella.RemoveLeadingZeroHashes()
+	} else if v.Deneb != nil {
+		v.Deneb.RemoveLeadingZeroHashes()
 	}
 }

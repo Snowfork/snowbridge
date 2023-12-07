@@ -1055,6 +1055,7 @@ fn set_operating_mode_root_only() {
 	});
 }
 
+#[cfg(feature = "beacon-spec-minimal-deneb")]
 #[test]
 fn process_deneb_initial_checkpoint() {
 	let checkpoint = load_deneb_checkpoint_update_fixture();
@@ -1064,5 +1065,65 @@ fn process_deneb_initial_checkpoint() {
 			RuntimeOrigin::root(),
 			Box::new(checkpoint)
 		),);
+	});
+}
+
+#[cfg(feature = "beacon-spec-minimal-deneb")]
+#[test]
+fn submit_deneb_update() {
+	let checkpoint = load_deneb_checkpoint_update_fixture();
+	let update = load_deneb_finalized_header_update_fixture();
+	let initial_period = compute_period(checkpoint.header.slot);
+	let update_period = compute_period(update.finalized_header.slot);
+	assert_eq!(initial_period, update_period);
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(
+			RuntimeOrigin::signed(1),
+			Box::new(update.clone())
+		));
+		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
+		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
+	});
+}
+
+#[cfg(feature = "beacon-spec-minimal-deneb")]
+#[test]
+fn submit_deneb_update_with_sync_committee() {
+	let checkpoint = load_deneb_checkpoint_update_fixture();
+	let update = load_deneb_sync_committee_update_fixture();
+	let init_period = compute_period(checkpoint.header.slot);
+	let update_period = compute_period(update.finalized_header.slot);
+	assert_eq!(init_period, update_period);
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert!(!<NextSyncCommittee<Test>>::exists());
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(update)));
+		assert!(<NextSyncCommittee<Test>>::exists());
+	});
+}
+
+#[cfg(feature = "beacon-spec-minimal-deneb")]
+#[test]
+fn submit_deneb_execution_header_update() {
+	let checkpoint = load_deneb_checkpoint_update_fixture();
+	let finalized_header_update = load_deneb_finalized_header_update_fixture();
+	let execution_header_update = load_deneb_execution_header_update_fixture();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(
+			RuntimeOrigin::signed(1),
+			Box::new(finalized_header_update)
+		));
+		assert_ok!(EthereumBeaconClient::submit_execution_header(
+			RuntimeOrigin::signed(1),
+			Box::new(execution_header_update.clone())
+		));
+		assert!(<ExecutionHeaders<Test>>::contains_key(
+			execution_header_update.execution_header.block_hash()
+		));
 	});
 }
