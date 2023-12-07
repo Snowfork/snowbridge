@@ -48,6 +48,18 @@ func ToUint64(stringVal string) (uint64, error) {
 	return intVal, err
 }
 
+func ToUint64AllowEmpty(stringVal string) (uint64, error) {
+	if stringVal == "" {
+		return 0, nil
+	}
+	intVal, err := strconv.ParseUint(stringVal, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return intVal, err
+}
+
 func ToUint64Array(items []types.U64) []uint64 {
 	result := []uint64{}
 

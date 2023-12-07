@@ -648,12 +648,12 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, isDeneb boo
 		return nil, err
 	}
 
-	blobGasUsed, err := util.ToUint64(executionPayload.BlobGasUsed)
+	blobGasUsed, err := util.ToUint64AllowEmpty(executionPayload.BlobGasUsed)
 	if err != nil {
 		return nil, err
 	}
 
-	excessBlobGas, err := util.ToUint64(executionPayload.ExcessBlobGas)
+	excessBlobGas, err := util.ToUint64AllowEmpty(executionPayload.ExcessBlobGas)
 	if err != nil {
 		return nil, err
 	}
