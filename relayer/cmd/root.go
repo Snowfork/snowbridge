@@ -24,6 +24,7 @@ func init() {
 	rootCmd.AddCommand(getBlockCmd())
 	//rootCmd.AddCommand(fetchMessagesCmd())
 	rootCmd.AddCommand(subBeefyCmd())
+	rootCmd.AddCommand(scanBeefyCmd())
 	rootCmd.AddCommand(leafCmd())
 	rootCmd.AddCommand(basicChannelLeafProofCmd())
 	rootCmd.AddCommand(parachainHeadProofCmd())
