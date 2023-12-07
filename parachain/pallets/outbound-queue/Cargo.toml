@@ -24,7 +24,7 @@ sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = 
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
 
-bridge-hub-common = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "master", default-features = false }
+bridge-hub-common = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "snowbridge", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", features = ["serde"], default-features = false }
 snowbridge-outbound-queue-merkle-tree = { path = "merkle-tree", default-features = false }
