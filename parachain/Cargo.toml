@@ -29,3 +29,6 @@ snowbridge-outbound-queue-runtime-api = { path = "./pallets/outbound-queue/runti
 snowbridge-router-primitives = { path = "./primitives/router" }
 snowbridge-runtime-common = { path = "./runtime/runtime-common" }
 snowbridge-rococo-common = { path = "./runtime/rococo-common" }
+
+[patch.'https://github.com/paritytech/polkadot-sdk']
+sp-core = { git = "https://github.com/snowfork/polkadot-sdk", branch = "merge-to-upstream" }
