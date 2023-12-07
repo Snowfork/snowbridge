@@ -642,7 +642,7 @@ dependencies = [
 [[package]]
 name = "ark-secret-scalar"
 version = "0.0.2"
-source = "git+https://github.com/w3f/ring-vrf?rev=cbc342e#cbc342e95d3cbcd3c5ba8d45af7200eb58e63502"
+source = "git+https://github.com/w3f/ring-vrf?rev=2019248#2019248785389b3246d55b1c3b0e9bdef4454cb7"
 dependencies = [
  "ark-ec",
  "ark-ff 0.4.2",
@@ -650,7 +650,7 @@ dependencies = [
  "ark-std 0.4.0",
  "ark-transcript",
  "digest 0.10.7",
- "rand_core 0.6.4",
+ "getrandom_or_panic",
  "zeroize",
 ]
 
@@ -711,7 +711,7 @@ dependencies = [
 [[package]]
 name = "ark-transcript"
 version = "0.0.2"
-source = "git+https://github.com/w3f/ring-vrf?rev=cbc342e#cbc342e95d3cbcd3c5ba8d45af7200eb58e63502"
+source = "git+https://github.com/w3f/ring-vrf?rev=2019248#2019248785389b3246d55b1c3b0e9bdef4454cb7"
 dependencies = [
  "ark-ff 0.4.2",
  "ark-serialize 0.4.2",
@@ -828,7 +828,6 @@ dependencies = [
  "bp-bridge-hub-rococo",
  "bp-bridge-hub-westend",
  "cumulus-pallet-aura-ext",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
@@ -1073,8 +1072,8 @@ dependencies = [
 
 [[package]]
 name = "bandersnatch_vrfs"
-version = "0.0.3"
-source = "git+https://github.com/w3f/ring-vrf?rev=cbc342e#cbc342e95d3cbcd3c5ba8d45af7200eb58e63502"
+version = "0.0.4"
+source = "git+https://github.com/w3f/ring-vrf?rev=2019248#2019248785389b3246d55b1c3b0e9bdef4454cb7"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -1605,7 +1604,6 @@ dependencies = [
  "bridge-hub-common",
  "bridge-runtime-common",
  "cumulus-pallet-aura-ext",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
@@ -2528,6 +2526,7 @@ dependencies = [
  "cumulus-pallet-parachain-system-proc-macro",
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
+ "cumulus-primitives-proof-size-hostfunction",
  "environmental",
  "frame-benchmarking",
  "frame-support",
@@ -2556,7 +2555,7 @@ dependencies = [
 name = "cumulus-pallet-parachain-system-proc-macro"
 version = "0.1.0"
 dependencies = [
- "proc-macro-crate 1.3.1",
+ "proc-macro-crate 2.0.0",
  "proc-macro2",
  "quote",
  "syn 2.0.39",
@@ -2650,6 +2649,15 @@ dependencies = [
  "sp-storage 13.0.0",
  "sp-trie",
  "tracing",
+]
+
+[[package]]
+name = "cumulus-primitives-proof-size-hostfunction"
+version = "0.1.0"
+dependencies = [
+ "sp-externalities 0.19.0",
+ "sp-runtime-interface 17.0.0",
+ "sp-trie",
 ]
 
 [[package]]
@@ -3076,7 +3084,7 @@ dependencies = [
 [[package]]
 name = "dleq_vrf"
 version = "0.0.2"
-source = "git+https://github.com/w3f/ring-vrf?rev=cbc342e#cbc342e95d3cbcd3c5ba8d45af7200eb58e63502"
+source = "git+https://github.com/w3f/ring-vrf?rev=2019248#2019248785389b3246d55b1c3b0e9bdef4454cb7"
 dependencies = [
  "ark-ec",
  "ark-ff 0.4.2",
@@ -3086,7 +3094,6 @@ dependencies = [
  "ark-std 0.4.0",
  "ark-transcript",
  "arrayvec 0.7.4",
- "rand_core 0.6.4",
  "zeroize",
 ]
 
@@ -3509,11 +3516,12 @@ dependencies = [
 
 [[package]]
 name = "fdlimit"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c4c9e43643f5a3be4ca5b67d26b98031ff9db6806c3440ae32e02e3ceac3f1b"
+checksum = "e182f7dbc2ef73d9ef67351c5fbbea084729c48362d3ce9dd44c28e32e277fe5"
 dependencies = [
  "libc",
+ "thiserror",
 ]
 
 [[package]]
@@ -3687,7 +3695,7 @@ dependencies = [
 name = "frame-election-provider-solution-type"
 version = "4.0.0-dev"
 dependencies = [
- "proc-macro-crate 1.3.1",
+ "proc-macro-crate 2.0.0",
  "proc-macro2",
  "quote",
  "syn 2.0.39",
@@ -3801,7 +3809,7 @@ name = "frame-support-procedural-tools"
 version = "4.0.0-dev"
 dependencies = [
  "frame-support-procedural-tools-derive",
- "proc-macro-crate 1.3.1",
+ "proc-macro-crate 2.0.0",
  "proc-macro2",
  "quote",
  "syn 2.0.39",
@@ -6612,6 +6620,7 @@ dependencies = [
  "pallet-nfts",
  "parity-scale-codec",
  "sp-api",
+ "sp-std 8.0.0",
 ]
 
 [[package]]
@@ -7326,7 +7335,9 @@ dependencies = [
  "smallvec",
  "sp-api",
  "sp-authority-discovery",
+ "sp-blockchain",
  "sp-consensus-babe",
+ "sp-runtime",
  "substrate-prometheus-endpoint",
  "thiserror",
 ]
@@ -8570,6 +8581,7 @@ dependencies = [
  "sp-core",
  "sp-inherents",
  "sp-runtime",
+ "sp-trie",
 ]
 
 [[package]]
@@ -8600,7 +8612,7 @@ dependencies = [
 name = "sc-chain-spec-derive"
 version = "4.0.0-dev"
 dependencies = [
- "proc-macro-crate 1.3.1",
+ "proc-macro-crate 2.0.0",
  "proc-macro2",
  "quote",
  "syn 2.0.39",
@@ -8806,6 +8818,7 @@ dependencies = [
  "array-bytes 4.2.0",
  "arrayvec 0.7.4",
  "blake2 0.10.6",
+ "bytes",
  "futures",
  "futures-timer",
  "libp2p-identity",
@@ -8861,6 +8874,8 @@ dependencies = [
  "sp-runtime",
  "substrate-prometheus-endpoint",
  "thiserror",
+ "tokio",
+ "tokio-stream",
  "unsigned-varint",
  "wasm-timer",
  "zeroize",
@@ -9185,6 +9200,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
+ "parity-scale-codec",
  "parking_lot 0.12.1",
  "regex",
  "rustc-hash",
@@ -9207,7 +9223,7 @@ dependencies = [
 name = "sc-tracing-proc-macro"
 version = "4.0.0-dev"
 dependencies = [
- "proc-macro-crate 1.3.1",
+ "proc-macro-crate 2.0.0",
  "proc-macro2",
  "quote",
  "syn 2.0.39",
@@ -9396,18 +9412,18 @@ dependencies = [
 
 [[package]]
 name = "secp256k1"
-version = "0.24.3"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b1629c9c557ef9b293568b338dddfc8208c98a18c59d722a9d53f859d9c9b62"
+checksum = "2acea373acb8c21ecb5a23741452acd2593ed44ee3d343e72baaa143bc89d0d5"
 dependencies = [
  "secp256k1-sys",
 ]
 
 [[package]]
 name = "secp256k1-sys"
-version = "0.6.1"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83080e2c2fc1006e625be82e5d1eb6a43b7fd9578b617fcc55814daf286bba4b"
+checksum = "4dd97a086ec737e30053fd5c46f097465d25bb81dd3608825f65298c4c98be83"
 dependencies = [
  "cc",
 ]
@@ -9638,6 +9654,11 @@ dependencies = [
  "paste",
  "wide",
 ]
+
+[[package]]
+name = "simple-mermaid"
+version = "0.1.0"
+source = "git+https://github.com/kianenigma/simple-mermaid.git?branch=main#e48b187bcfd5cc75111acd9d241f1bd36604344b"
 
 [[package]]
 name = "siphasher"
@@ -10101,7 +10122,7 @@ dependencies = [
  "Inflector",
  "blake2 0.10.6",
  "expander 2.0.0",
- "proc-macro-crate 1.3.1",
+ "proc-macro-crate 2.0.0",
  "proc-macro2",
  "quote",
  "syn 2.0.39",
@@ -10283,7 +10304,6 @@ dependencies = [
  "hash256-std-hasher",
  "impl-serde",
  "itertools 0.10.5",
- "lazy_static",
  "libsecp256k1",
  "log",
  "merlin 2.0.1",
@@ -10292,7 +10312,6 @@ dependencies = [
  "paste",
  "primitive-types",
  "rand 0.8.5",
- "regex",
  "scale-info",
  "schnorrkel",
  "secp256k1",
@@ -10542,6 +10561,7 @@ dependencies = [
 name = "sp-runtime"
 version = "24.0.0"
 dependencies = [
+ "docify",
  "either",
  "hash256-std-hasher",
  "impl-trait-for-tuples",
@@ -10551,6 +10571,7 @@ dependencies = [
  "rand 0.8.5",
  "scale-info",
  "serde",
+ "simple-mermaid",
  "sp-application-crypto",
  "sp-arithmetic",
  "sp-core",
@@ -10599,7 +10620,8 @@ name = "sp-runtime-interface-proc-macro"
 version = "11.0.0"
 dependencies = [
  "Inflector",
- "proc-macro-crate 1.3.1",
+ "expander 2.0.0",
+ "proc-macro-crate 2.0.0",
  "proc-macro2",
  "quote",
  "syn 2.0.39",
@@ -10795,6 +10817,7 @@ dependencies = [
  "scale-info",
  "schnellru",
  "sp-core",
+ "sp-externalities 0.19.0",
  "sp-std 8.0.0",
  "thiserror",
  "tracing",
@@ -11644,7 +11667,7 @@ name = "tracing-gum-proc-macro"
 version = "1.0.0"
 dependencies = [
  "expander 2.0.0",
- "proc-macro-crate 1.3.1",
+ "proc-macro-crate 2.0.0",
  "proc-macro2",
  "quote",
  "syn 2.0.39",
