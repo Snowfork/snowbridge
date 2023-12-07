@@ -107,6 +107,14 @@ jobs:
           --release
           --features runtime-benchmarks
           --package snowbridge-ethereum-beacon-client
+      # Run tests for beacon deneb specific
+      - name: Tests for beacon light client with deneb specific
+        working-directory: parachain
+        run: >
+          cargo test
+          --features beacon-spec-minimal-deneb
+          --package snowbridge-ethereum-beacon-client 
+          deneb
 
   coverage:
     needs: check
