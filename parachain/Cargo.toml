@@ -31,4 +31,4 @@ snowbridge-runtime-common = { path = "./runtime/runtime-common" }
 snowbridge-rococo-common = { path = "./runtime/rococo-common" }
 
 [patch.'https://github.com/paritytech/polkadot-sdk']
-sp-core = { git = "https://github.com/snowfork/polkadot-sdk", branch = "merge-to-upstream" }
+bridge-hub-common = { git = "https://github.com/snowfork/polkadot-sdk.git", branch = "merge-to-upstream", default-features = false }
