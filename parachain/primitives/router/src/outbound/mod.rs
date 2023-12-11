@@ -9,7 +9,10 @@ use core::slice::Iter;
 
 use codec::{Decode, Encode};
 
-use frame_support::{ensure, traits::Get};
+use frame_support::{
+	ensure,
+	traits::{ContainsPair, Get},
+};
 use snowbridge_core::{
 	outbound::{AgentExecuteCommand, Command, Message, SendMessage},
 	ChannelId, ParaId,
@@ -24,15 +27,31 @@ pub struct EthereumBlobExporter<
 	EthereumNetwork,
 	OutboundQueue,
 	AgentHashedDescription,
->(PhantomData<(UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription)>);
+	ExportFilter,
+>(
+	PhantomData<(
+		UniversalLocation,
+		EthereumNetwork,
+		OutboundQueue,
+		AgentHashedDescription,
+		ExportFilter,
+	)>,
+);
 
-impl<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription> ExportXcm
-	for EthereumBlobExporter<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription>
-where
+impl<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription, ExportFilter>
+	ExportXcm
+	for EthereumBlobExporter<
+		UniversalLocation,
+		EthereumNetwork,
+		OutboundQueue,
+		AgentHashedDescription,
+		ExportFilter,
+	> where
 	UniversalLocation: Get<InteriorMultiLocation>,
 	EthereumNetwork: Get<NetworkId>,
 	OutboundQueue: SendMessage<Balance = u128>,
 	AgentHashedDescription: ConvertLocation<H256>,
+	ExportFilter: ContainsPair<InteriorMultiLocation, Message>,
 {
 	type Ticket = (Vec<u8>, XcmHash);
 
@@ -110,6 +129,12 @@ where
 			channel_id,
 			command: Command::AgentExecute { agent_id, command: agent_execute_command },
 		};
+
+		// filter out message
+		if !ExportFilter::contains(&dest, &outbound_message) {
+			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to being filtered. '{local_sub_location:?}'");
+			return Err(SendError::Unroutable)
+		}
 
 		// validate the message
 		let (ticket, fee) = OutboundQueue::validate(&outbound_message).map_err(|err| {
