@@ -1,4 +1,7 @@
-use frame_support::{assert_ok, parameter_types, traits::Everything};
+use frame_support::{
+	assert_err, assert_ok, parameter_types,
+	traits::{Everything, Nothing},
+};
 use hex_literal::hex;
 use snowbridge_core::outbound::{Fee, SendError, SendMessageFeeProvider};
 
@@ -74,7 +77,7 @@ fn exporter_validate_with_unknown_network_yields_not_applicable() {
 			AgentIdOf,
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-	assert_eq!(result, Err(XcmSendError::NotApplicable));
+	assert_err!(result, XcmSendError::NotApplicable);
 }
 
 #[test]
@@ -93,7 +96,7 @@ fn exporter_validate_with_invalid_destination_yields_missing_argument() {
 			AgentIdOf,
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-	assert_eq!(result, Err(XcmSendError::MissingArgument));
+	assert_err!(result, XcmSendError::MissingArgument);
 }
 
 #[test]
@@ -114,7 +117,7 @@ fn exporter_validate_with_x8_destination_yields_not_applicable() {
 			AgentIdOf,
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-	assert_eq!(result, Err(XcmSendError::NotApplicable));
+	assert_err!(result, XcmSendError::NotApplicable);
 }
 
 #[test]
@@ -133,7 +136,7 @@ fn exporter_validate_without_universal_source_yields_missing_argument() {
 			AgentIdOf,
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-	assert_eq!(result, Err(XcmSendError::MissingArgument));
+	assert_err!(result, XcmSendError::MissingArgument);
 }
 
 #[test]
@@ -152,7 +155,7 @@ fn exporter_validate_without_global_universal_location_yields_unroutable() {
 			AgentIdOf,
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-	assert_eq!(result, Err(XcmSendError::Unroutable));
+	assert_err!(result, XcmSendError::Unroutable);
 }
 
 #[test]
@@ -171,7 +174,7 @@ fn exporter_validate_without_global_bridge_location_yields_not_applicable() {
 			AgentIdOf,
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-	assert_eq!(result, Err(XcmSendError::NotApplicable));
+	assert_err!(result, XcmSendError::NotApplicable);
 }
 
 #[test]
@@ -191,7 +194,7 @@ fn exporter_validate_with_remote_universal_source_yields_not_applicable() {
 			AgentIdOf,
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-	assert_eq!(result, Err(XcmSendError::NotApplicable));
+	assert_err!(result, XcmSendError::NotApplicable);
 }
 
 #[test]
@@ -210,7 +213,7 @@ fn exporter_validate_without_para_id_in_source_yields_missing_argument() {
 			AgentIdOf,
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-	assert_eq!(result, Err(XcmSendError::MissingArgument));
+	assert_err!(result, XcmSendError::MissingArgument);
 }
 
 #[test]
@@ -230,7 +233,7 @@ fn exporter_validate_complex_para_id_in_source_yields_missing_argument() {
 			AgentIdOf,
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-	assert_eq!(result, Err(XcmSendError::MissingArgument));
+	assert_err!(result, XcmSendError::MissingArgument);
 }
 
 #[test]
@@ -250,7 +253,7 @@ fn exporter_validate_without_xcm_message_yields_missing_argument() {
 			AgentIdOf,
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
-	assert_eq!(result, Err(XcmSendError::MissingArgument));
+	assert_err!(result, XcmSendError::MissingArgument);
 }
 
 #[test]
@@ -298,7 +301,7 @@ fn exporter_validate_with_max_target_fee_yields_unroutable() {
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
-	assert_eq!(result, Err(XcmSendError::Unroutable));
+	assert_err!(result, XcmSendError::Unroutable);
 }
 
 #[test]
@@ -325,7 +328,7 @@ fn exporter_validate_with_unparsable_xcm_yields_unroutable() {
 			Everything,
 		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
 
-	assert_eq!(result, Err(XcmSendError::Unroutable));
+	assert_err!(result, XcmSendError::Unroutable);
 }
 
 #[test]
@@ -375,6 +378,52 @@ fn exporter_validate_xcm_success_case_1() {
 }
 
 #[test]
+fn exporter_validate_with_filter_yields_unroutable() {
+	let network = BridgedNetwork::get();
+	let mut destination: Option<InteriorMultiLocation> = Here.into();
+
+	let mut universal_source: Option<InteriorMultiLocation> =
+		Some(X2(GlobalConsensus(Polkadot), Parachain(1000)));
+
+	let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
+	let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+	let channel: u32 = 0;
+	let assets: MultiAssets = vec![MultiAsset {
+		id: Concrete(X1(AccountKey20 { network: None, key: token_address }).into()),
+		fun: Fungible(1000),
+	}]
+	.into();
+	let fee = assets.clone().get(0).unwrap().clone();
+	let filter: MultiAssetFilter = assets.clone().into();
+
+	let mut message: Option<Xcm<()>> = Some(
+		vec![
+			WithdrawAsset(assets.clone()),
+			ClearOrigin,
+			BuyExecution { fees: fee, weight_limit: Unlimited },
+			DepositAsset {
+				assets: filter,
+				beneficiary: X1(AccountKey20 { network: None, key: beneficiary_address }).into(),
+			},
+			SetTopic([0; 32]),
+		]
+		.into(),
+	);
+
+	let result =
+		EthereumBlobExporter::<
+			UniversalLocation,
+			BridgedNetwork,
+			MockOkOutboundQueue,
+			AgentIdOf,
+			Nothing,
+		>::validate(network, channel, &mut universal_source, &mut destination, &mut message);
+
+	assert_err!(result, XcmSendError::Unroutable);
+}
+
+#[test]
 fn exporter_deliver_with_submit_failure_yields_unroutable() {
 	let result = EthereumBlobExporter::<
 		UniversalLocation,
@@ -383,7 +432,7 @@ fn exporter_deliver_with_submit_failure_yields_unroutable() {
 		AgentIdOf,
 		Everything,
 	>::deliver((hex!("deadbeef").to_vec(), XcmHash::default()));
-	assert_eq!(result, Err(XcmSendError::Transport("other transport error")))
+	assert_err!(result, XcmSendError::Transport("other transport error"))
 }
 
 #[test]
@@ -418,7 +467,7 @@ fn xcm_converter_convert_success() {
 		amount: 1000,
 	};
 	let result = converter.convert();
-	assert_eq!(result, Ok((expected_payload, [0; 32])));
+	assert_ok!(result, (expected_payload, [0; 32]));
 }
 
 #[test]
@@ -451,7 +500,7 @@ fn xcm_converter_convert_without_buy_execution_yields_success() {
 		amount: 1000,
 	};
 	let result = converter.convert();
-	assert_eq!(result, Ok((expected_payload, [0; 32])));
+	assert_ok!(result, (expected_payload, [0; 32]));
 }
 
 #[test]
@@ -486,7 +535,7 @@ fn xcm_converter_convert_with_wildcard_all_asset_filter_succeeds() {
 		amount: 1000,
 	};
 	let result = converter.convert();
-	assert_eq!(result, Ok((expected_payload, [0; 32])));
+	assert_ok!(result, (expected_payload, [0; 32]));
 }
 
 #[test]
@@ -522,7 +571,7 @@ fn xcm_converter_convert_with_fees_less_than_reserve_yields_success() {
 		amount: 1000,
 	};
 	let result = converter.convert();
-	assert_eq!(result, Ok((expected_payload, [0; 32])));
+	assert_ok!(result, (expected_payload, [0; 32]));
 }
 
 #[test]
@@ -551,7 +600,7 @@ fn xcm_converter_convert_without_set_topic_yields_set_topic_expected() {
 	.into();
 	let mut converter = XcmConverter::new(&message, &network);
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::SetTopicExpected));
+	assert_err!(result, XcmConverterError::SetTopicExpected);
 }
 
 #[test]
@@ -568,7 +617,7 @@ fn xcm_converter_convert_with_partial_message_yields_unexpected_end_of_xcm() {
 
 	let mut converter = XcmConverter::new(&message, &network);
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedEndOfXcm));
+	assert_err!(result, XcmConverterError::UnexpectedEndOfXcm);
 }
 
 #[test]
@@ -602,7 +651,7 @@ fn xcm_converter_with_different_fee_asset_fails() {
 	.into();
 	let mut converter = XcmConverter::new(&message, &network);
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::InvalidFeeAsset));
+	assert_err!(result, XcmConverterError::InvalidFeeAsset);
 }
 
 #[test]
@@ -633,7 +682,7 @@ fn xcm_converter_with_fees_greater_than_reserve_fails() {
 	.into();
 	let mut converter = XcmConverter::new(&message, &network);
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::InvalidFeeAsset));
+	assert_err!(result, XcmConverterError::InvalidFeeAsset);
 }
 
 #[test]
@@ -645,7 +694,7 @@ fn xcm_converter_convert_with_empty_xcm_yields_unexpected_end_of_xcm() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedEndOfXcm));
+	assert_err!(result, XcmConverterError::UnexpectedEndOfXcm);
 }
 
 #[test]
@@ -677,7 +726,7 @@ fn xcm_converter_convert_with_extra_instructions_yields_end_of_xcm_message_expec
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::EndOfXcmMessageExpected));
+	assert_err!(result, XcmConverterError::EndOfXcmMessageExpected);
 }
 
 #[test]
@@ -707,7 +756,7 @@ fn xcm_converter_convert_without_withdraw_asset_yields_withdraw_expected() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::WithdrawAssetExpected));
+	assert_err!(result, XcmConverterError::WithdrawAssetExpected);
 }
 
 #[test]
@@ -732,7 +781,7 @@ fn xcm_converter_convert_without_withdraw_asset_yields_deposit_expected() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::DepositAssetExpected));
+	assert_err!(result, XcmConverterError::DepositAssetExpected);
 }
 
 #[test]
@@ -765,7 +814,7 @@ fn xcm_converter_convert_without_assets_yields_no_reserve_assets() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::NoReserveAssets));
+	assert_err!(result, XcmConverterError::NoReserveAssets);
 }
 
 #[test]
@@ -803,7 +852,7 @@ fn xcm_converter_convert_with_two_assets_yields_too_many_assets() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::TooManyAssets));
+	assert_err!(result, XcmConverterError::TooManyAssets);
 }
 
 #[test]
@@ -834,7 +883,7 @@ fn xcm_converter_convert_without_consuming_filter_yields_filter_does_not_consume
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::FilterDoesNotConsumeAllAssets));
+	assert_err!(result, XcmConverterError::FilterDoesNotConsumeAllAssets);
 }
 
 #[test]
@@ -865,7 +914,7 @@ fn xcm_converter_convert_with_zero_amount_asset_yields_zero_asset_transfer() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::ZeroAssetTransfer));
+	assert_err!(result, XcmConverterError::ZeroAssetTransfer);
 }
 
 #[test]
@@ -895,7 +944,7 @@ fn xcm_converter_convert_non_ethereum_asset_yields_asset_resolution_failed() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::AssetResolutionFailed));
+	assert_err!(result, XcmConverterError::AssetResolutionFailed);
 }
 
 #[test]
@@ -928,7 +977,7 @@ fn xcm_converter_convert_non_ethereum_chain_asset_yields_asset_resolution_failed
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::AssetResolutionFailed));
+	assert_err!(result, XcmConverterError::AssetResolutionFailed);
 }
 
 #[test]
@@ -961,7 +1010,7 @@ fn xcm_converter_convert_non_ethereum_chain_yields_asset_resolution_failed() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::AssetResolutionFailed));
+	assert_err!(result, XcmConverterError::AssetResolutionFailed);
 }
 
 #[test]
@@ -998,7 +1047,7 @@ fn xcm_converter_convert_with_non_ethereum_beneficiary_yields_beneficiary_resolu
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::BeneficiaryResolutionFailed));
+	assert_err!(result, XcmConverterError::BeneficiaryResolutionFailed);
 }
 
 #[test]
@@ -1034,5 +1083,5 @@ fn xcm_converter_convert_with_non_ethereum_chain_beneficiary_yields_beneficiary_
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::BeneficiaryResolutionFailed));
+	assert_err!(result, XcmConverterError::BeneficiaryResolutionFailed);
 }
