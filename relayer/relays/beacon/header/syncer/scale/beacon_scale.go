@@ -1,6 +1,7 @@
 package scale
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -300,6 +301,10 @@ type VersionedExecutionPayloadHeader struct {
 	Deneb   *ExecutionPayloadHeaderDeneb
 }
 
+var (
+	ErrEncodeVersionedExecutionPayloadHeader = errors.New("error scale encode VersionedExecutionPayloadHeader")
+)
+
 func (v VersionedExecutionPayloadHeader) Encode(encoder scale.Encoder) error {
 	var err error
 	if v.Capella != nil {
@@ -308,6 +313,8 @@ func (v VersionedExecutionPayloadHeader) Encode(encoder scale.Encoder) error {
 	} else if v.Deneb != nil {
 		encoder.PushByte(1)
 		err = encoder.Encode(v.Deneb)
+	} else {
+		err = ErrEncodeVersionedExecutionPayloadHeader
 	}
 	return err
 }
