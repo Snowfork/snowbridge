@@ -131,8 +131,8 @@ impl<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription, 
 		};
 
 		// filter out message
-		if !ExportFilter::contains(&dest, &outbound_message) {
-			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to being filtered. '{local_sub_location:?}'");
+		if !ExportFilter::contains(&local_sub, &outbound_message) {
+			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to being filtered. '{local_sub:?}'");
 			return Err(SendError::Unroutable)
 		}
 
