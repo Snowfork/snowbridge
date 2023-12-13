@@ -1,8 +1,12 @@
+use codec::{Decode, Encode};
 use hex_literal::hex;
+use scale_info::TypeInfo;
 use snowbridge_beacon_primitives::CompactExecutionHeader;
 use snowbridge_core::inbound::{Log, Message, Proof};
+use sp_core::RuntimeDebug;
 use sp_std::vec;
 
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct InboundQueueTest {
 	pub execution_header: CompactExecutionHeader,
 	pub message: Message,

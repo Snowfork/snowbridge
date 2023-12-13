@@ -1,5 +1,3 @@
-mod fixtures;
-
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use super::*;
@@ -7,12 +5,11 @@ use super::*;
 use crate::Pallet as InboundQueue;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
-use sp_std::vec;
 
 #[benchmarks]
 mod benchmarks {
 	use super::*;
-	use crate::benchmarking::fixtures::make_create_message;
+	use crate::fixtures::make_create_message;
 
 	#[benchmark]
 	fn submit() -> Result<(), BenchmarkError> {

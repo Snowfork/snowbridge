@@ -73,3 +73,18 @@ pub fn transfer_token_to_ethereum_insufficient_fund() {
 		BridgeHubEthereumBaseFeeInROC::get(),
 	)
 }
+
+#[test]
+pub fn submit_register_token_message_from_ethereum_works() {
+	test_cases::submit_register_token_message_from_ethereum_works::<Runtime>(
+		collator_session_keys(),
+		1013,
+		1000,
+		Box::new(|runtime_event_encoded: Vec<u8>| {
+			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
+				Ok(RuntimeEvent::EthereumInboundQueue(event)) => Some(event),
+				_ => None,
+			}
+		}),
+	)
+}

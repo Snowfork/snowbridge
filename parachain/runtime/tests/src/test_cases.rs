@@ -5,17 +5,27 @@
 
 use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::BridgeHubEthereumBaseFeeInROC;
 use codec::Encode;
-use frame_support::{assert_err, assert_ok, traits::fungible::Mutate};
+use frame_support::{
+	assert_err, assert_ok,
+	traits::{fungible::Mutate, OriginTrait},
+};
+use parachains_common::AccountId;
+pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
 use parachains_runtimes_test_utils::{
 	AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf, XcmReceivedFrom,
 };
+use snowbridge_core::{Channel, ChannelId, ParaId};
+use snowbridge_inbound_queue::{
+	fixtures::{make_create_message, InboundQueueTest},
+	BenchmarkHelper,
+};
 use sp_core::H160;
 use sp_runtime::SaturatedConversion;
-use xcm::latest::prelude::*;
+use xcm::{
+	latest::prelude::*,
+	v3::Error::{Barrier, FailedToTransactAsset, NotHoldingFees},
+};
 use xcm_executor::XcmExecutor;
-// Re-export test_case from `parachains-runtimes-test-utils`
-pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
-use xcm::v3::Error::{Barrier, FailedToTransactAsset, NotHoldingFees};
 
 type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 	parachains_runtimes_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
@@ -320,5 +330,91 @@ pub fn send_transfer_token_message_insufficient_fund<Runtime, XcmConfig>(
 			);
 			// check err is FailedToTransactAsset("InsufficientBalance")
 			assert_err!(outcome.ensure_complete(), FailedToTransactAsset("InsufficientBalance"));
+		});
+}
+
+pub fn initialize_beacon<Runtime>(fixture: InboundQueueTest)
+where
+	Runtime: snowbridge_inbound_queue::Config,
+{
+	Runtime::Helper::initialize_storage(fixture.message.proof.block_hash, fixture.execution_header);
+}
+
+pub fn initialize_channel<Runtime>(assethub_parachain_id: u32)
+where
+	Runtime: snowbridge_system::Config,
+{
+	// Asset Hub
+	let asset_hub_location: MultiLocation =
+		ParentThen(X1(Parachain(assethub_parachain_id.into()))).into();
+	let asset_hub_agent_id =
+		snowbridge_system::agent_id_of::<Runtime>(&asset_hub_location).unwrap();
+
+	let asset_hub_channel_id: ChannelId = (ParaId::from(assethub_parachain_id)).into();
+	snowbridge_system::Agents::<Runtime>::insert(asset_hub_agent_id, ());
+	snowbridge_system::Channels::<Runtime>::insert(
+		asset_hub_channel_id,
+		Channel { agent_id: asset_hub_agent_id, para_id: assethub_parachain_id.into() },
+	);
+}
+
+pub fn submit_register_token_message_from_ethereum_works<Runtime>(
+	collator_session_key: CollatorSessionKeys<Runtime>,
+	runtime_para_id: u32,
+	assethub_parachain_id: u32,
+	snowbridge_inbound_queue_event: Box<
+		dyn Fn(Vec<u8>) -> Option<snowbridge_inbound_queue::Event<Runtime>>,
+	>,
+) where
+	Runtime: frame_system::Config
+		+ pallet_balances::Config
+		+ pallet_session::Config
+		+ pallet_xcm::Config
+		+ parachain_info::Config
+		+ pallet_collator_selection::Config
+		+ cumulus_pallet_parachain_system::Config
+		+ snowbridge_outbound_queue::Config
+		+ snowbridge_inbound_queue::Config
+		+ snowbridge_system::Config,
+	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
+	<Runtime as frame_system::Config>::AccountId: From<sp_runtime::AccountId32>,
+{
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_key.collators())
+		.with_session_keys(collator_session_key.session_keys())
+		.with_para_id(runtime_para_id.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			initial_fund::<Runtime>(assethub_parachain_id, 1_000_000_000_000_000);
+			initialize_beacon::<Runtime>(make_create_message());
+			initialize_channel::<Runtime>(assethub_parachain_id);
+
+			let message = make_create_message().message;
+			log::info!("{:?}", message);
+
+			assert_ok!(<snowbridge_inbound_queue::Pallet<Runtime>>::submit(
+				<Runtime as frame_system::Config>::RuntimeOrigin::signed(
+					AccountId::from(crate::Alice).into()
+				),
+				message.clone()
+			));
+			let mut events = <frame_system::Pallet<Runtime>>::events()
+				.into_iter()
+				.filter_map(|e| snowbridge_inbound_queue_event(e.event.encode()));
+			assert!(events.any(|e| {
+				log::info!("{:?}", e);
+				matches!(
+					e,
+					snowbridge_inbound_queue::Event::MessageReceived {
+						message_id: [
+							197, 79, 50, 255, 200, 228, 214, 3, 10, 230, 237, 56, 63, 84, 34, 43,
+							140, 50, 176, 220, 7, 95, 137, 251, 237, 226, 101, 161, 227, 37, 156,
+							134
+						],
+						..
+					}
+				)
+			}));
 		});
 }

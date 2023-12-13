@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2021"
 
+[workspace]
+
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex-literal = { version = "0.4.1" }
@@ -91,7 +93,7 @@ bridge-runtime-common = { path = "../../../polkadot-sdk/bridges/bin/runtime-comm
 sp-keyring = { path = "../../../polkadot-sdk/substrate/primitives/keyring" }
 
 [features]
-default = ["std"]
+default = ["std", "runtime-tests"]
 std = [
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
@@ -228,3 +230,18 @@ experimental = ["pallet-aura/experimental"]
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller like logging for example.
 on-chain-release-build = ["sp-api/disable-logging"]
+
+runtime-tests = ["bridge-hub-rococo-runtime/runtime-tests"]
+
+[patch.'https://github.com/snowfork/snowbridge']
+snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
+snowbridge-system = { path = "../../pallets/system" }
+snowbridge-system-runtime-api = { path = "../../pallets/system/runtime-api" }
+snowbridge-core = { path = "../../primitives/core" }
+snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
+snowbridge-inbound-queue = { path = "../../pallets/inbound-queue" }
+snowbridge-outbound-queue = { path = "../../pallets/outbound-queue" }
+snowbridge-outbound-queue-runtime-api = { path = "../../pallets/outbound-queue/runtime-api" }
+snowbridge-router-primitives = { path = "../../primitives/router" }
+snowbridge-runtime-common = { path = "../../runtime/runtime-common" }
+snowbridge-rococo-common = { path = "../../runtime/rococo-common" }

@@ -28,7 +28,7 @@ mod envelope;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-#[cfg(feature = "runtime-benchmarks")]
+#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
 use snowbridge_beacon_primitives::CompactExecutionHeader;
 
 pub mod weights;
@@ -38,6 +38,9 @@ mod mock;
 
 #[cfg(test)]
 mod test;
+
+#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
+pub mod fixtures;
 
 use codec::{Decode, DecodeAll, Encode};
 use envelope::Envelope;
@@ -89,7 +92,7 @@ pub mod pallet {
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
 	pub trait BenchmarkHelper<T> {
 		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader);
 	}
@@ -125,7 +128,7 @@ pub mod pallet {
 
 		type WeightInfo: WeightInfo;
 
-		#[cfg(feature = "runtime-benchmarks")]
+		#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
 		type Helper: BenchmarkHelper<Self>;
 
 		/// Convert a weight value into balance type.
