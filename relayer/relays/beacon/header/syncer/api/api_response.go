@@ -2,9 +2,10 @@ package api
 
 import (
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"math/big"
 	"strconv"
+
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -97,7 +98,7 @@ type FinalizedCheckpointResponse struct {
 
 type SignedHeaderResponse struct {
 	Message   HeaderResponse `json:"message"`
-	Signature []byte         `json:"signature"`
+	Signature string         `json:"signature"`
 }
 
 type CheckpointResponse struct {
@@ -993,10 +994,14 @@ func (s SignedHeaderResponse) ToFastSSZ() (*state.SignedBeaconBlockHeader, error
 	if err != nil {
 		return nil, err
 	}
+	signature, err := util.HexStringToByteArray(s.Signature)
+	if err != nil {
+		return nil, err
+	}
 
 	return &state.SignedBeaconBlockHeader{
 		Header:    message,
-		Signature: s.Signature,
+		Signature: signature,
 	}, nil
 }
 
