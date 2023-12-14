@@ -65,7 +65,6 @@ start_lodestar() {
             timestamp=$(date -d'+10second' +%s)
         fi
 
-        local config_dir="$web_dir/packages/test/config"
         pushd $root_dir/lodestar
         ./lodestar dev \
             --genesisValidators 8 \
