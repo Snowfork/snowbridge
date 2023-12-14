@@ -90,7 +90,7 @@ mod mock;
 #[cfg(test)]
 mod test;
 
-use bridge_hub_common::AggregateMessageOrigin;
+use bridge_hub_common::{AggregateMessageOrigin, CustomDigestItem};
 use codec::Decode;
 use frame_support::{
 	storage::StorageStreamIter,
@@ -104,7 +104,10 @@ use snowbridge_core::{
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 use sp_core::{H256, U256};
-use sp_runtime::traits::{CheckedDiv, Hash};
+use sp_runtime::{
+	traits::{CheckedDiv, Hash},
+	DigestItem,
+};
 use sp_std::prelude::*;
 pub use types::{CommittedMessage, FeeConfigRecord, ProcessMessageOriginOf};
 pub use weights::WeightInfo;
@@ -277,10 +280,10 @@ pub mod pallet {
 			// Create merkle root of messages
 			let root = merkle_root::<<T as Config>::Hashing, _>(MessageLeaves::<T>::stream_iter());
 
+			let digest_item: DigestItem = CustomDigestItem::Snowbridge(root).into();
+
 			// Insert merkle root into the header digest
-			<frame_system::Pallet<T>>::deposit_log(sp_runtime::DigestItem::Other(
-				root.to_fixed_bytes().into(),
-			));
+			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
 			Self::deposit_event(Event::MessagesCommitted { root, count });
 		}
