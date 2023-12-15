@@ -6,6 +6,7 @@ exclude = [
 	"contracts/foundry.toml",
 	"rust-toolchain.toml",
 	"web/packages/test/config/launch-config.toml",
+	"polkadot-sdk/**",
 ]
 
 # global rules
