@@ -3,10 +3,11 @@
 # ignore zombienet as they do some deliberate custom toml stuff
 exclude = [
 	"_typos.toml",
-	"contracts/foundry.toml",
+	"contracts/**",
 	"rust-toolchain.toml",
 	"web/packages/test/config/launch-config.toml",
 	"polkadot-sdk/**",
+	".config/**",
 ]
 
 # global rules
