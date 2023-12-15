@@ -126,7 +126,7 @@ mod tests {
 		// key + item value
 		let node: ShortNode = rlp::decode(RAW_PROOF[2]).unwrap();
 		assert_eq!(node.key, vec![32]);
-		assert!(!node.value.is_empty());
+		assert!(node.value.len() > 0);
 
 		// key + item hash
 		let node: ShortNode = rlp::decode(&hex!(
