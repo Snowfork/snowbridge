@@ -76,6 +76,9 @@ library Verification {
     uint256 public constant DIGEST_ITEM_PRERUNTIME = 6;
     uint256 public constant DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED = 8;
 
+    /// @dev Prefix of enum variants of DigestItem(0 is reserved for snowbridge)
+    bytes1 public constant DIGEST_ITEM_PREFIX = 0;
+
     /// @dev Verify the message commitment by applying several proofs
     ///
     /// 1. First check that the commitment is included in the digest items of the parachain header
@@ -133,8 +136,17 @@ library Verification {
     {
         for (uint256 i = 0; i < header.digestItems.length; i++) {
             DigestItem memory item = header.digestItems[i];
-            if (item.kind == DIGEST_ITEM_OTHER && item.data.length == 32 && commitment == bytes32(item.data)) {
-                return true;
+            if (item.kind == DIGEST_ITEM_OTHER && item.data.length == 33 && item.data[0] == DIGEST_ITEM_PREFIX) {
+                bytes memory commitment_in_header = new bytes(32);
+                for (uint256 j = 1; j < 33;) {
+                    commitment_in_header[j - 1] = item.data[j];
+                    unchecked {
+                        ++j;
+                    }
+                }
+                if (commitment == bytes32(commitment_in_header)) {
+                    return true;
+                }
             }
         }
         return false;

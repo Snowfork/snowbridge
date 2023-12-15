@@ -207,3 +207,15 @@ fn convert_local_currency() {
 		assert_eq!(fee, fee2);
 	});
 }
+
+#[test]
+fn encode_digest_item() {
+	new_tester().execute_with(|| {
+		let digest_item: DigestItem = CustomDigestItem::Snowbridge(H256::default()).into();
+		let enum_prefix = match digest_item {
+			DigestItem::Other(data) => data[0],
+			_ => u8::MAX,
+		};
+		assert_eq!(enum_prefix, 0);
+	});
+}
