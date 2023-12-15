@@ -1,7 +1,7 @@
 [package]
 name = "snowbridge-rococo-common"
 version = "0.0.1"
-authors = [ "Snowfork <contact@snowfork.com>" ]
+authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2021"
 
 [dependencies]
@@ -13,9 +13,12 @@ xcm = { package = "staging-xcm", path = "../../../polkadot-sdk/polkadot/xcm", de
 [dev-dependencies]
 
 [features]
-default = [ "std" ]
+default = ["std"]
 std = [
-    "frame-support/std",
-    "xcm/std",
+	"frame-support/std",
+	"log/std",
+	"xcm/std",
 ]
-runtime-benchmarks = []
+runtime-benchmarks = [
+	"frame-support/runtime-benchmarks",
+]
