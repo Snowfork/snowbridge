@@ -56,18 +56,13 @@ jobs:
         working-directory: parachain
         run: cargo clippy -- -D warnings
       - name: taplo
-        env:
-          version: "0.8.1"
+        working-directory: parachain
         run: |
-          curl -Ls "https://github.com/tamasfe/taplo/releases/download/${{ env.version }}/taplo-full-linux-x86_64.gz" | \
-          gzip -d > taplo && \
-          chmod +x taplo && \
-          sudo mv taplo /usr/local/bin/taplo \
-          taplo format --check --config .config/taplo.toml
+          cargo install taplo-cli --locked && taplo format --check --config .config/taplo.toml
       - name: zepter
+        working-directory: parachain
         run: |
-          cargo install zepter -f --locked \
-          zepter run check
+          cargo install zepter -f --locked && zepter run check
 
   test:
     needs: check
