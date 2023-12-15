@@ -622,7 +622,10 @@ pub mod pallet {
 		}
 
 		/// Initializes agents and channels.
-		pub fn initialize(para_id: ParaId, asset_hub_para_id: ParaId) -> Result<(), DispatchError> {
+		pub(crate) fn initialize(
+			para_id: ParaId,
+			asset_hub_para_id: ParaId,
+		) -> Result<(), DispatchError> {
 			let bridge_hub_agent_id = agent_id_of::<T>(&MultiLocation::here())?;
 			// Agent for BridgeHub
 			Agents::<T>::insert(bridge_hub_agent_id, ());
