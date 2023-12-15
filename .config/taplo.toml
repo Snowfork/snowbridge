@@ -2,10 +2,10 @@
 
 # ignore zombienet as they do some deliberate custom toml stuff
 exclude = [
-	"cumulus/zombienet/**",
-	"polkadot/node/malus/integrationtests/**",
-	"polkadot/zombienet_tests/**",
-	"substrate/zombienet/**",
+	"_typos.toml",
+	"contracts/foundry.toml",
+	"rust-toolchain.toml",
+	"web/packages/test/config/launch-config.toml",
 ]
 
 # global rules

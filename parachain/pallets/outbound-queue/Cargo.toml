@@ -15,7 +15,7 @@ codec = { version = "3.6.1", package = "parity-scale-codec", default-features = 
 scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
 hex-literal = { version = "0.4.1", optional = true }
 
-frame-benchmarking = { path = "../../../polkadot-sdk/substrate/frame/benchmarking", default-features = false, optional = true}
+frame-benchmarking = { path = "../../../polkadot-sdk/substrate/frame/benchmarking", default-features = false, optional = true }
 frame-support = { path = "../../../polkadot-sdk/substrate/frame/support", default-features = false }
 frame-system = { path = "../../../polkadot-sdk/substrate/frame/system", default-features = false }
 sp-core = { path = "../../../polkadot-sdk/substrate/primitives/core", default-features = false }
