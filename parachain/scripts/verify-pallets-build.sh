@@ -56,16 +56,17 @@ function revert_to_clean_state {
 trap revert_to_clean_state EXIT
 
 # remove everything we think is not required for our needs
+rm -rf $SNOWBRIDGE_FOLDER/.cargo
 rm -rf $SNOWBRIDGE_FOLDER/.github
 rm -rf $SNOWBRIDGE_FOLDER/contracts
-rm -f $SNOWBRIDGE_FOLDER/docs
+rm -rf $SNOWBRIDGE_FOLDER/codecov.yml
+rm -rf $SNOWBRIDGE_FOLDER/docs
 rm -rf $SNOWBRIDGE_FOLDER/hooks
 rm -rf $SNOWBRIDGE_FOLDER/relayer
-rm -rf $SNOWBRIDGE_FOLDER/scripts
 rm -rf $SNOWBRIDGE_FOLDER/smoketest
 rm -rf $SNOWBRIDGE_FOLDER/web
 rm -rf $SNOWBRIDGE_FOLDER/.envrc-example
-rm -rf $SNOWBRIDGE_FOLDER/.gitbook.yml
+rm -rf $SNOWBRIDGE_FOLDER/.gitbook.yaml
 rm -rf $SNOWBRIDGE_FOLDER/.gitignore
 rm -rf $SNOWBRIDGE_FOLDER/.gitmodules
 rm -rf $SNOWBRIDGE_FOLDER/_typos.toml
@@ -73,32 +74,25 @@ rm -rf $SNOWBRIDGE_FOLDER/_codecov.yml
 rm -rf $SNOWBRIDGE_FOLDER/flake.lock
 rm -rf $SNOWBRIDGE_FOLDER/flake.nix
 rm -rf $SNOWBRIDGE_FOLDER/go.work
+rm -rf $SNOWBRIDGE_FOLDER/go.work.sum
+rm -rf $SNOWBRIDGE_FOLDER/polkadot-sdk
 rm -rf $SNOWBRIDGE_FOLDER/rust-toolchain.toml
+rm -rf $SNOWBRIDGE_FOLDER/parachain/rustfmt.toml
+rm -rf $SNOWBRIDGE_FOLDER/parachain/.gitignore
+rm -rf $SNOWBRIDGE_FOLDER/parachain/templates
 
-# Function to count number of slashes in a path, indicating depth
-count_slashes() {
-    local path=$1
-    echo "${path}" | awk -F"/" '{print NF-1}'
-}
+cd bridges/snowbridge/parachain
 
-# Function to replace strings in Cargo.toml
-replace_string_in_file() {
-    local file=$1
-    local depth=$2
-    local replace=$(printf '../%.0s' $(seq 1 $depth))
-    sed -i "s|polkadot-sdk/|$replace|g" "$file"
-}
-
-# Find all Cargo.toml files and process them
+# fix polkadot-sdk paths in Cargo.toml files
 find "." -name 'Cargo.toml' | while read -r file; do
-    # Calculate depth
-    relative_path="${file#$root_dir/}"
-    depth=$(count_slashes "$relative_path")
-    # Replace string in file
-    replace_string_in_file "$file" "$depth"
+    replace=$(printf '../../' )
+    if [[ "$(uname)" = "Darwin" ]] || [[ "$(uname)" = *BSD ]]; then
+        sed -i '' "s|polkadot-sdk/|$replace|g" "$file"
+    else
+        sed -i "s|polkadot-sdk/|$replace|g" "$file"
+    fi
 done
 
-cd parachain
 # let's test if everything we need compiles
 cargo check -p snowbridge-ethereum-beacon-client
 cargo check -p snowbridge-ethereum-beacon-client --features runtime-benchmarks
@@ -116,8 +110,7 @@ cd -
 
 # we're removing lock file after all checks are done. Otherwise we may use different
 # Substrate/Polkadot/Cumulus commits and our checks will fail
-rm -f $SNOWBRIDGE_FOLDER/Cargo.toml
-rm -f $SNOWBRIDGE_FOLDER/Cargo.lock
-rm -rf $SNOWBRIDGE_FOLDER/polkadot-sdk
+rm -f $SNOWBRIDGE_FOLDER/parachain/Cargo.toml
+rm -f $SNOWBRIDGE_FOLDER/parachain/Cargo.lock
 
 echo "OK"
