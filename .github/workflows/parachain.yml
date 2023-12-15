@@ -69,33 +69,11 @@ jobs:
         run: |
           cargo install zepter -f --locked && zepter run check
       - name: lint-markdown
+        working-directory: parachain
         run: |
           npm install -g markdownlint-cli
           markdownlint --version
-          markdownlint --config .markdownlint.yaml --ignore target parachain/
-
-  lint-markdown:
-    runs-on: snowbridge-runner
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
-      - uses: actions/setup-node@v4.0.0
-        with:
-          node-version: "18.x"
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@paritytech"
-
-      - name: Install tooling
-        run: |
-          npm install -g markdownlint-cli
-          markdownlint --version
-
-      - name: Check Markdown
-        env:
-          CONFIG: .github/.markdownlint.yaml
-        run: |
-          markdownlint --config "$CONFIG" --ignore target .
+          markdownlint --config .markdownlint.yaml --ignore target
 
   test:
     needs: check
