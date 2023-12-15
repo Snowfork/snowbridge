@@ -135,18 +135,12 @@ library Verification {
         returns (bool)
     {
         for (uint256 i = 0; i < header.digestItems.length; i++) {
-            DigestItem memory item = header.digestItems[i];
-            if (item.kind == DIGEST_ITEM_OTHER && item.data.length == 33 && item.data[0] == DIGEST_ITEM_PREFIX) {
-                bytes memory commitment_in_header = new bytes(32);
-                for (uint256 j = 1; j < 33;) {
-                    commitment_in_header[j - 1] = item.data[j];
-                    unchecked {
-                        ++j;
-                    }
-                }
-                if (commitment == bytes32(commitment_in_header)) {
-                    return true;
-                }
+            if (
+                header.digestItems[i].kind == DIGEST_ITEM_OTHER && header.digestItems[i].data.length == 33
+                    && header.digestItems[i].data[0] == DIGEST_ITEM_PREFIX
+                    && commitment == bytes32(header.digestItems[i].data[1:])
+            ) {
+                return true;
             }
         }
         return false;
