@@ -73,7 +73,7 @@ jobs:
         run: |
           npm install -g markdownlint-cli
           markdownlint --version
-          markdownlint --config .markdownlint.yaml --ignore target
+          markdownlint --config .config/.markdownlint.yaml --ignore target
 
   test:
     needs: check
