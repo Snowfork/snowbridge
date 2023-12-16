@@ -75,13 +75,13 @@ importers:
 
   packages/contract-types:
     dependencies:
-      '@typechain/ethers-v6':
-        specifier: ^0.5.1
-        version: 0.5.1(ethers@6.9.0)(typechain@8.3.2)(typescript@5.1.6)
       ethers:
         specifier: ^6.9.0
         version: 6.9.0
     devDependencies:
+      '@typechain/ethers-v6':
+        specifier: ^0.5.1
+        version: 0.5.1(ethers@6.9.0)(typechain@8.3.2)(typescript@5.1.6)
       '@types/node':
         specifier: ^18.13.0
         version: 18.16.8
@@ -317,7 +317,6 @@ packages:
 
   /@adraffy/ens-normalize@1.10.0:
     resolution: {integrity: sha512-nA9XHtlAkYfJxY7bce8DcN7eKxWWCWkU+1GR9d+U6MbNpfwQp8TI7vqOsBsMcHoT4mBu2kypKoSKnghEzOOq5Q==}
-    dev: false
 
   /@chainsafe/as-chacha20poly1305@0.1.0:
     resolution: {integrity: sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==}
@@ -3155,7 +3154,7 @@ packages:
       ts-essentials: 7.0.3(typescript@5.1.6)
       typechain: 8.3.2(typescript@5.1.6)
       typescript: 5.1.6
-    dev: false
+    dev: true
 
   /@types/abstract-leveldown@7.2.1:
     resolution: {integrity: sha512-YK8irIC+eMrrmtGx0H4ISn9GgzLd9dojZWJaMbjp1YHLl2VqqNFBNrL5Q3KjGf4VE3sf/4hmq6EhQZ7kZp1NoQ==}
@@ -3254,7 +3253,6 @@ packages:
 
   /@types/node@18.15.13:
     resolution: {integrity: sha512-N+0kuo9KgrUQ1Sn/ifDXsvg0TTleP7rIy4zOBGECxAljqvqfqpTfzx0Q1NUedOixRMBfe2Whhb056a42cWs26Q==}
-    dev: false
 
   /@types/node@18.16.8:
     resolution: {integrity: sha512-p0iAXcfWCOTCBbsExHIDFCfwsqFwBTgETJveKMT+Ci3LY9YqQCI91F5S+TB20+aRCXpcWfvx5Qr5EccnwCm2NA==}
@@ -3603,7 +3601,6 @@ packages:
 
   /aes-js@4.0.0-beta.5:
     resolution: {integrity: sha512-G965FqalsNyrPqgEGON7nIx1e/OVENSgiEIzyC63haUMuvNnwIgIjMs52hlTCKhkBny7A2ORNlfY9Zu+jmGk1Q==}
-    dev: false
 
   /agent-base@6.0.2:
     resolution: {integrity: sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==}
@@ -5234,7 +5231,6 @@ packages:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
-    dev: false
 
   /ethjs-unit@0.1.6:
     resolution: {integrity: sha512-/Sn9Y0oKl0uqQuvgFk/zQgR7aw1g36qX/jzSQ5lSwlO0GigPymk4eGQfeNTD03w1dPOqfz8V77Cy43jH56pagw==}
@@ -9602,7 +9598,6 @@ packages:
 
   /tslib@2.4.0:
     resolution: {integrity: sha512-d6xOpEDfsi2CZVlPQzGeux8XMwLT9hssAsaPYExaQMuYskwb+x1x7J371tWlbBdWHroy99KnVB6qIkUbs5X3UQ==}
-    dev: false
 
   /tslib@2.6.1:
     resolution: {integrity: sha512-t0hLfiEKfMUoqhG+U1oid7Pva4bbDPHYfJNiB7BiIjRkj1pyC++4N3huJfqY6aRH6VTB0rvtzQwjM4K6qpfOig==}
@@ -10170,7 +10165,6 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
-    dev: false
 
   /xml-name-validator@5.0.0:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
