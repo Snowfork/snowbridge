@@ -77,7 +77,7 @@ library Verification {
     uint256 public constant DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED = 8;
 
     /// @dev Prefix of enum variants of DigestItem(0 is reserved for snowbridge)
-    bytes1 public constant DIGEST_ITEM_PREFIX = 0;
+    bytes1 public constant DIGEST_ITEM_OTHER_SNOWBRIDGE = 0x00;
 
     /// @dev Verify the message commitment by applying several proofs
     ///
@@ -137,7 +137,7 @@ library Verification {
         for (uint256 i = 0; i < header.digestItems.length; i++) {
             if (
                 header.digestItems[i].kind == DIGEST_ITEM_OTHER && header.digestItems[i].data.length == 33
-                    && header.digestItems[i].data[0] == DIGEST_ITEM_PREFIX
+                    && header.digestItems[i].data[0] == DIGEST_ITEM_OTHER_SNOWBRIDGE
                     && commitment == bytes32(header.digestItems[i].data[1:])
             ) {
                 return true;
