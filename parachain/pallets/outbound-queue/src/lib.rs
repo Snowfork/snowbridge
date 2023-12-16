@@ -198,8 +198,6 @@ pub mod pallet {
 		InvalidFeeConfig,
 		/// Invalid Channel
 		InvalidChannel,
-		/// Maximum Nonce reached
-		MaxNonceReached,
 	}
 
 	/// Messages to be committed in the current block. This storage value is killed in

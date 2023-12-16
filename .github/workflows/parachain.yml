@@ -43,6 +43,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - uses: actions/setup-node@v4.0.0
+        with:
+          node-version: "18.x"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@paritytech"
       - name: setup rust toolchain
         run: rustup show
       - name: cargo check
@@ -55,6 +60,20 @@ jobs:
       - name: clippy
         working-directory: parachain
         run: cargo clippy -- -D warnings
+      - name: taplo
+        working-directory: parachain
+        run: |
+          cargo install taplo-cli --locked && taplo format --check --config .config/taplo.toml
+      - name: zepter
+        working-directory: parachain
+        run: |
+          cargo install zepter -f --locked && zepter run check
+      - name: lint-markdown
+        working-directory: parachain
+        run: |
+          npm install -g markdownlint-cli
+          markdownlint --version
+          markdownlint --config .config/.markdownlint.yaml --ignore target
 
   test:
     needs: check
