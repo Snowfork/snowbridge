@@ -464,9 +464,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Sends a message to the Gateway contract to update a channel configuration
-		///
-		/// The origin must already have a channel initialized, as this message is sent over it.
+		/// Sends a message to the Gateway contract to update an arbitrary channel
 		///
 		/// Fee required: No
 		///
@@ -487,7 +485,7 @@ pub mod pallet {
 			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::NoChannel);
 
 			let command = Command::UpdateChannel { channel_id, mode };
-			Self::send(SECONDARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
+			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
 
 			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode, outbound_fee });
 			Ok(())
@@ -551,7 +549,7 @@ pub mod pallet {
 
 			Self::do_transfer_native_from_agent(
 				agent_id,
-				SECONDARY_GOVERNANCE_CHANNEL,
+				PRIMARY_GOVERNANCE_CHANNEL,
 				recipient,
 				amount,
 				pays_fee,
