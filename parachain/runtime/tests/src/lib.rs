@@ -45,7 +45,7 @@ pub fn transfer_token_from_non_assethub_to_ethereum_unroutable() {
 		collator_session_keys(),
 		1013,
 		1001,
-		BridgeHubEthereumBaseFeeInROC::get() + 1_000_000_000,
+		DefaultBridgeHubEthereumBaseFee::get() + 1_000_000_000,
 		H160::random(),
 		H160::random(),
 		// fee not enough
@@ -71,7 +71,7 @@ pub fn transfer_token_to_ethereum_fee_not_enough() {
 		collator_session_keys(),
 		1013,
 		1000,
-		BridgeHubEthereumBaseFeeInROC::get() + 1_000_000_000,
+		DefaultBridgeHubEthereumBaseFee::get() + 1_000_000_000,
 		H160::random(),
 		H160::random(),
 		// fee not enough
