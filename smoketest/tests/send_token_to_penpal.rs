@@ -68,6 +68,7 @@ async fn send_token_to_penpal() {
 			weth.address(),
 			PENPAL_PARA_ID,
 			i_gateway::MultiAddress { kind: 1, data: FERDIE.into() },
+			4_000_000_000,
 			amount,
 		)
 		.value(1000)

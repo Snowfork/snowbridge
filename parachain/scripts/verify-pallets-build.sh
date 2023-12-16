@@ -47,7 +47,7 @@ done
 # let's avoid any restrictions on where this script can be called for - snowbridge repo may be
 # plugged into any other repo folder. So the script (and other stuff that needs to be removed)
 # may be located either in call dir, or one of it subdirs.
-SNOWBRIDGE_FOLDER="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
+SNOWBRIDGE_FOLDER="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/../.."
 
 # let's leave repository/subtree in its original (clean) state if something fails below
 function revert_to_clean_state {
@@ -80,6 +80,7 @@ rm -rf $SNOWBRIDGE_FOLDER/rust-toolchain.toml
 rm -rf $SNOWBRIDGE_FOLDER/parachain/rustfmt.toml
 rm -rf $SNOWBRIDGE_FOLDER/parachain/.gitignore
 rm -rf $SNOWBRIDGE_FOLDER/parachain/templates
+rm -rf $SNOWBRIDGE_FOLDER/parachain/.config
 
 cd bridges/snowbridge/parachain
 
