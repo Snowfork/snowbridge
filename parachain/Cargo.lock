@@ -1622,6 +1622,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "snowbridge-core",
+ "sp-core",
  "sp-runtime",
  "sp-std 8.0.0",
  "staging-xcm",
