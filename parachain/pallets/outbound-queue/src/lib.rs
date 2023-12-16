@@ -311,10 +311,16 @@ pub mod pallet {
 			let queued_message: QueuedMessage =
 				versioned_queued_message.try_into().map_err(|_| Unsupported)?;
 
+			// Obtain next nonce
+			let nonce = <Nonce<T>>::try_mutate(
+				queued_message.channel_id,
+				|nonce| -> Result<u64, ProcessMessageError> {
+					*nonce = nonce.checked_add(1).ok_or(Unsupported)?;
+					Ok(*nonce)
+				},
+			)?;
+
 			let pricing_params = T::PricingParameters::get();
-
-			let next_nonce = Nonce::<T>::get(queued_message.channel_id).saturating_add(1);
-
 			let command = queued_message.command.index();
 			let params = queued_message.command.abi_encode();
 			let max_dispatch_gas =
@@ -324,7 +330,7 @@ pub mod pallet {
 			// Construct the final committed message
 			let message = CommittedMessage {
 				channel_id: queued_message.channel_id,
-				nonce: next_nonce,
+				nonce,
 				command,
 				params,
 				max_dispatch_gas,
@@ -342,12 +348,8 @@ pub mod pallet {
 
 			Messages::<T>::append(Box::new(message));
 			MessageLeaves::<T>::append(message_abi_encoded_hash);
-			Nonce::<T>::set(queued_message.channel_id, next_nonce);
 
-			Self::deposit_event(Event::MessageAccepted {
-				id: queued_message.id,
-				nonce: next_nonce,
-			});
+			Self::deposit_event(Event::MessageAccepted { id: queued_message.id, nonce });
 
 			Ok(true)
 		}
