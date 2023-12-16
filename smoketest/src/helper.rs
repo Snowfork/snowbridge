@@ -286,59 +286,6 @@ pub async fn construct_transfer_native_from_agent_call(
 	Ok(call)
 }
 
-pub async fn governance_bridgehub_batch_call_from_relay_chain(
-	calls: Vec<BHRuntimeCall>,
-) -> Result<(), Box<dyn std::error::Error>> {
-	let test_clients = initial_clients().await.expect("initialize clients");
-
-	let sudo: Pair = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
-
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
-
-	let utility_api = utility::calls::TransactionApi;
-	let batch_call = utility_api
-		.batch_all(calls)
-		.encode_call_data(&test_clients.bridge_hub_client.metadata())
-		.expect("encoded call");
-
-	let weight = 180000000000;
-	let proof_size = 900000;
-
-	let dest = Box::new(RelaychainVersionedMultiLocation::V3(RelaychainMultiLocation {
-		parents: 0,
-		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(BRIDGE_HUB_PARA_ID)),
-	}));
-	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
-		RelaychainInstruction::UnpaidExecution {
-			weight_limit: RelaychainWeightLimit::Unlimited,
-			check_origin: None,
-		},
-		RelaychainInstruction::Transact {
-			origin_kind: RelaychainOriginKind::Superuser,
-			require_weight_at_most: RelaychainWeight { ref_time: weight, proof_size },
-			call: RelaychainDoubleEncoded { encoded: batch_call },
-		},
-	])));
-
-	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
-	let sudo_call = sudo_api
-		.sudo(RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }));
-
-	let result = test_clients
-		.relaychain_client
-		.tx()
-		.sign_and_submit_then_watch_default(&sudo_call, &signer)
-		.await
-		.expect("send through sudo call.")
-		.wait_for_finalized_success()
-		.await
-		.expect("sudo call success");
-
-	println!("Sudo call issued at relaychain block hash {:?}", result.block_hash());
-
-	Ok(())
-}
-
 pub async fn governance_bridgehub_call_from_relay_chain(
 	call: Vec<u8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
