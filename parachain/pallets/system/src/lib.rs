@@ -191,7 +191,6 @@ pub mod pallet {
 		UpdateChannel {
 			channel_id: ChannelId,
 			mode: OperatingMode,
-			outbound_fee: u128,
 		},
 		/// An SetOperatingMode message was sent to the Gateway
 		SetOperatingMode {
@@ -440,11 +439,7 @@ pub mod pallet {
 		/// - `outbound_fee`: Fee charged to users for sending outbound messages to Polkadot
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::update_channel())]
-		pub fn update_channel(
-			origin: OriginFor<T>,
-			mode: OperatingMode,
-			outbound_fee: u128,
-		) -> DispatchResult {
+		pub fn update_channel(origin: OriginFor<T>, mode: OperatingMode) -> DispatchResult {
 			let origin_location: MultiLocation = T::SiblingOrigin::ensure_origin(origin)?;
 
 			// Ensure that origin location is a sibling parachain
@@ -460,7 +455,7 @@ pub mod pallet {
 			// Parachains send the update message on their own channel
 			Self::send(channel_id, command, pays_fee)?;
 
-			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode, outbound_fee });
+			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode });
 			Ok(())
 		}
 
@@ -478,7 +473,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			channel_id: ChannelId,
 			mode: OperatingMode,
-			outbound_fee: u128,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -487,7 +481,7 @@ pub mod pallet {
 			let command = Command::UpdateChannel { channel_id, mode };
 			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
 
-			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode, outbound_fee });
+			Self::deposit_event(Event::<T>::UpdateChannel { channel_id, mode });
 			Ok(())
 		}
 
