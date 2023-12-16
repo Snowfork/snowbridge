@@ -312,10 +312,7 @@ pub mod pallet {
 			let nonce = <Nonce<T>>::try_mutate(
 				queued_message.channel_id,
 				|nonce| -> Result<u64, ProcessMessageError> {
-					if *nonce == u64::MAX {
-						return Err(Unsupported)
-					}
-					*nonce = nonce.saturating_add(1);
+					*nonce = nonce.checked_add(1).ok_or(Unsupported)?;
 					Ok(*nonce)
 				},
 			)?;
