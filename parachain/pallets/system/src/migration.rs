@@ -39,7 +39,7 @@ pub mod v1 {
 					target: LOG_TARGET,
 					"Ethereum system initialized. current: {current_version:?} onchain: {onchain_version:?}"
 				);
-				T::DbWeight::get().reads(1)
+				T::DbWeight::get().reads_writes(1, 5)
 			} else {
 				log::info!(
 					target: LOG_TARGET,
