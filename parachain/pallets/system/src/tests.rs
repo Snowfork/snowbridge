@@ -636,7 +636,7 @@ fn force_initialize_initializes_correctly() {
 }
 
 #[test]
-fn force_initialize_with_genesis_build_initializes_correctly() {
+fn genesis_build_initializes_correctly() {
 	new_test_ext(true).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 		assert!(EthereumSystem::is_initialized(), "Ethereum uninitialized.");
