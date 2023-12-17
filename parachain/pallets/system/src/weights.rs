@@ -42,6 +42,7 @@ pub trait WeightInfo {
 	fn force_transfer_native_from_agent() -> Weight;
 	fn set_token_transfer_fees() -> Weight;
 	fn set_pricing_parameters() -> Weight;
+	fn force_initialize() -> Weight;
 }
 
 // For backwards compatibility and tests.
@@ -245,5 +246,19 @@ impl WeightInfo for () {
 		Weight::from_parts(42_000_000, 3517)
 			.saturating_add(RocksDbWeight::get().reads(4_u64))
 			.saturating_add(RocksDbWeight::get().writes(3_u64))
+	}
+
+	/// Storage: `EthereumSystem::Agents` (r:0 w:2)
+	/// Proof: `EthereumSystem::Agents` (`max_values`: None, `max_size`: Some(40), added: 2515, mode: `MaxEncodedLen`)
+	/// Storage: `EthereumSystem::Channels` (r:0 w:3)
+	/// Proof: `EthereumSystem::Channels` (`max_values`: None, `max_size`: Some(76), added: 2551, mode: `MaxEncodedLen`)
+	fn force_initialize() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 11_000_000 picoseconds.
+		Weight::from_parts(11_000_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			.saturating_add(RocksDbWeight::get().writes(5))
 	}
 }

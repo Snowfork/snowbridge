@@ -134,10 +134,7 @@ pub mod pallet {
 
 	use super::*;
 
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
-
 	#[pallet::pallet]
-	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -571,6 +568,29 @@ pub mod pallet {
 			});
 			Ok(())
 		}
+
+		/// Force initializes the pallet if not already initialized.
+		///
+		/// Creates 2 agents (BridgeHub and AssetHub).
+		/// Creates 3 channels (Primary and secondary governance channels, BridgeHub channel).
+		///
+		/// Privileged. Can only be called by root.
+		///
+		/// - `origin`: Must be root
+		/// - `own_para_id`: The parachain id of the parachain housing this pallet. Most likely
+		///   BridgeHub.
+		/// - `asset_hub_para_id`: The parachain id of AssetHub.
+		#[pallet::call_index(10)]
+		#[pallet::weight((T::WeightInfo::force_initialize(), DispatchClass::Operational))]
+		pub fn force_initialize(
+			origin: OriginFor<T>,
+			own_para_id: ParaId,
+			asset_hub_para_id: ParaId,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			Self::initialize(own_para_id, asset_hub_para_id)?;
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -621,11 +641,30 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Checks if the pallet has been initialized.
+		pub(crate) fn is_initialized() -> bool {
+			let primary_exists = Channels::<T>::contains_key(PRIMARY_GOVERNANCE_CHANNEL);
+			let secondary_exists = Channels::<T>::contains_key(SECONDARY_GOVERNANCE_CHANNEL);
+			primary_exists && secondary_exists
+		}
+
 		/// Initializes agents and channels.
 		pub(crate) fn initialize(
 			para_id: ParaId,
 			asset_hub_para_id: ParaId,
 		) -> Result<(), DispatchError> {
+			// Asset Hub
+			let asset_hub_location: MultiLocation =
+				ParentThen(X1(Parachain(asset_hub_para_id.into()))).into();
+			let asset_hub_agent_id = agent_id_of::<T>(&asset_hub_location)?;
+			let asset_hub_channel_id: ChannelId = asset_hub_para_id.into();
+			Agents::<T>::insert(asset_hub_agent_id, ());
+			Channels::<T>::insert(
+				asset_hub_channel_id,
+				Channel { agent_id: asset_hub_agent_id, para_id: asset_hub_para_id },
+			);
+
+			// Governance channels
 			let bridge_hub_agent_id = agent_id_of::<T>(&MultiLocation::here())?;
 			// Agent for BridgeHub
 			Agents::<T>::insert(bridge_hub_agent_id, ());
@@ -640,17 +679,6 @@ pub mod pallet {
 			Channels::<T>::insert(
 				SECONDARY_GOVERNANCE_CHANNEL,
 				Channel { agent_id: bridge_hub_agent_id, para_id },
-			);
-
-			// Asset Hub
-			let asset_hub_location: MultiLocation =
-				ParentThen(X1(Parachain(asset_hub_para_id.into()))).into();
-			let asset_hub_agent_id = agent_id_of::<T>(&asset_hub_location)?;
-			let asset_hub_channel_id: ChannelId = asset_hub_para_id.into();
-			Agents::<T>::insert(asset_hub_agent_id, ());
-			Channels::<T>::insert(
-				asset_hub_channel_id,
-				Channel { agent_id: asset_hub_agent_id, para_id: asset_hub_para_id },
 			);
 
 			Ok(())
