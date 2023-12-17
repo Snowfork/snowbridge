@@ -287,19 +287,13 @@ pub async fn construct_transfer_native_from_agent_call(
 }
 
 pub async fn governance_bridgehub_call_from_relay_chain(
-	calls: Vec<BHRuntimeCall>,
+	call: Vec<u8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let test_clients = initial_clients().await.expect("initialize clients");
 
 	let sudo: Pair = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
 	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
-
-	let utility_api = utility::calls::TransactionApi;
-	let batch_call = utility_api
-		.batch_all(calls)
-		.encode_call_data(&test_clients.bridge_hub_client.metadata())
-		.expect("encoded call");
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -316,7 +310,7 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 		RelaychainInstruction::Transact {
 			origin_kind: RelaychainOriginKind::Superuser,
 			require_weight_at_most: RelaychainWeight { ref_time: weight, proof_size },
-			call: RelaychainDoubleEncoded { encoded: batch_call },
+			call: RelaychainDoubleEncoded { encoded: call },
 		},
 	])));
 
