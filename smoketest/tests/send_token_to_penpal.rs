@@ -63,6 +63,7 @@ async fn send_token_to_penpal() {
 
 	// Lock tokens into vault
 	let amount: u128 = U256::from(value).low_u128();
+	let fee: u128 = 30_000_000_000_000_000;
 	let receipt = gateway
 		.send_token(
 			weth.address(),
@@ -71,7 +72,7 @@ async fn send_token_to_penpal() {
 			4_000_000_000,
 			amount,
 		)
-		.value(1000)
+		.value(fee)
 		.send()
 		.await
 		.unwrap()
