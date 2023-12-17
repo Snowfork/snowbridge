@@ -63,7 +63,7 @@ pub mod v0 {
 		}
 
 		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(prev_count: Vec<u8>) -> Result<(), TryRuntimeError> {
+		fn post_upgrade(_: Vec<u8>) -> Result<(), TryRuntimeError> {
 			frame_support::ensure!(
 				Pallet::<T>::is_initialized(),
 				"Agents and channels were not initialized."
