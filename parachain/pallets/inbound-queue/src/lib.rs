@@ -130,6 +130,11 @@ pub mod pallet {
 
 		/// Convert a weight value into balance type.
 		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
+
+		/// Convert the length value into balance type based on MaxMessagePayloadSize(the worst
+		/// case)
+		type MaxMessagePayloadSize: Get<u32>;
+		type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
 	}
 
 	#[pallet::hooks]
@@ -322,9 +327,14 @@ pub mod pallet {
 	/// API for accessing the delivery cost of a message
 	impl<T: Config> Get<BalanceOf<T>> for Pallet<T> {
 		fn get() -> BalanceOf<T> {
-			let pricing_parameters = T::PricingParameters::get();
-			let refund: BalanceOf<T> = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
-			refund.saturating_add(pricing_parameters.rewards.local)
+			let weight_fee = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
+			let length_fee = T::LengthToFee::weight_to_fee(&Weight::from_parts(
+				T::MaxMessagePayloadSize::get() as u64,
+				0,
+			));
+			let refund = weight_fee.saturating_add(length_fee);
+			let reward = T::PricingParameters::get().rewards.local;
+			refund.saturating_add(reward)
 		}
 	}
 }
