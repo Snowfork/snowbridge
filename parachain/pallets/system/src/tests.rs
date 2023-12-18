@@ -625,7 +625,7 @@ fn genesis_build_initializes_correctly() {
 }
 
 #[test]
-fn genesis_build_initializes_correctly() {
+fn no_genesis_build_is_uninitialized() {
 	new_test_ext(false).execute_with(|| {
 		assert!(!EthereumSystem::is_initialized(), "Ethereum initialized.");
 	});
