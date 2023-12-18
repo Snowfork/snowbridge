@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{mock::*, *};
-use frame_support::{assert_err, assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok};
 use hex_literal::hex;
 use snowbridge_core::{eth, sibling_sovereign_account_raw};
 use sp_core::H256;
@@ -618,27 +618,15 @@ fn charge_fee_for_upgrade() {
 }
 
 #[test]
-fn force_initialize_can_only_be_called_by_root() {
-	new_test_ext(false).execute_with(|| {
-		let origin = RuntimeOrigin::signed([14; 32].into());
-		assert_err!(EthereumSystem::force_initialize(origin, 1000.into(), 1013.into()), BadOrigin);
-	});
-}
-
-#[test]
-fn force_initialize_initializes_correctly() {
-	new_test_ext(false).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		assert!(!EthereumSystem::is_initialized(), "Ethereum uninitialized.");
-		assert_ok!(EthereumSystem::force_initialize(origin, 1000.into(), 1013.into()));
-		assert!(EthereumSystem::is_initialized(), "Ethereum initialized.");
+fn genesis_build_initializes_correctly() {
+	new_test_ext(true).execute_with(|| {
+		assert!(EthereumSystem::is_initialized(), "Ethereum uninitialized.");
 	});
 }
 
 #[test]
 fn genesis_build_initializes_correctly() {
-	new_test_ext(true).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		assert!(EthereumSystem::is_initialized(), "Ethereum uninitialized.");
+	new_test_ext(false).execute_with(|| {
+		assert!(!EthereumSystem::is_initialized(), "Ethereum initialized.");
 	});
 }

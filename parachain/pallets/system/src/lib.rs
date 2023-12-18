@@ -568,29 +568,6 @@ pub mod pallet {
 			});
 			Ok(())
 		}
-
-		/// Force initializes the pallet if not already initialized.
-		///
-		/// Creates 2 agents (BridgeHub and AssetHub).
-		/// Creates 3 channels (Primary and secondary governance channels, BridgeHub channel).
-		///
-		/// Privileged. Can only be called by root.
-		///
-		/// - `origin`: Must be root
-		/// - `own_para_id`: The parachain id of the parachain housing this pallet. Most likely
-		///   BridgeHub.
-		/// - `asset_hub_para_id`: The parachain id of AssetHub.
-		#[pallet::call_index(10)]
-		#[pallet::weight((T::WeightInfo::force_initialize(), DispatchClass::Operational))]
-		pub fn force_initialize(
-			origin: OriginFor<T>,
-			own_para_id: ParaId,
-			asset_hub_para_id: ParaId,
-		) -> DispatchResult {
-			ensure_root(origin)?;
-			Self::initialize(own_para_id, asset_hub_para_id)?;
-			Ok(())
-		}
 	}
 
 	impl<T: Config> Pallet<T> {

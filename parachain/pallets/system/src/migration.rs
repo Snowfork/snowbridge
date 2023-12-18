@@ -36,7 +36,7 @@ pub mod v0 {
 					target: LOG_TARGET,
 					"Ethereum system initialized."
 				);
-				T::DbWeight::get().reads(2) + T::WeightInfo::force_initialize()
+				T::DbWeight::get().reads_writes(2, 5)
 			} else {
 				log::info!(
 					target: LOG_TARGET,

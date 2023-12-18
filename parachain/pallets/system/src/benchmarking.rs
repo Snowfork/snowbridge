@@ -157,14 +157,6 @@ mod benchmarks {
 		Ok(())
 	}
 
-	#[benchmark]
-	fn force_initialize() -> Result<(), BenchmarkError> {
-		#[extrinsic_call]
-		_(RawOrigin::Root, 1013.into(), 1000.into());
-
-		Ok(())
-	}
-
 	impl_benchmark_test_suite!(
 		SnowbridgeControl,
 		crate::mock::new_test_ext(true),
