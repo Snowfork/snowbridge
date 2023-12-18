@@ -259,14 +259,7 @@ pub mod pallet {
 			// Expected to fail if sovereign account has no funds
 			let sovereign_account = sibling_sovereign_account::<T>(channel.para_id);
 			let delivery_cost = Self::calculate_delivery_cost(message.encode().len() as u32);
-			if delivery_cost > T::Token::minimum_balance() {
-				T::Token::transfer(
-					&sovereign_account,
-					&who,
-					delivery_cost,
-					Preservation::Preserve,
-				)?;
-			}
+			T::Token::transfer(&sovereign_account, &who, delivery_cost, Preservation::Preserve)?;
 
 			// Decode message into XCM
 			let (xcm, fee) =
