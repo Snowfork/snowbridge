@@ -2,16 +2,7 @@ use crate::{
 	constants::*,
 	contracts::i_gateway,
 	parachains::{
-		bridgehub::{
-			self,
-			api::{
-				runtime_types::{
-					bridge_hub_rococo_runtime::RuntimeCall as BHRuntimeCall,
-					snowbridge_core::outbound::v1::OperatingMode,
-				},
-				utility,
-			},
-		},
+		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::v1::OperatingMode},
 		penpal::{
 			api::runtime_types as penpalTypes,
 			{self},
