@@ -342,7 +342,7 @@ pub mod pallet {
 	/// API for accessing the delivery cost of a message
 	impl<T: Config> Get<BalanceOf<T>> for Pallet<T> {
 		fn get() -> BalanceOf<T> {
-			/// Cost here based on MaxMessagePayloadSize(the worst case)
+			// Cost here based on MaxMessagePayloadSize(the worst case)
 			Self::calculate_delivery_cost(T::MaxMessagePayloadSize::get())
 		}
 	}
