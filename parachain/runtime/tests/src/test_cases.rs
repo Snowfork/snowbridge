@@ -4,6 +4,7 @@
 //! Module contains predefined test-case scenarios for `Runtime` with bridging capabilities.
 
 use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::DefaultBridgeHubEthereumBaseFee;
+use bridge_hub_rococo_runtime::EthereumSystem;
 use codec::Encode;
 use frame_support::{assert_err, assert_ok, traits::fungible::Mutate};
 use parachains_runtimes_test_utils::{
@@ -119,7 +120,8 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
 		+ cumulus_pallet_parachain_system::Config
-		+ snowbridge_outbound_queue::Config,
+		+ snowbridge_outbound_queue::Config
+		+ snowbridge_system::Config,
 	XcmConfig: xcm_executor::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 {
@@ -130,6 +132,9 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 		.with_tracing()
 		.build()
 		.execute_with(|| {
+			EthereumSystem::initialize(runtime_para_id.into(), assethub_parachain_id.into())
+				.unwrap();
+
 			// fund asset hub sovereign account enough so it can pay fees
 			initial_fund::<Runtime>(
 				assethub_parachain_id,
@@ -257,7 +262,8 @@ pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
 		+ cumulus_pallet_parachain_system::Config
-		+ snowbridge_outbound_queue::Config,
+		+ snowbridge_outbound_queue::Config
+		+ snowbridge_system::Config,
 	XcmConfig: xcm_executor::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 {
@@ -268,6 +274,9 @@ pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
 		.with_tracing()
 		.build()
 		.execute_with(|| {
+			EthereumSystem::initialize(runtime_para_id.into(), assethub_parachain_id.into())
+				.unwrap();
+
 			// fund asset hub sovereign account enough so it can pay fees
 			initial_fund::<Runtime>(assethub_parachain_id, initial_amount);
 

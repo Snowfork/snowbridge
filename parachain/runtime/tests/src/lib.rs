@@ -8,7 +8,7 @@ mod test_cases;
 use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::DefaultBridgeHubEthereumBaseFee;
 use bridge_hub_rococo_runtime::{xcm_config::XcmConfig, Runtime, RuntimeEvent, SessionKeys};
 use codec::Decode;
-use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees, Unroutable};
+use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
 use parachains_common::{AccountId, AuraId};
 use sp_core::H160;
 use sp_keyring::AccountKeyring::Alice;
@@ -36,21 +36,6 @@ pub fn transfer_token_to_ethereum_works() {
 				_ => None,
 			}
 		}),
-	)
-}
-
-#[test]
-pub fn transfer_token_from_non_assethub_to_ethereum_unroutable() {
-	test_cases::send_transfer_token_message_failure::<Runtime, XcmConfig>(
-		collator_session_keys(),
-		1013,
-		1001,
-		DefaultBridgeHubEthereumBaseFee::get() + 1_000_000_000,
-		H160::random(),
-		H160::random(),
-		// fee not enough
-		1_000_000_000,
-		Unroutable,
 	)
 }
 

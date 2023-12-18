@@ -618,18 +618,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Checks if the pallet has been initialized.
-		pub(crate) fn is_initialized() -> bool {
-			let primary_exists = Channels::<T>::contains_key(PRIMARY_GOVERNANCE_CHANNEL);
-			let secondary_exists = Channels::<T>::contains_key(SECONDARY_GOVERNANCE_CHANNEL);
-			primary_exists && secondary_exists
-		}
-
 		/// Initializes agents and channels.
-		pub(crate) fn initialize(
-			para_id: ParaId,
-			asset_hub_para_id: ParaId,
-		) -> Result<(), DispatchError> {
+		pub fn initialize(para_id: ParaId, asset_hub_para_id: ParaId) -> Result<(), DispatchError> {
 			// Asset Hub
 			let asset_hub_location: MultiLocation =
 				ParentThen(X1(Parachain(asset_hub_para_id.into()))).into();
@@ -659,6 +649,13 @@ pub mod pallet {
 			);
 
 			Ok(())
+		}
+
+		/// Checks if the pallet has been initialized.
+		pub(crate) fn is_initialized() -> bool {
+			let primary_exists = Channels::<T>::contains_key(PRIMARY_GOVERNANCE_CHANNEL);
+			let secondary_exists = Channels::<T>::contains_key(SECONDARY_GOVERNANCE_CHANNEL);
+			primary_exists && secondary_exists
 		}
 	}
 
