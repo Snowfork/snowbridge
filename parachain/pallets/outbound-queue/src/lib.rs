@@ -94,12 +94,12 @@ use bridge_hub_common::{AggregateMessageOrigin, CustomDigestItem};
 use codec::Decode;
 use frame_support::{
 	storage::StorageStreamIter,
-	traits::{tokens::Balance, Defensive, EnqueueMessage, Get, ProcessMessageError},
+	traits::{tokens::Balance, Contains, Defensive, EnqueueMessage, Get, ProcessMessageError},
 	weights::{Weight, WeightToFee},
 };
 use snowbridge_core::{
 	outbound::{Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
-	BasicOperatingMode, Channel, ChannelId, StaticLookup,
+	BasicOperatingMode, ChannelId,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
@@ -150,8 +150,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
 
-		/// Lookup a channel descriptor
-		type ChannelLookup: StaticLookup<Source = ChannelId, Target = Channel>;
+		/// Check whether a channel exists
+		type Channels: Contains<ChannelId>;
 
 		type PricingParameters: Get<PricingParameters<Self::Balance>>;
 

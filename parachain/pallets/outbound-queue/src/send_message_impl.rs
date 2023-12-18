@@ -49,7 +49,7 @@ where
 		);
 
 		// Ensure there is a registered channel we can transmit this message on
-		ensure!(T::ChannelLookup::lookup(message.channel_id).is_some(), SendError::InvalidChannel);
+		ensure!(T::Channels::contains(&message.channel_id), SendError::InvalidChannel);
 
 		// Generate a unique message id unless one is provided
 		let message_id: H256 = message

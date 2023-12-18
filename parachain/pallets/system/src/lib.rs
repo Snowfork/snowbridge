@@ -58,7 +58,7 @@ use frame_support::{
 	traits::{
 		fungible::{Inspect, Mutate},
 		tokens::Preservation,
-		EnsureOrigin,
+		Contains, EnsureOrigin,
 	},
 };
 use frame_system::pallet_prelude::*;
@@ -667,6 +667,12 @@ pub mod pallet {
 		type Target = Channel;
 		fn lookup(channel_id: Self::Source) -> Option<Self::Target> {
 			Channels::<T>::get(channel_id)
+		}
+	}
+
+	impl<T: Config> Contains<ChannelId> for Pallet<T> {
+		fn contains(channel_id: &ChannelId) -> bool {
+			Channels::<T>::get(channel_id).is_some()
 		}
 	}
 

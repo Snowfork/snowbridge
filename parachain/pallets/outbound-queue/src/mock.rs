@@ -4,16 +4,15 @@ use super::*;
 
 use frame_support::{
 	parameter_types,
-	traits::{Everything, Hooks},
+	traits::{Contains, Everything, Hooks},
 	weights::IdentityFee,
 };
 
-use hex_literal::hex;
 use snowbridge_core::{
 	gwei, meth,
 	outbound::*,
 	pricing::{PricingParameters, Rewards},
-	Channel, ParaId, StaticLookup, PRIMARY_GOVERNANCE_CHANNEL,
+	ParaId, PRIMARY_GOVERNANCE_CHANNEL,
 };
 use sp_core::{ConstU32, ConstU8, H160, H256};
 use sp_runtime::{
@@ -94,13 +93,10 @@ parameter_types! {
 
 pub const DOT: u128 = 10_000_000_000;
 
-pub struct MockChannelLookup;
-impl StaticLookup for MockChannelLookup {
-	type Source = ChannelId;
-	type Target = Channel;
-
-	fn lookup(channel_id: Self::Source) -> Option<Self::Target> {
-		Some(Channel { agent_id: H256::zero(), para_id: 0.into() })
+pub struct MockChannels;
+impl Contains<ChannelId> for MockChannels {
+	fn contains(_: &ChannelId) -> bool {
+		true
 	}
 }
 
@@ -114,7 +110,7 @@ impl crate::Config for Test {
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
 	type PricingParameters = Parameters;
-	type ChannelLookup = MockChannelLookup;
+	type Channels = MockChannels;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }
