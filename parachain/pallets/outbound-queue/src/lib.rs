@@ -99,7 +99,7 @@ use frame_support::{
 };
 use snowbridge_core::{
 	outbound::{Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
-	BasicOperatingMode, ChannelId, StaticLookup,
+	BasicOperatingMode, Channel, ChannelId, StaticLookup,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
