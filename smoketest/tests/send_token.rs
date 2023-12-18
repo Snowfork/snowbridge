@@ -51,7 +51,12 @@ async fn send_token() {
 		.unwrap();
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	let fee = gateway.quote_register_token_fee().call().await.unwrap();
+	let destination_fee = 0;
+	let fee = gateway
+		.quote_send_token_fee(weth.address(), ASSET_HUB_PARA_ID, destination_fee)
+		.call()
+		.await
+		.unwrap();
 
 	// Lock tokens into vault
 	let amount: u128 = U256::from(value).low_u128();
@@ -60,7 +65,7 @@ async fn send_token() {
 			weth.address(),
 			ASSET_HUB_PARA_ID,
 			i_gateway::MultiAddress { kind: 1, data: FERDIE.into() },
-			0,
+			destination_fee,
 			amount,
 		)
 		.value(fee)
