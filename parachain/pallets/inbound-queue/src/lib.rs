@@ -134,7 +134,7 @@ pub mod pallet {
 		type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
 
 		/// The upper limit here only used to estimate delivery cost
-		type MaxMessagePayloadSize: Get<u32>;
+		type MaxMessageSize: Get<u32>;
 	}
 
 	#[pallet::hooks]
@@ -343,7 +343,7 @@ pub mod pallet {
 	impl<T: Config> Get<BalanceOf<T>> for Pallet<T> {
 		fn get() -> BalanceOf<T> {
 			// Cost here based on MaxMessagePayloadSize(the worst case)
-			Self::calculate_delivery_cost(T::MaxMessagePayloadSize::get())
+			Self::calculate_delivery_cost(T::MaxMessageSize::get())
 		}
 	}
 }

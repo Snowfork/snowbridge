@@ -220,7 +220,7 @@ impl inbound_queue::Config for Test {
 	type Helper = Test;
 	type WeightToFee = IdentityFee<u128>;
 	type LengthToFee = IdentityFee<u128>;
-	type MaxMessagePayloadSize = ConstU32<1024>;
+	type MaxMessageSize = ConstU32<1024>;
 }
 
 pub fn last_events(n: usize) -> Vec<RuntimeEvent> {
