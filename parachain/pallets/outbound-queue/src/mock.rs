@@ -4,7 +4,7 @@ use super::*;
 
 use frame_support::{
 	parameter_types,
-	traits::{Contains, Everything, Hooks},
+	traits::{Everything, Hooks},
 	weights::IdentityFee,
 };
 
@@ -93,13 +93,6 @@ parameter_types! {
 
 pub const DOT: u128 = 10_000_000_000;
 
-pub struct MockChannels;
-impl Contains<ChannelId> for MockChannels {
-	fn contains(_: &ChannelId) -> bool {
-		true
-	}
-}
-
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
@@ -110,7 +103,7 @@ impl crate::Config for Test {
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
 	type PricingParameters = Parameters;
-	type Channels = MockChannels;
+	type Channels = Everything;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }
