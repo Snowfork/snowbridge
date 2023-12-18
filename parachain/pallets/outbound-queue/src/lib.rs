@@ -99,7 +99,7 @@ use frame_support::{
 };
 use snowbridge_core::{
 	outbound::{Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
-	BasicOperatingMode, ChannelId,
+	BasicOperatingMode, ChannelId, StaticLookup,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
@@ -149,6 +149,9 @@ pub mod pallet {
 		/// Max number of messages processed per block
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
+
+		/// Lookup a channel descriptor
+		type ChannelLookup: StaticLookup<Source = ChannelId, Target = Channel>;
 
 		type PricingParameters: Get<PricingParameters<Self::Balance>>;
 
