@@ -1,6 +1,6 @@
 use super::GlobalConsensusEthereumConvertsFor;
 use crate::inbound::CallIndex;
-use frame_support::{parameter_types, traits::ContainsPair};
+use frame_support::parameter_types;
 use hex_literal::hex;
 use sp_core::crypto::Ss58Codec;
 use xcm::v3::prelude::*;
@@ -14,7 +14,6 @@ const EXPECTED_SOVEREIGN_ADDRESS: &str = "HF3T62xRQvoCCowYamEQweEyWbD5yt4mkET8Uk
 
 parameter_types! {
 	pub EthereumNetwork: NetworkId = NETWORK;
-	pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
 
 	pub const CreateAssetCall: CallIndex = [1, 1];
 	pub const CreateAssetExecutionFee: u128 = 123;
