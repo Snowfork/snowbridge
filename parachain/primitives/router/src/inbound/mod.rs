@@ -302,17 +302,6 @@ where
 	}
 }
 
-pub struct FromEthereumGlobalConsensus<EthereumBridgeLocation>(PhantomData<EthereumBridgeLocation>);
-impl<EthereumBridgeLocation> ContainsPair<MultiLocation, MultiLocation>
-	for FromEthereumGlobalConsensus<EthereumBridgeLocation>
-where
-	EthereumBridgeLocation: Get<MultiLocation>,
-{
-	fn contains(asset: &MultiLocation, origin: &MultiLocation) -> bool {
-		origin == &EthereumBridgeLocation::get() && asset.starts_with(origin)
-	}
-}
-
 pub struct GlobalConsensusEthereumConvertsFor<AccountId>(PhantomData<AccountId>);
 impl<AccountId> ConvertLocation<AccountId> for GlobalConsensusEthereumConvertsFor<AccountId>
 where
