@@ -55,8 +55,9 @@ use sp_core::{H160, H256};
 use sp_std::{convert::TryFrom, vec};
 use xcm::prelude::{
 	send_xcm, Instruction::SetTopic, Junction::*, Junctions::*, MultiLocation,
-	SendError as XcmpSendError, SendXcm, Xcm, XcmHash,
+	SendError as XcmpSendError, SendXcm, Xcm, XcmContext, XcmHash,
 };
+use xcm_executor::traits::{TransactAsset, XcmAssetTransfers};
 
 use snowbridge_core::{
 	inbound::{Message, VerificationError, Verifier},
@@ -66,7 +67,7 @@ use snowbridge_router_primitives::{
 	inbound,
 	inbound::{ConvertMessage, ConvertMessageError},
 };
-use sp_runtime::traits::Saturating;
+use sp_runtime::{traits::Saturating, SaturatedConversion};
 
 pub use weights::WeightInfo;
 
@@ -84,6 +85,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use snowbridge_core::PricingParameters;
+	use xcm::latest::ExecuteXcm;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -135,6 +137,9 @@ pub mod pallet {
 
 		/// The upper limit here only used to estimate delivery cost
 		type MaxMessageSize: Get<u32>;
+
+		/// Something to execute an XCM message.
+		type XcmExecutor: ExecuteXcm<Self::RuntimeCall> + XcmAssetTransfers;
 	}
 
 	#[pallet::hooks]
@@ -180,6 +185,8 @@ pub mod pallet {
 		Send(SendError),
 		/// Message conversion error
 		ConvertMessage(ConvertMessageError),
+		/// Burn fees failure
+		BurnFees,
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, PalletError)]
@@ -268,16 +275,15 @@ pub mod pallet {
 					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 				};
 
-			// We embed fees for xcm execution inside the xcm program using teleports
-			// so we must burn the amount of the fee embedded into the XCM script.
-			T::Token::burn_from(&sovereign_account, fee, Precision::Exact, Fortitude::Polite)?;
-
 			log::info!(
 				target: LOG_TARGET,
-				"💫 xcm {:?} sent with fee {:?}",
+				"💫 xcm decoded as {:?} with fee {:?}",
 				xcm,
 				fee
 			);
+
+			// Burning fees for teleport
+			Self::burn_fees(channel.para_id, fee)?;
 
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, channel.para_id)?;
@@ -329,6 +335,33 @@ pub mod pallet {
 			weight_fee
 				.saturating_add(len_fee)
 				.saturating_add(T::PricingParameters::get().rewards.local)
+		}
+
+		/// Burn the amount of the fee embedded into the XCM for teleports
+		pub fn burn_fees(para_id: ParaId, fee: BalanceOf<T>) -> DispatchResult {
+			let dummy_context =
+				XcmContext { origin: None, message_id: Default::default(), topic: None };
+
+			let dest = MultiLocation { parents: 1, interior: X1(Parachain(para_id.into())) };
+
+			let fees = (MultiLocation::parent(), fee.saturated_into::<u128>()).into();
+
+			<T::XcmExecutor as XcmAssetTransfers>::AssetTransactor::can_check_out(
+				&dest,
+				&fees,
+				&dummy_context,
+			)
+			.map_err(|_| Error::<T>::BurnFees)?;
+
+			<T::XcmExecutor as XcmAssetTransfers>::AssetTransactor::check_out(
+				&dest,
+				&fees,
+				&dummy_context,
+			);
+
+			let sovereign_account = sibling_sovereign_account::<T>(para_id);
+			T::Token::burn_from(&sovereign_account, fee, Precision::Exact, Fortitude::Polite)?;
+			Ok(())
 		}
 	}
 

@@ -32,6 +32,7 @@ sp-runtime = { path = "../../../polkadot-sdk/substrate/primitives/runtime", defa
 
 xcm = { package = "staging-xcm", path = "../../../polkadot-sdk/polkadot/xcm", default-features = false }
 xcm-builder = { package = "staging-xcm-builder", path = "../../../polkadot-sdk/polkadot/xcm/xcm-builder", default-features = false }
+xcm-executor = { package = "staging-xcm-executor", path = "../../../polkadot-sdk/polkadot/xcm/xcm-executor", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
@@ -69,6 +70,7 @@ std = [
 	"sp-std/std",
 	"xcm-builder/std",
 	"xcm/std",
+	"xcm-executor/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
@@ -83,6 +85,7 @@ runtime-benchmarks = [
 	"snowbridge-router-primitives/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+	"xcm-executor/runtime-benchmarks",
 ]
 try-runtime = [
 	"frame-support/try-runtime",
