@@ -185,7 +185,7 @@ where
 			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
 			// Fund the snowbridge sovereign with the required deposit for creation.
 			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
-			// Switch origin.
+			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
 			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(network)),
