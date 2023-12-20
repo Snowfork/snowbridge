@@ -146,7 +146,7 @@ pub mod pallet {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T> {
+	pub enum Event<T: Config> {
 		/// A message was received from Ethereum
 		MessageReceived {
 			/// The message channel
@@ -155,6 +155,8 @@ pub mod pallet {
 			nonce: u64,
 			/// ID of the XCM message which was forwarded to the final destination parachain
 			message_id: [u8; 32],
+			///
+			fee_burned: BalanceOf<T>,
 		},
 		/// Set OperatingMode
 		OperatingModeChanged { mode: BasicOperatingMode },
@@ -291,6 +293,7 @@ pub mod pallet {
 				channel_id: envelope.channel_id,
 				nonce: envelope.nonce,
 				message_id,
+				fee_burned: fee,
 			});
 
 			Ok(())
