@@ -6,7 +6,9 @@
 mod test_cases;
 
 use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::DefaultBridgeHubEthereumBaseFee;
-use bridge_hub_rococo_runtime::{xcm_config::XcmConfig, MessageQueueServiceWeight, Runtime, RuntimeEvent, SessionKeys};
+use bridge_hub_rococo_runtime::{
+	xcm_config::XcmConfig, MessageQueueServiceWeight, Runtime, RuntimeEvent, SessionKeys,
+};
 use codec::Decode;
 use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
 use parachains_common::{AccountId, AuraId};
@@ -83,8 +85,10 @@ pub fn transfer_token_to_ethereum_insufficient_fund() {
 #[test]
 fn max_message_queue_service_weight_is_more_than_beacon_extrinsic_weights() {
 	let max_message_quick_weight = MessageQueueServiceWeight::get();
-	let force_checkpoint = <Runtime as snowbridge_ethereum_beacon_client::Config>::WeightInfo::force_checkpoint();
-	let submit_checkpoint = <Runtime as snowbridge_ethereum_beacon_client::Config>::WeightInfo::submit();
+	let force_checkpoint =
+		<Runtime as snowbridge_ethereum_beacon_client::Config>::WeightInfo::force_checkpoint();
+	let submit_checkpoint =
+		<Runtime as snowbridge_ethereum_beacon_client::Config>::WeightInfo::submit();
 	max_message_quick_weight.all_gt(force_checkpoint);
 	max_message_quick_weight.all_gt(submit_checkpoint);
 }
