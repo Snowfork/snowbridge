@@ -155,7 +155,7 @@ pub mod pallet {
 			nonce: u64,
 			/// ID of the XCM message which was forwarded to the final destination parachain
 			message_id: [u8; 32],
-			///
+			/// Fee burned for the teleport
 			fee_burned: BalanceOf<T>,
 		},
 		/// Set OperatingMode
