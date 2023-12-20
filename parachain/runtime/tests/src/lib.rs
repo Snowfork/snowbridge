@@ -84,11 +84,11 @@ pub fn transfer_token_to_ethereum_insufficient_fund() {
 
 #[test]
 fn max_message_queue_service_weight_is_more_than_beacon_extrinsic_weights() {
-	let max_message_quick_weight = MessageQueueServiceWeight::get();
+	let max_message_queue_weight = MessageQueueServiceWeight::get();
 	let force_checkpoint =
 		<Runtime as snowbridge_ethereum_beacon_client::Config>::WeightInfo::force_checkpoint();
 	let submit_checkpoint =
 		<Runtime as snowbridge_ethereum_beacon_client::Config>::WeightInfo::submit();
-	max_message_quick_weight.all_gt(force_checkpoint);
-	max_message_quick_weight.all_gt(submit_checkpoint);
+	max_message_queue_weight.all_gt(force_checkpoint);
+	max_message_queue_weight.all_gt(submit_checkpoint);
 }
