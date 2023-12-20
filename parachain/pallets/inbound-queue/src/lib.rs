@@ -343,11 +343,8 @@ pub mod pallet {
 		pub fn burn_fees(para_id: ParaId, fee: BalanceOf<T>) -> DispatchResult {
 			let dummy_context =
 				XcmContext { origin: None, message_id: Default::default(), topic: None };
-
 			let dest = MultiLocation { parents: 1, interior: X1(Parachain(para_id.into())) };
-
 			let fees = (MultiLocation::parent(), fee.saturated_into::<u128>()).into();
-
 			T::AssetTransactor::can_check_out(&dest, &fees, &dummy_context).map_err(|error| {
 				log::error!(
 					target: LOG_TARGET,
@@ -355,19 +352,14 @@ pub mod pallet {
 				);
 				Error::<T>::BurnFees
 			})?;
-
 			T::AssetTransactor::check_out(&dest, &fees, &dummy_context);
-
-			T::AssetTransactor::withdraw_asset(&fees, &dest, Some(&dummy_context)).map_err(
-				|error| {
-					log::error!(
-						target: LOG_TARGET,
-						"XCM asset withdraw failed with error {:?}", error
-					);
-					Error::<T>::BurnFees
-				},
-			)?;
-
+			T::AssetTransactor::withdraw_asset(&fees, &dest, None).map_err(|error| {
+				log::error!(
+					target: LOG_TARGET,
+					"XCM asset withdraw failed with error {:?}", error
+				);
+				Error::<T>::BurnFees
+			})?;
 			Ok(())
 		}
 	}
