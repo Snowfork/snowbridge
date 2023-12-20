@@ -44,7 +44,7 @@ use envelope::Envelope;
 use frame_support::{
 	traits::{
 		fungible::{Inspect, Mutate},
-		tokens::{Fortitude, Precision, Preservation},
+		tokens::Preservation,
 	},
 	weights::WeightToFee,
 	PalletError,
@@ -57,11 +57,12 @@ use xcm::prelude::{
 	send_xcm, Instruction::SetTopic, Junction::*, Junctions::*, MultiLocation,
 	SendError as XcmpSendError, SendXcm, Xcm, XcmContext, XcmHash,
 };
-use xcm_executor::traits::{TransactAsset, XcmAssetTransfers};
+use xcm_executor::traits::TransactAsset;
 
 use snowbridge_core::{
 	inbound::{Message, VerificationError, Verifier},
-	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ParaId, StaticLookup,
+	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ParaId, PricingParameters,
+	StaticLookup,
 };
 use snowbridge_router_primitives::{
 	inbound,
@@ -84,8 +85,6 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use snowbridge_core::PricingParameters;
-	use xcm::latest::ExecuteXcm;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -138,8 +137,8 @@ pub mod pallet {
 		/// The upper limit here only used to estimate delivery cost
 		type MaxMessageSize: Get<u32>;
 
-		/// Something to execute an XCM message.
-		type XcmExecutor: ExecuteXcm<Self::RuntimeCall> + XcmAssetTransfers;
+		/// To withdraw and deposit an asset.
+		type AssetTransactor: TransactAsset;
 	}
 
 	#[pallet::hooks]
@@ -346,21 +345,26 @@ pub mod pallet {
 
 			let fees = (MultiLocation::parent(), fee.saturated_into::<u128>()).into();
 
-			<T::XcmExecutor as XcmAssetTransfers>::AssetTransactor::can_check_out(
-				&dest,
-				&fees,
-				&dummy_context,
-			)
-			.map_err(|_| Error::<T>::BurnFees)?;
+			T::AssetTransactor::can_check_out(&dest, &fees, &dummy_context).map_err(|error| {
+				log::error!(
+					target: LOG_TARGET,
+					"XCM asset check out failed with error {:?}", error
+				);
+				Error::<T>::BurnFees
+			})?;
 
-			<T::XcmExecutor as XcmAssetTransfers>::AssetTransactor::check_out(
-				&dest,
-				&fees,
-				&dummy_context,
-			);
+			T::AssetTransactor::check_out(&dest, &fees, &dummy_context);
 
-			let sovereign_account = sibling_sovereign_account::<T>(para_id);
-			T::Token::burn_from(&sovereign_account, fee, Precision::Exact, Fortitude::Polite)?;
+			T::AssetTransactor::withdraw_asset(&fees, &dest, Some(&dummy_context)).map_err(
+				|error| {
+					log::error!(
+						target: LOG_TARGET,
+						"XCM asset withdraw failed with error {:?}", error
+					);
+					Error::<T>::BurnFees
+				},
+			)?;
+
 			Ok(())
 		}
 	}

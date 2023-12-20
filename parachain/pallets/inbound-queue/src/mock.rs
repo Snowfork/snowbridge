@@ -4,7 +4,7 @@ use super::*;
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU128, ConstU32, Everything, Nothing},
+	traits::{ConstU128, ConstU32, Everything},
 	weights::IdentityFee,
 };
 use hex_literal::hex;
@@ -22,8 +22,7 @@ use sp_runtime::{
 };
 use sp_std::convert::From;
 use xcm::v3::{prelude::*, MultiAssets, SendXcm};
-use xcm_builder::FixedWeightBounds;
-use xcm_executor::{Assets, XcmExecutor};
+use xcm_executor::Assets;
 
 use crate::{self as inbound_queue};
 
@@ -202,14 +201,6 @@ impl StaticLookup for MockChannelLookup {
 	}
 }
 
-parameter_types! {
-	pub const RelayChain: MultiLocation = MultiLocation::parent();
-	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(1u32));
-	pub UnitWeightCost: Weight = Weight::from_parts(1_000_000, 1024);
-	pub const MaxInstructions: u32 = 100;
-	pub const MaxAssetsIntoHolding: u32 = 64;
-}
-
 pub struct SuccessfulTransactor;
 impl TransactAsset for SuccessfulTransactor {
 	fn can_check_in(
@@ -254,34 +245,6 @@ impl TransactAsset for SuccessfulTransactor {
 	}
 }
 
-pub struct XcmConfig;
-impl xcm_executor::Config for XcmConfig {
-	type RuntimeCall = RuntimeCall;
-	type XcmSender = (); // sending XCM not supported
-	type AssetTransactor = SuccessfulTransactor; // balances not supported
-	type OriginConverter = ();
-	type IsReserve = (); // balances not supported
-	type IsTeleporter = (); // balances not supported
-	type UniversalLocation = UniversalLocation;
-	type Barrier = ();
-	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>; // balances not supported
-	type Trader = (); // balances not supported
-	type ResponseHandler = (); // Don't handle responses for now.
-	type AssetTrap = (); // don't trap for now
-	type AssetClaims = (); // don't claim for now
-	type SubscriptionService = (); // don't handle subscriptions for now
-	type PalletInstancesInfo = AllPalletsWithSystem;
-	type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
-	type AssetLocker = ();
-	type AssetExchanger = ();
-	type FeeManager = ();
-	type MessageExporter = ();
-	type UniversalAliases = Nothing;
-	type CallDispatcher = RuntimeCall;
-	type SafeCallFilter = Everything;
-	type Aliasers = Nothing;
-}
-
 impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
@@ -303,7 +266,7 @@ impl inbound_queue::Config for Test {
 	type WeightToFee = IdentityFee<u128>;
 	type LengthToFee = IdentityFee<u128>;
 	type MaxMessageSize = ConstU32<1024>;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type AssetTransactor = SuccessfulTransactor;
 }
 
 pub fn last_events(n: usize) -> Vec<RuntimeEvent> {
