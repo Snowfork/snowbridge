@@ -68,7 +68,7 @@ use snowbridge_router_primitives::{
 	inbound,
 	inbound::{ConvertMessage, ConvertMessageError},
 };
-use sp_runtime::{traits::Saturating, SaturatedConversion};
+use sp_runtime::{traits::Saturating, SaturatedConversion, TokenError};
 
 pub use weights::WeightInfo;
 
@@ -186,8 +186,6 @@ pub mod pallet {
 		Send(SendError),
 		/// Message conversion error
 		ConvertMessage(ConvertMessageError),
-		/// Burn fees failure
-		BurnFees,
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, PalletError)]
@@ -350,7 +348,7 @@ pub mod pallet {
 					target: LOG_TARGET,
 					"XCM asset check out failed with error {:?}", error
 				);
-				Error::<T>::BurnFees
+				TokenError::FundsUnavailable
 			})?;
 			T::AssetTransactor::check_out(&dest, &fees, &dummy_context);
 			T::AssetTransactor::withdraw_asset(&fees, &dest, None).map_err(|error| {
@@ -358,7 +356,7 @@ pub mod pallet {
 					target: LOG_TARGET,
 					"XCM asset withdraw failed with error {:?}", error
 				);
-				Error::<T>::BurnFees
+				TokenError::FundsUnavailable
 			})?;
 			Ok(())
 		}
