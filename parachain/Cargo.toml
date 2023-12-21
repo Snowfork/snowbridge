@@ -31,4 +31,4 @@ snowbridge-runtime-common = { path = "./runtime/runtime-common" }
 snowbridge-rococo-common = { path = "./runtime/rococo-common" }
 
 [workspace.dependencies]
-milagro_bls = { git = "https://github.com/snowfork/milagro_bls", default-features = false, rev = "b29806d51686f36589bdb0c759ca7d63165e1054" }
+milagro_bls = { git = "https://github.com/snowfork/milagro_bls", default-features = false, rev = "a8e9585ae904112328ddff9c229db473b563f4fa" }
