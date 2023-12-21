@@ -2,13 +2,9 @@ use frame_support::parameter_types;
 use hex_literal::hex;
 use snowbridge_core::{
 	outbound::{Fee, SendError, SendMessageFeeProvider},
-	DescribeHere,
+	AgentIdOf,
 };
-
 use xcm::v3::prelude::SendError as XcmSendError;
-use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
-
-pub type AgentIdOf = HashedDescription<H256, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
 
 use super::*;
 
