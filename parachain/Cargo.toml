@@ -29,3 +29,6 @@ snowbridge-outbound-queue-runtime-api = { path = "./pallets/outbound-queue/runti
 snowbridge-router-primitives = { path = "./primitives/router" }
 snowbridge-runtime-common = { path = "./runtime/runtime-common" }
 snowbridge-rococo-common = { path = "./runtime/rococo-common" }
+
+[workspace.dependencies]
+milagro_bls = { git = "https://github.com/snowfork/milagro_bls", default-features = false, rev = "b29806d51686f36589bdb0c759ca7d63165e1054" }

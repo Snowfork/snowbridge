@@ -251,7 +251,7 @@ dependencies = [
 [[package]]
 name = "amcl"
 version = "0.3.0"
-source = "git+https://github.com/snowfork/milagro_bls?rev=a6d66e4eb89015e352fb1c9f7b661ecdbb5b2176#a6d66e4eb89015e352fb1c9f7b661ecdbb5b2176"
+source = "git+https://github.com/snowfork/milagro_bls?rev=b29806d51686f36589bdb0c759ca7d63165e1054#b29806d51686f36589bdb0c759ca7d63165e1054"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -5811,7 +5811,7 @@ dependencies = [
 [[package]]
 name = "milagro_bls"
 version = "1.5.0"
-source = "git+https://github.com/snowfork/milagro_bls?rev=a6d66e4eb89015e352fb1c9f7b661ecdbb5b2176#a6d66e4eb89015e352fb1c9f7b661ecdbb5b2176"
+source = "git+https://github.com/snowfork/milagro_bls?rev=b29806d51686f36589bdb0c759ca7d63165e1054#b29806d51686f36589bdb0c759ca7d63165e1054"
 dependencies = [
  "amcl",
  "hex",
