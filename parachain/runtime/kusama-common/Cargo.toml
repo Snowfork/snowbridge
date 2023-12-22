@@ -1,6 +1,6 @@
 [package]
 name = "snowbridge-kusama-common"
-description = "Snowbridge Kusamam Common"
+description = "Snowbridge Kusama Common"
 version = "0.0.1"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2021"
