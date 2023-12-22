@@ -115,29 +115,22 @@ jobs:
         run: rustup show
       # Increase stack limit for beacon light client tests
       - run: sudo prlimit --pid $$ --stack=32768
-      # Run tests for everything except the beacon light client
-      - name: Tests for everything except the beacon light client
+      # Run tests for runtime-benchmarks feature
+      - name: Tests for runtime-benchmarks
         working-directory: parachain
         run: >
           cargo test
           --workspace
           --features runtime-benchmarks
-          --exclude snowbridge-ethereum-beacon-client
           --exclude snowbridge-runtime-tests
-      # Run tests for beacon light client, excluding benchmark tests
-      - name: Tests for beacon light client excluding benchmark tests
+      # Run tests for fast-runtime feature
+      - name: Tests for fast-runtime
         working-directory: parachain
         run: >
           cargo test
-          --package snowbridge-ethereum-beacon-client
-      # Run benchmark tests for beacon light client
-      - name: Benchmark tests for beacon light client
-        working-directory: parachain
-        run: >
-          cargo test
-          --release
-          --features runtime-benchmarks
-          --package snowbridge-ethereum-beacon-client
+          --workspace
+          --features fast-runtime
+          --exclude snowbridge-runtime-tests
 
   coverage:
     needs: check
