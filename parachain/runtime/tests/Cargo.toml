@@ -234,7 +234,7 @@ try-runtime = [
 	"sp-runtime/try-runtime",
 ]
 fast-runtime = [
-	"snowbridge-ethereum-beacon-client/fast-runtime",
+	"snowbridge-ethereum-beacon-client/beacon-spec-minimal",
 ]
 experimental = ["pallet-aura/experimental"]
 

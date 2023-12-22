@@ -6,10 +6,10 @@ use static_assertions::const_assert;
 pub mod mainnet;
 pub mod minimal;
 
-#[cfg(feature = "fast-runtime")]
+#[cfg(feature = "beacon-spec-minimal")]
 pub use minimal::*;
 
-#[cfg(not(feature = "fast-runtime"))]
+#[cfg(not(feature = "beacon-spec-minimal"))]
 pub use mainnet::*;
 
 // Generalized Indices
