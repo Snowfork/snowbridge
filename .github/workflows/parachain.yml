@@ -129,7 +129,7 @@ jobs:
         run: >
           cargo test
           --workspace
-          --features runtime-benchmarks
+          --features fast-runtime
           --exclude snowbridge-runtime-tests
 
   coverage:
