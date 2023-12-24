@@ -61,7 +61,7 @@ pub use pallet::*;
 
 pub use config::SLOTS_PER_HISTORICAL_ROOT;
 
-pub const LOG_TARGET: &str = "ethereum-beacon-client";
+pub const LOG_TARGET: &str = "foo";
 
 #[frame_support::pallet]
 pub mod pallet {
