@@ -156,6 +156,7 @@ jobs:
           cargo install cargo-tarpaulin@0.27.0 &&
           cargo tarpaulin
           --workspace
+          --features beacon-spec-minimal
           --engine llvm
           --out xml
       - name: Upload coverage reports to Codecov with GitHub Action
@@ -199,7 +200,7 @@ jobs:
       - name: snowbridge runtime tests
         working-directory: parachain/runtime/tests
         run: >
-          cargo test 
+          cargo test
           -p snowbridge-runtime-tests
           -- --nocapture
 
@@ -218,7 +219,7 @@ jobs:
       - name: bridge-hub and asset-hub integration tests
         working-directory: polkadot-sdk
         run: >
-          RUST_LOG=xcm=trace cargo test 
+          RUST_LOG=xcm=trace cargo test
           -p bridge-hub-rococo-integration-tests
           -p asset-hub-rococo-integration-tests
           -- --nocapture
