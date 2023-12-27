@@ -4,7 +4,7 @@ use super::*;
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU128, Everything},
+	traits::{ConstU128, ConstU32, Everything},
 	weights::IdentityFee,
 };
 use hex_literal::hex;
@@ -52,6 +52,7 @@ impl frame_system::Config for Test {
 	type BlockLength = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
+	type RuntimeTask = RuntimeTask;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
@@ -182,7 +183,7 @@ parameter_types! {
 	pub Parameters: PricingParameters<u128> = PricingParameters {
 		exchange_rate: FixedU128::from_rational(1, 400),
 		fee_per_gas: gwei(20),
-		rewards: Rewards { local: 1 * DOT, remote: meth(1) }
+		rewards: Rewards { local: DOT, remote: meth(1) }
 	};
 }
 
@@ -199,7 +200,7 @@ impl StaticLookup for MockChannelLookup {
 		{
 			return None
 		}
-		Some(Channel { agent_id: H256::zero().into(), para_id: ASSET_HUB_PARAID.into() })
+		Some(Channel { agent_id: H256::zero(), para_id: ASSET_HUB_PARAID.into() })
 	}
 }
 
@@ -222,6 +223,8 @@ impl inbound_queue::Config for Test {
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Test;
 	type WeightToFee = IdentityFee<u128>;
+	type LengthToFee = IdentityFee<u128>;
+	type MaxMessageSize = ConstU32<1024>;
 }
 
 pub fn last_events(n: usize) -> Vec<RuntimeEvent> {
@@ -255,7 +258,7 @@ pub fn setup() {
 pub fn new_tester() -> sp_io::TestExternalities {
 	let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| setup());
+	ext.execute_with(setup);
 	ext
 }
 

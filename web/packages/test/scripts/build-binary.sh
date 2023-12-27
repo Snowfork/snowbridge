@@ -7,15 +7,15 @@ build_binaries() {
     pushd $root_dir/polkadot-sdk
 
     local features=''
-    if [[ "$active_spec" != "minimal" ]]; then
-        features=--features beacon-spec-mainnet
+    if [[ "$active_spec" == "minimal" ]]; then
+        features="--features fast-runtime"
     fi
 
     check_local_changes "polkadot"
     check_local_changes "substrate"
 
     # Check that all 3 binaries are available and no changes made in the polkadot and substrate dirs
-    if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" ]]; then
+    if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" || "$changes_detected" -eq 1 ]]; then
         echo "Building polkadot binary, due to changes detected in polkadot or substrate, or binaries not found"
         cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker
     else
@@ -27,7 +27,7 @@ build_binaries() {
     cp target/release/polkadot-prepare-worker $output_bin_dir/polkadot-prepare-worker
 
     echo "Building polkadot-parachain binary"
-    cargo build --release --locked -p polkadot-parachain-bin --bin polkadot-parachain $features --no-default-features
+    cargo build --release --locked -p polkadot-parachain-bin --bin polkadot-parachain $features
     cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
 
     popd

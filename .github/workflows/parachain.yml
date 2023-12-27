@@ -43,6 +43,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - uses: actions/setup-node@v4.0.0
+        with:
+          node-version: "18.x"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@paritytech"
       - name: setup rust toolchain
         run: rustup show
       - name: cargo check
@@ -55,6 +60,32 @@ jobs:
       - name: clippy
         working-directory: parachain
         run: cargo clippy -- -D warnings
+
+      - name: install taplo
+        run: |
+          cargo install taplo-cli --locked
+      - name: taplo snowbridge
+        working-directory: parachain
+        run: taplo format --check --config .config/taplo.toml
+      - name: taplo polkadot-sdk
+        working-directory: polkadot-sdk
+        run: taplo format --check --config .config/taplo.toml
+
+      - name: install zepter
+        run: |
+          cargo install zepter -f --locked
+      - name: zepter snowbridge
+        working-directory: parachain
+        run: zepter run check
+      - name: zepter polkadot-sdk
+        working-directory: polkadot-sdk
+        run: zepter run check
+      - name: lint-markdown
+        working-directory: parachain
+        run: |
+          npm install -g markdownlint-cli
+          markdownlint --version
+          markdownlint --config .config/.markdownlint.yaml --ignore target
 
   test:
     needs: check
@@ -84,37 +115,22 @@ jobs:
         run: rustup show
       # Increase stack limit for beacon light client tests
       - run: sudo prlimit --pid $$ --stack=32768
-      # Run tests for everything except the beacon light client
-      - name: Tests for everything except the beacon light client
+      # Run tests for runtime-benchmarks feature
+      - name: Tests for runtime-benchmarks
         working-directory: parachain
         run: >
           cargo test
           --workspace
           --features runtime-benchmarks
-          --exclude snowbridge-ethereum-beacon-client
           --exclude snowbridge-runtime-tests
-      # Run tests for beacon light client, excluding benchmark tests
-      - name: Tests for beacon light client excluding benchmark tests
+      # Run tests for fast-runtime feature
+      - name: Tests for fast-runtime
         working-directory: parachain
         run: >
           cargo test
-          --package snowbridge-ethereum-beacon-client
-      # Run benchmark tests for beacon light client
-      - name: Benchmark tests for beacon light client
-        working-directory: parachain
-        run: >
-          cargo test
-          --release
-          --features runtime-benchmarks
-          --package snowbridge-ethereum-beacon-client
-      # Run tests for beacon deneb specific
-      - name: Tests for beacon light client with deneb specific
-        working-directory: parachain
-        run: >
-          cargo test
-          --features beacon-spec-minimal-deneb
-          --package snowbridge-ethereum-beacon-client 
-          deneb
+          --workspace
+          --features fast-runtime
+          --exclude snowbridge-runtime-tests
 
   coverage:
     needs: check
@@ -140,6 +156,7 @@ jobs:
           cargo install cargo-tarpaulin@0.27.0 &&
           cargo tarpaulin
           --workspace
+          --features beacon-spec-minimal
           --engine llvm
           --out xml
       - name: Upload coverage reports to Codecov with GitHub Action
@@ -183,7 +200,7 @@ jobs:
       - name: snowbridge runtime tests
         working-directory: parachain/runtime/tests
         run: >
-          cargo test 
+          cargo test
           -p snowbridge-runtime-tests
           -- --nocapture
 
@@ -202,7 +219,7 @@ jobs:
       - name: bridge-hub and asset-hub integration tests
         working-directory: polkadot-sdk
         run: >
-          RUST_LOG=xcm=trace cargo test 
+          RUST_LOG=xcm=trace cargo test
           -p bridge-hub-rococo-integration-tests
           -p asset-hub-rococo-integration-tests
           -- --nocapture

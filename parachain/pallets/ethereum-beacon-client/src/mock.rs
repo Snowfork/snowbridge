@@ -7,7 +7,7 @@ use primitives::{Fork, ForkVersions};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 
-#[cfg(not(feature = "beacon-spec-mainnet"))]
+#[cfg(feature = "beacon-spec-minimal")]
 pub mod minimal {
 	use super::*;
 
@@ -41,6 +41,7 @@ pub mod minimal {
 		type DbWeight = ();
 		type RuntimeOrigin = RuntimeOrigin;
 		type RuntimeCall = RuntimeCall;
+		type RuntimeTask = RuntimeTask;
 		type Hash = H256;
 		type Hashing = BlakeTwo256;
 		type AccountId = u64;
@@ -138,7 +139,7 @@ pub mod minimal {
 	{
 		let filepath: PathBuf =
 			[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", basename].iter().collect();
-		serde_json::from_reader(File::open(&filepath).unwrap())
+		serde_json::from_reader(File::open(filepath).unwrap())
 	}
 
 	fn load_deneb_fixture<T>(basename: &str) -> Result<T, serde_json::Error>
@@ -240,7 +241,7 @@ pub mod minimal {
 	}
 }
 
-#[cfg(feature = "beacon-spec-mainnet")]
+#[cfg(not(feature = "beacon-spec-minimal"))]
 pub mod mainnet {
 	use super::*;
 
@@ -268,6 +269,7 @@ pub mod mainnet {
 		type DbWeight = ();
 		type RuntimeOrigin = RuntimeOrigin;
 		type RuntimeCall = RuntimeCall;
+		type RuntimeTask = RuntimeTask;
 		type Hash = H256;
 		type Hashing = BlakeTwo256;
 		type AccountId = u64;

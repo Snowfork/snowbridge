@@ -42,7 +42,7 @@ pub fn compute_domain() {
 	new_tester().execute_with(|| {
 		let domain = EthereumBeaconClient::compute_domain(
 			hex!("07000000").into(),
-			hex!("00000001").into(),
+			hex!("00000001"),
 			hex!("5dec7ae03261fde20d5b024dfabce8bac3276c9a4908e23d50ba8c9b50b0adff").into(),
 		);
 
@@ -117,7 +117,7 @@ pub fn compute_domain_bls() {
 	new_tester().execute_with(|| {
 		let domain = EthereumBeaconClient::compute_domain(
 			hex!("07000000").into(),
-			hex!("01000000").into(),
+			hex!("01000000"),
 			hex!("4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95").into(),
 		);
 
@@ -132,43 +132,37 @@ pub fn compute_domain_bls() {
 #[test]
 pub fn verify_merkle_branch_for_finalized_root() {
 	new_tester().execute_with(|| {
-		assert_eq!(
-			verify_merkle_branch(
+		assert!(verify_merkle_branch(
+			hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+			&[
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-				&[
-					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-					hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
-					hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
-					hex!("002c1fe5bc0bd62db6f299a582f2a80a6d5748ccc82e7ed843eaf0ae0739f74a").into(),
-					hex!("d2dc4ba9fd4edff6716984136831e70a6b2e74fca27b8097a820cbbaa5a6e3c3").into(),
-					hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584").into(),
-				],
-				crate::config::FINALIZED_ROOT_INDEX,
-				crate::config::FINALIZED_ROOT_DEPTH,
-				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
-			),
-			true
-		);
+				hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
+				hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
+				hex!("002c1fe5bc0bd62db6f299a582f2a80a6d5748ccc82e7ed843eaf0ae0739f74a").into(),
+				hex!("d2dc4ba9fd4edff6716984136831e70a6b2e74fca27b8097a820cbbaa5a6e3c3").into(),
+				hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584").into(),
+			],
+			crate::config::FINALIZED_ROOT_INDEX,
+			crate::config::FINALIZED_ROOT_DEPTH,
+			hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
+		));
 	});
 }
 
 #[test]
 pub fn verify_merkle_branch_fails_if_depth_and_branch_dont_match() {
 	new_tester().execute_with(|| {
-		assert_eq!(
-			verify_merkle_branch(
+		assert!(!verify_merkle_branch(
+			hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+			&[
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-				&[
-					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-					hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
-					hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
-				],
-				crate::config::FINALIZED_ROOT_INDEX,
-				crate::config::FINALIZED_ROOT_DEPTH,
-				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
-			),
-			false
-		);
+				hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
+				hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
+			],
+			crate::config::FINALIZED_ROOT_INDEX,
+			crate::config::FINALIZED_ROOT_DEPTH,
+			hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
+		));
 	});
 }
 
@@ -233,7 +227,7 @@ pub fn execution_header_pruning() {
 		}
 
 		// We should have stored everything until now
-		assert_eq!(ExecutionHeaders::<Test>::iter().count() as usize, stored_hashes.len());
+		assert_eq!({ ExecutionHeaders::<Test>::iter().count() }, stored_hashes.len());
 
 		// Let's push extra entries so that some of the previous entries are deleted.
 		for i in 0..to_be_deleted {
@@ -541,8 +535,7 @@ fn submit_update_with_skipped_period() {
 	let checkpoint = load_checkpoint_update_fixture();
 	let sync_committee_update = load_sync_committee_update_fixture();
 	let mut update = load_next_finalized_header_update_fixture();
-	update.signature_slot =
-		update.signature_slot + (EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) as u64;
+	update.signature_slot += (EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) as u64;
 	update.attested_header.slot = update.signature_slot - 1;
 
 	new_tester().execute_with(|| {
@@ -707,7 +700,7 @@ fn submit_update_with_invalid_sync_committee_update() {
 			let prev = x.unwrap();
 			*x = Some(CompactBeaconState { slot: next_update.attested_header.slot, ..prev });
 		});
-		next_update.attested_header.slot = next_update.attested_header.slot + 1;
+		next_update.attested_header.slot += 1;
 		next_update.signature_slot = next_update.attested_header.slot + 1;
 		let next_sync_committee = NextSyncCommitteeUpdate::default();
 		next_update.next_sync_committee_update = Some(next_sync_committee);

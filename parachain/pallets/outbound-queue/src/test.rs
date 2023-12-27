@@ -54,7 +54,7 @@ fn submit_message_fail_too_large() {
 fn convert_from_ether_decimals() {
 	assert_eq!(
 		OutboundQueue::convert_from_ether_decimals(1_000_000_000_000_000_000),
-		100_000_000_000_0
+		1_000_000_000_000
 	);
 }
 
@@ -78,7 +78,7 @@ fn process_message_yields_on_max_messages_per_block() {
 		}
 
 		let channel_id: ChannelId = ParaId::from(1000).into();
-		let origin = AggregateMessageOrigin::Snowbridge(channel_id.into());
+		let origin = AggregateMessageOrigin::Snowbridge(channel_id);
 		let message = QueuedMessage {
 			id: Default::default(),
 			channel_id,
@@ -93,8 +93,32 @@ fn process_message_yields_on_max_messages_per_block() {
 		let mut meter = WeightMeter::new();
 
 		assert_noop!(
-			OutboundQueue::process_message(&message.as_slice(), origin, &mut meter, &mut [0u8; 32]),
+			OutboundQueue::process_message(message.as_slice(), origin, &mut meter, &mut [0u8; 32]),
 			ProcessMessageError::Yield
+		);
+	})
+}
+
+#[test]
+fn process_message_fails_on_max_nonce_reached() {
+	new_tester().execute_with(|| {
+		let sibling_id = 1000;
+		let channel_id: ChannelId = ParaId::from(sibling_id).into();
+		let origin = AggregateMessageOrigin::Snowbridge(channel_id);
+		let message: QueuedMessage = QueuedMessage {
+			id: H256::zero(),
+			channel_id,
+			command: mock_message(sibling_id).command,
+		};
+		let versioned_queued_message: VersionedQueuedMessage = message.try_into().unwrap();
+		let encoded = versioned_queued_message.encode();
+		let mut meter = WeightMeter::with_limit(Weight::MAX);
+
+		Nonce::<Test>::set(channel_id, u64::MAX);
+
+		assert_noop!(
+			OutboundQueue::process_message(encoded.as_slice(), origin, &mut meter, &mut [0u8; 32]),
+			ProcessMessageError::Unsupported
 		);
 	})
 }
@@ -104,11 +128,17 @@ fn process_message_fails_on_overweight_message() {
 	new_tester().execute_with(|| {
 		let sibling_id = 1000;
 		let channel_id: ChannelId = ParaId::from(sibling_id).into();
-		let origin = AggregateMessageOrigin::Snowbridge(channel_id.into());
-		let message = mock_message(sibling_id).encode();
+		let origin = AggregateMessageOrigin::Snowbridge(channel_id);
+		let message: QueuedMessage = QueuedMessage {
+			id: H256::zero(),
+			channel_id,
+			command: mock_message(sibling_id).command,
+		};
+		let versioned_queued_message: VersionedQueuedMessage = message.try_into().unwrap();
+		let encoded = versioned_queued_message.encode();
 		let mut meter = WeightMeter::with_limit(Weight::from_parts(1, 1));
 		assert_noop!(
-			OutboundQueue::process_message(&message.as_slice(), origin, &mut meter, &mut [0u8; 32]),
+			OutboundQueue::process_message(encoded.as_slice(), origin, &mut meter, &mut [0u8; 32]),
 			ProcessMessageError::Overweight(<Test as Config>::WeightInfo::do_process_message())
 		);
 	})
@@ -155,7 +185,7 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 			OutboundQueue::deliver(ticket).unwrap();
 		}
 
-		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id));
 		assert_eq!(footprint.storage.count, (max_messages) as u64);
 
 		let message = mock_governance_message::<Test>();
@@ -167,11 +197,11 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 		run_to_end_of_next_block();
 
 		// first process 20 messages from sibling channel
-		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id));
 		assert_eq!(footprint.storage.count, 40 - 20);
 
 		// and governance message does not have the chance to execute in same block
-		let footprint = MessageQueue::footprint(Snowbridge(PRIMARY_GOVERNANCE_CHANNEL.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(PRIMARY_GOVERNANCE_CHANNEL));
 		assert_eq!(footprint.storage.count, 1);
 
 		// move to next block
@@ -179,17 +209,17 @@ fn governance_message_does_not_get_the_chance_to_processed_in_same_block_when_co
 		run_to_end_of_next_block();
 
 		// now governance message get executed in this block
-		let footprint = MessageQueue::footprint(Snowbridge(PRIMARY_GOVERNANCE_CHANNEL.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(PRIMARY_GOVERNANCE_CHANNEL));
 		assert_eq!(footprint.storage.count, 0);
 
 		// and this time process 19 messages from sibling channel so we have 1 message left
-		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id));
 		assert_eq!(footprint.storage.count, 1);
 
 		// move to the next block, the last 1 message from sibling channel get executed
 		ServiceWeight::set(Some(Weight::MAX));
 		run_to_end_of_next_block();
-		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id.into()));
+		let footprint = MessageQueue::footprint(Snowbridge(sibling_channel_id));
 		assert_eq!(footprint.storage.count, 0);
 	});
 }
@@ -205,5 +235,34 @@ fn convert_local_currency() {
 			.expect("accuracy is not zero; qed");
 		assert_eq!(fee, fee1);
 		assert_eq!(fee, fee2);
+	});
+}
+
+#[test]
+fn encode_digest_item_with_correct_index() {
+	new_tester().execute_with(|| {
+		let digest_item: DigestItem = CustomDigestItem::Snowbridge(H256::default()).into();
+		let enum_prefix = match digest_item {
+			DigestItem::Other(data) => data[0],
+			_ => u8::MAX,
+		};
+		assert_eq!(enum_prefix, 0);
+	});
+}
+
+#[test]
+fn encode_digest_item() {
+	new_tester().execute_with(|| {
+		let digest_item: DigestItem = CustomDigestItem::Snowbridge([5u8; 32].into()).into();
+		let digest_item_raw = digest_item.encode();
+		assert_eq!(digest_item_raw[0], 0); // DigestItem::Other
+		assert_eq!(digest_item_raw[2], 0); // CustomDigestItem::Snowbridge
+		assert_eq!(
+			digest_item_raw,
+			[
+				0, 132, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+				5, 5, 5, 5, 5, 5, 5, 5
+			]
+		);
 	});
 }

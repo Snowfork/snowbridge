@@ -12,7 +12,7 @@ use sp_runtime::SaturatedConversion;
 use xcm::prelude::*;
 
 fn fund_sovereign_account<T: Config>(para_id: ParaId) -> Result<(), BenchmarkError> {
-	let amount: BalanceOf<T> = (1_000_000_000_000_u64).saturated_into::<u128>().saturated_into();
+	let amount: BalanceOf<T> = (10_000_000_000_000_u64).saturated_into::<u128>().saturated_into();
 	let sovereign_account = sibling_sovereign_account::<T>(para_id);
 	T::Token::mint_into(&sovereign_account, amount)?;
 	Ok(())
@@ -97,7 +97,7 @@ mod benchmarks {
 		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
 
 		#[extrinsic_call]
-		_(origin as T::RuntimeOrigin, OperatingMode::RejectingOutboundMessages, 1);
+		_(origin as T::RuntimeOrigin, OperatingMode::RejectingOutboundMessages);
 
 		Ok(())
 	}
@@ -114,7 +114,7 @@ mod benchmarks {
 		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, channel_id, OperatingMode::RejectingOutboundMessages, 1);
+		_(RawOrigin::Root, channel_id, OperatingMode::RejectingOutboundMessages);
 
 		Ok(())
 	}
@@ -126,6 +126,7 @@ mod benchmarks {
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
+		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
 
 		#[extrinsic_call]
 		_(origin as T::RuntimeOrigin, H160::default(), 1);
@@ -157,5 +158,9 @@ mod benchmarks {
 		Ok(())
 	}
 
-	impl_benchmark_test_suite!(SnowbridgeControl, crate::mock::new_test_ext(), crate::mock::Test);
+	impl_benchmark_test_suite!(
+		SnowbridgeControl,
+		crate::mock::new_test_ext(true),
+		crate::mock::Test
+	);
 }

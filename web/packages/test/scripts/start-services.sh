@@ -50,8 +50,13 @@ echo "Config bridgehub"
 source scripts/configure-bridgehub.sh
 configure_bridgehub
 
+# 7. config assethub
+echo "Config assethub"
+source scripts/configure-assethub.sh
+configure_assethub
+
 if [ "$skip_relayer" == "false" ]; then
-  # 7. start relayer
+  # 8. start relayer
   echo "Starting relayers"
   source scripts/start-relayer.sh
   deploy_relayer

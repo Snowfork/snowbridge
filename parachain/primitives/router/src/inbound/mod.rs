@@ -7,11 +7,7 @@ mod tests;
 
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use frame_support::{
-	traits::{tokens::Balance as BalanceT, ContainsPair},
-	weights::Weight,
-	PalletError,
-};
+use frame_support::{traits::tokens::Balance as BalanceT, weights::Weight, PalletError};
 use scale_info::TypeInfo;
 use sp_core::{Get, RuntimeDebug, H160};
 use sp_io::hashing::blake2_256;
@@ -69,7 +65,7 @@ pub enum Destination {
 	AccountId32 { id: [u8; 32] },
 	/// The funds will deposited into the sovereign account of destination parachain `para_id` on
 	/// AssetHub, Account `id` on the destination parachain will receive the funds via a
-	/// reserve-backed transfer. See https://github.com/paritytech/xcm-format#depositreserveasset
+	/// reserve-backed transfer. See <https://github.com/paritytech/xcm-format#depositreserveasset>
 	ForeignAccountId32 {
 		para_id: u32,
 		id: [u8; 32],
@@ -78,7 +74,7 @@ pub enum Destination {
 	},
 	/// The funds will deposited into the sovereign account of destination parachain `para_id` on
 	/// AssetHub, Account `id` on the destination parachain will receive the funds via a
-	/// reserve-backed transfer. See https://github.com/paritytech/xcm-format#depositreserveasset
+	/// reserve-backed transfer. See <https://github.com/paritytech/xcm-format#depositreserveasset>
 	ForeignAccountId20 {
 		para_id: u32,
 		id: [u8; 20],
@@ -179,13 +175,14 @@ where
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let xcm: Xcm<()> = vec![
-			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
 			// Teleport required fees.
 			ReceiveTeleportedAsset(total.into()),
 			// Pay for execution.
 			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
 			// Fund the snowbridge sovereign with the required deposit for creation.
 			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
+			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
+			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(network)),
 			// Call create_asset on foreign assets pallet.
@@ -298,17 +295,6 @@ where
 				AccountKey20 { network: None, key: token.into() },
 			),
 		}
-	}
-}
-
-pub struct FromEthereumGlobalConsensus<EthereumBridgeLocation>(PhantomData<EthereumBridgeLocation>);
-impl<EthereumBridgeLocation> ContainsPair<MultiLocation, MultiLocation>
-	for FromEthereumGlobalConsensus<EthereumBridgeLocation>
-where
-	EthereumBridgeLocation: Get<MultiLocation>,
-{
-	fn contains(asset: &MultiLocation, origin: &MultiLocation) -> bool {
-		origin == &EthereumBridgeLocation::get() && asset.starts_with(origin)
 	}
 }
 

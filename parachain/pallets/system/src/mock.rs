@@ -12,14 +12,13 @@ use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::{
 	gwei, meth, outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly,
-	DescribeHere, ParaId, PricingParameters, Rewards,
+	ParaId, PricingParameters, Rewards,
 };
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
 	AccountId32, BuildStorage, FixedU128,
 };
 use xcm::prelude::*;
-use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::BenchmarkHelper;
@@ -103,6 +102,7 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
+	type RuntimeTask = RuntimeTask;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
@@ -177,6 +177,7 @@ impl snowbridge_outbound_queue::Config for Test {
 	type GasMeter = ConstantGasMeter;
 	type Balance = u128;
 	type PricingParameters = EthereumSystem;
+	type Channels = EthereumSystem;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }
@@ -202,7 +203,7 @@ parameter_types! {
 	pub Parameters: PricingParameters<u128> = PricingParameters {
 		exchange_rate: FixedU128::from_rational(1, 400),
 		fee_per_gas: gwei(20),
-		rewards: Rewards { local: 1 * DOT, remote: meth(1) }
+		rewards: Rewards { local: DOT, remote: meth(1) }
 	};
 	pub const InboundDeliveryCost: u128 = 1_000_000_000;
 
@@ -219,8 +220,7 @@ impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OutboundQueue = OutboundQueue;
 	type SiblingOrigin = pallet_xcm_origin::EnsureXcm<AllowSiblingsOnly>;
-	type AgentIdOf =
-		HashedDescription<AgentId, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
+	type AgentIdOf = snowbridge_core::AgentIdOf;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
 	type DefaultPricingParameters = Parameters;
@@ -231,19 +231,21 @@ impl crate::Config for Test {
 }
 
 // Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
+pub fn new_test_ext(genesis_build: bool) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
-	crate::GenesisConfig::<Test> {
-		para_id: OwnParaId::get(),
-		asset_hub_para_id: AssetHubParaId::get(),
-		_config: Default::default(),
+	if genesis_build {
+		crate::GenesisConfig::<Test> {
+			para_id: OwnParaId::get(),
+			asset_hub_para_id: AssetHubParaId::get(),
+			_config: Default::default(),
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
 	}
-	.assimilate_storage(&mut storage)
-	.unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
-	let initial_amount = InitialFunding::get().into();
+	let initial_amount = InitialFunding::get();
 	let test_para_id = TestParaId::get();
 	let sovereign_account = sibling_sovereign_account::<Test>(test_para_id.into());
 	let treasury_account = TreasuryAccount::get();

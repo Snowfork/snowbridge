@@ -51,7 +51,7 @@
 //! * Ether fee per unit of gas
 //!
 //! By design, it is expected that governance should manually update these
-//! parameters every few weeks using the `set_fee_parameters` extrinsic in the
+//! parameters every few weeks using the `set_pricing_parameters` extrinsic in the
 //! system pallet.
 //!
 //! ## Fee Computation Function
@@ -90,11 +90,11 @@ mod mock;
 #[cfg(test)]
 mod test;
 
-use bridge_hub_common::AggregateMessageOrigin;
+use bridge_hub_common::{AggregateMessageOrigin, CustomDigestItem};
 use codec::Decode;
 use frame_support::{
 	storage::StorageStreamIter,
-	traits::{tokens::Balance, Defensive, EnqueueMessage, Get, ProcessMessageError},
+	traits::{tokens::Balance, Contains, Defensive, EnqueueMessage, Get, ProcessMessageError},
 	weights::{Weight, WeightToFee},
 };
 use snowbridge_core::{
@@ -104,9 +104,12 @@ use snowbridge_core::{
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 use sp_core::{H256, U256};
-use sp_runtime::traits::{CheckedDiv, Hash};
+use sp_runtime::{
+	traits::{CheckedDiv, Hash},
+	DigestItem,
+};
 use sp_std::prelude::*;
-pub use types::{CommittedMessage, FeeConfigRecord, ProcessMessageOriginOf};
+pub use types::{CommittedMessage, ProcessMessageOriginOf};
 pub use weights::WeightInfo;
 
 pub use pallet::*;
@@ -147,6 +150,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxMessagesPerBlock: Get<u32>;
 
+		/// Check whether a channel exists
+		type Channels: Contains<ChannelId>;
+
 		type PricingParameters: Get<PricingParameters<Self::Balance>>;
 
 		/// Convert a weight value into a deductible fee based.
@@ -180,12 +186,7 @@ pub mod pallet {
 			count: u64,
 		},
 		/// Set OperatingMode
-		OperatingModeChanged {
-			mode: BasicOperatingMode,
-		},
-		FeeConfigChanged {
-			fee_config: FeeConfigRecord,
-		},
+		OperatingModeChanged { mode: BasicOperatingMode },
 	}
 
 	#[pallet::error]
@@ -194,8 +195,6 @@ pub mod pallet {
 		MessageTooLarge,
 		/// The pallet is halted
 		Halted,
-		// Invalid fee config
-		InvalidFeeConfig,
 		/// Invalid Channel
 		InvalidChannel,
 	}
@@ -277,10 +276,10 @@ pub mod pallet {
 			// Create merkle root of messages
 			let root = merkle_root::<<T as Config>::Hashing, _>(MessageLeaves::<T>::stream_iter());
 
+			let digest_item: DigestItem = CustomDigestItem::Snowbridge(root).into();
+
 			// Insert merkle root into the header digest
-			<frame_system::Pallet<T>>::deposit_log(sp_runtime::DigestItem::Other(
-				root.to_fixed_bytes().into(),
-			));
+			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
 			Self::deposit_event(Event::MessagesCommitted { root, count });
 		}
@@ -308,10 +307,16 @@ pub mod pallet {
 			let queued_message: QueuedMessage =
 				versioned_queued_message.try_into().map_err(|_| Unsupported)?;
 
+			// Obtain next nonce
+			let nonce = <Nonce<T>>::try_mutate(
+				queued_message.channel_id,
+				|nonce| -> Result<u64, ProcessMessageError> {
+					*nonce = nonce.checked_add(1).ok_or(Unsupported)?;
+					Ok(*nonce)
+				},
+			)?;
+
 			let pricing_params = T::PricingParameters::get();
-
-			let next_nonce = Nonce::<T>::get(queued_message.channel_id).saturating_add(1);
-
 			let command = queued_message.command.index();
 			let params = queued_message.command.abi_encode();
 			let max_dispatch_gas =
@@ -321,7 +326,7 @@ pub mod pallet {
 			// Construct the final committed message
 			let message = CommittedMessage {
 				channel_id: queued_message.channel_id,
-				nonce: next_nonce,
+				nonce,
 				command,
 				params,
 				max_dispatch_gas,
@@ -339,12 +344,8 @@ pub mod pallet {
 
 			Messages::<T>::append(Box::new(message));
 			MessageLeaves::<T>::append(message_abi_encoded_hash);
-			Nonce::<T>::set(queued_message.channel_id, next_nonce);
 
-			Self::deposit_event(Event::MessageAccepted {
-				id: queued_message.id,
-				nonce: next_nonce,
-			});
+			Self::deposit_event(Event::MessageAccepted { id: queued_message.id, nonce });
 
 			Ok(true)
 		}
