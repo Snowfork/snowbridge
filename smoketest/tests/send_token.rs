@@ -76,7 +76,11 @@ async fn send_token() {
 		.unwrap()
 		.unwrap();
 
-	println!("receipt transaction hash: {:#?}", hex::encode(receipt.transaction_hash));
+	println!(
+		"receipt transaction hash: {:#?}, receipt block number: {:#?}",
+		hex::encode(receipt.transaction_hash),
+		receipt.block_number
+	);
 
 	// Log for OutboundMessageAccepted
 	let outbound_message_accepted_log = receipt.logs.last().unwrap();

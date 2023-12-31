@@ -1,12 +1,15 @@
 package api
 
 import (
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
-	"math/big"
 )
 
 func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb, activeSpec config.ActiveSpec) (scale.ExecutionPayloadHeaderDeneb, error) {
@@ -56,5 +59,95 @@ func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb, activeSpec con
 		WithdrawalsRoot:  withdrawalRoot,
 		BlobGasUsed:      types.NewU64(e.BlobGasUsed),
 		ExcessBlobGas:    types.NewU64(e.ExcessBlobGas),
+	}, nil
+}
+
+func DenebExecutionPayloadHeaderToScale(e *beaconjson.ExecutionPayloadHeaderJsonV1) (scale.ExecutionPayloadHeaderDeneb, error) {
+	var executionPayloadHeader scale.ExecutionPayloadHeaderDeneb
+	var baseFeePerGas big.Int
+	baseFeePerGasU64, err := util.ToUint64(e.BaseFeePerGas)
+	if err != nil {
+		return executionPayloadHeader, err
+	}
+	blockNumber, err := util.ToUint64(e.BlockNumber)
+	if err != nil {
+		return executionPayloadHeader, err
+	}
+	baseFeePerGas.SetUint64(baseFeePerGasU64)
+	gasLimit, err := util.ToUint64(e.GasLimit)
+	if err != nil {
+		return executionPayloadHeader, err
+	}
+	gasUsed, err := util.ToUint64(e.GasUsed)
+	if err != nil {
+		return executionPayloadHeader, err
+	}
+	timestamp, err := util.ToUint64(e.Timestamp)
+	if err != nil {
+		return executionPayloadHeader, err
+	}
+	blobGasUsed, _ := util.ToUint64(e.BlobGasUsed)
+	excessBlobGas, _ := util.ToUint64(e.ExcessBlobGas)
+	return scale.ExecutionPayloadHeaderDeneb{
+		ParentHash:       types.NewH256(common.HexToHash(e.ParentHash).Bytes()),
+		FeeRecipient:     types.NewH160(common.HexToAddress(e.FeeRecipient).Bytes()),
+		StateRoot:        types.NewH256(common.HexToHash(e.StateRoot).Bytes()),
+		ReceiptsRoot:     types.NewH256(common.HexToHash(e.ReceiptsRoot).Bytes()),
+		LogsBloom:        common.FromHex(e.LogsBloom),
+		PrevRandao:       types.NewH256(common.HexToHash(e.PrevRandao).Bytes()),
+		BlockNumber:      types.NewU64(blockNumber),
+		GasLimit:         types.NewU64(gasLimit),
+		GasUsed:          types.NewU64(gasUsed),
+		Timestamp:        types.NewU64(timestamp),
+		ExtraData:        common.FromHex(e.ExtraData),
+		BaseFeePerGas:    types.NewU256(baseFeePerGas),
+		BlockHash:        types.NewH256(common.HexToHash(e.BlockHash).Bytes()),
+		TransactionsRoot: types.NewH256(common.HexToHash(e.TransactionsRoot).Bytes()),
+		WithdrawalsRoot:  types.NewH256(common.HexToHash(e.WithdrawalsRoot).Bytes()),
+		BlobGasUsed:      types.NewU64(blobGasUsed),
+		ExcessBlobGas:    types.NewU64(excessBlobGas),
+	}, nil
+}
+
+func ExecutionPayloadHeaderToCapellaScaleV1(e *beaconjson.ExecutionPayloadHeaderJsonV1) (scale.ExecutionPayloadHeaderCapella, error) {
+	var executionPayloadHeader scale.ExecutionPayloadHeaderCapella
+	var baseFeePerGas big.Int
+	baseFeePerGasU64, err := util.ToUint64(e.BaseFeePerGas)
+	if err != nil {
+		return executionPayloadHeader, err
+	}
+	blockNumber, err := util.ToUint64(e.BlockNumber)
+	if err != nil {
+		return executionPayloadHeader, err
+	}
+	baseFeePerGas.SetUint64(baseFeePerGasU64)
+	gasLimit, err := util.ToUint64(e.GasLimit)
+	if err != nil {
+		return executionPayloadHeader, err
+	}
+	gasUsed, err := util.ToUint64(e.GasUsed)
+	if err != nil {
+		return executionPayloadHeader, err
+	}
+	timestamp, err := util.ToUint64(e.Timestamp)
+	if err != nil {
+		return executionPayloadHeader, err
+	}
+	return scale.ExecutionPayloadHeaderCapella{
+		ParentHash:       types.NewH256(common.HexToHash(e.ParentHash).Bytes()),
+		FeeRecipient:     types.NewH160(common.HexToAddress(e.FeeRecipient).Bytes()),
+		StateRoot:        types.NewH256(common.HexToHash(e.StateRoot).Bytes()),
+		ReceiptsRoot:     types.NewH256(common.HexToHash(e.ReceiptsRoot).Bytes()),
+		LogsBloom:        common.Hex2Bytes(e.LogsBloom),
+		PrevRandao:       types.NewH256(common.HexToHash(e.PrevRandao).Bytes()),
+		BlockNumber:      types.NewU64(blockNumber),
+		GasLimit:         types.NewU64(gasLimit),
+		GasUsed:          types.NewU64(gasUsed),
+		Timestamp:        types.NewU64(timestamp),
+		ExtraData:        common.Hex2Bytes(e.ExtraData),
+		BaseFeePerGas:    types.NewU256(baseFeePerGas),
+		BlockHash:        types.NewH256(common.HexToHash(e.ParentHash).Bytes()),
+		TransactionsRoot: types.NewH256(common.HexToHash(e.TransactionsRoot).Bytes()),
+		WithdrawalsRoot:  types.NewH256(common.HexToHash(e.WithdrawalsRoot).Bytes()),
 	}, nil
 }

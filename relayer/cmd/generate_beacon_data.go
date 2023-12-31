@@ -27,16 +27,9 @@ func generateBeaconDataCmd() *cobra.Command {
 		RunE:  generateBeaconData,
 	}
 
-	cmd.Flags().String("spec", "", "Valid values are mainnet or minimal")
-	err := cmd.MarkFlagRequired("spec")
-	if err != nil {
-		return nil
-	}
-
+	cmd.Flags().String("spec", "minimal", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
-	if err != nil {
-		return nil
-	}
+	cmd.Flags().String("version", "deneb", "Valid values are capella or deneb")
 
 	return cmd
 }
@@ -49,22 +42,10 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 		RunE:  generateBeaconCheckpoint,
 	}
 
-	cmd.Flags().String("spec", "", "Valid values are mainnet or minimal")
-	err := cmd.MarkFlagRequired("spec")
-	if err != nil {
-		return nil
-	}
-
+	cmd.Flags().String("spec", "minimal", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
-	if err != nil {
-		return nil
-	}
-
-	cmd.Flags().Bool("export-json", true, "Export Json")
-	if err != nil {
-		return nil
-	}
-
+	cmd.Flags().String("version", "deneb", "Valid values are capella or deneb")
+	cmd.Flags().Bool("export-json", false, "Export Json")
 	return cmd
 }
 
@@ -76,22 +57,10 @@ func generateExecutionUpdateCmd() *cobra.Command {
 		RunE:  generateExecutionUpdate,
 	}
 
-	cmd.Flags().String("spec", "", "Valid values are mainnet or minimal")
-	err := cmd.MarkFlagRequired("spec")
-	if err != nil {
-		return nil
-	}
-
+	cmd.Flags().String("spec", "minimal", "Valid values are mainnet or minimal")
 	cmd.Flags().Uint32("slot", 1, "slot number")
-	err = cmd.MarkFlagRequired("slot")
-	if err != nil {
-		return nil
-	}
-
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
-	if err != nil {
-		return nil
-	}
+	cmd.Flags().String("version", "deneb", "Valid values are capella or deneb")
 
 	return cmd
 }
@@ -135,6 +104,11 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
+		version, err := cmd.Flags().GetString("version")
+		if err != nil {
+			return fmt.Errorf("get version: %w", err)
+		}
+
 		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
 
 		s := syncer.New(endpoint, specSettings, activeSpec)
@@ -146,15 +120,13 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		exportJson, err := cmd.Flags().GetBool("export-json")
 		if exportJson {
 			initialSync := checkPointScale.ToJSON()
-			err = writeJSONToFile(initialSync, "dump-initial-checkpoint.json")
+			err = writeJSONToFile(initialSync, version, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
 			if err != nil {
 				return fmt.Errorf("write initial sync to file: %w", err)
 			}
 		}
 		checkPointBytes, _ := types.EncodeToBytes(checkPointScale)
-		// Call index for EthereumBeaconClient.force_checkpoint
-		checkPointCallIndex := "0x5200"
-		checkPointUpdateCall := checkPointCallIndex + hex.EncodeToString(checkPointBytes)
+		checkPointUpdateCall := hex.EncodeToString(checkPointBytes)
 		fmt.Println(checkPointUpdateCall)
 		return nil
 	}()
@@ -190,6 +162,11 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
+		version, err := cmd.Flags().GetString("version")
+		if err != nil {
+			return fmt.Errorf("get version: %w", err)
+		}
+
 		// ETH_FAST_MODE hack for fast slot period
 		SlotTimeDuration := 6 * time.Second
 		if os.Getenv("ETH_FAST_MODE") == "true" {
@@ -206,7 +183,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
 		initialSync := initialSyncScale.ToJSON()
-		writeJSONToFile(initialSync, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
+		writeJSONToFile(initialSync, version, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
 		initialSyncHeaderSlot := initialSync.Header.Slot
 		initialSyncPeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
 		initialEpoch := s.ComputeEpochAtSlot(initialSyncHeaderSlot)
@@ -236,20 +213,11 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		if initialSyncPeriod != finalizedPeriod {
 			return fmt.Errorf("initialSyncPeriod should be consistent with finalizedUpdatePeriod")
 		}
-		writeJSONToFile(finalizedUpdate, fmt.Sprintf("finalized-header-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(finalizedUpdate, version, fmt.Sprintf("finalized-header-update.%s.json", activeSpec.ToString()))
 		log.WithFields(log.Fields{
 			"epoch":  finalizedEpoch,
 			"period": finalizedPeriod,
 		}).Info("created finalized header update file")
-
-		// generate SyncCommitteeUpdate same as InitialUpdate for filling NextSyncCommittee
-		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod)
-		if err != nil {
-			return fmt.Errorf("get sync committee update: %w", err)
-		}
-		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("sync-committee-update.%s.json", activeSpec.ToString()))
-		log.Info("created sync committee update file")
 
 		// generate executionUpdate
 		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot - 2)
@@ -258,54 +226,54 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			BlockRootsTree:     finalizedUpdateScale.BlockRootsTree,
 			Slot:               uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot),
 		}
-		headerUpdateScale, err := s.GetNextHeaderUpdateBySlotWithCheckpoint(blockUpdateSlot, &checkPoint)
+		headerUpdateScale, err := s.GetHeaderUpdateBySlotWithCheckpoint(blockUpdateSlot, &checkPoint)
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
 		headerUpdate := headerUpdateScale.ToJSON()
-		writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(headerUpdate, version, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
 		log.Info("created execution update file")
 
-		if activeSpec.IsMinimal() {
-			// generate FinalizedUpdate for next period
-			log.Info("waiting until next sync period,several minutes required...")
-			time.Sleep(time.Duration(specSettings.SlotsInEpoch*(specSettings.EpochsPerSyncCommitteePeriod-elapseEpochs)) * SlotTimeDuration)
-			nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
-			if err != nil {
-				return fmt.Errorf("get next finalized header update: %w", err)
-			}
-			nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
-			nextFinalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
-			if initialSyncPeriod+1 != nextFinalizedUpdatePeriod {
-				return fmt.Errorf("nextFinalizedUpdatePeriod should be 1 period ahead of initialSyncPeriod")
-			}
-			writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("next-finalized-header-update.%s.json", activeSpec.ToString()))
-			log.Info("created next finalized header update file")
+		var nextSyncCommitteeUpdate beaconjson.Update
 
-			// generate nextSyncCommitteeUpdate
-			nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod + 1)
-			if err != nil {
-				return fmt.Errorf("get sync committee update: %w", err)
-			}
-			nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
-			writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("next-sync-committee-update.%s.json", activeSpec.ToString()))
-			log.Info("created next sync committee update file")
+		// generate FinalizedUpdate for next period
+		log.Info("waiting until next sync period,several minutes required...")
+		time.Sleep(time.Duration(specSettings.SlotsInEpoch*(specSettings.EpochsPerSyncCommitteePeriod-elapseEpochs)) * SlotTimeDuration)
+		nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
+		if err != nil {
+			return fmt.Errorf("get next finalized header update: %w", err)
 		}
+		nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
+		nextFinalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
+		if initialSyncPeriod+1 != nextFinalizedUpdatePeriod {
+			return fmt.Errorf("nextFinalizedUpdatePeriod should be 1 period ahead of initialSyncPeriod")
+		}
+		writeJSONToFile(nextFinalizedUpdate, version, fmt.Sprintf("next-finalized-header-update.%s.json", activeSpec.ToString()))
+		log.Info("created next finalized header update file")
+
+		// generate nextSyncCommitteeUpdate
+		nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod + 1)
+		if err != nil {
+			return fmt.Errorf("get sync committee update: %w", err)
+		}
+		nextSyncCommitteeUpdate = nextSyncCommitteeUpdateScale.Payload.ToJSON()
+		writeJSONToFile(nextSyncCommitteeUpdate, version, fmt.Sprintf("next-sync-committee-update.%s.json", activeSpec.ToString()))
+		log.Info("created next sync committee update file")
 
 		if !activeSpec.IsMinimal() {
 			log.Info("now updating benchmarking data files")
 
 			// Rust file hexes require the 0x of hashes to be removed
 			initialSync.RemoveLeadingZeroHashes()
-			syncCommitteeUpdate.RemoveLeadingZeroHashes()
+			nextSyncCommitteeUpdate.RemoveLeadingZeroHashes()
 			finalizedUpdate.RemoveLeadingZeroHashes()
 			headerUpdate.RemoveLeadingZeroHashes()
 
 			data := Data{
 				CheckpointUpdate:      initialSync,
-				SyncCommitteeUpdate:   syncCommitteeUpdate,
 				FinalizedHeaderUpdate: finalizedUpdate,
 				HeaderUpdate:          headerUpdate,
+				SyncCommitteeUpdate:   nextSyncCommitteeUpdate,
 			}
 
 			log.WithFields(log.Fields{
@@ -342,10 +310,10 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func writeJSONToFile(data interface{}, filename string) error {
+func writeJSONToFile(data interface{}, version, filename string) error {
 	file, _ := json.MarshalIndent(data, "", "  ")
 
-	f, err := os.OpenFile(fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", pathToBeaconTestFixtureFiles, version, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 
 	if err != nil {
 		return fmt.Errorf("create file: %w", err)
@@ -406,6 +374,11 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
 		log.WithFields(log.Fields{"spec": activeSpec, "endpoint": endpoint}).Info("connecting to beacon API")
 
+		version, err := cmd.Flags().GetString("version")
+		if err != nil {
+			return fmt.Errorf("get version: %w", err)
+		}
+
 		// generate executionUpdate
 		s := syncer.New(endpoint, specSettings, activeSpec)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
@@ -417,7 +390,7 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get header update: %w", err)
 		}
 		headerUpdate := headerUpdateScale.ToJSON()
-		writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(headerUpdate, version, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
 		log.Info("created execution update file")
 
 		return nil

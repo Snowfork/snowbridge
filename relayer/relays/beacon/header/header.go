@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
@@ -157,7 +158,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 	lastSyncedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
 
 	if lastSyncedPeriod < currentSyncPeriod {
-		err = h.syncLaggingSyncCommitteePeriods(ctx, lastSyncedPeriod, currentSyncPeriod)
+		err = h.syncLaggingSyncCommitteePeriod(ctx, lastSyncedPeriod, currentSyncPeriod)
 		if err != nil {
 			return fmt.Errorf("sync lagging sync committee periods: %w", err)
 		}
@@ -186,11 +187,6 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 }
 
 func (h *Header) SyncHeaders(ctx context.Context) error {
-	err := h.SyncExecutionHeaders(ctx)
-	if err != nil {
-		return err
-	}
-
 	hasChanged, err := h.syncer.HasFinalizedHeaderChanged(h.cache.Finalized.LastSyncedHash)
 	if err != nil {
 		return err
@@ -208,98 +204,16 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 	return nil
 }
 
-func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
-	fromSlot := h.cache.LastSyncedExecutionSlot
-	// SyncExecutionHeaders at least from initial checkpoint
-	if fromSlot <= h.cache.InitialCheckpointSlot {
-		fromSlot = h.cache.InitialCheckpointSlot
-	}
-	toSlot := h.cache.Finalized.LastSyncedSlot
-	if fromSlot >= toSlot {
-		log.WithFields(log.Fields{
-			"fromSlot": fromSlot,
-			"toSlot":   toSlot,
-		}).Info("execution headers sync up to date with last finalized header")
-		return nil
-	}
+func (h *Header) syncLaggingSyncCommitteePeriod(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
 	log.WithFields(log.Fields{
-		"fromSlot":   fromSlot,
-		"fromEpoch":  h.syncer.ComputeEpochAtSlot(fromSlot),
-		"toSlot":     toSlot,
-		"toEpoch":    h.syncer.ComputeEpochAtSlot(toSlot),
-		"totalSlots": toSlot - fromSlot,
-	}).Info("starting to back-fill headers")
+		"period": latestSyncedPeriod + 1,
+	}).Info("sync committee periods to be synced")
 
-	var headersToSync []scale.HeaderUpdatePayload
-
-	// start syncing at next block after last synced block
-	currentSlot := fromSlot
-	headerUpdate, err := h.getNextHeaderUpdateBySlot(currentSlot)
-	if err != nil {
-		return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
-	}
-	currentSlot = uint64(headerUpdate.Header.Slot)
-
-	for currentSlot <= toSlot {
-		log.WithFields(log.Fields{
-			"currentSlot": currentSlot,
-		}).Info("fetching next header at slot")
-
-		var nextHeaderUpdate scale.HeaderUpdatePayload
-		if currentSlot >= toSlot {
-			// Just construct an empty update so to break the loop
-			nextHeaderUpdate = scale.HeaderUpdatePayload{Header: scale.BeaconHeader{Slot: types.U64(toSlot + 1)}}
-		} else {
-			// To get the sync witness for the current synced header. This header
-			// will be used as the next update.
-			nextHeaderUpdate, err = h.getNextHeaderUpdateBySlot(currentSlot)
-			if err != nil {
-				return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
-			}
-		}
-
-		headersToSync = append(headersToSync, headerUpdate)
-		// last slot to be synced, sync headers
-		if currentSlot >= toSlot {
-			err = h.batchSyncHeaders(ctx, headersToSync)
-			if err != nil {
-				return fmt.Errorf("batch sync headers failed: %w", err)
-			}
-		}
-		headerUpdate = nextHeaderUpdate
-		currentSlot = uint64(headerUpdate.Header.Slot)
-	}
-	// waiting for all batch calls to be executed on chain
-	err = h.waitingForBatchCallFinished(toSlot)
+	err := h.SyncCommitteePeriodUpdate(ctx, latestSyncedPeriod+1)
 	if err != nil {
 		return err
 	}
-	h.cache.SetLastSyncedExecutionSlot(toSlot)
-	return nil
-}
 
-func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
-	// sync for the next period
-	periodsToSync := []uint64{latestSyncedPeriod + 1}
-
-	// For initialPeriod special handling here to sync it again for nextSyncCommittee which is not included in InitCheckpoint
-	if h.isInitialSyncPeriod() {
-		periodsToSync = append([]uint64{latestSyncedPeriod}, periodsToSync...)
-	}
-
-	log.WithFields(log.Fields{
-		"periods": periodsToSync,
-	}).Info("sync committee periods to be synced")
-
-	for _, period := range periodsToSync {
-		err := h.SyncCommitteePeriodUpdate(ctx, period)
-		if err != nil {
-			return err
-		}
-	}
-
-	// If Latency found between LastSyncedSyncCommitteePeriod and currentSyncPeriod in Ethereum beacon client
-	// just return error so to exit ASAP to allow ExecutionUpdate to catch up
 	lastSyncedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
 	if lastSyncedPeriod < currentSyncPeriod {
 		return ErrSyncCommitteeLatency
@@ -377,8 +291,7 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 	return checkpoint, nil
 }
 
-func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
-	slot = slot + 1
+func (h *Header) getHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
 	header, err := h.syncer.FindBeaconHeaderWithBlockIncluded(slot)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next beacon header with block included: %w", err)
@@ -394,41 +307,33 @@ func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePaylo
 	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 }
 
-func (h *Header) batchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {
-	headerUpdatesInf := make([]interface{}, len(headerUpdates))
-	for i, v := range headerUpdates {
-		headerUpdatesInf[i] = v
-	}
-	err := h.writer.BatchCall(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdatesInf)
+func (h *Header) SyncExecutionHeader(ctx context.Context, blockRoot common.Hash) error {
+	header, err := h.syncer.Client.GetHeader(blockRoot)
 	if err != nil {
-		return err
+		return fmt.Errorf("get beacon header by blockRoot: %w", err)
 	}
-	return nil
-}
-
-func (h *Header) isInitialSyncPeriod() bool {
-	initialPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.InitialCheckpointSlot)
-	lastFinalizedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
-	return initialPeriod == lastFinalizedPeriod
-}
-
-func (h *Header) waitingForBatchCallFinished(toSlot uint64) error {
-	batchCallFinished := false
-	cnt := 0
-	for cnt <= 12 {
-		executionHeaderState, err := h.writer.GetLastExecutionHeaderState()
-		if err != nil {
-			return fmt.Errorf("fetch last execution hash: %w", err)
-		}
-		if executionHeaderState.BeaconSlot == toSlot {
-			batchCallFinished = true
-			break
-		}
-		time.Sleep(6 * time.Second)
-		cnt++
+	headerUpdate, err := h.getHeaderUpdateBySlot(header.Slot)
+	if err != nil {
+		return fmt.Errorf("get header update by slot with ancestry proof: %w", err)
 	}
-	if !batchCallFinished {
-		return ErrExecutionHeaderNotImported
+	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdate)
+	if err != nil {
+		return fmt.Errorf("submit_execution_header: %w", err)
+	}
+	var blockHash types.H256
+	if headerUpdate.ExecutionHeader.Deneb != nil {
+		blockHash = headerUpdate.ExecutionHeader.Deneb.BlockHash
+	} else if headerUpdate.ExecutionHeader.Capella != nil {
+		blockHash = headerUpdate.ExecutionHeader.Capella.BlockHash
+	} else {
+		return fmt.Errorf("invalid blockHash in headerUpdate")
+	}
+	compactExecutionHeaderState, err := h.writer.GetCompactExecutionHeaderStateByBlockHash(blockHash)
+	if err != nil {
+		return fmt.Errorf("get compactExecutionHeaderState by blockHash: %w", err)
+	}
+	if compactExecutionHeaderState.BlockNumber == 0 {
+		return fmt.Errorf("invalid compactExecutionHeaderState")
 	}
 	return nil
 }

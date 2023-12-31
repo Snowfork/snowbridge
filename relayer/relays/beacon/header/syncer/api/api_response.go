@@ -17,17 +17,13 @@ import (
 
 type SyncCommitteePeriodUpdateResponse struct {
 	Data struct {
-		AttestedHeader struct {
-			Beacon HeaderResponse `json:"beacon"`
-		} `json:"attested_header"`
-		NextSyncCommittee       SyncCommitteeResponse `json:"next_sync_committee"`
-		NextSyncCommitteeBranch []string              `json:"next_sync_committee_branch"`
-		FinalizedHeader         struct {
-			Beacon HeaderResponse `json:"beacon"`
-		} `json:"finalized_header"`
-		FinalityBranch []string              `json:"finality_branch"`
-		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
-		SignatureSlot  string                `json:"signature_slot"`
+		AttestedHeader          BeaconHeaderWithExecutionHeaderResponse `json:"attested_header"`
+		NextSyncCommittee       SyncCommitteeResponse                   `json:"next_sync_committee"`
+		NextSyncCommitteeBranch []string                                `json:"next_sync_committee_branch"`
+		FinalizedHeader         BeaconHeaderWithExecutionHeaderResponse `json:"finalized_header"`
+		FinalityBranch          []string                                `json:"finality_branch"`
+		SyncAggregate           SyncAggregateResponse                   `json:"sync_aggregate"`
+		SignatureSlot           string                                  `json:"signature_slot"`
 	} `json:"data"`
 }
 
@@ -80,11 +76,9 @@ type BeaconBlockResponse struct {
 
 type BootstrapResponse struct {
 	Data struct {
-		Header struct {
-			Beacon HeaderResponse `json:"beacon"`
-		} `json:"header"`
-		CurrentSyncCommittee       SyncCommitteeResponse `json:"current_sync_committee"`
-		CurrentSyncCommitteeBranch []string              `json:"current_sync_committee_branch"`
+		Header                     BeaconHeaderWithExecutionHeaderResponse `json:"header"`
+		CurrentSyncCommittee       SyncCommitteeResponse                   `json:"current_sync_committee"`
+		CurrentSyncCommitteeBranch []string                                `json:"current_sync_committee_branch"`
 	} `json:"data"`
 }
 
@@ -261,17 +255,19 @@ type ForkResponse struct {
 	} `json:"data"`
 }
 
+type BeaconHeaderWithExecutionHeaderResponse struct {
+	Beacon          HeaderResponse                          `json:"beacon"`
+	Execution       beaconjson.ExecutionPayloadHeaderJsonV1 `json:"execution,omitempty"`
+	ExecutionBranch []string                                `json:"execution_branch,omitempty"`
+}
+
 type LatestFinalisedUpdateResponse struct {
 	Data struct {
-		AttestedHeader struct {
-			Beacon HeaderResponse `json:"beacon"`
-		} `json:"attested_header"`
-		FinalizedHeader struct {
-			Beacon HeaderResponse `json:"beacon"`
-		} `json:"finalized_header"`
-		FinalityBranch []string              `json:"finality_branch"`
-		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
-		SignatureSlot  string                `json:"signature_slot"`
+		AttestedHeader  BeaconHeaderWithExecutionHeaderResponse `json:"attested_header"`
+		FinalizedHeader BeaconHeaderWithExecutionHeaderResponse `json:"finalized_header"`
+		FinalityBranch  []string                                `json:"finality_branch"`
+		SyncAggregate   SyncAggregateResponse                   `json:"sync_aggregate"`
+		SignatureSlot   string                                  `json:"signature_slot"`
 	} `json:"data"`
 }
 

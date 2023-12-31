@@ -73,13 +73,40 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
 	}
 
+	from := s.ComputeSyncPeriodAtSlot(uint64(header.Slot))
+
+	committeeUpdate, err := s.Client.GetSyncCommitteePeriodUpdate(from)
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("get sync committee: %w", err)
+	}
+
+	nextSyncCommittee, err := committeeUpdate.Data.NextSyncCommittee.ToScale()
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("convert next sync committee to scale: %w", err)
+	}
+	nextSyncCommitteeBranch := util.ProofBranchToScale(committeeUpdate.Data.NextSyncCommitteeBranch)
+	attestedHeader, err := committeeUpdate.Data.AttestedHeader.Beacon.ToScale()
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("convert attestedHeader to scale: %w", err)
+	}
+
+	executionPayloadHeader, executionBranch, err := s.getExecutionHeaderFromBeaconHeader(bootstrap.Data.Header)
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("get execution header from beacon header: %w", err)
+	}
+
 	return scale.BeaconCheckpoint{
 		Header:                     header,
 		CurrentSyncCommittee:       syncCommittee,
 		CurrentSyncCommitteeBranch: util.ProofBranchToScale(bootstrap.Data.CurrentSyncCommitteeBranch),
+		AttestedHeader:             attestedHeader,
+		NextSyncCommittee:          nextSyncCommittee,
+		NextSyncCommitteeBranch:    nextSyncCommitteeBranch,
 		ValidatorsRoot:             types.H256(genesis.ValidatorsRoot),
 		BlockRootsRoot:             blockRootsProof.Leaf,
 		BlockRootsBranch:           blockRootsProof.Proof,
+		ExecutionHeader:            executionPayloadHeader,
+		ExecutionBranch:            executionBranch,
 	}, nil
 }
 
@@ -126,6 +153,11 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 		return scale.Update{}, fmt.Errorf("beacon header hash tree root: %w", err)
 	}
 
+	executionPayloadHeader, executionBranch, err := s.getExecutionHeaderFromBeaconHeader(committeeUpdateContainer.Data.FinalizedHeader)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get execution header from beacon header: %w", err)
+	}
+
 	syncCommitteePeriodUpdate := scale.Update{
 		Payload: scale.UpdatePayload{
 			AttestedHeader: attestedHeader,
@@ -142,6 +174,8 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 			FinalityBranch:   util.ProofBranchToScale(committeeUpdate.FinalityBranch),
 			BlockRootsRoot:   blockRootsProof.Leaf,
 			BlockRootsBranch: blockRootsProof.Proof,
+			ExecutionHeader:  executionPayloadHeader,
+			ExecutionBranch:  executionBranch,
 		},
 		FinalizedHeaderBlockRoot: finalizedHeaderBlockRoot,
 		BlockRootsTree:           blockRootsProof.Tree,
@@ -255,6 +289,11 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
+	executionPayloadHeader, executionBranch, err := s.getExecutionHeaderFromBeaconHeader(finalizedUpdate.Data.FinalizedHeader)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get execution header from beacon header: %w", err)
+	}
+
 	updatePayload := scale.UpdatePayload{
 		AttestedHeader: attestedHeader,
 		SyncAggregate:  syncAggregate,
@@ -266,6 +305,8 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		FinalityBranch:   util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
 		BlockRootsRoot:   blockRootsProof.Leaf,
 		BlockRootsBranch: blockRootsProof.Proof,
+		ExecutionHeader:  executionPayloadHeader,
+		ExecutionBranch:  executionBranch,
 	}
 
 	return scale.Update{
@@ -363,7 +404,7 @@ func (s *Syncer) FindBeaconHeaderWithBlockIncluded(slot uint64) (state.BeaconBlo
 	return beaconHeader, nil
 }
 
-func (s *Syncer) GetNextHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
+func (s *Syncer) GetHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
 	header, err := s.FindBeaconHeaderWithBlockIncluded(slot)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next beacon header with block included: %w", err)
@@ -490,4 +531,31 @@ func (s *Syncer) getExecutionHeaderBranch(block state.BeaconBlock) ([]types.H256
 	proof, err := tree.Prove(ExecutionPayloadGeneralizedIndex)
 
 	return util.BytesBranchToScale(proof.Hashes), nil
+}
+
+func (s *Syncer) getExecutionHeaderFromBeaconHeader(header api.BeaconHeaderWithExecutionHeaderResponse) (scale.VersionedExecutionPayloadHeader, []types.H256, error) {
+	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
+	var executionBranch []types.H256
+	slot, err := strconv.ParseUint(header.Beacon.Slot, 10, 64)
+	if err != nil {
+		return versionedExecutionPayloadHeader, executionBranch, fmt.Errorf("invalid slot in header: %w", err)
+	}
+	if s.DenebForked(slot) {
+		executionPayloadScale, err := api.DenebExecutionPayloadHeaderToScale(&header.Execution)
+		if err != nil {
+			return versionedExecutionPayloadHeader, executionBranch, fmt.Errorf("convert payloadHeader to scale: %w", err)
+		}
+		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
+	} else {
+		executionPayloadScale, err := api.ExecutionPayloadHeaderToCapellaScaleV1(&header.Execution)
+		if err != nil {
+			return versionedExecutionPayloadHeader, executionBranch, fmt.Errorf("convert payloadHeader to scale: %w", err)
+		}
+		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Capella: &executionPayloadScale}
+	}
+	if len(header.ExecutionBranch) == 0 {
+		return versionedExecutionPayloadHeader, executionBranch, fmt.Errorf("invalid ExecutionBranch in header: %w", err)
+	}
+	executionBranch = util.ProofBranchToScale(header.ExecutionBranch)
+	return versionedExecutionPayloadHeader, executionBranch, nil
 }

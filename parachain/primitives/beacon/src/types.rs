@@ -440,6 +440,12 @@ impl VersionedExecutionPayloadHeader {
 	}
 }
 
+impl Default for VersionedExecutionPayloadHeader {
+	fn default() -> Self {
+		VersionedExecutionPayloadHeader::Deneb(ExecutionPayloadHeaderDeneb::default())
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

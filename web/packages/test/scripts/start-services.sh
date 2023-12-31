@@ -55,8 +55,19 @@ echo "Config assethub"
 source scripts/configure-assethub.sh
 configure_assethub
 
+# 8. open hrmp channels
+echo "Config hrmp channels"
+source scripts/open-hrmp.sh
+open_hrmp_channels
+
+#9. config beacon checkpoint for bridgeHub
+echo "Config bridgehub beacon,waiting..."
+sleep 30 # a huge transact so sleep to execute solely in another block
+source scripts/configure-bridgehub-beacon.sh
+configure_bridgehub_beacon
+
 if [ "$skip_relayer" == "false" ]; then
-  # 8. start relayer
+  # 10. start relayer
   echo "Starting relayers"
   source scripts/start-relayer.sh
   deploy_relayer

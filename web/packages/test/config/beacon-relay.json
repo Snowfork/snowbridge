@@ -6,7 +6,7 @@
         "minimal": {
           "slotsInEpoch": 8,
           "epochsPerSyncCommitteePeriod": 8,
-          "denebForkedEpoch": 20
+          "denebForkedEpoch": 0
         },
         "mainnet": {
           "slotsInEpoch": 32,

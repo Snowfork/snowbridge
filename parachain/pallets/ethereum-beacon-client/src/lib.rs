@@ -34,9 +34,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-use frame_support::{
-	dispatch::DispatchResult, pallet_prelude::OptionQuery, traits::Get, transactional,
-};
+use frame_support::{dispatch::DispatchResult, pallet_prelude::OptionQuery, traits::Get};
 use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
@@ -214,8 +212,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::force_checkpoint())]
-		#[transactional]
+		#[pallet::weight((T::WeightInfo::force_checkpoint(), DispatchClass::Operational))]
 		/// Used for pallet initialization and light client resetting. Needs to be called by
 		/// the root origin.
 		pub fn force_checkpoint(
@@ -234,7 +231,6 @@ pub mod pallet {
 				Some(_) => T::WeightInfo::submit_with_sync_committee(),
 			}
 		})]
-		#[transactional]
 		/// Submits a new finalized beacon header update. The update may contain the next
 		/// sync committee.
 		pub fn submit(origin: OriginFor<T>, update: Box<Update>) -> DispatchResult {
@@ -246,7 +242,6 @@ pub mod pallet {
 
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::submit_execution_header())]
-		#[transactional]
 		/// Submits a new execution header update. The relevant related beacon header
 		/// is also included to prove the execution header, as well as ancestry proof data.
 		pub fn submit_execution_header(
@@ -315,14 +310,62 @@ pub mod pallet {
 				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
 
+			// Execution payload header corresponding to `beacon.body_root` (from Capella onward)
+			// https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/light-client/sync-protocol.md#modified-lightclientheader
+			if update.execution_branch.len() > 0 {
+				let execution_header_root: H256 = update
+					.execution_header
+					.hash_tree_root()
+					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
+
+				ensure!(
+					verify_merkle_branch(
+						execution_header_root,
+						&update.execution_branch,
+						config::EXECUTION_HEADER_SUBTREE_INDEX,
+						config::EXECUTION_HEADER_DEPTH,
+						update.header.body_root
+					),
+					Error::<T>::InvalidExecutionHeaderProof
+				);
+				Self::store_execution_header(
+					update.execution_header.block_hash(),
+					update.execution_header.clone().into(),
+					update.header.slot,
+					header_root,
+				);
+			}
+
 			let sync_committee_prepared: SyncCommitteePrepared = (&update.current_sync_committee)
 				.try_into()
 				.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
 			<CurrentSyncCommittee<T>>::set(sync_committee_prepared);
-			<NextSyncCommittee<T>>::kill();
-			InitialCheckpointRoot::<T>::set(header_root);
-			<LatestExecutionState<T>>::kill();
 
+			if update.next_sync_committee_branch.len() > 0 {
+				let next_sync_committee_root = update
+					.next_sync_committee
+					.hash_tree_root()
+					.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
+
+				// Verifies the next sync committee in the Beacon state.
+				ensure!(
+					verify_merkle_branch(
+						next_sync_committee_root,
+						&update.next_sync_committee_branch,
+						config::NEXT_SYNC_COMMITTEE_SUBTREE_INDEX,
+						config::NEXT_SYNC_COMMITTEE_DEPTH,
+						update.attested_header.state_root
+					),
+					Error::<T>::InvalidSyncCommitteeMerkleProof
+				);
+				let next_sync_committee_prepared: SyncCommitteePrepared = (&update
+					.next_sync_committee)
+					.try_into()
+					.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
+				<NextSyncCommittee<T>>::set(next_sync_committee_prepared);
+			}
+
+			InitialCheckpointRoot::<T>::set(header_root);
 			Self::store_validators_root(update.validators_root);
 			Self::store_finalized_header(header_root, update.header, update.block_roots_root)?;
 
@@ -479,6 +522,26 @@ pub mod pallet {
 			)
 			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
+			// Execution payload header corresponding to `beacon.body_root` (from Capella onward)
+			// https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/light-client/sync-protocol.md#modified-lightclientheader
+			if update.execution_branch.len() > 0 {
+				let execution_header_root: H256 = update
+					.execution_header
+					.hash_tree_root()
+					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
+
+				ensure!(
+					verify_merkle_branch(
+						execution_header_root,
+						&update.execution_branch,
+						config::EXECUTION_HEADER_SUBTREE_INDEX,
+						config::EXECUTION_HEADER_DEPTH,
+						update.finalized_header.body_root
+					),
+					Error::<T>::InvalidExecutionHeaderProof
+				);
+			}
+
 			Ok(())
 		}
 
@@ -530,6 +593,19 @@ pub mod pallet {
 				)?;
 			}
 
+			if update.execution_branch.len() > 0 {
+				let finalized_block_root: H256 = update
+					.finalized_header
+					.hash_tree_root()
+					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
+				Self::store_execution_header(
+					update.execution_header.block_hash(),
+					update.execution_header.clone().into(),
+					update.finalized_header.slot,
+					finalized_block_root,
+				);
+			}
+
 			Ok(())
 		}
 
@@ -548,16 +624,8 @@ pub mod pallet {
 				Error::<T>::HeaderNotFinalized
 			);
 
-			// Checks that we don't skip execution headers, they need to be imported sequentially.
 			let compact_execution_header: CompactExecutionHeader =
 				update.execution_header.clone().into();
-			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
-			ensure!(
-				latest_execution_state.block_number == 0 ||
-					compact_execution_header.block_number ==
-						latest_execution_state.block_number + 1,
-				Error::<T>::ExecutionHeaderSkippedBlock
-			);
 
 			// Gets the hash tree root of the execution header, in preparation for the execution
 			// header proof (used to check that the execution header is rooted in the beacon
@@ -711,12 +779,15 @@ pub mod pallet {
 				block_number
 			);
 
-			LatestExecutionState::<T>::mutate(|s| {
-				s.beacon_block_root = beacon_block_root;
-				s.beacon_slot = beacon_slot;
-				s.block_hash = block_hash;
-				s.block_number = block_number;
-			});
+			let latest_execution_state = LatestExecutionState::<T>::get();
+			if beacon_slot > latest_execution_state.beacon_slot {
+				LatestExecutionState::<T>::mutate(|s| {
+					s.beacon_block_root = beacon_block_root;
+					s.beacon_slot = beacon_slot;
+					s.block_hash = block_hash;
+					s.block_number = block_number;
+				});
+			}
 
 			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
 		}

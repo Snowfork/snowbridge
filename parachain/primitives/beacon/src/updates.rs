@@ -8,7 +8,9 @@ use sp_std::prelude::*;
 
 use crate::types::{BeaconHeader, SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader};
 
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+#[derive(
+	Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
+)]
 #[cfg_attr(
 	feature = "std",
 	derive(serde::Serialize, serde::Deserialize),
@@ -18,22 +20,14 @@ pub struct CheckpointUpdate<const COMMITTEE_SIZE: usize> {
 	pub header: BeaconHeader,
 	pub current_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
 	pub current_sync_committee_branch: Vec<H256>,
+	pub attested_header: BeaconHeader,
+	pub next_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
+	pub next_sync_committee_branch: Vec<H256>,
 	pub validators_root: H256,
 	pub block_roots_root: H256,
 	pub block_roots_branch: Vec<H256>,
-}
-
-impl<const COMMITTEE_SIZE: usize> Default for CheckpointUpdate<COMMITTEE_SIZE> {
-	fn default() -> Self {
-		CheckpointUpdate {
-			header: Default::default(),
-			current_sync_committee: Default::default(),
-			current_sync_committee_branch: Default::default(),
-			validators_root: Default::default(),
-			block_roots_root: Default::default(),
-			block_roots_branch: Default::default(),
-		}
-	}
+	pub execution_header: VersionedExecutionPayloadHeader,
+	pub execution_branch: Vec<H256>,
 }
 
 #[derive(
@@ -64,6 +58,10 @@ pub struct Update<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 	pub block_roots_root: H256,
 	/// The merkle path to prove the `block_roots_root` value.
 	pub block_roots_branch: Vec<H256>,
+	/// The execution header to be imported
+	pub execution_header: VersionedExecutionPayloadHeader,
+	/// The merkle proof for the execution_header
+	pub execution_branch: Vec<H256>,
 }
 
 #[derive(

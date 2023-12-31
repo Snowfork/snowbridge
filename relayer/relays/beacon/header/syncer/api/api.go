@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 )
 
 const (
@@ -44,30 +45,30 @@ func NewBeaconClient(endpoint string, activeSpec config.ActiveSpec, slotsInEpoch
 }
 
 func (b *BeaconClient) GetBootstrap(blockRoot common.Hash) (BootstrapResponse, error) {
+	var response BootstrapResponse
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/bootstrap/%s", b.endpoint, blockRoot), nil)
 	if err != nil {
-		return BootstrapResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
+		return response, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		return BootstrapResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
+		return response, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return BootstrapResponse{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
+		return response, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return BootstrapResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
+		return response, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
-	var response BootstrapResponse
 	err = json.Unmarshal(bodyBytes, &response)
 	if err != nil {
-		return BootstrapResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
+		return response, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	return response, nil

@@ -10,9 +10,14 @@ func (p BeaconCheckpoint) ToJSON() json.CheckPoint {
 		Header:                     p.Header.ToJSON(),
 		CurrentSyncCommittee:       p.CurrentSyncCommittee.ToJSON(),
 		CurrentSyncCommitteeBranch: util.ScaleBranchToString(p.CurrentSyncCommitteeBranch),
+		AttestedHeader:             p.AttestedHeader.ToJSON(),
+		NextSyncCommittee:          p.NextSyncCommittee.ToJSON(),
+		NextSyncCommitteeBranch:    util.ScaleBranchToString(p.NextSyncCommitteeBranch),
 		ValidatorsRoot:             p.ValidatorsRoot.Hex(),
 		BlockRootsRoot:             p.BlockRootsRoot.Hex(),
 		BlockRootsBranch:           util.ScaleBranchToString(p.BlockRootsBranch),
+		ExecutionHeader:            p.ExecutionHeader.ToJSON(),
+		ExecutionBranch:            util.ScaleBranchToString(p.ExecutionBranch),
 	}
 }
 
@@ -34,6 +39,8 @@ func (p UpdatePayload) ToJSON() json.Update {
 		FinalityBranch:          util.ScaleBranchToString(p.FinalityBranch),
 		BlockRootsRoot:          p.BlockRootsRoot.Hex(),
 		BlockRootsBranch:        util.ScaleBranchToString(p.BlockRootsBranch),
+		ExecutionHeader:         p.ExecutionHeader.ToJSON(),
+		ExecutionBranch:         util.ScaleBranchToString(p.ExecutionBranch),
 	}
 }
 
@@ -65,21 +72,21 @@ func (b *BeaconHeader) ToJSON() json.BeaconHeader {
 
 func (e *ExecutionPayloadHeaderCapella) ToJSON() json.ExecutionPayloadHeaderCapella {
 	return json.ExecutionPayloadHeaderCapella{
-		ParentHash:      e.ParentHash.Hex(),
-		FeeRecipient:    util.BytesToHexString(e.FeeRecipient[:]),
-		StateRoot:       e.StateRoot.Hex(),
-		ReceiptsRoot:    e.ReceiptsRoot.Hex(),
-		LogsBloom:       util.BytesToHexString(e.LogsBloom),
-		PrevRandao:      e.PrevRandao.Hex(),
-		BlockNumber:     uint64(e.BlockNumber),
-		GasLimit:        uint64(e.GasLimit),
-		GasUsed:         uint64(e.GasUsed),
-		Timestamp:       uint64(e.Timestamp),
-		ExtraData:       util.BytesToHexString(e.ExtraData),
-		BaseFeePerGas:   e.BaseFeePerGas.Uint64(),
-		BlockHash:       e.BlockHash.Hex(),
-		TransactionRoot: e.TransactionsRoot.Hex(),
-		WithdrawalsRoot: e.WithdrawalsRoot.Hex(),
+		ParentHash:       e.ParentHash.Hex(),
+		FeeRecipient:     util.BytesToHexString(e.FeeRecipient[:]),
+		StateRoot:        e.StateRoot.Hex(),
+		ReceiptsRoot:     e.ReceiptsRoot.Hex(),
+		LogsBloom:        util.BytesToHexString(e.LogsBloom),
+		PrevRandao:       e.PrevRandao.Hex(),
+		BlockNumber:      uint64(e.BlockNumber),
+		GasLimit:         uint64(e.GasLimit),
+		GasUsed:          uint64(e.GasUsed),
+		Timestamp:        uint64(e.Timestamp),
+		ExtraData:        util.BytesToHexString(e.ExtraData),
+		BaseFeePerGas:    e.BaseFeePerGas.Uint64(),
+		BlockHash:        e.BlockHash.Hex(),
+		TransactionsRoot: e.TransactionsRoot.Hex(),
+		WithdrawalsRoot:  e.WithdrawalsRoot.Hex(),
 	}
 }
 

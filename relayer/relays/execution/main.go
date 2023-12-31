@@ -16,6 +16,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,6 +26,7 @@ type Relay struct {
 	paraconn        *parachain.Connection
 	ethconn         *ethereum.Connection
 	gatewayContract *contracts.Gateway
+	beaconHeader    *header.Header
 }
 
 func NewRelay(
@@ -77,6 +79,14 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 	r.gatewayContract = contract
+
+	beaconHeader := header.New(
+		writer,
+		r.config.Source.Beacon.Endpoint,
+		r.config.GetSpecSettings(),
+		r.config.GetActiveSpec(),
+	)
+	r.beaconHeader = &beaconHeader
 
 	for {
 		select {
@@ -144,6 +154,18 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				if ev.Nonce <= paraNonce {
 					logger.Warn("inbound message outdated, just skipped")
 					continue
+				}
+				nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
+
+				blockHeader, err := ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
+				if err != nil {
+					return fmt.Errorf("get block header: %w", err)
+				}
+
+				// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
+				err = beaconHeader.SyncExecutionHeader(ctx, *blockHeader.ParentBeaconRoot)
+				if err != nil {
+					return fmt.Errorf("sync beacon header: %w", err)
 				}
 
 				err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)

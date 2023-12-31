@@ -5,11 +5,12 @@ package ethereum
 
 import (
 	"fmt"
+	"math/big"
+
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	types "github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"math/big"
 )
 
 type HeaderID struct {
@@ -18,21 +19,22 @@ type HeaderID struct {
 }
 
 type headerSCALE struct {
-	ParentHash       types.H256
-	Timestamp        types.U64
-	Number           types.U64
-	Author           types.H160
-	TransactionsRoot types.H256
-	OmmersHash       types.H256
-	ExtraData        types.Bytes
-	StateRoot        types.H256
-	ReceiptsRoot     types.H256
-	LogsBloom        types.Bytes256
-	GasUsed          types.U256
-	GasLimit         types.U256
-	Difficulty       types.U256
-	Seal             []types.Bytes
-	BaseFee          optionBaseFee
+	ParentHash            types.H256
+	Timestamp             types.U64
+	Number                types.U64
+	Author                types.H160
+	TransactionsRoot      types.H256
+	OmmersHash            types.H256
+	ExtraData             types.Bytes
+	StateRoot             types.H256
+	ReceiptsRoot          types.H256
+	LogsBloom             types.Bytes256
+	GasUsed               types.U256
+	GasLimit              types.U256
+	Difficulty            types.U256
+	Seal                  []types.Bytes
+	BaseFee               optionBaseFee
+	ParentBeaconBlockRoot types.H256
 }
 
 type optionBaseFee struct {
