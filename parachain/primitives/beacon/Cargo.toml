@@ -26,7 +26,8 @@ byte-slice-cast = { version = "1.2.1", default-features = false }
 
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 static_assertions = { version = "1.1.0" }
-milagro_bls = { workspace = true }
+milagro_bls = { git = "https://github.com/snowfork/milagro_bls", default-features = false, rev = "a8e9585ae904112328ddff9c229db473b563f4fa" }
+
 
 [dev-dependencies]
 hex-literal = { version = "0.4.1" }
