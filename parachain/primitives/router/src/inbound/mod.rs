@@ -9,6 +9,7 @@ use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use frame_support::{traits::tokens::Balance as BalanceT, weights::Weight, PalletError};
 use scale_info::TypeInfo;
+use snowbridge_core::ParaId;
 use sp_core::{Get, RuntimeDebug, H160};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
@@ -89,10 +90,12 @@ pub struct MessageToXcm<
 	InboundQueuePalletInstance,
 	AccountId,
 	Balance,
+	SelfParaId,
 > where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT,
+	SelfParaId: Get<ParaId>,
 {
 	_phantom: PhantomData<(
 		CreateAssetCall,
@@ -100,6 +103,7 @@ pub struct MessageToXcm<
 		InboundQueuePalletInstance,
 		AccountId,
 		Balance,
+		SelfParaId,
 	)>,
 }
 
@@ -120,20 +124,28 @@ pub trait ConvertMessage {
 
 pub type CallIndex = [u8; 2];
 
-impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
-	ConvertMessage
+impl<
+		CreateAssetCall,
+		CreateAssetDeposit,
+		InboundQueuePalletInstance,
+		AccountId,
+		Balance,
+		SelfParaId,
+	> ConvertMessage
 	for MessageToXcm<
 		CreateAssetCall,
 		CreateAssetDeposit,
 		InboundQueuePalletInstance,
 		AccountId,
 		Balance,
+		SelfParaId,
 	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
+	SelfParaId: Get<ParaId>,
 {
 	type Balance = Balance;
 	type AccountId = AccountId;
@@ -150,14 +162,28 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 	}
 }
 
-impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
-	MessageToXcm<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
-where
+impl<
+		CreateAssetCall,
+		CreateAssetDeposit,
+		InboundQueuePalletInstance,
+		AccountId,
+		Balance,
+		SelfParaId,
+	>
+	MessageToXcm<
+		CreateAssetCall,
+		CreateAssetDeposit,
+		InboundQueuePalletInstance,
+		AccountId,
+		Balance,
+		SelfParaId,
+	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
+	SelfParaId: Get<ParaId>,
 {
 	fn convert_register_token(chain_id: u64, token: H160, fee: u128) -> (Xcm<()>, Balance) {
 		let network = Ethereum { chain_id };
@@ -198,10 +224,17 @@ where
 					.encode()
 					.into(),
 			},
-			RefundSurplus,
-			// Clear the origin so that remaining assets in holding
-			// are claimable by the physical origin (BridgeHub)
-			ClearOrigin,
+			SetAppendix(Xcm(vec![
+				RefundSurplus,
+				ClearOrigin,
+				DepositAsset {
+					assets: Wild(AllCounted(1u32)),
+					beneficiary: MultiLocation {
+						parents: 1,
+						interior: X1(Junction::Parachain(SelfParaId::get().into())),
+					},
+				},
+			])),
 		]
 		.into();
 
@@ -252,6 +285,7 @@ where
 			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
 			UniversalOrigin(GlobalConsensus(network)),
 			ReserveAssetDeposited(asset.clone().into()),
+			RefundSurplus,
 			ClearOrigin,
 		];
 
@@ -268,8 +302,8 @@ where
 						xcm: vec![
 							// Buy execution on target.
 							BuyExecution { fees: dest_para_fee_asset, weight_limit: Unlimited },
-							// Deposit asset to beneficiary.
-							DepositAsset { assets: Definite(asset.into()), beneficiary },
+							// Deposit asset and fee to beneficiary.
+							DepositAsset { assets: Wild(AllCounted(2u32)), beneficiary },
 						]
 						.into(),
 					},
@@ -277,8 +311,8 @@ where
 			},
 			None => {
 				instructions.extend(vec![
-					// Deposit asset to beneficiary.
-					DepositAsset { assets: Definite(asset.into()), beneficiary },
+					// Deposit asset and fee to beneficiary.
+					DepositAsset { assets: Wild(AllCounted(2u32)), beneficiary },
 				]);
 			},
 		}

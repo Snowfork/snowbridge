@@ -213,6 +213,7 @@ impl inbound_queue::Config for Test {
 		InboundQueuePalletInstance,
 		AccountId,
 		Balance,
+		OwnParaId,
 	>;
 	type PricingParameters = Parameters;
 	type ChannelLookup = MockChannelLookup;

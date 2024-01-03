@@ -206,7 +206,7 @@ contract Gateway is IGateway, IInitializable {
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
         // that could drain funds unnecessarily. During these spikes, relayers should back off.
         uint256 gasUsed = _transactionBaseGas() + (startGas - gasleft());
-        uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
+        uint256 refund = Math.min(maxDispatchGas * message.maxFeePerGas, gasUsed * tx.gasprice);
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
