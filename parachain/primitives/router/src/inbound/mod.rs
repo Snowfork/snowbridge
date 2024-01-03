@@ -285,7 +285,6 @@ impl<
 			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
 			UniversalOrigin(GlobalConsensus(network)),
 			ReserveAssetDeposited(asset.clone().into()),
-			RefundSurplus,
 			ClearOrigin,
 		];
 
