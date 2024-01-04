@@ -190,10 +190,16 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		// ETH_FAST_MODE hack for fast slot period
-		SlotTimeDuration := 6 * time.Second
-		if os.Getenv("ETH_FAST_MODE") == "true" {
-			SlotTimeDuration = 1 * time.Second
+		var SlotTimeDuration time.Duration
+
+		if activeSpec == config.Mainnet {
+			SlotTimeDuration = 12 * time.Second
+		} else {
+			SlotTimeDuration = 6 * time.Second
+			// ETH_FAST_MODE hack for fast slot period
+			if os.Getenv("ETH_FAST_MODE") == "true" {
+				SlotTimeDuration = 2 * time.Second
+			}
 		}
 
 		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
@@ -215,8 +221,17 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			"period": initialSyncPeriod,
 		}).Info("created initial sync file")
 
+		// generate SyncCommitteeUpdate for filling the missing NextSyncCommittee in initial checkpoint
+		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod)
+		if err != nil {
+			return fmt.Errorf("get sync committee update: %w", err)
+		}
+		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
+		writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("sync-committee-update.%s.json", activeSpec.ToString()))
+		log.Info("created sync committee update file")
+
 		// generate FinalizedUpdate for next epoch
-		log.Info("waiting for a new finalized_update in next epoch and in current sync period,several seconds required...")
+		log.Info("waiting for a new finalized_update in next epoch and in current sync period,several minutes required...")
 		elapseEpochs := uint64(1)
 		waitIntervalForNextEpoch := elapseEpochs * specSettings.SlotsInEpoch
 		time.Sleep(time.Duration(waitIntervalForNextEpoch) * SlotTimeDuration)
@@ -241,15 +256,6 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			"epoch":  finalizedEpoch,
 			"period": finalizedPeriod,
 		}).Info("created finalized header update file")
-
-		// generate SyncCommitteeUpdate same as InitialUpdate for filling NextSyncCommittee
-		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod)
-		if err != nil {
-			return fmt.Errorf("get sync committee update: %w", err)
-		}
-		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("sync-committee-update.%s.json", activeSpec.ToString()))
-		log.Info("created sync committee update file")
 
 		// generate executionUpdate
 		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot - 2)
