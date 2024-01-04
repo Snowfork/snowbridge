@@ -418,7 +418,7 @@ pub mod pallet {
 			// Though following check does not belong to ALC spec we verify block_roots_root to
 			// match the finalized checkpoint root saved in the state of `finalized_header` so to
 			// cache it for later use in `verify_ancestry_proof`.
-			if update.block_roots_branch.len() > 0 {
+			if !update.block_roots_branch.is_empty() {
 				ensure!(
 					verify_merkle_branch(
 						update.block_roots_root,
@@ -520,7 +520,7 @@ pub mod pallet {
 			};
 
 			if update.finalized_header.slot > latest_finalized_state.slot &&
-				update.block_roots_branch.len() > 0
+				!update.block_roots_branch.is_empty()
 			{
 				let finalized_block_root: H256 = update
 					.finalized_header
