@@ -24,20 +24,12 @@ func generateBeaconDataCmd() *cobra.Command {
 		Use:   "generate-beacon-data",
 		Short: "Generate beacon data.",
 		Args:  cobra.ExactArgs(0),
-		RunE:  generateBeaconData,
+		RunE:  generateBeaconTestFixture,
 	}
 
-	cmd.Flags().String("spec", "", "Valid values are mainnet or minimal")
-	err := cmd.MarkFlagRequired("spec")
-	if err != nil {
-		return nil
-	}
-
+	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
-	if err != nil {
-		return nil
-	}
-
+	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	return cmd
 }
 
@@ -49,21 +41,9 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 		RunE:  generateBeaconCheckpoint,
 	}
 
-	cmd.Flags().String("spec", "", "Valid values are mainnet or minimal")
-	err := cmd.MarkFlagRequired("spec")
-	if err != nil {
-		return nil
-	}
-
+	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
-	if err != nil {
-		return nil
-	}
-
-	cmd.Flags().Bool("export-json", true, "Export Json")
-	if err != nil {
-		return nil
-	}
+	cmd.Flags().Bool("export_json", false, "Export Json")
 
 	return cmd
 }
@@ -76,23 +56,9 @@ func generateExecutionUpdateCmd() *cobra.Command {
 		RunE:  generateExecutionUpdate,
 	}
 
-	cmd.Flags().String("spec", "", "Valid values are mainnet or minimal")
-	err := cmd.MarkFlagRequired("spec")
-	if err != nil {
-		return nil
-	}
-
-	cmd.Flags().Uint32("slot", 1, "slot number")
-	err = cmd.MarkFlagRequired("slot")
-	if err != nil {
-		return nil
-	}
-
+	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
-	if err != nil {
-		return nil
-	}
-
+	cmd.Flags().Uint32("slot", 1, "slot number")
 	return cmd
 }
 
@@ -109,6 +75,7 @@ const (
 	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
 )
 
+// Only print the hex encoded call as output of this command
 func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		spec, err := cmd.Flags().GetString("spec")
@@ -151,11 +118,9 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 				return fmt.Errorf("write initial sync to file: %w", err)
 			}
 		}
-		checkPointBytes, _ := types.EncodeToBytes(checkPointScale)
-		// Call index for EthereumBeaconClient.force_checkpoint
-		checkPointCallIndex := "0x5200"
-		checkPointUpdateCall := checkPointCallIndex + hex.EncodeToString(checkPointBytes)
-		fmt.Println(checkPointUpdateCall)
+		checkPointCallBytes, _ := types.EncodeToBytes(checkPointScale)
+		checkPointCallHex := hex.EncodeToString(checkPointCallBytes)
+		fmt.Println(checkPointCallHex)
 		return nil
 	}()
 	if err != nil {
@@ -165,7 +130,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func generateBeaconData(cmd *cobra.Command, _ []string) error {
+func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		spec, err := cmd.Flags().GetString("spec")
 		if err != nil {
@@ -231,7 +196,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		log.Info("created sync committee update file")
 
 		// generate FinalizedUpdate for next epoch
-		log.Info("waiting for a new finalized_update in next epoch and in current sync period,several minutes required...")
+		log.Info("waiting finalized_update in next epoch(6.4 minutes later), be patient and drink a cup of tea...")
 		elapseEpochs := uint64(1)
 		waitIntervalForNextEpoch := elapseEpochs * specSettings.SlotsInEpoch
 		time.Sleep(time.Duration(waitIntervalForNextEpoch) * SlotTimeDuration)
@@ -272,32 +237,7 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
 		log.Info("created execution update file")
 
-		if activeSpec.IsMinimal() {
-			// generate FinalizedUpdate for next period
-			log.Info("waiting until next sync period,several minutes required...")
-			time.Sleep(time.Duration(specSettings.SlotsInEpoch*(specSettings.EpochsPerSyncCommitteePeriod-elapseEpochs)) * SlotTimeDuration)
-			nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
-			if err != nil {
-				return fmt.Errorf("get next finalized header update: %w", err)
-			}
-			nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
-			nextFinalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
-			if initialSyncPeriod+1 != nextFinalizedUpdatePeriod {
-				return fmt.Errorf("nextFinalizedUpdatePeriod should be 1 period ahead of initialSyncPeriod")
-			}
-			writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("next-finalized-header-update.%s.json", activeSpec.ToString()))
-			log.Info("created next finalized header update file")
-
-			// generate nextSyncCommitteeUpdate
-			nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod + 1)
-			if err != nil {
-				return fmt.Errorf("get sync committee update: %w", err)
-			}
-			nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
-			writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("next-sync-committee-update.%s.json", activeSpec.ToString()))
-			log.Info("created next sync committee update file")
-		}
-
+		// Generate benchmark fixture for mainnet spec only
 		if !activeSpec.IsMinimal() {
 			log.Info("now updating benchmarking data files")
 
@@ -335,6 +275,33 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			if err != nil {
 				return err
 			}
+		}
+
+		// Generate test fixture in next period(require waiting a long time)
+		waitUntilNextPeriod, err := cmd.Flags().GetBool("wait_until_next_period")
+		if waitUntilNextPeriod {
+			log.Info("waiting finalized_update in next period(27 hours later), be patient and go to sleep first...")
+			time.Sleep(time.Duration(specSettings.SlotsInEpoch*(specSettings.EpochsPerSyncCommitteePeriod-elapseEpochs)) * SlotTimeDuration)
+			nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
+			if err != nil {
+				return fmt.Errorf("get next finalized header update: %w", err)
+			}
+			nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
+			nextFinalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
+			if initialSyncPeriod+1 != nextFinalizedUpdatePeriod {
+				return fmt.Errorf("nextFinalizedUpdatePeriod should be 1 period ahead of initialSyncPeriod")
+			}
+			writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("next-finalized-header-update.%s.json", activeSpec.ToString()))
+			log.Info("created next finalized header update file")
+
+			// generate nextSyncCommitteeUpdate
+			nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod + 1)
+			if err != nil {
+				return fmt.Errorf("get sync committee update: %w", err)
+			}
+			nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
+			writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("next-sync-committee-update.%s.json", activeSpec.ToString()))
+			log.Info("created next sync committee update file")
 		}
 
 		log.WithField("spec", activeSpec).Info("done")
