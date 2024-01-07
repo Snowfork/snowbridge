@@ -53,16 +53,16 @@ jobs:
         run: rustup show
       - name: cargo check
         working-directory: parachain
-        run: |
-          rustup install --profile minimal $RUST_NIGHTLY_VERSION
-          rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
-          cargo check --workspace --all-features
+        run: cargo check --workspace --all-features
       - name: clippy
         working-directory: parachain
         run: cargo clippy -- -D warnings
       - name: format
         working-directory: parachain
-        run: cargo +nightly fmt --check
+        run: |
+          rustup install --profile minimal $RUST_NIGHTLY_VERSION
+          rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
+          cargo +$RUST_NIGHTLY_VERSION fmt --check
       - name: install taplo
         run: |
           cargo install taplo-cli --locked
