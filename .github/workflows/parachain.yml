@@ -53,7 +53,7 @@ jobs:
         run: rustup show
       - name: cargo check
         working-directory: parachain
-        run: >
+        run: |
           rustup install --profile minimal $RUST_NIGHTLY_VERSION
           rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
           cargo check --workspace --all-features
