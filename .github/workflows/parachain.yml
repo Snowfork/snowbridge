@@ -28,6 +28,7 @@ jobs:
       RUST_BACKTRACE: 1
       RUSTFLAGS: -C debuginfo=1
       SKIP_WASM_BUILD: 1
+      RUST_NIGHTLY_VERSION: nightly-2023-05-23
     steps:
       - uses: actions/checkout@v2
         with:
@@ -53,9 +54,9 @@ jobs:
       - name: cargo check
         working-directory: parachain
         run: >
-          cargo check
-          --workspace
-          --all-features
+          rustup install --profile minimal $RUST_NIGHTLY_VERSION
+          rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
+          cargo check --workspace --all-features
       - name: clippy
         working-directory: parachain
         run: cargo clippy -- -D warnings
