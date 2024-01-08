@@ -5,6 +5,8 @@ version = "0.1.1"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2021"
 repository = "https://github.com/Snowfork/snowbridge"
+homepage = "https://docs.snowbridge.network"
+readme = "README.md"
 license = "Apache-2.0"
 
 [package.metadata.docs.rs]
