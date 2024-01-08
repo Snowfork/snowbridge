@@ -428,6 +428,7 @@ pub mod pallet {
 				),
 				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
+
 			// Verify that the `next_sync_committee`, if present, actually is the next sync
 			// committee saved in the state of the `attested_header`.
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {

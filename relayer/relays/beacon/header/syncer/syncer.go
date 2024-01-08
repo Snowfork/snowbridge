@@ -117,14 +117,14 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
-	finalizedHeaderBlockRoot, err := finalizedHeader.ToSSZ().HashTreeRoot()
-	if err != nil {
-		return scale.Update{}, fmt.Errorf("beacon header hash tree root: %w", err)
-	}
-
 	blockRootsProof, err := s.GetBlockRoots(uint64(finalizedHeader.Slot))
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("fetch block roots: %w", err)
+	}
+
+	finalizedHeaderBlockRoot, err := finalizedHeader.ToSSZ().HashTreeRoot()
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("beacon header hash tree root: %w", err)
 	}
 
 	syncCommitteePeriodUpdate := scale.Update{
