@@ -211,7 +211,7 @@ impl<
 			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(network)),
-			// SetAppendix to refund the surplus fee asset to BH sovereign in AH
+			// Refund the surplus execution weight to BH sovereign
 			SetAppendix(Xcm(vec![
 				RefundSurplus,
 				ClearOrigin,
