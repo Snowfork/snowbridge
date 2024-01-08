@@ -418,18 +418,16 @@ pub mod pallet {
 			// Though following check does not belong to ALC spec we verify block_roots_root to
 			// match the finalized checkpoint root saved in the state of `finalized_header` so to
 			// cache it for later use in `verify_ancestry_proof`.
-			if !update.block_roots_branch.is_empty() {
-				ensure!(
-					verify_merkle_branch(
-						update.block_roots_root,
-						&update.block_roots_branch,
-						config::BLOCK_ROOTS_SUBTREE_INDEX,
-						config::BLOCK_ROOTS_DEPTH,
-						update.finalized_header.state_root
-					),
-					Error::<T>::InvalidBlockRootsRootMerkleProof
-				);
-			}
+			ensure!(
+				verify_merkle_branch(
+					update.block_roots_root,
+					&update.block_roots_branch,
+					config::BLOCK_ROOTS_SUBTREE_INDEX,
+					config::BLOCK_ROOTS_DEPTH,
+					update.finalized_header.state_root
+				),
+				Error::<T>::InvalidBlockRootsRootMerkleProof
+			);
 			// Verify that the `next_sync_committee`, if present, actually is the next sync
 			// committee saved in the state of the `attested_header`.
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
@@ -519,9 +517,7 @@ pub mod pallet {
 				});
 			};
 
-			if update.finalized_header.slot > latest_finalized_state.slot &&
-				!update.block_roots_branch.is_empty()
-			{
+			if update.finalized_header.slot > latest_finalized_state.slot {
 				let finalized_block_root: H256 = update
 					.finalized_header
 					.hash_tree_root()

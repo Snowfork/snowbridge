@@ -123,9 +123,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 	}
 
 	blockRootsProof, err := s.GetBlockRoots(uint64(finalizedHeader.Slot))
-	// It's possible that beaconState is not available when GetSyncCommitteePeriodUpdate, in this case
-	// there is no blockRootsProof and just ignore it in beacon client
-	if err != nil && err != ErrBeaconStateAvailableYet {
+	if err != nil {
 		return scale.Update{}, fmt.Errorf("fetch block roots: %w", err)
 	}
 
