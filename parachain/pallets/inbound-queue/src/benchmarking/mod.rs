@@ -29,7 +29,7 @@ mod benchmarks {
 		let minimum_balance = T::Token::minimum_balance();
 
 		// So that the receiving account exists
-		let _ = T::Token::mint_into(&caller, minimum_balance.into());
+		let _ = T::Token::mint_into(&caller, minimum_balance);
 		// Fund the sovereign account (parachain sovereign account) so it can transfer a reward
 		// fee to the caller account
 		let _ = T::Token::mint_into(
@@ -41,7 +41,7 @@ mod benchmarks {
 
 		#[block]
 		{
-			let _ = InboundQueue::<T>::submit(
+			InboundQueue::<T>::submit(
 				RawOrigin::Signed(caller.clone()).into(),
 				create_message.message,
 			)?;

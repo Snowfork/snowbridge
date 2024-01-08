@@ -56,7 +56,7 @@ jobs:
         run: cargo check --workspace --all-features
       - name: clippy
         working-directory: parachain
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-features -- -D warnings
       - name: format
         working-directory: parachain
         run: |

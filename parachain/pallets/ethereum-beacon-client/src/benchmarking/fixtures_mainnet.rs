@@ -1130,7 +1130,7 @@ pub fn make_finalized_header_update() -> Box<Update> {
             body_root: hex!("109e4c0c647d42dba0c8c6569997c51b5bcfc1a33475b1433ded6353f48423ff").into(),
         },
         sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("ffffffffff7bfdfffff7fffff1effffef7f9ffbdfdffffffdffbfffbbf7ffffffffffefdf7ffbeffdffef7bfffffffffffbffffffffffbffffffffffffffdfda").into(),
+            sync_committee_bits: hex!("ffffffffff7bfdfffff7fffff1effffef7f9ffbdfdffffffdffbfffbbf7ffffffffffefdf7ffbeffdffef7bfffffffffffbffffffffffbffffffffffffffdfda"),
             sync_committee_signature: hex!("b5727bad1db101b6f0fd7ec4cb79b43dae90366fe0cae31a62439388eb03ebd75732cee3bde51f814203a4c0f5b23898120cd0870f0e662bdf0f85a048b534d9a906e6d32a65df019059d34f724221075734ec2849c09679febecf6929934f09").into(),
         },
         signature_slot: 4058721,
@@ -1200,7 +1200,7 @@ pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
             gas_used: 13802943,
             timestamp: 1704437448,
             extra_data: hex!("476f65726c69205365706f6c69612d4265706f6c696120513966").into(),
-            base_fee_per_gas: U256::from(19959019915 as u64),
+            base_fee_per_gas: U256::from(19959019915_u64),
             block_hash: hex!("795021134c2b7f9c00b498ff7b0971dbbe061561868f702d8ca68a05e5eb5a99").into(),
             transactions_root: hex!("3cb7c92fde5d511cc90cd67e375c4388794f4c01e375e8e8a06d003b5593fd12").into(),
             withdrawals_root: hex!("5f5155fd8e5cd24b7ecb1e039792b0caff01dfda2990786d9ffc88325b5d1ea8").into(),
