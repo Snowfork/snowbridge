@@ -1,15 +1,15 @@
-use hex_literal::hex;
-use std::{fs::File, path::PathBuf};
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate as ethereum_beacon_client;
 use crate::config;
 use frame_support::parameter_types;
+use hex_literal::hex;
 use pallet_timestamp;
 use primitives::{CompactExecutionHeader, Fork, ForkVersions};
 use snowbridge_core::inbound::{Log, Proof};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
+use std::{fs::File, path::PathBuf};
 
 fn load_fixture<T>(basename: String) -> Result<T, serde_json::Error>
 where
