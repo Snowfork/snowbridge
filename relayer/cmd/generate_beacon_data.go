@@ -237,44 +237,43 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
 		log.Info("created execution update file")
 
-		// Generate benchmark fixture for mainnet spec only
-		if !activeSpec.IsMinimal() {
-			log.Info("now updating benchmarking data files")
+		// Generate benchmark fixture
+		log.Info("now updating benchmarking data files")
 
-			// Rust file hexes require the 0x of hashes to be removed
-			initialSync.RemoveLeadingZeroHashes()
-			syncCommitteeUpdate.RemoveLeadingZeroHashes()
-			finalizedUpdate.RemoveLeadingZeroHashes()
-			headerUpdate.RemoveLeadingZeroHashes()
+		// Rust file hexes require the 0x of hashes to be removed
+		initialSync.RemoveLeadingZeroHashes()
+		syncCommitteeUpdate.RemoveLeadingZeroHashes()
+		finalizedUpdate.RemoveLeadingZeroHashes()
+		headerUpdate.RemoveLeadingZeroHashes()
 
-			data := Data{
-				CheckpointUpdate:      initialSync,
-				SyncCommitteeUpdate:   syncCommitteeUpdate,
-				FinalizedHeaderUpdate: finalizedUpdate,
-				HeaderUpdate:          headerUpdate,
-			}
+		data := Data{
+			CheckpointUpdate:      initialSync,
+			SyncCommitteeUpdate:   syncCommitteeUpdate,
+			FinalizedHeaderUpdate: finalizedUpdate,
+			HeaderUpdate:          headerUpdate,
+		}
 
-			log.WithFields(log.Fields{
-				"location": pathToBeaconTestFixtureFiles,
-				"template": pathToBenchmarkDataTemplate,
-				"spec":     activeSpec,
-			}).Info("rendering file using mustache")
+		log.WithFields(log.Fields{
+			"location": pathToBeaconTestFixtureFiles,
+			"template": pathToBenchmarkDataTemplate,
+			"spec":     activeSpec,
+		}).Info("rendering file using mustache")
 
-			rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
-			if err != nil {
-				return fmt.Errorf("render benchmark fixture: %w", err)
-			}
-			filename := "fixtures.rs"
+		rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
+		if err != nil {
+			return fmt.Errorf("render benchmark fixture: %w", err)
+		}
 
-			log.WithFields(log.Fields{
-				"location": pathToBeaconBenchmarkData,
-				"filename": filename,
-			}).Info("writing result file")
+		filename := fmt.Sprintf("fixtures_%s.rs", activeSpec.ToString())
 
-			err = writeBenchmarkDataFile(filename, rendered)
-			if err != nil {
-				return err
-			}
+		log.WithFields(log.Fields{
+			"location": pathToBeaconBenchmarkData,
+			"filename": filename,
+		}).Info("writing result file")
+
+		err = writeBenchmarkDataFile(filename, rendered)
+		if err != nil {
+			return err
 		}
 
 		// Generate test fixture in next period(require waiting a long time)
