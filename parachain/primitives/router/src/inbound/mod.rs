@@ -211,6 +211,18 @@ impl<
 			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(network)),
+			// SetAppendix to refund the surplus fee asset to BH sovereign in AH
+			SetAppendix(Xcm(vec![
+				RefundSurplus,
+				ClearOrigin,
+				DepositAsset {
+					assets: Wild(AllCounted(1u32)),
+					beneficiary: MultiLocation {
+						parents: 1,
+						interior: X1(Junction::Parachain(SelfParaId::get().into())),
+					},
+				},
+			])),
 			// Call create_asset on foreign assets pallet.
 			Transact {
 				origin_kind: OriginKind::Xcm,
@@ -224,17 +236,6 @@ impl<
 					.encode()
 					.into(),
 			},
-			SetAppendix(Xcm(vec![
-				RefundSurplus,
-				ClearOrigin,
-				DepositAsset {
-					assets: Wild(AllCounted(1u32)),
-					beneficiary: MultiLocation {
-						parents: 1,
-						interior: X1(Junction::Parachain(SelfParaId::get().into())),
-					},
-				},
-			])),
 		]
 		.into();
 
