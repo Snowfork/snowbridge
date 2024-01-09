@@ -65,6 +65,7 @@ func (li *PolkadotListener) scanCommitments(
 	if err != nil {
 		return fmt.Errorf("scan commitments: %w", err)
 	}
+	lastSyncedBeefyBlock := currentBeefyBlock
 
 	for {
 		select {
@@ -78,7 +79,7 @@ func (li *PolkadotListener) scanCommitments(
 				return fmt.Errorf("scan safe commitments: %w", result.Error)
 			}
 
-			committedBeefyBlock := result.SignedCommitment.Commitment.BlockNumber
+			committedBeefyBlock := uint64(result.SignedCommitment.Commitment.BlockNumber)
 			validatorSetID := result.SignedCommitment.Commitment.ValidatorSetID
 			nextValidatorSetID := uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID)
 
@@ -118,10 +119,15 @@ func (li *PolkadotListener) scanCommitments(
 				case requests <- task:
 					logEntry.Info("New commitment with handover added to channel")
 					currentValidatorSet++
+					lastSyncedBeefyBlock = committedBeefyBlock
 				}
 			} else if validatorSetID == currentValidatorSet {
 				if result.Depth > li.config.FastForwardDepth {
 					logEntry.Warn("Discarded commitment with depth not fast forward")
+					continue
+				}
+				if committedBeefyBlock < lastSyncedBeefyBlock+li.config.UpdatePeriod {
+					logEntry.Warn("Discarded commitment with update period too frequently")
 					continue
 				}
 
@@ -130,6 +136,7 @@ func (li *PolkadotListener) scanCommitments(
 				case <-ctx.Done():
 					return ctx.Err()
 				case requests <- task:
+					lastSyncedBeefyBlock = committedBeefyBlock
 					logEntry.Info("New commitment added to channel")
 				default:
 					logEntry.Warn("Discarded commitment fail adding to channel")

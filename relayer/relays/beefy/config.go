@@ -12,6 +12,7 @@ type Config struct {
 type SourceConfig struct {
 	Polkadot         config.PolkadotConfig `mapstructure:"polkadot"`
 	FastForwardDepth uint64                `mapstructure:"fast-forward-depth"`
+	UpdatePeriod     uint64                `mapstructure:"update-period"`
 }
 
 type SinkConfig struct {
