@@ -205,16 +205,9 @@ impl<
 			ReceiveTeleportedAsset(total.into()),
 			// Pay for execution.
 			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
-			// Fund the snowbridge sovereign with the required deposit for creation.
-			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
-			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
-			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
-			// Change origin to the bridge.
-			UniversalOrigin(GlobalConsensus(network)),
 			// Refund the surplus execution weight to BH sovereign
 			SetAppendix(Xcm(vec![
 				RefundSurplus,
-				ClearOrigin,
 				DepositAsset {
 					assets: Wild(AllCounted(1u32)),
 					beneficiary: MultiLocation {
@@ -223,6 +216,12 @@ impl<
 					},
 				},
 			])),
+			// Fund the snowbridge sovereign with the required deposit for creation.
+			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
+			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
+			DescendOrigin(X1(PalletInstance(inbound_queue_pallet_index))),
+			// Change origin to the bridge.
+			UniversalOrigin(GlobalConsensus(network)),
 			// Call create_asset on foreign assets pallet.
 			Transact {
 				origin_kind: OriginKind::Xcm,
