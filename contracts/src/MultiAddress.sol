@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 using {isIndex, asIndex, isAddress32, asAddress32, isAddress20, asAddress20} for MultiAddress global;
 

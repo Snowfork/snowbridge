@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
