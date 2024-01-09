@@ -10,6 +10,7 @@ use snowbridge_core::inbound::{Log, Proof};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 use std::{fs::File, path::PathBuf};
+
 #[cfg(feature = "beacon-spec-minimal")]
 const SPEC: &str = "minimal";
 #[cfg(not(feature = "beacon-spec-minimal"))]
