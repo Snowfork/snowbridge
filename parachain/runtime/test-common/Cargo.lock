@@ -9027,7 +9027,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-runtime-tests"
+name = "snowbridge-runtime-test-common"
 version = "0.9.0"
 dependencies = [
  "assets-common",

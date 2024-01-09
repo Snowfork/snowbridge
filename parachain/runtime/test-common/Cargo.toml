@@ -1,5 +1,5 @@
 [package]
-name = "snowbridge-runtime-tests"
+name = "snowbridge-runtime-test-common"
 description = "Snowbridge Runtime Tests"
 version = "0.9.0"
 authors = ["Snowfork <contact@snowfork.com>"]
