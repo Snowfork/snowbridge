@@ -708,86 +708,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "asset-hub-rococo-runtime"
-version = "0.9.420"
-dependencies = [
- "assets-common",
- "bp-asset-hub-rococo",
- "bp-asset-hub-westend",
- "bp-bridge-hub-rococo",
- "bp-bridge-hub-westend",
- "cumulus-pallet-aura-ext",
- "cumulus-pallet-parachain-system",
- "cumulus-pallet-session-benchmarking",
- "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
- "cumulus-primitives-utility",
- "frame-benchmarking",
- "frame-executive",
- "frame-support",
- "frame-system",
- "frame-system-benchmarking",
- "frame-system-rpc-runtime-api",
- "frame-try-runtime",
- "hex-literal",
- "log",
- "pallet-asset-conversion",
- "pallet-asset-conversion-tx-payment",
- "pallet-assets",
- "pallet-aura",
- "pallet-authorship",
- "pallet-balances",
- "pallet-collator-selection",
- "pallet-message-queue",
- "pallet-multisig",
- "pallet-nft-fractionalization",
- "pallet-nfts",
- "pallet-nfts-runtime-api",
- "pallet-proxy",
- "pallet-session",
- "pallet-state-trie-migration",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
- "pallet-uniques",
- "pallet-utility",
- "pallet-xcm",
- "pallet-xcm-benchmarks",
- "pallet-xcm-bridge-hub-router",
- "parachains-common",
- "parity-scale-codec",
- "polkadot-core-primitives",
- "polkadot-parachain-primitives",
- "polkadot-runtime-common",
- "primitive-types",
- "rococo-runtime-constants",
- "scale-info",
- "smallvec",
- "snowbridge-rococo-common",
- "snowbridge-router-primitives",
- "sp-api",
- "sp-block-builder",
- "sp-consensus-aura",
- "sp-core",
- "sp-genesis-builder",
- "sp-inherents",
- "sp-offchain",
- "sp-runtime",
- "sp-session",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool",
- "sp-version",
- "sp-weights",
- "staging-parachain-info",
- "staging-xcm",
- "staging-xcm-builder",
- "staging-xcm-executor",
- "substrate-wasm-builder",
-]
-
-[[package]]
 name = "asset-test-utils"
 version = "1.0.0"
 dependencies = [
@@ -1210,79 +1130,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bp-asset-hub-rococo"
-version = "0.1.0"
-dependencies = [
- "bp-xcm-bridge-hub-router",
- "frame-support",
- "parity-scale-codec",
- "scale-info",
-]
-
-[[package]]
-name = "bp-asset-hub-westend"
-version = "0.1.0"
-dependencies = [
- "bp-xcm-bridge-hub-router",
- "frame-support",
- "parity-scale-codec",
- "scale-info",
-]
-
-[[package]]
-name = "bp-bridge-hub-cumulus"
-version = "0.1.0"
-dependencies = [
- "bp-messages",
- "bp-polkadot-core",
- "bp-runtime",
- "frame-support",
- "frame-system",
- "polkadot-primitives",
- "sp-api",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-bridge-hub-polkadot"
-version = "0.1.0"
-dependencies = [
- "bp-bridge-hub-cumulus",
- "bp-messages",
- "bp-runtime",
- "frame-support",
- "sp-api",
- "sp-runtime",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-bridge-hub-rococo"
-version = "0.1.0"
-dependencies = [
- "bp-bridge-hub-cumulus",
- "bp-messages",
- "bp-runtime",
- "frame-support",
- "sp-api",
- "sp-runtime",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-bridge-hub-westend"
-version = "0.1.0"
-dependencies = [
- "bp-bridge-hub-cumulus",
- "bp-messages",
- "bp-runtime",
- "frame-support",
- "sp-api",
- "sp-runtime",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "bp-header-chain"
 version = "0.1.0"
 dependencies = [
@@ -1329,23 +1176,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bp-polkadot-bulletin"
-version = "0.1.0"
-dependencies = [
- "bp-header-chain",
- "bp-messages",
- "bp-polkadot-core",
- "bp-runtime",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "sp-api",
- "sp-runtime",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "bp-polkadot-core"
 version = "0.1.0"
 dependencies = [
@@ -1372,18 +1202,6 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-rococo"
-version = "0.1.0"
-dependencies = [
- "bp-header-chain",
- "bp-polkadot-core",
- "bp-runtime",
- "frame-support",
- "sp-api",
  "sp-std 8.0.0",
 ]
 
@@ -1429,18 +1247,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bp-westend"
-version = "0.1.0"
-dependencies = [
- "bp-header-chain",
- "bp-polkadot-core",
- "bp-runtime",
- "frame-support",
- "sp-api",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "bp-xcm-bridge-hub"
 version = "0.1.0"
 dependencies = [
@@ -1471,101 +1277,6 @@ dependencies = [
  "sp-runtime",
  "sp-std 8.0.0",
  "staging-xcm",
-]
-
-[[package]]
-name = "bridge-hub-rococo-runtime"
-version = "0.1.0"
-dependencies = [
- "bp-asset-hub-rococo",
- "bp-asset-hub-westend",
- "bp-bridge-hub-polkadot",
- "bp-bridge-hub-rococo",
- "bp-bridge-hub-westend",
- "bp-header-chain",
- "bp-messages",
- "bp-parachains",
- "bp-polkadot-bulletin",
- "bp-polkadot-core",
- "bp-relayers",
- "bp-rococo",
- "bp-runtime",
- "bp-westend",
- "bridge-hub-common",
- "bridge-runtime-common",
- "cumulus-pallet-aura-ext",
- "cumulus-pallet-parachain-system",
- "cumulus-pallet-session-benchmarking",
- "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
- "cumulus-primitives-utility",
- "frame-benchmarking",
- "frame-executive",
- "frame-support",
- "frame-system",
- "frame-system-benchmarking",
- "frame-system-rpc-runtime-api",
- "frame-try-runtime",
- "hex-literal",
- "log",
- "pallet-aura",
- "pallet-authorship",
- "pallet-balances",
- "pallet-bridge-grandpa",
- "pallet-bridge-messages",
- "pallet-bridge-parachains",
- "pallet-bridge-relayers",
- "pallet-collator-selection",
- "pallet-message-queue",
- "pallet-multisig",
- "pallet-session",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
- "pallet-utility",
- "pallet-xcm",
- "pallet-xcm-benchmarks",
- "pallet-xcm-bridge-hub",
- "parachains-common",
- "parity-scale-codec",
- "polkadot-core-primitives",
- "polkadot-parachain-primitives",
- "polkadot-runtime-common",
- "rococo-runtime-constants",
- "scale-info",
- "serde",
- "smallvec",
- "snowbridge-beacon-primitives",
- "snowbridge-core",
- "snowbridge-ethereum-beacon-client",
- "snowbridge-inbound-queue",
- "snowbridge-outbound-queue",
- "snowbridge-outbound-queue-runtime-api",
- "snowbridge-rococo-common",
- "snowbridge-router-primitives",
- "snowbridge-runtime-common",
- "snowbridge-system",
- "snowbridge-system-runtime-api",
- "sp-api",
- "sp-block-builder",
- "sp-consensus-aura",
- "sp-core",
- "sp-genesis-builder",
- "sp-inherents",
- "sp-io",
- "sp-offchain",
- "sp-runtime",
- "sp-session",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool",
- "sp-version",
- "staging-parachain-info",
- "staging-xcm",
- "staging-xcm-builder",
- "staging-xcm-executor",
- "substrate-wasm-builder",
 ]
 
 [[package]]
@@ -4154,17 +3865,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "impl-num-traits"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "951641f13f873bff03d4bf19ae8bec531935ac0ac2cc775f84d7edfdcfed3f17"
-dependencies = [
- "integer-sqrt",
- "num-traits",
- "uint",
-]
-
-[[package]]
 name = "impl-rlp"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5867,20 +5567,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-asset-conversion-tx-payment"
-version = "4.0.0-dev"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-asset-conversion",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "pallet-asset-rate"
 version = "4.0.0-dev"
 dependencies = [
@@ -6204,63 +5890,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-nft-fractionalization"
-version = "4.0.0-dev"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "pallet-assets",
- "pallet-nfts",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "pallet-nfts"
-version = "4.0.0-dev"
-dependencies = [
- "enumflags2",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "pallet-nfts-runtime-api"
-version = "4.0.0-dev"
-dependencies = [
- "pallet-nfts",
- "parity-scale-codec",
- "sp-api",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "pallet-proxy"
-version = "4.0.0-dev"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "pallet-session"
 version = "4.0.0-dev"
 dependencies = [
@@ -6309,22 +5938,6 @@ version = "4.0.0-dev"
 dependencies = [
  "log",
  "sp-arithmetic",
-]
-
-[[package]]
-name = "pallet-state-trie-migration"
-version = "4.0.0-dev"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std 8.0.0",
 ]
 
 [[package]]
@@ -6391,20 +6004,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-uniques"
-version = "4.0.0-dev"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "pallet-utility"
 version = "4.0.0-dev"
 dependencies = [
@@ -6466,28 +6065,6 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-io",
- "sp-runtime",
- "sp-std 8.0.0",
- "staging-xcm",
- "staging-xcm-builder",
- "staging-xcm-executor",
-]
-
-[[package]]
-name = "pallet-xcm-bridge-hub"
-version = "0.1.0"
-dependencies = [
- "bp-messages",
- "bp-runtime",
- "bp-xcm-bridge-hub",
- "bridge-runtime-common",
- "frame-support",
- "frame-system",
- "log",
- "pallet-bridge-messages",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
  "sp-runtime",
  "sp-std 8.0.0",
  "staging-xcm",
@@ -7255,7 +6832,6 @@ checksum = "0b34d9fd68ae0b74a41b21c03c2f62847aa0ffea044eee893b4c140b37e244e2"
 dependencies = [
  "fixed-hash",
  "impl-codec",
- "impl-num-traits",
  "impl-rlp",
  "impl-serde",
  "scale-info",
@@ -9454,9 +9030,7 @@ dependencies = [
 name = "snowbridge-runtime-tests"
 version = "0.9.0"
 dependencies = [
- "asset-hub-rococo-runtime",
  "assets-common",
- "bridge-hub-rococo-runtime",
  "bridge-hub-test-utils",
  "bridge-runtime-common",
  "cumulus-pallet-aura-ext",
@@ -9495,7 +9069,6 @@ dependencies = [
  "polkadot-core-primitives",
  "polkadot-parachain-primitives",
  "polkadot-runtime-common",
- "rococo-runtime-constants",
  "scale-info",
  "serde",
  "smallvec",
