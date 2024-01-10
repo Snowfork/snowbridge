@@ -96,9 +96,9 @@ done
 cargo check -p snowbridge-ethereum-client-pallet
 cargo check -p snowbridge-ethereum-client-pallet --features runtime-benchmarks
 cargo check -p snowbridge-ethereum-client-pallet --features try-runtime
-cargo check -p snowbridge-inbound-queue
-cargo check -p snowbridge-inbound-queue --features runtime-benchmarks
-cargo check -p snowbridge-inbound-queue --features try-runtime
+cargo check -p snowbridge-inbound-queue-pallet
+cargo check -p snowbridge-inbound-queue-pallet --features runtime-benchmarks
+cargo check -p snowbridge-inbound-queue-pallet --features try-runtime
 cargo check -p snowbridge-outbound-queue
 cargo check -p snowbridge-outbound-queue --features runtime-benchmarks
 cargo check -p snowbridge-outbound-queue --features try-runtime

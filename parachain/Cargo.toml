@@ -28,7 +28,7 @@ snowbridge-system = { path = "./pallets/system" }
 snowbridge-system-runtime-api = { path = "./pallets/system/runtime-api" }
 snowbridge-core = { path = "./primitives/core" }
 snowbridge-ethereum-client-pallet = { path = "./pallets/ethereum-client" }
-snowbridge-inbound-queue = { path = "./pallets/inbound-queue" }
+snowbridge-inbound-queue-pallet = { path = "./pallets/inbound-queue" }
 snowbridge-outbound-queue = { path = "./pallets/outbound-queue" }
 snowbridge-outbound-queue-runtime-api = { path = "./pallets/outbound-queue/runtime-api" }
 snowbridge-router-primitives = { path = "./primitives/router" }

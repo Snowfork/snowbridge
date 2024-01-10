@@ -1,6 +1,6 @@
 [package]
-name = "snowbridge-inbound-queue"
-description = "Snowbridge Inbound Queue"
+name = "snowbridge-inbound-queue-pallet"
+description = "Snowbridge Inbound Queue Pallet"
 version = "0.9.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition.workspace = true

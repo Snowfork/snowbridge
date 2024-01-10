@@ -9031,7 +9031,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-inbound-queue"
+name = "snowbridge-inbound-queue-pallet"
 version = "0.9.0"
 dependencies = [
  "alloy-primitives",
@@ -9210,7 +9210,7 @@ dependencies = [
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-ethereum-client-pallet",
- "snowbridge-inbound-queue",
+ "snowbridge-inbound-queue-pallet",
  "snowbridge-outbound-queue",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-router-primitives",
