@@ -9144,15 +9144,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-rococo-common"
-version = "0.9.0"
-dependencies = [
- "frame-support",
- "log",
- "staging-xcm",
-]
-
-[[package]]
 name = "snowbridge-router-primitives"
 version = "0.9.0"
 dependencies = [

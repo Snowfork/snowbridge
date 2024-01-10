@@ -17,7 +17,6 @@ members = [
 	"primitives/core",
 	"primitives/ethereum",
 	"primitives/router",
-	"runtime/rococo-common",
 	"runtime/runtime-common",
 	"runtime/test-common",
 ]
@@ -33,4 +32,3 @@ snowbridge-pallet-outbound-queue = { path = "./pallets/outbound-queue" }
 snowbridge-outbound-queue-runtime-api = { path = "./pallets/outbound-queue/runtime-api" }
 snowbridge-router-primitives = { path = "./primitives/router" }
 snowbridge-runtime-common = { path = "./runtime/runtime-common" }
-snowbridge-rococo-common = { path = "./runtime/rococo-common" }
