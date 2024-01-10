@@ -1,5 +1,5 @@
 [package]
-name = "snowbridge-inbound-queue-pallet"
+name = "snowbridge-pallet-inbound-queue"
 description = "Snowbridge Inbound Queue Pallet"
 version = "0.9.0"
 authors = ["Snowfork <contact@snowfork.com>"]
@@ -47,7 +47,7 @@ snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-featu
 frame-benchmarking = { path = "../../../polkadot-sdk/substrate/frame/benchmarking" }
 sp-keyring = { path = "../../../polkadot-sdk/substrate/primitives/keyring" }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
-snowbridge-ethereum-client-pallet = { path = "../../pallets/ethereum-client" }
+snowbridge-pallet-ethereum-client = { path = "../../pallets/ethereum-client" }
 hex-literal = { version = "0.4.1" }
 
 [features]
@@ -85,7 +85,7 @@ runtime-benchmarks = [
 	"pallet-balances/runtime-benchmarks",
 	"snowbridge-beacon-primitives",
 	"snowbridge-core/runtime-benchmarks",
-	"snowbridge-ethereum-client-pallet/runtime-benchmarks",
+	"snowbridge-pallet-ethereum-client/runtime-benchmarks",
 	"snowbridge-router-primitives/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
@@ -95,6 +95,6 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"pallet-balances/try-runtime",
-	"snowbridge-ethereum-client-pallet/try-runtime",
+	"snowbridge-pallet-ethereum-client/try-runtime",
 	"sp-runtime/try-runtime",
 ]

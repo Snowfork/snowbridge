@@ -24,12 +24,12 @@ members = [
 
 [patch.'https://github.com/snowfork/snowbridge']
 snowbridge-beacon-primitives = { path = "./primitives/beacon" }
-snowbridge-system-pallet = { path = "./pallets/system" }
+snowbridge-pallet-system = { path = "./pallets/system" }
 snowbridge-system-runtime-api = { path = "./pallets/system/runtime-api" }
 snowbridge-core = { path = "./primitives/core" }
-snowbridge-ethereum-client-pallet = { path = "./pallets/ethereum-client" }
-snowbridge-inbound-queue-pallet = { path = "./pallets/inbound-queue" }
-snowbridge-outbound-queue-pallet = { path = "./pallets/outbound-queue" }
+snowbridge-pallet-ethereum-client = { path = "./pallets/ethereum-client" }
+snowbridge-pallet-inbound-queue = { path = "./pallets/inbound-queue" }
+snowbridge-pallet-outbound-queue = { path = "./pallets/outbound-queue" }
 snowbridge-outbound-queue-runtime-api = { path = "./pallets/outbound-queue/runtime-api" }
 snowbridge-router-primitives = { path = "./primitives/router" }
 snowbridge-runtime-common = { path = "./runtime/runtime-common" }

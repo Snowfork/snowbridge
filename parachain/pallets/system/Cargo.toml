@@ -1,5 +1,5 @@
 [package]
-name = "snowbridge-system-pallet"
+name = "snowbridge-pallet-system"
 description = "Snowbridge System Pallet"
 version = "0.9.0"
 authors = ["Snowfork <contact@snowfork.com>"]
@@ -43,7 +43,7 @@ pallet-balances = { path = "../../../polkadot-sdk/substrate/frame/balances" }
 sp-keyring = { path = "../../../polkadot-sdk/substrate/primitives/keyring" }
 polkadot-primitives = { path = "../../../polkadot-sdk/polkadot/primitives" }
 pallet-message-queue = { path = "../../../polkadot-sdk/substrate/frame/message-queue" }
-snowbridge-outbound-queue-pallet = { path = "../outbound-queue" }
+snowbridge-pallet-outbound-queue = { path = "../outbound-queue" }
 
 [features]
 default = ["std"]
@@ -72,7 +72,7 @@ runtime-benchmarks = [
 	"pallet-message-queue/runtime-benchmarks",
 	"polkadot-primitives/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
-	"snowbridge-outbound-queue-pallet/runtime-benchmarks",
+	"snowbridge-pallet-outbound-queue/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
@@ -82,6 +82,6 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-message-queue/try-runtime",
-	"snowbridge-outbound-queue-pallet/try-runtime",
+	"snowbridge-pallet-outbound-queue/try-runtime",
 	"sp-runtime/try-runtime",
 ]

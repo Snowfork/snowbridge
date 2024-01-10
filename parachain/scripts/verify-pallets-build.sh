@@ -93,18 +93,18 @@ find "." -name 'Cargo.toml' | while read -r file; do
 done
 
 # let's test if everything we need compiles
-cargo check -p snowbridge-ethereum-client-pallet
-cargo check -p snowbridge-ethereum-client-pallet --features runtime-benchmarks
-cargo check -p snowbridge-ethereum-client-pallet --features try-runtime
-cargo check -p snowbridge-inbound-queue-pallet
-cargo check -p snowbridge-inbound-queue-pallet --features runtime-benchmarks
-cargo check -p snowbridge-inbound-queue-pallet --features try-runtime
-cargo check -p snowbridge-outbound-queue-pallet
-cargo check -p snowbridge-outbound-queue-pallet --features runtime-benchmarks
-cargo check -p snowbridge-outbound-queue-pallet --features try-runtime
-cargo check -p snowbridge-system-pallet
-cargo check -p snowbridge-system-pallet --features runtime-benchmarks
-cargo check -p snowbridge-system-pallet --features try-runtime
+cargo check -p snowbridge-pallet-ethereum-client
+cargo check -p snowbridge-pallet-ethereum-client --features runtime-benchmarks
+cargo check -p snowbridge-pallet-ethereum-client --features try-runtime
+cargo check -p snowbridge-pallet-inbound-queue
+cargo check -p snowbridge-pallet-inbound-queue --features runtime-benchmarks
+cargo check -p snowbridge-pallet-inbound-queue --features try-runtime
+cargo check -p snowbridge-pallet-outbound-queue
+cargo check -p snowbridge-pallet-outbound-queue --features runtime-benchmarks
+cargo check -p snowbridge-pallet-outbound-queue --features try-runtime
+cargo check -p snowbridge-pallet-system
+cargo check -p snowbridge-pallet-system --features runtime-benchmarks
+cargo check -p snowbridge-pallet-system --features try-runtime
 
 cd -
 

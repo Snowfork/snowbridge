@@ -80,11 +80,11 @@ assets-common = { path = "../../../polkadot-sdk/cumulus/parachains/runtimes/asse
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
 snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
-snowbridge-ethereum-client-pallet = { path = "../../pallets/ethereum-client", default-features = false }
-snowbridge-inbound-queue-pallet = { path = "../../pallets/inbound-queue", default-features = false }
-snowbridge-outbound-queue-pallet = { path = "../../pallets/outbound-queue", default-features = false }
+snowbridge-pallet-ethereum-client = { path = "../../pallets/ethereum-client", default-features = false }
+snowbridge-pallet-inbound-queue = { path = "../../pallets/inbound-queue", default-features = false }
+snowbridge-pallet-outbound-queue = { path = "../../pallets/outbound-queue", default-features = false }
 snowbridge-outbound-queue-runtime-api = { path = "../../pallets/outbound-queue/runtime-api", default-features = false }
-snowbridge-system-pallet = { path = "../../pallets/system", default-features = false }
+snowbridge-pallet-system = { path = "../../pallets/system", default-features = false }
 snowbridge-system-runtime-api = { path = "../../pallets/system/runtime-api", default-features = false }
 
 [dev-dependencies]
@@ -137,12 +137,12 @@ std = [
 	"serde",
 	"snowbridge-beacon-primitives/std",
 	"snowbridge-core/std",
-	"snowbridge-ethereum-client-pallet/std",
-	"snowbridge-inbound-queue-pallet/std",
-	"snowbridge-outbound-queue-pallet/std",
+	"snowbridge-pallet-ethereum-client/std",
+	"snowbridge-pallet-inbound-queue/std",
+	"snowbridge-pallet-outbound-queue/std",
 	"snowbridge-outbound-queue-runtime-api/std",
 	"snowbridge-router-primitives/std",
-	"snowbridge-system-pallet/std",
+	"snowbridge-pallet-system/std",
 	"snowbridge-system-runtime-api/std",
 	"sp-api/std",
 	"sp-block-builder/std",
@@ -188,11 +188,11 @@ runtime-benchmarks = [
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
-	"snowbridge-ethereum-client-pallet/runtime-benchmarks",
-	"snowbridge-inbound-queue-pallet/runtime-benchmarks",
-	"snowbridge-outbound-queue-pallet/runtime-benchmarks",
+	"snowbridge-pallet-ethereum-client/runtime-benchmarks",
+	"snowbridge-pallet-inbound-queue/runtime-benchmarks",
+	"snowbridge-pallet-outbound-queue/runtime-benchmarks",
 	"snowbridge-router-primitives/runtime-benchmarks",
-	"snowbridge-system-pallet/runtime-benchmarks",
+	"snowbridge-pallet-system/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",

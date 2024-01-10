@@ -1,7 +1,7 @@
 #![no_main]
-extern crate snowbridge_ethereum_client_pallet;
+extern crate snowbridge_pallet_ethereum_client;
 
-use snowbridge_ethereum_client_pallet::{mock::minimal::*, types::Update};
+use snowbridge_pallet_ethereum_client::{mock::minimal::*, types::Update};
 use snowbridge_ethereum_beacon_client_fuzz::types::FuzzUpdate;
 use std::convert::TryInto;
 

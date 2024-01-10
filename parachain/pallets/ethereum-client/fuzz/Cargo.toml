@@ -10,7 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = { version = "0.4", features = ["arbitrary-derive"] }
 arbitrary = { version = "1", optional = true, features = ["derive"] }
-snowbridge-ethereum-client-pallet = { path = "..", features = ["fuzzing"] }
+snowbridge-pallet-ethereum-client = { path = "..", features = ["fuzzing"] }
 snowbridge-beacon-primitives = { path = "../../../primitives/beacon" }
 hex-literal = "0.4.1"
 sp-core = { path = "../../../../polkadot-sdk/substrate/primitives/core", default-features = false }
