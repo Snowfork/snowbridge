@@ -59,14 +59,14 @@ cargo run --release --bin polkadot-parachain \
 benchmark pallet \
 --base-path /mnt/scratch/benchmark \
 --chain=bridge-hub-rococo-dev \
---pallet=snowbridge_ethereum_beacon_client \
+--pallet=snowbridge_ethereum_client_pallet \
 --extrinsic="*" \
 --execution=wasm --wasm-execution=compiled \
 --steps 50 --repeat 20 \
---output ./parachains/runtimes/bridge-hubs/bridge-hub-rococo/src/weights/snowbridge_ethereum_beacon_client.rs
+--output ./parachains/runtimes/bridge-hubs/bridge-hub-rococo/src/weights/snowbridge_ethereum_client_pallet.rs
 ```
 
-### [Weights](https://github.com/Snowfork/cumulus/blob/ron/benchmark-beacon-bridge/parachains/runtimes/bridge-hubs/bridge-hub-rococo/src/weights/snowbridge_ethereum_beacon_client.rs)
+### [Weights](https://github.com/Snowfork/cumulus/blob/ron/benchmark-beacon-bridge/parachains/runtimes/bridge-hubs/bridge-hub-rococo/src/weights/snowbridge_ethereum_client_pallet.rs)
 
 |extrinsic       | minimum execution time benchmarked(us) |
 | --------------------------------------- |----------------------------------------|
