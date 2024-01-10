@@ -99,12 +99,12 @@ cargo check -p snowbridge-ethereum-client-pallet --features try-runtime
 cargo check -p snowbridge-inbound-queue-pallet
 cargo check -p snowbridge-inbound-queue-pallet --features runtime-benchmarks
 cargo check -p snowbridge-inbound-queue-pallet --features try-runtime
-cargo check -p snowbridge-outbound-queue
-cargo check -p snowbridge-outbound-queue --features runtime-benchmarks
-cargo check -p snowbridge-outbound-queue --features try-runtime
-cargo check -p snowbridge-system
-cargo check -p snowbridge-system --features runtime-benchmarks
-cargo check -p snowbridge-system --features try-runtime
+cargo check -p snowbridge-outbound-queue-pallet
+cargo check -p snowbridge-outbound-queue-pallet --features runtime-benchmarks
+cargo check -p snowbridge-outbound-queue-pallet --features try-runtime
+cargo check -p snowbridge-system-pallet
+cargo check -p snowbridge-system-pallet --features runtime-benchmarks
+cargo check -p snowbridge-system-pallet --features try-runtime
 
 cd -
 

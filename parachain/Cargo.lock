@@ -9063,7 +9063,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-outbound-queue"
+name = "snowbridge-outbound-queue-merkle-tree"
+version = "0.9.0"
+dependencies = [
+ "array-bytes 4.2.0",
+ "env_logger 0.9.3",
+ "hex",
+ "hex-literal",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "snowbridge-outbound-queue-pallet"
 version = "0.9.0"
 dependencies = [
  "bridge-hub-common",
@@ -9085,20 +9099,6 @@ dependencies = [
  "sp-runtime",
  "sp-std 8.0.0",
  "staging-xcm",
-]
-
-[[package]]
-name = "snowbridge-outbound-queue-merkle-tree"
-version = "0.9.0"
-dependencies = [
- "array-bytes 4.2.0",
- "env_logger 0.9.3",
- "hex",
- "hex-literal",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-runtime",
 ]
 
 [[package]]
@@ -9211,10 +9211,10 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-ethereum-client-pallet",
  "snowbridge-inbound-queue-pallet",
- "snowbridge-outbound-queue",
+ "snowbridge-outbound-queue-pallet",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-router-primitives",
- "snowbridge-system",
+ "snowbridge-system-pallet",
  "snowbridge-system-runtime-api",
  "sp-api",
  "sp-block-builder",
@@ -9239,7 +9239,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-system"
+name = "snowbridge-system-pallet"
 version = "0.9.0"
 dependencies = [
  "ethabi-decode",
@@ -9255,7 +9255,7 @@ dependencies = [
  "polkadot-primitives",
  "scale-info",
  "snowbridge-core",
- "snowbridge-outbound-queue",
+ "snowbridge-outbound-queue-pallet",
  "sp-core",
  "sp-io",
  "sp-keyring",

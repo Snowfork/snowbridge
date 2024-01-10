@@ -79,9 +79,9 @@ snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-featu
 snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
 snowbridge-ethereum-client-pallet = { path = "../../pallets/ethereum-client", default-features = false }
 snowbridge-inbound-queue-pallet = { path = "../../pallets/inbound-queue", default-features = false }
-snowbridge-outbound-queue = { path = "../../pallets/outbound-queue", default-features = false }
+snowbridge-outbound-queue-pallet = { path = "../../pallets/outbound-queue", default-features = false }
 snowbridge-outbound-queue-runtime-api = { path = "../../pallets/outbound-queue/runtime-api", default-features = false }
-snowbridge-system = { path = "../../pallets/system", default-features = false }
+snowbridge-system-pallet = { path = "../../pallets/system", default-features = false }
 snowbridge-system-runtime-api = { path = "../../pallets/system/runtime-api", default-features = false }
 
 [dev-dependencies]
@@ -137,10 +137,10 @@ std = [
 	"snowbridge-ethereum-client-pallet/std",
 	"snowbridge-inbound-queue-pallet/std",
 	"snowbridge-outbound-queue-runtime-api/std",
-	"snowbridge-outbound-queue/std",
+	"snowbridge-outbound-queue-pallet/std",
 	"snowbridge-router-primitives/std",
 	"snowbridge-system-runtime-api/std",
-	"snowbridge-system/std",
+	"snowbridge-system-pallet/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",
@@ -187,9 +187,9 @@ runtime-benchmarks = [
 	"snowbridge-core/runtime-benchmarks",
 	"snowbridge-ethereum-client-pallet/runtime-benchmarks",
 	"snowbridge-inbound-queue-pallet/runtime-benchmarks",
-	"snowbridge-outbound-queue/runtime-benchmarks",
+	"snowbridge-outbound-queue-pallet/runtime-benchmarks",
 	"snowbridge-router-primitives/runtime-benchmarks",
-	"snowbridge-system/runtime-benchmarks",
+	"snowbridge-system-pallet/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",

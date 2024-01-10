@@ -46,7 +46,7 @@ where
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
 		+ cumulus_pallet_parachain_system::Config
-		+ snowbridge_outbound_queue::Config,
+		+ snowbridge_outbound_queue_pallet::Config,
 	XcmConfig: xcm_executor::Config,
 {
 	let assethub_parachain_location = MultiLocation::new(1, Parachain(assethub_parachain_id));
@@ -106,8 +106,8 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 	weth_contract_address: H160,
 	destination_address: H160,
 	fee_amount: u128,
-	snowbridge_outbound_queue: Box<
-		dyn Fn(Vec<u8>) -> Option<snowbridge_outbound_queue::Event<Runtime>>,
+	snowbridge_outbound_queue_pallet: Box<
+		dyn Fn(Vec<u8>) -> Option<snowbridge_outbound_queue_pallet::Event<Runtime>>,
 	>,
 ) where
 	Runtime: frame_system::Config
@@ -117,8 +117,8 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
 		+ cumulus_pallet_parachain_system::Config
-		+ snowbridge_outbound_queue::Config
-		+ snowbridge_system::Config,
+		+ snowbridge_outbound_queue_pallet::Config
+		+ snowbridge_system_pallet::Config,
 	XcmConfig: xcm_executor::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 {
@@ -129,7 +129,7 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 		.with_tracing()
 		.build()
 		.execute_with(|| {
-			<snowbridge_system::Pallet<Runtime>>::initialize(
+			<snowbridge_system_pallet::Pallet<Runtime>>::initialize(
 				runtime_para_id.into(),
 				assethub_parachain_id.into(),
 			)
@@ -150,9 +150,9 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 			// check events
 			let mut events = <frame_system::Pallet<Runtime>>::events()
 				.into_iter()
-				.filter_map(|e| snowbridge_outbound_queue(e.event.encode()));
+				.filter_map(|e| snowbridge_outbound_queue_pallet(e.event.encode()));
 			assert!(
-				events.any(|e| matches!(e, snowbridge_outbound_queue::Event::MessageQueued { .. }))
+				events.any(|e| matches!(e, snowbridge_outbound_queue_pallet::Event::MessageQueued { .. }))
 			);
 		});
 }
@@ -171,7 +171,7 @@ pub fn send_unpaid_transfer_token_message<Runtime, XcmConfig>(
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
 		+ cumulus_pallet_parachain_system::Config
-		+ snowbridge_outbound_queue::Config,
+		+ snowbridge_outbound_queue_pallet::Config,
 	XcmConfig: xcm_executor::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 {
@@ -260,8 +260,8 @@ pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
 		+ cumulus_pallet_parachain_system::Config
-		+ snowbridge_outbound_queue::Config
-		+ snowbridge_system::Config,
+		+ snowbridge_outbound_queue_pallet::Config
+		+ snowbridge_system_pallet::Config,
 	XcmConfig: xcm_executor::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 {
@@ -272,7 +272,7 @@ pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
 		.with_tracing()
 		.build()
 		.execute_with(|| {
-			<snowbridge_system::Pallet<Runtime>>::initialize(
+			<snowbridge_system_pallet::Pallet<Runtime>>::initialize(
 				runtime_para_id.into(),
 				assethub_parachain_id.into(),
 			)
