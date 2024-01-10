@@ -97,8 +97,9 @@ func (li *PolkadotListener) scanCommitments(
 					"validatorSetID":     validatorSetID,
 					"nextValidatorSetID": nextValidatorSetID,
 				},
-				"validatorSetID": currentValidatorSet,
-				"IsHandover":     validatorSetID == currentValidatorSet+1,
+				"validatorSetID":       currentValidatorSet,
+				"IsHandover":           validatorSetID == currentValidatorSet+1,
+				"lastSyncedBeefyBlock": lastSyncedBeefyBlock,
 			})
 
 			validators, err := li.queryBeefyAuthorities(result.BlockHash)
@@ -127,7 +128,7 @@ func (li *PolkadotListener) scanCommitments(
 					continue
 				}
 				if committedBeefyBlock < lastSyncedBeefyBlock+li.config.UpdatePeriod {
-					logEntry.Warn("Discarded commitment with update period too frequently")
+					logEntry.Info("Discarded commitment with sampling")
 					continue
 				}
 
