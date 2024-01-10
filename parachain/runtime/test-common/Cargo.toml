@@ -7,6 +7,9 @@ edition = "2021"
 license = "Apache-2.0"
 categories = ["cryptography::cryptocurrencies"]
 
+[lints]
+workspace = true
+
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex-literal = { version = "0.4.1" }

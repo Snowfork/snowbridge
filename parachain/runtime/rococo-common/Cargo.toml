@@ -8,6 +8,9 @@ repository.workspace = true
 license = "Apache-2.0"
 categories = ["cryptography::cryptocurrencies"]
 
+[lints]
+workspace = true
+
 [dependencies]
 log = { version = "0.4.20", default-features = false }
 

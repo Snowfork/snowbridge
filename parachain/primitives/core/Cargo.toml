@@ -8,6 +8,9 @@ repository.workspace = true
 license = "Apache-2.0"
 categories = ["cryptography::cryptocurrencies"]
 
+[lints]
+workspace = true
+
 [dependencies]
 serde = { version = "1.0.188", optional = true, features = ["alloc", "derive"], default-features = false }
 codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false }

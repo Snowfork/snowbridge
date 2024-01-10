@@ -8,6 +8,9 @@ repository.workspace = true
 license = "Apache-2.0"
 categories = ["cryptography::cryptocurrencies"]
 
+[lints]
+workspace = true
+
 [dependencies]
 serde = { version = "1.0.188", optional = true, features = ["derive"] }
 serde-big-array = { version = "0.3.2", optional = true, features = ["const-generics"] }
