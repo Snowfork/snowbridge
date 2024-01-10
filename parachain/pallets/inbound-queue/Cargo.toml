@@ -2,8 +2,8 @@
 name = "snowbridge-inbound-queue"
 description = "Snowbridge Inbound Queue"
 version = "0.9.0"
+authors = ["Snowfork <contact@snowfork.com>"]
 edition.workspace = true
-authors.workspace = true
 repository.workspace = true
 license = "Apache-2.0"
 categories = ["cryptography::cryptocurrencies"]

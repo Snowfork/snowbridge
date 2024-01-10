@@ -8,9 +8,10 @@
 use frame_support::parameter_types;
 use xcm::opaque::lts::NetworkId;
 
+/// The pallet index of the Ethereum inbound queue pallet in the bridge hub runtime.
 pub const INBOUND_QUEUE_MESSAGES_PALLET_INDEX: u8 = 80;
 
 parameter_types! {
-	// Network and location for the Ethereum chain.
+	/// Network and location for the Ethereum chain.
 	pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
 }
