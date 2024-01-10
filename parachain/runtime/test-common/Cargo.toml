@@ -77,7 +77,7 @@ assets-common = { path = "../../../polkadot-sdk/cumulus/parachains/runtimes/asse
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
 snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
-snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client", default-features = false }
+snowbridge-ethereum-client-pallet = { path = "../../pallets/ethereum-client", default-features = false }
 snowbridge-inbound-queue = { path = "../../pallets/inbound-queue", default-features = false }
 snowbridge-outbound-queue = { path = "../../pallets/outbound-queue", default-features = false }
 snowbridge-outbound-queue-runtime-api = { path = "../../pallets/outbound-queue/runtime-api", default-features = false }
@@ -134,7 +134,7 @@ std = [
 	"serde",
 	"snowbridge-beacon-primitives/std",
 	"snowbridge-core/std",
-	"snowbridge-ethereum-beacon-client/std",
+	"snowbridge-ethereum-client-pallet/std",
 	"snowbridge-inbound-queue/std",
 	"snowbridge-outbound-queue-runtime-api/std",
 	"snowbridge-outbound-queue/std",
@@ -185,7 +185,7 @@ runtime-benchmarks = [
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
-	"snowbridge-ethereum-beacon-client/runtime-benchmarks",
+	"snowbridge-ethereum-client-pallet/runtime-benchmarks",
 	"snowbridge-inbound-queue/runtime-benchmarks",
 	"snowbridge-outbound-queue/runtime-benchmarks",
 	"snowbridge-router-primitives/runtime-benchmarks",

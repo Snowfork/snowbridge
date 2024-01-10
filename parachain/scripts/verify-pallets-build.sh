@@ -93,9 +93,9 @@ find "." -name 'Cargo.toml' | while read -r file; do
 done
 
 # let's test if everything we need compiles
-cargo check -p snowbridge-ethereum-beacon-client
-cargo check -p snowbridge-ethereum-beacon-client --features runtime-benchmarks
-cargo check -p snowbridge-ethereum-beacon-client --features try-runtime
+cargo check -p snowbridge-ethereum-client-pallet
+cargo check -p snowbridge-ethereum-client-pallet --features runtime-benchmarks
+cargo check -p snowbridge-ethereum-client-pallet --features try-runtime
 cargo check -p snowbridge-inbound-queue
 cargo check -p snowbridge-inbound-queue --features runtime-benchmarks
 cargo check -p snowbridge-inbound-queue --features try-runtime

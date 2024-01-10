@@ -44,7 +44,7 @@ snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-featu
 frame-benchmarking = { path = "../../../polkadot-sdk/substrate/frame/benchmarking" }
 sp-keyring = { path = "../../../polkadot-sdk/substrate/primitives/keyring" }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon" }
-snowbridge-ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client" }
+snowbridge-ethereum-client-pallet = { path = "../../pallets/ethereum-client" }
 hex-literal = { version = "0.4.1" }
 
 [features]
@@ -82,7 +82,7 @@ runtime-benchmarks = [
 	"pallet-balances/runtime-benchmarks",
 	"snowbridge-beacon-primitives",
 	"snowbridge-core/runtime-benchmarks",
-	"snowbridge-ethereum-beacon-client/runtime-benchmarks",
+	"snowbridge-ethereum-client-pallet/runtime-benchmarks",
 	"snowbridge-router-primitives/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
@@ -92,6 +92,6 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"pallet-balances/try-runtime",
-	"snowbridge-ethereum-beacon-client/try-runtime",
+	"snowbridge-ethereum-client-pallet/try-runtime",
 	"sp-runtime/try-runtime",
 ]
