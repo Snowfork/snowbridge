@@ -33,7 +33,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
+		EthereumBeaconClient: snowbridge_pallet_ethereum_client::{Pallet, Call, Storage, Event<T>},
 		InboundQueue: inbound_queue::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -113,7 +113,7 @@ parameter_types! {
 	};
 }
 
-impl snowbridge_ethereum_beacon_client::Config for Test {
+impl snowbridge_pallet_ethereum_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
 	type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
@@ -143,7 +143,7 @@ parameter_types! {
 }
 
 #[cfg(feature = "runtime-benchmarks")]
-impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Test {
+impl<T: snowbridge_pallet_ethereum_client::Config> BenchmarkHelper<T> for Test {
 	// not implemented since the MockVerifier is used for tests
 	fn initialize_storage(_: H256, _: CompactExecutionHeader) {}
 }
