@@ -151,9 +151,10 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 			let mut events = <frame_system::Pallet<Runtime>>::events()
 				.into_iter()
 				.filter_map(|e| snowbridge_outbound_queue_pallet(e.event.encode()));
-			assert!(
-				events.any(|e| matches!(e, snowbridge_outbound_queue_pallet::Event::MessageQueued { .. }))
-			);
+			assert!(events.any(|e| matches!(
+				e,
+				snowbridge_outbound_queue_pallet::Event::MessageQueued { .. }
+			)));
 		});
 }
 
