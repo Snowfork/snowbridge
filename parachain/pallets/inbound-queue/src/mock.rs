@@ -22,6 +22,7 @@ use sp_runtime::{
 };
 use sp_std::convert::From;
 use xcm::v3::{prelude::*, MultiAssets, SendXcm};
+use xcm_executor::Assets;
 
 use crate::{self as inbound_queue};
 
@@ -200,6 +201,50 @@ impl StaticLookup for MockChannelLookup {
 	}
 }
 
+pub struct SuccessfulTransactor;
+impl TransactAsset for SuccessfulTransactor {
+	fn can_check_in(
+		_origin: &MultiLocation,
+		_what: &MultiAsset,
+		_context: &XcmContext,
+	) -> XcmResult {
+		Ok(())
+	}
+
+	fn can_check_out(
+		_dest: &MultiLocation,
+		_what: &MultiAsset,
+		_context: &XcmContext,
+	) -> XcmResult {
+		Ok(())
+	}
+
+	fn deposit_asset(
+		_what: &MultiAsset,
+		_who: &MultiLocation,
+		_context: Option<&XcmContext>,
+	) -> XcmResult {
+		Ok(())
+	}
+
+	fn withdraw_asset(
+		_what: &MultiAsset,
+		_who: &MultiLocation,
+		_context: Option<&XcmContext>,
+	) -> Result<Assets, XcmError> {
+		Ok(Assets::default())
+	}
+
+	fn internal_transfer_asset(
+		_what: &MultiAsset,
+		_from: &MultiLocation,
+		_to: &MultiLocation,
+		_context: &XcmContext,
+	) -> Result<Assets, XcmError> {
+		Ok(Assets::default())
+	}
+}
+
 impl inbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = MockVerifier;
@@ -221,6 +266,7 @@ impl inbound_queue::Config for Test {
 	type WeightToFee = IdentityFee<u128>;
 	type LengthToFee = IdentityFee<u128>;
 	type MaxMessageSize = ConstU32<1024>;
+	type AssetTransactor = SuccessfulTransactor;
 }
 
 pub fn last_events(n: usize) -> Vec<RuntimeEvent> {
