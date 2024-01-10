@@ -1,6 +1,6 @@
 [package]
-name = "snowbridge-runtime-test-common"
-description = "Snowbridge Runtime Tests"
+name = "snowbridge-runtime-common"
+description = "Snowbridge Runtime Common"
 version = "0.9.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition.workspace = true
