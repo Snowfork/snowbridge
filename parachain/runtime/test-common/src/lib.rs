@@ -2,13 +2,17 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
 use codec::Encode;
-use frame_support::{assert_err, assert_ok, traits::fungible::Mutate};
+use frame_support::{
+	assert_err, assert_ok,
+	traits::fungible::{Inspect, Mutate},
+};
 pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
 use parachains_runtimes_test_utils::{
 	AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf, XcmReceivedFrom,
 };
+use snowbridge_core::{gwei, meth, PricingParameters, Rewards};
 use sp_core::H160;
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{FixedU128, SaturatedConversion};
 use xcm::{
 	latest::prelude::*,
 	v3::Error::{self, Barrier},
@@ -17,6 +21,10 @@ use xcm_executor::XcmExecutor;
 
 type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 	parachains_runtimes_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
+
+type TokenBalanceOf<Runtime> = <<Runtime as snowbridge_system::Config>::Token as Inspect<
+	<Runtime as frame_system::Config>::AccountId,
+>>::Balance;
 
 pub fn initial_fund<Runtime>(assethub_parachain_id: u32, initial_amount: u128)
 where
@@ -30,6 +38,13 @@ where
 		initial_amount.saturated_into::<BalanceOf<Runtime>>(),
 	)
 	.unwrap();
+}
+
+pub fn initialize_price_params<Runtime>(params: PricingParameters<TokenBalanceOf<Runtime>>)
+where
+	Runtime: frame_system::Config + snowbridge_system::Config + pallet_balances::Config,
+{
+	snowbridge_system::PricingParameters::<Runtime>::put(params.clone());
 }
 
 pub fn send_transfer_token_message<Runtime, XcmConfig>(
@@ -272,6 +287,63 @@ pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
 		.with_tracing()
 		.build()
 		.execute_with(|| {
+			<snowbridge_system::Pallet<Runtime>>::initialize(
+				runtime_para_id.into(),
+				assethub_parachain_id.into(),
+			)
+			.unwrap();
+
+			// fund asset hub sovereign account enough so it can pay fees
+			initial_fund::<Runtime>(assethub_parachain_id, initial_amount);
+
+			let outcome = send_transfer_token_message::<Runtime, XcmConfig>(
+				assethub_parachain_id,
+				weth_contract_address,
+				destination_address,
+				fee_amount,
+			);
+			// check err is NotHoldingFees
+			assert_err!(outcome.ensure_complete(), expected_error);
+		});
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn send_transfer_token_message_failure_with_invalid_fee_params<Runtime, XcmConfig>(
+	collator_session_key: CollatorSessionKeys<Runtime>,
+	runtime_para_id: u32,
+	assethub_parachain_id: u32,
+	initial_amount: u128,
+	weth_contract_address: H160,
+	destination_address: H160,
+	fee_amount: u128,
+	expected_error: Error,
+) where
+	Runtime: frame_system::Config
+		+ pallet_balances::Config
+		+ pallet_session::Config
+		+ pallet_xcm::Config
+		+ parachain_info::Config
+		+ pallet_collator_selection::Config
+		+ cumulus_pallet_parachain_system::Config
+		+ snowbridge_outbound_queue::Config
+		+ snowbridge_system::Config,
+	XcmConfig: xcm_executor::Config,
+	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
+{
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_key.collators())
+		.with_session_keys(collator_session_key.session_keys())
+		.with_para_id(runtime_para_id.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			let params: PricingParameters<TokenBalanceOf<Runtime>> = PricingParameters {
+				exchange_rate: FixedU128::from_rational(1, 400),
+				fee_per_gas: gwei(0),
+				rewards: Rewards { local: 0_u32.into(), remote: meth(0) },
+			};
+			initialize_price_params::<Runtime>(params);
+
 			<snowbridge_system::Pallet<Runtime>>::initialize(
 				runtime_para_id.into(),
 				assethub_parachain_id.into(),
