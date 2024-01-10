@@ -6,7 +6,7 @@ repository = "https://github.com/snowfork/snowbridge.git"
 [workspace]
 resolver = "2"
 members = [
-	"pallets/ethereum-beacon-client",
+	"pallets/ethereum-client",
 	"pallets/inbound-queue",
 	"pallets/outbound-queue",
 	"pallets/outbound-queue/merkle-tree",

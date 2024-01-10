@@ -78,7 +78,7 @@ rm -rf $SNOWBRIDGE_FOLDER/parachain/.gitignore
 rm -rf $SNOWBRIDGE_FOLDER/parachain/templates
 rm -rf $SNOWBRIDGE_FOLDER/parachain/.cargo
 rm -rf $SNOWBRIDGE_FOLDER/parachain/.config
-rm -rf $SNOWBRIDGE_FOLDER/parachain/pallets/ethereum-beacon-client/fuzz
+rm -rf $SNOWBRIDGE_FOLDER/parachain/pallets/ethereum-client/fuzz
 
 cd bridges/snowbridge/parachain
 
