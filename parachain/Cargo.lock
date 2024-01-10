@@ -9038,7 +9038,7 @@ dependencies = [
  "hex-literal",
  "parity-scale-codec",
  "scale-info",
- "sp-core",
+ "sp-core 21.0.0",
  "sp-runtime",
 ]
 
@@ -9051,7 +9051,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",
  "sp-api",
- "sp-core",
+ "sp-core 21.0.0",
  "sp-std 8.0.0",
  "staging-xcm",
 ]
@@ -9162,7 +9162,7 @@ dependencies = [
  "scale-info",
  "snowbridge-core",
  "snowbridge-pallet-outbound-queue",
- "sp-core",
+ "sp-core 21.0.0",
  "sp-io",
  "sp-keyring",
  "sp-runtime",
