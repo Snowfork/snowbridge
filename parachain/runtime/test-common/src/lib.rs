@@ -22,7 +22,7 @@ use xcm_executor::XcmExecutor;
 type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 	parachains_runtimes_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
 
-type TokenBalanceOf<Runtime> = <<Runtime as snowbridge_system::Config>::Token as Inspect<
+type TokenBalanceOf<Runtime> = <<Runtime as snowbridge_pallet_system::Config>::Token as Inspect<
 	<Runtime as frame_system::Config>::AccountId,
 >>::Balance;
 
@@ -42,9 +42,9 @@ where
 
 pub fn initialize_price_params<Runtime>(params: PricingParameters<TokenBalanceOf<Runtime>>)
 where
-	Runtime: frame_system::Config + snowbridge_system::Config + pallet_balances::Config,
+	Runtime: frame_system::Config + snowbridge_pallet_system::Config + pallet_balances::Config,
 {
-	snowbridge_system::PricingParameters::<Runtime>::put(params.clone());
+	snowbridge_pallet_system::PricingParameters::<Runtime>::put(params.clone());
 }
 
 pub fn send_transfer_token_message<Runtime, XcmConfig>(
@@ -326,8 +326,8 @@ pub fn send_transfer_token_message_failure_with_invalid_fee_params<Runtime, XcmC
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
 		+ cumulus_pallet_parachain_system::Config
-		+ snowbridge_outbound_queue::Config
-		+ snowbridge_system::Config,
+		+ snowbridge_pallet_outbound_queue::Config
+		+ snowbridge_pallet_system::Config,
 	XcmConfig: xcm_executor::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 {
@@ -345,7 +345,7 @@ pub fn send_transfer_token_message_failure_with_invalid_fee_params<Runtime, XcmC
 			};
 			initialize_price_params::<Runtime>(params);
 
-			<snowbridge_system::Pallet<Runtime>>::initialize(
+			<snowbridge_pallet_system::Pallet<Runtime>>::initialize(
 				runtime_para_id.into(),
 				assethub_parachain_id.into(),
 			)
