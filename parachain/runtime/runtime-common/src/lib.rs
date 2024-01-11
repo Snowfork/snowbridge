@@ -7,10 +7,10 @@
 
 use core::marker::PhantomData;
 use frame_support::{ensure, traits::Get};
-use snowbridge_core::{outbound::SendMessageFeeProvider, sibling_sovereign_account_raw};
+use snowbridge_core::outbound::SendMessageFeeProvider;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 use xcm::prelude::*;
-use xcm_builder::{deposit_or_burn_fee, HandleFee};
+use xcm_builder::HandleFee;
 use xcm_executor::traits::{FeeReason, TransactAsset};
 
 /// A `HandleFee` implementation that takes fees from `ExportMessage` XCM instructions
@@ -68,21 +68,20 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		}
 
 		// Get the parachain sovereign from the `context`.
-		let para_sovereign = if let Some(XcmContext {
+		let maybe_para_id = if let Some(XcmContext {
 			origin: Some(MultiLocation { parents: 1, interior }),
 			..
 		}) = context
 		{
 			if let Some(Parachain(sibling_para_id)) = interior.first() {
-				let account: AccountId =
-					sibling_sovereign_account_raw((*sibling_para_id).into()).into();
-				account
+				Some(sibling_para_id)
 			} else {
-				return Ok(fees)
+				None
 			}
 		} else {
-			return Ok(fees)
+			None
 		};
+		let para_id = maybe_para_id.ok_or(XcmError::InvalidLocation)?;
 
 		// Get the total fee offered by export message.
 		let maybe_total_supplied_fee: Option<(usize, Balance)> = fees
@@ -99,22 +98,21 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 			})
 			.next();
 		let (fee_index, total_fee) = maybe_total_supplied_fee.ok_or(XcmError::FeesNotMet)?;
-		let remote_fee =
-			total_fee.checked_sub(&FeeProvider::local_fee()).ok_or(XcmError::FeesNotMet)?;
+		let local_fee = FeeProvider::local_fee();
+		let remote_fee = total_fee.checked_sub(&local_fee).ok_or(XcmError::FeesNotMet)?;
 		ensure!(remote_fee > Balance::zero(), XcmError::FeesNotMet);
 		// Refund remote component of fee to physical origin
-		deposit_or_burn_fee::<AssetTransactor, _>(
-			MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee.into()) }.into(),
+		AssetTransactor::deposit_asset(
+			&MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee.into()) },
+			&MultiLocation { parents: 1, interior: X1(Parachain(*para_id)) },
 			context,
-			para_sovereign,
-		);
+		)?;
+
 		// Return remaining fee to the next fee handler in the chain.
 		let mut modified_fees = fees.inner().clone();
 		modified_fees.remove(fee_index);
-		modified_fees.push(MultiAsset {
-			id: Concrete(token_location),
-			fun: Fungible((total_fee - remote_fee).into()),
-		});
+		modified_fees
+			.push(MultiAsset { id: Concrete(token_location), fun: Fungible(local_fee.into()) });
 		Ok(modified_fees.into())
 	}
 }
