@@ -100,7 +100,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		let (fee_index, total_fee) = maybe_total_supplied_fee.ok_or(XcmError::FeesNotMet)?;
 		let local_fee = FeeProvider::local_fee();
 		let remote_fee = total_fee.checked_sub(&local_fee).ok_or(XcmError::FeesNotMet)?;
-		ensure!(remote_fee > Balance::zero(), XcmError::FeesNotMet);
+		ensure!(remote_fee > Balance::one(), XcmError::FeesNotMet);
 		// Refund remote component of fee to physical origin
 		AssetTransactor::deposit_asset(
 			&MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee.into()) },
