@@ -283,6 +283,22 @@ fn test_calculate_fees() {
 		let gas_used: u64 = 250000;
 		let illegal_price_params: PricingParameters<<Test as Config>::Balance> =
 			PricingParameters {
+				exchange_rate: FixedU128::from_rational(1, 400),
+				fee_per_gas: 10000_u32.into(),
+				rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
+			};
+		let fee = OutboundQueue::calculate_fee(gas_used, illegal_price_params);
+		assert_eq!(fee.local, 698000000);
+		assert_eq!(fee.remote, 1000000);
+	});
+}
+
+#[test]
+fn test_calculate_fees_with_insane_exchange_rate() {
+	new_tester().execute_with(|| {
+		let gas_used: u64 = 250000;
+		let illegal_price_params: PricingParameters<<Test as Config>::Balance> =
+			PricingParameters {
 				exchange_rate: FixedU128::from_rational(1, 1),
 				fee_per_gas: 1_u32.into(),
 				rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
