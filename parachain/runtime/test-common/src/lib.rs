@@ -10,9 +10,9 @@ pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_g
 use parachains_runtimes_test_utils::{
 	AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf, XcmReceivedFrom,
 };
-use snowbridge_core::{gwei, meth, PricingParameters, Rewards};
+use snowbridge_core::PricingParameters;
 use sp_core::H160;
-use sp_runtime::{FixedU128, SaturatedConversion};
+use sp_runtime::SaturatedConversion;
 use xcm::{
 	latest::prelude::*,
 	v3::Error::{self, Barrier},
@@ -38,13 +38,6 @@ where
 		initial_amount.saturated_into::<BalanceOf<Runtime>>(),
 	)
 	.unwrap();
-}
-
-pub fn initialize_price_params<Runtime>(params: PricingParameters<TokenBalanceOf<Runtime>>)
-where
-	Runtime: frame_system::Config + snowbridge_pallet_system::Config + pallet_balances::Config,
-{
-	snowbridge_pallet_system::PricingParameters::<Runtime>::put(params.clone());
 }
 
 pub fn send_transfer_token_message<Runtime, XcmConfig>(
@@ -317,6 +310,7 @@ pub fn send_transfer_token_message_failure_with_invalid_fee_params<Runtime, XcmC
 	weth_contract_address: H160,
 	destination_address: H160,
 	fee_amount: u128,
+	price_params: PricingParameters<TokenBalanceOf<Runtime>>,
 	expected_error: Error,
 ) where
 	Runtime: frame_system::Config
@@ -338,13 +332,10 @@ pub fn send_transfer_token_message_failure_with_invalid_fee_params<Runtime, XcmC
 		.with_tracing()
 		.build()
 		.execute_with(|| {
-			let params: PricingParameters<TokenBalanceOf<Runtime>> = PricingParameters {
-				exchange_rate: FixedU128::from_rational(1, 400),
-				fee_per_gas: gwei(0),
-				rewards: Rewards { local: 0_u32.into(), remote: meth(0) },
-			};
-			initialize_price_params::<Runtime>(params);
+			// initialize price params
+			snowbridge_pallet_system::PricingParameters::<Runtime>::put(price_params);
 
+			// initialize agent and channel
 			<snowbridge_pallet_system::Pallet<Runtime>>::initialize(
 				runtime_para_id.into(),
 				assethub_parachain_id.into(),
