@@ -2,7 +2,7 @@ use crate::XcmExportFeeToSibling;
 use frame_support::{parameter_types, sp_runtime::testing::H256};
 use snowbridge_core::outbound::{Fee, Message, SendError, SendMessage, SendMessageFeeProvider};
 use xcm::prelude::{
-	Here, MultiAsset, MultiAssets, MultiLocation, NetworkId, Parachain, Rococo, XcmContext,
+	Here, Kusama, MultiAsset, MultiAssets, MultiLocation, NetworkId, Parachain, XcmContext,
 	XcmError, XcmHash, XcmResult, X1,
 };
 use xcm_builder::HandleFee;
@@ -173,7 +173,8 @@ fn handle_fee_success() {
 fn handle_fee_success_but_not_for_ethereum() {
 	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 10_u128)).into();
 	let ctx = XcmContext { origin: None, message_id: XcmHash::default(), topic: None };
-	let reason = FeeReason::Export { network: Rococo, destination: Here };
+	// invalid network not for ethereum
+	let reason = FeeReason::Export { network: Kusama, destination: Here };
 	let result = XcmExportFeeToSibling::<
 		u128,
 		u64,
@@ -185,4 +186,63 @@ fn handle_fee_success_but_not_for_ethereum() {
 	.unwrap();
 	// assert fee not touched and just forward to the next handler
 	assert_eq!(result, fee)
+}
+
+#[test]
+fn handle_fee_fail_for_invalid_location() {
+	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 10_u128)).into();
+	// invalid origin not from sibling chain
+	let ctx = XcmContext { origin: None, message_id: XcmHash::default(), topic: None };
+	let reason = FeeReason::Export { network: EthereumNetwork::get(), destination: Here };
+	let result = XcmExportFeeToSibling::<
+		u128,
+		u64,
+		TokenLocation,
+		EthereumNetwork,
+		SuccessfulTransactor,
+		MockOkOutboundQueue,
+	>::handle_fee(fee.clone(), Some(&ctx), reason);
+	assert_eq!(result, Err(XcmError::InvalidLocation))
+}
+
+#[test]
+fn handle_fee_fail_for_fees_not_met() {
+	// insufficient fee not met
+	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 1_u128)).into();
+	let ctx = XcmContext {
+		origin: Some(MultiLocation { parents: 1, interior: X1(Parachain(1000)) }),
+		message_id: XcmHash::default(),
+		topic: None,
+	};
+	let reason = FeeReason::Export { network: EthereumNetwork::get(), destination: Here };
+	let result = XcmExportFeeToSibling::<
+		u128,
+		u64,
+		TokenLocation,
+		EthereumNetwork,
+		SuccessfulTransactor,
+		MockOkOutboundQueue,
+	>::handle_fee(fee.clone(), Some(&ctx), reason);
+	assert_eq!(result, Err(XcmError::FeesNotMet))
+}
+
+#[test]
+fn handle_fee_fail_for_transact() {
+	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 10_u128)).into();
+	let ctx = XcmContext {
+		origin: Some(MultiLocation { parents: 1, interior: X1(Parachain(1000)) }),
+		message_id: XcmHash::default(),
+		topic: None,
+	};
+	let reason = FeeReason::Export { network: EthereumNetwork::get(), destination: Here };
+	let result = XcmExportFeeToSibling::<
+		u128,
+		u64,
+		TokenLocation,
+		EthereumNetwork,
+		// invalid transactor
+		NotFoundTransactor,
+		MockOkOutboundQueue,
+	>::handle_fee(fee.clone(), Some(&ctx), reason);
+	assert_eq!(result, Err(XcmError::AssetNotFound))
 }
