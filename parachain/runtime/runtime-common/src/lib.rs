@@ -10,12 +10,15 @@ mod tests;
 
 use codec::FullCodec;
 use core::marker::PhantomData;
-use frame_support::{ensure, traits::Get};
+use frame_support::traits::Get;
 use snowbridge_core::outbound::SendMessageFeeProvider;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
+use sp_std::fmt::Debug;
 use xcm::prelude::*;
 use xcm_builder::HandleFee;
 use xcm_executor::traits::{FeeReason, TransactAsset};
+
+pub const LOG_TARGET: &str = "xcm::export-fee-to-sibling";
 
 /// A `HandleFee` implementation that takes fees from `ExportMessage` XCM instructions
 /// to Snowbridge and splits off the remote fee and deposits it to the origin
@@ -48,7 +51,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		AssetTransactor,
 		FeeProvider,
 	> where
-	Balance: BaseArithmetic + Unsigned + Copy + From<u128> + Into<u128>,
+	Balance: BaseArithmetic + Unsigned + Copy + From<u128> + Into<u128> + Debug,
 	AccountId: Clone + FullCodec,
 	FeeAssetLocation: Get<MultiLocation>,
 	EthereumNetwork: Get<NetworkId>,
@@ -59,7 +62,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		fees: MultiAssets,
 		context: Option<&XcmContext>,
 		reason: FeeReason,
-	) -> Result<MultiAssets, XcmError> {
+	) -> MultiAssets {
 		let token_location = FeeAssetLocation::get();
 
 		// Check the reason to see if this export is for snowbridge.
@@ -68,7 +71,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 			FeeReason::Export { network: bridged_network, destination }
 				if bridged_network == EthereumNetwork::get() && destination == Here
 		) {
-			return Ok(fees)
+			return fees
 		}
 
 		// Get the parachain sovereign from the `context`.
@@ -85,7 +88,15 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		} else {
 			None
 		};
-		let para_id = maybe_para_id.ok_or(XcmError::InvalidLocation)?;
+		if maybe_para_id.is_none() {
+			log::error!(
+				target: LOG_TARGET,
+				"Invalid location in context {:?} ",
+				context,
+			);
+			return fees
+		}
+		let para_id = maybe_para_id.unwrap();
 
 		// Get the total fee offered by export message.
 		let maybe_total_supplied_fee: Option<(usize, Balance)> = fees
@@ -101,22 +112,46 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 				None
 			})
 			.next();
-		let (fee_index, total_fee) = maybe_total_supplied_fee.ok_or(XcmError::FeesNotMet)?;
+		if maybe_total_supplied_fee.is_none() {
+			log::error!(
+				target: LOG_TARGET,
+				"fees {:?} not met with no relay token",
+				fees,
+			);
+			return fees
+		}
+		let (fee_index, total_fee) = maybe_total_supplied_fee.unwrap();
 		let local_fee = FeeProvider::local_fee();
-		let remote_fee = total_fee.checked_sub(&local_fee).ok_or(XcmError::FeesNotMet)?;
-		ensure!(remote_fee > Balance::one(), XcmError::FeesNotMet);
+		let remote_fee = total_fee.saturating_sub(local_fee);
+		if local_fee == Balance::zero() || remote_fee == Balance::zero() {
+			log::error!(
+				target: LOG_TARGET,
+				"fees to refund not correct with local_fee {:?} and remote_fee {:?}",
+				local_fee,
+				remote_fee,
+			);
+			return fees
+		}
 		// Refund remote component of fee to physical origin
-		AssetTransactor::deposit_asset(
+		let result = AssetTransactor::deposit_asset(
 			&MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee.into()) },
 			&MultiLocation { parents: 1, interior: X1(Parachain(para_id)) },
 			context,
-		)?;
+		);
+		if result.is_err() {
+			log::error!(
+				target: LOG_TARGET,
+				"transact fee asset failed with err {:?}",
+				result.unwrap_err()
+			);
+			return fees
+		}
 
 		// Return remaining fee to the next fee handler in the chain.
 		let mut modified_fees = fees.inner().clone();
 		modified_fees.remove(fee_index);
 		modified_fees
 			.push(MultiAsset { id: Concrete(token_location), fun: Fungible(local_fee.into()) });
-		Ok(modified_fees.into())
+		modified_fees.into()
 	}
 }

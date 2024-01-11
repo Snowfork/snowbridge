@@ -161,8 +161,7 @@ fn handle_fee_success() {
 		EthereumNetwork,
 		SuccessfulTransactor,
 		MockOkOutboundQueue,
-	>::handle_fee(fee, Some(&ctx), reason)
-	.unwrap();
+	>::handle_fee(fee, Some(&ctx), reason);
 	let local_fee =
 		MultiAsset::from((MultiLocation::parent(), MockOkOutboundQueue::local_fee())).into();
 	// assert only local fee left
@@ -182,8 +181,7 @@ fn handle_fee_success_but_not_for_ethereum() {
 		EthereumNetwork,
 		SuccessfulTransactor,
 		MockOkOutboundQueue,
-	>::handle_fee(fee.clone(), Some(&ctx), reason)
-	.unwrap();
+	>::handle_fee(fee.clone(), Some(&ctx), reason);
 	// assert fee not touched and just forward to the next handler
 	assert_eq!(result, fee)
 }
@@ -202,7 +200,7 @@ fn handle_fee_fail_for_invalid_location() {
 		SuccessfulTransactor,
 		MockOkOutboundQueue,
 	>::handle_fee(fee.clone(), Some(&ctx), reason);
-	assert_eq!(result, Err(XcmError::InvalidLocation))
+	assert_eq!(result, fee)
 }
 
 #[test]
@@ -223,7 +221,7 @@ fn handle_fee_fail_for_fees_not_met() {
 		SuccessfulTransactor,
 		MockOkOutboundQueue,
 	>::handle_fee(fee.clone(), Some(&ctx), reason);
-	assert_eq!(result, Err(XcmError::FeesNotMet))
+	assert_eq!(result, fee)
 }
 
 #[test]
@@ -244,5 +242,5 @@ fn handle_fee_fail_for_transact() {
 		NotFoundTransactor,
 		MockOkOutboundQueue,
 	>::handle_fee(fee.clone(), Some(&ctx), reason);
-	assert_eq!(result, Err(XcmError::AssetNotFound))
+	assert_eq!(result, fee)
 }
