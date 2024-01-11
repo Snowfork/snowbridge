@@ -5,6 +5,10 @@
 //! Common traits and types shared by runtimes.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(test)]
+mod tests;
+
+use codec::FullCodec;
 use core::marker::PhantomData;
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::outbound::SendMessageFeeProvider;
@@ -45,7 +49,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		FeeProvider,
 	> where
 	Balance: BaseArithmetic + Unsigned + Copy + From<u128> + Into<u128>,
-	AccountId: Clone + Into<[u8; 32]> + From<[u8; 32]>,
+	AccountId: Clone + FullCodec,
 	FeeAssetLocation: Get<MultiLocation>,
 	EthereumNetwork: Get<NetworkId>,
 	AssetTransactor: TransactAsset,
@@ -68,13 +72,13 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		}
 
 		// Get the parachain sovereign from the `context`.
-		let maybe_para_id = if let Some(XcmContext {
+		let maybe_para_id: Option<u32> = if let Some(XcmContext {
 			origin: Some(MultiLocation { parents: 1, interior }),
 			..
 		}) = context
 		{
 			if let Some(Parachain(sibling_para_id)) = interior.first() {
-				Some(sibling_para_id)
+				Some(*sibling_para_id)
 			} else {
 				None
 			}
@@ -104,7 +108,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		// Refund remote component of fee to physical origin
 		AssetTransactor::deposit_asset(
 			&MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee.into()) },
-			&MultiLocation { parents: 1, interior: X1(Parachain(*para_id)) },
+			&MultiLocation { parents: 1, interior: X1(Parachain(para_id)) },
 			context,
 		)?;
 
