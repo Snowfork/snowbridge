@@ -115,7 +115,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		if maybe_total_supplied_fee.is_none() {
 			log::error!(
 				target: LOG_TARGET,
-				"fees {:?} not met with no relay token",
+				"could not find fee asset item in fees: {:?}",
 				fees,
 			);
 			return fees
