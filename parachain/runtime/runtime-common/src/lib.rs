@@ -91,7 +91,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		if maybe_para_id.is_none() {
 			log::error!(
 				target: LOG_TARGET,
-				"Invalid location in context {:?} ",
+				"invalid location in context {:?}",
 				context,
 			);
 			return fees
@@ -115,7 +115,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		if maybe_total_supplied_fee.is_none() {
 			log::error!(
 				target: LOG_TARGET,
-				"fees {:?} not met with no relay token",
+				"could not find fee asset item in fees: {:?}",
 				fees,
 			);
 			return fees
@@ -126,7 +126,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		if local_fee == Balance::zero() || remote_fee == Balance::zero() {
 			log::error!(
 				target: LOG_TARGET,
-				"fees to refund not correct with local_fee {:?} and remote_fee {:?}",
+				"calculated refund incorrect with local_fee: {:?} and remote_fee: {:?}",
 				local_fee,
 				remote_fee,
 			);
@@ -141,7 +141,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		if result.is_err() {
 			log::error!(
 				target: LOG_TARGET,
-				"transact fee asset failed with err {:?}",
+				"transact fee asset failed: {:?}",
 				result.unwrap_err()
 			);
 			return fees
