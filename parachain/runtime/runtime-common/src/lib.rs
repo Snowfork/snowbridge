@@ -91,7 +91,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		if maybe_para_id.is_none() {
 			log::error!(
 				target: LOG_TARGET,
-				"Invalid location in context {:?} ",
+				"invalid location in context {:?}",
 				context,
 			);
 			return fees
