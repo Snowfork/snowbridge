@@ -201,6 +201,7 @@ pub mod deneb {
 	};
 	use byte_slice_cast::AsByteSlice;
 	use sp_core::H256;
+	use sp_std::{vec, vec::Vec};
 	use ssz_rs::{
 		prelude::{List, Vector},
 		Deserialize, DeserializeError, SimpleSerializeError, Sized, U256,

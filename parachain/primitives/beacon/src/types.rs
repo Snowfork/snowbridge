@@ -578,6 +578,7 @@ pub mod deneb {
 	#[cfg(feature = "std")]
 	use serde::{Deserialize, Serialize};
 	use sp_core::{H160, H256, U256};
+	use sp_std::prelude::*;
 
 	/// ExecutionPayloadHeader
 	/// https://github.com/ethereum/consensus-specs/blob/dev/specs/deneb/beacon-chain.md#executionpayloadheader
