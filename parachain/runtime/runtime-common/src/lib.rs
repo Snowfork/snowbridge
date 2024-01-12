@@ -126,7 +126,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		if local_fee == Balance::zero() || remote_fee == Balance::zero() {
 			log::error!(
 				target: LOG_TARGET,
-				"fees to refund not correct with local_fee {:?} and remote_fee {:?}",
+				"calculated refund incorrect with local_fee: {:?} and remote_fee: {:?}",
 				local_fee,
 				remote_fee,
 			);
