@@ -141,7 +141,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		if result.is_err() {
 			log::error!(
 				target: LOG_TARGET,
-				"transact fee asset failed with err {:?}",
+				"transact fee asset failed: {:?}",
 				result.unwrap_err()
 			);
 			return fees
