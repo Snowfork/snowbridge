@@ -1,5 +1,4 @@
 use super::GlobalConsensusEthereumConvertsFor;
-use crate::inbound::CallIndex;
 use frame_support::parameter_types;
 use hex_literal::hex;
 use xcm::v3::prelude::*;
@@ -10,7 +9,6 @@ const NETWORK: NetworkId = Ethereum { chain_id: 11155111 };
 parameter_types! {
 	pub EthereumNetwork: NetworkId = NETWORK;
 
-	pub const CreateAssetCall: CallIndex = [1, 1];
 	pub const CreateAssetExecutionFee: u128 = 123;
 	pub const CreateAssetDeposit: u128 = 891;
 	pub const SendTokenExecutionFee: u128 = 592;

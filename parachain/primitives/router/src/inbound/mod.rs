@@ -16,7 +16,8 @@ use sp_std::prelude::*;
 use xcm::prelude::{Junction::AccountKey20, *};
 use xcm_executor::traits::ConvertLocation;
 
-const MINIMUM_DEPOSIT: u128 = 1;
+pub const MINIMUM_DEPOSIT: u128 = 1;
+pub const FOREIGN_CREATE_ASSET_WEIGHT_AT_MOST: Weight = Weight::from_parts(400_000_000, 8_000);
 
 /// Messages from Ethereum are versioned. This is because in future,
 /// we may want to evolve the protocol so that the ethereum side sends XCM messages directly.
@@ -83,24 +84,12 @@ pub enum Destination {
 	},
 }
 
-pub struct MessageToXcm<
-	CreateAssetCall,
-	CreateAssetDeposit,
-	InboundQueuePalletInstance,
-	AccountId,
-	Balance,
-> where
-	CreateAssetCall: Get<CallIndex>,
+pub struct MessageToXcm<CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
+where
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT,
 {
-	_phantom: PhantomData<(
-		CreateAssetCall,
-		CreateAssetDeposit,
-		InboundQueuePalletInstance,
-		AccountId,
-		Balance,
-	)>,
+	_phantom: PhantomData<(CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance)>,
 }
 
 /// Reason why a message conversion failed.
@@ -118,18 +107,9 @@ pub trait ConvertMessage {
 	fn convert(message: VersionedMessage) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError>;
 }
 
-pub type CallIndex = [u8; 2];
-
-impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
-	ConvertMessage
-	for MessageToXcm<
-		CreateAssetCall,
-		CreateAssetDeposit,
-		InboundQueuePalletInstance,
-		AccountId,
-		Balance,
-	> where
-	CreateAssetCall: Get<CallIndex>,
+impl<CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance> ConvertMessage
+	for MessageToXcm<CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
+where
 	CreateAssetDeposit: Get<u128>,
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
@@ -150,10 +130,9 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 	}
 }
 
-impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
-	MessageToXcm<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
+impl<CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
+	MessageToXcm<CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
 where
-	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
@@ -171,7 +150,6 @@ where
 
 		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
 		let asset_id = Self::convert_token_address(network, token);
-		let create_call_index: [u8; 2] = CreateAssetCall::get();
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let xcm: Xcm<()> = vec![
@@ -188,15 +166,14 @@ where
 			// Call create_asset on foreign assets pallet.
 			Transact {
 				origin_kind: OriginKind::Xcm,
-				require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
-				call: (
-					create_call_index,
-					asset_id,
-					MultiAddress::<[u8; 32], ()>::Id(owner),
-					MINIMUM_DEPOSIT,
-				)
-					.encode()
-					.into(),
+				require_weight_at_most: FOREIGN_CREATE_ASSET_WEIGHT_AT_MOST,
+				call: Call::ForeignAssets(ForeignAssetsCall::create {
+					id: asset_id,
+					admin: MultiAddress::<[u8; 32], ()>::Id(owner),
+					min_balance: MINIMUM_DEPOSIT,
+				})
+				.encode()
+				.into(),
 			},
 			RefundSurplus,
 			// Clear the origin so that remaining assets in holding
@@ -317,4 +294,20 @@ impl<AccountId> GlobalConsensusEthereumConvertsFor<AccountId> {
 	pub fn from_chain_id(chain_id: &u64) -> [u8; 32] {
 		(b"ethereum-chain", chain_id).using_encoded(blake2_256)
 	}
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
+pub enum Call {
+	/// Call create_asset on foreign assets pallet.
+	#[codec(index = 53)]
+	ForeignAssets(ForeignAssetsCall),
+}
+
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
+#[allow(non_camel_case_types)]
+pub enum ForeignAssetsCall {
+	/// `pallet-assets::Call::create`
+	#[codec(index = 0)]
+	create { id: MultiLocation, admin: MultiAddress<[u8; 32], ()>, min_balance: u128 },
 }
