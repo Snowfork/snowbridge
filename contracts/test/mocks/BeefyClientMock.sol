@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {BeefyClient} from "../../src/BeefyClient.sol";
 import {Uint16Array, createUint16Array} from "../../src/utils/Uint16Array.sol";
