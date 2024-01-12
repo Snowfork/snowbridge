@@ -11,7 +11,7 @@ type Config struct {
 
 type SourceConfig struct {
 	Polkadot config.PolkadotConfig `mapstructure:"polkadot"`
-	// Depth to ignore the beefy updates too far away(in number of blocks)
+	// Depth to ignore the beefy updates too far away (in number of blocks)
 	FastForwardDepth uint64 `mapstructure:"fast-forward-depth"`
 	// Period to sample the beefy updates (in number of blocks)
 	UpdatePeriod uint64 `mapstructure:"update-period"`
