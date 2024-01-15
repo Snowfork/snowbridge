@@ -43,6 +43,7 @@ sp-core = { path = "../../../polkadot-sdk/substrate/primitives/core", default-fe
 sp-genesis-builder = { path = "../../../polkadot-sdk/substrate/primitives/genesis-builder", default-features = false }
 sp-inherents = { path = "../../../polkadot-sdk/substrate/primitives/inherents", default-features = false }
 sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io", default-features = false }
+sp-keyring = { path = "../../../polkadot-sdk/substrate/primitives/keyring" }
 sp-offchain = { path = "../../../polkadot-sdk/substrate/primitives/offchain", default-features = false }
 sp-runtime = { path = "../../../polkadot-sdk/substrate/primitives/runtime", default-features = false }
 sp-session = { path = "../../../polkadot-sdk/substrate/primitives/session", default-features = false }
