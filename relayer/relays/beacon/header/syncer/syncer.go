@@ -151,6 +151,32 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 		return syncCommitteePeriodUpdate, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
 	}
 
+	var displayProof []common.Hash
+	for _, proof := range blockRootsProof.Proof {
+		displayProof = append(displayProof, common.HexToHash(proof.Hex()))
+	}
+
+	log.WithFields(log.Fields{
+		"attestedHeader.ParentRoot":                       attestedHeader.ParentRoot.Hex(),
+		"attestedHeader.StateRoot":                        attestedHeader.StateRoot.Hex(),
+		"attestedHeader.BodyRoot":                         attestedHeader.BodyRoot.Hex(),
+		"attestedHeader.Slot":                             attestedHeader.Slot,
+		"attestedHeader.ProposerIndex":                    attestedHeader.ProposerIndex,
+		"syncAggregate.SyncCommitteeSignature":            committeeUpdate.SyncAggregate.SyncCommitteeSignature,
+		"syncAggregate.SyncCommitteeBits":                 committeeUpdate.SyncAggregate.SyncCommitteeBits,
+		"signatureSlot":                                   signatureSlot,
+		"NextSyncCommitteeUpdate.NextSyncCommittee":       committeeUpdate.NextSyncCommittee,
+		"NextSyncCommitteeUpdate.NextSyncCommitteeBranch": committeeUpdate.NextSyncCommitteeBranch,
+		"finalizedHeader.ParentRoot":                      finalizedHeader.ParentRoot.Hex(),
+		"finalizedHeader.StateRoot":                       finalizedHeader.StateRoot.Hex(),
+		"finalizedHeader.BodyRoot":                        finalizedHeader.BodyRoot.Hex(),
+		"finalizedHeader.Slot":                            finalizedHeader.Slot,
+		"finalizedHeader.ProposerIndex":                   finalizedHeader.ProposerIndex,
+		"finalityBranch":                                  committeeUpdate.FinalityBranch,
+		"blockRootsRoot":                                  blockRootsProof.Leaf.Hex(),
+		"blockRootsBranch":                                displayProof,
+	}).Info("sync committee update")
+
 	return syncCommitteePeriodUpdate, nil
 }
 
@@ -256,6 +282,31 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		BlockRootsRoot:   blockRootsProof.Leaf,
 		BlockRootsBranch: blockRootsProof.Proof,
 	}
+
+	var displayProof []common.Hash
+	for _, proof := range blockRootsProof.Proof {
+		displayProof = append(displayProof, common.HexToHash(proof.Hex()))
+	}
+
+	log.WithFields(log.Fields{
+		"attestedHeader.ParentRoot":            attestedHeader.ParentRoot.Hex(),
+		"attestedHeader.StateRoot":             attestedHeader.StateRoot.Hex(),
+		"attestedHeader.BodyRoot":              attestedHeader.BodyRoot.Hex(),
+		"attestedHeader.Slot":                  attestedHeader.Slot,
+		"attestedHeader.ProposerIndex":         attestedHeader.ProposerIndex,
+		"syncAggregate.SyncCommitteeSignature": finalizedUpdate.Data.SyncAggregate.SyncCommitteeSignature,
+		"syncAggregate.SyncCommitteeBits":      finalizedUpdate.Data.SyncAggregate.SyncCommitteeBits,
+		"signatureSlot":                        signatureSlot,
+		"NextSyncCommitteeUpdate":              "none",
+		"finalizedHeader.ParentRoot":           finalizedHeader.ParentRoot.Hex(),
+		"finalizedHeader.StateRoot":            finalizedHeader.StateRoot.Hex(),
+		"finalizedHeader.BodyRoot":             finalizedHeader.BodyRoot.Hex(),
+		"finalizedHeader.Slot":                 finalizedHeader.Slot,
+		"finalizedHeader.ProposerIndex":        finalizedHeader.ProposerIndex,
+		"finalityBranch":                       finalizedUpdate.Data.FinalityBranch,
+		"blockRootsRoot":                       blockRootsProof.Leaf.Hex(),
+		"blockRootsBranch":                     displayProof,
+	}).Info("finalized header")
 
 	return scale.Update{
 		Payload:                  updatePayload,
@@ -432,6 +483,36 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 	for _, proof := range proofScale {
 		displayProof = append(displayProof, common.HexToHash(proof.Hex()))
 	}
+
+	var displayExecutionBranch []common.Hash
+	for _, executionHeaderBranch := range displayExecutionBranch {
+		displayExecutionBranch = append(displayExecutionBranch, common.HexToHash(executionHeaderBranch.Hex()))
+	}
+
+	log.WithFields(log.Fields{
+		"header.ParentRoot":                 beaconHeader.ParentRoot.Hex(),
+		"header.StateRoot":                  beaconHeader.StateRoot.Hex(),
+		"header.BodyRoot":                   beaconHeader.BodyRoot.Hex(),
+		"header.Slot":                       beaconHeader.Slot,
+		"header.ProposerIndex":              beaconHeader.ProposerIndex,
+		"ancestryProofs.HeaderBranch":       displayProof,
+		"ancestryProofs.FinalizedBlockRoot": checkpoint.FinalizedBlockRoot,
+		"executionHeader.ParentHash":        executionPayloadScale.ParentHash.Hex(),
+		"executionHeader.StateRoot":         executionPayloadScale.StateRoot.Hex(),
+		"executionHeader.ReceiptsRoot":      executionPayloadScale.ReceiptsRoot.Hex(),
+		"executionHeader.LogsBloom":         common.BytesToHash(executionPayloadScale.LogsBloom),
+		"executionHeader.PrevRandao":        executionPayloadScale.PrevRandao.Hex(),
+		"executionHeader.BlockNumber":       uint64(executionPayloadScale.BlockNumber),
+		"executionHeader.GasLimit":          uint64(executionPayloadScale.GasLimit),
+		"executionHeader.GasUsed":           uint64(executionPayloadScale.GasUsed),
+		"executionHeader.Timestamp":         uint64(executionPayloadScale.Timestamp),
+		"executionHeader.ExtraData":         common.BytesToHash(executionPayloadScale.ExtraData),
+		"executionHeader.BaseFeePerGas":     block.GetExecutionPayload().BaseFeePerGas,
+		"executionHeader.BlockHash":         executionPayloadScale.BlockHash.Hex(),
+		"executionHeader.TransactionsRoot":  executionPayloadScale.TransactionsRoot.Hex(),
+		"executionHeader.WithdrawalsRoot":   executionPayloadScale.WithdrawalsRoot.Hex(),
+		"executionBranch":                   displayExecutionBranch,
+	}).Info("header")
 
 	return scale.HeaderUpdatePayload{
 		Header: beaconHeader,
