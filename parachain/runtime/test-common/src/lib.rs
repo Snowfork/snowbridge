@@ -14,6 +14,10 @@ use xcm::{
 	v3::Error::{self, Barrier},
 };
 use xcm_executor::XcmExecutor;
+use sp_keyring::AccountKeyring::*;
+use sp_runtime::AccountId32;
+
+mod fixtures;
 
 type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 	parachains_runtimes_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
@@ -288,3 +292,79 @@ pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
 			assert_err!(outcome.ensure_complete(), expected_error);
 		});
 }
+
+pub fn ethereum_extrinsic<Runtime>(
+	collator_session_key: CollatorSessionKeys<Runtime>,
+	runtime_para_id: u32,
+	construct_and_apply_extrinsic: fn(
+		sp_keyring::AccountKeyring,
+		<Runtime as frame_system::Config>::RuntimeCall,
+	) -> sp_runtime::DispatchOutcome,
+)
+where
+	Runtime: frame_system::Config
+	+ pallet_balances::Config
+	+ pallet_session::Config
+	+ pallet_xcm::Config
+	+ pallet_utility::Config
+	+ parachain_info::Config
+	+ pallet_collator_selection::Config
+	+ cumulus_pallet_parachain_system::Config
+	+ snowbridge_pallet_outbound_queue::Config
+	+ snowbridge_pallet_system::Config
+	+ snowbridge_pallet_ethereum_client::Config,
+	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
+	<Runtime as pallet_utility::Config>::RuntimeCall: From<snowbridge_pallet_ethereum_client::Call<Runtime>>,
+	<Runtime as frame_system::Config>::RuntimeCall: From<pallet_utility::Call<Runtime>>,
+	AccountIdOf<Runtime>: From<AccountId32>
+{
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_key.collators())
+		.with_session_keys(collator_session_key.session_keys())
+		.with_para_id(runtime_para_id.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			let initial_checkpoint = fixtures::ethereum_client_mainnet::make_checkpoint();
+			let update = fixtures::ethereum_client_mainnet::make_finalized_header_update();
+			let sync_committee_update = fixtures::ethereum_client_mainnet::make_sync_committee_update();
+			let execution_header_update = fixtures::ethereum_client_mainnet::make_execution_header_update();
+
+			let alice = Alice;
+			let alice_account = alice.to_account_id();
+			<pallet_balances::Pallet<Runtime>>::mint_into(
+				&alice_account.into(),
+				1_000_000_000_0000u128.saturated_into::<BalanceOf<Runtime>>(),
+			)
+				.unwrap();
+
+			assert_ok!(
+				<snowbridge_pallet_ethereum_client::Pallet<Runtime>>::force_checkpoint(
+					RuntimeHelper::<Runtime>::root_origin(),
+					initial_checkpoint,
+				)
+			);
+
+			let update_call: <Runtime as pallet_utility::Config>::RuntimeCall = snowbridge_pallet_ethereum_client::Call::<Runtime>::submit {
+				update: Box::new(*update),
+			}.into();
+
+			let update_sync_committee_call: <Runtime as pallet_utility::Config>::RuntimeCall = snowbridge_pallet_ethereum_client::Call::<Runtime>::submit {
+				update: Box::new(*sync_committee_update),
+			}.into();
+
+			let execution_header_call: <Runtime as pallet_utility::Config>::RuntimeCall = snowbridge_pallet_ethereum_client::Call::<Runtime>::submit_execution_header {
+				update: Box::new(*execution_header_update),
+			}.into();
+
+			let update_outcome = construct_and_apply_extrinsic(alice.into(), update_call.into());
+			assert_ok!(update_outcome);
+
+			let sync_committee_outcome = construct_and_apply_extrinsic(alice.into(), update_sync_committee_call.into());
+			assert_ok!(sync_committee_outcome);
+
+			let execution_header_outcome = construct_and_apply_extrinsic(alice.into(), execution_header_call.into());
+			assert_ok!(execution_header_outcome);
+		});
+}
+
