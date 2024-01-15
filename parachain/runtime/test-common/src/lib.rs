@@ -325,10 +325,10 @@ where
 		.with_tracing()
 		.build()
 		.execute_with(|| {
-			let initial_checkpoint = fixtures::ethereum_client_mainnet::make_checkpoint();
-			let update = fixtures::ethereum_client_mainnet::make_finalized_header_update();
-			let sync_committee_update = fixtures::ethereum_client_mainnet::make_sync_committee_update();
-			let execution_header_update = fixtures::ethereum_client_mainnet::make_execution_header_update();
+			let initial_checkpoint = fixtures::make_checkpoint();
+			let update = fixtures::make_finalized_header_update();
+			let sync_committee_update = fixtures::make_sync_committee_update();
+			let execution_header_update = fixtures::make_execution_header_update();
 
 			let alice = Alice;
 			let alice_account = alice.to_account_id();
