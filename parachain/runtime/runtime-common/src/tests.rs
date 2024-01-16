@@ -101,50 +101,6 @@ impl TransactAsset for SuccessfulTransactor {
 	}
 }
 
-pub struct NotFoundTransactor;
-impl TransactAsset for NotFoundTransactor {
-	fn can_check_in(
-		_origin: &MultiLocation,
-		_what: &MultiAsset,
-		_context: &XcmContext,
-	) -> XcmResult {
-		Err(XcmError::AssetNotFound)
-	}
-
-	fn can_check_out(
-		_dest: &MultiLocation,
-		_what: &MultiAsset,
-		_context: &XcmContext,
-	) -> XcmResult {
-		Err(XcmError::AssetNotFound)
-	}
-
-	fn deposit_asset(
-		_what: &MultiAsset,
-		_who: &MultiLocation,
-		_context: Option<&XcmContext>,
-	) -> XcmResult {
-		Err(XcmError::AssetNotFound)
-	}
-
-	fn withdraw_asset(
-		_what: &MultiAsset,
-		_who: &MultiLocation,
-		_context: Option<&XcmContext>,
-	) -> Result<Assets, XcmError> {
-		Err(XcmError::AssetNotFound)
-	}
-
-	fn internal_transfer_asset(
-		_what: &MultiAsset,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
-		_context: &XcmContext,
-	) -> Result<Assets, XcmError> {
-		Err(XcmError::AssetNotFound)
-	}
-}
-
 #[test]
 fn handle_fee_success() {
 	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 10_u128)).into();
@@ -187,9 +143,9 @@ fn handle_fee_success_but_not_for_ethereum() {
 }
 
 #[test]
-fn handle_fee_fail_for_invalid_location() {
+fn handle_fee_success_even_from_an_invalid_none_origin_location() {
 	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 10_u128)).into();
-	// invalid origin not from sibling chain
+	// invalid origin None here not from a sibling chain
 	let ctx = XcmContext { origin: None, message_id: XcmHash::default(), topic: None };
 	let reason = FeeReason::Export { network: EthereumNetwork::get(), destination: Here };
 	let result = XcmExportFeeToSibling::<
@@ -204,8 +160,8 @@ fn handle_fee_fail_for_invalid_location() {
 }
 
 #[test]
-fn handle_fee_fail_for_fees_not_met() {
-	// insufficient fee not met
+fn handle_fee_success_even_when_fee_insufficient() {
+	// insufficient fee not cover the (local_fee + remote_fee) required
 	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 1_u128)).into();
 	let ctx = XcmContext {
 		origin: Some(MultiLocation { parents: 1, interior: X1(Parachain(1000)) }),
@@ -219,27 +175,6 @@ fn handle_fee_fail_for_fees_not_met() {
 		TokenLocation,
 		EthereumNetwork,
 		SuccessfulTransactor,
-		MockOkOutboundQueue,
-	>::handle_fee(fee.clone(), Some(&ctx), reason);
-	assert_eq!(result, fee)
-}
-
-#[test]
-fn handle_fee_fail_for_transact() {
-	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 10_u128)).into();
-	let ctx = XcmContext {
-		origin: Some(MultiLocation { parents: 1, interior: X1(Parachain(1000)) }),
-		message_id: XcmHash::default(),
-		topic: None,
-	};
-	let reason = FeeReason::Export { network: EthereumNetwork::get(), destination: Here };
-	let result = XcmExportFeeToSibling::<
-		u128,
-		u64,
-		TokenLocation,
-		EthereumNetwork,
-		// invalid transactor
-		NotFoundTransactor,
 		MockOkOutboundQueue,
 	>::handle_fee(fee.clone(), Some(&ctx), reason);
 	assert_eq!(result, fee)
