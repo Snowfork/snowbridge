@@ -198,5 +198,9 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 ]
-beacon-spec-minimal = []
-fast-runtime = ["beacon-spec-minimal"]
+beacon-spec-minimal = [
+	"snowbridge-pallet-ethereum-client/beacon-spec-minimal"
+]
+fast-runtime = [
+	"beacon-spec-minimal",
+]
