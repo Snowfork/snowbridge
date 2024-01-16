@@ -5,7 +5,7 @@ use frame_support::{assert_noop, assert_ok};
 use hex_literal::hex;
 use snowbridge_core::eth;
 use sp_core::H256;
-use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
+use sp_runtime::{AccountId32, DispatchError::BadOrigin, FixedU128, TokenError};
 
 #[test]
 fn create_agent() {
@@ -87,8 +87,8 @@ fn create_agent_bad_origin() {
 fn upgrade_as_root() {
 	new_test_ext(true).execute_with(|| {
 		let origin = RuntimeOrigin::root();
-		let address: H160 = Default::default();
-		let code_hash: H256 = Default::default();
+		let address: H160 = [1_u8; 20].into();
+		let code_hash: H256 = [1_u8; 32].into();
 
 		assert_ok!(EthereumSystem::upgrade(origin, address, code_hash, None));
 
@@ -115,8 +115,8 @@ fn upgrade_as_signed_fails() {
 fn upgrade_with_params() {
 	new_test_ext(true).execute_with(|| {
 		let origin = RuntimeOrigin::root();
-		let address: H160 = Default::default();
-		let code_hash: H256 = Default::default();
+		let address: H160 = [1_u8; 20].into();
+		let code_hash: H256 = [1_u8; 32].into();
 		let initializer: Option<Initializer> =
 			Some(Initializer { params: [0; 256].into(), maximum_required_gas: 10000 });
 		assert_ok!(EthereumSystem::upgrade(origin, address, code_hash, initializer));
@@ -202,6 +202,22 @@ fn set_pricing_parameters_invalid() {
 		);
 		params = Parameters::get();
 		params.rewards.remote = sp_core::U256::zero();
+		assert_noop!(
+			EthereumSystem::set_pricing_parameters(origin.clone(), params),
+			Error::<Test>::InvalidPricingParameters
+		);
+
+		// Invalid exchange rate with DOT expensive than Ether
+		params = Parameters::get();
+		params.exchange_rate = FixedU128::from_rational(2, 1);
+		assert_noop!(
+			EthereumSystem::set_pricing_parameters(origin.clone(), params),
+			Error::<Test>::InvalidPricingParameters
+		);
+
+		// Invalid gas fee too cheap
+		params = Parameters::get();
+		params.fee_per_gas = 1_u128.into();
 		assert_noop!(
 			EthereumSystem::set_pricing_parameters(origin, params),
 			Error::<Test>::InvalidPricingParameters
@@ -620,8 +636,8 @@ fn charge_fee_for_upgrade() {
 	new_test_ext(true).execute_with(|| {
 		let para_id: u32 = TestParaId::get();
 		let origin = RuntimeOrigin::root();
-		let address: H160 = Default::default();
-		let code_hash: H256 = Default::default();
+		let address: H160 = [1_u8; 20].into();
+		let code_hash: H256 = [1_u8; 32].into();
 		let initializer: Option<Initializer> =
 			Some(Initializer { params: [0; 256].into(), maximum_required_gas: 10000 });
 		assert_ok!(EthereumSystem::upgrade(origin, address, code_hash, initializer.clone()));

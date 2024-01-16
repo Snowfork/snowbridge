@@ -339,12 +339,17 @@ pub enum SendError {
 	Halted,
 	/// Invalid Channel
 	InvalidChannel,
+	/// Message with gas or fees calculated invalid
+	MessageInvalidGasFees,
 }
 
 pub trait GasMeter {
 	/// All the gas used for submitting a message to Ethereum, minus the cost of dispatching
 	/// the command within the message
 	const MAXIMUM_BASE_GAS: u64;
+
+	/// Hard limit for the maximum gas allowed among all commands
+	const MAXIMUM_GAS_CAP: u64;
 
 	fn maximum_gas_used_at_most(command: &Command) -> u64 {
 		Self::MAXIMUM_BASE_GAS + Self::maximum_dispatch_gas_used_at_most(command)
@@ -370,6 +375,8 @@ impl GasMeter for ConstantGasMeter {
 	// 21_000 transaction cost, roughly worst case 64_000 for calldata, and 100_000
 	// for message verification
 	const MAXIMUM_BASE_GAS: u64 = 185_000;
+
+	const MAXIMUM_GAS_CAP: u64 = 5_000_000;
 
 	fn maximum_dispatch_gas_used_at_most(command: &Command) -> u64 {
 		match command {
@@ -404,6 +411,8 @@ impl GasMeter for ConstantGasMeter {
 
 impl GasMeter for () {
 	const MAXIMUM_BASE_GAS: u64 = 1;
+
+	const MAXIMUM_GAS_CAP: u64 = 100;
 
 	fn maximum_dispatch_gas_used_at_most(_: &Command) -> u64 {
 		1

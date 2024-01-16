@@ -113,7 +113,7 @@ where
 		// validate the message
 		let (ticket, fee) = OutboundQueue::validate(&outbound_message).map_err(|err| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
-			SendError::Unroutable
+			SendError::Fees
 		})?;
 
 		// convert fee to MultiAsset

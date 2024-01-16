@@ -296,13 +296,12 @@ pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
 				destination_address,
 				fee_amount,
 			);
-			// check err is NotHoldingFees
 			assert_err!(outcome.ensure_complete(), expected_error);
 		});
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn send_transfer_token_message_success_with_fee_params<Runtime, XcmConfig>(
+pub fn send_transfer_token_message_with_invalid_fee_params<Runtime, XcmConfig>(
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
 	assethub_parachain_id: u32,
@@ -311,6 +310,7 @@ pub fn send_transfer_token_message_success_with_fee_params<Runtime, XcmConfig>(
 	destination_address: H160,
 	fee_amount: u128,
 	price_params: PricingParameters<TokenBalanceOf<Runtime>>,
+	expected_error: Error,
 ) where
 	Runtime: frame_system::Config
 		+ pallet_balances::Config
@@ -350,6 +350,6 @@ pub fn send_transfer_token_message_success_with_fee_params<Runtime, XcmConfig>(
 				destination_address,
 				fee_amount,
 			);
-			assert_ok!(outcome.ensure_complete());
+			assert_err!(outcome.ensure_complete(), expected_error);
 		});
 }

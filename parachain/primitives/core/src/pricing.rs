@@ -1,6 +1,7 @@
+use crate::gwei;
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_arithmetic::traits::{BaseArithmetic, Unsigned, Zero};
+use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 use sp_core::U256;
 use sp_runtime::{FixedU128, RuntimeDebug};
 use sp_std::prelude::*;
@@ -23,7 +24,7 @@ pub struct Rewards<Balance> {
 	pub remote: U256,
 }
 
-#[derive(RuntimeDebug)]
+#[derive(Clone, PartialEq, RuntimeDebug)]
 pub struct InvalidPricingParameters;
 
 impl<Balance> PricingParameters<Balance>
@@ -31,10 +32,12 @@ where
 	Balance: BaseArithmetic + Unsigned + Copy,
 {
 	pub fn validate(&self) -> Result<(), InvalidPricingParameters> {
-		if self.exchange_rate == FixedU128::zero() {
+		if self.exchange_rate < FixedU128::from_rational(1, 10000) ||
+			self.exchange_rate > FixedU128::from_rational(1, 1)
+		{
 			return Err(InvalidPricingParameters)
 		}
-		if self.fee_per_gas == U256::zero() {
+		if self.fee_per_gas < gwei(1) || self.fee_per_gas > gwei(1000) {
 			return Err(InvalidPricingParameters)
 		}
 		if self.rewards.local.is_zero() {
