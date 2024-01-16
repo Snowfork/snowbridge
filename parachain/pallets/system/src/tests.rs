@@ -206,22 +206,6 @@ fn set_pricing_parameters_invalid() {
 			EthereumSystem::set_pricing_parameters(origin.clone(), params),
 			Error::<Test>::InvalidPricingParameters
 		);
-
-		// Invalid exchange rate with DOT expensive than Ether
-		params = Parameters::get();
-		params.exchange_rate = FixedU128::from_rational(2, 1);
-		assert_noop!(
-			EthereumSystem::set_pricing_parameters(origin.clone(), params),
-			Error::<Test>::InvalidPricingParameters
-		);
-
-		// Invalid gas fee too cheap
-		params = Parameters::get();
-		params.fee_per_gas = 1_u128.into();
-		assert_noop!(
-			EthereumSystem::set_pricing_parameters(origin, params),
-			Error::<Test>::InvalidPricingParameters
-		);
 	});
 }
 

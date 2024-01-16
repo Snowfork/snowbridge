@@ -11,7 +11,6 @@ use frame_support::{
 use codec::Encode;
 use snowbridge_core::{
 	outbound::{Command, SendError, SendMessage},
-	pricing::InvalidPricingParameters,
 	ParaId, PricingParameters, Rewards,
 };
 use sp_arithmetic::FixedU128;
@@ -295,7 +294,7 @@ fn test_calculate_fees() {
 }
 
 #[test]
-fn test_calculate_fees_with_exchange_rate_invalid() {
+fn test_calculate_fees_with_valid_exchange_rate_but_remote_fee_calculated_as_zero() {
 	new_tester().execute_with(|| {
 		let gas_used: u64 = 250000;
 		let illegal_price_params: PricingParameters<<Test as Config>::Balance> =
@@ -309,7 +308,5 @@ fn test_calculate_fees_with_exchange_rate_invalid() {
 		// Though none zero pricing params the remote fee calculated here is invalid
 		// which should be avoided
 		assert_eq!(fee.remote, 0);
-		// assert the pricing params as illegal as expected
-		assert_err!(illegal_price_params.validate(), InvalidPricingParameters)
 	});
 }
