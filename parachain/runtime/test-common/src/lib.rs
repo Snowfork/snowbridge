@@ -402,42 +402,29 @@ pub fn ethereum_to_polkadot_message_extrinsics_work<Runtime>(
 		.with_tracing()
 		.build()
 		.execute_with(|| {
-			let storage_constant_key = ExecutionHeaderBuffer::<Runtime>::key().to_vec();
+			let initial_checkpoint = fixtures::make_checkpoint_for_inbound();
+			let sync_committee_update = fixtures::make_sync_committee_update_for_inbound();
 
-			// check delivery reward constant before (not stored yet, just as default value is used)
-			//assert_eq!(StorageConstant::get(), storage_constant_init_value);
-			//assert_eq!(sp_io::storage::get(&storage_constant_key), None);
+			let alice = Alice;
+			let alice_account = alice.to_account_id();
+			<pallet_balances::Pallet<Runtime>>::mint_into(
+				&alice_account.into(),
+				10_000_000_000_000_u128.saturated_into::<BalanceOf<Runtime>>(),
+			)
+				.unwrap();
 
-			//let new_storage_constant_value =
-			//	new_storage_constant_value(&storage_constant_init_value);
-			//assert_ne!(new_storage_constant_value, storage_constant_init_value);
-//
-			//// encode `set_storage` call
-			//let set_storage_call =
-			//	runtime_call_encode(frame_system::Call::<Runtime>::set_storage {
-			//		items: vec![(
-			//			storage_constant_key.clone(),
-			//			new_storage_constant_value.encode(),
-			//		)],
-			//	});
-//
-			//// estimate - storing just 1 value
-			//use frame_system::WeightInfo;
-			//let require_weight_at_most =
-			//	<Runtime as frame_system::Config>::SystemWeightInfo::set_storage(1);
-//
-			//// execute XCM with Transact to `set_storage` as governance does
-			//assert_ok!(RuntimeHelper::<Runtime>::execute_as_governance(
-			//	set_storage_call,
-			//	require_weight_at_most
-			//)
-			//.ensure_complete());
-//
-			//// check delivery reward constant after (stored)
-			//assert_eq!(StorageConstant::get(), new_storage_constant_value);
-			//assert_eq!(
-			//	sp_io::storage::get(&storage_constant_key),
-			//	Some(new_storage_constant_value.encode().into())
-			//);
+			assert_ok!(
+				<snowbridge_pallet_ethereum_client::Pallet<Runtime>>::force_checkpoint(
+					RuntimeHelper::<Runtime>::root_origin(),
+					initial_checkpoint,
+				)
+			);
+
+			let update_sync_committee_call: <Runtime as pallet_utility::Config>::RuntimeCall = snowbridge_pallet_ethereum_client::Call::<Runtime>::submit {
+				update: Box::new(*sync_committee_update),
+			}.into();
+
+			let sync_committee_outcome = construct_and_apply_extrinsic(alice, update_sync_committee_call.into());
+			assert_ok!(sync_committee_outcome);
 		});
 }
