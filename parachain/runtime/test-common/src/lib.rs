@@ -404,6 +404,8 @@ pub fn ethereum_to_polkadot_message_extrinsics_work<Runtime>(
 		.execute_with(|| {
 			let initial_checkpoint = fixtures::make_checkpoint_for_inbound();
 			let sync_committee_update = fixtures::make_sync_committee_update_for_inbound();
+			let sync_committee_update_for_next_period = fixtures::make_sync_committee_update_for_inbound_next_period();
+			let execution_header_update = fixtures::make_execution_header_update_for_inbound();
 
 			let alice = Alice;
 			let alice_account = alice.to_account_id();
@@ -424,7 +426,21 @@ pub fn ethereum_to_polkadot_message_extrinsics_work<Runtime>(
 				update: Box::new(*sync_committee_update),
 			}.into();
 
+			let update_sync_committee_call_for_next_period: <Runtime as pallet_utility::Config>::RuntimeCall = snowbridge_pallet_ethereum_client::Call::<Runtime>::submit {
+				update: Box::new(*sync_committee_update_for_next_period),
+			}.into();
+
+			let execution_header_call: <Runtime as pallet_utility::Config>::RuntimeCall = snowbridge_pallet_ethereum_client::Call::<Runtime>::submit_execution_header {
+				update: Box::new(*execution_header_update),
+			}.into();
+
 			let sync_committee_outcome = construct_and_apply_extrinsic(alice, update_sync_committee_call.into());
 			assert_ok!(sync_committee_outcome);
+
+			let sync_committee_outcome_next_period_outcome = construct_and_apply_extrinsic(alice, update_sync_committee_call_for_next_period.into());
+			assert_ok!(sync_committee_outcome_next_period_outcome);
+
+			let execution_header_outcome = construct_and_apply_extrinsic(alice, execution_header_call.into());
+			assert_ok!(execution_header_outcome);
 		});
 }

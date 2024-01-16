@@ -485,8 +485,8 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 	}
 
 	var displayExecutionBranch []common.Hash
-	for _, executionHeaderBranch := range displayExecutionBranch {
-		displayExecutionBranch = append(displayExecutionBranch, common.HexToHash(executionHeaderBranch.Hex()))
+	for _, exe := range executionHeaderBranch {
+		displayExecutionBranch = append(displayExecutionBranch, common.HexToHash(exe.Hex()))
 	}
 
 	log.WithFields(log.Fields{
@@ -507,7 +507,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		"executionHeader.GasUsed":           uint64(executionPayloadScale.GasUsed),
 		"executionHeader.Timestamp":         uint64(executionPayloadScale.Timestamp),
 		"executionHeader.ExtraData":         common.BytesToHash(executionPayloadScale.ExtraData),
-		"executionHeader.BaseFeePerGas":     block.GetExecutionPayload().BaseFeePerGas,
+		"executionHeader.BaseFeePerGas":     executionPayloadScale.BaseFeePerGas,
 		"executionHeader.BlockHash":         executionPayloadScale.BlockHash.Hex(),
 		"executionHeader.TransactionsRoot":  executionPayloadScale.TransactionsRoot.Hex(),
 		"executionHeader.WithdrawalsRoot":   executionPayloadScale.WithdrawalsRoot.Hex(),
