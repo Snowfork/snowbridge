@@ -2,15 +2,11 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
 use codec::Encode;
-use frame_support::{
-	assert_err, assert_ok,
-	traits::fungible::{Inspect, Mutate},
-};
+use frame_support::{assert_err, assert_ok, traits::fungible::Mutate};
 pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
 use parachains_runtimes_test_utils::{
 	AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf, XcmReceivedFrom,
 };
-use snowbridge_core::PricingParameters;
 use sp_core::H160;
 use sp_runtime::SaturatedConversion;
 use xcm::{
@@ -21,10 +17,6 @@ use xcm_executor::XcmExecutor;
 
 type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 	parachains_runtimes_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
-
-type TokenBalanceOf<Runtime> = <<Runtime as snowbridge_pallet_system::Config>::Token as Inspect<
-	<Runtime as frame_system::Config>::AccountId,
->>::Balance;
 
 pub fn initial_fund<Runtime>(assethub_parachain_id: u32, initial_amount: u128)
 where
@@ -281,60 +273,6 @@ pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
 		.with_tracing()
 		.build()
 		.execute_with(|| {
-			<snowbridge_pallet_system::Pallet<Runtime>>::initialize(
-				runtime_para_id.into(),
-				assethub_parachain_id.into(),
-			)
-			.unwrap();
-
-			// fund asset hub sovereign account enough so it can pay fees
-			initial_fund::<Runtime>(assethub_parachain_id, initial_amount);
-
-			let outcome = send_transfer_token_message::<Runtime, XcmConfig>(
-				assethub_parachain_id,
-				weth_contract_address,
-				destination_address,
-				fee_amount,
-			);
-			assert_err!(outcome.ensure_complete(), expected_error);
-		});
-}
-
-#[allow(clippy::too_many_arguments)]
-pub fn send_transfer_token_message_with_invalid_fee_params<Runtime, XcmConfig>(
-	collator_session_key: CollatorSessionKeys<Runtime>,
-	runtime_para_id: u32,
-	assethub_parachain_id: u32,
-	initial_amount: u128,
-	weth_contract_address: H160,
-	destination_address: H160,
-	fee_amount: u128,
-	price_params: PricingParameters<TokenBalanceOf<Runtime>>,
-	expected_error: Error,
-) where
-	Runtime: frame_system::Config
-		+ pallet_balances::Config
-		+ pallet_session::Config
-		+ pallet_xcm::Config
-		+ parachain_info::Config
-		+ pallet_collator_selection::Config
-		+ cumulus_pallet_parachain_system::Config
-		+ snowbridge_pallet_outbound_queue::Config
-		+ snowbridge_pallet_system::Config,
-	XcmConfig: xcm_executor::Config,
-	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
-{
-	ExtBuilder::<Runtime>::default()
-		.with_collators(collator_session_key.collators())
-		.with_session_keys(collator_session_key.session_keys())
-		.with_para_id(runtime_para_id.into())
-		.with_tracing()
-		.build()
-		.execute_with(|| {
-			// initialize price params
-			snowbridge_pallet_system::PricingParameters::<Runtime>::put(price_params);
-
-			// initialize agent and channel
 			<snowbridge_pallet_system::Pallet<Runtime>>::initialize(
 				runtime_para_id.into(),
 				assethub_parachain_id.into(),

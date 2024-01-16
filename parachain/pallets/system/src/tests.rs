@@ -5,7 +5,7 @@ use frame_support::{assert_noop, assert_ok};
 use hex_literal::hex;
 use snowbridge_core::eth;
 use sp_core::H256;
-use sp_runtime::{AccountId32, DispatchError::BadOrigin, FixedU128, TokenError};
+use sp_runtime::{AccountId32, DispatchError::BadOrigin, TokenError};
 
 #[test]
 fn create_agent() {
