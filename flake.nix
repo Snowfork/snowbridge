@@ -10,7 +10,7 @@
     outputs = { self, nixpkgs, flake-utils, foundry }:
 
     let
-        supportedSystems = [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" ];
+        supportedSystems = [ "aarch64-darwin" "aarch64-linux" "x86_64-darwin" "x86_64-linux" ];
         overlays = [ foundry.overlay ];
     in
 
