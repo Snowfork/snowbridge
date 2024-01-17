@@ -268,7 +268,7 @@ pub mod mainnet {
 				epoch: 56832,
 			},
 			deneb: Fork {
-				version: [4, 0, 16, 32], // 0x04001020
+				version: [144, 0, 0, 115], // 0x90000073
 				epoch: 4294967295,
 			}
 		};
