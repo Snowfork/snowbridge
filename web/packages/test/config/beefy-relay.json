@@ -5,7 +5,7 @@
     },
     "beefy-activation-block": 0,
     "fast-forward-depth": 20,
-    "update-period": 30
+    "update-period": 0
   },
   "sink": {
     "ethereum": {
