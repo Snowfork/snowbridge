@@ -238,11 +238,8 @@ pub mod pallet {
 		/// Submits a new finalized beacon header update. The update may contain the next
 		/// sync committee.
 		pub fn submit(origin: OriginFor<T>, update: Box<Update>) -> DispatchResult {
-			log::info!(target: LOG_TARGET,"💫 submitted finalized header.");
 			ensure_signed(origin)?;
-			log::info!(target: LOG_TARGET,"💫 is signed.");
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
-			log::info!(target: LOG_TARGET,"💫 bridge not halted.");
 			Self::process_update(&update)?;
 			Ok(())
 		}
@@ -334,11 +331,8 @@ pub mod pallet {
 
 		pub(crate) fn process_update(update: &Update) -> DispatchResult {
 			Self::cross_check_execution_state()?;
-			log::info!(target: LOG_TARGET,"💫 cross checked execution state.");
 			Self::verify_update(update)?;
-			log::info!(target: LOG_TARGET,"💫 verified update.");
 			Self::apply_update(update)?;
-			log::info!(target: LOG_TARGET,"💫 applied update.");
 			Ok(())
 		}
 
@@ -372,17 +366,12 @@ pub mod pallet {
 				decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
 			Self::sync_committee_participation_is_supermajority(&participation)?;
 
-			log::info!(target: LOG_TARGET,"💫 sync committee is a supermajority.");
-
 			// Verify update does not skip a sync committee period.
 			ensure!(
 				update.signature_slot > update.attested_header.slot &&
 					update.attested_header.slot >= update.finalized_header.slot,
 				Error::<T>::InvalidUpdateSlot
 			);
-
-			log::info!(target: LOG_TARGET,"💫 update does not skip a sync committee period.");
-
 			// Retrieve latest finalized state.
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
@@ -398,8 +387,6 @@ pub mod pallet {
 				ensure!(signature_period == store_period, Error::<T>::SkippedSyncCommitteePeriod)
 			}
 
-			log::info!(target: LOG_TARGET,"💫 next sync committee checks.");
-
 			// Verify update is relevant.
 			let update_attested_period = compute_period(update.attested_header.slot);
 			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
@@ -410,8 +397,6 @@ pub mod pallet {
 					update_has_next_sync_committee,
 				Error::<T>::IrrelevantUpdate
 			);
-
-			log::info!(target: LOG_TARGET,"💫 update is relevant.");
 
 			// Verify that the `finality_branch`, if present, confirms `finalized_header` to match
 			// the finalized checkpoint root saved in the state of `attested_header`.
@@ -430,8 +415,6 @@ pub mod pallet {
 				Error::<T>::InvalidHeaderMerkleProof
 			);
 
-			log::info!(target: LOG_TARGET,"💫 finalized block header merkle proof passed.");
-
 			// Though following check does not belong to ALC spec we verify block_roots_root to
 			// match the finalized checkpoint root saved in the state of `finalized_header` so to
 			// cache it for later use in `verify_ancestry_proof`.
@@ -446,12 +429,9 @@ pub mod pallet {
 				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
 
-			log::info!(target: LOG_TARGET,"💫 ancestry proof passed.");
-
 			// Verify that the `next_sync_committee`, if present, actually is the next sync
 			// committee saved in the state of the `attested_header`.
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
-				log::info!(target: LOG_TARGET,"💫 sync committee is present.");
 				let sync_committee_root = next_sync_committee_update
 					.next_sync_committee
 					.hash_tree_root()
@@ -463,7 +443,6 @@ pub mod pallet {
 						Error::<T>::InvalidSyncCommitteeUpdate
 					);
 				}
-				log::info!(target: LOG_TARGET,"💫 checked sync committee periods.");
 				ensure!(
 					verify_merkle_branch(
 						sync_committee_root,
@@ -474,7 +453,6 @@ pub mod pallet {
 					),
 					Error::<T>::InvalidSyncCommitteeMerkleProof
 				);
-				log::info!(target: LOG_TARGET,"💫 sync committee merkle proof passed.");
 			}
 
 			// Verify sync committee aggregate signature.
@@ -483,7 +461,6 @@ pub mod pallet {
 			} else {
 				<NextSyncCommittee<T>>::get()
 			};
-			log::info!(target: LOG_TARGET,"💫 verifying signature.");
 			let absent_pubkeys =
 				Self::find_pubkeys(&participation, (*sync_committee.pubkeys).as_ref(), false);
 			let signing_root = Self::signing_root(
@@ -491,7 +468,6 @@ pub mod pallet {
 				Self::validators_root(),
 				update.signature_slot,
 			)?;
-			log::info!(target: LOG_TARGET,"💫 fast_aggregate_verify.");
 			// Improvement here per <https://eth2book.info/capella/part2/building_blocks/signatures/#sync-aggregates>
 			// suggested start from the full set aggregate_pubkey then subtracting the absolute
 			// minority that did not participate.
@@ -501,17 +477,8 @@ pub mod pallet {
 				signing_root,
 				&update.sync_aggregate.sync_committee_signature,
 			)
-			.map_err(|e| {
-				match e {
-					BlsError::InvalidSignature => log::error!(target: LOG_TARGET,"💫 InvalidSignature"),
-					BlsError::InvalidPublicKey=> log::error!(target: LOG_TARGET,"💫 InvalidPublicKey"),
-					BlsError::InvalidAggregatePublicKeys=> log::error!(target: LOG_TARGET,"💫 InvalidAggregatePublicKeys"),
-					BlsError::SignatureVerificationFailed=> log::error!(target: LOG_TARGET,"💫 SignatureVerificationFailed"),
-				}
-				log::error!(target: LOG_TARGET,"💫 BLSVerificationFailed: {:?}.", e);
-				Error::<T>::BLSVerificationFailed(e)
-			})?;
-			log::info!(target: LOG_TARGET,"💫 verified signature.");
+			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
+
 			Ok(())
 		}
 
