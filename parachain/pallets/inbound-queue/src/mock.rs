@@ -14,7 +14,7 @@ use snowbridge_core::{
 	inbound::{Log, Proof, VerificationError},
 	meth, Channel, ChannelId, PricingParameters, Rewards, StaticLookup,
 };
-use snowbridge_router_primitives::inbound::MessageToXcm;
+use snowbridge_router_primitives::inbound::{CreateAssetCallInfo, MessageToXcm};
 use sp_core::{H160, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -134,10 +134,12 @@ const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39
 parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 11155111 };
 	pub const GatewayAddress: H160 = H160(GATEWAY_ADDRESS);
-	pub const CreateAssetCall: [u8;2] = [53, 0];
-	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
-	pub const CreateAssetDeposit: u128 = 100_000_000_000;
-	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
+	pub const CreateAssetCall: CreateAssetCallInfo = CreateAssetCallInfo {
+		call_index: [53,0],
+		asset_deposit: 100_000_000_000,
+		min_balance: 1,
+		transact_weight_at_most:Weight::from_parts(400_000_000, 8_000)
+	};
 	pub const InitialFund: u128 = 1_000_000_000_000;
 	pub const InboundQueuePalletInstance: u8 = 80;
 }
@@ -252,13 +254,8 @@ impl inbound_queue::Config for Test {
 	type XcmSender = MockXcmSender;
 	type WeightInfo = ();
 	type GatewayAddress = GatewayAddress;
-	type MessageConverter = MessageToXcm<
-		CreateAssetCall,
-		CreateAssetDeposit,
-		InboundQueuePalletInstance,
-		AccountId,
-		Balance,
-	>;
+	type MessageConverter =
+		MessageToXcm<CreateAssetCall, InboundQueuePalletInstance, AccountId, Balance>;
 	type PricingParameters = Parameters;
 	type ChannelLookup = MockChannelLookup;
 	#[cfg(feature = "runtime-benchmarks")]

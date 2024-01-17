@@ -16,8 +16,6 @@ use sp_std::prelude::*;
 use xcm::prelude::{Junction::AccountKey20, *};
 use xcm_executor::traits::ConvertLocation;
 
-pub const MINIMUM_DEPOSIT: u128 = 1;
-pub const FOREIGN_CREATE_ASSET_WEIGHT_AT_MOST: Weight = Weight::from_parts(400_000_000, 8_000);
 pub type CallIndex = [u8; 2];
 
 /// Messages from Ethereum are versioned. This is because in future,
@@ -85,24 +83,27 @@ pub enum Destination {
 	},
 }
 
-pub struct MessageToXcm<
-	CreateAssetCall,
-	CreateAssetDeposit,
-	InboundQueuePalletInstance,
-	AccountId,
-	Balance,
-> where
-	CreateAssetCall: Get<CallIndex>,
-	CreateAssetDeposit: Get<u128>,
+/// CallInfo required to create the foreign asset
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
+pub struct CreateAssetCallInfo {
+	/// Index of the create call
+	pub call_index: CallIndex,
+	/// Deposit required to create the asset
+	pub asset_deposit: u128,
+	/// Minimal balance of the asset
+	pub min_balance: u128,
+	/// Weight required for the xcm transact
+	pub transact_weight_at_most: Weight,
+}
+
+pub struct MessageToXcm<CreateAssetCall, InboundQueuePalletInstance, AccountId, Balance>
+where
+	CreateAssetCall: Get<CreateAssetCallInfo>,
+	InboundQueuePalletInstance: Get<u8>,
+	AccountId: Into<[u8; 32]>,
 	Balance: BalanceT,
 {
-	_phantom: PhantomData<(
-		CreateAssetCall,
-		CreateAssetDeposit,
-		InboundQueuePalletInstance,
-		AccountId,
-		Balance,
-	)>,
+	_phantom: PhantomData<(CreateAssetCall, InboundQueuePalletInstance, AccountId, Balance)>,
 }
 
 /// Reason why a message conversion failed.
@@ -120,17 +121,10 @@ pub trait ConvertMessage {
 	fn convert(message: VersionedMessage) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError>;
 }
 
-impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
-	ConvertMessage
-	for MessageToXcm<
-		CreateAssetCall,
-		CreateAssetDeposit,
-		InboundQueuePalletInstance,
-		AccountId,
-		Balance,
-	> where
-	CreateAssetCall: Get<CallIndex>,
-	CreateAssetDeposit: Get<u128>,
+impl<CreateAssetCall, InboundQueuePalletInstance, AccountId, Balance> ConvertMessage
+	for MessageToXcm<CreateAssetCall, InboundQueuePalletInstance, AccountId, Balance>
+where
+	CreateAssetCall: Get<CreateAssetCallInfo>,
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
@@ -150,11 +144,10 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 	}
 }
 
-impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
-	MessageToXcm<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
+impl<CreateAssetCall, InboundQueuePalletInstance, AccountId, Balance>
+	MessageToXcm<CreateAssetCall, InboundQueuePalletInstance, AccountId, Balance>
 where
-	CreateAssetCall: Get<CallIndex>,
-	CreateAssetDeposit: Get<u128>,
+	CreateAssetCall: Get<CreateAssetCallInfo>,
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
@@ -162,16 +155,17 @@ where
 	fn convert_register_token(chain_id: u64, token: H160, fee: u128) -> (Xcm<()>, Balance) {
 		let network = Ethereum { chain_id };
 		let xcm_fee: MultiAsset = (MultiLocation::parent(), fee).into();
-		let deposit: MultiAsset = (MultiLocation::parent(), CreateAssetDeposit::get()).into();
+		let call_info = CreateAssetCall::get();
+		let deposit: MultiAsset = (MultiLocation::parent(), call_info.asset_deposit).into();
 
-		let total_amount = fee + CreateAssetDeposit::get();
+		let total_amount = fee + call_info.asset_deposit;
 		let total: MultiAsset = (MultiLocation::parent(), total_amount).into();
 
 		let bridge_location: MultiLocation = (Parent, Parent, GlobalConsensus(network)).into();
 
 		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
 		let asset_id = Self::convert_token_address(network, token);
-		let create_call_index: [u8; 2] = CreateAssetCall::get();
+		let create_call_index = call_info.call_index;
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let xcm: Xcm<()> = vec![
@@ -188,12 +182,12 @@ where
 			// Call create_asset on foreign assets pallet.
 			Transact {
 				origin_kind: OriginKind::Xcm,
-				require_weight_at_most: FOREIGN_CREATE_ASSET_WEIGHT_AT_MOST,
+				require_weight_at_most: call_info.transact_weight_at_most,
 				call: (
 					create_call_index,
 					asset_id,
 					MultiAddress::<[u8; 32], ()>::Id(owner),
-					MINIMUM_DEPOSIT,
+					call_info.min_balance,
 				)
 					.encode()
 					.into(),

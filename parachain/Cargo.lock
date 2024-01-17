@@ -6190,6 +6190,7 @@ dependencies = [
  "rococo-runtime-constants",
  "scale-info",
  "smallvec",
+ "snowbridge-router-primitives",
  "sp-consensus-aura",
  "sp-core",
  "sp-io",
