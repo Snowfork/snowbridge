@@ -29,16 +29,14 @@ var (
 )
 
 type Syncer struct {
-	Client     api.BeaconClient
-	setting    config.SpecSettings
-	activeSpec config.ActiveSpec
+	Client  api.BeaconClient
+	setting config.SpecSettings
 }
 
-func New(endpoint string, setting config.SpecSettings, activeSpec config.ActiveSpec) *Syncer {
+func New(endpoint string, setting config.SpecSettings) *Syncer {
 	return &Syncer{
-		Client:     *api.NewBeaconClient(endpoint, activeSpec, setting.SlotsInEpoch),
-		setting:    setting,
-		activeSpec: activeSpec,
+		Client:  *api.NewBeaconClient(endpoint, setting.SlotsInEpoch),
+		setting: setting,
 	}
 }
 
@@ -167,20 +165,11 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	}
 	isDeneb := s.DenebForked(slot)
 
-	if s.activeSpec == config.Minimal {
-		blockRootsContainer = &state.BlockRootsContainerMinimal{}
-		if isDeneb {
-			beaconState = &state.BeaconStateDenebMinimal{}
-		} else {
-			beaconState = &state.BeaconStateCapellaMinimal{}
-		}
+	blockRootsContainer = &state.BlockRootsContainerMainnet{}
+	if isDeneb {
+		beaconState = &state.BeaconStateDenebMainnet{}
 	} else {
-		blockRootsContainer = &state.BlockRootsContainerMainnet{}
-		if isDeneb {
-			beaconState = &state.BeaconStateDenebMainnet{}
-		} else {
-			beaconState = &state.BeaconStateCapellaMainnet{}
-		}
+		beaconState = &state.BeaconStateCapellaMainnet{}
 	}
 
 	err = beaconState.UnmarshalSSZ(data)

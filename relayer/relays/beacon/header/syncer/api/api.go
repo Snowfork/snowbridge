@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 )
 
 const (
@@ -30,15 +33,13 @@ var (
 type BeaconClient struct {
 	httpClient   http.Client
 	endpoint     string
-	activeSpec   config.ActiveSpec
 	slotsInEpoch uint64
 }
 
-func NewBeaconClient(endpoint string, activeSpec config.ActiveSpec, slotsInEpoch uint64) *BeaconClient {
+func NewBeaconClient(endpoint string, slotsInEpoch uint64) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
-		activeSpec,
 		slotsInEpoch,
 	}
 }
