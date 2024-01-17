@@ -79,6 +79,18 @@ start_lodestar() {
     fi
 }
 
+set_slot_time() {
+    local old_value=$1
+    local new_value=$2
+    echo "Hack lodestar for faster slot time"
+    local preset_mainnet_config_file="$web_dir/node_modules/.pnpm/@lodestar+config@$lodestar_version/node_modules/@lodestar/config/lib/chainConfig/presets/mainnet.js"
+    if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
+        gsed -i "s/SECONDS_PER_SLOT: $old_value/SECONDS_PER_SLOT: $new_value/g" $preset_mainnet_config_file
+    else
+        sed -i "s/SECONDS_PER_SLOT: $old_value/SECONDS_PER_SLOT: $new_value/g" $preset_mainnet_config_file
+    fi
+}
+
 deploy_local() {
     # 1. deploy execution client
     echo "Starting execution node"
@@ -86,6 +98,14 @@ deploy_local() {
 
     echo "Waiting for geth API to be ready"
     sleep 3
+
+    # if were are running locally speed up the seconds per slot from 12 seconds to 2 seconds. if we are not
+    # running locally, revert
+    if [ "$eth_network" == "localhost" ]; then
+        set_slot_time 12 2
+    else
+        set_slot_time 2 12
+    fi
 
     # 2. deploy consensus client
     echo "Starting beacon node"

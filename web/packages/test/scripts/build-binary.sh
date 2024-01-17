@@ -7,7 +7,7 @@ build_binaries() {
     pushd $root_dir/polkadot-sdk
 
     local features=''
-    if [[ "$active_spec" == "minimal" ]]; then
+    if [ "$eth_network" == "localhost" ]; then
         features="--features fast-runtime"
     fi
 
