@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 //! Implementation for [`snowbridge_core::outbound::SendMessage`]
 use super::*;
 use bridge_hub_common::AggregateMessageOrigin;
@@ -15,7 +17,6 @@ use snowbridge_core::{
 	},
 	ChannelId, PRIMARY_GOVERNANCE_CHANNEL,
 };
-use sp_arithmetic::traits::Zero;
 use sp_core::H256;
 use sp_runtime::BoundedVec;
 
@@ -58,14 +59,7 @@ where
 			.unwrap_or_else(|| unique((message.channel_id, &message.command)).into());
 
 		let gas_used_at_most = T::GasMeter::maximum_gas_used_at_most(&message.command);
-		ensure!(
-			gas_used_at_most > T::GasMeter::MAXIMUM_BASE_GAS &&
-				gas_used_at_most < T::GasMeter::MAXIMUM_GAS_CAP,
-			SendError::MessageInvalidGasFees
-		);
 		let fee = Self::calculate_fee(gas_used_at_most, T::PricingParameters::get());
-		let zero_fee = <Self as SendMessageFeeProvider>::Balance::zero();
-		ensure!(fee.local > zero_fee && fee.remote > zero_fee, SendError::MessageInvalidGasFees);
 
 		let queued_message: VersionedQueuedMessage = QueuedMessage {
 			id: message_id,

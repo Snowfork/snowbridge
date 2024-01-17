@@ -203,7 +203,7 @@ fn set_pricing_parameters_invalid() {
 		params = Parameters::get();
 		params.rewards.remote = sp_core::U256::zero();
 		assert_noop!(
-			EthereumSystem::set_pricing_parameters(origin.clone(), params),
+			EthereumSystem::set_pricing_parameters(origin, params),
 			Error::<Test>::InvalidPricingParameters
 		);
 	});
