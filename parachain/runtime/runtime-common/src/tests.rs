@@ -57,8 +57,8 @@ impl SendMessageFeeProvider for MockErrOutboundQueue {
 	}
 }
 
-pub struct SuccessfulTransactor;
-impl TransactAsset for SuccessfulTransactor {
+pub struct MockAssetTransactor;
+impl TransactAsset for MockAssetTransactor {
 	fn can_check_in(
 		_origin: &MultiLocation,
 		_what: &MultiAsset,
@@ -115,7 +115,7 @@ fn handle_fee_success() {
 		u64,
 		TokenLocation,
 		EthereumNetwork,
-		SuccessfulTransactor,
+		MockAssetTransactor,
 		MockOkOutboundQueue,
 	>::handle_fee(fee, Some(&ctx), reason);
 	let local_fee =
@@ -135,7 +135,7 @@ fn handle_fee_success_but_not_for_ethereum() {
 		u64,
 		TokenLocation,
 		EthereumNetwork,
-		SuccessfulTransactor,
+		MockAssetTransactor,
 		MockOkOutboundQueue,
 	>::handle_fee(fee.clone(), Some(&ctx), reason);
 	// assert fee not touched and just forward to the next handler
@@ -153,7 +153,7 @@ fn handle_fee_success_even_from_an_invalid_none_origin_location() {
 		u64,
 		TokenLocation,
 		EthereumNetwork,
-		SuccessfulTransactor,
+		MockAssetTransactor,
 		MockOkOutboundQueue,
 	>::handle_fee(fee.clone(), Some(&ctx), reason);
 	assert_eq!(result, fee)
@@ -174,7 +174,7 @@ fn handle_fee_success_even_when_fee_insufficient() {
 		u64,
 		TokenLocation,
 		EthereumNetwork,
-		SuccessfulTransactor,
+		MockAssetTransactor,
 		MockOkOutboundQueue,
 	>::handle_fee(fee.clone(), Some(&ctx), reason);
 	assert_eq!(result, fee)
