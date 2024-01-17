@@ -10,10 +10,9 @@ use snowbridge_core::inbound::{Log, Proof};
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 use std::{fs::File, path::PathBuf};
+type Block = frame_system::mocking::MockBlock<Test>;
+use sp_runtime::BuildStorage;
 
-#[cfg(feature = "beacon-spec-minimal")]
-const SPEC: &str = "minimal";
-#[cfg(not(feature = "beacon-spec-minimal"))]
 const SPEC: &str = "mainnet";
 
 fn load_fixture<T>(basename: String) -> Result<T, serde_json::Error>
@@ -98,156 +97,52 @@ pub fn get_message_verification_header() -> CompactExecutionHeader {
 	}
 }
 
-#[cfg(feature = "beacon-spec-minimal")]
-pub mod minimal {
-	use super::*;
-
-	use sp_runtime::BuildStorage;
-
-	type Block = frame_system::mocking::MockBlock<Test>;
-
-	frame_support::construct_runtime!(
-		pub enum Test {
-			System: frame_system::{Pallet, Call, Storage, Event<T>},
-			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
-		}
-	);
-
-	parameter_types! {
-		pub const BlockHashCount: u64 = 250;
-		pub const SS58Prefix: u8 = 42;
+frame_support::construct_runtime!(
+	pub enum Test {
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
 	}
+);
 
-	impl frame_system::Config for Test {
-		type BaseCallFilter = frame_support::traits::Everything;
-		type OnSetCode = ();
-		type BlockWeights = ();
-		type BlockLength = ();
-		type DbWeight = ();
-		type RuntimeOrigin = RuntimeOrigin;
-		type RuntimeCall = RuntimeCall;
-		type RuntimeTask = RuntimeTask;
-		type Hash = H256;
-		type Hashing = BlakeTwo256;
-		type AccountId = u64;
-		type Lookup = IdentityLookup<Self::AccountId>;
-		type RuntimeEvent = RuntimeEvent;
-		type BlockHashCount = BlockHashCount;
-		type Version = ();
-		type PalletInfo = PalletInfo;
-		type AccountData = ();
-		type OnNewAccount = ();
-		type OnKilledAccount = ();
-		type SystemWeightInfo = ();
-		type SS58Prefix = SS58Prefix;
-		type MaxConsumers = frame_support::traits::ConstU32<16>;
-		type Nonce = u64;
-		type Block = Block;
-	}
-
-	impl pallet_timestamp::Config for Test {
-		type Moment = u64;
-		type OnTimestampSet = ();
-		type MinimumPeriod = ();
-		type WeightInfo = ();
-	}
-
-	parameter_types! {
-		pub const ExecutionHeadersPruneThreshold: u32 = 10;
-		pub const ChainForkVersions: ForkVersions = ForkVersions {
-			genesis: Fork {
-				version: [0, 0, 0, 1], // 0x00000001
-				epoch: 0,
-			},
-			altair: Fork {
-				version: [1, 0, 0, 1], // 0x01000001
-				epoch: 0,
-			},
-			bellatrix: Fork {
-				version: [2, 0, 0, 1], // 0x02000001
-				epoch: 0,
-			},
-			capella: Fork {
-				version: [3, 0, 0, 1], // 0x03000001
-				epoch: 0,
-			},
-			deneb: Fork {
-				version: [4, 0, 0, 1], // 0x04000001
-				epoch: 4294967295,
-			},
-		};
-	}
-
-	impl ethereum_beacon_client::Config for Test {
-		type RuntimeEvent = RuntimeEvent;
-		type ForkVersions = ChainForkVersions;
-		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
-		type WeightInfo = ();
-	}
-
-	// Build genesis storage according to the mock runtime.
-	pub fn new_tester() -> sp_io::TestExternalities {
-		let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-		let mut ext = sp_io::TestExternalities::new(t);
-		let _ = ext.execute_with(|| Timestamp::set(RuntimeOrigin::signed(1), 30_000));
-		ext
-	}
+parameter_types! {
+	pub const BlockHashCount: u64 = 250;
+	pub const SS58Prefix: u8 = 42;
 }
 
-#[cfg(not(feature = "beacon-spec-minimal"))]
-pub mod mainnet {
-	use super::*;
+impl frame_system::Config for Test {
+	type BaseCallFilter = frame_support::traits::Everything;
+	type OnSetCode = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type RuntimeTask = RuntimeTask;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type RuntimeEvent = RuntimeEvent;
+	type BlockHashCount = BlockHashCount;
+	type Version = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = ();
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
+	type SS58Prefix = SS58Prefix;
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type Nonce = u64;
+	type Block = Block;
+}
 
-	type Block = frame_system::mocking::MockBlock<Test>;
-	use sp_runtime::BuildStorage;
-
-	frame_support::construct_runtime!(
-		pub enum Test {
-			System: frame_system::{Pallet, Call, Storage, Event<T>},
-			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-			EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
-		}
-	);
-
-	parameter_types! {
-		pub const BlockHashCount: u64 = 250;
-		pub const SS58Prefix: u8 = 42;
-	}
-
-	impl frame_system::Config for Test {
-		type BaseCallFilter = frame_support::traits::Everything;
-		type OnSetCode = ();
-		type BlockWeights = ();
-		type BlockLength = ();
-		type DbWeight = ();
-		type RuntimeOrigin = RuntimeOrigin;
-		type RuntimeCall = RuntimeCall;
-		type RuntimeTask = RuntimeTask;
-		type Hash = H256;
-		type Hashing = BlakeTwo256;
-		type AccountId = u64;
-		type Lookup = IdentityLookup<Self::AccountId>;
-		type RuntimeEvent = RuntimeEvent;
-		type BlockHashCount = BlockHashCount;
-		type Version = ();
-		type PalletInfo = PalletInfo;
-		type AccountData = ();
-		type OnNewAccount = ();
-		type OnKilledAccount = ();
-		type SystemWeightInfo = ();
-		type SS58Prefix = SS58Prefix;
-		type MaxConsumers = frame_support::traits::ConstU32<16>;
-		type Nonce = u64;
-		type Block = Block;
-	}
-
-	impl pallet_timestamp::Config for Test {
-		type Moment = u64;
-		type OnTimestampSet = ();
-		type MinimumPeriod = ();
-		type WeightInfo = ();
-	}
+impl pallet_timestamp::Config for Test {
+	type Moment = u64;
+	type OnTimestampSet = ();
+	type MinimumPeriod = ();
+	type WeightInfo = ();
+}
 
 	parameter_types! {
 		pub const ChainForkVersions: ForkVersions = ForkVersions {
@@ -275,18 +170,17 @@ pub mod mainnet {
 		pub const ExecutionHeadersPruneThreshold: u32 = 8192;
 	}
 
-	impl ethereum_beacon_client::Config for Test {
-		type RuntimeEvent = RuntimeEvent;
-		type ForkVersions = ChainForkVersions;
-		type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
-		type WeightInfo = ();
-	}
+impl ethereum_beacon_client::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type ForkVersions = ChainForkVersions;
+	type MaxExecutionHeadersToKeep = ExecutionHeadersPruneThreshold;
+	type WeightInfo = ();
+}
 
-	// Build genesis storage according to the mock runtime.
-	pub fn new_tester() -> sp_io::TestExternalities {
-		let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-		let mut ext = sp_io::TestExternalities::new(t);
-		let _ = ext.execute_with(|| Timestamp::set(RuntimeOrigin::signed(1), 30_000));
-		ext
-	}
+// Build genesis storage according to the mock runtime.
+pub fn new_tester() -> sp_io::TestExternalities {
+	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	let mut ext = sp_io::TestExternalities::new(t);
+	let _ = ext.execute_with(|| Timestamp::set(RuntimeOrigin::signed(1), 30_000));
+	ext
 }

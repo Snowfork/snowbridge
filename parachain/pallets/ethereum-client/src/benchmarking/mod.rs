@@ -7,14 +7,6 @@ use crate::Pallet as EthereumBeaconClient;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 
-#[cfg(feature = "beacon-spec-minimal")]
-mod fixtures_minimal;
-#[cfg(feature = "beacon-spec-minimal")]
-use fixtures_minimal::*;
-
-#[cfg(not(feature = "beacon-spec-minimal"))]
-mod fixtures_mainnet;
-#[cfg(not(feature = "beacon-spec-minimal"))]
 use fixtures_mainnet::*;
 
 use primitives::{
@@ -151,16 +143,9 @@ mod benchmarks {
 		Ok(())
 	}
 
-	#[cfg(feature = "beacon-spec-minimal")]
 	impl_benchmark_test_suite!(
 		EthereumBeaconClient,
-		crate::mock::minimal::new_tester(),
-		crate::mock::minimal::Test
-	);
-	#[cfg(not(feature = "beacon-spec-minimal"))]
-	impl_benchmark_test_suite!(
-		EthereumBeaconClient,
-		crate::mock::mainnet::new_tester(),
-		crate::mock::mainnet::Test
+		crate::mock::new_tester(),
+		crate::mock:::Test
 	);
 }

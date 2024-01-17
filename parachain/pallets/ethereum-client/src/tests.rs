@@ -13,15 +13,7 @@ use crate::mock::{
 	load_next_sync_committee_update_fixture, load_sync_committee_update_fixture,
 };
 
-#[cfg(feature = "beacon-spec-minimal")]
-pub use crate::config::minimal::*;
-#[cfg(feature = "beacon-spec-minimal")]
-pub use crate::mock::minimal::*;
-
-#[cfg(not(feature = "beacon-spec-minimal"))]
-pub use crate::config::mainnet::*;
-#[cfg(not(feature = "beacon-spec-minimal"))]
-pub use crate::mock::mainnet::*;
+pub use crate::mock::*;
 
 use frame_support::{assert_err, assert_noop, assert_ok};
 use hex_literal::hex;
@@ -36,6 +28,7 @@ use snowbridge_core::{
 };
 use sp_core::H256;
 use sp_runtime::DispatchError;
+use crate::config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH};
 
 /// Arbitrary hash used for tests and invalid hashes.
 const TEST_HASH: [u8; 32] =
