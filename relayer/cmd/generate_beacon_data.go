@@ -78,16 +78,6 @@ const (
 // Only print the hex encoded call as output of this command
 func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	err := func() error {
-		spec, err := cmd.Flags().GetString("spec")
-		if err != nil {
-			return fmt.Errorf("get active spec: %w", err)
-		}
-
-		activeSpec, err := config.ToSpec(spec)
-		if err != nil {
-			return fmt.Errorf("get spec: %w", err)
-		}
-
 		endpoint, err := cmd.Flags().GetString("url")
 
 		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
@@ -102,9 +92,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
-
-		s := syncer.New(endpoint, specSettings, activeSpec)
+		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
 
 		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -132,16 +120,6 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 
 func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 	err := func() error {
-		spec, err := cmd.Flags().GetString("spec")
-		if err != nil {
-			return fmt.Errorf("get active spec: %w", err)
-		}
-
-		activeSpec, err := config.ToSpec(spec)
-		if err != nil {
-			return fmt.Errorf("get spec: %w", err)
-		}
-
 		endpoint, _ := cmd.Flags().GetString("url")
 
 		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
@@ -150,26 +128,16 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		var conf config.Config
-		err = viper.Unmarshal(&conf)
+		err := viper.Unmarshal(&conf)
 		if err != nil {
 			return err
 		}
 
-		var SlotTimeDuration time.Duration
+		specSettings := conf.Source.Beacon.Spec
 
-		if activeSpec == config.Mainnet {
-			SlotTimeDuration = 12 * time.Second
-		} else {
-			SlotTimeDuration = 6 * time.Second
-			// ETH_FAST_MODE hack for fast slot period
-			if os.Getenv("ETH_FAST_MODE") == "true" {
-				SlotTimeDuration = 2 * time.Second
-			}
-		}
-
-		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
-		log.WithFields(log.Fields{"spec": activeSpec, "endpoint": endpoint}).Info("connecting to beacon API")
-		s := syncer.New(endpoint, specSettings, activeSpec)
+		SlotTimeDuration := 2 * time.Second
+		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
+		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
 
 		// generate InitialUpdate
 		initialSyncScale, err := s.GetCheckpoint()
@@ -177,7 +145,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
 		initialSync := initialSyncScale.ToJSON()
-		writeJSONToFile(initialSync, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
+		writeJSONToFile(initialSync, fmt.Sprintf("initial-checkpoint.%s.json"))
 		initialSyncHeaderSlot := initialSync.Header.Slot
 		initialSyncPeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
 		initialEpoch := s.ComputeEpochAtSlot(initialSyncHeaderSlot)
@@ -192,7 +160,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
 		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("sync-committee-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("sync-committee-update.json"))
 		log.Info("created sync committee update file")
 
 		// generate FinalizedUpdate for next epoch
@@ -216,14 +184,14 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if initialSyncPeriod != finalizedPeriod {
 			return fmt.Errorf("initialSyncPeriod should be consistent with finalizedUpdatePeriod")
 		}
-		writeJSONToFile(finalizedUpdate, fmt.Sprintf("finalized-header-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(finalizedUpdate, fmt.Sprintf("finalized-header-update.json"))
 		log.WithFields(log.Fields{
 			"epoch":  finalizedEpoch,
 			"period": finalizedPeriod,
 		}).Info("created finalized header update file")
 
 		// generate executionUpdate
-		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot - 2)
+		blockUpdateSlot := uint64(finalizedUpdateScale.Payload.FinalizedHeader.Slot) - 2
 		checkPoint := cache.Proof{
 			FinalizedBlockRoot: finalizedUpdateScale.FinalizedHeaderBlockRoot,
 			BlockRootsTree:     finalizedUpdateScale.BlockRootsTree,
@@ -234,7 +202,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get header update: %w", err)
 		}
 		headerUpdate := headerUpdateScale.ToJSON()
-		writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.json"))
 		log.Info("created execution update file")
 
 		// Generate benchmark fixture
@@ -256,7 +224,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		log.WithFields(log.Fields{
 			"location": pathToBeaconTestFixtureFiles,
 			"template": pathToBenchmarkDataTemplate,
-			"spec":     activeSpec,
 		}).Info("rendering file using mustache")
 
 		rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
@@ -264,7 +231,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("render benchmark fixture: %w", err)
 		}
 
-		filename := fmt.Sprintf("fixtures_%s.rs", activeSpec.ToString())
+		filename := fmt.Sprintf("fixtures.rs")
 
 		log.WithFields(log.Fields{
 			"location": pathToBeaconBenchmarkData,
@@ -290,7 +257,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			if initialSyncPeriod+1 != nextFinalizedUpdatePeriod {
 				return fmt.Errorf("nextFinalizedUpdatePeriod should be 1 period ahead of initialSyncPeriod")
 			}
-			writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("next-finalized-header-update.%s.json", activeSpec.ToString()))
+			writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("next-finalized-header-update.json"))
 			log.Info("created next finalized header update file")
 
 			// generate nextSyncCommitteeUpdate
@@ -299,11 +266,11 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 				return fmt.Errorf("get sync committee update: %w", err)
 			}
 			nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
-			writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("next-sync-committee-update.%s.json", activeSpec.ToString()))
+			writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("next-sync-committee-update.json"))
 			log.Info("created next sync committee update file")
 		}
 
-		log.WithField("spec", activeSpec).Info("done")
+		log.Info("done")
 
 		return nil
 	}()
@@ -354,15 +321,6 @@ func writeBenchmarkDataFile(filename, fileContents string) error {
 
 func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 	err := func() error {
-		spec, err := cmd.Flags().GetString("spec")
-		if err != nil {
-			return fmt.Errorf("get active spec: %w", err)
-		}
-		activeSpec, err := config.ToSpec(spec)
-		if err != nil {
-			return fmt.Errorf("get spec: %w", err)
-		}
-
 		endpoint, _ := cmd.Flags().GetString("url")
 		beaconSlot, _ := cmd.Flags().GetUint32("slot")
 
@@ -371,15 +329,15 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 		var conf config.Config
-		err = viper.Unmarshal(&conf)
+		err := viper.Unmarshal(&conf)
 		if err != nil {
 			return err
 		}
-		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
-		log.WithFields(log.Fields{"spec": activeSpec, "endpoint": endpoint}).Info("connecting to beacon API")
+		specSettings := conf.Source.Beacon.Spec
+		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
 
 		// generate executionUpdate
-		s := syncer.New(endpoint, specSettings, activeSpec)
+		s := syncer.New(endpoint, specSettings)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
 		if err != nil {
 			return fmt.Errorf("fetch block: %w", err)
@@ -389,7 +347,7 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get header update: %w", err)
 		}
 		headerUpdate := headerUpdateScale.ToJSON()
-		writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.json"))
 		log.Info("created execution update file")
 
 		return nil
