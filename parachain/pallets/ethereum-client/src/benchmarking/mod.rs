@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use super::*;
-mod util;
 mod fixtures;
+mod util;
 
 use crate::Pallet as EthereumBeaconClient;
 use frame_benchmarking::v2::*;
@@ -144,9 +144,5 @@ mod benchmarks {
 		Ok(())
 	}
 
-	impl_benchmark_test_suite!(
-		EthereumBeaconClient,
-		crate::mock::new_tester(),
-		crate::mock::Test
-	);
+	impl_benchmark_test_suite!(EthereumBeaconClient, crate::mock::new_tester(), crate::mock::Test);
 }
