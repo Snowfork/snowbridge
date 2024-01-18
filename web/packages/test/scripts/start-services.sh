@@ -24,10 +24,6 @@ echo "Starting ethereum nodes"
 if [ "$eth_network" == "localhost" ]; then
   source scripts/deploy-ethereum.sh
   deploy_ethereum
-else
-  source scripts/start-goerli.sh
-  # deploy beacon node locally for fast response time or retrieving beacon state from remote could be very slow
-  deploy_goerli
 fi
 
 # 3. start polkadot
@@ -62,7 +58,7 @@ open_hrmp_channels
 
 #9. config beacon checkpoint for bridgeHub
 echo "Config bridgehub beacon,waiting..."
-sleep 30 # a huge transact so sleep to execute solely in another block
+sleep 12 # initialize beacon is a huge transact so sleep to execute in a separate block
 source scripts/configure-bridgehub-beacon.sh
 configure_bridgehub_beacon
 
