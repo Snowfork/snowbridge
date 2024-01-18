@@ -13,7 +13,6 @@ use std::{fs::File, path::PathBuf};
 type Block = frame_system::mocking::MockBlock<Test>;
 use sp_runtime::BuildStorage;
 
-const SPEC: &str = "mainnet";
 
 fn load_fixture<T>(basename: String) -> Result<T, serde_json::Error>
 where
@@ -25,38 +24,32 @@ where
 }
 
 pub fn load_execution_header_update_fixture() -> primitives::ExecutionHeaderUpdate {
-	let basename = format!("execution-header-update.{}.json", SPEC);
-	load_fixture(basename).unwrap()
+	load_fixture("execution-header-update.json".to_string()).unwrap()
 }
 
 pub fn load_checkpoint_update_fixture(
 ) -> primitives::CheckpointUpdate<{ config::SYNC_COMMITTEE_SIZE }> {
-	let basename = format!("initial-checkpoint.{}.json", SPEC);
-	load_fixture(basename).unwrap()
+	load_fixture("initial-checkpoint.json".to_string()).unwrap()
 }
 
 pub fn load_sync_committee_update_fixture(
 ) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
-	let basename = format!("sync-committee-update.{}.json", SPEC);
-	load_fixture(basename).unwrap()
+	load_fixture("sync-committee-update.json".to_string()).unwrap()
 }
 
 pub fn load_finalized_header_update_fixture(
 ) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
-	let basename = format!("finalized-header-update.{}.json", SPEC);
-	load_fixture(basename).unwrap()
+	load_fixture("finalized-header-update.json".to_string()).unwrap()
 }
 
 pub fn load_next_sync_committee_update_fixture(
 ) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
-	let basename = format!("next-sync-committee-update.{}.json", SPEC);
-	load_fixture(basename).unwrap()
+	load_fixture("next-sync-committee-update.json".to_string()).unwrap()
 }
 
 pub fn load_next_finalized_header_update_fixture(
 ) -> primitives::Update<{ config::SYNC_COMMITTEE_SIZE }, { config::SYNC_COMMITTEE_BITS_SIZE }> {
-	let basename = format!("next-finalized-header-update.{}.json", SPEC);
-	load_fixture(basename).unwrap()
+	load_fixture("next-finalized-header-update.json".to_string()).unwrap()
 }
 
 pub fn get_message_verification_payload() -> (Log, Proof) {
