@@ -256,9 +256,9 @@ type ForkResponse struct {
 }
 
 type BeaconHeaderWithExecutionHeaderResponse struct {
-	Beacon          HeaderResponse                          `json:"beacon"`
-	Execution       beaconjson.ExecutionPayloadHeaderJsonV1 `json:"execution,omitempty"`
-	ExecutionBranch []string                                `json:"execution_branch,omitempty"`
+	Beacon          HeaderResponse                            `json:"beacon"`
+	Execution       beaconjson.FullExecutionPayloadHeaderJson `json:"execution,omitempty"`
+	ExecutionBranch []string                                  `json:"execution_branch,omitempty"`
 }
 
 type LatestFinalisedUpdateResponse struct {

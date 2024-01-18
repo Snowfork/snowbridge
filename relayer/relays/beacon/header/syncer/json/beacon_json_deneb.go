@@ -20,7 +20,7 @@ type ExecutionPayloadHeaderDeneb struct {
 	ExcessBlobGas    uint64 `json:"excess_blob_gas"`
 }
 
-type ExecutionPayloadHeaderJsonV1 struct {
+type FullExecutionPayloadHeaderJson struct {
 	ParentHash       string `json:"parent_hash"`
 	FeeRecipient     string `json:"fee_recipient"`
 	StateRoot        string `json:"state_root"`

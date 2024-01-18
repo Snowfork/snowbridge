@@ -62,7 +62,7 @@ func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb, activeSpec con
 	}, nil
 }
 
-func DenebExecutionPayloadHeaderToScale(e *beaconjson.ExecutionPayloadHeaderJsonV1) (scale.ExecutionPayloadHeaderDeneb, error) {
+func DenebExecutionPayloadHeaderToScale(e *beaconjson.FullExecutionPayloadHeaderJson) (scale.ExecutionPayloadHeaderDeneb, error) {
 	var executionPayloadHeader scale.ExecutionPayloadHeaderDeneb
 	var baseFeePerGas big.Int
 	baseFeePerGasU64, err := util.ToUint64(e.BaseFeePerGas)
@@ -109,7 +109,7 @@ func DenebExecutionPayloadHeaderToScale(e *beaconjson.ExecutionPayloadHeaderJson
 	}, nil
 }
 
-func ExecutionPayloadHeaderToCapellaScaleV1(e *beaconjson.ExecutionPayloadHeaderJsonV1) (scale.ExecutionPayloadHeaderCapella, error) {
+func ExecutionPayloadHeaderToCapellaScaleV1(e *beaconjson.FullExecutionPayloadHeaderJson) (scale.ExecutionPayloadHeaderCapella, error) {
 	var executionPayloadHeader scale.ExecutionPayloadHeaderCapella
 	var baseFeePerGas big.Int
 	baseFeePerGasU64, err := util.ToUint64(e.BaseFeePerGas)
