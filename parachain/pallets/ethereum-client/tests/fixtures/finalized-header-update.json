@@ -1,38 +1,38 @@
 {
   "attested_header": {
-    "slot": 4058720,
-    "proposer_index": 1088,
-    "parent_root": "0x37c7398a391c71da07258b48f41d4caaaf891fdf558e110b9c25db716fa8ff55",
-    "state_root": "0x6cf68a66c993f1c27f499e054a5fbd7c0e625c34ea0057fda9691c561e990002",
-    "body_root": "0x109e4c0c647d42dba0c8c6569997c51b5bcfc1a33475b1433ded6353f48423ff"
+    "slot": 296,
+    "proposer_index": 0,
+    "parent_root": "0xc62a8d9f2a004616e0ae4e7de1af3422563ecdbba98da5f18904e44f812956d8",
+    "state_root": "0x52e35da4c6b3790689d39a4772addab9bfb844871b1efefcfbfa0e14d09038c7",
+    "body_root": "0x47eeac4dbbce592011328d8e2098e8a3acafb0ddae4ccb78f54461aebf2ceb93"
   },
   "sync_aggregate": {
-    "sync_committee_bits": "0xffffffffff7bfdfffff7fffff1effffef7f9ffbdfdffffffdffbfffbbf7ffffffffffefdf7ffbeffdffef7bfffffffffffbffffffffffbffffffffffffffdfda",
-    "sync_committee_signature": "0xb5727bad1db101b6f0fd7ec4cb79b43dae90366fe0cae31a62439388eb03ebd75732cee3bde51f814203a4c0f5b23898120cd0870f0e662bdf0f85a048b534d9a906e6d32a65df019059d34f724221075734ec2849c09679febecf6929934f09"
+    "sync_committee_bits": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "sync_committee_signature": "0x8866c6afdde82dc2990c565842e4574939cdeeedec124f70488812c786e6a2767fdb3d7b9b750407b0194728f24c525c12af702106485634d61df00a83bc54775f5a26990ac29e952461970eda8f67374146f00656f0852d41c5c63b379c8aca"
   },
-  "signature_slot": 4058721,
+  "signature_slot": 297,
   "next_sync_committee_update": null,
   "finalized_header": {
-    "slot": 4058656,
-    "proposer_index": 810,
-    "parent_root": "0xbb6cfda1e02c3117d9fa41c1e1594ce0645352a073ad8b474f83c148e0d9954f",
-    "state_root": "0xf938f0f0cba85234afbaace20545134c70b35e6ff9f74d944b0fea309109f3cf",
-    "body_root": "0xcf6a7a6f653cb64b2b910278a478339b34eb08abf00e0766d10c7a8fe9bdb139"
+    "slot": 224,
+    "proposer_index": 4,
+    "parent_root": "0x1adf851f1c3b14d5ad39a2296f9c0eb67f3ce29f548b1042c42e7ae4c8e57e01",
+    "state_root": "0x919ed2241dd533b1f21b8870782200dd1285716e5a2dd12b85459932d408e43b",
+    "body_root": "0x05ed6596aa7ca9e47169fb0a36e325b6d74c01f439432393fdfbbae87d105805"
   },
   "finality_branch": [
-    "0x71ef010000000000000000000000000000000000000000000000000000000000",
-    "0x3d4be5d019ba15ea3ef304a83b8a067f2e79f46a3fac8069306a6c814a0a35eb",
-    "0xa2e2a28c0bb0ad56c25f3c461a4bfe4f3b3b894bc0105a62e85f43a4ae1adc3f",
-    "0xaa2bad8cf9b0433d3d79bc5b95c067048b018d1d2ffd0c66db6e7cf86e0a314e",
-    "0x027f238235d07ac9757543c19deabe1d553d6fc110e8bea4b037b1fab263b4dc",
-    "0x7dfa1cc1907e8927295f78a770bf86b28f5c2bddcac38beb3b4beb265ff5608f"
+    "0x0700000000000000000000000000000000000000000000000000000000000000",
+    "0x10c726fac935bf9657cc7476d3cfa7bedec5983dcfb59e8a7df6d0a619e108d7",
+    "0xdaf8a03ff85a662ff55561aaf11278c7dddb8800d99462115f9558ea044e2a43",
+    "0x93529c79a1f0e94a7a7de696413daf53e5098da0d426985f90d706de6d2d3b2e",
+    "0xf615b76aa6925080058bb97081b011332c97d149e55140905c487feeaca8370e",
+    "0x4494b18d90d300ceb7047a814a7b288d2d971d29b644dccab613207443b077bb"
   ],
-  "block_roots_root": "0x4a5a57fb0769443f6472f59dbb78d7a9a69ff61d09aa89d5da645d634ec46a14",
+  "block_roots_root": "0xf946f80d3e26468eaa41291903bc9463d2262853b05924d7bfbc63ff1ef7e134",
   "block_roots_branch": [
-    "0xa09ad7f3afd681bb6fd54abba339549f3b601beedea79a5b7d448b1cf1e1613e",
-    "0xacdfd4d5eba154f118a84af7a2d17ba6100fcd9c24fc235e927f584a5b56e32f",
-    "0x36ca106eac009ed605e680415b105b3a6591830c38034511f300aae44802235f",
-    "0x171561a9e1afb413132d0f4d3cbbd810766c151be32ec9f2d609f40aef9e2588",
-    "0x7cd963eba3fb57ee5ce37ee4b621d24fc14d642e32f48dc48ade528e11458ab9"
+    "0x6e5e1a3d26495a17a227b3ec5a1adb89f230dd93d7e566c998cb008dedadebcb",
+    "0xe4d0f37bffcfbb950103fbf8fb34e1ad65ea150a92646d16181ece6e62d4d35c",
+    "0xc015681664a7ad3d54814f2e2a47cca499a7a978b45d0adce7762738459f2673",
+    "0x4eca2aa5bf11abad5f48e31368c1ff0ed1bb0f9fd4dcb358542ab4411554c221",
+    "0x8eb64193f6567424413d95ae5a3e272a54c1d1c73ef53e6074db9c61e5890216"
   ]
 }

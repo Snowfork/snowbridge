@@ -9,8 +9,8 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
 type SyncCommitteePeriodUpdateResponse struct {
