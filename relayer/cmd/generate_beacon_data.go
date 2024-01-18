@@ -24,13 +24,13 @@ func generateBeaconDataCmd() *cobra.Command {
 		Use:   "generate-beacon-data",
 		Short: "Generate beacon data.",
 		Args:  cobra.ExactArgs(0),
-		RunE:  generateBeaconData,
+		RunE:  generateBeaconTestFixture,
 	}
 
-	cmd.Flags().String("spec", "minimal", "Valid values are mainnet or minimal")
+	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	cmd.Flags().String("version", "deneb", "Valid values are capella or deneb")
-
 	return cmd
 }
 
@@ -42,10 +42,11 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 		RunE:  generateBeaconCheckpoint,
 	}
 
-	cmd.Flags().String("spec", "minimal", "Valid values are mainnet or minimal")
+	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	cmd.Flags().Bool("export_json", false, "Export Json")
 	cmd.Flags().String("version", "deneb", "Valid values are capella or deneb")
-	cmd.Flags().Bool("export-json", false, "Export Json")
+
 	return cmd
 }
 
@@ -57,11 +58,10 @@ func generateExecutionUpdateCmd() *cobra.Command {
 		RunE:  generateExecutionUpdate,
 	}
 
-	cmd.Flags().String("spec", "minimal", "Valid values are mainnet or minimal")
-	cmd.Flags().Uint32("slot", 1, "slot number")
+	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	cmd.Flags().Uint32("slot", 1, "slot number")
 	cmd.Flags().String("version", "deneb", "Valid values are capella or deneb")
-
 	return cmd
 }
 
@@ -78,6 +78,7 @@ const (
 	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
 )
 
+// Only print the hex encoded call as output of this command
 func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		spec, err := cmd.Flags().GetString("spec")
@@ -125,9 +126,9 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 				return fmt.Errorf("write initial sync to file: %w", err)
 			}
 		}
-		checkPointBytes, _ := types.EncodeToBytes(checkPointScale)
-		checkPointUpdateCall := hex.EncodeToString(checkPointBytes)
-		fmt.Println(checkPointUpdateCall)
+		checkPointCallBytes, _ := types.EncodeToBytes(checkPointScale)
+		checkPointCallHex := hex.EncodeToString(checkPointCallBytes)
+		fmt.Println(checkPointCallHex)
 		return nil
 	}()
 	if err != nil {
@@ -137,7 +138,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func generateBeaconData(cmd *cobra.Command, _ []string) error {
+func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		spec, err := cmd.Flags().GetString("spec")
 		if err != nil {
@@ -168,9 +169,16 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		}
 
 		// ETH_FAST_MODE hack for fast slot period
-		SlotTimeDuration := 6 * time.Second
-		if os.Getenv("ETH_FAST_MODE") == "true" {
-			SlotTimeDuration = 1 * time.Second
+		var SlotTimeDuration time.Duration
+
+		if activeSpec == config.Mainnet {
+			SlotTimeDuration = 12 * time.Second
+		} else {
+			SlotTimeDuration = 6 * time.Second
+			// ETH_FAST_MODE hack for fast slot period
+			if os.Getenv("ETH_FAST_MODE") == "true" {
+				SlotTimeDuration = 1 * time.Second
+			}
 		}
 
 		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
@@ -192,8 +200,17 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 			"period": initialSyncPeriod,
 		}).Info("created initial sync file")
 
+		// generate SyncCommitteeUpdate for filling the missing NextSyncCommittee in initial checkpoint
+		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod)
+		if err != nil {
+			return fmt.Errorf("get sync committee update: %w", err)
+		}
+		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
+		writeJSONToFile(syncCommitteeUpdate, version, fmt.Sprintf("sync-committee-update.%s.json", activeSpec.ToString()))
+		log.Info("created sync committee update file")
+
 		// generate FinalizedUpdate for next epoch
-		log.Info("waiting for a new finalized_update in next epoch and in current sync period,several seconds required...")
+		log.Info("waiting finalized_update in next epoch(6.4 minutes later), be patient and drink a cup of tea...")
 		elapseEpochs := uint64(1)
 		waitIntervalForNextEpoch := elapseEpochs * specSettings.SlotsInEpoch
 		time.Sleep(time.Duration(waitIntervalForNextEpoch) * SlotTimeDuration)
@@ -234,69 +251,70 @@ func generateBeaconData(cmd *cobra.Command, _ []string) error {
 		writeJSONToFile(headerUpdate, version, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
 		log.Info("created execution update file")
 
-		var nextSyncCommitteeUpdate beaconjson.Update
+		// Generate benchmark fixture
+		log.Info("now updating benchmarking data files")
 
-		// generate FinalizedUpdate for next period
-		log.Info("waiting until next sync period,several minutes required...")
-		time.Sleep(time.Duration(specSettings.SlotsInEpoch*(specSettings.EpochsPerSyncCommitteePeriod-elapseEpochs)) * SlotTimeDuration)
-		nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
+		// Rust file hexes require the 0x of hashes to be removed
+		initialSync.RemoveLeadingZeroHashes()
+		syncCommitteeUpdate.RemoveLeadingZeroHashes()
+		finalizedUpdate.RemoveLeadingZeroHashes()
+		headerUpdate.RemoveLeadingZeroHashes()
+
+		data := Data{
+			CheckpointUpdate:      initialSync,
+			SyncCommitteeUpdate:   syncCommitteeUpdate,
+			FinalizedHeaderUpdate: finalizedUpdate,
+			HeaderUpdate:          headerUpdate,
+		}
+
+		log.WithFields(log.Fields{
+			"location": pathToBeaconTestFixtureFiles,
+			"template": pathToBenchmarkDataTemplate,
+			"spec":     activeSpec,
+		}).Info("rendering file using mustache")
+
+		rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
 		if err != nil {
-			return fmt.Errorf("get next finalized header update: %w", err)
+			return fmt.Errorf("render benchmark fixture: %w", err)
 		}
-		nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
-		nextFinalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
-		if initialSyncPeriod+1 != nextFinalizedUpdatePeriod {
-			return fmt.Errorf("nextFinalizedUpdatePeriod should be 1 period ahead of initialSyncPeriod")
-		}
-		writeJSONToFile(nextFinalizedUpdate, version, fmt.Sprintf("next-finalized-header-update.%s.json", activeSpec.ToString()))
-		log.Info("created next finalized header update file")
 
-		// generate nextSyncCommitteeUpdate
-		nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod + 1)
+		filename := fmt.Sprintf("fixtures_%s.rs", activeSpec.ToString())
+
+		log.WithFields(log.Fields{
+			"location": pathToBeaconBenchmarkData,
+			"filename": filename,
+		}).Info("writing result file")
+
+		err = writeBenchmarkDataFile(filename, rendered)
 		if err != nil {
-			return fmt.Errorf("get sync committee update: %w", err)
+			return err
 		}
-		nextSyncCommitteeUpdate = nextSyncCommitteeUpdateScale.Payload.ToJSON()
-		writeJSONToFile(nextSyncCommitteeUpdate, version, fmt.Sprintf("next-sync-committee-update.%s.json", activeSpec.ToString()))
-		log.Info("created next sync committee update file")
 
-		if !activeSpec.IsMinimal() {
-			log.Info("now updating benchmarking data files")
-
-			// Rust file hexes require the 0x of hashes to be removed
-			initialSync.RemoveLeadingZeroHashes()
-			nextSyncCommitteeUpdate.RemoveLeadingZeroHashes()
-			finalizedUpdate.RemoveLeadingZeroHashes()
-			headerUpdate.RemoveLeadingZeroHashes()
-
-			data := Data{
-				CheckpointUpdate:      initialSync,
-				FinalizedHeaderUpdate: finalizedUpdate,
-				HeaderUpdate:          headerUpdate,
-				SyncCommitteeUpdate:   nextSyncCommitteeUpdate,
-			}
-
-			log.WithFields(log.Fields{
-				"location": pathToBeaconTestFixtureFiles,
-				"template": pathToBenchmarkDataTemplate,
-				"spec":     activeSpec,
-			}).Info("rendering file using mustache")
-
-			rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
+		// Generate test fixture in next period(require waiting a long time)
+		waitUntilNextPeriod, err := cmd.Flags().GetBool("wait_until_next_period")
+		if waitUntilNextPeriod {
+			log.Info("waiting finalized_update in next period(27 hours later), be patient and go to sleep first...")
+			time.Sleep(time.Duration(specSettings.SlotsInEpoch*(specSettings.EpochsPerSyncCommitteePeriod-elapseEpochs)) * SlotTimeDuration)
+			nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
 			if err != nil {
-				return fmt.Errorf("render benchmark fixture: %w", err)
+				return fmt.Errorf("get next finalized header update: %w", err)
 			}
-			filename := "fixtures.rs"
+			nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
+			nextFinalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
+			if initialSyncPeriod+1 != nextFinalizedUpdatePeriod {
+				return fmt.Errorf("nextFinalizedUpdatePeriod should be 1 period ahead of initialSyncPeriod")
+			}
+			writeJSONToFile(nextFinalizedUpdate, version, fmt.Sprintf("next-finalized-header-update.%s.json", activeSpec.ToString()))
+			log.Info("created next finalized header update file")
 
-			log.WithFields(log.Fields{
-				"location": pathToBeaconBenchmarkData,
-				"filename": filename,
-			}).Info("writing result file")
-
-			err = writeBenchmarkDataFile(filename, rendered)
+			// generate nextSyncCommitteeUpdate
+			nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod + 1)
 			if err != nil {
-				return err
+				return fmt.Errorf("get sync committee update: %w", err)
 			}
+			nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
+			writeJSONToFile(nextSyncCommitteeUpdate, version, fmt.Sprintf("next-sync-committee-update.%s.json", activeSpec.ToString()))
+			log.Info("created next sync committee update file")
 		}
 
 		log.WithField("spec", activeSpec).Info("done")
