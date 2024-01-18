@@ -409,13 +409,13 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 
 	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
 	if s.DenebForked(slot) {
-		executionPayloadScale, err := api.DenebExecutionPayloadToScale(sszBlock.DenebExecutionPayload(), s.activeSpec)
+		executionPayloadScale, err := api.DenebExecutionPayloadToScale(sszBlock.ExecutionPayloadDeneb(), s.activeSpec)
 		if err != nil {
 			return scale.HeaderUpdatePayload{}, err
 		}
 		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
 	} else {
-		executionPayloadScale, err := api.CapellaExecutionPayloadToScale(sszBlock.CapallaExecutionPayload(), s.activeSpec)
+		executionPayloadScale, err := api.CapellaExecutionPayloadToScale(sszBlock.ExecutionPayloadCapella(), s.activeSpec)
 		if err != nil {
 			return scale.HeaderUpdatePayload{}, err
 		}
