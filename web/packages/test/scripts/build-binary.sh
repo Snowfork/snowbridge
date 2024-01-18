@@ -80,22 +80,10 @@ build_lodestar() {
     fi
 }
 
-build_geth() {
-    if [ ! -f "$root_dir/go-ethereum/build/bin/geth" ]; then
-        pushd $root_dir/go-ethereum
-        make geth
-        cp build/bin/geth "$output_bin_dir"
-        popd
-    else
-        echo "geth has already been built."
-    fi
-}
-
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
     build_lodestar
-    build_geth
     build_binaries
     build_contracts
     build_relayer
