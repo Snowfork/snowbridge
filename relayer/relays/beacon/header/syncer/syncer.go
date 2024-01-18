@@ -73,40 +73,17 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
 	}
 
-	from := s.ComputeSyncPeriodAtSlot(uint64(header.Slot))
-
-	committeeUpdate, err := s.Client.GetSyncCommitteePeriodUpdate(from)
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get sync committee: %w", err)
-	}
-
-	nextSyncCommittee, err := committeeUpdate.Data.NextSyncCommittee.ToScale()
-	if err != nil {
-		return scale.BeaconCheckpoint{}, fmt.Errorf("convert next sync committee to scale: %w", err)
-	}
-	nextSyncCommitteeBranch := util.ProofBranchToScale(committeeUpdate.Data.NextSyncCommitteeBranch)
-	attestedHeader, err := committeeUpdate.Data.AttestedHeader.Beacon.ToScale()
-	if err != nil {
-		return scale.BeaconCheckpoint{}, fmt.Errorf("convert attestedHeader to scale: %w", err)
-	}
-
-	executionPayloadHeader, executionBranch, err := s.getExecutionHeaderFromBeaconHeader(bootstrap.Data.Header)
-	if err != nil {
-		return scale.BeaconCheckpoint{}, fmt.Errorf("get execution header from beacon header: %w", err)
 	}
 
 	return scale.BeaconCheckpoint{
 		Header:                     header,
 		CurrentSyncCommittee:       syncCommittee,
 		CurrentSyncCommitteeBranch: util.ProofBranchToScale(bootstrap.Data.CurrentSyncCommitteeBranch),
-		AttestedHeader:             attestedHeader,
-		NextSyncCommittee:          nextSyncCommittee,
-		NextSyncCommitteeBranch:    nextSyncCommitteeBranch,
 		ValidatorsRoot:             types.H256(genesis.ValidatorsRoot),
 		BlockRootsRoot:             blockRootsProof.Leaf,
 		BlockRootsBranch:           blockRootsProof.Proof,
-		ExecutionHeader:            executionPayloadHeader,
-		ExecutionBranch:            executionBranch,
 	}, nil
 }
 
@@ -174,8 +151,14 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 			FinalityBranch:   util.ProofBranchToScale(committeeUpdate.FinalityBranch),
 			BlockRootsRoot:   blockRootsProof.Leaf,
 			BlockRootsBranch: blockRootsProof.Proof,
-			ExecutionHeader:  executionPayloadHeader,
-			ExecutionBranch:  executionBranch,
+			ExecutionHeader: scale.OptionExecutionHeader{
+				HasValue: true,
+				Value:    executionPayloadHeader,
+			},
+			ExecutionBranch: scale.OptionExecutionBranch{
+				HasValue: true,
+				Value:    executionBranch,
+			},
 		},
 		FinalizedHeaderBlockRoot: finalizedHeaderBlockRoot,
 		BlockRootsTree:           blockRootsProof.Tree,
@@ -305,8 +288,14 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		FinalityBranch:   util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
 		BlockRootsRoot:   blockRootsProof.Leaf,
 		BlockRootsBranch: blockRootsProof.Proof,
-		ExecutionHeader:  executionPayloadHeader,
-		ExecutionBranch:  executionBranch,
+		ExecutionHeader: scale.OptionExecutionHeader{
+			HasValue: true,
+			Value:    executionPayloadHeader,
+		},
+		ExecutionBranch: scale.OptionExecutionBranch{
+			HasValue: true,
+			Value:    executionBranch,
+		},
 	}
 
 	return scale.Update{

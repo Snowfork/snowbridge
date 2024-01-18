@@ -30,7 +30,6 @@ func generateBeaconDataCmd() *cobra.Command {
 	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
 	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
-	cmd.Flags().String("version", "deneb", "Valid values are capella or deneb")
 	return cmd
 }
 
@@ -45,7 +44,6 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
 	cmd.Flags().Bool("export_json", false, "Export Json")
-	cmd.Flags().String("version", "deneb", "Valid values are capella or deneb")
 
 	return cmd
 }
@@ -61,7 +59,6 @@ func generateExecutionUpdateCmd() *cobra.Command {
 	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
 	cmd.Flags().Uint32("slot", 1, "slot number")
-	cmd.Flags().String("version", "deneb", "Valid values are capella or deneb")
 	return cmd
 }
 
@@ -105,11 +102,6 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		version, err := cmd.Flags().GetString("version")
-		if err != nil {
-			return fmt.Errorf("get version: %w", err)
-		}
-
 		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
 
 		s := syncer.New(endpoint, specSettings, activeSpec)
@@ -121,7 +113,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		exportJson, err := cmd.Flags().GetBool("export-json")
 		if exportJson {
 			initialSync := checkPointScale.ToJSON()
-			err = writeJSONToFile(initialSync, version, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
+			err = writeJSONToFile(initialSync, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
 			if err != nil {
 				return fmt.Errorf("write initial sync to file: %w", err)
 			}
@@ -163,11 +155,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		version, err := cmd.Flags().GetString("version")
-		if err != nil {
-			return fmt.Errorf("get version: %w", err)
-		}
-
 		// ETH_FAST_MODE hack for fast slot period
 		var SlotTimeDuration time.Duration
 
@@ -191,7 +178,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
 		initialSync := initialSyncScale.ToJSON()
-		writeJSONToFile(initialSync, version, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
+		writeJSONToFile(initialSync, fmt.Sprintf("initial-checkpoint.%s.json", activeSpec.ToString()))
 		initialSyncHeaderSlot := initialSync.Header.Slot
 		initialSyncPeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
 		initialEpoch := s.ComputeEpochAtSlot(initialSyncHeaderSlot)
@@ -206,7 +193,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
 		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		writeJSONToFile(syncCommitteeUpdate, version, fmt.Sprintf("sync-committee-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("sync-committee-update.%s.json", activeSpec.ToString()))
 		log.Info("created sync committee update file")
 
 		// generate FinalizedUpdate for next epoch
@@ -230,7 +217,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if initialSyncPeriod != finalizedPeriod {
 			return fmt.Errorf("initialSyncPeriod should be consistent with finalizedUpdatePeriod")
 		}
-		writeJSONToFile(finalizedUpdate, version, fmt.Sprintf("finalized-header-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(finalizedUpdate, fmt.Sprintf("finalized-header-update.%s.json", activeSpec.ToString()))
 		log.WithFields(log.Fields{
 			"epoch":  finalizedEpoch,
 			"period": finalizedPeriod,
@@ -248,7 +235,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get header update: %w", err)
 		}
 		headerUpdate := headerUpdateScale.ToJSON()
-		writeJSONToFile(headerUpdate, version, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
 		log.Info("created execution update file")
 
 		// Generate benchmark fixture
@@ -304,7 +291,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			if initialSyncPeriod+1 != nextFinalizedUpdatePeriod {
 				return fmt.Errorf("nextFinalizedUpdatePeriod should be 1 period ahead of initialSyncPeriod")
 			}
-			writeJSONToFile(nextFinalizedUpdate, version, fmt.Sprintf("next-finalized-header-update.%s.json", activeSpec.ToString()))
+			writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("next-finalized-header-update.%s.json", activeSpec.ToString()))
 			log.Info("created next finalized header update file")
 
 			// generate nextSyncCommitteeUpdate
@@ -313,7 +300,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 				return fmt.Errorf("get sync committee update: %w", err)
 			}
 			nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
-			writeJSONToFile(nextSyncCommitteeUpdate, version, fmt.Sprintf("next-sync-committee-update.%s.json", activeSpec.ToString()))
+			writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("next-sync-committee-update.%s.json", activeSpec.ToString()))
 			log.Info("created next sync committee update file")
 		}
 
@@ -328,10 +315,10 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func writeJSONToFile(data interface{}, version, filename string) error {
+func writeJSONToFile(data interface{}, filename string) error {
 	file, _ := json.MarshalIndent(data, "", "  ")
 
-	f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", pathToBeaconTestFixtureFiles, version, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	f, err := os.OpenFile(fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 
 	if err != nil {
 		return fmt.Errorf("create file: %w", err)
@@ -392,11 +379,6 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		specSettings := conf.GetSpecSettingsBySpec(activeSpec)
 		log.WithFields(log.Fields{"spec": activeSpec, "endpoint": endpoint}).Info("connecting to beacon API")
 
-		version, err := cmd.Flags().GetString("version")
-		if err != nil {
-			return fmt.Errorf("get version: %w", err)
-		}
-
 		// generate executionUpdate
 		s := syncer.New(endpoint, specSettings, activeSpec)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
@@ -408,7 +390,7 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get header update: %w", err)
 		}
 		headerUpdate := headerUpdateScale.ToJSON()
-		writeJSONToFile(headerUpdate, version, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
+		writeJSONToFile(headerUpdate, fmt.Sprintf("execution-header-update.%s.json", activeSpec.ToString()))
 		log.Info("created execution update file")
 
 		return nil

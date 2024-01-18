@@ -20,14 +20,9 @@ pub struct CheckpointUpdate<const COMMITTEE_SIZE: usize> {
 	pub header: BeaconHeader,
 	pub current_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
 	pub current_sync_committee_branch: Vec<H256>,
-	pub attested_header: BeaconHeader,
-	pub next_sync_committee: SyncCommittee<COMMITTEE_SIZE>,
-	pub next_sync_committee_branch: Vec<H256>,
 	pub validators_root: H256,
 	pub block_roots_root: H256,
 	pub block_roots_branch: Vec<H256>,
-	pub execution_header: VersionedExecutionPayloadHeader,
-	pub execution_branch: Vec<H256>,
 }
 
 #[derive(
@@ -36,7 +31,7 @@ pub struct CheckpointUpdate<const COMMITTEE_SIZE: usize> {
 #[cfg_attr(
 	feature = "std",
 	derive(serde::Deserialize),
-	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+	serde(bound(serialize = ""), bound(deserialize = ""))
 )]
 pub struct Update<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize> {
 	/// A recent header attesting to the finalized header, using its `state_root`.
@@ -59,9 +54,9 @@ pub struct Update<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 	/// The merkle path to prove the `block_roots_root` value.
 	pub block_roots_branch: Vec<H256>,
 	/// The execution header to be imported
-	pub execution_header: VersionedExecutionPayloadHeader,
+	pub execution_header: Option<VersionedExecutionPayloadHeader>,
 	/// The merkle proof for the execution_header
-	pub execution_branch: Vec<H256>,
+	pub execution_branch: Option<Vec<H256>>,
 }
 
 #[derive(

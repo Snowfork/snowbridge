@@ -10,14 +10,9 @@ func (p BeaconCheckpoint) ToJSON() json.CheckPoint {
 		Header:                     p.Header.ToJSON(),
 		CurrentSyncCommittee:       p.CurrentSyncCommittee.ToJSON(),
 		CurrentSyncCommitteeBranch: util.ScaleBranchToString(p.CurrentSyncCommitteeBranch),
-		AttestedHeader:             p.AttestedHeader.ToJSON(),
-		NextSyncCommittee:          p.NextSyncCommittee.ToJSON(),
-		NextSyncCommitteeBranch:    util.ScaleBranchToString(p.NextSyncCommitteeBranch),
 		ValidatorsRoot:             p.ValidatorsRoot.Hex(),
 		BlockRootsRoot:             p.BlockRootsRoot.Hex(),
 		BlockRootsBranch:           util.ScaleBranchToString(p.BlockRootsBranch),
-		ExecutionHeader:            p.ExecutionHeader.ToJSON(),
-		ExecutionBranch:            util.ScaleBranchToString(p.ExecutionBranch),
 	}
 }
 
@@ -29,6 +24,15 @@ func (p UpdatePayload) ToJSON() json.Update {
 			NextSyncCommitteeBranch: util.ScaleBranchToString(p.NextSyncCommitteeUpdate.Value.NextSyncCommitteeBranch),
 		}
 	}
+	var executionHeader json.VersionedExecutionPayloadHeader
+	if p.ExecutionHeader.HasValue {
+		executionHeader = p.ExecutionHeader.Value.ToJSON()
+	}
+
+	var executionBranch []string
+	if p.ExecutionBranch.HasValue {
+		executionBranch = util.ScaleBranchToString(p.ExecutionBranch.Value)
+	}
 
 	return json.Update{
 		AttestedHeader:          p.AttestedHeader.ToJSON(),
@@ -39,8 +43,8 @@ func (p UpdatePayload) ToJSON() json.Update {
 		FinalityBranch:          util.ScaleBranchToString(p.FinalityBranch),
 		BlockRootsRoot:          p.BlockRootsRoot.Hex(),
 		BlockRootsBranch:        util.ScaleBranchToString(p.BlockRootsBranch),
-		ExecutionHeader:         p.ExecutionHeader.ToJSON(),
-		ExecutionBranch:         util.ScaleBranchToString(p.ExecutionBranch),
+		ExecutionHeader:         &executionHeader,
+		ExecutionBranch:         &executionBranch,
 	}
 }
 

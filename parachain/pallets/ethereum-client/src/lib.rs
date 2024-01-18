@@ -310,62 +310,14 @@ pub mod pallet {
 				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
 
-			// Execution payload header corresponding to `beacon.body_root` (from Capella onward)
-			// https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/light-client/sync-protocol.md#modified-lightclientheader
-			if update.execution_branch.len() > 0 {
-				let execution_header_root: H256 = update
-					.execution_header
-					.hash_tree_root()
-					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
-
-				ensure!(
-					verify_merkle_branch(
-						execution_header_root,
-						&update.execution_branch,
-						config::EXECUTION_HEADER_SUBTREE_INDEX,
-						config::EXECUTION_HEADER_DEPTH,
-						update.header.body_root
-					),
-					Error::<T>::InvalidExecutionHeaderProof
-				);
-				Self::store_execution_header(
-					update.execution_header.block_hash(),
-					update.execution_header.clone().into(),
-					update.header.slot,
-					header_root,
-				);
-			}
-
 			let sync_committee_prepared: SyncCommitteePrepared = (&update.current_sync_committee)
 				.try_into()
 				.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
 			<CurrentSyncCommittee<T>>::set(sync_committee_prepared);
-
-			if update.next_sync_committee_branch.len() > 0 {
-				let next_sync_committee_root = update
-					.next_sync_committee
-					.hash_tree_root()
-					.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
-
-				// Verifies the next sync committee in the Beacon state.
-				ensure!(
-					verify_merkle_branch(
-						next_sync_committee_root,
-						&update.next_sync_committee_branch,
-						config::NEXT_SYNC_COMMITTEE_SUBTREE_INDEX,
-						config::NEXT_SYNC_COMMITTEE_DEPTH,
-						update.attested_header.state_root
-					),
-					Error::<T>::InvalidSyncCommitteeMerkleProof
-				);
-				let next_sync_committee_prepared: SyncCommitteePrepared = (&update
-					.next_sync_committee)
-					.try_into()
-					.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
-				<NextSyncCommittee<T>>::set(next_sync_committee_prepared);
-			}
-
+			<NextSyncCommittee<T>>::kill();
 			InitialCheckpointRoot::<T>::set(header_root);
+			<LatestExecutionState<T>>::kill();
+
 			Self::store_validators_root(update.validators_root);
 			Self::store_finalized_header(header_root, update.header, update.block_roots_root)?;
 
@@ -524,22 +476,22 @@ pub mod pallet {
 
 			// Execution payload header corresponding to `beacon.body_root` (from Capella onward)
 			// https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/light-client/sync-protocol.md#modified-lightclientheader
-			if update.execution_branch.len() > 0 {
-				let execution_header_root: H256 = update
-					.execution_header
+			if let Some(version_execution_header) = &update.execution_header {
+				let execution_header_root: H256 = version_execution_header
 					.hash_tree_root()
 					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
-
-				ensure!(
-					verify_merkle_branch(
-						execution_header_root,
-						&update.execution_branch,
-						config::EXECUTION_HEADER_SUBTREE_INDEX,
-						config::EXECUTION_HEADER_DEPTH,
-						update.finalized_header.body_root
-					),
-					Error::<T>::InvalidExecutionHeaderProof
-				);
+				if let Some(execution_branch) = &update.execution_branch {
+					ensure!(
+						verify_merkle_branch(
+							execution_header_root,
+							&execution_branch,
+							config::EXECUTION_HEADER_SUBTREE_INDEX,
+							config::EXECUTION_HEADER_DEPTH,
+							update.finalized_header.body_root
+						),
+						Error::<T>::InvalidExecutionHeaderProof
+					);
+				}
 			}
 
 			Ok(())
@@ -593,14 +545,14 @@ pub mod pallet {
 				)?;
 			}
 
-			if update.execution_branch.len() > 0 {
+			if let Some(version_execution_header) = &update.execution_header {
 				let finalized_block_root: H256 = update
 					.finalized_header
 					.hash_tree_root()
 					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 				Self::store_execution_header(
-					update.execution_header.block_hash(),
-					update.execution_header.clone().into(),
+					version_execution_header.block_hash(),
+					version_execution_header.clone().into(),
 					update.finalized_header.slot,
 					finalized_block_root,
 				);

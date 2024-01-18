@@ -205,6 +205,14 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 }
 
 func (h *Header) syncLaggingSyncCommitteePeriod(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
+	// sync for the next period
+	periodsToSync := []uint64{latestSyncedPeriod + 1}
+
+	// For initialPeriod special handling here to sync it again for nextSyncCommittee which is not included in InitCheckpoint
+	if h.isInitialSyncPeriod() {
+		periodsToSync = append([]uint64{latestSyncedPeriod}, periodsToSync...)
+	}
+
 	log.WithFields(log.Fields{
 		"period": latestSyncedPeriod + 1,
 	}).Info("sync committee periods to be synced")
@@ -336,4 +344,10 @@ func (h *Header) SyncExecutionHeader(ctx context.Context, blockRoot common.Hash)
 		return fmt.Errorf("invalid compactExecutionHeaderState")
 	}
 	return nil
+}
+
+func (h *Header) isInitialSyncPeriod() bool {
+	initialPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.InitialCheckpointSlot)
+	lastFinalizedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
+	return initialPeriod == lastFinalizedPeriod
 }

@@ -21,14 +21,9 @@ type BeaconCheckpoint struct {
 	Header                     BeaconHeader
 	CurrentSyncCommittee       SyncCommittee
 	CurrentSyncCommitteeBranch []types.H256
-	AttestedHeader             BeaconHeader
-	NextSyncCommittee          SyncCommittee
-	NextSyncCommitteeBranch    []types.H256
 	ValidatorsRoot             types.H256
 	BlockRootsRoot             types.H256
 	BlockRootsBranch           []types.H256
-	ExecutionHeader            VersionedExecutionPayloadHeader
-	ExecutionBranch            []types.H256
 }
 
 type Update struct {
@@ -46,8 +41,26 @@ type UpdatePayload struct {
 	FinalityBranch          []types.H256
 	BlockRootsRoot          types.H256
 	BlockRootsBranch        []types.H256
-	ExecutionHeader         VersionedExecutionPayloadHeader
-	ExecutionBranch         []types.H256
+	ExecutionHeader         OptionExecutionHeader
+	ExecutionBranch         OptionExecutionBranch
+}
+
+type OptionExecutionHeader struct {
+	HasValue bool
+	Value    VersionedExecutionPayloadHeader
+}
+
+func (o OptionExecutionHeader) Encode(encoder scale.Encoder) error {
+	return encoder.EncodeOption(o.HasValue, o.Value)
+}
+
+type OptionExecutionBranch struct {
+	HasValue bool
+	Value    []types.H256
+}
+
+func (o OptionExecutionBranch) Encode(encoder scale.Encoder) error {
+	return encoder.EncodeOption(o.HasValue, o.Value)
 }
 
 type OptionNextSyncCommitteeUpdatePayload struct {

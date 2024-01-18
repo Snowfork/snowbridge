@@ -56,15 +56,12 @@ pub fn make_checkpoint() -> Box<CheckpointUpdate> {
             aggregate_pubkey: hex!("8fe11476a05750c52618deb79918e2e674f56dfbf12dbce55ae4386d108e8a1e83c6326f5957e2ef19137582ce270dc6").into(),
         },
         current_sync_committee_branch: vec![
-                hex!("c6dd41df7b4978b7ee7479dcbfdbfa9fb56d1464afe9806bfd6f527e9d1c69a4").into(),
-                hex!("b3824f305318071010d4f4d9505f9fc102cdd57f1c03cf4540e471b157f98e3f").into(),
-                hex!("66677299731d34be9d4dea7c0e89d8eae81b8dffa3c6218152484a063b1064a1").into(),
-                hex!("ef53c2b02cdb7f44fb37ea75f4c48c5086604a26be9635f88b1138f961f87773").into(),
-                hex!("1a3f86a88fb2ec99cb1d7b0f35227c0f646490773bac523c30fc7eccf87c0f84").into(),
+            hex!("c6dd41df7b4978b7ee7479dcbfdbfa9fb56d1464afe9806bfd6f527e9d1c69a4").into(),
+            hex!("b3824f305318071010d4f4d9505f9fc102cdd57f1c03cf4540e471b157f98e3f").into(),
+            hex!("66677299731d34be9d4dea7c0e89d8eae81b8dffa3c6218152484a063b1064a1").into(),
+            hex!("ef53c2b02cdb7f44fb37ea75f4c48c5086604a26be9635f88b1138f961f87773").into(),
+            hex!("1a3f86a88fb2ec99cb1d7b0f35227c0f646490773bac523c30fc7eccf87c0f84").into(),
         ],
-        attested_header: Default::default(),
-        next_sync_committee: Default::default(),
-        next_sync_committee_branch: vec![],
         validators_root: hex!("270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69").into(),
         block_roots_root: hex!("8ad7487f0e79a6cf67ce49916f74e5b272be9e38ea5f8a6a588eaa89ea7f858e").into(),
         block_roots_branch: vec![
@@ -74,8 +71,6 @@ pub fn make_checkpoint() -> Box<CheckpointUpdate> {
             hex!("857526b3bf20de3ec6e57565dd593304f83e47541cc18d7c2d5b4c9f2724ba14").into(),
             hex!("1b4bedd5ecc523599da000387f5e33ffe5324b8e234c43ee702de8ccc88d713f").into(),
         ],
-        execution_header: Default::default(),
-        execution_branch: vec![],
     })
 }
 
@@ -162,8 +157,6 @@ pub fn make_sync_committee_update() -> Box<Update> {
             hex!("506ed8ca9908af4b5acb4cfdec6dd968acf38346c16385abca360c9976411c3e").into(),
             hex!("ada571922caf3dde48e19f1482df8d17dd6bb05e525c016c8cf6796a5d7f4a00").into(),
         ],
-        execution_header: Default::default(),
-        execution_branch: vec![],
     })
 }
 
@@ -204,9 +197,7 @@ pub fn make_finalized_header_update() -> Box<Update> {
             hex!("bc9b31cd5d18358bff3038fab52101cfd5c56c75539449d988c5a789200fb264").into(),
             hex!("7d57e424243eeb39169edccf9dab962ba8d80a9575179799bbd509c95316d8df").into(),
             hex!("c07eeb9da14bcedb7dd225a68b92f578ef0b86187724879e5171d5de8a00be3a").into(),
-        ],
-        execution_header: Default::default(),
-        execution_branch: vec![],
+        ]
     })
 }
 
