@@ -454,7 +454,7 @@ fn submit_update_with_sync_committee_in_current_period() {
 fn submit_update_in_next_period() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let sync_committee_update = Box::new(load_sync_committee_update_fixture());
-	let update = load_next_finalized_header_update_fixture();
+	let update = Box::new(load_next_finalized_header_update_fixture());
 	let sync_committee_period = compute_period(sync_committee_update.finalized_header.slot);
 	let next_sync_committee_period = compute_period(update.finalized_header.slot);
 	assert_eq!(sync_committee_period + 1, next_sync_committee_period);
