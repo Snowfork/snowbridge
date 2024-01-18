@@ -158,7 +158,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 	lastSyncedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
 
 	if lastSyncedPeriod < currentSyncPeriod {
-		err = h.syncLaggingSyncCommitteePeriod(ctx, lastSyncedPeriod, currentSyncPeriod)
+		err = h.syncLaggingSyncCommitteePeriods(ctx, lastSyncedPeriod, currentSyncPeriod)
 		if err != nil {
 			return fmt.Errorf("sync lagging sync committee periods: %w", err)
 		}
@@ -204,7 +204,7 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 	return nil
 }
 
-func (h *Header) syncLaggingSyncCommitteePeriod(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
+func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
 	// sync for the next period
 	periodsToSync := []uint64{latestSyncedPeriod + 1}
 

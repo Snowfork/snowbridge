@@ -480,18 +480,20 @@ pub mod pallet {
 				let execution_header_root: H256 = version_execution_header
 					.hash_tree_root()
 					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
-				if let Some(execution_branch) = &update.execution_branch {
-					ensure!(
-						verify_merkle_branch(
-							execution_header_root,
-							&execution_branch,
-							config::EXECUTION_HEADER_SUBTREE_INDEX,
-							config::EXECUTION_HEADER_DEPTH,
-							update.finalized_header.body_root
-						),
-						Error::<T>::InvalidExecutionHeaderProof
-					);
-				}
+				ensure!(
+					&update.execution_branch.is_some(),
+					Error::<T>::InvalidExecutionHeaderProof
+				);
+				ensure!(
+					verify_merkle_branch(
+						execution_header_root,
+						&update.execution_branch.clone().unwrap(),
+						config::EXECUTION_HEADER_SUBTREE_INDEX,
+						config::EXECUTION_HEADER_DEPTH,
+						update.finalized_header.body_root
+					),
+					Error::<T>::InvalidExecutionHeaderProof
+				);
 			}
 
 			Ok(())
