@@ -13,7 +13,6 @@ use std::{fs::File, path::PathBuf};
 type Block = frame_system::mocking::MockBlock<Test>;
 use sp_runtime::BuildStorage;
 
-
 fn load_fixture<T>(basename: String) -> Result<T, serde_json::Error>
 where
 	T: for<'de> serde::Deserialize<'de>,
