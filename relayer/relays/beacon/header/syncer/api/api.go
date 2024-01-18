@@ -14,7 +14,8 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
 const (
