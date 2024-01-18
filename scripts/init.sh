@@ -22,7 +22,10 @@ echo "Installing web packages"
 (cd web && pnpm install)
 
 echo "Download geth to replace the nix version"
-geth_package=geth-$(uname | tr '[:upper:]' '[:lower:]')-amd64-1.13.10-bc0be1b1
+OS=$(uname -s | tr A-Z a-z)
+MACHINE_TYPE=$(uname -m | tr A-Z a-z)
+geth_package=geth-$OS-$MACHINE_TYPE-1.13.10-bc0be1b1
 curl https://gethstore.blob.core.windows.net/builds/$geth_package.tar.gz -o /tmp/geth.tar.gz
+mkdir -p $GOPATH/bin
 tar -xvf /tmp/geth.tar.gz -C $GOPATH
 cp $GOPATH/$geth_package/geth $GOPATH/bin
