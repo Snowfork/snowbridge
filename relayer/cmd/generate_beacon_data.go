@@ -73,9 +73,9 @@ type Data struct {
 }
 
 const (
-	pathToBeaconBenchmarkData    = "parachain/pallets/ethereum-beacon-client/src/benchmarking"
+	pathToBeaconBenchmarkData    = "parachain/pallets/ethereum-client/src/benchmarking"
 	pathToBenchmarkDataTemplate  = "parachain/templates/benchmarking-fixtures.mustache"
-	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
+	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-client/tests/fixtures"
 )
 
 // Only print the hex encoded call as output of this command

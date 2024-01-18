@@ -196,18 +196,18 @@ func (b *BeaconStateDenebMainnet) SetBlockRoots(blockRoots [][]byte) {
 	b.BlockRoots = blockRoots
 }
 
-func (b *BeaconBlockDenebMainnet) CapallaExecutionPayload() *ExecutionPayloadCapella {
+func (b *BeaconBlockDenebMainnet) ExecutionPayloadCapella() *ExecutionPayloadCapella {
 	return nil
 }
 
-func (b *BeaconBlockDenebMainnet) DenebExecutionPayload() *ExecutionPayloadDeneb {
+func (b *BeaconBlockDenebMainnet) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
 	return b.Body.ExecutionPayload
 }
 
-func (b *BeaconBlockDenebMinimal) CapallaExecutionPayload() *ExecutionPayloadCapella {
+func (b *BeaconBlockDenebMinimal) ExecutionPayloadCapella() *ExecutionPayloadCapella {
 	return nil
 }
 
-func (b *BeaconBlockDenebMinimal) DenebExecutionPayload() *ExecutionPayloadDeneb {
+func (b *BeaconBlockDenebMinimal) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
 	return b.Body.ExecutionPayload
 }

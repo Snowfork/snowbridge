@@ -19,6 +19,3 @@
 [submodule "lodestar"]
 	path = lodestar
 	url = https://github.com/Snowfork/lodestar
-[submodule "go-ethereum"]
-	path = go-ethereum
-	url = https://github.com/Snowfork/go-ethereum
