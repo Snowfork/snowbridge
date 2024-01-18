@@ -1,38 +1,38 @@
 {
   "attested_header": {
-    "slot": 4058720,
-    "proposer_index": 1088,
-    "parent_root": "0x37c7398a391c71da07258b48f41d4caaaf891fdf558e110b9c25db716fa8ff55",
-    "state_root": "0x6cf68a66c993f1c27f499e054a5fbd7c0e625c34ea0057fda9691c561e990002",
-    "body_root": "0x109e4c0c647d42dba0c8c6569997c51b5bcfc1a33475b1433ded6353f48423ff"
+    "slot": 7421515,
+    "proposer_index": 126263,
+    "parent_root": "0x8a64c6e095f15aff1f7a3b0d1f7cd25fd33fb902af3d88f56b8853950e28cf65",
+    "state_root": "0x9717e392f73211e8074089207f71bcce323ac9e3788516db53209edfc63c3298",
+    "body_root": "0x643b176af507418f10d16fcd9a7529d44397e418301efb686f79aaf8d6bd4898"
   },
   "sync_aggregate": {
-    "sync_committee_bits": "0xffffffffff7bfdfffff7fffff1effffef7f9ffbdfdffffffdffbfffbbf7ffffffffffefdf7ffbeffdffef7bfffffffffffbffffffffffbffffffffffffffdfda",
-    "sync_committee_signature": "0xb5727bad1db101b6f0fd7ec4cb79b43dae90366fe0cae31a62439388eb03ebd75732cee3bde51f814203a4c0f5b23898120cd0870f0e662bdf0f85a048b534d9a906e6d32a65df019059d34f724221075734ec2849c09679febecf6929934f09"
+    "sync_committee_bits": "0x735fff77bfffb9bff67dff67ffcef77cf3fff679fedfdcfbf2effbef972ebff9b5e1bebfbebaffdde3feef4fbcafecffbeaee3eee9eff8afff3b75bbf77e7df7",
+    "sync_committee_signature": "0x89e1aa0180eed4f6417bb000f9d1a1b6d12fc8865eb86aadc54767e6404fc4cc93608afcc779de7363c55f4e84cd111c118da326e58f75943ea6954915a579bb82c3ea3a1aa9d2bcefde0d6b476d1b5238dd01e2ef8ed2fedaf110b9133d15ce"
   },
-  "signature_slot": 4058721,
+  "signature_slot": 7421516,
   "next_sync_committee_update": null,
   "finalized_header": {
-    "slot": 4058656,
-    "proposer_index": 810,
-    "parent_root": "0xbb6cfda1e02c3117d9fa41c1e1594ce0645352a073ad8b474f83c148e0d9954f",
-    "state_root": "0xf938f0f0cba85234afbaace20545134c70b35e6ff9f74d944b0fea309109f3cf",
-    "body_root": "0xcf6a7a6f653cb64b2b910278a478339b34eb08abf00e0766d10c7a8fe9bdb139"
+    "slot": 7421408,
+    "proposer_index": 194384,
+    "parent_root": "0x5250b609cb30103d304dd4e2a3e170b7db73b6689ca57e802df761677fafcb29",
+    "state_root": "0xce6a37ba0354793f1bcef0fb3e7bcbdbd80baa4090abcf74ef1264196b46ef0b",
+    "body_root": "0x21c3ceffc41d81bd04310f8eb0a92e3c7952684b6126c2d728987ac84ec7c164"
   },
   "finality_branch": [
-    "0x71ef010000000000000000000000000000000000000000000000000000000000",
-    "0x3d4be5d019ba15ea3ef304a83b8a067f2e79f46a3fac8069306a6c814a0a35eb",
-    "0xa2e2a28c0bb0ad56c25f3c461a4bfe4f3b3b894bc0105a62e85f43a4ae1adc3f",
-    "0xaa2bad8cf9b0433d3d79bc5b95c067048b018d1d2ffd0c66db6e7cf86e0a314e",
-    "0x027f238235d07ac9757543c19deabe1d553d6fc110e8bea4b037b1fab263b4dc",
-    "0x7dfa1cc1907e8927295f78a770bf86b28f5c2bddcac38beb3b4beb265ff5608f"
+    "0xef89030000000000000000000000000000000000000000000000000000000000",
+    "0x4ee9e89847722cca4c32143c79bd5f4308384fb49875c99dda4d395a835fc2c3",
+    "0x3bf8d82be3501d21f5f9ec6b4a03a3546d1480c9ef61cf4ed3f9484e2ffa1e0f",
+    "0xacb1c92001c0d9aa1e71fa72512ae27a5b73b62e9ed8c5e0b8e4895286f203b2",
+    "0x49a84bf41359badab7dbe871ac5b7e48b9b6c14c3cae3b746636f2c9d8f1a793",
+    "0x60c127bf3036f2facdfc2565daa298488574266ed06d4f71a94312048849002a"
   ],
-  "block_roots_root": "0x4a5a57fb0769443f6472f59dbb78d7a9a69ff61d09aa89d5da645d634ec46a14",
+  "block_roots_root": "0x228bb6780c3518887c2d7d39f7c901fd6906073f360cf1a3197666a3ff0d4345",
   "block_roots_branch": [
-    "0xa09ad7f3afd681bb6fd54abba339549f3b601beedea79a5b7d448b1cf1e1613e",
-    "0xacdfd4d5eba154f118a84af7a2d17ba6100fcd9c24fc235e927f584a5b56e32f",
-    "0x36ca106eac009ed605e680415b105b3a6591830c38034511f300aae44802235f",
-    "0x171561a9e1afb413132d0f4d3cbbd810766c151be32ec9f2d609f40aef9e2588",
-    "0x7cd963eba3fb57ee5ce37ee4b621d24fc14d642e32f48dc48ade528e11458ab9"
+    "0xb87f676451f23627cd4154c79915ad482659690fcd161de331c6026f97aef1e3",
+    "0x850939f4a1954a844cbe26f069aacf32aa13f4fd58a9cdbc8513a745eb150649",
+    "0x3c89979b060890f0f5c6fa080a17c6a67159ea64e1f450ae1f93094435a0f53c",
+    "0xc1dd826ce139b59f4ed437704f32ade5797c3c9c83631caef6738e41c046c39e",
+    "0xd7bb698938c717e96138d7595b71fb79d3d2453dcbba73edc3eb2cc75a50afe3"
   ]
 }
