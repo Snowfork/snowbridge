@@ -205,8 +205,11 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 }
 
 func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
-	// sync for the next period
-	periodsToSync := []uint64{latestSyncedPeriod + 1}
+	// sync for all missing periods
+	periodsToSync := []uint64{}
+	for i := latestSyncedPeriod + 1; i <= currentSyncPeriod; i++ {
+		periodsToSync = append(periodsToSync, i)
+	}
 
 	// For initialPeriod special handling here to sync it again for nextSyncCommittee which is not included in InitCheckpoint
 	if h.isInitialSyncPeriod() {
@@ -214,14 +217,18 @@ func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSync
 	}
 
 	log.WithFields(log.Fields{
-		"period": latestSyncedPeriod + 1,
+		"periods": periodsToSync,
 	}).Info("sync committee periods to be synced")
 
-	err := h.SyncCommitteePeriodUpdate(ctx, latestSyncedPeriod+1)
-	if err != nil {
-		return err
+	for _, period := range periodsToSync {
+		err := h.SyncCommitteePeriodUpdate(ctx, period)
+		if err != nil {
+			return err
+		}
 	}
 
+	// If Latency found between LastSyncedSyncCommitteePeriod and currentSyncPeriod in Ethereum beacon client
+	// just return error so to exit ASAP to allow ExecutionUpdate to catch up
 	lastSyncedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
 	if lastSyncedPeriod < currentSyncPeriod {
 		return ErrSyncCommitteeLatency
