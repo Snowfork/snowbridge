@@ -2,12 +2,13 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use super::*;
 mod util;
+mod fixtures;
 
 use crate::Pallet as EthereumBeaconClient;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 
-use fixtures_mainnet::*;
+use fixtures::*;
 
 use primitives::{
 	fast_aggregate_verify, prepare_aggregate_pubkey, prepare_aggregate_signature,
@@ -146,6 +147,6 @@ mod benchmarks {
 	impl_benchmark_test_suite!(
 		EthereumBeaconClient,
 		crate::mock::new_tester(),
-		crate::mock:::Test
+		crate::mock::Test
 	);
 }
