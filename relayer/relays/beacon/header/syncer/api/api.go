@@ -15,17 +15,14 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 )
 
-const (
-	ConstructRequestErrorMessage = "construct header request"
-	DoHTTPRequestErrorMessage    = "do http request"
-	HTTPStatusNotOKErrorMessage  = "http status not ok"
-	ReadResponseBodyErrorMessage = "read response body"
-	UnmarshalBodyErrorMessage    = "unmarshal body"
-)
-
 var (
 	ErrNotFound                        = errors.New("not found")
 	ErrSyncCommitteeUpdateNotAvailable = errors.New("no sync committee update available")
+	ConstructRequestErrorMessage       = "construct header request"
+	DoHTTPRequestErrorMessage          = "do http request"
+	HTTPStatusNotOKErrorMessage        = "http status not ok"
+	ReadResponseBodyErrorMessage       = "read response body"
+	UnmarshalBodyErrorMessage          = "unmarshal body"
 )
 
 type BeaconClient struct {
