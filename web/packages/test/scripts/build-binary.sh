@@ -60,7 +60,7 @@ build_relayer() {
 
 hack_beacon_client() {
     echo "Hack lodestar for faster slot time"
-    local preset_minimal_config_file="$root_dir/lodestar/packages/config/src/chainConfig/presets/minimal.ts"
+    local preset_minimal_config_file="$root_dir/lodestar/packages/config/src/chainConfig/presets/mainnet.ts"
     if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
         gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/g" $preset_minimal_config_file
     else

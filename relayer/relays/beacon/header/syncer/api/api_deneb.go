@@ -21,15 +21,9 @@ func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb, activeSpec con
 
 	var withdrawalRoot types.H256
 
-	if activeSpec == config.Minimal {
-		withdrawalContainer := state.WithdrawalsRootContainerMinimal{}
-		withdrawalContainer.Withdrawals = e.Withdrawals
-		withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
-	} else {
-		withdrawalContainer := state.WithdrawalsRootContainerMainnet{}
-		withdrawalContainer.Withdrawals = e.Withdrawals
-		withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
-	}
+	withdrawalContainer := state.WithdrawalsRootContainerMainnet{}
+	withdrawalContainer.Withdrawals = e.Withdrawals
+	withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
 	if err != nil {
 		return payloadHeader, err
 	}
