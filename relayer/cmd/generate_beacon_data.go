@@ -272,10 +272,10 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		log.Info("created execution update file")
 
 		compactBeaconHeader := beaconjson.CompactExecutionHeader{
-			ParentHash:   headerUpdate.ExecutionHeader.ParentHash,
-			StateRoot:    headerUpdate.ExecutionHeader.StateRoot,
-			ReceiptsRoot: headerUpdate.ExecutionHeader.ReceiptsRoot,
-			BlockNumber:  headerUpdate.ExecutionHeader.BlockNumber,
+			ParentHash:   headerUpdate.ExecutionHeader.Capella.ParentHash,
+			StateRoot:    headerUpdate.ExecutionHeader.Capella.StateRoot,
+			ReceiptsRoot: headerUpdate.ExecutionHeader.Capella.ReceiptsRoot,
+			BlockNumber:  headerUpdate.ExecutionHeader.Capella.BlockNumber,
 		}
 
 		inboundMessageTest := InboundMessageTest{
@@ -612,12 +612,10 @@ func getFinalizedUpdate(s syncer.Syncer, eventBlockNumber uint64) (*scale.Update
 			return nil, err
 		}
 
-		beaconBlockScale, err := beaconBlock.ToScale()
+		blockNumber, err = strconv.ParseUint(beaconBlock.Data.Message.Body.ExecutionPayload.BlockNumber, 10, 64)
 		if err != nil {
 			return nil, err
 		}
-
-		blockNumber = uint64(beaconBlockScale.Body.ExecutionPayload.BlockNumber)
 
 		if blockNumber > eventBlockNumber {
 			log.Info("found finalized block after message")

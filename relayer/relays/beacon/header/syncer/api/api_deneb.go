@@ -2,14 +2,13 @@ package api
 
 import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 	"math/big"
 )
 
-func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb, activeSpec config.ActiveSpec) (scale.ExecutionPayloadHeaderDeneb, error) {
+func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb) (scale.ExecutionPayloadHeaderDeneb, error) {
 	var payloadHeader scale.ExecutionPayloadHeaderDeneb
 	transactionsContainer := state.TransactionsRootContainer{}
 	transactionsContainer.Transactions = e.Transactions
