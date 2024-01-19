@@ -393,7 +393,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 						return fmt.Errorf("get sync committee update: %w", err)
 					}
 					nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
-					err = writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("next-sync-committee-update.json"))
+					err = writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "next-sync-committee-update.json"))
 					if err != nil {
 						return err
 					}

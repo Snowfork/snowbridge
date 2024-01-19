@@ -1,6 +1,8 @@
 // Generated, do not edit!
 // See README.md for instructions to generate
-use crate::{CheckpointUpdate, ExecutionHeaderUpdate, Update};
+use crate::{
+	CheckpointUpdate, ExecutionHeaderUpdate, Update,
+};
 use hex_literal::hex;
 use primitives::{
 	updates::AncestryProof, BeaconHeader, ExecutionPayloadHeader, NextSyncCommitteeUpdate,
@@ -10,13 +12,13 @@ use sp_core::U256;
 use sp_std::{boxed::Box, vec};
 
 pub fn make_checkpoint() -> Box<CheckpointUpdate> {
-	Box::new(CheckpointUpdate {
+    Box::new(CheckpointUpdate {
         header: BeaconHeader {
-            slot: 576,
+            slot: 128,
             proposer_index: 4,
-            parent_root: hex!("2ec20030f6471f594bf209e2924a6aa76f70e89387f451cc12b12ad3745b98a8").into(),
-            state_root: hex!("85c07f80846e3cd124d46f5b335fc83cef83a75b8a06fa691ae8371144012b0a").into(),
-            body_root: hex!("a6a846f804e6ca59334f3ce626e64f895836246a7c5d22fc0d086082159b2238").into(),
+            parent_root: hex!("0d99e5d1567a55a6714b88f841d33bc9e75d87f52595902202ed0e4010189135").into(),
+            state_root: hex!("8700d059bdb1332795273b9787615e3b2a3ac465525846eac2e70c889c485b5a").into(),
+            body_root: hex!("e233cc28a7447d530446f66a0c02cf46a989adb627f5209d9f3a46f136bbac3f").into(),
         },
         current_sync_committee: SyncCommittee {
             pubkeys: [
@@ -537,35 +539,35 @@ pub fn make_checkpoint() -> Box<CheckpointUpdate> {
         },
         current_sync_committee_branch: vec![
                 hex!("26667a1f3519f7c687f1dc80340b204c3c0f39a08fe70a43e76472fffe17c50a").into(),
-                hex!("010a9888df49c9e6455e97691f584d98e8b288fee272169e1957c86d91d6a421").into(),
-                hex!("8191773795baf1053cdbaa7dcfa72b794eb0a86c255cb3e503255f7c01203c99").into(),
-                hex!("77d4c99070f309892f503ea6686d195853b654472c5b5debf6b3b45ed6fbe1f2").into(),
-                hex!("70a758121dd2515193ae7eeb9a4ae42eb7175335a7b7fde074500b20f9fca7f0").into(),
+                hex!("01de5be44cb09aa87860c87c2f8a548dec3e9fbb096e62ccd053d4623db189f1").into(),
+                hex!("1437916a47476451dd03518524e7ce92645441326dcc4b75fadeeb71b947ed2d").into(),
+                hex!("7eee7ce7210102cc63c9350f4436731e16f6a32cd135ba03cf3aad1f42f6099a").into(),
+                hex!("d077a1180b3141f14ee681d18221db693856b4f7235f03e1d1740c5ee06b7ee1").into(),
         ],
         validators_root: hex!("270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69").into(),
-        block_roots_root: hex!("e7fde4ff62bcf8c17d0e050a9cd39f698d0f31000fb0e833d90e5f042db81a32").into(),
+        block_roots_root: hex!("c0b9d390058a44e6d820ce83e66263f2724cca9c8ffd3ee6ceae433ac6adf9f6").into(),
         block_roots_branch: vec![
-            hex!("83728ec879806961d4b27da2ef2d76127d1477ffedf81bd78cdb6e779cb8c99b").into(),
-            hex!("c17ef7addf10aa73c975cb00cc011cef3afa008b4d9fdceb280ea03c6907e2a6").into(),
-            hex!("6020d8098f31f9ca0044e5405dd92ee4b8666c00f9984a41451b43a1be2db9fb").into(),
-            hex!("5d878a041d271775ee7a161511898b1c02a496984167a409c75afab71e6494f0").into(),
-            hex!("88f431867f85b8f7c1962f4c3f91c9017111901b75316b6b0085ac637cff0f00").into(),
+            hex!("50458f86c0acad28647f130307ab5cbd524662d7b86c9328abdd8297807b1dfa").into(),
+            hex!("c289607d6dbfca932acdab3f03c6e7598aad9031d668e8835d10678292386b76").into(),
+            hex!("aecb4ec530cdd65bacfbb0bf73f9ee9898002992aeb034d494a9d224250743d0").into(),
+            hex!("3592d687b8f40e5b87af2ccfe2a51121868cbf6dcc72fed71d422c99921c2679").into(),
+            hex!("632716fc3726f3705c6f0345399a9cebda2d4afe3bb59f95390216bf869873f5").into(),
         ],
     })
 }
 
 pub fn make_sync_committee_update() -> Box<Update> {
-	Box::new(Update {
+    Box::new(Update {
         attested_header: BeaconHeader {
             slot: 129,
             proposer_index: 6,
-            parent_root: hex!("71007d74091331caf734e78ce4f664c4ad3c5d0dab9b32fcda0d7e86895af85f").into(),
-            state_root: hex!("a3a74dd9f61ef4596b257de23749aa38e1878b3fe4ebdbcdd8fd8be9892322b0").into(),
-            body_root: hex!("5f4e078df13b0dfb5267a32a8fb1e55ab9aa680f51ea965d060edac5b989f6c4").into(),
+            parent_root: hex!("9f2a3b19df67946a42ee0cecee5fff5aa9d9b8c5a67a9bb0d189a261c09e7193").into(),
+            state_root: hex!("86cc6f49bb7024c218ded7513a9f902d4be8075dd0622709f41904ee1098baa1").into(),
+            body_root: hex!("f10978a07883d3c5d5d619277132e7800b885669716590cbf17b388b985dcbbf").into(),
         },
         sync_aggregate: SyncAggregate{
             sync_committee_bits: hex!("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-            sync_committee_signature: hex!("820ec591b23b80cc39f6e7a8fa9185fb0791d125d9ea368b252bdfde2c5fc40fe1f4c75adafeaf01b2566396e3a3bd2102bd4d1ded69d23237b1a2e4d7e501bd90fad60eacbb8ed2ac2a6d6564915dcd15d36fb4b08a09bf4745b08f4147508b").into(),
+            sync_committee_signature: hex!("87fc684ba49a1d3b17ff5011264c350f5df6b7ca6537487ff0cd4d872491412a77f536a97c55cb3569864dcb99bb677308666f5d648c574fe9c4b4a63bb26b02f1b97bb2832615de0f36b674d53525491dc3e2c2e00cf7342d4da1cb68d44e0f").into(),
         },
         signature_slot: 130,
         next_sync_committee_update: Some(NextSyncCommitteeUpdate {
@@ -1088,87 +1090,87 @@ pub fn make_sync_committee_update() -> Box<Update> {
             },
             next_sync_committee_branch: vec![
                 hex!("26667a1f3519f7c687f1dc80340b204c3c0f39a08fe70a43e76472fffe17c50a").into(),
-                hex!("201ac2a339a068decc70545a867b83a9256731846eff2864ef18606f95a923d5").into(),
-                hex!("6f1d613c7d17f685a5a1a185d375c91adef20aa540ae85f1663e04363bc4e508").into(),
-                hex!("9cf49488eed8021a3dfc4131449cc15d0e434fe01db467383bfdd290c449f886").into(),
-                hex!("44aaad0d983ff482347518de4f34b11f00476c2c0da4261dba2a8bcbbdbfd939").into(),
+                hex!("01de5be44cb09aa87860c87c2f8a548dec3e9fbb096e62ccd053d4623db189f1").into(),
+                hex!("1437916a47476451dd03518524e7ce92645441326dcc4b75fadeeb71b947ed2d").into(),
+                hex!("cc56a48ab055663298623f018b476c2fd255bcae00db3aa24bb48cbc3c3656ac").into(),
+                hex!("b9d033750b8f53364621df226b8c4be94369593b4f4eef79691cfbae6fc273a5").into(),
             ],
         }),
         finalized_header: BeaconHeader{
             slot: 64,
             proposer_index: 0,
-            parent_root: hex!("7fbed69cce696757bceca650f8deb96c332e84bcb59d9d68c12f0527b76be4f3").into(),
-            state_root: hex!("e83224024d2363b42bdfa9051ba15ecda9cc8e35e217d0d2cf9f4f61f1d8f1bd").into(),
-            body_root: hex!("a279c6b2ed4f0583a56c1ac10cd2fc46aa98e745e572277c45b3f2697de98076").into(),
+            parent_root: hex!("7f75934d4d33dbb0b15b525e15d9c42e720120236c8dc8b22ce0518605e188be").into(),
+            state_root: hex!("8662ba91251b2ee7ddc62b5074e13fda53a36b7d4d1eb25305c91afd9a77f370").into(),
+            body_root: hex!("6774cf44b5646b3cfc47f7482cdf03c3014a07da03088f227fb33c990adc816d").into(),
         },
         finality_branch: vec![
             hex!("0200000000000000000000000000000000000000000000000000000000000000").into(),
             hex!("10c726fac935bf9657cc7476d3cfa7bedec5983dcfb59e8a7df6d0a619e108d7").into(),
             hex!("daf8a03ff85a662ff55561aaf11278c7dddb8800d99462115f9558ea044e2a43").into(),
-            hex!("6f1d613c7d17f685a5a1a185d375c91adef20aa540ae85f1663e04363bc4e508").into(),
-            hex!("9cf49488eed8021a3dfc4131449cc15d0e434fe01db467383bfdd290c449f886").into(),
-            hex!("44aaad0d983ff482347518de4f34b11f00476c2c0da4261dba2a8bcbbdbfd939").into(),
+            hex!("1437916a47476451dd03518524e7ce92645441326dcc4b75fadeeb71b947ed2d").into(),
+            hex!("cc56a48ab055663298623f018b476c2fd255bcae00db3aa24bb48cbc3c3656ac").into(),
+            hex!("b9d033750b8f53364621df226b8c4be94369593b4f4eef79691cfbae6fc273a5").into(),
         ],
-        block_roots_root: hex!("7af34d57d791abbad724b520a4d527f94286b173904e84abbf1848ab4449ddc2").into(),
+        block_roots_root: hex!("d273c6745d168e49fcd88191ab0b6df7b8d04629aa5ab5a949fe7f5d091b09fa").into(),
         block_roots_branch: vec![
-            hex!("fd569bf11d4a619c4d326daf82f2353db954d7bab7c937fb81b396d35b5eb940").into(),
-            hex!("18b557f2eb10e7d962e63b1d666741a964572f36b889e823f2f93d5046589cf9").into(),
-            hex!("391b46c583f682b6a94a768848b68b47ab0cfc0619f85e2032fb00c128f9a36b").into(),
+            hex!("16c2e8a04062a2b2f8a9fb2eabc0f74ec1efb3429ddfcd7717c891fbb9f0f93f").into(),
+            hex!("21e3ec23e1afc9f37792f3ea453bdefc451009f4f4885a5d08416947891f0ba3").into(),
+            hex!("1294473cf175e6d94c09ab39a659331902ebe4e7d884fe89cac7cc217a053974").into(),
             hex!("d4c1f0bbc1ef89edcd99633c0e918afb10903e41ee7b27b5f44c6df1643ea600").into(),
-            hex!("3d7666479bd4d11d316f342828550768d7e0f495f4f555b473372d6222432ad5").into(),
+            hex!("d9594f7bdec9c3e95d6c9f36a253928f337f109500e8cd46f0cadf553e61b0eb").into(),
         ],
     })
 }
 
 pub fn make_finalized_header_update() -> Box<Update> {
-	Box::new(Update {
+    Box::new(Update {
         attested_header: BeaconHeader {
-            slot: 646,
-            proposer_index: 3,
-            parent_root: hex!("dcedea5c34f843d8ae22c948fec0ce3b5e6560545a0b8d2ae734d720e8816a24").into(),
-            state_root: hex!("175b5b32fc81665f2a7e3b29292f6302fcc6b9960e60745576abcf2af6e1cffb").into(),
-            body_root: hex!("6006a94f908c21b32d2b66b9d61cf09c5d2b8edadf50d17e178cecf4eb43dbb0").into(),
+            slot: 257,
+            proposer_index: 2,
+            parent_root: hex!("8225722e0cf9ebde300e397367c4eaa69b39edab5b86c671f1f503662377b9dc").into(),
+            state_root: hex!("1b8f0368b4d8ef4275137d8c8ff8d4dd7fedbd68a321727baa852106817abc73").into(),
+            body_root: hex!("fcff96274db17b38f55e76258cda3b1a7d56028abd888644d0820142e833e438").into(),
         },
         sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-            sync_committee_signature: hex!("b388f69c0e49386b7718f788b1e0cbe7275043972303b8776d9b673d2ed8c3f766d99aaec4aaf0037a4c3afbc225f66c17c21e804c150fd6612f1f2cf9d4039492ba2699c79b4d96c1fab04816d27a81028f42c0eb874e27ff62fc99bad427a6").into(),
+            sync_committee_bits: hex!("ffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000ffffffffffffffffffffffffffffffff"),
+            sync_committee_signature: hex!("acad405a0ac0739e9e12deb3f1122789d8817b034ab42d3799631a8c9de4b6810305d62c24606daf695304c6e46b2b7b16bd87e40c807feba7956b3c0d8578ab50b10712474f1e5ba1daaa2af6d0e4a5afb87d54536967fda56f038fc005d05a").into(),
         },
-        signature_slot: 647,
+        signature_slot: 258,
         next_sync_committee_update: None,
         finalized_header: BeaconHeader {
-            slot: 576,
-            proposer_index: 4,
-            parent_root: hex!("2ec20030f6471f594bf209e2924a6aa76f70e89387f451cc12b12ad3745b98a8").into(),
-            state_root: hex!("85c07f80846e3cd124d46f5b335fc83cef83a75b8a06fa691ae8371144012b0a").into(),
-            body_root: hex!("a6a846f804e6ca59334f3ce626e64f895836246a7c5d22fc0d086082159b2238").into(),
+            slot: 192,
+            proposer_index: 2,
+            parent_root: hex!("d00dd1e4ca9d18c7b1d3bc920f36810b3fccbd824b32e5a516198e31aa29a8ad").into(),
+            state_root: hex!("1ad6bf3183a137a6cef17b1b13d8e12f59e21f4a7ea6bb5b59d6867f0d334eab").into(),
+            body_root: hex!("abc6b8c1a4a171c78c658e8595dce8a5a6c545ea2990dd3764315b7e2f792596").into(),
         },
         finality_branch: vec![
-            hex!("1200000000000000000000000000000000000000000000000000000000000000").into(),
+            hex!("0600000000000000000000000000000000000000000000000000000000000000").into(),
             hex!("10c726fac935bf9657cc7476d3cfa7bedec5983dcfb59e8a7df6d0a619e108d7").into(),
             hex!("daf8a03ff85a662ff55561aaf11278c7dddb8800d99462115f9558ea044e2a43").into(),
-            hex!("22b727be62d2b843ee1cc7a91829059147f57e482f6dbf65ad62073d1fe165ae").into(),
-            hex!("7fcb913a1852d2fec7e593d6d69d45901357a0e9f130668761113fb125048499").into(),
-            hex!("d50e31e45a8836365fde440cb70f6ea19b1fbda0c205d98edacd635937a42d41").into(),
+            hex!("065d8ef02d6889358be990da1c211c6c9686f436bbb9ac16eaaf9d09221ffc3e").into(),
+            hex!("7d7a9915c78bd2a809aa680bec388d68a09e258e63990ade3203a8f810de703d").into(),
+            hex!("9593a12c8f12696cf9185b9f23ed3966fbbb850a3ab2c5101e819cfb6523168d").into(),
         ],
-        block_roots_root: hex!("e7fde4ff62bcf8c17d0e050a9cd39f698d0f31000fb0e833d90e5f042db81a32").into(),
+        block_roots_root: hex!("a434d9c70c136ca2ff706448cbb861e2f3ef4c5b8540c78d1116ba23c06db973").into(),
         block_roots_branch: vec![
-            hex!("83728ec879806961d4b27da2ef2d76127d1477ffedf81bd78cdb6e779cb8c99b").into(),
-            hex!("c17ef7addf10aa73c975cb00cc011cef3afa008b4d9fdceb280ea03c6907e2a6").into(),
-            hex!("6020d8098f31f9ca0044e5405dd92ee4b8666c00f9984a41451b43a1be2db9fb").into(),
-            hex!("5d878a041d271775ee7a161511898b1c02a496984167a409c75afab71e6494f0").into(),
-            hex!("88f431867f85b8f7c1962f4c3f91c9017111901b75316b6b0085ac637cff0f00").into(),
+            hex!("3fe0a767dc4a77a71b927e3f895710607fdc8eff989b3c77c60cfc3e28b6de30").into(),
+            hex!("5767524f333243118e057d9f2806dd0a69795a012cab47c5639e2bde66c8a5b1").into(),
+            hex!("b85f6902fba4d5f99d3255bc690661937b2869abfdd2dfb21381ff7c61e8e1c3").into(),
+            hex!("a9e1bf6740d20d61c973bc4ca5c39d4092f9090180962cb41568c71c0305bfaa").into(),
+            hex!("dbb0adda75230c97438f21e76d600c24678dd2ed3d72a3ba003409b539e13ca7").into(),
         ]
     })
 }
 
 pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
-	Box::new(ExecutionHeaderUpdate {
+    Box::new(ExecutionHeaderUpdate {
         header: BeaconHeader {
-            slot: 210,
+            slot: 192,
             proposer_index: 2,
-            parent_root: hex!("655f4a19288078cfb1106d540fd93f002dea436edba4ee97e764a32b6b101d49").into(),
-            state_root: hex!("3077e936bf7c873dd847c63a12ba562f972558ebb921cff25294af430f40cef0").into(),
-            body_root: hex!("87dc2f47af85fd83cd478976aefffe260c2bbd8ee25b9c1f7bd8e5f0fbc3e25f").into(),
+            parent_root: hex!("d00dd1e4ca9d18c7b1d3bc920f36810b3fccbd824b32e5a516198e31aa29a8ad").into(),
+            state_root: hex!("1ad6bf3183a137a6cef17b1b13d8e12f59e21f4a7ea6bb5b59d6867f0d334eab").into(),
+            body_root: hex!("abc6b8c1a4a171c78c658e8595dce8a5a6c545ea2990dd3764315b7e2f792596").into(),
         },
         ancestry_proof: Some(AncestryProof {
             header_branch: vec![
@@ -1206,10 +1208,10 @@ pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
             withdrawals_root: hex!("5f5155fd8e5cd24b7ecb1e039792b0caff01dfda2990786d9ffc88325b5d1ea8").into(),
         }),
         execution_branch: vec![
-            hex!("eadf19bf88d1c0f14acb0594c3ca29982da94cea91b627bb7546ad1053f95c3c").into(),
+            hex!("7492ffac863cd4616e86cddef72b79496456ad348b9f3387fc0406331c73fa03").into(),
             hex!("336488033fe5f3ef4ccc12af07b9370b92e553e35ecb4a337a1b1c0e4afe1e0e").into(),
             hex!("db56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71").into(),
-            hex!("3b92b711fddbbe13f66d8c81c798b825a4dbbfa9359ba5985192d5af87569354").into(),
+            hex!("9d0db51c9249537d5063d1d3b8b6809b91d2a64e039d02a36f6d48b2813e8d6b").into(),
         ],
     })
 }

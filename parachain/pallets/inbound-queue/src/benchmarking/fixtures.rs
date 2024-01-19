@@ -6,16 +6,16 @@ use snowbridge_core::inbound::{Log, Message, Proof};
 use sp_std::vec;
 
 pub struct InboundQueueTest {
-	pub execution_header: CompactExecutionHeader,
-	pub message: Message,
+    pub execution_header: CompactExecutionHeader,
+    pub message: Message,
 }
 
 pub fn make_create_message() -> InboundQueueTest {
-	InboundQueueTest {
+    InboundQueueTest {
         execution_header: CompactExecutionHeader{
-            parent_hash: hex!("088df21dc48b1ef18b6df9ef35dc3b21eda78f943813436d5059fb3b8248c74a").into(),
-            block_number: 210,
-            state_root: hex!("c1e042d99f2e5d21f4be14cca504ce8bd961db18084a1908431686ef918900bd").into(),
+            parent_hash: hex!("91596cce98b42ad458835e27c7d0f977b54e37e1953aaa0a1c7a6929cf43be22").into(),
+            block_number: 192,
+            state_root: hex!("538f8029002c68622aaafb78e6219784dc7c63c2ca209237fe464b5d0fc0021a").into(),
             receipts_root: hex!("7b1f61b9714c080ef0be014e01657a15f45f0304b477beebc7ca5596c8033095").into(),
         },
         message: Message {
@@ -29,7 +29,7 @@ pub fn make_create_message() -> InboundQueueTest {
                 data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002e00a736aa00000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d00e40b54020000000000000000000000000000000000000000000000000000000000").into(),
             },
             proof: Proof {
-                block_hash: hex!("b8b9d2d1cba781dee0b344c8102fa02fc94aefe92dd2d7e154f3eb98a3c6288f").into(),
+                block_hash: hex!("e517bf7cdff73c2469e39234a583f133d1974b74f74bccc744a0baff801225f6").into(),
                 tx_index: 0,
                 data: (vec![
                     hex!("7b1f61b9714c080ef0be014e01657a15f45f0304b477beebc7ca5596c8033095").to_vec(),
