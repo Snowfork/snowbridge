@@ -530,13 +530,13 @@ func (s *Syncer) getExecutionHeaderFromBeaconHeader(header api.BeaconHeaderWithE
 		return versionedExecutionPayloadHeader, executionBranch, fmt.Errorf("invalid slot in header: %w", err)
 	}
 	if s.DenebForked(slot) {
-		executionPayloadScale, err := api.DenebExecutionPayloadHeaderToScale(&header.Execution)
+		executionPayloadScale, err := api.DenebJsonExecutionPayloadHeaderToScale(&header.Execution)
 		if err != nil {
 			return versionedExecutionPayloadHeader, executionBranch, fmt.Errorf("convert payloadHeader to scale: %w", err)
 		}
 		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
 	} else {
-		executionPayloadScale, err := api.ExecutionPayloadHeaderToCapellaScaleV1(&header.Execution)
+		executionPayloadScale, err := api.CapellaJsonExecutionPayloadHeaderToScale(&header.Execution)
 		if err != nil {
 			return versionedExecutionPayloadHeader, executionBranch, fmt.Errorf("convert payloadHeader to scale: %w", err)
 		}
