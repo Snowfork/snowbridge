@@ -37,7 +37,6 @@ func generateBeaconDataCmd() *cobra.Command {
 		RunE:  generateBeaconTestFixture,
 	}
 
-	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
 	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	return cmd
@@ -51,7 +50,6 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 		RunE:  generateBeaconCheckpoint,
 	}
 
-	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
 	cmd.Flags().Bool("export_json", false, "Export Json")
 
@@ -66,7 +64,6 @@ func generateExecutionUpdateCmd() *cobra.Command {
 		RunE:  generateExecutionUpdate,
 	}
 
-	cmd.Flags().String("spec", "mainnet", "Valid values are mainnet or minimal")
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
 	cmd.Flags().Uint32("slot", 1, "slot number")
 	return cmd
@@ -389,6 +386,18 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 						return err
 					}
 					log.Info("created next finalized header update file")
+
+					// generate nextSyncCommitteeUpdate
+					nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod + 1)
+					if err != nil {
+						return fmt.Errorf("get sync committee update: %w", err)
+					}
+					nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
+					err = writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("next-sync-committee-update.json"))
+					if err != nil {
+						return err
+					}
+					log.Info("created next sync committee update file")
 
 					break
 				} else {
