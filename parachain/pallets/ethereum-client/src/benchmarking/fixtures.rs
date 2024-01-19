@@ -1,8 +1,6 @@
 // Generated, do not edit!
 // See README.md for instructions to generate
-use crate::{
-	CheckpointUpdate, ExecutionHeaderUpdate, Update,
-};
+use crate::{CheckpointUpdate, ExecutionHeaderUpdate, Update};
 use hex_literal::hex;
 use primitives::{
 	updates::AncestryProof, BeaconHeader, ExecutionPayloadHeader, NextSyncCommitteeUpdate,
@@ -12,7 +10,7 @@ use sp_core::U256;
 use sp_std::{boxed::Box, vec};
 
 pub fn make_checkpoint() -> Box<CheckpointUpdate> {
-    Box::new(CheckpointUpdate {
+	Box::new(CheckpointUpdate {
         header: BeaconHeader {
             slot: 576,
             proposer_index: 4,
@@ -557,7 +555,7 @@ pub fn make_checkpoint() -> Box<CheckpointUpdate> {
 }
 
 pub fn make_sync_committee_update() -> Box<Update> {
-    Box::new(Update {
+	Box::new(Update {
         attested_header: BeaconHeader {
             slot: 129,
             proposer_index: 6,
@@ -1123,7 +1121,7 @@ pub fn make_sync_committee_update() -> Box<Update> {
 }
 
 pub fn make_finalized_header_update() -> Box<Update> {
-    Box::new(Update {
+	Box::new(Update {
         attested_header: BeaconHeader {
             slot: 646,
             proposer_index: 3,
@@ -1164,7 +1162,7 @@ pub fn make_finalized_header_update() -> Box<Update> {
 }
 
 pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
-    Box::new(ExecutionHeaderUpdate {
+	Box::new(ExecutionHeaderUpdate {
         header: BeaconHeader {
             slot: 210,
             proposer_index: 2,
