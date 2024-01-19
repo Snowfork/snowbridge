@@ -455,7 +455,7 @@ func (s SyncAggregateResponse) ToScale() (scale.SyncAggregate, error) {
 // Because it only returns JSON, we need this interim step where we convert the block JSON to the data
 // types that the FastSSZ lib expects. When Lodestar supports SSZ block response, we can remove all these
 // and directly unmarshal SSZ bytes to state.BeaconBlock.
-func (b BeaconBlockResponse) ToFastSSZ(epoch uint64, isDeneb bool) (state.BeaconBlock, error) {
+func (b BeaconBlockResponse) ToFastSSZ(isDeneb bool) (state.BeaconBlock, error) {
 	data := b.Data.Message
 
 	slot, err := util.ToUint64(data.Slot)
