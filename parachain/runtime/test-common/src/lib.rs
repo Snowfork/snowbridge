@@ -288,7 +288,6 @@ pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
 				destination_address,
 				fee_amount,
 			);
-			// check err is NotHoldingFees
 			assert_err!(outcome.ensure_complete(), expected_error);
 		});
 }
