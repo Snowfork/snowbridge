@@ -27,6 +27,7 @@ use frame_support::{assert_err, assert_noop, assert_ok};
 use hex_literal::hex;
 use primitives::{
 	CompactExecutionHeader, ExecutionHeaderState, Fork, ForkVersions, NextSyncCommitteeUpdate,
+	VersionedExecutionPayloadHeader,
 };
 use rand::{thread_rng, Rng};
 use snowbridge_core::{
@@ -280,6 +281,7 @@ fn compute_fork_version() {
 		altair: Fork { version: [0, 0, 0, 1], epoch: 10 },
 		bellatrix: Fork { version: [0, 0, 0, 2], epoch: 20 },
 		capella: Fork { version: [0, 0, 0, 3], epoch: 30 },
+		deneb: Fork { version: [0, 0, 0, 4], epoch: 40 },
 	};
 	new_tester().execute_with(|| {
 		assert_eq!(EthereumBeaconClient::select_fork_version(&mock_fork_versions, 0), [0, 0, 0, 0]);
@@ -740,7 +742,7 @@ fn submit_execution_header_update() {
 			Box::new(execution_header_update.clone())
 		));
 		assert!(<ExecutionHeaders<Test>>::contains_key(
-			execution_header_update.execution_header.block_hash
+			execution_header_update.execution_header.block_hash()
 		));
 	});
 }
@@ -799,8 +801,23 @@ fn submit_execution_header_update_that_skips_block() {
 	let finalized_header_update = load_finalized_header_update_fixture();
 	let execution_header_update = load_execution_header_update_fixture();
 	let mut skipped_block_execution_header_update = load_execution_header_update_fixture();
-	skipped_block_execution_header_update.execution_header.block_number =
-		execution_header_update.execution_header.block_number + 2;
+	let mut skipped_execution_header =
+		skipped_block_execution_header_update.execution_header.clone();
+
+	skipped_execution_header = match skipped_execution_header {
+		VersionedExecutionPayloadHeader::Capella(execution_payload_header) => {
+			let mut mut_execution_payload_header = execution_payload_header.clone();
+			mut_execution_payload_header.block_number = execution_payload_header.block_number + 2;
+			VersionedExecutionPayloadHeader::Capella(mut_execution_payload_header)
+		},
+		VersionedExecutionPayloadHeader::Deneb(execution_payload_header) => {
+			let mut mut_execution_payload_header = execution_payload_header.clone();
+			mut_execution_payload_header.block_number = execution_payload_header.block_number + 2;
+			VersionedExecutionPayloadHeader::Deneb(mut_execution_payload_header)
+		},
+	};
+
+	skipped_block_execution_header_update.execution_header = skipped_execution_header;
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
@@ -813,7 +830,7 @@ fn submit_execution_header_update_that_skips_block() {
 			Box::new(execution_header_update.clone())
 		));
 		assert!(<ExecutionHeaders<Test>>::contains_key(
-			execution_header_update.execution_header.block_hash
+			execution_header_update.execution_header.block_hash()
 		));
 		assert_err!(
 			EthereumBeaconClient::submit_execution_header(

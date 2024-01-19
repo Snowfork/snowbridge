@@ -1,11 +1,9 @@
 package api
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 
@@ -70,8 +68,11 @@ type BeaconBlockResponse struct {
 					BlockHash     string               `json:"block_hash"`
 					Transactions  []string             `json:"transactions"`
 					Withdrawals   []WithdrawalResponse `json:"withdrawals"`
+					BlobGasUsed   string               `json:"blob_gas_used,omitempty"`
+					ExcessBlobGas string               `json:"excess_blob_gas,omitempty"`
 				} `json:"execution_payload"`
 				BlsToExecutionChanges []SignedBLSToExecutionChangeResponse `json:"bls_to_execution_changes"`
+				BlobKzgCommitments    []string                             `json:"blob_kzg_commitments"`
 			} `json:"body"`
 		} `json:"message"`
 	} `json:"data"`
@@ -452,184 +453,11 @@ func (s SyncAggregateResponse) ToScale() (scale.SyncAggregate, error) {
 	}, nil
 }
 
-func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
-	dataMessage := b.Data.Message
-
-	slot, err := util.ToUint64(dataMessage.Slot)
-	if err != nil {
-		return scale.BeaconBlock{}, fmt.Errorf("parse slot as int: %w", err)
-	}
-
-	proposerIndex, err := util.ToUint64(dataMessage.ProposerIndex)
-	if err != nil {
-		return scale.BeaconBlock{}, fmt.Errorf("parse proposerIndex as int: %w", err)
-	}
-
-	body := dataMessage.Body
-
-	syncAggregate, err := body.SyncAggregate.ToScale()
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	proposerSlashings := []scale.ProposerSlashing{}
-
-	for _, proposerSlashing := range body.ProposerSlashings {
-		proposerSlashingScale, err := proposerSlashing.ToScale()
-		if err != nil {
-			return scale.BeaconBlock{}, err
-		}
-
-		proposerSlashings = append(proposerSlashings, proposerSlashingScale)
-	}
-
-	attesterSlashings := []scale.AttesterSlashing{}
-
-	for _, attesterSlashing := range body.AttesterSlashings {
-		attesterSlashingScale, err := attesterSlashing.ToScale()
-		if err != nil {
-			return scale.BeaconBlock{}, err
-		}
-
-		attesterSlashings = append(attesterSlashings, attesterSlashingScale)
-	}
-
-	attestations := []scale.Attestation{}
-
-	for _, attestation := range body.Attestations {
-		attestationScale, err := attestation.ToScale()
-		if err != nil {
-			return scale.BeaconBlock{}, err
-		}
-
-		attestations = append(attestations, attestationScale)
-	}
-
-	deposits := []scale.Deposit{}
-
-	for _, deposit := range body.Deposits {
-		depositScale, err := deposit.ToScale()
-		if err != nil {
-			return scale.BeaconBlock{}, err
-		}
-
-		deposits = append(deposits, depositScale)
-	}
-
-	voluntaryExits := []scale.SignedVoluntaryExit{}
-
-	for _, voluntaryExit := range body.VoluntaryExits {
-		voluntaryExitScale, err := voluntaryExit.ToScale()
-		if err != nil {
-			return scale.BeaconBlock{}, err
-		}
-
-		voluntaryExits = append(voluntaryExits, voluntaryExitScale)
-	}
-
-	depositCount, err := util.ToUint64(body.Eth1Data.DepositCount)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	executionPayload := body.ExecutionPayload
-
-	baseFeePerGasUint64, err := util.ToUint64(executionPayload.BaseFeePerGas)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	bigInt := big.NewInt(int64(baseFeePerGasUint64))
-
-	blockNumber, err := util.ToUint64(executionPayload.BlockNumber)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	gasLimit, err := util.ToUint64(executionPayload.GasLimit)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	gasUsed, err := util.ToUint64(executionPayload.GasUsed)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	timestamp, err := util.ToUint64(executionPayload.Timestamp)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	transactionsRoot, err := getTransactionsHashTreeRoot(executionPayload.Transactions)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	randaoReveal, err := util.HexStringToByteArray(body.RandaoReveal)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	feeRecipient, err := util.HexStringTo20Bytes(executionPayload.FeeRecipient)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	logsBloom, err := util.HexStringToByteArray(executionPayload.LogsBloom)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	extraData, err := util.HexStringToByteArray(executionPayload.ExtraData)
-	if err != nil {
-		return scale.BeaconBlock{}, err
-	}
-
-	return scale.BeaconBlock{
-		Slot:          types.NewU64(slot),
-		ProposerIndex: types.NewU64(proposerIndex),
-		ParentRoot:    types.NewH256(common.HexToHash(dataMessage.ParentRoot).Bytes()),
-		StateRoot:     types.NewH256(common.HexToHash(dataMessage.StateRoot).Bytes()),
-		Body: scale.Body{
-			RandaoReveal: randaoReveal,
-			Eth1Data: scale.Eth1Data{
-				DepositRoot:  types.NewH256(common.HexToHash(body.Eth1Data.DepositRoot).Bytes()),
-				DepositCount: types.NewU64(depositCount),
-				BlockHash:    types.NewH256(common.HexToHash(body.Eth1Data.BlockHash).Bytes()),
-			},
-			Graffiti:          types.NewH256(common.HexToHash(body.Graffiti).Bytes()),
-			ProposerSlashings: proposerSlashings,
-			AttesterSlashings: attesterSlashings,
-			Attestations:      attestations,
-			Deposits:          deposits,
-			VoluntaryExits:    voluntaryExits,
-			SyncAggregate:     syncAggregate,
-			ExecutionPayload: scale.ExecutionPayloadHeaderCapella{
-				ParentHash:       types.NewH256(common.HexToHash(executionPayload.ParentHash).Bytes()),
-				FeeRecipient:     feeRecipient,
-				StateRoot:        types.NewH256(common.HexToHash(executionPayload.StateRoot).Bytes()),
-				ReceiptsRoot:     types.NewH256(common.HexToHash(executionPayload.ReceiptsRoot).Bytes()),
-				LogsBloom:        logsBloom,
-				PrevRandao:       types.NewH256(common.HexToHash(executionPayload.PrevRandao).Bytes()),
-				BlockNumber:      types.NewU64(blockNumber),
-				GasLimit:         types.NewU64(gasLimit),
-				GasUsed:          types.NewU64(gasUsed),
-				Timestamp:        types.NewU64(timestamp),
-				ExtraData:        extraData,
-				BaseFeePerGas:    types.NewU256(*bigInt),
-				BlockHash:        types.NewH256(common.HexToHash(executionPayload.BlockHash).Bytes()),
-				TransactionsRoot: transactionsRoot,
-			},
-		},
-	}, nil
-}
-
 // ToFastSSZ can be removed once Lodestar supports returning block data as SSZ instead of JSON only.
 // Because it only returns JSON, we need this interim step where we convert the block JSON to the data
 // types that the FastSSZ lib expects. When Lodestar supports SSZ block response, we can remove all these
 // and directly unmarshal SSZ bytes to state.BeaconBlock.
-func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint64) (state.BeaconBlock, error) {
+func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, isDeneb bool) (state.BeaconBlock, error) {
 	data := b.Data.Message
 
 	slot, err := util.ToUint64(data.Slot)
@@ -821,6 +649,16 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint6
 		return nil, err
 	}
 
+	blobGasUsed, err := util.ToUint64AllowEmpty(executionPayload.BlobGasUsed)
+	if err != nil {
+		return nil, err
+	}
+
+	excessBlobGas, err := util.ToUint64AllowEmpty(executionPayload.ExcessBlobGas)
+	if err != nil {
+		return nil, err
+	}
+
 	syncCommitteeBits, err := util.HexStringToByteArray(body.SyncAggregate.SyncCommitteeBits)
 	if err != nil {
 		return nil, err
@@ -832,7 +670,6 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint6
 	}
 
 	blsExecutionChanges := []*state.SignedBLSToExecutionChange{}
-
 	for _, changeResponse := range body.BlsToExecutionChanges {
 		changeSSZ, err := changeResponse.ToFastSSZ()
 		if err != nil {
@@ -841,7 +678,63 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint6
 		blsExecutionChanges = append(blsExecutionChanges, changeSSZ)
 	}
 
+	var kzgCommitments [][48]byte
+	for _, kzgCommitment := range body.BlobKzgCommitments {
+		kzgCommitmentSSZ, err := util.HexStringTo48Bytes(kzgCommitment)
+		if err != nil {
+			return nil, err
+		}
+		kzgCommitments = append(kzgCommitments, kzgCommitmentSSZ)
+	}
+
 	if activeSpec == config.Minimal {
+		if isDeneb {
+			return &state.BeaconBlockDenebMinimal{
+				Slot:          slot,
+				ProposerIndex: proposerIndex,
+				ParentRoot:    parentRoot,
+				StateRoot:     stateRoot,
+				Body: &state.BeaconBlockBodyDenebMinimal{
+					RandaoReveal: randaoReveal,
+					Eth1Data: &state.Eth1Data{
+						DepositRoot:  eth1DepositRoot,
+						DepositCount: eth1DepositCount,
+						BlockHash:    eth1BlockHash,
+					},
+					Graffiti:          graffiti,
+					ProposerSlashings: proposerSlashings,
+					AttesterSlashings: attesterSlashings,
+					Attestations:      attestations,
+					Deposits:          deposits,
+					VoluntaryExits:    voluntaryExits,
+					SyncAggregate: &state.SyncAggregateMinimal{
+						SyncCommitteeBits:      syncCommitteeBits,
+						SyncCommitteeSignature: syncCommitteeSignature,
+					},
+					ExecutionPayload: &state.ExecutionPayloadDeneb{
+						ParentHash:    parentHash,
+						FeeRecipient:  feeRecipient,
+						StateRoot:     executionStateRoot,
+						ReceiptsRoot:  receiptsRoot,
+						LogsBloom:     logsBloom,
+						PrevRandao:    prevRando,
+						BlockNumber:   blockNumber,
+						GasLimit:      gasLimit,
+						GasUsed:       gasUsed,
+						Timestamp:     timestamp,
+						ExtraData:     extraData,
+						BaseFeePerGas: baseFeePerGasBytes,
+						BlockHash:     blockHash,
+						Transactions:  transactions,
+						Withdrawals:   withdrawals,
+						BlobGasUsed:   blobGasUsed,   // new for Deneb
+						ExcessBlobGas: excessBlobGas, // new for Deneb
+					},
+					BlsToExecutionChanges: blsExecutionChanges,
+					BlobKzgCommitments:    kzgCommitments, // new for Deneb
+				},
+			}, nil
+		}
 		return &state.BeaconBlockCapellaMinimal{
 			Slot:          slot,
 			ProposerIndex: proposerIndex,
@@ -885,6 +778,53 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint6
 			},
 		}, nil
 	} else {
+		if isDeneb {
+			return &state.BeaconBlockDenebMainnet{
+				Slot:          slot,
+				ProposerIndex: proposerIndex,
+				ParentRoot:    parentRoot,
+				StateRoot:     stateRoot,
+				Body: &state.BeaconBlockBodyDenebMainnet{
+					RandaoReveal: randaoReveal,
+					Eth1Data: &state.Eth1Data{
+						DepositRoot:  eth1DepositRoot,
+						DepositCount: eth1DepositCount,
+						BlockHash:    eth1BlockHash,
+					},
+					Graffiti:          graffiti,
+					ProposerSlashings: proposerSlashings,
+					AttesterSlashings: attesterSlashings,
+					Attestations:      attestations,
+					Deposits:          deposits,
+					VoluntaryExits:    voluntaryExits,
+					SyncAggregate: &state.SyncAggregateMainnet{
+						SyncCommitteeBits:      syncCommitteeBits,
+						SyncCommitteeSignature: syncCommitteeSignature,
+					},
+					ExecutionPayload: &state.ExecutionPayloadDeneb{
+						ParentHash:    parentHash,
+						FeeRecipient:  feeRecipient,
+						StateRoot:     executionStateRoot,
+						ReceiptsRoot:  receiptsRoot,
+						LogsBloom:     logsBloom,
+						PrevRandao:    prevRando,
+						BlockNumber:   blockNumber,
+						GasLimit:      gasLimit,
+						GasUsed:       gasUsed,
+						Timestamp:     timestamp,
+						ExtraData:     extraData,
+						BaseFeePerGas: baseFeePerGasBytes,
+						BlockHash:     blockHash,
+						Transactions:  transactions,
+						Withdrawals:   withdrawals,
+						BlobGasUsed:   blobGasUsed,   // new for Deneb
+						ExcessBlobGas: excessBlobGas, // new for Deneb
+					},
+					BlsToExecutionChanges: blsExecutionChanges,
+					BlobKzgCommitments:    kzgCommitments, // new for Deneb
+				},
+			}, nil
+		}
 		return &state.BeaconBlockCapellaMainnet{
 			Slot:          slot,
 			ProposerIndex: proposerIndex,
@@ -930,23 +870,6 @@ func (b BeaconBlockResponse) ToFastSSZ(activeSpec config.ActiveSpec, epoch uint6
 	}
 }
 
-func (p ProposerSlashingResponse) ToScale() (scale.ProposerSlashing, error) {
-	signedHeader1, err := p.SignedHeader1.ToScale()
-	if err != nil {
-		return scale.ProposerSlashing{}, err
-	}
-
-	signedHeader2, err := p.SignedHeader2.ToScale()
-	if err != nil {
-		return scale.ProposerSlashing{}, err
-	}
-
-	return scale.ProposerSlashing{
-		SignedHeader1: signedHeader1,
-		SignedHeader2: signedHeader2,
-	}, nil
-}
-
 func (p ProposerSlashingResponse) ToFastSSZ() (*state.ProposerSlashing, error) {
 	signedHeader1, err := p.SignedHeader1.ToFastSSZ()
 	if err != nil {
@@ -964,23 +887,6 @@ func (p ProposerSlashingResponse) ToFastSSZ() (*state.ProposerSlashing, error) {
 	}, nil
 }
 
-func (a AttesterSlashingResponse) ToScale() (scale.AttesterSlashing, error) {
-	attestation1, err := a.Attestation1.ToScale()
-	if err != nil {
-		return scale.AttesterSlashing{}, err
-	}
-
-	attestation2, err := a.Attestation2.ToScale()
-	if err != nil {
-		return scale.AttesterSlashing{}, err
-	}
-
-	return scale.AttesterSlashing{
-		Attestation1: attestation1,
-		Attestation2: attestation2,
-	}, nil
-}
-
 func (a AttesterSlashingResponse) ToFastSSZ() (*state.AttesterSlashing, error) {
 	attestation1, err := a.Attestation1.ToFastSSZ()
 	if err != nil {
@@ -995,29 +901,6 @@ func (a AttesterSlashingResponse) ToFastSSZ() (*state.AttesterSlashing, error) {
 	return &state.AttesterSlashing{
 		Attestation1: attestation1,
 		Attestation2: attestation2,
-	}, nil
-}
-
-func (a AttestationResponse) ToScale() (scale.Attestation, error) {
-	data, err := a.Data.ToScale()
-	if err != nil {
-		return scale.Attestation{}, err
-	}
-
-	aggregationBits, err := util.HexStringToByteArray(a.AggregationBits)
-	if err != nil {
-		return scale.Attestation{}, err
-	}
-
-	signature, err := util.HexStringToByteArray(a.Signature)
-	if err != nil {
-		return scale.Attestation{}, err
-	}
-
-	return scale.Attestation{
-		AggregationBits: aggregationBits,
-		Data:            data,
-		Signature:       signature,
 	}, nil
 }
 
@@ -1044,31 +927,6 @@ func (a AttestationResponse) ToFastSSZ() (*state.Attestation, error) {
 	}, nil
 }
 
-func (d SignedVoluntaryExitResponse) ToScale() (scale.SignedVoluntaryExit, error) {
-	epoch, err := util.ToUint64(d.Message.Epoch)
-	if err != nil {
-		return scale.SignedVoluntaryExit{}, err
-	}
-
-	validaterIndex, err := util.ToUint64(d.Message.ValidatorIndex)
-	if err != nil {
-		return scale.SignedVoluntaryExit{}, err
-	}
-
-	signature, err := util.HexStringToByteArray(d.Signature)
-	if err != nil {
-		return scale.SignedVoluntaryExit{}, err
-	}
-
-	return scale.SignedVoluntaryExit{
-		Exit: scale.VoluntaryExit{
-			Epoch:          types.NewU64(epoch),
-			ValidaterIndex: types.NewU64(validaterIndex),
-		},
-		Signature: signature,
-	}, nil
-}
-
 func (d SignedVoluntaryExitResponse) ToFastSSZ() (*state.SignedVoluntaryExit, error) {
 	epoch, err := util.ToUint64(d.Message.Epoch)
 	if err != nil {
@@ -1091,39 +949,6 @@ func (d SignedVoluntaryExitResponse) ToFastSSZ() (*state.SignedVoluntaryExit, er
 			ValidatorIndex: validaterIndex,
 		},
 		Signature: signature,
-	}, nil
-}
-
-func (d DepositResponse) ToScale() (scale.Deposit, error) {
-	proofs := []types.H256{}
-
-	for _, proofData := range d.Proof {
-		proofs = append(proofs, types.NewH256(common.HexToHash(proofData).Bytes()))
-	}
-
-	amount, err := util.ToUint64(d.Data.Amount)
-	if err != nil {
-		return scale.Deposit{}, err
-	}
-
-	pubkey, err := util.HexStringToByteArray(d.Data.Pubkey)
-	if err != nil {
-		return scale.Deposit{}, err
-	}
-
-	signature, err := util.HexStringToByteArray(d.Data.Signature)
-	if err != nil {
-		return scale.Deposit{}, err
-	}
-
-	return scale.Deposit{
-		Proof: proofs,
-		Data: scale.DepositData{
-			Pubkey:                pubkey,
-			WithdrawalCredentials: types.NewH256(common.HexToHash(d.Data.WithdrawalCredentials).Bytes()),
-			Amount:                types.NewU64(amount),
-			Signature:             signature,
-		},
 	}, nil
 }
 
@@ -1164,22 +989,6 @@ func (d DepositResponse) ToFastSSZ() (*state.Deposit, error) {
 	}, nil
 }
 
-func (s SignedHeaderResponse) ToScale() (scale.SignedHeader, error) {
-	message, err := s.Message.ToScale()
-	if err != nil {
-		return scale.SignedHeader{}, err
-	}
-	signature, err := util.HexStringToByteArray(s.Signature)
-	if err != nil {
-		return scale.SignedHeader{}, err
-	}
-
-	return scale.SignedHeader{
-		Message:   message,
-		Signature: signature,
-	}, nil
-}
-
 func (s SignedHeaderResponse) ToFastSSZ() (*state.SignedBeaconBlockHeader, error) {
 	message, err := s.Message.ToFastSSZ()
 	if err != nil {
@@ -1193,35 +1002,6 @@ func (s SignedHeaderResponse) ToFastSSZ() (*state.SignedBeaconBlockHeader, error
 	return &state.SignedBeaconBlockHeader{
 		Header:    message,
 		Signature: signature,
-	}, nil
-}
-
-func (i IndexedAttestationResponse) ToScale() (scale.IndexedAttestation, error) {
-	data, err := i.Data.ToScale()
-	if err != nil {
-		return scale.IndexedAttestation{}, err
-	}
-
-	attestationIndexes := []types.U64{}
-
-	for _, index := range i.AttestingIndices {
-		indexInt, err := util.ToUint64(index)
-		if err != nil {
-			return scale.IndexedAttestation{}, err
-		}
-
-		attestationIndexes = append(attestationIndexes, types.NewU64(indexInt))
-	}
-
-	signature, err := util.HexStringToByteArray(i.Signature)
-	if err != nil {
-		return scale.IndexedAttestation{}, err
-	}
-
-	return scale.IndexedAttestation{
-		AttestingIndices: attestationIndexes,
-		Data:             data,
-		Signature:        signature,
 	}, nil
 }
 
@@ -1250,36 +1030,6 @@ func (i IndexedAttestationResponse) ToFastSSZ() (*state.IndexedAttestation, erro
 		AttestationIndices: attestationIndexes,
 		Data:               data,
 		Signature:          signature,
-	}, nil
-}
-
-func (a AttestationDataResponse) ToScale() (scale.AttestationData, error) {
-	slot, err := util.ToUint64(a.Slot)
-	if err != nil {
-		return scale.AttestationData{}, err
-	}
-
-	index, err := util.ToUint64(a.Index)
-	if err != nil {
-		return scale.AttestationData{}, err
-	}
-
-	source, err := a.Source.ToScale()
-	if err != nil {
-		return scale.AttestationData{}, err
-	}
-
-	target, err := a.Target.ToScale()
-	if err != nil {
-		return scale.AttestationData{}, err
-	}
-
-	return scale.AttestationData{
-		Slot:            types.NewU64(slot),
-		Index:           types.NewU64(index),
-		BeaconBlockRoot: types.NewH256(common.HexToHash(a.BeaconBlockRoot).Bytes()),
-		Source:          source,
-		Target:          target,
 	}, nil
 }
 
@@ -1342,28 +1092,6 @@ func (c CheckpointResponse) ToFastSSZ() (*state.Checkpoint, error) {
 	}, nil
 }
 
-func getTransactionsHashTreeRoot(transactions []string) (types.H256, error) {
-	resultTransactions := [][]byte{}
-
-	for _, trans := range transactions {
-		decodeString, err := hex.DecodeString(strings.ReplaceAll(trans, "0x", ""))
-		if err != nil {
-			return types.H256{}, err
-		}
-		resultTransactions = append(resultTransactions, decodeString)
-	}
-
-	transactionsContainer := state.TransactionsRootContainer{}
-	transactionsContainer.Transactions = resultTransactions
-
-	transactionsRoot, err := transactionsContainer.HashTreeRoot()
-	if err != nil {
-		return types.H256{}, err
-	}
-
-	return types.NewH256(transactionsRoot[:]), nil
-}
-
 func CapellaExecutionPayloadToScale(e *state.ExecutionPayloadCapella, activeSpec config.ActiveSpec) (scale.ExecutionPayloadHeaderCapella, error) {
 	transactionsContainer := state.TransactionsRootContainer{}
 	transactionsContainer.Transactions = e.Transactions
@@ -1409,12 +1137,4 @@ func CapellaExecutionPayloadToScale(e *state.ExecutionPayloadCapella, activeSpec
 		TransactionsRoot: transactionsRoot,
 		WithdrawalsRoot:  withdrawalRoot,
 	}, nil
-}
-
-func SyncAggregateToScale(s state.SyncAggregate) scale.SyncAggregate {
-	aggregateSignature := s.GetSyncAggregateSignature()
-	return scale.SyncAggregate{
-		SyncCommitteeBits:      s.GetSyncAggregateBits(),
-		SyncCommitteeSignature: aggregateSignature,
-	}
 }
