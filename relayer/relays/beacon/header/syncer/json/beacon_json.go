@@ -168,6 +168,12 @@ type Deposit struct {
 	Data  DepositData `json:"data"`
 }
 
+func (c *CompactExecutionHeader) RemoveLeadingZeroHashes() {
+	c.ParentHash = removeLeadingZeroHash(c.ParentHash)
+	c.ReceiptsRoot = removeLeadingZeroHash(c.ReceiptsRoot)
+	c.StateRoot = removeLeadingZeroHash(c.StateRoot)
+}
+
 func (b *BeaconHeader) RemoveLeadingZeroHashes() {
 	b.ParentRoot = removeLeadingZeroHash(b.ParentRoot)
 	b.StateRoot = removeLeadingZeroHash(b.StateRoot)

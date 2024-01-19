@@ -1,38 +1,38 @@
 {
   "attested_header": {
-    "slot": 296,
-    "proposer_index": 0,
-    "parent_root": "0xc62a8d9f2a004616e0ae4e7de1af3422563ecdbba98da5f18904e44f812956d8",
-    "state_root": "0x52e35da4c6b3790689d39a4772addab9bfb844871b1efefcfbfa0e14d09038c7",
-    "body_root": "0x47eeac4dbbce592011328d8e2098e8a3acafb0ddae4ccb78f54461aebf2ceb93"
+    "slot": 449,
+    "proposer_index": 1,
+    "parent_root": "0x02ca524ff0823a5be2fed720bc9083f8f1fc94ffb5de5b140719fb5cfbb58b6f",
+    "state_root": "0x9c7599487d0f7c20926ac08f6c69bab006eeaff8717f4db235a546e2073cd191",
+    "body_root": "0xd01ee814bb3c83810f2e3dc5650f93934dc1cfea957b6fdd35cd611893533ad3"
   },
   "sync_aggregate": {
     "sync_committee_bits": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-    "sync_committee_signature": "0x8866c6afdde82dc2990c565842e4574939cdeeedec124f70488812c786e6a2767fdb3d7b9b750407b0194728f24c525c12af702106485634d61df00a83bc54775f5a26990ac29e952461970eda8f67374146f00656f0852d41c5c63b379c8aca"
+    "sync_committee_signature": "0x9844c8841b8a267cd6de8e6aadd9cfe44140469b4cf7e098676446753663d1f0f5f4d9e7130a28b32b14344c4f35eb5c096ce2f299a3c16855d489c0a90a022bfa48ab7b970b67e70dd967b2aff874c5fe69fc631bac6bd9cc4c978d9fb8c04c"
   },
-  "signature_slot": 297,
+  "signature_slot": 450,
   "next_sync_committee_update": null,
   "finalized_header": {
-    "slot": 224,
+    "slot": 384,
     "proposer_index": 4,
-    "parent_root": "0x1adf851f1c3b14d5ad39a2296f9c0eb67f3ce29f548b1042c42e7ae4c8e57e01",
-    "state_root": "0x919ed2241dd533b1f21b8870782200dd1285716e5a2dd12b85459932d408e43b",
-    "body_root": "0x05ed6596aa7ca9e47169fb0a36e325b6d74c01f439432393fdfbbae87d105805"
+    "parent_root": "0x5d25c04db0e76c4adf4667609533cfe7adb1e9542f6a14917016164993c55a05",
+    "state_root": "0x75ed68dad9fe94a3071a6fdb107c5cc6818000db27f5591c9dce4c7dca8a6af5",
+    "body_root": "0x7e020cfc89c239ebf0e13b25779bdfc3db9e1d78304fb06d209ff35ef4dde59f"
   },
   "finality_branch": [
-    "0x0700000000000000000000000000000000000000000000000000000000000000",
+    "0x0c00000000000000000000000000000000000000000000000000000000000000",
     "0x10c726fac935bf9657cc7476d3cfa7bedec5983dcfb59e8a7df6d0a619e108d7",
     "0xdaf8a03ff85a662ff55561aaf11278c7dddb8800d99462115f9558ea044e2a43",
-    "0x93529c79a1f0e94a7a7de696413daf53e5098da0d426985f90d706de6d2d3b2e",
-    "0xf615b76aa6925080058bb97081b011332c97d149e55140905c487feeaca8370e",
-    "0x4494b18d90d300ceb7047a814a7b288d2d971d29b644dccab613207443b077bb"
+    "0x5a4c72a94442d7043bedccc34bf098985069aee3bcd352b18d34891ba64c49bf",
+    "0xee374cb8f954fbc02e85e0cae25c9d8d5bc70f72e6eea25d58a84ddd6e7e47f2",
+    "0xfefd831d50cbfac2959ed7800c7cfb0fd189cbb1ded17bb3ae930830de2ad5f7"
   ],
-  "block_roots_root": "0xf946f80d3e26468eaa41291903bc9463d2262853b05924d7bfbc63ff1ef7e134",
+  "block_roots_root": "0x2eb7753a8eae8625a51bb68efa0a9af8e8c5bbf46b6d212fa9c3ffffb2f1deaf",
   "block_roots_branch": [
-    "0x6e5e1a3d26495a17a227b3ec5a1adb89f230dd93d7e566c998cb008dedadebcb",
-    "0xe4d0f37bffcfbb950103fbf8fb34e1ad65ea150a92646d16181ece6e62d4d35c",
-    "0xc015681664a7ad3d54814f2e2a47cca499a7a978b45d0adce7762738459f2673",
-    "0x4eca2aa5bf11abad5f48e31368c1ff0ed1bb0f9fd4dcb358542ab4411554c221",
-    "0x8eb64193f6567424413d95ae5a3e272a54c1d1c73ef53e6074db9c61e5890216"
+    "0x297a90619f0c67641cd96c87ada3b409e5143a1aa7baa6a84c5d821a70c476e8",
+    "0x47aa470955ec3803db6ce4f6e756e4c9b27ceb81f72d0572e3beb3723ab51c7f",
+    "0xe17ce59f8be2b1f825597c84f4829df9b8a9f4955047ae647a6eb7270525c321",
+    "0x45b0a224e5ea7522d2ab204bca477eeb1109699a0d8b1047a21793c1fab70ae5",
+    "0x5a915ffa8eaba643cf4ab94e1901b6e27084cfa4cace6bda3ddcfefda59d7dd7"
   ]
 }

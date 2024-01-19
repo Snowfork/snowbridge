@@ -103,7 +103,7 @@ pub fn make_finalized_header_update() -> Box<Update> {
             body_root: hex!("{{FinalizedHeaderUpdate.AttestedHeader.BodyRoot}}").into(),
         },
         sync_aggregate: SyncAggregate{
-            sync_committee_bits: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeBits}}").into(),
+            sync_committee_bits: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeBits}}"),
             sync_committee_signature: hex!("{{FinalizedHeaderUpdate.SyncAggregate.SyncCommitteeSignature}}").into(),
         },
         signature_slot: {{FinalizedHeaderUpdate.SignatureSlot}},
