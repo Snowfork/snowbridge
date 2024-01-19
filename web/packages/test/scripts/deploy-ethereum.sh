@@ -6,20 +6,7 @@ source scripts/set-env.sh
 start_geth() {
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local node"
-        local timestamp=""
-        if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
-            if [ "$eth_fast_mode" == "true" ]; then
-                timestamp=$(gdate -d'+180second' +%s)
-            else
-                timestamp=$(gdate -d'+1000second' +%s)
-            fi
-        else
-            if [ "$eth_fast_mode" == "true" ]; then
-                timestamp=$(date -d'+180second' +%s)
-            else
-                timestamp=$(date -d'+1000second' +%s)
-            fi
-        fi
+        local timestamp="0" #start Cancun from genesis
         jq \
             --argjson timestamp "$timestamp" \
             '
@@ -80,7 +67,7 @@ start_lodestar() {
             --params.ALTAIR_FORK_EPOCH 0 \
             --params.BELLATRIX_FORK_EPOCH 0 \
             --params.CAPELLA_FORK_EPOCH 0 \
-            --params.DENEB_FORK_EPOCH 20 \
+            --params.DENEB_FORK_EPOCH 0 \
             --eth1=true \
             --rest.namespace="*" \
             --jwt-secret $config_dir/jwtsecret \
